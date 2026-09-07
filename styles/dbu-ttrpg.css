@@ -72,17 +72,77 @@
   object-fit: cover;
 }
 
-.dbu-ttrpg .race-and-power {
-  gap: 8px;
-  align-items: flex-end;
+.dbu-ttrpg .header-fields {
+  gap: 4px;
+  min-width: 0;
 }
 
-.dbu-ttrpg .race-and-power label {
+.dbu-ttrpg .character-name {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.dbu-ttrpg .header-traits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+
+.dbu-ttrpg .header-field {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.dbu-ttrpg .header-field em {
+  font-style: normal;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .header-pools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+/* Chosen or derived here; the header only reports them. */
+.dbu-ttrpg .character-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.dbu-ttrpg .character-fields label {
   display: flex;
   flex-direction: column;
-  font-size: 11px;
-  color: var(--dbu-text-dim);
   gap: 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .character-fields select {
+  min-width: 130px;
+}
+
+/* A derived value sitting among the fields that produce it. */
+.dbu-ttrpg .character-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .character-readout em {
+  font-style: normal;
 }
 
 .dbu-ttrpg .subvalue {
@@ -122,7 +182,7 @@
 
 .dbu-ttrpg .resources {
   display: grid;
-  grid-template-columns: 1fr 1fr 0.7fr;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -173,6 +233,211 @@
 
 .dbu-ttrpg .resource-ki .meter-fill {
   background: var(--dbu-ki);
+}
+
+.dbu-ttrpg .turn-state {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 6px;
+}
+
+.dbu-ttrpg .stat-note {
+  font-style: normal;
+  font-size: 9px;
+  text-align: center;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .turn-state input[type="number"] {
+  width: 46px;
+  text-align: center;
+}
+
+/* Guards the values that are tracked by hand during play. */
+.dbu-ttrpg .edit-toggle {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 0 8px;
+  line-height: 18px;
+  font-size: 10px;
+}
+
+.dbu-ttrpg .edit-toggle.active {
+  border-color: var(--dbu-accent);
+  color: var(--dbu-accent);
+}
+
+/* The attack Profile picker: one collapsible list per group. */
+.dbu-profile-group {
+  margin-bottom: 4px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 4px;
+}
+
+.dbu-profile-group > summary {
+  padding: 3px 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.dbu-profile-group > summary em {
+  font-style: italic;
+  font-weight: normal;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+/* A Foundation with no Profile of its own yet: listed, but nothing to open. */
+.dbu-profile-empty > summary {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.dbu-profile-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+  cursor: pointer;
+}
+
+.dbu-profile-name {
+  flex: 1 1 auto;
+}
+
+.dbu-profile-category {
+  flex: 0 0 auto;
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.dbu-profile-cost {
+  flex: 0 0 auto;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.dbu-profile-fixed {
+  margin: 0 0 6px;
+}
+
+/* Declared alongside the Profile, since both are paid for at once. */
+.dbu-wager {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.dbu-wager input {
+  width: 60px;
+}
+
+.dbu-wager em {
+  font-style: italic;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* The Defend picker: one row per option, each explaining itself. */
+.dbu-defend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dbu-defend-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dbu-defend-option:hover {
+  border-color: rgba(128, 128, 128, 0.6);
+}
+
+.dbu-defend-option > input {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.dbu-defend-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.dbu-defend-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.dbu-defend-summary {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* Enabled only while the option that rolls a Wound is the one selected. */
+.dbu-defend-wager {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  font-size: 11px;
+}
+
+.dbu-defend-wager input {
+  width: 56px;
+}
+
+.dbu-defend-wager input:disabled {
+  opacity: 0.4;
+}
+
+.dbu-defend-wager em {
+  font-style: italic;
+  opacity: 0.65;
+}
+
+.dbu-instant-note {
+  margin: 6px 0 0;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.dbu-ttrpg .capacity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dbu-ttrpg .capacity .resource-card {
+  flex: 0 1 200px;
+}
+
+.dbu-ttrpg .resource-capacity .meter-fill {
+  background: var(--dbu-accent);
+}
+
+.dbu-ttrpg .capacity-reset {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0 10px;
+}
+
+.dbu-ttrpg .capacity-note {
+  font-size: 10px;
+  font-style: italic;
+  color: var(--dbu-text-dim);
 }
 
 .dbu-ttrpg .resource-tp {
@@ -287,6 +552,81 @@
 .dbu-ttrpg .stat span {
   font-size: 16px;
   font-weight: bold;
+}
+
+.dbu-ttrpg .tab-placeholder {
+  margin: 0;
+  color: var(--dbu-text-dim);
+  font-style: italic;
+}
+
+/* --- Maneuvers -------------------------------------------------------------- */
+
+.dbu-ttrpg .maneuver-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbu-ttrpg .maneuver {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--dbu-border);
+}
+
+.dbu-ttrpg button.maneuver-name {
+  flex: 1 1 auto;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  line-height: inherit;
+  font-size: inherit;
+  font-weight: bold;
+  text-align: left;
+  color: var(--dbu-text);
+  cursor: pointer;
+}
+
+.dbu-ttrpg button.maneuver-name:hover {
+  color: var(--dbu-accent);
+  text-shadow: none;
+}
+
+.dbu-ttrpg span.maneuver-name {
+  flex: 1 1 auto;
+  font-weight: bold;
+}
+
+/* Only playable when something grants it, so it is listed but not offered. */
+.dbu-ttrpg .maneuver-triggered {
+  opacity: 0.5;
+  cursor: help;
+}
+
+.dbu-ttrpg .maneuver-source {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .maneuver-type {
+  flex: 0 0 auto;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .maneuver-cost {
+  flex: 0 0 62px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--dbu-text-dim);
 }
 
 /* --- Skills ---------------------------------------------------------------- */
@@ -564,6 +904,241 @@
 
 .dbu-check {
   text-align: center;
+}
+
+.dbu-maneuver-name {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.dbu-maneuver-meta {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.dbu-maneuver-attack {
+  margin-top: 2px;
+  font-size: 11px;
+}
+
+/* Who has answered a Standard Maneuver, and with what. */
+.dbu-response-list {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.dbu-response-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 11px;
+}
+
+.dbu-response-actor {
+  font-weight: bold;
+}
+
+.dbu-response-maneuver {
+  flex: 1 1 auto;
+}
+
+.dbu-response-timing {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* Only rendered for Actors the reader has access to. */
+.dbu-cancel-response {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  line-height: 16px;
+  font-size: 13px;
+}
+
+/* --- Skill Clash card ------------------------------------------------------ */
+
+.dbu-clash-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  font-weight: bold;
+}
+
+.dbu-clash-skill {
+  font-size: 10px;
+  font-weight: normal;
+  opacity: 0.7;
+}
+
+.dbu-clash-side {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.dbu-clash-name {
+  flex: 1 1 auto;
+}
+
+.dbu-clash-name em {
+  font-style: normal;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+}
+
+.dbu-clash-total {
+  font-size: 17px;
+  font-weight: bold;
+}
+
+.dbu-clash-waiting {
+  font-size: 17px;
+  opacity: 0.4;
+}
+
+.dbu-clash-outcome {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dbu-clash-outcome.dbu-critical {
+  color: #f5a623;
+}
+
+.dbu-clash-outcome.dbu-botch {
+  color: #c0392b;
+}
+
+.dbu-clash-result {
+  margin-top: 3px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.dbu-clash-button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* Offered on a Standard Maneuver: one button per character the reader controls. */
+.dbu-respond-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.dbu-respond-label {
+  flex: 1 0 100%;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.dbu-respond-button {
+  flex: 0 1 auto;
+  width: auto;
+  padding: 0 8px;
+  line-height: 20px;
+}
+
+/* GM only: closes the maneuver to further responses. */
+.dbu-settle-button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* Out-of-Sequence chances granted by a message. */
+.dbu-oos-list {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.dbu-oos-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 11px;
+}
+
+.dbu-oos-actor {
+  font-weight: bold;
+}
+
+.dbu-oos-maneuver {
+  flex: 0 0 auto;
+}
+
+.dbu-oos-reason {
+  flex: 1 1 auto;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.dbu-oos-button {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0 8px;
+  line-height: 18px;
+}
+
+.dbu-grant-button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.dbu-grant-form label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.dbu-settled-note {
+  margin-top: 4px;
+  text-align: center;
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* The picker inside the response dialog. */
+.dbu-instant-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 2px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+  cursor: pointer;
+}
+
+.dbu-instant-option input {
+  flex: 0 0 auto;
+}
+
+.dbu-instant-name {
+  flex: 1 1 auto;
+  font-weight: bold;
+}
+
+.dbu-instant-source {
+  flex: 0 0 auto;
+  font-size: 10px;
+  opacity: 0.7;
 }
 
 .dbu-check-parts {

@@ -33,6 +33,7 @@ directory - it can only fetch files it is told about by name.
 | `exclusiveAttributes` | no | Groups of Attributes from which at most one may be picked across all choices. |
 | `savingThrow` | no | The race's focused Saving Throw, or a list of them. It gains +1(bT) and its Critical Target drops by 1. |
 | `skillRanks` | no | How many Skill Ranks the race grants. Picked in the Progression tab, counted toward the Tier of Power rank cap, and treated as earned at Power Level 1. |
+| `subraces` | no | Variants of the race, as `{ "id", "name" }` entries. A race with none offers no subrace choice at all. |
 | `description` | no | Free text, shown as a tooltip. |
 
 Attribute keys: `agility`, `force`, `tenacity`, `scholarship`, `insight`, `magic`,
@@ -74,3 +75,16 @@ A race that focuses two Saving Throws lists both; each one gets the full bonus.
 ```json
 "savingThrow": ["cognitive", "impulsive"]
 ```
+
+## Subraces
+
+A race that comes in variants lists them, and the sheet offers the choice beside the
+race. No published race declares any yet, so the field is normally absent.
+
+```json
+"subraces": [
+  { "id": "half", "name": "Half-Saiyan" }
+]
+```
+
+A subrace is currently a label only: it does not change any of the race's numbers.

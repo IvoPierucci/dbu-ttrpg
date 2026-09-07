@@ -1,0 +1,61 @@
+{
+  "maneuvers": [
+    {
+      "id": "basic-attack",
+      "name": "Basic Attack",
+      "type": "standard",
+      "actionCost": 1,
+      "kiCost": 0,
+      "attacking": true,
+      "requiresTarget": true,
+      "profile": "any",
+      "source": "Core Rule",
+      "description": "Attack with any Profile. Strike against the target's Dodge; on a win, Wound less their Soak Value."
+    },
+    {
+      "id": "defend",
+      "name": "Defend",
+      "type": "counter",
+      "actionCost": 1,
+      "kiCost": 0,
+      "attacking": false,
+      "defend": true,
+      "source": "Core Rule",
+      "description": "Actively defend yourself against dangerous attacks. Played in response to an Attacking Maneuver; the effect chosen sets the Ki cost."
+    },
+    {
+      "id": "jump",
+      "name": "Jump",
+      "type": "standard",
+      "actionCost": 1,
+      "kiCost": 0,
+      "attacking": false,
+      "description": "Placeholder maneuver, used to exercise the action economy.",
+      "source": "Core Rule"
+    },
+    {
+      "id": "crouch",
+      "name": "Crouch",
+      "type": "instant",
+      "actionCost": 0,
+      "kiCost": 0,
+      "attacking": false,
+      "description": "Placeholder Instant maneuver, used to exercise responses.",
+      "source": "Core Rule"
+    },
+    {
+      "id": "thumb-war",
+      "name": "Thumb War",
+      "type": "standard",
+      "actionCost": 1,
+      "kiCost": 0,
+      "attacking": false,
+      "requiresTarget": true,
+      "clash": {
+        "skill": "bluff"
+      },
+      "source": "Core Rule",
+      "description": "Placeholder maneuver: a Skill Clash of Bluff against one target."
+    }
+  ]
+}

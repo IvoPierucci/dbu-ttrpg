@@ -1,34 +1,5 @@
 <div class="tab {{tabs.main.cssClass}}" data-group="primary" data-tab="main">
 
-  <!-- Resource pools. Only the current value is editable; both maximums are derived. -->
-  <section class="resources">
-    <div class="resource-card resource-life">
-      <label>Life Points</label>
-      <div class="resource-values">
-        <input type="number" name="system.life.value" value="{{system.life.value}}" min="0"/>
-        <span class="resource-sep">/</span>
-        <span class="computed-value">{{system.life.max}}</span>
-      </div>
-      <div class="meter"><div class="meter-fill" style="width: {{lifePercent}}%"></div></div>
-    </div>
-
-    <div class="resource-card resource-ki">
-      <label>Ki Points</label>
-      <div class="resource-values">
-        <input type="number" name="system.ki.value" value="{{system.ki.value}}" min="0"/>
-        <span class="resource-sep">/</span>
-        <span class="computed-value">{{system.ki.max}}</span>
-      </div>
-      <div class="meter"><div class="meter-fill" style="width: {{kiPercent}}%"></div></div>
-    </div>
-
-    <div class="resource-card resource-tp">
-      <label>Technique Points</label>
-      {{! Sum of every TP grant from Level 1 up to the current Power Level. }}
-      <div class="resource-values"><span class="computed-value headline">{{system.techniquePoints}}</span></div>
-    </div>
-  </section>
-
   <!-- Attributes. Score comes from the progression table; only Bonus is editable. -->
   <section class="panel">
     <h3 class="panel-title">

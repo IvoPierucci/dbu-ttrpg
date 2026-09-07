@@ -1,7 +1,8 @@
 import DBUCharacterData from "./data/actor-character.mjs";
 import DBUCharacterSheet from "./sheets/actor-character-sheet.mjs";
-import { registerChatHooks } from "./chat.mjs";
+import { registerChatHooks, registerManeuverSocket } from "./chat.mjs";
 import { loadRaces, racialAttributeIncrease, racialLifeModifier } from "./races.mjs";
+import { loadManeuvers } from "./maneuvers.mjs";
 
 Hooks.once("init", () => {
   console.log("DBU TTRPG | Initializing system");
@@ -26,7 +27,9 @@ Hooks.once("init", () => {
 // the time the files arrive; re-preparing afterwards settles any Life totals that
 // were computed with no Racial Life Modifier.
 Hooks.once("setup", async () => {
-  await loadRaces();
+  // game.socket is not available during init, so the listener is registered here.
+  registerManeuverSocket();
+  await Promise.all([loadRaces(), loadManeuvers()]);
   for (const actor of game.actors ?? []) actor.prepareData();
 });
 

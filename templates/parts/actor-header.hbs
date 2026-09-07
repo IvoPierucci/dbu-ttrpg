@@ -1,31 +1,60 @@
 <header class="sheet-header flexrow">
-  <img class="profile-img" src="{{actor.img}}" data-action="editImage" data-edit="img" title="{{actor.name}}" height="100" width="100"/>
+  <img class="profile-img" src="{{actor.img}}" data-action="editImage" data-edit="img"
+       title="{{actor.name}}" height="100" width="100"/>
+
   <div class="header-fields flexcol">
-    <input name="name" type="text" value="{{actor.name}}" placeholder="Character Name"/>
-    <div class="race-and-power flexrow">
-      <label>Race
-        <select name="system.race">
-          <option value=""></option>
-          {{#each raceOptions as |race|}}
-          <option value="{{race.value}}" {{#if race.selected}}selected{{/if}}
-                  data-tooltip="{{race.description}}">{{race.label}}</option>
-          {{/each}}
-        </select>
-      </label>
-      <label>Power Level
-        <input type="number" name="system.powerLevel" value="{{system.powerLevel}}" min="1" max="30"/>
-      </label>
-      <label data-tooltip="Base Tier of Power comes from Power Level. Breakthrough caps the current Tier at Base + 2.">Tier of Power
-        <span class="computed-value">{{system.tierOfPower}}
-          <span class="subvalue">base {{system.baseTierOfPower}}</span>
-        </span>
-      </label>
-      <label data-tooltip="Adjustment from Transformations and effects.">ToP Mod
-        <input type="number" name="system.tierOfPowerModifier" value="{{system.tierOfPowerModifier}}"/>
-      </label>
-      <label data-tooltip="Base Die result needed to crit. Effects can lower it to 7.">Crit Target
-        <input type="number" name="system.criticalTarget" value="{{system.criticalTarget}}" min="7" max="10"/>
-      </label>
+    <input class="character-name" name="name" type="text" value="{{actor.name}}" placeholder="Character Name"/>
+
+    {{! Everything here is read-only: these are chosen or derived in Progression. }}
+    <div class="header-traits">
+      <span class="header-field">
+        <em>Race</em>
+        <span class="computed-value">{{#if raceName}}{{raceName}}{{else}}&mdash;{{/if}}</span>
+      </span>
+
+      {{#if subraceName}}
+      <span class="header-field">
+        <em>Subrace</em>
+        <span class="computed-value">{{subraceName}}</span>
+      </span>
+      {{/if}}
+
+      <span class="header-field">
+        <em>Level</em>
+        <span class="computed-value">{{system.powerLevel}}</span>
+      </span>
+
+      <span class="header-field" data-tooltip="Base Tier of Power, from Power Level alone">
+        <em>BToP</em>
+        <span class="computed-value">{{system.baseTierOfPower}}</span>
+      </span>
+
+      <span class="header-field" data-tooltip="Current Tier of Power. Breakthrough caps it at BToP + 2.">
+        <em>ToP</em>
+        <span class="computed-value">{{system.tierOfPower}}</span>
+      </span>
+    </div>
+
+    <div class="header-pools">
+      <div class="resource-card resource-life">
+        <label>Life Points</label>
+        <div class="resource-values">
+          <input type="number" name="system.life.value" value="{{system.life.value}}" min="0"/>
+          <span class="resource-sep">/</span>
+          <span class="computed-value">{{system.life.max}}</span>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width: {{lifePercent}}%"></div></div>
+      </div>
+
+      <div class="resource-card resource-ki">
+        <label>Ki Points</label>
+        <div class="resource-values">
+          <input type="number" name="system.ki.value" value="{{system.ki.value}}" min="0"/>
+          <span class="resource-sep">/</span>
+          <span class="computed-value">{{system.ki.max}}</span>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width: {{kiPercent}}%"></div></div>
+      </div>
     </div>
   </div>
 </header>

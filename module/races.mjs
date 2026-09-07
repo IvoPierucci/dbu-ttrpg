@@ -51,6 +51,19 @@ export function exclusiveAttributeGroups(id) {
   return races.get(id)?.exclusiveAttributes ?? [];
 }
 
+/**
+ * The subraces a race defines, as { id, name } entries. Most define none, in which
+ * case the sheet offers no subrace at all.
+ */
+export function raceSubraces(id) {
+  return races.get(id)?.subraces ?? [];
+}
+
+/** The display name of a race's subrace, or "" when there is none. */
+export function subraceName(raceId, subraceId) {
+  return raceSubraces(raceId).find(subrace => subrace.id === subraceId)?.name ?? "";
+}
+
 /** How many Skill Ranks a race grants. */
 export function racialSkillRankCount(id) {
   return races.get(id)?.skillRanks ?? 0;

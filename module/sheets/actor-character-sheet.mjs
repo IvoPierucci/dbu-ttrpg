@@ -2,12 +2,22 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import DBUCharacterData from "../data/actor-character.mjs";
-import { checkCard } from "../chat.mjs";
+import { checkCard, evaluateCheck, postAttack, postManeuver, postSkillClash } from "../chat.mjs";
+import {
+  MANEUVER_TYPES,
+  allManeuvers,
+  declareAttack,
+  getManeuver,
+  maneuverKiCost,
+  spendManeuverCost
+} from "../maneuvers.mjs";
 import {
   exclusiveAttributeGroups,
   raceOptions,
+  raceSubraces,
   racialAttributeChoices,
-  racialSkillRankCount
+  racialSkillRankCount,
+  subraceName
 } from "../races.mjs";
 
 /**
@@ -29,6 +39,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollAttribute: DBUCharacterSheet._onAttributeRoll,
       dbuChangeTab: DBUCharacterSheet._onChangeTab,
       rollSkill: DBUCharacterSheet._onSkillRoll,
+      useManeuver: DBUCharacterSheet._onUseManeuver,
+      resetCapacity: DBUCharacterSheet._onResetCapacity,
+      toggleCombatEdit: DBUCharacterSheet._onToggleCombatEdit,
       editImage: DBUCharacterSheet._onEditImage
     },
     form: {
@@ -40,14 +53,23 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     header: { template: "systems/dbu-ttrpg/templates/parts/actor-header.hbs" },
     tabs: { template: "systems/dbu-ttrpg/templates/parts/actor-tabs.hbs" },
     main: { template: "systems/dbu-ttrpg/templates/parts/actor-main.hbs" },
+    combat: { template: "systems/dbu-ttrpg/templates/parts/actor-combat.hbs" },
     progression: { template: "systems/dbu-ttrpg/templates/parts/actor-progression.hbs" },
     biography: { template: "systems/dbu-ttrpg/templates/parts/actor-biography.hbs" }
   };
 
   tabGroups = { primary: "main" };
 
+  /**
+   * Whether the Combat tab's tracking values are unlocked. Deliberately not stored on
+   * the Actor: it is a guard against stray clicks during play, not a character trait,
+   * and it should lapse when the sheet is closed.
+   */
+  #combatEditMode = false;
+
   static TABS = {
     main: { id: "main", group: "primary", label: "Main" },
+    combat: { id: "combat", group: "primary", label: "Combat" },
     progression: { id: "progression", group: "primary", label: "Progression" },
     biography: { id: "biography", group: "primary", label: "Biography" }
   };
@@ -73,13 +95,56 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Bar widths, since Handlebars cannot divide.
     context.lifePercent = DBUCharacterSheet.#percentFull(this.actor.system.life);
     context.kiPercent = DBUCharacterSheet.#percentFull(this.actor.system.ki);
+    // Wound is per Foundation, so the labels come from the same config the values do.
+    context.woundRolls = Object.entries(DBUCharacterData.FOUNDATIONS).map(([key, foundation]) => ({
+      label: foundation.label,
+      value: this.actor.system.combat.wound[key]
+    }));
+
+    context.combatEditMode = this.#combatEditMode;
+
+    const { capacity } = this.actor.system;
+    context.capacityPercent = DBUCharacterSheet.#percentFull({
+      value: capacity.spent,
+      max: capacity.max
+    });
     context.skillGroups = this._prepareSkillGroups();
+    context.maneuvers = allManeuvers().map(maneuver => ({
+      ...maneuver,
+      typeLabel: MANEUVER_TYPES[maneuver.type].label,
+      // Instant and Out-of-Sequence Maneuvers spend no Action at all.
+      spendsAction: Boolean(MANEUVER_TYPES[maneuver.type].action),
+      // An Out-of-Sequence Maneuver is never used from here: it exists only as a
+      // chance granted by something that just happened, offered on that message.
+      usable: maneuver.type !== "outOfSequence"
+    }));
     context.racialSkillRanks = this._prepareRacialSkillRanks();
     context.racialAttributeChoices = this._prepareRacialAttributeChoices();
+    const { race, subrace } = this.actor.system;
     context.raceOptions = raceOptions().map(option => ({
       ...option,
-      selected: option.value === this.actor.system.race
+      selected: option.value === race
     }));
+    // Only the Character Creation Sizes are offered, plus whatever the character is
+    // already set to - an effect may have moved them somewhere not on that list, and
+    // rendering it as absent would silently drop it on the next save.
+    const { size } = this.actor.system;
+    context.sizeOptions = Object.entries(DBUCharacterData.SIZES)
+      .filter(([key, definition]) => definition.selectable || (key === size.key))
+      .map(([key, definition]) => ({
+        value: key,
+        label: definition.label,
+        selected: key === size.key
+      }));
+
+    context.raceName = raceOptions().find(option => option.value === race)?.label ?? "";
+    // Only races that define subraces offer the choice at all.
+    context.subraceOptions = raceSubraces(race).map(option => ({
+      value: option.id,
+      label: option.name,
+      selected: option.id === subrace
+    }));
+    context.subraceName = subraceName(race, subrace);
     return context;
   }
 
@@ -276,7 +341,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const key = target.dataset.attribute;
     const attribute = this.actor.system.attributes[key];
     const label = key.charAt(0).toUpperCase() + key.slice(1);
-    return this.#rollCheck({ bonus: attribute.mod, flavor: `${label} Check` });
+    // Not a Skill roll, so the critical uses the character's Critical Extra Dice.
+    return this.#rollCheck({
+      bonus: attribute.mod,
+      flavor: `${label} Check`,
+      criticalDice: this.actor.system.dice.critical.formula
+    });
   }
 
   /** Maximum attribute points a single "Attribute Addition" row may distribute. */
@@ -298,6 +368,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       }
     }
 
+    this.#bindActionTotals();
     this.#bindRange('input[name="system.powerLevel"]', 1, DBUCharacterData.MAX_POWER_LEVEL);
     // Clearing the field falls back to 10, not to the 7 minimum - an emptied field
     // must not hand out the best possible Critical Target.
@@ -307,6 +378,27 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       DBUCharacterData.CRITICAL_TARGET_DEFAULT,
       DBUCharacterData.CRITICAL_TARGET_DEFAULT
     );
+  }
+
+  /**
+   * Let the unlocked Combat tab set how many Actions a character has this round.
+   *
+   * What is stored is the modifier, not the total, since the total is derived - so a
+   * typed total is turned back into the adjustment that produces it.
+   */
+  #bindActionTotals() {
+    const bases = {
+      standard: DBUCharacterData.BASE_STANDARD_ACTIONS,
+      counter: DBUCharacterData.BASE_COUNTER_ACTIONS
+    };
+
+    for (const input of this.element.querySelectorAll("input[data-action-type]")) {
+      input.addEventListener("change", () => {
+        const type = input.dataset.actionType;
+        const total = Math.max(0, Math.floor(Number(input.value)) || 0);
+        this.actor.update({ [`system.actionModifiers.${type}`]: total - bases[type] });
+      });
+    }
   }
 
   /**
@@ -368,6 +460,81 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
   }
 
+  /** Unlock or re-lock the Combat tab's tracking values. */
+  static _onToggleCombatEdit() {
+    this.#combatEditMode = !this.#combatEditMode;
+    this.render();
+  }
+
+  /**
+   * Clear the Ki spent this Combat Round. Manual for now: the system has no notion of
+   * a round to reset it against.
+   */
+  static async _onResetCapacity() {
+    // Everything that only lasts a Combat Round clears together: Diminishing Defense
+    // goes at the start of a round and Diminishing Offense at the end, which between
+    // two rounds is the same moment.
+    return this.actor.update({
+      "system.capacity.spent": 0,
+      "system.attacksThisRound": 0,
+      "system.diminishingDefense": 0
+    });
+  }
+
+  /**
+   * Use a Maneuver: pay for it and announce it. A Standard Maneuver is announced as
+   * respondable, so other players can answer it with an Instant Maneuver.
+   */
+  static async _onUseManeuver(event, target) {
+    const maneuver = getManeuver(target.dataset.maneuver);
+    if (!maneuver) return;
+
+    // Resolve the target before paying for anything, so a maneuver that cannot be
+    // aimed does not cost Ki.
+    let targetActor = null;
+    if (maneuver.requiresTarget) {
+      targetActor = game.user.targets.first()?.actor ?? null;
+      if (!targetActor) {
+        ui.notifications.warn(`${maneuver.name} needs a target. Target a token first.`);
+        return;
+      }
+      if (targetActor.uuid === this.actor.uuid) {
+        ui.notifications.warn(`${maneuver.name} cannot target its own user.`);
+        return;
+      }
+    }
+
+    // The Profile and its Foundation are declared before anything is paid, since
+    // both choices can still be aborted - and the Profile is what sets the price.
+    let declared = null;
+    if (maneuver.profile) {
+      declared = await declareAttack(maneuver, DBUCharacterData.FOUNDATIONS, this.actor);
+      if (!declared) return;
+    }
+
+    if (!await spendManeuverCost(this.actor, maneuver, maneuverKiCost(maneuver, declared))) return;
+
+    await DBUCharacterSheet.#trackInstant(this.actor, maneuver.type);
+
+    if (maneuver.clash) return postSkillClash(this.actor, targetActor, maneuver);
+    if (declared) return postAttack(this.actor, targetActor, maneuver, declared);
+    return postManeuver(this.actor, maneuver);
+  }
+
+  /**
+   * Record whether this Maneuver leaves the character having just played an Instant.
+   *
+   * An Out-of-Sequence Maneuver deliberately leaves the flag alone: one played off
+   * the back of an Instant does not count as a Maneuver in its place, so it cannot
+   * launder an Instant into a legal follow-up.
+   */
+  static async #trackInstant(actor, type) {
+    if (type === "outOfSequence") return;
+    const wasInstant = type === "instant";
+    if (actor.system.lastManeuverWasInstant === wasInstant) return;
+    return actor.update({ "system.lastManeuverWasInstant": wasInstant });
+  }
+
   /**
    * Roll the Base Die plus a bonus and post it to chat.
    *
@@ -376,16 +543,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * its adjusted total in the flavor, and a critical is flagged for the chat hook,
    * which offers the extra die as a button on the message (see chat.mjs).
    */
-  async #rollCheck({ bonus, flavor }) {
-    const { BASE_DIE, BOTCH_PENALTY } = DBUCharacterData;
-
-    const roll = new Roll(`${BASE_DIE} + @bonus`, { bonus });
-    await roll.evaluate();
-
-    const natural = roll.dice[0]?.total;
-    const botch = natural === 1;
-    // The Critical Target never drops below 7, so a Botch can never also be a crit.
-    const critical = natural >= this.actor.system.criticalTarget;
+  async #rollCheck({ bonus, flavor, criticalDice }) {
+    const { BOTCH_PENALTY } = DBUCharacterData;
+    const { roll, botch, critical } = await evaluateCheck(this.actor, bonus);
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
 
@@ -407,7 +567,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       speaker,
       flavor: critical ? `${flavor} — Critical` : flavor,
       // Picked up by the chat hook, which offers the extra die as a button.
-      flags: { "dbu-ttrpg": { criticalPending: critical } }
+      flags: { "dbu-ttrpg": { criticalPending: critical, criticalDice } }
     });
   }
 
@@ -440,7 +600,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
     if (!confirmed) return;
 
-    return this.#rollCheck({ bonus: skill.bonus, flavor: `${name} Check` });
+    // A Skill's critical die is a flat 1d4: it does not grow with Tier of Power.
+    return this.#rollCheck({
+      bonus: skill.bonus,
+      flavor: `${name} Check`,
+      criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE
+    });
   }
 
   /**

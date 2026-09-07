@@ -1,0 +1,167 @@
+<div class="tab {{tabs.combat.cssClass}}" data-group="primary" data-tab="combat">
+
+  {{! These values are kept by hand during play, so they are locked until asked for:
+      a stray click should not quietly change what a character has left. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Turn State
+      <button type="button" class="edit-toggle {{#if combatEditMode}}active{{/if}}"
+              data-action="toggleCombatEdit"
+              data-tooltip="Unlock the turn state and action counts for editing">
+        {{#if combatEditMode}}Done{{else}}Edit{{/if}}
+      </button>
+    </h3>
+
+    <div class="turn-state">
+      <div class="stat"
+           data-tooltip="An Instant Maneuver cannot follow another Instant.">
+        <em>Last was Instant</em>
+        {{#if combatEditMode}}
+        <input type="checkbox" name="system.lastManeuverWasInstant"
+               {{#if system.lastManeuverWasInstant}}checked{{/if}}/>
+        {{else}}
+        <span>{{#if system.lastManeuverWasInstant}}Yes{{else}}No{{/if}}</span>
+        {{/if}}
+      </div>
+
+      {{! Nothing spends Actions yet: that needs a notion of the current round. }}
+      <div class="stat" data-tooltip="Standard Actions per Combat Round">
+        <em>Standard Actions</em>
+        {{#if combatEditMode}}
+        <input type="number" data-action-type="standard" value="{{system.actions.standard}}" min="0"/>
+        {{else}}
+        <span>{{system.actions.standard}}</span>
+        {{/if}}
+      </div>
+
+      <div class="stat" data-tooltip="Counter Actions per Combat Round">
+        <em>Counter Actions</em>
+        {{#if combatEditMode}}
+        <input type="number" data-action-type="counter" value="{{system.actions.counter}}" min="0"/>
+        {{else}}
+        <span>{{system.actions.counter}}</span>
+        {{/if}}
+      </div>
+
+      {{! Wear accrued within a Combat Round. Both clear when the round turns over. }}
+      <div class="stat"
+           data-tooltip="Attacking Maneuvers made this round. Each one after the third costs a stack, and each stack reduces your Strike Rolls by 1(bT).">
+        <em>Attacks this round</em>
+        {{#if combatEditMode}}
+        <input type="number" name="system.attacksThisRound" value="{{system.attacksThisRound}}" min="0"/>
+        {{else}}
+        <span>{{system.attacksThisRound}}</span>
+        {{/if}}
+        <i class="stat-note">Dim. Offense {{system.diminishing.offense.stacks}} &middot; Strike -{{system.diminishing.offense.penalty}}</i>
+      </div>
+
+      <div class="stat"
+           data-tooltip="Each stack reduces your Dodge Rolls by 1. Gained per Attacking Maneuver aimed at you, unless you use the Defend Maneuver.">
+        <em>Dim. Defense</em>
+        {{#if combatEditMode}}
+        <input type="number" name="system.diminishingDefense" value="{{system.diminishingDefense}}" min="0"/>
+        {{else}}
+        <span>{{system.diminishingDefense}}</span>
+        {{/if}}
+        <i class="stat-note">Dodge -{{system.diminishing.defense.penalty}} &middot; +{{system.diminishing.defense.perAttack}} per attack</i>
+      </div>
+    </div>
+  </section>
+
+  <!-- Values used only in combat. -->
+  <section class="panel">
+    <h3 class="panel-title">
+      Combat Rolls
+      {{! Tier of Power Extra Dice ride on every one of these. }}
+      <span class="panel-note">Rolled as 1d10{{#if system.dice.extra.formula}} + {{system.dice.extra.formula}}{{/if}} + the value</span>
+    </h3>
+    <div class="stat-grid">
+      <div class="stat" data-tooltip="Haste + Awareness"><em>Strike</em><span>{{system.combat.strike}}</span></div>
+      <div class="stat" data-tooltip="Defense Value"><em>Dodge</em><span>{{system.combat.dodge}}</span></div>
+      {{! Wound uses the Damage Attribute, which depends on the attack's Foundation. }}
+      {{#each woundRolls as |wound|}}
+      <div class="stat" data-tooltip="Damage Attribute for {{wound.label}} attacks">
+        <em>Wound &middot; {{wound.label}}</em>
+        <span>{{wound.value}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </section>
+
+  <!-- Dice that ride alongside the Base Die. -->
+  <section class="panel">
+    <h3 class="panel-title">
+      Dice
+      <span class="panel-note">Base Die: 1d10</span>
+    </h3>
+    <div class="stat-grid">
+      <div class="stat" data-tooltip="Rolled alongside the Base Die. Grows with Tier of Power.">
+        <em>Extra Dice</em>
+        <span>{{#if system.dice.extra.formula}}{{system.dice.extra.formula}}{{else}}&mdash;{{/if}}</span>
+      </div>
+      <div class="stat" data-tooltip="Extra Dice granted by effects, one Category above the Tier of Power Extra Dice.">
+        <em>Greater Dice</em>
+        <span>{{system.dice.greater.formula}}</span>
+      </div>
+      <div class="stat" data-tooltip="Added on a critical. Skill rolls always use a flat 1d4 instead.">
+        <em>Critical Dice</em>
+        <span>{{system.dice.critical.formula}}</span>
+      </div>
+      <div class="stat" data-tooltip="Most Dice Categories an Extra Dice may be raised by: Base Tier of Power + 1. Energy Charges are exempt.">
+        <em>Max Category Increase</em>
+        <span>{{system.dice.maxCategoryIncrease}}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- The most Ki that may be spent within one Combat Round. -->
+  <section class="panel">
+    <h3 class="panel-title">
+      Capacity
+      <span class="panel-note">Ki spendable per Combat Round</span>
+    </h3>
+    <div class="capacity">
+      <div class="resource-card resource-capacity">
+        <label>Spent this round</label>
+        <div class="resource-values">
+          <span class="computed-value">{{system.capacity.spent}}</span>
+          <span class="resource-sep">/</span>
+          <span class="computed-value">{{system.capacity.max}}</span>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width: {{capacityPercent}}%"></div></div>
+      </div>
+      <button type="button" data-action="resetCapacity" class="capacity-reset"
+              data-tooltip="Clear the Ki spent, the attacks made, and all Diminishing stacks">New round</button>
+      <span class="capacity-note">{{system.capacity.remaining}} left this round</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">Maneuvers</h3>
+    {{#if maneuvers.length}}
+    <ul class="maneuver-list">
+      {{#each maneuvers as |maneuver|}}
+      <li class="maneuver">
+        {{#if maneuver.usable}}
+        <button type="button" class="maneuver-name rollable" data-action="useManeuver"
+                data-maneuver="{{maneuver.id}}" data-tooltip="{{maneuver.description}}">{{maneuver.name}}</button>
+        {{else}}
+        {{! Out-of-Sequence: only ever played from the message that granted it. }}
+        <span class="maneuver-name maneuver-triggered"
+              data-tooltip="Only usable when an effect grants it">{{maneuver.name}}</span>
+        {{/if}}
+        <span class="maneuver-source">{{maneuver.source}}</span>
+        <span class="maneuver-type">{{maneuver.typeLabel}}</span>
+        <span class="maneuver-cost">
+          {{#if maneuver.spendsAction}}{{maneuver.actionCost}} action{{else}}&mdash;{{/if}}
+        </span>
+        <span class="maneuver-cost">{{maneuver.kiCost}} KP</span>
+      </li>
+      {{/each}}
+    </ul>
+    {{else}}
+    <p class="tab-placeholder">No maneuvers loaded.</p>
+    {{/if}}
+  </section>
+
+</div>

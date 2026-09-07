@@ -1,5 +1,58 @@
 <div class="tab {{tabs.progression.cssClass}}" data-group="primary" data-tab="progression">
 
+  <!-- Everything the character is built from. The header only reports these. -->
+  <section class="panel">
+    <h3 class="panel-title">Character</h3>
+    <div class="character-fields">
+      <label>Race
+        <select name="system.race">
+          <option value=""></option>
+          {{#each raceOptions as |race|}}
+          <option value="{{race.value}}" {{#if race.selected}}selected{{/if}}
+                  data-tooltip="{{race.description}}">{{race.label}}</option>
+          {{/each}}
+        </select>
+      </label>
+
+      {{#if subraceOptions.length}}
+      <label>Subrace
+        <select name="system.subrace">
+          <option value=""></option>
+          {{#each subraceOptions as |subrace|}}
+          <option value="{{subrace.value}}" {{#if subrace.selected}}selected{{/if}}>{{subrace.label}}</option>
+          {{/each}}
+        </select>
+      </label>
+      {{/if}}
+
+      <label data-tooltip="Larger is tougher, smaller is harder to hit. Both scale with Tier of Power.">Size
+        <select name="system.size">
+          {{#each sizeOptions as |size|}}
+          <option value="{{size.value}}" {{#if size.selected}}selected{{/if}}>{{size.label}}</option>
+          {{/each}}
+        </select>
+      </label>
+
+      <label>Power Level
+        <input type="number" name="system.powerLevel" value="{{system.powerLevel}}" min="1" max="30"/>
+      </label>
+
+      <label data-tooltip="Adjustment from Transformations and effects. Breakthrough caps the result at BToP + 2.">ToP Mod
+        <input type="number" name="system.tierOfPowerModifier" value="{{system.tierOfPowerModifier}}"/>
+      </label>
+
+      <label data-tooltip="Base Die result needed to crit. Effects can lower it to 7.">Crit Target
+        <input type="number" name="system.criticalTarget" value="{{system.criticalTarget}}" min="7" max="10"/>
+      </label>
+
+      {{! Sum of every TP grant from Level 1 up to the current Power Level. }}
+      <span class="character-readout" data-tooltip="Total granted up to your Power Level">
+        <em>Technique Points</em>
+        <span class="computed-value headline">{{system.techniquePoints}}</span>
+      </span>
+    </div>
+  </section>
+
   <!-- Where the table's Attribute columns and the Aptitudes they feed end up. -->
   <section class="progression-summary">
     <div class="stat-grid scores">

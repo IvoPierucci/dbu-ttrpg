@@ -1,6 +1,12 @@
 const { fields } = foundry.data;
 
 import {
+  categoryFormula,
+  greaterDiceCategory,
+  maxCategoryIncrease,
+  tierExtraDiceCategory
+} from "../dice.mjs";
+import {
   racialAttributeChoices,
   racialAttributeIncrease,
   racialLifeModifier,
@@ -125,8 +131,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   /** A natural 1 is a Botch: this much is subtracted from the result. */
   static BOTCH_PENALTY = 2;
 
-  /** A critical adds one die of this size to the result, whatever the Tier of Power. */
-  static CRITICAL_DIE_FACES = 4;
+  /**
+   * A critical on a Skill roll always adds a flat 1d4. Every other roll uses the
+   * character's Critical Extra Dice, which grow with the Tier of Power.
+   */
+  static SKILL_CRITICAL_DIE = "1d4";
 
   /**
    * A roll crits when the Base Die meets or beats the Critical Target. It starts at 10
@@ -144,6 +153,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     insight: "IN",
     magic: "MA",
     personality: "PE"
+  });
+
+  /**
+   * Skills that care how big you are. Being larger makes you harder to hide and easier
+   * to take seriously, so the same step counts against one and for the other.
+   */
+  static SIZE_SKILL_ADJUSTMENTS = Object.freeze({
+    stealth: -1,
+    intimidation: 1
   });
 
   /** Each Skill Rank adds this much to the Skill's bonus. */
@@ -182,6 +200,73 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     }
     return true;
   }
+
+  /** Capacity: 20 at Power Level 1, plus 4 for every Level above it. */
+  static BASE_CAPACITY = 20;
+  static CAPACITY_PER_LEVEL = 4;
+
+  /**
+   * The three Foundations an attack can have, and the Attribute each one draws its
+   * Damage Attribute from. Physical and Energy both use Force; Magic uses Magic.
+   */
+  static FOUNDATIONS = Object.freeze({
+    physical: { label: "Physical", attribute: "force" },
+    energy: { label: "Energy", attribute: "force" },
+    magic: { label: "Magic", attribute: "magic" }
+  });
+
+  /** Attacking Maneuvers in a Combat Round that cost nothing before stacks begin. */
+  static FREE_ATTACKS_PER_ROUND = 3;
+
+  /**
+   * Stacks of Diminishing Defense gained per Attacking Maneuver aimed at you: one at
+   * Base Tier of Power 1-2, and one more for every two Tiers after that.
+   */
+  static diminishingDefensePerAttack(baseTierOfPower) {
+    return Math.floor((baseTierOfPower + 1) / 2);
+  }
+
+  /**
+   * Size Categories, smallest first. Defense Value and Soak move in opposite
+   * directions - the smaller you are the harder you are to hit, the larger you are the
+   * more you shrug off - and both scale with Tier of Power, hence the (T) notation.
+   *
+   * Only Small, Medium and Large may be chosen at Character Creation; the rest exist
+   * because effects and Traits can move a character into them.
+   */
+  static SIZES = Object.freeze({
+    nano:     { label: "Nano",     meleeRange: 0, speed: -6, defensePerTier: 3,  soakPerTier: -3, squares: "1" },
+    tiny:     { label: "Tiny",     meleeRange: 0, speed: -3, defensePerTier: 2,  soakPerTier: -2, squares: "1" },
+    small:    { label: "Small",    meleeRange: 0, speed: 0,  defensePerTier: 1,  soakPerTier: -1, squares: "1", selectable: true },
+    medium:   { label: "Medium",   meleeRange: 0, speed: 0,  defensePerTier: 0,  soakPerTier: 0,  squares: "1", selectable: true },
+    large:    { label: "Large",    meleeRange: 0, speed: 0,  defensePerTier: -1, soakPerTier: 1,  squares: "1", selectable: true },
+    enormous: { label: "Enormous", meleeRange: 1, speed: 3,  defensePerTier: -2, soakPerTier: 2,  squares: "2x2" },
+    gigantic: { label: "Gigantic", meleeRange: 3, speed: 6,  defensePerTier: -3, soakPerTier: 3,  squares: "4x4" },
+    colossal: { label: "Colossal", meleeRange: 6, speed: 10, defensePerTier: -5, soakPerTier: 5,  squares: "7x7" }
+  });
+
+  /** The Size everything else is measured against. */
+  static DEFAULT_SIZE = "medium";
+
+  /** No Size penalty may take an Aptitude below this. */
+  static SIZE_APTITUDE_FLOOR = 2;
+
+  /**
+   * Apply a Size modifier to an Aptitude.
+   *
+   * A penalty stops at 2 - and that floor beats the general minimums elsewhere, being
+   * the more specific rule. It can only ever reduce, though: an Aptitude already below
+   * 2 is left where it is rather than being raised up to the floor.
+   */
+  static applySizeModifier(value, modifier) {
+    if (modifier >= 0) return value + modifier;
+    const floor = Math.min(value, DBUCharacterData.SIZE_APTITUDE_FLOOR);
+    return Math.max(floor, value + modifier);
+  }
+
+  /** Actions a character has each Combat Round before any effect alters them. */
+  static BASE_STANDARD_ACTIONS = 3;
+  static BASE_COUNTER_ACTIONS = 1;
 
   /** Breakthrough: the current Tier of Power may exceed the Base Tier by at most this. */
   static BREAKTHROUGH_LIMIT = 2;
@@ -316,6 +401,58 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       { required: true, initial: [] }
     );
 
+    // --- Capacity ---
+    // The most Ki a character may spend in a single Combat Round. Only what has been
+    // spent is stored; the ceiling itself is derived from Power Level.
+    schema.capacity = new fields.SchemaField({
+      spent: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+    });
+
+    // --- Instant Maneuver tracking ---
+    // An Instant Maneuver cannot follow another Instant within the same turn, so what
+    // matters is only whether the last Maneuver was one. Kept editable: turns are not
+    // tracked, so the table needs to be able to correct it.
+    schema.lastManeuverWasInstant = new fields.BooleanField({ required: true, initial: false });
+
+    // --- Diminishing Offense and Defense ---
+    // Both are per-Combat-Round wear: attacking repeatedly blunts your Strike, and
+    // being attacked repeatedly blunts your Dodge. Only the counts are stored; what
+    // they cost is derived.
+    schema.attacksThisRound = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
+    schema.diminishingDefense = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
+
+    // --- Roll modifiers ---
+    // Bonuses that attach to a roll rather than to the value behind it. Kept apart
+    // from the Attribute-derived values because effects that halve one of those - Cross
+    // Counter halving the Defense Value - must not halve these along with it.
+    schema.rollModifiers = new fields.SchemaField({
+      dodge: new fields.NumberField({ required: true, integer: true, initial: 0 })
+    });
+
+    // --- Dice modifiers ---
+    // Effects that raise a die's Dice Category write here. Declared now so they have
+    // somewhere to go; at 0 they change nothing.
+    schema.diceModifiers = new fields.SchemaField({
+      criticalCategory: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+    });
+
+    // --- Capacity modifiers ---
+    // Effects raise Capacity either by adding to it or by scaling it. Declared here
+    // so they have somewhere to write once effects exist; the flat bonus starts at 0
+    // and the multiplier at 1, so neither changes anything until something sets them.
+    schema.capacityModifiers = new fields.SchemaField({
+      flat: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      multiplier: new fields.NumberField({ required: true, initial: 1, min: 0 })
+    });
+
+    // --- Action economy modifiers ---
+    // Signed adjustments to the Actions available each Combat Round. Effects grant or
+    // remove Actions; declared here so they have somewhere to write once they exist.
+    schema.actionModifiers = new fields.SchemaField({
+      standard: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      counter: new fields.NumberField({ required: true, integer: true, initial: 0 })
+    });
+
     // --- Tier of Power modifier ---
     // Signed adjustment to the Base Tier of Power. Transformations and effects raise
     // or lower it; Breakthrough caps how far up it can go (see prepareDerivedData).
@@ -355,6 +492,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // --- Biographical / descriptive fields ---
     // The id of a race defined under races/. Blank until one is chosen.
     schema.race = new fields.StringField({ required: true, blank: true, initial: "" });
+
+    // Size Category. Chosen at Character Creation from the selectable ones; effects
+    // can move a character to any of them.
+    schema.size = new fields.StringField({
+      required: true, blank: false, initial: DBUCharacterData.DEFAULT_SIZE
+    });
+
+    // The id of a subrace, for races that define any. Blank otherwise.
+    schema.subrace = new fields.StringField({ required: true, blank: true, initial: "" });
     schema.biography = new fields.HTMLField({ required: true, blank: true, initial: "" });
 
     // --- Character Progression ---
@@ -475,6 +621,24 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       Math.max(1, this.baseTierOfPower + this.tierOfPowerModifier)
     );
 
+    // --- Size ---
+    // Its modifiers are written in (T), so they grow with the Tier of Power. `steps`
+    // is how far from Medium the character is, which is what the Skill adjustments and
+    // every relative-size rule are counted in.
+    const size = DBUCharacterData.SIZES[this.size] ?? DBUCharacterData.SIZES[DBUCharacterData.DEFAULT_SIZE];
+    const sizeKeys = Object.keys(DBUCharacterData.SIZES);
+
+    this.size = {
+      key: this.size,
+      label: size.label,
+      meleeRange: size.meleeRange,
+      squares: size.squares,
+      steps: sizeKeys.indexOf(this.size) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
+      defenseModifier: size.defensePerTier * this.tierOfPower,
+      soakModifier: size.soakPerTier * this.tierOfPower,
+      speedModifier: size.speed
+    };
+
     // TP is never entered by hand - each row's grant is derived from its option.
     for (const entry of this.progression) {
       entry.technique = DBUCharacterData.techniquePointsFor(entry);
@@ -512,12 +676,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     this.skills = Object.fromEntries(Object.entries(DBUCharacterData.SKILLS).map(([key, skill]) => {
       const ranks = rankSlots.filter(slot => slot === key).length;
+      // One step per Size Category away from Medium, in whichever direction the Skill
+      // is affected.
+      const sizeAdjustment = (DBUCharacterData.SIZE_SKILL_ADJUSTMENTS[key] ?? 0) * this.size.steps;
+
       return [key, {
         ...skill,
         key,
         ranks,
+        sizeAdjustment,
         // Skill Bonus is the governing Attribute's Score plus 2 per Rank.
-        bonus: atts[skill.attribute].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks),
+        bonus: atts[skill.attribute].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment,
         specialization: skill.encompassing ? this.skillSpecializations[key] : "",
         // A Required Skill with no Ranks cannot be rolled at all - it always fails.
         untrained: Boolean(skill.required) && (ranks === 0),
@@ -539,16 +708,32 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       kiPerLevelBonus: this.transformationBonuses.kiPerLevel
     });
 
+    // Capacity: the ceiling on Ki spent within one Combat Round. Flat bonuses land
+    // before the multiplier, so a doubling effect doubles them too.
+    const baseCapacity = DBUCharacterData.BASE_CAPACITY
+      + (DBUCharacterData.CAPACITY_PER_LEVEL * (this.powerLevel - 1))
+      + this.capacityModifiers.flat;
+
+    this.capacity.max = Math.max(0, Math.floor(baseCapacity * this.capacityModifiers.multiplier));
+    this.capacity.remaining = Math.max(0, this.capacity.max - this.capacity.spent);
+
+    // Actions available each Combat Round. An effect can take Actions away, but never
+    // past zero.
+    this.actions = {
+      standard: Math.max(0, DBUCharacterData.BASE_STANDARD_ACTIONS + this.actionModifiers.standard),
+      counter: Math.max(0, DBUCharacterData.BASE_COUNTER_ACTIONS + this.actionModifiers.counter)
+    };
+
     // Haste: 1/2 Agility Modifier, added to Strike Rolls.
     this.haste = Math.floor(atts.agility.mod / 2);
 
-    // Defense Value: equal to Agility Modifier.
-    this.defenseValue = atts.agility.mod;
+    // Defense Value: equal to Agility Modifier, then adjusted for Size.
+    this.defenseValue = DBUCharacterData.applySizeModifier(atts.agility.mod, this.size.defenseModifier);
 
     // Speed: Normal = 2 + (1/2 Agility Mod); Boosted = Agility Mod + 2.
     this.speed = {
-      normal: 2 + Math.floor(atts.agility.mod / 2),
-      boosted: atts.agility.mod + 2
+      normal: 2 + Math.floor(atts.agility.mod / 2) + this.size.speedModifier,
+      boosted: atts.agility.mod + 2 + this.size.speedModifier
     };
 
     // Initiative bonus: 1/2 Agility Score.
@@ -561,7 +746,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // for themselves never falls below their Tier of Power. External effects can
     // reduce the result further, down to a floor of 0 - nothing writes such a penalty
     // yet, so in practice only the Tier of Power minimum applies today.
-    const ownSoak = Math.max(atts.tenacity.mod, this.tierOfPower);
+    const ownSoak = DBUCharacterData.applySizeModifier(
+      Math.max(atts.tenacity.mod, this.tierOfPower),
+      this.size.soakModifier
+    );
     this.soakValue = Math.max(0, ownSoak + this.externalModifiers.soak);
 
     // Surgency: increases the Life/Ki Points regained through a Surge.
@@ -569,6 +757,59 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // Awareness: Insight Modifier, added to Strike Rolls.
     this.awareness = atts.insight.mod;
+
+    // --- Dice ---
+    // Extra Dice ride alongside the Base Die and grow with the Tier of Power. The
+    // ceiling on raising them uses the BASE Tier, so a Breakthrough does not widen
+    // how far an effect may push them.
+    const extraCategory = tierExtraDiceCategory(this.tierOfPower);
+    const greaterCategory = greaterDiceCategory(this.tierOfPower);
+
+    // Critical Extra Dice: a d4 at Tier 1, one Category higher per Tier above that.
+    // An effect can push them further, but no further than the shared ceiling.
+    const increaseLimit = maxCategoryIncrease(this.baseTierOfPower);
+    const criticalCategory = greaterDiceCategory(this.tierOfPower)
+      + Math.min(this.diceModifiers.criticalCategory, increaseLimit);
+
+    this.dice = {
+      extra: { category: extraCategory, formula: categoryFormula(extraCategory) },
+      greater: { category: greaterCategory, formula: categoryFormula(greaterCategory) },
+      critical: { category: criticalCategory, formula: categoryFormula(criticalCategory) },
+      maxCategoryIncrease: increaseLimit
+    };
+
+    // --- Diminishing Offense and Defense ---
+    // Offense only begins once the round's free attacks are used up, and each stack
+    // costs 1(bT) - so it bites harder the stronger you are. Defense is a flat 1 per
+    // stack, but you gain more of them per attack as your Base Tier rises.
+    const offenseStacks = Math.max(0, this.attacksThisRound - DBUCharacterData.FREE_ATTACKS_PER_ROUND);
+
+    this.diminishing = {
+      offense: {
+        stacks: offenseStacks,
+        penalty: offenseStacks * this.baseTierOfPower
+      },
+      defense: {
+        stacks: this.diminishingDefense,
+        perAttack: DBUCharacterData.diminishingDefensePerAttack(this.baseTierOfPower),
+        penalty: this.diminishingDefense
+      }
+    };
+
+    // --- Combat Rolls ---
+    // Only used in combat. Wound depends on the attack's Foundation, since that is
+    // what decides which Attribute is the Damage Attribute.
+    this.combat = {
+      strike: this.haste + this.awareness,
+      // The whole Dodge Roll. Its Defense Value component stays reachable on its own,
+      // since that is the part an effect can halve.
+      dodge: this.defenseValue + this.rollModifiers.dodge,
+      wound: Object.fromEntries(
+        Object.entries(DBUCharacterData.FOUNDATIONS)
+          .map(([key, foundation]) => [key, atts[foundation.attribute].mod])
+      )
+    };
+
 
     // Saving Throws: tied to Attribute Score (not Modifier) per the rules. The race's
     // focused Saving Throw gains +1(bT) - which does not grow with a Breakthrough,
