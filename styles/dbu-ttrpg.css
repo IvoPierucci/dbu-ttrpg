@@ -734,6 +734,19 @@
   border-radius: 3px;
 }
 
+.dbu-ttrpg .trait-arm {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0 8px;
+  line-height: 18px;
+  font-size: 10px;
+}
+
+.dbu-ttrpg .trait-arm.active {
+  border-color: var(--dbu-accent);
+  color: var(--dbu-accent);
+}
+
 .dbu-ttrpg .trait-control {
   flex: 0 0 auto;
   width: 18px;

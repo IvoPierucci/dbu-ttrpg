@@ -17,12 +17,32 @@ export default class DBUTalentData extends foundry.abstract.TypeDataModel {
 
       effects: new fields.ArrayField(
         new fields.SchemaField({
-          // Which rule this hooks into, e.g. "defendOptionCost" or "soakWhenDefending".
+          // Which rule this hooks into, e.g. "soak" or "attackKiCost".
           key: new fields.StringField({ required: true, blank: true, initial: "" }),
-          // Argument for rules that name one, such as which Defend option is affected.
+          // Arguments for the rules that name something: a Defend option, one
+          // Attribute, or the pair of Attributes a rule plays off each other.
           option: new fields.StringField({ required: true, blank: true, initial: "" }),
-          // The "x(T)" part: how much per Tier of Power, negative to reduce.
+          attribute: new fields.StringField({ required: true, blank: true, initial: "" }),
+          attributes: new fields.ArrayField(
+            new fields.StringField({ required: true, blank: false }),
+            { required: true, initial: [] }
+          ),
+          // A plain amount, for the effects written without a (T) or (bT).
+          flat: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+          // The "x(T)" and "x(bT)" parts. Negative reduces.
           perTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+          perBaseTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+          // The "1d10(T)" form: this many of that die per Tier of Power.
+          dicePerTier: new fields.StringField({ required: true, blank: true, initial: "" }),
+          // Forced value for the rules that set one, such as a Base Die's result.
+          value: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+          // How often a triggered effect may be used. Absent means no limit.
+          limits: new fields.SchemaField({
+            round: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null }),
+            encounter: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null })
+          }),
+          // When the passive applies at all. Empty means always.
+          condition: new fields.ObjectField({ required: true, initial: {} }),
           text: new fields.StringField({ required: true, blank: true, initial: "" })
         }),
         { required: true, initial: [] }

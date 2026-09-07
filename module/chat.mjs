@@ -1,5 +1,5 @@
 import DBUCharacterData from "./data/actor-character.mjs";
-import { talentEffects } from "./talents.mjs";
+import { armedEffect, talentEffects } from "./talents.mjs";
 import {
   DAMAGE_CATEGORIES,
   DEFEND_OPTIONS,
@@ -75,6 +75,7 @@ export function registerManeuverSocket() {
     else if (request?.type === "cancel") applyCancel(request.messageId, request.actorUuid);
     else if (request?.type === "clash") applyClash(request.messageId, request.clash);
     else if (request?.type === "attack") applyAttack(request.messageId, request.attack);
+    else if (request?.type === "actor") applyActorUpdate(request.actorUuid, request.changes);
     else if (request?.type === "settle") applySettle(request.messageId, request.stage);
     else if (request?.type === "offer") applyOffer(request.messageId, request.offer);
     else if (request?.type === "offerTaken") applyOfferTaken(request.messageId, request.actorUuid);
@@ -119,6 +120,33 @@ async function applySettle(messageId, stage) {
   const message = game.messages.get(messageId);
   if (!message) return;
   await message.setFlag(SCOPE, SETTLE_STAGE_FLAG, stage);
+}
+
+async function applyActorUpdate(actorUuid, changes) {
+  const actor = fromUuidSync(actorUuid);
+  return actor?.update(changes);
+}
+
+/**
+ * Change an Actor we may not own.
+ *
+ * A Combat Roll is resolved by whichever client is settling the exchange, which is
+ * often not the one that owns the character rolling - so spending a triggered effect
+ * has to be relayed the same way a message edit is.
+ */
+function requestActorUpdate(actor, changes) {
+  if (actor.isOwner) return actor.update(changes);
+  if (!game.users.activeGM) return;
+  game.socket.emit(CHANNEL, { type: "actor", actorUuid: actor.uuid, changes });
+}
+
+/** Record one use of a triggered effect, and disarm it. */
+function spendTriggeredEffect(actor, effect) {
+  return requestActorUpdate(actor, {
+    "system.talentUses.round": [...actor.system.talentUses.round, effect.talentId],
+    "system.talentUses.encounter": [...actor.system.talentUses.encounter, effect.talentId],
+    "system.armedTalents": actor.system.armedTalents.filter(id => id !== effect.talentId)
+  });
 }
 
 /** Write a resolved attack back onto its message. */
@@ -494,20 +522,40 @@ const ATTACK_FLAG = "attack";
  * button: the two sides are compared against each other, so a total that might still
  * grow is not yet a result. Both outcomes are therefore applied here and now.
  */
-async function rollSide(actor, modifiers, { extraDice = "", criticalDice } = {}) {
+async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false } = {}) {
   // A single netted number cannot be taken apart again, so what went into it is kept
   // as labelled parts and only summed for the roll itself.
   const parts = (typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers;
   const bonus = parts.reduce((sum, part) => sum + part.value, 0);
 
-  const { roll, botch, critical } = await evaluateCheck(actor, bonus, extraDice);
+  const evaluated = await evaluateCheck(actor, bonus, extraDice);
+  const { roll } = evaluated;
+  let { natural, botch, critical } = evaluated;
 
   let total = roll.total;
   let outcome = "";
 
+  // A Talent can set the Base Die's Natural Result instead of rolling it. The die is
+  // still rolled - Foundry cannot make one land on a chosen face - so what it came up
+  // with is taken back out of the total and the forced result put in its place.
+  const forced = combatRoll ? armedEffect(actor, "forceNaturalResult") : null;
+  if (forced) {
+    total += forced.value - natural;
+    natural = forced.value;
+
+    // The Talent states the result outright: setting the Base Die this way scores a
+    // Critical. Not left to the comparison against the Critical Target, which happens
+    // to agree today only because that target can never exceed 10 - if something ever
+    // raised it, the guarantee would quietly stop holding.
+    botch = false;
+    critical = true;
+
+    spendTriggeredEffect(actor, forced);
+  }
+
   // How it was reached is written down here, while the dice are still in hand.
   const dice = roll.dice.map(die => `${die.expression} ${die.total}`).join(" + ");
-  const segments = [dice];
+  const segments = [forced ? `${dice}  |  Base Die set to ${forced.value}` : dice];
 
   const describe = (entries) => entries
     .map(entry => `${entry.label} ${Math.abs(entry.value)}`)
@@ -757,7 +805,7 @@ async function takeOutOfSequence(message, actor, offer) {
   }
 
   // An Out-of-Sequence Maneuver ignores its Action Cost, but not its Ki cost.
-  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, declared))) return;
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, declared, actor))) return;
 
   requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
 
@@ -899,11 +947,13 @@ async function resolveAttack(message, target, attack, defense = "dodge", defence
   const options = {
     attacker: {
       extraDice: attacker.system.dice.extra.formula,
-      criticalDice: attacker.system.dice.critical.formula
+      criticalDice: attacker.system.dice.critical.formula,
+      combatRoll: true
     },
     target: {
       extraDice: target.system.dice.extra.formula,
-      criticalDice: target.system.dice.critical.formula
+      criticalDice: target.system.dice.critical.formula,
+      combatRoll: true
     }
   };
 
@@ -913,7 +963,7 @@ async function resolveAttack(message, target, attack, defense = "dodge", defence
     { label: "Strike", value: attacker.system.combat.strike },
     { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty },
     ...thresholdPenalty(attacker)
-  ], options.attacker);
+  ], { ...options.attacker, combatRoll: true });
 
   // What the defender answers the Strike with, and whether they answer at all.
   const defence = DEFENCES[defense];
@@ -990,7 +1040,8 @@ async function rollAttackWound(message, attack) {
     ...thresholdPenalty(attacker)
   ], {
     extraDice: attacker.system.dice.extra.formula,
-    criticalDice: attacker.system.dice.critical.formula
+    criticalDice: attacker.system.dice.critical.formula,
+    combatRoll: true
   });
 
   // Power Flare answers the Wound Roll rather than the Strike Roll, immediately after
@@ -1001,7 +1052,8 @@ async function rollAttackWound(message, attack) {
         { label: "Ki Wager", value: attack.defenceWager ?? 0 }
       ], {
         extraDice: target.system.dice.extra.formula,
-        criticalDice: target.system.dice.critical.formula
+        criticalDice: target.system.dice.critical.formula,
+        combatRoll: true
       })
     : null;
 
@@ -1176,7 +1228,17 @@ export async function takeSurge(actor, { source = "Surge" } = {}) {
 
   if (kind === "healing") {
     const dice = DBUCharacterData.HEALING_SURGE_DICE_PER_TIER * actor.system.tierOfPower;
-    const roll = new Roll(`${dice}d10 + @surgency`, { surgency });
+
+    // A Talent can add dice of its own, written as "1d10(T)" - that many of that die
+    // per Tier of Power, alongside the Surge's own.
+    const extra = talentEffects(actor, "healingSurgeDice")
+      .map(effect => {
+        const [count, faces] = effect.dicePerTier.split("d");
+        return `${Number(count) * actor.system.tierOfPower}d${faces}`;
+      });
+
+    const formula = [`${dice}d10`, ...extra, "@surgency"].join(" + ");
+    const roll = new Roll(formula, { surgency });
     await roll.evaluate();
 
     const { value, max } = actor.system.life;

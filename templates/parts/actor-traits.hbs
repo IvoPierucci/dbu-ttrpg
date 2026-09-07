@@ -15,26 +15,37 @@
 
     {{#if talents.length}}
     <ul class="trait-list">
-      {{#each talents as |talent|}}
-      <li class="trait" data-item-id="{{talent.id}}" draggable="true">
+      {{#each talents as |entry|}}
+      <li class="trait" data-item-id="{{entry.item.id}}" draggable="true">
         <div class="trait-head">
-          <img class="trait-img" src="{{talent.img}}" height="20" width="20"/>
-          <span class="trait-name">{{talent.name}}</span>
-          {{#if talent.system.prerequisites}}
-          <span class="trait-prereq">Requires {{talent.system.prerequisites}}</span>
+          <img class="trait-img" src="{{entry.item.img}}" height="20" width="20"/>
+          <span class="trait-name">{{entry.item.name}}</span>
+          {{#if entry.item.system.prerequisites}}
+          <span class="trait-prereq">Requires {{entry.item.system.prerequisites}}</span>
           {{/if}}
-          <button type="button" class="trait-control" data-action="editItem" data-item-id="{{talent.id}}"
+
+          {{! Only the talents with an effect that is spent can be armed. }}
+          {{#if entry.triggered}}
+          <button type="button" class="trait-arm {{#if entry.triggered.armed}}active{{/if}}"
+                  data-action="armTalent" data-item-id="{{entry.item.id}}"
+                  {{#unless entry.triggered.available}}disabled{{/unless}}
+                  data-tooltip="Use on the next Combat Roll. {{entry.triggered.round}} left this round, {{entry.triggered.encounter}} this encounter.">
+            {{#if entry.triggered.armed}}Armed{{else}}Arm{{/if}}
+          </button>
+          {{/if}}
+
+          <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
                   data-tooltip="Edit this talent">&#9998;</button>
-          <button type="button" class="trait-control" data-action="deleteItem" data-item-id="{{talent.id}}"
+          <button type="button" class="trait-control" data-action="deleteItem" data-item-id="{{entry.item.id}}"
                   data-tooltip="Remove from this character">&times;</button>
         </div>
 
-        {{#if talent.system.description}}
-        <div class="trait-description">{{{talent.system.description}}}</div>
+        {{#if entry.item.system.description}}
+        <div class="trait-description">{{{entry.item.system.description}}}</div>
         {{/if}}
 
         <ol class="trait-effects">
-          {{#each talent.system.effects as |effect|}}
+          {{#each entry.item.system.effects as |effect|}}
           <li>{{effect.text}}</li>
           {{/each}}
         </ol>

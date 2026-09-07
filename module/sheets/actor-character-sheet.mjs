@@ -2,7 +2,7 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import DBUCharacterData from "../data/actor-character.mjs";
-import { importCoreTalents, ownedTalents } from "../talents.mjs";
+import { importCoreTalents, ownedTalents, usesLeft } from "../talents.mjs";
 import {
   checkCard,
   evaluateCheck,
@@ -57,6 +57,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       resetEncounter: DBUCharacterSheet._onResetEncounter,
       steadfastCheck: DBUCharacterSheet._onSteadfastCheck,
       importTalents: DBUCharacterSheet._onImportTalents,
+      armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
       deleteItem: DBUCharacterSheet._onDeleteItem,
       toggleCombatEdit: DBUCharacterSheet._onToggleCombatEdit,
@@ -165,7 +166,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.threshold = this.actor.system.threshold;
     // Only what the character actually holds; a talent whose definition is missing is
     // dropped rather than shown as a blank row.
-    context.talents = ownedTalents(this.actor);
+    context.talents = ownedTalents(this.actor).map(item => {
+      // A talent is armable when it has an effect that is used rather than simply had.
+      const triggered = item.system.effects.find(effect => effect.limits?.round || effect.limits?.encounter);
+      return {
+        item,
+        triggered: triggered && {
+          ...usesLeft(this.actor, { ...triggered, talentId: item.id }),
+          armed: this.actor.system.armedTalents.includes(item.id)
+        }
+      };
+    });
     context.isGM = game.user.isGM;
 
     const { capacity } = this.actor.system;
@@ -572,6 +583,21 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return importCoreTalents();
   }
 
+  /**
+   * Arm or disarm a triggered talent effect for the next Combat Roll.
+   *
+   * Armed ahead of the roll rather than offered during it: the client that resolves an
+   * exchange is often not the one that owns the character rolling, so there is no
+   * moment mid-roll at which the owner could be asked.
+   */
+  static async _onArmTalent(event, target) {
+    const id = target.dataset.itemId;
+    const armed = this.actor.system.armedTalents;
+    return this.actor.update({
+      "system.armedTalents": armed.includes(id) ? armed.filter(other => other !== id) : [...armed, id]
+    });
+  }
+
   /** Open an owned Item's own sheet. */
   static _onEditItem(event, target) {
     this.actor.items.get(target.dataset.itemId)?.sheet.render(true);
@@ -599,7 +625,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.actor.update({
       "system.capacity.spent": 0,
       "system.attacksThisRound": 0,
-      "system.diminishingDefense": 0
+      "system.diminishingDefense": 0,
+      "system.talentUses.round": []
     });
   }
 
@@ -640,7 +667,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   /** Clear what only refreshes between Combat Encounters. */
   static async _onResetEncounter() {
-    return this.actor.update({ "system.usedManeuvers": [] });
+    return this.actor.update({
+      "system.usedManeuvers": [],
+      "system.talentUses.encounter": [],
+      "system.armedTalents": []
+    });
   }
 
   /**
@@ -698,7 +729,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       if (!declared) return;
     }
 
-    if (!await spendManeuverCost(this.actor, maneuver, maneuverKiCost(maneuver, declared))) return;
+    if (!await spendManeuverCost(this.actor, maneuver, maneuverKiCost(maneuver, declared, this.actor))) return;
 
     await recordManeuverUse(this.actor, maneuver);
     await DBUCharacterSheet.#trackInstant(this.actor, maneuver.type);

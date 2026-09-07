@@ -1,5 +1,6 @@
 const { fields } = foundry.data;
 
+import { talentBonus, talentEffects } from "../talents.mjs";
 import {
   categoryFormula,
   greaterDiceCategory,
@@ -474,6 +475,22 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       )
     );
 
+    // --- Triggered talent effects ---
+    // `armedTalents` holds the ones set to fire on the next roll. Arming is a step of
+    // its own because the client that rolls is not always the one that owns the
+    // character - a defender resolves the attacker's Strike, and cannot be asked in
+    // the middle of it whether the attacker wants to spend something.
+    schema.armedTalents = new fields.ArrayField(
+      new fields.StringField({ required: true, blank: false }),
+      { required: true, initial: [] }
+    );
+
+    // One entry per use, so an effect allowed several times can be counted.
+    schema.talentUses = new fields.SchemaField({
+      round: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { initial: [] }),
+      encounter: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { initial: [] })
+    });
+
     // --- Maneuver uses ---
     // One entry per use of a Maneuver that is limited per Encounter, so a Maneuver
     // allowed more than once can be counted rather than merely flagged.
@@ -729,8 +746,37 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         this.progression, key, this.powerLevel,
         DBUCharacterData.racialIncreaseFor(this.race, this.racialAttributeChoices, key)
       );
+    }
+
+    // Attribute Score cap for the current Tier of Power: 8 at ToP 1, +3 per tier after.
+    // The published table only lists ToP 1-5 (8/11/14/17/20); the formula holds beyond
+    // that, so ToP 6 and 7 are 23 and 26. Informational only - nothing enforces it yet,
+    // except where a Talent is explicitly bounded by it.
+    this.attributeScoreCap = 8 + (this.tierOfPower - 1) * 3;
+
+    // Talents can add to an Attribute's Modifier. Worked out from the Scores, so every
+    // Score has to be settled before any of them is read.
+    const talentMods = Object.fromEntries(Object.keys(atts).map(key => [key, 0]));
+
+    // A pair of Attributes each lending the other its Score. The bonus is bounded so
+    // that it and the Score together stay within the Attribute Score Limit.
+    for (const effect of talentEffects(this.parent, "mirrorAttributeModifiers")) {
+      const [first, second] = effect.attributes;
+      const lend = (to, from) => {
+        talentMods[to] += Math.max(0, Math.min(atts[from].score, this.attributeScoreCap - atts[to].score));
+      };
+      lend(first, second);
+      lend(second, first);
+    }
+
+    for (const effect of talentEffects(this.parent, "attributeModifier")) {
+      talentMods[effect.attribute] += (effect.perTier * this.tierOfPower)
+        + (effect.perBaseTier * this.baseTierOfPower);
+    }
+
+    for (const key of Object.keys(atts)) {
       // Modifier defaults to the Score, adjusted by any Bonus from effects/Transformations.
-      atts[key].mod = atts[key].score + atts[key].bonus;
+      atts[key].mod = atts[key].score + atts[key].bonus + talentMods[key];
     }
 
     // --- Skills ---
@@ -819,8 +865,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Initiative bonus: 1/2 Agility Score.
     this.initiativeBonus = Math.floor(atts.agility.score / 2);
 
-    // Might: higher of Force / Magic Modifier.
-    this.might = Math.max(atts.force.mod, atts.magic.mod);
+    // Might: higher of Force / Magic Modifier. Some Talents raise it alongside the
+    // Wound Rolls it feeds.
+    const woundAndMight = talentBonus(this.parent, "woundAndMight");
+    this.might = Math.max(atts.force.mod, atts.magic.mod) + woundAndMight;
 
     // Soak Value: the Tenacity Modifier, except that the Soak a character provides
     // for themselves never falls below their Tier of Power. External effects can
@@ -829,7 +877,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const ownSoak = DBUCharacterData.applySizeModifier(
       Math.max(atts.tenacity.mod, this.tierOfPower),
       this.size.soakModifier
-    );
+    ) + talentBonus(this.parent, "soak");
     this.soakValue = Math.max(0, ownSoak + this.externalModifiers.soak);
 
     // Surgency: increases the Life/Ki Points regained through a Surge.
@@ -903,8 +951,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     };
 
     // Stress Bonus stands in for a rule not implemented yet; each Steadfast failure
-    // takes 1 off it.
-    this.stressBonus = (this.powerLevel + 1) - failures;
+    // takes 1 off it, and a Talent can raise it.
+    this.stressBonus = (this.powerLevel + 1) - failures + talentBonus(this.parent, "stressBonus");
 
     // --- Combat Rolls ---
     // Only used in combat. Wound depends on the attack's Foundation, since that is
@@ -916,7 +964,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       dodge: this.defenseValue + this.rollModifiers.dodge,
       wound: Object.fromEntries(
         Object.entries(DBUCharacterData.FOUNDATIONS)
-          .map(([key, foundation]) => [key, atts[foundation.attribute].mod])
+          .map(([key, foundation]) => [key, atts[foundation.attribute].mod + woundAndMight])
       )
     };
 
@@ -944,9 +992,5 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       }];
     }));
 
-    // Attribute Score cap for the current Tier of Power: 8 at ToP 1, +3 per tier after.
-    // The published table only lists ToP 1-5 (8/11/14/17/20); the formula holds beyond
-    // that, so ToP 6 and 7 are 23 and 26. Informational only - nothing enforces it yet.
-    this.attributeScoreCap = 8 + (this.tierOfPower - 1) * 3;
   }
 }

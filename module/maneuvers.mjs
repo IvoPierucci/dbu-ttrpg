@@ -1,4 +1,4 @@
-import { talentEffects } from "./talents.mjs";
+import { talentBonus, talentEffects } from "./talents.mjs";
 
 /**
  * Maneuvers: anything that spends an Action.
@@ -405,11 +405,16 @@ async function pickProfile(maneuver, foundations, actor) {
 }
 
 /** What a Maneuver costs in Ki once its declared Profile is taken into account. */
-export function maneuverKiCost(maneuver, declared) {
+export function maneuverKiCost(maneuver, declared, actor) {
   if (!declared) return maneuver.kiCost ?? 0;
+
   // The wager is Ki spent on the attack like any other, so it is paid here - which is
-  // also what takes it out of Capacity.
-  return (maneuver.kiCost ?? 0) + PROFILES[declared.profile].kiCost + (declared.kiWager ?? 0);
+  // also what takes it out of Capacity. A Talent that cheapens Attacking Maneuvers
+  // discounts the Maneuver, never the wager: the wager is what you chose to spend.
+  const base = (maneuver.kiCost ?? 0) + PROFILES[declared.profile].kiCost;
+  const discount = (actor && maneuver.attacking) ? talentBonus(actor, "attackKiCost") : 0;
+
+  return Math.max(0, base + discount) + (declared.kiWager ?? 0);
 }
 
 /**
