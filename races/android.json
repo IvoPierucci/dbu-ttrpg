@@ -1,0 +1,12 @@
+{
+  "id": "android",
+  "name": "Android",
+  "lifeModifier": 4,
+  "attributeIncrease": {
+    "force": 2,
+    "tenacity": 2,
+    "insight": 1
+  },
+  "savingThrow": "cognitive",
+  "skillRanks": 3
+}

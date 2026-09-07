@@ -1,0 +1,5 @@
+<nav class="sheet-tabs tabs" data-group="primary">
+  {{#each tabs as |tab id|}}
+  <a class="item {{tab.cssClass}}" data-action="dbuChangeTab" data-tab="{{tab.id}}" data-group="primary">{{tab.label}}</a>
+  {{/each}}
+</nav>

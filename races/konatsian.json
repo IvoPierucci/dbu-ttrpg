@@ -1,0 +1,12 @@
+{
+  "id": "konatsian",
+  "name": "Konatsian",
+  "lifeModifier": 3,
+  "attributeIncrease": {
+    "insight": 2,
+    "personality": 2,
+    "agility": 1
+  },
+  "savingThrow": "morale",
+  "skillRanks": 3
+}

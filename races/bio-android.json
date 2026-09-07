@@ -1,0 +1,27 @@
+{
+  "id": "bio-android",
+  "name": "Bio Android",
+  "lifeModifier": 3,
+  "attributeChoices": [
+    {
+      "amount": 2,
+      "options": "any"
+    },
+    {
+      "amount": 2,
+      "options": "any"
+    },
+    {
+      "amount": 1,
+      "options": "any"
+    }
+  ],
+  "exclusiveAttributes": [
+    [
+      "force",
+      "magic"
+    ]
+  ],
+  "savingThrow": "corporeal",
+  "skillRanks": 3
+}

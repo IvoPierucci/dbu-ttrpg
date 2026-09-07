@@ -1,0 +1,23 @@
+{
+  "id": "shinjin",
+  "name": "Shinjin",
+  "lifeModifier": 4,
+  "attributeIncrease": {
+    "insight": 2
+  },
+  "attributeChoices": [
+    {
+      "amount": 2,
+      "options": [
+        "force",
+        "magic"
+      ]
+    },
+    {
+      "amount": 1,
+      "options": "any"
+    }
+  ],
+  "savingThrow": "cognitive",
+  "skillRanks": 2
+}

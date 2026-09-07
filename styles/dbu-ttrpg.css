@@ -1,0 +1,586 @@
+/* ==========================================================================
+   DBU TTRPG character sheet
+   ========================================================================== */
+
+.dbu-ttrpg {
+  --dbu-text: #e8e8e8;
+  --dbu-text-dim: #a8a8a8;
+  --dbu-panel: #1e1e1e;
+  --dbu-panel-raised: #272727;
+  --dbu-border: #4a4a4a;
+  --dbu-border-strong: #8a8a8a;
+  --dbu-accent: #f5a623;
+  --dbu-life: #c0392b;
+  --dbu-ki: #2e86de;
+
+  color: var(--dbu-text);
+}
+
+.dbu-ttrpg label,
+.dbu-ttrpg h3 {
+  color: var(--dbu-text);
+}
+
+/* Values derived in prepareDerivedData(); never editable. */
+.dbu-ttrpg .computed-value {
+  font-weight: bold;
+}
+
+.dbu-ttrpg .computed-value.headline {
+  font-size: 22px;
+  color: var(--dbu-accent);
+}
+
+/* --- Tabs -----------------------------------------------------------------
+   ApplicationV2#changeTab toggles the .active class on click, so the class -
+   not the `hidden` attribute - must drive visibility, otherwise clicking a tab
+   has no visible effect. */
+.dbu-ttrpg .tab {
+  display: none;
+}
+
+/* The header, the tab nav and the active tab stack vertically; the tab takes the
+   remaining height and scrolls inside itself, so a long tab does not overflow the
+   window. `min-height: 0` is what actually lets a flex child shrink enough to
+   scroll - without it the content forces the item to its full height. */
+.dbu-ttrpg .window-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dbu-ttrpg .sheet-header,
+.dbu-ttrpg .sheet-tabs {
+  flex: 0 0 auto;
+}
+
+.dbu-ttrpg .tab.active {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* --- Header ---------------------------------------------------------------- */
+
+/* The portrait opens a FilePicker via the editImage action. */
+.dbu-ttrpg .profile-img {
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.dbu-ttrpg .race-and-power {
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.dbu-ttrpg .race-and-power label {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  color: var(--dbu-text-dim);
+  gap: 2px;
+}
+
+.dbu-ttrpg .subvalue {
+  margin-left: 3px;
+  font-size: 9px;
+  font-weight: normal;
+  color: var(--dbu-text-dim);
+}
+
+/* --- Panels ---------------------------------------------------------------- */
+
+.dbu-ttrpg .panel {
+  margin-bottom: 12px;
+}
+
+.dbu-ttrpg .panel-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--dbu-border);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dbu-ttrpg .panel-note {
+  font-size: 10px;
+  font-weight: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--dbu-text-dim);
+}
+
+/* --- Resource pools -------------------------------------------------------- */
+
+.dbu-ttrpg .resources {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.7fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dbu-ttrpg .resource-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+  background: var(--dbu-panel);
+}
+
+.dbu-ttrpg .resource-card > label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .resource-values {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 15px;
+}
+
+.dbu-ttrpg .resource-sep {
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .meter {
+  height: 5px;
+  border-radius: 3px;
+  background: #000;
+  overflow: hidden;
+}
+
+.dbu-ttrpg .meter-fill {
+  height: 100%;
+  transition: width 0.2s ease;
+}
+
+.dbu-ttrpg .resource-life .meter-fill {
+  background: var(--dbu-life);
+}
+
+.dbu-ttrpg .resource-ki .meter-fill {
+  background: var(--dbu-ki);
+}
+
+.dbu-ttrpg .resource-tp {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* --- Attributes ------------------------------------------------------------ */
+
+.dbu-ttrpg .attributes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 6px;
+}
+
+.dbu-ttrpg .attribute-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 4px;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+  background: var(--dbu-panel);
+}
+
+.dbu-ttrpg .attribute-name {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  line-height: 1.2;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dbu-text-dim);
+  cursor: pointer;
+}
+
+.dbu-ttrpg .attribute-name:hover {
+  color: var(--dbu-accent);
+  text-shadow: none;
+}
+
+.dbu-ttrpg .attribute-mod {
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+.dbu-ttrpg .attribute-detail {
+  display: flex;
+  gap: 6px;
+}
+
+.dbu-ttrpg .attribute-detail .field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.dbu-ttrpg .attribute-detail em {
+  font-style: normal;
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .attribute-detail input[type="number"] {
+  width: 34px;
+  height: 18px;
+  text-align: center;
+}
+
+/* --- Derived stat tiles ---------------------------------------------------- */
+
+.dbu-ttrpg .stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 6px;
+}
+
+.dbu-ttrpg .stat-grid.saves {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.dbu-ttrpg .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+  background: var(--dbu-panel);
+}
+
+.dbu-ttrpg .stat em {
+  font-style: normal;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--dbu-text-dim);
+  text-align: center;
+}
+
+.dbu-ttrpg .stat span {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* --- Skills ---------------------------------------------------------------- */
+
+.dbu-ttrpg .skill-group {
+  margin-bottom: 8px;
+}
+
+.dbu-ttrpg .skill-group-title {
+  margin: 0 0 3px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .skill-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 2px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbu-ttrpg .skill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--dbu-border);
+}
+
+.dbu-ttrpg .skill-name {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dbu-ttrpg .skill-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A Skill name that can be rolled. Styled flat so it reads as text, not a control. */
+.dbu-ttrpg button.skill-label {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  line-height: inherit;
+  font-size: inherit;
+  text-align: left;
+  color: var(--dbu-text);
+  cursor: pointer;
+}
+
+.dbu-ttrpg button.skill-label:hover {
+  color: var(--dbu-accent);
+  text-shadow: none;
+}
+
+/* Marks a Required Skill: unusable until it has at least one Rank. */
+.dbu-ttrpg .skill-flag {
+  padding: 0 3px;
+  border: 1px solid var(--dbu-border-strong);
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: bold;
+  color: var(--dbu-text-dim);
+  cursor: help;
+}
+
+.dbu-ttrpg .skill-specialization {
+  flex: 0 1 90px;
+  height: 18px;
+  font-size: 10px;
+  font-style: italic;
+}
+
+.dbu-ttrpg .skill-ranks {
+  flex: 0 0 16px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .skill-bonus {
+  flex: 0 0 28px;
+  text-align: right;
+  font-weight: bold;
+}
+
+/* A Required Skill with no Ranks always fails, so it is greyed out. */
+.dbu-ttrpg .skill-untrained {
+  opacity: 0.5;
+}
+
+.dbu-ttrpg .skill-untrained .skill-bonus {
+  text-decoration: line-through;
+}
+
+/* More Ranks than the Tier of Power allows. */
+.dbu-ttrpg .skill-over-cap .skill-ranks {
+  color: var(--dbu-life);
+  font-weight: bold;
+}
+
+/* --- Progression summary ---------------------------------------------------
+   The Attribute Scores and the Aptitudes drawn from them, sitting above the table
+   whose columns produce them. */
+
+.dbu-ttrpg .progression-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 8px;
+}
+
+.dbu-ttrpg .progression-summary .stat-grid {
+  flex: 1 1 auto;
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+}
+
+/* Score tiles line up with the table's Attribute columns, so keep them narrow. */
+.dbu-ttrpg .progression-summary .stat-grid.scores {
+  flex: 2 1 auto;
+}
+
+.dbu-ttrpg .racial-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.dbu-ttrpg .racial-row-label {
+  flex: 0 0 110px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .racial-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dbu-ttrpg .racial-choice {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.dbu-ttrpg .racial-choice em {
+  font-style: normal;
+  font-weight: bold;
+  font-size: 11px;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .racial-slots select {
+  flex: 0 1 auto;
+  min-width: 80px;
+  background: var(--dbu-panel-raised);
+  color: #f0f0f0;
+  border: 1px solid #555;
+}
+
+/* The Saving Throw the race focuses: better bonus, easier crit. */
+.dbu-ttrpg .stat-racial {
+  border-color: var(--dbu-accent);
+}
+
+/* --- Progression table ----------------------------------------------------- */
+
+.dbu-ttrpg .progression-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: #f0f0f0;
+  background: var(--dbu-panel);
+}
+
+.dbu-ttrpg .progression-table th,
+.dbu-ttrpg .progression-table td {
+  border: 1px solid #666;
+  padding: 2px 4px;
+  text-align: center;
+  color: #f0f0f0;
+}
+
+.dbu-ttrpg .progression-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #333;
+}
+
+.dbu-ttrpg .progression-table .level-cell {
+  font-weight: bold;
+}
+
+.dbu-ttrpg .progression-table input[type="number"],
+.dbu-ttrpg .progression-table input[type="text"],
+.dbu-ttrpg .progression-table select {
+  background: var(--dbu-panel-raised);
+  color: #f0f0f0;
+  border: 1px solid #555;
+}
+
+.dbu-ttrpg .progression-table input[type="number"] {
+  width: 36px;
+}
+
+.dbu-ttrpg .progression-table select {
+  width: 100%;
+  min-width: 130px;
+}
+
+.dbu-ttrpg .progression-table .locked-choice {
+  color: #bbb;
+  font-style: italic;
+}
+
+/* An attribute cell whose row budget is fully spent cannot be raised further. */
+.dbu-ttrpg .progression-table .attr-input[max="0"] {
+  opacity: 0.5;
+}
+
+/* Six rank slots share one cell, so keep them compact and let them wrap. */
+.dbu-ttrpg .progression-table .skill-ranks-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+}
+
+.dbu-ttrpg .progression-table .skill-ranks-cell select {
+  flex: 1 1 40%;
+  min-width: 44px;
+}
+
+.dbu-ttrpg .progression-table .talent-cell select {
+  min-width: 70px;
+}
+
+/* One Power Level spans several rows; rule off where a new one begins. */
+.dbu-ttrpg .progression-table tr.level-start td {
+  border-top: 2px solid var(--dbu-border-strong);
+}
+
+/* Levels the character has not reached yet: shown for planning, but they do not
+   contribute to the Technique Points total. */
+.dbu-ttrpg .progression-table tr.unreached {
+  opacity: 0.45;
+}
+
+/* --- Chat cards -----------------------------------------------------------
+   These live in the chat log, outside the sheet, so they are not scoped to
+   .dbu-ttrpg. */
+
+.dbu-crit-button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.dbu-check {
+  text-align: center;
+}
+
+.dbu-check-parts {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.dbu-check-total {
+  font-size: 30px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+.dbu-check-total.dbu-critical {
+  color: #f5a623;
+}
+
+.dbu-check-total.dbu-botch {
+  color: #c0392b;
+}

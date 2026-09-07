@@ -1,0 +1,35 @@
+{
+  "id": "dbu-ttrpg",
+  "title": "DBU TTRPG",
+  "description": "An unofficial Foundry VTT implementation of the Dragon Ball Universe Tabletop RPG (dbu-rpg.com).",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14",
+    "maximum": "14"
+  },
+  "authors": [
+    { "name": "Your Name" }
+  ],
+  "esmodules": ["module/dbu-ttrpg.mjs"],
+  "styles": ["styles/dbu-ttrpg.css"],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "documentTypes": {
+    "Actor": {
+      "character": {}
+    },
+    "Item": {
+      "item": {}
+    }
+  },
+  "primaryTokenAttribute": "life",
+  "url": "",
+  "manifest": "",
+  "download": ""
+}

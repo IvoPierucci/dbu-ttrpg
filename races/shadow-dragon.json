@@ -1,0 +1,20 @@
+{
+  "id": "shadow-dragon",
+  "name": "Shadow Dragon",
+  "lifeModifier": 7,
+  "attributeIncrease": {
+    "tenacity": 2,
+    "personality": 1
+  },
+  "attributeChoices": [
+    {
+      "amount": 2,
+      "options": [
+        "force",
+        "magic"
+      ]
+    }
+  ],
+  "savingThrow": "morale",
+  "skillRanks": 2
+}

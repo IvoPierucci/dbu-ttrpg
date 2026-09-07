@@ -1,0 +1,31 @@
+<header class="sheet-header flexrow">
+  <img class="profile-img" src="{{actor.img}}" data-action="editImage" data-edit="img" title="{{actor.name}}" height="100" width="100"/>
+  <div class="header-fields flexcol">
+    <input name="name" type="text" value="{{actor.name}}" placeholder="Character Name"/>
+    <div class="race-and-power flexrow">
+      <label>Race
+        <select name="system.race">
+          <option value=""></option>
+          {{#each raceOptions as |race|}}
+          <option value="{{race.value}}" {{#if race.selected}}selected{{/if}}
+                  data-tooltip="{{race.description}}">{{race.label}}</option>
+          {{/each}}
+        </select>
+      </label>
+      <label>Power Level
+        <input type="number" name="system.powerLevel" value="{{system.powerLevel}}" min="1" max="30"/>
+      </label>
+      <label data-tooltip="Base Tier of Power comes from Power Level. Breakthrough caps the current Tier at Base + 2.">Tier of Power
+        <span class="computed-value">{{system.tierOfPower}}
+          <span class="subvalue">base {{system.baseTierOfPower}}</span>
+        </span>
+      </label>
+      <label data-tooltip="Adjustment from Transformations and effects.">ToP Mod
+        <input type="number" name="system.tierOfPowerModifier" value="{{system.tierOfPowerModifier}}"/>
+      </label>
+      <label data-tooltip="Base Die result needed to crit. Effects can lower it to 7.">Crit Target
+        <input type="number" name="system.criticalTarget" value="{{system.criticalTarget}}" min="7" max="10"/>
+      </label>
+    </div>
+  </div>
+</header>

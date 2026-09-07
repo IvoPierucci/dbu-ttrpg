@@ -1,0 +1,20 @@
+{
+  "id": "namekian",
+  "name": "Namekian",
+  "lifeModifier": 5,
+  "attributeIncrease": {
+    "tenacity": 2,
+    "insight": 2
+  },
+  "attributeChoices": [
+    {
+      "amount": 1,
+      "options": [
+        "force",
+        "magic"
+      ]
+    }
+  ],
+  "savingThrow": "corporeal",
+  "skillRanks": 3
+}

@@ -1,0 +1,12 @@
+{
+  "id": "angel",
+  "name": "Angel",
+  "lifeModifier": 4,
+  "attributeIncrease": {
+    "insight": 2,
+    "agility": 2,
+    "tenacity": 1
+  },
+  "savingThrow": "impulsive",
+  "skillRanks": 6
+}

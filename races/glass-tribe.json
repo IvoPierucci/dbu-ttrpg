@@ -1,0 +1,20 @@
+{
+  "id": "glass-tribe",
+  "name": "Glass Tribe",
+  "lifeModifier": 2,
+  "attributeIncrease": {
+    "insight": 2,
+    "tenacity": 2
+  },
+  "attributeChoices": [
+    {
+      "amount": 1,
+      "options": [
+        "force",
+        "magic"
+      ]
+    }
+  ],
+  "savingThrow": "corporeal",
+  "skillRanks": 4
+}

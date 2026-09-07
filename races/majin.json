@@ -1,0 +1,20 @@
+{
+  "id": "majin",
+  "name": "Majin",
+  "lifeModifier": 3,
+  "attributeIncrease": {
+    "personality": 2,
+    "tenacity": 1
+  },
+  "attributeChoices": [
+    {
+      "amount": 2,
+      "options": [
+        "force",
+        "magic"
+      ]
+    }
+  ],
+  "savingThrow": "morale",
+  "skillRanks": 2
+}

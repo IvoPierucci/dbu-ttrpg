@@ -1,0 +1,26 @@
+{
+  "id": "earthling",
+  "name": "Earthling",
+  "lifeModifier": 4,
+  "attributeIncrease": {
+    "insight": 2
+  },
+  "attributeChoices": [
+    {
+      "amount": 2,
+      "options": [
+        "agility",
+        "tenacity"
+      ]
+    },
+    {
+      "amount": 1,
+      "options": [
+        "scholarship",
+        "personality"
+      ]
+    }
+  ],
+  "savingThrow": "morale",
+  "skillRanks": 4
+}

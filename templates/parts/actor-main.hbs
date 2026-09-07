@@ -1,0 +1,119 @@
+<div class="tab {{tabs.main.cssClass}}" data-group="primary" data-tab="main">
+
+  <!-- Resource pools. Only the current value is editable; both maximums are derived. -->
+  <section class="resources">
+    <div class="resource-card resource-life">
+      <label>Life Points</label>
+      <div class="resource-values">
+        <input type="number" name="system.life.value" value="{{system.life.value}}" min="0"/>
+        <span class="resource-sep">/</span>
+        <span class="computed-value">{{system.life.max}}</span>
+      </div>
+      <div class="meter"><div class="meter-fill" style="width: {{lifePercent}}%"></div></div>
+    </div>
+
+    <div class="resource-card resource-ki">
+      <label>Ki Points</label>
+      <div class="resource-values">
+        <input type="number" name="system.ki.value" value="{{system.ki.value}}" min="0"/>
+        <span class="resource-sep">/</span>
+        <span class="computed-value">{{system.ki.max}}</span>
+      </div>
+      <div class="meter"><div class="meter-fill" style="width: {{kiPercent}}%"></div></div>
+    </div>
+
+    <div class="resource-card resource-tp">
+      <label>Technique Points</label>
+      {{! Sum of every TP grant from Level 1 up to the current Power Level. }}
+      <div class="resource-values"><span class="computed-value headline">{{system.techniquePoints}}</span></div>
+    </div>
+  </section>
+
+  <!-- Attributes. Score comes from the progression table; only Bonus is editable. -->
+  <section class="panel">
+    <h3 class="panel-title">
+      Attributes
+      <span class="panel-note">Score cap at ToP {{system.tierOfPower}}: {{system.attributeScoreCap}}</span>
+    </h3>
+    <div class="attributes-grid">
+      {{#each system.attributes as |attribute key|}}
+      <div class="attribute-card">
+        <button type="button" class="attribute-name" data-action="rollAttribute" data-attribute="{{key}}"
+                data-tooltip="Roll 1d10 + Modifier">{{key}}</button>
+        <div class="attribute-mod">{{attribute.mod}}</div>
+        <div class="attribute-detail">
+          <label class="field">
+            <em>Bonus</em>
+            <input type="number" name="system.attributes.{{key}}.bonus" value="{{attribute.bonus}}"/>
+          </label>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </section>
+
+  <!-- Aptitudes, all derived from the Attribute Modifiers/Scores. -->
+  <section class="panel">
+    <h3 class="panel-title">Aptitudes</h3>
+    <div class="stat-grid">
+      <div class="stat"><em>Might</em><span>{{system.might}}</span></div>
+      <div class="stat"><em>Surgency</em><span>{{system.surgency}}</span></div>
+      <div class="stat"><em>Soak Value</em><span>{{system.soakValue}}</span></div>
+      <div class="stat"><em>Initiative</em><span>{{system.initiativeBonus}}</span></div>
+      <div class="stat"><em>Speed</em><span>{{system.speed.normal}}</span></div>
+      <div class="stat"><em>Speed (Boosted)</em><span>{{system.speed.boosted}}</span></div>
+    </div>
+  </section>
+
+  <!-- Skills. Ranks come from the Skill Improvement rows in the Progression tab. -->
+  <section class="panel">
+    <h3 class="panel-title">
+      Skills
+      <span class="panel-note">Bonus = Attribute Score + 2 per Rank &middot; Rank cap: {{system.skillRankCap}}</span>
+    </h3>
+
+    {{#each skillGroups as |group|}}
+    <div class="skill-group">
+      <h4 class="skill-group-title">{{group.label}}</h4>
+      <ul class="skill-list">
+        {{#each group.skills as |skill|}}
+        <li class="skill {{#if skill.untrained}}skill-untrained{{/if}} {{#if skill.overCap}}skill-over-cap{{/if}}">
+          <span class="skill-name">
+            {{#if skill.untrained}}
+              {{! A Required Skill with no Ranks always fails, so there is nothing to roll. }}
+              <span class="skill-label">{{skill.label}}</span>
+            {{else}}
+              <button type="button" class="skill-label rollable" data-action="rollSkill"
+                      data-skill="{{skill.key}}" data-tooltip="Roll this Skill">{{skill.label}}</button>
+            {{/if}}
+            {{#if skill.required}}<span class="skill-flag" data-tooltip="Required: cannot be rolled without at least one Rank">R</span>{{/if}}
+          </span>
+
+          {{#if skill.encompassing}}
+          <input type="text" class="skill-specialization" placeholder="specialisation"
+                 name="system.skillSpecializations.{{skill.key}}" value="{{skill.specialization}}"/>
+          {{/if}}
+
+          <span class="skill-ranks" data-tooltip="Ranks">{{skill.ranks}}</span>
+          <span class="skill-bonus">{{numberFormat skill.bonus decimals=0 sign=true}}</span>
+        </li>
+        {{/each}}
+      </ul>
+    </div>
+    {{/each}}
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">Saving Throws</h3>
+    <div class="stat-grid saves">
+      {{#each system.savingThrows as |save|}}
+      <div class="stat {{#if save.racial}}stat-racial{{/if}}"
+           data-tooltip="Crits on {{save.criticalTarget}}+{{#if save.racial}} · racial Saving Throw{{/if}}">
+        <em>{{save.label}}</em>
+        <span>{{save.value}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </section>
+
+</div>

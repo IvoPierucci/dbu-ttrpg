@@ -1,0 +1,23 @@
+{
+  "id": "yardrat",
+  "name": "Yardrat",
+  "lifeModifier": 1,
+  "attributeIncrease": {
+    "insight": 2,
+    "agility": 2
+  },
+  "attributeChoices": [
+    {
+      "amount": 1,
+      "options": [
+        "scholarship",
+        "personality"
+      ]
+    }
+  ],
+  "savingThrow": [
+    "cognitive",
+    "impulsive"
+  ],
+  "skillRanks": 3
+}

@@ -1,0 +1,20 @@
+{
+  "id": "cerealian",
+  "name": "Cerealian",
+  "lifeModifier": 3,
+  "attributeIncrease": {
+    "insight": 2,
+    "agility": 2
+  },
+  "attributeChoices": [
+    {
+      "amount": 1,
+      "options": [
+        "force",
+        "magic"
+      ]
+    }
+  ],
+  "savingThrow": "impulsive",
+  "skillRanks": 3
+}

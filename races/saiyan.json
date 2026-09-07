@@ -1,0 +1,13 @@
+{
+  "id": "saiyan",
+  "name": "Saiyan",
+  "lifeModifier": 3,
+  "attributeIncrease": {
+    "force": 2,
+    "tenacity": 2,
+    "agility": 1
+  },
+  "savingThrow": "corporeal",
+  "skillRanks": 2,
+  "description": "A warrior race with a natural aptitude for combat."
+}

@@ -1,0 +1,20 @@
+{
+  "id": "neo-tuffle",
+  "name": "Neo-Tuffle",
+  "lifeModifier": 4,
+  "attributeIncrease": {
+    "tenacity": 2,
+    "insight": 2
+  },
+  "attributeChoices": [
+    {
+      "amount": 1,
+      "options": [
+        "scholarship",
+        "personality"
+      ]
+    }
+  ],
+  "savingThrow": "cognitive",
+  "skillRanks": 3
+}

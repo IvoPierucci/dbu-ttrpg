@@ -1,0 +1,12 @@
+{
+  "id": "arcosian",
+  "name": "Arcosian",
+  "lifeModifier": 5,
+  "attributeIncrease": {
+    "tenacity": 2,
+    "agility": 2,
+    "force": 1
+  },
+  "savingThrow": "corporeal",
+  "skillRanks": 2
+}

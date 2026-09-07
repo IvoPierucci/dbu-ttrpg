@@ -1,0 +1,20 @@
+{
+  "id": "demon",
+  "name": "Demon",
+  "lifeModifier": 4,
+  "attributeIncrease": {
+    "insight": 2,
+    "personality": 1
+  },
+  "attributeChoices": [
+    {
+      "amount": 2,
+      "options": [
+        "force",
+        "magic"
+      ]
+    }
+  ],
+  "savingThrow": "cognitive",
+  "skillRanks": 3
+}

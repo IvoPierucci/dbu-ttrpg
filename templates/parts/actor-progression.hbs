@@ -1,0 +1,159 @@
+<div class="tab {{tabs.progression.cssClass}}" data-group="primary" data-tab="progression">
+
+  <!-- Where the table's Attribute columns and the Aptitudes they feed end up. -->
+  <section class="progression-summary">
+    <div class="stat-grid scores">
+      {{#each attributeColumns as |column|}}
+      <div class="stat" data-tooltip="{{column.key}}"><em>{{column.abbr}}</em><span>{{column.score}}</span></div>
+      {{/each}}
+    </div>
+    <div class="stat-grid">
+      <div class="stat"><em>Haste</em><span>{{system.haste}}</span></div>
+      <div class="stat"><em>Awareness</em><span>{{system.awareness}}</span></div>
+      <div class="stat"><em>Defense Value</em><span>{{system.defenseValue}}</span></div>
+    </div>
+  </section>
+
+  {{#if racialSkillRanks.length}}
+  <!-- What the race grants. Kept apart from the Power Level table because none of it
+       is earned by levelling, though the Skill Ranks do count toward the same cap. -->
+  <section class="panel racial-grants">
+    <h3 class="panel-title">
+      Racial Grants
+      <span class="panel-note">Granted at Power Level 1 &middot; Skill Ranks count toward the rank cap</span>
+    </h3>
+
+    {{#if racialAttributeChoices.length}}
+    <div class="racial-row">
+      <span class="racial-row-label">Attribute Increase</span>
+      <div class="racial-slots">
+        {{#each racialAttributeChoices as |choice|}}
+        <label class="racial-choice">
+          <em>+{{choice.amount}}</em>
+          <select name="{{choice.name}}">
+            <option value=""></option>
+            {{#each choice.options as |option|}}
+            <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}
+                    {{#if option.disabled}}disabled{{/if}}>{{option.label}}</option>
+            {{/each}}
+          </select>
+        </label>
+        {{/each}}
+      </div>
+    </div>
+    {{/if}}
+
+    <div class="racial-row">
+      <span class="racial-row-label">Skill Ranks</span>
+      <div class="racial-slots">
+        {{#each racialSkillRanks as |slot|}}
+        <select name="{{slot.name}}">
+          <option value=""></option>
+          {{#each slot.options as |option|}}
+          <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}
+                  {{#if option.disabled}}disabled{{/if}}>{{option.label}}</option>
+          {{/each}}
+        </select>
+        {{/each}}
+      </div>
+    </div>
+  </section>
+  {{/if}}
+
+  <table class="progression-table">
+    <thead>
+      <tr>
+        <th>Level</th>
+        <th>Choice</th>
+        <th>Talent</th>
+        {{#each attributeColumns as |column|}}
+        <th data-tooltip="{{column.key}}">{{column.abbr}}</th>
+        {{/each}}
+        <th>TP</th>
+        <th>Skill Ranks</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each progressionRows as |row|}}
+      <tr class="{{#if row.firstOfLevel}}level-start{{/if}} {{#unless row.reached}}unreached{{/unless}}"
+          {{#if row.isAttributeAddition}}data-attribute-addition{{/if}}>
+
+        <td class="level-cell">
+          {{! Foundry rebuilds the whole progression array from the submitted form, so
+              every schema field of a row must appear in it. Fields with no visible
+              control are carried as hidden inputs - otherwise they would silently fall
+              back to their schema `initial` on every save. }}
+          <input type="hidden" name="system.progression.{{row.index}}.lvl" value="{{row.entry.lvl}}" data-dtype="Number"/>
+          <input type="hidden" name="system.progression.{{row.index}}.stepType" value="{{row.entry.stepType}}"/>
+          <input type="hidden" name="system.progression.{{row.index}}.locked" value="{{row.entry.locked}}" data-dtype="Boolean"/>
+          {{#if row.firstOfLevel}}{{row.entry.lvl}}{{/if}}
+        </td>
+
+        <td>
+          {{#if row.entry.locked}}
+            <span class="locked-choice">{{row.entry.choice}}</span>
+            <input type="hidden" name="system.progression.{{row.index}}.choice" value="{{row.entry.choice}}"/>
+          {{else}}
+            <select name="system.progression.{{row.index}}.choice">
+              <option value="Character Perk" {{#if (eq row.entry.choice "Character Perk")}}selected{{/if}}>Character Perk</option>
+              <option value="Attribute Addition" {{#if (eq row.entry.choice "Attribute Addition")}}selected{{/if}}>Attribute Addition</option>
+              <option value="Skill Improvement" {{#if (eq row.entry.choice "Skill Improvement")}}selected{{/if}}>Skill Improvement</option>
+              <option value="Talent Addition" {{#if (eq row.entry.choice "Talent Addition")}}selected{{/if}}>Talent Addition</option>
+            </select>
+          {{/if}}
+        </td>
+
+        <td class="talent-cell">
+          {{#if row.isTalentAddition}}
+            <select name="system.progression.{{row.index}}.talent">
+              <option value=""></option>
+              {{#each row.talentOptions as |option|}}
+              <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.value}}</option>
+              {{/each}}
+            </select>
+          {{else}}
+            <input type="hidden" name="system.progression.{{row.index}}.talent" value="{{row.entry.talent}}"/>
+          {{/if}}
+        </td>
+
+        {{#each @root.attributeColumns as |column|}}
+        <td>
+          {{#if row.isAttributeAddition}}
+            <input type="number" class="attr-input"
+                   name="system.progression.{{row.index}}.attributes.{{column.key}}"
+                   value="{{lookup row.entry.attributes column.key}}"/>
+          {{else}}
+            <span class="computed-value">{{lookup row.entry.attributes column.key}}</span>
+            <input type="hidden" name="system.progression.{{row.index}}.attributes.{{column.key}}"
+                   value="{{lookup row.entry.attributes column.key}}" data-dtype="Number"/>
+          {{/if}}
+        </td>
+        {{/each}}
+
+        <td>
+          <span class="computed-value">{{row.entry.technique}}</span>
+          <input type="hidden" name="system.progression.{{row.index}}.technique" value="{{row.entry.technique}}" data-dtype="Number"/>
+        </td>
+
+        <td class="skill-ranks-cell">
+          {{#each row.skillRanks as |slot|}}
+            {{#if row.isSkillImprovement}}
+              <select name="{{slot.name}}">
+                <option value=""></option>
+                {{#each slot.options as |option|}}
+                <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}
+                        {{#if option.disabled}}disabled{{/if}}>{{option.label}}</option>
+                {{/each}}
+              </select>
+            {{else}}
+              <input type="hidden" name="{{slot.name}}" value="{{slot.value}}"/>
+            {{/if}}
+          {{/each}}
+        </td>
+
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+</div>

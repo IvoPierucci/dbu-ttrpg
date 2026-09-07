@@ -1,0 +1,29 @@
+{
+  "id": "neko-majin",
+  "name": "Neko Majin",
+  "lifeModifier": 4,
+  "attributeIncrease": {
+    "personality": 2
+  },
+  "attributeChoices": [
+    {
+      "amount": 2,
+      "options": [
+        "force",
+        "magic"
+      ]
+    },
+    {
+      "amount": 1,
+      "options": [
+        "tenacity",
+        "insight"
+      ]
+    }
+  ],
+  "savingThrow": [
+    "cognitive",
+    "morale"
+  ],
+  "skillRanks": 3
+}
