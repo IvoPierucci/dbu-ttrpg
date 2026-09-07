@@ -9,7 +9,7 @@
     "maximum": "14"
   },
   "authors": [
-    { "name": "Your Name" }
+    { "name": "IvoPierucci" }
   ],
   "esmodules": ["module/dbu-ttrpg.mjs"],
   "styles": ["styles/dbu-ttrpg.css"],
@@ -29,7 +29,7 @@
     }
   },
   "primaryTokenAttribute": "life",
-  "url": "",
-  "manifest": "",
-  "download": ""
+  "url": "https://github.com/IvoPierucci/dbu-ttrpg",
+  "manifest": "https://raw.githubusercontent.com/IvoPierucci/dbu-ttrpg/main/system.json",
+  "download": "https://github.com/IvoPierucci/dbu-ttrpg/archive/refs/heads/main.zip"
 }
