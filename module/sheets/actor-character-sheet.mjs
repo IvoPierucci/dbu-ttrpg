@@ -414,12 +414,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           const rankCap = DBUCharacterData.skillRankCap(DBUCharacterData.tierOfPowerFor(entry.lvl));
           const prior = ranksBeforeRow[index];
 
+          const otherSlots = entry.skillRanks.filter((pick, at) => at !== slot);
+
           return {
             name: `system.progression.${index}.skillRanks.${slot}`,
             value,
             options: Object.entries(SKILLS).map(([key, skill]) => {
-              // One Skill Improvement cannot raise the same Skill twice.
-              const takenBySibling = entry.skillRanks.includes(key);
+              // A Skill Improvement spreads across distinct Skills, except for the two
+              // extra Ranks the Level 1 one carries.
+              const takenBySibling = !DBUCharacterData.canRepeatSkillRank(entry, key, otherSlots);
               // Nor can it push a Skill past the cap of this row's Tier of Power.
               const atCap = ((prior[key] ?? 0) + 1) > rankCap;
 
