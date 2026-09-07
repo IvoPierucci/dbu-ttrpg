@@ -1,0 +1,49 @@
+<div class="tab {{tabs.traits.cssClass}}" data-group="primary" data-tab="traits">
+
+  {{! Talents are Items the character owns: drag one here to grant it. }}
+  <details class="trait-group" open>
+    <summary>
+      Talents
+      <span class="trait-count">{{talents.length}}</span>
+      {{#if isGM}}
+      <button type="button" class="edit-toggle" data-action="importTalents"
+              data-tooltip="Fill the DBU Talents compendium with the published talents, ready to drag onto a character">
+        Import core talents
+      </button>
+      {{/if}}
+    </summary>
+
+    {{#if talents.length}}
+    <ul class="trait-list">
+      {{#each talents as |talent|}}
+      <li class="trait" data-item-id="{{talent.id}}" draggable="true">
+        <div class="trait-head">
+          <img class="trait-img" src="{{talent.img}}" height="20" width="20"/>
+          <span class="trait-name">{{talent.name}}</span>
+          {{#if talent.system.prerequisites}}
+          <span class="trait-prereq">Requires {{talent.system.prerequisites}}</span>
+          {{/if}}
+          <button type="button" class="trait-control" data-action="editItem" data-item-id="{{talent.id}}"
+                  data-tooltip="Edit this talent">&#9998;</button>
+          <button type="button" class="trait-control" data-action="deleteItem" data-item-id="{{talent.id}}"
+                  data-tooltip="Remove from this character">&times;</button>
+        </div>
+
+        {{#if talent.system.description}}
+        <div class="trait-description">{{{talent.system.description}}}</div>
+        {{/if}}
+
+        <ol class="trait-effects">
+          {{#each talent.system.effects as |effect|}}
+          <li>{{effect.text}}</li>
+          {{/each}}
+        </ol>
+      </li>
+      {{/each}}
+    </ul>
+    {{else}}
+    <p class="tab-placeholder">No talents yet. Drag a talent Item onto this sheet to grant one.</p>
+    {{/if}}
+  </details>
+
+</div>

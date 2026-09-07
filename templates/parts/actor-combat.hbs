@@ -68,6 +68,33 @@
     </div>
   </section>
 
+  {{! Where the character stands, and what being there is costing them. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Health Threshold
+      {{#if threshold.pending.length}}
+      <button type="button" class="edit-toggle" data-action="steadfastCheck"
+              data-tooltip="Roll for the thresholds crossed. Crossing several at once fails all but the lowest automatically.">
+        Steadfast Check
+      </button>
+      {{/if}}
+    </h3>
+    <div class="stat-grid">
+      <div class="stat threshold-{{system.threshold.key}}">
+        <em>Threshold</em><span>{{system.threshold.label}}</span>
+      </div>
+      <div class="stat" data-tooltip="Failed Steadfast Checks at or below your current threshold">
+        <em>Failures</em><span>{{system.threshold.failures}}</span>
+      </div>
+      <div class="stat" data-tooltip="1(bT) per failed Steadfast Check, off Strike, Dodge and Wound">
+        <em>Combat Rolls</em><span>-{{system.threshold.penalty}}</span>
+      </div>
+      <div class="stat" data-tooltip="Power Level + 1, less one per failure">
+        <em>Stress Bonus</em><span>{{system.stressBonus}}</span>
+      </div>
+    </div>
+  </section>
+
   <!-- Values used only in combat. -->
   <section class="panel">
     <h3 class="panel-title">
@@ -132,36 +159,62 @@
       </div>
       <button type="button" data-action="resetCapacity" class="capacity-reset"
               data-tooltip="Clear the Ki spent, the attacks made, and all Diminishing stacks">New round</button>
+      <button type="button" data-action="resetEncounter" class="capacity-reset"
+              data-tooltip="Restore maneuvers limited to once per encounter">New encounter</button>
       <span class="capacity-note">{{system.capacity.remaining}} left this round</span>
     </div>
   </section>
 
   <section class="panel">
     <h3 class="panel-title">Maneuvers</h3>
-    {{#if maneuvers.length}}
-    <ul class="maneuver-list">
-      {{#each maneuvers as |maneuver|}}
-      <li class="maneuver">
-        {{#if maneuver.usable}}
-        <button type="button" class="maneuver-name rollable" data-action="useManeuver"
-                data-maneuver="{{maneuver.id}}" data-tooltip="{{maneuver.description}}">{{maneuver.name}}</button>
-        {{else}}
-        {{! Out-of-Sequence: only ever played from the message that granted it. }}
-        <span class="maneuver-name maneuver-triggered"
-              data-tooltip="Only usable when an effect grants it">{{maneuver.name}}</span>
-        {{/if}}
-        <span class="maneuver-source">{{maneuver.source}}</span>
-        <span class="maneuver-type">{{maneuver.typeLabel}}</span>
-        <span class="maneuver-cost">
-          {{#if maneuver.spendsAction}}{{maneuver.actionCost}} action{{else}}&mdash;{{/if}}
-        </span>
-        <span class="maneuver-cost">{{maneuver.kiCost}} KP</span>
-      </li>
-      {{/each}}
-    </ul>
-    {{else}}
-    <p class="tab-placeholder">No maneuvers loaded.</p>
-    {{/if}}
+    {{#each maneuverGroups as |group|}}
+    <details class="maneuver-group" open>
+      <summary>
+        {{group.label}}
+        {{#if group.note}}<em>{{group.note}}</em>{{/if}}
+      </summary>
+
+      <ul class="maneuver-list">
+        {{#each group.maneuvers as |maneuver|}}
+        <li class="maneuver {{#if maneuver.exhausted}}maneuver-exhausted{{/if}}">
+          {{#if group.playable}}
+          <button type="button" class="maneuver-name rollable" data-action="useManeuver"
+                  data-maneuver="{{maneuver.id}}" data-tooltip="{{maneuver.description}}">{{maneuver.name}}</button>
+          {{else}}
+          {{! Reactive: it is played from the message of the attack it answers. }}
+          <span class="maneuver-name maneuver-triggered"
+                data-tooltip="{{maneuver.description}}">{{maneuver.name}}</span>
+          {{/if}}
+
+          {{#if maneuver.usageLabel}}
+          <span class="maneuver-uses" data-tooltip="Uses left this encounter">
+            {{maneuver.usageLabel}} &middot; {{maneuver.usesLeft}} left
+          </span>
+          {{/if}}
+          <span class="maneuver-source">{{maneuver.source}}</span>
+          <span class="maneuver-cost">{{maneuver.actionLabel}}</span>
+          <span class="maneuver-cost">{{maneuver.kiCost}} KP</span>
+        </li>
+        {{/each}}
+      </ul>
+    </details>
+    {{/each}}
+  </section>
+
+  {{! Stand-ins for systems that do not exist yet, so the rules that depend on them
+      can still be tried out. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Debug
+      <span class="panel-note">Manual stand-ins for unimplemented systems</span>
+    </h3>
+    <label class="debug-toggle"
+           data-tooltip="From a Form entered through the Transformation Maneuver: Maximum Ki doubled, Max Capacity increased by half.">
+      <input type="checkbox" name="system.debug.kiMultiplier"
+             {{#if system.debug.kiMultiplier}}checked{{/if}}/>
+      Ki Multiplier
+      {{#if system.debug.kiMultiplier}}<em>Ki x2 &middot; Capacity x1.5</em>{{/if}}
+    </label>
   </section>
 
 </div>

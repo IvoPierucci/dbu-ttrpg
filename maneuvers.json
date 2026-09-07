@@ -56,6 +56,21 @@
       },
       "source": "Core Rule",
       "description": "Placeholder maneuver: a Skill Clash of Bluff against one target."
+    },
+    {
+      "id": "surge",
+      "name": "Surge",
+      "type": "instant",
+      "actionCost": 0,
+      "kiCost": 0,
+      "attacking": false,
+      "usageLimit": {
+        "amount": 1,
+        "per": "encounter"
+      },
+      "surge": true,
+      "source": "Core Rule",
+      "description": "Gather yourself and recover: take either a Healing Surge or a Ki Surge."
     }
   ]
 }

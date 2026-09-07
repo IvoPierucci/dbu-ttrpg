@@ -1,14 +1,18 @@
 import DBUCharacterData from "./data/actor-character.mjs";
 import DBUCharacterSheet from "./sheets/actor-character-sheet.mjs";
+import DBUTalentData from "./data/item-talent.mjs";
+import DBUTalentSheet from "./sheets/item-talent-sheet.mjs";
 import { registerChatHooks, registerManeuverSocket } from "./chat.mjs";
 import { loadRaces, racialAttributeIncrease, racialLifeModifier } from "./races.mjs";
 import { loadManeuvers } from "./maneuvers.mjs";
+import { loadTalents } from "./talents.mjs";
 
 Hooks.once("init", () => {
   console.log("DBU TTRPG | Initializing system");
 
   // Register the character data model for the "character" Actor type
   CONFIG.Actor.dataModels.character = DBUCharacterData;
+  CONFIG.Item.dataModels.talent = DBUTalentData;
 
   // Register the character sheet using the v13+/v14 ApplicationV2 sheet registration API
   const DocumentSheetConfig = foundry.applications.apps.DocumentSheetConfig;
@@ -19,7 +23,30 @@ Hooks.once("init", () => {
     label: "DBU Character Sheet"
   });
 
+  DocumentSheetConfig.unregisterSheet(foundry.documents.Item, "core", foundry.appv1.sheets.ItemSheet);
+  DocumentSheetConfig.registerSheet(foundry.documents.Item, "dbu-ttrpg", DBUTalentSheet, {
+    types: ["talent"],
+    makeDefault: true,
+    label: "DBU Talent Sheet"
+  });
+
   registerChatHooks();
+});
+
+// Recovering above a Health Threshold clears the Steadfast Check recorded there, so
+// that dropping back down calls for a fresh one rather than reusing the old result.
+Hooks.on("preUpdateActor", (actor, changes) => {
+  if (actor.type !== "character") return;
+
+  const life = foundry.utils.getProperty(changes, "system.life.value");
+  if (life === undefined) return;
+
+  const threshold = DBUCharacterData.thresholdKey(life, actor.system.life.max);
+  for (const key of DBUCharacterData.thresholdsAbove(threshold)) {
+    if (actor.system.thresholdChecks[key]) {
+      foundry.utils.setProperty(changes, `system.thresholdChecks.${key}`, "");
+    }
+  }
 });
 
 // Races are files under races/, so loading them is asynchronous. Hooks are not
@@ -29,7 +56,7 @@ Hooks.once("init", () => {
 Hooks.once("setup", async () => {
   // game.socket is not available during init, so the listener is registered here.
   registerManeuverSocket();
-  await Promise.all([loadRaces(), loadManeuvers()]);
+  await Promise.all([loadRaces(), loadManeuvers(), loadTalents()]);
   for (const actor of game.actors ?? []) actor.prepareData();
 });
 

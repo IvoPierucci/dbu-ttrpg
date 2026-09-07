@@ -1,0 +1,35 @@
+<div class="tab {{tabs.passives.cssClass}}" data-group="primary" data-tab="passives">
+  <section class="panel">
+    <h3 class="panel-title">
+      Passives
+      <button type="button" class="edit-toggle" data-action="addEffect"
+              data-tooltip="Add a passive effect">Add</button>
+    </h3>
+
+    {{#if system.effects.length}}
+    <ol class="effect-rows">
+      {{#each system.effects as |effect index|}}
+      <li class="effect-row">
+        <div class="effect-fields">
+          <label data-tooltip="Which rule this hooks into, e.g. defendOptionCost">Key
+            <input type="text" name="system.effects.{{index}}.key" value="{{effect.key}}"/>
+          </label>
+          <label data-tooltip="For rules that name one, e.g. the Defend option affected">Option
+            <input type="text" name="system.effects.{{index}}.option" value="{{effect.option}}"/>
+          </label>
+          <label data-tooltip="The x(T) part: how much per Tier of Power. Negative reduces.">Per Tier
+            <input type="number" name="system.effects.{{index}}.perTier" value="{{effect.perTier}}"/>
+          </label>
+          <button type="button" class="effect-delete" data-action="deleteEffect" data-index="{{index}}"
+                  data-tooltip="Remove this passive">&times;</button>
+        </div>
+        <input type="text" class="effect-text" name="system.effects.{{index}}.text"
+               value="{{effect.text}}" placeholder="Wording shown on the character sheet"/>
+      </li>
+      {{/each}}
+    </ol>
+    {{else}}
+    <p class="tab-placeholder">No passives yet.</p>
+    {{/if}}
+  </section>
+</div>

@@ -85,8 +85,6 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   /** Placeholder rank choices, standing in until the skill list is implemented. */
   static SKILL_RANK_OPTIONS = ["1", "2", "3", "4"];
 
-  /** Placeholder talent choices, standing in until the talent list is implemented. */
-  static TALENT_OPTIONS = ["1", "2", "3", "4"];
 
   /**
    * Every Skill, keyed by id, with the Attribute that governs it.
@@ -264,6 +262,49 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     return Math.max(floor, value + modifier);
   }
 
+  /**
+   * Health Thresholds, in order. `above` is the fraction of Maximum Life Points you
+   * must be strictly above to be at that Threshold, so each one ends where the next
+   * begins.
+   *
+   * Healthy is not itself a Threshold: rules that count how many Thresholds you are
+   * below start at Bruised, which is what `counts` marks.
+   */
+  static THRESHOLDS = Object.freeze({
+    healthy: { label: "Healthy", above: 0.5, counts: false },
+    bruised: { label: "Bruised", above: 0.25, counts: true },
+    injured: { label: "Injured", above: 0.1, counts: true },
+    critical: { label: "Critical", above: -Infinity, counts: true }
+  });
+
+  /** The Health Threshold a character sits at, from their Life Points. */
+  static thresholdKey(value, max) {
+    const ratio = max ? (value / max) : 0;
+    return Object.keys(DBUCharacterData.THRESHOLDS)
+      .find(key => ratio > DBUCharacterData.THRESHOLDS[key].above);
+  }
+
+  /** Thresholds deeper than the given one, whose recorded checks no longer apply. */
+  static thresholdsAbove(key) {
+    const keys = Object.keys(DBUCharacterData.THRESHOLDS);
+    return keys
+      .filter((candidate, index) => (index > keys.indexOf(key)) && DBUCharacterData.THRESHOLDS[candidate].counts);
+  }
+
+  /** A Steadfast Check is a bare d10 against this - no Extra Dice, no crits, no botches. */
+  static STEADFAST_DIE = "1d10";
+  static STEADFAST_TARGET = 6;
+
+  /** A Healing Surge restores this many d10 per Tier of Power. */
+  static HEALING_SURGE_DICE_PER_TIER = 2;
+
+  /** A Ki Surge restores this fraction of the Ki and Capacity maximums. */
+  static KI_SURGE_FRACTION = 4;
+
+  /** Ki Multiplier: Maximum Ki doubled, Max Capacity increased by half. */
+  static KI_MULTIPLIER_KI = 2;
+  static KI_MULTIPLIER_CAPACITY = 1.5;
+
   /** Actions a character has each Combat Round before any effect alters them. */
   static BASE_STANDARD_ACTIONS = 3;
   static BASE_COUNTER_ACTIONS = 1;
@@ -421,6 +462,34 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     schema.attacksThisRound = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
     schema.diminishingDefense = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 
+    // --- Steadfast Checks ---
+    // One result per Threshold that can be failed: "" until checked, then "pass" or
+    // "fail". Kept per Threshold rather than as a count, because recovering above one
+    // clears its result and dropping back down calls for a fresh check.
+    schema.thresholdChecks = new fields.SchemaField(
+      Object.fromEntries(
+        Object.entries(DBUCharacterData.THRESHOLDS)
+          .filter(([, threshold]) => threshold.counts)
+          .map(([key]) => [key, new fields.StringField({ required: true, blank: true, initial: "" })])
+      )
+    );
+
+    // --- Maneuver uses ---
+    // One entry per use of a Maneuver that is limited per Encounter, so a Maneuver
+    // allowed more than once can be counted rather than merely flagged.
+    schema.usedManeuvers = new fields.ArrayField(
+      new fields.StringField({ required: true, blank: false }),
+      { required: true, initial: [] }
+    );
+
+    // --- Debug switches ---
+    // Effects whose own system does not exist yet, driven by hand so the rules that
+    // depend on them can be exercised. Ki Multiplier belongs to a Form entered through
+    // the Transformation Maneuver; until Forms exist, this stands in for one.
+    schema.debug = new fields.SchemaField({
+      kiMultiplier: new fields.BooleanField({ required: true, initial: false })
+    });
+
     // --- Roll modifiers ---
     // Bonuses that attach to a roll rather than to the value behind it. Kept apart
     // from the Attribute-derived values because effects that halve one of those - Cross
@@ -572,6 +641,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * Resolve the system's "+x(T)" notation: a value of x per Tier of Power. Written
    * throughout the rules for bonuses that scale as a character grows.
    *
+   * The same notation appears on dice, where it multiplies how many are rolled rather
+   * than what is added: "2d10(T)" is 2 x Tier of Power d10s, not 2d10 plus something.
+   *
    * Only valid after prepareDerivedData has set the Tiers.
    */
   perTier(multiplier) {
@@ -708,13 +780,21 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       kiPerLevelBonus: this.transformationBonuses.kiPerLevel
     });
 
+    // Doubled on the finished pool, for the same reason.
+    if (this.debug.kiMultiplier) this.ki.max *= DBUCharacterData.KI_MULTIPLIER_KI;
+
     // Capacity: the ceiling on Ki spent within one Combat Round. Flat bonuses land
     // before the multiplier, so a doubling effect doubles them too.
     const baseCapacity = DBUCharacterData.BASE_CAPACITY
       + (DBUCharacterData.CAPACITY_PER_LEVEL * (this.powerLevel - 1))
       + this.capacityModifiers.flat;
 
-    this.capacity.max = Math.max(0, Math.floor(baseCapacity * this.capacityModifiers.multiplier));
+    // The Ki Multiplier lands on the finished Capacity, after everything that builds
+    // it up - it increases the maximum, not any one part of it.
+    const capacityMultiplier = this.capacityModifiers.multiplier
+      * (this.debug.kiMultiplier ? DBUCharacterData.KI_MULTIPLIER_CAPACITY : 1);
+
+    this.capacity.max = Math.max(0, Math.floor(baseCapacity * capacityMultiplier));
     this.capacity.remaining = Math.max(0, this.capacity.max - this.capacity.spent);
 
     // Actions available each Combat Round. An effect can take Actions away, but never
@@ -795,6 +875,36 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         penalty: this.diminishingDefense
       }
     };
+
+    // --- Health Thresholds ---
+    // Where the character sits is read from Life, so it follows damage and healing on
+    // its own. What it costs comes from the Steadfast Checks failed at or below that
+    // point; results recorded above it are ignored, since rising back up clears them.
+    const keys = Object.keys(DBUCharacterData.THRESHOLDS);
+    const current = DBUCharacterData.thresholdKey(this.life.value, this.life.max);
+    const currentIndex = keys.indexOf(current);
+
+    const reached = keys
+      .filter((key, index) => (index <= currentIndex) && DBUCharacterData.THRESHOLDS[key].counts);
+
+    const failures = reached.filter(key => this.thresholdChecks[key] === "fail").length;
+
+    this.threshold = {
+      key: current,
+      label: DBUCharacterData.THRESHOLDS[current].label,
+      // How many Thresholds below Healthy the character is.
+      depth: reached.length,
+      failures,
+      // Each failure costs 1(bT) on every Combat Roll.
+      penalty: failures * this.baseTierOfPower,
+      // Thresholds reached but not yet checked. Crossing several at once auto-fails
+      // all but the lowest, which is the only one still rolled for.
+      pending: reached.filter(key => !this.thresholdChecks[key])
+    };
+
+    // Stress Bonus stands in for a rule not implemented yet; each Steadfast failure
+    // takes 1 off it.
+    this.stressBonus = (this.powerLevel + 1) - failures;
 
     // --- Combat Rolls ---
     // Only used in combat. Wound depends on the attack's Foundation, since that is

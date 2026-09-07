@@ -2,11 +2,22 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import DBUCharacterData from "../data/actor-character.mjs";
-import { checkCard, evaluateCheck, postAttack, postManeuver, postSkillClash } from "../chat.mjs";
+import { importCoreTalents, ownedTalents } from "../talents.mjs";
+import {
+  checkCard,
+  evaluateCheck,
+  postAttack,
+  postManeuver,
+  postSkillClash,
+  takeSurge
+} from "../chat.mjs";
 import {
   MANEUVER_TYPES,
   allManeuvers,
   declareAttack,
+  maneuverUsesLeft,
+  recordManeuverUse,
+  usageLimitLabel,
   getManeuver,
   maneuverKiCost,
   spendManeuverCost
@@ -28,6 +39,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   static DEFAULT_OPTIONS = {
     classes: ["dbu-ttrpg", "character"],
+    // Talents are Items, so the sheet has to accept one being dropped on it.
+    dragDrop: [{ dragSelector: "[data-item-id]", dropSelector: null }],
     position: {
       width: 700,
       height: 780
@@ -41,6 +54,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollSkill: DBUCharacterSheet._onSkillRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
+      resetEncounter: DBUCharacterSheet._onResetEncounter,
+      steadfastCheck: DBUCharacterSheet._onSteadfastCheck,
+      importTalents: DBUCharacterSheet._onImportTalents,
+      editItem: DBUCharacterSheet._onEditItem,
+      deleteItem: DBUCharacterSheet._onDeleteItem,
       toggleCombatEdit: DBUCharacterSheet._onToggleCombatEdit,
       editImage: DBUCharacterSheet._onEditImage
     },
@@ -51,9 +69,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   static PARTS = {
     header: { template: "systems/dbu-ttrpg/templates/parts/actor-header.hbs" },
-    tabs: { template: "systems/dbu-ttrpg/templates/parts/actor-tabs.hbs" },
+    tabs: { template: "systems/dbu-ttrpg/templates/parts/sheet-tabs.hbs" },
     main: { template: "systems/dbu-ttrpg/templates/parts/actor-main.hbs" },
     combat: { template: "systems/dbu-ttrpg/templates/parts/actor-combat.hbs" },
+    traits: { template: "systems/dbu-ttrpg/templates/parts/actor-traits.hbs" },
     progression: { template: "systems/dbu-ttrpg/templates/parts/actor-progression.hbs" },
     biography: { template: "systems/dbu-ttrpg/templates/parts/actor-biography.hbs" }
   };
@@ -67,9 +86,50 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   #combatEditMode = false;
 
+  /** ApplicationV2 does not wire drag and drop itself; each sheet binds its own. */
+  #dragDrop = this.options.dragDrop.map(config => new foundry.applications.ux.DragDrop.implementation({
+    ...config,
+    permissions: {
+      dragstart: () => this.isEditable,
+      drop: () => this.isEditable
+    },
+    callbacks: {
+      dragstart: this._onDragStart.bind(this),
+      drop: this._onDrop.bind(this)
+    }
+  }));
+
+  /** Let an owned Item be dragged off the sheet, to another actor or the directory. */
+  async _onDragStart(event) {
+    const item = this.actor.items.get(event.currentTarget.dataset.itemId);
+    if (!item) return;
+    event.dataTransfer.setData("text/plain", JSON.stringify(item.toDragData()));
+  }
+
+  /** Accept a Talent dropped onto the sheet, copying it onto this character. */
+  async _onDrop(event) {
+    if (!this.isEditable) return;
+
+    const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
+    if (data?.type !== "Item") return;
+
+    const item = await Item.implementation.fromDropData(data);
+    if (!item) return;
+
+    if (item.type !== "talent") {
+      ui.notifications.warn(`${item.name} is not a talent.`);
+      return;
+    }
+    // Dropping an Item the character already owns is a re-order, not a second copy.
+    if (this.actor.items.has(item.id)) return;
+
+    return this.actor.createEmbeddedDocuments("Item", [item.toObject()]);
+  }
+
   static TABS = {
     main: { id: "main", group: "primary", label: "Main" },
     combat: { id: "combat", group: "primary", label: "Combat" },
+    traits: { id: "traits", group: "primary", label: "Traits" },
     progression: { id: "progression", group: "primary", label: "Progression" },
     biography: { id: "biography", group: "primary", label: "Biography" }
   };
@@ -102,6 +162,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }));
 
     context.combatEditMode = this.#combatEditMode;
+    context.threshold = this.actor.system.threshold;
+    // Only what the character actually holds; a talent whose definition is missing is
+    // dropped rather than shown as a blank row.
+    context.talents = ownedTalents(this.actor);
+    context.isGM = game.user.isGM;
 
     const { capacity } = this.actor.system;
     context.capacityPercent = DBUCharacterSheet.#percentFull({
@@ -109,15 +174,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       max: capacity.max
     });
     context.skillGroups = this._prepareSkillGroups();
-    context.maneuvers = allManeuvers().map(maneuver => ({
-      ...maneuver,
-      typeLabel: MANEUVER_TYPES[maneuver.type].label,
-      // Instant and Out-of-Sequence Maneuvers spend no Action at all.
-      spendsAction: Boolean(MANEUVER_TYPES[maneuver.type].action),
-      // An Out-of-Sequence Maneuver is never used from here: it exists only as a
-      // chance granted by something that just happened, offered on that message.
-      usable: maneuver.type !== "outOfSequence"
-    }));
+    context.maneuverGroups = this._prepareManeuverGroups();
     context.racialSkillRanks = this._prepareRacialSkillRanks();
     context.racialAttributeChoices = this._prepareRacialAttributeChoices();
     const { race, subrace } = this.actor.system;
@@ -228,6 +285,52 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
+   * The Maneuvers a character can reach from this tab, grouped by type.
+   *
+   * Standard and Instant Maneuvers are played from here. Counter Maneuvers are listed
+   * for reference only: they answer an Attacking Maneuver, so they are played from
+   * that attack's message in chat rather than from the sheet.
+   *
+   * Out-of-Sequence Maneuvers are left out altogether - they never sit in a list
+   * waiting to be used, only appearing where an effect grants one.
+   */
+  _prepareManeuverGroups() {
+    // An Instant Maneuver cannot follow another Instant - nor an Out-of-Sequence one
+    // played off the back of an Instant, which is why that never clears the flag.
+    const blocked = this.actor.system.lastManeuverWasInstant;
+
+    const groups = [
+      { key: "standard", playable: true },
+      {
+        key: "instant",
+        playable: !blocked,
+        note: blocked ? "Your last maneuver was an Instant" : ""
+      },
+      { key: "counter", playable: false, note: "Played from the attack they answer, in chat" }
+    ];
+
+    return groups
+      .map(group => ({
+        ...group,
+        label: MANEUVER_TYPES[group.key].label,
+        maneuvers: allManeuvers()
+          .filter(maneuver => maneuver.type === group.key)
+          .map(maneuver => ({
+            ...maneuver,
+            usageLabel: usageLimitLabel(maneuver),
+            usesLeft: maneuverUsesLeft(this.actor, maneuver),
+            exhausted: maneuverUsesLeft(this.actor, maneuver) <= 0,
+            // Instant and Counter Maneuvers spend no Standard Action, so what they
+            // cost is worth showing per type rather than assuming.
+            actionLabel: MANEUVER_TYPES[maneuver.type].action
+              ? `${maneuver.actionCost} ${MANEUVER_TYPES[maneuver.type].action}`
+              : "—"
+          }))
+      }))
+      .filter(group => group.maneuvers.length > 0);
+  }
+
+  /**
    * Group the derived Skills under the Attribute that governs them, in the order the
    * Attributes themselves are listed. Force and Tenacity govern none, so they are
    * left out rather than shown empty.
@@ -251,7 +354,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * always derived from the option rather than entered by hand.
    */
   _prepareProgressionRows() {
-    const { SKILLS, TALENT_OPTIONS } = DBUCharacterData;
+    const { SKILLS } = DBUCharacterData;
+    // A Talent Addition row records which of the character's Talents was taken at that
+    // Level. The Talents themselves are the Items they own, not these rows.
+    const talents = ownedTalents(this.actor).map(item => ({ value: item.id, label: item.name }));
 
     const powerLevel = this.actor.system.powerLevel;
     const progression = this.actor.system.progression;
@@ -290,7 +396,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Rows above the character's current Power Level are not earned yet and do
         // not count toward the TP total.
         reached: entry.lvl <= powerLevel,
-        talentOptions: TALENT_OPTIONS.map(option => ({ value: option, selected: option === entry.talent })),
+        talentOptions: talents.map(option => ({ ...option, selected: option.value === entry.talent })),
         // The Level 1 Skill Improvement offers 6 rank slots; every other one offers 4.
         skillRanks: Array.from({ length: DBUCharacterData.skillRankSlotsFor(entry) }, (unused, slot) => {
           const value = entry.skillRanks[slot] ?? "";
@@ -368,6 +474,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       }
     }
 
+    for (const handler of this.#dragDrop) handler.bind(this.element);
     this.#bindActionTotals();
     this.#bindRange('input[name="system.powerLevel"]', 1, DBUCharacterData.MAX_POWER_LEVEL);
     // Clearing the field falls back to 10, not to the 7 minimum - an emptied field
@@ -460,6 +567,21 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
   }
 
+  /** GM only: put the published Talents in the Items directory to drag from. */
+  static async _onImportTalents() {
+    return importCoreTalents();
+  }
+
+  /** Open an owned Item's own sheet. */
+  static _onEditItem(event, target) {
+    this.actor.items.get(target.dataset.itemId)?.sheet.render(true);
+  }
+
+  /** Remove an owned Item from this character. */
+  static async _onDeleteItem(event, target) {
+    return this.actor.items.get(target.dataset.itemId)?.delete();
+  }
+
   /** Unlock or re-lock the Combat tab's tracking values. */
   static _onToggleCombatEdit() {
     this.#combatEditMode = !this.#combatEditMode;
@@ -482,12 +604,76 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
+   * Settle the Steadfast Checks owed for the Thresholds crossed.
+   *
+   * Crossing several at once is Massive Damage: every Threshold passed through is an
+   * automatic failure except the lowest, which is the only one actually rolled for.
+   */
+  static async _onSteadfastCheck() {
+    const pending = this.actor.system.threshold.pending;
+    if (!pending.length) return;
+
+    const { STEADFAST_DIE, STEADFAST_TARGET, THRESHOLDS } = DBUCharacterData;
+    const updates = {};
+
+    // All but the last are passed through rather than stopped at.
+    const automatic = pending.slice(0, -1);
+    const rolled = pending[pending.length - 1];
+    for (const key of automatic) updates[`system.thresholdChecks.${key}`] = "fail";
+
+    const roll = new Roll(STEADFAST_DIE);
+    await roll.evaluate();
+    const passed = roll.total >= STEADFAST_TARGET;
+    updates[`system.thresholdChecks.${rolled}`] = passed ? "pass" : "fail";
+
+    await this.actor.update(updates);
+
+    const carried = automatic.length
+      ? ` (${automatic.map(key => THRESHOLDS[key].label).join(", ")} failed automatically)`
+      : "";
+
+    await roll.toMessage({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - ${passed ? "passed" : "failed"}${carried}`
+    });
+  }
+
+  /** Clear what only refreshes between Combat Encounters. */
+  static async _onResetEncounter() {
+    return this.actor.update({ "system.usedManeuvers": [] });
+  }
+
+  /**
    * Use a Maneuver: pay for it and announce it. A Standard Maneuver is announced as
    * respondable, so other players can answer it with an Instant Maneuver.
    */
   static async _onUseManeuver(event, target) {
     const maneuver = getManeuver(target.dataset.maneuver);
     if (!maneuver) return;
+
+    // The template does not offer these, but a stale render should not be a way past
+    // the rules either.
+    if ((maneuver.type === "instant") && this.actor.system.lastManeuverWasInstant) {
+      ui.notifications.warn(
+        `${this.actor.name} just played an Instant Maneuver and cannot play another.`
+      );
+      return;
+    }
+
+    if (maneuverUsesLeft(this.actor, maneuver) <= 0) {
+      ui.notifications.warn(`${this.actor.name} has no uses of ${maneuver.name} left.`);
+      return;
+    }
+
+    // A Surge is what the Maneuver does, and it can be declined once opened - so
+    // nothing is spent or recorded until it has actually been taken.
+    if (maneuver.surge) {
+      // takeSurge posts the outcome itself, naming the Maneuver - announcing the
+      // Maneuver separately would put the same event in chat twice.
+      if (!await takeSurge(this.actor, { source: maneuver.name })) return;
+      await recordManeuverUse(this.actor, maneuver);
+      return DBUCharacterSheet.#trackInstant(this.actor, maneuver.type);
+    }
 
     // Resolve the target before paying for anything, so a maneuver that cannot be
     // aimed does not cost Ki.
@@ -514,6 +700,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     if (!await spendManeuverCost(this.actor, maneuver, maneuverKiCost(maneuver, declared))) return;
 
+    await recordManeuverUse(this.actor, maneuver);
     await DBUCharacterSheet.#trackInstant(this.actor, maneuver.type);
 
     if (maneuver.clash) return postSkillClash(this.actor, targetActor, maneuver);

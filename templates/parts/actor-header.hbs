@@ -33,6 +33,14 @@
         <em>ToP</em>
         <span class="computed-value">{{system.tierOfPower}}</span>
       </span>
+
+      <span class="header-field threshold-{{system.threshold.key}}"
+            data-tooltip="Health Threshold. Each failed Steadfast Check costs 1(bT) on Combat Rolls and 1 Stress Bonus.">
+        <em>Health</em>
+        <span class="computed-value">{{system.threshold.label}}
+          {{#if system.threshold.failures}}<span class="subvalue">{{system.threshold.failures}} failed</span>{{/if}}
+        </span>
+      </span>
     </div>
 
     <div class="header-pools">

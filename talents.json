@@ -1,0 +1,23 @@
+{
+  "talents": [
+    {
+      "id": "effective-defenses",
+      "name": "Effective Defenses",
+      "description": "Able to withstand damage more efficiently than most, you are nearly indestructible.",
+      "prerequisites": "",
+      "effects": [
+        {
+          "key": "defendOptionCost",
+          "option": "guard",
+          "perTier": -2,
+          "text": "Reduce the Ki Point Cost for the Guard option of the Defend Maneuver by 2(T)."
+        },
+        {
+          "key": "soakWhenDefending",
+          "perTier": 2,
+          "text": "Increase your Soak Value by 2(T) (before any calculations) for the duration of an Attacking Maneuver that targets you if you use the Defend Maneuver in response to it."
+        }
+      ]
+    }
+  ]
+}

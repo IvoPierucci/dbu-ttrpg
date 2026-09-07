@@ -20,12 +20,22 @@
       "path": "lang/en.json"
     }
   ],
+  "packs": [
+    {
+      "name": "talents",
+      "label": "DBU Talents",
+      "path": "packs/talents",
+      "type": "Item",
+      "system": "dbu-ttrpg",
+      "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" }
+    }
+  ],
   "documentTypes": {
     "Actor": {
       "character": {}
     },
     "Item": {
-      "item": {}
+      "talent": {}
     }
   },
   "primaryTokenAttribute": "life",

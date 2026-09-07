@@ -1,3 +1,5 @@
+import { talentEffects } from "./talents.mjs";
+
 /**
  * Maneuvers: anything that spends an Action.
  *
@@ -106,23 +108,29 @@ export const MANEUVER_TYPES = Object.freeze({
  * How much of the target's Soak Value stands between them and the damage. A Profile
  * declares one, and it is what makes two attacks of the same Wound land differently.
  *
- * Listed from least to most severe, which is the order Guard steps back down.
+ * Each is numbered, because a Damage Category is arrived at by arithmetic: every
+ * effect that raises or lowers it contributes a step, they are summed, and only the
+ * sum is clamped. Clamping as you go would lose the difference between a Category
+ * pushed to the ceiling and one pushed well past it - a +3 answered by a -2 must land
+ * on Direct, not back on Standard.
  */
 export const DAMAGE_CATEGORIES = Object.freeze({
-  standard: { label: "Standard", soakMultiplier: 1, summary: "Defended against with the full Soak Value." },
-  direct: { label: "Direct", soakMultiplier: 0.5, summary: "Ignores half of the Soak Value." },
-  lethal: { label: "Lethal", soakMultiplier: 0, summary: "Ignores the Soak Value entirely." }
+  standard: { value: 1, label: "Standard", soakMultiplier: 1, summary: "Defended against with the full Soak Value." },
+  direct: { value: 2, label: "Direct", soakMultiplier: 0.5, summary: "Ignores half of the Soak Value." },
+  lethal: { value: 3, label: "Lethal", soakMultiplier: 0, summary: "Ignores the Soak Value entirely." }
 });
 
-const DAMAGE_CATEGORY_ORDER = ["standard", "direct", "lethal"];
+const DAMAGE_CATEGORY_MIN = 1;
+const DAMAGE_CATEGORY_MAX = 3;
 
 /**
- * Step a Damage Category down the scale, as Guard does. Standard is the floor: there
- * is nothing gentler to fall back to.
+ * The Damage Category an attack ends up at: its Profile's, moved by the total of every
+ * step for and against it, and only then held within range.
  */
-export function reduceDamageCategory(category, steps = 1) {
-  const index = DAMAGE_CATEGORY_ORDER.indexOf(category);
-  return DAMAGE_CATEGORY_ORDER[Math.max(0, index - steps)];
+export function resolveDamageCategory(baseCategory, shift = 0) {
+  const base = DAMAGE_CATEGORIES[baseCategory]?.value ?? DAMAGE_CATEGORY_MIN;
+  const value = Math.min(DAMAGE_CATEGORY_MAX, Math.max(DAMAGE_CATEGORY_MIN, base + shift));
+  return Object.keys(DAMAGE_CATEGORIES).find(key => DAMAGE_CATEGORIES[key].value === value);
 }
 
 export const PROFILES = Object.freeze({
@@ -173,13 +181,21 @@ export const DEFEND_OPTIONS = Object.freeze({
   }
 });
 
-/** What one Defend option costs this character, resolving the (bT) notation. */
+/**
+ * What one Defend option costs this character, resolving the (bT) notation and any
+ * Talent that discounts it. A discount can never make a Maneuver pay you.
+ */
 export function defendOptionCost(option, actor) {
   const definition = DEFEND_OPTIONS[option];
-  if (definition.kiCostPerBaseTier) {
-    return definition.kiCostPerBaseTier * actor.system.baseTierOfPower;
-  }
-  return definition.kiCost ?? 0;
+  const base = definition.kiCostPerBaseTier
+    ? definition.kiCostPerBaseTier * actor.system.baseTierOfPower
+    : (definition.kiCost ?? 0);
+
+  const discount = talentEffects(actor, "defendOptionCost")
+    .filter(effect => effect.option === option)
+    .reduce((total, effect) => total + (effect.perTier * actor.system.tierOfPower), 0);
+
+  return Math.max(0, base + discount);
 }
 
 /** Action types a Maneuver can spend. Instant and Out-of-Sequence spend none. */
@@ -394,6 +410,29 @@ export function maneuverKiCost(maneuver, declared) {
   // The wager is Ki spent on the attack like any other, so it is paid here - which is
   // also what takes it out of Capacity.
   return (maneuver.kiCost ?? 0) + PROFILES[declared.profile].kiCost + (declared.kiWager ?? 0);
+}
+
+/**
+ * How many uses of a limited Maneuver a character has left. A Maneuver with no limit
+ * is always available, so it reports Infinity rather than a number to compare.
+ */
+export function maneuverUsesLeft(actor, maneuver) {
+  if (!maneuver.usageLimit) return Infinity;
+  const spent = actor.system.usedManeuvers.filter(id => id === maneuver.id).length;
+  return Math.max(0, maneuver.usageLimit.amount - spent);
+}
+
+/** Record one use of a limited Maneuver. */
+export async function recordManeuverUse(actor, maneuver) {
+  if (!maneuver.usageLimit) return;
+  await actor.update({ "system.usedManeuvers": [...actor.system.usedManeuvers, maneuver.id] });
+}
+
+/** "[1/Encounter]", as the rules write it in a Maneuver's name. */
+export function usageLimitLabel(maneuver) {
+  if (!maneuver.usageLimit) return "";
+  const { amount, per } = maneuver.usageLimit;
+  return `${amount}/${per.charAt(0).toUpperCase()}${per.slice(1)}`;
 }
 
 const SOURCE = "systems/dbu-ttrpg/maneuvers.json";

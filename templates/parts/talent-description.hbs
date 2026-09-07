@@ -1,0 +1,6 @@
+<div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">
+  {{! A rich-text field, so it is edited through Foundry's own editor rather than a
+      plain input - the book's wording carries emphasis and line breaks. }}
+  {{formInput fields.description value=system.description enriched=enrichedDescription
+              toggled=false editable=editable}}
+</div>

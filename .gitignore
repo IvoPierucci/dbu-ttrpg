@@ -9,3 +9,7 @@ desktop.ini
 # Foundry never needs these, and OneDrive likes to leave them around
 *.tmp
 ~$*
+
+# Compendium databases. Foundry builds these from the manifest on world load, and they
+# are binary LevelDB files - the talents themselves live in talents.json.
+packs/*/

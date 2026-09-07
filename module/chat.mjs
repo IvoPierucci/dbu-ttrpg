@@ -1,10 +1,11 @@
 import DBUCharacterData from "./data/actor-character.mjs";
+import { talentEffects } from "./talents.mjs";
 import {
   DAMAGE_CATEGORIES,
   DEFEND_OPTIONS,
   MANEUVER_TYPES,
   PROFILES,
-  reduceDamageCategory,
+  resolveDamageCategory,
   allManeuvers,
   declareAttack,
   defendOptionCost,
@@ -865,6 +866,9 @@ export async function postAttack(actor, target, maneuver, { profile, foundation,
           // Carried on the attack rather than looked up later: a Profile's Damage
           // Category is part of what was declared.
           damageCategory: PROFILES[profile].damageCategory,
+          // Steps applied by the attacker's own effects. None write here yet, but they
+          // must be summed with the defender's before anything is clamped.
+          damageCategoryShift: 0,
           kiWager,
           foundation,
           foundationLabel: DBUCharacterData.FOUNDATIONS[foundation].label,
@@ -907,7 +911,8 @@ async function resolveAttack(message, target, attack, defense = "dodge", defence
   // the round's free attacks are spent.
   const strike = await rollSide(attacker, [
     { label: "Strike", value: attacker.system.combat.strike },
-    { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty }
+    { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty },
+    ...thresholdPenalty(attacker)
   ], options.attacker);
 
   // What the defender answers the Strike with, and whether they answer at all.
@@ -917,11 +922,10 @@ async function resolveAttack(message, target, attack, defense = "dodge", defence
   // The defender wins ties, as everywhere else: the attacker has to beat them.
   const hit = answer ? (strike.total > answer.total) : true;
 
-  // The Damage Category is settled here, since it is the defence that can change it,
-  // but nothing is wounded yet: the Wound Roll is a step of its own.
-  const damageCategory = defence.reducesDamageCategory
-    ? reduceDamageCategory(attack.damageCategory)
-    : attack.damageCategory;
+  // Every step for and against the Damage Category is summed before anything is
+  // clamped, so an attack pushed well past Lethal is still above one merely at it.
+  const shift = (attack.damageCategoryShift ?? 0) + (defence.damageCategoryShift ?? 0);
+  const damageCategory = resolveDamageCategory(attack.damageCategory, shift);
 
   // Gained after the Attacking Maneuver, so it never touches the roll just made. The
   // Defend Maneuver spares you these entirely, whichever option it was used for.
@@ -982,7 +986,8 @@ async function rollAttackWound(message, attack) {
   // declared, which is what took it out of Capacity.
   const wound = await rollSide(attacker, [
     { label: "Wound", value: attacker.system.combat.wound[attack.foundation] },
-    { label: "Ki Wager", value: attack.kiWager ?? 0 }
+    { label: "Ki Wager", value: attack.kiWager ?? 0 },
+    ...thresholdPenalty(attacker)
   ], {
     extraDice: attacker.system.dice.extra.formula,
     criticalDice: attacker.system.dice.critical.formula
@@ -1000,9 +1005,19 @@ async function rollAttackWound(message, attack) {
       })
     : null;
 
+  // A Talent that raises the Soak Value for defending does so "before any
+  // calculations", so it lands on the base value - ahead of the Damage Category and
+  // ahead of whatever the defence itself does to it.
+  const defended = attack.defense !== "dodge";
+  const soakBonus = defended
+    ? talentEffects(target, "soakWhenDefending")
+        .reduce((total, effect) => total + (effect.perTier * target.system.tierOfPower), 0)
+    : 0;
+
   // Only what the Damage Category leaves of the Soak Value counts, and the defence
   // adjusts what survives that.
-  const counted = Math.floor(target.system.soakValue * DAMAGE_CATEGORIES[damageCategory].soakMultiplier);
+  const base = target.system.soakValue + soakBonus;
+  const counted = Math.floor(base * DAMAGE_CATEGORIES[damageCategory].soakMultiplier);
   const soak = defence.soak(counted);
   const effectiveWound = defence.wound(wound.total);
 
@@ -1039,7 +1054,17 @@ function dodgeBonus(actor, { halved = false } = {}) {
   if (other) parts.push({ label: "Dodge bonus", value: other });
 
   parts.push({ label: "Dim. Defense", value: -actor.system.diminishing.defense.penalty });
+  parts.push(...thresholdPenalty(actor));
   return parts;
+}
+
+/**
+ * What failed Steadfast Checks cost on a Combat Roll: 1(bT) for each. Returned as a
+ * list so it drops out of the breakdown entirely when there is nothing to report.
+ */
+function thresholdPenalty(actor) {
+  const { penalty } = actor.system.threshold;
+  return penalty ? [{ label: "Thresholds", value: -penalty }] : [];
 }
 
 /**
@@ -1063,9 +1088,11 @@ const DEFENCES = {
   parry: {
     label: "Parry",
     // Clashed with the Strike Roll, as though throwing a Physical Attack back.
-    // A Parry is not an Attacking Maneuver, so Diminishing Offense does not touch it.
+    // A Parry is not an Attacking Maneuver, so Diminishing Offense does not touch it -
+    // but it is still a Combat Roll, so Thresholds do.
     answer: (actor, options) => rollSide(actor, [
-      { label: "Strike", value: actor.system.combat.strike }
+      { label: "Strike", value: actor.system.combat.strike },
+      ...thresholdPenalty(actor)
     ], options),
     soak: (soak) => soak,
     wound: (total) => total
@@ -1105,7 +1132,7 @@ const DEFENCES = {
     soak: (soak) => soak,
     // The Wound Roll against you is halved, and the attack's Damage Category drops a
     // step - so more of your Soak Value counts than the Profile intended.
-    reducesDamageCategory: true,
+    damageCategoryShift: -1,
     wound: (total) => Math.floor(total / 2)
   }
 };
@@ -1118,6 +1145,75 @@ async function applyAttackDamage(message, target, attack) {
     type: "attack",
     attack: { ...attack, result: { ...attack.result, applied: true } }
   });
+}
+
+/**
+ * Take a Surge: either a Healing Surge or a Ki Surge.
+ *
+ * A Surge is not the Surge Maneuver - the Maneuver is one way to reach one, and other
+ * effects will reach the same two Surges by other routes, so this is kept apart from
+ * whatever triggered it.
+ */
+export async function takeSurge(actor, { source = "Surge" } = {}) {
+  const kind = await foundry.applications.api.DialogV2.wait({
+    window: { title: "Surge" },
+    content: `<ul class="dbu-surge-options">
+      <li><strong>Healing Surge</strong>: regain ${DBUCharacterData.HEALING_SURGE_DICE_PER_TIER}d10 per Tier of Power in Life Points.</li>
+      <li><strong>Ki Surge</strong>: regain a quarter of your maximum Ki Points and Capacity.</li>
+    </ul>`,
+    buttons: [
+      { action: "healing", label: "Healing Surge" },
+      { action: "ki", label: "Ki Surge" },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!kind || (kind === "cancel")) return false;
+
+  // Surgency adds the Force Modifier to the Life and Ki regained - but not to the
+  // Capacity, which the rule does not mention.
+  const surgency = actor.system.surgency;
+
+  if (kind === "healing") {
+    const dice = DBUCharacterData.HEALING_SURGE_DICE_PER_TIER * actor.system.tierOfPower;
+    const roll = new Roll(`${dice}d10 + @surgency`, { surgency });
+    await roll.evaluate();
+
+    const { value, max } = actor.system.life;
+    const restored = Math.min(max, value + roll.total) - value;
+    await actor.update({ "system.life.value": value + restored });
+
+    // The Surge announces itself: a separate message for the Maneuver would say the
+    // same thing twice.
+    await roll.toMessage({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      flavor: `${source} - Healing Surge - ${restored} Life Points restored`
+    });
+    return true;
+  }
+
+  const { ki, capacity } = actor.system;
+  const kiGain = Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency;
+  const capacityGain = Math.floor(capacity.max / DBUCharacterData.KI_SURGE_FRACTION);
+
+  const kiRestored = Math.min(ki.max, ki.value + kiGain) - ki.value;
+  // Capacity comes back by giving back what has been spent this round.
+  const capacityRestored = Math.min(capacity.spent, capacityGain);
+
+  await actor.update({
+    "system.ki.value": ki.value + kiRestored,
+    "system.capacity.spent": capacity.spent - capacityRestored
+  });
+
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: checkCard({
+      parts: `${Handlebars.escapeExpression(source)} &middot; Ki Surge &middot; ${capacityRestored} Capacity regained`,
+      total: `+${kiRestored} KP`,
+      outcome: "surge"
+    })
+  });
+  return true;
 }
 
 /**
