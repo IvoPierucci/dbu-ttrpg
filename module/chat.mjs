@@ -140,29 +140,16 @@ async function applyClash(messageId, clash) {
 }
 
 /**
- * The message ownership that lets an Actor's owners edit it themselves.
+ * Apply an edit directly when we may, and ask the GM to when we may not.
  *
- * A message is normally editable only by whoever posted it, which would leave the
- * defender in an exchange unable to record their own roll - their click would have to
- * be relayed through a connected GM to take effect. Handing the two sides ownership of
- * the message keeps the exchange between the players involved in it.
+ * A ChatMessage can only be edited by whoever posted it - unlike an Actor, it carries
+ * no ownership that could be handed to anyone else. So a defender recording their own
+ * roll on the attacker's message has to go through the GM's client, which applies it
+ * for them. This asks the question that decides that, rather than canUserModify, which
+ * answers it too generously and leaves the update to be refused by the server.
  */
-function ownershipFor(...actors) {
-  const ownership = {};
-  for (const user of game.users) {
-    if (user.isGM) continue;
-    if (actors.some(actor => actor?.testUserPermission(user, "OWNER"))) {
-      ownership[user.id] = CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
-    }
-  }
-  return ownership;
-}
-
-/** Apply an edit directly when we may, and ask the GM to when we may not. */
 function requestEdit(message, request) {
-  // canUserModify rather than authorship: a message can be handed to someone else to
-  // edit, which is how an opposed roll is settled without a GM in the middle.
-  if (message.canUserModify(game.user, "update")) {
+  if (message.isAuthor || game.user.isGM) {
     if (request.type === "respond") return applyResponse(message.id, request.response);
     if (request.type === "clash") return applyClash(message.id, request.clash);
     if (request.type === "attack") return applyAttack(message.id, request.attack);
@@ -172,7 +159,7 @@ function requestEdit(message, request) {
   }
 
   if (!game.users.activeGM) {
-    ui.notifications.warn("A GM must be connected to respond to another player's maneuver.");
+    ui.notifications.warn("A GM must be connected for this to be recorded on the maneuver.");
     return;
   }
   game.socket.emit(CHANNEL, { ...request, messageId: message.id });
@@ -757,8 +744,6 @@ export async function postSkillClash(actor, target, maneuver) {
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    // The defender rolls both sides, so they need to be able to write the result.
-    ownership: ownershipFor(actor, target),
     content: "",
     flags: {
       [SCOPE]: {
@@ -1049,8 +1034,6 @@ export async function postAttack(actor, target, maneuver, { profile, foundation,
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    // The target settles the exchange, so they get to edit the message that holds it.
-    ownership: ownershipFor(actor, target),
     content: "",
     flags: {
       [SCOPE]: {
