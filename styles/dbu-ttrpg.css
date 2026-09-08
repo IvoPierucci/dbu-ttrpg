@@ -1269,34 +1269,74 @@
   margin-top: 4px;
 }
 
-/* Offered on a Standard Maneuver: one button per character the reader controls. */
-.dbu-respond-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.dbu-respond-label {
-  flex: 1 0 100%;
-  font-size: 11px;
-  opacity: 0.75;
-}
-
+/* The single way in to answering a Maneuver. */
 .dbu-respond-button {
-  flex: 0 1 auto;
-  width: auto;
-  padding: 0 8px;
-  line-height: 20px;
-}
-
-/* GM only: closes the maneuver to further responses. */
-.dbu-settle-button {
   width: 100%;
   margin-top: 4px;
 }
 
+/* Its dialog: a list per character, and three within each. */
+.dbu-respond-actor > summary {
+  padding: 3px 0;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.dbu-respond-group {
+  margin: 0 0 4px 12px;
+  border-left: 2px solid rgba(128, 128, 128, 0.3);
+  padding-left: 8px;
+}
+
+.dbu-respond-group > summary {
+  padding: 2px 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.dbu-respond-option {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+/* Shown, but not available in this situation. */
+.dbu-respond-blocked {
+  opacity: 0.45;
+  cursor: help;
+}
+
+.dbu-respond-name {
+  flex: 0 0 auto;
+  font-weight: bold;
+}
+
+.dbu-respond-source {
+  flex: 1 1 auto;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* Answering an attack without a Maneuver, shown ahead of the ones that are. */
+.dbu-respond-dodge {
+  margin-left: 12px;
+  padding-left: 8px;
+  border-left: 2px solid rgba(128, 128, 128, 0.3);
+}
+
+.dbu-respond-note {
+  margin: 2px 0;
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.65;
+}
+
+/* GM only: closes the maneuver to further responses. */
 /* Out-of-Sequence chances granted by a message. */
 .dbu-oos-list {
   margin: 4px 0 0;

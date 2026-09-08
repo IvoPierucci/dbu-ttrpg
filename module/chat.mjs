@@ -1,5 +1,5 @@
 import DBUCharacterData from "./data/actor-character.mjs";
-import { armedEffect, talentEffects } from "./talents.mjs";
+import { armedEffect, talentEffects, usesLeft } from "./talents.mjs";
 import {
   DAMAGE_CATEGORIES,
   DEFEND_OPTIONS,
@@ -32,16 +32,6 @@ const RESPONDABLE_FLAG = "respondable";
 const RESPONSES_FLAG = "responses";
 
 /**
- * How far the GM has closed a Maneuver to responses: unset while both windows are
- * open, "before" once the Maneuver itself has resolved, and "after" once it is done
- * with entirely.
- *
- * The two are separate because an Instant may be played once the Maneuver has
- * finished - but only ever as an "after".
- */
-const SETTLE_STAGE_FLAG = "settleStage";
-
-/**
  * Out-of-Sequence opportunities granted by this message: one entry per Maneuver a
  * character has been allowed to play in response to it.
  */
@@ -52,12 +42,6 @@ const OOS_OFFERS_FLAG = "oosOffers";
  * Maneuver may come out of a single trigger, so taking one closes the rest.
  */
 const OOS_TAKEN_FLAG = "oosTaken";
-
-/** Whether a response at this timing can still be played or taken back. */
-function timingLocked(stage, timing) {
-  if (!stage) return false;
-  return (stage === "after") || (timing === "before");
-}
 
 /** Socket channel used to ask the GM to edit a message the responder cannot. */
 const CHANNEL = `system.${SCOPE}`;
@@ -76,7 +60,6 @@ export function registerManeuverSocket() {
     else if (request?.type === "clash") applyClash(request.messageId, request.clash);
     else if (request?.type === "attack") applyAttack(request.messageId, request.attack);
     else if (request?.type === "actor") applyActorUpdate(request.actorUuid, request.changes);
-    else if (request?.type === "settle") applySettle(request.messageId, request.stage);
     else if (request?.type === "offer") applyOffer(request.messageId, request.offer);
     else if (request?.type === "offerTaken") applyOfferTaken(request.messageId, request.actorUuid);
   });
@@ -113,13 +96,6 @@ async function applyOfferTaken(messageId, actorUuid) {
   const message = game.messages.get(messageId);
   if (!message) return;
   await message.setFlag(SCOPE, OOS_TAKEN_FLAG, actorUuid);
-}
-
-/** Close one of the two windows for responding to a Maneuver. */
-async function applySettle(messageId, stage) {
-  const message = game.messages.get(messageId);
-  if (!message) return;
-  await message.setFlag(SCOPE, SETTLE_STAGE_FLAG, stage);
 }
 
 async function applyActorUpdate(actorUuid, changes) {
@@ -190,7 +166,6 @@ function requestEdit(message, request) {
     if (request.type === "respond") return applyResponse(message.id, request.response);
     if (request.type === "clash") return applyClash(message.id, request.clash);
     if (request.type === "attack") return applyAttack(message.id, request.attack);
-    if (request.type === "settle") return applySettle(message.id, request.stage);
     if (request.type === "offer") return applyOffer(message.id, request.offer);
     if (request.type === "offerTaken") return applyOfferTaken(message.id, request.actorUuid);
     return applyCancel(message.id, request.actorUuid);
@@ -296,6 +271,22 @@ function attackLine(actor, maneuver, foundation) {
 }
 
 /**
+ * Whether a character has answered the most recent Standard Maneuver with an Instant.
+ *
+ * This is what keeps two Instants from being played back to back: having answered the
+ * last one, you may not reach for another until a Standard Maneuver passes that you
+ * did not answer. Read from the messages themselves, so there is no flag to set or
+ * clear and no way for it to fall out of step.
+ */
+export function answeredLatestManeuver(actor) {
+  const respondable = game.messages.contents.filter(message => message.getFlag(SCOPE, RESPONDABLE_FLAG));
+  const latest = respondable[respondable.length - 1];
+  if (!latest) return false;
+
+  return (latest.getFlag(SCOPE, RESPONSES_FLAG) ?? []).some(entry => entry.actorUuid === actor.uuid);
+}
+
+/**
  * Whether an Instant Maneuver may be played in response. Instants answer Standard
  * Maneuvers and nothing else, so this follows from the type alone - regardless of
  * what the Maneuver does.
@@ -333,24 +324,34 @@ function ownedCharacters() {
 }
 
 /**
- * Show which Actors have answered a Standard Maneuver, and offer the reader their
- * own turn to.
+ * Show what has been played in answer to a Maneuver, and offer one way in to playing
+ * something yourself.
  *
- * A response belongs to the Actor that played it, not to the user who clicked, so
- * whoever has access to that Actor may take it back - which lets a GM undo any of
- * them. Anyone without access sees the entry, but no way to touch it.
+ * One button rather than several: a message can invite a Counter Maneuver, an Instant
+ * Maneuver and a triggered effect at once, and from any of several characters. Laying
+ * every combination out as its own button turned the card into a wall of them, so the
+ * choices live behind a single Respond and are grouped there by character.
  *
- * The list is rebuilt from the message's flags on every render rather than written
- * into its content, so a response played on one client appears on all of them and a
- * cancelled one disappears just as cleanly.
+ * What has already been played is listed here rather than in the dialog, since it is
+ * of interest to the whole table. A response belongs to the Actor that played it, so
+ * whoever has access to that Actor may take it back - which lets a GM undo any of them.
  */
 function renderInstantResponses(message, html) {
-  if (!message.getFlag(SCOPE, RESPONDABLE_FLAG)) return;
+  const respondable = Boolean(message.getFlag(SCOPE, RESPONDABLE_FLAG));
+
+  // An attack played out of sequence cannot be answered with an Instant, but it still
+  // has to be answered: its target has to dodge or Defend. So the way in is offered
+  // whenever there is something to answer, not only when Instants are allowed.
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const awaiting = Boolean(attack && !attack.result && fromUuidSync(attack.targetUuid)?.isOwner);
+
+  // Once every target has answered, there is nothing left to answer with: what follows
+  // belongs to the Wound Roll and to being hit, which have their own stages.
+  if (attack?.result) return;
+  if (!respondable && !awaiting) return;
 
   const container = html.querySelector(".message-content") ?? html;
   const responses = message.getFlag(SCOPE, RESPONSES_FLAG) ?? [];
-
-  const stage = message.getFlag(SCOPE, SETTLE_STAGE_FLAG) ?? null;
 
   if (responses.length) {
     const list = document.createElement("ul");
@@ -360,12 +361,10 @@ function renderInstantResponses(message, html) {
       const item = document.createElement("li");
       item.innerHTML = `
         <span class="dbu-response-actor">${Handlebars.escapeExpression(response.actorName)}</span>
-        <span class="dbu-response-maneuver">${Handlebars.escapeExpression(response.maneuverName)}</span>
-        <span class="dbu-response-timing">${response.timing}</span>`;
+        <span class="dbu-response-maneuver">${Handlebars.escapeExpression(response.maneuverName)}</span>`;
 
-      // A response can only be taken back while its own timing is still open.
       const actor = fromUuidSync(response.actorUuid);
-      if (actor?.isOwner && !timingLocked(stage, response.timing)) {
+      if (actor?.isOwner) {
         const cancel = document.createElement("button");
         cancel.type = "button";
         cancel.className = "dbu-cancel-response";
@@ -380,153 +379,281 @@ function renderInstantResponses(message, html) {
     container.append(list);
   }
 
-  if (stage === "after") {
-    const note = document.createElement("div");
-    note.className = "dbu-settled-note";
-    note.textContent = "Responses settled";
-    container.append(note);
-    return;
-  }
+  if (!ownedCharacters().length) return;
 
-  // The GM decides when each window closes, so that a Maneuver does not sit open
-  // waiting on a player who has nothing to play.
-  if (game.user.isGM) {
-    const settle = document.createElement("button");
-    settle.type = "button";
-    settle.className = "dbu-settle-button";
-
-    if (stage === "before") {
-      settle.textContent = "Settle After";
-      settle.dataset.tooltip = "Close this maneuver to any further Instant Maneuvers";
-      settle.addEventListener("click", () => requestEdit(message, { type: "settle", stage: "after" }));
-    }
-    else {
-      settle.textContent = "Settle Before";
-      settle.dataset.tooltip = "The maneuver resolves: from here, Instants can only be played after it";
-      settle.addEventListener("click", () => requestEdit(message, { type: "settle", stage: "before" }));
-    }
-    container.append(settle);
-  }
-
-  if (!instantManeuvers().length) return;
-
-  // One Instant per Actor per Maneuver, so a character that has already answered
-  // gets no button - the way back is the cancel control on its own row.
-  const answered = new Set(responses.map(response => response.actorUuid));
-  const available = ownedCharacters().filter(actor => !answered.has(actor.uuid));
-  if (!available.length) return;
-
-  const row = document.createElement("div");
-  row.className = "dbu-respond-row";
-
-  const label = document.createElement("span");
-  label.className = "dbu-respond-label";
-  label.textContent = (stage === "before")
-    ? "Respond with an Instant (after):"
-    : "Respond with an Instant:";
-  row.append(label);
-
-  // One button per character the reader controls, rather than guessing which one
-  // they meant: a GM answering for several NPCs should not have to select tokens
-  // between responses.
-  for (const actor of available) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "dbu-respond-button";
-    button.textContent = actor.name;
-    button.addEventListener("click", () => respondWithInstant(message, actor, stage));
-    row.append(button);
-  }
-
-  container.append(row);
+  const respond = document.createElement("button");
+  respond.type = "button";
+  respond.className = "dbu-respond-button";
+  respond.textContent = "Respond";
+  respond.dataset.tooltip = "Play a Counter or Instant Maneuver, or trigger an effect";
+  respond.addEventListener("click", () => respondDialog(message, respondable));
+  container.append(respond);
 }
 
 function instantManeuvers() {
   return allManeuvers().filter(maneuver => maneuver.type === "instant");
 }
 
-/**
- * Ask which Instant Maneuver to use and when it resolves, then pay for it and record
- * it on the Standard Maneuver's message. Both questions are asked in one dialog: the
- * timing is not a separate decision from the choice.
- */
-async function respondWithInstant(message, actor, stage) {
-  const instants = instantManeuvers();
+function counterManeuvers() {
+  return allManeuvers().filter(maneuver => maneuver.type === "counter");
+}
 
-  const options = instants.map((maneuver, index) => `
-    <label class="dbu-instant-option">
-      <input type="radio" name="maneuver" value="${maneuver.id}" ${index === 0 ? "checked" : ""}/>
-      <span class="dbu-instant-name">${Handlebars.escapeExpression(maneuver.name)}</span>
-      <span class="dbu-instant-source">${Handlebars.escapeExpression(maneuver.source ?? "")}</span>
+/**
+ * Which triggered effects belong to which point of an exchange.
+ *
+ * An attack passes through stages, and an effect is only worth offering at the one it
+ * can act on: setting a Base Die is of use before a roll is made, not after. Keyed by
+ * stage so a new effect joins the list it belongs to rather than appearing everywhere.
+ */
+const TRIGGER_STAGES = {
+  // Answering the attack: the Strike and whatever meets it.
+  response: ["forceNaturalResult"],
+  // The attack has landed. One moment, shared by both sides: the attacker brings what
+  // happens on hitting, the target what happens on being hit, and both come before the
+  // Wound Roll - which is exactly what they are there to change.
+  hit: ["forceNaturalResult"]
+};
+
+/**
+ * The triggered effects worth offering to this character at this point.
+ *
+ * Only what could actually bear on it: an effect that sets a Combat Roll is of no use
+ * on a Maneuver that rolls nothing, or to a character standing outside the exchange.
+ * Showing everything a character owns would bury the one that matters.
+ */
+function relevantTriggers(actor, message, stage) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack) return [];
+
+  // Both sides take part in both stages; what differs is which effects each holds.
+  if (![attack.attackerUuid, attack.targetUuid].includes(actor.uuid)) return [];
+
+  return TRIGGER_STAGES[stage]
+    .flatMap(key => talentEffects(actor, key))
+    .filter(effect => usesLeft(actor, effect).available);
+}
+
+/**
+ * Ask which of these effects to bring to bear, and arm the ones chosen.
+ *
+ * @returns {Promise<boolean>} False if the reader backed out entirely.
+ */
+async function armTriggers(actor, effects, title) {
+  const rows = effects.map(effect => `
+    <label class="dbu-respond-option">
+      <input type="checkbox" name="trigger" value="${effect.talentId}"/>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(effect.talentName)}</span>
+      <span class="dbu-respond-source">${Handlebars.escapeExpression(effect.text)}</span>
     </label>`).join("");
 
-  /** Read the picked Maneuver out of the dialog, pairing it with the button's timing. */
-  const pick = (timing) => (event, button, dialog) => {
-    const chosen = dialog.element.querySelector('input[name="maneuver"]:checked');
-    return chosen ? { maneuverId: chosen.value, timing } : null;
-  };
-
-  // Two things can rule out playing this before the Maneuver resolves: the GM having
-  // already settled that window, and the character's own last Maneuver having been an
-  // Instant. Playing after is always open, because by then the last Maneuver is the
-  // Standard one this responds to - which is exactly why the same character may answer
-  // after a Maneuver when it could not have answered before it.
-  const justPlayedInstant = actor.system.lastManeuverWasInstant;
-  const beforeAvailable = (stage !== "before") && !justPlayedInstant;
-
-  const timings = [
-    ...(beforeAvailable ? [{ action: "before", label: "Use Before", callback: pick("before") }] : []),
-    { action: "after", label: "Use After", callback: pick("after") }
-  ];
-
-  const note = (!beforeAvailable && justPlayedInstant)
-    ? `<p class="dbu-instant-note">${Handlebars.escapeExpression(actor.name)} just played an Instant Maneuver, so this one can only come after.</p>`
-    : "";
-
-  const choice = await foundry.applications.api.DialogV2.wait({
-    window: { title: "Respond with an Instant Maneuver" },
-    content: `<div class="dbu-instant-picker">${options}</div>${note}`,
-    buttons: [...timings, { action: "cancel", label: "Cancel" }],
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    window: { title },
+    content: `<div class="dbu-respond-dialog">${rows}</div>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) =>
+          [...dialog.element.querySelectorAll('input[name="trigger"]:checked')].map(input => input.value)
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
     rejectClose: false
   });
 
-  // The Cancel button resolves to its own action string rather than a choice.
-  if (!choice || (typeof choice !== "object")) return;
+  if (!Array.isArray(chosen)) return false;
+  if (chosen.length) {
+    await actor.update({
+      "system.armedTalents": [...new Set([...actor.system.armedTalents, ...chosen])]
+    });
+  }
+  return true;
+}
 
-  const maneuver = getManeuver(choice.maneuverId);
+/**
+ * One dialog holding everything a reader could play in answer to this Maneuver,
+ * grouped by the character playing it.
+ *
+ * A Counter and an Instant can both be played against the same Maneuver, so the two
+ * lists are independent - picking from one leaves the other free. Within each list
+ * only one Maneuver may be chosen, which is what the radios enforce.
+ */
+async function respondDialog(message, respondable) {
+  const characters = ownedCharacters();
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const answered = new Set((message.getFlag(SCOPE, RESPONSES_FLAG) ?? []).map(entry => entry.actorUuid));
+
+  const sections = characters.map(actor => {
+    const isTarget = attack?.targetUuid === actor.uuid;
+    const unresolved = isTarget && !attack.result;
+
+    // Nothing is picked to begin with, so confirming the dialog without touching a
+    // group answers nothing. The Instants carry an explicit "nothing" of their own,
+    // since a radio cannot be unpicked once it has been.
+    const nothing = (group) => `
+      <label class="dbu-respond-option">
+        <input type="radio" name="${group}-${actor.id}" value="none" checked/>
+        <span class="dbu-respond-name">Nothing</span>
+      </label>`;
+
+    // Dodging is not a Maneuver, but it is the other way to answer an attack - so it
+    // shares the Counters' group and picking one unpicks the other.
+    const dodge = unresolved
+      ? `<label class="dbu-respond-option dbu-respond-dodge">
+           <input type="radio" name="counter-${actor.id}" value="dodge"/>
+           <span class="dbu-respond-name">Dodge</span>
+           <span class="dbu-respond-source">no maneuver, no action</span>
+         </label>`
+      : "";
+
+    const counters = counterManeuvers().map(maneuver => {
+      // A Counter Maneuver answers an Attacking Maneuver aimed at you, so a character
+      // who is not the target is shown it but cannot take it.
+      const blocked = !unresolved;
+      return option(`counter-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, blocked,
+        blocked ? "only the target of an attack may Defend, and only before it resolves" : "");
+    }).join("");
+
+    // An Instant played here is taken as having come before the Maneuver it answers,
+    // so there is no timing to choose.
+    const instants = !respondable
+      ? `<p class="dbu-respond-note">This maneuver cannot be answered with an Instant.</p>`
+      : answered.has(actor.uuid)
+      ? `<p class="dbu-respond-note">Already answered - cancel it on the card to play another.</p>`
+      : nothing("instant") + instantManeuvers().map(maneuver =>
+          option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, false, "")
+        ).join("");
+
+    const triggers = relevantTriggers(actor, message, "response");
+    const triggerRows = triggers.length
+      ? triggers.map(effect => `
+          <label class="dbu-respond-option">
+            <input type="checkbox" name="trigger-${actor.id}" value="${effect.talentId}"/>
+            <span class="dbu-respond-name">${Handlebars.escapeExpression(effect.talentName)}</span>
+            <span class="dbu-respond-source">${Handlebars.escapeExpression(effect.text)}</span>
+          </label>`).join("")
+      : `<p class="dbu-respond-note">Nothing applies here.</p>`;
+
+    return `
+      <details class="dbu-respond-actor" open>
+        <summary>${Handlebars.escapeExpression(actor.name)}</summary>
+
+        ${dodge}
+
+        <details class="dbu-respond-group">
+          <summary>Counter Maneuvers</summary>
+          ${counters || `<p class="dbu-respond-note">None.</p>`}
+        </details>
+
+        <details class="dbu-respond-group">
+          <summary>Instant Maneuvers</summary>
+          ${instants || `<p class="dbu-respond-note">None.</p>`}
+        </details>
+
+        <details class="dbu-respond-group">
+          <summary>Triggered Effects</summary>
+          ${triggerRows}
+        </details>
+      </details>`;
+  }).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    window: { title: "Respond" },
+    content: `<div class="dbu-respond-dialog">${sections}</div>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) => characters.map(actor => ({
+          actor,
+          counter: dialog.element.querySelector(`input[name="counter-${actor.id}"]:checked`)?.value ?? null,
+          instant: dialog.element.querySelector(`input[name="instant-${actor.id}"]:checked`)?.value ?? null,
+          triggers: [...dialog.element.querySelectorAll(`input[name="trigger-${actor.id}"]:checked`)]
+            .map(input => input.value)
+        }))
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if (!Array.isArray(chosen)) return;
+
+  for (const choice of chosen) {
+    // Arming comes first: a Counter resolves the exchange, and an effect meant to
+    // shape that roll has to be in place before it is made.
+    if (choice.triggers.length) {
+      const armed = choice.actor.system.armedTalents;
+      await choice.actor.update({
+        "system.armedTalents": [...new Set([...armed, ...choice.triggers])]
+      });
+    }
+
+    if (choice.instant && (choice.instant !== "none")) {
+      await playInstant(message, choice.actor, choice.instant);
+    }
+    if (choice.counter && (choice.counter !== "none")) {
+      await playCounter(message, choice.actor, choice.counter, attack);
+    }
+  }
+}
+
+/** One selectable row in the Respond dialog. */
+function option(name, value, label, note, disabled, reason) {
+  return `
+    <label class="dbu-respond-option ${disabled ? "dbu-respond-blocked" : ""}"
+           ${reason ? `data-tooltip="${Handlebars.escapeExpression(reason)}"` : ""}>
+      <input type="radio" name="${name}" value="${value}" ${disabled ? "disabled" : ""}/>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(label)}</span>
+      <span class="dbu-respond-source">${Handlebars.escapeExpression(note ?? "")}</span>
+    </label>`;
+}
+
+/**
+ * Pay for an Instant Maneuver and record it on the Maneuver it answers.
+ *
+ * The sheet's "last maneuver was an Instant" flag is deliberately left alone. An
+ * Instant played here comes before the Maneuver it answers, which then takes its place
+ * as the last one played - so by the time the dust settles it was not an Instant.
+ *
+ * What does stop a second Instant is the response itself: having answered the most
+ * recent Standard Maneuver, the sheet will not offer another until a Standard Maneuver
+ * goes by unanswered. That is read straight off the messages, so nothing needs
+ * clearing afterwards.
+ */
+async function playInstant(message, actor, maneuverId) {
+  const maneuver = getManeuver(maneuverId);
   if (!maneuver) return;
   if (!await spendManeuverCost(actor, maneuver)) return;
-
-  // Playing after the Maneuver leaves this Instant as the last one played. Playing
-  // before it does not: the Standard Maneuver resolves afterwards and takes that
-  // place, and it already cleared the flag when it was declared.
-  if (choice.timing === "after") {
-    await actor.update({ "system.lastManeuverWasInstant": true });
-  }
 
   requestEdit(message, {
     type: "respond",
     response: {
-      // A uuid rather than an id, so an unlinked token's Actor resolves too.
       actorUuid: actor.uuid,
       actorName: actor.name,
       maneuverId: maneuver.id,
-      maneuverName: maneuver.name,
-      timing: choice.timing
+      maneuverName: maneuver.name
     }
   });
+}
+
+/**
+ * Answer the attack: either plainly, by dodging, or with a Counter Maneuver. Both
+ * resolve the exchange, which is why they share one group of choices.
+ */
+async function playCounter(message, actor, answer, attack) {
+  if (!attack || attack.result) return;
+  if (answer === "dodge") return resolveAttack(message, actor, attack);
+
+  const maneuver = getManeuver(answer);
+  if (!maneuver?.defend) return;
+  return defendAgainst(message, actor, attack);
 }
 
 /** Take back a response, refunding what it cost to the Actor that played it. */
 async function cancelInstant(message, actor, response) {
   const maneuver = getManeuver(response.maneuverId);
   if (maneuver) await refundManeuverCost(actor, maneuver);
-
-  // Un-playing an Instant that was played after the Maneuver undoes what it left
-  // behind. The checkbox on the sheet is there for whatever this cannot infer.
-  if (response.timing === "after") {
-    await actor.update({ "system.lastManeuverWasInstant": false });
-  }
   requestEdit(message, { type: "cancel", actorUuid: response.actorUuid });
 }
 
@@ -1042,6 +1169,16 @@ async function resolveAttack(message, target, attack, defense = "dodge", defence
 }
 
 /**
+ * Bring any effects that answer this stage to bear, then roll the Wound. The dialog is
+ * skipped when there is nothing to choose - most attacks have nothing to ask about.
+ */
+async function woundStage(message, attack, attacker) {
+  const triggers = relevantTriggers(attacker, message, "hit");
+  if (triggers.length && !await armTriggers(attacker, triggers, "On hitting")) return;
+  return rollAttackWound(message, attack);
+}
+
+/**
  * Roll the Wound and work out what gets through. Kept apart from the Strike so the
  * table sees whether the attack landed before any damage is rolled - and so a hit can
  * be argued over before it becomes a number.
@@ -1310,6 +1447,9 @@ export async function takeSurge(actor, { source = "Surge" } = {}) {
  * of them needs a field of its own.
  */
 async function defendAgainst(message, target, attack) {
+  // Reached from Respond, where the Defend Maneuver is chosen; this asks which of its
+  // effects is being used and what it costs.
+
   const wagerMax = maxKiWager(target);
 
   const options = Object.entries(DEFEND_OPTIONS).map(([key, option], index) => {
@@ -1448,6 +1588,24 @@ function renderAttack(message, html) {
     <div class="dbu-clash-result">${result ? attackOutcome(attack) : "Awaiting the target"}</div>`;
   container.append(card);
 
+  const target = fromUuidSync(attack.targetUuid);
+
+  // The target's half of the same moment. It has to come before the Wound Roll, since
+  // that is what these effects are there to change. Only drawn when they have some -
+  // an empty dialog is worse than no button.
+  if (result?.hit && !result.wound && target?.isOwner) {
+    const onHit = relevantTriggers(target, message, "hit");
+    if (onHit.length) {
+      const apply = document.createElement("button");
+      apply.type = "button";
+      apply.className = "dbu-clash-button";
+      apply.textContent = "Apply effects";
+      apply.dataset.tooltip = "Trigger effects that answer being hit";
+      apply.addEventListener("click", () => armTriggers(target, onHit, "On being hit"));
+      container.append(apply);
+    }
+  }
+
   // The attacker rolls their own Wound, so that step belongs to them.
   if (result?.hit && !result.wound) {
     const attacker = fromUuidSync(attack.attackerUuid);
@@ -1457,36 +1615,16 @@ function renderAttack(message, html) {
     roll.type = "button";
     roll.className = "dbu-clash-button";
     roll.textContent = "Roll Wound";
-    roll.addEventListener("click", () => rollAttackWound(message, attack));
+    roll.addEventListener("click", () => woundStage(message, attack, attacker));
     container.append(roll);
     return;
   }
 
-  const target = fromUuidSync(attack.targetUuid);
   if (!target?.isOwner) return;
 
-  if (!result) {
-    // Dodging is free and needs no choosing, so it stays a single click; the Defend
-    // Maneuver is the deliberate alternative, and costs a Counter Action to use.
-    const row = document.createElement("div");
-    row.className = "dbu-respond-row";
-
-    const dodge = document.createElement("button");
-    dodge.type = "button";
-    dodge.textContent = "Roll Dodge";
-    dodge.addEventListener("click", () => resolveAttack(message, target, attack));
-    row.append(dodge);
-
-    const defend = document.createElement("button");
-    defend.type = "button";
-    defend.textContent = "Defend";
-    defend.dataset.tooltip = "Counter Maneuver: defend in some way other than dodging";
-    defend.addEventListener("click", () => defendAgainst(message, target, attack));
-    row.append(defend);
-
-    container.append(row);
-    return;
-  }
+  // Answering an attack - by dodging or with a Counter Maneuver - is done from
+  // Respond, along with everything else that answers a Maneuver.
+  if (!result) return;
 
   // A miss ends it, and a Wound not yet rolled has nothing to apply.
   if (!result.hit || !result.wound) return;

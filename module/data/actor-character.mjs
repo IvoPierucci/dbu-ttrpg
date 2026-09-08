@@ -80,21 +80,20 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   }
 
   /**
-   * How many of a Skill Improvement's Ranks may double up on a Skill already taken in
-   * the same grant.
+   * How many Skills a Skill Improvement may take twice.
    *
    * A Skill Improvement normally spreads across distinct Skills. The Level 1 one is
-   * the exception: the two extra Ranks it carries may be placed in a Skill already
-   * chosen there, so up to two Skills can be taken twice.
+   * the exception: the extra Ranks it carries may be placed in a Skill already chosen
+   * there - but only one Skill may be doubled up that way.
    */
-  static PAIRED_SKILL_RANKS_LEVEL_1 = 2;
+  static PAIRED_SKILL_RANKS_LEVEL_1 = 1;
 
   /**
    * Whether a Skill can be taken in one more slot of a Skill Improvement, given what
    * the rest of that grant already holds.
    *
    * No Skill may appear more than twice, and only the Level 1 grant allows a Skill to
-   * appear twice at all - and only for as many pairs as it has extra Ranks.
+   * appear twice at all - and only one Skill within it.
    */
   static canRepeatSkillRank(entry, key, otherSlots) {
     const taken = otherSlots.filter(slot => slot === key).length;

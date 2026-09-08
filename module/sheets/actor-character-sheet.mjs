@@ -4,6 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, usesLeft } from "../talents.mjs";
 import {
+  answeredLatestManeuver,
   checkCard,
   evaluateCheck,
   postAttack,
@@ -306,16 +307,21 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * waiting to be used, only appearing where an effect grants one.
    */
   _prepareManeuverGroups() {
-    // An Instant Maneuver cannot follow another Instant - nor an Out-of-Sequence one
-    // played off the back of an Instant, which is why that never clears the flag.
-    const blocked = this.actor.system.lastManeuverWasInstant;
+    // An Instant Maneuver cannot follow another Instant. Two things can mean it just
+    // did: playing one from here, which sets the flag, and answering the most recent
+    // Standard Maneuver with one - which does not, because the Maneuver it answered
+    // takes its place, but still leaves no room for another.
+    const playedInstant = this.actor.system.lastManeuverWasInstant;
+    const answered = answeredLatestManeuver(this.actor);
 
     const groups = [
       { key: "standard", playable: true },
       {
         key: "instant",
-        playable: !blocked,
-        note: blocked ? "Your last maneuver was an Instant" : ""
+        playable: !playedInstant && !answered,
+        note: playedInstant
+          ? "Your last maneuver was an Instant"
+          : (answered ? "You answered the last maneuver with an Instant" : "")
       },
       { key: "counter", playable: false, note: "Played from the attack they answer, in chat" }
     ];
@@ -423,8 +429,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
               // A Skill Improvement spreads across distinct Skills, except for the two
               // extra Ranks the Level 1 one carries.
               const takenBySibling = !DBUCharacterData.canRepeatSkillRank(entry, key, otherSlots);
-              // Nor can it push a Skill past the cap of this row's Tier of Power.
-              const atCap = ((prior[key] ?? 0) + 1) > rankCap;
+              // Nor can it push a Skill past the cap of this row's Tier of Power. The
+              // Ranks already spent on it in this same grant count too - without them a
+              // racial Rank plus a pair here would quietly reach three.
+              const takenInRow = otherSlots.filter(pick => pick === key).length;
+              const atCap = ((prior[key] ?? 0) + takenInRow + 1) > rankCap;
 
               return {
                 value: key,
@@ -687,7 +696,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // The template does not offer these, but a stale render should not be a way past
     // the rules either.
-    if ((maneuver.type === "instant") && this.actor.system.lastManeuverWasInstant) {
+    if ((maneuver.type === "instant")
+      && (this.actor.system.lastManeuverWasInstant || answeredLatestManeuver(this.actor))) {
       ui.notifications.warn(
         `${this.actor.name} just played an Instant Maneuver and cannot play another.`
       );
