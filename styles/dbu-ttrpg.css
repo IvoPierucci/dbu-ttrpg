@@ -1198,7 +1198,22 @@
   font-size: 13px;
 }
 
-/* --- Skill Clash card ------------------------------------------------------ */
+/* --- Skill Clash and attack cards ------------------------------------------
+   These render into the chat log, outside the sheet's .dbu-ttrpg root, so they
+   cannot inherit its palette: what they need is declared on the cards themselves.
+   The two states carry real colour rather than a wash of it: they are the thing you
+   scan a card for. Kept off pure red and green all the same, so a row of them does
+   not glare, and mid-toned so they hold up on a light parchment background and a
+   dark one alike. */
+.dbu-clash,
+.dbu-check,
+.dbu-clash-button,
+.dbu-respond-button {
+  --dbu-accent: #f5a623;
+  --dbu-ready: #2f9e55;
+  --dbu-pending: #d1544a;
+  --dbu-action: 74, 118, 176;
+}
 
 .dbu-clash-title {
   display: flex;
@@ -1240,8 +1255,28 @@
 }
 
 .dbu-clash-waiting {
-  font-size: 17px;
-  opacity: 0.4;
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.5;
+}
+
+/* Still deciding, and confirmed. The name carries the same state as the word beside
+   it: a card with four people on it is read by scanning the names, not the statuses. */
+.dbu-clash-name.dbu-pending,
+.dbu-clash-waiting.dbu-pending {
+  color: var(--dbu-pending);
+}
+
+.dbu-clash-name.dbu-ready,
+.dbu-clash-waiting.dbu-ready {
+  color: var(--dbu-ready);
+}
+
+.dbu-clash-waiting.dbu-ready,
+.dbu-clash-waiting.dbu-pending {
+  font-style: normal;
+  font-weight: bold;
+  opacity: 1;
 }
 
 .dbu-clash-outcome {
@@ -1264,15 +1299,23 @@
   font-weight: bold;
 }
 
-.dbu-clash-button {
-  width: 100%;
-  margin-top: 4px;
-}
-
-/* The single way in to answering a Maneuver. */
+/* The single way in to answering a Maneuver, and the card's own controls. */
+.dbu-clash-button,
 .dbu-respond-button {
   width: 100%;
   margin-top: 4px;
+  border: 1px solid rgba(var(--dbu-action), 0.7);
+  border-radius: 3px;
+  background: rgba(var(--dbu-action), 0.24);
+  color: inherit;
+  font-weight: bold;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.dbu-clash-button:hover,
+.dbu-respond-button:hover {
+  background: rgba(var(--dbu-action), 0.4);
+  border-color: rgba(var(--dbu-action), 1);
 }
 
 /* Its dialog: a list per character, and three within each. */
@@ -1322,11 +1365,38 @@
   opacity: 0.7;
 }
 
+/* Ruled off from the effects above it, when there are any: a willing failure is not
+   one of them, it is a separate declaration about the same roll. */
+.dbu-respond-willing:not(:first-child) {
+  margin-top: 4px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+/* Sits with the character rather than in any of the three lists. */
+.dbu-respond-aside {
+  margin-left: 12px;
+  padding-left: 8px;
+  border-left: 2px solid rgba(128, 128, 128, 0.3);
+}
+
+.dbu-check-total.dbu-willing,
+.dbu-clash-outcome.dbu-willing {
+  color: var(--dbu-text-dim);
+}
+
 /* Answering an attack without a Maneuver, shown ahead of the ones that are. */
 .dbu-respond-dodge {
   margin-left: 12px;
   padding-left: 8px;
   border-left: 2px solid rgba(128, 128, 128, 0.3);
+}
+
+/* Says which roll this window is for, above whatever can be brought to it. */
+.dbu-respond-hint {
+  margin: 0 0 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
 }
 
 .dbu-respond-note {
@@ -1372,18 +1442,6 @@
   width: auto;
   padding: 0 8px;
   line-height: 18px;
-}
-
-.dbu-grant-button {
-  width: 100%;
-  margin-top: 4px;
-}
-
-.dbu-grant-form label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
 }
 
 .dbu-settled-note {
@@ -1440,4 +1498,273 @@
 
 .dbu-check-total.dbu-botch {
   color: #c0392b;
+}
+
+/* ==========================================================================
+   Chat log
+   ==========================================================================
+   dbu-rpg.com renders its rules on #282828 with #cccccc text, and reserves
+   #dfe288 for anything that matters - headings, bold, table rules. Foundry's
+   chat is light by default, so a card written for one sat badly beside the
+   other. These values are taken from the site's own computed styles.
+
+   Every selector is prefixed with .system-dbu-ttrpg, the class Foundry puts on
+   <body> for the active system: this is a re-theme of the whole chat log, and
+   it has no business following the user into another world. */
+
+.system-dbu-ttrpg {
+  --dbu-chat-bg: #282828;
+  --dbu-chat-raised: #303030;
+  --dbu-chat-text: #cccccc;
+  --dbu-chat-dim: #8f8f8f;
+  --dbu-chat-accent: #dfe288;
+  --dbu-chat-rule: rgba(223, 226, 136, 0.3);
+  /* Open Sans is the site's face but is not bundled with Foundry, so Signika -
+     which is - carries it when the font is not installed locally. */
+  --dbu-chat-font: "Open Sans", "Signika", sans-serif;
+}
+
+/* Foundry paints the card from its own custom properties - the default background
+   is a parchment image, not a colour - and whispers, emotes and blind rolls each
+   swap in a pale tint of their own. Setting those properties rather than the
+   painted result means every rule that reads them follows along, instead of each
+   one having to be out-argued in the cascade. The three tints keep their identity
+   as a darker ground of the same hue, since a pale wash on a dark card is mud. */
+.system-dbu-ttrpg .chat-message {
+  --chat-message-background: var(--dbu-chat-bg);
+  --chat-message-border-color: var(--dbu-chat-rule);
+  --color-whisper-background: #2b2a33;
+  --color-whisper-border: #6f6a8c;
+  --color-emote-background: #302d26;
+  --color-emote-border: #887c5d;
+  --color-blind-background: #322a32;
+  --color-blind-border: #8c6b8c;
+
+  color: var(--dbu-chat-text);
+  border-radius: 4px;
+  font-family: var(--dbu-chat-font);
+  line-height: 1.55;
+  text-shadow: none;
+}
+
+/* The speaker's name, top left: the site's accent, as asked. */
+.system-dbu-ttrpg .chat-message .message-header .message-sender {
+  color: var(--dbu-chat-accent);
+  font-weight: bold;
+}
+
+.system-dbu-ttrpg .chat-message .message-header .message-metadata,
+.system-dbu-ttrpg .chat-message .message-header .flavor-text,
+.system-dbu-ttrpg .chat-message .message-header .whisper-to {
+  color: var(--dbu-chat-dim);
+}
+
+.system-dbu-ttrpg .chat-message .message-header {
+  color: var(--dbu-chat-dim);
+  border-bottom: 1px solid var(--dbu-chat-rule);
+  padding-bottom: 2px;
+  margin-bottom: 3px;
+}
+
+/* Anything the writer marked as mattering takes the accent, the way the site
+   treats its own bold text. */
+.system-dbu-ttrpg .chat-message .message-content strong,
+.system-dbu-ttrpg .chat-message .message-content b,
+.system-dbu-ttrpg .chat-message .message-content h1,
+.system-dbu-ttrpg .chat-message .message-content h2,
+.system-dbu-ttrpg .chat-message .message-content h3,
+.system-dbu-ttrpg .chat-message .message-content h4 {
+  color: var(--dbu-chat-accent);
+}
+
+.system-dbu-ttrpg .chat-message .message-content hr {
+  border: 0;
+  border-top: 1px solid var(--dbu-chat-rule);
+}
+
+/* Links have to be lifted off the site's #21759b, which is close to unreadable
+   on #282828 - it was chosen for a light column. */
+.system-dbu-ttrpg .chat-message a,
+.system-dbu-ttrpg .chat-message .content-link,
+.system-dbu-ttrpg .chat-message .inline-roll {
+  color: #7fb4d4;
+  background: rgba(127, 180, 212, 0.12);
+  border: 1px solid rgba(127, 180, 212, 0.35);
+}
+
+.system-dbu-ttrpg .chat-message .content-link i,
+.system-dbu-ttrpg .chat-message .inline-roll i {
+  color: inherit;
+}
+
+/* Tables are ruled in the accent on the site; the same here. */
+.system-dbu-ttrpg .chat-message table,
+.system-dbu-ttrpg .chat-message th,
+.system-dbu-ttrpg .chat-message td {
+  border-color: var(--dbu-chat-rule);
+  color: var(--dbu-chat-text);
+}
+
+.system-dbu-ttrpg .chat-message td {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* --- Rolls ---------------------------------------------------------------- */
+
+.system-dbu-ttrpg .chat-message .dice-roll .dice-formula,
+.system-dbu-ttrpg .chat-message .dice-roll .dice-tooltip,
+.system-dbu-ttrpg .chat-message .dice-roll .dice-total {
+  background: var(--dbu-chat-raised);
+  border: 1px solid var(--dbu-chat-rule);
+  color: var(--dbu-chat-text);
+}
+
+.system-dbu-ttrpg .chat-message .dice-roll .dice-total {
+  color: var(--dbu-chat-accent);
+  font-weight: bold;
+}
+
+/* Foundry's own success and failure tints, restated for a dark ground. */
+.system-dbu-ttrpg .chat-message .dice-total.success,
+.system-dbu-ttrpg .chat-message .dice-total.critical {
+  background: rgba(47, 158, 85, 0.2);
+  border-color: rgba(47, 158, 85, 0.6);
+  color: #7fd39b;
+}
+
+.system-dbu-ttrpg .chat-message .dice-total.failure,
+.system-dbu-ttrpg .chat-message .dice-total.fumble {
+  background: rgba(209, 84, 74, 0.2);
+  border-color: rgba(209, 84, 74, 0.6);
+  color: #e79b93;
+}
+
+.system-dbu-ttrpg .chat-message .dice-tooltip .dice-rolls .roll {
+  color: var(--dbu-chat-text);
+}
+
+.system-dbu-ttrpg .chat-message .dice-tooltip .part-header,
+.system-dbu-ttrpg .chat-message .dice-tooltip .part-formula,
+.system-dbu-ttrpg .chat-message .dice-tooltip .part-total {
+  color: var(--dbu-chat-dim);
+}
+
+/* ==========================================================================
+   The system's own dialogs
+   ==========================================================================
+   Respond, the roll window, Defend and the Maneuver pickers. Reached through
+   the .dbu-dialog class each of them is opened with, so this repaints the
+   windows this system puts on screen and stops there - Foundry's own dialogs
+   are not ours to theme.
+
+   Driven through the window's variables rather than its painted result, the
+   same way the chat log is: what the core reads to draw a window is what gets
+   changed, so the parts we do not name here follow along instead of staying
+   light against a dark ground. */
+
+.application.dbu-dialog {
+  --background: var(--dbu-chat-bg);
+  --color-text-primary: var(--dbu-chat-text);
+  --color-text-secondary: var(--dbu-chat-dim);
+  --color-border: var(--dbu-chat-rule);
+  --color-header-background: #1f1f1f;
+  /* Tells the browser to draw checkboxes, radios and scrollbars dark; without it
+     the form controls stay light and sit on the card like cut-outs. */
+  --color-scheme: dark;
+
+  color: var(--dbu-chat-text);
+  font-family: var(--dbu-chat-font);
+}
+
+.application.dbu-dialog .window-header {
+  border-bottom: 1px solid var(--dbu-chat-rule);
+}
+
+.application.dbu-dialog .window-header .window-title {
+  color: var(--dbu-chat-accent);
+  font-weight: bold;
+}
+
+/* The dark theme blurs whatever is behind the content; over a flat card that
+   only softens the edge of the colour we just set. */
+.application.dbu-dialog .window-content {
+  background: var(--dbu-chat-bg);
+  color: var(--dbu-chat-text);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.application.dbu-dialog .window-content p,
+.application.dbu-dialog .window-content label,
+.application.dbu-dialog .window-content span {
+  color: var(--dbu-chat-text);
+}
+
+/* What the reader is choosing between: the name of each option carries the
+   accent, as bold does everywhere else. */
+.application.dbu-dialog .dbu-respond-name,
+.application.dbu-dialog .dbu-defend-head strong,
+.application.dbu-dialog .window-content strong,
+.application.dbu-dialog .window-content b {
+  color: var(--dbu-chat-accent);
+}
+
+.application.dbu-dialog .dbu-respond-actor > summary,
+.application.dbu-dialog .dbu-respond-group > summary {
+  color: var(--dbu-chat-accent);
+}
+
+.application.dbu-dialog .dbu-respond-group,
+.application.dbu-dialog .dbu-respond-aside {
+  border-left-color: var(--dbu-chat-rule);
+}
+
+.application.dbu-dialog .dbu-respond-hint {
+  border-bottom-color: var(--dbu-chat-rule);
+}
+
+/* An option that cannot be taken here keeps its reason on hover; it is dimmed
+   rather than recoloured, so it still reads as one of the list. */
+.application.dbu-dialog .dbu-respond-blocked,
+.application.dbu-dialog .dbu-respond-blocked .dbu-respond-name {
+  color: var(--dbu-chat-dim);
+}
+
+/* Foundry draws checkboxes and radios itself, from these properties and a Font
+   Awesome glyph. They are pinned here rather than left to inherit: the window is
+   dark whatever theme the user runs, and the light theme's values would put a pale
+   control on a dark card. Checked takes the accent, like everything else that
+   matters. */
+.application.dbu-dialog input[type="checkbox"],
+.application.dbu-dialog input[type="radio"] {
+  --checkbox-checked-color: var(--dbu-chat-accent);
+  --checkbox-background-color: #4a4a4a;
+  --checkbox-disabled-color: #3a3a3a;
+  --checkbox-checkmark-color: transparent;
+}
+
+.application.dbu-dialog input[type="number"],
+.application.dbu-dialog input[type="text"],
+.application.dbu-dialog select {
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--dbu-chat-text);
+  border: 1px solid var(--dbu-chat-rule);
+}
+
+/* The confirm and cancel row: the same soft blue the cards use, so the button
+   that commits the choice looks like the button that opened the window. */
+.application.dbu-dialog .form-footer > button,
+.application.dbu-dialog .dialog-buttons button {
+  --dbu-action: 74, 118, 176;
+  background: rgba(var(--dbu-action), 0.24);
+  border: 1px solid rgba(var(--dbu-action), 0.7);
+  color: var(--dbu-chat-text);
+  font-weight: bold;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.application.dbu-dialog .form-footer > button:hover,
+.application.dbu-dialog .dialog-buttons button:hover {
+  background: rgba(var(--dbu-action), 0.4);
+  border-color: rgba(var(--dbu-action), 1);
 }

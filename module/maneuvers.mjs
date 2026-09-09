@@ -254,6 +254,7 @@ export async function refundManeuverCost(actor, maneuver) {
 /** One-question dialog returning the chosen action, or null if dismissed. */
 async function pick(title, question, buttons) {
   const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
     window: { title },
     content: `<p>${question}</p>`,
     buttons: [...buttons, { action: "cancel", label: "Cancel" }],
@@ -379,6 +380,7 @@ async function pickProfile(maneuver, foundations, actor) {
     </label>`;
 
   const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
     window: { title: `${maneuver.name} - Profile` },
     content: `${body}${wager}`,
     buttons: [

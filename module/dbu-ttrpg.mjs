@@ -53,8 +53,11 @@ Hooks.on("preUpdateActor", (actor, changes) => {
 // awaited, so an Actor may already have been prepared against an empty registry by
 // the time the files arrive; re-preparing afterwards settles any Life totals that
 // were computed with no Racial Life Modifier.
+// Registered at both points, guarded against running twice: setup is where the socket
+// is reliably available, and ready is the backstop for the case where it was not.
+Hooks.once("ready", registerManeuverSocket);
+
 Hooks.once("setup", async () => {
-  // game.socket is not available during init, so the listener is registered here.
   registerManeuverSocket();
   await Promise.all([loadRaces(), loadManeuvers(), loadTalents()]);
   for (const actor of game.actors ?? []) actor.prepareData();

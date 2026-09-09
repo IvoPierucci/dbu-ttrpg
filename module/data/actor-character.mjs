@@ -519,6 +519,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       encounter: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { initial: [] })
     });
 
+    // --- Willing failure ---
+    // Not something a character sits armed with: it is chosen in the window that opens
+    // for a roll and spent by that roll. It is stored only because the roll is often
+    // made by a different client than the one that declared it, so the choice has to
+    // travel on the Actor to get there.
+    schema.willingFailure = new fields.BooleanField({ required: true, initial: false });
+
     // --- Maneuver uses ---
     // One entry per use of a Maneuver that is limited per Encounter, so a Maneuver
     // allowed more than once can be counted rather than merely flagged.

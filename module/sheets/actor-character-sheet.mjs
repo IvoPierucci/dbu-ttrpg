@@ -7,6 +7,7 @@ import {
   answeredLatestManeuver,
   checkCard,
   evaluateCheck,
+  prepareRoll,
   postAttack,
   postManeuver,
   postSkillClash,
@@ -470,6 +471,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const key = target.dataset.attribute;
     const attribute = this.actor.system.attributes[key];
     const label = key.charAt(0).toUpperCase() + key.slice(1);
+    const mod = attribute.mod >= 0 ? `+${attribute.mod}` : String(attribute.mod);
+
+    // Every roll opens the same window, even when a willing failure is the only thing
+    // there is to declare: it is decided here, at the roll, rather than armed in
+    // advance and waiting to catch a later one.
+    const ready = await prepareRoll(
+      this.actor, [], `${label} Check`,
+      `Roll <strong>${label}</strong>? (${DBUCharacterData.BASE_DIE} ${mod})`
+    );
+    if (!ready) return;
+
     // Not a Skill roll, so the critical uses the character's Critical Extra Dice.
     return this.#rollCheck({
       bonus: attribute.mod,
@@ -780,6 +792,24 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
 
+    // A willing failure applies to any roll at all, this one included. It is decided
+    // before the dice are read, so the total is 0 however they landed and neither a
+    // Botch nor a critical is worked out - there is nothing left for either to change.
+    if (this.actor.system.willingFailure) {
+      await this.actor.update({ "system.willingFailure": false });
+      await ChatMessage.create({
+        speaker,
+        flavor: `${flavor} — Willing failure`,
+        rolls: [roll],
+        content: checkCard({
+          parts: `${roll.formula} = <strong>${roll.total}</strong> &nbsp;&middot;&nbsp; willing failure`,
+          total: 0,
+          outcome: "willing"
+        })
+      });
+      return;
+    }
+
     if (botch) {
       // The penalty is certain, so the adjusted total is shown right away rather than
       // leaving the reader to subtract it from the card's number.
@@ -822,14 +852,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { BASE_DIE } = DBUCharacterData;
     const bonus = skill.bonus >= 0 ? `+${skill.bonus}` : String(skill.bonus);
 
-    const confirmed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: `${name} Check` },
-      // The specialisation is free text typed by the player, so it must be escaped.
-      content: `<p>Roll <strong>${Handlebars.escapeExpression(name)}</strong>? (${BASE_DIE} ${bonus})</p>`,
-      modal: true,
-      rejectClose: false
-    });
-    if (!confirmed) return;
+    // The confirmation and the roll window are the same dialog: asking twice for one
+    // roll would be a click for nothing.
+    // The specialisation is free text typed by the player, so it must be escaped.
+    const ready = await prepareRoll(
+      this.actor, [], `${name} Check`,
+      `Roll <strong>${Handlebars.escapeExpression(name)}</strong>? (${BASE_DIE} ${bonus})`
+    );
+    if (!ready) return;
 
     // A Skill's critical die is a flat 1d4: it does not grow with Tier of Power.
     return this.#rollCheck({

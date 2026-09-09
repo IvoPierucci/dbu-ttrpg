@@ -51,18 +51,52 @@ const CHANNEL = `system.${SCOPE}`;
  * not own another player's message and so cannot edit it. Those edits are relayed to
  * the GM's client, which applies them for everyone.
  */
+/** Registering twice would apply every relayed edit twice. */
+let socketRegistered = false;
+
 export function registerManeuverSocket() {
-  game.socket.on(CHANNEL, request => {
-    // Exactly one client must act, or the same edit is applied several times.
-    if (game.users.activeGM !== game.user) return;
-    if (request?.type === "respond") applyResponse(request.messageId, request.response);
-    else if (request?.type === "cancel") applyCancel(request.messageId, request.actorUuid);
-    else if (request?.type === "clash") applyClash(request.messageId, request.clash);
-    else if (request?.type === "attack") applyAttack(request.messageId, request.attack);
-    else if (request?.type === "actor") applyActorUpdate(request.actorUuid, request.changes);
-    else if (request?.type === "offer") applyOffer(request.messageId, request.offer);
-    else if (request?.type === "offerTaken") applyOfferTaken(request.messageId, request.actorUuid);
+  if (socketRegistered) return;
+  if (!game.socket) {
+    console.error("DBU TTRPG | No socket to listen on yet");
+    return;
+  }
+  socketRegistered = true;
+  console.log(`DBU TTRPG | Listening on ${CHANNEL}`);
+
+  game.socket.on(CHANNEL, async request => {
+    // Exactly one client must act, or the same edit is applied several times - but a
+    // lone GM must always be that client. Deferring to activeGM alone would drop the
+    // edit entirely on the one setup where it matters most.
+    if (!game.user.isGM) return;
+    const activeGM = game.users.activeGM;
+    if (activeGM && (activeGM !== game.user)) return;
+
+    try {
+      await applyRequest(request);
+    }
+    catch (error) {
+      // A refused edit here leaves the player who asked for it staring at a card that
+      // never changed, so it must not fail quietly on this end.
+      console.error("DBU TTRPG | Could not apply a relayed edit", request, error);
+      ui.notifications.error("DBU TTRPG | A relayed edit failed. See the console.");
+    }
   });
+}
+
+/** Carry out one relayed edit. Shared with the direct path, which needs the same map. */
+function applyRequest(request) {
+  switch (request?.type) {
+    case "respond": return applyResponse(request.messageId, request.response);
+    case "cancel": return applyCancel(request.messageId, request.actorUuid);
+    case "clash": return applyClash(request.messageId, request.clash);
+    case "attack": return applyAttack(request.messageId, request.attack);
+    case "actor": return applyActorUpdate(request.actorUuid, request.changes);
+    case "offer": return applyOffer(request.messageId, request.offer);
+    case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
+    default:
+      console.warn("DBU TTRPG | Unknown relayed edit", request);
+      return undefined;
+  }
 }
 
 /** Record a response, replacing whatever that Actor had played before. */
@@ -149,20 +183,23 @@ async function applyClash(messageId, clash) {
  * answers it too generously and leaves the update to be refused by the server.
  */
 function requestEdit(message, request) {
+  const payload = { ...request, messageId: message.id };
+
+  // Surfaced rather than left to an unhandled rejection: a failure here stops the
+  // exchange dead, and the card simply never changes.
   if (message.isAuthor || game.user.isGM) {
-    if (request.type === "respond") return applyResponse(message.id, request.response);
-    if (request.type === "clash") return applyClash(message.id, request.clash);
-    if (request.type === "attack") return applyAttack(message.id, request.attack);
-    if (request.type === "offer") return applyOffer(message.id, request.offer);
-    if (request.type === "offerTaken") return applyOfferTaken(message.id, request.actorUuid);
-    return applyCancel(message.id, request.actorUuid);
+    return Promise.resolve(applyRequest(payload)).catch(error => {
+      console.error("DBU TTRPG | Could not apply an edit", payload, error);
+      ui.notifications.error("DBU TTRPG | An edit failed. See the console.");
+    });
   }
 
   if (!game.users.activeGM) {
     ui.notifications.warn("A GM must be connected for this to be recorded on the maneuver.");
     return;
   }
-  game.socket.emit(CHANNEL, { ...request, messageId: message.id });
+
+  game.socket.emit(CHANNEL, payload);
 }
 
 export function registerChatHooks() {
@@ -421,11 +458,16 @@ function relevantTriggers(actor, message, stage) {
 }
 
 /**
- * Ask which of these effects to bring to bear, and arm the ones chosen.
+ * Ask what this character is bringing to a roll they are about to make, and set it up.
+ *
+ * Willing failure is offered here rather than only from the Respond dialog: it applies
+ * to any roll at all, so every point where a character is asked to confirm one has to
+ * be able to declare it. The triggered effects vary with the moment; the willing
+ * failure does not.
  *
  * @returns {Promise<boolean>} False if the reader backed out entirely.
  */
-async function armTriggers(actor, effects, title) {
+export async function prepareRoll(actor, effects, title, hint = "") {
   const rows = effects.map(effect => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="trigger" value="${effect.talentId}"/>
@@ -433,27 +475,44 @@ async function armTriggers(actor, effects, title) {
       <span class="dbu-respond-source">${Handlebars.escapeExpression(effect.text)}</span>
     </label>`).join("");
 
+  const willing = `
+    <label class="dbu-respond-option dbu-respond-willing">
+      <input type="checkbox" name="willing" ${actor.system.willingFailure ? "checked" : ""}/>
+      <span class="dbu-respond-name">Willing failure</span>
+      <span class="dbu-respond-source">Fail on purpose: this roll totals 0, however the dice land.</span>
+    </label>`;
+
   const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
     window: { title },
-    content: `<div class="dbu-respond-dialog">${rows}</div>`,
+    content: `<div class="dbu-respond-dialog">
+      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${rows}${willing}
+    </div>`,
     buttons: [
       {
         action: "confirm",
         label: "Confirm",
-        callback: (event, button, dialog) =>
-          [...dialog.element.querySelectorAll('input[name="trigger"]:checked')].map(input => input.value)
+        callback: (event, button, dialog) => ({
+          triggers: [...dialog.element.querySelectorAll('input[name="trigger"]:checked')].map(input => input.value),
+          willing: dialog.element.querySelector('input[name="willing"]')?.checked ?? false
+        })
       },
       { action: "cancel", label: "Cancel" }
     ],
     rejectClose: false
   });
 
-  if (!Array.isArray(chosen)) return false;
-  if (chosen.length) {
-    await actor.update({
-      "system.armedTalents": [...new Set([...actor.system.armedTalents, ...chosen])]
-    });
+  if (!chosen || (typeof chosen !== "object")) return false;
+
+  const changes = {};
+  if (chosen.triggers.length) {
+    changes["system.armedTalents"] = [...new Set([...actor.system.armedTalents, ...chosen.triggers])];
   }
+  // Written even when it is being turned back off: the reader may have armed it from
+  // the sheet and changed their mind here, and leaving it set would spend it silently.
+  if (chosen.willing !== actor.system.willingFailure) changes["system.willingFailure"] = chosen.willing;
+
+  if (!foundry.utils.isEmpty(changes)) await actor.update(changes);
   return true;
 }
 
@@ -465,6 +524,25 @@ async function armTriggers(actor, effects, title) {
  * lists are independent - picking from one leaves the other free. Within each list
  * only one Maneuver may be chosen, which is what the radios enforce.
  */
+/**
+ * Whether this character will roll anything on this message.
+ *
+ * An attack is rolled by the attacker and answered by its targets; a Skill Clash by
+ * its two sides. Anyone else responding here takes part without rolling - playing an
+ * Instant records a Maneuver, it does not pick up dice - so there is nothing for a
+ * willing failure to apply to, and offering it would only invite a choice that does
+ * nothing in this exchange.
+ */
+function rollsOnMessage(message, actor) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (attack) return attackParticipants(attack).includes(actor.uuid);
+
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (clash) return clashParticipants(clash).includes(actor.uuid);
+
+  return false;
+}
+
 async function respondDialog(message, respondable) {
   const characters = ownedCharacters();
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
@@ -483,11 +561,27 @@ async function respondDialog(message, respondable) {
         <span class="dbu-respond-name">Nothing</span>
       </label>`;
 
+    // Not a Maneuver and not an alternative to one: a willing failure sits alongside
+    // whatever is played, since you can dodge or Defend and still choose to fail.
+    // Only for the characters this exchange actually asks to roll, though - a
+    // bystander playing an Instant has no roll here to fail.
+    const willing = rollsOnMessage(message, actor)
+      ? `<label class="dbu-respond-option dbu-respond-aside">
+           <input type="checkbox" name="willing-${actor.id}"
+                  ${actor.system.willingFailure ? "checked" : ""}/>
+           <span class="dbu-respond-name">Willing failure</span>
+           <span class="dbu-respond-source">your next roll totals 0</span>
+         </label>`
+      : "";
+
     // Dodging is not a Maneuver, but it is the other way to answer an attack - so it
     // shares the Counters' group and picking one unpicks the other.
+    // Picked to begin with: dodging is what answering an attack means when nothing
+    // else is chosen, so confirming without touching this is a real answer rather
+    // than a dialog that quietly did nothing.
     const dodge = unresolved
       ? `<label class="dbu-respond-option dbu-respond-dodge">
-           <input type="radio" name="counter-${actor.id}" value="dodge"/>
+           <input type="radio" name="counter-${actor.id}" value="dodge" checked/>
            <span class="dbu-respond-name">Dodge</span>
            <span class="dbu-respond-source">no maneuver, no action</span>
          </label>`
@@ -500,6 +594,18 @@ async function respondDialog(message, respondable) {
       return option(`counter-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, blocked,
         blocked ? "only the target of an attack may Defend, and only before it resolves" : "");
     }).join("");
+
+    // Both Dodge and the Defend Maneuver are called for by being attacked, and a
+    // Maneuver that is not an attack does not call for either - a Skill Clash such as
+    // Thumb War is answered on its own card, not defended against. With no attack here
+    // the whole group is left off rather than shown with everything in it disabled:
+    // greying out an option says "not now", and the truth is "not for this".
+    const counterGroup = attack
+      ? `<details class="dbu-respond-group">
+           <summary>Counter Maneuvers</summary>
+           ${counters || `<p class="dbu-respond-note">None.</p>`}
+         </details>`
+      : "";
 
     // An Instant played here is taken as having come before the Maneuver it answers,
     // so there is no timing to choose.
@@ -526,11 +632,9 @@ async function respondDialog(message, respondable) {
         <summary>${Handlebars.escapeExpression(actor.name)}</summary>
 
         ${dodge}
+        ${willing}
 
-        <details class="dbu-respond-group">
-          <summary>Counter Maneuvers</summary>
-          ${counters || `<p class="dbu-respond-note">None.</p>`}
-        </details>
+        ${counterGroup}
 
         <details class="dbu-respond-group">
           <summary>Instant Maneuvers</summary>
@@ -545,6 +649,7 @@ async function respondDialog(message, respondable) {
   }).join("");
 
   const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
     window: { title: "Respond" },
     content: `<div class="dbu-respond-dialog">${sections}</div>`,
     buttons: [
@@ -555,6 +660,7 @@ async function respondDialog(message, respondable) {
           actor,
           counter: dialog.element.querySelector(`input[name="counter-${actor.id}"]:checked`)?.value ?? null,
           instant: dialog.element.querySelector(`input[name="instant-${actor.id}"]:checked`)?.value ?? null,
+          willing: dialog.element.querySelector(`input[name="willing-${actor.id}"]`)?.checked ?? null,
           triggers: [...dialog.element.querySelectorAll(`input[name="trigger-${actor.id}"]:checked`)]
             .map(input => input.value)
         }))
@@ -566,9 +672,26 @@ async function respondDialog(message, respondable) {
 
   if (!Array.isArray(chosen)) return;
 
+  try {
+    await applyResponses(message, chosen, attack);
+  }
+  catch (error) {
+    console.error("DBU TTRPG | Could not play a response", chosen, error);
+    ui.notifications.error("DBU TTRPG | A response failed. See the console.");
+  }
+}
+
+/** Carry out everything the reader chose, for every character they chose it for. */
+async function applyResponses(message, chosen, attack) {
   for (const choice of chosen) {
-    // Arming comes first: a Counter resolves the exchange, and an effect meant to
-    // shape that roll has to be in place before it is made.
+    // Arming comes first: a Counter resolves the exchange, and anything meant to shape
+    // that roll has to be in place before it is made.
+    // Null means the dialog never asked - this character rolls nothing here - so
+    // whatever they had armed elsewhere is left exactly as it was.
+    if ((choice.willing !== null) && (choice.willing !== choice.actor.system.willingFailure)) {
+      await choice.actor.update({ "system.willingFailure": choice.willing });
+    }
+
     if (choice.triggers.length) {
       const armed = choice.actor.system.armedTalents;
       await choice.actor.update({
@@ -630,7 +753,7 @@ async function playInstant(message, actor, maneuverId) {
  */
 async function playCounter(message, actor, answer, attack) {
   if (!attack || attack.result) return;
-  if (answer === "dodge") return resolveAttack(message, actor, attack);
+  if (answer === "dodge") return chooseDefence(message, actor, "dodge");
 
   const maneuver = getManeuver(answer);
   if (!maneuver?.defend) return;
@@ -669,6 +792,19 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 
   let total = roll.total;
   let outcome = "";
+
+  // A willing failure is decided before the dice are read: the total is 0 whatever
+  // they said, so nothing that would raise or lower it is worked out at all.
+  if (actor.system.willingFailure) {
+    requestActorUpdate(actor, { "system.willingFailure": false });
+    return {
+      actorUuid: actor.uuid,
+      actorName: actor.name,
+      total: 0,
+      outcome: "willing",
+      breakdown: `${roll.formula} = ${roll.result}  ·  willing failure  →  0`
+    };
+  }
 
   // A Talent can set the Base Die's Natural Result instead of rolling it. The die is
   // still rolled - Foundry cannot make one land on a chosen face - so what it came up
@@ -757,6 +893,10 @@ export async function postSkillClash(actor, target, maneuver) {
           challengerName: actor.name,
           defenderUuid: target.uuid,
           defenderName: target.name,
+          // Who has finished preparing. Neither side's dice are picked up until both
+          // appear here: each may have a willing failure or an effect to declare, and
+          // a roll made while the other was still deciding cannot be taken back.
+          ready: [],
           // Both sides land here at once, or not at all.
           result: null
         }
@@ -765,15 +905,47 @@ export async function postSkillClash(actor, target, maneuver) {
   });
 }
 
-/** One side of the Clash card. */
-function clashSide(name, side) {
-  const total = side ? rolledTotal(side) : `<span class="dbu-clash-waiting">-</span>`;
-  const outcome = side?.outcome ? `<span class="dbu-clash-outcome dbu-${side.outcome}">${side.outcome}</span>` : "";
+/**
+ * One side of the Clash card: who has finished preparing while it is still open, and
+ * what they rolled once it is settled.
+ */
+function clashSide(clash, uuid, name, side) {
+  if (!side) {
+    const ready = (clash.ready ?? []).includes(uuid);
+    const state = ready ? "dbu-ready" : "dbu-pending";
+    return `
+      <div class="dbu-clash-side">
+        <span class="dbu-clash-name ${state}">${Handlebars.escapeExpression(name)}</span>
+        <span class="dbu-clash-waiting ${state}">${ready ? "ready" : "waiting"}</span>
+      </div>`;
+  }
+
+  const outcome = side.outcome ? `<span class="dbu-clash-outcome dbu-${side.outcome}">${side.outcome}</span>` : "";
   return `
     <div class="dbu-clash-side">
       <span class="dbu-clash-name">${Handlebars.escapeExpression(name)}</span>
-      ${total}${outcome}
+      ${rolledTotal(side)}${outcome}
     </div>`;
+}
+
+/** Everyone whose confirmation the Clash is waiting on. */
+function clashParticipants(clash) {
+  return [clash.challengerUuid, clash.defenderUuid];
+}
+
+/** Whether both sides have confirmed and the dice can be picked up. */
+function clashIsReady(clash) {
+  return clashParticipants(clash).every(uuid => (clash.ready ?? []).includes(uuid));
+}
+
+/** Who the Clash is still waiting on, named so nobody has to guess. */
+function awaitingClash(clash) {
+  const waiting = clashParticipants(clash)
+    .filter(uuid => !(clash.ready ?? []).includes(uuid))
+    .map(uuid => (uuid === clash.challengerUuid) ? clash.challengerName : clash.defenderName);
+  return waiting.length
+    ? `Waiting on ${waiting.map(name => Handlebars.escapeExpression(name)).join(", ")}`
+    : "Rolling";
 }
 
 /**
@@ -794,22 +966,30 @@ function renderSkillClash(message, html) {
     <div class="dbu-clash-title">${Handlebars.escapeExpression(clash.maneuverName)}
       <span class="dbu-clash-skill">Skill Clash &middot; ${Handlebars.escapeExpression(clash.skillLabel)}</span>
     </div>
-    ${clashSide(clash.challengerName, result?.challenger)}
-    ${clashSide(clash.defenderName, result?.defender)}
-    <div class="dbu-clash-result">${result ? clashResult(result) : "Awaiting the defender"}</div>`;
+    ${clashSide(clash, clash.challengerUuid, clash.challengerName, result?.challenger)}
+    ${clashSide(clash, clash.defenderUuid, clash.defenderName, result?.defender)}
+    <div class="dbu-clash-result">${result ? clashResult(result) : awaitingClash(clash)}</div>`;
   container.append(card);
 
   if (result) return;
 
-  const defender = fromUuidSync(clash.defenderUuid);
-  if (!defender?.isOwner) return;
+  // Both sides confirm the same way, and each only for themselves. The challenger has
+  // as much to declare as the defender does - a willing failure, an effect - so the
+  // card asks them both rather than rolling the challenger's dice unasked.
+  for (const uuid of clashParticipants(clash)) {
+    if ((clash.ready ?? []).includes(uuid)) continue;
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "dbu-clash-button";
-  button.textContent = `Roll ${clash.skillLabel}`;
-  button.addEventListener("click", () => answerSkillClash(message, defender, clash));
-  container.append(button);
+    const actor = fromUuidSync(uuid);
+    if (!actor?.isOwner) continue;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Roll ${clash.skillLabel}`;
+    button.dataset.tooltip = "Declare what you bring, then wait for the other side";
+    button.addEventListener("click", () => clashStage(message, actor));
+    container.append(button);
+  }
 }
 
 /**
@@ -823,13 +1003,38 @@ function clashResult({ challenger, defender }) {
 }
 
 /**
- * Accept the Clash: roll both sides at once and publish them together, so neither
+ * Let this side declare what they are bringing, then mark them ready.
+ */
+async function clashStage(message, actor) {
+  if (!await prepareRoll(actor, [], `${actor.name}: before the roll`)) return;
+
+  // Read fresh rather than trusting what the card was drawn with: the other side may
+  // have confirmed while this dialog was open, and writing a stale copy back would
+  // erase it.
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (!clash || clash.result) return;
+
+  return settleClash(message, {
+    ...clash,
+    ready: [...new Set([...(clash.ready ?? []), actor.uuid])]
+  });
+}
+
+/** Write the Clash back, and roll it if that was the last confirmation needed. */
+async function settleClash(message, clash) {
+  if (!clashIsReady(clash)) return requestEdit(message, { type: "clash", clash });
+  return resolveSkillClash(message, clash);
+}
+
+/**
+ * Settle the Clash: roll both sides at once and publish them together, so neither
  * result is known before the other is decided.
  */
-async function answerSkillClash(message, defender, clash) {
+async function resolveSkillClash(message, clash) {
   const challenger = fromUuidSync(clash.challengerUuid);
-  if (!challenger) {
-    ui.notifications.warn("The challenging actor no longer exists.");
+  const defender = fromUuidSync(clash.defenderUuid);
+  if (!challenger || !defender) {
+    ui.notifications.warn("One of the actors in this Skill Clash no longer exists.");
     return;
   }
 
@@ -853,8 +1058,8 @@ async function answerSkillClash(message, defender, clash) {
  * as a chance handed out by something that just happened. This draws those chances
  * on the message that caused them.
  *
- * Until traits exist, the GM hands them out by hand - which is what a trait will do
- * automatically once there are traits to read.
+ * Nothing hands these out by hand: they come from the effects that grant them, such
+ * as Cross Counter striking back at the opponent that was just answered.
  */
 function renderOutOfSequence(message, html) {
   const container = html.querySelector(".message-content") ?? html;
@@ -896,15 +1101,6 @@ function renderOutOfSequence(message, html) {
     return;
   }
 
-  if (!game.user.isGM) return;
-
-  const grant = document.createElement("button");
-  grant.type = "button";
-  grant.className = "dbu-grant-button";
-  grant.textContent = "Grant Out-of-Sequence";
-  grant.dataset.tooltip = "Let a character play a maneuver out of sequence in response to this";
-  grant.addEventListener("click", () => grantOutOfSequence(message));
-  container.append(grant);
 }
 
 /**
@@ -949,79 +1145,6 @@ async function takeOutOfSequence(message, actor, offer) {
     : postManeuver(actor, maneuver, { asOutOfSequence: true });
 }
 
-/** GM control: choose who may play what, and say what allowed it. */
-async function grantOutOfSequence(message) {
-  const candidates = sceneCharacters();
-  if (!candidates.length) {
-    ui.notifications.warn("No characters on this scene to grant an Out-of-Sequence Maneuver to.");
-    return;
-  }
-
-  // A Maneuver that spends no Action of its own has nothing to gain from being
-  // played out of sequence, so only the Standard ones are offered.
-  const usable = allManeuvers().filter(maneuver => maneuver.type === "standard");
-  if (!usable.length) {
-    ui.notifications.warn("No maneuvers can be played out of sequence.");
-    return;
-  }
-
-  const actorOptions = candidates
-    .map(actor => `<option value="${actor.uuid}">${Handlebars.escapeExpression(actor.name)}</option>`)
-    .join("");
-  const maneuverOptions = usable
-    .map(maneuver => `<option value="${maneuver.id}">${Handlebars.escapeExpression(maneuver.name)}</option>`)
-    .join("");
-
-  const granted = await foundry.applications.api.DialogV2.wait({
-    window: { title: "Grant an Out-of-Sequence Maneuver" },
-    content: `
-      <div class="dbu-grant-form">
-        <label>Character<select name="actor">${actorOptions}</select></label>
-        <label>Maneuver<select name="maneuver">${maneuverOptions}</select></label>
-        <label>Reason<input type="text" name="reason" placeholder="e.g. won the Bluff clash"/></label>
-      </div>`,
-    buttons: [
-      {
-        action: "grant",
-        label: "Grant",
-        callback: (event, button, dialog) => {
-          const read = (name) => dialog.element.querySelector(`[name="${name}"]`)?.value ?? "";
-          return { actorUuid: read("actor"), maneuverId: read("maneuver"), reason: read("reason") };
-        }
-      },
-      { action: "cancel", label: "Cancel" }
-    ],
-    rejectClose: false
-  });
-
-  if (!granted || (typeof granted !== "object")) return;
-
-  const actor = fromUuidSync(granted.actorUuid);
-  const maneuver = getManeuver(granted.maneuverId);
-  if (!actor || !maneuver) return;
-
-  requestEdit(message, {
-    type: "offer",
-    offer: {
-      actorUuid: actor.uuid,
-      actorName: actor.name,
-      maneuverId: maneuver.id,
-      maneuverName: maneuver.name,
-      reason: granted.reason
-    }
-  });
-}
-
-/** Every character with a token on the current scene. */
-function sceneCharacters() {
-  const byUuid = new Map();
-  for (const token of canvas.tokens?.placeables ?? []) {
-    const actor = token.actor;
-    if (actor?.type === "character") byUuid.set(actor.uuid, actor);
-  }
-  return [...byUuid.values()].sort((a, b) => a.name.localeCompare(b.name));
-}
-
 /**
  * Declare an attack. As with a Skill Clash, nothing is rolled yet: Strike and Dodge
  * are rolled together the moment the target accepts, so neither side learns the
@@ -1059,6 +1182,12 @@ export async function postAttack(actor, target, maneuver, { profile, foundation,
           attackerName: actor.name,
           targetUuid: target.uuid,
           targetName: target.name,
+          // Who has confirmed what they are bringing, and what each target answered
+          // with. Nothing is rolled until every participant appears here: both sides
+          // may have effects to apply first, and a roll made before they do cannot be
+          // taken back.
+          ready: [],
+          defences: {},
           result: null
         }
       }
@@ -1066,15 +1195,61 @@ export async function postAttack(actor, target, maneuver, { profile, foundation,
   });
 }
 
+/** Everyone whose confirmation the attack is waiting on. */
+function attackParticipants(attack) {
+  return [attack.attackerUuid, ...attackTargets(attack).map(target => target.uuid)];
+}
+
+/** Whether everyone has confirmed and the dice can be picked up. */
+function attackIsReady(attack) {
+  return attackParticipants(attack).every(uuid => (attack.ready ?? []).includes(uuid));
+}
+
 /**
- * Resolve the attack: Strike against Dodge, and on a hit a Wound roll reduced by the
- * target's Soak Value. Soak can absorb a Wound entirely, so a hit does not guarantee
- * damage.
+ * Record what a target is answering with, and that they are done preparing.
+ *
+ * The defence is only written down here - it is rolled once the attacker has confirmed
+ * too, so that neither side is committed to dice while the other is still deciding.
  */
-async function resolveAttack(message, target, attack, defense = "dodge", defenceWager = 0) {
+function chooseDefence(message, target, defence, wager = 0) {
+  // Read fresh rather than trusting what the dialog was opened with: the other side
+  // may have confirmed since, and writing a stale copy back would erase it.
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result) return;
+
+  return settleAttack(message, {
+    ...attack,
+    defences: { ...attack.defences, [target.uuid]: { defence, wager } },
+    ready: [...new Set([...(attack.ready ?? []), target.uuid])]
+  });
+}
+
+/** Record that the attacker has finished applying whatever they are bringing. */
+function readyAttacker(message) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result) return;
+
+  return settleAttack(message, {
+    ...attack,
+    ready: [...new Set([...(attack.ready ?? []), attack.attackerUuid])]
+  });
+}
+
+/** Write the attack back, and roll it if that was the last confirmation needed. */
+async function settleAttack(message, attack) {
+  if (!attackIsReady(attack)) return requestEdit(message, { type: "attack", attack });
+  return resolveAttack(message, attack);
+}
+
+/**
+ * Roll the exchange: the Strike, and whatever each target chose to meet it with.
+ */
+async function resolveAttack(message, attack) {
+  const target = fromUuidSync(attack.targetUuid);
+  const { defence: defense = "dodge", wager: defenceWager = 0 } = attack.defences[attack.targetUuid] ?? {};
   const attacker = fromUuidSync(attack.attackerUuid);
-  if (!attacker) {
-    ui.notifications.warn("The attacking actor no longer exists.");
+  if (!attacker || !target) {
+    ui.notifications.warn("One of the actors in this attack no longer exists.");
     return;
   }
 
@@ -1114,8 +1289,12 @@ async function resolveAttack(message, target, attack, defense = "dodge", defence
 
   // Gained after the Attacking Maneuver, so it never touches the roll just made. The
   // Defend Maneuver spares you these entirely, whichever option it was used for.
+  // Relayed rather than written directly: the exchange is settled by whichever client
+  // confirmed last, which is as often the attacker's as the defender's, and that one
+  // does not own the target. Writing straight to it there throws and takes the rest of
+  // the resolution - the result itself included - down with it.
   if (defence.gainsDiminishingDefense) {
-    await target.update({
+    await requestActorUpdate(target, {
       "system.diminishingDefense": target.system.diminishingDefense + target.system.diminishing.defense.perAttack
     });
   }
@@ -1151,13 +1330,27 @@ async function resolveAttack(message, target, attack, defense = "dodge", defence
   }
 }
 
+/** Who the exchange is still waiting on, named so nobody has to guess. */
+function awaitingWhom(attack) {
+  const waiting = [
+    ...((attack.ready ?? []).includes(attack.attackerUuid) ? [] : [attack.attackerName]),
+    ...attackTargets(attack).filter(target => !(attack.ready ?? []).includes(target.uuid)).map(target => target.name)
+  ];
+  return waiting.length ? `Waiting on ${waiting.map(name => Handlebars.escapeExpression(name)).join(", ")}` : "Rolling";
+}
+
 /**
- * Bring any effects that answer this stage to bear, then roll the Wound. The dialog is
- * skipped when there is nothing to choose - most attacks have nothing to ask about.
+ * Let the attacker bring what they have to the Strike, then mark them ready.
  */
+async function attackerStage(message, attack, attacker) {
+  const triggers = relevantTriggers(attacker, message, "response");
+  if (!await prepareRoll(attacker, triggers, "Before the Strike Roll")) return;
+  return readyAttacker(message);
+}
+
 async function woundStage(message, attack, attacker) {
   const triggers = relevantTriggers(attacker, message, "hit");
-  if (triggers.length && !await armTriggers(attacker, triggers, "On hitting")) return;
+  if (!await prepareRoll(attacker, triggers, "On hitting")) return;
   return rollAttackWound(message, attack);
 }
 
@@ -1353,6 +1546,7 @@ async function applyAttackDamage(message, target, attack) {
  */
 export async function takeSurge(actor, { source = "Surge" } = {}) {
   const kind = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
     window: { title: "Surge" },
     content: `<ul class="dbu-surge-options">
       <li><strong>Healing Surge</strong>: regain ${DBUCharacterData.HEALING_SURGE_DICE_PER_TIER}d10 per Tier of Power in Life Points.</li>
@@ -1461,6 +1655,7 @@ async function defendAgainst(message, target, attack) {
   }).join("");
 
   const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
     window: { title: "Defend" },
     content: `<div class="dbu-defend-list">${options}</div>`,
     // The wager only means anything for the option it belongs to, so it follows the
@@ -1503,7 +1698,59 @@ async function defendAgainst(message, target, attack) {
   const cost = defendOptionCost(chosen.defence, target) + chosen.kiWager;
   if (defend && !await spendManeuverCost(target, defend, cost)) return;
 
-  return resolveAttack(message, target, attack, chosen.defence, chosen.kiWager);
+  return chooseDefence(message, target, chosen.defence, chosen.kiWager);
+}
+
+/**
+ * Everyone the attack is aimed at.
+ *
+ * Read as a list even though an attack currently names one target, so an area attack
+ * has somewhere to put the rest without the card being rebuilt around it.
+ */
+function attackTargets(attack) {
+  return attack.targets ?? [{ uuid: attack.targetUuid, name: attack.targetName }];
+}
+
+/** The attacker's line while the exchange is still being prepared. */
+function attackerRow(attack) {
+  const ready = (attack.ready ?? []).includes(attack.attackerUuid);
+  const state = ready ? "dbu-ready" : "dbu-pending";
+  return `
+    <div class="dbu-clash-side">
+      <span class="dbu-clash-name ${state}">${Handlebars.escapeExpression(attack.attackerName)}<em> strike</em></span>
+      <span class="dbu-clash-waiting ${state}">${ready ? "ready" : "waiting"}</span>
+    </div>`;
+}
+
+/**
+ * A target's line on the card. Named from the moment the attack is declared: who has
+ * to answer is worth knowing before they do, and until now the card said nothing.
+ */
+function targetRow(attack, target, result) {
+  const name = Handlebars.escapeExpression(target.name);
+
+  if (!result) {
+    // What they chose is not shown while the exchange is still open: the attacker
+    // should not learn how they are being answered before the dice are picked up.
+    const ready = (attack.ready ?? []).includes(target.uuid);
+    const state = ready ? "dbu-ready" : "dbu-pending";
+    return `
+      <div class="dbu-clash-side">
+        <span class="dbu-clash-name ${state}">${name}<em> target</em></span>
+        <span class="dbu-clash-waiting ${state}">${ready ? "ready" : "waiting"}</span>
+      </div>`;
+  }
+
+  // Some defences answer the Strike with a roll and some forgo it, so the line reports
+  // the defence either way, with a total only where there was one.
+  const label = attack.defenseLabel ?? "Dodge";
+  if (result.answer) return attackSide(label, target.name, result.answer);
+
+  return `
+    <div class="dbu-clash-side">
+      <span class="dbu-clash-name">${name}<em> ${Handlebars.escapeExpression(label)}</em></span>
+      <span class="dbu-clash-outcome">no roll</span>
+    </div>`;
 }
 
 /** A settled total, with the dice and bonuses behind it on hover. */
@@ -1513,7 +1760,7 @@ function rolledTotal(side) {
 
 /** One rolled side of the attack. */
 function attackSide(label, name, side) {
-  const total = side ? rolledTotal(side) : `<span class="dbu-clash-waiting">-</span>`;
+  const total = side ? rolledTotal(side) : `<span class="dbu-clash-waiting">waiting</span>`;
   const outcome = side?.outcome ? `<span class="dbu-clash-outcome dbu-${side.outcome}">${side.outcome}</span>` : "";
   return `
     <div class="dbu-clash-side">
@@ -1561,15 +1808,33 @@ function renderAttack(message, html) {
         ${Handlebars.escapeExpression(DAMAGE_CATEGORIES[attack.damageCategory]?.label ?? "")}${
           attack.kiWager ? ` &middot; ${attack.kiWager} KP wagered` : ""}</span>
     </div>
-    ${attackSide("Strike", attack.attackerName, result?.strike)}
-    ${result?.answer ? attackSide(attack.defenseLabel, attack.targetName, result.answer) : ""}
+    ${result
+      ? attackSide("Strike", attack.attackerName, result.strike)
+      : attackerRow(attack)}
+    ${attackTargets(attack).map(target => targetRow(attack, target, result)).join("")}
     ${result?.wound ? attackSide("Wound", attack.attackerName, result.wound) : ""}
     ${result?.counterWound
       ? attackSide(attack.defenceWager ? `Power Flare +${attack.defenceWager} KP` : "Power Flare",
                    attack.targetName, result.counterWound)
       : ""}
-    <div class="dbu-clash-result">${result ? attackOutcome(attack) : "Awaiting the target"}</div>`;
+    <div class="dbu-clash-result">${result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
+
+  // The attacker prepares their Strike before anything is rolled. The button doubles
+  // as their confirmation, since the exchange waits on everyone having finished.
+  if (!result) {
+    const attacker = fromUuidSync(attack.attackerUuid);
+    if (attacker?.isOwner && !(attack.ready ?? []).includes(attack.attackerUuid)) {
+      const ready = document.createElement("button");
+      ready.type = "button";
+      ready.className = "dbu-clash-button";
+      ready.textContent = "Apply effects";
+      ready.dataset.tooltip = "Apply what you bring to the Strike Roll, then wait for the targets";
+      ready.addEventListener("click", () => attackerStage(message, attack, attacker));
+      container.append(ready);
+    }
+    return;
+  }
 
   const target = fromUuidSync(attack.targetUuid);
 
@@ -1584,7 +1849,7 @@ function renderAttack(message, html) {
       apply.className = "dbu-clash-button";
       apply.textContent = "Apply effects";
       apply.dataset.tooltip = "Trigger effects that answer being hit";
-      apply.addEventListener("click", () => armTriggers(target, onHit, "On being hit"));
+      apply.addEventListener("click", () => prepareRoll(target, onHit, "On being hit"));
       container.append(apply);
     }
   }
