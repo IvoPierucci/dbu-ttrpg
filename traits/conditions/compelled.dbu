@@ -18,14 +18,17 @@ text: >
 
 ---
 
-# Not automated: who the target is, and whether enough Actions were spent
-# attacking them. Both need a target the system does not track yet, so the
-# Life Point loss at the end of the turn is left to the GM.
+# The target is deliberately not tracked, and this is not a gap to be closed
+# later. Who it is, whether enough Actions were spent attacking them, and the
+# Life Point loss at the end of the turn if they were not, all stay with the
+# player and the GM: nobody forgets they are Compelled, and a system that tracked
+# it would be asking a question the table has already answered out loud.
 #
+# So everything here is written as though every attack is against that target.
 # The rule says "against that target" of both the wager and the Urgency, and
-# without a tracked target neither could be narrowed to one. It costs nothing:
-# the same Condition forbids attacking anyone else, so every Attacking Maneuver
-# you are able to make is one against that target anyway.
+# nothing is lost by dropping the qualifier - the same Condition forbids
+# attacking anyone else, so every Attacking Maneuver you are able to make is one
+# against them anyway.
 #
 # Urgency is a forbidden Willing Failure, which is what Urgent means. It is
 # written reactively because it is a property of the roll and not of the

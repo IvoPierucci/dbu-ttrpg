@@ -412,9 +412,10 @@ export function maxKiWager(actor) {
  * spend Ki you do not have.
  */
 export function minimumKiWager(actor, maneuver = null) {
-  // "on all Attacking Maneuvers" - and since Compelled also forbids attacking anyone
-  // but its target, that comes to every Attacking Maneuver you are able to make. A
-  // Maneuver that is not one is untouched however it was declared.
+  // "on all Attacking Maneuvers". Compelled also forbids attacking anyone but its
+  // target, so that is every Attacking Maneuver you are able to make - which is why
+  // the target itself is left to the table rather than tracked. A Maneuver that is
+  // not an attack is untouched however it was declared.
   if (maneuver && !maneuver.attacking) return 0;
 
   const floor = applySlot(actor.system.effects?.slots, "attack.kiWager.min", 0);

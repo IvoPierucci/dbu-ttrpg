@@ -1449,9 +1449,9 @@ async function respondDialog(message, respondable) {
     // whatever is played, since you can dodge or Defend and still choose to fail.
     // Only for the characters this exchange actually asks to roll, though - a
     // bystander playing an Instant has no roll here to fail.
-    // And not when something forbids it either - Compelled forces every Combat Roll
-    // against its target. Shown greyed with the reason rather than left out, so it is
-    // clear the option exists and why it is closed.
+    // And not when something forbids it either - Compelled forces every Combat Roll.
+    // Shown greyed with the reason rather than left out, so it is clear the option
+    // exists and why it is closed.
     const forced = whyNotWilling(actor, { combatRoll: rollsCombat(message) });
     const willing = !rollsOnMessage(message, actor)
       ? ""
@@ -1891,7 +1891,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 
   // A willing failure is decided before the dice are read: the total is 0 whatever
   // they said, so nothing that would raise or lower it is worked out at all - unless
-  // something forbids it, which Compelled does to every Combat Roll against its target.
+  // something forbids it, which Compelled does to every Combat Roll a character makes.
   // Left armed rather than spent, so it still answers the next roll that allows it.
   const forced = whyNotWilling(actor, { slots: answered?.slots });
 
