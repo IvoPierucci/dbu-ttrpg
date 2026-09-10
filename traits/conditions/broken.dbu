@@ -20,9 +20,14 @@ text: >
 # It has to be that rather than arithmetic on the Soak you can see: by the time
 # you can see it, it has already been floored at zero, and the amount the floor
 # threw away is the whole answer.
+#
+# Capped at what this Condition itself took off. The shortfall is how far the
+# Soak Value went below zero for any reason, and if something else is reducing it
+# too then part of that drop is not Broken's doing. Broken can never add more
+# Damage than it removed Soak.
 
 [passive per stack]
 soakValue.external -= 2(bT);
 
 [automatic/before-wound]
-incoming.damage += soakShortfall;
+incoming.damage += min(soakShortfall, 2(bT) * stacks);
