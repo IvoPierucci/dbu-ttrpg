@@ -255,7 +255,10 @@ export async function useManeuver(actor, maneuver) {
   // The Profile and its Foundation are declared before anything is paid, since both
   // choices can still be aborted - and the Profile is what sets the price.
   let declared = null;
-  if (maneuver.profile) {
+  // Opened for an Attacking Maneuver even when it names no Profile: the Ki Wager
+  // belongs to the attack rather than to the Profile, and Compelled sets a floor under
+  // it that has to be asked for somewhere.
+  if (maneuver.profile || maneuver.attacking) {
     // A charged attack was declared with a Profile, and that is the one it is made
     // with. Handed over as a Maneuver that names its own Profile, which is a shape the
     // picker already understands - it shows it rather than offering a choice.

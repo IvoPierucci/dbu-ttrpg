@@ -323,6 +323,8 @@ export async function declareAttack(maneuver, foundations, actor) {
   if (!declared) return null;
 
   const { profile, kiWager } = declared;
+  if (!profile) return { profile: "", foundation: "physical", kiWager };
+
   const available = PROFILES[profile].foundations;
   const foundation = (available.length === 1)
     ? available[0]
@@ -409,7 +411,12 @@ export function maxKiWager(actor) {
  * would leave the dialog with no number it would accept - the rule cannot make you
  * spend Ki you do not have.
  */
-export function minimumKiWager(actor) {
+export function minimumKiWager(actor, maneuver = null) {
+  // "on all Attacking Maneuvers" - and since Compelled also forbids attacking anyone
+  // but its target, that comes to every Attacking Maneuver you are able to make. A
+  // Maneuver that is not one is untouched however it was declared.
+  if (maneuver && !maneuver.attacking) return 0;
+
   const floor = applySlot(actor.system.effects?.slots, "attack.kiWager.min", 0);
   return Math.max(0, Math.min(floor, maxKiWager(actor)));
 }
@@ -424,6 +431,10 @@ export function minimumKiWager(actor) {
 async function pickProfile(maneuver, foundations, actor) {
   const groups = profileGroups(foundations);
   const fixed = (maneuver.profile !== "any") ? PROFILES[maneuver.profile] : null;
+  // An Attacking Maneuver that names no Profile at all - which the schema allows, and
+  // a hand-written Signature Technique can be - still has a wager to declare. There is
+  // simply nothing to choose between, so only the wager is asked.
+  const noProfile = !maneuver.profile;
   let checked = false;
 
   const sections = groups.map(group => {
@@ -453,7 +464,9 @@ async function pickProfile(maneuver, foundations, actor) {
     </details>`;
   }).join("");
 
-  const body = fixed
+  const body = noProfile
+    ? ""
+    : fixed
     ? `<p class="dbu-profile-fixed"><strong>${Handlebars.escapeExpression(fixed.label)}</strong>
         &middot; ${DAMAGE_CATEGORIES[fixed.damageCategory].label}</p>`
     : `<div class="dbu-profile-picker">${sections}</div>`;
@@ -462,7 +475,7 @@ async function pickProfile(maneuver, foundations, actor) {
   // is the lower of the rule's half-Capacity limit and what can actually be paid.
   // The floor is normally nothing, and is what Compelled raises.
   const wagerMax = maxKiWager(actor);
-  const wagerMin = minimumKiWager(actor);
+  const wagerMin = minimumKiWager(actor, maneuver);
   const wager = `
     <label class="dbu-wager">
       <span>Ki Wager</span>
@@ -472,17 +485,19 @@ async function pickProfile(maneuver, foundations, actor) {
 
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
-    window: { title: `${maneuver.name} - Profile` },
+    window: { title: `${maneuver.name} - ${noProfile ? "Ki Wager" : "Profile"}` },
     content: `${body}${wager}`,
     buttons: [
       {
         action: "confirm",
         label: "Confirm",
         callback: (event, button, dialog) => {
-          const profile = fixed
+          const profile = noProfile
+            ? ""
+            : fixed
             ? maneuver.profile
             : dialog.element.querySelector('input[name="profile"]:checked')?.value;
-          if (!profile) return null;
+          if (!noProfile && !profile) return null;
 
           // Clamped here as well as on the input: `min` on a number field is advice to
           // the browser, not a guarantee, and a typed number gets through it.

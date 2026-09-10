@@ -21,7 +21,15 @@ text: >
 # Not automated: who the target is, and whether enough Actions were spent
 # attacking them. Both need a target the system does not track yet, so the
 # Life Point loss at the end of the turn is left to the GM.
-# Urgency is a forbidden Willing Failure, which is what Urgent means.
+#
+# The rule says "against that target" of both the wager and the Urgency, and
+# without a tracked target neither could be narrowed to one. It costs nothing:
+# the same Condition forbids attacking anyone else, so every Attacking Maneuver
+# you are able to make is one against that target anyway.
+#
+# Urgency is a forbidden Willing Failure, which is what Urgent means. It is
+# written reactively because it is a property of the roll and not of the
+# character - it does not exist until a Combat Roll is being made.
 
 [passive]
 forbid attacksOnOthers;

@@ -2254,7 +2254,10 @@ async function takeOutOfSequence(message, actor, offer) {
   }
 
   let declared = null;
-  if (maneuver.profile) {
+  // Opened for an Attacking Maneuver even when it names no Profile: the Ki Wager
+  // belongs to the attack rather than to the Profile, and Compelled sets a floor under
+  // it that has to be asked for somewhere.
+  if (maneuver.profile || maneuver.attacking) {
     declared = await declareAttack(maneuver, DBUCharacterData.FOUNDATIONS, actor);
     if (!declared) return;
   }
