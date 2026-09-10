@@ -1140,10 +1140,7 @@
    These live in the chat log, outside the sheet, so they are not scoped to
    .dbu-ttrpg. */
 
-.dbu-crit-button {
-  width: 100%;
-  margin-top: 4px;
-}
+/* Full width and the shared look; nothing of its own left to say. */
 
 .dbu-check {
   text-align: center;
@@ -1193,7 +1190,11 @@
   font-style: italic;
 }
 
-/* Only rendered for Actors the reader has access to. */
+/* Only rendered for Actors the reader has access to.
+
+   It had no colour of its own, so it took Foundry's default button text - black,
+   on a card that is not. The fallback is the same yellow the variable holds, for
+   the case where this list is drawn somewhere the chat palette does not reach. */
 .dbu-cancel-response {
   flex: 0 0 auto;
   width: 18px;
@@ -1201,6 +1202,15 @@
   padding: 0;
   line-height: 16px;
   font-size: 13px;
+  border: 1px solid rgba(223, 226, 136, 0.35);
+  background: rgba(223, 226, 136, 0.08);
+  color: var(--dbu-chat-accent, #dfe288);
+}
+
+.dbu-cancel-response:hover {
+  border-color: var(--dbu-chat-accent, #dfe288);
+  background: rgba(223, 226, 136, 0.2);
+  color: var(--dbu-chat-accent, #dfe288);
 }
 
 /* --- Skill Clash and attack cards ------------------------------------------
@@ -1304,9 +1314,15 @@
   font-weight: bold;
 }
 
-/* The single way in to answering a Maneuver, and the card's own controls. */
+/* The single way in to answering a Maneuver, and the card's own controls.
+
+   Every button drawn into the chat log belongs here. One that is left out takes
+   Foundry's default button text - black, on a card that is not - and it will not
+   look wrong until somebody happens to be shown it. */
 .dbu-clash-button,
-.dbu-respond-button {
+.dbu-respond-button,
+.dbu-crit-button,
+.dbu-oos-button {
   width: 100%;
   margin-top: 4px;
   border: 1px solid rgba(var(--dbu-action), 0.7);
@@ -1318,7 +1334,9 @@
 }
 
 .dbu-clash-button:hover,
-.dbu-respond-button:hover {
+.dbu-respond-button:hover,
+.dbu-crit-button:hover,
+.dbu-oos-button:hover {
   background: rgba(var(--dbu-action), 0.4);
   border-color: rgba(var(--dbu-action), 1);
 }
@@ -1442,9 +1460,11 @@
   opacity: 0.7;
 }
 
+/* Sits in a row rather than spanning the card, so it overrides the shared width. */
 .dbu-oos-button {
   flex: 0 0 auto;
   width: auto;
+  margin-top: 0;
   padding: 0 8px;
   line-height: 18px;
 }
