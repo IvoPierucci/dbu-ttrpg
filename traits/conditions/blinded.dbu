@@ -1,0 +1,20 @@
+id: blinded
+name: Blinded
+kind: condition
+description: >
+  For one reason or another, you cannot see for a short period.
+text: >
+  While you have this Combat Condition, suffer from the effects of the
+  Blinding Light Level (see - Light Levels), regardless of what the current
+  Light Level is.
+
+---
+
+# The Blinding Light Level halves Awareness, Defense Value and the Perception
+# Skill Bonus. Written out rather than referenced, because a Light Level is a
+# property of a Square and this Condition ignores what the Square says.
+
+[passive]
+awareness *= 0.5;
+defenseValue *= 0.5;
+skill.perception.bonus *= 0.5;

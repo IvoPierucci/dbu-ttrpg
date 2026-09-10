@@ -1,0 +1,20 @@
+id: insightful-warrior
+name: Insightful Warrior
+prerequisites: Insight Score of 8+
+description: >
+  You realize that reading your opponent and reacting accordingly is more
+  effective than brute strength.
+text: >
+  While your Force and Magic Scores are at least 4 lower than your Insight Score
+  and you are not benefiting from Balanced Warrior, increase your Wound Rolls and
+  Might by 2(T).
+
+---
+
+[passive]
+if (force.score <= insight.score - 4 &&
+    magic.score <= insight.score - 4 &&
+    !benefiting("Balanced Warrior")) {
+    might += 2(T);
+    wound += 2(T);
+}

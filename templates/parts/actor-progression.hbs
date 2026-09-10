@@ -96,6 +96,27 @@
     </div>
     {{/if}}
 
+    {{#if racialTraits.length}}
+    {{! What the race offers, filtered to this character's own. Toggled rather than
+        chosen from a list, since which ones you have is what matters and the rules do
+        not settle how many that is. }}
+    <div class="racial-row">
+      <span class="racial-row-label">Racial Traits</span>
+      <div class="racial-slots racial-traits">
+        {{#each racialTraits as |trait|}}
+        <button type="button"
+                class="condition-toggle {{#if trait.taken}}racial-taken{{/if}}"
+                data-action="toggleRacialTrait" data-trait="{{trait.id}}"
+                data-tooltip="{{trait.text}}"
+                aria-pressed="{{#if trait.taken}}true{{else}}false{{/if}}">
+          <span class="condition-mark">{{#if trait.taken}}&#10003;{{/if}}</span>
+          <span class="condition-name">{{trait.name}}</span>
+        </button>
+        {{/each}}
+      </div>
+    </div>
+    {{/if}}
+
     <div class="racial-row">
       <span class="racial-row-label">Skill Ranks</span>
       <div class="racial-slots">

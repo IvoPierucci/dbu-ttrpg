@@ -1,0 +1,40 @@
+id: energy-cancel
+name: Energy Cancel
+type: counter
+actionCost: 1
+kiCost: 0
+usageLimit: 1/round
+cancelCharge: true
+source: Core Rule
+description: >
+  Plans change. Standing around charging an attack did not work, so change
+  strategies immediately, even if you will lose the stamina you dedicated to
+  charging.
+text: >
+  If you are currently suffering from the effects of the Energy Charge Maneuver
+  when you are targeted by an Attacking Maneuver (or at the start of your turn),
+  you can use this Maneuver to immediately lose all Energy Charges gained from
+  the Energy Charge Maneuver but also stop suffering from the other effects of
+  the Energy Charge Maneuver.
+
+---
+
+# No script, for the same reason the Energy Charge Maneuver has none: what this
+# does is undo a declaration that is being held open, and a script has no way to
+# reach one. `cancelCharge: true` hands it to the code that does.
+#
+# What it comes to:
+#   - only offered while you are actually charging - there is nothing to cancel
+#     otherwise, and a Maneuver that costs an Action to do nothing is a trap
+#   - every Energy Charge on the declared attack is lost
+#   - the declaration goes with them, and so does the Guard Down it was causing
+#     and the hold on your other Attacking and Standard Maneuvers
+#
+# Two ways in, both named by the rule: from the card of an Attacking Maneuver
+# aimed at you, and from your own sheet at the start of your turn.
+#
+# On the card it sits among the Counter Maneuvers, because that is what it costs -
+# one Counter Action, and you only get to spend one answering any one Maneuver.
+# So it is exclusive with the Defend Maneuver. It is not exclusive with dodging:
+# a Dodge costs nothing, so having spent the Action here you dodge as you would
+# have if you had spent nothing.

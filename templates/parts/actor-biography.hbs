@@ -1,3 +1,27 @@
 <div class="tab {{tabs.biography.cssClass}}" data-group="primary" data-tab="biography">
+
+  <section class="panel bio-standing">
+    <h3 class="panel-title">Standing</h3>
+
+    {{! Karma Points are spent during play and handed back between Encounters, so they
+        need to be adjustable without opening anything. }}
+    <div class="karma">
+      <span class="karma-label" data-tooltip="Spent to change a roll, refuse a defeat, or wake an ally. You start an Encounter with two.">Karma Points</span>
+      <button type="button" class="karma-step" data-action="stepKarma" data-step="-1"
+              data-tooltip="Spend one">&minus;</button>
+      <span class="karma-count">{{system.karma}}<span class="karma-max">/{{karmaMax}}</span></span>
+      <button type="button" class="karma-step" data-action="stepKarma" data-step="1"
+              data-tooltip="Regain one">+</button>
+    </div>
+
+    {{! A Minion is a lesser opponent: fewer Actions are demanded of them by Compelled,
+        and several rules read this rather than the character's numbers. }}
+    <label class="bio-toggle"
+           data-tooltip="A lesser opponent. Several rules ask less of a Minion than of a full Character.">
+      <input type="checkbox" name="system.minion" {{#if system.minion}}checked{{/if}}/>
+      Minion
+    </label>
+  </section>
+
   {{editor system.biography target="system.biography" button=true editable=editable engine="prosemirror"}}
 </div>

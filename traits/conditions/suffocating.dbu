@@ -1,0 +1,13 @@
+id: suffocating
+name: Suffocating
+kind: condition
+description: >
+  You cannot breathe.
+text: >
+  Reduce your Life Points by 1/5 of your Maximum Life Points at the end of
+  each of your turns.
+
+---
+
+[automatic/end-of-turn]
+life.value -= floor(life.max / 5);

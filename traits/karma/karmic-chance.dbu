@@ -1,0 +1,27 @@
+id: karmic-chance
+name: Karmic Chance
+kind: karma
+cost: 1
+description: >
+  You manage to override random chance through sheer force of will.
+text: >
+  After seeing the result of any die, you may use this Karmic Effect to
+  reroll that die. You must accept this second roll, unless it is lower than
+  the first. In which case, you may take the first roll.
+
+---
+
+# reroll() replaces the Base Die outright and reads the result again from
+# scratch - so a new Critical rolls its dice, a new Botch takes its 2(bT), and
+# whichever the first die scored is gone rather than carried over.
+# When the second roll comes out lower you are asked whether to keep the first,
+# which is the one part of it that is your choice rather than arithmetic.
+# No `requires`, and that is deliberate: the rule is "any die", so this is
+# offered on a lone Skill roll or Steadfast Check as well as on a Clash, and it
+# does not ask whether you passed. Rerolling a roll that already succeeded is
+# strange, but it is what the effect says you may do.
+# Not automated: rerolling a die other than the Base Die - a Wound Roll's own
+# dice, say. The system can only reach the one that decided the result.
+
+[triggered/clash-resolved]
+reroll();

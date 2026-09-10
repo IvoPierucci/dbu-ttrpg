@@ -1,0 +1,24 @@
+id: stress-exhaustion
+name: Stress Exhaustion
+kind: condition
+description: >
+  The stress of your Transformations catch up to you, rendering you exhausted.
+text: >
+  Upon gaining this Combat Condition, return to your Normal State (see -
+  Transformation Rules) and halve your Ki Points if you were benefiting from
+  the effects of Ki Multiplier. While suffering from this Combat Condition, you
+  cannot enter any Enhancement or Form.
+
+---
+
+# leaveState with no name leaves every State, which is what returning to your
+# Normal State means.
+
+[passive]
+forbid transformations;
+
+[on applied]
+leaveState();
+if (benefiting("Ki Multiplier")) {
+    ki.value *= 0.5;
+}

@@ -1,12 +1,19 @@
 const { fields } = foundry.data;
 
+import { legacyToProgram } from "../effects/migrate.mjs";
+import { decompile } from "../effects/decompile.mjs";
+
 /**
  * A Talent, as an Item a character owns.
  *
- * Its passives are typed entries rather than prose: `key` names the rule the entry
- * hooks into and the rest are its arguments, so a Talent that reuses an existing rule
- * needs no code at all. `text` is the wording from the book, kept alongside so the
- * sheet can show what the entry is meant to say.
+ * What it does lives in `script`, written in the small language this system uses for
+ * rules. `text` is the wording from the book, kept alongside: a script is precise but
+ * does not read like a rule, and generated prose would never sound like the book.
+ *
+ * `effects` is what Talents used to carry - typed data rows, one per rule, with the
+ * meaning of each `key` living in whatever code consumed it. It is kept only so that
+ * Talents written before the language existed still work, and `migrateData` turns them
+ * into a script on the way in.
  */
 export default class DBUTalentData extends foundry.abstract.TypeDataModel {
 
@@ -15,38 +22,64 @@ export default class DBUTalentData extends foundry.abstract.TypeDataModel {
       description: new fields.HTMLField({ required: true, blank: true, initial: "" }),
       prerequisites: new fields.StringField({ required: true, blank: true, initial: "" }),
 
+      /** What the Talent does. */
+      script: new fields.StringField({ required: true, blank: true, initial: "" }),
+
+      /** The book's own wording, shown to players. */
+      text: new fields.StringField({ required: true, blank: true, initial: "" }),
+
+      /** An Addendum's separate explanation, when the effect carries one. */
+      addendum: new fields.StringField({ required: true, blank: true, initial: "" }),
+
+      // --- Deprecated -------------------------------------------------------
+      // The old typed rows. Nothing writes these any more; they are read once by
+      // migrateData and otherwise left alone, so reverting the system loses nothing.
       effects: new fields.ArrayField(
         new fields.SchemaField({
-          // Which rule this hooks into, e.g. "soak" or "attackKiCost".
           key: new fields.StringField({ required: true, blank: true, initial: "" }),
-          // Arguments for the rules that name something: a Defend option, one
-          // Attribute, or the pair of Attributes a rule plays off each other.
           option: new fields.StringField({ required: true, blank: true, initial: "" }),
           attribute: new fields.StringField({ required: true, blank: true, initial: "" }),
           attributes: new fields.ArrayField(
             new fields.StringField({ required: true, blank: false }),
             { required: true, initial: [] }
           ),
-          // A plain amount, for the effects written without a (T) or (bT).
           flat: new fields.NumberField({ required: true, integer: true, initial: 0 }),
-          // The "x(T)" and "x(bT)" parts. Negative reduces.
           perTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
           perBaseTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
-          // The "1d10(T)" form: this many of that die per Tier of Power.
           dicePerTier: new fields.StringField({ required: true, blank: true, initial: "" }),
-          // Forced value for the rules that set one, such as a Base Die's result.
           value: new fields.NumberField({ required: true, integer: true, initial: 0 }),
-          // How often a triggered effect may be used. Absent means no limit.
           limits: new fields.SchemaField({
             round: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null }),
             encounter: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null })
           }),
-          // When the passive applies at all. Empty means always.
           condition: new fields.ObjectField({ required: true, initial: {} }),
           text: new fields.StringField({ required: true, blank: true, initial: "" })
         }),
         { required: true, initial: [] }
       )
     };
+  }
+
+  /**
+   * Give a Talent written in the old form a script, on the way in.
+   *
+   * This runs on the document source before anything reads it, so **every Talent
+   * already owned by every character keeps working with nothing written and nothing for
+   * anyone to run**. It is the safety net that makes the one-shot migration optional
+   * rather than urgent.
+   */
+  static migrateData(source) {
+    if (source?.script) return super.migrateData(source);
+    if (!source?.effects?.length) return super.migrateData(source);
+
+    const program = legacyToProgram(source.effects);
+    if (program.blocks.length) source.script = decompile(program);
+
+    // The rows carried the book's wording one per effect; joined, it is the Talent's.
+    if (!source.text) {
+      source.text = source.effects.map(row => row.text).filter(Boolean).join("\n");
+    }
+
+    return super.migrateData(source);
   }
 }

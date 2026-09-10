@@ -30,7 +30,15 @@
       <div class="stat"><em>Might</em><span>{{system.might}}</span></div>
       <div class="stat"><em>Surgency</em><span>{{system.surgency}}</span></div>
       <div class="stat"><em>Soak Value</em><span>{{system.soakValue}}</span></div>
-      <div class="stat"><em>Initiative</em><span>{{system.initiativeBonus}}</span></div>
+      <div class="stat"
+           data-tooltip="Taken off a Wound Roll like Soak, but the Damage Category does not reduce or ignore it, and multipliers on Soak do not touch it.">
+        <em>Damage Reduction</em><span>{{system.damageReduction}}</span>
+      </div>
+      <div class="stat">
+        <button type="button" class="stat-roll" data-action="rollInitiative"
+                data-tooltip="Roll Initiative, and place yourself in the Combat Tracker if you are in one"><em>Initiative</em></button>
+        <span>{{system.initiativeBonus}}</span>
+      </div>
       <div class="stat"><em>Speed</em><span>{{system.speed.normal}}</span></div>
       <div class="stat"><em>Speed (Boosted)</em><span>{{system.speed.boosted}}</span></div>
     </div>
@@ -78,9 +86,9 @@
     <h3 class="panel-title">Saving Throws</h3>
     <div class="stat-grid saves">
       {{#each system.savingThrows as |save|}}
-      <div class="stat {{#if save.racial}}stat-racial{{/if}}"
-           data-tooltip="Crits on {{save.criticalTarget}}+{{#if save.racial}} · racial Saving Throw{{/if}}">
-        <em>{{save.label}}</em>
+      <div class="stat {{#if save.racial}}stat-racial{{/if}}">
+        <button type="button" class="stat-roll" data-action="rollSave" data-save="{{@key}}"
+                data-tooltip="Roll 1d10 + {{save.label}} &middot; crits on {{save.criticalTarget}}+{{#if save.racial}} &middot; racial Saving Throw{{/if}}"><em>{{save.label}}</em></button>
         <span>{{save.value}}</span>
       </div>
       {{/each}}

@@ -2,28 +2,39 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import DBUCharacterData from "../data/actor-character.mjs";
-import { importCoreTalents, ownedTalents, usesLeft } from "../talents.mjs";
+import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
+import { reactiveFor } from "../effects/registry.mjs";
+import { traitsOfKind } from "../effects/traits.mjs";
+import {
+  conditionsFor,
+  setCondition,
+  setState,
+  statesFor,
+  toggleCondition,
+  toggleState
+} from "../conditions.mjs";
+import { actionsLeft, newRoundFor, spendActions } from "../combat.mjs";
+import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
   answeredLatestManeuver,
   checkCard,
   evaluateCheck,
   prepareRoll,
-  postAttack,
-  postManeuver,
-  postSkillClash,
-  takeSurge
+  whyNotWilling
 } from "../chat.mjs";
 import {
   MANEUVER_TYPES,
-  allManeuvers,
-  declareAttack,
-  maneuverUsesLeft,
-  recordManeuverUse,
-  usageLimitLabel,
-  getManeuver,
+  PROFILES,
   maneuverKiCost,
-  spendManeuverCost
+  maneuverUsesLeft,
+  usageLimitLabel
 } from "../maneuvers.mjs";
+import {
+  coreManeuverItems,
+  definitionOf,
+  importCoreManeuvers,
+  useOwnedManeuver
+} from "../use-maneuver.mjs";
 import {
   exclusiveAttributeGroups,
   raceOptions,
@@ -41,8 +52,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   static DEFAULT_OPTIONS = {
     classes: ["dbu-ttrpg", "character"],
-    // Talents are Items, so the sheet has to accept one being dropped on it.
-    dragDrop: [{ dragSelector: "[data-item-id]", dropSelector: null }],
+    // Talents and Maneuvers are both Items, so the sheet accepts either being dropped
+    // on it - and lets either be dragged off, a Maneuver most usefully onto the hotbar.
+    dragDrop: [{ dragSelector: "[data-item-id][draggable]", dropSelector: null }],
     position: {
       width: 700,
       height: 780
@@ -54,15 +66,27 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollAttribute: DBUCharacterSheet._onAttributeRoll,
       dbuChangeTab: DBUCharacterSheet._onChangeTab,
       rollSkill: DBUCharacterSheet._onSkillRoll,
+      rollSave: DBUCharacterSheet._onSaveRoll,
+      toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
+      rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
       resetEncounter: DBUCharacterSheet._onResetEncounter,
       steadfastCheck: DBUCharacterSheet._onSteadfastCheck,
       importTalents: DBUCharacterSheet._onImportTalents,
+      reloadTalents: DBUCharacterSheet._onReloadTalents,
+      importManeuvers: DBUCharacterSheet._onImportManeuvers,
+      grantManeuvers: DBUCharacterSheet._onGrantManeuvers,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
       deleteItem: DBUCharacterSheet._onDeleteItem,
       toggleCombatEdit: DBUCharacterSheet._onToggleCombatEdit,
+      toggleCondition: DBUCharacterSheet._onToggleCondition,
+      toggleState: DBUCharacterSheet._onToggleState,
+      stepState: DBUCharacterSheet._onStepState,
+      stepCondition: DBUCharacterSheet._onStepCondition,
+      useConditionAbility: DBUCharacterSheet._onUseConditionAbility,
+      stepKarma: DBUCharacterSheet._onStepKarma,
       editImage: DBUCharacterSheet._onEditImage
     },
     form: {
@@ -73,11 +97,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static PARTS = {
     header: { template: "systems/dbu-ttrpg/templates/parts/actor-header.hbs" },
     tabs: { template: "systems/dbu-ttrpg/templates/parts/sheet-tabs.hbs" },
-    main: { template: "systems/dbu-ttrpg/templates/parts/actor-main.hbs" },
-    combat: { template: "systems/dbu-ttrpg/templates/parts/actor-combat.hbs" },
-    traits: { template: "systems/dbu-ttrpg/templates/parts/actor-traits.hbs" },
-    progression: { template: "systems/dbu-ttrpg/templates/parts/actor-progression.hbs" },
-    biography: { template: "systems/dbu-ttrpg/templates/parts/actor-biography.hbs" }
+    main: { template: "systems/dbu-ttrpg/templates/parts/actor-main.hbs", scrollable: [""] },
+    combat: { template: "systems/dbu-ttrpg/templates/parts/actor-combat.hbs", scrollable: [""] },
+    traits: { template: "systems/dbu-ttrpg/templates/parts/actor-traits.hbs", scrollable: [""] },
+    progression: {
+      template: "systems/dbu-ttrpg/templates/parts/actor-progression.hbs",
+      scrollable: [""]
+    },
+    biography: {
+      template: "systems/dbu-ttrpg/templates/parts/actor-biography.hbs",
+      scrollable: [""]
+    }
   };
 
   tabGroups = { primary: "main" };
@@ -88,6 +118,25 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * and it should lapse when the sheet is closed.
    */
   #combatEditMode = false;
+
+  /**
+   * Which collapsible sections are open, by their `data-section` name.
+   *
+   * The template renders from this rather than deciding for itself, and that ordering
+   * is the whole point. Foundry restores a `details[data-sync]` *after* it has restored
+   * the scroll position, so a section that opens or closes at that moment changes the
+   * height under a scroll that was already set - which is the jump. Rendering the real
+   * state means nothing moves after the fact.
+   *
+   * It also settles the rule the sections follow: they open when the player opens them
+   * and close when the player closes them. Whether anything is active does not enter
+   * into it - a section flinging itself open because a Condition was ticked is the
+   * same jump wearing a different hat.
+   */
+  // Anything not named here starts closed - States and Combat Conditions among them,
+  // which is what keeps a long checklist from taking over the Combat tab. The Maneuver
+  // groups default the other way, in _prepareManeuverGroups.
+  #openSections = { talents: true };
 
   /** ApplicationV2 does not wire drag and drop itself; each sheet binds its own. */
   #dragDrop = this.options.dragDrop.map(config => new foundry.applications.ux.DragDrop.implementation({
@@ -109,7 +158,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     event.dataTransfer.setData("text/plain", JSON.stringify(item.toDragData()));
   }
 
-  /** Accept a Talent dropped onto the sheet, copying it onto this character. */
+  /** Every kind of Item a character can be given. */
+  static ACCEPTS = ["talent", "maneuver"];
+
+  /** Accept an Item dropped onto the sheet, copying it onto this character. */
   async _onDrop(event) {
     if (!this.isEditable) return;
 
@@ -119,8 +171,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const item = await Item.implementation.fromDropData(data);
     if (!item) return;
 
-    if (item.type !== "talent") {
-      ui.notifications.warn(`${item.name} is not a talent.`);
+    if (!DBUCharacterSheet.ACCEPTS.includes(item.type)) {
+      ui.notifications.warn(
+        `${item.name} cannot be given to a character. This sheet takes `
+        + `${DBUCharacterSheet.ACCEPTS.join(" and ")} Items.`
+      );
       return;
     }
     // Dropping an Item the character already owns is a re-order, not a second copy.
@@ -136,6 +191,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     progression: { id: "progression", group: "primary", label: "Progression" },
     biography: { id: "biography", group: "primary", label: "Biography" }
   };
+
+  /** The character's Maneuver Items, as the plain definitions the rules speak in. */
+  #ownedManeuvers() {
+    return this.actor.items
+      .filter(item => item.type === "maneuver")
+      .map(definitionOf)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
 
   /** @override */
   async _prepareContext(options) {
@@ -165,20 +228,65 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }));
 
     context.combatEditMode = this.#combatEditMode;
+    // What is left of each pool right now. Derived rather than stored: what is stored
+    // is what has been spent, so the sheet cannot drift from what the rules allow.
+    context.actionsLeft = {
+      standard: actionsLeft(this.actor, "standard"),
+      counter: actionsLeft(this.actor, "counter")
+    };
+    context.openSections = this.#openSections;
     context.threshold = this.actor.system.threshold;
+
+    // Combat Conditions: every one the system knows, marked with what this character
+    // has, so the section is a checklist rather than a list of what is already wrong.
+    context.conditions = conditionsFor(this.actor);
+    const held = context.conditions.filter(c => c.active);
+    context.anyCondition = held.length > 0;
+    context.conditionSummary = held
+      .map(c => (c.stacking ? `${c.name} ${c.stacks}` : c.name))
+      .join(", ");
+    context.conditionAbilities = this.#conditionAbilities();
+
+    context.states = statesFor(this.actor);
+    const entered = context.states.filter(s => s.active);
+    context.anyState = entered.length > 0;
+    context.stateSummary = entered
+      .map(s => (s.levelled ? `${s.name} ${s.level}` : s.name))
+      .join(", ");
+
+    context.karmaMax = DBUCharacterData.KARMA_MAX;
+    context.racialTraits = this.#racialTraitChoices();
+
+    // What is being charged, if anything. Named rather than shown as an id, since the
+    // point of saying it is that the reader knows which attack is waiting.
+    const charging = this.actor.system.charging;
+    context.charging = charging?.maneuverId
+      ? {
+          name: this.actor.items.get(charging.maneuverId)?.name ?? "an Attacking Maneuver",
+          profile: PROFILES[charging.profile]?.label ?? "",
+          charges: charging.charges,
+          one: charging.charges === 1
+        }
+      : null;
     // Only what the character actually holds; a talent whose definition is missing is
     // dropped rather than shown as a blank row.
-    context.talents = ownedTalents(this.actor).map(item => {
-      // A talent is armable when it has an effect that is used rather than simply had.
-      const triggered = item.system.effects.find(effect => effect.limits?.round || effect.limits?.encounter);
-      return {
-        item,
-        triggered: triggered && {
-          ...usesLeft(this.actor, { ...triggered, talentId: item.id }),
-          armed: this.actor.system.armedTalents.includes(item.id)
-        }
-      };
-    });
+    // Armed per **effect**, not per Talent. A Talent carrying two triggered effects
+    // could not have them armed or spent separately before, because both the armed list
+    // and the use counters were keyed on the Talent itself.
+    const triggered = reactiveFor(this.actor);
+    context.talents = ownedTalents(this.actor).map(item => ({
+      item,
+      triggered: triggered
+        .filter(entry => (entry.sourceId === item.id) && entry.budget)
+        .map(entry => ({
+          id: entry.blockId,
+          armed: entry.armed,
+          available: entry.available,
+          round: entry.uses.round,
+          encounter: entry.uses.encounter,
+          text: entry.program.blocks[0]?.text ?? ""
+        }))
+    }));
     context.isGM = game.user.isGM;
 
     const { capacity } = this.actor.system;
@@ -331,13 +439,29 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .map(group => ({
         ...group,
         label: MANEUVER_TYPES[group.key].label,
-        maneuvers: allManeuvers()
+        // Open unless the player has closed it. Rendered rather than restored after the
+        // fact, so the section never changes height once the scroll has been set.
+        open: this.#openSections[`maneuvers-${group.key}`] ?? true,
+        // The character's own Maneuver Items, not a shared table: Signature Techniques
+        // and Unique Abilities are bought per character, so they could never have lived
+        // in one.
+        maneuvers: this.#ownedManeuvers()
           .filter(maneuver => maneuver.type === group.key)
           .map(maneuver => ({
             ...maneuver,
+            // The cost as it will really be charged: `kiCost` on its own misses the
+            // "2(bT)" notation and misses any discount an effect applies, so a
+            // Maneuver priced that way showed as free.
+            kiCost: maneuverKiCost(maneuver, null, this.actor),
             usageLabel: usageLimitLabel(maneuver),
             usesLeft: maneuverUsesLeft(this.actor, maneuver),
+            // Off the group, unless the Maneuver has a reason of its own to be here.
+            playable: group.playable || this.#playableAlone(maneuver),
+            // Two different ways to be unable to play it, and the row says which:
+            // out of uses is a limit of the Maneuver, out of Actions is a limit of
+            // the round. Seen before clicking rather than after.
             exhausted: maneuverUsesLeft(this.actor, maneuver) <= 0,
+            unaffordable: this.#shortOfActions(maneuver),
             // Instant and Counter Maneuvers spend no Standard Action, so what they
             // cost is worth showing per type rather than assuming.
             actionLabel: MANEUVER_TYPES[maneuver.type].action
@@ -490,6 +614,86 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
   }
 
+  /**
+   * Roll a Saving Throw.
+   *
+   * A Saving Throw is its own category of roll - not a Combat Roll and not a Skill - so
+   * it takes the character's own Critical Extra Dice and the Botch penalty that goes
+   * with everything that is not a Skill.
+   */
+  static async _onSaveRoll(event, target) {
+    const key = target.dataset.save;
+    const save = this.actor.system.savingThrows[key];
+    if (!save) return;
+
+    const ready = await prepareRoll(
+      this.actor, [], `${save.label} Saving Throw`,
+      `Roll <strong>${save.label}</strong>? (${DBUCharacterData.BASE_DIE} +${save.value})`
+    );
+    if (!ready) return;
+
+    return this.#rollCheck({
+      bonus: save.value,
+      flavor: `${save.label} Saving Throw`,
+      criticalDice: this.actor.system.dice.critical.formula
+    });
+  }
+
+  /**
+   * Roll Initiative from the sheet.
+   *
+   * Handed to the Combat if this character is in one, so the Tracker takes the result
+   * rather than the table having to read a number off a card and type it in. Outside a
+   * Combat it is rolled as a plain check, which is what the button can honestly do.
+   */
+  static async _onInitiativeRoll() {
+    const combatant = game.combat?.combatants?.find(c => c.actor?.uuid === this.actor.uuid);
+
+    // An Initiative Check is Urgent, so it cannot be failed on purpose.
+    const ready = await prepareRoll(
+      this.actor, [], "Initiative",
+      `Roll <strong>Initiative</strong>? (${DBUCharacterData.BASE_DIE} `
+        + `+${this.actor.system.initiativeBonus})`,
+      { urgent: true }
+    );
+    if (!ready) return;
+
+    if (combatant) return game.combat.rollInitiative([combatant.id]);
+
+    return this.#rollCheck({
+      bonus: this.actor.system.initiativeBonus,
+      flavor: "Initiative",
+      criticalDice: this.actor.system.dice.critical.formula,
+      urgent: true
+    });
+  }
+
+  /**
+   * Whether this Maneuver can be played from the sheet despite its group.
+   *
+   * Only Energy Cancel so far. Its group is played from the card of the attack it
+   * answers, and it can be too - but the rule also allows it "at the start of your
+   * turn", and there is no card for that.
+   */
+  #playableAlone(maneuver) {
+    return Boolean(maneuver.cancelCharge) && Boolean(this.actor.system.charging?.maneuverId);
+  }
+
+  /**
+   * Whether the round has run out of the Actions this Maneuver would cost.
+   *
+   * Only inside a Combat Encounter: outside one there are no rounds, so nothing has
+   * been spent and nothing can be short.
+   */
+  #shortOfActions(maneuver) {
+    if (!game.combat?.started) return false;
+
+    const type = MANEUVER_TYPES[maneuver.type];
+    if (!type?.action) return false;
+
+    return actionsLeft(this.actor, type.action) < (maneuver.actionCost ?? 1);
+  }
+
   /** Maximum attribute points a single "Attribute Addition" row may distribute. */
   static ATTRIBUTE_ADDITION_MAX = 2;
 
@@ -507,6 +711,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       for (const input of row.querySelectorAll(".attr-input")) {
         input.addEventListener("input", () => this.#onAttributeAdditionInput(row, input));
       }
+    }
+
+    // Recorded, not re-rendered: opening a section is a local thing, and re-rendering
+    // to record it would be the very jump this is here to avoid.
+    for (const details of this.element.querySelectorAll("details[data-section]")) {
+      details.addEventListener("toggle", () => {
+        this.#openSections[details.dataset.section] = details.open;
+      });
     }
 
     for (const handler of this.#dragDrop) handler.bind(this.element);
@@ -602,9 +814,57 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
   }
 
-  /** GM only: put the published Talents in the Items directory to drag from. */
+  /** GM only: put the published Talents in the compendium to drag from. */
   static async _onImportTalents() {
     return importCoreTalents();
+  }
+
+  /**
+   * GM only: read every Talent back from its file.
+   *
+   * Importing leaves an existing Talent alone, because a GM may have edited it. This is
+   * how to say "take the file's version instead" - on a button, so an edit is never
+   * lost by surprise.
+   */
+  static async _onReloadTalents() {
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: "Reload Talents from files" },
+      content: "<p>Every core Talent will be overwritten with what its file says. "
+             + "Edits made in Foundry to those Talents are lost. Continue?</p>",
+      modal: true,
+      rejectClose: false
+    });
+    if (!confirmed) return;
+    return reloadCoreTalents();
+  }
+
+  /** GM only: put the published Maneuvers in the compendium to drag from. */
+  static async _onImportManeuvers() {
+    return importCoreManeuvers();
+  }
+
+  /**
+   * Give this character the Core Maneuvers they are missing.
+   *
+   * New characters get them when they are created, but one made before Maneuvers became
+   * Items has none - and without this there would be no way to hand them over except by
+   * dragging six things out of a compendium.
+   */
+  static async _onGrantManeuvers() {
+    const held = new Set(this.actor.items
+      .filter(item => item.type === "maneuver")
+      .map(item => item.system.maneuverId || item.name));
+
+    const missing = coreManeuverItems()
+      .filter(entry => !held.has(entry.system.maneuverId) && !held.has(entry.name));
+
+    if (!missing.length) {
+      ui.notifications.info(`${this.actor.name} already has every core Maneuver.`);
+      return;
+    }
+
+    await this.actor.createEmbeddedDocuments("Item", missing);
+    ui.notifications.info(`Gave ${this.actor.name} ${missing.length} core Maneuver(s).`);
   }
 
   /**
@@ -615,7 +875,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * moment mid-roll at which the owner could be asked.
    */
   static async _onArmTalent(event, target) {
-    const id = target.dataset.itemId;
+    // The id names one effect of one Talent, so two triggered effects on the same
+    // Talent are armed independently.
+    const id = target.dataset.effectId ?? target.dataset.itemId;
     const armed = this.actor.system.armedTalents;
     return this.actor.update({
       "system.armedTalents": armed.includes(id) ? armed.filter(other => other !== id) : [...armed, id]
@@ -632,6 +894,140 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.actor.items.get(target.dataset.itemId)?.delete();
   }
 
+  /**
+   * What a Condition lets you do about it, as buttons.
+   *
+   * Standing up from Prone and clashing free of Pinned are both written as triggered
+   * effects that cost an Action. They are the character's choice to make, so they need
+   * somewhere to be chosen - and the Action cost is checked here rather than after,
+   * because a button that spends an Action you do not have is worse than a greyed one.
+   */
+  #conditionAbilities() {
+    return reactiveFor(this.actor)
+      .filter(entry => entry.sourceId.startsWith("condition:"))
+      .flatMap(entry => (entry.program.blocks ?? [])
+        .filter(b => b.budget?.actions)
+        .map(b => {
+          const cost = b.budget.actions;
+          const affordable = actionsLeft(this.actor, "standard") >= cost;
+          return {
+            sourceId: entry.sourceId,
+            block: b.index,
+            label: `${entry.sourceName} (${cost} Action${cost === 1 ? "" : "s"})`,
+            affordable,
+            tooltip: affordable
+              ? entry.sourceName
+              : `Not enough Actions left this round.`
+          };
+        }));
+  }
+
+  /**
+   * The Racial Traits this character's race offers, and which of them they have.
+   *
+   * Filtered by race rather than listing them all: a Saiyan has no business being
+   * offered an Android's. Empty until a race has Traits written for it, and the section
+   * says so rather than appearing as an empty box.
+   */
+  #racialTraitChoices() {
+    const race = this.actor.system.race;
+    if (!race) return [];
+
+    const taken = new Set(this.actor.system.racialTraits ?? []);
+    return traitsOfKind("races", race).map(trait => ({
+      id: trait.id,
+      name: trait.name,
+      text: trait.text || trait.description || "",
+      taken: taken.has(trait.id)
+    }));
+  }
+
+  /** Take a Racial Trait, or give it up. */
+  static async _onToggleRacialTrait(event, target) {
+    const id = target.dataset.trait;
+    const taken = new Set(this.actor.system.racialTraits ?? []);
+
+    if (taken.has(id)) taken.delete(id);
+    else taken.add(id);
+
+    return this.actor.update({ "system.racialTraits": [...taken] });
+  }
+
+  /** Enter or leave a State. */
+  static async _onToggleState(event, target) {
+    return toggleState(this.actor, target.dataset.state);
+  }
+
+  /** One level higher or lower in a State that has levels. */
+  static async _onStepState(event, target) {
+    const key = target.dataset.state;
+    const step = Number(target.dataset.step) || 0;
+    const current = Number(this.actor.system.states?.[key]) || 0;
+    return setState(this.actor, key, current + step);
+  }
+
+  /** Put a Combat Condition on this character, or take it off. */
+  static async _onToggleCondition(event, target) {
+    return toggleCondition(this.actor, target.dataset.condition);
+  }
+
+  /** One more or one fewer stack of a stacking Combat Condition. */
+  static async _onStepCondition(event, target) {
+    const key = target.dataset.condition;
+    const step = Number(target.dataset.step) || 0;
+    const current = Number(this.actor.system.conditions?.[key]) || 0;
+    return setCondition(this.actor, key, current + step);
+  }
+
+  /**
+   * Use what a Condition offers - standing up, or clashing free.
+   *
+   * The Action is spent first: if it cannot be paid for, nothing should fire. Arming the
+   * block is what makes the effect eligible, since it is triggered rather than automatic.
+   */
+  static async _onUseConditionAbility(event, target) {
+    const { source, block } = target.dataset;
+    const entry = reactiveFor(this.actor)
+      .find(e => (e.sourceId === source) && (e.blockId === `${source}#${block}`));
+    if (!entry) return;
+
+    const cost = entry.program.blocks?.[0]?.budget?.actions ?? 0;
+    if (!await spendActions(this.actor, cost, "standard")) return;
+
+    // Armed for exactly this, then fired. It is disarmed again by fireMoment when the
+    // use is recorded, so a second press has to pay for itself.
+    await this.actor.update({
+      "system.armedTalents": [...this.actor.system.armedTalents, entry.blockId]
+    });
+
+    // Narrowed to this Condition: pressing "stand up" must not also spend whatever else
+    // the character had armed for the same Moment.
+    const moment = entry.program.blocks?.[0]?.moment;
+    const fired = await fireMoment(
+      this.actor,
+      moment,
+      { condition: source.slice("condition:".length) },
+      { only: source }
+    );
+
+    // Nothing fired means the Action bought nothing, so it is handed back rather than
+    // quietly lost - the most likely cause is a limit that had already run out.
+    if (foundry.utils.isEmpty(fired)) {
+      const { refundActions } = await import("../combat.mjs");
+      await refundActions(this.actor, cost, "standard");
+      ui.notifications.warn(`${entry.sourceName} could not be used right now.`);
+    }
+  }
+
+  /** Spend or regain a Karma Point. */
+  static async _onStepKarma(event, target) {
+    const step = Number(target.dataset.step) || 0;
+    const wanted = (this.actor.system.karma ?? 0) + step;
+    return this.actor.update({
+      "system.karma": Math.min(DBUCharacterData.KARMA_MAX, Math.max(0, wanted))
+    });
+  }
+
   /** Unlock or re-lock the Combat tab's tracking values. */
   static _onToggleCombatEdit() {
     this.#combatEditMode = !this.#combatEditMode;
@@ -639,19 +1035,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * Clear the Ki spent this Combat Round. Manual for now: the system has no notion of
-   * a round to reset it against.
+   * Turn the Combat Round over by hand.
+   *
+   * A Combat does this on its own now, so this is for a table playing without a formal
+   * Encounter - and for putting things right when one gets out of step. It clears
+   * exactly what a round clears, from the same list, so the two cannot say different
+   * things about what a new round means.
    */
   static async _onResetCapacity() {
-    // Everything that only lasts a Combat Round clears together: Diminishing Defense
-    // goes at the start of a round and Diminishing Offense at the end, which between
-    // two rounds is the same moment.
-    return this.actor.update({
-      "system.capacity.spent": 0,
-      "system.attacksThisRound": 0,
-      "system.diminishingDefense": 0,
-      "system.talentUses.round": []
-    });
+    return this.actor.update(newRoundFor(this.actor));
   }
 
   /**
@@ -703,79 +1095,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * respondable, so other players can answer it with an Instant Maneuver.
    */
   static async _onUseManeuver(event, target) {
-    const maneuver = getManeuver(target.dataset.maneuver);
-    if (!maneuver) return;
-
-    // The template does not offer these, but a stale render should not be a way past
-    // the rules either.
-    if ((maneuver.type === "instant")
-      && (this.actor.system.lastManeuverWasInstant || answeredLatestManeuver(this.actor))) {
-      ui.notifications.warn(
-        `${this.actor.name} just played an Instant Maneuver and cannot play another.`
-      );
-      return;
-    }
-
-    if (maneuverUsesLeft(this.actor, maneuver) <= 0) {
-      ui.notifications.warn(`${this.actor.name} has no uses of ${maneuver.name} left.`);
-      return;
-    }
-
-    // A Surge is what the Maneuver does, and it can be declined once opened - so
-    // nothing is spent or recorded until it has actually been taken.
-    if (maneuver.surge) {
-      // takeSurge posts the outcome itself, naming the Maneuver - announcing the
-      // Maneuver separately would put the same event in chat twice.
-      if (!await takeSurge(this.actor, { source: maneuver.name })) return;
-      await recordManeuverUse(this.actor, maneuver);
-      return DBUCharacterSheet.#trackInstant(this.actor, maneuver.type);
-    }
-
-    // Resolve the target before paying for anything, so a maneuver that cannot be
-    // aimed does not cost Ki.
-    let targetActor = null;
-    if (maneuver.requiresTarget) {
-      targetActor = game.user.targets.first()?.actor ?? null;
-      if (!targetActor) {
-        ui.notifications.warn(`${maneuver.name} needs a target. Target a token first.`);
-        return;
-      }
-      if (targetActor.uuid === this.actor.uuid) {
-        ui.notifications.warn(`${maneuver.name} cannot target its own user.`);
-        return;
-      }
-    }
-
-    // The Profile and its Foundation are declared before anything is paid, since
-    // both choices can still be aborted - and the Profile is what sets the price.
-    let declared = null;
-    if (maneuver.profile) {
-      declared = await declareAttack(maneuver, DBUCharacterData.FOUNDATIONS, this.actor);
-      if (!declared) return;
-    }
-
-    if (!await spendManeuverCost(this.actor, maneuver, maneuverKiCost(maneuver, declared, this.actor))) return;
-
-    await recordManeuverUse(this.actor, maneuver);
-    await DBUCharacterSheet.#trackInstant(this.actor, maneuver.type);
-
-    if (maneuver.clash) return postSkillClash(this.actor, targetActor, maneuver);
-    if (declared) return postAttack(this.actor, targetActor, maneuver, declared);
-    return postManeuver(this.actor, maneuver);
-  }
-
-  /**
-   * Record whether this Maneuver leaves the character having just played an Instant.
-   *
-   * An Out-of-Sequence Maneuver deliberately leaves the flag alone: one played off
-   * the back of an Instant does not count as a Maneuver in its place, so it cannot
-   * launder an Instant into a legal follow-up.
-   */
-  static async #trackInstant(actor, type) {
-    if (type === "outOfSequence") return;
-    const wasInstant = type === "instant";
-    if (actor.system.lastManeuverWasInstant === wasInstant) return;
-    return actor.update({ "system.lastManeuverWasInstant": wasInstant });
+    // The same call the hotbar macro makes, so the two cannot drift apart.
+    return useOwnedManeuver(this.actor, target.dataset.itemId ?? target.dataset.maneuver);
   }
 
   /**
@@ -786,16 +1107,38 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * its adjusted total in the flavor, and a critical is flagged for the chat hook,
    * which offers the extra die as a button on the message (see chat.mjs).
    */
-  async #rollCheck({ bonus, flavor, criticalDice }) {
-    const { BOTCH_PENALTY } = DBUCharacterData;
-    const { roll, botch, critical } = await evaluateCheck(this.actor, bonus);
+  async #rollCheck({ bonus, flavor, criticalDice, skillRoll = false, urgent = false }) {
+    // Same rule as a Combat Roll: penalties cancel bonuses but never take a roll below
+    // what the dice said.
+    bonus = Math.max(0, bonus);
+
+    // Neither a Skill roll nor an Attribute Check is a Combat Roll, so only a Skill
+    // roll loses the flat 2; everything else loses 2(bT).
+    const botchPenalty = skillRoll
+      ? (this.actor.system.botch?.skill ?? DBUCharacterData.BOTCH_PENALTY)
+      : (this.actor.system.botch?.penalty ?? DBUCharacterData.BOTCH_PENALTY);
+    const { roll, natural, botch, critical } = await evaluateCheck(this.actor, bonus);
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
+
+    // What Karmic Chance needs to roll this again: the Base Die it got, what the roll
+    // came to before that die's consequences, and which Botch penalty this kind of
+    // roll uses. Carried on the message because the card outlives this call.
+    const rerollable = {
+      actorUuid: this.actor.uuid,
+      natural,
+      beforeOutcome: roll.total,
+      criticalDice,
+      botchPenalty,
+      flavor
+    };
 
     // A willing failure applies to any roll at all, this one included. It is decided
     // before the dice are read, so the total is 0 however they landed and neither a
     // Botch nor a critical is worked out - there is nothing left for either to change.
-    if (this.actor.system.willingFailure) {
+    // An Urgent roll cannot be thrown, and neither can one an effect is forcing. The
+    // flag stays armed for whatever roll comes next that does allow it.
+    if (this.actor.system.willingFailure && !whyNotWilling(this.actor, { urgent })) {
       await this.actor.update({ "system.willingFailure": false });
       await ChatMessage.create({
         speaker,
@@ -804,8 +1147,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         content: checkCard({
           parts: `${roll.formula} = <strong>${roll.total}</strong> &nbsp;&middot;&nbsp; willing failure`,
           total: 0,
-          outcome: "willing"
+          outcome: "willing",
+          owner: this.actor.uuid
         })
+        // No `check` flag: a willing failure is a deliberate zero, and rerolling the
+        // die it ignored would change nothing. The card marks its own owner, which is
+        // all the hiding needs.
       });
       return;
     }
@@ -813,13 +1160,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (botch) {
       // The penalty is certain, so the adjusted total is shown right away rather than
       // leaving the reader to subtract it from the card's number.
+      // Floored at zero, as every other value is: the penalty cancels what the roll
+      // came to rather than pushing it below nothing.
+      const botched = Math.max(0, roll.total - botchPenalty);
       const parts = `${roll.formula} = <strong>${roll.total}</strong>`
-        + ` &nbsp;&minus;&nbsp; botch <strong>${BOTCH_PENALTY}</strong>`;
+        + ` &nbsp;&minus;&nbsp; botch <strong>${botchPenalty}</strong>`;
       await ChatMessage.create({
         speaker,
         flavor: `${flavor} — Botch`,
         rolls: [roll],
-        content: checkCard({ parts, total: roll.total - BOTCH_PENALTY, outcome: "botch" })
+        content: checkCard({ parts, total: botched, outcome: "botch", owner: this.actor.uuid }),
+        flags: { "dbu-ttrpg": { check: { ...rerollable, total: botched, outcome: "botch" } } }
       });
       return;
     }
@@ -827,8 +1178,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     await roll.toMessage({
       speaker,
       flavor: critical ? `${flavor} — Critical` : flavor,
-      // Picked up by the chat hook, which offers the extra die as a button.
-      flags: { "dbu-ttrpg": { criticalPending: critical, criticalDice } }
+      // Picked up by the chat hook, which offers the extra die as a button, and the
+      // Karmic Chance button beside it.
+      flags: {
+        "dbu-ttrpg": {
+          criticalPending: critical,
+          criticalDice,
+          check: { ...rerollable, total: roll.total, outcome: critical ? "critical" : "" }
+        }
+      }
     });
   }
 
@@ -865,7 +1223,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.#rollCheck({
       bonus: skill.bonus,
       flavor: `${name} Check`,
-      criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE
+      criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,
+      skillRoll: true
     });
   }
 

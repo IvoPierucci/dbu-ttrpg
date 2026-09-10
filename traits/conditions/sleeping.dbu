@@ -1,0 +1,36 @@
+id: sleeping
+name: Sleeping
+kind: condition
+description: >
+  You have been rendered unconscious and thus, unable to fight.
+text: >
+  A Character who is Sleeping cannot use any Maneuvers, has their Perception
+  and Clairvoyance Skill Bonuses reduced by 2, and is hit automatically by any
+  Attacking Maneuver that targets them. If a Sleeping Character has their Life
+  Points reduced by Damage from an Attacking Maneuver, Collision Damage, Damage
+  Over Time, the Poisoned Combat Condition, the Compelled Combat Condition, or
+  any other Character's effects, a Sleeping Character immediately loses the
+  Sleeping Combat Condition.
+  A Character who is Sleeping, when targeted by an Attacking Maneuver, can
+  spend a Karma Point to not be automatically hit by an Attacking Maneuver and
+  defend normally. They can also use a Counter Maneuver for the duration of
+  that Attacking Maneuver.
+  An Ally can also spend a Karma Point to shout something to wake up an Ally as
+  an Instant Maneuver. The thing shouted must be something that would motivate
+  the Character to action (such as shouting 'dinner time' to wake up Goku).
+
+---
+
+# Waking on damage is written against damage-applied, which fires for any
+# damage that lands - which is what the rule lists at length.
+# Not automated: the two Karma Point options, which are choices made at the
+# table rather than effects that fire.
+
+[passive]
+forbid maneuvers;
+skill.perception.bonus -= 2;
+skill.clairvoyance.bonus -= 2;
+incoming.autoHit = true;
+
+[automatic/damage-applied]
+remove("Sleeping");

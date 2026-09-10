@@ -1,5 +1,9 @@
 import DBUCharacterData from "./data/actor-character.mjs";
-import { armedEffect, talentEffects, usesLeft } from "./talents.mjs";
+import { reactiveFor, usesLeft } from "./effects/registry.mjs";
+import { permits } from "./effects/interpreter.mjs";
+import { spendActions } from "./combat.mjs";
+import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
+import { collectReactive, applySlot } from "./effects/interpreter.mjs";
 import {
   DAMAGE_CATEGORIES,
   DEFEND_OPTIONS,
@@ -42,6 +46,52 @@ const OOS_OFFERS_FLAG = "oosOffers";
  * Maneuver may come out of a single trigger, so taking one closes the rest.
  */
 const OOS_TAKEN_FLAG = "oosTaken";
+
+/**
+ * Which Karmic Effect each character has spent on this exchange, keyed by Actor id.
+ *
+ * Only one Karmic Effect may be applied at a time, and this is what makes the rest
+ * come up greyed out with the reason rather than simply working twice.
+ */
+const KARMIC_FLAG = "karmicApplied";
+
+/**
+ * What a lone check off the sheet needs to be rolled again.
+ *
+ * A Clash keeps its two sides on the message already; a Skill roll, an Attribute Check
+ * or a Steadfast Check had nowhere to keep theirs, so Karmic Chance - which is about
+ * "any die" and not only a Clash - had nothing to work from.
+ */
+const CHECK_FLAG = "check";
+
+/**
+ * The four kinds of roll a Clash can be settled on.
+ *
+ * A Clash is always the same kind against itself. A Strike is answered by a Dodge or a
+ * Parry, never by a Skill; a Skill Clash is a Skill on both sides; a Might Clash is
+ * Might on both. They are kept apart because they scale differently - a Combat Roll and
+ * a Saving Throw at the same Tier of Power are not comparable numbers - so pitting one
+ * against another would not be a close contest, it would be a category error.
+ *
+ * Written down here because effects ask about it, and because the next person to add a
+ * Clash needs to know which of the four they are building.
+ */
+const CLASH_CATEGORIES = Object.freeze({
+  /** Strike, Dodge and Wound - including a Parry, which rolls Strike. */
+  combat: "combatRoll",
+  /** Any Skill. */
+  skill: "skill",
+  /** Impulsive, Corporeal, Cognitive, Morale. */
+  save: "save",
+  /** Might, and only Might. */
+  might: "might"
+});
+
+/** The four as context, with the one this Clash was settled on set. */
+function categoryContext(category) {
+  return Object.fromEntries(
+    Object.entries(CLASH_CATEGORIES).map(([key, name]) => [name, key === category ? 1 : 0]));
+}
 
 /** Socket channel used to ask the GM to edit a message the responder cannot. */
 const CHANNEL = `system.${SCOPE}`;
@@ -93,10 +143,26 @@ function applyRequest(request) {
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
+    case "karmic": return applyKarmicRecord(request.messageId, request.actorId, request.key);
     default:
       console.warn("DBU TTRPG | Unknown relayed edit", request);
       return undefined;
   }
+}
+
+/**
+ * Note that this character has spent their Karmic Effect on this exchange.
+ *
+ * Relayed like every other edit, because the person spending the Karma is usually not
+ * the author of the message they are spending it on - the defender answering an attack,
+ * most often - and writing the flag directly would simply be refused.
+ */
+async function applyKarmicRecord(messageId, actorId, key) {
+  const message = game.messages.get(messageId);
+  if (!message) return;
+  const applied = { ...(message.getFlag(SCOPE, KARMIC_FLAG) ?? {}) };
+  applied[actorId] = key;
+  await message.setFlag(SCOPE, KARMIC_FLAG, applied);
 }
 
 /** Record a response, replacing whatever that Actor had played before. */
@@ -150,12 +216,18 @@ function requestActorUpdate(actor, changes) {
   game.socket.emit(CHANNEL, { type: "actor", actorUuid: actor.uuid, changes });
 }
 
-/** Record one use of a triggered effect, and disarm it. */
-function spendTriggeredEffect(actor, effect) {
+/**
+ * Record one use of a triggered effect, and disarm it.
+ *
+ * Counted against the **block**, not the Trait. A Talent with two triggered effects
+ * used to be impossible to arm or spend separately, because both lists were keyed on
+ * the Talent's own id.
+ */
+function spendTriggeredEffect(actor, blockId) {
   return requestActorUpdate(actor, {
-    "system.talentUses.round": [...actor.system.talentUses.round, effect.talentId],
-    "system.talentUses.encounter": [...actor.system.talentUses.encounter, effect.talentId],
-    "system.armedTalents": actor.system.armedTalents.filter(id => id !== effect.talentId)
+    "system.talentUses.round": [...actor.system.talentUses.round, blockId],
+    "system.talentUses.encounter": [...actor.system.talentUses.encounter, blockId],
+    "system.armedTalents": actor.system.armedTalents.filter(id => id !== blockId)
   });
 }
 
@@ -211,19 +283,27 @@ export function registerChatHooks() {
  * do about it. Callers apply their own policy: a lone check offers the critical die
  * as a button, while a Skill Clash has to settle both sides at once.
  */
-export async function evaluateCheck(actor, bonus, extraDice = "") {
+export async function evaluateCheck(actor, bonus, extraDice = "", forcedNatural = null) {
+  // With the Base Die set by an effect it is not rolled at all: it is stated. Rolling
+  // one and discarding it left a die on the card that meant nothing. Every other die
+  // still rolls - the Tier of Power Extra Dice and the critical die among them.
+  const base = (forcedNatural === null) ? DBUCharacterData.BASE_DIE : String(forcedNatural);
+
   // The Base Die stays first, since the critical and botch rules read its natural
   // result - Extra Dice never decide either.
-  const formula = [DBUCharacterData.BASE_DIE, extraDice, "@bonus"].filter(Boolean).join(" + ");
+  const formula = [base, extraDice, "@bonus"].filter(Boolean).join(" + ");
   const roll = new Roll(formula, { bonus });
   await roll.evaluate();
 
-  const natural = roll.dice[0]?.total;
+  const natural = (forcedNatural === null) ? roll.dice[0]?.total : forcedNatural;
   return {
     roll,
     natural,
-    botch: natural === 1,
-    // The Critical Target never drops below 7, so the two can never both be true.
+    // Two ends of the same line, both read off the Base Die: a Botch is any Natural
+    // Result at or below the Botch Range, a Critical any at or above the Critical
+    // Target. The Botch Range is held below the Critical Target when it is derived, so
+    // the two can never both be true - which used to rest on the Botch always being 1.
+    botch: natural <= (actor.system.botchRange ?? 1),
     critical: natural >= actor.system.criticalTarget
   };
 }
@@ -232,10 +312,14 @@ export async function evaluateCheck(actor, bonus, extraDice = "") {
  * Card for a check whose result needs to stand out. The parts line keeps the working
  * visible; the total is what the player actually reads, so it carries the emphasis.
  */
-export function checkCard({ parts, total, outcome }) {
+export function checkCard({ parts, total, outcome, owner = null }) {
+  // `owner` marks the line as a breakdown of somebody's roll rather than a statement of
+  // what happened. A Karma spend or a Ki Surge names itself and stays public; the dice
+  // and bonuses behind a roll belong to whoever made it.
+  const attribution = owner ? ` data-owner="${owner}"` : "";
   return `
     <div class="dbu-check">
-      <div class="dbu-check-parts">${parts}</div>
+      <div class="dbu-check-parts"${attribution}>${parts}</div>
       <div class="dbu-check-total dbu-${outcome}">${total}</div>
     </div>`;
 }
@@ -251,6 +335,674 @@ function onRenderChatMessage(message, html) {
   renderAttack(message, html);
   renderInstantResponses(message, html);
   renderOutOfSequence(message, html);
+  renderAfterTheFact(message, html);
+  renderCheckKarma(message, html);
+  hidePrivateBreakdowns(message, html);
+}
+
+/**
+ * Keep a roll's workings to whoever made it.
+ *
+ * Two things carry it: our own breakdown line, and the dice tooltip Foundry puts on a
+ * roll message. Both are held to Observer permission on the character that rolled.
+ *
+ * This hides them in the rendered card. The text is still in the message document, so
+ * this is a courtesy between players rather than a guarantee against someone who goes
+ * looking - making it a guarantee would mean whispering every roll, which would take the
+ * results away from the table too.
+ */
+function hidePrivateBreakdowns(message, html) {
+  let hidden = false;
+
+  // Our own breakdown line, on the cards we draw ourselves.
+  for (const parts of html.querySelectorAll(".dbu-check-parts[data-owner]")) {
+    if (maySeeRolls(fromUuidSync(parts.dataset.owner))) continue;
+    // Removed rather than replaced with a note. The card keeps its total and its
+    // flavour, which is all a reader who cannot see the workings needs from it, and a
+    // line explaining what is missing is itself just something else to read past.
+    parts.remove();
+    hidden = true;
+  }
+
+  // Foundry's own expandable dice breakdown, on a plain roll message. Those carry no
+  // card of ours, so the flag is what says whose roll it was.
+  const check = message.getFlag(SCOPE, CHECK_FLAG);
+  if (check?.actorUuid && !maySeeRolls(fromUuidSync(check.actorUuid))) hidden = true;
+
+  if (!hidden) return;
+  for (const el of html.querySelectorAll(".dice-tooltip, .dice-formula")) el.remove();
+}
+
+/**
+ * Karmic Chance on a roll that was not part of a Clash.
+ *
+ * The rule is "after seeing the result of any die", and the example the table uses is a
+ * Steadfast Check: you need a 6, you rolled a 5, you spend a Karma Point. It does not
+ * ask whether you passed - you may reroll one that already succeeded, which is strange
+ * but is what it says.
+ */
+function renderCheckKarma(message, html) {
+  const check = message.getFlag(SCOPE, CHECK_FLAG);
+  if (!check) return;
+
+  const actor = fromUuidSync(check.actorUuid);
+  if (!actor?.isOwner) return;
+
+  // Only the ones that ask nothing of a Clash, since there was none. Karmic Boost and
+  // Karmic Save both name one, so they rule themselves out.
+  const options = karmicOptionsFor(actor, message)
+    .filter(answersAfterTheFact)
+    .filter(effect => !(effect.script ?? "").includes("clash."));
+  if (!options.some(effect => effect.available)) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button dbu-karma-button";
+  button.textContent = "Apply effects";
+  button.dataset.tooltip = "Karmic Effects that can still change this roll";
+  button.addEventListener("click", () =>
+    prepareRoll(actor, [], "After the roll", "",
+      { karmic: { message, check, options }, rolling: false }));
+
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/**
+ * Karmic Effects taken once the result is already known.
+ *
+ * Three of the seven are written that way on purpose - Karmic Boost adds to a Combat
+ * Roll "when you know the result of the Clash it was involved in", Karmic Chance is
+ * taken "after seeing the result of any die", and Karmic Save turns a Clash you have
+ * already lost. None of them can be offered in the Respond dialog, because that closes
+ * before the dice are read. So they are offered on the settled card instead.
+ */
+function renderAfterTheFact(message, html) {
+  // An attack draws its own "Apply effects", and a Karmic Effect belongs in it rather
+  // than beside it - it is an effect, and being asked twice at the same moment is worse
+  // than being asked once. Only a Skill Clash needs its own button here.
+  if (!message.getFlag(SCOPE, CLASH_FLAG)) return;
+
+  const situations = clashSides(message);
+  if (!situations.length) return;
+
+  const container = html.querySelector(".dbu-clash") ?? html.querySelector(".message-content");
+  if (!container) return;
+
+  for (const situation of situations) {
+    const options = offerableTo(situation, message);
+    if (!options.some(effect => effect.available)) continue;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button dbu-karma-button";
+    button.textContent = `${situation.actor.name}: apply effects`;
+    button.dataset.tooltip = "Change this result with a Karmic Effect";
+    button.addEventListener("click", () =>
+      prepareRoll(situation.actor, [], `${situation.actor.name}: after the roll`, "",
+        { karmic: { message, situation, options }, rolling: false }));
+    container.append(button);
+  }
+}
+
+/**
+ * Every side of a settled roll on this message, among the characters you own.
+ *
+ * Whether each *lost* travels with them rather than filtering them out, because the
+ * three effects do not all want the same thing. Karmic Boost and Karmic Save rescue a
+ * result that went against you, so they need the loss. Karmic Chance is about "any
+ * die" - you may reroll one that already passed, which is odd but is what it says - so
+ * it needs only that a die was rolled.
+ *
+ * "Currently" is the operative word for the two that need a loss: if one of them flips
+ * the Clash, the other side is now the one that lost, and it is their turn.
+ */
+function clashSides(message) {
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (clash?.result) {
+    const { challenger, defender } = clash.result;
+    // The defender takes a tie, so a tie is a loss for the challenger and not for them.
+    return [
+      { uuid: clash.challengerUuid, side: challenger,
+        lost: beaten(challenger, defender, false) },
+      { uuid: clash.defenderUuid, side: defender,
+        lost: beaten(defender, challenger, true) }
+    ]
+      // Both sides roll the same Skill, which is what makes it a Skill Clash.
+      .map(entry => ({ ...entry, kind: "clash", category: "skill",
+                       answering: entry.uuid === clash.defenderUuid }))
+      .flatMap(entry => mine(entry));
+  }
+
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const result = attack?.result;
+  if (!result) return [];
+
+  // Once the damage is dealt there is nothing left to change.
+  if (result.applied) return [];
+
+  return result.wound
+    ? woundSides(attack, result)
+    : strikeSides(attack, result);
+}
+
+/** The Strike against whatever answered it, before the Wound Roll. */
+function strikeSides(attack, result) {
+  // Only when there was a Clash at all. Direct Hit, Guard and Power Flare answer
+  // without rolling, so there is nothing there to have lost.
+  if (!result.answer) return [];
+
+  return [
+    { uuid: attack.attackerUuid, side: result.strike,
+      lost: beaten(result.strike, result.answer, false), answering: false },
+    { uuid: attack.targetUuid, side: result.answer,
+      lost: beaten(result.answer, result.strike, true), answering: true }
+  ]
+    // A Strike answered by a Dodge or a Parry: Combat Rolls on both sides.
+    .map(entry => ({ ...entry, kind: "attack", stage: "strike", category: "combat" }))
+    .flatMap(entry => mine(entry));
+}
+
+/**
+ * The Wound Roll, and whether anything met it.
+ *
+ * A Wound Roll on its own is not a Clash - nobody is rolling against it - so nobody
+ * lost one, and Karmic Boost rules itself out by asking for a loss. Karmic Chance asks
+ * for nothing and is offered, because it is about any die.
+ *
+ * Power Flare changes that: it answers the Wound Roll with a Wound Roll of your own,
+ * and then the two are a Clash like any other. Both sides are Combat Rolls, so Karmic
+ * Boost reaches the loser - and Karmic Save, which wants a Saving Throw, a Skill or
+ * Might, reaches neither.
+ */
+function woundSides(attack, result) {
+  const flare = result.counterWound;
+
+  // The attacker takes ties here: Power Flare negates the Wound only by beating it.
+  const sides = [{
+    uuid: attack.attackerUuid,
+    side: result.wound,
+    lost: flare ? beaten(result.wound, flare, true) : false,
+    answering: false
+  }];
+
+  if (flare) {
+    sides.push({
+      uuid: attack.targetUuid,
+      side: flare,
+      lost: beaten(flare, result.wound, false),
+      answering: true
+    });
+  }
+
+  // Wound against Wound: Combat Rolls on both sides, the same as the Strike stage.
+  return sides
+    .map(entry => ({ ...entry, kind: "attack", stage: "wound", category: "combat" }))
+    .flatMap(entry => mine(entry));
+}
+
+/** Whether this side lost, with ties going to whoever was answering. */
+function beaten(side, other, takesTies) {
+  return takesTies ? (side.total < other.total) : (side.total <= other.total);
+}
+
+/** Narrow to the characters you own. */
+function mine(entry) {
+  const actor = fromUuidSync(entry.uuid);
+  if (!actor?.isOwner) return [];
+  return [{ ...entry, actor }];
+}
+
+/**
+ * What to call the dialog, said in terms of what actually happened.
+ *
+ * "On being hit" was wrong for the commonest case: a Karmic Effect used to defend is
+ * taken because the Dodge or Parry lost the Clash, not because the blow landed.
+ */
+function momentTitle(karmic, which) {
+  const stage = karmic?.situation?.stage;
+  if (!karmic?.situation?.lost) {
+    return (stage === "wound") ? "After the Wound Roll" : "After the roll";
+  }
+  if (stage === "wound") return "On losing the Wound Roll";
+  return (which === "strike") ? "On losing the Strike" : "On losing the clash";
+}
+
+/**
+ * What this side may take, given what kind of Clash it was.
+ *
+ * Refused by name rather than hidden, so it is clear the effect exists and why it does
+ * not apply. Whatever reason came first is kept: "you already spent one" is more use to
+ * the reader than a second reason layered over it.
+ */
+function offerableTo(situation, message) {
+  return karmicOptionsFor(situation.actor, message)
+    .filter(answersAfterTheFact)
+    .map(effect => {
+      if (effect.blocked) return effect;
+      const reason = whyNot(effect, situation);
+      return reason ? { ...effect, blocked: reason, available: false } : effect;
+    });
+}
+
+/** How each category reads in a refusal. */
+const LABELS = Object.freeze({
+  combatRoll: "a Combat Roll - a Strike, a Dodge or a Wound",
+  skill: "a Skill Clash",
+  save: "a Saving Throw",
+  might: "a Might Clash"
+});
+
+/**
+ * Why this effect cannot be taken here, or null.
+ *
+ * Read off what the effect itself requires, so an effect that names a condition of the
+ * Clash is greyed out for the same reason its own `requires` would refuse it - rather
+ * than being offered, paid for, and then quietly doing nothing.
+ */
+function whyNot(effect, situation) {
+  // Plain text rather than a pattern: a template literal treats a backslash as an
+  // escape, so a word boundary written here would become a backspace character and
+  // the test would never match. None of these names is a prefix of another.
+  const wants = key => (effect.script ?? "").includes(`clash.${key}`);
+
+  if (wants("lost") && !situation.lost) {
+    // An unopposed Wound Roll has no loser because it has no Clash, which is a
+    // different thing from having lost one, and worth saying differently.
+    return (situation.stage === "wound")
+      ? "nothing answered this Wound Roll, so there is no Clash to have lost"
+      : "only when you lost the Clash";
+  }
+  // An effect that names any of the four categories must have named this one. Written
+  // as one rule rather than a case each, so a fifth category would need nothing here.
+  const named = Object.values(CLASH_CATEGORIES).filter(wants);
+  if (named.length && !named.includes(CLASH_CATEGORIES[situation.category])) {
+    return `only on ${LABELS[named[0]] ?? named[0]}`;
+  }
+  if (wants("answering") && !situation.answering) {
+    return "only when an opponent started the Clash";
+  }
+  return null;
+}
+
+/**
+ * Spend only what the player actually chose.
+ *
+ * A collection at a Moment sweeps up every effect that answers it, Automatic ones
+ * included - and an Automatic effect is not consumed by applying, it simply applies.
+ * Only the armed ones were a decision, so only those are marked used.
+ */
+function spendChosen(actor, answered) {
+  const armed = new Set(actor.system.armedTalents ?? []);
+  for (const use of answered.spent) {
+    const id = `${use.sourceId}#${use.block}`;
+    if (armed.has(id)) spendTriggeredEffect(actor, id);
+  }
+}
+
+/** Whether this effect is one of the ones taken once the result is known. */
+function answersAfterTheFact(effect) {
+  return effect.when === "after";
+}
+
+/**
+ * Take one, and pay for it only if it actually changed the result.
+ *
+ * Armed first, tried, and charged last. The other order charges for an effect whose own
+ * `requires` refused - the player would have bought silence.
+ */
+export async function takeAfterTheFact(message, situation, key) {
+  const { actor } = situation;
+  const effect = allKarmicEffects().find(e => e.key === key);
+  if (!effect) return;
+
+  await armKarmic(actor, key);
+
+  const changed = (situation.kind === "clash")
+    ? await resettleClash(message, situation)
+    : await resettleAttack(message, situation);
+
+  if (!changed) {
+    await disarmKarmic(actor, key);
+    ui.notifications.warn(`${effect.name} does not apply to this roll.`);
+    return;
+  }
+
+  await payKarmic(message, actor, effect);
+}
+
+/**
+ * Take a Karmic Effect on a lone check, and republish the card.
+ *
+ * The original is replaced rather than added to, the same way the critical die does it -
+ * one result in the log instead of a number the reader has to work out for themselves.
+ */
+async function takeOnCheck(message, actor, check, key) {
+  const effect = allKarmicEffects().find(e => e.key === key);
+  if (!effect) return;
+
+  await armKarmic(actor, key);
+
+  const scope = { data: actor.system, errors: [], context: { roll: 1 }, queue: [] };
+  const answered = collectReactive(reactiveFor(actor), "clash-resolved", scope);
+  const rerolls = (scope.queue ?? []).some(call => call.verb === "reroll");
+
+  if (!answered.spent.length || !rerolls) {
+    await disarmKarmic(actor, key);
+    ui.notifications.warn(`${effect.name} does not apply to this roll.`);
+    return;
+  }
+
+  const again = await rerollBaseDie(actor, check);
+  spendChosen(actor, answered);
+  await payKarmic(message, actor, effect);
+
+  await ChatMessage.create({
+    speaker: message.speaker,
+    flavor: check.flavor,
+    content: checkCard({
+      parts: `${Handlebars.escapeExpression(effect.name)} &middot; ${again.notes.join(" &middot; ")}`,
+      total: again.total,
+      outcome: again.outcome || "karma",
+      owner: actor.uuid
+    }),
+    flags: {
+      [SCOPE]: {
+        // Rerolled once and no more: the effect is spent, and the new card carries no
+        // Base Die of its own to offer again.
+        [CHECK_FLAG]: null
+      }
+    }
+  });
+
+  if (message.isAuthor || game.user.isGM) await message.delete();
+}
+
+/**
+ * What this character may spend a Karma Point on right now, if anything.
+ *
+ * Returns null when they are not currently losing anything on this message, which is
+ * the only time these three are worth offering.
+ */
+export function afterTheFactFor(message, actor) {
+  const situation = clashSides(message).find(entry => entry.actor.uuid === actor.uuid);
+  if (!situation) return null;
+
+  const options = offerableTo(situation, message);
+  if (!options.some(effect => effect.available)) return null;
+
+  return { message, situation, options };
+}
+
+/**
+ * Collect what the effect just armed, for the side that is changing.
+ *
+ * Read fresh from the message rather than from what the card was drawn with: the effect
+ * has been armed on the Actor since, and the side being changed has to be the stored one.
+ */
+function collectAfterTheFact(situation, mineNow, theirs) {
+  return atMoment(situation.actor, "clash-resolved", {
+    clash: {
+      lost: situation.lost ? 1 : 0,
+      answering: situation.answering ? 1 : 0,
+      margin: theirs.total - mineNow.total,
+      // All four, with the one this Clash was settled on set. An effect names what it
+      // wants rather than what it is not.
+      ...categoryContext(situation.category)
+    },
+    roll: 1
+  });
+}
+
+/** Work a Skill Clash out again. */
+async function resettleClash(message, situation) {
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (!clash?.result) return;
+
+  const isChallenger = clash.challengerUuid === situation.actor.uuid;
+  const mineNow = isChallenger ? clash.result.challenger : clash.result.defender;
+  const theirs = isChallenger ? clash.result.defender : clash.result.challenger;
+
+  const answered = collectAfterTheFact(situation, mineNow, theirs);
+  if (!answered.spent.length) return false;
+
+  const settled = await applyAfterTheFact(situation.actor, mineNow, answered);
+  spendChosen(situation.actor, answered);
+
+  requestEdit(message, {
+    type: "clash",
+    clash: {
+      ...clash,
+      result: isChallenger
+        ? { ...clash.result, challenger: settled }
+        : { ...clash.result, defender: settled }
+    }
+  });
+
+  return true;
+}
+
+/**
+ * Work an attack's Clash out again, and with it whether it lands.
+ *
+ * Changing a Strike or a defence changes the hit, which is the whole reason to spend a
+ * Karma Point here - so the outcome is recomputed rather than left saying what it said
+ * before the number moved.
+ */
+async function resettleAttack(message, situation) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const result = attack?.result;
+  if (!result || result.applied) return false;
+  if (situation.stage === "wound") return resettleWound(message, situation, attack, result);
+  if (result.wound) return false;
+
+  const isAttacker = attack.attackerUuid === situation.actor.uuid;
+  const mineNow = isAttacker ? result.strike : result.answer;
+  const theirs = isAttacker ? result.answer : result.strike;
+
+  const answered = collectAfterTheFact(situation, mineNow, theirs);
+  if (!answered.spent.length) return false;
+
+  const settled = await applyAfterTheFact(situation.actor, mineNow, answered);
+  spendChosen(situation.actor, answered);
+
+  const strike = isAttacker ? settled : result.strike;
+  const answer = isAttacker ? result.answer : settled;
+  const hit = result.automatic || (strike.total > answer.total);
+
+  // The defender's own answer to being hit was collected when the Clash first settled,
+  // and only if it landed. An attack that only now connects has never asked.
+  let incomingDamage = result.incomingDamage;
+  if (hit && !result.hit) {
+    const target = fromUuidSync(attack.targetUuid);
+    if (target) {
+      const incoming = atMoment(target, "being-hit", { attack: 1, attacker: 1 });
+      spendChosen(target, incoming);
+      incomingDamage = incoming.slots?.["incoming.damage"] ?? null;
+    }
+  }
+
+  requestEdit(message, {
+    type: "attack",
+    attack: { ...attack, result: { ...result, strike, answer, hit, incomingDamage } }
+  });
+
+  return true;
+}
+
+/**
+ * Work the Wound Roll out again, and with it the Damage.
+ *
+ * Everything the Damage was built from is already on the message - the Soak that counted,
+ * the Damage Category, what the defender's own effects did to it - so only the roll that
+ * changed is redone rather than the whole exchange.
+ */
+async function resettleWound(message, situation, attack, result) {
+  const isAttacker = attack.attackerUuid === situation.actor.uuid;
+  const mineNow = isAttacker ? result.wound : result.counterWound;
+  // A lone Wound Roll has nothing on the other side of it. Its own total stands in, so
+  // the margin an effect might read comes to nothing rather than to nonsense.
+  const theirs = (isAttacker ? result.counterWound : result.wound) ?? mineNow;
+
+  const answered = collectAfterTheFact(situation, mineNow, theirs);
+  if (!answered.spent.length) return false;
+
+  const settled = await applyAfterTheFact(situation.actor, mineNow, answered);
+  spendChosen(situation.actor, answered);
+
+  const wound = isAttacker ? settled : result.wound;
+  const counterWound = isAttacker ? result.counterWound : settled;
+
+  // The same arithmetic the Wound step does, on the numbers it already worked out.
+  const defence = DEFENCES[attack.defense] ?? DEFENCES.dodge;
+  const effectiveWound = defence.wound(wound.total);
+  const negated = counterWound && (counterWound.total > wound.total);
+  const raw = negated
+    ? 0
+    : Math.max(0, effectiveWound - (result.soak ?? 0) - (result.reduction ?? 0));
+  const damage = Math.max(0, applySlot(
+    { "incoming.damage": result.incomingDamage }, "incoming.damage", raw));
+
+  requestEdit(message, {
+    type: "attack",
+    attack: {
+      ...attack,
+      result: { ...result, wound, counterWound, effectiveWound, damage }
+    }
+  });
+
+  return true;
+}
+
+/**
+ * Roll the Base Die again, and read the whole result from scratch.
+ *
+ * The roll is rebuilt from what it came to *before* the first die's Botch or Critical
+ * was applied, so the new die brings its own consequences and the old ones are gone
+ * rather than layered underneath. That is what makes it a different die rather than an
+ * adjustment to the one already rolled.
+ *
+ * Shared by every kind of roll: a Clash, an attack, and a lone check off the sheet all
+ * reroll the same way, and Karmic Chance applies to "any die".
+ *
+ * @param {Actor} actor
+ * @param {object} side  natural, beforeOutcome, total, criticalDice, and optionally
+ *                       botchPenalty when the roll uses one of its own
+ * @returns {Promise<{total: number, outcome: string, notes: string[]}>}
+ */
+async function rerollBaseDie(actor, side) {
+  const again = new Roll(DBUCharacterData.BASE_DIE);
+  await again.evaluate();
+
+  const before = side.natural ?? 0;
+  // "You must accept this second roll, unless it is lower than the first. In which
+  // case, you may take the first roll." Only asked when it is actually lower, so the
+  // ordinary case costs nobody a click.
+  if ((again.total < before) && await keepTheFirstRoll(actor, before, again.total)) {
+    return {
+      total: side.total,
+      outcome: side.outcome ?? "",
+      notes: [`karmic chance ${again.total}, keeping ${before}`]
+    };
+  }
+
+  let total = (side.beforeOutcome ?? side.total) - before + again.total;
+  let outcome = "";
+  const notes = [`karmic chance ${before} &rarr; ${again.total}`];
+
+  const botch = again.total <= (actor.system.botchRange ?? 1);
+  const critical = again.total >= (actor.system.criticalTarget ?? 10);
+
+  if (botch) {
+    // A Skill roll loses a flat 2 where everything else loses 2(bT), so the caller may
+    // say which this roll was rather than being assumed into the wrong one.
+    const penalty = side.botchPenalty
+      ?? actor.system.botch?.penalty ?? DBUCharacterData.BOTCH_PENALTY;
+    total -= penalty;
+    outcome = "botch";
+    notes.push(`botch -${penalty}`);
+  }
+  else if (critical) {
+    const formula = side.criticalDice ?? actor.system.dice.critical.formula;
+    const extra = new Roll(formula);
+    await extra.evaluate();
+    total += extra.total;
+    outcome = "critical";
+    notes.push(`critical ${formula} ${extra.result}`);
+  }
+
+  // Floored like every finished roll: a Botch takes what it takes, never past zero.
+  return { total: Math.max(0, total), outcome, notes };
+}
+
+/**
+ * Offer the first roll back when the second came out worse.
+ *
+ * Karmic Chance is not a straight replacement: the second result stands unless it is
+ * lower, and then it is the player's choice. The Karma is spent either way - they used
+ * the effect and the dice simply did not help.
+ */
+async function keepTheFirstRoll(actor, before, after) {
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: "Karmic Chance" },
+    content: `<p>${Handlebars.escapeExpression(actor.name)} rerolled the Base Die and
+      got <strong>${after}</strong>, lower than the original <strong>${before}</strong>.</p>
+      <p>You may keep the first roll.</p>`,
+    buttons: [
+      { action: "keep", label: `Keep ${before}` },
+      { action: "take", label: `Take ${after}` }
+    ],
+    rejectClose: false
+  });
+  // Closing the dialog keeps what they had, which is the outcome that takes nothing away.
+  return chosen !== "take";
+}
+
+/**
+ * Put the collected changes onto a side that has already been rolled.
+ *
+ * Three shapes: the Base Die replaced outright, dice added and rolled now, and a flat
+ * change to the total. A Clash simply declared won is a fourth and is not arithmetic at
+ * all - Karmic Save says you succeed whatever the numbers said - so it is carried as an
+ * outcome rather than by inventing a total large enough to win.
+ */
+async function applyAfterTheFact(actor, side, { slots, queue }) {
+  const segments = [side.breakdown];
+  let total = side.total;
+  let outcome = side.outcome;
+
+  // Karmic Chance: a different Base Die entirely.
+  if ((queue ?? []).some(call => call.verb === "reroll")) {
+    const again = await rerollBaseDie(actor, side);
+    total = again.total;
+    outcome = again.outcome;
+    segments.push(...again.notes);
+  }
+
+  const dice = slots["roll.dice"] ?? [];
+  for (const formula of dice) {
+    if (!formula) continue;
+    const roll = new Roll(formula);
+    await roll.evaluate();
+    total += roll.total;
+    segments.push(`karma ${formula} ${roll.result}`);
+  }
+
+  const settled = Math.max(0, applySlot(slots, "roll.total", total));
+  if (settled !== total) segments.push(`karma ${settled - total >= 0 ? "+" : ""}${settled - total}`);
+
+  if (slots["clash.succeed"] === true) {
+    outcome = "karmic-save";
+    segments.push("Karmic Save - this Clash succeeds");
+  }
+
+  return {
+    ...side,
+    total: settled,
+    outcome,
+    succeeded: (slots["clash.succeed"] === true) || side.succeeded,
+    breakdown: `${segments.join("  &middot;  ")}  &rarr;  ${settled}`
+  };
 }
 
 /**
@@ -429,13 +1181,27 @@ function counterManeuvers() {
  * can act on: setting a Base Die is of use before a roll is made, not after. Keyed by
  * stage so a new effect joins the list it belongs to rather than appearing everywhere.
  */
+/**
+ * Which Moments each side may bring something to, at each point in the exchange.
+ *
+ * Two sides and two points, and the four are not the same list: what answers *making*
+ * an attack is not what answers *being* one. The old data rows had a single key that
+ * served for everything, so this used to be one Moment shared by all four - which
+ * quietly meant the target was offered the attacker's effects and, once the Moments
+ * were told apart, nothing at all.
+ */
 const TRIGGER_STAGES = {
-  // Answering the attack: the Strike and whatever meets it.
-  response: ["forceNaturalResult"],
-  // The attack has landed. One moment, shared by both sides: the attacker brings what
-  // happens on hitting, the target what happens on being hit, and both come before the
-  // Wound Roll - which is exactly what they are there to change.
-  hit: ["forceNaturalResult"]
+  // Answering the attack: the Strike, and whatever meets it.
+  response: {
+    attacker: ["combat-roll"],
+    target: ["combat-roll", "defending"]
+  },
+  // The attack has landed, and the Wound Roll has not been made yet - which is exactly
+  // what these are there to change.
+  hit: {
+    attacker: ["hit", "before-wound"],
+    target: ["being-hit", "before-wound"]
+  }
 };
 
 /**
@@ -445,6 +1211,11 @@ const TRIGGER_STAGES = {
  * on a Maneuver that rolls nothing, or to a character standing outside the exchange.
  * Showing everything a character owns would bury the one that matters.
  */
+/** The rulebook's own wording for one triggered effect, for the dialogs to show. */
+function triggerText(entry) {
+  return entry.program?.blocks?.[0]?.text ?? "";
+}
+
 function relevantTriggers(actor, message, stage) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack) return [];
@@ -452,9 +1223,21 @@ function relevantTriggers(actor, message, stage) {
   // Both sides take part in both stages; what differs is which effects each holds.
   if (![attack.attackerUuid, attack.targetUuid].includes(actor.uuid)) return [];
 
-  return TRIGGER_STAGES[stage]
-    .flatMap(key => talentEffects(actor, key))
-    .filter(effect => usesLeft(actor, effect).available);
+  // Whatever answers one of this side's Moments and still has uses. Only the triggered
+  // ones: an Automatic effect fires by itself, so listing it here would be asking the
+  // player to choose something that was never theirs to choose.
+  const side = (actor.uuid === attack.attackerUuid) ? "attacker" : "target";
+  const moments = TRIGGER_STAGES[stage]?.[side] ?? [];
+
+  return reactiveFor(actor).filter(entry =>
+    // A Karmic Effect answers Moments like anything else, but it is bought rather than
+    // merely armed - it has its own list, and offering it here as a free checkbox would
+    // hand it over without the Karma Point.
+    !entry.sourceId.startsWith("karma:")
+    && entry.available && (entry.program.blocks ?? []).some(b =>
+      (b.mode === "triggered")
+      && moments.includes(String(b.moment ?? "").split(/[(/]/)[0]))
+  );
 }
 
 /**
@@ -467,26 +1250,83 @@ function relevantTriggers(actor, message, stage) {
  *
  * @returns {Promise<boolean>} False if the reader backed out entirely.
  */
-export async function prepareRoll(actor, effects, title, hint = "") {
-  const rows = effects.map(effect => `
+/**
+ * Whether this roll may be failed on purpose.
+ *
+ * Two things can refuse it. Some rolls are Urgent by their nature - an Initiative Check
+ * is one - and some effects forbid it for a while, which is what Compelled does to every
+ * Combat Roll against its target. Both come through here so that no caller has to know
+ * about only one of them.
+ *
+ * @param {Actor} actor
+ * @param {object} [options]
+ * @param {boolean} [options.urgent]  this particular roll is Urgent
+ * @param {object} [options.slots]    slots collected at the roll, when there are any
+ * @returns {null|string}  null if it may be, otherwise why it may not
+ */
+export function whyNotWilling(actor, { urgent = false, slots = null } = {}) {
+  if (urgent) return "This roll is Urgent, so it cannot be failed on purpose.";
+  if (slots?.willingFailure === false) return "Something is forcing this roll.";
+  if (!permits(actor.system.effects?.slots, "willingFailure")) {
+    return "Something is forcing this roll.";
+  }
+  return null;
+}
+
+export async function prepareRoll(actor, effects, title, hint = "",
+                                  { karmic = null, rolling = true, urgent = false } = {}) {
+  const rows = effects.map(entry => `
     <label class="dbu-respond-option">
-      <input type="checkbox" name="trigger" value="${effect.talentId}"/>
-      <span class="dbu-respond-name">${Handlebars.escapeExpression(effect.talentName)}</span>
-      <span class="dbu-respond-source">${Handlebars.escapeExpression(effect.text)}</span>
+      <input type="checkbox" name="trigger" value="${entry.blockId}"/>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(entry.sourceName)}</span>
+      <span class="dbu-respond-source">${Handlebars.escapeExpression(triggerText(entry))}</span>
     </label>`).join("");
 
-  const willing = `
-    <label class="dbu-respond-option dbu-respond-willing">
-      <input type="checkbox" name="willing" ${actor.system.willingFailure ? "checked" : ""}/>
-      <span class="dbu-respond-name">Willing failure</span>
-      <span class="dbu-respond-source">Fail on purpose: this roll totals 0, however the dice land.</span>
-    </label>`;
+  // A Karmic Effect is an effect like any other, so it belongs in the same dialog - it
+  // simply costs a Karma Point where the rest are free. Kept in its own group with the
+  // price on show, and as radios, because only one may be applied at a time.
+  // The rules text goes on the name, not into the row. Spelt out inline it is a
+  // paragraph per effect, and the window grows to fit the longest one - which made the
+  // dialog wider than the screen. The row keeps what you need to choose between them,
+  // the price and the reason it is closed; the wording is a hover away.
+  const karmicRows = (karmic?.options ?? []).map(effect => `
+    <label class="dbu-respond-option${effect.blocked ? " dbu-respond-blocked" : ""}">
+      <input type="radio" name="karmic" value="${effect.key}" ${effect.blocked ? "disabled" : ""}/>
+      <span class="dbu-respond-name" data-tooltip="${Handlebars.escapeExpression(effect.text)}"
+            >${Handlebars.escapeExpression(effect.name)}</span>
+      <span class="dbu-respond-source">${Handlebars.escapeExpression(
+        effect.blocked ?? effect.costLabel)}</span>
+    </label>`).join("");
+
+  const karmicGroup = karmicRows
+    ? `<details class="dbu-respond-group" open>
+         <summary>Karmic Effects &middot; ${actor.system.karma ?? 0} left</summary>
+         ${karmicRows}
+       </details>`
+    : "";
+
+  // Said rather than simply absent when it is refused: "you cannot throw this one" is
+  // worth knowing, and a missing checkbox tells nobody anything.
+  const refused = rolling ? whyNotWilling(actor, { urgent }) : null;
+  const willing = !rolling
+    ? ""
+    : refused
+    ? `<label class="dbu-respond-option dbu-respond-willing dbu-respond-blocked"
+              data-tooltip="${Handlebars.escapeExpression(refused)}">
+         <span class="dbu-respond-name">Willing failure</span>
+         <span class="dbu-respond-source">${Handlebars.escapeExpression(refused)}</span>
+       </label>`
+    : `<label class="dbu-respond-option dbu-respond-willing">
+         <input type="checkbox" name="willing" ${actor.system.willingFailure ? "checked" : ""}/>
+         <span class="dbu-respond-name">Willing failure</span>
+         <span class="dbu-respond-source">Fail on purpose: this roll totals 0, however the dice land.</span>
+       </label>`;
 
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title },
     content: `<div class="dbu-respond-dialog">
-      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${rows}${willing}
+      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${rows}${willing}${karmicGroup}
     </div>`,
     buttons: [
       {
@@ -494,7 +1334,8 @@ export async function prepareRoll(actor, effects, title, hint = "") {
         label: "Confirm",
         callback: (event, button, dialog) => ({
           triggers: [...dialog.element.querySelectorAll('input[name="trigger"]:checked')].map(input => input.value),
-          willing: dialog.element.querySelector('input[name="willing"]')?.checked ?? false
+          willing: dialog.element.querySelector('input[name="willing"]')?.checked ?? null,
+          karmic: dialog.element.querySelector('input[name="karmic"]:checked')?.value ?? null
         })
       },
       { action: "cancel", label: "Cancel" }
@@ -510,9 +1351,20 @@ export async function prepareRoll(actor, effects, title, hint = "") {
   }
   // Written even when it is being turned back off: the reader may have armed it from
   // the sheet and changed their mind here, and leaving it set would spend it silently.
-  if (chosen.willing !== actor.system.willingFailure) changes["system.willingFailure"] = chosen.willing;
+  // Null means the dialog never asked, and then it is left exactly as it was.
+  if ((chosen.willing !== null) && (chosen.willing !== actor.system.willingFailure)) {
+    changes["system.willingFailure"] = chosen.willing;
+  }
 
   if (!foundry.utils.isEmpty(changes)) await actor.update(changes);
+
+  // Last, so that anything armed above is already in place when the Clash is worked
+  // out again - a Karmic Effect changes a result the other choices may also touch.
+  if (chosen.karmic) {
+    if (karmic?.situation) await takeAfterTheFact(karmic.message, karmic.situation, chosen.karmic);
+    else if (karmic?.check) await takeOnCheck(karmic.message, actor, karmic.check, chosen.karmic);
+  }
+
   return true;
 }
 
@@ -565,17 +1417,29 @@ async function respondDialog(message, respondable) {
     // whatever is played, since you can dodge or Defend and still choose to fail.
     // Only for the characters this exchange actually asks to roll, though - a
     // bystander playing an Instant has no roll here to fail.
-    const willing = rollsOnMessage(message, actor)
-      ? `<label class="dbu-respond-option dbu-respond-aside">
+    // And not when something forbids it either - Compelled forces every Combat Roll
+    // against its target. Shown greyed with the reason rather than left out, so it is
+    // clear the option exists and why it is closed.
+    const forced = whyNotWilling(actor);
+    const willing = !rollsOnMessage(message, actor)
+      ? ""
+      : forced
+      ? `<label class="dbu-respond-option dbu-respond-aside dbu-respond-blocked"
+                data-tooltip="${Handlebars.escapeExpression(forced)}">
+           <span class="dbu-respond-name">Willing failure</span>
+           <span class="dbu-respond-source">${Handlebars.escapeExpression(forced)}</span>
+         </label>`
+      : `<label class="dbu-respond-option dbu-respond-aside">
            <input type="checkbox" name="willing-${actor.id}"
                   ${actor.system.willingFailure ? "checked" : ""}/>
            <span class="dbu-respond-name">Willing failure</span>
            <span class="dbu-respond-source">your next roll totals 0</span>
          </label>`
-      : "";
 
-    // Dodging is not a Maneuver, but it is the other way to answer an attack - so it
-    // shares the Counters' group and picking one unpicks the other.
+    // Dodging is not a Maneuver and costs no Counter Action, but it is the other way to
+    // answer an attack - so it shares the Counters' group and picking one unpicks the
+    // other. Energy Cancel is the exception that proves the shape: it spends the Counter
+    // Action without answering the attack, so taking it leaves you dodging anyway.
     // Picked to begin with: dodging is what answering an attack means when nothing
     // else is chosen, so confirming without touching this is a real answer rather
     // than a dialog that quietly did nothing.
@@ -587,12 +1451,26 @@ async function respondDialog(message, respondable) {
          </label>`
       : "";
 
+    // One Counter Action answers one Maneuver, so these are one choice between them -
+    // Dodge included, since answering an attack is what the group is for.
     const counters = counterManeuvers().map(maneuver => {
       // A Counter Maneuver answers an Attacking Maneuver aimed at you, so a character
       // who is not the target is shown it but cannot take it.
-      const blocked = !unresolved;
-      return option(`counter-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, blocked,
-        blocked ? "only the target of an attack may Defend, and only before it resolves" : "");
+      let blocked = !unresolved;
+      let reason = blocked
+        ? "only the target of an attack may answer it, and only before it resolves" : "";
+
+      // Energy Cancel needs a charge to let go of, whoever is looking at it.
+      if (!blocked && maneuver.cancelCharge && !actor.system.charging?.maneuverId) {
+        blocked = true;
+        reason = "you are not charging anything";
+      }
+
+      const note = maneuver.cancelCharge
+        ? `${maneuver.source} - you still Dodge`
+        : maneuver.source;
+
+      return option(`counter-${actor.id}`, maneuver.id, maneuver.name, note, blocked, reason);
     }).join("");
 
     // Both Dodge and the Defend Maneuver are called for by being attacked, and a
@@ -621,11 +1499,44 @@ async function respondDialog(message, respondable) {
     const triggerRows = triggers.length
       ? triggers.map(effect => `
           <label class="dbu-respond-option">
-            <input type="checkbox" name="trigger-${actor.id}" value="${effect.talentId}"/>
-            <span class="dbu-respond-name">${Handlebars.escapeExpression(effect.talentName)}</span>
-            <span class="dbu-respond-source">${Handlebars.escapeExpression(effect.text)}</span>
+            <input type="checkbox" name="trigger-${actor.id}" value="${effect.blockId}"/>
+            <span class="dbu-respond-name">${Handlebars.escapeExpression(effect.sourceName)}</span>
+            <span class="dbu-respond-source">${Handlebars.escapeExpression(triggerText(effect))}</span>
           </label>`).join("")
       : `<p class="dbu-respond-note">Nothing applies here.</p>`;
+
+    // Karmic Effects sit beside the Counters and Instants rather than inside the
+    // Triggered Effects, because taking one costs a Karma Point and the other three
+    // lists cost nothing - they are not the same kind of decision.
+    //
+    // Only for the characters actually taking part, and only the ones that are chosen
+    // before the dice. A bystander at the same table has no roll to spend a Karma Point
+    // on, and Boost, Save and Chance are all taken once the result is known - they are
+    // offered on the settled card instead.
+    const karmicOptions = rollsOnMessage(message, actor)
+      ? karmicOptionsFor(actor, message).filter(effect => !answersAfterTheFact(effect))
+      : [];
+
+    const karmic = karmicOptions.map(effect => `
+      <label class="dbu-respond-option${effect.blocked ? " dbu-respond-blocked" : ""}"
+             ${effect.blocked ? `data-tooltip="${Handlebars.escapeExpression(effect.blocked)}"` : ""}>
+        <input type="radio" name="karma-${actor.id}" value="${effect.key}"
+               ${effect.blocked ? "disabled" : ""}/>
+        <span class="dbu-respond-name">${Handlebars.escapeExpression(effect.name)}</span>
+        <span class="dbu-respond-source">${
+          effect.blocked
+            ? Handlebars.escapeExpression(effect.blocked)
+            : Handlebars.escapeExpression(effect.costLabel)}</span>
+      </label>`).join("");
+
+    // Left off entirely rather than shown empty: "no Karmic Effects here" and "you are
+    // not part of this roll" are different things, and an empty list says neither.
+    const karmaGroup = karmicOptions.length
+      ? `<details class="dbu-respond-group">
+           <summary>Karmic Effects &middot; ${actor.system.karma ?? 0} left</summary>
+           ${karmic}
+         </details>`
+      : "";
 
     return `
       <details class="dbu-respond-actor" open>
@@ -645,6 +1556,8 @@ async function respondDialog(message, respondable) {
           <summary>Triggered Effects</summary>
           ${triggerRows}
         </details>
+
+        ${karmaGroup}
       </details>`;
   }).join("");
 
@@ -661,6 +1574,7 @@ async function respondDialog(message, respondable) {
           counter: dialog.element.querySelector(`input[name="counter-${actor.id}"]:checked`)?.value ?? null,
           instant: dialog.element.querySelector(`input[name="instant-${actor.id}"]:checked`)?.value ?? null,
           willing: dialog.element.querySelector(`input[name="willing-${actor.id}"]`)?.checked ?? null,
+          karma: dialog.element.querySelector(`input[name="karma-${actor.id}"]:checked`)?.value ?? null,
           triggers: [...dialog.element.querySelectorAll(`input[name="trigger-${actor.id}"]:checked`)]
             .map(input => input.value)
         }))
@@ -699,6 +1613,10 @@ async function applyResponses(message, chosen, attack) {
       });
     }
 
+    // A Karmic Effect pays for itself: the cost is the effect rather than a separate
+    // step, so choosing one here is what spends the Karma Point.
+    if (choice.karma) await applyKarmic(message, choice.actor, choice.karma);
+
     if (choice.instant && (choice.instant !== "none")) {
       await playInstant(message, choice.actor, choice.instant);
     }
@@ -706,6 +1624,91 @@ async function applyResponses(message, chosen, attack) {
       await playCounter(message, choice.actor, choice.counter, attack);
     }
   }
+}
+
+/**
+ * Take a Karmic Effect for this exchange.
+ *
+ * Paid for first: if the cost cannot be met - or Dynamic is cancelled at its prompt -
+ * nothing is armed and nothing is recorded, so the option is still there to take.
+ */
+async function applyKarmic(message, actor, key) {
+  const effect = allKarmicEffects().find(e => e.key === key);
+  if (!effect) return null;
+
+  await armKarmic(actor, key);
+  const paid = await payKarmic(message, actor, effect);
+  if (!paid) await disarmKarmic(actor, key);
+  return paid;
+}
+
+/** Which blocks of a Karmic Effect answer a Moment. */
+function karmicBlocks(actor, key) {
+  return reactiveFor(actor)
+    .filter(entry => entry.sourceId === `karma:${key}`)
+    .map(entry => entry.blockId);
+}
+
+/**
+ * Arm a Karmic Effect so the next Moment picks it up.
+ *
+ * Every block of it, not only the first: paying for a Karmic Effect buys the whole
+ * thing. Arming is free - what it costs is settled separately, so that an effect which
+ * turns out not to apply can be disarmed again without anyone having paid for silence.
+ */
+async function armKarmic(actor, key) {
+  const blocks = karmicBlocks(actor, key);
+  if (!blocks.length) return;
+  await actor.update({
+    "system.armedTalents": [...new Set([...actor.system.armedTalents, ...blocks])]
+  });
+}
+
+/** Put it back, for an effect that was armed and then did nothing. */
+async function disarmKarmic(actor, key) {
+  const blocks = new Set(karmicBlocks(actor, key));
+  if (!blocks.size) return;
+  await actor.update({
+    "system.armedTalents": actor.system.armedTalents.filter(id => !blocks.has(id))
+  });
+}
+
+/** Spend the Karma Points, record it against the message, and say so. */
+async function payKarmic(message, actor, effect) {
+  const spent = await spendKarma(actor, effect);
+  if (spent === null) return null;
+
+  requestEdit(message, { type: "karmic", actorId: actor.id, key: effect.key });
+
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: checkCard({
+      parts: `${Handlebars.escapeExpression(effect.name)}`,
+      total: `-${spent} Karma`,
+      outcome: "karma"
+    })
+  });
+
+  return { effect, spent };
+}
+
+/**
+ * Play a Counter Maneuver that answers something other than the attack.
+ *
+ * Only Energy Cancel so far. It goes through the ordinary path, so its Action Cost, its
+ * once-per-round limit and everything else about it are enforced in one place.
+ */
+async function playAside(actor, maneuverId) {
+  const owned = actor.items.find(item =>
+    (item.type === "maneuver") && (item.system.maneuverId === maneuverId));
+
+  if (!owned) {
+    ui.notifications.warn(`${actor.name} does not have that Maneuver.`);
+    return false;
+  }
+
+  const { useOwnedManeuver } = await import("./use-maneuver.mjs");
+  return useOwnedManeuver(actor, owned.id);
 }
 
 /** One selectable row in the Respond dialog. */
@@ -756,7 +1759,18 @@ async function playCounter(message, actor, answer, attack) {
   if (answer === "dodge") return chooseDefence(message, actor, "dodge");
 
   const maneuver = getManeuver(answer);
-  if (!maneuver?.defend) return;
+  if (!maneuver) return;
+
+  // Energy Cancel spends the Counter Action on letting go of a charge rather than on
+  // meeting the attack - so having spent it, the attack is answered the way it is
+  // answered when you spend nothing: you Dodge. That is what makes it exclusive with
+  // Defend and compatible with dodging at the same time.
+  if (maneuver.cancelCharge) {
+    if (!await playAside(actor, maneuver.id)) return;
+    return chooseDefence(message, actor, "dodge");
+  }
+
+  if (!maneuver.defend) return;
   return defendAgainst(message, actor, attack);
 }
 
@@ -774,59 +1788,100 @@ const CLASH_FLAG = "clash";
 const ATTACK_FLAG = "attack";
 
 /**
+ * Whatever the character's effects contribute at one Moment.
+ *
+ * The engine is asked rather than any particular Trait, so a Talent, a Racial Trait and
+ * a Combat Condition all reach a roll through the same door.
+ */
+function atMoment(actor, moment, context = {}) {
+  const scope = { data: actor.system, errors: [], context, queue: [] };
+  const collected = collectReactive(reactiveFor(actor), moment, scope);
+  // The queue travels with the result: a verb is an act the caller has to carry out,
+  // and one collected into a scope nobody reads is an effect that does nothing.
+  return { ...collected, queue: scope.queue, errors: scope.errors };
+}
+
+/**
  * Settle one side of an opposed roll into a single number.
  *
  * Unlike a standalone check, an opposed roll cannot leave the critical die to a
  * button: the two sides are compared against each other, so a total that might still
  * grow is not yet a result. Both outcomes are therefore applied here and now.
  */
-async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false } = {}) {
+async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false, slot = null } = {}) {
   // A single netted number cannot be taken apart again, so what went into it is kept
   // as labelled parts and only summed for the roll itself.
   const parts = (typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers;
-  const bonus = parts.reduce((sum, part) => sum + part.value, 0);
 
-  const evaluated = await evaluateCheck(actor, bonus, extraDice);
+  // Penalties cancel bonuses; they never drag a roll below the dice. A Strike with more
+  // taken off it than it had adds nothing rather than subtracting - so a roll always
+  // comes to at least what the dice said, which is why an opponent who forgoes their
+  // own roll can still be hit.
+  const bonus = Math.max(0, parts.reduce((sum, part) => sum + part.value, 0));
+
+  // Asked before the dice are picked up, because an effect that sets the Base Die
+  // replaces the roll rather than adjusting it: rolling a d10 and then throwing the
+  // result away puts a number on the card that means nothing.
+  const answered = combatRoll ? atMoment(actor, "combat-roll", { roll: true }) : null;
+  const forcedNatural = answered?.slots?.baseDie?.set ?? null;
+
+  // What a triggered effect adds to this roll. "1/Round: increase your Strike Rolls by
+  // 2(T)" is the commonest shape in the rulebook, and it is written against the same
+  // Slot the sheet shows - `strike`, `dodge`, `wound`, or `combatRolls`, which fans out
+  // to all three. Applied here rather than folded into the sheet, because a triggered
+  // effect is not true until it is used.
+  if (answered && slot) {
+    const before = parts.reduce((sum, part) => sum + part.value, 0);
+    const after = applySlot(answered.slots, slot, before);
+    if (after !== before) parts.push({ label: "Effects", value: after - before });
+  }
+
+  // Dice an effect adds to every Combat Roll - the Superior State's Greater Dice are
+  // the one thing in the rules that does this. Folded when the character was prepared,
+  // so they are read off the sheet rather than collected again here. The Slot was
+  // declared and read by nobody, which made that half of Superior do nothing at all.
+  const standing = combatRoll
+    ? (actor.system.effects?.slots?.["combatRolls.dice"] ?? [])
+    : [];
+  const allExtra = [extraDice, ...standing].filter(Boolean).join(" + ");
+
+  const evaluated = await evaluateCheck(actor, bonus, allExtra, forcedNatural);
   const { roll } = evaluated;
   let { natural, botch, critical } = evaluated;
+
+  // Anything the player armed for this roll has now been used, whether it set the Base
+  // Die or added to the total. Only the armed ones: an automatic effect swept up by the
+  // same collection is not consumed by applying.
+  if (answered) spendChosen(actor, answered);
 
   let total = roll.total;
   let outcome = "";
 
   // A willing failure is decided before the dice are read: the total is 0 whatever
-  // they said, so nothing that would raise or lower it is worked out at all.
-  if (actor.system.willingFailure) {
+  // they said, so nothing that would raise or lower it is worked out at all - unless
+  // something forbids it, which Compelled does to every Combat Roll against its target.
+  // Left armed rather than spent, so it still answers the next roll that allows it.
+  const forced = whyNotWilling(actor, { slots: answered?.slots });
+
+  if (actor.system.willingFailure && !forced) {
     requestActorUpdate(actor, { "system.willingFailure": false });
     return {
       actorUuid: actor.uuid,
       actorName: actor.name,
+      natural,
       total: 0,
       outcome: "willing",
       breakdown: `${roll.formula} = ${roll.result}  ·  willing failure  →  0`
     };
   }
 
-  // A Talent can set the Base Die's Natural Result instead of rolling it. The die is
-  // still rolled - Foundry cannot make one land on a chosen face - so what it came up
-  // with is taken back out of the total and the forced result put in its place.
-  const forced = combatRoll ? armedEffect(actor, "forceNaturalResult") : null;
-  if (forced) {
-    total += forced.value - natural;
-    natural = forced.value;
-
-    // The Talent states the result outright: setting the Base Die this way scores a
-    // Critical. Not left to the comparison against the Critical Target, which happens
-    // to agree today only because that target can never exceed 10 - if something ever
-    // raised it, the guarantee would quietly stop holding.
-    botch = false;
-    critical = true;
-
-    spendTriggeredEffect(actor, forced);
-  }
-
   // How it was reached is written down here, while the dice are still in hand.
   const dice = roll.dice.map(die => `${die.expression} ${die.total}`).join(" + ");
-  const segments = [forced ? `${dice}  |  Base Die set to ${forced.value}` : dice];
+  // With the Base Die set by an effect it was never rolled, so the line says what it
+  // was set to rather than quoting a die that does not exist.
+  const segments = [forcedNatural === null
+    ? dice
+    : `Base Die set to ${forcedNatural}${dice ? `  |  ${dice}` : ""}`];
 
   const describe = (entries) => entries
     .map(entry => `${entry.label} ${Math.abs(entry.value)}`)
@@ -845,9 +1900,15 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   }
 
   if (botch) {
-    total -= DBUCharacterData.BOTCH_PENALTY;
+    // A Skill roll loses 2 flat; every other roll loses 2(bT). One flat constant was
+    // right only while the Base Tier was 1, so from Power Level 5 a botched Combat Roll
+    // was costing half of what it should.
+    const penalty = combatRoll
+      ? (actor.system.botch?.penalty ?? DBUCharacterData.BOTCH_PENALTY)
+      : (actor.system.botch?.skill ?? DBUCharacterData.BOTCH_PENALTY);
+    total -= penalty;
     outcome = "botch";
-    segments.push(`botch -${DBUCharacterData.BOTCH_PENALTY}`);
+    segments.push(`botch -${penalty}`);
   }
   else if (critical) {
     const extra = new Roll(criticalDice);
@@ -857,9 +1918,20 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     segments.push(`critical ${criticalDice} ${extra.result}`);
   }
 
+  // The finished total is a system value like any other: a Botch takes what it takes,
+  // but never past zero. Otherwise a bad roll turns into a negative that an opponent
+  // has to beat from below, which is not a thing the rules ask anyone to do.
+  total = Math.max(0, total);
+
   return {
     actorUuid: actor.uuid,
     actorName: actor.name,
+    natural,
+    // What the dice and the bonuses came to before a Botch or a Critical touched it.
+    // Karmic Chance replaces the Base Die and re-reads the result from scratch, so it
+    // needs the total without the old die's consequences already baked in.
+    beforeOutcome: roll.total,
+    criticalDice,
     total,
     outcome,
     breakdown: `${segments.join("  ·  ")}  →  ${total}`
@@ -920,7 +1992,8 @@ function clashSide(clash, uuid, name, side) {
       </div>`;
   }
 
-  const outcome = side.outcome ? `<span class="dbu-clash-outcome dbu-${side.outcome}">${side.outcome}</span>` : "";
+  const outcome = (side.outcome && !side.succeeded)
+    ? `<span class="dbu-clash-outcome dbu-${side.outcome}">${side.outcome}</span>` : "";
   return `
     <div class="dbu-clash-side">
       <span class="dbu-clash-name">${Handlebars.escapeExpression(name)}</span>
@@ -997,6 +2070,12 @@ function renderSkillClash(message, html) {
  * challenger has to beat them outright rather than merely match them.
  */
 function clashResult({ challenger, defender }) {
+  // Karmic Save says you succeed, whatever the numbers said, so it settles the Clash
+  // before the totals are compared at all. Both sides having it is not a thing the
+  // rules allow - it can only be used by whoever lost - so one check each is enough.
+  if (challenger.succeeded) return `${Handlebars.escapeExpression(challenger.actorName)} wins (Karmic Save)`;
+  if (defender.succeeded) return `${Handlebars.escapeExpression(defender.actorName)} wins (Karmic Save)`;
+
   const tied = challenger.total === defender.total;
   const winner = (challenger.total > defender.total) ? challenger : defender;
   return `${Handlebars.escapeExpression(winner.actorName)} wins${tied ? " (tie)" : ""}`;
@@ -1150,7 +2229,9 @@ async function takeOutOfSequence(message, actor, offer) {
  * are rolled together the moment the target accepts, so neither side learns the
  * other's result in advance.
  */
-export async function postAttack(actor, target, maneuver, { profile, foundation, kiWager = 0 }, { asOutOfSequence = false } = {}) {
+export async function postAttack(actor, target, maneuver,
+                                 { profile, foundation, kiWager = 0, charges = 0 },
+                                 { asOutOfSequence = false } = {}) {
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
   // Strike Roll - the attack after your third is itself the one that suffers.
   await actor.update({ "system.attacksThisRound": actor.system.attacksThisRound + 1 });
@@ -1176,6 +2257,10 @@ export async function postAttack(actor, target, maneuver, { profile, foundation,
           // must be summed with the defender's before anything is clamped.
           damageCategoryShift: 0,
           kiWager,
+          // Energy Charges live on the Maneuver, not the character: they were fed into
+          // this attack and are spent with it. Each adds a die to the Wound Roll.
+          energyCharges: Math.min(charges, DBUCharacterData.MAX_ENERGY_CHARGES),
+          signature: (maneuver.tags ?? []).includes("signature"),
           foundation,
           foundationLabel: DBUCharacterData.FOUNDATIONS[foundation].label,
           attackerUuid: actor.uuid,
@@ -1195,6 +2280,23 @@ export async function postAttack(actor, target, maneuver, { profile, foundation,
   });
 }
 
+/**
+ * The dice an attack's Energy Charges add to its Wound Roll.
+ *
+ * One die per charge, scaled by the Tier of Power the way every other scaled die is:
+ * three charges at Tier 4 is 12 of them. An empty string when there are none, so the
+ * formula it joins does not end up with a stray plus.
+ */
+function energyChargeDice(attacker, attack) {
+  const charges = attack.energyCharges ?? 0;
+  if (charges <= 0) return "";
+
+  const die = DBUCharacterData.energyChargeDie(attack.signature);
+  const [, faces] = die.split("d");
+  const count = charges * Math.max(1, attacker.system.tierOfPower ?? 1);
+  return `${count}d${faces}`;
+}
+
 /** Everyone whose confirmation the attack is waiting on. */
 function attackParticipants(attack) {
   return [attack.attackerUuid, ...attackTargets(attack).map(target => target.uuid)];
@@ -1211,7 +2313,7 @@ function attackIsReady(attack) {
  * The defence is only written down here - it is rolled once the attacker has confirmed
  * too, so that neither side is committed to dice while the other is still deciding.
  */
-function chooseDefence(message, target, defence, wager = 0) {
+function chooseDefence(message, target, defence, wager = 0, foundation = "energy") {
   // Read fresh rather than trusting what the dialog was opened with: the other side
   // may have confirmed since, and writing a stale copy back would erase it.
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
@@ -1219,7 +2321,7 @@ function chooseDefence(message, target, defence, wager = 0) {
 
   return settleAttack(message, {
     ...attack,
-    defences: { ...attack.defences, [target.uuid]: { defence, wager } },
+    defences: { ...attack.defences, [target.uuid]: { defence, wager, foundation } },
     ready: [...new Set([...(attack.ready ?? []), target.uuid])]
   });
 }
@@ -1246,7 +2348,11 @@ async function settleAttack(message, attack) {
  */
 async function resolveAttack(message, attack) {
   const target = fromUuidSync(attack.targetUuid);
-  const { defence: defense = "dodge", wager: defenceWager = 0 } = attack.defences[attack.targetUuid] ?? {};
+  const {
+    defence: defense = "dodge",
+    wager: defenceWager = 0,
+    foundation: defenceFoundation = "energy"
+  } = attack.defences[attack.targetUuid] ?? {};
   const attacker = fromUuidSync(attack.attackerUuid);
   if (!attacker || !target) {
     ui.notifications.warn("One of the actors in this attack no longer exists.");
@@ -1273,18 +2379,31 @@ async function resolveAttack(message, attack) {
     { label: "Strike", value: attacker.system.combat.strike },
     { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty },
     ...thresholdPenalty(attacker)
-  ], { ...options.attacker, combatRoll: true });
+  ], { ...options.attacker, combatRoll: true, slot: "strike" });
 
   // What the defender answers the Strike with, and whether they answer at all.
   const defence = DEFENCES[defense];
   const answer = await defence.answer(target, options.target);
 
+  // Some things hit whatever the Clash said: the Determined State on the attacker's
+  // side, being Sleeping on the defender's. Both were declared as Slots and read by
+  // nobody, which made two rules that simply never happened.
+  const automatic = (attacker.system.effects?.slots?.["attack.autoHit"] === true)
+    || (target.system.effects?.slots?.["incoming.autoHit"] === true);
+
   // The defender wins ties, as everywhere else: the attacker has to beat them.
-  const hit = answer ? (strike.total > answer.total) : true;
+  const hit = automatic || (answer ? (strike.total > answer.total) : true);
+
+  // What the defender's own effects do about being hit - Superior taking more Damage,
+  // Prone taking it a category harder. Collected once, and used at the Wound Roll.
+  const incoming = hit ? atMoment(target, "being-hit", { attack: 1, attacker: 1 }) : null;
+  if (incoming) spendChosen(target, incoming);
 
   // Every step for and against the Damage Category is summed before anything is
   // clamped, so an attack pushed well past Lethal is still above one merely at it.
-  const shift = (attack.damageCategoryShift ?? 0) + (defence.damageCategoryShift ?? 0);
+  const shift = (attack.damageCategoryShift ?? 0)
+    + (defence.damageCategoryShift ?? 0)
+    + (incoming?.slots?.["incoming.damage.category.shift"]?.add ?? 0);
   const damageCategory = resolveDamageCategory(attack.damageCategory, shift);
 
   // Gained after the Attacking Maneuver, so it never touches the roll just made. The
@@ -1308,7 +2427,19 @@ async function resolveAttack(message, attack) {
       // Carried through to the Wound Roll step, which is where Power Flare's own roll
       // happens - the Ki was already paid when the defence was declared.
       defenceWager,
-      result: { strike, answer, hit, damageCategory, wound: null, applied: false }
+      defenceFoundation,
+      result: {
+        strike,
+        answer,
+        hit,
+        automatic,
+        damageCategory,
+        // Carried on the attack so the Wound Roll can apply it: the defender's client
+        // worked it out, and the attacker's is as likely to be the one settling this.
+        incomingDamage: incoming?.slots?.["incoming.damage"] ?? null,
+        wound: null,
+        applied: false
+      }
     }
   });
 
@@ -1372,26 +2503,38 @@ async function rollAttackWound(message, attack) {
 
   // Wagered Ki is added to the Wound Roll - already paid for when the attack was
   // declared, which is what took it out of Capacity.
+  // Each Energy Charge adds a die to this roll - a larger one for a Signature
+  // Technique. They were declared through the Energy Charge Maneuver and came here with
+  // the attack, and this is where they are finally worth something.
+  const chargeDice = energyChargeDice(attacker, attack);
+
   const wound = await rollSide(attacker, [
     { label: "Wound", value: attacker.system.combat.wound[attack.foundation] },
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...thresholdPenalty(attacker)
   ], {
-    extraDice: attacker.system.dice.extra.formula,
+    extraDice: [attacker.system.dice.extra.formula, chargeDice].filter(Boolean).join(" + "),
     criticalDice: attacker.system.dice.critical.formula,
-    combatRoll: true
+    combatRoll: true,
+    slot: "wound"
   });
 
   // Power Flare answers the Wound Roll rather than the Strike Roll, immediately after
   // it - so it is rolled here, not left for another round trip.
+  //
+  // It is your own Wound Roll, "as if you made an Energy or Magic Attack", and which of
+  // the two was chosen when the defence was declared. It is a Wound Roll like any other,
+  // which is why it takes a Ki Wager and why `slot: "wound"` lets an effect change it.
+  const flareFoundation = attack.defenceFoundation ?? "energy";
   const counterWound = defence.answersWound
     ? await rollSide(target, [
-        { label: "Might", value: target.system.might },
+        { label: "Wound", value: target.system.combat.wound[flareFoundation] ?? 0 },
         { label: "Ki Wager", value: attack.defenceWager ?? 0 }
       ], {
         extraDice: target.system.dice.extra.formula,
         criticalDice: target.system.dice.critical.formula,
-        combatRoll: true
+        combatRoll: true,
+        slot: "wound"
       })
     : null;
 
@@ -1400,8 +2543,8 @@ async function rollAttackWound(message, attack) {
   // ahead of whatever the defence itself does to it.
   const defended = attack.defense !== "dodge";
   const soakBonus = defended
-    ? talentEffects(target, "soakWhenDefending")
-        .reduce((total, effect) => total + (effect.perTier * target.system.tierOfPower), 0)
+    ? (atMoment(target, "defending", { defending: true, attack, attacker })
+        .slots["soakValue.base"]?.add ?? 0)
     : 0;
 
   // Only what the Damage Category leaves of the Soak Value counts, and the defence
@@ -1411,8 +2554,34 @@ async function rollAttackWound(message, attack) {
   const soak = defence.soak(counted);
   const effectiveWound = defence.wound(wound.total);
 
+  // Damage Reduction comes off the same Wound Roll, and off it whole. The Damage
+  // Category has already had its say on the Soak above and gets no say here, and the
+  // defence's own multiplier is applied to `counted` rather than to this - which is
+  // what makes a point of it worth more than a point of Soak.
+  //
+  // An attack can get past some of it, for that attack only. Collected from the
+  // attacker, since it is their effect and their client that knows about it.
+  const pierce = atMoment(attacker, "before-wound", { attack: 1, damageCategory: 1 });
+  spendChosen(attacker, pierce);
+  const pierced = pierce.slots?.["damageReduction.pierced"]?.add ?? 0;
+
+  const reduction = Math.max(0, (target.system.damageReduction ?? 0) - pierced);
+
   const negated = counterWound && (counterWound.total > wound.total);
-  const damage = negated ? 0 : Math.max(0, effectiveWound - soak);
+  const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);
+
+  // What the defender's own effects do to the Damage they take, in two passes because
+  // they answer two different moments. Being hit is settled when the Clash is - the
+  // Superior State takes 2(T) more - and that was worked out on the defender's client
+  // and carried here on the attack. Before the Wound Roll is settled now, since Broken
+  // needs the Soak Value it could not use, which is only known at this point.
+  const onHit = applySlot(
+    { "incoming.damage": attack.result.incomingDamage }, "incoming.damage", raw);
+
+  const beforeWound = atMoment(target, "before-wound", { attack: 1, damageCategory: 1 });
+  spendChosen(target, beforeWound);
+
+  const damage = Math.max(0, applySlot(beforeWound.slots, "incoming.damage", onHit));
 
   requestEdit(message, {
     type: "attack",
@@ -1420,7 +2589,9 @@ async function rollAttackWound(message, attack) {
     // step, so the table can rule on it before anyone loses Life.
     attack: {
       ...attack,
-      result: { ...attack.result, wound, counterWound, effectiveWound, soak, damage }
+      result: {
+        ...attack.result, wound, counterWound, effectiveWound, soak, reduction, damage
+      }
     }
   });
 }
@@ -1467,7 +2638,7 @@ const DEFENCES = {
   dodge: {
     label: "Dodge",
     // Diminishing Defense reduces Dodge Rolls, and only Dodge Rolls.
-    answer: (actor, options) => rollSide(actor, dodgeBonus(actor), options),
+    answer: (actor, options) => rollSide(actor, dodgeBonus(actor), { ...options, slot: "dodge" }),
     // Named here so the two halves stay visible in the breakdown.
     // Dodging is not the Defend Maneuver, so it does not spare you the stacks.
     gainsDiminishingDefense: true,
@@ -1480,10 +2651,13 @@ const DEFENCES = {
     // Clashed with the Strike Roll, as though throwing a Physical Attack back.
     // A Parry is not an Attacking Maneuver, so Diminishing Offense does not touch it -
     // but it is still a Combat Roll, so Thresholds do.
+    // A Parry rolls Strike, so that is the Slot an effect names to change it - plus
+    // `parry`, which is the one that applies only when Strike is rolled defensively.
     answer: (actor, options) => rollSide(actor, [
       { label: "Strike", value: actor.system.combat.strike },
+      { label: "Parry", value: actor.system.combat.parry ?? 0 },
       ...thresholdPenalty(actor)
-    ], options),
+    ], { ...options, slot: "strike" }),
     soak: (soak) => soak,
     wound: (total) => total
   },
@@ -1511,7 +2685,8 @@ const DEFENCES = {
     // The clash happens as usual, but with the Defense Value halved. It is still a
     // Dodge Roll, so Diminishing Defense applies - to the roll, after the halving,
     // since what is halved is the Defense Value and not the result.
-    answer: (actor, options) => rollSide(actor, dodgeBonus(actor, { halved: true }), options),
+    answer: (actor, options) =>
+      rollSide(actor, dodgeBonus(actor, { halved: true }), { ...options, slot: "dodge" }),
     soak: (soak) => soak,
     wound: (total) => total
   },
@@ -1530,7 +2705,12 @@ const DEFENCES = {
 /** Take the damage off the target, once and once only. */
 async function applyAttackDamage(message, target, attack) {
   const { damage } = attack.result;
-  await target.update({ "system.life.value": Math.max(0, target.system.life.value - damage) });
+
+  // Floored at zero for everyone except whoever has been granted otherwise - the Undying
+  // State being the one thing in the rules that grants it.
+  const settled = target.system.life.value - damage;
+  const floor = target.system.effects?.slots?.["life.allowNegative"] ? settled : Math.max(0, settled);
+  await target.update({ "system.life.value": floor });
   requestEdit(message, {
     type: "attack",
     attack: { ...attack, result: { ...attack.result, applied: true } }
@@ -1544,8 +2724,10 @@ async function applyAttackDamage(message, target, attack) {
  * effects will reach the same two Surges by other routes, so this is kept apart from
  * whatever triggered it.
  */
-export async function takeSurge(actor, { source = "Surge" } = {}) {
-  const kind = await foundry.applications.api.DialogV2.wait({
+export async function takeSurge(actor, { source = "Surge", kind: forced = null } = {}) {
+  // An effect that names a Surge is not offering a choice between the two: "use a Ki
+  // Surge as an Instant Maneuver" is one Surge, and asking which would be wrong.
+  const kind = forced ?? await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: "Surge" },
     content: `<ul class="dbu-surge-options">
@@ -1568,13 +2750,9 @@ export async function takeSurge(actor, { source = "Surge" } = {}) {
   if (kind === "healing") {
     const dice = DBUCharacterData.HEALING_SURGE_DICE_PER_TIER * actor.system.tierOfPower;
 
-    // A Talent can add dice of its own, written as "1d10(T)" - that many of that die
-    // per Tier of Power, alongside the Surge's own.
-    const extra = talentEffects(actor, "healingSurgeDice")
-      .map(effect => {
-        const [count, faces] = effect.dicePerTier.split("d");
-        return `${Number(count) * actor.system.tierOfPower}d${faces}`;
-      });
+    // Dice an effect adds, already resolved against the Tier of Power when the
+    // character's data was prepared - "1d10(T)" is three d10s at Tier 3.
+    const extra = actor.system.effects?.slots?.["surge.life.dice"] ?? [];
 
     const formula = [`${dice}d10`, ...extra, "@surgency"].join(" + ");
     const roll = new Roll(formula, { surgency });
@@ -1633,8 +2811,17 @@ async function defendAgainst(message, target, attack) {
     const cost = defendOptionCost(key, target);
     // Power Flare makes a Wound Roll of its own, so it is the one option that can
     // carry a wager. The field sits with it rather than under the whole dialog.
+    // Power Flare answers with a Wound Roll of your own, "as if you made an Energy or
+    // Magic Attack" - so which of the two is yours to pick, and it can carry a wager
+    // like any other Wound Roll. Both fields sit with the option rather than under the
+    // whole dialog.
     const wager = option.allowsKiWager
       ? `<span class="dbu-defend-wager">
+           <span>Wound as</span>
+           <select name="defenceFoundation" disabled>
+             <option value="energy">Energy</option>
+             <option value="magic">Magic</option>
+           </select>
            <span>Ki Wager</span>
            <input type="number" name="defenceWager" value="0" min="0" max="${wagerMax}" disabled/>
            <em>max ${wagerMax}</em>
@@ -1662,11 +2849,13 @@ async function defendAgainst(message, target, attack) {
     // selection rather than sitting there inviting a value that would be ignored.
     render: (event, dialog) => {
       const wagerField = dialog.element.querySelector('input[name="defenceWager"]');
+      const foundationField = dialog.element.querySelector('select[name="defenceFoundation"]');
       if (!wagerField) return;
       for (const radio of dialog.element.querySelectorAll('input[name="defence"]')) {
         radio.addEventListener("change", () => {
           const option = DEFEND_OPTIONS[dialog.element.querySelector('input[name="defence"]:checked')?.value];
           wagerField.disabled = !option?.allowsKiWager;
+          if (foundationField) foundationField.disabled = wagerField.disabled;
           if (wagerField.disabled) wagerField.value = "0";
         });
       }
@@ -1684,7 +2873,12 @@ async function defendAgainst(message, target, attack) {
           const kiWager = (!field?.disabled && Number.isFinite(typed))
             ? Math.min(Math.max(typed, 0), wagerMax)
             : 0;
-          return { defence, kiWager };
+          const foundation = dialog.element.querySelector('select[name="defenceFoundation"]');
+          return {
+            defence,
+            kiWager,
+            foundation: (!foundation?.disabled && foundation?.value) || "energy"
+          };
         }
       },
       { action: "cancel", label: "Cancel" }
@@ -1698,7 +2892,16 @@ async function defendAgainst(message, target, attack) {
   const cost = defendOptionCost(chosen.defence, target) + chosen.kiWager;
   if (defend && !await spendManeuverCost(target, defend, cost)) return;
 
-  return chooseDefence(message, target, chosen.defence, chosen.kiWager);
+  // Defending is a Counter Maneuver and costs a Counter Action - which was never being
+  // spent here, because this path does not go through useManeuver. Karmic Desperation
+  // is the one thing that waives it, and it would have had nothing to waive.
+  const answered = atMoment(target, "defending", { attack: true, attacker: true });
+  const free = answered.slots?.["defend.free"] === true;
+
+  if (!free && !await spendActions(target, 1, "counter")) return;
+  if (free) spendChosen(target, answered);
+
+  return chooseDefence(message, target, chosen.defence, chosen.kiWager, chosen.foundation);
 }
 
 /**
@@ -1753,15 +2956,67 @@ function targetRow(attack, target, result) {
     </div>`;
 }
 
-/** A settled total, with the dice and bonuses behind it on hover. */
+/**
+ * A settled total, with the dice and bonuses behind it on hover.
+ *
+ * Shown only to someone with Observer permission on the character that rolled it, and
+ * that goes for the total as well as the workings. What the roll *decided* stays public
+ * - who won, whether it landed - because the table needs that to play on.
+ *
+ * Observer rather than Owner so a party can watch each other's rolls by being given it
+ * on each other's sheets, while an enemy the GM keeps to themselves stays opaque.
+ */
 function rolledTotal(side) {
-  return `<span class="dbu-clash-total" data-tooltip="${Handlebars.escapeExpression(side.breakdown ?? "")}">${side.total}</span>`;
+  const mine = ownsSide(side);
+  // No tooltip at all when it is not yours to see. There is nothing to put in one: the
+  // dash already says the number is not on offer, and explaining that on hover only
+  // makes the reader ask twice.
+  const tip = mine ? ` data-tooltip="${Handlebars.escapeExpression(side.breakdown ?? "")}"` : "";
+
+  // A Karmic Save is not a number: it says you succeed whatever the dice came to. So
+  // it is shown in place of the total rather than beside it, with the roll it overrode
+  // still on hover. It is an outcome, not a value, so everyone may see it.
+  if (side.succeeded) {
+    return `<span class="dbu-clash-total dbu-karmic-save"${tip}>Karmic Save</span>`;
+  }
+
+  // The number itself is withheld too, not only the workings behind it. What the roll
+  // decided - who won, whether it landed - is said elsewhere and stays public; what it
+  // came to is between the character and whoever plays them.
+  if (!mine) return `<span class="dbu-clash-total dbu-clash-private">&mdash;</span>`;
+
+  return `<span class="dbu-clash-total"${tip}>${side.total}</span>`;
+}
+
+/**
+ * Whether you are allowed to see what a character rolled.
+ *
+ * Observer, not Owner. A party can be given Observer on each other's sheets and then
+ * follow each other's rolls, while an enemy the GM keeps to themselves stays opaque -
+ * which is the distinction the permission already exists to draw, so there is no reason
+ * to invent a second one here. A GM tests as Owner on everything and so sees all of it.
+ */
+function maySeeRolls(actor) {
+  return actor?.testUserPermission(game.user, "OBSERVER") ?? false;
+}
+
+/** Whether either character in this attack is one you may watch. */
+function ownsEitherSide(attack) {
+  return [attack.attackerUuid, attack.targetUuid]
+    .some(uuid => uuid && maySeeRolls(fromUuidSync(uuid)));
+}
+
+/** Whether the character that made this roll is one you may watch. */
+function ownsSide(side) {
+  if (!side?.actorUuid) return false;
+  return maySeeRolls(fromUuidSync(side.actorUuid));
 }
 
 /** One rolled side of the attack. */
 function attackSide(label, name, side) {
   const total = side ? rolledTotal(side) : `<span class="dbu-clash-waiting">waiting</span>`;
-  const outcome = side?.outcome ? `<span class="dbu-clash-outcome dbu-${side.outcome}">${side.outcome}</span>` : "";
+  const outcome = (side?.outcome && !side.succeeded)
+    ? `<span class="dbu-clash-outcome dbu-${side.outcome}">${side.outcome}</span>` : "";
   return `
     <div class="dbu-clash-side">
       <span class="dbu-clash-name">${Handlebars.escapeExpression(name)}<em> ${label}</em></span>
@@ -1771,12 +3026,19 @@ function attackSide(label, name, side) {
 
 /** What the attack did, once both sides are in. */
 function attackOutcome(attack) {
-  const { hit, wound, counterWound, soak, damage } = attack.result;
+  const { hit, wound, counterWound, soak, reduction, damage } = attack.result;
   if (!hit) return "Missed";
   if (!wound) return "Hit - awaiting the Wound Roll";
 
   if (counterWound && (counterWound.total > wound.total)) {
     return "Power Flare beats the Wound Roll: no damage";
+  }
+
+  // The arithmetic quotes the Wound Roll and the Soak, which are the very numbers the
+  // sides withhold - so it is only spelt out to someone playing one of the two. Anyone
+  // else is told what happened, which is what a bystander would see at the table.
+  if (!ownsEitherSide(attack)) {
+    return (damage <= 0) ? "Hit, and no damage" : `Hit for ${damage} damage`;
   }
 
   const { effectiveWound, damageCategory } = attack.result;
@@ -1787,7 +3049,10 @@ function attackOutcome(attack) {
   // Say so when the defence changed the Wound, rather than quoting a number that no
   // longer matches the arithmetic.
   const reduced = (effectiveWound !== wound.total) ? " halved" : "";
-  const detail = `Wound ${effectiveWound}${reduced} - Soak ${soak}${stepped}`;
+  // Named separately from Soak, because it is subtracted separately: the Category note
+  // sits with the Soak it applied to, and Damage Reduction stands outside it.
+  const dr = reduction ? ` - DR ${reduction}` : "";
+  const detail = `Wound ${effectiveWound}${reduced} - Soak ${soak}${stepped}${dr}`;
   return (damage <= 0) ? `${detail}: no damage` : `${detail} = ${damage} damage`;
 }
 
@@ -1806,7 +3071,9 @@ function renderAttack(message, html) {
       <span class="dbu-clash-skill">${Handlebars.escapeExpression(attack.profileLabel)} &middot;
         ${Handlebars.escapeExpression(attack.foundationLabel)} &middot;
         ${Handlebars.escapeExpression(DAMAGE_CATEGORIES[attack.damageCategory]?.label ?? "")}${
-          attack.kiWager ? ` &middot; ${attack.kiWager} KP wagered` : ""}</span>
+          attack.kiWager ? ` &middot; ${attack.kiWager} KP wagered` : ""}${attack.energyCharges
+          ? ` &middot; ${attack.energyCharges} Energy Charge${attack.energyCharges === 1 ? "" : "s"}`
+          : ""}</span>
     </div>
     ${result
       ? attackSide("Strike", attack.attackerName, result.strike)
@@ -1839,17 +3106,65 @@ function renderAttack(message, html) {
   const target = fromUuidSync(attack.targetUuid);
 
   // The target's half of the same moment. It has to come before the Wound Roll, since
-  // that is what these effects are there to change. Only drawn when they have some -
+  // that is what these effects are there to change - and a Karmic Effect is one of them,
+  // which is the whole point of losing the Clash. Only drawn when they have something:
   // an empty dialog is worse than no button.
-  if (result?.hit && !result.wound && target?.isOwner) {
-    const onHit = relevantTriggers(target, message, "hit");
-    if (onHit.length) {
+  if (!result.wound && target?.isOwner) {
+    const onHit = result.hit ? relevantTriggers(target, message, "hit") : [];
+    const karmic = afterTheFactFor(message, target);
+
+    if (onHit.length || karmic) {
       const apply = document.createElement("button");
       apply.type = "button";
-      apply.className = "dbu-clash-button";
+      apply.className = `dbu-clash-button${karmic ? " dbu-karma-button" : ""}`;
       apply.textContent = "Apply effects";
-      apply.dataset.tooltip = "Trigger effects that answer being hit";
-      apply.addEventListener("click", () => prepareRoll(target, onHit, "On being hit"));
+      apply.dataset.tooltip = karmic
+        ? "Effects that answer this, and Karmic Effects that can still change it"
+        : "Trigger effects that answer being hit";
+      apply.addEventListener("click", () =>
+        prepareRoll(target, onHit, momentTitle(karmic, "defence"), "",
+          { karmic, rolling: false }));
+      container.append(apply);
+    }
+  }
+
+  // The attacker gets the same. Usually it matters when the Strike is the roll that
+  // lost - that is the side a Karmic Effect rescues - but Karmic Chance is about any
+  // die, so it is offered on a Strike that landed too.
+  if (!result.wound) {
+    const attacker = fromUuidSync(attack.attackerUuid);
+    const karmic = attacker?.isOwner ? afterTheFactFor(message, attacker) : null;
+
+    if (karmic) {
+      const apply = document.createElement("button");
+      apply.type = "button";
+      apply.className = "dbu-clash-button dbu-karma-button";
+      apply.textContent = "Apply effects";
+      apply.dataset.tooltip = "Karmic Effects that can still change this Strike";
+      apply.addEventListener("click", () =>
+        prepareRoll(attacker, [], momentTitle(karmic, "strike"), "",
+          { karmic, rolling: false }));
+      container.append(apply);
+    }
+  }
+
+  // Once the Wound Roll is made and before the Damage is dealt, both sides get one
+  // last window - Karmic Chance is about any die, and the Wound Roll is a die. Power
+  // Flare makes it a Clash as well - Wound against Wound - which is when Karmic Boost
+  // becomes worth offering too.
+  if (result.wound && !result.applied) {
+    for (const uuid of [attack.attackerUuid, attack.targetUuid]) {
+      const who = fromUuidSync(uuid);
+      const karmic = who?.isOwner ? afterTheFactFor(message, who) : null;
+      if (!karmic) continue;
+
+      const apply = document.createElement("button");
+      apply.type = "button";
+      apply.className = "dbu-clash-button dbu-karma-button";
+      apply.textContent = `${who.name}: apply effects`;
+      apply.dataset.tooltip = "Karmic Effects that can still change the Wound Roll";
+      apply.addEventListener("click", () =>
+        prepareRoll(who, [], momentTitle(karmic, "wound"), "", { karmic, rolling: false }));
       container.append(apply);
     }
   }
@@ -1930,7 +3245,12 @@ async function rollCriticalDie(message, button, criticalDice) {
     flavor: message.flavor,
     // Only the new die is attached, so the original dice are not re-animated.
     rolls: [critRoll],
-    content: checkCard({ parts, total: baseTotal + critRoll.total, outcome: "critical" })
+    content: checkCard({
+      parts,
+      total: baseTotal + critRoll.total,
+      outcome: "critical",
+      owner: message.getFlag(SCOPE, CHECK_FLAG)?.actorUuid ?? null
+    })
   });
 
   // Author or GM only; for anyone else the button just stays disabled locally.

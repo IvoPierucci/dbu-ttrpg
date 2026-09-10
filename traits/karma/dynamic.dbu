@@ -1,0 +1,21 @@
+id: dynamic
+name: Dynamic
+kind: karma
+cost: dynamic
+manual: yes
+description: >
+  You can do anything!
+text: >
+  You can request anything from your ARC - it may be a potential bonus, a
+  change to the narrative, the ability to do something outside the bounds of
+  your Maneuvers, or otherwise. This Karmic Effect may include a Challenge
+  (when Adventuring) or another form of Clash/Check while in a Combat
+  Encounter, but ultimately it is down to you and your ARC's creativity to
+  bring your thoughts to life through this Karmic Effect.
+
+---
+
+# No script, and not for want of one: what this does is whatever the ARC
+# agrees to. The system spends the Karma Points and announces it, which is
+# the whole of what it can honestly do here.
+# The cost is asked for when it is taken, since the ARC sets it.

@@ -1,6 +1,9 @@
 const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
+import { compile } from "../effects/parser.mjs";
+import { describeFor } from "../effects/debug.mjs";
+
 /**
  * Sheet for a Talent Item.
  *
@@ -15,8 +18,6 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
     window: { resizable: true },
     actions: {
       dbuChangeTab: DBUTalentSheet._onChangeTab,
-      addEffect: DBUTalentSheet._onAddEffect,
-      deleteEffect: DBUTalentSheet._onDeleteEffect,
       editImage: DBUTalentSheet._onEditImage
     },
     form: { submitOnChange: true }
@@ -25,8 +26,11 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
   static PARTS = {
     header: { template: "systems/dbu-ttrpg/templates/parts/talent-header.hbs" },
     tabs: { template: "systems/dbu-ttrpg/templates/parts/sheet-tabs.hbs" },
-    description: { template: "systems/dbu-ttrpg/templates/parts/talent-description.hbs" },
-    passives: { template: "systems/dbu-ttrpg/templates/parts/talent-passives.hbs" }
+    description: {
+      template: "systems/dbu-ttrpg/templates/parts/talent-description.hbs",
+      scrollable: [""]
+    },
+    passives: { template: "systems/dbu-ttrpg/templates/parts/talent-passives.hbs", scrollable: [""] }
   };
 
   tabGroups = { primary: "description" };
@@ -48,6 +52,16 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
       { relativeTo: this.item }
     );
     context.tabs = this._getTabs();
+
+    // Compiled every time the sheet is drawn, so a mistake is reported as it is made.
+    // The character is passed in when there is one, which is what lets a slot name be
+    // checked against the Skills and Attributes that actually exist.
+    const owner = this.item.actor;
+    const { program, errors } = compile(this.item.system.script, owner?.system);
+    context.errors = errors;
+    context.actorName = owner?.name ?? "";
+    context.resolved = (owner && !errors.length) ? describeFor(program, owner) : [];
+
     return context;
   }
 
@@ -79,19 +93,4 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
     return picker.browse();
   }
 
-  /** Append a blank passive for the author to fill in. */
-  static async _onAddEffect() {
-    const effects = [...this.item.system.effects, { key: "", option: "", perTier: 0, text: "" }];
-    return this.item.update({ "system.effects": effects });
-  }
-
-  /**
-   * Remove one passive. The whole array is rewritten rather than the one entry
-   * removed, since an ArrayField is replaced wholesale on update.
-   */
-  static async _onDeleteEffect(event, target) {
-    const index = Number(target.dataset.index);
-    const effects = this.item.system.effects.filter((effect, at) => at !== index);
-    return this.item.update({ "system.effects": effects });
-  }
 }

@@ -1,0 +1,28 @@
+id: prone
+name: Prone
+kind: condition
+description: >
+  You are placed onto the floor, making it difficult to move or fight
+  back.
+text: >
+  Reduce your Speed, Defense Value, and Haste by 1/2 and increase the Damage
+  Category of all Damage you receive from Attacking Maneuvers by 1. During your
+  turn, you can spend 1 Action to stand up and remove the Prone Combat
+  Condition.
+
+---
+
+# Standing up is an Action the player chooses to spend, so it is triggered
+# rather than automatic.
+
+[passive]
+speed.normal *= 0.5;
+speed.boosted *= 0.5;
+defenseValue *= 0.5;
+haste *= 0.5;
+
+[automatic/being-hit]
+incoming.damage.category.shift += 1;
+
+[triggered/start-of-turn, costs 1 action]
+remove("Prone");

@@ -1,0 +1,13 @@
+id: defend
+name: Defend
+type: counter
+actionCost: 1
+kiCost: 0
+attacking: false
+defend: true
+source: Core Rule
+description: >
+  Actively defend yourself against dangerous attacks. Played in response to an
+  Attacking Maneuver; the effect chosen sets the Ki cost.
+
+---

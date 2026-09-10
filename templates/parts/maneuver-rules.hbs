@@ -1,0 +1,66 @@
+<div class="tab {{tabs.rules.cssClass}}" data-group="primary" data-tab="rules">
+  <section class="panel">
+    <h3 class="panel-title">Costs</h3>
+    <div class="stat-grid">
+      <div class="stat">
+        <em>Type</em>
+        <select name="system.type">
+          {{#each types as |type|}}
+          <option value="{{type.value}}" {{#if (eq type.value ../system.type)}}selected{{/if}}>{{type.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat" data-tooltip="Actions of its own kind that using it spends.">
+        <em>Action Cost</em>
+        <input type="number" name="system.actionCost" value="{{system.actionCost}}" min="0"/>
+      </div>
+      <div class="stat" data-tooltip="A flat Ki Point Cost.">
+        <em>Ki Cost</em>
+        <input type="number" name="system.kiCost" value="{{system.kiCost}}" min="0"/>
+      </div>
+      <div class="stat" data-tooltip="A Ki Point Cost written as x(bT), which grows with the Base Tier of Power.">
+        <em>Ki Cost (bT)</em>
+        <input type="number" name="system.kiCostPerBaseTier" value="{{system.kiCostPerBaseTier}}"/>
+      </div>
+      <div class="stat" data-tooltip="How often it may be used, written as 1/round or 2/encounter. Blank means freely.">
+        <em>Usage Limit</em>
+        <input type="text" name="system.usageLimit" value="{{system.usageLimit}}" placeholder="1/encounter"/>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">Behaviour</h3>
+    <div class="stat-grid">
+      <div class="stat" data-tooltip="Makes a Strike Roll and a Wound Roll, so Diminishing Offense and attack discounts apply.">
+        <em>Attacking</em>
+        <input type="checkbox" name="system.attacking" {{#if system.attacking}}checked{{/if}}/>
+      </div>
+      <div class="stat" data-tooltip="Cannot be used without a target.">
+        <em>Needs a target</em>
+        <input type="checkbox" name="system.requiresTarget" {{#if system.requiresTarget}}checked{{/if}}/>
+      </div>
+      <div class="stat" data-tooltip="Opens the Defend options when played in answer to an attack.">
+        <em>Is Defend</em>
+        <input type="checkbox" name="system.defend" {{#if system.defend}}checked{{/if}}/>
+      </div>
+      <div class="stat" data-tooltip="Lets the user take a Surge.">
+        <em>Is Surge</em>
+        <input type="checkbox" name="system.surge" {{#if system.surge}}checked{{/if}}/>
+      </div>
+      <div class="stat" data-tooltip="Which Attack Profile it uses. 'any' lets the user choose when declaring it.">
+        <em>Profile</em>
+        <input type="text" name="system.profile" value="{{system.profile}}" placeholder="any"/>
+      </div>
+      <div class="stat" data-tooltip="If this is a Skill Clash, which Skill both sides roll.">
+        <em>Clash Skill</em>
+        <input type="text" name="system.clashSkill" value="{{system.clashSkill}}"/>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">Description</h3>
+    <textarea name="system.description" rows="4">{{system.description}}</textarea>
+  </section>
+</div>

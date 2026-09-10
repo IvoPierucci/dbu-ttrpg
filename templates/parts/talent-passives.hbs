@@ -1,35 +1,49 @@
 <div class="tab {{tabs.passives.cssClass}}" data-group="primary" data-tab="passives">
   <section class="panel">
     <h3 class="panel-title">
-      Passives
-      <button type="button" class="edit-toggle" data-action="addEffect"
-              data-tooltip="Add a passive effect">Add</button>
+      Effect
+      <span class="panel-hint">See WRITING-EFFECTS.txt</span>
     </h3>
 
-    {{#if system.effects.length}}
-    <ol class="effect-rows">
-      {{#each system.effects as |effect index|}}
-      <li class="effect-row">
-        <div class="effect-fields">
-          <label data-tooltip="Which rule this hooks into, e.g. defendOptionCost">Key
-            <input type="text" name="system.effects.{{index}}.key" value="{{effect.key}}"/>
-          </label>
-          <label data-tooltip="For rules that name one, e.g. the Defend option affected">Option
-            <input type="text" name="system.effects.{{index}}.option" value="{{effect.option}}"/>
-          </label>
-          <label data-tooltip="The x(T) part: how much per Tier of Power. Negative reduces.">Per Tier
-            <input type="number" name="system.effects.{{index}}.perTier" value="{{effect.perTier}}"/>
-          </label>
-          <button type="button" class="effect-delete" data-action="deleteEffect" data-index="{{index}}"
-                  data-tooltip="Remove this passive">&times;</button>
-        </div>
-        <input type="text" class="effect-text" name="system.effects.{{index}}.text"
-               value="{{effect.text}}" placeholder="Wording shown on the character sheet"/>
-      </li>
+    <textarea class="effect-script" name="system.script" rows="14" spellcheck="false"
+              placeholder="[passive]&#10;soakValue += 1(bT);">{{system.script}}</textarea>
+
+    {{! What is wrong, by line, so the mistake is pointed at rather than described. }}
+    {{#if errors.length}}
+    <ul class="effect-errors">
+      {{#each errors as |problem|}}
+      <li>{{#if problem.line}}<b>Line {{problem.line}}</b> — {{/if}}{{problem.message}}</li>
       {{/each}}
-    </ol>
-    {{else}}
-    <p class="tab-placeholder">No passives yet.</p>
+    </ul>
+    {{else if system.script}}
+    <p class="effect-ok">Compiles.</p>
+    {{/if}}
+
+    {{! What it comes to for the character holding it, which is the question an author
+        actually has. Only shown when this Talent belongs to someone. }}
+    {{#if resolved.length}}
+    <details class="effect-resolved" open>
+      <summary>On {{actorName}}</summary>
+      <ul>
+        {{#each resolved as |line|}}<li>{{line}}</li>{{/each}}
+      </ul>
+    </details>
     {{/if}}
   </section>
+
+  <section class="panel">
+    <h3 class="panel-title">Wording</h3>
+    <textarea class="effect-text" name="system.text" rows="4"
+              placeholder="The rulebook's own wording, shown to players.">{{system.text}}</textarea>
+  </section>
+
+  {{#if system.effects.length}}
+  <section class="panel">
+    <h3 class="panel-title">Old data rows</h3>
+    <p class="tab-placeholder">
+      This Talent still carries the typed rows Talents used before the script existed.
+      They are read once to build the script above and are otherwise ignored.
+    </p>
+  </section>
+  {{/if}}
 </div>

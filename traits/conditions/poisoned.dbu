@@ -1,0 +1,18 @@
+id: poisoned
+name: Poisoned
+kind: condition
+description: >
+  Poison flows through your veins, reducing your ability to fight and sapping
+  away your health.
+text: >
+  At the end of each of your turns, lose Life Points equal to 1/10 of your
+  Maximum Life Points. Additionally, double any Health Threshold Penalties you
+  suffer from.
+
+---
+
+[passive]
+threshold.penalty *= 2;
+
+[automatic/end-of-turn]
+life.value -= floor(life.max / 10);

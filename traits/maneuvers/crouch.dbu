@@ -1,0 +1,11 @@
+id: crouch
+name: Crouch
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+source: Core Rule
+description: >
+  Placeholder Instant maneuver, used to exercise responses.
+
+---

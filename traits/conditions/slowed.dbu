@@ -1,0 +1,34 @@
+id: slowed
+name: Slowed
+kind: condition
+maxStacks: 3
+description: >
+  Your ability to move and fight is reduced to a crawl, if not a complete
+  standstill.
+text: >
+  For each Stack of this Combat Condition, you have 1 less Action during each
+  Combat Round and reduce your Speeds by 1/4. This effect applies immediately
+  (meaning you lose a number of Actions equal to the number of Slowed stacks
+  you gained). If you have 3 stacks of Slowed, you cannot use any form of
+  Maneuver (including those that cost Counter Actions) and your turn in
+  Initiative is skipped.
+
+---
+
+# Applies immediately means the Actions are gone now, not next round, which
+# is what the on applied block is for.
+# Reducing Speeds by 1/4 leaves three quarters of them.
+
+[passive per stack]
+actions.standard -= 1;
+speed.normal *= 0.75;
+speed.boosted *= 0.75;
+
+[passive]
+if (stacks >= 3) {
+    forbid maneuvers;
+    skipTurn = true;
+}
+
+[on applied per stack]
+actions.remaining -= 1;

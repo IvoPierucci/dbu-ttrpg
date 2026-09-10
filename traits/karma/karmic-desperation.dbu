@@ -1,0 +1,15 @@
+id: karmic-desperation
+name: Karmic Desperation
+kind: karma
+cost: 1
+description: >
+  Through desperate need, you manage to defend against an attack that you
+  were unprepared for.
+text: >
+  If you are targeted by an Attacking Maneuver, you may use the Defend
+  Maneuver without spending a Counter Action.
+
+---
+
+[triggered/defending]
+defend.free = true;

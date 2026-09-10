@@ -1,0 +1,23 @@
+id: undying
+name: Undying
+kind: state
+description: >
+  You refuse to fall, and pay for it in every exchange.
+text: >
+  You cannot be Defeated, and Damage can take your Life Points below zero.
+  Reduce your Combat Rolls by 1(T).
+
+---
+
+# Two prohibitions rather than one: defeat is forbidden while this lasts, and
+# the automatic block catches the moment it would otherwise be registered.
+# life.allowNegative is what stops the pipeline flooring Life at zero, which
+# is the one stated exception to the rule that nothing goes below it.
+
+[passive]
+forbid defeat;
+life.allowNegative = true;
+combatRolls -= 1(T);
+
+[automatic/defeated]
+life.value = 1;

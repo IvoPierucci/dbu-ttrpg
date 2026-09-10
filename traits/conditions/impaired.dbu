@@ -1,0 +1,19 @@
+id: impaired
+name: Impaired
+kind: condition
+maxStacks: 3
+description: >
+  You are impeded from succeeding in your goals by some means, be it a curse
+  of bad luck or a physical obstacle keeping you from moving the way you want
+  to.
+text: >
+  Reduce the Natural Result of your Combat Rolls by the number of Impaired
+  Stacks you possess.
+
+---
+
+# The Natural Result, not the total - so this can push a roll into its Botch
+# Range, which a penalty to the Combat Roll itself would not.
+
+[automatic/combat-roll]
+baseDie -= stacks;

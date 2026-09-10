@@ -1,0 +1,24 @@
+id: broken
+name: Broken
+kind: condition
+maxStacks: 3
+description: >
+  Your durability is reduced, potentially due to flames wearing away at your
+  body or due to your body being forcefully tampered with.
+text: >
+  For each stack of this Combat Condition, reduce your Soak Value by 2(bT)
+  after all other reductions. If the reduction to your Soak Value exceeds your
+  Soak Value before applying this penalty, increase any Damage you take from
+  Attacking Maneuvers by the difference.
+
+---
+
+# The overflow is not linear in the stacks, so it is written once against the
+# whole reduction rather than per stack. Soak already floors at zero, so what
+# the floor discarded is exactly the difference the rule asks for.
+
+[passive per stack]
+soakValue.external -= 2(bT);
+
+[automatic/before-wound]
+incoming.damage += overflow(soakValue, 2(bT) * stacks);

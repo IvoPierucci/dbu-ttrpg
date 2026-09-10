@@ -1,0 +1,11 @@
+id: thumb-war
+name: Thumb War
+type: standard
+actionCost: 1
+requiresTarget: true
+clashSkill: bluff
+source: Core Rule
+description: >
+  Placeholder maneuver: a Skill Clash of Bluff against one target.
+
+---

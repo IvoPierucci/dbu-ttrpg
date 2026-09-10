@@ -1,0 +1,15 @@
+id: resilience
+name: Resilience
+prerequisites: Tenacity Score 6+
+description: >
+  Able to bounce back from damage more easily than most, you are exceptionally
+  good at ignoring injuries.
+text: >
+  Increase your Soak Value by 1(bT).
+  Increase the Life Points regained through a Healing Surge by 1d10(T).
+
+---
+
+[passive]
+soakValue       += 1(bT);
+surge.life.dice += 1d10(T);

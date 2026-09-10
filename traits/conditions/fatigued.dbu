@@ -1,0 +1,17 @@
+id: fatigued
+name: Fatigued
+kind: condition
+maxStacks: 2
+description: >
+  You are exhausted, unable to draw out your full strength.
+text: >
+  For each Stack of this Combat Condition, halve your Max Capacity.
+
+---
+
+# Repeated per stack, so two stacks quarter it rather than halving it twice
+# over - which is the same thing, and is why per stack is written rather than
+# an amount that knows about stacks.
+
+[passive per stack]
+capacity.multiplier *= 0.5;

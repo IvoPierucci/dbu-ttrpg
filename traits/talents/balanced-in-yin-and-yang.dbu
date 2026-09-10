@@ -1,0 +1,22 @@
+id: balanced-in-yin-and-yang
+name: Balanced in Yin and Yang
+prerequisites: Balanced Warrior
+description: >
+  Seeking enlightenment, you strive for inner balance and total control over
+  your body.
+text: >
+  While your Force and Magic Scores are equal but at least 4 lower than your
+  Insight Score, increase your Insight Modifier by 1(T).
+  Reduce the Ki Point Cost of all Attacking Maneuvers by 1(T).
+
+---
+
+[passive]
+if (force.score == magic.score &&
+    force.score <= insight.score - 4 &&
+    magic.score <= insight.score - 4) {
+    insight.mod += 1(T);
+}
+
+[passive]
+attack.kiCost -= 1(T);

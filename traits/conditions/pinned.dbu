@@ -1,0 +1,33 @@
+id: pinned
+name: Pinned
+kind: condition
+description: >
+  You are, for one reason or another, stuck in place and unable to move
+  properly.
+text: >
+  Upon gaining this Combat Condition, reduce your remaining Actions this
+  Combat Round to 1 if you had more Actions. You only gain 1 Action each Combat
+  Round and cannot use any Attacking Maneuvers or any effects that allow
+  Movement.
+  A Pinned Character can spend 1 Action during their turns to make a Might
+  Clash against the Character who inflicted the Combat Condition. If they win,
+  they stop being Pinned and regain their lost Actions. This effect can be
+  repeated as much as the Pinned Character desires.
+
+---
+
+# The Might Clash is offered as a button rather than taken automatically:
+# the rule says the Pinned Character may repeat it as often as they like, so
+# it is their choice, and it costs the one Action they have.
+
+[passive]
+actions.standard max= 1;
+actions.counter max= 0;
+forbid attackingManeuvers;
+forbid movement;
+
+[on applied]
+actions.remaining max= 1;
+
+[triggered/start-of-turn, costs 1 action]
+mightClash();

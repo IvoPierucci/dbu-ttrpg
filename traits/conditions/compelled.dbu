@@ -1,0 +1,31 @@
+id: compelled
+name: Compelled
+kind: condition
+description: >
+  You have lost control of yourself.
+text: >
+  When you gain this Combat Condition, you will be given a target - you can
+  only make Attacking Maneuvers that include the target as a target for that
+  Attacking Maneuver. If you do not spend at least 2 Actions (1 Action if you
+  are a Minion) making Attacking Maneuvers that include that Character as a
+  Target during each of your turns while you are suffering from this Combat
+  Condition, reduce your Life Points by 1/10 of your Maximum Life Points at the
+  end of your turn. Additionally, you must Ki Wager at least 1/10 (rounded up)
+  of your Max Capacity on all Attacking Maneuvers against that target and all
+  Combat Rolls for Attacking Maneuvers made against that target become Urgent.
+  If your target becomes Hidden to you, change your target for the effects of
+  Compelled to the closest Character to you other than your previous target.
+
+---
+
+# Not automated: who the target is, and whether enough Actions were spent
+# attacking them. Both need a target the system does not track yet, so the
+# Life Point loss at the end of the turn is left to the GM.
+# Urgency is a forbidden Willing Failure, which is what Urgent means.
+
+[passive]
+forbid attacksOnOthers;
+attack.kiWager.min = ceil(capacity.max / 10);
+
+[automatic/combat-roll]
+forbid willingFailure;

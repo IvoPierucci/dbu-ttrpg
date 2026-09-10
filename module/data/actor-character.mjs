@@ -1,6 +1,8 @@
 const { fields } = foundry.data;
 
-import { talentBonus, talentEffects } from "../talents.mjs";
+import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
+import { programsFor } from "../effects/registry.mjs";
+import { evaluate } from "../effects/conditions.mjs";
 import {
   categoryFormula,
   greaterDiceCategory,
@@ -14,6 +16,67 @@ import {
   racialSavingThrows,
   racialSkillRankCount
 } from "../races.mjs";
+
+/**
+ * Fold one phase of passive effects into the character's derived data.
+ *
+ * Called three times during the pass, because amounts are themselves derived: the
+ * earliest phase runs before the Tiers are known and may only use (bT), the middle one
+ * has everything, and the last waits for Might and the Thresholds. A Slot declares
+ * which phase it belongs to and the compiler refuses an amount that would read a value
+ * not settled yet - that check is what makes the arrangement honest rather than hopeful.
+ */
+function runPhase(data, phase) {
+  const scope = {
+    data,
+    errors: data.effects.errors,
+    // The rulebook asks this as a Trait's name ("while you are not benefiting from
+    // Balanced Warrior"), so it is answered by looking for that Trait among the ones
+    // whose conditions currently hold. The visited set arrives through the scope, so
+    // two Traits naming each other stop instead of recursing.
+    benefitsFrom: (name, inner) => data.effects.programs.some(entry =>
+      (entry.sourceName?.toLowerCase() === String(name).toLowerCase())
+      && (entry.program.blocks ?? []).some(b => blockApplies(b, inner))
+    )
+  };
+
+  const { slots, active } = applyPassives(data.effects.programs, phase, scope);
+  Object.assign(data.effects.slots, slots);
+  data.effects.active.push(...active);
+}
+
+/** Whether a block would do anything right now, which is what "benefiting" means. */
+function blockApplies(b, scope) {
+  if (b.mode !== "passive") return false;
+  return (b.statements ?? []).some(statement =>
+    (statement.type !== "if") || evaluate(statement.condition, scope)
+  );
+}
+
+/**
+ * What effects add to one Slot, for values that are a component of a larger formula.
+ *
+ * Only the additive part: a multiplication has to land on the finished value, not on
+ * one ingredient of it, so anything that can be multiplied goes through withEffects.
+ */
+function slot(data, key) {
+  return data.effects?.slots?.[key]?.add ?? 0;
+}
+
+/**
+ * A finished value with everything effects did to it: adds, then set/floor/ceiling,
+ * then multiplications last, as Calculation Priority requires.
+ *
+ * **Nothing the system derives goes below zero.** A penalty large enough to take a
+ * value past zero simply cancels whatever it was, rather than turning it into a number
+ * that then drags a roll down with it. The exceptions are stated where they apply -
+ * Undying letting Life Points go negative is one - and are opted into here rather than
+ * being the default.
+ */
+function withEffects(data, key, base, { min = 0 } = {}) {
+  const value = applySlot(data.effects?.slots, key, base);
+  return (min === null) ? value : Math.max(min, value);
+}
 
 /**
  * Data model for the "character" Actor type in the DBU TTRPG system.
@@ -159,6 +222,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   static BOTCH_PENALTY = 2;
 
   /**
+   * The highest Natural Result that scores a Botch. One by default; effects raise it.
+   *
+   * The mirror of the Critical Target, and read the same way: a Botch is any Natural
+   * Result at or below this, just as a Critical is any at or above the Critical Target.
+   */
+  static BOTCH_RANGE_DEFAULT = 1;
+
+  /**
    * A critical on a Skill roll always adds a flat 1d4. Every other roll uses the
    * character's Critical Extra Dice, which grow with the Tier of Power.
    */
@@ -170,6 +241,23 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    */
   static CRITICAL_TARGET_DEFAULT = 10;
   static CRITICAL_TARGET_MIN = 7;
+
+  /** The most Karma Points a character can hold. */
+  static KARMA_MAX = 4;
+
+  /** The most Energy Charges one Attacking Maneuver can carry. */
+  static MAX_ENERGY_CHARGES = 7;
+
+  /**
+   * What one Energy Charge adds to the Wound Roll of the Maneuver carrying it.
+   *
+   * A Signature Technique gets the larger die. Which one it is comes from the Maneuver
+   * carrying a `signature` tag - the concept has no home of its own in the system yet,
+   * and a tag is the hook that will not have to move when it does.
+   */
+  static energyChargeDie(signature) {
+    return signature ? "1d8" : "1d6";
+  }
 
   /** Column headings for the Attributes in the progression table. */
   static ATTRIBUTE_ABBREVIATIONS = Object.freeze({
@@ -434,8 +522,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // --- Life and Ki Points ---
     // Only the current value is stored; both maximums are derived from Power Level
     // (see prepareDerivedData).
+    // No floor here on purpose. Life Points are the stated exception to the rule that
+    // nothing goes below zero - the Undying State lets Damage take them negative - and a
+    // floor in the schema would make that impossible rather than merely unusual.
+    // prepareDerivedData puts the floor back for everyone who is not Undying.
     schema.life = new fields.SchemaField({
-      value: new fields.NumberField({ required: true, integer: true, initial: 60, min: 0 })
+      value: new fields.NumberField({ required: true, integer: true, initial: 60 })
     });
 
     schema.ki = new fields.SchemaField({
@@ -525,6 +617,81 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // made by a different client than the one that declared it, so the choice has to
     // travel on the Actor to get there.
     schema.willingFailure = new fields.BooleanField({ required: true, initial: false });
+
+    // --- Action economy ---
+    // Actions spent this Combat Round, by kind. Refilled when the round turns over.
+    schema.actionsSpent = new fields.SchemaField({
+      standard: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      counter: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+    });
+
+    // --- Combat Conditions ---
+    // A Condition is not an Item and not owned: you have it or you do not. Stored as a
+    // count so the four that stack need nothing of their own - one is simply 1.
+    // Creating and destroying documents as Prone comes and goes would be far heavier.
+    //
+    // The initial value is a *function*, and that is not a style choice. Foundry hands
+    // out a non-function `initial` by reference (DataField#getInitialValue), so a plain
+    // `initial: {}` gives every character in the world the same object - and ObjectField
+    // commits an update by mutating it in place (ObjectField#_updateCommit). One
+    // character gaining Prone would give it to everyone who had never been written to.
+    schema.conditions = new fields.ObjectField({ required: true, initial: () => ({}) });
+
+    // --- States ---
+    // The same shape, holding the level rather than a count: Raging at 2 is 2.
+    schema.states = new fields.ObjectField({ required: true, initial: () => ({}) });
+
+    // --- Resources ---
+    // Stackable bonuses a Trait grants by name. Lost at the end of a Combat Encounter.
+    schema.resources = new fields.ObjectField({ required: true, initial: () => ({}) });
+
+    // --- Karma Points ---
+    // Not a Resource, despite looking like one: Resources are lost when an Encounter
+    // ends, and Karma is carried through a campaign. Moved by hand, since it is earned
+    // by roleplay - which is not something the system can judge.
+    schema.karma = new fields.NumberField({
+      required: true, integer: true, initial: 2, min: 0, max: DBUCharacterData.KARMA_MAX
+    });
+
+    // --- Energy Charges ---
+    // Charges live on the declared Attacking Maneuver, not on the character - they are
+    // spent with it. But the declaration itself has to outlive the Maneuver that made
+    // it, because the Energy Charge Maneuver is used, ends, and is used again before
+    // the attack it is feeding is ever thrown. So the declaration is kept here and the
+    // charges ride along with it until the attack collects them.
+    schema.charging = new fields.SchemaField({
+      /** The Attacking Maneuver that was declared, by its id. Empty when not charging. */
+      maneuverId: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
+       * The Profile it was declared with. Settled at the moment of declaring, and the
+       * attack has to be made with it - that is what makes it a declaration rather than
+       * a note to come back to.
+       */
+      profile: new fields.StringField({ required: true, blank: true, initial: "" }),
+      charges: new fields.NumberField({
+        required: true, integer: true, initial: 0, min: 0,
+        max: DBUCharacterData.MAX_ENERGY_CHARGES
+      })
+    });
+
+    // --- Racial Traits ---
+    // The ids of the Traits taken from this character's race. Stored rather than
+    // derived because a race offers more than a character ends up with, and which ones
+    // were taken is a choice made at creation, not something the numbers imply.
+    schema.racialTraits = new fields.ArrayField(
+      new fields.StringField({ required: true, blank: false }),
+      { required: true, initial: () => [] }
+    );
+
+    // Whether this character is a Minion, which a few rules ask about.
+    schema.minion = new fields.BooleanField({ required: true, initial: false });
+
+    // How many times this character has been brought back from Defeat this Encounter.
+    // The rules allow one; kept here because it is a limit of the rule rather than of
+    // any one effect.
+    schema.defeatsEscaped = new fields.NumberField({
+      required: true, integer: true, initial: 0, min: 0
+    });
 
     // --- Maneuver uses ---
     // One entry per use of a Maneuver that is limited per Encounter, so a Maneuver
@@ -733,6 +900,34 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, this.criticalTarget)
     );
 
+    // --- Attribute Scores, before anything else ---
+    // A Score depends only on the progression table, the Power Level and the race - not
+    // on the Tier of Power. That is what lets them come first, and it matters: an
+    // effect's condition reads Scores while its amount reads Tiers, so without this the
+    // two would need each other. Settling the Scores up front breaks that circle.
+    for (const key of Object.keys(atts)) {
+      atts[key].score = DBUCharacterData.attributeScore(
+        this.progression, key, this.powerLevel,
+        DBUCharacterData.racialIncreaseFor(this.race, this.racialAttributeChoices, key)
+      );
+    }
+
+    // --- Effects ---
+    // Everything effects contribute lands in a bag rebuilt from scratch on every pass,
+    // never in the stored fields. Those stay as the GM's own manual overrides, and
+    // keeping them apart means a stray update can never persist a transient bonus.
+    this.effects = { slots: {}, active: [], errors: [], programs: [] };
+    // Built after the bag exists: the report callback writes into it, and calling
+    // programsFor inside the assignment would fire that callback before there was
+    // anywhere for it to write.
+    this.effects.programs = programsFor(this.parent ?? {}, {
+      report: message => this.effects.errors.push(message)
+    });
+
+    // The earliest phase: conditions may read Scores, but amounts may only use (bT),
+    // which follows from Power Level alone. (T) is not settled yet.
+    runPhase(this, "tier");
+
     // Base Tier of Power follows from Power Level alone: 1 for Levels 1-4, then one
     // more per five Levels, reaching 7 at Level 30.
     this.baseTierOfPower = DBUCharacterData.tierOfPowerFor(this.powerLevel);
@@ -742,7 +937,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // freely, but never below 1.
     this.tierOfPower = Math.min(
       this.baseTierOfPower + DBUCharacterData.BREAKTHROUGH_LIMIT,
-      Math.max(1, this.baseTierOfPower + this.tierOfPowerModifier)
+      Math.max(1, this.baseTierOfPower + this.tierOfPowerModifier + slot(this, "tierOfPower"))
     );
 
     // --- Size ---
@@ -774,44 +969,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       .filter(entry => entry.lvl <= this.powerLevel)
       .reduce((total, entry) => total + entry.technique, 0);
 
-    // Every Attribute starts at 1 and grows only through Attribute Additions. Rows
-    // above the current Power Level have not been earned yet, so they do not count.
-    for (const key of Object.keys(atts)) {
-      atts[key].score = DBUCharacterData.attributeScore(
-        this.progression, key, this.powerLevel,
-        DBUCharacterData.racialIncreaseFor(this.race, this.racialAttributeChoices, key)
-      );
-    }
-
     // Attribute Score cap for the current Tier of Power: 8 at ToP 1, +3 per tier after.
     // The published table only lists ToP 1-5 (8/11/14/17/20); the formula holds beyond
     // that, so ToP 6 and 7 are 23 and 26. Informational only - nothing enforces it yet,
     // except where a Talent is explicitly bounded by it.
-    this.attributeScoreCap = 8 + (this.tierOfPower - 1) * 3;
+    this.attributeScoreCap = withEffects(this, "attributeScoreCap", 8 + (this.tierOfPower - 1) * 3);
 
-    // Talents can add to an Attribute's Modifier. Worked out from the Scores, so every
-    // Score has to be settled before any of them is read.
-    const talentMods = Object.fromEntries(Object.keys(atts).map(key => [key, 0]));
-
-    // A pair of Attributes each lending the other its Score. The bonus is bounded so
-    // that it and the Score together stay within the Attribute Score Limit.
-    for (const effect of talentEffects(this.parent, "mirrorAttributeModifiers")) {
-      const [first, second] = effect.attributes;
-      const lend = (to, from) => {
-        talentMods[to] += Math.max(0, Math.min(atts[from].score, this.attributeScoreCap - atts[to].score));
-      };
-      lend(first, second);
-      lend(second, first);
-    }
-
-    for (const effect of talentEffects(this.parent, "attributeModifier")) {
-      talentMods[effect.attribute] += (effect.perTier * this.tierOfPower)
-        + (effect.perBaseTier * this.baseTierOfPower);
-    }
+    // The bulk of the pass. Everything an amount could read is settled by now, so this
+    // is where most effects land.
+    runPhase(this, "core");
 
     for (const key of Object.keys(atts)) {
       // Modifier defaults to the Score, adjusted by any Bonus from effects/Transformations.
-      atts[key].mod = atts[key].score + atts[key].bonus + talentMods[key];
+      atts[key].mod = withEffects(this, `${key}.mod`, atts[key].score + atts[key].bonus);
     }
 
     // --- Skills ---
@@ -839,7 +1009,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         ranks,
         sizeAdjustment,
         // Skill Bonus is the governing Attribute's Score plus 2 per Rank.
-        bonus: atts[skill.attribute].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment,
+        bonus: Math.max(0,
+          atts[skill.attribute].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment),
         specialization: skill.encompassing ? this.skillSpecializations[key] : "",
         // A Required Skill with no Ranks cannot be rolled at all - it always fails.
         untrained: Boolean(skill.required) && (ranks === 0),
@@ -853,13 +1024,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       powerLevel: this.powerLevel,
       tenacityScore: atts.tenacity.score,
       racialLifeModifier: this.racialLifeModifier,
-      lifePerLevelBonus: this.transformationBonuses.lifePerLevel
+      lifePerLevelBonus: this.transformationBonuses.lifePerLevel + slot(this, "life.perLevel")
     });
+    this.life.max = Math.max(1, withEffects(this, "life.max", this.life.max));
 
     this.ki.max = DBUCharacterData.maxKi({
       powerLevel: this.powerLevel,
-      kiPerLevelBonus: this.transformationBonuses.kiPerLevel
+      kiPerLevelBonus: this.transformationBonuses.kiPerLevel + slot(this, "ki.perLevel")
     });
+    this.ki.max = Math.max(0, withEffects(this, "ki.max", this.ki.max));
 
     // Doubled on the finished pool, for the same reason.
     if (this.debug.kiMultiplier) this.ki.max *= DBUCharacterData.KI_MULTIPLIER_KI;
@@ -868,11 +1041,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // before the multiplier, so a doubling effect doubles them too.
     const baseCapacity = DBUCharacterData.BASE_CAPACITY
       + (DBUCharacterData.CAPACITY_PER_LEVEL * (this.powerLevel - 1))
-      + this.capacityModifiers.flat;
+      + this.capacityModifiers.flat + slot(this, "capacity.flat");
 
     // The Ki Multiplier lands on the finished Capacity, after everything that builds
     // it up - it increases the maximum, not any one part of it.
     const capacityMultiplier = this.capacityModifiers.multiplier
+      * (this.effects.slots["capacity.multiplier"]?.multiply ?? 1)
       * (this.debug.kiMultiplier ? DBUCharacterData.KI_MULTIPLIER_CAPACITY : 1);
 
     this.capacity.max = Math.max(0, Math.floor(baseCapacity * capacityMultiplier));
@@ -881,29 +1055,29 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Actions available each Combat Round. An effect can take Actions away, but never
     // past zero.
     this.actions = {
-      standard: Math.max(0, DBUCharacterData.BASE_STANDARD_ACTIONS + this.actionModifiers.standard),
-      counter: Math.max(0, DBUCharacterData.BASE_COUNTER_ACTIONS + this.actionModifiers.counter)
+      standard: Math.max(0, withEffects(this, "actions.standard",
+        DBUCharacterData.BASE_STANDARD_ACTIONS + this.actionModifiers.standard)),
+      counter: Math.max(0, withEffects(this, "actions.counter",
+        DBUCharacterData.BASE_COUNTER_ACTIONS + this.actionModifiers.counter))
     };
 
     // Haste: 1/2 Agility Modifier, added to Strike Rolls.
-    this.haste = Math.floor(atts.agility.mod / 2);
+    this.haste = withEffects(this, "haste", Math.floor(atts.agility.mod / 2));
 
     // Defense Value: equal to Agility Modifier, then adjusted for Size.
-    this.defenseValue = DBUCharacterData.applySizeModifier(atts.agility.mod, this.size.defenseModifier);
+    this.defenseValue = withEffects(this, "defenseValue",
+      DBUCharacterData.applySizeModifier(atts.agility.mod, this.size.defenseModifier));
 
     // Speed: Normal = 2 + (1/2 Agility Mod); Boosted = Agility Mod + 2.
     this.speed = {
-      normal: 2 + Math.floor(atts.agility.mod / 2) + this.size.speedModifier,
-      boosted: atts.agility.mod + 2 + this.size.speedModifier
+      normal: withEffects(this, "speed.normal",
+        2 + Math.floor(atts.agility.mod / 2) + this.size.speedModifier),
+      boosted: withEffects(this, "speed.boosted",
+        atts.agility.mod + 2 + this.size.speedModifier)
     };
 
     // Initiative bonus: 1/2 Agility Score.
-    this.initiativeBonus = Math.floor(atts.agility.score / 2);
-
-    // Might: higher of Force / Magic Modifier. Some Talents raise it alongside the
-    // Wound Rolls it feeds.
-    const woundAndMight = talentBonus(this.parent, "woundAndMight");
-    this.might = Math.max(atts.force.mod, atts.magic.mod) + woundAndMight;
+    this.initiativeBonus = withEffects(this, "initiative", Math.floor(atts.agility.score / 2));
 
     // Soak Value: the Tenacity Modifier, except that the Soak a character provides
     // for themselves never falls below their Tier of Power. External effects can
@@ -912,14 +1086,21 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const ownSoak = DBUCharacterData.applySizeModifier(
       Math.max(atts.tenacity.mod, this.tierOfPower),
       this.size.soakModifier
-    ) + talentBonus(this.parent, "soak");
-    this.soakValue = Math.max(0, ownSoak + this.externalModifiers.soak);
+    );
+    this.soakValue = Math.max(0, withEffects(this, "soakValue.external",
+      withEffects(this, "soakValue", ownSoak) + this.externalModifiers.soak));
+
+    // Damage Reduction: taken off a Wound Roll the way Soak is, and that is where the
+    // resemblance stops. The Damage Category does not reduce or ignore it, and nothing
+    // that multiplies Soak reaches it either - so a point of this is worth more than a
+    // point of Soak, and nothing grants it by default.
+    this.damageReduction = Math.max(0, withEffects(this, "damageReduction", 0));
 
     // Surgency: increases the Life/Ki Points regained through a Surge.
-    this.surgency = atts.force.mod;
+    this.surgency = withEffects(this, "surgency", atts.force.mod);
 
     // Awareness: Insight Modifier, added to Strike Rolls.
-    this.awareness = atts.insight.mod;
+    this.awareness = withEffects(this, "awareness", atts.insight.mod);
 
     // --- Dice ---
     // Extra Dice ride alongside the Base Die and grow with the Tier of Power. The
@@ -941,20 +1122,49 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       maxCategoryIncrease: increaseLimit
     };
 
+    // --- Critical and Botch ---
+    // Both read the Base Die's Natural Result and nothing else, so they are two ends of
+    // the same line: a Critical is a Natural at or above the Critical Target, a Botch is
+    // one at or below the Botch Range.
+    this.criticalTarget = Math.min(
+      DBUCharacterData.CRITICAL_TARGET_DEFAULT,
+      Math.max(DBUCharacterData.CRITICAL_TARGET_MIN,
+        withEffects(this, "criticalTarget", this.criticalTarget))
+    );
+
+    // Kept below the Critical Target: with both derived, the two could otherwise be
+    // made to overlap and a single Natural Result would be both at once.
+    this.botchRange = Math.max(0, Math.min(this.criticalTarget - 1,
+      withEffects(this, "botchRange", DBUCharacterData.BOTCH_RANGE_DEFAULT)));
+
+    // What a Botch costs depends on the kind of roll: a Skill roll loses 2 flat, every
+    // other roll loses 2(bT). It was one flat constant everywhere, which is right only
+    // while the Base Tier is 1 - so from Power Level 5 a botched Combat Roll was costing
+    // half what it should.
+    this.botch = {
+      range: this.botchRange,
+      skill: DBUCharacterData.BOTCH_PENALTY,
+      penalty: withEffects(this, "botch.penalty",
+        DBUCharacterData.BOTCH_PENALTY * this.baseTierOfPower)
+    };
+
     // --- Diminishing Offense and Defense ---
     // Offense only begins once the round's free attacks are used up, and each stack
     // costs 1(bT) - so it bites harder the stronger you are. Defense is a flat 1 per
     // stack, but you gain more of them per attack as your Base Tier rises.
-    const offenseStacks = Math.max(0, this.attacksThisRound - DBUCharacterData.FREE_ATTACKS_PER_ROUND);
+    const freeAttacks = withEffects(this, "attacks.free", DBUCharacterData.FREE_ATTACKS_PER_ROUND);
+    const offenseStacks = Math.max(0, this.attacksThisRound - freeAttacks);
 
     this.diminishing = {
       offense: {
         stacks: offenseStacks,
-        penalty: offenseStacks * this.baseTierOfPower
+        penalty: offenseStacks * withEffects(this, "diminishing.offense.perStack",
+          this.baseTierOfPower)
       },
       defense: {
         stacks: this.diminishingDefense,
-        perAttack: DBUCharacterData.diminishingDefensePerAttack(this.baseTierOfPower),
+        perAttack: withEffects(this, "diminishing.defense.perAttack",
+          DBUCharacterData.diminishingDefensePerAttack(this.tierOfPower)),
         penalty: this.diminishingDefense
       }
     };
@@ -985,21 +1195,50 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       pending: reached.filter(key => !this.thresholdChecks[key])
     };
 
-    // Stress Bonus stands in for a rule not implemented yet; each Steadfast failure
-    // takes 1 off it, and a Talent can raise it.
-    this.stressBonus = (this.powerLevel + 1) - failures + talentBonus(this.parent, "stressBonus");
+    // The last phase. It waits for the Thresholds, because Stress Bonus counts their
+    // failures and an effect can change what one costs.
+    runPhase(this, "late");
+
+    this.threshold.penalty = Math.max(0,
+      withEffects(this, "threshold.penalty", this.threshold.penalty));
+
+    // Stress Bonus is what a Transformation's Stress Test is measured against; each
+    // Steadfast failure takes 1 off it.
+    this.stressBonus = withEffects(this, "stressBonus", (this.powerLevel + 1) - failures);
+
+    // Might: higher of Force / Magic Modifier. Computed here rather than earlier because
+    // an effect can raise it and the Wound Roll below reads the result.
+    this.might = withEffects(this, "might", Math.max(atts.force.mod, atts.magic.mod));
+
+    // Life Points are the stated exception: Undying lets damage take them below zero,
+    // and they are settled against that rather than against the general floor.
+    if (!this.effects.slots["life.allowNegative"]) {
+      this.life.value = Math.max(0, this.life.value);
+    }
+
+    // Defeated is derived, not recorded: at zero you are Defeated, and being healed
+    // above zero lifts it by itself without anything having to remember to. Undying
+    // forbids it outright, which is what lets negative Life not end the fight.
+    this.defeated = (this.life.value <= 0) && permits(this.effects.slots, "defeat");
 
     // --- Combat Rolls ---
     // Only used in combat. Wound depends on the attack's Foundation, since that is
     // what decides which Attribute is the Damage Attribute.
+    // Every Combat Roll picks up what was written to `combatRolls`, which is why that
+    // Slot fans out to these three: an effect saying "+1(T) to your Combat Rolls" has to
+    // show in the Strike on the sheet, not wait to be remembered at the table.
     this.combat = {
-      strike: this.haste + this.awareness,
+      strike: withEffects(this, "strike", this.haste + this.awareness),
       // The whole Dodge Roll. Its Defense Value component stays reachable on its own,
       // since that is the part an effect can halve.
-      dodge: this.defenseValue + this.rollModifiers.dodge,
+      dodge: withEffects(this, "dodge", this.defenseValue + this.rollModifiers.dodge),
+      // A Parry rolls the Strike value, so it takes Strike's effects and adds its own -
+      // which exist for effects that only apply when Strike is rolled defensively.
+      parry: withEffects(this, "parry", withEffects(this, "strike", this.haste + this.awareness)),
       wound: Object.fromEntries(
         Object.entries(DBUCharacterData.FOUNDATIONS)
-          .map(([key, foundation]) => [key, atts[foundation.attribute].mod + woundAndMight])
+          .map(([key, foundation]) =>
+            [key, withEffects(this, "wound", atts[foundation.attribute].mod + this.might)])
       )
     };
 
@@ -1020,7 +1259,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       return [save, {
         label: save.charAt(0).toUpperCase() + save.slice(1),
         racial,
-        value: atts[attribute].score + (racial ? this.perBaseTier(1) : 0),
+        value: Math.max(0, atts[attribute].score + (racial ? this.perBaseTier(1) : 0)),
         criticalTarget: racial
           ? Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, this.criticalTarget - 1)
           : this.criticalTarget

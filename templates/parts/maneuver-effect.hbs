@@ -1,0 +1,32 @@
+<div class="tab {{tabs.effect.cssClass}}" data-group="primary" data-tab="effect">
+  <section class="panel">
+    <h3 class="panel-title">
+      Effect
+      <span class="panel-hint">See WRITING-EFFECTS.txt</span>
+    </h3>
+
+    <p class="tab-placeholder">
+      Most Maneuvers have none: what a Basic Attack does is the attack engine itself,
+      not an effect written on top of it. This is for the ones that change something.
+    </p>
+
+    <textarea class="effect-script" name="system.script" rows="10" spellcheck="false"
+              placeholder="[passive]&#10;attack.kiCost -= 1(T);">{{system.script}}</textarea>
+
+    {{#if errors.length}}
+    <ul class="effect-errors">
+      {{#each errors as |problem|}}
+      <li>{{#if problem.line}}<b>Line {{problem.line}}</b> — {{/if}}{{problem.message}}</li>
+      {{/each}}
+    </ul>
+    {{else if system.script}}
+    <p class="effect-ok">Compiles.</p>
+    {{/if}}
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">Wording</h3>
+    <textarea class="effect-text" name="system.text" rows="3"
+              placeholder="The rulebook's own wording.">{{system.text}}</textarea>
+  </section>
+</div>

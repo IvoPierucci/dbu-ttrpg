@@ -1,0 +1,19 @@
+id: superior
+name: Superior
+kind: state
+description: >
+  You fight above the level of everyone around you.
+text: >
+  Apply your Greater Dice to your Combat Rolls. Increase the Damage you take
+  by 2(T).
+
+---
+
+# Impediment cancels this State and is cancelled by it. That bargain is written
+# in Impediment, since it is the one giving up its whole effect.
+
+[passive]
+combatRolls.dice += greaterDice;
+
+[automatic/being-hit]
+incoming.damage += 2(T);

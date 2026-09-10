@@ -1,7 +1,8 @@
 <div class="tab {{tabs.traits.cssClass}}" data-group="primary" data-tab="traits">
 
   {{! Talents are Items the character owns: drag one here to grant it. }}
-  <details class="trait-group" open>
+  <details class="trait-group" data-section="talents"
+           {{#if openSections.talents}}open{{/if}}>
     <summary>
       Talents
       <span class="trait-count">{{talents.length}}</span>
@@ -9,6 +10,14 @@
       <button type="button" class="edit-toggle" data-action="importTalents"
               data-tooltip="Fill the DBU Talents compendium with the published talents, ready to drag onto a character">
         Import core talents
+      </button>
+      <button type="button" class="edit-toggle" data-action="reloadTalents"
+              data-tooltip="Read every core talent back from its file, overwriting what is in the compendium">
+        Reload from files
+      </button>
+      <button type="button" class="edit-toggle" data-action="importManeuvers"
+              data-tooltip="Fill the DBU Maneuvers compendium from the files">
+        Import core maneuvers
       </button>
       {{/if}}
     </summary>
@@ -24,15 +33,16 @@
           <span class="trait-prereq">Requires {{entry.item.system.prerequisites}}</span>
           {{/if}}
 
-          {{! Only the talents with an effect that is spent can be armed. }}
-          {{#if entry.triggered}}
-          <button type="button" class="trait-arm {{#if entry.triggered.armed}}active{{/if}}"
-                  data-action="armTalent" data-item-id="{{entry.item.id}}"
-                  {{#unless entry.triggered.available}}disabled{{/unless}}
-                  data-tooltip="Use on the next Combat Roll. {{entry.triggered.round}} left this round, {{entry.triggered.encounter}} this encounter.">
-            {{#if entry.triggered.armed}}Armed{{else}}Arm{{/if}}
+          {{! One button per triggered effect, not per talent: a talent carrying two of
+              them has each armed on its own. }}
+          {{#each entry.triggered as |trigger|}}
+          <button type="button" class="trait-arm {{#if trigger.armed}}active{{/if}}"
+                  data-action="armTalent" data-effect-id="{{trigger.id}}"
+                  {{#unless trigger.available}}disabled{{/unless}}
+                  data-tooltip="{{trigger.text}} — {{trigger.round}} left this round, {{trigger.encounter}} this encounter.">
+            {{#if trigger.armed}}Armed{{else}}Arm{{/if}}
           </button>
-          {{/if}}
+          {{/each}}
 
           <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
                   data-tooltip="Edit this talent">&#9998;</button>

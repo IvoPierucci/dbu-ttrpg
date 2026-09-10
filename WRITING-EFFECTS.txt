@@ -1,0 +1,671 @@
+WRITING EFFECTS
+===============
+
+Every Trait in this system is a file. The header describes it; the part after the
+--- line says what it does, in a small language built for DBU's rules.
+
+You do not need to know how to program. If you can read the rulebook, you can
+read this.
+
+
+1. THE SHAPE OF A FILE
+----------------------
+
+  id: resilience
+  name: Resilience
+  prerequisites: Tenacity Score 6+
+  description: >
+    Able to bounce back from damage more easily than most.
+  text: >
+    Increase your Soak Value by 1(bT).
+    Increase the Life Points regained through a Healing Surge by 1d10(T).
+
+  ---
+
+  [passive]
+  soakValue       += 1(bT);
+  surge.life.dice += 1d10(T);
+
+`text` is the rulebook's own wording, shown to players. The script below the ---
+is what actually runs. Keep both: one is precise, the other is readable.
+
+
+2. BLOCKS AND KEYWORDS
+----------------------
+
+Every block opens with its keyword in brackets, the same way the rulebook writes
+it. Statements end in a semicolon.
+
+[passive]
+  Always on. No trigger. Folded into your character's numbers.
+
+    // Resilience
+    [passive]
+    soakValue += 1(bT);
+
+[triggered/<moment>]
+  Happens in response to something. You choose whether to use it. Add the
+  budget after a comma.
+
+    // Power of the Z-Warrior
+    [triggered/combat-roll, 1/round, 2/encounter, before]
+    baseDie = 10;
+
+  `before` means the effect runs BEFORE the thing that triggered it resolves.
+  By default a triggered effect runs after. You need `before` only when the
+  effect replaces something rather than reacting to it - here, it replaces the
+  Base Die roll instead of adjusting it.
+
+[automatic/<moment>]
+  Same as triggered, but not optional. It fires on its own.
+
+    // Suffocating
+    [automatic/end-of-turn]
+    life.value -= life.max / 5;
+
+[on applied]
+  Runs once, the moment you gain this Condition or State.
+
+    // Pinned
+    [on applied]
+    actions.remaining max= 1;
+
+[passive per stack]
+  Repeats once for each stack. Put `maxStacks:` in the header.
+
+    // Fatigued - maxStacks: 2
+    [passive per stack]
+    capacity.multiplier *= 1/2;
+
+[passive from <level>]
+  Only applies from that level of a State or Aspect upward. Everything
+  accumulates: at level 3 you still have what levels 1 and 2 gave you.
+
+    // Raging
+    [passive from 2]
+    soakValue += L(T);
+
+[costs <n> action]
+  Something you spend an Action to do.
+
+    // Prone
+    [costs 1 action]
+    remove();
+
+[on removed]
+  Runs once, when this Condition or State ends.
+
+    // Surging
+    [on removed]
+    gain("Fatigued");
+
+[passive after <slot>]
+  Runs after that slot has finished resolving. You need this only when an
+  effect reads the result of something it also changed - and usually you do not:
+  a passive that has to read a settled value is better written as an automatic
+  answering the moment where that value is settled.
+
+    // Broken - the leftover after your Soak Value is reduced past zero.
+    // Written against the moment rather than with `after`, because the Wound
+    // Roll is where the difference has somewhere to go.
+    [automatic/before-wound]
+    incoming.damage += overflow(soakValue, 2(bT) * stacks);
+
+[<budget>] on its own
+  A block with only a budget is something you activate. In practice you will
+  almost always pair it with `instant maneuver` (below) so there is somewhere
+  to click it from.
+
+[..., instant maneuver]
+  The effect is offered as a Maneuver instead of applying on its own. It shows
+  up in your Maneuver list with the rest, and drags to the hotbar like any
+  other. Works with standard and counter too.
+
+  Pair it with `requires`, which is the condition for the Maneuver being
+  available at all - the sheet reads it to grey the Maneuver out and say why.
+  That is different from `if`, which is an ordinary branch inside the body: an
+  `if` that fails would run the effect and quietly do nothing.
+
+    // a Trait that lets you take a Ki Surge without the Surge Maneuver,
+    // so the Surge Maneuver's own once-per-encounter stays untouched
+    [1/encounter, instant maneuver]
+    requires ki.value < capacity.max;
+    surge("ki");
+
+[..., first]
+  Runs before other effects waiting on the same moment. Use it when your effect
+  changes what the others would see.
+
+    // Determined - leaving the State has to happen before anything else
+    // reads whether you are in it
+    [automatic/start-of-turn, first]
+    leaveState();
+    turn.skip = true;
+
+Modifiers combine. [on applied per stack] runs once per stack gained, at the
+moment you gain them.
+
+
+3. STATEMENTS
+-------------
+
+  x += 5;      add          x -= 5;      subtract
+  x *= 1/2;    multiply     x = 5;       set to exactly
+  x min= 2;    floor at     x max= 1;    cap at
+
+Multiplication always applies last, after every addition - that is the
+rulebook's Calculation Priority, and the engine does it for you.
+
+    // Drained
+    [passive]
+    surgency *= 1/2;
+
+"Reduce by 1/2" means multiply by 1/2. "Increase by 1/2" means multiply by 3/2.
+"Reduce by 1/4" means multiply by 3/4.
+
+
+4. AMOUNTS
+----------
+
+  3           a flat number
+  2(T)        2 x your Tier of Power
+  1(bT)       1 x your Base Tier of Power
+  1d10(T)     that many of that die per Tier of Power
+  L           the level of the State or Aspect this effect came from
+  L(T)        that level x your Tier of Power
+  L(bT)       that level x your Base Tier of Power
+  stacks      how many stacks of this Condition you have
+  greaterDice your Greater Dice, as a dice amount
+  extraDice   your Tier of Power Extra Dice
+  criticalDice  your Critical Extra Dice
+  true / false            for a flag, and only for a flag
+  (insight.score / 2)     any arithmetic you need
+
+Write (T) and (bT) exactly as the rulebook does. You can copy a line off the
+website and it will mean the same thing here.
+
+L takes a scale like any other amount, and that is what makes a level scale
+rather than merely unlock. Raging at level 2 gives Wound +2(T):
+
+    [passive from 1]
+    wound += L(T);
+
+Multiply L explicitly - write 2 * L(bT), never 2L(bT).
+
+`stacks` is the count of the Condition carrying the effect. Most of the time you
+do not need it: `[passive per stack]` repeats the whole block once per stack,
+which is simpler. Reach for `stacks` only when the amount is not linear:
+
+    // Broken - the overflow depends on the total reduction, not on one stack
+    [automatic/before-wound]
+    incoming.damage += overflow(soakValue, 2(bT) * stacks);
+
+The named dice are whatever the character has right now. At a Tier with no
+Greater Dice, greaterDice adds nothing rather than erroring.
+
+A question mark picks between two amounts:
+
+    // an Energy Charge
+    wound.dice += signatureTechnique ? 1d8(T) : 1d6(T);
+
+
+5. CONDITIONS
+-------------
+
+Wrap anything conditional in `if`. Use `==` to compare - a single `=` sets a
+value, which is a different thing.
+
+    // Balanced Warrior
+    [passive]
+    if (force.score == magic.score) {
+        force.mod += min(magic.score, attributeScoreCap - force.score);
+        magic.mod += min(force.score, attributeScoreCap - magic.score);
+    }
+
+Combine with && (and), || (or) and ! (not). Some questions have their own
+words: benefiting("Name"), defending, hasResource("power").
+
+    // Insightful Warrior
+    [passive]
+    if (force.score <= insight.score - 4 &&
+        magic.score <= insight.score - 4 &&
+        !benefiting("Balanced Warrior")) {
+        might      += 2(T);
+        wound += 2(T);
+    }
+
+One condition covers every statement in its block. You never repeat it.
+
+
+6. FORBIDDING THINGS
+--------------------
+
+Not every effect is a number. Some take options away.
+
+    // Staggered
+    [passive]
+    forbid movement;
+
+You may only forbid a name the system declares, and the list is closed for the
+same reason the Slots are: something nobody reads is an effect that silently
+does nothing. These are the permissions:
+
+  maneuvers            using Maneuvers at all, Counter Maneuvers included
+  attackingManeuvers   using Attacking Maneuvers
+  movement             the Movement Maneuver, the Soar Maneuver, and moving
+                       through your own effects
+  transformations      entering an Enhancement or a Form
+  signatureTechniques  using a Signature Technique
+  uniqueAbilities      using a Unique Ability
+  nonPhysicalAttacks   Attacking Maneuvers of any Attack Type but Physical
+  attacksOnOthers      attacking anyone but the target you were given
+  willingFailure       failing a roll on purpose - this is what Urgent means
+  defeat               being registered as Defeated at all
+  condition.<name>     gaining one named Combat Condition, i.e. immunity to it
+
+`allow` is the opposite and takes the same names.
+
+Some flags are set rather than forbidden, and those take true or false:
+
+    // Determined
+    [passive]
+    attack.autoHit = true;
+
+Write the word, not a number. A flag set to anything else is refused: `true` and
+`false` are the only two values a flag has.
+
+    // Surging - immune to Compelled while it lasts
+    [passive]
+    forbid condition.compelled;
+
+There is no `unless`, `toward` or `tagged`. If you need an exception, write the
+forbid inside an `if`:
+
+    [passive]
+    if (!targets(Focus)) {
+        forbid attackingManeuvers;
+    }
+
+When two effects disagree - one forbids, another allows - the one from the
+higher Priority source wins. Ordinary bonuses never disagree; they all add up.
+
+
+7. WHO IT LANDS ON
+------------------
+
+By default, you. Put a prefix on the slot to aim elsewhere:
+
+  self.       you (the default, can be left out)
+  target.     the character you are attacking
+  attacker.   the character attacking you
+  incoming.   the attack or damage coming at you
+
+    // Prone
+    [automatic/being-hit]
+    incoming.damage.category.shift += 1;
+
+  [ target. and attacker. have no example from a published effect yet.
+    This section will grow as more effects are added. ]
+
+
+8. RESOURCES
+------------
+
+A Resource is a named counter you build up during a fight. Declare it in the
+file header, with its maximum if it has one:
+
+  resource: power
+  resourceMax: 5
+
+That gives you two things to read, named after the Resource itself:
+
+  power.stacks    how many you have
+  power.max       the most you can hold
+
+    [passive]
+    if (power.stacks == power.max) {
+        combatRolls += 1(T);
+        soakValue   += 1(T);
+    }
+
+Leave resourceMax out and the Resource has no ceiling. Other effects can raise
+it by writing to power.max.
+
+You lose all Resources at the end of a Combat Encounter.
+
+
+9. THINGS YOU CAN DO
+--------------------
+
+Besides changing numbers, an effect can act. These are the verbs available.
+
+  remove()                 remove this Condition from yourself
+  remove("Prone")          remove a named Condition
+  gain("Fatigued")         apply a Condition, optionally gain("Slowed", 2)
+  leaveState()             leave every State - what returning to Normal means
+  leaveState("Raging")     leave one named State
+  surge()                  take a Surge, asking which
+  surge("ki")              take a Ki Surge, without asking
+  grantOutOfSequence("x")  offer a Maneuver played out of sequence
+  mightClash()             offer a Might Clash
+
+The list is closed. A verb the system does not implement is refused when the
+file is compiled rather than warned about mid-fight, and the number of arguments
+is checked too.
+
+And these read something rather than doing it:
+
+  min(a, b) / max(a, b)   the smaller or larger of two amounts
+  floor(x) / ceil(x)      round down or up
+  round(x) / abs(x)
+  overflow(<slot>, <by>)  how far a reduction went past what was there
+  benefiting("Name")    are you getting anything from that Trait right now
+  hasResource("name")   do you have any of that Resource
+  hasCondition("name")  do you have that Combat Condition
+  inState("name")       are you in that State
+  isMinion              are you a Minion
+  defending             are you Defending against an attack
+  targets(X)            does this Maneuver include X as a target
+  aoeHits(X)            does this attack's area cover X
+  attacking(X)          is this Maneuver an attack aimed at X
+
+surge() takes a Surge without spending the Surge Maneuver's own use - which is
+a different thing from using that Maneuver, and the whole point of the rule.
+What kind of action it costs comes from the block header, not from the verb.
+
+
+10. WHEN THINGS CAN HAPPEN
+--------------------------
+
+These are the moments you can write after triggered/ or automatic/. The list is
+open - new ones get added as the rules need them - but this is what exists today.
+
+From the rulebook, using its own names:
+
+  threshold           You are knocked through a Health Threshold, after the
+                      Maneuver that did it finishes. Only once per Threshold per
+                      Combat Encounter. Write threshold/bruised for one specific
+                      Threshold.
+  defeated            Your Life Points hit their minimum, but BEFORE you are
+                      registered as Defeated - so something can still save you.
+                      Only one effect of this kind per Combat Encounter.
+  start-of-encounter  Fires when you enter the Encounter, so you get it even if
+                      you join after it started.
+  start-of-round
+  start-of-turn
+  power               You use the Power Up Maneuver.
+  transform           You use the Transformation Maneuver to enter this
+                      Transformation.
+  <state>             You enter that State, e.g. triggered/raging.
+
+A moment written with a name in brackets is about that character instead of
+you: defeated is you being Defeated, defeated(Focus) is your Focus being
+Defeated. Same for the others that can take one.
+
+From the flow of combat:
+
+  declare-maneuver    A Maneuver is declared.     gives: maneuver, targets
+  combat-roll         A Combat Roll is coming.    gives: the roll
+  clash-win           You win a Clash.            gives: the clash
+  clash-lose          You lose a Clash.           gives: the clash
+  clash-resolved      A Clash is settled and you
+                      know the result.            gives: the clash, the roll
+  defending           You Defend an attack.       gives: attack, attacker
+  hit                 Your attack connects.       gives: attack, target
+  miss                Your attack fails.          gives: attack, target
+  being-hit           An attack connects on you.  gives: attack, attacker
+  before-wound        Before the Wound Roll.      gives: attack, damage category
+  damage-applied      Damage is dealt.            gives: amount, type, source
+  end-of-turn         Your turn ends.
+  defeat-resolved     You are Defeated, after it is settled - this is when you
+                      leave any Transformation or State. Different from
+                      defeated, which fires before it is settled.
+  steadfast-check     You make a Steadfast Check. gives: the result
+  healing-surge       You take a Healing Surge.   gives: the amount
+  ki-surge            You take a Ki Surge.        gives: the amount
+  counter-maneuver    You use a Counter Maneuver.
+  counter-window      You could play something out of sequence.
+
+"gives" is what you are allowed to read at that moment. Reading something a
+moment does not give you is an error, not an empty value - so you find out when
+you write the file, not in the middle of a fight.
+
+Two moments that look like opposites and are not: hitting for zero damage is
+still a hit, while a miss means the Strike failed, the target dodged, or an
+Intervene deflected it. And an Absolute Attack deals damage without hitting at
+all, so it fires neither.
+
+
+11. NAMES YOU CAN REFER TO
+--------------------------
+
+Effects talk about Conditions and States by name - triggered/raging, or
+forbid condition("compelled"). These are the ones that ship with the system.
+Homebrew adds to this list: the name is the file's id.
+
+Combat Conditions. The four marked [S] stack; the number is their maximum.
+
+  blinded           impaired [S] 3     shaken
+  broken [S] 3      impediment         sleeping
+  compelled         pinned             slowed [S] 3
+  drained           poisoned           staggered
+  fatigued [S] 2    prone              stress-exhaustion
+  guard-down                           suffocating
+
+States. Raging and Mindful have levels; the rest are single.
+
+  raging      3 levels    superior    determined
+  mindful     3 levels    undying     surging
+
+Inside a State or a levelled Aspect, L is your current level - so an effect
+written 2(T) at level 3 of Raging is not the same as one written L(T).
+
+
+12. WHAT YOU CAN CHANGE
+-----------------------
+
+You can only change things the system knows about. A name it does not
+recognise is an error, not a silent no-op - if you mistype a slot, it will
+tell you rather than quietly doing nothing.
+
+Attributes   force.score  force.mod  attributeScoreCap
+Power        tierOfPower  life.perLevel  ki.perLevel  life.allowNegative
+Pools        life.max  ki.max  capacity.flat  capacity.multiplier
+             surge.life.dice  surge.ki.amount
+Defence      soakValue  soakValue.base  soakValue.external
+             damageReduction  damageReduction.pierced
+             defenseValue  might  stressBonus  awareness  surgency  haste
+Rolls        strike  dodge  parry  wound  initiative  combatRolls
+             skill.<name>  skill.<name>.bonus  save.<name>
+             baseDie  criticalTarget  botchRange  botch.penalty
+             willingFailure
+Dice         dice.extra.category  dice.greater.category  dice.critical.category
+             dice.extra.instances  diceAdvantage  combatRolls.dice
+Economy      attack.kiCost  defend.<option>.kiCost  actions.standard
+             actions.counter  actions.perRound  actions.remaining
+             speed.normal  speed.boosted
+Damage       attack.energyCharges  damage.category.shift
+             incoming.damage.category.shift
+             wound.total  wound.dice  damage.dealt
+             incoming.damage  incoming.autoHit  attack.autoHit
+Range        range.melee  range.attack  area.size
+Initiative   initiative.advantage  turn.outOfOrder  skipTurn
+Attacks      attacks.free  diminishing.offense.perStack
+             diminishing.defense.perAttack
+Thresholds   threshold.penalty  threshold.<name>.at  steadfast.target
+Resources    <name>.stacks  <name>.max
+
+These are named the way the rulebook names them - "increase your Wound Rolls by
+2(T)" is just `wound += 2(T)`.
+
+Three pairs sit close together and are not the same thing:
+
+  wound          a bonus added into the Wound Roll
+  wound.dice     extra dice rolled as part of it, beyond the Energy Charges the
+                 attack already carries
+  wound.total    the finished number, after the roll (Guard halves this)
+
+  soakValue      your Soak Value
+  soakValue.base Soak before the Damage Category is applied to it
+
+  damageReduction         taken off a Wound Roll the way Soak is, and there the
+                          resemblance ends: the Damage Category neither reduces
+                          nor ignores it, and nothing that multiplies Soak
+                          reaches it. A point of it is worth more than a point
+                          of Soak, and nothing grants it by default.
+  damageReduction.pierced how much of the target's Damage Reduction one attack
+                          gets past. Written by the attacker, and lasting only
+                          for that attack.
+
+  skill.<name>         a bonus to rolls using that Skill
+  skill.<name>.bonus   the Skill Bonus itself, as shown on your sheet
+
+The full list, with what each one means, lives in the system's slot registry.
+
+
+12b. PASSIVE OR TRIGGERED
+-------------------------
+
+A passive is folded into the character every time the sheet is prepared; a
+triggered or automatic effect happens once, at a moment. That decides which of
+the two a rule wants, and the compiler checks it.
+
+A triggered or automatic effect may change anything. By the time a moment
+happens every value is settled, so this is the natural way to write "1/Round:
+increase your Strike Rolls by 2(T)":
+
+    [triggered/combat-roll, 1/round]
+    strike += 2(T);
+
+The reverse is not allowed. Some things only exist during an exchange - the
+Damage coming at you, the Clash you just lost, the Wound Roll being made - and a
+passive has nothing to change while the character is being prepared. Writing one
+from a passive used to be discarded without a word; now it is an error.
+
+  only in a passive     skipTurn, and everything the sheet shows
+  only at a moment      roll.total, roll.dice, clash.succeed, defend.free,
+                        turn.skip, baseDie, incoming.damage, wound.total,
+                        life.value, ki.value, capacity.spent
+
+The pair skipTurn / turn.skip is the clearest case of the difference. Slowed at
+three stacks skips your turns for as long as it lasts, so it is a passive.
+Determined skips one turn and ends in the same breath, so it is automatic - a
+standing property would be gone before anything read it.
+
+
+12c. AFTER THE ROLL
+-------------------
+
+`clash-resolved` is the one moment that happens once the dice are already read, and it
+exists for the effects that are chosen then. It fires for a lone Skill roll or Steadfast
+Check as well as for a Clash.
+
+What an effect asks for decides where it is offered. Name `clash.lost` and you are only
+offered it by the side that lost - and if your effect flips the Clash, the other side has
+now lost and it is their turn. Name nothing, and you are offered it after any roll at
+all, won or lost.
+
+What it puts within reach, when there was a Clash at all:
+
+  clash.lost        you are the side that lost
+  clash.answering   you did not start it
+  clash.margin      how far behind you are
+
+  clash.combatRoll  it was settled on a Strike, a Dodge or a Wound
+  clash.skill       on a Skill
+  clash.save        on a Saving Throw
+  clash.might       on Might
+
+Those last four are the four categories, and exactly one of them is set. A Clash
+is always the same category on both sides - see section 12d - so naming the
+category is naming the whole Clash, not just your half of it.
+
+A Wound Roll nobody answered is a Combat Roll but not a Clash, so nobody lost it.
+Ask for `clash.lost` as well when your effect needs there to have been an
+opponent.
+
+And what such an effect may change:
+
+  roll.total        the finished number
+  roll.dice         dice added and rolled now
+  clash.succeed     the Clash simply counts as won, whatever the totals said
+
+    // Karmic Save - only against a Clash an opponent opened
+    [triggered/clash-resolved]
+    requires clash.lost && clash.answering
+          && (clash.skill || clash.save || clash.might);
+    clash.succeed = true;
+
+`requires` is what decides whether it applies at all. Write it: an effect whose
+`requires` refuses is offered greyed out with the reason rather than being taken and
+then doing nothing.
+
+
+12d. THE FOUR CATEGORIES OF ROLL
+--------------------------------
+
+  Combat Roll     Strike, Dodge, Wound. A Parry is one: it rolls Strike.
+  Skill           any Skill.
+  Saving Throw    Impulsive, Corporeal, Cognitive, Morale.
+  Might           Might, and nothing else.
+
+**A Clash is always the same category on both sides.** A Strike is answered by a
+Dodge or a Parry, never by a Skill. A Skill Clash is that Skill on both sides. A
+Might Clash is Might on both. Power Flare looks like an exception and is not - it
+answers a Wound Roll with a Wound Roll of your own.
+
+This is not a convention, it is why the numbers work. The four scale differently,
+so a Combat Roll and a Saving Throw at the same Tier of Power are not comparable
+quantities. Pitting one against another would not be a close contest; it would be
+a category error, and whichever category happens to scale faster would simply
+win.
+
+Two things follow. If you are adding a Clash, decide which of the four it is and
+roll that on both sides. And if you are writing an effect that only applies to
+some of them, name the categories you want rather than excluding the ones you do
+not - the list is closed, so naming is exact and stays exact if a fifth is ever
+added.
+
+
+13. WHEN SOMETHING IS WRONG
+---------------------------
+
+The system checks your file when it loads it and tells you where the problem
+is, by line. A Trait that fails to compile is skipped and named - the rest keep
+working.
+
+  unknown slot          you wrote a name that does not exist. Check section 12.
+  unknown moment        the trigger after the / is not one the system knows.
+  wrong phase           you used (T) somewhere only (bT) is available yet.
+  no such context       you read incoming damage at a moment with no damage.
+  not a keyword         a word in the [header] that means nothing.
+  cannot be forbidden   the name is not one of the permissions in section 6.
+  not something an      a verb the system does not implement, or one given the
+  effect can do         wrong number of arguments.
+  not a function or a   a name followed by brackets that is neither. Usually a
+  condition             misspelling: benefitting for benefiting.
+
+
+14. STILL MISSING FROM THIS GUIDE
+---------------------------------
+
+These exist in the language but no published effect uses them yet, so there is
+no honest example to show. They will be filled in as the system grows:
+
+  target. and attacker. prefixes
+  allow (the opposite of forbid)
+
+And these are things the rules ask for that the language cannot yet say. Where
+an effect needs one, its file says so in a comment rather than pretending:
+
+  a chosen opponent that outlives one Maneuver (Compelled's target, Surging's
+    Focus) - so both enforce the shape of the restriction but not its subject
+
+  who inflicted a Condition (Shaken's direction of movement, Pinned's Might
+    Clash opponent)
+
+  a Condition that lasts a stated number of turns - gain() applies one until it
+    is removed, and nothing counts down
+
+  why an effect was removed, which [on removed] would need to tell Surging's
+    Fatigued apart from leaving because the Focus fell

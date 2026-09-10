@@ -1,0 +1,23 @@
+id: guard-down
+name: Guard Down
+kind: condition
+description: >
+  Flat-footed, pushed over, or in any situation that limits your defense, you
+  become vulnerable.
+text: >
+  Reduce your Dodge Rolls and all Strike Rolls made through the Parry option
+  of the Defend Maneuver by 2(T). Additionally, increase the Ki Point Cost of
+  the Guard option of the Defend Maneuver by 1/2 (after all other
+  calculations).
+
+---
+
+# Parry is its own Slot rather than Strike, because the penalty applies only
+# when Strike is rolled defensively.
+# Increasing a cost by 1/2 is multiplying it by 1.5, and a multiply lands on
+# the finished value - which is what after all other calculations means.
+
+[passive]
+dodge -= 2(T);
+parry -= 2(T);
+defend.guard.kiCost *= 1.5;

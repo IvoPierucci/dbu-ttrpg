@@ -1,0 +1,14 @@
+id: basic-attack
+name: Basic Attack
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: true
+requiresTarget: true
+profile: any
+source: Core Rule
+description: >
+  Attack with any Profile. Strike against the target's Dodge; on a win, Wound
+  less their Soak Value.
+
+---

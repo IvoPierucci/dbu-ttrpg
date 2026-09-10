@@ -24,22 +24,33 @@
         {{/if}}
       </div>
 
-      {{! Nothing spends Actions yet: that needs a notion of the current round. }}
-      <div class="stat" data-tooltip="Standard Actions per Combat Round">
+      {{#if charging}}
+      {{! While a charge is held, the rules close off most of what you could otherwise
+          do - so it is said plainly rather than only discovered by being refused. }}
+      <div class="stat stat-charging"
+           data-tooltip="Until this is thrown you suffer Guard Down and cannot use another Attacking or Standard Maneuver.">
+        <em>Charging</em>
+        <span>{{charging.name}}<span class="stat-of">{{#if charging.profile}} &middot; {{charging.profile}}{{/if}} &middot; {{charging.charges}} charge{{#unless charging.one}}s{{/unless}}</span></span>
+      </div>
+      {{/if}}
+
+      {{! What is left this round over what the round gives you. Both refill when the
+          round turns over, so the second number is the one that is yours to change. }}
+      <div class="stat" data-tooltip="Standard Actions left this round, of what each round gives you">
         <em>Standard Actions</em>
         {{#if combatEditMode}}
         <input type="number" data-action-type="standard" value="{{system.actions.standard}}" min="0"/>
         {{else}}
-        <span>{{system.actions.standard}}</span>
+        <span>{{actionsLeft.standard}}<span class="stat-of">/{{system.actions.standard}}</span></span>
         {{/if}}
       </div>
 
-      <div class="stat" data-tooltip="Counter Actions per Combat Round">
+      <div class="stat" data-tooltip="Counter Actions left this round, of what each round gives you">
         <em>Counter Actions</em>
         {{#if combatEditMode}}
         <input type="number" data-action-type="counter" value="{{system.actions.counter}}" min="0"/>
         {{else}}
-        <span>{{system.actions.counter}}</span>
+        <span>{{actionsLeft.counter}}<span class="stat-of">/{{system.actions.counter}}</span></span>
         {{/if}}
       </div>
 
@@ -158,7 +169,7 @@
         <div class="meter"><div class="meter-fill" style="width: {{capacityPercent}}%"></div></div>
       </div>
       <button type="button" data-action="resetCapacity" class="capacity-reset"
-              data-tooltip="Clear the Ki spent, the attacks made, and all Diminishing stacks">New round</button>
+              data-tooltip="Give back the Actions and the Capacity, and clear the attacks made and the Diminishing stacks. A Combat does this on its own each round.">New round</button>
       <button type="button" data-action="resetEncounter" class="capacity-reset"
               data-tooltip="Restore maneuvers limited to once per encounter">New encounter</button>
       <span class="capacity-note">{{system.capacity.remaining}} left this round</span>
@@ -166,9 +177,16 @@
   </section>
 
   <section class="panel">
-    <h3 class="panel-title">Maneuvers</h3>
+    <h3 class="panel-title">
+      Maneuvers
+      <button type="button" class="edit-toggle" data-action="grantManeuvers"
+              data-tooltip="Give this character any core Maneuver they are missing. New characters get them automatically.">
+        Add core maneuvers
+      </button>
+    </h3>
     {{#each maneuverGroups as |group|}}
-    <details class="maneuver-group" open>
+    <details class="maneuver-group" data-section="maneuvers-{{group.key}}"
+             {{#if group.open}}open{{/if}}>
       <summary>
         {{group.label}}
         {{#if group.note}}<em>{{group.note}}</em>{{/if}}
@@ -176,10 +194,16 @@
 
       <ul class="maneuver-list">
         {{#each group.maneuvers as |maneuver|}}
-        <li class="maneuver {{#if maneuver.exhausted}}maneuver-exhausted{{/if}}">
-          {{#if group.playable}}
+        {{! Draggable so it can be dropped on the hotbar, where it becomes a macro that
+            uses it - the same call this row's own button makes. }}
+        <li class="maneuver {{#if maneuver.exhausted}}maneuver-exhausted{{/if}}{{#if maneuver.unaffordable}} maneuver-unaffordable{{/if}}"
+            data-item-id="{{maneuver.itemId}}" draggable="true">
+          {{#if maneuver.playable}}
           <button type="button" class="maneuver-name rollable" data-action="useManeuver"
-                  data-maneuver="{{maneuver.id}}" data-tooltip="{{maneuver.description}}">{{maneuver.name}}</button>
+                  data-item-id="{{maneuver.itemId}}"
+                  {{#if maneuver.unaffordable}}disabled
+                  data-tooltip="No Actions left this round for this"
+                  {{else}}data-tooltip="{{maneuver.description}}"{{/if}}>{{maneuver.name}}</button>
           {{else}}
           {{! Reactive: it is played from the message of the attack it answers. }}
           <span class="maneuver-name maneuver-triggered"
@@ -199,6 +223,109 @@
       </ul>
     </details>
     {{/each}}
+  </section>
+
+  {{! States. Entered by hand for the same reason Conditions are, and shown next to
+      them because the two reference each other constantly in the rules. }}
+  <section class="panel">
+    <details class="condition-group" data-section="states"
+             {{#if openSections.states}}open{{/if}}>
+      <summary class="panel-title">
+        States
+        {{#if anyState}}
+        <span class="panel-note">{{stateSummary}}</span>
+        {{else}}
+        <span class="panel-note">Normal</span>
+        {{/if}}
+      </summary>
+
+      <ul class="condition-list">
+        {{#each states as |state|}}
+        <li class="condition {{#if state.active}}condition-active{{/if}}">
+          <button type="button" class="condition-toggle" data-action="toggleState"
+                  data-state="{{state.key}}" data-tooltip="{{state.text}}"
+                  aria-pressed="{{#if state.active}}true{{else}}false{{/if}}">
+            <span class="condition-mark">{{#if state.active}}&#10003;{{/if}}</span>
+            <span class="condition-name">{{state.name}}</span>
+          </button>
+
+          {{#if state.levelled}}
+          {{! Levels are not unlocks: at level 2 the level 1 effect is worth 2(T), so
+              which level you are at changes every number the State gives. }}
+          <span class="condition-stacks">
+            <button type="button" class="stack-step" data-action="stepState"
+                    data-state="{{state.key}}" data-step="-1"
+                    data-tooltip="One level lower">&minus;</button>
+            <span class="stack-count">{{state.level}}/{{state.levels}}</span>
+            <button type="button" class="stack-step" data-action="stepState"
+                    data-state="{{state.key}}" data-step="1"
+                    data-tooltip="One level higher">+</button>
+          </span>
+          {{/if}}
+        </li>
+        {{/each}}
+      </ul>
+    </details>
+  </section>
+
+  {{! Combat Conditions. Set by hand, because most of the ways one is inflicted are not
+      things the system resolves - though an effect can set one too, and this shows it. }}
+  <section class="panel">
+    <details class="condition-group" data-section="conditions"
+             {{#if openSections.conditions}}open{{/if}}>
+      <summary class="panel-title">
+        Combat Conditions
+        {{#if anyCondition}}
+        <span class="panel-note">{{conditionSummary}}</span>
+        {{else}}
+        <span class="panel-note">None</span>
+        {{/if}}
+      </summary>
+
+      <ul class="condition-list">
+        {{#each conditions as |condition|}}
+        <li class="condition {{#if condition.active}}condition-active{{/if}}">
+          <button type="button" class="condition-toggle" data-action="toggleCondition"
+                  data-condition="{{condition.key}}" data-tooltip="{{condition.text}}"
+                  aria-pressed="{{#if condition.active}}true{{else}}false{{/if}}">
+            <span class="condition-mark">{{#if condition.active}}&#10003;{{/if}}</span>
+            <span class="condition-name">{{condition.name}}</span>
+          </button>
+
+          {{#if condition.stacking}}
+          {{! A stacking Condition needs a number, not a tick: Broken at three stacks is
+              a different rule from Broken at one. }}
+          <span class="condition-stacks">
+            <button type="button" class="stack-step" data-action="stepCondition"
+                    data-condition="{{condition.key}}" data-step="-1"
+                    data-tooltip="One less stack">&minus;</button>
+            <span class="stack-count">{{condition.stacks}}/{{condition.maxStacks}}</span>
+            <button type="button" class="stack-step" data-action="stepCondition"
+                    data-condition="{{condition.key}}" data-step="1"
+                    data-tooltip="One more stack">+</button>
+          </span>
+          {{/if}}
+        </li>
+        {{/each}}
+      </ul>
+
+      {{#if conditionAbilities}}
+      {{! What a Condition lets you do about it: standing up from Prone, or clashing
+          free of Pinned. Each costs the Actions its own effect asks for. }}
+      <ul class="condition-abilities">
+        {{#each conditionAbilities as |ability|}}
+        <li>
+          <button type="button" class="rollable" data-action="useConditionAbility"
+                  data-source="{{ability.sourceId}}" data-block="{{ability.block}}"
+                  {{#unless ability.affordable}}disabled{{/unless}}
+                  data-tooltip="{{ability.tooltip}}">
+            {{ability.label}}
+          </button>
+        </li>
+        {{/each}}
+      </ul>
+      {{/if}}
+    </details>
   </section>
 
   {{! Stand-ins for systems that do not exist yet, so the rules that depend on them

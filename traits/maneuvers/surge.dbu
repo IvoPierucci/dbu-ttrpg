@@ -1,0 +1,12 @@
+id: surge
+name: Surge
+type: instant
+actionCost: 0
+kiCost: 0
+usageLimit: 1/encounter
+surge: true
+source: Core Rule
+description: >
+  Gather yourself and recover: take either a Healing Surge or a Ki Surge.
+
+---

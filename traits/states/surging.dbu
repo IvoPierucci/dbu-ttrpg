@@ -1,0 +1,32 @@
+id: surging
+name: Surging
+kind: state
+description: >
+  Fixed on one opponent to the exclusion of everything else, and burnt out
+  when it passes.
+text: >
+  You choose one opponent as your Focus. You cannot make Attacking Maneuvers
+  that do not include your Focus, and you cannot gain the Compelled Combat
+  Condition. When you stop Surging you become Fatigued, unless you stopped
+  because your Focus was Defeated.
+
+---
+
+# Not automated: which opponent the Focus is. The system has no notion of a
+# chosen opponent that outlives one Maneuver, so the GM names them and this
+# enforces the shape rather than the target.
+# Leaving because the Focus fell should skip the Fatigued, and does not yet:
+# on removed cannot see why it was removed.
+
+[passive]
+forbid attacksOnOthers;
+forbid condition.compelled;
+
+[on applied]
+remove("Compelled");
+
+[on removed]
+gain("Fatigued", 1);
+
+[triggered/defeated(Focus)]
+leaveState("Surging");

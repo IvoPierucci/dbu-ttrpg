@@ -1,0 +1,32 @@
+id: karmic-save
+name: Karmic Save
+kind: karma
+cost: 1
+description: >
+  Through sheer determination, you persevere to succeed in avoiding an
+  attack you would not have otherwise.
+text: >
+  If you lose a Clash that was initiated by an Opponent or due to a Challenge
+  (see - Adventure), you may use this Karmic Effect to instead succeed at that
+  Clash. A Karmic Save can only be used against Clashes that use your Saving
+  Throws, Skills, or Might.
+
+---
+
+# The three named are exactly the three the rule names. A Clash is always the
+# same category on both sides, so naming them here is naming the whole Clash.
+# A Strike against a Dodge is a Combat Roll and so is not one of them, which is
+# why this cannot be used to undo being hit.
+#
+# clash.answering is true only for the side that did not start it. The rule says
+# the Clash must have been "initiated by an Opponent", so whoever opened it
+# cannot save themselves out of losing it.
+# Inside a fight this reaches nothing: every Clash there is settled on Strike,
+# Dodge or Wound, and none of those are the three the rule names. Power Flare
+# looks like an exception and is not - it answers a Wound Roll with a Wound
+# Roll of your own, so both sides are Combat Rolls.
+
+[triggered/clash-resolved]
+requires clash.lost && clash.answering
+      && (clash.skill || clash.save || clash.might);
+clash.succeed = true;

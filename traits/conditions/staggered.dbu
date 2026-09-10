@@ -1,0 +1,16 @@
+id: staggered
+name: Staggered
+kind: condition
+description: >
+  You are dazed and unable to move.
+text: >
+  You cannot use the Movement Maneuver, the Soar Maneuver, or move through
+  your own effects.
+
+---
+
+# One flag rather than three, because the Movement Maneuver, the Soar
+# Maneuver and movement through an effect are the three things it covers.
+
+[passive]
+forbid movement;

@@ -1,4 +1,5 @@
-import { talentBonus, talentEffects } from "./talents.mjs";
+import { applySlot } from "./effects/interpreter.mjs";
+import { traitsOfKind } from "./effects/traits.mjs";
 
 /**
  * Maneuvers: anything that spends an Action.
@@ -167,7 +168,8 @@ export const DEFEND_OPTIONS = Object.freeze({
     kiCost: 0,
     // The only option whose own Wound Roll is made, so the only one that can wager.
     allowsKiWager: true,
-    summary: "Be hit automatically, then answer their Wound Roll with your own. Beat it and take no damage."
+    summary: "Be hit automatically, then answer their Wound Roll with your own, as an "
+      + "Energy or Magic Attack. Beat it and take no damage."
   },
   crossCounter: {
     label: "Cross Counter",
@@ -191,11 +193,11 @@ export function defendOptionCost(option, actor) {
     ? definition.kiCostPerBaseTier * actor.system.baseTierOfPower
     : (definition.kiCost ?? 0);
 
-  const discount = talentEffects(actor, "defendOptionCost")
-    .filter(effect => effect.option === option)
-    .reduce((total, effect) => total + (effect.perTier * actor.system.tierOfPower), 0);
-
-  return Math.max(0, base + discount);
+  // The Slot names the option, so an effect that discounts Guard cannot touch Parry.
+  // The whole cost goes through the engine rather than a hand-rolled sum, which is
+  // what makes flat and (bT) discounts work here - reading only perTier is why they
+  // silently did nothing before.
+  return Math.max(0, applySlot(actor.system.effects?.slots, `defend.${option}.kiCost`, base));
 }
 
 /** Action types a Maneuver can spend. Instant and Out-of-Sequence spend none. */
@@ -317,6 +319,61 @@ export async function declareAttack(maneuver, foundations, actor) {
 }
 
 /**
+ * Just the Profile, with no wager and no Foundation.
+ *
+ * The Energy Charge Maneuver declares an Attacking Maneuver before it is thrown, and
+ * the Profile is settled then - "the next Basic Attack has to be with that Profile".
+ * What it costs and what Foundation carries it are still the attack's own business, so
+ * they are asked when it is finally made.
+ *
+ * @returns {Promise<string|null>} A Profile id, or null if nothing was chosen.
+ */
+export async function pickProfileOnly(maneuver, foundations, hint = "") {
+  if (maneuver.profile && (maneuver.profile !== "any")) return maneuver.profile;
+
+  const groups = profileGroups(foundations);
+  let checked = false;
+
+  const sections = groups.map(group => {
+    if (!group.profiles.length) return "";
+    const items = group.profiles.map(profile => {
+      const attr = checked ? "" : "checked";
+      checked = true;
+      return `<label class="dbu-profile-option">
+        <input type="radio" name="profile" value="${profile.id}" ${attr}/>
+        <span class="dbu-profile-name">${Handlebars.escapeExpression(profile.label)}</span>
+        <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
+        <span class="dbu-profile-cost">${profile.kiCost ? `${profile.kiCost} KP` : "0 KP"}</span>
+      </label>`;
+    }).join("");
+
+    return `<details class="dbu-profile-group" open>
+      <summary>${Handlebars.escapeExpression(group.label)}</summary>
+      ${items}
+    </details>`;
+  }).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${maneuver.name} - Profile` },
+    content: `${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}
+      <div class="dbu-profile-picker">${sections}</div>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) =>
+          dialog.element.querySelector('input[name="profile"]:checked')?.value ?? null
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  return (typeof chosen === "string") ? chosen : null;
+}
+
+/**
  * The most Ki a character may wager on one attack: half their Capacity by the rule,
  * and no more than they could actually pay for.
  */
@@ -406,17 +463,41 @@ async function pickProfile(maneuver, foundations, actor) {
   return (chosen && (typeof chosen === "object")) ? chosen : null;
 }
 
+/**
+ * A Maneuver's own Ki Point cost, before anything is declared.
+ *
+ * `kiCostPerBaseTier` is the "2(bT)" notation, and it was being read for the Defend
+ * options and nowhere else - so a Maneuver written with it cost nothing at all. The two
+ * are alternatives rather than additions: a Maneuver states its price one way or the
+ * other.
+ */
+function baseKiCost(maneuver, actor) {
+  return maneuver.kiCostPerBaseTier
+    ? maneuver.kiCostPerBaseTier * (actor?.system?.baseTierOfPower ?? 1)
+    : (maneuver.kiCost ?? 0);
+}
+
 /** What a Maneuver costs in Ki once its declared Profile is taken into account. */
 export function maneuverKiCost(maneuver, declared, actor) {
-  if (!declared) return maneuver.kiCost ?? 0;
+  if (!declared) {
+    // Still discountable by name: a Talent that cheapens one Maneuver reaches it here
+    // as much as it does an attack below.
+    const own = baseKiCost(maneuver, actor);
+    return Math.max(0, applySlot(actor?.system?.effects?.slots, `${maneuver.id}.kiCost`, own));
+  }
 
   // The wager is Ki spent on the attack like any other, so it is paid here - which is
   // also what takes it out of Capacity. A Talent that cheapens Attacking Maneuvers
   // discounts the Maneuver, never the wager: the wager is what you chose to spend.
-  const base = (maneuver.kiCost ?? 0) + PROFILES[declared.profile].kiCost;
-  const discount = (actor && maneuver.attacking) ? talentBonus(actor, "attackKiCost") : 0;
+  const base = baseKiCost(maneuver, actor) + PROFILES[declared.profile].kiCost;
+  const slots = actor?.system?.effects?.slots;
 
-  return Math.max(0, base + discount) + (declared.kiWager ?? 0);
+  // A named Maneuver can be discounted on its own; an Attacking one also takes whatever
+  // applies to attacks in general.
+  let cost = applySlot(slots, `${maneuver.id}.kiCost`, base);
+  if (actor && maneuver.attacking) cost = applySlot(slots, "attack.kiCost", cost);
+
+  return Math.max(0, cost) + (declared.kiWager ?? 0);
 }
 
 /**
@@ -425,14 +506,34 @@ export function maneuverKiCost(maneuver, declared, actor) {
  */
 export function maneuverUsesLeft(actor, maneuver) {
   if (!maneuver.usageLimit) return Infinity;
-  const spent = actor.system.usedManeuvers.filter(id => id === maneuver.id).length;
+
+  const spent = (actor.system.usedManeuvers ?? []).filter(entry => usedIs(entry, maneuver)).length;
   return Math.max(0, maneuver.usageLimit.amount - spent);
 }
 
-/** Record one use of a limited Maneuver. */
+/**
+ * Whether a recorded use is a use of this Maneuver.
+ *
+ * A use is written with the period it is counted against - `round:energy-cancel` - so
+ * that a new Combat Round can clear the ones it owns and leave the per-Encounter ones
+ * alone. A bare id is a use recorded before that was true, and still counts: a Maneuver
+ * has one limit, so there is never more than one form of its own entry in the list.
+ */
+function usedIs(entry, maneuver) {
+  return (entry === maneuver.id) || (entry === `${maneuver.usageLimit.per}:${maneuver.id}`);
+}
+
+/**
+ * Record one use of a limited Maneuver.
+ *
+ * Written with its period, because that is what tells a new Round which uses it hands
+ * back. Without it every use looked alike, the Round could not tell them apart, and a
+ * Maneuver limited to once per Round was in practice once per Encounter.
+ */
 export async function recordManeuverUse(actor, maneuver) {
   if (!maneuver.usageLimit) return;
-  await actor.update({ "system.usedManeuvers": [...actor.system.usedManeuvers, maneuver.id] });
+  const entry = `${maneuver.usageLimit.per}:${maneuver.id}`;
+  await actor.update({ "system.usedManeuvers": [...actor.system.usedManeuvers, entry] });
 }
 
 /** "[1/Encounter]", as the rules write it in a Maneuver's name. */
@@ -442,7 +543,6 @@ export function usageLimitLabel(maneuver) {
   return `${amount}/${per.charAt(0).toUpperCase()}${per.slice(1)}`;
 }
 
-const SOURCE = "systems/dbu-ttrpg/maneuvers.json";
 
 /** Loaded maneuver definitions, keyed by id. Populated by loadManeuvers(). */
 const maneuvers = new Map();
@@ -461,19 +561,34 @@ export function getManeuver(id) {
  * Load the Maneuver list. Unlike races, these live in a single file: a Maneuver is
  * a rule rather than something a group is expected to extend piecemeal.
  */
+/** "1/encounter" as the shape the rest of the system reads. */
+function parseLimit(text) {
+  const match = String(text ?? "").match(/^(\d+)\s*\/\s*(round|encounter)$/i);
+  return match ? { amount: Number(match[1]), per: match[2].toLowerCase() } : null;
+}
+
 export async function loadManeuvers() {
   maneuvers.clear();
 
-  let file;
-  try {
-    file = await foundry.utils.fetchJsonWithTimeout(SOURCE);
-  }
-  catch (error) {
-    console.error("DBU TTRPG | Could not read maneuvers.json; no maneuvers will be available.", error);
-    return;
-  }
+  // Read from the files under traits/maneuvers/, the same place a homebrew Maneuver
+  // goes. The registry is still keyed by id, because several rules name a Maneuver
+  // rather than owning one - Cross Counter grants "basic-attack", and the cost of a
+  // Defend option is asked for without anyone holding the Maneuver.
+  const definitions = traitsOfKind("maneuvers").map(trait => ({
+    ...trait,
+    actionCost: trait.actionCost ?? 1,
+    kiCost: trait.kiCost ?? 0,
+    attacking: Boolean(trait.attacking),
+    requiresTarget: Boolean(trait.requiresTarget),
+    defend: Boolean(trait.defend),
+    surge: Boolean(trait.surge),
+    charge: Boolean(trait.charge),
+    cancelCharge: Boolean(trait.cancelCharge),
+    usageLimit: parseLimit(trait.usageLimit),
+    clash: trait.clashSkill ? { skill: trait.clashSkill } : null
+  }));
 
-  for (const maneuver of (Array.isArray(file?.maneuvers) ? file.maneuvers : [])) {
+  for (const maneuver of definitions) {
     if (!maneuver?.id || !maneuver?.name) {
       console.warn("DBU TTRPG | A maneuver is missing an id or a name; skipping.", maneuver);
       continue;

@@ -1,0 +1,18 @@
+id: karmic-assault
+name: Karmic Assault
+kind: karma
+cost: 2
+manual: yes
+description: >
+  With every fiber of your being, you push a ton of extra power into your attack.
+text: >
+  If you use an Ultimate Signature Technique, you may apply a Super Profile
+  of your choice to that Attacking Maneuver.
+
+---
+
+# No script. Ultimate Signature Techniques and Super Profiles are not in
+# the system yet, so there is nothing to write against - when they arrive
+# this becomes a triggered effect on declare-maneuver.
+# Marked manual so it is offered rather than greyed out: the table can
+# apply the Super Profile by hand and the Karma is still spent.

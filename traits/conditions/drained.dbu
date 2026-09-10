@@ -1,0 +1,15 @@
+id: drained
+name: Drained
+kind: condition
+description: >
+  Having been drained of energy, you have a harder time replenishing the
+  energy you have lost.
+text: >
+  Halve your Surgency and increase the Ki Point Cost of all Attacking
+  Maneuvers by 2(T).
+
+---
+
+[passive]
+surgency *= 0.5;
+attack.kiCost += 2(T);

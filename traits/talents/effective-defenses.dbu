@@ -1,0 +1,19 @@
+id: effective-defenses
+name: Effective Defenses
+prerequisites:
+description: >
+  Able to withstand damage more efficiently than most, you are nearly
+  indestructible.
+text: >
+  Reduce the Ki Point Cost for the Guard option of the Defend Maneuver by 2(T).
+  Increase your Soak Value by 2(T) (before any calculations) for the duration of
+  an Attacking Maneuver that targets you if you use the Defend Maneuver in
+  response to it.
+
+---
+
+[passive]
+defend.guard.kiCost -= 2(T);
+
+[automatic/defending]
+soakValue.base += 2(T);

@@ -1,0 +1,30 @@
+id: raging
+name: Raging
+kind: state
+levels: 3
+description: >
+  Fury sharpens what you can land and dulls what you can feel.
+text: >
+  Level 1: increase your Wound Rolls by L(T) and your Botch Range by L.
+  Level 2: increase your Soak Value by L(T).
+  Level 3: you suffer no Health Threshold Penalties, and once per Combat Round
+  you may make a Basic Attack out of sequence.
+
+---
+
+# Everything accumulates upwards: at level 3 the level 1 and level 2 effects
+# are still running, and they are worth 3(T) rather than 1(T), because L is
+# the level reached and not the level that unlocked them.
+
+[passive from 1]
+wound += L(T);
+botchRange += L;
+
+[passive from 2]
+soakValue += L(T);
+
+[passive from 3]
+threshold.penalty = 0;
+
+[triggered/counter-window, 1/round, from 3]
+grantOutOfSequence("basic-attack");

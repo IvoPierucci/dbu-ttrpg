@@ -2,18 +2,24 @@
   "id": "dbu-ttrpg",
   "title": "DBU TTRPG",
   "description": "An unofficial Foundry VTT implementation of the Dragon Ball Universe Tabletop RPG (dbu-rpg.com).",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "compatibility": {
     "minimum": "13",
     "verified": "14",
     "maximum": "14"
   },
   "authors": [
-    { "name": "IvoPierucci" }
+    {
+      "name": "IvoPierucci"
+    }
   ],
-  "esmodules": ["module/dbu-ttrpg.mjs"],
+  "esmodules": [
+    "module/dbu-ttrpg.mjs"
+  ],
   "socket": true,
-  "styles": ["styles/dbu-ttrpg.css"],
+  "styles": [
+    "styles/dbu-ttrpg.css"
+  ],
   "languages": [
     {
       "lang": "en",
@@ -28,7 +34,21 @@
       "path": "packs/talents",
       "type": "Item",
       "system": "dbu-ttrpg",
-      "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" }
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "maneuvers",
+      "label": "DBU Maneuvers",
+      "path": "packs/maneuvers",
+      "type": "Item",
+      "system": "dbu-ttrpg",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
     }
   ],
   "documentTypes": {
@@ -36,7 +56,8 @@
       "character": {}
     },
     "Item": {
-      "talent": {}
+      "talent": {},
+      "maneuver": {}
     }
   },
   "primaryTokenAttribute": "life",

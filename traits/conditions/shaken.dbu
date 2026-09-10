@@ -1,0 +1,17 @@
+id: shaken
+name: Shaken
+kind: condition
+description: >
+  Wrought with fear, you cannot fight properly.
+text: >
+  You cannot willingly use any effect to move towards the Character that
+  inflicted this Combat Condition. Additionally, reduce your Strike Rolls by
+  2(T).
+
+---
+
+# Not automated: moving towards whoever inflicted this. The system does not
+# record who that was, and movement is not resolved through effects.
+
+[passive]
+strike -= 2(T);

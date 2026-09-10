@@ -1,0 +1,40 @@
+id: energy-charge
+name: Energy Charge
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 2
+charge: true
+exploitable: All adjacent Opponents
+source: Core Rule
+description: >
+  Charge up your energy into a single, high-power attack.
+text: >
+  Declare an Attacking Maneuver through either the Basic Attack Maneuver or
+  Signature Technique Maneuver. That declared Attacking Maneuver gains an Energy
+  Charge. Each time you would use the Energy Charge Maneuver after declaring an
+  Attacking Maneuver but before using the declared Attacking Maneuver, any use of
+  the Energy Charge Maneuver instead only grants an additional Energy Charge to
+  the originally declared Attacking Maneuver. Until you use the chosen Attacking
+  Maneuver, you suffer from the Guard Down Combat Condition and you cannot use
+  any other Attacking Maneuver or Standard Maneuver.
+
+---
+
+# No script, and not for want of one.
+#
+# What this Maneuver does is declare something and then keep adding to it across
+# later uses, and a script runs once and is done. So `charge: true` in the header
+# hands it to the code that can hold a declaration open - the same way `surge` and
+# `defend` are handled - and what it does is written there rather than here.
+#
+# What it comes to:
+#   - the first use asks which Attacking Maneuver is being charged and with which
+#     Profile, and gives it one Energy Charge. The Profile is part of the declaration:
+#     when the attack is finally thrown it is made with that Profile and no other,
+#     which is what makes this a declaration rather than a reminder
+#   - every use after that gives that same Maneuver another, up to seven
+#   - Guard Down lasts as long as the charging does
+#   - no other Attacking or Standard Maneuver may be used meanwhile - this one and
+#     the declared attack are the two exceptions, both named by the rule
+#   - each charge adds 1d6(T) to the attack's Wound Roll, or 1d8(T) if the Maneuver
+#     carries the `signature` tag

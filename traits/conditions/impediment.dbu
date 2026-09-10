@@ -1,0 +1,30 @@
+id: impediment
+name: Impediment
+kind: condition
+description: >
+  A catch-all combat condition that reflects a worsened mental state.
+text: >
+  Do not apply your Tier of Power Extra Dice (this only applies to a single
+  instance of Tier of Power Extra Dice - meaning that if you apply multiple
+  instances through effects, you only remove a single instance of them). If you
+  do not possess Tier of Power Extra Dice, reduce your Combat Rolls by 2(bT)
+  instead.
+  Impediment has a unique interaction with the Superior State. If you are in
+  the Superior State while suffering from the Impediment Combat Condition,
+  ignore the effects of the Impediment Combat Condition, but also ignore the
+  first effect of the Superior State.
+
+---
+
+# The Superior State cancels this outright. The other half of that bargain -
+# Superior also losing its first effect - is written in the Superior State,
+# since that is the effect being given up.
+
+[passive]
+if (!inState("Superior")) {
+    if (dice.extra.instances > 0) {
+        dice.extra.instances -= 1;
+    } else {
+        combatRolls -= 2(bT);
+    }
+}

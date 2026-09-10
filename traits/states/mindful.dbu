@@ -1,0 +1,29 @@
+id: mindful
+name: Mindful
+kind: state
+levels: 3
+description: >
+  Clarity, bought at the cost of force.
+text: >
+  Level 1: reduce your Critical Target by L and your Wound Rolls by L(T).
+  Level 2: you suffer no Health Threshold Penalties, and regain 2L(bT) Ki
+  Points whenever you use a Counter Maneuver.
+  Level 3: gain one extra Counter Action each Combat Round.
+
+---
+
+# The Critical Target never falls below 7 whatever this says: that floor is in
+# the pipeline rather than here, so no effect has to remember it.
+
+[passive from 1]
+criticalTarget -= L;
+wound -= L(T);
+
+[passive from 2]
+threshold.penalty = 0;
+
+[triggered/counter-maneuver, from 2]
+ki.value += 2 * L(bT);
+
+[passive from 3]
+actions.counter += 1;

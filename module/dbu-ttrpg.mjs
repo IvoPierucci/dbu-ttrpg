@@ -2,10 +2,17 @@ import DBUCharacterData from "./data/actor-character.mjs";
 import DBUCharacterSheet from "./sheets/actor-character-sheet.mjs";
 import DBUTalentData from "./data/item-talent.mjs";
 import DBUTalentSheet from "./sheets/item-talent-sheet.mjs";
+import DBUManeuverData from "./data/item-maneuver.mjs";
+import DBUManeuverSheet from "./sheets/item-maneuver-sheet.mjs";
 import { registerChatHooks, registerManeuverSocket } from "./chat.mjs";
+import { registerDebugTools } from "./effects/debug.mjs";
+import { forget, forgetAll } from "./effects/registry.mjs";
+import { coreManeuverItems, registerHotbarDrop, registerMacroApi } from "./use-maneuver.mjs";
 import { loadRaces, racialAttributeIncrease, racialLifeModifier } from "./races.mjs";
 import { loadManeuvers } from "./maneuvers.mjs";
-import { loadTalents } from "./talents.mjs";
+import { loadTraits } from "./effects/traits.mjs";
+import { registerCombatHooks, registerDefeatHooks } from "./combat.mjs";
+import { registerConditionHooks } from "./conditions.mjs";
 
 Hooks.once("init", () => {
   console.log("DBU TTRPG | Initializing system");
@@ -13,6 +20,21 @@ Hooks.once("init", () => {
   // Register the character data model for the "character" Actor type
   CONFIG.Actor.dataModels.character = DBUCharacterData;
   CONFIG.Item.dataModels.talent = DBUTalentData;
+  CONFIG.Item.dataModels.maneuver = DBUManeuverData;
+
+  // Initiative. Without this, Foundry has no formula to roll at all, and the button in
+  // the Combat Tracker does nothing - which is exactly how it behaved.
+  //
+  // `@initiativeBonus` reads off the prepared character: Actor#getRollData returns
+  // `system`, so the derived value is what the formula sees, effects included.
+  //
+  // Initiative Advantage is deliberately not in here. There is a Slot for it and a rule
+  // behind it, but not one written down in this system yet, and guessing at how it
+  // breaks a tie would put a rule in the game that is not in the book.
+  CONFIG.Combat.initiative = {
+    formula: `${DBUCharacterData.BASE_DIE} + @initiativeBonus`,
+    decimals: 0
+  };
 
   // Register the character sheet using the v13+/v14 ApplicationV2 sheet registration API
   const DocumentSheetConfig = foundry.applications.apps.DocumentSheetConfig;
@@ -30,7 +52,17 @@ Hooks.once("init", () => {
     label: "DBU Talent Sheet"
   });
 
+  DocumentSheetConfig.registerSheet(foundry.documents.Item, "dbu-ttrpg", DBUManeuverSheet, {
+    types: ["maneuver"],
+    makeDefault: true,
+    label: "DBU Maneuver Sheet"
+  });
+
   registerChatHooks();
+  registerHotbarDrop();
+  registerCombatHooks();
+  registerDefeatHooks();
+  registerConditionHooks();
 });
 
 // Recovering above a Health Threshold clears the Steadfast Check recorded there, so
@@ -57,9 +89,19 @@ Hooks.on("preUpdateActor", (actor, changes) => {
 // is reliably available, and ready is the backstop for the case where it was not.
 Hooks.once("ready", registerManeuverSocket);
 
+// Compiled effects are cached by the content they came from, so a stale entry cannot
+// happen - an edit produces a different key. These only bound how much is kept.
+Hooks.on("updateItem", item => forget(item.uuid));
+Hooks.on("deleteItem", item => forget(item.uuid));
+
 Hooks.once("setup", async () => {
   registerManeuverSocket();
-  await Promise.all([loadRaces(), loadManeuvers(), loadTalents()]);
+  registerDebugTools();
+  registerMacroApi();
+  // Traits first: the Maneuvers are built from those files, so loading the two at the
+  // same time would sometimes find nothing there.
+  await loadTraits();
+  await Promise.all([loadRaces(), loadManeuvers()]);
   for (const actor of game.actors ?? []) actor.prepareData();
 });
 
@@ -88,4 +130,12 @@ Hooks.on("preCreateActor", (actor, data, options, userId) => {
   updates["system.ki.value"] = DBUCharacterData.maxKi({ powerLevel });
 
   actor.updateSource(updates);
+
+  // Every character carries their own copies of the Core Maneuvers. That is what lets
+  // one be dragged to the hotbar, and what makes room in the same list for the
+  // Signature Techniques and Unique Abilities bought per character.
+  if (!actor.items.size) {
+    const starting = coreManeuverItems();
+    if (starting.length) actor.updateSource({ items: starting });
+  }
 });

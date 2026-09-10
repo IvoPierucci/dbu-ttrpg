@@ -425,7 +425,12 @@
   width: 56px;
 }
 
-.dbu-defend-wager input:disabled {
+.dbu-defend-wager select {
+  max-width: 84px;
+}
+
+.dbu-defend-wager input:disabled,
+.dbu-defend-wager select:disabled {
   opacity: 0.4;
 }
 
@@ -1500,6 +1505,11 @@
   color: #c0392b;
 }
 
+/* Karma is spent rather than rolled, so it reads as a cost rather than a result. */
+.dbu-check-total.dbu-karma {
+  color: #9b59b6;
+}
+
 /* ==========================================================================
    Chat log
    ==========================================================================
@@ -1767,4 +1777,380 @@
 .application.dbu-dialog .dialog-buttons button:hover {
   background: rgba(var(--dbu-action), 0.4);
   border-color: rgba(var(--dbu-action), 1);
+}
+
+/* --- The script editor on a Talent ---------------------------------------- */
+
+.dbu-ttrpg .effect-script {
+  width: 100%;
+  font-family: "Consolas", "Menlo", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  tab-size: 4;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--dbu-text);
+  border: 1px solid var(--dbu-border);
+  border-radius: 3px;
+  resize: vertical;
+}
+
+/* What is wrong, by line. Loud on purpose: a Trait that does not compile does
+   nothing, and finding that out in play is the failure this replaces. */
+.dbu-ttrpg .effect-errors {
+  margin: 6px 0 0;
+  padding: 6px 8px 6px 24px;
+  list-style: disc;
+  background: rgba(209, 84, 74, 0.15);
+  border-left: 3px solid #d1544a;
+  font-size: 11px;
+}
+
+.dbu-ttrpg .effect-ok {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #2f9e55;
+}
+
+/* What the script comes to for whoever holds it. */
+.dbu-ttrpg .effect-resolved {
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+.dbu-ttrpg .effect-resolved > summary {
+  cursor: pointer;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .effect-resolved ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  font-family: "Consolas", "Menlo", monospace;
+  opacity: 0.85;
+}
+
+.dbu-ttrpg .panel-hint {
+  font-size: 10px;
+  font-weight: normal;
+  opacity: 0.6;
+}
+
+.dbu-ttrpg .effect-text {
+  width: 100%;
+  resize: vertical;
+}
+
+/* --- Combat Conditions ---------------------------------------------------- */
+
+/* Collapsed by default when the character has none, so the Combat tab is not
+   dominated by a checklist of eighteen things that are not happening. */
+.dbu-ttrpg .condition-group > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.dbu-ttrpg .condition-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dbu-ttrpg .condition-group > summary::before {
+  content: "\25B8";
+  display: inline-block;
+  width: 10px;
+  color: var(--dbu-text-dim);
+  transition: transform 0.1s ease;
+}
+
+.dbu-ttrpg .condition-group[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.dbu-ttrpg .condition-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 2px 10px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbu-ttrpg .condition {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 1px 0;
+}
+
+.dbu-ttrpg .condition-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1 1 auto;
+  width: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  line-height: 1.4;
+  cursor: pointer;
+  color: var(--dbu-text-dim);
+}
+
+/* A fixed-width box for the tick, so the names line up whether one is held or not. */
+.dbu-ttrpg .condition-mark {
+  flex: 0 0 auto;
+  width: 12px;
+  text-align: center;
+  color: var(--dbu-accent);
+}
+
+/* One held is worth picking out of eighteen at a glance. */
+.dbu-ttrpg .condition-active .condition-toggle {
+  color: var(--dbu-accent);
+  font-weight: bold;
+}
+
+.dbu-ttrpg .condition-toggle:hover {
+  color: var(--dbu-text);
+}
+
+.dbu-ttrpg .condition-stacks {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+
+.dbu-ttrpg .stack-count {
+  min-width: 26px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .condition-active .stack-count {
+  color: var(--dbu-text);
+}
+
+.dbu-ttrpg .stack-step,
+.dbu-ttrpg .karma-step {
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  padding: 0;
+  flex: 0 0 auto;
+  border: 1px solid var(--dbu-border);
+  border-radius: 3px;
+  background: var(--dbu-panel-raised);
+  color: var(--dbu-text-dim);
+  cursor: pointer;
+}
+
+.dbu-ttrpg .stack-step:hover,
+.dbu-ttrpg .karma-step:hover {
+  border-color: var(--dbu-border-strong);
+  color: var(--dbu-text);
+}
+
+/* What a Condition lets you do about it: standing up, clashing free. */
+.dbu-ttrpg .condition-abilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--dbu-border);
+  list-style: none;
+}
+
+.dbu-ttrpg .condition-abilities button[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* --- Standing (Biography) ------------------------------------------------- */
+
+.dbu-ttrpg .bio-standing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.dbu-ttrpg .karma {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dbu-ttrpg .karma-label {
+  flex: 1 1 auto;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .karma-count {
+  min-width: 34px;
+  text-align: center;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .karma-max {
+  font-weight: normal;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .bio-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dbu-text-dim);
+  cursor: pointer;
+}
+
+/* Spending Karma after the result is known, offered on the settled card. */
+.dbu-ttrpg .dbu-karma-button,
+.dbu-karma-button {
+  border-color: #9b59b6;
+  color: #c39bd3;
+}
+
+.dbu-ttrpg .dbu-karma-button:hover,
+.dbu-karma-button:hover {
+  border-color: #c39bd3;
+  color: #e8daef;
+}
+
+/* Shown in place of a total: a Karmic Save is not a number, it is an outcome. */
+.dbu-ttrpg .dbu-clash-total.dbu-karmic-save,
+.dbu-clash-total.dbu-karmic-save {
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  color: #c39bd3;
+}
+
+/* A total that belongs to someone else. The dash holds the column so the card keeps
+   its shape, and is dimmed so it reads as withheld rather than as a result of zero. */
+.dbu-ttrpg .dbu-clash-total.dbu-clash-private,
+.dbu-clash-total.dbu-clash-private {
+  cursor: default;
+  text-decoration: none;
+  color: var(--dbu-chat-dim, #8f8f8f);
+  font-weight: normal;
+}
+
+
+/* A stat whose label rolls it. The button carries no chrome of its own - the card is
+   already the frame - so it reads as the label it replaced until you hover it. */
+.dbu-ttrpg .stat-roll {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.dbu-ttrpg .stat-roll:hover em {
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .stat-roll:focus-visible {
+  outline: 1px solid var(--dbu-accent);
+  outline-offset: 2px;
+}
+
+/* The "of how many" half of a pool, kept quieter than the number that changes. */
+.dbu-ttrpg .stat-of {
+  font-size: 11px;
+  font-weight: normal;
+  color: var(--dbu-text-dim);
+}
+
+/* Out of Actions rather than out of uses: the round is what refills it, not the
+   Encounter, so it is dimmed rather than struck through. */
+.dbu-ttrpg .maneuver-unaffordable .maneuver-name {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* --- Dropdown lists -------------------------------------------------------- */
+
+/* A <select> is two things: the closed control, which ordinary background and colour
+   rules reach, and the list the browser opens when you click it, which they do not.
+   That list is painted by the platform, and left to itself it comes up light - grey
+   options carrying the white text they inherited, which is close to unreadable on
+   every dropdown this system has.
+
+   `color-scheme` is what tells the platform to paint it dark. It is a real property
+   here, not the `--color-scheme` variable set alongside it elsewhere; that one only
+   does anything where Foundry reads it. The explicit option colours below back it up
+   for engines that paint the list without consulting the scheme. */
+
+.dbu-ttrpg select,
+.application.dbu-dialog select {
+  color-scheme: dark;
+}
+
+.dbu-ttrpg select option {
+  background: var(--dbu-panel-raised);
+  color: var(--dbu-text);
+}
+
+.application.dbu-dialog select option {
+  background: var(--dbu-chat-bg);
+  color: var(--dbu-chat-text);
+}
+
+/* Foundry's own dark theme leaves a disabled option nearly invisible; this keeps it
+   readable as the "not available" it is meant to be. */
+.dbu-ttrpg select option:disabled {
+  color: var(--dbu-text-dim);
+}
+
+.application.dbu-dialog select option:disabled {
+  color: var(--dbu-chat-dim);
+}
+
+/* A dialog sizes itself to its content, so one long line makes the whole window wide
+   enough to hold it. Capping the content is what keeps a rules quotation from
+   stretching the window off the screen; anything longer wraps instead. */
+.application.dbu-dialog .dbu-respond-dialog,
+.application.dbu-dialog .dbu-defend-list {
+  max-width: 560px;
+}
+
+/* The name carries the full wording on hover, so it reads as something to point at. */
+.dbu-respond-name[data-tooltip] {
+  cursor: help;
+}
+
+/* The race's own Traits, offered as toggles beside its other grants. */
+.dbu-ttrpg .racial-traits {
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.dbu-ttrpg .racial-traits .condition-toggle {
+  flex: 0 1 auto;
+}
+
+.dbu-ttrpg .racial-taken .condition-name {
+  color: var(--dbu-accent);
+  font-weight: bold;
+}
+
+/* A charge being held: the accent marks it as something in progress rather than a
+   number that simply is. */
+.dbu-ttrpg .stat-charging {
+  border-color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .stat-charging span {
+  font-size: 12px;
+  color: var(--dbu-accent);
 }

@@ -1,0 +1,23 @@
+id: determined
+name: Determined
+kind: state
+description: >
+  One last effort, and then nothing left.
+text: >
+  Your Attacking Maneuvers hit automatically and you suffer no Health
+  Threshold Penalties. At the start of your next turn you leave this State and
+  your turn is skipped.
+
+---
+
+# first means once per Encounter, which is the closest span the system tracks
+# to once per entry - a State left and re-entered in the same Encounter will
+# not spend itself twice.
+
+[passive]
+attack.autoHit = true;
+threshold.penalty = 0;
+
+[automatic/start-of-turn, first]
+leaveState("Determined");
+turn.skip = true;

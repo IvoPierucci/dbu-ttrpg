@@ -1,0 +1,32 @@
+id: karmic-boost
+name: Karmic Boost
+kind: karma
+cost: 1
+description: >
+  You pour your heart and soul into the fight to ensure your desired outcome.
+text: >
+  After making a Combat Roll, when you know the result of the Clash it was
+  involved in, you may roll an Extra Dice equal to your Greater Dice (before
+  any modifications) and then increase the Dice Score by 1(bT). Apply this Dice
+  Score to your Combat Roll. This may change the outcome of the Clash that
+  Combat Roll was involved in.
+
+---
+
+# Taken after the Clash is settled, which is why the moment is
+# clash-resolved and not combat-roll: the whole point is choosing once you
+# know whether you need it.
+# greaterDice is your Greater Dice before any modification, which is what
+# the named amount reads.
+# clash.combatRoll is what keeps this off a Skill Clash: the rule says "after
+# making a Combat Roll", and Strike, Dodge and Wound are the Combat Rolls -
+# a Thumb War is not one of them.
+# clash.lost is what keeps it off a Wound Roll nobody answered. The rule wants
+# "the Clash it was involved in", and an unopposed Wound Roll is not one - so
+# there is no loser and this rules itself out. Power Flare answers the Wound
+# with Might, and then there is a Clash and a loser, and this applies again.
+
+[triggered/clash-resolved]
+requires clash.lost && clash.combatRoll;
+roll.dice += greaterDice;
+roll.total += 1(bT);

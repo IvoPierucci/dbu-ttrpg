@@ -1,0 +1,18 @@
+id: transfigured
+name: Transfigured
+kind: condition
+description: >
+  You have been transformed into an object, unable to fight as effectively as
+  normal.
+text: >
+  A Transfigured Character has their Combat Rolls reduced by 2(bT) and cannot
+  use any Signature Techniques or Unique Abilities, and can only make Attacking
+  Maneuvers of the Physical Attack Type.
+
+---
+
+[passive]
+combatRolls -= 2(bT);
+forbid signatureTechniques;
+forbid uniqueAbilities;
+forbid nonPhysicalAttacks;

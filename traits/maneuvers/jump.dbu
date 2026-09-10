@@ -1,0 +1,11 @@
+id: jump
+name: Jump
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+source: Core Rule
+description: >
+  Placeholder maneuver, used to exercise the action economy.
+
+---
