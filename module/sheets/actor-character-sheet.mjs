@@ -1218,7 +1218,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const name = skill.specialization ? `${skill.label} (${skill.specialization})` : skill.label;
     const { BASE_DIE } = DBUCharacterData;
-    const bonus = skill.bonus >= 0 ? `+${skill.bonus}` : String(skill.bonus);
+    // The Skill Bonus, plus whatever applies only to rolling it. The two are separate
+    // because a bonus to Stealth Rolls is not a higher Stealth Bonus - it does not
+    // raise the number on the sheet, and it is not what another Skill is compared to.
+    const total = skill.bonus + skill.rollBonus;
+    const bonus = total >= 0 ? `+${total}` : String(total);
 
     // The confirmation and the roll window are the same dialog: asking twice for one
     // roll would be a click for nothing.
@@ -1231,7 +1235,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // A Skill's critical die is a flat 1d4: it does not grow with Tier of Power.
     return this.#rollCheck({
-      bonus: skill.bonus,
+      bonus: total,
       flavor: `${name} Check`,
       criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,
       skillRoll: true

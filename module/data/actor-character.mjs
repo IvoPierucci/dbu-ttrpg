@@ -1008,9 +1008,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         key,
         ranks,
         sizeAdjustment,
-        // Skill Bonus is the governing Attribute's Score plus 2 per Rank.
-        bonus: Math.max(0,
+        // Skill Bonus is the governing Attribute's Score plus 2 per Rank, and then
+        // whatever effects do to it - Blinded halving Perception, Sleeping taking 2 off
+        // it. That last step had been missing: the Slot existed and was written by two
+        // Conditions, and nothing here ever read it.
+        bonus: withEffects(this, `skill.${key}.bonus`,
           atts[skill.attribute].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment),
+        // Filled in after the last phase, since `skill.<key>` is a LATE Slot and Skills
+        // are settled before it runs.
+        rollBonus: 0,
         specialization: skill.encompassing ? this.skillSpecializations[key] : "",
         // A Required Skill with no Ranks cannot be rolled at all - it always fails.
         untrained: Boolean(skill.required) && (ranks === 0),
@@ -1207,6 +1213,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // The last phase. It waits for the Thresholds, because Stress Bonus counts their
     // failures and an effect can change what one costs.
     runPhase(this, "late");
+
+    // What effects add to rolls made *with* a Skill, as opposed to the Skill Bonus
+    // itself: a bonus to Stealth Rolls does not raise the Stealth Bonus on the sheet.
+    // It is LATE, so it lands here rather than where the Skills were built.
+    for (const [key, entry] of Object.entries(this.skills)) {
+      entry.rollBonus = withEffects(this, `skill.${key}`, 0, { min: null });
+    }
 
     this.threshold.penalty = Math.max(0,
       withEffects(this, "threshold.penalty", this.threshold.penalty));
