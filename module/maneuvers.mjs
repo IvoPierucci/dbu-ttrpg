@@ -497,17 +497,13 @@ function baseKiCost(maneuver, actor) {
 
 /** What a Maneuver costs in Ki once its declared Profile is taken into account. */
 export function maneuverKiCost(maneuver, declared, actor) {
-  if (!declared) {
-    // Still discountable by name: a Talent that cheapens one Maneuver reaches it here
-    // as much as it does an attack below.
-    const own = baseKiCost(maneuver, actor);
-    return Math.max(0, applySlot(actor?.system?.effects?.slots, `${maneuver.id}.kiCost`, own));
-  }
+  // One path whether or not a Profile has been declared. It used to fork, and the
+  // branch that answers "what does this cost" for the sheet had quietly lost the
+  // half that applies to Attacking Maneuvers - so Drained raising the price of every
+  // attack was true when you paid and invisible when you looked.
+  const base = baseKiCost(maneuver, actor)
+    + (declared ? PROFILES[declared.profile].kiCost : 0);
 
-  // The wager is Ki spent on the attack like any other, so it is paid here - which is
-  // also what takes it out of Capacity. A Talent that cheapens Attacking Maneuvers
-  // discounts the Maneuver, never the wager: the wager is what you chose to spend.
-  const base = baseKiCost(maneuver, actor) + PROFILES[declared.profile].kiCost;
   const slots = actor?.system?.effects?.slots;
 
   // A named Maneuver can be discounted on its own; an Attacking one also takes whatever
@@ -515,7 +511,10 @@ export function maneuverKiCost(maneuver, declared, actor) {
   let cost = applySlot(slots, `${maneuver.id}.kiCost`, base);
   if (actor && maneuver.attacking) cost = applySlot(slots, "attack.kiCost", cost);
 
-  return Math.max(0, cost) + (declared.kiWager ?? 0);
+  // The wager is Ki spent on the attack like any other, so it is paid here - which is
+  // also what takes it out of Capacity. A Talent that cheapens Attacking Maneuvers
+  // discounts the Maneuver, never the wager: the wager is what you chose to spend.
+  return Math.max(0, cost) + (declared?.kiWager ?? 0);
 }
 
 /**
