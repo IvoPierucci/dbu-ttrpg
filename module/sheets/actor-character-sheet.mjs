@@ -1218,10 +1218,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const name = skill.specialization ? `${skill.label} (${skill.specialization})` : skill.label;
     const { BASE_DIE } = DBUCharacterData;
-    // The Skill Bonus, plus whatever applies only to rolling it. The two are separate
-    // because a bonus to Stealth Rolls is not a higher Stealth Bonus - it does not
-    // raise the number on the sheet, and it is not what another Skill is compared to.
-    const total = skill.bonus + skill.rollBonus;
+    // What is rolled, which is the Skill Bonus with everything that applies only to
+    // rolling it. The two are separate because a bonus to Stealth Rolls is not a
+    // higher Stealth Bonus - it does not raise the number on the sheet, and it is not
+    // what another Skill is compared to.
+    const total = skill.roll;
     const bonus = total >= 0 ? `+${total}` : String(total);
 
     // The confirmation and the roll window are the same dialog: asking twice for one

@@ -1014,9 +1014,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // Conditions, and nothing here ever read it.
         bonus: withEffects(this, `skill.${key}.bonus`,
           atts[skill.attribute].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment),
-        // Filled in after the last phase, since `skill.<key>` is a LATE Slot and Skills
-        // are settled before it runs.
-        rollBonus: 0,
+        // What is rolled, filled in after the last phase: `skill.<key>` is a LATE
+        // Slot and Skills are settled before it runs. Starts as the Bonus, since
+        // that is what it is a modification of.
+        roll: 0,
         specialization: skill.encompassing ? this.skillSpecializations[key] : "",
         // A Required Skill with no Ranks cannot be rolled at all - it always fails.
         untrained: Boolean(skill.required) && (ranks === 0),
@@ -1214,11 +1215,18 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // failures and an effect can change what one costs.
     runPhase(this, "late");
 
-    // What effects add to rolls made *with* a Skill, as opposed to the Skill Bonus
-    // itself: a bonus to Stealth Rolls does not raise the Stealth Bonus on the sheet.
-    // It is LATE, so it lands here rather than where the Skills were built.
+    // What a Skill actually rolls with, as opposed to the Skill Bonus itself: a bonus
+    // to Stealth Rolls does not raise the Stealth Bonus on the sheet, or the number
+    // another Skill is measured against. It is LATE, so it lands here rather than
+    // where the Skills were built.
+    //
+    // The Skill Bonus is the *base* of this and not something added to it afterwards.
+    // Calculation Priority puts a multiplication after every other modification to a
+    // value, so a multiplication written here has to find the whole roll already
+    // assembled - against a base of nothing it would double the bonuses to the roll
+    // and leave the Skill Bonus, which is most of it, untouched.
     for (const [key, entry] of Object.entries(this.skills)) {
-      entry.rollBonus = withEffects(this, `skill.${key}`, 0, { min: null });
+      entry.roll = withEffects(this, `skill.${key}`, entry.bonus);
     }
 
     this.threshold.penalty = Math.max(0,
@@ -1281,7 +1289,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       return [save, {
         label: save.charAt(0).toUpperCase() + save.slice(1),
         racial,
-        value: Math.max(0, atts[attribute].score + (racial ? this.perBaseTier(1) : 0)),
+        // Everything that makes up the Saving Throw goes in before the Slot, so a
+        // multiplication written against it lands on the finished value - which is
+        // what Calculation Priority asks. The Slot had had no reader at all.
+        value: withEffects(this, `save.${save}`,
+          atts[attribute].score + (racial ? this.perBaseTier(1) : 0)),
         criticalTarget: racial
           ? Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, this.criticalTarget - 1)
           : this.criticalTarget
