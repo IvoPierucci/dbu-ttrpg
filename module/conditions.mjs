@@ -137,7 +137,12 @@ export async function setCondition(actor, key, stacks) {
   if (wanted <= 0) delete conditions[key];
   else conditions[key] = wanted;
 
-  await actor.update({ "system.conditions": replaceObject(conditions) });
+  // Relayed when the character is not yours. A Condition is often put on somebody by
+  // somebody else - Direct Hit rattles the attacker, and it is the attacker's own
+  // client that works out there was no Damage - and writing to an Actor you do not own
+  // throws, taking whatever was mid-resolution down with it.
+  const { requestActorUpdate } = await import("./chat.mjs");
+  await requestActorUpdate(actor, { "system.conditions": replaceObject(conditions) });
   return true;
 }
 

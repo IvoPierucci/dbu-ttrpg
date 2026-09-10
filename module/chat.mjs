@@ -210,7 +210,7 @@ async function applyActorUpdate(actorUuid, changes) {
  * often not the one that owns the character rolling - so spending a triggered effect
  * has to be relayed the same way a message edit is.
  */
-function requestActorUpdate(actor, changes) {
+export function requestActorUpdate(actor, changes) {
   if (actor.isOwner) return actor.update(changes);
   if (!game.users.activeGM) return;
   game.socket.emit(CHANNEL, { type: "actor", actorUuid: actor.uuid, changes });
@@ -861,6 +861,11 @@ async function resettleWound(message, situation, attack, result) {
     : Math.max(0, effectiveWound - (result.soak ?? 0) - (result.reduction ?? 0));
   const damage = Math.max(0, applySlot(
     { "incoming.damage": result.incomingDamage }, "incoming.damage", raw));
+
+  // A Karmic Effect that takes the Damage down to nothing rattles the attacker exactly
+  // as a Direct Hit that did so on its own would.
+  const attacker = fromUuidSync(attack.attackerUuid);
+  if (attacker) await maybeShakeAttacker(attacker, attack, defence, damage);
 
   requestEdit(message, {
     type: "attack",
@@ -2281,6 +2286,42 @@ export async function postAttack(actor, target, maneuver,
 }
 
 /**
+ * Direct Hit rattling an attacker who threw everything into a blow that did nothing.
+ *
+ * Both halves of the condition are the attacker's own investment - the Charges they fed
+ * it, or the Ki they wagered - so what is read is theirs, not the defender's.
+ *
+ * Not automated: "until the end of their next turn". Combat Conditions have no notion
+ * of a duration yet, so this applies Shaken and the table takes it off.
+ */
+async function maybeShakeAttacker(attacker, attack, defence, damage) {
+  const rule = defence.shakesOnNoDamage;
+  if (!rule || (damage > 0)) return;
+
+  // Once. The Wound step settles this, and so does a Karmic Effect that later takes the
+  // Damage to nothing - both are the same blow amounting to the same thing.
+  if (attacker.system.conditions?.shaken) return;
+
+  const wagered = attack.kiWager ?? 0;
+  const threshold = Math.ceil((attacker.system.capacity.max ?? 0) / rule.wagerFraction);
+  const invested = ((attack.energyCharges ?? 0) >= rule.charges)
+    || (wagered > 0 && (wagered >= threshold));
+  if (!invested) return;
+
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(attacker, "shaken", 1);
+
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: attacker }),
+    content: checkCard({
+      parts: `Direct Hit &middot; all of that for nothing`,
+      total: "Shaken",
+      outcome: "botch"
+    })
+  });
+}
+
+/**
  * The dice an attack's Energy Charges add to its Wound Roll.
  *
  * One die per charge, scaled by the Tier of Power the way every other scaled die is:
@@ -2295,6 +2336,25 @@ function energyChargeDice(attacker, attack) {
   const [, faces] = die.split("d");
   const count = charges * Math.max(1, attacker.system.tierOfPower ?? 1);
   return `${count}d${faces}`;
+}
+
+/**
+ * What the Energy Charges on an attack take off a Parry.
+ *
+ * "Reduce your Dice Score by 1(bT) for each Energy Charge or rank of Power Shot on the
+ * Attacking Maneuver." Power Shot is not in the system yet - there is one Profile, and
+ * it has no ranks - so only the Charges are counted, and the day a ranked Profile
+ * arrives this is where its ranks are added.
+ *
+ * An empty list when there is nothing to take off, so the breakdown does not carry a
+ * line saying zero.
+ */
+function chargePenalty(actor, attack) {
+  const charges = attack?.energyCharges ?? 0;
+  if (charges <= 0) return [];
+
+  const perCharge = actor.system.baseTierOfPower ?? 1;
+  return [{ label: "Energy Charges", value: -(charges * perCharge) }];
 }
 
 /** Everyone whose confirmation the attack is waiting on. */
@@ -2383,7 +2443,7 @@ async function resolveAttack(message, attack) {
 
   // What the defender answers the Strike with, and whether they answer at all.
   const defence = DEFENCES[defense];
-  const answer = await defence.answer(target, options.target);
+  const answer = await defence.answer(target, options.target, attack);
 
   // Some things hit whatever the Clash said: the Determined State on the attacker's
   // side, being Sleeping on the defender's. Both were declared as Slots and read by
@@ -2583,6 +2643,8 @@ async function rollAttackWound(message, attack) {
 
   const damage = Math.max(0, applySlot(beforeWound.slots, "incoming.damage", onHit));
 
+  await maybeShakeAttacker(attacker, attack, defence, damage);
+
   requestEdit(message, {
     type: "attack",
     // Damage is worked out here but not dealt: applying it is a separate, deliberate
@@ -2653,9 +2715,11 @@ const DEFENCES = {
     // but it is still a Combat Roll, so Thresholds do.
     // A Parry rolls Strike, so that is the Slot an effect names to change it - plus
     // `parry`, which is the one that applies only when Strike is rolled defensively.
-    answer: (actor, options) => rollSide(actor, [
+    // A charged attack is harder to turn aside: 1(bT) off for each Energy Charge on it.
+    answer: (actor, options, attack) => rollSide(actor, [
       { label: "Strike", value: actor.system.combat.strike },
       { label: "Parry", value: actor.system.combat.parry ?? 0 },
+      ...chargePenalty(actor, attack),
       ...thresholdPenalty(actor)
     ], { ...options, slot: "strike" }),
     soak: (soak) => soak,
@@ -2665,6 +2729,11 @@ const DEFENCES = {
   directHit: {
     label: "Direct Hit",
     answer: () => null,
+    // "If this Attacking Maneuver inflicts no Damage and has 2+ Energy Charges or a Ki
+    // Wager equal to or higher than 1/4 of their Max Capacity, the attacker suffers
+    // from the Shaken Combat Condition." Taking the blow head on and shrugging it off
+    // is what rattles them, so it is settled once the Damage is known.
+    shakesOnNoDamage: { charges: 2, wagerFraction: 4 },
     // Soak Value increased by half for this attack - applied to whatever the
     // Damage Category left of it, so half of nothing is still nothing.
     soak: (soak) => Math.floor(soak * 1.5),
@@ -2808,7 +2877,7 @@ async function defendAgainst(message, target, attack) {
   const wagerMax = maxKiWager(target);
 
   const options = Object.entries(DEFEND_OPTIONS).map(([key, option], index) => {
-    const cost = defendOptionCost(key, target);
+    const cost = defendOptionCost(key, target, attack);
     // Power Flare makes a Wound Roll of its own, so it is the one option that can
     // carry a wager. The field sits with it rather than under the whole dialog.
     // Power Flare answers with a Wound Roll of your own, "as if you made an Energy or
@@ -2889,7 +2958,7 @@ async function defendAgainst(message, target, attack) {
   if (!chosen || (typeof chosen !== "object")) return;
 
   const defend = getManeuver("defend");
-  const cost = defendOptionCost(chosen.defence, target) + chosen.kiWager;
+  const cost = defendOptionCost(chosen.defence, target, attack) + chosen.kiWager;
   if (defend && !await spendManeuverCost(target, defend, cost)) return;
 
   // Defending is a Counter Maneuver and costs a Counter Action - which was never being

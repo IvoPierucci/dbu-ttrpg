@@ -156,12 +156,15 @@ export const DEFEND_OPTIONS = Object.freeze({
   parry: {
     label: "Parry",
     kiCost: 0,
-    summary: "Clash with your Strike Roll instead of your Dodge Roll. Win and you avoid the attack."
+    summary: "Clash with your Strike Roll instead of your Dodge Roll. Win and you avoid "
+      + "the attack. Each Energy Charge on it takes 1(bT) off your roll."
   },
   directHit: {
     label: "Direct Hit",
     kiCost: 0,
-    summary: "Forgo the clash and be hit, with your Soak Value increased by half for this attack."
+    summary: "Forgo the clash and be hit, with your Soak Value increased by half for "
+      + "this attack. Shrug off a charged or heavily wagered blow for nothing and the "
+      + "attacker is left Shaken."
   },
   powerFlare: {
     label: "Power Flare",
@@ -178,8 +181,12 @@ export const DEFEND_OPTIONS = Object.freeze({
   },
   guard: {
     label: "Guard",
+    /** Each Energy Charge on the attack adds this much per Base Tier, up to `max`. */
+    chargeSurcharge: { perCharge: 1, max: 4 },
     kiCostPerBaseTier: 8,
-    summary: "Forgo the clash and be hit, but halve the Wound Roll against you."
+    summary: "Forgo the clash and be hit, but halve the Wound Roll against you and "
+      + "drop its Damage Category by one. Each Energy Charge on the attack adds "
+      + "1(bT) to what this costs, up to four."
   }
 });
 
@@ -187,17 +194,28 @@ export const DEFEND_OPTIONS = Object.freeze({
  * What one Defend option costs this character, resolving the (bT) notation and any
  * Talent that discounts it. A discount can never make a Maneuver pay you.
  */
-export function defendOptionCost(option, actor) {
+export function defendOptionCost(option, actor, attack = null) {
   const definition = DEFEND_OPTIONS[option];
   const base = definition.kiCostPerBaseTier
     ? definition.kiCostPerBaseTier * actor.system.baseTierOfPower
     : (definition.kiCost ?? 0);
 
+  // Guard gets dearer the more the attack was charged: "+1(bT) for each Energy Charge
+  // on your Opponent's Attacking Maneuver (max. +4(bT))". The cap is on the Charges
+  // counted, not on the Ki - four Charges is as expensive as seven.
+  const surcharge = definition.chargeSurcharge
+    ? Math.min(attack?.energyCharges ?? 0, definition.chargeSurcharge.max)
+      * definition.chargeSurcharge.perCharge * actor.system.baseTierOfPower
+    : 0;
+
   // The Slot names the option, so an effect that discounts Guard cannot touch Parry.
   // The whole cost goes through the engine rather than a hand-rolled sum, which is
   // what makes flat and (bT) discounts work here - reading only perTier is why they
   // silently did nothing before.
-  return Math.max(0, applySlot(actor.system.effects?.slots, `defend.${option}.kiCost`, base));
+  // The surcharge rides on top of whatever the option costs after any discount: an
+  // effect that cheapens Guard cheapens Guard, not the Charges on the attack.
+  return Math.max(0,
+    applySlot(actor.system.effects?.slots, `defend.${option}.kiCost`, base) + surcharge);
 }
 
 /** Action types a Maneuver can spend. Instant and Out-of-Sequence spend none. */
