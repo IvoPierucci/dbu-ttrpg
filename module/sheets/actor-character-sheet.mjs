@@ -13,7 +13,7 @@ import {
   toggleCondition,
   toggleState
 } from "../conditions.mjs";
-import { actionsLeft, newRoundFor, spendActions } from "../combat.mjs";
+import { actionsLeft, isTheirTurn, newRoundFor, spendActions } from "../combat.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
   answeredLatestManeuver,
@@ -909,15 +909,24 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         .filter(b => b.budget?.actions)
         .map(b => {
           const cost = b.budget.actions;
+
+          // Both of these are spent "during your turn", and outside an Encounter there
+          // are no turns to be out of - so the restriction only bites where it means
+          // something.
+          const inCombat = Boolean(game.combat?.started);
+          const theirTurn = !inCombat || isTheirTurn(this.actor);
           const affordable = actionsLeft(this.actor, "standard") >= cost;
+
+          const refusal = !theirTurn
+            ? "This can only be done during your own turn."
+            : (!affordable ? "Not enough Actions left this round." : null);
+
           return {
             sourceId: entry.sourceId,
             block: b.index,
             label: `${entry.sourceName} (${cost} Action${cost === 1 ? "" : "s"})`,
-            affordable,
-            tooltip: affordable
-              ? entry.sourceName
-              : `Not enough Actions left this round.`
+            affordable: !refusal,
+            tooltip: refusal ?? entry.sourceName
           };
         }));
   }
@@ -1003,16 +1012,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Narrowed to this Condition: pressing "stand up" must not also spend whatever else
     // the character had armed for the same Moment.
     const moment = entry.program.blocks?.[0]?.moment;
-    const fired = await fireMoment(
+    const { fired } = await fireMoment(
       this.actor,
       moment,
       { condition: source.slice("condition:".length) },
       { only: source }
     );
 
-    // Nothing fired means the Action bought nothing, so it is handed back rather than
-    // quietly lost - the most likely cause is a limit that had already run out.
-    if (foundry.utils.isEmpty(fired)) {
+    // Judged by whether anything answered, not by what it came to. Standing up from
+    // Prone is a verb and changes no Slot, so measuring the Slots said it had failed -
+    // and then handed the Action back for something that had in fact happened.
+    if (!fired) {
       const { refundActions } = await import("../combat.mjs");
       await refundActions(this.actor, cost, "standard");
       ui.notifications.warn(`${entry.sourceName} could not be used right now.`);

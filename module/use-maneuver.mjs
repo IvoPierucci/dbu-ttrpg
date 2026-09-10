@@ -110,9 +110,8 @@ function permitted(actor, maneuver) {
 
 /** Take the Actions, once the Maneuver has actually committed. */
 async function payActions(actor, maneuver) {
-  if (!game.combat?.started) return;
   const { kind, amount } = actionCostOf(maneuver);
-  if (amount > 0) await spendActions(actor, amount, kind);
+  await spendActions(actor, amount, kind);
 }
 
 /**

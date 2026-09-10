@@ -35,21 +35,26 @@ const STATEFUL = {
  * @param {Actor} actor
  * @param {string} moment   a key from moments.mjs, parameter and all
  * @param {object} context  what this Moment puts within reach
- * @returns {Promise<object>} the slots that were collected, for a caller that needs them
+ * @returns {Promise<{slots: object, fired: number}>} what was collected, and how many
+ *   effects answered. The count matters on its own: an effect whose whole body is a
+ *   verb - Prone standing you up - changes no Slot at all, and judging it by the Slots
+ *   alone reads as nothing having happened.
  */
 export async function fireMoment(actor, moment, context = {}, { only = null, stacks = null } = {}) {
   if (!actor) return {};
 
+  const nothing = { slots: {}, fired: 0 };
+
   const definition = getMoment(moment);
   if (!definition) {
     console.warn(`DBU TTRPG | Nothing in this system knows the moment "${moment}".`);
-    return {};
+    return nothing;
   }
 
   // A Moment can carry a limit of its own, which belongs to the trigger rather than to
   // any effect using it: Threshold fires once per Threshold per Encounter however many
   // effects are waiting on it.
-  if (definition.limit && !momentAvailable(actor, definition, context)) return {};
+  if (definition.limit && !momentAvailable(actor, definition, context)) return nothing;
 
   let entries = reactiveFor(actor).filter(entry => entry.available && entry.armed);
 
@@ -61,7 +66,7 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
   // does on being applied is done for the stacks just gained.
   if (stacks !== null) entries = entries.map(entry => ({ ...entry, stacks }));
 
-  if (!entries.length) return {};
+  if (!entries.length) return nothing;
 
   const scope = { data: actor.system, errors: [], context, queue: [] };
   const { slots, spent } = collectReactive(entries, moment, scope);
@@ -69,7 +74,7 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
   for (const message of scope.errors) {
     console.warn(`DBU TTRPG | ${actor.name}: ${message}`);
   }
-  if (!spent.length) return slots;
+  if (!spent.length) return nothing;
 
   await writeStateful(actor, slots);
   for (const call of scope.queue) await runVerb(actor, call, context);
@@ -77,7 +82,7 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
   await recordUses(actor, spent, definition, context);
   await announce(actor, entries, spent, moment);
 
-  return slots;
+  return { slots, fired: spent.length };
 }
 
 /** Put what the Moment changed onto the character. */

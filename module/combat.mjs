@@ -119,8 +119,8 @@ export function registerCombatHooks() {
       // Something may skip the turn as it begins rather than for as long as it lasts -
       // Determined ends and costs you the turn in the same breath - so the moment is
       // fired first and its answer read after.
-      const fired = await fireMoment(arriving, "start-of-turn");
-      if (fired?.["turn.skip"] === true) {
+      const { slots } = await fireMoment(arriving, "start-of-turn");
+      if (slots["turn.skip"] === true) {
         ui.notifications.info(`${arriving.name} is skipped this round.`);
         return combat.nextTurn();
       }
@@ -208,6 +208,11 @@ export function actionsLeft(actor, kind = "standard") {
  */
 export async function spendActions(actor, amount, kind = "standard") {
   if (amount <= 0) return true;
+
+  // Only inside a Combat Encounter. Outside one there are no rounds, so nothing hands
+  // the Actions back - spending them there would take them away for good. The guard
+  // lives here, on the write, so a caller cannot forget it: one of them already had.
+  if (!game.combat?.started) return true;
 
   if (actionsLeft(actor, kind) < amount) {
     ui.notifications.warn(
