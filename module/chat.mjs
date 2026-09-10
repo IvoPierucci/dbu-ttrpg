@@ -2282,7 +2282,15 @@ export async function postAttack(actor, target, maneuver,
                                  { asOutOfSequence = false } = {}) {
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
   // Strike Roll - the attack after your third is itself the one that suffers.
-  await actor.update({ "system.attacksThisRound": actor.system.attacksThisRound + 1 });
+  //
+  // The Actions it took are counted separately, for Compelled's end-of-turn check. An
+  // Out-of-Sequence Maneuver ignores its Action Cost, so it spends none and none are
+  // counted: the rule asks what you spent, and that spent nothing.
+  await actor.update({
+    "system.attacksThisRound": actor.system.attacksThisRound + 1,
+    "system.attackActionsThisTurn": actor.system.attackActionsThisTurn
+      + (asOutOfSequence ? 0 : (maneuver.actionCost ?? 1))
+  });
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),

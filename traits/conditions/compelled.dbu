@@ -19,10 +19,13 @@ text: >
 ---
 
 # The target is deliberately not tracked, and this is not a gap to be closed
-# later. Who it is, whether enough Actions were spent attacking them, and the
-# Life Point loss at the end of the turn if they were not, all stay with the
-# player and the GM: nobody forgets they are Compelled, and a system that tracked
-# it would be asking a question the table has already answered out loud.
+# later. Who it is stays with the player and the GM: nobody forgets they are
+# Compelled, and a system that tracked it would be asking a question the table
+# has already answered out loud.
+#
+# How much attacking was done is a different question, and that one *is* counted -
+# it is arithmetic rather than intent, and nobody wants to do it by hand at the
+# end of every turn.
 #
 # So everything here is written as though every attack is against that target.
 # The rule says "against that target" of both the wager and the Urgency, and
@@ -40,3 +43,11 @@ attack.kiWager.min = ceil(capacity.max / 10);
 
 [automatic/combat-roll]
 forbid willingFailure;
+
+# What the counter is for. It holds the Actions spent on Attacking Maneuvers since
+# this check last ran, which is the end of the character's own turn - so reading it
+# here reads exactly the turn that is ending, and it is zeroed afterwards.
+[automatic/end-of-turn]
+if (attackActionsThisTurn < (isMinion ? 1 : 2)) {
+  life.value -= floor(life.max / 10);
+}

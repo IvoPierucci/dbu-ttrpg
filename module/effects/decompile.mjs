@@ -82,7 +82,11 @@ function amountText(a) {
     case "name": return `"${a.value}"`;
     case "binary": return `(${amountText(a.left)} ${a.op} ${amountText(a.right)})`;
     case "ternary":
-      return `${conditionText(a.condition)} ? ${amountText(a.then)} : ${amountText(a.else)}`;
+      // Bracketed, for the reason a binary is: `?:` binds looser than everything else,
+      // so a ternary used as one side of a comparison loses its shape written flat -
+      // `n < (isMinion ? 1 : 2)` reads back as `(n < isMinion) ? 1 : 2`, which asks a
+      // different question and still compiles.
+      return `(${conditionText(a.condition)} ? ${amountText(a.then)} : ${amountText(a.else)})`;
     case "call": return `${a.fn}(${(a.args ?? []).map(amountText).join(", ")})`;
     case "predicate": return predicateText(a);
     default: return "0";

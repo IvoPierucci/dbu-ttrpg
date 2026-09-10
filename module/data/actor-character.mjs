@@ -583,6 +583,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     schema.attacksThisRound = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
     schema.diminishingDefense = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 
+    // Actions spent on Attacking Maneuvers since this was last read, which is the end
+    // of the character's own turn. Compelled is what asks: "if you do not spend at
+    // least 2 Actions (1 if you are a Minion) making Attacking Maneuvers during each of
+    // your turns". Counted in Actions and not in Maneuvers, because that is what the
+    // rule measures - one attack costing 2 Actions satisfies it on its own.
+    //
+    // Kept apart from attacksThisRound, which counts Maneuvers, resets on the round
+    // rather than the turn, and exists for Diminishing Offense. Two questions that
+    // happen to be about attacking are not one number.
+    schema.attackActionsThisTurn = new fields.NumberField({
+      required: true, integer: true, initial: 0, min: 0
+    });
+
     // --- Steadfast Checks ---
     // One result per Threshold that can be failed: "" until checked, then "pass" or
     // "fail". Kept per Threshold rather than as a count, because recovering above one

@@ -103,7 +103,16 @@ export function registerCombatHooks() {
     // Actor rather than the one in the sidebar it was made from.
     const leaving = previous?.combatantId
       ? combat.combatants.get(previous.combatantId)?.actor : null;
-    if (leaving?.type === "character") await fireMoment(leaving, "end-of-turn");
+    if (leaving?.type === "character") {
+      await fireMoment(leaving, "end-of-turn");
+      // Zeroed after the moment and not before it, since the moment is what reads it:
+      // Compelled's Life Point loss asks how many Actions went into attacking during
+      // the turn that just ended. "Since the last check" is what the counter means, and
+      // this is the check - so it is reset for every character, Compelled or not.
+      if (leaving.system.attackActionsThisTurn) {
+        await leaving.update({ "system.attackActionsThisTurn": 0 });
+      }
+    }
 
     const arriving = combat.combatant?.actor;
     if (arriving?.type === "character") {
