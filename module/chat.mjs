@@ -1255,23 +1255,37 @@ function relevantTriggers(actor, message, stage) {
  *
  * @returns {Promise<boolean>} False if the reader backed out entirely.
  */
+/** Said the same way wherever a roll turns out not to be failable on purpose. */
+const URGENT = "This roll is Urgent, so it cannot be failed on purpose.";
+
 /**
  * Whether this roll may be failed on purpose.
  *
- * Two things can refuse it. Some rolls are Urgent by their nature - an Initiative Check
- * is one - and some effects forbid it for a while, which is what Compelled does to every
- * Combat Roll against its target. Both come through here so that no caller has to know
- * about only one of them.
+ * Three things can refuse it. Some rolls are Urgent by their nature - an Initiative
+ * Check is one. Some effects forbid it outright from the sheet. And Compelled makes
+ * every Combat Roll Urgent through a *reactive* block, which is the one that had been
+ * getting through: a reactive forbid does not exist on the sheet at all, it exists only
+ * at the moment the roll is made, so asking the sheet found nothing and the option was
+ * offered, taken, and then quietly ignored when the dice were picked up.
+ *
+ * So when the caller says this is a Combat Roll, the moment is asked rather than the
+ * sheet. `slots` short-circuits that: at the roll itself they have already been
+ * collected, and collecting them twice would offer the same one-shot effects again.
  *
  * @param {Actor} actor
  * @param {object} [options]
- * @param {boolean} [options.urgent]  this particular roll is Urgent
- * @param {object} [options.slots]    slots collected at the roll, when there are any
+ * @param {boolean} [options.urgent]      this particular roll is Urgent by its nature
+ * @param {boolean} [options.combatRoll]  the roll in question is a Combat Roll
+ * @param {object} [options.slots]        slots already collected at the roll
  * @returns {null|string}  null if it may be, otherwise why it may not
  */
-export function whyNotWilling(actor, { urgent = false, slots = null } = {}) {
-  if (urgent) return "This roll is Urgent, so it cannot be failed on purpose.";
-  if (slots?.willingFailure === false) return "Something is forcing this roll.";
+export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll = false } = {}) {
+  if (urgent) return URGENT;
+
+  const reactive = slots
+    ?? (combatRoll ? atMoment(actor, "combat-roll", { roll: true }).slots : null);
+  if (reactive?.willingFailure === false) return URGENT;
+
   if (!permits(actor.system.effects?.slots, "willingFailure")) {
     return "Something is forcing this roll.";
   }
@@ -1279,7 +1293,8 @@ export function whyNotWilling(actor, { urgent = false, slots = null } = {}) {
 }
 
 export async function prepareRoll(actor, effects, title, hint = "",
-                                  { karmic = null, rolling = true, urgent = false } = {}) {
+                                  { karmic = null, rolling = true, urgent = false,
+                                    combatRoll = false } = {}) {
   const rows = effects.map(entry => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
@@ -1312,7 +1327,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
 
   // Said rather than simply absent when it is refused: "you cannot throw this one" is
   // worth knowing, and a missing checkbox tells nobody anything.
-  const refused = rolling ? whyNotWilling(actor, { urgent }) : null;
+  const refused = rolling ? whyNotWilling(actor, { urgent, combatRoll }) : null;
   const willing = !rolling
     ? ""
     : refused
@@ -1390,6 +1405,18 @@ export async function prepareRoll(actor, effects, title, hint = "",
  * willing failure to apply to, and offering it would only invite a choice that does
  * nothing in this exchange.
  */
+/**
+ * Whether what this message asks for is a Combat Roll.
+ *
+ * An attack is Strike against Dodge or Parry, so it always is. A Clash is whichever
+ * of the four categories it was opened as - the categories exist because they scale
+ * differently, and Compelled makes Combat Rolls Urgent and nothing else.
+ */
+function rollsCombat(message) {
+  if (message.getFlag(SCOPE, ATTACK_FLAG)) return true;
+  return message.getFlag(SCOPE, CLASH_FLAG)?.category === "combat";
+}
+
 function rollsOnMessage(message, actor) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (attack) return attackParticipants(attack).includes(actor.uuid);
@@ -1425,7 +1452,7 @@ async function respondDialog(message, respondable) {
     // And not when something forbids it either - Compelled forces every Combat Roll
     // against its target. Shown greyed with the reason rather than left out, so it is
     // clear the option exists and why it is closed.
-    const forced = whyNotWilling(actor);
+    const forced = whyNotWilling(actor, { combatRoll: rollsCombat(message) });
     const willing = !rollsOnMessage(message, actor)
       ? ""
       : forced
@@ -1868,6 +1895,12 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // Left armed rather than spent, so it still answers the next roll that allows it.
   const forced = whyNotWilling(actor, { slots: answered?.slots });
 
+  // Declared, and refused by the roll itself. It used to be dropped in silence, which
+  // left the player believing they had failed on purpose and looking at a total that
+  // said otherwise. Kept armed, as below, so it still answers the next roll that allows
+  // it - but the card says why this one did not take it.
+  const refusedWilling = actor.system.willingFailure && Boolean(forced);
+
   if (actor.system.willingFailure && !forced) {
     requestActorUpdate(actor, { "system.willingFailure": false });
     return {
@@ -1902,6 +1935,13 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   if (negatives.length) {
     const sum = negatives.reduce((total, part) => total + part.value, 0);
     segments.push(`penalties ${sum} (${describe(negatives)})`);
+  }
+
+  // Said before the Botch and the Critical, because it is why the roll happened at all:
+  // the player asked to fail and the roll would not let them.
+  if (refusedWilling) {
+    outcome = "urgent";
+    segments.push("Urgent, willing failure refused");
   }
 
   if (botch) {

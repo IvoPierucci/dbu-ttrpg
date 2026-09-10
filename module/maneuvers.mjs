@@ -401,6 +401,20 @@ export function maxKiWager(actor) {
 }
 
 /**
+ * The least that may be wagered on an Attacking Maneuver.
+ *
+ * Normally nothing. Compelled is what makes it something: "you must Ki Wager at least
+ * 1/10 (rounded up) of your Max Capacity on all Attacking Maneuvers against that
+ * target". Held down to what can actually be paid, since a floor above the ceiling
+ * would leave the dialog with no number it would accept - the rule cannot make you
+ * spend Ki you do not have.
+ */
+export function minimumKiWager(actor) {
+  const floor = applySlot(actor.system.effects?.slots, "attack.kiWager.min", 0);
+  return Math.max(0, Math.min(floor, maxKiWager(actor)));
+}
+
+/**
  * Declare the attack's Profile and its Ki Wager together, since both are settled at
  * the same moment - and both are paid for at the same moment too.
  *
@@ -446,12 +460,14 @@ async function pickProfile(maneuver, foundations, actor) {
 
   // Wagered Ki is added to the Wound Roll and comes out of Capacity, so the ceiling
   // is the lower of the rule's half-Capacity limit and what can actually be paid.
+  // The floor is normally nothing, and is what Compelled raises.
   const wagerMax = maxKiWager(actor);
+  const wagerMin = minimumKiWager(actor);
   const wager = `
     <label class="dbu-wager">
       <span>Ki Wager</span>
-      <input type="number" name="kiWager" value="0" min="0" max="${wagerMax}"/>
-      <em>max ${wagerMax}, added to the Wound Roll</em>
+      <input type="number" name="kiWager" value="${wagerMin}" min="${wagerMin}" max="${wagerMax}"/>
+      <em>${wagerMin ? `at least ${wagerMin}, ` : ""}max ${wagerMax}, added to the Wound Roll</em>
     </label>`;
 
   const chosen = await foundry.applications.api.DialogV2.wait({
@@ -468,8 +484,12 @@ async function pickProfile(maneuver, foundations, actor) {
             : dialog.element.querySelector('input[name="profile"]:checked')?.value;
           if (!profile) return null;
 
+          // Clamped here as well as on the input: `min` on a number field is advice to
+          // the browser, not a guarantee, and a typed number gets through it.
           const typed = Math.floor(Number(dialog.element.querySelector('input[name="kiWager"]').value));
-          const kiWager = Number.isFinite(typed) ? Math.min(Math.max(typed, 0), wagerMax) : 0;
+          const kiWager = Number.isFinite(typed)
+            ? Math.min(Math.max(typed, wagerMin), wagerMax)
+            : wagerMin;
           return { profile, kiWager };
         }
       },

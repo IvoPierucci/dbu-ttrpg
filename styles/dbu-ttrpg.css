@@ -1408,6 +1408,13 @@
   color: var(--dbu-text-dim);
 }
 
+/* A roll that would not be failed on purpose. The total stands, so it is not dimmed
+   like a willing failure - it is marked, the way a Botch is. */
+.dbu-check-total.dbu-urgent,
+.dbu-clash-outcome.dbu-urgent {
+  color: var(--dbu-accent);
+}
+
 /* Answering an attack without a Maneuver, shown ahead of the ones that are. */
 .dbu-respond-dodge {
   margin-left: 12px;
