@@ -48,6 +48,7 @@ export function snapshot(actor) {
   put("ki.max", s.ki?.max);
   put("capacity.max", s.capacity?.max);
   put("soakValue", s.soakValue);
+  put("soakShortfall", s.soakShortfall);
   put("damageReduction", s.damageReduction);
   put("defenseValue", s.defenseValue);
   put("might", s.might);

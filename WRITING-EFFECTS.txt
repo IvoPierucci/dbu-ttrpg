@@ -109,7 +109,7 @@ it. Statements end in a semicolon.
     // Written against the moment rather than with `after`, because the Wound
     // Roll is where the difference has somewhere to go.
     [automatic/before-wound]
-    incoming.damage += overflow(soakValue, 2(bT) * stacks);
+    incoming.damage += soakShortfall;
 
 [<budget>] on its own
   A block with only a budget is something you activate. In practice you will
@@ -196,9 +196,17 @@ Multiply L explicitly - write 2 * L(bT), never 2L(bT).
 do not need it: `[passive per stack]` repeats the whole block once per stack,
 which is simpler. Reach for `stacks` only when the amount is not linear:
 
-    // Broken - the overflow depends on the total reduction, not on one stack
-    [automatic/before-wound]
-    incoming.damage += overflow(soakValue, 2(bT) * stacks);
+    // Impaired - the Natural Result drops by the number of Stacks, which is one
+    // subtraction rather than the same subtraction repeated
+    [automatic/combat-roll]
+    baseDie -= stacks;
+
+    // Slowed - three Stacks is a rule of its own, not three times a rule
+    [passive]
+    if (stacks >= 3) {
+        forbid maneuvers;
+        skipTurn = true;
+    }
 
 The named dice are whatever the character has right now. At a Tier with no
 Greater Dice, greaterDice adds nothing rather than erroring.
@@ -358,7 +366,10 @@ And these read something rather than doing it:
   min(a, b) / max(a, b)   the smaller or larger of two amounts
   floor(x) / ceil(x)      round down or up
   round(x) / abs(x)
-  overflow(<slot>, <by>)  how far a reduction went past what was there
+  soakShortfall           how far a reduction pushed your Soak Value below zero.
+                          Not a function - a value, because by the time you can
+                          read your Soak Value it has already been floored and
+                          what the floor threw away is gone
   benefiting("Name")    are you getting anything from that Trait right now
   hasResource("name")   do you have any of that Resource
   hasCondition("name")  do you have that Combat Condition

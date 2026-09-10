@@ -15,15 +15,7 @@ export const FUNCTIONS = {
   floor: value => Math.floor(value),
   ceil: value => Math.ceil(value),
   round: value => Math.round(value),
-  abs: value => Math.abs(value),
-  /**
-   * How far a reduction went past what was there.
-   *
-   * Broken reduces your Soak Value and turns whatever it could not take off into extra
-   * damage. Since Soak already floors at zero, the overflow is exactly what the floor
-   * discarded - no need to remember the value from before.
-   */
-  overflow: (slotValue, before) => Math.max(0, (before ?? 0) - Math.max(0, slotValue))
+  abs: value => Math.abs(value)
 };
 
 /**

@@ -13,12 +13,16 @@ text: >
 
 ---
 
-# The overflow is not linear in the stacks, so it is written once against the
-# whole reduction rather than per stack. Soak already floors at zero, so what
-# the floor discarded is exactly the difference the rule asks for.
+# The reduction is per stack; the overflow is not. So the first block repeats and
+# the second is written once, against soakShortfall - how far the Soak Value was
+# pushed below zero, which is exactly "the difference" the rule asks for.
+#
+# It has to be that rather than arithmetic on the Soak you can see: by the time
+# you can see it, it has already been floored at zero, and the amount the floor
+# threw away is the whole answer.
 
 [passive per stack]
 soakValue.external -= 2(bT);
 
 [automatic/before-wound]
-incoming.damage += overflow(soakValue, 2(bT) * stacks);
+incoming.damage += soakShortfall;

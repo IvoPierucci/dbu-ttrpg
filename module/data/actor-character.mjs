@@ -1087,8 +1087,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       Math.max(atts.tenacity.mod, this.tierOfPower),
       this.size.soakModifier
     );
-    this.soakValue = Math.max(0, withEffects(this, "soakValue.external",
-      withEffects(this, "soakValue", ownSoak) + this.externalModifiers.soak));
+    // Worked out unfloored first, because how far a reduction went *past* zero is a
+    // number the rules ask for and the floor is the only place it exists. Broken wants
+    // it: "if the reduction to your Soak Value exceeds your Soak Value before applying
+    // this penalty, increase any Damage you take by the difference". That difference is
+    // exactly what the floor throws away.
+    const beforeFloor = withEffects(this, "soakValue.external",
+      withEffects(this, "soakValue", ownSoak) + this.externalModifiers.soak,
+      { min: null });
+
+    this.soakValue = Math.max(0, beforeFloor);
+    this.soakShortfall = Math.max(0, -beforeFloor);
 
     // Damage Reduction: taken off a Wound Roll the way Soak is, and that is where the
     // resemblance stops. The Damage Category does not reduce or ignore it, and nothing
