@@ -2441,15 +2441,21 @@ async function resolveAttack(message, attack) {
     ...thresholdPenalty(attacker)
   ], { ...options.attacker, combatRoll: true, slot: "strike" });
 
+  // Some things land whatever the Clash would have said: the Determined State on the
+  // attacker's side, being Sleeping on the defender's. Settled before the defence is
+  // rolled, because a roll whose result cannot matter should not be made - a Sleeping
+  // character winning a Dodge and being hit anyway reads as the rule not working.
+  const forced = attacker.system.effects?.slots?.["attack.autoHit"] === true
+    ? `${attacker.name} hits automatically`
+    : target.system.effects?.slots?.["incoming.autoHit"] === true
+    ? `${target.name} is hit automatically`
+    : null;
+
   // What the defender answers the Strike with, and whether they answer at all.
   const defence = DEFENCES[defense];
-  const answer = await defence.answer(target, options.target, attack);
+  const answer = forced ? null : await defence.answer(target, options.target, attack);
 
-  // Some things hit whatever the Clash said: the Determined State on the attacker's
-  // side, being Sleeping on the defender's. Both were declared as Slots and read by
-  // nobody, which made two rules that simply never happened.
-  const automatic = (attacker.system.effects?.slots?.["attack.autoHit"] === true)
-    || (target.system.effects?.slots?.["incoming.autoHit"] === true);
+  const automatic = Boolean(forced);
 
   // The defender wins ties, as everywhere else: the attacker has to beat them.
   const hit = automatic || (answer ? (strike.total > answer.total) : true);
@@ -2472,7 +2478,11 @@ async function resolveAttack(message, attack) {
   // confirmed last, which is as often the attacker's as the defender's, and that one
   // does not own the target. Writing straight to it there throws and takes the rest of
   // the resolution - the result itself included - down with it.
-  if (defence.gainsDiminishingDefense) {
+  // `forced` and not `hit`: what accrues the stacks is having dodged, and a Dodge that
+  // was never rolled is not one. Flagged for the table - the rule says the stacks come
+  // from defending against attack after attack, and whether being hit automatically
+  // still counts as defending is a reading, not something the text settles.
+  if (defence.gainsDiminishingDefense && !forced) {
     await requestActorUpdate(target, {
       "system.diminishingDefense": target.system.diminishingDefense + target.system.diminishing.defense.perAttack
     });
@@ -2493,6 +2503,9 @@ async function resolveAttack(message, attack) {
         answer,
         hit,
         automatic,
+        // Said on the card, since a defence that was never rolled needs a reason
+        // beside it or it looks like it was simply forgotten.
+        forced,
         damageCategory,
         // Carried on the attack so the Wound Roll can apply it: the defender's client
         // worked it out, and the attacker's is as likely to be the one settling this.
@@ -3018,10 +3031,15 @@ function targetRow(attack, target, result) {
   const label = attack.defenseLabel ?? "Dodge";
   if (result.answer) return attackSide(label, target.name, result.answer);
 
+  // Direct Hit, Guard and Power Flare forgo the roll by choice; being Sleeping or
+  // facing something Determined forgoes it for you. Both end with no roll, and only
+  // the second needs explaining.
+  const why = result.forced ? Handlebars.escapeExpression(result.forced) : "no roll";
+
   return `
     <div class="dbu-clash-side">
       <span class="dbu-clash-name">${name}<em> ${Handlebars.escapeExpression(label)}</em></span>
-      <span class="dbu-clash-outcome">no roll</span>
+      <span class="dbu-clash-outcome">${why}</span>
     </div>`;
 }
 
