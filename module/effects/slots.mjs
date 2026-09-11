@@ -307,6 +307,10 @@ const PATTERNS = [
   { match: /^defend\.(\w+)\.kiCost$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: () => true,
     doc: "Ki Point Cost of one option of the Defend Maneuver." },
+  { match: /^intervene\.(\w+)\.kiCost$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    valid: () => true,
+    doc: "Ki Point Cost of one option of the Intervene Maneuver: defenseWall, deflect "
+       + "or distantDeflect." },
   { match: /^(\w[\w-]*)\.kiCost$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: () => true,
     doc: "Ki Point Cost of one named Maneuver." },

@@ -48,6 +48,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       absolute: new fields.BooleanField({ required: true, initial: false }),
       requiresTarget: new fields.BooleanField({ required: true, initial: false }),
       defend: new fields.BooleanField({ required: true, initial: false }),
+      /** Steps in for somebody else. Played from an attack aimed at an Ally. */
+      intervene: new fields.BooleanField({ required: true, initial: false }),
       surge: new fields.BooleanField({ required: true, initial: false }),
       /** Feeds an Energy Charge into an Attacking Maneuver declared through it. */
       charge: new fields.BooleanField({ required: true, initial: false }),

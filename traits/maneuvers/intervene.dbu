@@ -1,0 +1,14 @@
+id: intervene
+name: Intervene
+type: counter
+actionCost: 1
+kiCost: 0
+attacking: false
+intervene: true
+source: Core Rule
+description: >
+  Step in the way of danger to help an ally. Played when an Ally who is not at
+  Long Range is hit by an Attacking Maneuver; the effect chosen sets the Ki cost.
+  The first Counter Maneuver that can be used without being the target.
+
+---

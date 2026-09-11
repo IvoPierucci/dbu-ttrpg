@@ -29,6 +29,7 @@
     "maneuvers/crouch.dbu",
     "maneuvers/defend.dbu",
     "maneuvers/energy-cancel.dbu",
+    "maneuvers/intervene.dbu",
     "maneuvers/energy-charge.dbu",
     "maneuvers/jump.dbu",
     "maneuvers/surge.dbu",

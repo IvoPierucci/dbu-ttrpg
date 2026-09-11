@@ -445,6 +445,98 @@ export const DEFEND_OPTIONS = Object.freeze({
 });
 
 /**
+ * The effects the Intervene Maneuver can be used for.
+ *
+ * Shaped like the Defend options, and priced the same way - the Maneuver's own cost is
+ * "varies", and the effect chosen is what sets it.
+ *
+ * Two of them ask for movement the system does not do: "move yourself to an unoccupied
+ * Square that is within range of your Boosted Speed and is between your Ally and the
+ * Character who used the Attacking Maneuver". Where a character stands is the table's to
+ * settle - there is no pathing here, and no notion of which Squares are occupied - so
+ * the requirement is stated on the card, with the Boosted Speed beside it, and whether
+ * it was met is a thing the players say out loud. `movement` is what gets said.
+ */
+export const INTERVENE_OPTIONS = Object.freeze({
+  defenseWall: {
+    label: "Defense Wall",
+    kiCost: 0,
+    /** Takes the Wound Roll in the Ally's place, whatever else happens. */
+    takesWound: true,
+    /** "Increase your Soak Value by 1/2 (rounded up)" for this attack. */
+    soakBonusFraction: 2,
+    movement: "Move to an unoccupied Square within your Boosted Speed, between your Ally "
+      + "and the attacker - or push the Ally back one Square and take their place.",
+    summary: "Take the Wound Roll in your Ally's place, with your Soak Value increased "
+      + "by half. If it Defeats you, what is left over reaches them through their own "
+      + "Soak and Damage Reduction."
+  },
+  deflect: {
+    label: "Deflect",
+    kiCostPerBaseTier: 2,
+    /** Won, the attack is turned aside from everyone it reached. */
+    clashes: true,
+    /** Lost, the Wound Roll is taken in the Ally's place, one Category harder. */
+    takesWoundOnLoss: true,
+    damageCategoryShiftOnLoss: 1,
+    movement: "Move to an unoccupied Square within your Boosted Speed, between your Ally "
+      + "and the attacker, or adjacent to your Ally.",
+    summary: "Might Clash with the attacker. Win and the attack is deflected away from "
+      + "everyone it reached. Lose and you take the Wound Roll in your Ally's place, one "
+      + "Damage Category harder for you."
+  },
+  distantDeflect: {
+    label: "Distant Deflect",
+    kiCostPerBaseTier: 8,
+    clashes: true,
+    /** Nothing is said about losing, so losing costs nothing but the Ki. */
+    summary: "Might Clash with the attacker from where you stand. Win and the attack is "
+      + "deflected away from everyone it reached. Lose and the attack goes on as it was."
+  }
+});
+
+/**
+ * What one Intervene option costs this character.
+ *
+ * The same road the Defend options take, down to the Slot being named after the option -
+ * so an effect that cheapens Deflect cannot touch Distant Deflect.
+ */
+export function interveneOptionCost(option, actor) {
+  const definition = INTERVENE_OPTIONS[option];
+  if (!definition) return 0;
+
+  const base = definition.kiCostPerBaseTier
+    ? definition.kiCostPerBaseTier * actor.system.baseTierOfPower
+    : (definition.kiCost ?? 0);
+
+  return Math.max(0,
+    applySlot(actor.system.effects?.slots, `intervene.${option}.kiCost`, base));
+}
+
+/**
+ * Whether this character may step in for that Ally against this attack.
+ *
+ * "If you use the Intervene Maneuver, no other Character can use the Intervene Maneuver
+ * for your selected Ally against that Attacking Maneuver." One per Ally, not one per
+ * attack: a Maneuver that caught four people can be intervened against four times, by
+ * four different characters, once each.
+ *
+ * Being a target yourself is no bar. The rule's trigger is written about the Ally being
+ * hit and says nothing about what happened to you - and stepping in while already in the
+ * way costs you nothing extra, since you take the Wound Roll once either way.
+ *
+ * @returns {null|string} null if it may be used, otherwise why it may not
+ */
+export function whyNotIntervene(actor, allyUuid, interventions = []) {
+  if (actor.uuid === allyUuid) return "You cannot Intervene for yourself.";
+
+  const taken = interventions.find(entry => entry.allyUuid === allyUuid);
+  if (taken) return `${taken.name} has already Intervened for them against this attack.`;
+
+  return null;
+}
+
+/**
  * What one Defend option costs this character, resolving the (bT) notation and any
  * Talent that discounts it. A discount can never make a Maneuver pay you.
  */
@@ -1161,6 +1253,7 @@ export async function loadManeuvers() {
     attacking: Boolean(trait.attacking),
     requiresTarget: Boolean(trait.requiresTarget),
     defend: Boolean(trait.defend),
+    intervene: Boolean(trait.intervene),
     surge: Boolean(trait.surge),
     charge: Boolean(trait.charge),
     cancelCharge: Boolean(trait.cancelCharge),

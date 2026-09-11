@@ -10,6 +10,7 @@ import { collectReactive, applySlot } from "./effects/interpreter.mjs";
 import {
   DAMAGE_CATEGORIES,
   DEFEND_OPTIONS,
+  INTERVENE_OPTIONS,
   MANEUVER_TYPES,
   PROFILES,
   areaLabel,
@@ -20,9 +21,11 @@ import {
   whyNotInReach,
   defendOptionCost,
   getManeuver,
+  interveneOptionCost,
   maneuverKiCost,
   recordManeuverType,
   whyNotAnotherAbsolute,
+  whyNotIntervene,
   maxKiWager,
   refundManeuverCost,
   spendManeuverCost
@@ -2734,6 +2737,10 @@ export async function postAttack(actor, target, maneuver,
           // last to confirm - those were written to the flag, mangled on the way, and
           // read back as no defence at all, which is a Dodge.
           defences: [],
+          // Everyone who stepped in front of somebody else. A list rather than an object
+          // keyed by uuid, for the reason every other list here is one: a uuid is full of
+          // dots and Foundry expands dotted keys when a document is written.
+          interventions: [],
           result: null
         }
       }
@@ -2741,6 +2748,314 @@ export async function postAttack(actor, target, maneuver,
   });
 
   return card;
+}
+
+/**
+ * What the Wound Roll comes to for somebody who took it in another character's place.
+ *
+ * Their own Soak Value and Damage Reduction, against the attack's own Damage Category -
+ * they did not defend against this, they walked into it, so nothing a Defend option does
+ * to Soak applies here.
+ *
+ * Defense Wall adds half their Soak Value, rounded *up*: "increase your Soak Value by
+ * 1/2 (rounded up)", which is the one place in the rules that rounds the other way and
+ * so is worth saying out loud.
+ *
+ * A lost Deflect is a Category harder: "you increase the Damage Category of that
+ * Attacking Maneuver by 1 Category for the sake of calculating your Damage" - for
+ * calculating theirs, and nobody else's.
+ */
+function interventionOutcome(attack, entry, wound) {
+  const actor = fromUuidSync(entry.uuid);
+  const ally = fromUuidSync(entry.allyUuid);
+  if (!actor) return null;
+
+  const option = INTERVENE_OPTIONS[entry.effect];
+  const lost = Boolean(entry.clash && !entry.clash.won);
+
+  const category = resolveDamageCategory(attack.damageCategory,
+    (attack.damageCategoryShift ?? 0) + (lost ? (option.damageCategoryShiftOnLoss ?? 0) : 0));
+
+  const base = actor.system.soakValue ?? 0;
+  // Rounded up, unlike every other halving in the system. Written as a ceiling rather
+  // than a floor on purpose: the rule says so, and a floor here would be a quiet nerf.
+  const bulwark = option.soakBonusFraction
+    ? Math.ceil(base / option.soakBonusFraction)
+    : 0;
+
+  const soak = Math.max(0,
+    Math.floor((base + bulwark) * DAMAGE_CATEGORIES[category].soakMultiplier));
+  const reduction = Math.max(0, actor.system.damageReduction ?? 0);
+  const damage = Math.max(0, wound.total - soak - reduction);
+
+  // "If you are Defeated by this Attacking Maneuver, any excess Damage is inflicted to
+  // that Ally - but is reduced by their Soak Value and Damage Reduction as usual for
+  // that Attacking Maneuver and its Damage Category."
+  //
+  // Only what is left after their Life runs out, and only for Defense Wall - a lost
+  // Deflect says nothing about spilling. Worked out off the Life they hold now, which
+  // is what the table is looking at when it decides.
+  const life = actor.system.life?.value ?? 0;
+  const excess = (option.takesWound && (damage > life)) ? (damage - life) : 0;
+
+  const spill = (excess && ally)
+    ? spilloverTo(ally, excess, attack)
+    : null;
+
+  return {
+    category,
+    bulwark,
+    soak,
+    reduction,
+    damage,
+    defeated: excess > 0,
+    excess,
+    spill,
+    applied: false
+  };
+}
+
+/** What is left over reaches the Ally through their own Soak and Damage Reduction. */
+function spilloverTo(ally, excess, attack) {
+  const own = targetResult(attack, ally.uuid);
+  const category = own?.damageCategory ?? attack.damageCategory;
+
+  const soak = Math.max(0, Math.floor(
+    (ally.system.soakValue ?? 0) * DAMAGE_CATEGORIES[category].soakMultiplier));
+  const reduction = Math.max(0, ally.system.damageReduction ?? 0);
+
+  return {
+    uuid: ally.uuid,
+    name: ally.name,
+    soak,
+    reduction,
+    damage: Math.max(0, excess - soak - reduction),
+    applied: false
+  };
+}
+
+/** Everybody who stepped in front of somebody else on this attack. */
+function interventions(attack) {
+  return attack.interventions ?? [];
+}
+
+/** The one standing between this target and the Wound Roll, if anybody is. */
+function interventionFor(attack, allyUuid) {
+  return interventions(attack).find(entry => entry.allyUuid === allyUuid) ?? null;
+}
+
+/**
+ * The Deflect that turned the whole attack aside, if one did.
+ *
+ * "If you win, the Attacking Maneuver is successfully deflected away from all targets" -
+ * so one won Clash ends it for everybody, not only for the Ally who was stepped in for.
+ */
+function deflection(attack) {
+  return interventions(attack).find(entry => entry.deflected) ?? null;
+}
+
+/**
+ * Whether this character is taking a Wound Roll in somebody else's place.
+ *
+ * Defense Wall always does. Deflect does it only having lost the Clash - winning it
+ * means there is no Wound Roll for anyone to take.
+ */
+function takesWoundFor(entry) {
+  const option = INTERVENE_OPTIONS[entry.effect];
+  if (option?.takesWound) return true;
+  return Boolean(option?.takesWoundOnLoss && entry.clash && !entry.clash.won);
+}
+
+/**
+ * The Might Clash penalty on a Deflect: "reduce your Dice Score by 1(T) for each Energy
+ * Charge or Rank of Power Shot the Attacking Maneuver possesses".
+ *
+ * (T) rather than the Parry's (bT), and Power Shot is not in the system yet - the ranks
+ * are read off the attack and are always none, so the Charges half is what bites today.
+ * Written as one line because the rule counts them as one number.
+ */
+function deflectPenalty(actor, attack) {
+  const charges = attack?.energyCharges ?? 0;
+  const powerShot = attack?.powerShotRanks ?? 0;
+  const counted = charges + powerShot;
+  if (counted <= 0) return [];
+
+  const perStep = actor.system.tierOfPower ?? 1;
+  return [{
+    label: powerShot ? "Charges and Power Shot" : "Energy Charges",
+    written: `-${counted}(T)`,
+    value: -(counted * perStep)
+  }];
+}
+
+/**
+ * Everyone the reader could step in with.
+ *
+ * Characters they own, holding the Intervene Maneuver, who are not the attacker. Being a
+ * target of the attack is deliberately no bar: the trigger is written about the Ally
+ * being hit and says nothing about what became of you, and stepping in while already in
+ * the way is no worse for you - you take the Wound Roll once either way.
+ */
+function possibleInterveners(attack) {
+  const seen = new Map();
+
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const actor = token.actor;
+    if (!actor || (actor.type !== "character") || !actor.isOwner) continue;
+    if (actor.uuid === attack.attackerUuid) continue;
+    if (!actor.items.some(item => (item.type === "maneuver") && item.system.intervene)) continue;
+    seen.set(actor.uuid, actor);
+  }
+
+  return [...seen.values()];
+}
+
+/** Who on this attack could still be stepped in for: hit, and not already covered. */
+function shieldableTargets(attack, intervener) {
+  return targetResults(attack).filter(entry =>
+    entry.own?.hit
+    && (entry.uuid !== intervener?.uuid)
+    && !interventionFor(attack, entry.uuid));
+}
+
+/**
+ * Step in for somebody: the Intervene Maneuver, played from the attack that threatens
+ * them rather than from the sheet.
+ *
+ * Everything about who stands where is left to the table. The rule asks for a move "to
+ * an unoccupied Square within range of your Boosted Speed, between your Ally and the
+ * Character who used the Attacking Maneuver", and the system has no pathing, no notion
+ * of which Squares are occupied and no range bands to tell Long Range from anything
+ * else. So the requirement is put on the card with the Boosted Speed beside it, and
+ * whether it was met is something the players say out loud.
+ */
+async function openIntervene(message, attack) {
+  if (attack.result?.wound || deflection(attack)) return;
+
+  const candidates = possibleInterveners(attack);
+  const usable = candidates.filter(actor => shieldableTargets(attack, actor).length);
+
+  if (!usable.length) {
+    ui.notifications.info("Nobody you own can step in for anyone here.");
+    return;
+  }
+
+  const whoRows = usable.map((actor, index) => `
+    <label class="dbu-respond-option">
+      <input type="radio" name="who" value="${actor.uuid}" ${index ? "" : "checked"}/>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(actor.name)}</span>
+      <span class="dbu-respond-source">Boosted Speed ${actor.system.speed.boosted} Squares</span>
+    </label>`).join("");
+
+  // Priced against the first of them, since the cost is per character and the dialog
+  // has to show a number before one is picked. Re-read once the choice is made.
+  const first = usable[0];
+  const effectRows = Object.entries(INTERVENE_OPTIONS).map(([key, option], index) => `
+    <label class="dbu-respond-option" data-tooltip="${
+      Handlebars.escapeExpression(`${option.summary}${option.movement ? ` ${option.movement}` : ""}`)}">
+      <input type="radio" name="effect" value="${key}" ${index ? "" : "checked"}/>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(option.label)}</span>
+      <span class="dbu-respond-source">${interveneOptionCost(key, first)} KP</span>
+    </label>`).join("");
+
+  const allyRows = shieldableTargets(attack, first).map((entry, index) => `
+    <label class="dbu-respond-option">
+      <input type="radio" name="ally" value="${entry.uuid}" ${index ? "" : "checked"}/>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(entry.name)}</span>
+    </label>`).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${attack.maneuverName} - Intervene` },
+    content: `<p class="dbu-respond-hint">Step in front of an Ally the attack hit. The
+        Squares you have to cross to do it, and whether they are yours to cross, are
+        yours and the Gamemaster's to settle - this only asks what you are doing.</p>
+      <div class="dbu-respond-group"><em>Who steps in</em>${whoRows}</div>
+      <div class="dbu-respond-group"><em>For whom</em>${allyRows}</div>
+      <div class="dbu-respond-group"><em>How</em>${effectRows}</div>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Intervene",
+        callback: (event, button, dialog) => ({
+          who: dialog.element.querySelector('input[name="who"]:checked')?.value,
+          ally: dialog.element.querySelector('input[name="ally"]:checked')?.value,
+          effect: dialog.element.querySelector('input[name="effect"]:checked')?.value
+        })
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if (!chosen?.who || !chosen?.ally || !chosen?.effect) return;
+  return playIntervene(message, attack, chosen);
+}
+
+/** Pay for an Intervene and write it onto the attack. */
+async function playIntervene(message, attack, { who, ally, effect }) {
+  const actor = fromUuidSync(who);
+  const allyActor = fromUuidSync(ally);
+  const option = INTERVENE_OPTIONS[effect];
+  if (!actor || !allyActor || !option) return;
+
+  // One per Ally: "no other Character can use the Intervene Maneuver for your selected
+  // Ally against that Attacking Maneuver."
+  const refused = whyNotIntervene(actor, ally, interventions(attack));
+  if (refused) {
+    ui.notifications.warn(refused);
+    return;
+  }
+
+  const maneuver = getManeuver("intervene");
+  if (!maneuver) return;
+
+  // A Counter Action and the chosen effect's Ki, in that order: the Action is the one
+  // that can be short, and a refused Maneuver must cost nothing.
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+  if (!await spendManeuverCost(actor, maneuver, interveneOptionCost(effect, actor))) return;
+
+  // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
+  await recordManeuverType(actor, "counter");
+
+  const entry = {
+    uuid: actor.uuid,
+    name: actor.name,
+    allyUuid: ally,
+    allyName: allyActor.name,
+    effect,
+    clash: null,
+    deflected: false,
+    outcome: null
+  };
+
+  // Deflect and Distant Deflect are settled by a Might Clash, and it has to be settled
+  // before the Wound Roll - winning it means there is no Wound Roll to make. Rolled here
+  // rather than posted as a card of its own: what it decides is this card's next step,
+  // and a second card to wait on is a second way for the exchange to stall.
+  if (option.clashes) {
+    const attacker = fromUuidSync(attack.attackerUuid);
+    if (!attacker) return;
+
+    const [mine, theirs] = await Promise.all([
+      rollSide(actor, [
+        { label: "Might", value: actor.system.might },
+        ...deflectPenalty(actor, attack)
+      ], { criticalDice: actor.system.dice.critical.formula, slot: "might" }),
+      rollSide(attacker, [{ label: "Might", value: attacker.system.might }],
+        { criticalDice: attacker.system.dice.critical.formula, slot: "might" })
+    ]);
+
+    // The attacker wins ties: whoever stepped in is the one asking for something, so
+    // they have to beat the roll rather than merely match it.
+    entry.clash = { mine, theirs, won: mine.total > theirs.total };
+    entry.deflected = entry.clash.won;
+  }
+
+  requestEdit(message, {
+    type: "attack",
+    attack: { ...attack, interventions: [...interventions(attack), entry] }
+  });
 }
 
 /**
@@ -3406,6 +3721,9 @@ function anyoneHit(attack) {
  * Maneuver that missed everybody it reached still has this step to make.
  */
 function owesWound(attack) {
+  // A won Deflect turns the whole thing aside - "deflected away from all targets" - so
+  // there is nothing left to roll, for anybody, Absolute or not.
+  if (deflection(attack)) return false;
   return anyoneHit(attack) || Boolean(attack.absolute);
 }
 
@@ -3568,7 +3886,36 @@ async function rollAttackWound(message, attack) {
 
   const settledTargets = [];
 
+  // Whoever stepped in front of somebody takes the Wound Roll in their place. Settled
+  // before the loop, because it changes two lines at once: the Ally takes nothing and
+  // the one who stepped in takes what the Ally would have.
+  const shields = interventions(attack).filter(takesWoundFor);
+  const shielded = new Set(shields.map(entry => entry.allyUuid));
+  // Somebody who stepped in while also being a target takes the Wound Roll once, not
+  // twice: "no recibis mas instancias de dano" - their own line is the instance they
+  // already had, and the intervention is where it is worked out.
+  const stepping = new Set(shields.map(entry => entry.uuid));
+
   for (const { uuid, actor: target, own } of targets) {
+    // Somebody stood in front of them. They take nothing from this attack - what
+    // becomes of what was aimed at them is worked out on the intervention below.
+    if (shielded.has(uuid)) {
+      settledTargets.push({
+        ...own, counterWound: null, soak: 0, reduction: 0, damage: 0,
+        shieldedBy: interventionFor(attack, uuid)?.name ?? ""
+      });
+      continue;
+    }
+
+    // They stepped in for somebody else and were a target as well. One instance of the
+    // Wound Roll, taken as the one who stepped in - which is the intervention's line.
+    if (stepping.has(uuid)) {
+      settledTargets.push({
+        ...own, counterWound: null, soak: 0, reduction: 0, damage: 0, steppedIn: true
+      });
+      continue;
+    }
+
     if (!own.hit) {
       // An ordinary miss takes nothing, and there is nothing here to work out for it.
       if (!attack.absolute) {
@@ -3650,11 +3997,19 @@ async function rollAttackWound(message, attack) {
     settledTargets.push({ ...own, counterWound, effectiveWound, soak, reduction, damage });
   }
 
+  // What the Wound Roll came to for each person who took one in somebody else's place.
+  const settledInterventions = interventions(attack).map(entry =>
+    takesWoundFor(entry) ? { ...entry, outcome: interventionOutcome(attack, entry, wound) } : entry);
+
   requestEdit(message, {
     type: "attack",
     // Damage is worked out here but not dealt: applying it is a separate, deliberate
     // step, so the table can rule on it before anyone loses Life.
-    attack: { ...attack, result: { ...attack.result, wound, targets: settledTargets } }
+    attack: {
+      ...attack,
+      interventions: settledInterventions,
+      result: { ...attack.result, wound, targets: settledTargets }
+    }
   });
 }
 
@@ -4000,6 +4355,48 @@ async function applyAttackDamage(message, target, attack) {
 }
 
 /**
+ * Deal the Damage somebody took in another character's place, and whatever it left over.
+ *
+ * Two characters can lose Life here, so both writes go through the relay: the one who
+ * stepped in is the reader's, but the Ally the excess reaches is very often not.
+ */
+async function applyInterventionDamage(message, attack, entry) {
+  const who = fromUuidSync(entry.uuid);
+  const outcome = entry.outcome;
+  if (!who || !outcome || outcome.applied) return;
+
+  const settled = who.system.life.value - outcome.damage;
+  const floor = who.system.effects?.slots?.["life.allowNegative"] ? settled : Math.max(0, settled);
+  await who.update({ "system.life.value": floor });
+
+  // What is left over after they are Defeated, through the Ally's own Soak and Damage
+  // Reduction. Their client is as likely as not to be somebody else's, hence the relay.
+  const spill = outcome.spill;
+  if (spill?.damage > 0) {
+    const ally = fromUuidSync(spill.uuid);
+    if (ally) {
+      const left = ally.system.life.value - spill.damage;
+      await requestActorUpdate(ally, {
+        "system.life.value": ally.system.effects?.slots?.["life.allowNegative"]
+          ? left
+          : Math.max(0, left)
+      });
+    }
+  }
+
+  requestEdit(message, {
+    type: "attack",
+    attack: {
+      ...attack,
+      interventions: interventions(attack).map(line =>
+        (line.uuid === entry.uuid) && (line.allyUuid === entry.allyUuid)
+          ? { ...line, outcome: { ...outcome, applied: true, spill: spill ? { ...spill, applied: true } : null } }
+          : line)
+    }
+  });
+}
+
+/**
  * Take a Surge: either a Healing Surge or a Ki Surge.
  *
  * A Surge is not the Surge Maneuver - the Maneuver is one way to reach one, and other
@@ -4329,6 +4726,12 @@ function attackSide(label, name, side, note = "") {
 
 /** What the attack did, once both sides are in. */
 function attackOutcome(attack) {
+  // A won Deflect ends it for everybody, so there is nothing else to report.
+  const turned = deflection(attack);
+  if (turned) {
+    return `Deflected by ${Handlebars.escapeExpression(turned.name)}`;
+  }
+
   if (awaitsFollowUps(attack)) {
     const plan = PROFILES[attack.profile].followUps;
     return `Hit - awaiting ${plan.rolls} more Strikes`;
@@ -4340,9 +4743,58 @@ function attackOutcome(attack) {
   // A line each, because the exchange branched: the Strike and the Wound Roll were one
   // roll, and what they came to for each person was not. One of them flaring the Damage
   // away says nothing about the next.
-  return targetResults(attack)
-    .map(entry => `<div>${Handlebars.escapeExpression(entry.name)}: ${outcomeFor(attack, entry)}</div>`)
-    .join("");
+  const lines = targetResults(attack)
+    .map(entry => `<div>${Handlebars.escapeExpression(entry.name)}: ${outcomeFor(attack, entry)}</div>`);
+
+  // Said after the targets, because that is the order it happened in: the attack reached
+  // them, and then somebody stepped in front of it.
+  const stepped = interventions(attack)
+    .map(entry => `<div class="dbu-intervene-line">${interveneText(attack, entry)}</div>`);
+
+  return [...lines, ...stepped].join("");
+}
+
+/** What one Intervene came to, in a line. */
+function interveneText(attack, entry) {
+  const option = INTERVENE_OPTIONS[entry.effect];
+  const who = Handlebars.escapeExpression(entry.name);
+  const ally = Handlebars.escapeExpression(entry.allyName);
+  const label = Handlebars.escapeExpression(option?.label ?? entry.effect);
+
+  if (entry.deflected) {
+    return `${who} Intervenes for ${ally} - ${label} wins the Might Clash: `
+      + "the attack is deflected away from everyone it reached";
+  }
+
+  // A Distant Deflect that lost does nothing at all, which the rule leaves at that.
+  if (entry.clash && !entry.clash.won && !takesWoundFor(entry)) {
+    return `${who} Intervenes for ${ally} - ${label} loses the Might Clash, `
+      + "and the attack goes on as it was";
+  }
+
+  const opening = entry.clash
+    ? `${who} Intervenes for ${ally} - ${label} loses the Might Clash and takes the Wound Roll`
+    : `${who} Intervenes for ${ally} - ${label}, taking the Wound Roll in their place`;
+
+  const outcome = entry.outcome;
+  if (!outcome) return `${opening}${option?.movement ? "" : ""}`;
+
+  const harder = (outcome.category !== attack.damageCategory)
+    ? ` (${DAMAGE_CATEGORIES[outcome.category].label})`
+    : "";
+
+  if (!outcome.defeated) {
+    return (outcome.damage <= 0)
+      ? `${opening}${harder}: ${outcome.soak} soak stops it`
+      : `${opening}${harder}: ${outcome.damage} damage`;
+  }
+
+  const spill = outcome.spill;
+  const reaches = (spill?.damage > 0)
+    ? `${spill.damage} of it reaches ${ally}`
+    : `${ally}'s own defences stop what is left`;
+
+  return `${opening}${harder}: ${outcome.damage} damage, which Defeats them - ${reaches}`;
 }
 
 /**
@@ -4375,6 +4827,16 @@ function absoluteOutcomeText(attack, own) {
 /** What the attack came to for one of the people it reached. */
 function outcomeFor(attack, { own }) {
   if (!own) return "waiting";
+
+  // Turned aside before the Wound Roll was ever made, for everyone it reached.
+  if (deflection(attack)) return "deflected";
+
+  // Somebody stepped in front of them, so nothing of this reaches them - bar whatever
+  // is left over if the one who did is Defeated, which is said on that line instead.
+  if (own.shieldedBy) return `shielded by ${own.shieldedBy}`;
+  // They stepped in for somebody else while being a target themselves. One instance of
+  // the Wound Roll, and it is taken on the intervention's line rather than here.
+  if (own.steppedIn) return "stepped in - taking the Wound Roll below";
 
   if (!own.hit) {
     // An Absolute Attack that missed still has a Wound Roll owed and Damage to come, so
@@ -4577,6 +5039,26 @@ function renderAttack(message, html) {
     return;
   }
 
+  // Stepping in for somebody, which is the one Counter Maneuver that can be played
+  // without being the target. Offered in the window the rule opens - the Ally has been
+  // hit, and the Wound Roll has not been made - to anyone the reader owns who holds the
+  // Maneuver, whether or not the attack was aimed at them too.
+  if (!result.wound && !deflection(attack)) {
+    const usable = possibleInterveners(attack)
+      .filter(who => shieldableTargets(attack, who).length);
+
+    if (usable.length) {
+      const step = document.createElement("button");
+      step.type = "button";
+      step.className = "dbu-clash-button";
+      step.textContent = "Intervene";
+      step.dataset.tooltip = "Step in front of an Ally this attack hit. Costs a Counter "
+        + "Action, and the effect you choose sets the Ki cost.";
+      step.addEventListener("click", () => openIntervene(message, attack));
+      container.append(step);
+    }
+  }
+
   // The attacker rolls their own Wound, so that step belongs to them.
   // Landed on anybody. One Wound Roll serves everyone it hit, and one of them having
   // dodged is no reason for the rest to go unwounded.
@@ -4595,6 +5077,27 @@ function renderAttack(message, html) {
 
   // A Wound not yet rolled has nothing to apply anywhere.
   if (!result.wound) return;
+
+  // Damage taken in somebody else's place, which belongs to no target line - the one
+  // who stepped in is not a target of the attack, and may not be on the card at all.
+  for (const entry of interventions(attack)) {
+    if (!entry.outcome || entry.outcome.applied) continue;
+
+    const who = fromUuidSync(entry.uuid);
+    if (!who?.isOwner) continue;
+    if ((entry.outcome.damage <= 0) && !entry.outcome.spill?.damage) continue;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Apply ${entry.outcome.damage} to ${who.name}`;
+    button.dataset.tooltip = entry.outcome.defeated
+      ? `Taken in ${entry.allyName}'s place. It Defeats them, and ${
+        entry.outcome.spill?.damage ?? 0} reaches ${entry.allyName} through their own defences.`
+      : `Taken in ${entry.allyName}'s place.`;
+    button.addEventListener("click", () => applyInterventionDamage(message, attack, entry));
+    container.append(button);
+  }
 
   // One line per person this reader plays: an attack that reached four people is four
   // separate amounts of Damage, taken by four different characters, and one of them
