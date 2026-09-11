@@ -4,6 +4,7 @@ import { permits } from "./effects/interpreter.mjs";
 import { spendActions } from "./combat.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, pushes } from "./signature.mjs";
+import { diceLine, partLine, noteLine, breakdownTable, breakdownText } from "./breakdown.mjs";
 import { collectReactive, applySlot } from "./effects/interpreter.mjs";
 import {
   DAMAGE_CATEGORIES,
@@ -287,18 +288,6 @@ export function registerChatHooks() {
  * do about it. Callers apply their own policy: a lone check offers the critical die
  * as a button, while a Skill Clash has to settle both sides at once.
  */
-/**
- * How a roll's line is punctuated.
- *
- * One line, read in one direction: each step is a segment, and the arrow at the end is
- * the only arrow on it - so what follows an arrow is always the answer and never
- * another step. Literal characters rather than HTML entities, because the line is read
- * through escapeExpression on its way into a tooltip and an entity would show as its
- * own source text.
- */
-const SEPARATOR = "  ·  ";
-const ARROW = "  →  ";
-
 export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null) {
   // The whole `baseDie` Slot, not only its `set`. Only `set` was ever read, so an
   // effect *adjusting* the Natural Result - which is what Impaired does, and the only
@@ -735,7 +724,8 @@ async function takeOnCheck(message, actor, check, key) {
     speaker: message.speaker,
     flavor: check.flavor,
     content: checkCard({
-      parts: `${Handlebars.escapeExpression(effect.name)} &middot; ${again.notes.join(" &middot; ")}`,
+      parts: `${Handlebars.escapeExpression(effect.name)} &middot; ${
+        breakdownText(again.lines, again.total)}`,
       total: again.total,
       outcome: again.outcome || "karma",
       owner: actor.uuid
@@ -941,13 +931,20 @@ async function rerollBaseDie(actor, side) {
     return {
       total: side.total,
       outcome: side.outcome ?? "",
-      notes: [`Karmic Chance rolled ${again.total}, keeping ${before}`]
+      lines: [noteLine(`Karmic Chance rolled ${again.total}, keeping ${before}`)]
     };
   }
 
   let total = (side.beforeOutcome ?? side.total) - before + again.total;
   let outcome = "";
-  const notes = [`Karmic Chance ${before} → ${again.total}`];
+  // The Base Die was replaced, so what is shown is the swap and not a second die: the
+  // first one is no longer part of the roll and a row implying it still counts would be
+  // a row that lies.
+  const lines = [partLine({
+    label: "Karmic Chance",
+    written: `${before} → ${again.total}`,
+    value: again.total - before
+  })];
 
   const botch = again.total <= (actor.system.botchRange ?? 1);
   const critical = again.total >= (actor.system.criticalTarget ?? 10);
@@ -959,7 +956,12 @@ async function rerollBaseDie(actor, side) {
       ?? actor.system.botch?.penalty ?? DBUCharacterData.BOTCH_PENALTY;
     total -= penalty;
     outcome = "botch";
-    notes.push(`Botch -${penalty}`);
+    lines.push(partLine({
+      label: "Botch",
+      written: side.botchPenalty ? "-2" : "-2(bT)",
+      value: -penalty,
+      rank: "botch"
+    }));
   }
   else if (critical) {
     const formula = side.criticalDice ?? actor.system.dice.critical.formula;
@@ -967,11 +969,11 @@ async function rerollBaseDie(actor, side) {
     await extra.evaluate();
     total += extra.total;
     outcome = "critical";
-    notes.push(`Critical +${extra.total} (${formula} ${extra.result})`);
+    lines.push(diceLine(extra, "Critical", { rank: "critical" }));
   }
 
   // Floored like every finished roll: a Botch takes what it takes, never past zero.
-  return { total: Math.max(0, total), outcome, notes };
+  return { total: Math.max(0, total), outcome, lines };
 }
 
 /**
@@ -1006,15 +1008,12 @@ async function keepTheFirstRoll(actor, before, after) {
  * all - Karmic Save says you succeed whatever the numbers said - so it is carried as an
  * outcome rather than by inventing a total large enough to win.
  */
-/** The total a finished line ends on, so it can be dropped when more is about to happen. */
-const ENDS_IN_TOTAL = /\s*\u2192\s*-?\d+\s*$/;
 
 async function applyAfterTheFact(actor, side, { slots, queue }) {
-  // The line already ends in the total it came to, and something is about to change it.
-  // Left in place it reads "... -> 8 ... -> 12", where the first total is stale and the
-  // reader has to work out which arrow is the answer. Every segment carries a sign, so
-  // nothing is lost by keeping only the last one.
-  const segments = [String(side.breakdown ?? "").replace(ENDS_IN_TOTAL, "")];
+  // Appended to the rows the roll already had. The total is not one of them - it is
+  // drawn from them - so there is no stale total in the middle to trim away, which is
+  // what the old one-line form needed and occasionally got wrong.
+  const lines = [...(side.lines ?? [])];
   let total = side.total;
   let outcome = side.outcome;
 
@@ -1023,7 +1022,7 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
     const again = await rerollBaseDie(actor, side);
     total = again.total;
     outcome = again.outcome;
-    segments.push(...again.notes);
+    lines.push(...again.lines);
   }
 
   const dice = slots["roll.dice"] ?? [];
@@ -1032,17 +1031,17 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
     const roll = new Roll(formula);
     await roll.evaluate();
     total += roll.total;
-    segments.push(`Karma +${roll.total} (${formula} ${roll.result})`);
+    lines.push(diceLine(roll, "Karma", { rank: "positive" }));
   }
 
   const settled = Math.max(0, applySlot(slots, "roll.total", total));
   if (settled !== total) {
-    segments.push(`Karma ${settled - total >= 0 ? "+" : ""}${settled - total}`);
+    lines.push(partLine({ label: "Karma", value: settled - total }));
   }
 
   if (slots["clash.succeed"] === true) {
     outcome = "karmic-save";
-    segments.push("Karmic Save – this Clash succeeds");
+    lines.push(noteLine("Karmic Save - this Clash succeeds whatever the dice said"));
   }
 
   return {
@@ -1050,10 +1049,8 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
     total: settled,
     outcome,
     succeeded: (slots["clash.succeed"] === true) || side.succeeded,
-    // The literal characters, not HTML entities: this line is read through
-    // escapeExpression on its way into a tooltip, which would show "&middot;" as those
-    // eight characters rather than as a dot.
-    breakdown: `${segments.join(SEPARATOR)}${ARROW}${settled}`
+    lines,
+    breakdown: breakdownText(lines, settled)
   };
 }
 
@@ -1960,58 +1957,35 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 
   if (actor.system.willingFailure && !forced) {
     requestActorUpdate(actor, { "system.willingFailure": false });
+    // The dice are shown even though they did not count: a player who threw a roll
+    // wants to see what they threw away, and a card that hides it looks like a bug.
+    const thrown = [diceLine(roll, "Base"), noteLine("Willing failure - the total is 0")];
     return {
       actorUuid: actor.uuid,
       actorName: actor.name,
       natural,
       total: 0,
       outcome: "willing",
-      // Written the way every other line is - the dice one at a time - rather than in
-      // Foundry's formula syntax, which is the only place that leaked onto a card.
-      breakdown: [roll.dice.map(die => `${die.expression} ${die.total}`).join(" + "),
-                  "willing failure"].filter(Boolean).join(SEPARATOR) + `${ARROW}0`
+      lines: thrown,
+      breakdown: breakdownText(thrown, 0)
     };
   }
 
-  // How it was reached is written down here, while the dice are still in hand.
-  const rolled = roll.dice.map(die => `${die.expression} ${die.total}`);
+  // One line per thing that moved the number, gathered in whatever order the maths
+  // happens and put in reading order when it is drawn.
+  const lines = [diceLine(roll, "Base", { naturalShift, natural, forcedNatural })];
 
-  // An adjusted Natural Result is written as what the die became, on the die it
-  // happened to - it is the Base Die's result, and the Extra Dice beside it are
-  // untouched. Saying the amount instead leaves the reader unable to tell "took 3 off"
-  // from "came to 3".
-  if (naturalShift && rolled.length) {
-    rolled[0] = `${rolled[0]} → Natural Result ${natural}`;
+  for (const part of parts) {
+    // A part worth nothing is left out rather than shown as zero: a row saying a
+    // Threshold took nothing off is a row to read past.
+    if (part.value) lines.push(partLine(part));
   }
 
-  const dice = rolled.join(" + ");
-  // With the Base Die set by an effect it was never rolled, so the line says what it
-  // was set to rather than quoting a die that does not exist.
-  const segments = [forcedNatural === null
-    ? dice
-    : `Base Die set to ${forcedNatural}${dice ? `  |  ${dice}` : ""}`];
-
-  const describe = (entries) => entries
-    .map(entry => `${entry.label} ${Math.abs(entry.value)}`)
-    .join(", ");
-
-  const positives = parts.filter(part => part.value > 0);
-  const negatives = parts.filter(part => part.value < 0);
-
-  if (positives.length) {
-    const sum = positives.reduce((total, part) => total + part.value, 0);
-    segments.push(`bonuses +${sum} (${describe(positives)})`);
-  }
-  if (negatives.length) {
-    const sum = negatives.reduce((total, part) => total + part.value, 0);
-    segments.push(`penalties ${sum} (${describe(negatives)})`);
-  }
-
-  // Said before the Botch and the Critical, because it is why the roll happened at all:
-  // the player asked to fail and the roll would not let them.
+  // Said out loud, because it is why the roll happened at all: the player asked to fail
+  // and the roll would not let them.
   if (refusedWilling) {
     outcome = "urgent";
-    segments.push("Urgent, willing failure refused");
+    lines.push(noteLine("Urgent - a willing failure was refused"));
   }
 
   if (botch) {
@@ -2023,14 +1997,21 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
       : (actor.system.botch?.skill ?? DBUCharacterData.BOTCH_PENALTY);
     total -= penalty;
     outcome = "botch";
-    segments.push(`Botch -${penalty}`);
+    lines.push(partLine({
+      label: "Botch",
+      // The notation the rulebook states it in, which is not the same question as what
+      // it came to - 2(bT) is 6 at Base Tier 3, and both are worth seeing.
+      written: combatRoll ? "-2(bT)" : "-2",
+      value: -penalty,
+      rank: "botch"
+    }));
   }
   else if (critical) {
     const extra = new Roll(criticalDice);
     await extra.evaluate();
     total += extra.total;
     outcome = "critical";
-    segments.push(`Critical +${extra.total} (${criticalDice} ${extra.result})`);
+    lines.push(diceLine(extra, "Critical", { rank: "critical" }));
   }
 
   // The finished total is a system value like any other: a Botch takes what it takes,
@@ -2057,7 +2038,11 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     criticalDice,
     total,
     outcome,
-    breakdown: `${segments.join(SEPARATOR)}${ARROW}${total}`
+    // The workings as rows. The one-line form is derived from them rather than built
+    // beside them: two descriptions of one roll drift, and the one that drifts is
+    // always the one nobody is looking at.
+    lines,
+    breakdown: breakdownText(lines, total)
   };
 }
 
@@ -2601,7 +2586,7 @@ function chargePenalty(actor, attack) {
   if (charges <= 0) return [];
 
   const perCharge = actor.system.baseTierOfPower ?? 1;
-  return [{ label: "Energy Charges", value: -(charges * perCharge) }];
+  return [{ label: "Energy Charges", written: `-${charges}(bT)`, value: -(charges * perCharge) }];
 }
 
 /** Everyone whose confirmation the attack is waiting on. */
@@ -2939,9 +2924,9 @@ function profileWoundParts(attacker, attack) {
   // the Wound Roll by 1(T)." On top of the die each Charge already adds - that die is
   // the Energy Charge Maneuver's doing, and this is the Profile's.
   if (profile?.woundPerChargePerTier) {
-    const bonus = (attack.energyCharges ?? 0) * profile.woundPerChargePerTier
-      * (attacker.system.tierOfPower ?? 1);
-    if (bonus) parts.push({ label: `${profile.label} (charges)`, value: bonus });
+    const per = (attack.energyCharges ?? 0) * profile.woundPerChargePerTier;
+    const bonus = per * (attacker.system.tierOfPower ?? 1);
+    if (bonus) parts.push({ label: `${profile.label} (charges)`, written: `+${per}(T)`, value: bonus });
   }
 
   // Blitz: "if you move a number of Squares that exceeds your Normal Speed due to the
@@ -3023,13 +3008,15 @@ async function combinationFollowUps(attacker, attack) {
   }
 
   const beat = rolls.filter(roll => roll.total > target).length;
-  const bonus = beat * plan.woundPerHitPerTier * tier;
+  const per = beat * plan.woundPerHitPerTier;
+  const bonus = per * tier;
   if (!bonus) return [];
 
   // The label carries what happened, since the Wound Roll's own line is where anyone
   // will look for it: how many of the three landed, and what they had to beat.
   return [{
     label: `${profile.label} (${beat} of ${plan.rolls} beat ${target})`,
+    written: `+${per}(T)`,
     value: bonus
   }];
 }
@@ -3187,7 +3174,12 @@ function dodgeBonus(actor, { halved = false } = {}) {
  */
 function thresholdPenalty(actor) {
   const { penalty } = actor.system.threshold;
-  return penalty ? [{ label: "Thresholds", value: -penalty }] : [];
+  // "Each failure costs 1(bT) on every Combat Roll", so what is written is the rule and
+  // what is shown beside it is what that came to for this character.
+  const failures = actor.system.threshold.failures ?? 0;
+  return penalty
+    ? [{ label: "Thresholds", written: `-${failures}(bT)`, value: -penalty }]
+    : [];
 }
 
 /**
@@ -3661,7 +3653,13 @@ function rolledTotal(side) {
   // No tooltip at all when it is not yours to see. There is nothing to put in one: the
   // dash already says the number is not on offer, and explaining that on hover only
   // makes the reader ask twice.
-  const tip = mine ? ` data-tooltip="${Handlebars.escapeExpression(side.breakdown ?? "")}"` : "";
+  // The workings as a table, so the hover is read down a column rather than along a
+  // sentence. `data-tooltip-html` is the attribute Foundry injects as HTML; the plain
+  // `data-tooltip` would show the markup as its own source text.
+  const tip = mine
+    ? ` data-tooltip-html="${Handlebars.escapeExpression(
+        side.lines ? breakdownTable(side.lines, side.total) : (side.breakdown ?? ""))}"`
+    : "";
 
   // A Karmic Save is not a number: it says you succeed whatever the dice came to. So
   // it is shown in place of the total rather than beside it, with the roll it overrode

@@ -1410,6 +1410,59 @@
 
 /* A roll that would not be failed on purpose. The total stands, so it is not dimmed
    like a willing failure - it is marked, the way a Botch is. */
+/* A roll's workings, in the hover.
+
+   Four columns, read down rather than along: what the rules call it, the dice if it had
+   any, what it came to, and where it came from. The numbers are right-aligned and
+   tabular so the digits line up between rows - a column of values you cannot compare at
+   a glance is the thing this replaced. */
+.dbu-breakdown {
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+  font-size: 0.9em;
+}
+
+.dbu-breakdown td {
+  padding: 1px 6px 1px 0;
+  vertical-align: baseline;
+}
+
+.dbu-bd-written {
+  color: var(--dbu-text, inherit);
+}
+
+.dbu-bd-each,
+.dbu-bd-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbu-bd-each {
+  color: var(--dbu-text-dim);
+}
+
+.dbu-bd-value {
+  font-weight: 600;
+}
+
+.dbu-bd-source {
+  color: var(--dbu-text-dim);
+  padding-right: 0;
+}
+
+/* Something that happened to the roll that is not a number, spanning the lot. */
+.dbu-bd-note td {
+  color: var(--dbu-accent);
+  padding-top: 3px;
+}
+
+/* The answer, set apart from the working above it. */
+.dbu-bd-total td {
+  border-top: 1px solid rgba(128, 128, 128, 0.4);
+  padding-top: 3px;
+}
+
 /* Why a Clash was opened, when it arrived out of something else rather than being
    played for its own sake. */
 .dbu-clash-reason {
