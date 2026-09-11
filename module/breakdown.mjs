@@ -45,10 +45,14 @@ const LINE_ORDER = Object.freeze({
 /**
  * The Base Die.
  *
- * One die, and the number in brackets is its Natural Result - which is what a Botch and
- * a Critical are read off, so it is the one number on this row anybody needs. When an
- * effect moved it the bracket carries both, joined by an arrow: "10 → 7" says what was
- * rolled and what it became, which no single figure can.
+ * One die, and the number in brackets is its Natural Result - the Base Die alone, which
+ * is what a Botch and a Critical are read off, so it is the one number on this row
+ * anybody needs. When an effect moved it the bracket carries both, joined by an arrow:
+ * "10 → 7" says what was rolled and what it became, which no single figure can.
+ *
+ * The two terms the rules use for a roll meet on this table. The Natural Result is this
+ * row's bracket; the Dice Score is the row at the bottom - the Base Die, every other
+ * die, and every bonus, all together.
  *
  * A Base Die an effect stated outright was never rolled at all, so there is nothing to
  * point away from - the arrow stands alone.

@@ -3298,8 +3298,8 @@ function profileSoakIgnored(attacker, attack) {
  * Maneuver) an additional 3 times. For every additional time your Strike Roll exceeds
  * their Dice Score, increase the Wound Roll by an additional 2(T)."
  *
- * The Dice Score is the dice alone, before any bonus - the reading the rest of the
- * system already uses, in Karmic Boost and in the Parry penalty.
+ * The Dice Score is the whole of a roll - the Base Die, every other die, and every
+ * bonus, all together. It is not the Natural Result, which is the Base Die alone.
  *
  * Rolled at the same bonus the first Strike was, rather than rebuilt from the sheet: a
  * triggered effect that raised that Strike raised *this* attack's Strike Roll, and
@@ -3337,8 +3337,8 @@ function anyoneHit(attack) {
  * Dodge Roll or Strike Roll an additional 3 times. For every additional time your
  * Strike Roll exceeds their Dice Score, increase the Wound Roll by an additional 2(T)."
  *
- * The Dice Score is the dice alone, before any bonus - the reading the rest of the
- * system already uses, in Karmic Boost and in the Parry penalty.
+ * The Dice Score is the whole of a roll - the Base Die, every other die, and every
+ * bonus, all together. It is not the Natural Result, which is the Base Die alone.
  *
  * Rolled at the same bonus the first Strike was, rather than rebuilt from the sheet: a
  * triggered effect that raised that Strike raised *this* attack's Strike Roll, and
@@ -4382,7 +4382,7 @@ function renderAttack(message, html) {
     more.type = "button";
     more.className = "dbu-clash-button";
     more.textContent = `Roll ${plan.rolls} additional Strikes`;
-    more.dataset.tooltip = "Each one that beats their Dice Score adds "
+    more.dataset.tooltip = "Each one that beats the defence they already made adds "
       + `${plan.woundPerHitPerTier}(T) to the Wound Roll.`;
     more.addEventListener("click", () => rollFollowUpStrikes(message, attack, attacker));
     container.append(more);

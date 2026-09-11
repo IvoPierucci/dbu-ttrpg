@@ -504,6 +504,17 @@ Rolls        strike  dodge  parry  wound  initiative  combatRolls
              skill.<name>  skill.<name>.bonus  save.<name>
              baseDie  criticalTarget  botchRange  botch.penalty
              willingFailure
+
+Two terms the rules use about a roll, and they are not the same thing:
+
+  Natural Result   the Base Die alone. A Botch and a Critical are read off it
+                   and off nothing else, and `baseDie` is the Slot that moves it.
+  Dice Score       the whole roll - the Base Die, every other die, and every
+                   bonus, all together. It is what a Clash compares.
+
+So `baseDie -= 1` changes the Natural Result, which can push a roll into its
+Botch Range; `strike -= 1` changes the Dice Score and cannot. Both take a point
+off the total.
 Dice         dice.extra.category  dice.greater.category  dice.critical.category
              dice.extra.instances  diceAdvantage  combatRolls.dice
 Economy      attack.kiCost  defend.<option>.kiCost  actions.standard
