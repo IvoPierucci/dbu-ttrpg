@@ -100,7 +100,9 @@ const TABLE = [
     doc: "How much of the target's Damage Reduction this one attack gets past. Written "
        + "by the attacker, and lasts only for that attack." },
   { key: "defenseValue", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Defense Value." },
-  { key: "might", phase: PHASES.LATE, kind: N, ops: NUMERIC, doc: "Might." },
+  { key: "might", phase: PHASES.LATE, kind: N, ops: NUMERIC,
+    doc: "Might, which is what a Might Clash rolls. Not what a Wound Roll is made of - "
+       + "the two are separate terms, and an effect raising one raises only that one." },
   { key: "stressBonus", phase: PHASES.LATE, kind: N, ops: NUMERIC, doc: "Stress Bonus." },
   { key: "awareness", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Awareness." },
   { key: "surgency", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Surgency." },
@@ -114,7 +116,9 @@ const TABLE = [
   { key: "dodge", phase: PHASES.LATE, kind: N, ops: NUMERIC, doc: "Dodge Rolls." },
   { key: "parry", phase: PHASES.LATE, kind: N, ops: NUMERIC,
     doc: "Added on top of Strike, but only when Strike is rolled defensively as a Parry." },
-  { key: "wound", phase: PHASES.LATE, kind: N, ops: NUMERIC, doc: "Wound Rolls." },
+  { key: "wound", phase: PHASES.LATE, kind: N, ops: NUMERIC,
+    doc: "Wound Rolls, which are the Damage Attribute the attack's Foundation names. "
+       + "Raising Might does not raise this." },
   { key: "initiative", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Initiative Bonus." },
 
   // Writing here lands on all three, because those three are the Combat Rolls.

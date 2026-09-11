@@ -108,6 +108,14 @@ async function writeStateful(actor, slots) {
  *
  * Adding one costs a case here and a line in the author's guide, and nothing else.
  */
+/** A character an effect named, by uuid or by name, or nothing. */
+function named(who) {
+  if (!who) return null;
+  return fromUuidSync(String(who))
+    ?? game.actors?.find(a => a.name === String(who))
+    ?? null;
+}
+
 async function runVerb(actor, call, context) {
   const verb = call?.verb;
   const args = call?.args ?? [];
@@ -129,13 +137,29 @@ async function runVerb(actor, call, context) {
     case "leaveState":
       return leaveState(actor, args[0] ?? context.state);
 
-    case "mightClash":
-      // Offered, not rolled: the Pinned Character may repeat it as often as they like,
-      // so which turn they spend the Action on is theirs to decide.
-      ui.notifications?.info(
-        `${actor.name} may make a Might Clash to break free.`
-      );
-      return;
+    case "mightClash": {
+      // Opened for real now that the system has Might Clashes. It used to print a line
+      // saying one could be made and do nothing, so Pinned spent an Action on a
+      // notification - the verb was declared, called, and had no clash behind it.
+      //
+      // Who it is against: whoever the effect names, and otherwise whoever the player
+      // has targeted. Who pinned you is not recorded - a Combat Condition is a name and
+      // a number of stacks and nothing else - and it is a thing the table knows, so it
+      // is asked for by targeting rather than tracked.
+      const against = named(args[0]) ?? game.user?.targets?.first()?.actor ?? null;
+      if (!against) {
+        ui.notifications?.warn(
+          `${actor.name} needs an opponent for the Might Clash. Target a token first.`
+        );
+        return;
+      }
+
+      const { postMightClash } = await import("../chat.mjs");
+      return postMightClash(actor, against, {
+        maneuverName: "Might Clash",
+        reason: `${actor.name} against ${against.name}`
+      });
+    }
 
     case "grantOutOfSequence":
       // Offered rather than taken: an Out-of-Sequence Maneuver is still the player's to
