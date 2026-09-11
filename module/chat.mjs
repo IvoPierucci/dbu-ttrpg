@@ -2383,7 +2383,10 @@ function renderSkillClash(message, html) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "dbu-clash-button";
-    button.textContent = `Roll ${clash.skillLabel}`;
+    // What this side actually rolls, which is the Skill on a Skill Clash and Might on a
+    // Might Clash - the label used to be the Skill's alone, so a Might Clash offered
+    // "Roll undefined".
+    button.textContent = `Roll ${CLASH_ROLLS[clash.category ?? "skill"].of(actor, clash).label}`;
     button.dataset.tooltip = "Declare what you bring, then wait for the other side";
     button.addEventListener("click", () => clashStage(message, actor));
     container.append(button);
@@ -3573,21 +3576,24 @@ export async function reduceLifePoints(target, amount, { reason = "Life Point re
 }
 
 /**
- * Knockback, once the Wound Roll has landed and taken something off.
+ * Knockback, once the Damage has actually been taken off.
  *
  * "If you successfully Damage an Opponent with this Signature Technique, after the
- * Wound Roll, you may make a Might Clash." Offered rather than fired, because "you may"
- * is a choice, and only when Damage was actually dealt, which is the condition the rule
- * opens with.
+ * Wound Roll, you may make a Might Clash." It arrives as its own card the moment the
+ * Damage is applied, rather than behind a button on the attack: the attack's card is
+ * about the attack, and this is a Clash between two characters with two sides to roll
+ * and a consequence of its own.
+ *
+ * "You may" is still a choice - nothing is rolled until both sides say so, and a card
+ * nobody answers is a card nobody answers.
  */
-async function offerKnockback(message, attack, attacker) {
-  const target = fromUuidSync(attack.targetUuid);
-  if (!target) return;
-
+async function openKnockback(attack, attacker, target) {
   return postMightClash(attacker, target, {
-    maneuverName: attack.maneuverName,
-    reason: `Knockback - win and move ${target.name} up to ${attacker.system.might} `
-      + "Squares in a straight line away from you.",
+    // Named for the Advantage, not for the Maneuver: this card is about the Knockback,
+    // and which attack caused it belongs in the line below rather than in the title.
+    maneuverName: "Knockback",
+    reason: `${attack.maneuverName} · win and move ${target.name} up to `
+      + `${attacker.system.might} Squares in a straight line away from you.`,
     collision: {
       // Launching doubles what the movement costs, and says so itself - an Advantage
       // does not know which Profile handed it out.
@@ -3680,6 +3686,15 @@ async function applyAttackDamage(message, target, attack) {
   const settled = target.system.life.value - damage;
   const floor = target.system.effects?.slots?.["life.allowNegative"] ? settled : Math.max(0, settled);
   await target.update({ "system.life.value": floor });
+
+  // "If you successfully Damage an Opponent" - which is answered here and nowhere
+  // earlier. The Clash arrives as its own card, because it is a Clash: two characters,
+  // two rolls, and a consequence that belongs to whoever wins it.
+  if ((damage > 0) && pushes(attack)) {
+    const attacker = fromUuidSync(attack.attackerUuid);
+    if (attacker) await openKnockback(attack, attacker, target);
+  }
+
   requestEdit(message, {
     type: "attack",
     attack: { ...attack, result: { ...attack.result, applied: true } }
@@ -4079,21 +4094,6 @@ function renderAttack(message, html) {
   // card - the others are often worked out after the first exchange has settled, not
   // before it - and only to them, since it is their Maneuver that is reaching.
   const thrower = fromUuidSync(attack.attackerUuid);
-
-  // Knockback waits for the Wound Roll to have landed and taken something off - "if you
-  // successfully Damage an Opponent" is the condition the Advantage opens with. What
-  // the movement costs is offered on the Clash this opens, and only to whoever wins it:
-  // there is no movement without the win, and no collision without the movement.
-  if (pushes(attack) && thrower?.isOwner && (result?.damage > 0)) {
-    const clash = document.createElement("button");
-    clash.type = "button";
-    clash.className = "dbu-clash-button";
-    clash.textContent = "Knockback";
-    clash.dataset.tooltip = "Open a Might Clash. Win it and move them up to your Might "
-      + "in Squares, in a straight line away from you.";
-    clash.addEventListener("click", () => offerKnockback(message, attack, thrower));
-    container.append(clash);
-  }
 
   if (PROFILES[attack.profile]?.area && thrower?.isOwner) {
     const add = document.createElement("button");

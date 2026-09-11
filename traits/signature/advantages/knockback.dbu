@@ -18,10 +18,12 @@ text: >
 #
 # What the system does is open the Clash and get out of the way. It is a Might
 # Clash - Might on both sides, which is one of the four categories a Clash can be,
-# and the only one of the four that is a single value rather than a family. Offered
-# to the attacker after the Wound Roll and only when Damage was actually dealt,
-# which is the condition the rule opens with, and offered rather than fired: "you
-# may make a Might Clash" is a choice.
+# and the only one of the four that is a single value rather than a family.
+#
+# It arrives as its own card the moment the Damage is taken off, which is where "if
+# you successfully Damage an Opponent" is first answered. Its own card because it is
+# a Clash: two characters, two rolls, and a consequence that belongs to whoever wins
+# it. "You may" is still a choice - nothing is rolled until both sides say so.
 #
 # Winning it is where the system stops. The direction is "any direction away from
 # you", the distance is "up to your Might", and both are the attacker's to pick on
