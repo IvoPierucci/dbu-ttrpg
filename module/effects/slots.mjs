@@ -105,6 +105,8 @@ const TABLE = [
   { key: "awareness", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Awareness." },
   { key: "surgency", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Surgency." },
   { key: "haste", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Haste." },
+  { key: "meleeRange", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Melee Range, in Squares beyond the adjacent ones. 0 reaches only what you touch." },
 
   // --- Rolls -------------------------------------------------------------------
   // Named as the rulebook names them: "increase your Wound Rolls by 2(T)" is `wound`.

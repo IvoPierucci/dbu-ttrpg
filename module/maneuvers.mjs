@@ -134,15 +134,198 @@ export function resolveDamageCategory(baseCategory, shift = 0) {
   return Object.keys(DAMAGE_CATEGORIES).find(key => DAMAGE_CATEGORIES[key].value === value);
 }
 
+/**
+ * The Profiles an Attacking Maneuver can be made with.
+ *
+ * `kiCost` is flat; `kiCostPerTier` is the "4(T)" notation and grows with the Tier of
+ * Power, which is how every Profile but Simple is priced. Both are added to the
+ * Maneuver's own cost - a Profile is what an attack pays for.
+ *
+ * `needs` names machinery a Profile leans on that the system does not have yet. It is
+ * carried rather than left out so the Profile can still be chosen, priced and thrown:
+ * what it says here is shown when it is picked, so nobody discovers at the table that
+ * half of it did nothing.
+ */
 export const PROFILES = Object.freeze({
   simple: {
     label: "Simple",
     foundations: ["physical", "energy", "magic"],
-    /** Added to the Maneuver's own cost: a Profile is what an attack pays for. */
     kiCost: 0,
     damageCategory: "standard"
+  },
+
+  // --- Physical -------------------------------------------------------------
+  // Every one of these is bound by the Foundation's own rule: a Physical Attack can
+  // only be made against an Opponent within your Melee Range.
+
+  blitz: {
+    label: "Blitz",
+    foundations: ["physical"],
+    kiCostPerTier: 4,
+    damageCategory: "standard",
+    summary: "An attack made as part of a high-speed charge.",
+    // "Gains the Charging Assault Advantage for free", and a Wound bonus of half your
+    // Agility Modifier when that Advantage carried you past your Normal Speed.
+    signatureDiscountPerTier: 2,
+    needs: "Charging Assault, and the Squares moved this turn, are not tracked yet - "
+      + "the Advantage and the half-Agility bonus to the Wound Roll are the table's to "
+      + "apply. The Signature Technique discount is applied.",
+    rules: [
+      "Gains the Charging Assault Advantage for free - no added KP, and no added TP as a Signature Technique.",
+      "Move further than your Normal Speed through Charging Assault and the Wound Roll rises by half your Agility Modifier.",
+      "As a Signature Technique, the KP Cost drops by 2(T)."
+    ]
+  },
+
+  crushing: {
+    label: "Crushing",
+    foundations: ["physical"],
+    kiCostPerTier: 6,
+    damageCategory: "lethal",
+    summary: "A heavy strike with the intent to break bones or cause internal damage.",
+    // Strike is Haste + Awareness, so this is a penalty of half the Haste that went
+    // into it - taken off the roll rather than rebuilt, so anything else that changed
+    // Strike is untouched.
+    halfHasteOnStrike: true,
+    rules: ["Only half of your Haste applies to the Strike Roll."]
+  },
+
+  pinpoint: {
+    label: "Pinpoint",
+    foundations: ["physical"],
+    kiCostPerTier: 4,
+    damageCategory: "standard",
+    summary: "Attacks made against pressure points, done through immense skill and precision.",
+    ignoresSoakByInsight: true,
+    rules: [
+      "Ignores the target's Soak Value equal to your Insight Modifier.",
+      "A Critical Result on the Strike Roll doubles that Insight Modifier for this attack."
+    ]
+  },
+
+  powered: {
+    label: "Powered",
+    foundations: ["physical"],
+    kiCostPerTier: 8,
+    damageCategory: "standard",
+    summary: "A single, powerful punch or kick charged to the brim with ki.",
+    extraDamageAttribute: true,
+    grantsEnergyCharge: 1,
+    rules: [
+      "Your Damage Attribute applies one more time.",
+      "Gains an Energy Charge."
+    ]
+  },
+
+  soaring: {
+    label: "Soaring",
+    foundations: ["physical"],
+    kiCostPerTier: 5,
+    damageCategory: "direct",
+    summary: "A physical attack that launches a concussive shock wave at a distant opponent.",
+    area: { shape: "line", magnitude: "standard" },
+    needs: "Areas of Effect are not built yet, so this is thrown at one target and the "
+      + "Line is the table's to resolve.",
+    rules: ["Has a Standard Line AoE."]
+  },
+
+  sweeping: {
+    label: "Sweeping",
+    foundations: ["physical"],
+    kiCostPerTier: 4,
+    damageCategory: "standard",
+    summary: "The user strikes at multiple enemies simultaneously.",
+    area: { shape: "sphere", magnitude: "minor", centredOnSelf: true, sparesAllies: true },
+    doublesDiminishingDefense: true,
+    needs: "Areas of Effect are not built yet, so this is thrown at one target and the "
+      + "Sphere is the table's to resolve. The doubled Diminishing Defense is applied.",
+    rules: [
+      "Has a Minor Sphere AoE centred on you.",
+      "Allies within it are not targeted.",
+      "Deal Damage and a target takes twice the Diminishing Defense stacks."
+    ]
   }
 });
+
+/**
+ * What a Foundation demands of an attack made with it, beyond the Damage Attribute.
+ *
+ * Each Foundation has rules of its own. Physical is the one written so far: "Physical
+ * Attacks can only be made against Opponents within your Melee Range, unless specified
+ * otherwise."
+ */
+export const FOUNDATION_RULES = Object.freeze({
+  physical: { meleeOnly: true },
+  energy: {},
+  magic: {}
+});
+
+/**
+ * How many empty Squares lie between two tokens.
+ *
+ * Zero means they are touching - adjacent, which is what Melee Range is before a Size
+ * or an effect widens it. Measured between the footprints rather than between centres,
+ * because a Gigantic character occupies 4x4 Squares and reaching them means reaching
+ * the nearest of those, not the middle of them.
+ *
+ * Chebyshev, so a diagonal costs the same as a straight line: the rules count Squares,
+ * and a Square touched at the corner is touched.
+ *
+ * @returns {number|null} null when it cannot be measured - no token, or two scenes.
+ */
+export function squaresBetween(a, b) {
+  if (!a || !b || (a.parent?.id !== b.parent?.id)) return null;
+
+  const grid = a.parent?.grid?.size ?? canvas?.grid?.size;
+  if (!grid) return null;
+
+  // In Squares, with the footprint each token actually covers.
+  const box = t => ({
+    x: t.x / grid, y: t.y / grid,
+    w: t.width ?? 1, h: t.height ?? 1
+  });
+  const one = box(a);
+  const two = box(b);
+
+  const gap = (p, q, pSize, qSize) => Math.max(0, Math.max(p - (q + qSize), q - (p + pSize)));
+  return Math.max(
+    Math.ceil(gap(one.x, two.x, one.w, two.w)),
+    Math.ceil(gap(one.y, two.y, one.h, two.h))
+  );
+}
+
+/**
+ * Whether a Physical Attack can reach this target at all.
+ *
+ * "Physical Attacks can only be made against Opponents within your Melee Range, unless
+ * specified otherwise." Melee Range is the adjacent Squares, widened by Size - an
+ * Enormous character reaches one Square further, a Colossal one six - and by anything
+ * written against the `meleeRange` Slot.
+ *
+ * Answers null - allowed - whenever the distance cannot be known. Neither character
+ * being on a scene is the ordinary case out of combat, and a rule about Squares cannot
+ * be enforced where there are none.
+ *
+ * @returns {null|string} null if it may be made, otherwise why it may not
+ */
+export function whyNotInReach(actor, target, { foundation, profile } = {}) {
+  if (!FOUNDATION_RULES[foundation]?.meleeOnly) return null;
+  if (PROFILES[profile]?.ignoresMeleeRule) return null;
+
+  const from = actor?.getActiveTokens?.(false, true)?.[0];
+  const to = target?.getActiveTokens?.(false, true)?.[0];
+  const squares = squaresBetween(from, to);
+  if (squares === null) return null;
+
+  const reach = Math.max(0, actor.system.meleeRange ?? 0);
+  if (squares <= reach) return null;
+
+  const range = reach
+    ? `${reach + 1} Squares`
+    : "adjacent Squares";
+  return `A Physical Attack only reaches your Melee Range (${range}). `
+    + `${target.name} is ${squares + 1} Squares away.`;
+}
 
 /**
  * The effects the Defend Maneuver can be used for. Each is chosen when the Maneuver
@@ -291,6 +474,22 @@ async function pick(title, question, buttons) {
  * The per-Foundation groups are empty for now - Simple is the only Profile - but they
  * are what every Foundation-specific Profile will slot into.
  */
+/**
+ * What a Profile does, on hover.
+ *
+ * Written here rather than in the row because spelt out inline it is a paragraph per
+ * Profile and the dialog grows to fit the longest - the same reason the Karmic Effects
+ * put their wording on the name. What the system does not do yet is said last and
+ * plainly, so a Profile that is half machinery and half table ruling says so where it
+ * is chosen rather than after it is thrown.
+ */
+function profileTip(profile) {
+  const lines = [profile.summary, ...(profile.rules ?? [])].filter(Boolean);
+  if (profile.needs) lines.push(`Not automated: ${profile.needs}`);
+  if (!lines.length) return "";
+  return ` data-tooltip="${Handlebars.escapeExpression(lines.join("\n"))}"`;
+}
+
 function profileGroups(foundations) {
   const groups = [{ key: "multi", label: "Multi-Foundation", profiles: [] }];
   for (const [key, foundation] of Object.entries(foundations)) {
@@ -348,7 +547,7 @@ export async function declareAttack(maneuver, foundations, actor) {
  *
  * @returns {Promise<string|null>} A Profile id, or null if nothing was chosen.
  */
-export async function pickProfileOnly(maneuver, foundations, hint = "") {
+export async function pickProfileOnly(maneuver, foundations, hint = "", actor = null) {
   if (maneuver.profile && (maneuver.profile !== "any")) return maneuver.profile;
 
   const groups = profileGroups(foundations);
@@ -361,9 +560,9 @@ export async function pickProfileOnly(maneuver, foundations, hint = "") {
       checked = true;
       return `<label class="dbu-profile-option">
         <input type="radio" name="profile" value="${profile.id}" ${attr}/>
-        <span class="dbu-profile-name">${Handlebars.escapeExpression(profile.label)}</span>
+        <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(profile.label)}</span>
         <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
-        <span class="dbu-profile-cost">${profile.kiCost ? `${profile.kiCost} KP` : "0 KP"}</span>
+        <span class="dbu-profile-cost">${profileKiCost(profile.id, maneuver, actor)} KP</span>
       </label>`;
     }).join("");
 
@@ -452,9 +651,9 @@ async function pickProfile(maneuver, foundations, actor) {
       checked = true;
       return `<label class="dbu-profile-option">
         <input type="radio" name="profile" value="${profile.id}" ${attr}/>
-        <span class="dbu-profile-name">${Handlebars.escapeExpression(profile.label)}</span>
+        <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(profile.label)}</span>
         <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
-        <span class="dbu-profile-cost">${profile.kiCost ? `${profile.kiCost} KP` : "0 KP"}</span>
+        <span class="dbu-profile-cost">${profileKiCost(profile.id, maneuver, actor)} KP</span>
       </label>`;
     }).join("");
 
@@ -531,6 +730,26 @@ function baseKiCost(maneuver, actor) {
     : (maneuver.kiCost ?? 0);
 }
 
+/**
+ * What a Profile adds to the price.
+ *
+ * Every Physical Profile is written in the "4(T)" notation, so it grows with the Tier
+ * of Power. Blitz alone takes some of it back as a Signature Technique - "reduce the KP
+ * Cost by 2(T)" - and never below nothing.
+ */
+export function profileKiCost(profileId, maneuver, actor) {
+  const profile = PROFILES[profileId];
+  if (!profile) return 0;
+
+  const tier = actor?.system?.tierOfPower ?? 1;
+  const cost = (profile.kiCost ?? 0) + ((profile.kiCostPerTier ?? 0) * tier);
+  const discount = (maneuver?.signature && profile.signatureDiscountPerTier)
+    ? profile.signatureDiscountPerTier * tier
+    : 0;
+
+  return Math.max(0, cost - discount);
+}
+
 /** What a Maneuver costs in Ki once its declared Profile is taken into account. */
 export function maneuverKiCost(maneuver, declared, actor) {
   // One path whether or not a Profile has been declared. It used to fork, and the
@@ -538,7 +757,7 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // half that applies to Attacking Maneuvers - so Drained raising the price of every
   // attack was true when you paid and invisible when you looked.
   const base = baseKiCost(maneuver, actor)
-    + (declared ? PROFILES[declared.profile].kiCost : 0);
+    + (declared ? profileKiCost(declared.profile, maneuver, actor) : 0);
 
   const slots = actor?.system?.effects?.slots;
 

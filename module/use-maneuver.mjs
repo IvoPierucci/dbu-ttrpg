@@ -11,6 +11,7 @@ import DBUCharacterData from "./data/actor-character.mjs";
 import {
   allManeuvers,
   declareAttack,
+  whyNotInReach,
   maneuverKiCost,
   maneuverUsesLeft,
   pickProfileOnly,
@@ -271,6 +272,15 @@ export async function useManeuver(actor, maneuver) {
     if (!declared) return false;
   }
 
+    // A Physical Attack only reaches your Melee Range. Checked once the Profile and
+    // Foundation are settled, since that is what decides whether the rule applies, and
+    // before anything is paid - the declaration can still be taken back here.
+    const outOfReach = targetActor && whyNotInReach(actor, targetActor, declared ?? {});
+    if (outOfReach) {
+      ui.notifications.warn(outOfReach);
+      return false;
+    }
+
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, declared, actor))) {
     return false;
   }
@@ -367,7 +377,8 @@ async function declareCharge(actor) {
   const profile = await pickProfileOnly(
     definitionOf(held),
     DBUCharacterData.FOUNDATIONS,
-    `Which Profile is ${Handlebars.escapeExpression(held.name)} being charged for?`
+    `Which Profile is ${Handlebars.escapeExpression(held.name)} being charged for?`,
+    actor
   );
   if (!profile) return false;
 

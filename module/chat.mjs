@@ -12,6 +12,7 @@ import {
   resolveDamageCategory,
   allManeuvers,
   declareAttack,
+  whyNotInReach,
   defendOptionCost,
   getManeuver,
   maneuverKiCost,
@@ -2321,6 +2322,14 @@ async function takeOutOfSequence(message, actor, offer) {
   if (maneuver.profile || maneuver.attacking) {
     declared = await declareAttack(maneuver, DBUCharacterData.FOUNDATIONS, actor);
     if (!declared) return;
+
+    // The same rule on the way in out of sequence: a Physical Attack only reaches your
+    // Melee Range, and an Out-of-Sequence Maneuver is no exception to it.
+    const outOfReach = target && whyNotInReach(actor, target, declared);
+    if (outOfReach) {
+      ui.notifications.warn(outOfReach);
+      return;
+    }
   }
 
   // An Out-of-Sequence Maneuver ignores its Action Cost, but not its Ki cost.
@@ -2376,7 +2385,12 @@ export async function postAttack(actor, target, maneuver,
           kiWager,
           // Energy Charges live on the Maneuver, not the character: they were fed into
           // this attack and are spent with it. Each adds a die to the Wound Roll.
-          energyCharges: Math.min(charges, DBUCharacterData.MAX_ENERGY_CHARGES),
+          // Powered "gains an Energy Charge", on top of anything the Energy Charge
+          // Maneuver fed into it - and still held to the seven the rules allow.
+          energyCharges: Math.min(
+            charges + (PROFILES[profile].grantsEnergyCharge ?? 0),
+            DBUCharacterData.MAX_ENERGY_CHARGES
+          ),
           signature: (maneuver.tags ?? []).includes("signature"),
           foundation,
           foundationLabel: DBUCharacterData.FOUNDATIONS[foundation].label,
@@ -2516,6 +2530,25 @@ async function settleAttack(message, attack) {
 }
 
 /**
+ * What a Profile takes off the Strike Roll.
+ *
+ * Crushing: "only apply half of your Haste to the Strike Roll." Strike is Haste plus
+ * Awareness, so this is a line taking half the Haste back off rather than a Strike
+ * rebuilt from scratch - which would throw away everything else that changed it, the
+ * sheet's own modifiers and any effect written against `strike` included.
+ *
+ * Empty when nothing applies, so the breakdown does not carry a zero.
+ */
+function profileStrikeParts(attacker, attack) {
+  const profile = PROFILES[attack.profile];
+  if (!profile?.halfHasteOnStrike) return [];
+
+  const haste = attacker.system.haste ?? 0;
+  const lost = haste - Math.floor(haste / 2);
+  return lost ? [{ label: "Crushing", value: -lost }] : [];
+}
+
+/**
  * Roll the exchange: the Strike, and whatever each target chose to meet it with.
  */
 async function resolveAttack(message, attack) {
@@ -2549,6 +2582,7 @@ async function resolveAttack(message, attack) {
   // the round's free attacks are spent.
   const strike = await rollSide(attacker, [
     { label: "Strike", value: attacker.system.combat.strike },
+    ...profileStrikeParts(attacker, attack),
     { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty },
     ...thresholdPenalty(attacker)
   ], { ...options.attacker, combatRoll: true, slot: "strike" });
@@ -2595,6 +2629,9 @@ async function resolveAttack(message, attack) {
   // from defending against attack after attack, and whether being hit automatically
   // still counts as defending is a reading, not something the text settles.
   if (defence.gainsDiminishingDefense && !forced) {
+    // Sweeping doubles what a target takes, but only "if you deal Damage with this
+    // Attacking Maneuver" - which is not known yet. So the multiplier travels with the
+    // attack and the stacks are settled once the Damage is.
     await requestActorUpdate(target, {
       "system.diminishingDefense": target.system.diminishingDefense + target.system.diminishing.defense.perAttack
     });
@@ -2671,6 +2708,44 @@ async function woundStage(message, attack, attacker) {
 }
 
 /**
+ * What a Profile adds to the Wound Roll.
+ *
+ * Powered: "apply your Damage Attribute an additional time." The Damage Attribute is
+ * whichever the Foundation names - it is already inside the Wound value once, so this
+ * is that Modifier added again rather than the Wound doubled, which would take Might
+ * and everything else along with it.
+ */
+function profileWoundParts(attacker, attack) {
+  const profile = PROFILES[attack.profile];
+  if (!profile?.extraDamageAttribute) return [];
+
+  const foundation = DBUCharacterData.FOUNDATIONS[attack.foundation];
+  const modifier = attacker.system.attributes?.[foundation?.attribute]?.mod ?? 0;
+  return modifier ? [{ label: `${profile.label} (${foundation.label})`, value: modifier }] : [];
+}
+
+/**
+ * How much of the target's Soak Value an attack simply passes through.
+ *
+ * Pinpoint: "ignores an amount of the target's Soak Value equal to your Insight
+ * Modifier", and "if you score a Critical Result on the Strike Roll, double your
+ * Insight Modifier for the duration of this Attacking Maneuver" - which is the Strike
+ * that was already rolled and settled, so it is read rather than asked for again.
+ *
+ * Taken off the Soak that the Damage Category left, not off the Soak Value on the
+ * sheet: the Category has already had its say, and ignoring more than is there ignores
+ * what is there.
+ */
+function profileSoakIgnored(attacker, attack) {
+  const profile = PROFILES[attack.profile];
+  if (!profile?.ignoresSoakByInsight) return 0;
+
+  const insight = attacker.system.attributes?.insight?.mod ?? 0;
+  const doubled = attack.result?.strike?.outcome === "critical";
+  return Math.max(0, insight * (doubled ? 2 : 1));
+}
+
+/**
  * Roll the Wound and work out what gets through. Kept apart from the Strike so the
  * table sees whether the attack landed before any damage is rolled - and so a hit can
  * be argued over before it becomes a number.
@@ -2695,6 +2770,7 @@ async function rollAttackWound(message, attack) {
 
   const wound = await rollSide(attacker, [
     { label: "Wound", value: attacker.system.combat.wound[attack.foundation] },
+    ...profileWoundParts(attacker, attack),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...thresholdPenalty(attacker)
   ], {
@@ -2736,7 +2812,12 @@ async function rollAttackWound(message, attack) {
   // adjusts what survives that.
   const base = target.system.soakValue + soakBonus;
   const counted = Math.floor(base * DAMAGE_CATEGORIES[damageCategory].soakMultiplier);
-  const soak = defence.soak(counted);
+
+  // Ignored after the Category and the defence have both had their say, and never more
+  // than is left: ignoring Soak that is not there would be worth more than ignoring
+  // Soak that is.
+  const ignored = profileSoakIgnored(attacker, attack);
+  const soak = Math.max(0, defence.soak(counted) - ignored);
   const effectiveWound = defence.wound(wound.total);
 
   // Damage Reduction comes off the same Wound Roll, and off it whole. The Damage
@@ -2899,6 +2980,19 @@ const DEFENCES = {
 /** Take the damage off the target, once and once only. */
 async function applyAttackDamage(message, target, attack) {
   const { damage } = attack.result;
+
+  // Sweeping: "if you deal Damage with this Attacking Maneuver, double the amount of
+  // Diminishing Defense stacks a target would receive from it." It is settled here
+  // because this is the first point at which "if you deal Damage" has an answer - the
+  // stacks were handed out when the Clash was, before the Wound Roll existed. So the
+  // second helping is added now, and only when Damage was actually dealt.
+  if ((damage > 0) && PROFILES[attack.profile]?.doublesDiminishingDefense
+      && (DEFENCES[attack.defense]?.gainsDiminishingDefense) && !attack.result.forced) {
+    await requestActorUpdate(target, {
+      "system.diminishingDefense":
+        target.system.diminishingDefense + target.system.diminishing.defense.perAttack
+    });
+  }
 
   // Floored at zero for everyone except whoever has been granted otherwise - the Undying
   // State being the one thing in the rules that grants it.

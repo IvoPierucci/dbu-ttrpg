@@ -1084,6 +1084,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Haste: 1/2 Agility Modifier, added to Strike Rolls.
     this.haste = withEffects(this, "haste", Math.floor(atts.agility.mod / 2));
 
+    // Melee Range, counted in Squares *beyond* the ones you are touching: 0 reaches
+    // everything adjacent, which is what Melee Range means for most characters, and
+    // Size widens it from there. A Physical Attack cannot be made past it.
+    this.meleeRange = withEffects(this, "meleeRange", this.size.meleeRange);
+
     // Defense Value: equal to Agility Modifier, then adjusted for Size.
     this.defenseValue = withEffects(this, "defenseValue",
       DBUCharacterData.applySizeModifier(atts.agility.mod, this.size.defenseModifier));
