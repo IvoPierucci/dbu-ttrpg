@@ -1265,8 +1265,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Steadfast failure takes 1 off it.
     this.stressBonus = withEffects(this, "stressBonus", (this.powerLevel + 1) - failures);
 
-    // Might: higher of Force / Magic Modifier. Computed here rather than earlier because
-    // an effect can raise it and the Wound Roll below reads the result.
+    // Might: higher of Force / Magic Modifier.
+    //
+    // Its own value and nothing else's. The Wound Roll used to be built out of it,
+    // which tied two terms that are not the same thing: an effect raising your Might
+    // raised every Wound Roll you made, and an effect raising your Wound Rolls raised
+    // what you brought to a Might Clash. They are told apart now, and Might is read by
+    // the Clash category that asks for it.
     this.might = withEffects(this, "might", Math.max(atts.force.mod, atts.magic.mod));
 
     // Life Points are the stated exception: Undying lets damage take them below zero,
@@ -1294,10 +1299,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // A Parry rolls the Strike value, so it takes Strike's effects and adds its own -
       // which exist for effects that only apply when Strike is rolled defensively.
       parry: withEffects(this, "parry", withEffects(this, "strike", this.haste + this.awareness)),
+      // The Wound Roll is the Damage Attribute the Foundation names, and that alone.
+      // It used to carry Might as well, which counted the same Modifier twice for
+      // anyone whose Might came from the attribute they attack with - Force for a
+      // Physical or Energy attack - so every Wound Roll they made was doubled before
+      // any rule said so, and the Powered Profile's "apply your Damage Attribute an
+      // additional time" made it three.
       wound: Object.fromEntries(
         Object.entries(DBUCharacterData.FOUNDATIONS)
           .map(([key, foundation]) =>
-            [key, withEffects(this, "wound", atts[foundation.attribute].mod + this.might)])
+            [key, withEffects(this, "wound", atts[foundation.attribute].mod)])
       )
     };
 

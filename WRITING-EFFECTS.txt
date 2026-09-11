@@ -238,9 +238,14 @@ words: benefiting("Name"), defending, hasResource("power").
     if (force.score <= insight.score - 4 &&
         magic.score <= insight.score - 4 &&
         !benefiting("Balanced Warrior")) {
-        might      += 2(T);
+        might += 2(T);
         wound += 2(T);
     }
+
+Note both lines. `might` and `wound` are separate terms and neither is built
+out of the other: Might is what a Might Clash rolls, and `wound` is the Damage
+Attribute your Wound Rolls are made of. An effect that raises one raises only
+that one, so a rule that raises both says both - as this one does.
 
 One condition covers every statement in its block. You never repeat it.
 
