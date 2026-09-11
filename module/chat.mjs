@@ -283,7 +283,13 @@ export function registerChatHooks() {
  * do about it. Callers apply their own policy: a lone check offers the critical die
  * as a button, while a Skill Clash has to settle both sides at once.
  */
-export async function evaluateCheck(actor, bonus, extraDice = "", forcedNatural = null) {
+export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null) {
+  // The whole `baseDie` Slot, not only its `set`. Only `set` was ever read, so an
+  // effect *adjusting* the Natural Result - which is what Impaired does, and the only
+  // way anything reaches the Botch Range that a penalty to the roll cannot - was
+  // collected, carried here, and dropped.
+  const forcedNatural = (typeof baseDie === "number") ? baseDie : (baseDie?.set ?? null);
+
   // With the Base Die set by an effect it is not rolled at all: it is stated. Rolling
   // one and discarding it left a die on the card that meant nothing. Every other die
   // still rolls - the Tier of Power Extra Dice and the critical die among them.
@@ -295,10 +301,23 @@ export async function evaluateCheck(actor, bonus, extraDice = "", forcedNatural 
   const roll = new Roll(formula, { bonus });
   await roll.evaluate();
 
-  const natural = (forcedNatural === null) ? roll.dice[0]?.total : forcedNatural;
+  const rolled = (forcedNatural === null) ? roll.dice[0]?.total : forcedNatural;
+
+  // Adjusted the way every other value is, which settles what a `set` and an adjustment
+  // do together without a rule of its own: adds land, then a `set` overrides them. An
+  // effect that states the Natural Result outright states it.
+  const natural = (typeof baseDie === "object" && baseDie)
+    ? Math.max(0, applySlot({ baseDie }, "baseDie", rolled))
+    : rolled;
+
   return {
     roll,
     natural,
+    // How far the adjustment moved it, so the caller can take the same amount off the
+    // total. The Natural Result is part of the total - reducing the die reduces the
+    // sum it sits in - and what makes it the *Natural* Result is that Botch and
+    // Critical read it too.
+    naturalShift: natural - rolled,
     // Two ends of the same line, both read off the Base Die: a Botch is any Natural
     // Result at or below the Botch Range, a Critical any at or above the Critical
     // Target. The Botch Range is held below the Critical Target when it is derived, so
@@ -1855,7 +1874,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // replaces the roll rather than adjusting it: rolling a d10 and then throwing the
   // result away puts a number on the card that means nothing.
   const answered = combatRoll ? atMoment(actor, "combat-roll", { roll: true }) : null;
-  const forcedNatural = answered?.slots?.baseDie?.set ?? null;
+  const baseDie = answered?.slots?.baseDie ?? null;
+  const forcedNatural = baseDie?.set ?? null;
 
   // What a triggered effect adds to this roll. "1/Round: increase your Strike Rolls by
   // 2(T)" is the commonest shape in the rulebook, and it is written against the same
@@ -1877,8 +1897,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     : [];
   const allExtra = [extraDice, ...standing].filter(Boolean).join(" + ");
 
-  const evaluated = await evaluateCheck(actor, bonus, allExtra, forcedNatural);
-  const { roll } = evaluated;
+  const evaluated = await evaluateCheck(actor, bonus, allExtra, baseDie);
+  const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
 
   // Anything the player armed for this roll has now been used, whether it set the Base
@@ -1886,7 +1906,12 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // same collection is not consumed by applying.
   if (answered) spendChosen(actor, answered);
 
-  let total = roll.total;
+  // The die was rolled at its face value and then adjusted, so the sum it was rolled
+  // into carries the same adjustment. Kept as a labelled part rather than folded in,
+  // since a total that quietly differs from the dice on the card invites an argument.
+  if (naturalShift) parts.push({ label: "Natural Result", value: naturalShift });
+
+  let total = roll.total + naturalShift;
   let outcome = "";
 
   // A willing failure is decided before the dice are read: the total is 0 whatever
