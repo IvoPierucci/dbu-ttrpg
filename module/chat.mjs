@@ -2244,7 +2244,8 @@ export async function postSkillClash(actor, target, maneuver) {
  * `reason` is what the card says this Clash is for, since a Might Clash arrives out of
  * something else - winning one is never the point by itself.
  */
-export async function postMightClash(actor, target, { maneuverName, reason = "" } = {}) {
+export async function postMightClash(actor, target,
+                                     { maneuverName, reason = "", collision = null } = {}) {
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: "",
@@ -2256,6 +2257,13 @@ export async function postMightClash(actor, target, { maneuverName, reason = "" 
           category: "might",
           maneuverName,
           reason,
+          // What winning this one lets the challenger do. Knockback sets it: win and
+          // the movement can cost the loser Life Points. Carried here rather than
+          // looked up from the attack, because this card is the one that knows who
+          // won - and what a collision costs is asked of the character who had it,
+          // not of the Maneuver that caused it.
+          collision,
+          collisionApplied: false,
           challengerUuid: actor.uuid,
           challengerName: actor.name,
           defenderUuid: target.uuid,
@@ -2338,7 +2346,30 @@ function renderSkillClash(message, html) {
     <div class="dbu-clash-result">${result ? clashResult(result) : awaitingClash(clash)}</div>`;
   container.append(card);
 
-  if (result) return;
+  if (result) {
+    // Winning a Knockback Clash is what lets the movement happen, and the movement is
+    // what causes the collision. Offered to the winner alone, once, and only when this
+    // Clash was opened with something for winning it to buy.
+    //
+    // A tie goes to the defender, as everywhere else: the challenger has to beat them.
+    const wonIt = result.challenger.succeeded
+      || (!result.defender.succeeded && (result.challenger.total > result.defender.total));
+
+    const challenger = fromUuidSync(clash.challengerUuid);
+    if (clash.collision && wonIt && !clash.collisionApplied && challenger?.isOwner) {
+      const collision = document.createElement("button");
+      collision.type = "button";
+      collision.className = "dbu-clash-button";
+      collision.textContent = "Apply collision damage";
+      collision.dataset.tooltip = "Move them first, then say what the collision cost. "
+        + "A Life Point reduction: straight off their Life, past their Soak Value and "
+        + "Damage Reduction."
+        + (clash.collision.doubles ? ` ${clash.collision.doubledBy} doubles it.` : "");
+      collision.addEventListener("click", () => applyCollisionDamage(message, clash));
+      container.append(collision);
+    }
+    return;
+  }
 
   // Both sides confirm the same way, and each only for themselves. The challenger has
   // as much to declare as the defender does - a willing failure, an effect - so the
@@ -3556,34 +3587,46 @@ async function offerKnockback(message, attack, attacker) {
   return postMightClash(attacker, target, {
     maneuverName: attack.maneuverName,
     reason: `Knockback - win and move ${target.name} up to ${attacker.system.might} `
-      + "Squares in a straight line away from you."
+      + "Squares in a straight line away from you.",
+    collision: {
+      // Launching doubles what the movement costs, and says so itself - an Advantage
+      // does not know which Profile handed it out.
+      doubles: Boolean(PROFILES[attack.profile]?.doublesCollisionDamage),
+      doubledBy: PROFILES[attack.profile]?.label ?? ""
+    }
   });
 }
 
 /**
  * Collision Damage, as a Life Point reduction.
  *
- * How much it is depends on what was hit and how far they went, which is the table's to
- * work out - so the amount is asked for rather than derived. What the system does is
- * take it off the right way: straight off Life, past the Soak Value and past Damage
- * Reduction, and doubled when the Launching Profile threw them.
+ * Offered off the Might Clash that Knockback opened, and only to the winner of it: the
+ * movement is what causes the collision, and there is no movement without the win.
+ *
+ * How much it is depends on what they hit and how far they went, which is the table's
+ * to work out - so the amount is asked for rather than derived, and asked once per
+ * Clash. Two characters thrown by one Maneuver each have a Clash of their own and are
+ * each asked their own number, because they did not hit the same wall.
+ *
+ * What the system does is take it off the right way: straight off Life, past the Soak
+ * Value and past Damage Reduction, and doubled when Launching threw them.
  */
-async function applyCollisionDamage(message, attack, attacker) {
-  const target = fromUuidSync(attack.targetUuid);
-  if (!target) return;
+async function applyCollisionDamage(message, clash) {
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target || clash.collisionApplied) return;
 
-  const doubled = Boolean(PROFILES[attack.profile]?.doublesCollisionDamage);
+  const doubled = Boolean(clash.collision?.doubles);
 
   const typed = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
-    window: { title: `${attack.maneuverName} - Collision Damage` },
+    window: { title: `${clash.maneuverName} - Collision Damage` },
     content: `
       <label class="dbu-wager">
         <span>Collision Damage</span>
         <input type="number" name="collision" value="0" min="0"/>
         <em>Taken straight off ${Handlebars.escapeExpression(target.name)}'s Life Points,
           past their Soak Value and Damage Reduction.${doubled
-            ? ` ${Handlebars.escapeExpression(PROFILES[attack.profile].label)} doubles it.`
+            ? ` ${Handlebars.escapeExpression(clash.collision.doubledBy)} doubles it.`
             : ""}</em>
       </label>`,
     buttons: [
@@ -3604,10 +3647,15 @@ async function applyCollisionDamage(message, attack, attacker) {
 
   const amount = doubled ? typed * 2 : typed;
   const reason = doubled
-    ? `Collision Damage, doubled by ${PROFILES[attack.profile].label}`
+    ? `Collision Damage, doubled by ${clash.collision.doubledBy}`
     : "Collision Damage";
 
-  return reduceLifePoints(target, amount, { reason });
+  await reduceLifePoints(target, amount, { reason });
+
+  // Marked on the Clash that allowed it, so one win buys one collision. Another
+  // character thrown by the same Maneuver has a Clash of their own, and is asked for
+  // their own number - what a collision costs depends on what they hit.
+  return requestEdit(message, { type: "clash", clash: { ...clash, collisionApplied: true } });
 }
 
 /** Take the damage off the target, once and once only. */
@@ -4032,10 +4080,10 @@ function renderAttack(message, html) {
   // before it - and only to them, since it is their Maneuver that is reaching.
   const thrower = fromUuidSync(attack.attackerUuid);
 
-  // Knockback, and what the movement it wins costs. Both wait for the Wound Roll to
-  // have landed and taken something off - "if you successfully Damage an Opponent" is
-  // the condition the Advantage opens with, and Collision Damage follows from movement
-  // that only happens if the Clash is won.
+  // Knockback waits for the Wound Roll to have landed and taken something off - "if you
+  // successfully Damage an Opponent" is the condition the Advantage opens with. What
+  // the movement costs is offered on the Clash this opens, and only to whoever wins it:
+  // there is no movement without the win, and no collision without the movement.
   if (pushes(attack) && thrower?.isOwner && (result?.damage > 0)) {
     const clash = document.createElement("button");
     clash.type = "button";
@@ -4045,18 +4093,6 @@ function renderAttack(message, html) {
       + "in Squares, in a straight line away from you.";
     clash.addEventListener("click", () => offerKnockback(message, attack, thrower));
     container.append(clash);
-
-    const collision = document.createElement("button");
-    collision.type = "button";
-    collision.className = "dbu-clash-button";
-    collision.textContent = "Apply collision damage";
-    collision.dataset.tooltip = "A Life Point reduction: straight off their Life, past "
-      + "their Soak Value and Damage Reduction."
-      + (PROFILES[attack.profile]?.doublesCollisionDamage
-        ? ` ${PROFILES[attack.profile].label} doubles it.`
-        : "");
-    collision.addEventListener("click", () => applyCollisionDamage(message, attack, thrower));
-    container.append(collision);
   }
 
   if (PROFILES[attack.profile]?.area && thrower?.isOwner) {
