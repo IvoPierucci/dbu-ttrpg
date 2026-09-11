@@ -2719,6 +2719,47 @@ function chargePenalty(actor, attack) {
   return [{ label: "Energy Charges", written: `-${charges}(bT)`, value: -(charges * perCharge) }];
 }
 
+/**
+ * Combination's follow-up Strikes, as rows of their own on the card.
+ *
+ * Each is a Strike Roll like any other and each is read the same way - the number, and
+ * the workings on hover. What they were measured against is said once, at the head of
+ * them, rather than repeated on every line.
+ */
+function followUpRows(attack) {
+  const settled = attack.result?.followUps;
+  if (!settled?.rolls?.length) return "";
+
+  const profile = PROFILES[attack.profile];
+  const against = (settled.beatable === null)
+    ? "no roll to beat"
+    : `against a Dice Score of ${settled.beatable}`;
+
+  // Written here rather than through attackSide, because these answer a different
+  // question: not "what was this roll's outcome" but "did it beat the number". The
+  // roll's own outcome still shows beside it - a Botch among them is worth seeing -
+  // and the ones that fell short are dimmed rather than labelled, since three rows
+  // each saying "missed" is three rows of the same word.
+  const rows = settled.rolls.map((roll, index) => {
+    const landed = (settled.beatable !== null) && (roll.total > settled.beatable);
+    const outcome = (roll.outcome && !roll.succeeded)
+      ? `<span class="dbu-clash-outcome dbu-${roll.outcome}">${roll.outcome}</span>`
+      : "";
+    return `
+      <div class="dbu-clash-side${landed ? "" : " dbu-fell-short"}">
+        <span class="dbu-clash-name">${Handlebars.escapeExpression(attack.attackerName)}<em>
+          ${Handlebars.escapeExpression(profile.label)} ${index + 1}</em></span>
+        ${rolledTotal(roll)}${outcome}
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="dbu-clash-reason">${Handlebars.escapeExpression(profile.label)} &middot;
+      ${settled.rolls.length} more Strikes ${Handlebars.escapeExpression(against)} &middot;
+      ${settled.beat} landed, +${settled.perTier}(T) to the Wound Roll</div>
+    ${rows}`;
+}
+
 /** Everyone whose confirmation the attack is waiting on. */
 function attackParticipants(attack) {
   return [attack.attackerUuid, ...attackTargets(attack).map(target => target.uuid)];
@@ -3120,16 +3161,47 @@ function profileSoakIgnored(attacker, attack) {
  * Only against a defence that was rolled. Direct Hit, Guard and Power Flare answer with
  * no roll at all, so there is no Dice Score to measure against and nothing to beat.
  */
-async function combinationFollowUps(attacker, attack) {
+/**
+ * Whether this attack still owes its follow-up Strikes.
+ *
+ * Combination puts three more Strike Rolls between the hit and the Wound Roll, and the
+ * rule puts them there for a reason: they decide how much the Wound Roll is worth. So
+ * they are a step of their own on the card - the Wound button does not appear until
+ * they have been made - rather than three rolls that happened inside the Wound Roll
+ * where nobody saw them.
+ */
+function awaitsFollowUps(attack) {
+  return Boolean(PROFILES[attack.profile]?.followUps)
+    && Boolean(attack.result?.hit)
+    && !attack.result?.wound
+    && !attack.result?.followUps;
+}
+
+/**
+ * Roll Combination's three follow-up Strikes and write down what they came to.
+ *
+ * "Roll your Strike Roll for this Attacking Maneuver against the Dice Score of their
+ * Dodge Roll or Strike Roll an additional 3 times. For every additional time your
+ * Strike Roll exceeds their Dice Score, increase the Wound Roll by an additional 2(T)."
+ *
+ * The Dice Score is the dice alone, before any bonus - the reading the rest of the
+ * system already uses, in Karmic Boost and in the Parry penalty.
+ *
+ * Rolled at the same bonus the first Strike was, rather than rebuilt from the sheet: a
+ * triggered effect that raised that Strike raised *this* attack's Strike Roll, and
+ * rebuilding would silently drop it. Collected effects are not offered again, though -
+ * these are three repetitions of one roll, not three more exchanges.
+ */
+async function rollFollowUpStrikes(message, attack, attacker) {
   const profile = PROFILES[attack.profile];
   const plan = profile?.followUps;
-  if (!plan) return [];
+  if (!plan) return;
 
+  // Only against a defence that was rolled. Direct Hit, Guard and Power Flare answer
+  // with no roll at all, so there is no Dice Score to measure against and nothing to
+  // beat - the follow-ups are made and none of them can land.
   const answer = attack.result?.answer;
-  if (!answer) return [];
-
-  const target = answer.diceScore ?? 0;
-  const tier = attacker.system.tierOfPower ?? 1;
+  const beatable = answer ? (answer.diceScore ?? 0) : null;
 
   const rolls = [];
   for (let i = 0; i < plan.rolls; i++) {
@@ -3143,17 +3215,43 @@ async function combinationFollowUps(attacker, attack) {
     }));
   }
 
-  const beat = rolls.filter(roll => roll.total > target).length;
-  const per = beat * plan.woundPerHitPerTier;
-  const bonus = per * tier;
-  if (!bonus) return [];
+  const beat = (beatable === null)
+    ? 0
+    : rolls.filter(roll => roll.total > beatable).length;
+
+  requestEdit(message, {
+    type: "attack",
+    attack: {
+      ...attack,
+      result: {
+        ...attack.result,
+        followUps: {
+          rolls,
+          beat,
+          beatable,
+          // Worked out now and carried, so the Wound Roll adds a number that was
+          // settled in front of everyone rather than one it worked out for itself.
+          perTier: beat * plan.woundPerHitPerTier,
+          bonus: beat * plan.woundPerHitPerTier * (attacker.system.tierOfPower ?? 1)
+        }
+      }
+    }
+  });
+}
+
+/** What Combination's follow-up Strikes added, once they have been made. */
+function combinationFollowUps(attacker, attack) {
+  const profile = PROFILES[attack.profile];
+  const settled = attack.result?.followUps;
+  if (!profile?.followUps || !settled?.bonus) return [];
 
   // The label carries what happened, since the Wound Roll's own line is where anyone
   // will look for it: how many of the three landed, and what they had to beat.
   return [{
-    label: `${profile.label} (${beat} of ${plan.rolls} beat ${target})`,
-    written: `+${per}(T)`,
-    value: bonus
+    label: `${profile.label} (${settled.beat} of ${profile.followUps.rolls}`
+      + `${settled.beatable === null ? "" : ` beat ${settled.beatable}`})`,
+    written: `+${settled.perTier}(T)`,
+    value: settled.bonus
   }];
 }
 
@@ -3180,8 +3278,8 @@ async function rollAttackWound(message, attack) {
   // the attack, and this is where they are finally worth something.
   const chargeDice = energyChargeDice(attacker, attack);
 
-  // After the hit and before the Wound Roll, which is where the rule puts them.
-  const followUps = await combinationFollowUps(attacker, attack);
+  // Rolled in their own step before this one, which is where the rule puts them.
+  const followUps = combinationFollowUps(attacker, attack);
 
   const wound = await rollSide(attacker, [
     ...followUps,
@@ -3862,6 +3960,10 @@ function attackSide(label, name, side) {
 function attackOutcome(attack) {
   const { hit, wound, counterWound, soak, reduction, damage } = attack.result;
   if (!hit) return "Missed";
+  if (awaitsFollowUps(attack)) {
+    const plan = PROFILES[attack.profile].followUps;
+    return `Hit - awaiting ${plan.rolls} more Strikes`;
+  }
   if (!wound) return "Hit - awaiting the Wound Roll";
 
   if (counterWound && (counterWound.total > wound.total)) {
@@ -3915,6 +4017,7 @@ function renderAttack(message, html) {
       ? attackSide("Strike", attack.attackerName, result.strike)
       : attackerRow(attack)}
     ${attackTargets(attack).map(target => targetRow(attack, target, result)).join("")}
+    ${followUpRows(attack)}
     ${result?.wound ? attackSide("Wound", attack.attackerName, result.wound) : ""}
     ${result?.counterWound
       ? attackSide(attack.defenceWager ? `Power Flare +${attack.defenceWager} KP` : "Power Flare",
@@ -4047,6 +4150,26 @@ function renderAttack(message, html) {
         prepareRoll(who, [], momentTitle(karmic, "wound"), "", { karmic, rolling: false }));
       container.append(apply);
     }
+  }
+
+  // Combination's three more Strikes come between the hit and the Wound Roll, and they
+  // decide what the Wound Roll is worth - so they are their own step and the Wound
+  // button waits for them. Rolling them inside the Wound Roll settled the same number
+  // without anybody seeing it happen.
+  if (awaitsFollowUps(attack)) {
+    const attacker = fromUuidSync(attack.attackerUuid);
+    if (!attacker?.isOwner) return;
+
+    const plan = PROFILES[attack.profile].followUps;
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "dbu-clash-button";
+    more.textContent = `Roll ${plan.rolls} additional Strikes`;
+    more.dataset.tooltip = "Each one that beats their Dice Score adds "
+      + `${plan.woundPerHitPerTier}(T) to the Wound Roll.`;
+    more.addEventListener("click", () => rollFollowUpStrikes(message, attack, attacker));
+    container.append(more);
+    return;
   }
 
   // The attacker rolls their own Wound, so that step belongs to them.
