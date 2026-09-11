@@ -23,7 +23,13 @@
 const SEPARATOR = "  ·  ";
 const ARROW = "  →  ";
 
-/** Where each kind of line sits, top to bottom. */
+/**
+ * Where each kind of line sits, top to bottom.
+ *
+ * Every Extra Dice row shares one rank, so they keep the order they were gathered in -
+ * which is the order the rules granted them - rather than being shuffled among
+ * themselves by a sort that has nothing to tell them apart.
+ */
 const LINE_ORDER = Object.freeze({
   base: 0,
   extra: 1,
@@ -64,16 +70,13 @@ export function baseDieLine(die, { rolled = null, natural = null, forcedNatural 
 /**
  * Every Extra Die on the roll, on one line.
  *
- * Tier of Power Extra Dice, the Greater Dice a State grants, the dice an Energy Charge
- * is worth, the Critical Extra Dice - all of them are Extra Dice, and a player counting
- * what they threw does not care which rule put each one in their hand. So they are
- * gathered, grouped by size and written smallest first: 1d4 + 2d6 + 1d8.
- *
- * Later dice are not folded in here. Karma and Karmic Chance happen after the roll is
- * settled and because somebody chose them, and a row that hid that would be hiding the
- * only part of the roll that was a decision.
+ * One row per source - the Tier of Power Extra Dice, a State's Greater Dice, what the
+ * Energy Charges are worth, the Critical Extra Dice - because "which rule gave me this
+ * die" is the question a player asks of a fistful of them. Within a row they are
+ * grouped by size and written smallest first: 1d4 + 2d6 + 1d8, so eight of a kind read
+ * as "8d6" rather than as a list to count.
  */
-export function extraDiceLine(terms) {
+export function extraDiceLine(terms, source = "Extra dice") {
   // Grouped by number of faces, since that is what makes two dice the same die.
   const byFaces = new Map();
   for (const term of terms ?? []) {
@@ -98,7 +101,7 @@ export function extraDiceLine(terms) {
     written: `+${written}`,
     each,
     value,
-    source: "Extra dice"
+    source
   };
 }
 

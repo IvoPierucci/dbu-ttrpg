@@ -279,9 +279,17 @@ function highest(entries) {
   return entries.reduce((best, e) => (e.priority >= best.priority) ? e : best);
 }
 
-/** Dice are appended, never summed: two effects adding 1d6 give you two dice. */
+/**
+ * Dice are appended, never summed: two effects adding 1d6 give you two dice.
+ *
+ * Each keeps the name of whatever granted it. A player looking at a fistful of dice
+ * wants to know which rule handed them each one, and that was known here and thrown
+ * away - the formula went on alone and the roll could only call them all "extra".
+ */
 function resolveDiceSlot(entries) {
-  return entries.map(e => e.value).filter(Boolean);
+  return entries
+    .filter(e => e.value)
+    .map(e => ({ formula: e.value, source: e.source ?? "" }));
 }
 
 /**

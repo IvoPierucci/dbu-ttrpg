@@ -1026,13 +1026,14 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
     lines.push(...again.lines);
   }
 
-  const dice = slots["roll.dice"] ?? [];
-  for (const formula of dice) {
-    if (!formula) continue;
-    const roll = new Roll(formula);
+  for (const granted of slots["roll.dice"] ?? []) {
+    if (!granted?.formula) continue;
+    const roll = new Roll(granted.formula);
     await roll.evaluate();
     total += roll.total;
-    lines.push(diceLine(roll, "Karma", { rank: "positive" }));
+    // Named by whatever granted it rather than lumped under "Karma": the Karmic Effect
+    // that did it is the only thing worth knowing about a die that arrived late.
+    lines.push(diceLine(roll, granted.source || "Karma"));
   }
 
   const settled = Math.max(0, applySlot(slots, "roll.total", total));
@@ -1879,22 +1880,63 @@ function atMoment(actor, moment, context = {}) {
 }
 
 /**
- * A roll's dice, as the one or two rows they make.
+ * Extra Dice as named groups, however the caller chose to say it.
+ *
+ * A bare formula is the Tier of Power Extra Dice every Combat Roll carries, which is
+ * what every caller used to pass and what most of them still mean.
+ */
+function asDiceGroups(extraDice) {
+  if (!extraDice) return [];
+  if (Array.isArray(extraDice)) return extraDice;
+  return [{ label: "Extra dice", formula: String(extraDice) }];
+}
+
+/**
+ * How many dice a formula of ours rolls.
+ *
+ * Ours are always "NdM" joined by plus signs - written by this system, never typed by a
+ * player - so counting the dice in one is counting the "d"s. It is only ever used to
+ * share the rolled terms back out among the groups that asked for them, in the order
+ * they were joined.
+ */
+function diceTermCount(formula) {
+  return (String(formula).match(/\d*d\d+/gi) ?? []).length;
+}
+
+/**
+ * A roll's dice, as the rows they make.
  *
  * The Base Die first and on its own, because the Natural Result is read off it and
- * nothing else - a Botch and a Critical both turn on that one number. Then every other
- * die on one row, whatever put it there.
+ * nothing else - a Botch and a Critical both turn on that one number. Then one row per
+ * source: the Extra Dice the Tier of Power grants, a State's Greater Dice, what the
+ * Energy Charges are worth, the Critical Extra Dice. They were rolled together, but
+ * "where did this die come from" is the question a player actually asks of them.
  *
  * The Base Die is `roll.dice[0]`: the formula is built with it first for exactly this
- * reason, and the Extra Dice follow it.
+ * reason, and the groups follow it in the order they were joined.
  */
-function rolledDice(roll, { rolled, natural, forcedNatural }, criticalTerms = []) {
+function rolledDice(roll, { rolled, natural, forcedNatural }, groups = [], criticalTerms = []) {
   const [base, ...extras] = roll.dice ?? [];
   const rows = [baseDieLine(base?.expression ?? DBUCharacterData.BASE_DIE,
     { rolled, natural, forcedNatural })];
 
-  const dice = extraDiceLine([...extras, ...criticalTerms]);
-  if (dice) rows.push(dice);
+  let at = 0;
+  for (const group of groups) {
+    const count = diceTermCount(group.formula);
+    const line = extraDiceLine(extras.slice(at, at + count), group.label);
+    at += count;
+    if (line) rows.push(line);
+  }
+
+  // Anything the groups did not account for still belongs to somebody, so it is shown
+  // rather than dropped - a die that vanishes off the card is worse than one labelled
+  // vaguely, and this is the only place a miscount could hide.
+  const leftover = extraDiceLine(extras.slice(at), "Extra dice");
+  if (leftover) rows.push(leftover);
+
+  const crit = extraDiceLine(criticalTerms, "Critical");
+  if (crit) rows.push(crit);
+
   return rows;
 }
 
@@ -1946,9 +1988,18 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   const standing = combatRoll
     ? (actor.system.effects?.slots?.["combatRolls.dice"] ?? [])
     : [];
-  const allExtra = [extraDice, ...standing].filter(Boolean).join(" + ");
 
-  const evaluated = await evaluateCheck(actor, bonus, allExtra, baseDie);
+  // Every Extra Die with the name of whatever granted it, kept apart all the way to
+  // the card. They are rolled together - one formula, one Roll - but a player looking
+  // at a fistful of dice wants to know which rule handed them each one, so the groups
+  // are carried alongside and the results shared back out afterwards.
+  const groups = [
+    ...asDiceGroups(extraDice),
+    ...standing.map(die => ({ label: die.source || "Greater dice", formula: die.formula }))
+  ].filter(group => group.formula);
+
+  const evaluated = await evaluateCheck(actor, bonus,
+    groups.map(group => group.formula).join(" + "), baseDie);
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
   // What the die actually showed, before an effect moved it. The shift is the whole of
@@ -1985,7 +2036,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     // The dice are shown even though they did not count: a player who threw a roll
     // wants to see what they threw away, and a card that hides it looks like a bug.
     const thrown = [
-      ...rolledDice(roll, { rolled, natural, forcedNatural }),
+      ...rolledDice(roll, { rolled, natural, forcedNatural }, groups),
       noteLine("Willing failure - the total is 0")
     ];
     return {
@@ -2046,7 +2097,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   }
 
   // Drawn now rather than first, so the Critical Extra Dice are among them.
-  lines.unshift(...rolledDice(roll, { rolled, natural, forcedNatural }, criticalTerms));
+  lines.unshift(...rolledDice(roll, { rolled, natural, forcedNatural }, groups, criticalTerms));
 
   // The finished total is a system value like any other: a Botch takes what it takes,
   // but never past zero. Otherwise a bad roll turns into a negative that an opponent
@@ -3089,7 +3140,14 @@ async function rollAttackWound(message, attack) {
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...thresholdPenalty(attacker)
   ], {
-    extraDice: [attacker.system.dice.extra.formula, chargeDice].filter(Boolean).join(" + "),
+    // Kept apart rather than joined: the dice an Energy Charge is worth and the ones
+    // the Tier of Power grants are two different rules, and the card says which is
+    // which. Seven Charges at Tier 3 is twenty-one dice, and "where did those come
+    // from" is not a question anybody should have to work out.
+    extraDice: [
+      { label: "Extra dice", formula: attacker.system.dice.extra.formula },
+      { label: "Energy charges", formula: chargeDice }
+    ],
     criticalDice: attacker.system.dice.critical.formula,
     combatRoll: true,
     slot: "wound"
@@ -3465,7 +3523,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null }
     // character's data was prepared - "1d10(T)" is three d10s at Tier 3.
     const extra = actor.system.effects?.slots?.["surge.life.dice"] ?? [];
 
-    const formula = [`${dice}d10`, ...extra, "@surgency"].join(" + ");
+    const formula = [`${dice}d10`, ...extra.map(d => d.formula), "@surgency"].join(" + ");
     const roll = new Roll(formula, { surgency });
     await roll.evaluate();
 
