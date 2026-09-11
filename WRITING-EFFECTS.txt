@@ -517,7 +517,8 @@ Botch Range; `strike -= 1` changes the Dice Score and cannot. Both take a point
 off the total.
 Dice         dice.extra.category  dice.greater.category  dice.critical.category
              dice.extra.instances  diceAdvantage  combatRolls.dice
-Economy      attack.kiCost  defend.<option>.kiCost  actions.standard
+Economy      attack.kiCost  attack.kiCost.minimum  defend.<option>.kiCost
+             actions.standard
              actions.counter  actions.perRound  actions.remaining
              speed.normal  speed.boosted
 Damage       attack.energyCharges  damage.category.shift
@@ -557,6 +558,30 @@ Three pairs sit close together and are not the same thing:
 
   skill.<name>         a bonus to rolls using that Skill
   skill.<name>.bonus   the Skill Bonus itself, as shown on your sheet
+
+  attack.kiCost         the price of an Attacking Maneuver
+  attack.kiCost.minimum the least that price can be reduced to. Half the
+                        Profile's listed KP Cost, read off the listed cost and
+                        nothing else - so an effect that makes attacks dearer
+                        raises what you pay and leaves the floor where it was.
+
+An Attacking Maneuver's price is settled as:
+
+    max(minimum, listed cost + everything written to attack.kiCost)
+
+so the order of the two never matters, and a reduction can empty the price down
+to the floor but not through it. Lowering the floor is its own effect, and is
+written as a cap on it rather than a new value - which is how a rule saying
+"this cannot increase the Minimum" is expressed:
+
+    // Perfect Ki Control
+    [passive]
+    attack.kiCost -= 1(T);
+    attack.kiCost.minimum max= 2(T);
+
+Written with `max=`, a character whose floor was already lower than 2(T) keeps
+theirs. Written as `= 2(T)` it would raise some floors, which is the one thing
+that rule says it must not do.
 
 Super Stacks are held rather than worn off per round, and `superStacks` is the
 one to write - the other three are what holding them is worth, and each of them

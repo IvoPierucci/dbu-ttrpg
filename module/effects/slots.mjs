@@ -195,6 +195,11 @@ const TABLE = [
   // --- Economy -----------------------------------------------------------------
   { key: "attack.kiCost", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Ki Point Cost of every Attacking Maneuver." },
+  { key: "attack.kiCost.minimum", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "The least an Attacking Maneuver can be reduced to. Half the Profile's listed "
+       + "KP Cost by default, and read off that alone - anything that raises the price "
+       + "leaves the floor where it was. Perfect Ki Control lowers it with "
+       + "`max= 2(T)`, which is how \"this cannot increase the Minimum\" is written." },
   { key: "attack.kiWager.min", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "The least you may Ki Wager on an Attacking Maneuver. Compelled forces one." },
   { key: "actions.standard", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Standard Actions." },

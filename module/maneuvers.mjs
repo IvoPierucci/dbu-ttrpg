@@ -713,7 +713,7 @@ export async function pickProfileOnly(maneuver, foundations, hint = "", actor = 
         <input type="radio" name="profile" value="${profile.id}" ${attr}/>
         <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(profile.label)}</span>
         <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
-        <span class="dbu-profile-cost">${profileKiCost(profile.id, maneuver, actor)} KP</span>
+        <span class="dbu-profile-cost">${profileOptionCost(maneuver, profile.id, actor)} KP</span>
       </label>`;
     }).join("");
 
@@ -864,7 +864,7 @@ async function pickProfile(maneuver, foundations, actor) {
         <input type="radio" name="profile" value="${profile.id}" ${attr}/>
         <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(profile.label)}</span>
         <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
-        <span class="dbu-profile-cost">${profileKiCost(profile.id, maneuver, actor)} KP</span>
+        <span class="dbu-profile-cost">${profileOptionCost(maneuver, profile.id, actor)} KP</span>
       </label>`;
     }).join("");
 
@@ -952,23 +952,79 @@ export function maxEnergyCharges(profileId, fallback) {
 }
 
 /**
- * What a Profile adds to the price.
+ * What choosing this Profile would actually cost, which is what a picker shows.
+ *
+ * The whole price of the attack under that Profile - the Maneuver's own cost, the
+ * Profile's, whatever effects do to it, and the Minimum Ki Point Cost underneath it -
+ * rather than the Profile's share alone. The share was what a player was shown and
+ * never quite what they were charged, and the Minimum is where the two come apart in
+ * the case that matters: once everything else has cut the price to the bone, what you
+ * pay is the floor, and the floor is the Profile's.
+ *
+ * No wager in it, because none has been declared at the moment of choosing.
+ */
+function profileOptionCost(maneuver, profileId, actor) {
+  return maneuverKiCost(maneuver, { profile: profileId }, actor);
+}
+
+/**
+ * The KP Cost a Profile *lists*, before anything reduces it.
+ *
+ * Kept apart from what the Profile ends up adding to the price, because the Minimum Ki
+ * Point Cost is half of this and half of nothing else: "cannot be reduced to lower than
+ * 1/2 of the listed KP Cost of that Attacking Maneuver's Profile". A reduction that
+ * lowers the price does not lower the floor under it, or the floor would follow the
+ * price down and stop being a floor at all.
  *
  * Every Physical Profile is written in the "4(T)" notation, so it grows with the Tier
- * of Power. Blitz alone takes some of it back as a Signature Technique - "reduce the KP
- * Cost by 2(T)" - and never below nothing.
+ * of Power.
+ */
+export function profileListedKiCost(profileId, actor) {
+  const profile = PROFILES[profileId];
+  if (!profile) return 0;
+
+  const tier = actor?.system?.tierOfPower ?? 1;
+  return (profile.kiCost ?? 0) + ((profile.kiCostPerTier ?? 0) * tier);
+}
+
+/**
+ * What a Profile adds to the price.
+ *
+ * The listed cost, less what Blitz takes back as a Signature Technique - "reduce the KP
+ * Cost by 2(T)" - and never below nothing. That discount is a reduction like any other,
+ * so it is subject to the Minimum and does not move it.
  */
 export function profileKiCost(profileId, maneuver, actor) {
   const profile = PROFILES[profileId];
   if (!profile) return 0;
 
   const tier = actor?.system?.tierOfPower ?? 1;
-  const cost = (profile.kiCost ?? 0) + ((profile.kiCostPerTier ?? 0) * tier);
   const discount = (maneuver?.signature && profile.signatureDiscountPerTier)
     ? profile.signatureDiscountPerTier * tier
     : 0;
 
-  return Math.max(0, cost - discount);
+  return Math.max(0, profileListedKiCost(profileId, actor) - discount);
+}
+
+/**
+ * The Minimum Ki Point Cost: what an Attacking Maneuver costs however much is taken off
+ * it. Half the Profile's listed cost, rounded down.
+ *
+ * The floor is read off the listed cost alone, so nothing that changes the price changes
+ * it. Drained making every attack cost 2(T) more raises what you pay and leaves the
+ * floor exactly where it was - which only shows when reductions are in play too, and is
+ * the whole point of the rule.
+ *
+ * The Slot can only be worth having if something may lower it, and something does:
+ * Perfect Ki Control, an Aspect, says "Your Minimum Ki Point Cost for your Attacking
+ * Maneuvers is 2(T), this cannot increase the Minimum Ki Point Cost for an Attacking
+ * Maneuver" - a ceiling on the minimum rather than a new value for it, written
+ * `attack.kiCost.minimum max= 2(T)`.
+ */
+export function minimumAttackKiCost(profileId, actor) {
+  const listed = profileListedKiCost(profileId, actor);
+  const half = Math.floor(listed / 2);
+  return Math.max(0, applySlot(actor?.system?.effects?.slots, "attack.kiCost.minimum", half));
 }
 
 /** What a Maneuver costs in Ki once its declared Profile is taken into account. */
@@ -985,11 +1041,21 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // A named Maneuver can be discounted on its own; an Attacking one also takes whatever
   // applies to attacks in general.
   let cost = applySlot(slots, `${maneuver.id}.kiCost`, base);
-  if (actor && maneuver.attacking) cost = applySlot(slots, "attack.kiCost", cost);
+
+  if (actor && maneuver.attacking) {
+    cost = applySlot(slots, "attack.kiCost", cost);
+
+    // Minimum Ki Point Cost, applied last: the price is whatever everything did to it,
+    // but never less than half what the Profile lists. Last because it is a floor under
+    // the finished price and not one more term in it - putting it anywhere earlier lets
+    // the next reduction walk straight through it.
+    cost = Math.max(cost, minimumAttackKiCost(declared?.profile, actor));
+  }
 
   // The wager is Ki spent on the attack like any other, so it is paid here - which is
   // also what takes it out of Capacity. A Talent that cheapens Attacking Maneuvers
-  // discounts the Maneuver, never the wager: the wager is what you chose to spend.
+  // discounts the Maneuver, never the wager: the wager is what you chose to spend, and
+  // the Minimum is a floor under the price rather than under what you choose to add.
   return Math.max(0, cost) + (declared?.kiWager ?? 0);
 }
 
