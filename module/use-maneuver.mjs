@@ -16,11 +16,12 @@ import {
   maneuverKiCost,
   maneuverUsesLeft,
   pickProfileOnly,
+  recordManeuverType,
   recordManeuverUse,
-  spendManeuverCost
+  spendManeuverCost,
+  whyNotAnotherInstant
 } from "./maneuvers.mjs";
 import {
-  answeredLatestManeuver,
   postAttack,
   postManeuver,
   postSkillClash,
@@ -148,20 +149,6 @@ export function definitionOf(item) {
 }
 
 /**
- * Record whether this Maneuver leaves the character having just played an Instant.
- *
- * An Out-of-Sequence Maneuver deliberately leaves the flag alone: one played off the
- * back of an Instant does not count as a Maneuver in its place, so it cannot launder an
- * Instant into a legal follow-up.
- */
-async function trackInstant(actor, type) {
-  if (type === "outOfSequence") return;
-  const wasInstant = type === "instant";
-  if (actor.system.lastManeuverWasInstant === wasInstant) return;
-  return actor.update({ "system.lastManeuverWasInstant": wasInstant });
-}
-
-/**
  * Use a Maneuver: check it is allowed, pay for it, and announce it.
  *
  * @param {Actor} actor
@@ -173,12 +160,12 @@ export async function useManeuver(actor, maneuver) {
 
   // The sheet does not offer these, but a stale render should not be a way past the
   // rules either.
-  if ((maneuver.type === "instant")
-    && (actor.system.lastManeuverWasInstant || answeredLatestManeuver(actor))) {
-    ui.notifications.warn(
-      `${actor.name} just played an Instant Maneuver and cannot play another.`
-    );
-    return false;
+  if (maneuver.type === "instant") {
+    const blocked = whyNotAnotherInstant(actor);
+    if (blocked) {
+      ui.notifications.warn(`${actor.name}: ${blocked}`);
+      return false;
+    }
   }
 
   if (maneuverUsesLeft(actor, maneuver) <= 0) {
@@ -204,9 +191,9 @@ export async function useManeuver(actor, maneuver) {
 
     await payActions(actor, maneuver);
     await recordManeuverUse(actor, maneuver);
-    await trackInstant(actor, maneuver.type);
     await cancelCharge(actor);
-    await postManeuver(actor, maneuver);
+    await recordManeuverType(actor, maneuver.type,
+      { messageId: (await postManeuver(actor, maneuver))?.id });
     return true;
   }
 
@@ -224,8 +211,8 @@ export async function useManeuver(actor, maneuver) {
     }
 
     await recordManeuverUse(actor, maneuver);
-    await trackInstant(actor, maneuver.type);
-    await postManeuver(actor, maneuver, { foundation: null });
+    await recordManeuverType(actor, maneuver.type,
+      { messageId: (await postManeuver(actor, maneuver, { foundation: null }))?.id });
     return true;
   }
 
@@ -235,7 +222,7 @@ export async function useManeuver(actor, maneuver) {
     if (!await takeSurge(actor, { source: maneuver.name })) return false;
     await payActions(actor, maneuver);
     await recordManeuverUse(actor, maneuver);
-    await trackInstant(actor, maneuver.type);
+    await recordManeuverType(actor, maneuver.type);
     return true;
   }
 
@@ -288,7 +275,6 @@ export async function useManeuver(actor, maneuver) {
 
   await payActions(actor, maneuver);
   await recordManeuverUse(actor, maneuver);
-  await trackInstant(actor, maneuver.type);
 
   // Whatever was charged into this one comes with it, and the charging ends here -
   // Guard Down with it. Only for the Maneuver that was actually declared: throwing a
@@ -304,9 +290,16 @@ export async function useManeuver(actor, maneuver) {
     targets: targetActor ? [targetActor] : []
   });
 
-  if (maneuver.clash) await postSkillClash(actor, targetActor, maneuver);
-  else if (declared) await postAttack(actor, targetActor, maneuver, { ...declared, charges });
-  else await postManeuver(actor, maneuver);
+  const card = maneuver.clash
+    ? await postSkillClash(actor, targetActor, maneuver)
+    : declared
+    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges })
+    : await postManeuver(actor, maneuver);
+
+  // Recorded once the card exists, since which card an Instant was played on is part
+  // of the rule: an Out-of-Sequence Maneuver this one offers is not a way out from
+  // under it.
+  await recordManeuverType(actor, maneuver.type, { messageId: card?.id });
 
   return true;
 }

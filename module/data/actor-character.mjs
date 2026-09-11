@@ -574,7 +574,18 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // An Instant Maneuver cannot follow another Instant within the same turn, so what
     // matters is only whether the last Maneuver was one. Kept editable: turns are not
     // tracked, so the table needs to be able to correct it.
-    schema.lastManeuverWasInstant = new fields.BooleanField({ required: true, initial: false });
+    // An Instant Maneuver cannot follow another Instant: once you have played one, you
+    // may not reach for a second until *you* have used a Maneuver of some other kind.
+    // Somebody else acting does not free you, which is what this used to be read as.
+    //
+    // The message it was played on travels with it, for the one exception: an
+    // Out-of-Sequence Maneuver counts as that other Maneuver, unless it was triggered
+    // by the very Instant that is holding you - which would be laundering an Instant
+    // into permission for another.
+    schema.instantPlayed = new fields.SchemaField({
+      held: new fields.BooleanField({ required: true, initial: false }),
+      messageId: new fields.StringField({ required: true, blank: true, initial: "" })
+    });
 
     // --- Diminishing Offense and Defense ---
     // Both are per-Combat-Round wear: attacking repeatedly blunts your Strike, and

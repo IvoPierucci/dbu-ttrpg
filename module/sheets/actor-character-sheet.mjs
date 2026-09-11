@@ -14,10 +14,10 @@ import {
   toggleState
 } from "../conditions.mjs";
 import { actionsLeft, isTheirTurn, newRoundFor, spendActions } from "../combat.mjs";
+import { whyNotAnotherInstant } from "../maneuvers.mjs";
 import { baseDieLine, extraDiceLine, partLine, noteLine, floorLine } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
-  answeredLatestManeuver,
   checkCard,
   evaluateCheck,
   prepareRoll,
@@ -417,21 +417,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * waiting to be used, only appearing where an effect grants one.
    */
   _prepareManeuverGroups() {
-    // An Instant Maneuver cannot follow another Instant. Two things can mean it just
-    // did: playing one from here, which sets the flag, and answering the most recent
-    // Standard Maneuver with one - which does not, because the Maneuver it answered
-    // takes its place, but still leaves no room for another.
-    const playedInstant = this.actor.system.lastManeuverWasInstant;
-    const answered = answeredLatestManeuver(this.actor);
+    // An Instant Maneuver cannot follow another Instant, and the one rule that says so
+    // is asked rather than reconstructed here - the sheet used to work it out a second
+    // way, and the two did not agree.
+    const blocked = whyNotAnotherInstant(this.actor);
 
     const groups = [
       { key: "standard", playable: true },
       {
         key: "instant",
-        playable: !playedInstant && !answered,
-        note: playedInstant
-          ? "Your last maneuver was an Instant"
-          : (answered ? "You answered the last maneuver with an Instant" : "")
+        playable: !blocked,
+        note: blocked ?? ""
       },
       { key: "counter", playable: false, note: "Played from the attack they answer, in chat" }
     ];

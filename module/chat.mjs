@@ -21,6 +21,7 @@ import {
   defendOptionCost,
   getManeuver,
   maneuverKiCost,
+  recordManeuverType,
   maxKiWager,
   refundManeuverCost,
   spendManeuverCost
@@ -1081,7 +1082,10 @@ export async function postManeuver(actor, maneuver, { asOutOfSequence = false, f
     ? `${maneuver.actionCost} ${type.action} action(s)`
     : "no action";
 
-  await ChatMessage.create({
+  // Handed back, because the card an Instant was played on is part of the Instant rule:
+  // an Out-of-Sequence Maneuver this one goes on to offer does not count as getting out
+  // from under it.
+  return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `
       <div class="dbu-maneuver">
@@ -1106,22 +1110,6 @@ function attackLine(actor, maneuver, foundation) {
 
   return `<div class="dbu-maneuver-attack">${Handlebars.escapeExpression(profile.label)} Profile
     &middot; ${Handlebars.escapeExpression(foundationLabel)} &middot; Wound ${wound}</div>`;
-}
-
-/**
- * Whether a character has answered the most recent Standard Maneuver with an Instant.
- *
- * This is what keeps two Instants from being played back to back: having answered the
- * last one, you may not reach for another until a Standard Maneuver passes that you
- * did not answer. Read from the messages themselves, so there is no flag to set or
- * clear and no way for it to fall out of step.
- */
-export function answeredLatestManeuver(actor) {
-  const respondable = game.messages.contents.filter(message => message.getFlag(SCOPE, RESPONDABLE_FLAG));
-  const latest = respondable[respondable.length - 1];
-  if (!latest) return false;
-
-  return (latest.getFlag(SCOPE, RESPONSES_FLAG) ?? []).some(entry => entry.actorUuid === actor.uuid);
 }
 
 /**
@@ -1841,6 +1829,11 @@ async function playInstant(message, actor, maneuverId) {
   if (!maneuver) return;
   if (!await spendManeuverCost(actor, maneuver)) return;
 
+  // An Instant played into a card is an Instant played, and it was not recorded as one -
+  // which is why the rule had to be inferred from the message log instead, and why
+  // somebody else playing a Standard Maneuver was letting you play a second.
+  await recordManeuverType(actor, "instant", { messageId: message.id });
+
   requestEdit(message, {
     type: "respond",
     response: {
@@ -1858,10 +1851,15 @@ async function playInstant(message, actor, maneuverId) {
  */
 async function playCounter(message, actor, answer, attack) {
   if (!attack || attack.result) return;
+  // Dodging is not a Maneuver, so it neither costs a Counter Action nor gets you out
+  // from under an Instant.
   if (answer === "dodge") return chooseDefence(message, actor, "dodge");
 
   const maneuver = getManeuver(answer);
   if (!maneuver) return;
+
+  // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
+  await recordManeuverType(actor, "counter");
 
   // Energy Cancel spends the Counter Action on letting go of a charge rather than on
   // meeting the attack - so having spent it, the attack is answered the way it is
@@ -2205,7 +2203,9 @@ const CLASH_ROLLS = Object.freeze({
 export async function postSkillClash(actor, target, maneuver) {
   const skillKey = maneuver.clash.skill;
 
-  await ChatMessage.create({
+  // Handed back for the reason postManeuver hands its card back: which card a Maneuver
+  // was played on is part of the Instant rule.
+  return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: "",
     flags: {
@@ -2524,6 +2524,11 @@ async function takeOutOfSequence(message, actor, offer) {
   // An Out-of-Sequence Maneuver ignores its Action Cost, but not its Ki cost.
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, declared, actor))) return;
 
+  // An Out-of-Sequence Maneuver counts as having used another kind - unless the thing
+  // that offered it was the Instant still holding you, which is what the message id is
+  // compared against.
+  await recordManeuverType(actor, "outOfSequence", { messageId: message.id });
+
   requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
 
   return declared
@@ -2558,7 +2563,9 @@ export async function postAttack(actor, target, maneuver,
     });
   }
 
-  await ChatMessage.create({
+  // Handed back for the reason postManeuver hands its card back: which card a Maneuver
+  // was played on is part of the Instant rule.
+  const card = await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: "",
     flags: {
@@ -2618,6 +2625,8 @@ export async function postAttack(actor, target, maneuver,
       }
     }
   });
+
+  return card;
 }
 
 /**

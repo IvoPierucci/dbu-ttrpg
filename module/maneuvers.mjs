@@ -740,6 +740,66 @@ export async function pickProfileOnly(maneuver, foundations, hint = "", actor = 
   return (typeof chosen === "string") ? chosen : null;
 }
 
+/** The four kinds a Maneuver can be. Dodging is not among them: it is not a Maneuver. */
+const MANEUVER_KINDS = new Set(["standard", "instant", "counter", "outOfSequence"]);
+
+/**
+ * What a Maneuver just used does to the Instant rule.
+ *
+ * "An Instant Maneuver cannot be used if the last Maneuver you used was an Instant
+ * Maneuver." So playing one holds you, and using any other kind releases you - your
+ * own use, not somebody else's turn going by.
+ *
+ * An Out-of-Sequence Maneuver releases you too, with one exception: not when the thing
+ * that offered it was the Instant still holding you. That would be laundering an
+ * Instant into permission for the next one, and the two would alternate for ever.
+ *
+ * Lives here rather than in either caller because both reach it - a Maneuver played
+ * from the sheet and one played into a chat card are the same rule - and this module is
+ * the one they already share.
+ *
+ * @param {Actor} actor
+ * @param {string} type       standard, instant, counter or outOfSequence
+ * @param {object} [options]
+ * @param {string} [options.messageId]  the card this Maneuver was played on or from
+ */
+export async function recordManeuverType(actor, type, { messageId = "" } = {}) {
+  // Fails closed, like every other judgement in this system: an unrecognised kind
+  // leaves the hold exactly as it was rather than lifting it. The four kinds are the
+  // four kinds, and anything else reaching here is a mistake that must not be a way
+  // out from under the rule - dodging is the obvious one, since it is not a Maneuver
+  // at all and costs nothing.
+  if (!MANEUVER_KINDS.has(type)) {
+    console.warn(`DBU TTRPG | "${type}" is not a kind of Maneuver; the Instant rule is unchanged.`);
+    return;
+  }
+
+  const held = actor.system.instantPlayed ?? { held: false, messageId: "" };
+
+  // Triggered by the Instant that is holding you, so it does not count as getting out
+  // from under it.
+  if ((type === "outOfSequence") && held.held && messageId && (messageId === held.messageId)) {
+    return;
+  }
+
+  const now = (type === "instant")
+    ? { held: true, messageId: messageId ?? "" }
+    : { held: false, messageId: "" };
+
+  if ((now.held === held.held) && (now.messageId === held.messageId)) return;
+  return actor.update({ "system.instantPlayed": now });
+}
+
+/**
+ * Why this character may not play an Instant Maneuver, if they may not.
+ *
+ * @returns {null|string} null when they may, otherwise what is in the way
+ */
+export function whyNotAnotherInstant(actor) {
+  if (!actor?.system?.instantPlayed?.held) return null;
+  return "Your last Maneuver was an Instant. Use another kind first.";
+}
+
 /**
  * The most Ki a character may wager on one attack: half their Capacity by the rule,
  * and no more than they could actually pay for.
