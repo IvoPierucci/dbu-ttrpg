@@ -148,11 +148,73 @@ export function resolveDamageCategory(baseCategory, shift = 0) {
  * half of it did nothing.
  */
 export const PROFILES = Object.freeze({
+  // --- Multi-Foundation -----------------------------------------------------
+  // "Profiles that don't belong to a specific Foundation. When using any of these, you
+  // can decide which of the Foundations that Profile belongs to for the duration of
+  // that Attacking Maneuver, including all the rules that are applied to Profiles of
+  // that Foundation and using their Damage Attribute."
+  //
+  // That is already how the system reads them: the Foundation is chosen when the attack
+  // is declared, the Damage Attribute follows from it, and the Foundation's own rules
+  // are keyed off the Foundation rather than off the Profile - so a Simple attack
+  // declared as Physical is bound by Melee Range exactly as a Crushing one is.
+
   simple: {
     label: "Simple",
     foundations: ["physical", "energy", "magic"],
     kiCost: 0,
-    damageCategory: "standard"
+    damageCategory: "standard",
+    summary: "A simple punch, kick, energy ball, or spell.",
+    rules: ["No effect of its own."]
+  },
+
+  combination: {
+    label: "Combination",
+    foundations: ["physical", "energy", "magic"],
+    kiCostPerTier: 3,
+    damageCategory: "standard",
+    summary: "A combination of several attacks done in sequence.",
+    // Three more Strike Rolls after the hit and before the Wound Roll, each measured
+    // against what the defender's dice came to rather than against their finished roll.
+    followUps: { rolls: 3, woundPerHitPerTier: 2 },
+    rules: [
+      "After you hit, and before the Wound Roll, roll your Strike Roll three more times.",
+      "Each is measured against the Dice Score of the roll they answered with.",
+      "Every one that beats it adds 2(T) to the Wound Roll."
+    ]
+  },
+
+  launching: {
+    label: "Launching",
+    foundations: ["physical", "energy", "magic"],
+    kiCostPerTier: 3,
+    damageCategory: "standard",
+    summary: "An attack that sends enemies flying away from you.",
+    grantsAdvantage: "knockback",
+    doublesCollisionDamage: true,
+    needs: "The Knockback Advantage has not been written yet, so neither the movement "
+      + "nor the Collision Damage it causes is known here - both are the table's, and "
+      + "the doubling with them.",
+    rules: [
+      "Gains the Knockback Advantage for free - no added KP, and no added TP as a Signature Technique.",
+      "Collision Damage from movement this causes is doubled."
+    ]
+  },
+
+  megaFlare: {
+    label: "Mega Flare",
+    foundations: ["physical", "energy", "magic"],
+    kiCostPerTier: 4,
+    damageCategory: "standard",
+    summary: "By focusing as much energy as possible, this attack is highly destructive.",
+    maxEnergyCharges: 10,
+    woundPerChargePerTier: 1,
+    categoryUpAtCharges: 7,
+    rules: [
+      "Holds up to 10 Energy Charges rather than the usual 7.",
+      "Each Energy Charge adds 1(T) to the Wound Roll, on top of its die.",
+      "At 7 or more Energy Charges the Damage Category rises by one."
+    ]
   },
 
   // --- Physical -------------------------------------------------------------
@@ -812,6 +874,16 @@ function baseKiCost(maneuver, actor) {
   return maneuver.kiCostPerBaseTier
     ? maneuver.kiCostPerBaseTier * (actor?.system?.baseTierOfPower ?? 1)
     : (maneuver.kiCost ?? 0);
+}
+
+/**
+ * The most Energy Charges an attack made with this Profile can hold.
+ *
+ * Seven for everything but Mega Flare, which is built to hold ten - "the maximum number
+ * of Energy Charges for this Profile is 10".
+ */
+export function maxEnergyCharges(profileId, fallback) {
+  return PROFILES[profileId]?.maxEnergyCharges ?? fallback;
 }
 
 /**

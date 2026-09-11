@@ -12,6 +12,7 @@ import {
   allManeuvers,
   declareAttack,
   whyNotInReach,
+  maxEnergyCharges,
   maneuverKiCost,
   maneuverUsesLeft,
   pickProfileOnly,
@@ -324,9 +325,12 @@ async function declareCharge(actor) {
   const charging = actor.system.charging;
 
   if (charging.maneuverId) {
-    if (charging.charges >= DBUCharacterData.MAX_ENERGY_CHARGES) {
+    // The ceiling is the declared Profile's, not one number for everything: Mega Flare
+    // is built to hold ten, and the Profile was settled when the charging began.
+    const ceiling = maxEnergyCharges(charging.profile, DBUCharacterData.MAX_ENERGY_CHARGES);
+    if (charging.charges >= ceiling) {
       ui.notifications.warn(
-        `That Attacking Maneuver already carries ${DBUCharacterData.MAX_ENERGY_CHARGES} `
+        `That Attacking Maneuver already carries ${ceiling} `
         + "Energy Charges, which is as many as one can hold."
       );
       return false;

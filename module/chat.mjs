@@ -11,6 +11,7 @@ import {
   MANEUVER_TYPES,
   PROFILES,
   areaLabel,
+  maxEnergyCharges,
   resolveDamageCategory,
   allManeuvers,
   declareAttack,
@@ -1886,7 +1887,8 @@ function atMoment(actor, moment, context = {}) {
  * button: the two sides are compared against each other, so a total that might still
  * grow is not yet a result. Both outcomes are therefore applied here and now.
  */
-async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false, slot = null } = {}) {
+async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false,
+                                           slot = null, collect = true } = {}) {
   // A single netted number cannot be taken apart again, so what went into it is kept
   // as labelled parts and only summed for the roll itself.
   const parts = (typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers;
@@ -1900,7 +1902,11 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // Asked before the dice are picked up, because an effect that sets the Base Die
   // replaces the roll rather than adjusting it: rolling a d10 and then throwing the
   // result away puts a number on the card that means nothing.
-  const answered = combatRoll ? atMoment(actor, "combat-roll", { roll: true }) : null;
+  // Not collected when the same roll is being made again as a measurement rather than
+  // as an exchange - Combination's three follow-up Strikes. A one-shot effect answers
+  // the roll it was armed for, and offering it once per repetition would spend it three
+  // more times over.
+  const answered = (combatRoll && collect) ? atMoment(actor, "combat-roll", { roll: true }) : null;
   const baseDie = answered?.slots?.baseDie ?? null;
   const forcedNatural = baseDie?.set ?? null;
 
@@ -2040,6 +2046,14 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     // Karmic Chance replaces the Base Die and re-reads the result from scratch, so it
     // needs the total without the old die's consequences already baked in.
     beforeOutcome: roll.total,
+    // The dice alone, before any bonus - which is what the rules call the Dice Score.
+    // Two rules already turn on it: Karmic Boost applies a Dice Score to a Combat Roll,
+    // and a Parry has its Dice Score reduced per Energy Charge. Combination measures
+    // its follow-up Strikes against the defender's.
+    diceScore: roll.dice.reduce((sum, die) => sum + die.total, 0) + naturalShift,
+    // What went into it besides the dice, so the same roll can be made again without
+    // rebuilding it from the sheet - which would quietly drop whatever an effect added.
+    bonus,
     criticalDice,
     total,
     outcome,
@@ -2399,9 +2413,11 @@ export async function postAttack(actor, target, maneuver,
           // Carried on the attack rather than looked up later: a Profile's Damage
           // Category is part of what was declared.
           damageCategory: PROFILES[profile].damageCategory,
-          // Steps applied by the attacker's own effects. None write here yet, but they
-          // must be summed with the defender's before anything is clamped.
-          damageCategoryShift: 0,
+          // Steps applied by the attacker's own effects, summed with the defender's
+          // before anything is clamped. Mega Flare is the first thing to write here:
+          // "if the number of Energy Charges applied is 7+, increase the Damage
+          // Category by 1 Category."
+          damageCategoryShift: profileCategoryShift(profile, charges, alsoCaught),
           kiWager,
           // Energy Charges live on the Maneuver, not the character: they were fed into
           // this attack and are spent with it. Each adds a die to the Wound Roll.
@@ -2409,7 +2425,7 @@ export async function postAttack(actor, target, maneuver,
           // Maneuver fed into it - and still held to the seven the rules allow.
           energyCharges: Math.min(
             charges + (alsoCaught ? 0 : (PROFILES[profile].grantsEnergyCharge ?? 0)),
-            DBUCharacterData.MAX_ENERGY_CHARGES
+            maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES)
           ),
           signature: (maneuver.tags ?? []).includes("signature"),
           foundation,
@@ -2429,6 +2445,24 @@ export async function postAttack(actor, target, maneuver,
       }
     }
   });
+}
+
+/**
+ * What a Profile does to its own Damage Category.
+ *
+ * Counted off the Charges the attack ends up with, granted ones included, since the
+ * rule asks how many are "applied to this Attacking Maneuver" and does not care where
+ * they came from.
+ */
+function profileCategoryShift(profileId, charges, alsoCaught) {
+  const profile = PROFILES[profileId];
+  if (!profile?.categoryUpAtCharges) return 0;
+
+  const total = Math.min(
+    charges + (alsoCaught ? 0 : (profile.grantsEnergyCharge ?? 0)),
+    maxEnergyCharges(profileId, DBUCharacterData.MAX_ENERGY_CHARGES)
+  );
+  return (total >= profile.categoryUpAtCharges) ? 1 : 0;
 }
 
 /**
@@ -2834,6 +2868,15 @@ function profileWoundParts(attacker, attack) {
     if (modifier) parts.push({ label: `${profile.label} (${foundation.label})`, value: modifier });
   }
 
+  // Mega Flare: "for every Energy Charge applied to this Attacking Maneuver, increase
+  // the Wound Roll by 1(T)." On top of the die each Charge already adds - that die is
+  // the Energy Charge Maneuver's doing, and this is the Profile's.
+  if (profile?.woundPerChargePerTier) {
+    const bonus = (attack.energyCharges ?? 0) * profile.woundPerChargePerTier
+      * (attacker.system.tierOfPower ?? 1);
+    if (bonus) parts.push({ label: `${profile.label} (charges)`, value: bonus });
+  }
+
   // Blitz: "if you move a number of Squares that exceeds your Normal Speed due to the
   // effects of Charging Assault, increase the Wound Roll by 1/2 of your Agility
   // Modifier." A rule this Profile has about an Advantage it granted, so it is keyed
@@ -2871,6 +2914,60 @@ function profileSoakIgnored(attacker, attack) {
 }
 
 /**
+ * Combination's follow-up Strikes.
+ *
+ * "After you hit an Opponent with this Attacking Maneuver but before you roll your
+ * Wound Roll, roll your Strike Roll for this Attacking Maneuver against the Dice Score
+ * of their Dodge Roll or Strike Roll (if they used the Parry option of the Defend
+ * Maneuver) an additional 3 times. For every additional time your Strike Roll exceeds
+ * their Dice Score, increase the Wound Roll by an additional 2(T)."
+ *
+ * The Dice Score is the dice alone, before any bonus - the reading the rest of the
+ * system already uses, in Karmic Boost and in the Parry penalty.
+ *
+ * Rolled at the same bonus the first Strike was, rather than rebuilt from the sheet: a
+ * triggered effect that raised that Strike raised *this* attack's Strike Roll, and
+ * rebuilding would silently drop it. Collected effects are not offered again, though -
+ * these are three repetitions of one roll, not three more exchanges.
+ *
+ * Only against a defence that was rolled. Direct Hit, Guard and Power Flare answer with
+ * no roll at all, so there is no Dice Score to measure against and nothing to beat.
+ */
+async function combinationFollowUps(attacker, attack) {
+  const profile = PROFILES[attack.profile];
+  const plan = profile?.followUps;
+  if (!plan) return [];
+
+  const answer = attack.result?.answer;
+  if (!answer) return [];
+
+  const target = answer.diceScore ?? 0;
+  const tier = attacker.system.tierOfPower ?? 1;
+
+  const rolls = [];
+  for (let i = 0; i < plan.rolls; i++) {
+    rolls.push(await rollSide(attacker, [{ label: "Strike", value: attack.result.strike.bonus ?? 0 }], {
+      extraDice: attacker.system.dice.extra.formula,
+      criticalDice: attacker.system.dice.critical.formula,
+      combatRoll: true,
+      slot: null,
+      collect: false
+    }));
+  }
+
+  const beat = rolls.filter(roll => roll.total > target).length;
+  const bonus = beat * plan.woundPerHitPerTier * tier;
+  if (!bonus) return [];
+
+  // The label carries what happened, since the Wound Roll's own line is where anyone
+  // will look for it: how many of the three landed, and what they had to beat.
+  return [{
+    label: `${profile.label} (${beat} of ${plan.rolls} beat ${target})`,
+    value: bonus
+  }];
+}
+
+/**
  * Roll the Wound and work out what gets through. Kept apart from the Strike so the
  * table sees whether the attack landed before any damage is rolled - and so a hit can
  * be argued over before it becomes a number.
@@ -2893,7 +2990,11 @@ async function rollAttackWound(message, attack) {
   // the attack, and this is where they are finally worth something.
   const chargeDice = energyChargeDice(attacker, attack);
 
+  // After the hit and before the Wound Roll, which is where the rule puts them.
+  const followUps = await combinationFollowUps(attacker, attack);
+
   const wound = await rollSide(attacker, [
+    ...followUps,
     { label: "Wound", value: attacker.system.combat.wound[attack.foundation] },
     ...profileWoundParts(attacker, attack),
     ...advantageWoundParts(attacker, attack),
