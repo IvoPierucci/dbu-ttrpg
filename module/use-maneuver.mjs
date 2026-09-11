@@ -27,7 +27,7 @@ import {
   postSkillClash,
   takeSurge
 } from "./chat.mjs";
-import { actionsLeft, spendActions } from "./combat.mjs";
+import { actionsLeft, spendActions, NOT_CHARGING, stopCharging } from "./combat.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
@@ -415,14 +415,11 @@ export async function cancelCharge(actor) {
 
 /** Put the declaration down, and take Guard Down off with it. */
 async function clearCharging(actor) {
-  await actor.update({
-    "system.charging.maneuverId": "",
-    "system.charging.profile": "",
-    "system.charging.charges": 0
-  });
-
-  const { setCondition } = await import("./conditions.mjs");
-  await setCondition(actor, "guard-down", 0);
+  // The same two steps leaving an Encounter takes, from the same place: three fields
+  // and the Condition that came with them. Written out twice, they drifted - one copy
+  // kept clearing the Profile and the other did not, and only one took Guard Down off.
+  await actor.update({ ...NOT_CHARGING });
+  await stopCharging(actor);
 }
 
 /** Everything the charge was holding, handed to the attack and let go of. */

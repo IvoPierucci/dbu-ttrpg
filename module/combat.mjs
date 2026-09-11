@@ -11,7 +11,7 @@
  */
 
 import { fireMoment } from "./effects/moments-runtime.mjs";
-import { replaceObject } from "./conditions.mjs";
+import { replaceObject, setCondition } from "./conditions.mjs";
 
 /** Every character taking part, as Actors. */
 function combatants(combat) {
@@ -41,6 +41,30 @@ async function startRound(combat) {
  * for a table not running a formal Encounter. They had already drifted - the button was
  * leaving Actions spent - and a rule that is written twice is a rule that will.
  */
+/**
+ * What a character holds when they are not charging anything.
+ *
+ * Written out here because two places clear it and they had drifted: both wiped the
+ * Maneuver and the count and left the Profile behind, so the character carried a
+ * declaration for an attack they were no longer charging.
+ */
+export const NOT_CHARGING = Object.freeze({
+  "system.charging.maneuverId": "",
+  "system.charging.profile": "",
+  "system.charging.charges": 0
+});
+
+/**
+ * And the Combat Condition that came with it.
+ *
+ * Guard Down lasts exactly as long as the charging does, so throwing the charge away
+ * has to take it too. Leaving an Encounter mid-charge used to clear the charge and
+ * leave the Condition on the character for good.
+ */
+export async function stopCharging(actor) {
+  if (actor.system.conditions?.["guard-down"]) await setCondition(actor, "guard-down", 0);
+}
+
 export function newRoundFor(actor) {
   return {
     "system.attacksThisRound": 0,
@@ -63,11 +87,11 @@ async function startEncounter(combat) {
       "system.armedTalents": [],
       "system.usedManeuvers": [],
       "system.defeatsEscaped": 0,
-      "system.charging.maneuverId": "",
-      "system.charging.charges": 0,
+      ...NOT_CHARGING,
       // Every Resource is lost when an Encounter ends, so one starts with none.
       "system.resources": replaceObject({})
     });
+    await stopCharging(actor);
     await fireMoment(actor, "start-of-encounter");
   }
 }
@@ -147,9 +171,9 @@ export function registerCombatHooks() {
         "system.resources": replaceObject({}),
         "system.defeatsEscaped": 0,
         // A charge that was never thrown does not follow you out of the Encounter.
-        "system.charging.maneuverId": "",
-        "system.charging.charges": 0
+        ...NOT_CHARGING
       });
+      await stopCharging(actor);
     }
   });
 }
