@@ -19,6 +19,7 @@ import {
   recordManeuverType,
   recordManeuverUse,
   spendManeuverCost,
+  whyNotAnotherAbsolute,
   whyNotAnotherInstant
 } from "./maneuvers.mjs";
 import {
@@ -134,6 +135,7 @@ export function definitionOf(item) {
     kiCost: item.system.kiCost,
     kiCostPerBaseTier: item.system.kiCostPerBaseTier,
     attacking: item.system.attacking,
+    absolute: item.system.absolute,
     requiresTarget: item.system.requiresTarget,
     defend: item.system.defend,
     surge: item.system.surge,
@@ -266,6 +268,14 @@ export async function useManeuver(actor, maneuver) {
     const outOfReach = targetActor && whyNotInReach(actor, targetActor, declared ?? {});
     if (outOfReach) {
       ui.notifications.warn(outOfReach);
+      return false;
+    }
+
+    // Two Absolute Attacks a Combat Round. Checked here for the same reason the reach
+    // is: before anything is paid, so the declaration can still be taken back.
+    const noMoreAbsolute = whyNotAnotherAbsolute(actor, maneuver);
+    if (noMoreAbsolute) {
+      ui.notifications.warn(noMoreAbsolute);
       return false;
     }
 
@@ -510,6 +520,7 @@ export function maneuverItemFrom(definition) {
       kiCost: definition.kiCost ?? 0,
       kiCostPerBaseTier: definition.kiCostPerBaseTier ?? 0,
       attacking: Boolean(definition.attacking),
+      absolute: Boolean(definition.absolute),
       requiresTarget: Boolean(definition.requiresTarget),
       defend: Boolean(definition.defend),
       surge: Boolean(definition.surge),

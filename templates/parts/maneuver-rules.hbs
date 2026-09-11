@@ -36,6 +36,10 @@
         <em>Attacking</em>
         <input type="checkbox" name="system.attacking" {{#if system.attacking}}checked{{/if}}/>
       </div>
+      <div class="stat" data-tooltip="An Absolute Attack: on a miss it still rolls its Wound Roll, and half that Dice Score is measured against the target's Soak Value and Damage Reduction. Two a Combat Round.">
+        <em>Absolute Attack</em>
+        <input type="checkbox" name="system.absolute" {{#if system.absolute}}checked{{/if}}/>
+      </div>
       <div class="stat" data-tooltip="Cannot be used without a target.">
         <em>Needs a target</em>
         <input type="checkbox" name="system.requiresTarget" {{#if system.requiresTarget}}checked{{/if}}/>

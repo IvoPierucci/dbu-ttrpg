@@ -40,6 +40,12 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
 
       /** How it behaves in an exchange. */
       attacking: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * An Absolute Attack: one that still rolls its Wound Roll when it fails to hit,
+       * and measures half that roll against the target's Soak Value and Damage
+       * Reduction. Only meaningful on an Attacking Maneuver.
+       */
+      absolute: new fields.BooleanField({ required: true, initial: false }),
       requiresTarget: new fields.BooleanField({ required: true, initial: false }),
       defend: new fields.BooleanField({ required: true, initial: false }),
       surge: new fields.BooleanField({ required: true, initial: false }),

@@ -68,6 +68,9 @@ export async function stopCharging(actor) {
 export function newRoundFor(actor) {
   return {
     "system.attacksThisRound": 0,
+    // "You can't do more than 2 Absolute Attacks during a single Combat Round", so the
+    // count belongs to the round exactly as the Diminishing ones do.
+    "system.absoluteAttacksThisRound": 0,
     "system.diminishingDefense": 0,
     "system.actionsSpent.standard": 0,
     "system.actionsSpent.counter": 0,

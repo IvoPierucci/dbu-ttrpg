@@ -968,6 +968,27 @@ function profileOptionCost(maneuver, profileId, actor) {
 }
 
 /**
+ * Whether another Absolute Attack may be made: "You can't do more than 2 Absolute
+ * Attacks during a single Combat Round."
+ *
+ * Counted when the attack is made rather than when it misses. An Absolute Attack is an
+ * Attacking Maneuver that is Absolute, and doing one is making one - the property is
+ * not something the attack acquires later by failing. The other reading, counting only
+ * the ones that actually missed, would let a character throw them all round and spend
+ * the two on whichever happened to need them.
+ *
+ * @returns {null|string} null if one may be made, otherwise why not
+ */
+export function whyNotAnotherAbsolute(actor, maneuver) {
+  if (!maneuver?.absolute || !maneuver?.attacking) return null;
+
+  const { used = 0, max = 0 } = actor?.system?.absoluteAttacks ?? {};
+  return (used < max)
+    ? null
+    : `${actor.name} has already made ${max} Absolute Attacks this Combat Round.`;
+}
+
+/**
  * The KP Cost a Profile *lists*, before anything reduces it.
  *
  * Kept apart from what the Profile ends up adding to the price, because the Minimum Ki

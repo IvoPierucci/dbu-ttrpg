@@ -333,6 +333,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   /** Attacking Maneuvers in a Combat Round that cost nothing before stacks begin. */
   static FREE_ATTACKS_PER_ROUND = 3;
 
+  /** "You can't do more than 2 Absolute Attacks during a single Combat Round." */
+  static MAX_ABSOLUTE_ATTACKS_PER_ROUND = 2;
+
   /**
    * The most Super Stacks a character can hold: "You can possess up to 3 Super Stacks."
    *
@@ -611,6 +614,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // being attacked repeatedly blunts your Dodge. Only the counts are stored; what
     // they cost is derived.
     schema.attacksThisRound = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
+
+    // Absolute Attacks made this Combat Round: "you can't do more than 2 during a single
+    // Combat Round". Counted apart from attacksThisRound, which every attack raises -
+    // this one counts only the Absolute ones, and the limit is a hard two rather than a
+    // point at which something starts costing more.
+    schema.absoluteAttacksThisRound = new fields.NumberField({
+      required: true, integer: true, initial: 0, min: 0
+    });
     schema.diminishingDefense = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 
     // --- Super Stacks ---
@@ -1320,6 +1331,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
           DBUCharacterData.diminishingDefensePerAttack(this.baseTierOfPower)),
         penalty: this.diminishingDefense
       }
+    };
+
+    // --- Absolute Attacks ---
+    // Two a Combat Round, and the count resets with the round the way the Diminishing
+    // ones do. Derived as a little block rather than left as a bare number so the sheet
+    // and the rule that refuses a third are reading the same thing.
+    this.absoluteAttacks = {
+      used: this.absoluteAttacksThisRound,
+      max: DBUCharacterData.MAX_ABSOLUTE_ATTACKS_PER_ROUND,
+      left: Math.max(0,
+        DBUCharacterData.MAX_ABSOLUTE_ATTACKS_PER_ROUND - this.absoluteAttacksThisRound)
     };
 
     // --- Health Thresholds ---

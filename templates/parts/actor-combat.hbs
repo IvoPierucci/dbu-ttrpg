@@ -66,6 +66,18 @@
         <i class="stat-note">Dim. Offense {{system.diminishing.offense.stacks}} &middot; Strike -{{system.diminishing.offense.penalty}}</i>
       </div>
 
+      {{! Two a Combat Round, and the count resets with the round like the one above. }}
+      <div class="stat"
+           data-tooltip="Absolute Attacks made this round. Two is the limit, and a third cannot be declared.">
+        <em>Absolute Attacks</em>
+        {{#if combatEditMode}}
+        <input type="number" name="system.absoluteAttacksThisRound"
+               value="{{system.absoluteAttacksThisRound}}" min="0"/>
+        {{else}}
+        <span>{{system.absoluteAttacks.used}}<span class="stat-of">/{{system.absoluteAttacks.max}}</span></span>
+        {{/if}}
+      </div>
+
       <div class="stat"
            data-tooltip="Each stack reduces your Dodge Rolls by 1. Gained per Attacking Maneuver aimed at you, unless you use the Defend Maneuver.">
         <em>Dim. Defense</em>

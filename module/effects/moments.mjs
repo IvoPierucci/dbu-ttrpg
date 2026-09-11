@@ -101,10 +101,16 @@ const TABLE = [
   { key: "clash-lose", label: "You lose a Clash", provides: [CTX.CLASH] },
   { key: "defending", label: "You Defend against an attack", provides: [CTX.ATTACK, CTX.ATTACKER] },
   { key: "hit", label: "Your attack connects", provides: [CTX.ATTACK, CTX.TARGET],
-    doc: "Hitting for no damage is still a hit. An Absolute Attack deals damage without "
-       + "hitting, so it fires neither this nor `miss`." },
+    doc: "Hitting for no damage is still a hit: Soak and Damage Reduction taking the "
+       + "Wound Roll down to nothing is not a miss. An Absolute Attack deals Damage "
+       + "without hitting and does not fire this - \"it does not count as hitting a "
+       + "Character with an Attacking Maneuver for any effects that would trigger as a "
+       + "result\", and the Damage it deals does not count either." },
   { key: "miss", label: "Your attack fails", provides: [CTX.ATTACK, CTX.TARGET],
-    doc: "The Strike failed, the target dodged, or an Intervene deflected it." },
+    doc: "Failing to hit at all: the Strike lost, the target dodged, an Intervene "
+       + "deflected it, or a Defend Maneuver avoided it completely. An Absolute Attack "
+       + "that deals Damage anyway has still missed. An Ally taking the hit through "
+       + "Intervene is not a miss on the first target - the target changed." },
   { key: "being-hit", label: "An attack connects on you", provides: [CTX.ATTACK, CTX.ATTACKER] },
   { key: "before-wound", label: "Before the Wound Roll", provides: [CTX.ATTACK, CTX.CATEGORY] },
   { key: "damage-applied", label: "Damage is dealt", provides: [CTX.DAMAGE, CTX.ATTACKER] },

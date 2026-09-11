@@ -22,6 +22,7 @@ import {
   getManeuver,
   maneuverKiCost,
   recordManeuverType,
+  whyNotAnotherAbsolute,
   maxKiWager,
   refundManeuverCost,
   spendManeuverCost
@@ -2610,6 +2611,14 @@ async function takeOutOfSequence(message, actor, offer) {
       ui.notifications.warn(outOfReach);
       return;
     }
+
+    // Two a Combat Round, whichever way the attack is reached - out of sequence is no
+    // exception, exactly as it is none to the Melee Range above.
+    const noMoreAbsolute = whyNotAnotherAbsolute(actor, maneuver);
+    if (noMoreAbsolute) {
+      ui.notifications.warn(noMoreAbsolute);
+      return;
+    }
   }
 
   // An Out-of-Sequence Maneuver ignores its Action Cost, but not its Ki cost.
@@ -2645,10 +2654,17 @@ export async function postAttack(actor, target, maneuver,
   //
   // Counted once however far the attack reaches: an area that catches four people is
   // one Attacking Maneuver, and they all answer the same card.
+  // An Absolute Attack is counted as it is made, not as it misses: doing one is making
+  // one. In the same write as the rest, off one reading of the character.
+  const absolute = Boolean(maneuver.absolute && maneuver.attacking);
+
   await actor.update({
     "system.attacksThisRound": actor.system.attacksThisRound + 1,
     "system.attackActionsThisTurn": actor.system.attackActionsThisTurn
-      + (asOutOfSequence ? 0 : (maneuver.actionCost ?? 1))
+      + (asOutOfSequence ? 0 : (maneuver.actionCost ?? 1)),
+    ...(absolute
+      ? { "system.absoluteAttacksThisRound": actor.system.absoluteAttacksThisRound + 1 }
+      : {})
   });
 
   // Handed back for the reason postManeuver hands its card back: which card a Maneuver
@@ -2667,6 +2683,10 @@ export async function postAttack(actor, target, maneuver,
             : maneuver.name,
           actionCost: maneuver.actionCost ?? 1,
           tags: maneuver.tags ?? [],
+          // Carried on the attack rather than looked up at the Wound Roll: whether this
+          // was an Absolute Attack was settled when it was declared, and the Maneuver it
+          // came from may be edited in between.
+          absolute,
           // Everyone this attack reaches, answering one Strike Roll. An area adds to
           // this list; it does not start a second attack.
           targets: [{ uuid: target.uuid, name: target.name }],
@@ -2721,6 +2741,41 @@ export async function postAttack(actor, target, maneuver,
   });
 
   return card;
+}
+
+/**
+ * What an Absolute Attack does to somebody it failed to hit.
+ *
+ * "If you fail to hit a target with an Attacking Maneuver, you still roll the Wound Roll
+ * for that Attacking Maneuver and apply 1/2 of the Dice Score of that roll to the
+ * target's Soak Value and Damage Reduction. The amount you exceed the cumulative of the
+ * target's Soak Value and Damage Reduction is dealt as Damage."
+ *
+ * Half the Dice Score - the whole Wound Roll, dice and bonuses together - against the
+ * two of them added up. Deliberately plain: no Damage Category, since the rule names
+ * the Dice Score rather than the Damage the attack would have done, and none of what a
+ * defence does to Soak, since nothing was defended against. Soak ignored by the Profile
+ * and Damage Reduction the attack pierces are left out for the same reason - the rule
+ * names the target's Soak Value and Damage Reduction, and an attack that did not land
+ * is not getting past anything.
+ *
+ * The line is marked `absolute` because what follows from it differs: this is not a hit,
+ * and what it deals is not Damage dealt with an Attacking Maneuver for anything that
+ * would trigger on either.
+ */
+function absoluteOutcome(target, wound) {
+  const half = Math.floor((wound.total ?? 0) / 2);
+  const soak = Math.max(0, target.system.soakValue ?? 0);
+  const reduction = Math.max(0, target.system.damageReduction ?? 0);
+
+  return {
+    absolute: true,
+    counterWound: null,
+    effectiveWound: half,
+    soak,
+    reduction,
+    damage: Math.max(0, half - soak - reduction)
+  };
 }
 
 /**
@@ -3344,6 +3399,22 @@ function anyoneHit(attack) {
 }
 
 /**
+ * Whether this attack owes a Wound Roll.
+ *
+ * Landing on somebody is the usual reason. An Absolute Attack owes one whatever
+ * happened - "you still roll the Wound Roll for that Attacking Maneuver" - so a
+ * Maneuver that missed everybody it reached still has this step to make.
+ */
+function owesWound(attack) {
+  return anyoneHit(attack) || Boolean(attack.absolute);
+}
+
+/** Whether this line is an Absolute Attack's answer to having missed. */
+function isAbsoluteMiss(own) {
+  return Boolean(own?.absolute) && !own?.hit;
+}
+
+/**
  * Roll Combination's three follow-up Strikes and write down what they came to.
  *
  * "Roll your Strike Roll for this Attacking Maneuver against the Dice Score of their
@@ -3498,9 +3569,14 @@ async function rollAttackWound(message, attack) {
   const settledTargets = [];
 
   for (const { uuid, actor: target, own } of targets) {
-    // A miss takes nothing, and there is nothing here to work out for it.
     if (!own.hit) {
-      settledTargets.push({ ...own, counterWound: null, soak: 0, reduction: 0, damage: 0 });
+      // An ordinary miss takes nothing, and there is nothing here to work out for it.
+      if (!attack.absolute) {
+        settledTargets.push({ ...own, counterWound: null, soak: 0, reduction: 0, damage: 0 });
+        continue;
+      }
+
+      settledTargets.push({ ...own, ...absoluteOutcome(target, wound) });
       continue;
     }
 
@@ -3873,7 +3949,12 @@ async function applyAttackDamage(message, target, attack) {
   // this is the first point at which "if you deal Damage" has an answer - the stacks
   // were handed out when the Clash was, before the Wound Roll existed. So the second
   // helping is added now, and only when Damage was actually dealt.
+  // Not for an Absolute Attack: "this does not count as hitting a Character with an
+  // Attacking Maneuver, or dealing damage to that Character with an Attacking Maneuver,
+  // for any effects that would trigger as a result" - and Sweeping's second helping is
+  // written "if you deal Damage with this Attacking Maneuver", so it is one of them.
   const doubled = (damage > 0)
+    && !isAbsoluteMiss(own)
     && PROFILES[attack.profile]?.doublesDiminishingDefense
     && DEFENCES[own.defense]?.gainsDiminishingDefense
     && !own.forced;
@@ -3901,7 +3982,10 @@ async function applyAttackDamage(message, target, attack) {
   // two rolls, and a consequence that belongs to whoever wins it.
   // Per person thrown, because each of them is a Clash of their own: one Maneuver can
   // send four people into four different walls.
-  if ((damage > 0) && pushes(attack)) {
+  // Knockback asks "if you successfully Damage an Opponent", which is the other half of
+  // the same sentence: Damage an Absolute Attack deals is not Damage dealt with an
+  // Attacking Maneuver for anything triggering off it.
+  if ((damage > 0) && !isAbsoluteMiss(own) && pushes(attack)) {
     const attacker = fromUuidSync(attack.attackerUuid);
     if (attacker) await openKnockback(attack, attacker, target);
   }
@@ -4261,10 +4345,45 @@ function attackOutcome(attack) {
     .join("");
 }
 
+/**
+ * What an Absolute Attack came to for somebody it missed.
+ *
+ * Said as a miss first and a number second, because that is what it is: no hit, and
+ * Damage all the same. The arithmetic is spelt out only to the two sides, as everywhere
+ * else - it quotes the Wound Roll and the Soak Value, which are theirs.
+ */
+function absoluteOutcomeText(attack, own) {
+  const { soak, reduction, damage, effectiveWound } = own;
+
+  if (!ownsEitherSide(attack)) {
+    return (damage <= 0)
+      ? "missed - Absolute Attack, no damage"
+      : `missed - Absolute Attack, ${damage} damage`;
+  }
+
+  const defences = reduction
+    ? `${soak} soak + ${reduction} reduction`
+    : `${soak} soak`;
+
+  return (damage <= 0)
+    ? `missed - Absolute Attack: half the Wound Roll is ${effectiveWound}, `
+      + `stopped by ${defences}`
+    : `missed - Absolute Attack: half the Wound Roll is ${effectiveWound}, `
+      + `less ${defences} = ${damage} damage`;
+}
+
 /** What the attack came to for one of the people it reached. */
 function outcomeFor(attack, { own }) {
   if (!own) return "waiting";
-  if (!own.hit) return "missed";
+
+  if (!own.hit) {
+    // An Absolute Attack that missed still has a Wound Roll owed and Damage to come, so
+    // "missed" on its own would read as the end of it.
+    if (!attack.absolute) return "missed";
+    if (!attack.result.wound) return "missed - Absolute Attack, Wound Roll still owed";
+    return absoluteOutcomeText(attack, own);
+  }
+
   if (!attack.result.wound) return "hit";
 
   const { wound } = attack.result;
@@ -4461,7 +4580,7 @@ function renderAttack(message, html) {
   // The attacker rolls their own Wound, so that step belongs to them.
   // Landed on anybody. One Wound Roll serves everyone it hit, and one of them having
   // dodged is no reason for the rest to go unwounded.
-  if (!result.wound && anyoneHit(attack)) {
+  if (!result.wound && owesWound(attack)) {
     const attacker = fromUuidSync(attack.attackerUuid);
     if (!attacker?.isOwner) return;
 
@@ -4482,7 +4601,10 @@ function renderAttack(message, html) {
   // having been dealt says nothing about the rest.
   for (const entry of targetResults(attack)) {
     const target = fromUuidSync(entry.uuid);
-    if (!target?.isOwner || !entry.own?.hit) continue;
+    if (!target?.isOwner) continue;
+    // A hit, or an Absolute Attack's answer to having missed - which owes Damage
+    // without having hit anybody.
+    if (!entry.own?.hit && !isAbsoluteMiss(entry.own)) continue;
 
     if (entry.own.applied) {
       const note = document.createElement("div");
