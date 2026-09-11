@@ -1543,7 +1543,12 @@ async function respondDialog(message, respondable) {
   const answered = new Set((message.getFlag(SCOPE, RESPONSES_FLAG) ?? []).map(entry => entry.actorUuid));
 
   const sections = characters.map(actor => {
-    const isTarget = attack?.targetUuid === actor.uuid;
+    // Any of the people this attack reaches, not the one it was first aimed at. An
+    // area attack adds to that list, and somebody added to it is being attacked as
+    // much as the first one was - they were the ones who could neither Dodge nor
+    // Defend, which also left the exchange waiting on an answer they could not give.
+    const isTarget = Boolean(attack)
+      && attackTargets(attack).some(target => target.uuid === actor.uuid);
     const unresolved = isTarget && !attack.result;
 
     // Nothing is picked to begin with, so confirming the dialog without touching a
@@ -4219,18 +4224,25 @@ function renderAttack(message, html) {
   // before it - and only to them, since it is their Maneuver that is reaching.
   const thrower = fromUuidSync(attack.attackerUuid);
 
-  // Only while the Strike is still to be rolled. Everyone this reaches answers the same
-  // Strike Roll, so they all have to be on the card before it is made - somebody added
-  // afterwards would be answering a number that was rolled without them, or would need
-  // a Strike of their own, which is the thing an area attack is not.
-  if (PROFILES[attack.profile]?.area && thrower?.isOwner && !result) {
+  // Only until the attacker confirms. Everyone this reaches answers the same Strike
+  // Roll, so they all have to be on the card before it is made - somebody added
+  // afterwards would be answering a number rolled without them, or would need a Strike
+  // of their own, which is the thing an area attack is not.
+  //
+  // The attacker's own confirmation is the line rather than the Strike Roll itself,
+  // because the exchange waits on everyone and the attacker is one of them: until they
+  // have confirmed, nothing can resolve, so the window is genuinely open. Waiting for
+  // the roll instead meant the first target to answer could settle the whole thing
+  // while the attacker was still working out who else was caught.
+  const committed = (attack.ready ?? []).includes(attack.attackerUuid);
+  if (PROFILES[attack.profile]?.area && thrower?.isOwner && !result && !committed) {
     const add = document.createElement("button");
     add.type = "button";
     add.className = "dbu-clash-button";
     add.textContent = "Add targets";
     add.dataset.tooltip = `Whoever else the `
       + `${areaLabel(PROFILES[attack.profile].area)} caught. They answer the same `
-      + `Strike Roll, so add them before it is rolled.`;
+      + `Strike Roll, so add them before you apply your effects.`;
     add.addEventListener("click", () => addAreaTargets(message, attack, thrower));
     container.append(add);
   }
