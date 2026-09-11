@@ -1181,6 +1181,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Massive Power: "apply 1/4 of your Force Modifier to the Wound Rolls of your
     // Physical and Energy Attacks for each stack of Super Stack."
     //
+    // The Force Modifier, and not the Damage Attribute. The two happen to be the same
+    // thing today - Physical and Energy Attacks both name Force - which is exactly what
+    // makes this worth writing down: an effect that swaps which Attribute a Wound Roll
+    // is made of does not swap this. Whatever the Wound Roll ends up being made of, the
+    // Super Stacks keep contributing quarters of Force. So this reads `atts.force`
+    // outright rather than going through FOUNDATIONS[...].attribute the way the Powered
+    // Profile does, and the difference is deliberate rather than a shortcut.
+    //
     // What is applied once per stack is a quarter of the Modifier, so each helping
     // rounds down on its own - a Force Modifier of 10 is 2 per stack and 6 at three
     // stacks, not 7. That is the reading of "apply X for each stack"; the other one
