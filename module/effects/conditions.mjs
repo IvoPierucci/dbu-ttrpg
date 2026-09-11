@@ -21,6 +21,16 @@ const PREDICATES = {
   defending: scope => Boolean(scope.context?.defending),
 
   /**
+   * Is this roll part of an Attacking Maneuver *you* are making.
+   *
+   * Not the same question as "is an attack happening": a Dodge and a Parry are Combat
+   * Rolls made during somebody else's Attacking Maneuver, and a rule about the rolls
+   * "for Attacking Maneuvers" does not reach them. Compelled is the rule that cares -
+   * it makes your own attacks Urgent, not your defence against one.
+   */
+  attackingManeuver: scope => Boolean(scope.context?.attackingManeuver),
+
+  /**
    * Is a named Trait doing anything for this character at the moment.
    *
    * Written as a Trait's name because that is how the rulebook writes it ("while you

@@ -36,12 +36,19 @@ text: >
 # Urgency is a forbidden Willing Failure, which is what Urgent means. It is
 # written reactively because it is a property of the roll and not of the
 # character - it does not exist until a Combat Roll is being made.
+#
+# "All Combat Rolls **for Attacking Maneuvers**", so it reaches your Strike and
+# your Wound Roll and stops there. A Dodge and a Parry are Combat Rolls made
+# during somebody else's Attacking Maneuver, and being Compelled does not stop
+# you throwing your own defence - it drives you at your target, it does not make
+# you careful about being hit.
 
 [passive]
 forbid attacksOnOthers;
 attack.kiWager.min = ceil(capacity.max / 10);
 
 [automatic/combat-roll]
+requires attackingManeuver;
 forbid willingFailure;
 
 # What the counter is for. It holds the Actions spent on Attacking Maneuvers since

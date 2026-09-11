@@ -379,9 +379,15 @@ And these read something rather than doing it:
   inState("name")       are you in that State
   isMinion              are you a Minion
   defending             are you Defending against an attack
+  attackingManeuver     is this roll part of an Attacking Maneuver you are making
   targets(X)            does this Maneuver include X as a target
   aoeHits(X)            does this attack's area cover X
   attacking(X)          is this Maneuver an attack aimed at X
+
+attackingManeuver and defending are the two sides of one exchange, and neither
+is "is an attack happening". A Dodge and a Parry are Combat Rolls made during
+somebody else's Attacking Maneuver: a rule about the rolls "for Attacking
+Maneuvers" reaches your Strike and your Wound Roll, and not your defence.
 
 surge() takes a Surge without spending the Surge Maneuver's own use - which is
 a different thing from using that Maneuver, and the whole point of the rule.

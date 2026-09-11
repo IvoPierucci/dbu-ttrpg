@@ -1322,14 +1322,22 @@ const URGENT = "This roll is Urgent, so it cannot be failed on purpose.";
  * @param {object} [options]
  * @param {boolean} [options.urgent]      this particular roll is Urgent by its nature
  * @param {boolean} [options.combatRoll]  the roll in question is a Combat Roll
+ * @param {boolean} [options.attackingManeuver]  and part of this actor's own attack
  * @param {object} [options.slots]        slots already collected at the roll
  * @returns {null|string}  null if it may be, otherwise why it may not
  */
-export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll = false } = {}) {
+export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll = false,
+                                       attackingManeuver = false } = {}) {
   if (urgent) return URGENT;
 
+  // Asked the same question the roll itself will ask, or the dialog and the roll
+  // disagree: Compelled makes your own attacks Urgent and leaves your defence alone,
+  // so a dialog that did not say which of the two this is would close the option on a
+  // Dodge the roll would have allowed.
   const reactive = slots
-    ?? (combatRoll ? atMoment(actor, "combat-roll", { roll: true }).slots : null);
+    ?? (combatRoll
+      ? atMoment(actor, "combat-roll", { roll: true, attackingManeuver }).slots
+      : null);
   if (reactive?.willingFailure === false) return URGENT;
 
   if (!permits(actor.system.effects?.slots, "willingFailure")) {
@@ -1340,7 +1348,7 @@ export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll 
 
 export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
-                                    combatRoll = false } = {}) {
+                                    combatRoll = false, attackingManeuver = false } = {}) {
   const rows = effects.map(entry => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
@@ -1373,7 +1381,9 @@ export async function prepareRoll(actor, effects, title, hint = "",
 
   // Said rather than simply absent when it is refused: "you cannot throw this one" is
   // worth knowing, and a missing checkbox tells nobody anything.
-  const refused = rolling ? whyNotWilling(actor, { urgent, combatRoll }) : null;
+  const refused = rolling
+    ? whyNotWilling(actor, { urgent, combatRoll, attackingManeuver })
+    : null;
   const willing = !rolling
     ? ""
     : refused
@@ -1498,7 +1508,10 @@ async function respondDialog(message, respondable) {
     // And not when something forbids it either - Compelled forces every Combat Roll.
     // Shown greyed with the reason rather than left out, so it is clear the option
     // exists and why it is closed.
-    const forced = whyNotWilling(actor, { combatRoll: rollsCombat(message) });
+    const forced = whyNotWilling(actor, {
+      combatRoll: rollsCombat(message),
+      attackingManeuver: attack?.attackerUuid === actor.uuid
+    });
     const willing = !rollsOnMessage(message, actor)
       ? ""
       : forced
@@ -1948,7 +1961,8 @@ function rolledDice(roll, { rolled, natural, forcedNatural }, groups = [], criti
  * grow is not yet a result. Both outcomes are therefore applied here and now.
  */
 async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false,
-                                           slot = null, collect = true } = {}) {
+                                           slot = null, collect = true,
+                                           attackingManeuver = false } = {}) {
   // A single netted number cannot be taken apart again, so what went into it is kept
   // as labelled parts and only summed for the roll itself.
   const parts = (typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers;
@@ -1966,7 +1980,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // as an exchange - Combination's three follow-up Strikes. A one-shot effect answers
   // the roll it was armed for, and offering it once per repetition would spend it three
   // more times over.
-  const answered = (combatRoll && collect) ? atMoment(actor, "combat-roll", { roll: true }) : null;
+  const answered = (combatRoll && collect)
+    ? atMoment(actor, "combat-roll", { roll: true, attackingManeuver })
+    : null;
   const baseDie = answered?.slots?.baseDie ?? null;
   const forcedNatural = baseDie?.set ?? null;
 
@@ -2776,7 +2792,7 @@ async function resolveAttack(message, attack) {
     ...profileStrikeParts(attacker, attack),
     { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty },
     ...thresholdPenalty(attacker)
-  ], { ...options.attacker, combatRoll: true, slot: "strike" });
+  ], { ...options.attacker, combatRoll: true, slot: "strike", attackingManeuver: true });
 
   // Some things land whatever the Clash would have said: the Determined State on the
   // attacker's side, being Sleeping on the defender's. Settled before the defence is
@@ -2977,13 +2993,18 @@ async function addAreaTargets(message, attack, attacker) {
 
 async function attackerStage(message, attack, attacker) {
   const triggers = relevantTriggers(attacker, message, "response");
-  if (!await prepareRoll(attacker, triggers, "Before the Strike Roll")) return;
+  // Their own Attacking Maneuver, so Compelled's Urgency reaches this one.
+  const ready = await prepareRoll(attacker, triggers, "Before the Strike Roll",
+    "", { combatRoll: true, attackingManeuver: true });
+  if (!ready) return;
   return readyAttacker(message);
 }
 
 async function woundStage(message, attack, attacker) {
   const triggers = relevantTriggers(attacker, message, "hit");
-  if (!await prepareRoll(attacker, triggers, "On hitting")) return;
+  const ready = await prepareRoll(attacker, triggers, "On hitting",
+    "", { combatRoll: true, attackingManeuver: true });
+  if (!ready) return;
   return rollAttackWound(message, attack);
 }
 
@@ -3088,7 +3109,8 @@ async function combinationFollowUps(attacker, attack) {
       criticalDice: attacker.system.dice.critical.formula,
       combatRoll: true,
       slot: null,
-      collect: false
+      collect: false,
+      attackingManeuver: true
     }));
   }
 
@@ -3150,7 +3172,8 @@ async function rollAttackWound(message, attack) {
     ],
     criticalDice: attacker.system.dice.critical.formula,
     combatRoll: true,
-    slot: "wound"
+    slot: "wound",
+    attackingManeuver: true
   });
 
   // Power Flare answers the Wound Roll rather than the Strike Roll, immediately after
@@ -3168,6 +3191,8 @@ async function rollAttackWound(message, attack) {
         extraDice: target.system.dice.extra.formula,
         criticalDice: target.system.dice.critical.formula,
         combatRoll: true,
+        // Not marked as an Attacking Maneuver: this is a defence option, answering
+        // somebody else's attack with a Wound Roll rather than making one of your own.
         slot: "wound"
       })
     : null;
