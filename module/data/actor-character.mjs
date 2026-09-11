@@ -692,9 +692,21 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
        * a note to come back to.
        */
       profile: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
+       * How many Energy Charges have been fed into it.
+       *
+       * No ceiling here, and that is the point: how many an Attacking Maneuver can hold
+       * depends on the Profile it was declared with - seven for most, ten for Mega
+       * Flare - and a field cannot know which Profile that was. It used to carry the
+       * seven, so declaring a Mega Flare and charging it an eighth time spent the Action
+       * and the Ki, passed the rule's own check, and was clamped straight back to seven
+       * on the way into the document.
+       *
+       * The ceiling is enforced where the Profile is known, which is the only place it
+       * can be.
+       */
       charges: new fields.NumberField({
-        required: true, integer: true, initial: 0, min: 0,
-        max: DBUCharacterData.MAX_ENERGY_CHARGES
+        required: true, integer: true, initial: 0, min: 0
       })
     });
 
