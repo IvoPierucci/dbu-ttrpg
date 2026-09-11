@@ -2985,7 +2985,16 @@ async function resolveAttack(message, attack) {
 
     // What this defender answers the Strike with, and whether they answer at all.
     const defence = DEFENCES[defense];
-    const answer = forced ? null : await defence.answer(target, options, attack);
+
+    // A forced hit settles the first Strike and nothing else. Where more Strikes follow
+    // it - Combination's do - the defence still has work to do: those are measured
+    // against it, so it is rolled even though it cannot stop the blow that is coming.
+    // Without this the defender met three more Strikes with nothing at all, and every
+    // one of them landed for free.
+    const stillCounts = Boolean(PROFILES[attack.profile]?.followUps);
+    const answer = (forced && !stillCounts)
+      ? null
+      : await defence.answer(target, options, attack);
 
     const automatic = Boolean(forced);
 
@@ -3011,11 +3020,14 @@ async function resolveAttack(message, attack) {
     // confirmed last, which is as often the attacker's as the defender's, and that one
     // does not own the target. Writing straight to it there throws and takes the rest
     // of the resolution - the result itself included - down with it.
-    // `forced` and not `hit`: what accrues the stacks is having dodged, and a Dodge that
-    // was never rolled is not one. Flagged for the table - the rule says the stacks come
-    // from defending against attack after attack, and whether being hit automatically
-    // still counts as defending is a reading, not something the text settles.
-    if (defence.gainsDiminishingDefense && !forced) {
+    // Keyed to the roll having been made, which is the reasoning this always had: what
+    // accrues the stacks is having dodged, and a Dodge that was never rolled is not one.
+    // A forced hit that still called for the roll - a Combination - therefore does
+    // accrue them, because the Dodge happened. Flagged for the table: the rule says the
+    // stacks come from defending against attack after attack, and whether being hit
+    // automatically still counts as defending is a reading, not something the text
+    // settles.
+    if (defence.gainsDiminishingDefense && answer) {
       // Sweeping doubles what a target takes, but only "if you deal Damage with this
       // Attacking Maneuver" - which is not known yet. So the multiplier travels with
       // the attack and the stacks are settled once the Damage is.
@@ -4086,7 +4098,10 @@ function targetRow(attack, target) {
   // Some defences answer the Strike with a roll and some forgo it, so the line reports
   // the defence either way, with a total only where there was one.
   const label = own.defenseLabel ?? "Dodge";
-  if (own.answer) return attackSide(label, target.name, own.answer);
+  // Rolled and beaten anyway keeps its number: the roll is not wasted, since the Strikes
+  // that follow are measured against it, and the reason it did not stop the first one
+  // is said beside it - a defence that plainly won otherwise reads as a bug.
+  if (own.answer) return attackSide(label, target.name, own.answer, own.forced ?? "");
 
   // Direct Hit, Guard and Power Flare forgo the roll by choice; being Sleeping or
   // facing something Determined forgoes it for you. Both end with no roll, and only
@@ -4163,14 +4178,18 @@ function ownsSide(side) {
 }
 
 /** One rolled side of the attack. */
-function attackSide(label, name, side) {
+function attackSide(label, name, side, note = "") {
   const total = side ? rolledTotal(side) : `<span class="dbu-clash-waiting">waiting</span>`;
   const outcome = (side?.outcome && !side.succeeded)
     ? `<span class="dbu-clash-outcome dbu-${side.outcome}">${side.outcome}</span>` : "";
+  // Something about the row that the roll itself does not say - a defence that was
+  // rolled and beaten anyway by a rule rather than by the dice.
+  const aside = note
+    ? `<span class="dbu-clash-outcome">${Handlebars.escapeExpression(note)}</span>` : "";
   return `
     <div class="dbu-clash-side">
       <span class="dbu-clash-name">${Handlebars.escapeExpression(name)}<em> ${label}</em></span>
-      ${total}${outcome}
+      ${total}${outcome}${aside}
     </div>`;
 }
 

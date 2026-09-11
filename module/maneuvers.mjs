@@ -181,7 +181,9 @@ export const PROFILES = Object.freeze({
     rules: [
       "After you hit, and before the Wound Roll, roll your Strike Roll three more times.",
       "Each is measured against the roll they answered the first Strike with.",
-      "Every one that beats it adds 2(T) to the Wound Roll."
+      "Every one that beats it adds 2(T) to the Wound Roll.",
+      "A hit that landed automatically still faces that defence here - the first Strike "
+        + "is the one that could not be stopped."
     ]
   },
 
