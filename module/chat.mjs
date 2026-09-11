@@ -1907,10 +1907,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   if (answered) spendChosen(actor, answered);
 
   // The die was rolled at its face value and then adjusted, so the sum it was rolled
-  // into carries the same adjustment. Kept as a labelled part rather than folded in,
-  // since a total that quietly differs from the dice on the card invites an argument.
-  if (naturalShift) parts.push({ label: "Natural Result", value: naturalShift });
-
+  // into carries the same adjustment. Shown beside the die rather than among the
+  // penalties: a penalty line reads as "Natural Result 3" and the amount subtracted is
+  // then indistinguishable from the result itself.
   let total = roll.total + naturalShift;
   let outcome = "";
 
@@ -1939,7 +1938,17 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   }
 
   // How it was reached is written down here, while the dice are still in hand.
-  const dice = roll.dice.map(die => `${die.expression} ${die.total}`).join(" + ");
+  const rolled = roll.dice.map(die => `${die.expression} ${die.total}`);
+
+  // An adjusted Natural Result is written as what the die became, on the die it
+  // happened to - it is the Base Die's result, and the Extra Dice beside it are
+  // untouched. Saying the amount instead leaves the reader unable to tell "took 3 off"
+  // from "came to 3".
+  if (naturalShift && rolled.length) {
+    rolled[0] = `${rolled[0]} → Natural Result ${natural}`;
+  }
+
+  const dice = rolled.join(" + ");
   // With the Base Die set by an effect it was never rolled, so the line says what it
   // was set to rather than quoting a die that does not exist.
   const segments = [forcedNatural === null
