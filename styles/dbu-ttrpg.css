@@ -1410,6 +1410,14 @@
 
 /* A roll that would not be failed on purpose. The total stands, so it is not dimmed
    like a willing failure - it is marked, the way a Botch is. */
+/* Why a Clash was opened, when it arrived out of something else rather than being
+   played for its own sake. */
+.dbu-clash-reason {
+  font-size: 0.85em;
+  color: var(--dbu-text-dim);
+  margin: 2px 0 6px;
+}
+
 .dbu-check-total.dbu-urgent,
 .dbu-clash-outcome.dbu-urgent {
   color: var(--dbu-accent);

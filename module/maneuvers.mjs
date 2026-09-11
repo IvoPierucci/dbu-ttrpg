@@ -192,9 +192,6 @@ export const PROFILES = Object.freeze({
     summary: "An attack that sends enemies flying away from you.",
     grantsAdvantage: "knockback",
     doublesCollisionDamage: true,
-    needs: "The Knockback Advantage has not been written yet, so neither the movement "
-      + "nor the Collision Damage it causes is known here - both are the table's, and "
-      + "the doubling with them.",
     rules: [
       "Gains the Knockback Advantage for free - no added KP, and no added TP as a Signature Technique.",
       "Collision Damage from movement this causes is doubled."
@@ -563,10 +560,15 @@ export function areaLabel(area) {
 
 function profileTip(profile) {
   const lines = [profile.summary, ...(profile.rules ?? [])].filter(Boolean);
-  if (profile.grantsAdvantage) {
+  if (profile.grantsAdvantage === "charging-assault") {
     lines.push("Move on the map first, then say how far you came - the line, the "
       + "distance and where you end up are yours to make; the Squares are what the "
       + "bonuses are worked out from.");
+  }
+  if (profile.grantsAdvantage === "knockback") {
+    lines.push("Deal Damage and the card offers the Might Clash. Win it and move them "
+      + "yourself; what the collision costs is yours and the GM's to set, and the "
+      + "button takes it straight off their Life.");
   }
   if (profile.area) {
     lines.push("Add the others it catches with the button on the card - who the "

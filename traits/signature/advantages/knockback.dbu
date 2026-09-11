@@ -1,0 +1,34 @@
+id: knockback
+name: Knockback
+kind: signature
+side: advantages
+tpCost: 4
+requirement: N/A
+description: >
+  Your technique pushes the opponent away.
+text: >
+  If you successfully Damage an Opponent with this Signature Technique, after the
+  Wound Roll, you may make a Might Clash. If you win, move the target a number of
+  Squares in a straight line away from you in any direction up to your Might.
+
+---
+
+# No script, for the same reason Charging Assault has none: what this does is move
+# a character, and the language has no verb for that.
+#
+# What the system does is open the Clash and get out of the way. It is a Might
+# Clash - Might on both sides, which is one of the four categories a Clash can be,
+# and the only one of the four that is a single value rather than a family. Offered
+# to the attacker after the Wound Roll and only when Damage was actually dealt,
+# which is the condition the rule opens with, and offered rather than fired: "you
+# may make a Might Clash" is a choice.
+#
+# Winning it is where the system stops. The direction is "any direction away from
+# you", the distance is "up to your Might", and both are the attacker's to pick on
+# the map - the Squares are right there to count.
+#
+# What the movement causes is Collision Damage, which is a Life Point reduction:
+# it goes straight off Life, past the Soak Value and past Damage Reduction. The
+# card offers it as a button once this Clash is won. The Launching Profile doubles
+# it, and says so itself rather than being named here - an Advantage does not know
+# which Profile handed it out.

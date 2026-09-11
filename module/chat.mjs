@@ -3,7 +3,7 @@ import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { spendActions } from "./combat.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
-import { advantageWoundParts } from "./signature.mjs";
+import { advantageWoundParts, pushes } from "./signature.mjs";
 import { collectReactive, applySlot } from "./effects/interpreter.mjs";
 import {
   DAMAGE_CATEGORIES,
@@ -2070,6 +2070,32 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
  * flag. The only way for neither side to know the other's result in advance is for
  * neither result to exist yet.
  */
+/**
+ * What each side of a Clash rolls, by category.
+ *
+ * A Clash is always the same category on both sides - that is the whole reason the
+ * categories exist, since a Skill and a Might scale differently and comparing them
+ * would be comparing nothing. So the category is a property of the Clash and each side
+ * reads its own number the same way.
+ */
+const CLASH_ROLLS = Object.freeze({
+  skill: {
+    label: "Skill Clash",
+    of: (actor, clash) => ({
+      label: clash.skillLabel,
+      value: actor.system.skills[clash.skill].roll
+    }),
+    criticalDice: () => DBUCharacterData.SKILL_CRITICAL_DIE
+  },
+  might: {
+    label: "Might Clash",
+    of: (actor) => ({ label: "Might", value: actor.system.might }),
+    // Might is not a Skill, so it does not take a Skill's flat critical die - it takes
+    // the character's own, which grows with the Tier of Power.
+    criticalDice: (actor) => actor.system.dice.critical.formula
+  }
+});
+
 export async function postSkillClash(actor, target, maneuver) {
   const skillKey = maneuver.clash.skill;
 
@@ -2081,6 +2107,7 @@ export async function postSkillClash(actor, target, maneuver) {
         // A Skill Clash is still a Maneuver: if it is Standard, it can be answered.
         [RESPONDABLE_FLAG]: isRespondable(maneuver),
         [CLASH_FLAG]: {
+          category: "skill",
           skill: skillKey,
           skillLabel: actor.system.skills[skillKey].label,
           maneuverName: maneuver.name,
@@ -2093,6 +2120,41 @@ export async function postSkillClash(actor, target, maneuver) {
           // a roll made while the other was still deciding cannot be taken back.
           ready: [],
           // Both sides land here at once, or not at all.
+          result: null
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Open a Might Clash between two characters.
+ *
+ * Might on both sides - it is one of the four categories a Clash can be, and the only
+ * one that is a single value rather than a family of them. Nothing is rolled yet, for
+ * the reason nothing is ever rolled yet: both sides may have something to declare, and
+ * whoever saw the other's number first would be deciding with an advantage.
+ *
+ * `reason` is what the card says this Clash is for, since a Might Clash arrives out of
+ * something else - winning one is never the point by itself.
+ */
+export async function postMightClash(actor, target, { maneuverName, reason = "" } = {}) {
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        // Not a Maneuver of its own, so there is nothing here for an Instant to answer.
+        [RESPONDABLE_FLAG]: false,
+        [CLASH_FLAG]: {
+          category: "might",
+          maneuverName,
+          reason,
+          challengerUuid: actor.uuid,
+          challengerName: actor.name,
+          defenderUuid: target.uuid,
+          defenderName: target.name,
+          ready: [],
           result: null
         }
       }
@@ -2160,8 +2222,11 @@ function renderSkillClash(message, html) {
   card.className = "dbu-clash";
   card.innerHTML = `
     <div class="dbu-clash-title">${Handlebars.escapeExpression(clash.maneuverName)}
-      <span class="dbu-clash-skill">Skill Clash &middot; ${Handlebars.escapeExpression(clash.skillLabel)}</span>
+      <span class="dbu-clash-skill">${
+        Handlebars.escapeExpression(CLASH_ROLLS[clash.category ?? "skill"].label)}${
+        clash.skillLabel ? ` &middot; ${Handlebars.escapeExpression(clash.skillLabel)}` : ""}</span>
     </div>
+    ${clash.reason ? `<div class="dbu-clash-reason">${Handlebars.escapeExpression(clash.reason)}</div>` : ""}
     ${clashSide(clash, clash.challengerUuid, clash.challengerName, result?.challenger)}
     ${clashSide(clash, clash.defenderUuid, clash.defenderName, result?.defender)}
     <div class="dbu-clash-result">${result ? clashResult(result) : awaitingClash(clash)}</div>`;
@@ -2240,13 +2305,15 @@ async function resolveSkillClash(message, clash) {
     return;
   }
 
+  // A Clash opened before the categories were told apart carries no category at all,
+  // and every one of those was a Skill Clash - there was nothing else to open.
+  const kind = CLASH_ROLLS[clash.category ?? "skill"];
+
   const [challengerSide, defenderSide] = await Promise.all([
-    rollSide(challenger, [
-      { label: clash.skillLabel, value: challenger.system.skills[clash.skill].bonus }
-    ], { criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE }),
-    rollSide(defender, [
-      { label: clash.skillLabel, value: defender.system.skills[clash.skill].bonus }
-    ], { criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE })
+    rollSide(challenger, [kind.of(challenger, clash)],
+      { criticalDice: kind.criticalDice(challenger) }),
+    rollSide(defender, [kind.of(defender, clash)],
+      { criticalDice: kind.criticalDice(defender) })
   ]);
 
   requestEdit(message, {
@@ -3204,6 +3271,109 @@ const DEFENCES = {
   }
 };
 
+/**
+ * Take Life Points off a character directly.
+ *
+ * A Life Point reduction is not Damage. Damage is what a Wound Roll gets past a Soak
+ * Value and Damage Reduction; this goes straight to Life and neither of those is
+ * consulted, which is the whole distinction and the only reason it needs a function of
+ * its own rather than being folded into the Damage path.
+ *
+ * Collision Damage is the first of these. It will not be the last, which is why it is
+ * written as the general thing and not as "collision".
+ *
+ * The floor is the one exception the rules grant anywhere: Undying lets Life go
+ * negative, and nothing else does.
+ */
+export async function reduceLifePoints(target, amount, { reason = "Life Point reduction" } = {}) {
+  const taken = Math.max(0, Math.floor(amount));
+  if (!taken) return;
+
+  const settled = target.system.life.value - taken;
+  const floor = target.system.effects?.slots?.["life.allowNegative"]
+    ? settled
+    : Math.max(0, settled);
+
+  await requestActorUpdate(target, { "system.life.value": floor });
+
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(target.name)}
+      loses <strong>${taken}</strong> Life Points &middot;
+      ${Handlebars.escapeExpression(reason)}
+      <em>past Soak and Damage Reduction</em></div>`
+  });
+}
+
+/**
+ * Knockback, once the Wound Roll has landed and taken something off.
+ *
+ * "If you successfully Damage an Opponent with this Signature Technique, after the
+ * Wound Roll, you may make a Might Clash." Offered rather than fired, because "you may"
+ * is a choice, and only when Damage was actually dealt, which is the condition the rule
+ * opens with.
+ */
+async function offerKnockback(message, attack, attacker) {
+  const target = fromUuidSync(attack.targetUuid);
+  if (!target) return;
+
+  return postMightClash(attacker, target, {
+    maneuverName: attack.maneuverName,
+    reason: `Knockback - win and move ${target.name} up to ${attacker.system.might} `
+      + "Squares in a straight line away from you."
+  });
+}
+
+/**
+ * Collision Damage, as a Life Point reduction.
+ *
+ * How much it is depends on what was hit and how far they went, which is the table's to
+ * work out - so the amount is asked for rather than derived. What the system does is
+ * take it off the right way: straight off Life, past the Soak Value and past Damage
+ * Reduction, and doubled when the Launching Profile threw them.
+ */
+async function applyCollisionDamage(message, attack, attacker) {
+  const target = fromUuidSync(attack.targetUuid);
+  if (!target) return;
+
+  const doubled = Boolean(PROFILES[attack.profile]?.doublesCollisionDamage);
+
+  const typed = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${attack.maneuverName} - Collision Damage` },
+    content: `
+      <label class="dbu-wager">
+        <span>Collision Damage</span>
+        <input type="number" name="collision" value="0" min="0"/>
+        <em>Taken straight off ${Handlebars.escapeExpression(target.name)}'s Life Points,
+          past their Soak Value and Damage Reduction.${doubled
+            ? ` ${Handlebars.escapeExpression(PROFILES[attack.profile].label)} doubles it.`
+            : ""}</em>
+      </label>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Apply",
+        callback: (event, button, dialog) => {
+          const value = Math.floor(Number(dialog.element.querySelector('input[name="collision"]').value));
+          return Number.isFinite(value) ? Math.max(0, value) : 0;
+        }
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if (!typed) return;
+
+  const amount = doubled ? typed * 2 : typed;
+  const reason = doubled
+    ? `Collision Damage, doubled by ${PROFILES[attack.profile].label}`
+    : "Collision Damage";
+
+  return reduceLifePoints(target, amount, { reason });
+}
+
 /** Take the damage off the target, once and once only. */
 async function applyAttackDamage(message, target, attack) {
   const { damage } = attack.result;
@@ -3614,6 +3784,34 @@ function renderAttack(message, html) {
   // card - the others are often worked out after the first exchange has settled, not
   // before it - and only to them, since it is their Maneuver that is reaching.
   const thrower = fromUuidSync(attack.attackerUuid);
+
+  // Knockback, and what the movement it wins costs. Both wait for the Wound Roll to
+  // have landed and taken something off - "if you successfully Damage an Opponent" is
+  // the condition the Advantage opens with, and Collision Damage follows from movement
+  // that only happens if the Clash is won.
+  if (pushes(attack) && thrower?.isOwner && (result?.damage > 0)) {
+    const clash = document.createElement("button");
+    clash.type = "button";
+    clash.className = "dbu-clash-button";
+    clash.textContent = "Knockback";
+    clash.dataset.tooltip = "Open a Might Clash. Win it and move them up to your Might "
+      + "in Squares, in a straight line away from you.";
+    clash.addEventListener("click", () => offerKnockback(message, attack, thrower));
+    container.append(clash);
+
+    const collision = document.createElement("button");
+    collision.type = "button";
+    collision.className = "dbu-clash-button";
+    collision.textContent = "Apply collision damage";
+    collision.dataset.tooltip = "A Life Point reduction: straight off their Life, past "
+      + "their Soak Value and Damage Reduction."
+      + (PROFILES[attack.profile]?.doublesCollisionDamage
+        ? ` ${PROFILES[attack.profile].label} doubles it.`
+        : "");
+    collision.addEventListener("click", () => applyCollisionDamage(message, attack, thrower));
+    container.append(collision);
+  }
+
   if (PROFILES[attack.profile]?.area && thrower?.isOwner) {
     const add = document.createElement("button");
     add.type = "button";

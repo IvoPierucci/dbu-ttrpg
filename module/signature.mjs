@@ -82,3 +82,17 @@ export function advantageWoundParts(attacker, attack) {
 
 /** The Squares a charge covers before any of them are worth anything. */
 export const CHARGING_FREE_SQUARES = 3;
+
+/**
+ * Features that push a character around, and so can cause Collision Damage.
+ *
+ * Named here rather than asked of each feature, because what makes Collision Damage
+ * possible is movement somebody did not choose, and only a handful of things cause
+ * that. A feature in this list earns the attack a button after the Wound Roll.
+ */
+const PUSHES = Object.freeze(["knockback"]);
+
+/** Whether anything on this attack could have thrown the target around. */
+export function pushes(attack) {
+  return (attack.advantages ?? []).some(id => PUSHES.includes(id));
+}
