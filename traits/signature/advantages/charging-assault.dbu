@@ -1,0 +1,43 @@
+id: charging-assault
+name: Charging Assault
+kind: signature
+side: advantages
+tpCost: 10
+requirement: N/A
+description: >
+  Your attack lets you rush forward and turn your momentum into power.
+text: >
+  At Attack Declaration, you may move up to your Boosted Speed in a straight line
+  towards your Opponent before any rolls, as long as your Movement would end with
+  them in your Melee Range. If you move more than 3 Squares through this effect,
+  increase your Wound Roll by 1 for each Square you moved after the third. This
+  bonus cannot exceed 2(T).
+
+  If you are in a High Environment, you may move up or down 1 rank of High
+  Environment when using this effect. If you are in the Low Sky Environment, you
+  may leave the High Environments entirely and return to a typical Battle
+  Environment for the Square that you end your movement on.
+
+---
+
+# No script. What this does is move a character, and the language has no verb for
+# that - nor should it, since where you may go is a question about the map.
+#
+# So the movement is the player's to make, on the map, as they would make any
+# other. What the system asks for is the one number the rule turns into arithmetic:
+# how many Squares were covered. That is asked when the attack is declared, which is
+# when the rule says the movement happens, and it feeds two bonuses:
+#
+#   - this Advantage's own: +1 per Square past the third, capped at 2(T)
+#   - the Blitz Profile's, when Blitz is what granted this: +1/2 your Agility
+#     Modifier if the distance exceeded your Normal Speed
+#
+# The second belongs to Blitz and lives with Blitz. The two meet through the number
+# and nowhere else, which is what keeps an Advantage from being welded to whichever
+# Profile happens to hand it out - Blitz is one way in, a Signature Technique that
+# buys this for 10 TP is another, and neither knows about the other.
+#
+# Not enforced, and deliberately: the straight line, the Melee Range the movement
+# has to end in, the Boosted Speed ceiling, and the High Environment ranks. Those
+# are all the map's business, and the player moving the token has already answered
+# them by moving it.

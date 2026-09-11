@@ -28,8 +28,33 @@ export const KINDS = Object.freeze({
   maneuvers: { label: "Maneuver", priority: PRIORITY.base },
   // A Karmic Effect is bought with a Karma Point rather than granted by anything, so
   // it sits at base Priority - nothing else is competing with it for a Slot.
-  karma: { label: "Karmic Effect", priority: PRIORITY.base }
+  karma: { label: "Karmic Effect", priority: PRIORITY.base },
+  // A feature of a Signature Technique rather than a Trait a character holds: a
+  // Signature Technique is built by its owner out of Advantages and Disadvantages,
+  // paid for in TP. The subfolder says which of the two a file is - `signature/
+  // advantages/x.dbu` and `signature/disadvantages/y.dbu` - so the pair live under one
+  // roof and are read the same way.
+  //
+  // Base Priority, because these do not compete for a Slot with anything: an Advantage
+  // applies to the Technique that bought it and to nothing else.
+  signature: { label: "Signature Technique Feature", priority: PRIORITY.base }
 });
+
+/** The two halves of a Signature Technique's design, as the folders name them. */
+export const SIGNATURE_SIDES = Object.freeze(["advantages", "disadvantages"]);
+
+/**
+ * One Advantage or Disadvantage by id, or undefined.
+ *
+ * Kept apart from getTrait so a caller asking for an Advantage cannot be handed a
+ * Combat Condition that happens to share a name.
+ */
+export function getSignatureFeature(id, side = null) {
+  const trait = traits.get(id);
+  if (!trait || (trait.kind !== "signature")) return undefined;
+  if (side && (trait.owner !== side)) return undefined;
+  return trait;
+}
 
 /** Everything loaded, keyed by id. */
 const traits = new Map();

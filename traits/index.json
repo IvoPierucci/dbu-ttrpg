@@ -33,6 +33,7 @@
     "maneuvers/jump.dbu",
     "maneuvers/surge.dbu",
     "maneuvers/thumb-war.dbu",
+    "signature/advantages/charging-assault.dbu",
     "states/determined.dbu",
     "states/mindful.dbu",
     "states/raging.dbu",

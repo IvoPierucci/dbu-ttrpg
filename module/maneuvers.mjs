@@ -1,5 +1,6 @@
 import { applySlot } from "./effects/interpreter.mjs";
 import { traitsOfKind } from "./effects/traits.mjs";
+import { featureAsks } from "./signature.mjs";
 
 /**
  * Maneuvers: anything that spends an Action.
@@ -167,9 +168,15 @@ export const PROFILES = Object.freeze({
     // "Gains the Charging Assault Advantage for free", and a Wound bonus of half your
     // Agility Modifier when that Advantage carried you past your Normal Speed.
     signatureDiscountPerTier: 2,
-    needs: "Charging Assault, and the Squares moved this turn, are not tracked - the "
-      + "Advantage and the half-Agility bonus to the Wound Roll are the table's to "
-      + "apply. The Signature Technique discount is applied.",
+    // Named rather than restated. Charging Assault is a Signature Technique Advantage
+    // in its own right, worth 10 TP to buy - this Profile is one way to it and a
+    // Technique that bought it is another, and neither knows about the other. What they
+    // share is the number the charge covered, and nothing else.
+    grantsAdvantage: "charging-assault",
+    // "If you move a number of Squares that exceeds your Normal Speed due to the
+    // effects of Charging Assault", which is this Profile's own rule about somebody
+    // else's Advantage - so it lives here, keyed off the same number.
+    woundPerCharge: "halfAgilityBeyondNormalSpeed",
     rules: [
       "Gains the Charging Assault Advantage for free - no added KP, and no added TP as a Signature Technique.",
       "Move further than your Normal Speed through Charging Assault and the Wound Roll rises by half your Agility Modifier.",
@@ -494,6 +501,11 @@ export function areaLabel(area) {
 
 function profileTip(profile) {
   const lines = [profile.summary, ...(profile.rules ?? [])].filter(Boolean);
+  if (profile.grantsAdvantage) {
+    lines.push("Move on the map first, then say how far you came - the line, the "
+      + "distance and where you end up are yours to make; the Squares are what the "
+      + "bonuses are worked out from.");
+  }
   if (profile.area) {
     lines.push("Add the others it catches with the button on the card - who the "
       + `${areaLabel(profile.area)} covers is yours and the GM's to agree.`);
@@ -535,7 +547,20 @@ export async function declareAttack(maneuver, foundations, actor) {
   if (!declared) return null;
 
   const { profile, kiWager } = declared;
-  if (!profile) return { profile: "", foundation: "physical", kiWager };
+
+  // What this attack carries from the Signature Technique side: whatever the Maneuver
+  // was built with, plus whatever the Profile hands out. Blitz grants Charging Assault
+  // for free, and a Technique that bought the same Advantage for 10 TP arrives here
+  // with it already in the list - so the two routes meet and neither is special.
+  const advantages = [...new Set([
+    ...(maneuver.advantages ?? []),
+    ...(PROFILES[profile]?.grantsAdvantage ? [PROFILES[profile].grantsAdvantage] : [])
+  ])];
+
+  const answers = await askFeatures(maneuver, actor, advantages);
+  if (!answers) return null;
+
+  if (!profile) return { profile: "", foundation: "physical", kiWager, advantages, ...answers };
 
   const available = PROFILES[profile].foundations;
   const foundation = (available.length === 1)
@@ -547,7 +572,53 @@ export async function declareAttack(maneuver, foundations, actor) {
       );
   if (!foundation) return null;
 
-  return { profile, foundation, kiWager };
+  return { profile, foundation, kiWager, advantages, ...answers };
+}
+
+/**
+ * The numbers an attack's Advantages need before it can be rolled.
+ *
+ * Asked at Attack Declaration because that is where the rules that use them put their
+ * movement - "at Attack Declaration, you may move up to your Boosted Speed" - so by
+ * the time anything is rolled the answer is already settled and cannot be chosen to
+ * suit the dice.
+ *
+ * Only the map is left to the player, and all of it: the straight line, the Melee
+ * Range the movement ends in, the ceiling on how far. Moving the token has answered
+ * those, and asking again would be asking the same question twice.
+ *
+ * @returns {Promise<object|null>} the answers, or null if the declaration was dropped
+ */
+async function askFeatures(maneuver, actor, advantages) {
+  const asks = featureAsks(advantages);
+  if (!asks.length) return {};
+
+  const rows = asks.map(ask => `
+    <label class="dbu-wager">
+      <span>${Handlebars.escapeExpression(ask.label)}</span>
+      <input type="number" name="${ask.field}" value="0" min="0" max="${ask.max ?? 99}"/>
+      <em>${Handlebars.escapeExpression(ask.hint)}</em>
+    </label>`).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${maneuver.name} - Charge` },
+    content: rows,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) => Object.fromEntries(asks.map(ask => {
+          const typed = Math.floor(Number(dialog.element.querySelector(`input[name="${ask.field}"]`)?.value));
+          return [ask.field, Number.isFinite(typed) ? Math.max(0, typed) : 0];
+        }))
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  return (chosen && (typeof chosen === "object")) ? chosen : null;
 }
 
 /**

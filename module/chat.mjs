@@ -3,6 +3,7 @@ import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { spendActions } from "./combat.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
+import { advantageWoundParts } from "./signature.mjs";
 import { collectReactive, applySlot } from "./effects/interpreter.mjs";
 import {
   DAMAGE_CATEGORIES,
@@ -2349,7 +2350,8 @@ async function takeOutOfSequence(message, actor, offer) {
  * other's result in advance.
  */
 export async function postAttack(actor, target, maneuver,
-                                 { profile, foundation, kiWager = 0, charges = 0 },
+                                 { profile, foundation, kiWager = 0, charges = 0,
+                                   advantages = [], squaresCharged = 0 },
                                  { asOutOfSequence = false, alsoCaught = false } = {}) {
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
   // Strike Roll - the attack after your third is itself the one that suffers.
@@ -2386,6 +2388,12 @@ export async function postAttack(actor, target, maneuver,
           alsoCaught,
           actionCost: maneuver.actionCost ?? 1,
           tags: maneuver.tags ?? [],
+          // What the Signature Technique side brought, and whatever it asked for at
+          // declaration. Carried on the attack rather than looked up later: an
+          // Advantage applies to the attack it was declared on, and the Technique it
+          // came from may be edited between the declaration and the Wound Roll.
+          advantages,
+          squaresCharged,
           profile,
           profileLabel: PROFILES[profile].label,
           // Carried on the attack rather than looked up later: a Profile's Damage
@@ -2788,7 +2796,10 @@ async function addAreaTargets(message, attack, attacker) {
       // The Charges rode on the Maneuver, so they reach everyone it reaches - as the
       // finished count, which is why postAttack does not grant the Profile's own Charge
       // again here. Powered grants one Charge, not one per target.
-      charges: attack.energyCharges ?? 0
+      charges: attack.energyCharges ?? 0,
+      // One charge across the ground, however many it caught - not re-run per person.
+      advantages: attack.advantages ?? [],
+      squaresCharged: attack.squaresCharged ?? 0
     }, { alsoCaught: true });
   }
 }
@@ -2815,11 +2826,27 @@ async function woundStage(message, attack, attacker) {
  */
 function profileWoundParts(attacker, attack) {
   const profile = PROFILES[attack.profile];
-  if (!profile?.extraDamageAttribute) return [];
+  const parts = [];
 
-  const foundation = DBUCharacterData.FOUNDATIONS[attack.foundation];
-  const modifier = attacker.system.attributes?.[foundation?.attribute]?.mod ?? 0;
-  return modifier ? [{ label: `${profile.label} (${foundation.label})`, value: modifier }] : [];
+  if (profile?.extraDamageAttribute) {
+    const foundation = DBUCharacterData.FOUNDATIONS[attack.foundation];
+    const modifier = attacker.system.attributes?.[foundation?.attribute]?.mod ?? 0;
+    if (modifier) parts.push({ label: `${profile.label} (${foundation.label})`, value: modifier });
+  }
+
+  // Blitz: "if you move a number of Squares that exceeds your Normal Speed due to the
+  // effects of Charging Assault, increase the Wound Roll by 1/2 of your Agility
+  // Modifier." A rule this Profile has about an Advantage it granted, so it is keyed
+  // off the same number the Advantage was given and not off the Advantage itself.
+  if (profile?.woundPerCharge === "halfAgilityBeyondNormalSpeed") {
+    const squares = Math.max(0, attack.squaresCharged ?? 0);
+    const bonus = Math.floor((attacker.system.attributes?.agility?.mod ?? 0) / 2);
+    if ((squares > (attacker.system.speed?.normal ?? 0)) && (bonus > 0)) {
+      parts.push({ label: `${profile.label} (charge)`, value: bonus });
+    }
+  }
+
+  return parts;
 }
 
 /**
@@ -2869,6 +2896,7 @@ async function rollAttackWound(message, attack) {
   const wound = await rollSide(attacker, [
     { label: "Wound", value: attacker.system.combat.wound[attack.foundation] },
     ...profileWoundParts(attacker, attack),
+    ...advantageWoundParts(attacker, attack),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...thresholdPenalty(attacker)
   ], {
