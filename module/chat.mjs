@@ -283,6 +283,18 @@ export function registerChatHooks() {
  * do about it. Callers apply their own policy: a lone check offers the critical die
  * as a button, while a Skill Clash has to settle both sides at once.
  */
+/**
+ * How a roll's line is punctuated.
+ *
+ * One line, read in one direction: each step is a segment, and the arrow at the end is
+ * the only arrow on it - so what follows an arrow is always the answer and never
+ * another step. Literal characters rather than HTML entities, because the line is read
+ * through escapeExpression on its way into a tooltip and an entity would show as its
+ * own source text.
+ */
+const SEPARATOR = "  ·  ";
+const ARROW = "  →  ";
+
 export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null) {
   // The whole `baseDie` Slot, not only its `set`. Only `set` was ever read, so an
   // effect *adjusting* the Natural Result - which is what Impaired does, and the only
@@ -925,13 +937,13 @@ async function rerollBaseDie(actor, side) {
     return {
       total: side.total,
       outcome: side.outcome ?? "",
-      notes: [`karmic chance ${again.total}, keeping ${before}`]
+      notes: [`Karmic Chance rolled ${again.total}, keeping ${before}`]
     };
   }
 
   let total = (side.beforeOutcome ?? side.total) - before + again.total;
   let outcome = "";
-  const notes = [`karmic chance ${before} &rarr; ${again.total}`];
+  const notes = [`Karmic Chance ${before} → ${again.total}`];
 
   const botch = again.total <= (actor.system.botchRange ?? 1);
   const critical = again.total >= (actor.system.criticalTarget ?? 10);
@@ -943,7 +955,7 @@ async function rerollBaseDie(actor, side) {
       ?? actor.system.botch?.penalty ?? DBUCharacterData.BOTCH_PENALTY;
     total -= penalty;
     outcome = "botch";
-    notes.push(`botch -${penalty}`);
+    notes.push(`Botch -${penalty}`);
   }
   else if (critical) {
     const formula = side.criticalDice ?? actor.system.dice.critical.formula;
@@ -951,7 +963,7 @@ async function rerollBaseDie(actor, side) {
     await extra.evaluate();
     total += extra.total;
     outcome = "critical";
-    notes.push(`critical ${formula} ${extra.result}`);
+    notes.push(`Critical +${extra.total} (${formula} ${extra.result})`);
   }
 
   // Floored like every finished roll: a Botch takes what it takes, never past zero.
@@ -990,8 +1002,15 @@ async function keepTheFirstRoll(actor, before, after) {
  * all - Karmic Save says you succeed whatever the numbers said - so it is carried as an
  * outcome rather than by inventing a total large enough to win.
  */
+/** The total a finished line ends on, so it can be dropped when more is about to happen. */
+const ENDS_IN_TOTAL = /\s*\u2192\s*-?\d+\s*$/;
+
 async function applyAfterTheFact(actor, side, { slots, queue }) {
-  const segments = [side.breakdown];
+  // The line already ends in the total it came to, and something is about to change it.
+  // Left in place it reads "... -> 8 ... -> 12", where the first total is stale and the
+  // reader has to work out which arrow is the answer. Every segment carries a sign, so
+  // nothing is lost by keeping only the last one.
+  const segments = [String(side.breakdown ?? "").replace(ENDS_IN_TOTAL, "")];
   let total = side.total;
   let outcome = side.outcome;
 
@@ -1009,15 +1028,17 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
     const roll = new Roll(formula);
     await roll.evaluate();
     total += roll.total;
-    segments.push(`karma ${formula} ${roll.result}`);
+    segments.push(`Karma +${roll.total} (${formula} ${roll.result})`);
   }
 
   const settled = Math.max(0, applySlot(slots, "roll.total", total));
-  if (settled !== total) segments.push(`karma ${settled - total >= 0 ? "+" : ""}${settled - total}`);
+  if (settled !== total) {
+    segments.push(`Karma ${settled - total >= 0 ? "+" : ""}${settled - total}`);
+  }
 
   if (slots["clash.succeed"] === true) {
     outcome = "karmic-save";
-    segments.push("Karmic Save - this Clash succeeds");
+    segments.push("Karmic Save – this Clash succeeds");
   }
 
   return {
@@ -1025,7 +1046,10 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
     total: settled,
     outcome,
     succeeded: (slots["clash.succeed"] === true) || side.succeeded,
-    breakdown: `${segments.join("  &middot;  ")}  &rarr;  ${settled}`
+    // The literal characters, not HTML entities: this line is read through
+    // escapeExpression on its way into a tooltip, which would show "&middot;" as those
+    // eight characters rather than as a dot.
+    breakdown: `${segments.join(SEPARATOR)}${ARROW}${settled}`
   };
 }
 
@@ -1933,7 +1957,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
       natural,
       total: 0,
       outcome: "willing",
-      breakdown: `${roll.formula} = ${roll.result}  ·  willing failure  →  0`
+      // Written the way every other line is - the dice one at a time - rather than in
+      // Foundry's formula syntax, which is the only place that leaked onto a card.
+      breakdown: [roll.dice.map(die => `${die.expression} ${die.total}`).join(" + "),
+                  "willing failure"].filter(Boolean).join(SEPARATOR) + `${ARROW}0`
     };
   }
 
@@ -1987,14 +2014,14 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
       : (actor.system.botch?.skill ?? DBUCharacterData.BOTCH_PENALTY);
     total -= penalty;
     outcome = "botch";
-    segments.push(`botch -${penalty}`);
+    segments.push(`Botch -${penalty}`);
   }
   else if (critical) {
     const extra = new Roll(criticalDice);
     await extra.evaluate();
     total += extra.total;
     outcome = "critical";
-    segments.push(`critical ${criticalDice} ${extra.result}`);
+    segments.push(`Critical +${extra.total} (${criticalDice} ${extra.result})`);
   }
 
   // The finished total is a system value like any other: a Botch takes what it takes,
@@ -2013,7 +2040,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     criticalDice,
     total,
     outcome,
-    breakdown: `${segments.join("  ·  ")}  →  ${total}`
+    breakdown: `${segments.join(SEPARATOR)}${ARROW}${total}`
   };
 }
 
