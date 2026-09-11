@@ -511,27 +511,44 @@ function clashSides(message) {
   const result = attack?.result;
   if (!result) return [];
 
-  // Once the damage is dealt there is nothing left to change.
-  if (result.applied) return [];
-
+  // Nothing is left to change for somebody whose Damage has already been dealt - but
+  // one of them having taken theirs says nothing about the rest.
   return result.wound
     ? woundSides(attack, result)
     : strikeSides(attack, result);
 }
 
-/** The Strike against whatever answered it, before the Wound Roll. */
+/**
+ * The Strike against whatever answered it, before the Wound Roll.
+ *
+ * One Strike Roll, several answers. The attacker's own side appears once, since there
+ * is one roll to rescue and rescuing it changes the hit for everyone - they count as
+ * having lost the Clash if any of the people they reached beat them, which is what
+ * Karmic Boost asks for. Each defender's side is their own.
+ */
 function strikeSides(attack, result) {
-  // Only when there was a Clash at all. Direct Hit, Guard and Power Flare answer
-  // without rolling, so there is nothing there to have lost.
-  if (!result.answer) return [];
+  const answered = targetResults(attack)
+    .filter(entry => entry.own?.answer && !entry.own.applied);
+  if (!answered.length) return [];
 
-  return [
-    { uuid: attack.attackerUuid, side: result.strike,
-      lost: beaten(result.strike, result.answer, false), answering: false },
-    { uuid: attack.targetUuid, side: result.answer,
-      lost: beaten(result.answer, result.strike, true), answering: true }
-  ]
-    // A Strike answered by a Dodge or a Parry: Combat Rolls on both sides.
+  const sides = [{
+    uuid: attack.attackerUuid,
+    side: result.strike,
+    lost: answered.some(entry => beaten(result.strike, entry.own.answer, false)),
+    answering: false
+  }];
+
+  for (const entry of answered) {
+    sides.push({
+      uuid: entry.uuid,
+      side: entry.own.answer,
+      lost: beaten(entry.own.answer, result.strike, true),
+      answering: true
+    });
+  }
+
+  // A Strike answered by a Dodge or a Parry: Combat Rolls on both sides.
+  return sides
     .map(entry => ({ ...entry, kind: "attack", stage: "strike", category: "combat" }))
     .flatMap(entry => mine(entry));
 }
@@ -549,21 +566,28 @@ function strikeSides(attack, result) {
  * Might, reaches neither.
  */
 function woundSides(attack, result) {
-  const flare = result.counterWound;
+  const live = targetResults(attack).filter(entry => entry.own && !entry.own.applied);
+  if (!live.length) return [];
+
+  const flares = live.filter(entry => entry.own.counterWound);
 
   // The attacker takes ties here: Power Flare negates the Wound only by beating it.
+  // One Wound Roll, so one side for it - lost if any flare beat it, since that is the
+  // one Karmic Boost would be spent to undo.
   const sides = [{
     uuid: attack.attackerUuid,
     side: result.wound,
-    lost: flare ? beaten(result.wound, flare, true) : false,
+    lost: flares.some(entry => beaten(result.wound, entry.own.counterWound, true)),
     answering: false
   }];
 
-  if (flare) {
+  // A flare answers the Wound Roll for whoever flared and for nobody else, so each is
+  // its own side and each is lost or won on its own.
+  for (const entry of flares) {
     sides.push({
-      uuid: attack.targetUuid,
-      side: flare,
-      lost: beaten(flare, result.wound, false),
+      uuid: entry.uuid,
+      side: entry.own.counterWound,
+      lost: beaten(entry.own.counterWound, result.wound, false),
       answering: true
     });
   }
@@ -826,13 +850,22 @@ async function resettleClash(message, situation) {
 async function resettleAttack(message, situation) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   const result = attack?.result;
-  if (!result || result.applied) return false;
+  if (!result) return false;
   if (situation.stage === "wound") return resettleWound(message, situation, attack, result);
   if (result.wound) return false;
 
   const isAttacker = attack.attackerUuid === situation.actor.uuid;
-  const mineNow = isAttacker ? result.strike : result.answer;
-  const theirs = isAttacker ? result.answer : result.strike;
+
+  // Whose branch this is. The attacker's Strike is one roll answered by everyone, so
+  // rescuing it settles the hit again for all of them; a defender's answer is theirs
+  // alone and touches nobody else's line.
+  const branches = isAttacker
+    ? targetResults(attack).filter(entry => entry.own && !entry.own.applied)
+    : targetResults(attack).filter(entry => entry.uuid === situation.actor.uuid);
+  if (!branches.length) return false;
+
+  const mineNow = isAttacker ? result.strike : branches[0].own.answer;
+  const theirs = isAttacker ? branches[0].own.answer : result.strike;
 
   const answered = collectAfterTheFact(situation, mineNow, theirs);
   if (!answered.spent.length) return false;
@@ -841,24 +874,31 @@ async function resettleAttack(message, situation) {
   spendChosen(situation.actor, answered);
 
   const strike = isAttacker ? settled : result.strike;
-  const answer = isAttacker ? result.answer : settled;
-  const hit = result.automatic || (strike.total > answer.total);
+  const byTarget = { ...result.byTarget };
 
-  // The defender's own answer to being hit was collected when the Clash first settled,
-  // and only if it landed. An attack that only now connects has never asked.
-  let incomingDamage = result.incomingDamage;
-  if (hit && !result.hit) {
-    const target = fromUuidSync(attack.targetUuid);
-    if (target) {
-      const incoming = atMoment(target, "being-hit", { attack: 1, attacker: 1 });
-      spendChosen(target, incoming);
-      incomingDamage = incoming.slots?.["incoming.damage"] ?? null;
+  for (const entry of branches) {
+    const own = entry.own;
+    const answer = isAttacker ? own.answer : settled;
+    const hit = own.automatic || (answer ? (strike.total > answer.total) : true);
+
+    // The defender's own answer to being hit was collected when the Clash first
+    // settled, and only if it landed. An attack that only now connects has never asked.
+    let incomingDamage = own.incomingDamage;
+    if (hit && !own.hit) {
+      const target = fromUuidSync(entry.uuid);
+      if (target) {
+        const incoming = atMoment(target, "being-hit", { attack: 1, attacker: 1 });
+        spendChosen(target, incoming);
+        incomingDamage = incoming.slots?.["incoming.damage"] ?? null;
+      }
     }
+
+    byTarget[entry.uuid] = { ...own, answer, hit, incomingDamage };
   }
 
   requestEdit(message, {
     type: "attack",
-    attack: { ...attack, result: { ...result, strike, answer, hit, incomingDamage } }
+    attack: { ...attack, result: { ...result, strike, byTarget } }
   });
 
   return true;
@@ -873,10 +913,19 @@ async function resettleAttack(message, situation) {
  */
 async function resettleWound(message, situation, attack, result) {
   const isAttacker = attack.attackerUuid === situation.actor.uuid;
-  const mineNow = isAttacker ? result.wound : result.counterWound;
+
+  // One Wound Roll, and one line of consequences per person it reached. The attacker
+  // rescuing their own roll redoes the Damage for all of them; a defender's Power Flare
+  // answers it for that defender and leaves the rest exactly as they were.
+  const branches = isAttacker
+    ? targetResults(attack).filter(entry => entry.own?.hit && !entry.own.applied)
+    : targetResults(attack).filter(entry => entry.uuid === situation.actor.uuid);
+  if (!branches.length) return false;
+
+  const mineNow = isAttacker ? result.wound : branches[0].own.counterWound;
   // A lone Wound Roll has nothing on the other side of it. Its own total stands in, so
   // the margin an effect might read comes to nothing rather than to nonsense.
-  const theirs = (isAttacker ? result.counterWound : result.wound) ?? mineNow;
+  const theirs = (isAttacker ? branches[0].own.counterWound : result.wound) ?? mineNow;
 
   const answered = collectAfterTheFact(situation, mineNow, theirs);
   if (!answered.spent.length) return false;
@@ -885,29 +934,33 @@ async function resettleWound(message, situation, attack, result) {
   spendChosen(situation.actor, answered);
 
   const wound = isAttacker ? settled : result.wound;
-  const counterWound = isAttacker ? result.counterWound : settled;
-
-  // The same arithmetic the Wound step does, on the numbers it already worked out.
-  const defence = DEFENCES[attack.defense] ?? DEFENCES.dodge;
-  const effectiveWound = defence.wound(wound.total);
-  const negated = counterWound && (counterWound.total > wound.total);
-  const raw = negated
-    ? 0
-    : Math.max(0, effectiveWound - (result.soak ?? 0) - (result.reduction ?? 0));
-  const damage = Math.max(0, applySlot(
-    { "incoming.damage": result.incomingDamage }, "incoming.damage", raw));
-
-  // A Karmic Effect that takes the Damage down to nothing rattles the attacker exactly
-  // as a Direct Hit that did so on its own would.
+  const byTarget = { ...result.byTarget };
   const attacker = fromUuidSync(attack.attackerUuid);
-  if (attacker) await maybeShakeAttacker(attacker, attack, defence, damage);
+
+  for (const entry of branches) {
+    const own = entry.own;
+    const counterWound = isAttacker ? own.counterWound : settled;
+
+    // The same arithmetic the Wound step does, on the numbers it already worked out.
+    const defence = DEFENCES[own.defense] ?? DEFENCES.dodge;
+    const effectiveWound = defence.wound(wound.total);
+    const negated = counterWound && (counterWound.total > wound.total);
+    const raw = negated
+      ? 0
+      : Math.max(0, effectiveWound - (own.soak ?? 0) - (own.reduction ?? 0));
+    const damage = Math.max(0, applySlot(
+      { "incoming.damage": own.incomingDamage }, "incoming.damage", raw));
+
+    // A Karmic Effect that takes the Damage down to nothing rattles the attacker
+    // exactly as a Direct Hit that did so on its own would.
+    if (attacker) await maybeShakeAttacker(attacker, attack, defence, damage);
+
+    byTarget[entry.uuid] = { ...own, counterWound, effectiveWound, damage };
+  }
 
   requestEdit(message, {
     type: "attack",
-    attack: {
-      ...attack,
-      result: { ...result, wound, counterWound, effectiveWound, damage }
-    }
+    attack: { ...attack, result: { ...result, wound, byTarget } }
   });
 
   return true;
@@ -1169,7 +1222,9 @@ function renderInstantResponses(message, html) {
   // has to be answered: its target has to dodge or Defend. So the way in is offered
   // whenever there is something to answer, not only when Instants are allowed.
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
-  const awaiting = Boolean(attack && !attack.result && fromUuidSync(attack.targetUuid)?.isOwner);
+  // Any of the people it reached, not the first one: an area attack waits on all of them.
+  const awaiting = Boolean(attack && !attack.result
+    && attackTargets(attack).some(target => fromUuidSync(target.uuid)?.isOwner));
 
   // Once every target has answered, there is nothing left to answer with: what follows
   // belongs to the Wound Roll and to being hit, which have their own stages.
@@ -1271,7 +1326,7 @@ function relevantTriggers(actor, message, stage) {
   if (!attack) return [];
 
   // Both sides take part in both stages; what differs is which effects each holds.
-  if (![attack.attackerUuid, attack.targetUuid].includes(actor.uuid)) return [];
+  if (!attackParticipants(attack).includes(actor.uuid)) return [];
 
   // Whatever answers one of this side's Moments and still has uses. Only the triggered
   // ones: an Automatic effect fires by itself, so listing it here would be asking the
@@ -2578,7 +2633,7 @@ async function takeOutOfSequence(message, actor, offer) {
 export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, charges = 0,
                                    advantages = [], squaresCharged = 0 },
-                                 { asOutOfSequence = false, alsoCaught = false } = {}) {
+                                 { asOutOfSequence = false } = {}) {
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
   // Strike Roll - the attack after your third is itself the one that suffers.
   //
@@ -2586,16 +2641,13 @@ export async function postAttack(actor, target, maneuver,
   // Out-of-Sequence Maneuver ignores its Action Cost, so it spends none and none are
   // counted: the rule asks what you spent, and that spent nothing.
   //
-  // Not for somebody the area caught. That is one Attacking Maneuver reaching further,
-  // not a second one: counting it again would blunt the attacker's own Strike Rolls
-  // for the rest of the round and pay off Compelled by standing in a crowd.
-  if (!alsoCaught) {
-    await actor.update({
-      "system.attacksThisRound": actor.system.attacksThisRound + 1,
-      "system.attackActionsThisTurn": actor.system.attackActionsThisTurn
-        + (asOutOfSequence ? 0 : (maneuver.actionCost ?? 1))
-    });
-  }
+  // Counted once however far the attack reaches: an area that catches four people is
+  // one Attacking Maneuver, and they all answer the same card.
+  await actor.update({
+    "system.attacksThisRound": actor.system.attacksThisRound + 1,
+    "system.attackActionsThisTurn": actor.system.attackActionsThisTurn
+      + (asOutOfSequence ? 0 : (maneuver.actionCost ?? 1))
+  });
 
   // Handed back for the reason postManeuver hands its card back: which card a Maneuver
   // was played on is part of the Instant rule.
@@ -2611,11 +2663,11 @@ export async function postAttack(actor, target, maneuver,
           maneuverName: asOutOfSequence
             ? `${maneuver.name} (Out-of-Sequence)`
             : maneuver.name,
-          // Everything an added target needs to be given the same attack again, and
-          // the mark that says this card is one of those.
-          alsoCaught,
           actionCost: maneuver.actionCost ?? 1,
           tags: maneuver.tags ?? [],
+          // Everyone this attack reaches, answering one Strike Roll. An area adds to
+          // this list; it does not start a second attack.
+          targets: [{ uuid: target.uuid, name: target.name }],
           // What the Signature Technique side brought, and whatever it asked for at
           // declaration. Carried on the attack rather than looked up later: an
           // Advantage applies to the attack it was declared on, and the Technique it
@@ -2631,14 +2683,14 @@ export async function postAttack(actor, target, maneuver,
           // before anything is clamped. Mega Flare is the first thing to write here:
           // "if the number of Energy Charges applied is 7+, increase the Damage
           // Category by 1 Category."
-          damageCategoryShift: profileCategoryShift(profile, charges, alsoCaught),
+          damageCategoryShift: profileCategoryShift(profile, charges),
           kiWager,
           // Energy Charges live on the Maneuver, not the character: they were fed into
           // this attack and are spent with it. Each adds a die to the Wound Roll.
           // Powered "gains an Energy Charge", on top of anything the Energy Charge
           // Maneuver fed into it - and still held to the seven the rules allow.
           energyCharges: Math.min(
-            charges + (alsoCaught ? 0 : (PROFILES[profile].grantsEnergyCharge ?? 0)),
+            charges + (PROFILES[profile].grantsEnergyCharge ?? 0),
             maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES)
           ),
           signature: (maneuver.tags ?? []).includes("signature"),
@@ -2670,12 +2722,12 @@ export async function postAttack(actor, target, maneuver,
  * rule asks how many are "applied to this Attacking Maneuver" and does not care where
  * they came from.
  */
-function profileCategoryShift(profileId, charges, alsoCaught) {
+function profileCategoryShift(profileId, charges) {
   const profile = PROFILES[profileId];
   if (!profile?.categoryUpAtCharges) return 0;
 
   const total = Math.min(
-    charges + (alsoCaught ? 0 : (profile.grantsEnergyCharge ?? 0)),
+    charges + (profile.grantsEnergyCharge ?? 0),
     maxEnergyCharges(profileId, DBUCharacterData.MAX_ENERGY_CHARGES)
   );
   return (total >= profile.categoryUpAtCharges) ? 1 : 0;
@@ -2863,32 +2915,27 @@ function profileStrikeParts(attacker, attack) {
  * Roll the exchange: the Strike, and whatever each target chose to meet it with.
  */
 async function resolveAttack(message, attack) {
-  const target = fromUuidSync(attack.targetUuid);
-  const {
-    defence: defense = "dodge",
-    wager: defenceWager = 0,
-    foundation: defenceFoundation = "energy"
-  } = attack.defences[attack.targetUuid] ?? {};
   const attacker = fromUuidSync(attack.attackerUuid);
-  if (!attacker || !target) {
+  const targets = attackTargets(attack)
+    .map(entry => ({ ...entry, actor: fromUuidSync(entry.uuid) }))
+    .filter(entry => entry.actor);
+
+  if (!attacker || !targets.length) {
     ui.notifications.warn("One of the actors in this attack no longer exists.");
     return;
   }
 
   // Tier of Power Extra Dice ride on every combat roll, each side using its own.
-  const options = {
-    attacker: {
-      extraDice: attacker.system.dice.extra.formula,
-      criticalDice: attacker.system.dice.critical.formula,
-      combatRoll: true
-    },
-    target: {
-      extraDice: target.system.dice.extra.formula,
-      criticalDice: target.system.dice.critical.formula,
-      combatRoll: true
-    }
+  const attackerOptions = {
+    extraDice: attacker.system.dice.extra.formula,
+    criticalDice: attacker.system.dice.critical.formula,
+    combatRoll: true
   };
 
+  // One Strike Roll for the whole Maneuver. An area attack is one attack reaching
+  // several people, not several attacks - so everybody it reaches answers the same
+  // number, and each of them answers it their own way.
+  //
   // Diminishing Offense blunts the Strike Roll of every Attacking Maneuver made once
   // the round's free attacks are spent.
   const strike = await rollSide(attacker, [
@@ -2896,95 +2943,115 @@ async function resolveAttack(message, attack) {
     ...profileStrikeParts(attacker, attack),
     { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty },
     ...thresholdPenalty(attacker)
-  ], { ...options.attacker, combatRoll: true, slot: "strike", attackingManeuver: true });
+  ], { ...attackerOptions, slot: "strike", attackingManeuver: true });
 
-  // Some things land whatever the Clash would have said: the Determined State on the
-  // attacker's side, being Sleeping on the defender's. Settled before the defence is
-  // rolled, because a roll whose result cannot matter should not be made - a Sleeping
-  // character winning a Dodge and being hit anyway reads as the rule not working.
-  const forced = attacker.system.effects?.slots?.["attack.autoHit"] === true
-    ? `${attacker.name} hits automatically`
-    : target.system.effects?.slots?.["incoming.autoHit"] === true
-    ? `${target.name} is hit automatically`
-    : null;
+  // From here it branches. What each of them did about that Strike is theirs alone, and
+  // one of them being missed says nothing about the next.
+  const byTarget = {};
 
-  // What the defender answers the Strike with, and whether they answer at all.
-  const defence = DEFENCES[defense];
-  const answer = forced ? null : await defence.answer(target, options.target, attack);
+  for (const { uuid, actor: target } of targets) {
+    const {
+      defence: defense = "dodge",
+      wager: defenceWager = 0,
+      foundation: defenceFoundation = "energy"
+    } = attack.defences[uuid] ?? {};
 
-  const automatic = Boolean(forced);
+    const options = {
+      extraDice: target.system.dice.extra.formula,
+      criticalDice: target.system.dice.critical.formula,
+      combatRoll: true
+    };
 
-  // The defender wins ties, as everywhere else: the attacker has to beat them.
-  const hit = automatic || (answer ? (strike.total > answer.total) : true);
+    // Some things land whatever the Clash would have said: the Determined State on the
+    // attacker's side, being Sleeping on the defender's. Settled before the defence is
+    // rolled, because a roll whose result cannot matter should not be made - a Sleeping
+    // character winning a Dodge and being hit anyway reads as the rule not working.
+    const forced = attacker.system.effects?.slots?.["attack.autoHit"] === true
+      ? `${attacker.name} hits automatically`
+      : target.system.effects?.slots?.["incoming.autoHit"] === true
+      ? `${target.name} is hit automatically`
+      : null;
 
-  // What the defender's own effects do about being hit - Superior taking more Damage,
-  // Prone taking it a category harder. Collected once, and used at the Wound Roll.
-  const incoming = hit ? atMoment(target, "being-hit", { attack: 1, attacker: 1 }) : null;
-  if (incoming) spendChosen(target, incoming);
+    // What this defender answers the Strike with, and whether they answer at all.
+    const defence = DEFENCES[defense];
+    const answer = forced ? null : await defence.answer(target, options, attack);
 
-  // Every step for and against the Damage Category is summed before anything is
-  // clamped, so an attack pushed well past Lethal is still above one merely at it.
-  const shift = (attack.damageCategoryShift ?? 0)
-    + (defence.damageCategoryShift ?? 0)
-    + (incoming?.slots?.["incoming.damage.category.shift"]?.add ?? 0);
-  const damageCategory = resolveDamageCategory(attack.damageCategory, shift);
+    const automatic = Boolean(forced);
 
-  // Gained after the Attacking Maneuver, so it never touches the roll just made. The
-  // Defend Maneuver spares you these entirely, whichever option it was used for.
-  // Relayed rather than written directly: the exchange is settled by whichever client
-  // confirmed last, which is as often the attacker's as the defender's, and that one
-  // does not own the target. Writing straight to it there throws and takes the rest of
-  // the resolution - the result itself included - down with it.
-  // `forced` and not `hit`: what accrues the stacks is having dodged, and a Dodge that
-  // was never rolled is not one. Flagged for the table - the rule says the stacks come
-  // from defending against attack after attack, and whether being hit automatically
-  // still counts as defending is a reading, not something the text settles.
-  if (defence.gainsDiminishingDefense && !forced) {
-    // Sweeping doubles what a target takes, but only "if you deal Damage with this
-    // Attacking Maneuver" - which is not known yet. So the multiplier travels with the
-    // attack and the stacks are settled once the Damage is.
-    await requestActorUpdate(target, {
-      "system.diminishingDefense": target.system.diminishingDefense + target.system.diminishing.defense.perAttack
-    });
-  }
+    // The defender wins ties, as everywhere else: the attacker has to beat them.
+    const hit = automatic || (answer ? (strike.total > answer.total) : true);
 
-  requestEdit(message, {
-    type: "attack",
-    attack: {
-      ...attack,
+    // What this defender's own effects do about being hit - Superior taking more
+    // Damage, Prone taking it a category harder. Collected once, used at the Wound Roll.
+    const incoming = hit ? atMoment(target, "being-hit", { attack: 1, attacker: 1 }) : null;
+    if (incoming) spendChosen(target, incoming);
+
+    // Every step for and against the Damage Category is summed before anything is
+    // clamped, so an attack pushed well past Lethal is still above one merely at it.
+    // Per target, because the defence is part of it: a Guard drops the Category for
+    // whoever guarded and for nobody else.
+    const shift = (attack.damageCategoryShift ?? 0)
+      + (defence.damageCategoryShift ?? 0)
+      + (incoming?.slots?.["incoming.damage.category.shift"]?.add ?? 0);
+
+    // Gained after the Attacking Maneuver, so it never touches the roll just made. The
+    // Defend Maneuver spares you these entirely, whichever option it was used for.
+    // Relayed rather than written directly: the exchange is settled by whichever client
+    // confirmed last, which is as often the attacker's as the defender's, and that one
+    // does not own the target. Writing straight to it there throws and takes the rest
+    // of the resolution - the result itself included - down with it.
+    // `forced` and not `hit`: what accrues the stacks is having dodged, and a Dodge that
+    // was never rolled is not one. Flagged for the table - the rule says the stacks come
+    // from defending against attack after attack, and whether being hit automatically
+    // still counts as defending is a reading, not something the text settles.
+    if (defence.gainsDiminishingDefense && !forced) {
+      // Sweeping doubles what a target takes, but only "if you deal Damage with this
+      // Attacking Maneuver" - which is not known yet. So the multiplier travels with
+      // the attack and the stacks are settled once the Damage is.
+      await requestActorUpdate(target, {
+        "system.diminishingDefense":
+          target.system.diminishingDefense + target.system.diminishing.defense.perAttack
+      });
+    }
+
+    byTarget[uuid] = {
       defense,
       defenseLabel: defence.label,
       // Carried through to the Wound Roll step, which is where Power Flare's own roll
       // happens - the Ki was already paid when the defence was declared.
       defenceWager,
       defenceFoundation,
-      result: {
-        strike,
-        answer,
-        hit,
-        automatic,
-        // Said on the card, since a defence that was never rolled needs a reason
-        // beside it or it looks like it was simply forgotten.
-        forced,
-        damageCategory,
-        // Carried on the attack so the Wound Roll can apply it: the defender's client
-        // worked it out, and the attacker's is as likely to be the one settling this.
-        incomingDamage: incoming?.slots?.["incoming.damage"] ?? null,
-        wound: null,
-        applied: false
-      }
-    }
+      answer,
+      hit,
+      automatic,
+      // Said on the card, since a defence that was never rolled needs a reason beside
+      // it or it looks like it was simply forgotten.
+      forced,
+      damageCategory: resolveDamageCategory(attack.damageCategory, shift),
+      // Carried on the attack so the Wound Roll can apply it: the defender's client
+      // worked it out, and the attacker's is as likely to be the one settling this.
+      incomingDamage: incoming?.slots?.["incoming.damage"] ?? null,
+      counterWound: null,
+      applied: false
+    };
+  }
+
+  requestEdit(message, {
+    type: "attack",
+    attack: { ...attack, result: { strike, byTarget, wound: null } }
   });
 
   // Cross Counter strikes back the moment the clash is settled. It is offered rather
   // than fired so the defender still chooses when to take it, like any other
-  // Out-of-Sequence Maneuver.
-  if (defence.counterAttacks) {
+  // Out-of-Sequence Maneuver - and offered to each of them who answered that way, since
+  // one attack reaching four people can be struck back at by all four.
+  for (const { uuid, name } of targets) {
+    if (!DEFENCES[byTarget[uuid].defense]?.counterAttacks) continue;
     requestEdit(message, {
       type: "offer",
       offer: {
-        actorUuid: target.uuid,
-        actorName: target.name,
+        actorUuid: uuid,
+        actorName: name,
         maneuverId: "basic-attack",
         maneuverName: "Basic Attack",
         targetUuid: attack.attackerUuid,
@@ -2992,6 +3059,31 @@ async function resolveAttack(message, attack) {
       }
     });
   }
+}
+
+/** What happened to one target of an attack, or an empty shape before anything did. */
+function targetResult(attack, uuid) {
+  return attack.result?.byTarget?.[uuid] ?? null;
+}
+
+/** Every target of an attack, paired with what happened to them. */
+function targetResults(attack) {
+  return attackTargets(attack).map(target => ({ ...target, own: targetResult(attack, target.uuid) }));
+}
+
+/**
+ * Power Flare answers the Wound Roll, and answers it for one person.
+ *
+ * So there is a row per flare rather than one for the attack: two people can both flare
+ * against the same Wound Roll, and one of them beating it says nothing about the other.
+ */
+function flareRows(attack) {
+  return targetResults(attack)
+    .filter(entry => entry.own?.counterWound)
+    .map(entry => attackSide(
+      entry.own.defenceWager ? `Power Flare +${entry.own.defenceWager} KP` : "Power Flare",
+      entry.name, entry.own.counterWound))
+    .join("");
 }
 
 /** Who the exchange is still waiting on, named so nobody has to guess. */
@@ -3051,8 +3143,8 @@ async function addAreaTargets(message, attack, attacker) {
     classes: ["dbu-dialog"],
     window: { title: `${attack.maneuverName} - Add targets` },
     content: `<p class="dbu-respond-hint">Who else does the
-      ${Handlebars.escapeExpression(areaLabel(area))} catch? Each one answers this
-      attack on a card of their own. Nothing is charged again.</p>${rows}`,
+      ${Handlebars.escapeExpression(areaLabel(area))} catch? They join this attack and
+      answer the same Strike Roll, each defending it their own way.</p>${rows}`,
     buttons: [
       {
         action: "confirm",
@@ -3068,31 +3160,21 @@ async function addAreaTargets(message, attack, attacker) {
 
   if (!Array.isArray(chosen) || !chosen.length) return;
 
-  // Rebuilt from what the card carries rather than from the Maneuver it came from: the
-  // Maneuver may have been spent, edited or deleted since, and what matters is the
-  // attack as it was declared.
-  const maneuver = {
-    name: attack.maneuverName.replace(/ \(Out-of-Sequence\)$/, ""),
-    actionCost: attack.actionCost ?? 1,
-    tags: attack.tags ?? []
-  };
+  // Added to this attack rather than posted as attacks of their own. One Attacking
+  // Maneuver reaching four people is one Strike Roll and one Wound Roll that all four
+  // answer - and it is counted once, paid for once, and charged once, which separate
+  // cards could only imitate.
+  const added = chosen
+    .map(uuid => fromUuidSync(uuid))
+    .filter(Boolean)
+    .map(actor => ({ uuid: actor.uuid, name: actor.name }));
 
-  for (const uuid of chosen) {
-    const caught = fromUuidSync(uuid);
-    if (!caught) continue;
-    await postAttack(attacker, caught, maneuver, {
-      profile: attack.profile,
-      foundation: attack.foundation,
-      kiWager: attack.kiWager ?? 0,
-      // The Charges rode on the Maneuver, so they reach everyone it reaches - as the
-      // finished count, which is why postAttack does not grant the Profile's own Charge
-      // again here. Powered grants one Charge, not one per target.
-      charges: attack.energyCharges ?? 0,
-      // One charge across the ground, however many it caught - not re-run per person.
-      advantages: attack.advantages ?? [],
-      squaresCharged: attack.squaresCharged ?? 0
-    }, { alsoCaught: true });
-  }
+  if (!added.length) return;
+
+  return requestEdit(message, {
+    type: "attack",
+    attack: { ...attack, targets: [...attackTargets(attack), ...added] }
+  });
 }
 
 async function attackerStage(message, attack, attacker) {
@@ -3296,14 +3378,14 @@ function combinationFollowUps(attacker, attack) {
  */
 async function rollAttackWound(message, attack) {
   const attacker = fromUuidSync(attack.attackerUuid);
-  const target = fromUuidSync(attack.targetUuid);
-  if (!attacker || !target) {
+  const targets = attackTargets(attack)
+    .map(entry => ({ ...entry, actor: fromUuidSync(entry.uuid), own: targetResult(attack, entry.uuid) }))
+    .filter(entry => entry.actor && entry.own);
+
+  if (!attacker || !targets.length) {
     ui.notifications.warn("One of the actors in this attack no longer exists.");
     return;
   }
-
-  const defence = DEFENCES[attack.defense];
-  const { damageCategory } = attack.result;
 
   // Wagered Ki is added to the Wound Roll - already paid for when the attack was
   // declared, which is what took it out of Capacity.
@@ -3315,6 +3397,9 @@ async function rollAttackWound(message, attack) {
   // Rolled in their own step before this one, which is where the rule puts them.
   const followUps = combinationFollowUps(attacker, attack);
 
+  // One Wound Roll for the whole Maneuver, like the Strike. What differs between the
+  // people it reached is what each of them did about it - their Soak, their Damage
+  // Reduction, and a Power Flare that answers it for them alone.
   const wound = await rollSide(attacker, [
     ...followUps,
     { label: "Wound", value: attacker.system.combat.wound[attack.foundation] },
@@ -3337,89 +3422,102 @@ async function rollAttackWound(message, attack) {
     attackingManeuver: true
   });
 
-  // Power Flare answers the Wound Roll rather than the Strike Roll, immediately after
-  // it - so it is rolled here, not left for another round trip.
-  //
-  // It is your own Wound Roll, "as if you made an Energy or Magic Attack", and which of
-  // the two was chosen when the defence was declared. It is a Wound Roll like any other,
-  // which is why it takes a Ki Wager and why `slot: "wound"` lets an effect change it.
-  const flareFoundation = attack.defenceFoundation ?? "energy";
-  const counterWound = defence.answersWound
-    ? await rollSide(target, [
-        { label: "Wound", value: target.system.combat.wound[flareFoundation] ?? 0 },
-        { label: "Ki Wager", value: attack.defenceWager ?? 0 }
-      ], {
-        extraDice: target.system.dice.extra.formula,
-        criticalDice: target.system.dice.critical.formula,
-        combatRoll: true,
-        // Not marked as an Attacking Maneuver: this is a defence option, answering
-        // somebody else's attack with a Wound Roll rather than making one of your own.
-        slot: "wound"
-      })
-    : null;
-
-  // A Talent that raises the Soak Value for defending does so "before any
-  // calculations", so it lands on the base value - ahead of the Damage Category and
-  // ahead of whatever the defence itself does to it.
-  const defended = attack.defense !== "dodge";
-  const soakBonus = defended
-    ? (atMoment(target, "defending", { defending: true, attack, attacker })
-        .slots["soakValue.base"]?.add ?? 0)
-    : 0;
-
-  // Only what the Damage Category leaves of the Soak Value counts, and the defence
-  // adjusts what survives that.
-  const base = target.system.soakValue + soakBonus;
-  const counted = Math.floor(base * DAMAGE_CATEGORIES[damageCategory].soakMultiplier);
+  // What an attack can get past of somebody's Damage Reduction, for this attack only.
+  // Collected from the attacker once, since it is their effect and their client that
+  // knows about it - the same piercing reaches everyone the attack reached.
+  const pierce = atMoment(attacker, "before-wound", { attack: 1, damageCategory: 1 });
+  spendChosen(attacker, pierce);
+  const pierced = pierce.slots?.["damageReduction.pierced"]?.add ?? 0;
 
   // Ignored after the Category and the defence have both had their say, and never more
   // than is left: ignoring Soak that is not there would be worth more than ignoring
   // Soak that is.
   const ignored = profileSoakIgnored(attacker, attack);
-  const soak = Math.max(0, defence.soak(counted) - ignored);
-  const effectiveWound = defence.wound(wound.total);
 
-  // Damage Reduction comes off the same Wound Roll, and off it whole. The Damage
-  // Category has already had its say on the Soak above and gets no say here, and the
-  // defence's own multiplier is applied to `counted` rather than to this - which is
-  // what makes a point of it worth more than a point of Soak.
-  //
-  // An attack can get past some of it, for that attack only. Collected from the
-  // attacker, since it is their effect and their client that knows about it.
-  const pierce = atMoment(attacker, "before-wound", { attack: 1, damageCategory: 1 });
-  spendChosen(attacker, pierce);
-  const pierced = pierce.slots?.["damageReduction.pierced"]?.add ?? 0;
+  const byTarget = { ...attack.result.byTarget };
 
-  const reduction = Math.max(0, (target.system.damageReduction ?? 0) - pierced);
+  for (const { uuid, actor: target, own } of targets) {
+    // A miss takes nothing, and there is nothing here to work out for it.
+    if (!own.hit) {
+      byTarget[uuid] = { ...own, counterWound: null, soak: 0, reduction: 0, damage: 0 };
+      continue;
+    }
 
-  const negated = counterWound && (counterWound.total > wound.total);
-  const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);
+    const defence = DEFENCES[own.defense];
 
-  // What the defender's own effects do to the Damage they take, in two passes because
-  // they answer two different moments. Being hit is settled when the Clash is - the
-  // Superior State takes 2(T) more - and that was worked out on the defender's client
-  // and carried here on the attack. Before the Wound Roll is settled now, since Broken
-  // needs the Soak Value it could not use, which is only known at this point.
-  const onHit = applySlot(
-    { "incoming.damage": attack.result.incomingDamage }, "incoming.damage", raw);
+    // Power Flare answers the Wound Roll rather than the Strike Roll, immediately after
+    // it - so it is rolled here, not left for another round trip.
+    //
+    // It is your own Wound Roll, "as if you made an Energy or Magic Attack", and which
+    // of the two was chosen when the defence was declared. It is a Wound Roll like any
+    // other, which is why it takes a Ki Wager and why `slot: "wound"` lets an effect
+    // change it.
+    //
+    // It defends the one who flared and nobody else: beating the Wound Roll takes the
+    // Damage off them, and everyone else it reached still takes theirs.
+    const flareFoundation = own.defenceFoundation ?? "energy";
+    const counterWound = defence.answersWound
+      ? await rollSide(target, [
+          { label: "Wound", value: target.system.combat.wound[flareFoundation] ?? 0 },
+          { label: "Ki Wager", value: own.defenceWager ?? 0 }
+        ], {
+          extraDice: target.system.dice.extra.formula,
+          criticalDice: target.system.dice.critical.formula,
+          combatRoll: true,
+          // Not marked as an Attacking Maneuver: this is a defence option, answering
+          // somebody else's attack with a Wound Roll rather than making one of your own.
+          slot: "wound"
+        })
+      : null;
 
-  const beforeWound = atMoment(target, "before-wound", { attack: 1, damageCategory: 1 });
-  spendChosen(target, beforeWound);
+    // A Talent that raises the Soak Value for defending does so "before any
+    // calculations", so it lands on the base value - ahead of the Damage Category and
+    // ahead of whatever the defence itself does to it.
+    const defended = own.defense !== "dodge";
+    const soakBonus = defended
+      ? (atMoment(target, "defending", { defending: true, attack, attacker })
+          .slots["soakValue.base"]?.add ?? 0)
+      : 0;
 
-  const damage = Math.max(0, applySlot(beforeWound.slots, "incoming.damage", onHit));
+    // Only what the Damage Category leaves of the Soak Value counts, and the defence
+    // adjusts what survives that.
+    const base = target.system.soakValue + soakBonus;
+    const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
+    const soak = Math.max(0, defence.soak(counted) - ignored);
+    const effectiveWound = defence.wound(wound.total);
 
-  await maybeShakeAttacker(attacker, attack, defence, damage);
+    // Damage Reduction comes off the same Wound Roll, and off it whole. The Damage
+    // Category has already had its say on the Soak above and gets no say here, and the
+    // defence's own multiplier is applied to `counted` rather than to this - which is
+    // what makes a point of it worth more than a point of Soak.
+    const reduction = Math.max(0, (target.system.damageReduction ?? 0) - pierced);
+
+    const negated = counterWound && (counterWound.total > wound.total);
+    const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);
+
+    // What this defender's own effects do to the Damage they take, in two passes
+    // because they answer two different moments. Being hit is settled when the Clash is
+    // - the Superior State takes 2(T) more - and that was worked out on the defender's
+    // client and carried here on the attack. Before the Wound Roll is settled now,
+    // since Broken needs the Soak Value it could not use, which is only known here.
+    const onHit = applySlot(
+      { "incoming.damage": own.incomingDamage }, "incoming.damage", raw);
+
+    const beforeWound = atMoment(target, "before-wound", { attack: 1, damageCategory: 1 });
+    spendChosen(target, beforeWound);
+
+    const damage = Math.max(0, applySlot(beforeWound.slots, "incoming.damage", onHit));
+
+    await maybeShakeAttacker(attacker, attack, defence, damage);
+
+    byTarget[uuid] = { ...own, counterWound, effectiveWound, soak, reduction, damage };
+  }
 
   requestEdit(message, {
     type: "attack",
     // Damage is worked out here but not dealt: applying it is a separate, deliberate
     // step, so the table can rule on it before anyone loses Life.
-    attack: {
-      ...attack,
-      result: {
-        ...attack.result, wound, counterWound, effectiveWound, soak, reduction, damage
-      }
-    }
+    attack: { ...attack, result: { ...attack.result, wound, byTarget } }
   });
 }
 
@@ -3664,9 +3762,11 @@ async function applyCollisionDamage(message, clash) {
   return requestEdit(message, { type: "clash", clash: { ...clash, collisionApplied: true } });
 }
 
-/** Take the damage off the target, once and once only. */
+/** Take the damage off one target, once and once only. */
 async function applyAttackDamage(message, target, attack) {
-  const { damage } = attack.result;
+  const own = targetResult(attack, target.uuid);
+  if (!own || own.applied) return;
+  const { damage } = own;
 
   // Sweeping: "if you deal Damage with this Attacking Maneuver, double the amount of
   // Diminishing Defense stacks a target would receive from it." It is settled here
@@ -3674,7 +3774,7 @@ async function applyAttackDamage(message, target, attack) {
   // stacks were handed out when the Clash was, before the Wound Roll existed. So the
   // second helping is added now, and only when Damage was actually dealt.
   if ((damage > 0) && PROFILES[attack.profile]?.doublesDiminishingDefense
-      && (DEFENCES[attack.defense]?.gainsDiminishingDefense) && !attack.result.forced) {
+      && (DEFENCES[own.defense]?.gainsDiminishingDefense) && !own.forced) {
     await requestActorUpdate(target, {
       "system.diminishingDefense":
         target.system.diminishingDefense + target.system.diminishing.defense.perAttack
@@ -3690,6 +3790,8 @@ async function applyAttackDamage(message, target, attack) {
   // "If you successfully Damage an Opponent" - which is answered here and nowhere
   // earlier. The Clash arrives as its own card, because it is a Clash: two characters,
   // two rolls, and a consequence that belongs to whoever wins it.
+  // Per person thrown, because each of them is a Clash of their own: one Maneuver can
+  // send four people into four different walls.
   if ((damage > 0) && pushes(attack)) {
     const attacker = fromUuidSync(attack.attackerUuid);
     if (attacker) await openKnockback(attack, attacker, target);
@@ -3697,7 +3799,13 @@ async function applyAttackDamage(message, target, attack) {
 
   requestEdit(message, {
     type: "attack",
-    attack: { ...attack, result: { ...attack.result, applied: true } }
+    attack: {
+      ...attack,
+      result: {
+        ...attack.result,
+        byTarget: { ...attack.result.byTarget, [target.uuid]: { ...own, applied: true } }
+      }
+    }
   });
 }
 
@@ -3895,6 +4003,8 @@ async function defendAgainst(message, target, attack) {
  * has somewhere to put the rest without the card being rebuilt around it.
  */
 function attackTargets(attack) {
+  // An attack posted before the list existed names one target and no list, and every
+  // one of those had exactly one.
   return attack.targets ?? [{ uuid: attack.targetUuid, name: attack.targetName }];
 }
 
@@ -3913,10 +4023,11 @@ function attackerRow(attack) {
  * A target's line on the card. Named from the moment the attack is declared: who has
  * to answer is worth knowing before they do, and until now the card said nothing.
  */
-function targetRow(attack, target, result) {
+function targetRow(attack, target) {
   const name = Handlebars.escapeExpression(target.name);
+  const own = targetResult(attack, target.uuid);
 
-  if (!result) {
+  if (!own) {
     // What they chose is not shown while the exchange is still open: the attacker
     // should not learn how they are being answered before the dice are picked up.
     const ready = (attack.ready ?? []).includes(target.uuid);
@@ -3930,13 +4041,13 @@ function targetRow(attack, target, result) {
 
   // Some defences answer the Strike with a roll and some forgo it, so the line reports
   // the defence either way, with a total only where there was one.
-  const label = attack.defenseLabel ?? "Dodge";
-  if (result.answer) return attackSide(label, target.name, result.answer);
+  const label = own.defenseLabel ?? "Dodge";
+  if (own.answer) return attackSide(label, target.name, own.answer);
 
   // Direct Hit, Guard and Power Flare forgo the roll by choice; being Sleeping or
   // facing something Determined forgoes it for you. Both end with no roll, and only
   // the second needs explaining.
-  const why = result.forced ? Handlebars.escapeExpression(result.forced) : "no roll";
+  const why = own.forced ? Handlebars.escapeExpression(own.forced) : "no roll";
 
   return `
     <div class="dbu-clash-side">
@@ -3995,9 +4106,9 @@ function maySeeRolls(actor) {
   return actor?.testUserPermission(game.user, "OBSERVER") ?? false;
 }
 
-/** Whether either character in this attack is one you may watch. */
+/** Whether anybody in this attack is one you may watch. */
 function ownsEitherSide(attack) {
-  return [attack.attackerUuid, attack.targetUuid]
+  return attackParticipants(attack)
     .some(uuid => uuid && maySeeRolls(fromUuidSync(uuid)));
 }
 
@@ -4021,13 +4132,30 @@ function attackSide(label, name, side) {
 
 /** What the attack did, once both sides are in. */
 function attackOutcome(attack) {
-  const { hit, wound, counterWound, soak, reduction, damage } = attack.result;
-  if (!hit) return "Missed";
   if (awaitsFollowUps(attack)) {
     const plan = PROFILES[attack.profile].followUps;
     return `Hit - awaiting ${plan.rolls} more Strikes`;
   }
-  if (!wound) return "Hit - awaiting the Wound Roll";
+  if (!attack.result.wound && attackTargets(attack).some(t => targetResult(attack, t.uuid)?.hit)) {
+    return "Hit - awaiting the Wound Roll";
+  }
+
+  // A line each, because the exchange branched: the Strike and the Wound Roll were one
+  // roll, and what they came to for each person was not. One of them flaring the Damage
+  // away says nothing about the next.
+  return targetResults(attack)
+    .map(entry => `<div>${Handlebars.escapeExpression(entry.name)}: ${outcomeFor(attack, entry)}</div>`)
+    .join("");
+}
+
+/** What the attack came to for one of the people it reached. */
+function outcomeFor(attack, { own }) {
+  if (!own) return "waiting";
+  if (!own.hit) return "missed";
+  if (!attack.result.wound) return "hit";
+
+  const { wound } = attack.result;
+  const { counterWound, soak, reduction, damage, effectiveWound, damageCategory } = own;
 
   if (counterWound && (counterWound.total > wound.total)) {
     return "Power Flare beats the Wound Roll: no damage";
@@ -4037,10 +4165,9 @@ function attackOutcome(attack) {
   // sides withhold - so it is only spelt out to someone playing one of the two. Anyone
   // else is told what happened, which is what a bystander would see at the table.
   if (!ownsEitherSide(attack)) {
-    return (damage <= 0) ? "Hit, and no damage" : `Hit for ${damage} damage`;
+    return (damage <= 0) ? "hit, and no damage" : `hit for ${damage} damage`;
   }
 
-  const { effectiveWound, damageCategory } = attack.result;
   // Say when Guard pulled the Category down, since that is why the Soak counts here.
   const stepped = (damageCategory !== attack.damageCategory)
     ? ` (${DAMAGE_CATEGORIES[damageCategory].label})`
@@ -4074,18 +4201,15 @@ function renderAttack(message, html) {
           ? ` &middot; ${attack.energyCharges} Energy Charge${attack.energyCharges === 1 ? "" : "s"}`
           : ""}${PROFILES[attack.profile]?.area
           ? ` &middot; ${Handlebars.escapeExpression(areaLabel(PROFILES[attack.profile].area))}`
-          : ""}${attack.alsoCaught ? " &middot; caught in the area" : ""}</span>
+          : ""}</span>
     </div>
     ${result
       ? attackSide("Strike", attack.attackerName, result.strike)
       : attackerRow(attack)}
-    ${attackTargets(attack).map(target => targetRow(attack, target, result)).join("")}
+    ${attackTargets(attack).map(target => targetRow(attack, target)).join("")}
     ${followUpRows(attack)}
     ${result?.wound ? attackSide("Wound", attack.attackerName, result.wound) : ""}
-    ${result?.counterWound
-      ? attackSide(attack.defenceWager ? `Power Flare +${attack.defenceWager} KP` : "Power Flare",
-                   attack.targetName, result.counterWound)
-      : ""}
+    ${flareRows(attack)}
     <div class="dbu-clash-result">${result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
 
@@ -4095,13 +4219,18 @@ function renderAttack(message, html) {
   // before it - and only to them, since it is their Maneuver that is reaching.
   const thrower = fromUuidSync(attack.attackerUuid);
 
-  if (PROFILES[attack.profile]?.area && thrower?.isOwner) {
+  // Only while the Strike is still to be rolled. Everyone this reaches answers the same
+  // Strike Roll, so they all have to be on the card before it is made - somebody added
+  // afterwards would be answering a number that was rolled without them, or would need
+  // a Strike of their own, which is the thing an area attack is not.
+  if (PROFILES[attack.profile]?.area && thrower?.isOwner && !result) {
     const add = document.createElement("button");
     add.type = "button";
     add.className = "dbu-clash-button";
     add.textContent = "Add targets";
-    add.dataset.tooltip = `Hand this attack to whoever else the `
-      + `${areaLabel(PROFILES[attack.profile].area)} caught. Nothing is charged again.`;
+    add.dataset.tooltip = `Whoever else the `
+      + `${areaLabel(PROFILES[attack.profile].area)} caught. They answer the same `
+      + `Strike Roll, so add them before it is rolled.`;
     add.addEventListener("click", () => addAreaTargets(message, attack, thrower));
     container.append(add);
   }
@@ -4122,14 +4251,15 @@ function renderAttack(message, html) {
     return;
   }
 
-  const target = fromUuidSync(attack.targetUuid);
+  // Each defender's half of the same moment, for whichever of them this reader plays.
+  // It has to come before the Wound Roll, since that is what these effects are there to
+  // change - and a Karmic Effect is one of them, which is the whole point of losing the
+  // Clash. Only drawn when they have something: an empty dialog is worse than no button.
+  for (const entry of targetResults(attack)) {
+    const target = fromUuidSync(entry.uuid);
+    if (result.wound || !target?.isOwner) continue;
 
-  // The target's half of the same moment. It has to come before the Wound Roll, since
-  // that is what these effects are there to change - and a Karmic Effect is one of them,
-  // which is the whole point of losing the Clash. Only drawn when they have something:
-  // an empty dialog is worse than no button.
-  if (!result.wound && target?.isOwner) {
-    const onHit = result.hit ? relevantTriggers(target, message, "hit") : [];
+    const onHit = entry.own?.hit ? relevantTriggers(target, message, "hit") : [];
     const karmic = afterTheFactFor(message, target);
 
     if (onHit.length || karmic) {
@@ -4171,8 +4301,8 @@ function renderAttack(message, html) {
   // last window - Karmic Chance is about any die, and the Wound Roll is a die. Power
   // Flare makes it a Clash as well - Wound against Wound - which is when Karmic Boost
   // becomes worth offering too.
-  if (result.wound && !result.applied) {
-    for (const uuid of [attack.attackerUuid, attack.targetUuid]) {
+  if (result.wound) {
+    for (const uuid of attackParticipants(attack)) {
       const who = fromUuidSync(uuid);
       const karmic = who?.isOwner ? afterTheFactFor(message, who) : null;
       if (!karmic) continue;
@@ -4222,32 +4352,35 @@ function renderAttack(message, html) {
     return;
   }
 
-  if (!target?.isOwner) return;
+  // A Wound not yet rolled has nothing to apply anywhere.
+  if (!result.wound) return;
 
-  // Answering an attack - by dodging or with a Counter Maneuver - is done from
-  // Respond, along with everything else that answers a Maneuver.
-  if (!result) return;
+  // One line per person this reader plays: an attack that reached four people is four
+  // separate amounts of Damage, taken by four different characters, and one of them
+  // having been dealt says nothing about the rest.
+  for (const entry of targetResults(attack)) {
+    const target = fromUuidSync(entry.uuid);
+    if (!target?.isOwner || !entry.own?.hit) continue;
 
-  // A miss ends it, and a Wound not yet rolled has nothing to apply.
-  if (!result.hit || !result.wound) return;
+    if (entry.own.applied) {
+      const note = document.createElement("div");
+      note.className = "dbu-settled-note";
+      note.textContent = `${target.name}: ${entry.own.damage} damage applied`;
+      container.append(note);
+      continue;
+    }
 
-  if (result.applied) {
-    const note = document.createElement("div");
-    note.className = "dbu-settled-note";
-    note.textContent = `${result.damage} damage applied`;
-    container.append(note);
-    return;
+    // A Wound the Soak Value absorbed entirely, or a Power Flare that beat it:
+    // nothing to apply.
+    if (entry.own.damage <= 0) continue;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Apply ${entry.own.damage} damage to ${target.name}`;
+    button.addEventListener("click", () => applyAttackDamage(message, target, attack));
+    container.append(button);
   }
-
-  // A miss, or a Wound the Soak Value absorbed entirely: nothing to apply.
-  if (result.damage <= 0) return;
-
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "dbu-clash-button";
-  button.textContent = `Apply ${result.damage} damage`;
-  button.addEventListener("click", () => applyAttackDamage(message, target, attack));
-  container.append(button);
 }
 
 function renderCriticalButton(message, html) {
