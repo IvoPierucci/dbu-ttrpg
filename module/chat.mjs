@@ -874,7 +874,7 @@ async function resettleAttack(message, situation) {
   spendChosen(situation.actor, answered);
 
   const strike = isAttacker ? settled : result.strike;
-  const byTarget = { ...result.byTarget };
+  let settledTargets = result.targets ?? [];
 
   for (const entry of branches) {
     const own = entry.own;
@@ -893,12 +893,13 @@ async function resettleAttack(message, situation) {
       }
     }
 
-    byTarget[entry.uuid] = { ...own, answer, hit, incomingDamage };
+    settledTargets = settledTargets.map(line =>
+      (line.uuid === entry.uuid) ? { ...own, answer, hit, incomingDamage } : line);
   }
 
   requestEdit(message, {
     type: "attack",
-    attack: { ...attack, result: { ...result, strike, byTarget } }
+    attack: { ...attack, result: { ...result, strike, targets: settledTargets } }
   });
 
   return true;
@@ -934,7 +935,7 @@ async function resettleWound(message, situation, attack, result) {
   spendChosen(situation.actor, answered);
 
   const wound = isAttacker ? settled : result.wound;
-  const byTarget = { ...result.byTarget };
+  let settledTargets = result.targets ?? [];
   const attacker = fromUuidSync(attack.attackerUuid);
 
   for (const entry of branches) {
@@ -955,12 +956,13 @@ async function resettleWound(message, situation, attack, result) {
     // exactly as a Direct Hit that did so on its own would.
     if (attacker) await maybeShakeAttacker(attacker, attack, defence, damage);
 
-    byTarget[entry.uuid] = { ...own, counterWound, effectiveWound, damage };
+    settledTargets = settledTargets.map(line =>
+      (line.uuid === entry.uuid) ? { ...own, counterWound, effectiveWound, damage } : line);
   }
 
   requestEdit(message, {
     type: "attack",
-    attack: { ...attack, result: { ...result, wound, byTarget } }
+    attack: { ...attack, result: { ...result, wound, targets: settledTargets } }
   });
 
   return true;
@@ -2710,7 +2712,13 @@ export async function postAttack(actor, target, maneuver,
           // may have effects to apply first, and a roll made before they do cannot be
           // taken back.
           ready: [],
-          defences: {},
+          // A list, not an object keyed by uuid: a uuid is full of dots and Foundry
+          // expands dotted keys when a document is written, so a key like
+          // "Actor.4Nx8qLmP2Zk" comes back as a nested Actor object and the lookup
+          // finds nothing. It cost every defence chosen by somebody who was not the
+          // last to confirm - those were written to the flag, mangled on the way, and
+          // read back as no defence at all, which is a Dodge.
+          defences: [],
           result: null
         }
       }
@@ -2873,9 +2881,12 @@ function chooseDefence(message, target, defence, wager = 0, foundation = "energy
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack || attack.result) return;
 
+  // Replaced rather than merged in, so choosing again overwrites rather than piling up.
+  const others = (attack.defences ?? []).filter(entry => entry.uuid !== target.uuid);
+
   return settleAttack(message, {
     ...attack,
-    defences: { ...attack.defences, [target.uuid]: { defence, wager, foundation } },
+    defences: [...others, { uuid: target.uuid, defence, wager, foundation }],
     ready: [...new Set([...(attack.ready ?? []), target.uuid])]
   });
 }
@@ -2952,14 +2963,14 @@ async function resolveAttack(message, attack) {
 
   // From here it branches. What each of them did about that Strike is theirs alone, and
   // one of them being missed says nothing about the next.
-  const byTarget = {};
+  const branches = [];
 
   for (const { uuid, actor: target } of targets) {
     const {
       defence: defense = "dodge",
       wager: defenceWager = 0,
       foundation: defenceFoundation = "energy"
-    } = attack.defences[uuid] ?? {};
+    } = defenceFor(attack, uuid) ?? {};
 
     const options = {
       extraDice: target.system.dice.extra.formula,
@@ -3019,7 +3030,8 @@ async function resolveAttack(message, attack) {
       });
     }
 
-    byTarget[uuid] = {
+    branches.push({
+      uuid,
       defense,
       defenseLabel: defence.label,
       // Carried through to the Wound Roll step, which is where Power Flare's own roll
@@ -3038,12 +3050,12 @@ async function resolveAttack(message, attack) {
       incomingDamage: incoming?.slots?.["incoming.damage"] ?? null,
       counterWound: null,
       applied: false
-    };
+    });
   }
 
   requestEdit(message, {
     type: "attack",
-    attack: { ...attack, result: { strike, byTarget, wound: null } }
+    attack: { ...attack, result: { strike, targets: branches, wound: null } }
   });
 
   // Cross Counter strikes back the moment the clash is settled. It is offered rather
@@ -3051,7 +3063,8 @@ async function resolveAttack(message, attack) {
   // Out-of-Sequence Maneuver - and offered to each of them who answered that way, since
   // one attack reaching four people can be struck back at by all four.
   for (const { uuid, name } of targets) {
-    if (!DEFENCES[byTarget[uuid].defense]?.counterAttacks) continue;
+    const own = branches.find(entry => entry.uuid === uuid);
+    if (!DEFENCES[own?.defense]?.counterAttacks) continue;
     requestEdit(message, {
       type: "offer",
       offer: {
@@ -3066,9 +3079,28 @@ async function resolveAttack(message, attack) {
   }
 }
 
-/** What happened to one target of an attack, or an empty shape before anything did. */
+/**
+ * What happened to one target of an attack, or nothing before anything did.
+ *
+ * A list rather than an object keyed by uuid, and that is not a style choice. A uuid is
+ * "Actor.4Nx8qLmP2Zk" - dots and all - and Foundry expands dotted keys when a document
+ * is written, so `{"Actor.4Nx8qLmP2Zk": ...}` comes back as `{Actor: {4Nx8qLmP2Zk:
+ * ...}}` and the lookup finds nothing. A list of entries carrying their own uuid
+ * survives whatever the write does to it.
+ */
 function targetResult(attack, uuid) {
-  return attack.result?.byTarget?.[uuid] ?? null;
+  return (attack.result?.targets ?? []).find(entry => entry.uuid === uuid) ?? null;
+}
+
+/** What one target chose to answer with, before any of it was rolled. */
+function defenceFor(attack, uuid) {
+  return (attack.defences ?? []).find(entry => entry.uuid === uuid) ?? null;
+}
+
+/** The target lines with one of them changed, leaving the rest exactly as they were. */
+function replaceTarget(attack, uuid, changes) {
+  return (attack.result?.targets ?? [])
+    .map(line => (line.uuid === uuid) ? { ...line, ...changes } : line);
 }
 
 /** Every target of an attack, paired with what happened to them. */
@@ -3439,12 +3471,12 @@ async function rollAttackWound(message, attack) {
   // Soak that is.
   const ignored = profileSoakIgnored(attacker, attack);
 
-  const byTarget = { ...attack.result.byTarget };
+  const settledTargets = [];
 
   for (const { uuid, actor: target, own } of targets) {
     // A miss takes nothing, and there is nothing here to work out for it.
     if (!own.hit) {
-      byTarget[uuid] = { ...own, counterWound: null, soak: 0, reduction: 0, damage: 0 };
+      settledTargets.push({ ...own, counterWound: null, soak: 0, reduction: 0, damage: 0 });
       continue;
     }
 
@@ -3515,14 +3547,14 @@ async function rollAttackWound(message, attack) {
 
     await maybeShakeAttacker(attacker, attack, defence, damage);
 
-    byTarget[uuid] = { ...own, counterWound, effectiveWound, soak, reduction, damage };
+    settledTargets.push({ ...own, counterWound, effectiveWound, soak, reduction, damage });
   }
 
   requestEdit(message, {
     type: "attack",
     // Damage is worked out here but not dealt: applying it is a separate, deliberate
     // step, so the table can rule on it before anyone loses Life.
-    attack: { ...attack, result: { ...attack.result, wound, byTarget } }
+    attack: { ...attack, result: { ...attack.result, wound, targets: settledTargets } }
   });
 }
 
@@ -3806,10 +3838,7 @@ async function applyAttackDamage(message, target, attack) {
     type: "attack",
     attack: {
       ...attack,
-      result: {
-        ...attack.result,
-        byTarget: { ...attack.result.byTarget, [target.uuid]: { ...own, applied: true } }
-      }
+      result: { ...attack.result, targets: replaceTarget(attack, target.uuid, { applied: true }) }
     }
   });
 }
