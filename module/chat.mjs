@@ -4,7 +4,8 @@ import { permits } from "./effects/interpreter.mjs";
 import { spendActions } from "./combat.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, pushes } from "./signature.mjs";
-import { diceLine, partLine, noteLine, breakdownTable, breakdownText } from "./breakdown.mjs";
+import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, breakdownTable, breakdownText }
+  from "./breakdown.mjs";
 import { collectReactive, applySlot } from "./effects/interpreter.mjs";
 import {
   DAMAGE_CATEGORIES,
@@ -969,7 +970,7 @@ async function rerollBaseDie(actor, side) {
     await extra.evaluate();
     total += extra.total;
     outcome = "critical";
-    lines.push(diceLine(extra, "Critical", { rank: "critical" }));
+    lines.push(diceLine(extra, "Karmic Chance - Critical"));
   }
 
   // Floored like every finished roll: a Botch takes what it takes, never past zero.
@@ -1878,6 +1879,26 @@ function atMoment(actor, moment, context = {}) {
 }
 
 /**
+ * A roll's dice, as the one or two rows they make.
+ *
+ * The Base Die first and on its own, because the Natural Result is read off it and
+ * nothing else - a Botch and a Critical both turn on that one number. Then every other
+ * die on one row, whatever put it there.
+ *
+ * The Base Die is `roll.dice[0]`: the formula is built with it first for exactly this
+ * reason, and the Extra Dice follow it.
+ */
+function rolledDice(roll, { rolled, natural, forcedNatural }, criticalTerms = []) {
+  const [base, ...extras] = roll.dice ?? [];
+  const rows = [baseDieLine(base?.expression ?? DBUCharacterData.BASE_DIE,
+    { rolled, natural, forcedNatural })];
+
+  const dice = extraDiceLine([...extras, ...criticalTerms]);
+  if (dice) rows.push(dice);
+  return rows;
+}
+
+/**
  * Settle one side of an opposed roll into a single number.
  *
  * Unlike a standalone check, an opposed roll cannot leave the critical die to a
@@ -1930,6 +1951,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   const evaluated = await evaluateCheck(actor, bonus, allExtra, baseDie);
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
+  // What the die actually showed, before an effect moved it. The shift is the whole of
+  // the difference, so this is the one subtraction that recovers it.
+  const rolled = natural - naturalShift;
 
   // Anything the player armed for this roll has now been used, whether it set the Base
   // Die or added to the total. Only the armed ones: an automatic effect swept up by the
@@ -1942,6 +1966,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // then indistinguishable from the result itself.
   let total = roll.total + naturalShift;
   let outcome = "";
+  let criticalTerms = [];
 
   // A willing failure is decided before the dice are read: the total is 0 whatever
   // they said, so nothing that would raise or lower it is worked out at all - unless
@@ -1959,7 +1984,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     requestActorUpdate(actor, { "system.willingFailure": false });
     // The dice are shown even though they did not count: a player who threw a roll
     // wants to see what they threw away, and a card that hides it looks like a bug.
-    const thrown = [diceLine(roll, "Base"), noteLine("Willing failure - the total is 0")];
+    const thrown = [
+      ...rolledDice(roll, { rolled, natural, forcedNatural }),
+      noteLine("Willing failure - the total is 0")
+    ];
     return {
       actorUuid: actor.uuid,
       actorName: actor.name,
@@ -1972,8 +2000,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   }
 
   // One line per thing that moved the number, gathered in whatever order the maths
-  // happens and put in reading order when it is drawn.
-  const lines = [diceLine(roll, "Base", { naturalShift, natural, forcedNatural })];
+  // happens and put in reading order when it is drawn. The Critical Extra Dice join
+  // the rest below, once it is known whether there are any.
+  const lines = [];
 
   for (const part of parts) {
     // A part worth nothing is left out rather than shown as zero: a row saying a
@@ -2011,8 +2040,13 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     await extra.evaluate();
     total += extra.total;
     outcome = "critical";
-    lines.push(diceLine(extra, "Critical", { rank: "critical" }));
+    // Extra Dice like any other, and shown with them: a player counting what they threw
+    // does not care which rule put each die in their hand.
+    criticalTerms = extra.dice;
   }
+
+  // Drawn now rather than first, so the Critical Extra Dice are among them.
+  lines.unshift(...rolledDice(roll, { rolled, natural, forcedNatural }, criticalTerms));
 
   // The finished total is a system value like any other: a Botch takes what it takes,
   // but never past zero. Otherwise a bad roll turns into a negative that an opponent

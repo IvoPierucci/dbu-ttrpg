@@ -26,7 +26,7 @@ const ARROW = "  →  ";
 /** Where each kind of line sits, top to bottom. */
 const LINE_ORDER = Object.freeze({
   base: 0,
-  critical: 1,
+  extra: 1,
   positive: 2,
   botch: 3,
   negative: 4,
@@ -34,34 +34,90 @@ const LINE_ORDER = Object.freeze({
 });
 
 /**
- * The dice, as one line.
+ * The Base Die.
  *
- * `each` is every die on its own and `value` is their sum, because both are worth
- * seeing: the sum is what enters the total, and the individual results are what a
- * player checks when they want to know whether the Extra Dice were any good.
+ * One die, and the number in brackets is its Natural Result - which is what a Botch and
+ * a Critical are read off, so it is the one number on this row anybody needs. When an
+ * effect moved it the bracket carries both, joined by an arrow: "10 → 7" says what was
+ * rolled and what it became, which no single figure can.
+ *
+ * A Base Die an effect stated outright was never rolled at all, so there is nothing to
+ * point away from - the arrow stands alone.
  */
-export function diceLine(roll, source, { rank = "base", naturalShift = 0, natural = null,
-                                  forcedNatural = null } = {}) {
-  const dice = roll.dice ?? [];
-  const each = dice.map(die => die.total);
-  const sum = each.reduce((total, value) => total + value, 0) + naturalShift;
+export function baseDieLine(die, { rolled = null, natural = null, forcedNatural = null } = {}) {
+  const shown = (forcedNatural !== null)
+    ? `→ ${forcedNatural}`
+    : (rolled !== natural) ? `${rolled} → ${natural}` : String(natural);
 
-  // With the Base Die stated by an effect it was never rolled, so the line says what it
-  // was set to rather than quoting a die that does not exist.
-  const written = (forcedNatural !== null)
-    ? `set to ${forcedNatural}`
-    : dice.map(die => die.expression).join(" + ");
+  return {
+    kind: "base",
+    rank: LINE_ORDER.base,
+    written: die ?? "",
+    each: [],
+    // What it contributes is the Natural Result; `shown` is how that is written.
+    value: (forcedNatural !== null) ? forcedNatural : natural,
+    shown,
+    source: "Base die"
+  };
+}
+
+/**
+ * Every Extra Die on the roll, on one line.
+ *
+ * Tier of Power Extra Dice, the Greater Dice a State grants, the dice an Energy Charge
+ * is worth, the Critical Extra Dice - all of them are Extra Dice, and a player counting
+ * what they threw does not care which rule put each one in their hand. So they are
+ * gathered, grouped by size and written smallest first: 1d4 + 2d6 + 1d8.
+ *
+ * Later dice are not folded in here. Karma and Karmic Chance happen after the roll is
+ * settled and because somebody chose them, and a row that hid that would be hiding the
+ * only part of the roll that was a decision.
+ */
+export function extraDiceLine(terms) {
+  // Grouped by number of faces, since that is what makes two dice the same die.
+  const byFaces = new Map();
+  for (const term of terms ?? []) {
+    const faces = term.faces ?? 0;
+    const results = (term.results ?? []).map(r => r.result ?? r);
+    const held = byFaces.get(faces) ?? { count: 0, results: [] };
+    held.count += results.length;
+    held.results.push(...results);
+    byFaces.set(faces, held);
+  }
+
+  const sizes = [...byFaces.keys()].sort((a, b) => a - b);
+  if (!sizes.length) return null;
+
+  const written = sizes.map(faces => `${byFaces.get(faces).count}d${faces}`).join(" + ");
+  const each = sizes.flatMap(faces => byFaces.get(faces).results);
+  const value = each.reduce((total, result) => total + result, 0);
 
   return {
     kind: "dice",
-    rank: LINE_ORDER[rank],
-    written,
+    rank: LINE_ORDER.extra,
+    written: `+${written}`,
     each,
-    value: sum,
-    source,
-    // Said on the line it happened to: the Natural Result is the Base Die's, and the
-    // Extra Dice beside it are untouched.
-    note: naturalShift ? `Natural Result ${natural}` : ""
+    value,
+    source: "Extra dice"
+  };
+}
+
+/**
+ * Dice rolled after the fact, by a Karmic Effect.
+ *
+ * Their own row for the reason they are not Extra Dice: they arrive once the roll has
+ * been read, because somebody spent a Karma Point on it.
+ */
+export function diceLine(roll, source, { rank = "positive" } = {}) {
+  const dice = roll.dice ?? [];
+  const each = dice.flatMap(die => (die.results ?? []).map(r => r.result ?? r));
+  return {
+    kind: "dice",
+    rank: LINE_ORDER[rank],
+    written: `+${dice.map(die => die.expression).join(" + ")}`,
+    each,
+    value: each.reduce((total, result) => total + result, 0),
+    source
   };
 }
 
@@ -109,14 +165,15 @@ export function breakdownTable(lines, total) {
     }
 
     const each = (line.each?.length > 1) ? `[${line.each.join(" + ")}]` : "";
-    const value = (line.kind === "dice") ? `[${line.value}]` : `[${signed(line.value)}]`;
-    const source = line.note ? `${esc(line.source)} · ${esc(line.note)}` : esc(line.source);
+    // `shown` is how a row writes its own value when the number alone will not do -
+    // the Base Die's "10 → 7", which says what was rolled and what it became.
+    const value = line.shown ?? ((line.kind === "dice") ? String(line.value) : signed(line.value));
 
     return `<tr>
       <td class="dbu-bd-written">${esc(line.written)}</td>
       <td class="dbu-bd-each">${each}</td>
-      <td class="dbu-bd-value">${value}</td>
-      <td class="dbu-bd-source">(${source})</td>
+      <td class="dbu-bd-value">[${esc(value)}]</td>
+      <td class="dbu-bd-source">(${esc(line.source)})</td>
     </tr>`;
   }).join("");
 
@@ -139,8 +196,8 @@ export function breakdownText(lines, total) {
   const parts = ordered(lines).map(line => {
     if (line.kind === "note") return line.source;
     const each = (line.each?.length > 1) ? ` [${line.each.join(" + ")}]` : "";
-    const value = (line.kind === "dice") ? line.value : signed(line.value);
-    const shown = (line.written === String(value)) ? "" : `${line.written} `;
+    const value = line.shown ?? ((line.kind === "dice") ? String(line.value) : signed(line.value));
+    const shown = (line.written === value) ? "" : `${line.written} `;
     return `${line.source}: ${shown}${each}${value}`.replace(/\s+/g, " ");
   });
 
