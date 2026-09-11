@@ -76,6 +76,24 @@
         {{/if}}
         <i class="stat-note">Dodge -{{system.diminishing.defense.penalty}} &middot; +{{system.diminishing.defense.perAttack}} per attack</i>
       </div>
+
+      {{! Not per-round wear like the two above: Super Stacks are held until something
+          takes them away. Shown beside them because this is where the counters live. }}
+      <div class="stat"
+           data-tooltip="Muscle Penalty: 1(bT) off Strike and Dodge per stack, 1(bT) more at three. Solid Bulk: 1(bT) of Soak per stack. Massive Power: 1/4 of your Force Modifier on the Wound Rolls of Physical and Energy Attacks, per stack.">
+        <em>Super Stacks</em>
+        {{#if combatEditMode}}
+        <input type="number" name="system.superStacks" value="{{system.superStacks}}"
+               min="0" max="{{system.superStack.max}}"/>
+        {{else}}
+        <span>{{system.superStack.stacks}}<span class="stat-of">/{{system.superStack.max}}</span></span>
+        {{/if}}
+        {{#if system.superStack.stacks}}
+        <i class="stat-note">Strike &amp; Dodge -{{system.superStack.musclePenalty}}
+          &middot; Soak +{{system.superStack.solidBulk}}
+          &middot; Wound +{{system.superStack.massivePower}}</i>
+        {{/if}}
+      </div>
     </div>
   </section>
 

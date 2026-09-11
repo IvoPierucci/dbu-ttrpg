@@ -254,6 +254,22 @@ const TABLE = [
   { key: "diminishing.defense.perAttack", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Stacks of Diminishing Defense gained per attack aimed at you." },
 
+  // --- Super Stacks ------------------------------------------------------------
+  // The count is resolved in CORE because everything it feeds - the Soak Value, and
+  // the two roll bonuses read off the sheet - is settled from CORE onwards.
+  { key: "superStacks", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Super Stacks you possess. Never counts for more than 3, however many are "
+       + "granted." },
+  { key: "superStack.musclePenalty", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "The Muscle Penalty your Super Stacks cost your Strike and Dodge Rolls. "
+       + "1(bT) per stack, and 1(bT) more at three. Zero while you hold none, so an "
+       + "effect adding to it adds to nothing." },
+  { key: "superStack.solidBulk", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "The Soak Value your Super Stacks grant: 1(bT) per stack." },
+  { key: "superStack.massivePower", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "What your Super Stacks add to the Wound Rolls of your Physical and Energy "
+       + "Attacks: 1/4 of your Force Modifier per stack, each quarter rounded down." },
+
   // --- Thresholds --------------------------------------------------------------
   { key: "threshold.penalty", phase: PHASES.LATE, kind: N, ops: NUMERIC,
     doc: "What failed Steadfast Checks cost your Combat Rolls." },

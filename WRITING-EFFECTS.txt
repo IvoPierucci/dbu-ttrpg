@@ -528,6 +528,8 @@ Range        range.melee  range.attack  area.size
 Initiative   initiative.advantage  turn.outOfOrder  skipTurn
 Attacks      attacks.free  diminishing.offense.perStack
              diminishing.defense.perAttack
+Super Stacks superStacks  superStack.musclePenalty  superStack.solidBulk
+             superStack.massivePower
 Thresholds   threshold.penalty  threshold.<name>.at  steadfast.target
 Resources    <name>.stacks  <name>.max
 
@@ -555,6 +557,22 @@ Three pairs sit close together and are not the same thing:
 
   skill.<name>         a bonus to rolls using that Skill
   skill.<name>.bonus   the Skill Bonus itself, as shown on your sheet
+
+Super Stacks are held rather than worn off per round, and `superStacks` is the
+one to write - the other three are what holding them is worth, and each of them
+is nothing at all while you hold none:
+
+  superStacks               how many you possess. Three is the ceiling, applied
+                            once where they are read, so `superStacks += 2` on a
+                            character already holding 3 is worth nothing.
+  superStack.musclePenalty  what they cost your Strike and Dodge Rolls: 1(bT)
+                            per stack, and 1(bT) more again at three.
+  superStack.solidBulk      the Soak Value they grant: 1(bT) per stack.
+  superStack.massivePower   what they add to the Wound Rolls of your Physical
+                            and Energy Attacks - 1/4 of your Force Modifier per
+                            stack, each quarter rounded down on its own. A Magic
+                            Attack gets none of it and the Muscle Penalty all
+                            the same.
 
 The full list, with what each one means, lives in the system's slot registry.
 

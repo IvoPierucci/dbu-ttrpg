@@ -2952,6 +2952,7 @@ async function resolveAttack(message, attack) {
   const strike = await rollSide(attacker, [
     { label: "Strike", value: attacker.system.combat.strike },
     ...profileStrikeParts(attacker, attack),
+    ...musclePenalty(attacker),
     { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty },
     ...thresholdPenalty(attacker)
   ], { ...attackerOptions, slot: "strike", attackingManeuver: true });
@@ -3464,6 +3465,7 @@ async function rollAttackWound(message, attack) {
     { label: "Wound", value: attacker.system.combat.wound[attack.foundation] },
     ...profileWoundParts(attacker, attack),
     ...advantageWoundParts(attacker, attack),
+    ...superStackWoundParts(attacker, attack),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...thresholdPenalty(attacker)
   ], {
@@ -3598,6 +3600,7 @@ function dodgeBonus(actor, { halved = false } = {}) {
   const other = actor.system.rollModifiers.dodge;
   if (other) parts.push({ label: "Dodge bonus", value: other });
 
+  parts.push(...musclePenalty(actor));
   parts.push({ label: "Dim. Defense", value: -actor.system.diminishing.defense.penalty });
   parts.push(...thresholdPenalty(actor));
   return parts;
@@ -3615,6 +3618,43 @@ function thresholdPenalty(actor) {
   return penalty
     ? [{ label: "Thresholds", written: `-${failures}(bT)`, value: -penalty }]
     : [];
+}
+
+/**
+ * The Muscle Penalty: what Super Stacks cost a Strike or a Dodge Roll.
+ *
+ * A part rather than something folded into the Strike and Dodge values, for the same
+ * reason Diminishing Offense is: four points going missing out of a roll with nothing
+ * on the card to say where reads as the roll being wrong.
+ *
+ * A Parry takes it too. The rule names Strike Rolls, and a Parry is a Strike Roll made
+ * defensively - unlike Diminishing Offense, which is spared a Parry because it is worn
+ * by *attacking* and a Parry is not an Attacking Maneuver. Nothing says the same of
+ * muscle: the weight slows the arm whichever direction it swings.
+ */
+function musclePenalty(actor) {
+  const { musclePenalty: penalty = 0, muscleMultiplier = 0 } = actor.system.superStack ?? {};
+  return penalty
+    ? [{ label: "Muscle Penalty", written: `-${muscleMultiplier}(bT)`, value: -penalty }]
+    : [];
+}
+
+/**
+ * Massive Power: what Super Stacks add to a Wound Roll.
+ *
+ * Only Physical and Energy Attacks, which is what the rule names - so a Magic Attack
+ * made by the same character gets the Muscle Penalty and none of this.
+ */
+function superStackWoundParts(attacker, attack) {
+  const { stacks = 0, massivePower = 0 } = attacker.system.superStack ?? {};
+  const reaches = DBUCharacterData.MASSIVE_POWER_FOUNDATIONS.includes(attack.foundation);
+  if (!massivePower || !reaches) return [];
+
+  return [{
+    label: "Super Stacks",
+    written: (stacks === 1) ? "+1/4 Force" : `+${stacks} × 1/4 Force`,
+    value: massivePower
+  }];
 }
 
 /**
@@ -3646,6 +3686,7 @@ const DEFENCES = {
     answer: (actor, options, attack) => rollSide(actor, [
       { label: "Strike", value: actor.system.combat.strike },
       { label: "Parry", value: actor.system.combat.parry ?? 0 },
+      ...musclePenalty(actor),
       ...chargePenalty(actor, attack),
       ...thresholdPenalty(actor)
     ], { ...options, slot: "strike" }),

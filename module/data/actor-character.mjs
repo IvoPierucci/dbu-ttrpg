@@ -334,6 +334,25 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   static FREE_ATTACKS_PER_ROUND = 3;
 
   /**
+   * The most Super Stacks a character can hold: "You can possess up to 3 Super Stacks."
+   *
+   * The one ceiling there is. The stored count is not clamped to it, so that a source
+   * granting a fourth can be seen to have granted one - what is capped is what holding
+   * them is worth, which is what everything else reads.
+   */
+  static MAX_SUPER_STACKS = 3;
+
+  /**
+   * Which Foundations Massive Power reaches: "the Wound Rolls of your Physical and
+   * Energy Attacks". A Magic Attack gets nothing from it, even though a Super Stack
+   * still costs its owner the same Muscle Penalty.
+   */
+  static MASSIVE_POWER_FOUNDATIONS = Object.freeze(["physical", "energy"]);
+
+  /** Massive Power applies this fraction of the Force Modifier, once per stack. */
+  static MASSIVE_POWER_DIVISOR = 4;
+
+  /**
    * Stacks of Diminishing Defense gained per Attacking Maneuver aimed at you: one at
    * Base Tier of Power 1-2, and one more for every two Tiers after that.
    */
@@ -593,6 +612,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // they cost is derived.
     schema.attacksThisRound = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
     schema.diminishingDefense = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
+
+    // --- Super Stacks ---
+    // How many the character holds. Nothing grants them yet; what holding them is worth
+    // is derived, and lives on `superStack` - singular, since it answers "what do your
+    // Super Stacks do" rather than "how many are there".
+    //
+    // No ceiling here on purpose. The rule's "up to 3" is applied once, where the stacks
+    // are read, so that a source handing out a fourth is visible rather than silently
+    // swallowed on the way in - a field clamping below its own rule is how Mega Flare
+    // lost three of its Energy Charges.
+    schema.superStacks = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 
     // Actions spent on Attacking Maneuvers since this was last read, which is the end
     // of the character's own turn. Compelled is what asks: "if you do not spend at
@@ -1127,6 +1157,57 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Initiative bonus: 1/2 Agility Score.
     this.initiativeBonus = withEffects(this, "initiative", Math.floor(atts.agility.score / 2));
 
+    // --- Super Stacks ---
+    // Extreme muscle, and it cuts both ways: it slows you down, it makes you harder to
+    // hurt, and it makes your own blows land heavier.
+    //
+    // Worked out here because Solid Bulk is part of the Soak Value just below, and the
+    // Force Modifier Massive Power reads is settled by now.
+    const superStacks = Math.max(0,
+      this.superStacks + slot(this, "superStacks"));
+
+    // "You can possess up to 3 Super Stacks." Applied once, here, so every reader is
+    // looking at the same number and none of them has to remember the cap.
+    const stacks = Math.min(DBUCharacterData.MAX_SUPER_STACKS, superStacks);
+
+    // Muscle Penalty: "For each Super Stack you possess, reduce your Strike and Dodge
+    // Rolls by 1(bT). If you possess 3 Super Stacks, increase your Muscle Penalty by an
+    // additional 1(bT)." So the third stack costs two helpings rather than one, and
+    // the multiplier - 1, 2, then 4 - is kept as its own number because the card writes
+    // the rule beside what it came to.
+    const muscleMultiplier = stacks
+      + ((stacks >= DBUCharacterData.MAX_SUPER_STACKS) ? 1 : 0);
+
+    // Massive Power: "apply 1/4 of your Force Modifier to the Wound Rolls of your
+    // Physical and Energy Attacks for each stack of Super Stack."
+    //
+    // What is applied once per stack is a quarter of the Modifier, so each helping
+    // rounds down on its own - a Force Modifier of 10 is 2 per stack and 6 at three
+    // stacks, not 7. That is the reading of "apply X for each stack"; the other one
+    // (a quarter of three times the Modifier) is a rule away if the table wants it.
+    const massivePerStack = Math.floor(
+      atts.force.mod / DBUCharacterData.MASSIVE_POWER_DIVISOR);
+
+    // Each of the three gated on actually holding a stack: every one of them is written
+    // "for each Super Stack you possess", so with none of them possessed there is
+    // nothing for an effect to increase either.
+    this.superStack = {
+      stacks,
+      max: DBUCharacterData.MAX_SUPER_STACKS,
+      // What the Muscle Penalty is written as, for the breakdown: "-2(bT)".
+      muscleMultiplier,
+      musclePenalty: stacks
+        ? withEffects(this, "superStack.musclePenalty", this.perBaseTier(muscleMultiplier))
+        : 0,
+      solidBulk: stacks
+        ? withEffects(this, "superStack.solidBulk", this.perBaseTier(stacks))
+        : 0,
+      massivePerStack,
+      massivePower: stacks
+        ? withEffects(this, "superStack.massivePower", stacks * massivePerStack)
+        : 0
+    };
+
     // Soak Value: the Tenacity Modifier, except that the Soak a character provides
     // for themselves never falls below their Tier of Power. External effects can
     // reduce the result further, down to a floor of 0 - nothing writes such a penalty
@@ -1140,8 +1221,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // it: "if the reduction to your Soak Value exceeds your Soak Value before applying
     // this penalty, increase any Damage you take by the difference". That difference is
     // exactly what the floor throws away.
+    // Solid Bulk goes in as part of your own Soak - inside the Slot rather than after
+    // it, so that anything multiplying your Soak Value multiplies this with it, which
+    // is what Calculation Priority asks of a multiplier on a finished value.
     const beforeFloor = withEffects(this, "soakValue.external",
-      withEffects(this, "soakValue", ownSoak) + this.externalModifiers.soak,
+      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk)
+        + this.externalModifiers.soak,
       { min: null });
 
     this.soakValue = Math.max(0, beforeFloor);
