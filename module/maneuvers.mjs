@@ -175,11 +175,12 @@ export const PROFILES = Object.freeze({
     damageCategory: "standard",
     summary: "A combination of several attacks done in sequence.",
     // Three more Strike Rolls after the hit and before the Wound Roll, each measured
-    // against what the defender's dice came to rather than against their finished roll.
+    // against the defence the target already made - the same roll that lost the first
+    // Clash, bonuses and all.
     followUps: { rolls: 3, woundPerHitPerTier: 2 },
     rules: [
       "After you hit, and before the Wound Roll, roll your Strike Roll three more times.",
-      "Each is measured against the Dice Score of the roll they answered with.",
+      "Each is measured against the roll they answered the first Strike with.",
       "Every one that beats it adds 2(T) to the Wound Roll."
     ]
   },

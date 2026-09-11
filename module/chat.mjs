@@ -2208,11 +2208,6 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     // Karmic Chance replaces the Base Die and re-reads the result from scratch, so it
     // needs the total without the old die's consequences already baked in.
     beforeOutcome: roll.total,
-    // The dice alone, before any bonus - which is what the rules call the Dice Score.
-    // Two rules already turn on it: Karmic Boost applies a Dice Score to a Combat Roll,
-    // and a Parry has its Dice Score reduced per Energy Charge. Combination measures
-    // its follow-up Strikes against the defender's.
-    diceScore: roll.dice.reduce((sum, die) => sum + die.total, 0) + naturalShift,
     // What went into it besides the dice, so the same roll can be made again without
     // rebuilding it from the sheet - which would quietly drop whatever an effect added.
     bonus,
@@ -2832,7 +2827,7 @@ function followUpRows(attack) {
   const profile = PROFILES[attack.profile];
   const against = (settled.beatable === null)
     ? "no roll to beat"
-    : `against a Dice Score of ${settled.beatable}`;
+    : `against their ${settled.beatable}`;
 
   // Written here rather than through attackSide, because these answer a different
   // question: not "what was this roll's outcome" but "did it beat the number". The
@@ -3356,15 +3351,20 @@ async function rollFollowUpStrikes(message, attack, attacker) {
   if (!plan) return;
 
   // Only against a defence that was rolled. Direct Hit, Guard and Power Flare answer
-  // with no roll at all, so there is no Dice Score to measure against and nothing to
-  // beat - the follow-ups are made and none of them can land.
+  // with no roll at all, so there is nothing to measure against and nothing to beat -
+  // the follow-ups are made and none of them can land.
   //
   // Measured against whoever was hit and rolled something. Combination has no area, so
   // in practice that is the one person it was aimed at; taking the first rather than
   // assuming there is only one keeps it honest if that ever changes.
+  //
+  // Against the whole Dodge they made, not the dice inside it. They are still defending
+  // with the roll they defended the first Strike with - the same number that lost - and
+  // measuring against the dice alone left them answering three more Strikes with a bare
+  // die while every bonus on the roll went missing.
   const answer = (attack.result?.targets ?? [])
     .find(line => line.hit && line.answer)?.answer ?? null;
-  const beatable = answer ? (answer.diceScore ?? 0) : null;
+  const beatable = answer ? (answer.total ?? 0) : null;
 
   const rolls = [];
   for (let i = 0; i < plan.rolls; i++) {
