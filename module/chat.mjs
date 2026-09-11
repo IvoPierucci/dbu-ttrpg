@@ -9,6 +9,7 @@ import {
   DEFEND_OPTIONS,
   MANEUVER_TYPES,
   PROFILES,
+  areaLabel,
   resolveDamageCategory,
   allManeuvers,
   declareAttack,
@@ -2349,18 +2350,24 @@ async function takeOutOfSequence(message, actor, offer) {
  */
 export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, charges = 0 },
-                                 { asOutOfSequence = false } = {}) {
+                                 { asOutOfSequence = false, alsoCaught = false } = {}) {
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
   // Strike Roll - the attack after your third is itself the one that suffers.
   //
   // The Actions it took are counted separately, for Compelled's end-of-turn check. An
   // Out-of-Sequence Maneuver ignores its Action Cost, so it spends none and none are
   // counted: the rule asks what you spent, and that spent nothing.
-  await actor.update({
-    "system.attacksThisRound": actor.system.attacksThisRound + 1,
-    "system.attackActionsThisTurn": actor.system.attackActionsThisTurn
-      + (asOutOfSequence ? 0 : (maneuver.actionCost ?? 1))
-  });
+  //
+  // Not for somebody the area caught. That is one Attacking Maneuver reaching further,
+  // not a second one: counting it again would blunt the attacker's own Strike Rolls
+  // for the rest of the round and pay off Compelled by standing in a crowd.
+  if (!alsoCaught) {
+    await actor.update({
+      "system.attacksThisRound": actor.system.attacksThisRound + 1,
+      "system.attackActionsThisTurn": actor.system.attackActionsThisTurn
+        + (asOutOfSequence ? 0 : (maneuver.actionCost ?? 1))
+    });
+  }
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
@@ -2374,6 +2381,11 @@ export async function postAttack(actor, target, maneuver,
           maneuverName: asOutOfSequence
             ? `${maneuver.name} (Out-of-Sequence)`
             : maneuver.name,
+          // Everything an added target needs to be given the same attack again, and
+          // the mark that says this card is one of those.
+          alsoCaught,
+          actionCost: maneuver.actionCost ?? 1,
+          tags: maneuver.tags ?? [],
           profile,
           profileLabel: PROFILES[profile].label,
           // Carried on the attack rather than looked up later: a Profile's Damage
@@ -2388,7 +2400,7 @@ export async function postAttack(actor, target, maneuver,
           // Powered "gains an Energy Charge", on top of anything the Energy Charge
           // Maneuver fed into it - and still held to the seven the rules allow.
           energyCharges: Math.min(
-            charges + (PROFILES[profile].grantsEnergyCharge ?? 0),
+            charges + (alsoCaught ? 0 : (PROFILES[profile].grantsEnergyCharge ?? 0)),
             DBUCharacterData.MAX_ENERGY_CHARGES
           ),
           signature: (maneuver.tags ?? []).includes("signature"),
@@ -2695,6 +2707,92 @@ function awaitingWhom(attack) {
 /**
  * Let the attacker bring what they have to the Strike, then mark them ready.
  */
+/**
+ * Hand the same attack to somebody else the area caught.
+ *
+ * No geometry. The Profile says it has a Line or a Sphere; who that actually covers is
+ * a question about where everyone is standing, and the player and the GM can answer it
+ * faster than any measurement of mine would. So this lists the characters on the scene
+ * and takes whoever is named.
+ *
+ * Each one gets a card of their own, carrying the same declaration - Profile,
+ * Foundation, wager, Charges - so the exchange that follows is the one that already
+ * works: they answer it, clash with it, and take their own Wound Roll. What is *not*
+ * repeated is the price: the Ki was paid once when the Maneuver was declared, and the
+ * Action and the attack itself are counted once for the same reason.
+ */
+async function addAreaTargets(message, attack, attacker) {
+  const already = new Set([attack.attackerUuid, ...attackTargets(attack).map(t => t.uuid)]);
+
+  // Everyone on the scene with a character sheet, minus the attacker and whoever is
+  // already in this exchange. Tokens rather than the Actors directory, since an
+  // unlinked token is its own character and two of them may share a name.
+  const candidates = (canvas?.tokens?.placeables ?? [])
+    .map(token => token.actor)
+    .filter(actor => actor && (actor.type === "character") && !already.has(actor.uuid));
+
+  // Named once each: two tokens of one linked Actor are one character standing in two
+  // places as far as the sheet is concerned, and hitting them twice is not a rule.
+  const unique = [...new Map(candidates.map(actor => [actor.uuid, actor])).values()];
+
+  if (!unique.length) {
+    ui.notifications.info("There is nobody else on this scene to catch.");
+    return;
+  }
+
+  const rows = unique.map(actor => `
+    <label class="dbu-respond-option">
+      <input type="checkbox" name="caught" value="${actor.uuid}"/>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(actor.name)}</span>
+      <span class="dbu-respond-source">${actor.system.life.value}/${actor.system.life.max} LP</span>
+    </label>`).join("");
+
+  const area = PROFILES[attack.profile]?.area;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${attack.maneuverName} - Add targets` },
+    content: `<p class="dbu-respond-hint">Who else does the
+      ${Handlebars.escapeExpression(areaLabel(area))} catch? Each one answers this
+      attack on a card of their own. Nothing is charged again.</p>${rows}`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Add",
+        callback: (event, button, dialog) =>
+          [...dialog.element.querySelectorAll('input[name="caught"]:checked')]
+            .map(input => input.value)
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if (!Array.isArray(chosen) || !chosen.length) return;
+
+  // Rebuilt from what the card carries rather than from the Maneuver it came from: the
+  // Maneuver may have been spent, edited or deleted since, and what matters is the
+  // attack as it was declared.
+  const maneuver = {
+    name: attack.maneuverName.replace(/ \(Out-of-Sequence\)$/, ""),
+    actionCost: attack.actionCost ?? 1,
+    tags: attack.tags ?? []
+  };
+
+  for (const uuid of chosen) {
+    const caught = fromUuidSync(uuid);
+    if (!caught) continue;
+    await postAttack(attacker, caught, maneuver, {
+      profile: attack.profile,
+      foundation: attack.foundation,
+      kiWager: attack.kiWager ?? 0,
+      // The Charges rode on the Maneuver, so they reach everyone it reaches - as the
+      // finished count, which is why postAttack does not grant the Profile's own Charge
+      // again here. Powered grants one Charge, not one per target.
+      charges: attack.energyCharges ?? 0
+    }, { alsoCaught: true });
+  }
+}
+
 async function attackerStage(message, attack, attacker) {
   const triggers = relevantTriggers(attacker, message, "response");
   if (!await prepareRoll(attacker, triggers, "Before the Strike Roll")) return;
@@ -3366,7 +3464,9 @@ function renderAttack(message, html) {
         ${Handlebars.escapeExpression(DAMAGE_CATEGORIES[attack.damageCategory]?.label ?? "")}${
           attack.kiWager ? ` &middot; ${attack.kiWager} KP wagered` : ""}${attack.energyCharges
           ? ` &middot; ${attack.energyCharges} Energy Charge${attack.energyCharges === 1 ? "" : "s"}`
-          : ""}</span>
+          : ""}${PROFILES[attack.profile]?.area
+          ? ` &middot; ${Handlebars.escapeExpression(areaLabel(PROFILES[attack.profile].area))}`
+          : ""}${attack.alsoCaught ? " &middot; caught in the area" : ""}</span>
     </div>
     ${result
       ? attackSide("Strike", attack.attackerName, result.strike)
@@ -3379,6 +3479,22 @@ function renderAttack(message, html) {
       : ""}
     <div class="dbu-clash-result">${result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
+
+  // An attack with an area reaches more than the one it was aimed at, and who it
+  // reaches is the table's to agree. Offered for as long as the attacker owns the
+  // card - the others are often worked out after the first exchange has settled, not
+  // before it - and only to them, since it is their Maneuver that is reaching.
+  const thrower = fromUuidSync(attack.attackerUuid);
+  if (PROFILES[attack.profile]?.area && thrower?.isOwner) {
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "dbu-clash-button";
+    add.textContent = "Add targets";
+    add.dataset.tooltip = `Hand this attack to whoever else the `
+      + `${areaLabel(PROFILES[attack.profile].area)} caught. Nothing is charged again.`;
+    add.addEventListener("click", () => addAreaTargets(message, attack, thrower));
+    container.append(add);
+  }
 
   // The attacker prepares their Strike before anything is rolled. The button doubles
   // as their confirmation, since the exchange waits on everyone having finished.

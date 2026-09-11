@@ -167,8 +167,8 @@ export const PROFILES = Object.freeze({
     // "Gains the Charging Assault Advantage for free", and a Wound bonus of half your
     // Agility Modifier when that Advantage carried you past your Normal Speed.
     signatureDiscountPerTier: 2,
-    needs: "Charging Assault, and the Squares moved this turn, are not tracked yet - "
-      + "the Advantage and the half-Agility bonus to the Wound Roll are the table's to "
+    needs: "Charging Assault, and the Squares moved this turn, are not tracked - the "
+      + "Advantage and the half-Agility bonus to the Wound Roll are the table's to "
       + "apply. The Signature Technique discount is applied.",
     rules: [
       "Gains the Charging Assault Advantage for free - no added KP, and no added TP as a Signature Technique.",
@@ -224,9 +224,13 @@ export const PROFILES = Object.freeze({
     damageCategory: "direct",
     summary: "A physical attack that launches a concussive shock wave at a distant opponent.",
     area: { shape: "line", magnitude: "standard" },
-    needs: "Areas of Effect are not built yet, so this is thrown at one target and the "
-      + "Line is the table's to resolve.",
-    rules: ["Has a Standard Line AoE."]
+    // A shock wave "at a distant opponent": this is the Profile that specifies
+    // otherwise, so the Melee Range the Physical Foundation demands does not bind it.
+    ignoresMeleeRule: true,
+    rules: [
+      "Has a Standard Line AoE.",
+      "Reaches past your Melee Range, unlike every other Physical Attack."
+    ]
   },
 
   sweeping: {
@@ -237,8 +241,6 @@ export const PROFILES = Object.freeze({
     summary: "The user strikes at multiple enemies simultaneously.",
     area: { shape: "sphere", magnitude: "minor", centredOnSelf: true, sparesAllies: true },
     doublesDiminishingDefense: true,
-    needs: "Areas of Effect are not built yet, so this is thrown at one target and the "
-      + "Sphere is the table's to resolve. The doubled Diminishing Defense is applied.",
     rules: [
       "Has a Minor Sphere AoE centred on you.",
       "Allies within it are not targeted.",
@@ -483,8 +485,19 @@ async function pick(title, question, buttons) {
  * plainly, so a Profile that is half machinery and half table ruling says so where it
  * is chosen rather than after it is thrown.
  */
+/** How an Area of Effect is named on the card and in the picker. */
+export function areaLabel(area) {
+  if (!area) return "";
+  const name = `${area.magnitude} ${area.shape}`.replace(/(^|\s)\w/g, c => c.toUpperCase());
+  return area.centredOnSelf ? `${name} (centred on you)` : name;
+}
+
 function profileTip(profile) {
   const lines = [profile.summary, ...(profile.rules ?? [])].filter(Boolean);
+  if (profile.area) {
+    lines.push("Add the others it catches with the button on the card - who the "
+      + `${areaLabel(profile.area)} covers is yours and the GM's to agree.`);
+  }
   if (profile.needs) lines.push(`Not automated: ${profile.needs}`);
   if (!lines.length) return "";
   return ` data-tooltip="${Handlebars.escapeExpression(lines.join("\n"))}"`;
