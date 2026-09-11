@@ -3325,9 +3325,14 @@ function profileSoakIgnored(attacker, attack) {
  */
 function awaitsFollowUps(attack) {
   return Boolean(PROFILES[attack.profile]?.followUps)
-    && Boolean(attack.result?.hit)
+    && anyoneHit(attack)
     && !attack.result?.wound
     && !attack.result?.followUps;
+}
+
+/** Whether the Strike landed on anybody at all. */
+function anyoneHit(attack) {
+  return (attack.result?.targets ?? []).some(line => line.hit);
 }
 
 /**
@@ -3353,7 +3358,12 @@ async function rollFollowUpStrikes(message, attack, attacker) {
   // Only against a defence that was rolled. Direct Hit, Guard and Power Flare answer
   // with no roll at all, so there is no Dice Score to measure against and nothing to
   // beat - the follow-ups are made and none of them can land.
-  const answer = attack.result?.answer;
+  //
+  // Measured against whoever was hit and rolled something. Combination has no area, so
+  // in practice that is the one person it was aimed at; taking the first rather than
+  // assuming there is only one keeps it honest if that ever changes.
+  const answer = (attack.result?.targets ?? [])
+    .find(line => line.hit && line.answer)?.answer ?? null;
   const beatable = answer ? (answer.diceScore ?? 0) : null;
 
   const rolls = [];
@@ -4380,7 +4390,9 @@ function renderAttack(message, html) {
   }
 
   // The attacker rolls their own Wound, so that step belongs to them.
-  if (result?.hit && !result.wound) {
+  // Landed on anybody. One Wound Roll serves everyone it hit, and one of them having
+  // dodged is no reason for the rest to go unwounded.
+  if (!result.wound && anyoneHit(attack)) {
     const attacker = fromUuidSync(attack.attackerUuid);
     if (!attacker?.isOwner) return;
 
