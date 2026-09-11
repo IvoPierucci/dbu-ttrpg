@@ -2891,18 +2891,20 @@ function deflectPenalty(actor, attack) {
 /**
  * Everyone the reader could step in with.
  *
- * Characters they own, holding the Intervene Maneuver, who are not the attacker. Being a
- * target of the attack is deliberately no bar: the trigger is written about the Ally
- * being hit and says nothing about what became of you, and stepping in while already in
- * the way is no worse for you - you take the Wound Roll once either way.
+ * Characters they own, holding the Intervene Maneuver, who are neither the attacker nor
+ * among the people the attack was aimed at: "when an Ally ... is hit by an Attacking
+ * Maneuver (that did not also target you)". Stepping in front of something already
+ * coming for you is not stepping in front of anything.
  */
 function possibleInterveners(attack) {
+  const aimedAt = new Set(attackTargets(attack).map(entry => entry.uuid));
   const seen = new Map();
 
   for (const token of (canvas?.tokens?.placeables ?? [])) {
     const actor = token.actor;
     if (!actor || (actor.type !== "character") || !actor.isOwner) continue;
     if (actor.uuid === attack.attackerUuid) continue;
+    if (aimedAt.has(actor.uuid)) continue;
     if (!actor.items.some(item => (item.type === "maneuver") && item.system.intervene)) continue;
     seen.set(actor.uuid, actor);
   }
@@ -2999,9 +3001,13 @@ async function playIntervene(message, attack, { who, ally, effect }) {
   const option = INTERVENE_OPTIONS[effect];
   if (!actor || !allyActor || !option) return;
 
-  // One per Ally: "no other Character can use the Intervene Maneuver for your selected
-  // Ally against that Attacking Maneuver."
-  const refused = whyNotIntervene(actor, ally, interventions(attack));
+  // Not a target of it, and one per Ally. Asked here as well as in the dialog: the list
+  // was drawn when the card was rendered, and an area attack can pick up new targets in
+  // between.
+  const refused = whyNotIntervene(actor, ally, {
+    interventions: interventions(attack),
+    targetUuids: attackTargets(attack).map(entry => entry.uuid)
+  });
   if (refused) {
     ui.notifications.warn(refused);
     return;
@@ -3891,11 +3897,6 @@ async function rollAttackWound(message, attack) {
   // the one who stepped in takes what the Ally would have.
   const shields = interventions(attack).filter(takesWoundFor);
   const shielded = new Set(shields.map(entry => entry.allyUuid));
-  // Somebody who stepped in while also being a target takes the Wound Roll once, not
-  // twice: "no recibis mas instancias de dano" - their own line is the instance they
-  // already had, and the intervention is where it is worked out.
-  const stepping = new Set(shields.map(entry => entry.uuid));
-
   for (const { uuid, actor: target, own } of targets) {
     // Somebody stood in front of them. They take nothing from this attack - what
     // becomes of what was aimed at them is worked out on the intervention below.
@@ -3903,15 +3904,6 @@ async function rollAttackWound(message, attack) {
       settledTargets.push({
         ...own, counterWound: null, soak: 0, reduction: 0, damage: 0,
         shieldedBy: interventionFor(attack, uuid)?.name ?? ""
-      });
-      continue;
-    }
-
-    // They stepped in for somebody else and were a target as well. One instance of the
-    // Wound Roll, taken as the one who stepped in - which is the intervention's line.
-    if (stepping.has(uuid)) {
-      settledTargets.push({
-        ...own, counterWound: null, soak: 0, reduction: 0, damage: 0, steppedIn: true
       });
       continue;
     }
@@ -4834,9 +4826,6 @@ function outcomeFor(attack, { own }) {
   // Somebody stepped in front of them, so nothing of this reaches them - bar whatever
   // is left over if the one who did is Defeated, which is said on that line instead.
   if (own.shieldedBy) return `shielded by ${own.shieldedBy}`;
-  // They stepped in for somebody else while being a target themselves. One instance of
-  // the Wound Roll, and it is taken on the intervention's line rather than here.
-  if (own.steppedIn) return "stepped in - taking the Wound Roll below";
 
   if (!own.hit) {
     // An Absolute Attack that missed still has a Wound Roll owed and Damage to come, so

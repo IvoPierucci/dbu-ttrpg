@@ -516,19 +516,26 @@ export function interveneOptionCost(option, actor) {
 /**
  * Whether this character may step in for that Ally against this attack.
  *
- * "If you use the Intervene Maneuver, no other Character can use the Intervene Maneuver
- * for your selected Ally against that Attacking Maneuver." One per Ally, not one per
- * attack: a Maneuver that caught four people can be intervened against four times, by
- * four different characters, once each.
+ * Two rules, and they refuse for different reasons.
  *
- * Being a target yourself is no bar. The rule's trigger is written about the Ally being
- * hit and says nothing about what happened to you - and stepping in while already in the
- * way costs you nothing extra, since you take the Wound Roll once either way.
+ * The attack must not have been aimed at you: "when an Ally who is not at Long Range is
+ * hit by an Attacking Maneuver (that did not also target you)". Stepping in front of
+ * something already coming for you is not stepping in front of anything.
+ *
+ * And one per Ally: "if you use the Intervene Maneuver, no other Character can use the
+ * Intervene Maneuver for your selected Ally against that Attacking Maneuver." One per
+ * Ally rather than one per attack - a Maneuver that caught four people can be intervened
+ * against four times, by four different characters, once each.
  *
  * @returns {null|string} null if it may be used, otherwise why it may not
  */
-export function whyNotIntervene(actor, allyUuid, interventions = []) {
+export function whyNotIntervene(actor, allyUuid,
+                                { interventions = [], targetUuids = [] } = {}) {
   if (actor.uuid === allyUuid) return "You cannot Intervene for yourself.";
+
+  if (targetUuids.includes(actor.uuid)) {
+    return `${actor.name} was targeted by this Attacking Maneuver, so they cannot Intervene against it.`;
+  }
 
   const taken = interventions.find(entry => entry.allyUuid === allyUuid);
   if (taken) return `${taken.name} has already Intervened for them against this attack.`;
