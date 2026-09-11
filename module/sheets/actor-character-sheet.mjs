@@ -14,6 +14,7 @@ import {
   toggleState
 } from "../conditions.mjs";
 import { actionsLeft, isTheirTurn, newRoundFor, spendActions } from "../combat.mjs";
+import { baseDieLine, extraDiceLine, partLine, noteLine, floorLine } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
   answeredLatestManeuver,
@@ -608,7 +609,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // Not a Skill roll, so the critical uses the character's Critical Extra Dice.
     return this.#rollCheck({
-      bonus: attribute.mod,
+      parts: [{ label, value: attribute.mod }],
       flavor: `${label} Check`,
       criticalDice: this.actor.system.dice.critical.formula
     });
@@ -633,7 +634,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!ready) return;
 
     return this.#rollCheck({
-      bonus: save.value,
+      parts: [{ label: save.label, value: save.value }],
       flavor: `${save.label} Saving Throw`,
       criticalDice: this.actor.system.dice.critical.formula
     });
@@ -661,7 +662,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (combatant) return game.combat.rollInitiative([combatant.id]);
 
     return this.#rollCheck({
-      bonus: this.actor.system.initiativeBonus,
+      parts: [{ label: "Initiative", value: this.actor.system.initiativeBonus }],
       flavor: "Initiative",
       criticalDice: this.actor.system.dice.critical.formula,
       urgent: true
@@ -1117,10 +1118,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * its adjusted total in the flavor, and a critical is flagged for the chat hook,
    * which offers the extra die as a button on the message (see chat.mjs).
    */
-  async #rollCheck({ bonus, flavor, criticalDice, skillRoll = false, urgent = false }) {
+  async #rollCheck({ parts = [], flavor, criticalDice, skillRoll = false, urgent = false }) {
     // Same rule as a Combat Roll: penalties cancel bonuses but never take a roll below
-    // what the dice said.
-    bonus = Math.max(0, bonus);
+    // what the dice said - and what the floor hands back is shown rather than left for
+    // the reader to discover by failing to add the column up.
+    const netted = parts.reduce((sum, part) => sum + part.value, 0);
+    const bonus = Math.max(0, netted);
 
     // Neither a Skill roll nor an Attribute Check is a Combat Roll, so only a Skill
     // roll loses the flat 2; everything else loses 2(bT).
@@ -1130,6 +1133,21 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { roll, natural, botch, critical } = await evaluateCheck(this.actor, bonus);
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
+
+    // The rows every other roll in the system is read as. A Skill Check used to show
+    // Foundry's own dice tooltip and nothing about where the bonus came from, or - on a
+    // Botch - a hand-built sentence quoting the raw formula. Same builders, same table.
+    const rows = () => {
+      const [base, ...extras] = roll.dice ?? [];
+      const lines = [baseDieLine(base?.expression ?? DBUCharacterData.BASE_DIE,
+        { rolled: natural, natural })];
+      const dice = extraDiceLine(extras, "Extra dice");
+      if (dice) lines.push(dice);
+      for (const part of parts) if (part.value) lines.push(partLine(part));
+      const held = floorLine(bonus - netted, "Penalties stop at the dice");
+      if (held) lines.push(held);
+      return lines;
+    };
 
     // What Karmic Chance needs to roll this again: the Base Die it got, what the roll
     // came to before that die's consequences, and which Botch penalty this kind of
@@ -1155,7 +1173,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         flavor: `${flavor} — Willing failure`,
         rolls: [roll],
         content: checkCard({
-          parts: `${roll.formula} = <strong>${roll.total}</strong> &nbsp;&middot;&nbsp; willing failure`,
+          lines: [...rows(), noteLine("Willing failure - the total is 0")],
           total: 0,
           outcome: "willing",
           owner: this.actor.uuid
@@ -1173,28 +1191,53 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // Floored at zero, as every other value is: the penalty cancels what the roll
       // came to rather than pushing it below nothing.
       const botched = Math.max(0, roll.total - botchPenalty);
-      const parts = `${roll.formula} = <strong>${roll.total}</strong>`
-        + ` &nbsp;&minus;&nbsp; botch <strong>${botchPenalty}</strong>`;
+      const lines = [
+        ...rows(),
+        // A Skill roll loses a flat 2; everything else loses 2(bT).
+        partLine({
+          label: "Botch",
+          written: skillRoll ? "-2" : "-2(bT)",
+          value: -botchPenalty,
+          rank: "botch"
+        }),
+        floorLine(botched - (roll.total - botchPenalty), "Nothing below zero")
+      ].filter(Boolean);
+
       await ChatMessage.create({
         speaker,
         flavor: `${flavor} — Botch`,
         rolls: [roll],
-        content: checkCard({ parts, total: botched, outcome: "botch", owner: this.actor.uuid }),
-        flags: { "dbu-ttrpg": { check: { ...rerollable, total: botched, outcome: "botch" } } }
+        content: checkCard({ lines, total: botched, outcome: "botch", owner: this.actor.uuid }),
+        flags: {
+          "dbu-ttrpg": { check: { ...rerollable, total: botched, outcome: "botch", lines } }
+        }
       });
       return;
     }
 
-    await roll.toMessage({
+    // Posted as our own card rather than Foundry's, so a Skill Check is read the same
+    // way as everything else. The Roll rides along on the message, which is what the
+    // Critical Die button reaches for and what lets Foundry animate the dice.
+    const lines = rows();
+    await ChatMessage.create({
       speaker,
       flavor: critical ? `${flavor} — Critical` : flavor,
+      rolls: [roll],
+      content: checkCard({
+        lines,
+        total: roll.total,
+        outcome: critical ? "critical" : "",
+        owner: this.actor.uuid
+      }),
       // Picked up by the chat hook, which offers the extra die as a button, and the
       // Karmic Chance button beside it.
       flags: {
         "dbu-ttrpg": {
           criticalPending: critical,
           criticalDice,
-          check: { ...rerollable, total: roll.total, outcome: critical ? "critical" : "" }
+          check: {
+            ...rerollable, total: roll.total, outcome: critical ? "critical" : "", lines
+          }
         }
       }
     });
@@ -1235,8 +1278,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!ready) return;
 
     // A Skill's critical die is a flat 1d4: it does not grow with Tier of Power.
+    // Two rows, because they are two things: the Skill Bonus the sheet shows, and
+    // whatever applies only to rolling this Skill - which does not raise that Bonus and
+    // must not look as though it did.
     return this.#rollCheck({
-      bonus: total,
+      parts: [
+        { label: name, value: skill.bonus },
+        { label: "Effects", value: skill.roll - skill.bonus }
+      ],
       flavor: `${name} Check`,
       criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,
       skillRoll: true

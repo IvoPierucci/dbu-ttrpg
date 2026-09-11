@@ -4,8 +4,8 @@ import { permits } from "./effects/interpreter.mjs";
 import { spendActions } from "./combat.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, pushes } from "./signature.mjs";
-import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, breakdownTable, breakdownText }
-  from "./breakdown.mjs";
+import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, floorLine,
+         fromOutcome, withoutOutcome, breakdownTable, breakdownText } from "./breakdown.mjs";
 import { collectReactive, applySlot } from "./effects/interpreter.mjs";
 import {
   DAMAGE_CATEGORIES,
@@ -337,14 +337,22 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
  * Card for a check whose result needs to stand out. The parts line keeps the working
  * visible; the total is what the player actually reads, so it carries the emphasis.
  */
-export function checkCard({ parts, total, outcome, owner = null }) {
+export function checkCard({ parts, total, outcome, owner = null, lines = null }) {
   // `owner` marks the line as a breakdown of somebody's roll rather than a statement of
   // what happened. A Karma spend or a Ki Surge names itself and stays public; the dice
   // and bonuses behind a roll belong to whoever made it.
   const attribution = owner ? ` data-owner="${owner}"` : "";
+
+  // The same rows a Clash hover shows, on the same cards the sheet posts. A check is
+  // read at a glance and inspected on hover, which is how every other roll works -
+  // there is no reason a Perception Check should be the one that reads differently.
+  const tip = lines
+    ? ` data-tooltip-html="${Handlebars.escapeExpression(breakdownTable(lines, total))}"`
+    : "";
+
   return `
     <div class="dbu-check">
-      <div class="dbu-check-parts"${attribution}>${parts}</div>
+      <div class="dbu-check-parts"${attribution}${tip}>${parts ?? breakdownText(lines ?? [], total)}</div>
       <div class="dbu-check-total dbu-${outcome}">${total}</div>
     </div>`;
 }
@@ -957,12 +965,12 @@ async function rerollBaseDie(actor, side) {
       ?? actor.system.botch?.penalty ?? DBUCharacterData.BOTCH_PENALTY;
     total -= penalty;
     outcome = "botch";
-    lines.push(partLine({
+    lines.push(fromOutcome(partLine({
       label: "Botch",
       written: side.botchPenalty ? "-2" : "-2(bT)",
       value: -penalty,
       rank: "botch"
-    }));
+    })));
   }
   else if (critical) {
     const formula = side.criticalDice ?? actor.system.dice.critical.formula;
@@ -970,7 +978,7 @@ async function rerollBaseDie(actor, side) {
     await extra.evaluate();
     total += extra.total;
     outcome = "critical";
-    lines.push(diceLine(extra, "Karmic Chance - Critical"));
+    lines.push(fromOutcome(diceLine(extra, "Karmic Chance - Critical")));
   }
 
   // Floored like every finished roll: a Botch takes what it takes, never past zero.
@@ -1018,12 +1026,15 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
   let total = side.total;
   let outcome = side.outcome;
 
-  // Karmic Chance: a different Base Die entirely.
+  // Karmic Chance: a different Base Die entirely. The new total is worked out from what
+  // the roll came to *before* the old die's consequences, so those consequences come off
+  // the card with it - a Botch row left standing beside a total reached without it is a
+  // column that will not add up.
   if ((queue ?? []).some(call => call.verb === "reroll")) {
     const again = await rerollBaseDie(actor, side);
     total = again.total;
     outcome = again.outcome;
-    lines.push(...again.lines);
+    lines.splice(0, lines.length, ...withoutOutcome(lines), ...again.lines);
   }
 
   for (const granted of slots["roll.dice"] ?? []) {
@@ -1947,7 +1958,8 @@ function rolledDice(roll, { rolled, natural, forcedNatural }, groups = [], criti
   const leftover = extraDiceLine(extras.slice(at), "Extra dice");
   if (leftover) rows.push(leftover);
 
-  const crit = extraDiceLine(criticalTerms, "Critical");
+  // Read off the Base Die, so a Karmic Chance that replaces that die replaces these too.
+  const crit = fromOutcome(extraDiceLine(criticalTerms, "Critical"));
   if (crit) rows.push(crit);
 
   return rows;
@@ -1971,7 +1983,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // taken off it than it had adds nothing rather than subtracting - so a roll always
   // comes to at least what the dice said, which is why an opponent who forgoes their
   // own roll can still be hit.
-  const bonus = Math.max(0, parts.reduce((sum, part) => sum + part.value, 0));
+  const netted = parts.reduce((sum, part) => sum + part.value, 0);
+  const bonus = Math.max(0, netted);
 
   // Asked before the dice are picked up, because an effect that sets the Base Die
   // replaces the roll rather than adjusting it: rolling a d10 and then throwing the
@@ -2077,6 +2090,11 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     if (part.value) lines.push(partLine(part));
   }
 
+  // The floor the penalties met, shown rather than left for the reader to discover by
+  // failing to add the column up.
+  const held = floorLine(bonus - netted, "Penalties stop at the dice");
+  if (held) lines.push(held);
+
   // Said out loud, because it is why the roll happened at all: the player asked to fail
   // and the roll would not let them.
   if (refusedWilling) {
@@ -2093,14 +2111,14 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
       : (actor.system.botch?.skill ?? DBUCharacterData.BOTCH_PENALTY);
     total -= penalty;
     outcome = "botch";
-    lines.push(partLine({
+    lines.push(fromOutcome(partLine({
       label: "Botch",
       // The notation the rulebook states it in, which is not the same question as what
       // it came to - 2(bT) is 6 at Base Tier 3, and both are worth seeing.
       written: combatRoll ? "-2(bT)" : "-2",
       value: -penalty,
       rank: "botch"
-    }));
+    })));
   }
   else if (critical) {
     const extra = new Roll(criticalDice);
@@ -2118,6 +2136,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // The finished total is a system value like any other: a Botch takes what it takes,
   // but never past zero. Otherwise a bad roll turns into a negative that an opponent
   // has to beat from below, which is not a thing the rules ask anyone to do.
+  const floored = floorLine(Math.max(0, total) - total, "Nothing below zero");
+  if (floored) lines.push(floored);
   total = Math.max(0, total);
 
   return {
@@ -4088,8 +4108,16 @@ async function rollCriticalDie(message, button, criticalDice) {
   await critRoll.evaluate();
 
   const baseTotal = baseRoll?.total ?? 0;
-  const parts = `${baseRoll?.formula ?? "check"} = <strong>${baseTotal}</strong>`
-    + ` &nbsp;+&nbsp; crit ${critRoll.formula} = <strong>${critRoll.total}</strong>`;
+  const check = message.getFlag(SCOPE, CHECK_FLAG);
+
+  // The rows the check was posted with, plus the die just rolled. Kept rather than
+  // rebuilt: the original said which Skill, which Saving Throw, what an effect added,
+  // and a card that threw all that away to say "check = 14" told the reader less after
+  // the Critical than before it.
+  const lines = [
+    ...(check?.lines ?? []),
+    fromOutcome(diceLine(critRoll, "Critical", { rank: "extra" }))
+  ];
 
   await ChatMessage.create({
     speaker: message.speaker,
@@ -4097,10 +4125,10 @@ async function rollCriticalDie(message, button, criticalDice) {
     // Only the new die is attached, so the original dice are not re-animated.
     rolls: [critRoll],
     content: checkCard({
-      parts,
+      lines,
       total: baseTotal + critRoll.total,
       outcome: "critical",
-      owner: message.getFlag(SCOPE, CHECK_FLAG)?.actorUuid ?? null
+      owner: check?.actorUuid ?? null
     })
   });
 

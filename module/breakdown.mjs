@@ -36,7 +36,10 @@ const LINE_ORDER = Object.freeze({
   positive: 2,
   botch: 3,
   negative: 4,
-  note: 5
+  // What a floor handed back, which has to come after everything it was measured
+  // against - a clamp is the last thing that happens to a number.
+  floor: 5,
+  note: 6
 });
 
 /**
@@ -124,6 +127,23 @@ export function diceLine(roll, source, { rank = "positive" } = {}) {
   };
 }
 
+/**
+ * Lines that came from how the dice landed rather than from what was added to them.
+ *
+ * A Botch and the Critical Extra Dice are read off the Base Die, so replacing that die
+ * replaces them - and Karmic Chance replaces it. Marked here so the reroll can take
+ * them away rather than leaving a Botch on the card that the new total was worked out
+ * without.
+ */
+export function fromOutcome(line) {
+  return line ? { ...line, outcome: true } : line;
+}
+
+/** Whatever a roll's lines are, minus the ones its Base Die decided. */
+export function withoutOutcome(lines) {
+  return (lines ?? []).filter(line => !line.outcome);
+}
+
 /** One thing added to or taken off the roll. */
 export function partLine(part) {
   const value = part.value ?? 0;
@@ -141,6 +161,22 @@ export function partLine(part) {
 /** Something that happened to the roll that is not a number. */
 export function noteLine(text) {
   return { kind: "note", rank: LINE_ORDER.note, written: "", value: null, source: text };
+}
+
+/**
+ * What a floor handed back.
+ *
+ * A table of signed numbers with an answer ruled off underneath is an addition, and a
+ * reader who cannot make it come out will conclude the card is lying rather than that a
+ * rule quietly clamped something. So every clamp that bites gets a row: the rules do
+ * this in two places, and neither of them was visible.
+ *
+ * Returns nothing when the floor did not bite, since a row saying a rule left the
+ * number alone is a row to read past.
+ */
+export function floorLine(given, source) {
+  if (!given) return null;
+  return { ...partLine({ label: source, value: given }), rank: LINE_ORDER.floor };
 }
 
 /** A number with its sign always shown, since a column of them is read by sign. */
