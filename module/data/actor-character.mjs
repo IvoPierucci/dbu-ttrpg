@@ -1220,8 +1220,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       },
       defense: {
         stacks: this.diminishingDefense,
+        // The Base Tier, which is what the rule names and what the function's own
+        // parameter is called. It was being handed the current Tier, so a Transformation
+        // made every attack aimed at you worth more stacks than it should be.
         perAttack: withEffects(this, "diminishing.defense.perAttack",
-          DBUCharacterData.diminishingDefensePerAttack(this.tierOfPower)),
+          DBUCharacterData.diminishingDefensePerAttack(this.baseTierOfPower)),
         penalty: this.diminishingDefense
       }
     };

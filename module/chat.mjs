@@ -3828,23 +3828,32 @@ async function applyAttackDamage(message, target, attack) {
   const { damage } = own;
 
   // Sweeping: "if you deal Damage with this Attacking Maneuver, double the amount of
-  // Diminishing Defense stacks a target would receive from it." It is settled here
-  // because this is the first point at which "if you deal Damage" has an answer - the
-  // stacks were handed out when the Clash was, before the Wound Roll existed. So the
-  // second helping is added now, and only when Damage was actually dealt.
-  if ((damage > 0) && PROFILES[attack.profile]?.doublesDiminishingDefense
-      && (DEFENCES[own.defense]?.gainsDiminishingDefense) && !own.forced) {
-    await requestActorUpdate(target, {
-      "system.diminishingDefense":
-        target.system.diminishingDefense + target.system.diminishing.defense.perAttack
-    });
-  }
+  // Diminishing Defense stacks a target would receive from it." Settled here because
+  // this is the first point at which "if you deal Damage" has an answer - the stacks
+  // were handed out when the Clash was, before the Wound Roll existed. So the second
+  // helping is added now, and only when Damage was actually dealt.
+  const doubled = (damage > 0)
+    && PROFILES[attack.profile]?.doublesDiminishingDefense
+    && DEFENCES[own.defense]?.gainsDiminishingDefense
+    && !own.forced;
 
   // Floored at zero for everyone except whoever has been granted otherwise - the Undying
   // State being the one thing in the rules that grants it.
   const settled = target.system.life.value - damage;
   const floor = target.system.effects?.slots?.["life.allowNegative"] ? settled : Math.max(0, settled);
-  await target.update({ "system.life.value": floor });
+
+  // One write, off one reading of the character. Two updates each doing their own
+  // read-and-add is how a number that was raised twice ends up raised once: whichever
+  // read second may not have seen the first yet.
+  await target.update({
+    "system.life.value": floor,
+    ...(doubled
+      ? {
+        "system.diminishingDefense":
+          target.system.diminishingDefense + target.system.diminishing.defense.perAttack
+      }
+      : {})
+  });
 
   // "If you successfully Damage an Opponent" - which is answered here and nowhere
   // earlier. The Clash arrives as its own card, because it is a Clash: two characters,
