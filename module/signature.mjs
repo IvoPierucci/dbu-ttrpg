@@ -30,9 +30,9 @@ const ASKS = Object.freeze({
   "charging-assault": {
     field: "squaresCharged",
     label: "Squares charged",
-    hint: "How far did you move towards them? Up to your Boosted Speed, in a straight "
-      + "line, ending with them in your Melee Range. Past the third Square each one "
-      + "adds to the Wound Roll."
+    // Short enough to read at a glance. The full rule is in the Trait file and on the
+    // Profile's own hover; a field hint is there to say what number goes in the box.
+    hint: "Squares moved towards them. Each one past the third adds to the Wound Roll."
   }
 });
 

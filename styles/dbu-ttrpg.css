@@ -349,10 +349,17 @@
 }
 
 /* Declared alongside the Profile, since both are paid for at once. */
+/* A number to type, with what it is for underneath it.
+
+   The explanation wraps to its own line rather than sitting beside the input. On one
+   row a dialog has no reason to be narrower than its longest sentence, and Charging
+   Assault's runs to about ninety characters - which stretched the window most of the
+   way across the screen to hold a field three digits wide. */
 .dbu-wager {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
   margin-top: 6px;
 }
 
@@ -361,6 +368,8 @@
 }
 
 .dbu-wager em {
+  /* Its own line, and free to wrap within it. */
+  flex-basis: 100%;
   font-style: italic;
   font-size: 10px;
   opacity: 0.7;
@@ -1761,6 +1770,14 @@
    light against a dark ground. */
 
 .application.dbu-dialog {
+  /* A dialog is sized to its contents, so one long sentence in it decides how wide the
+     window is - Charging Assault's hint runs to about ninety characters and stretched
+     the window most of the way across the screen to hold a field three digits wide.
+     Capped so prose wraps instead: a short column read straight down beats a line
+     tracked across a monitor, and the window stays near where the eye already is.
+     Nothing is cut off, and a dialog that wants less keeps its own width. */
+  max-width: min(440px, 90vw);
+
   --background: var(--dbu-chat-bg);
   --color-text-primary: var(--dbu-chat-text);
   --color-text-secondary: var(--dbu-chat-dim);
@@ -1790,6 +1807,10 @@
   color: var(--dbu-chat-text);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+
+  /* The frame carries the same ceiling; this one holds when the frame is given an
+     explicit width instead of being measured. */
+  max-width: min(440px, 90vw);
 }
 
 .application.dbu-dialog .window-content p,
