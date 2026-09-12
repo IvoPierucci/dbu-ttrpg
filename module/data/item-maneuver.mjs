@@ -79,6 +79,12 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * however it was reached.
        */
       grapple: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Throws the Character this one is already holding: a Grapple Check against their
+       * own Grappled, with no target to pick, since being the Grappler names exactly one
+       * Character and the Grapple already knows which.
+       */
+      launch: new fields.BooleanField({ required: true, initial: false }),
 
       /**
        * Who this Maneuver gives an opening to, in the rulebook's own words - "All

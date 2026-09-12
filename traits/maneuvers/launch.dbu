@@ -1,0 +1,44 @@
+id: launch
+name: Launch
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+launch: true
+usageLimit: 1/round
+source: Core Rule
+description: >
+  Throw the Character you are holding. A Grapple Check against your own Grappled;
+  win and you may let go to send them flying, lose and they are the one who gets
+  away.
+text: >
+  Launch Maneuver [1/Round]: Throw a Character you are holding.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Make a Grapple Check against an Opponent you are currently in a Grapple
+  with as the Grappler. If you win, you may end the Grapple to move that Character
+  a number of Squares up to your Might in any direction. If you lose, the Grappled
+  Opponent escapes the Grapple.
+
+# No target to pick. "An Opponent you are currently in a Grapple with as the Grappler"
+# names exactly one Character, and the Grapple already knows who that is - so asking
+# for a target would be asking a question with one answer, and a wrong answer to it
+# would be a Launch aimed at somebody who is not being held.
+
+---
+
+# The Check is the Grapple's own, and the roles are the Grapple's own: the Grappler is
+# the Initiator here as in every other Grapple Check, which is also what makes losing
+# it release the Grappled rather than tie.
+#
+# What winning buys is an offer rather than something that happens. "You MAY end the
+# Grapple to move that Character" - two things, and the first is the price of the
+# second, so declining is a real answer and the Grapple simply stays. The offer is a
+# button on the settled card, the same shape Knockback's collision uses.
+#
+# The throw itself is the table's, as every movement here is. What the system owes is
+# the number: "a number of Squares up to your Might", read off the Grappler when the
+# button is drawn rather than when the Check was opened, so it is their Might now.

@@ -306,6 +306,25 @@ async function settleGrapple(message, clash) {
 
   const winner = whoWonClash(clash.result);
 
+  if (clash.grapple.kind === "launch") {
+    // "If you lose, the Grappled Opponent escapes the Grapple." A tie is a loss here, as
+    // it is in every Grapple Check: the Defender takes one, and the Defender is the
+    // Grappled however the Check was opened.
+    if (winner !== "challenger") {
+      await endGrapple(grappler, grappled);
+      await settledNote(message,
+        `${grappler.name} loses the Grapple Check, and ${grappled.name} escapes.`);
+      return;
+    }
+
+    // "You MAY end the Grapple to move that Character." Two things, and the first is the
+    // price of the second - so it is offered rather than done, and declining leaves the
+    // Grapple exactly where it was.
+    await settledNote(message,
+      `${grappler.name} wins, and may let go of ${grappled.name} to throw them.`);
+    return;
+  }
+
   if (clash.grapple.kind === "escape") {
     if (winner !== "defender") {
       await settledNote(message, `${grappled.name} does not break free.`);
@@ -340,6 +359,36 @@ async function settleGrapple(message, clash) {
   await beginGrapple(grappler, grappled);
   await settledNote(message,
     `${grappler.name} has ${grappled.name} in a Grapple.`);
+}
+
+/**
+ * Take the throw a won Launch offered: let go, and say how far they may be sent.
+ *
+ * The movement itself is the table's, as every movement here is. What this does is the
+ * half the rules put a number on - ending the Grapple, and saying what that number is -
+ * and then gets out of the way.
+ */
+async function applyLaunch(message, clash, squares) {
+  const grappler = fromUuidSync(clash.challengerUuid);
+  const grappled = fromUuidSync(clash.defenderUuid);
+  if (!grappler || !grappled) return;
+
+  // Marked first, so a second click while the first is still working cannot end the
+  // Grapple twice and say so twice.
+  requestEdit(message, {
+    type: "clash",
+    clash: { ...clash, grapple: { ...clash.grapple, thrown: true } }
+  });
+
+  await endGrapple(grappler, grappled);
+
+  await ChatMessage.create({
+    speaker: message.speaker,
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(grappler.name)}
+      throws ${Handlebars.escapeExpression(grappled.name)}
+      <em>Grapple ended &middot; up to ${squares} Squares, in any direction &middot;
+      move them on the map</em></div>`
+  });
 }
 
 /** A line under the card saying what the Clash came to. */
@@ -2852,6 +2901,23 @@ function renderSkillClash(message, html) {
     const wonIt = whoWonClash(result) === "challenger";
 
     const challenger = fromUuidSync(clash.challengerUuid);
+
+    // A won Launch: the throw is the Grappler's to take or leave, and taking it costs
+    // them the Grapple. The distance is read now rather than when the Check was opened,
+    // so it is their Might as it stands when they let go.
+    if ((clash.grapple?.kind === "launch") && wonIt && !clash.grapple.thrown
+      && challenger?.isOwner) {
+      const squares = Math.max(0, challenger.system.might ?? 0);
+      const throwThem = document.createElement("button");
+      throwThem.type = "button";
+      throwThem.className = "dbu-clash-button";
+      throwThem.textContent = `Let go and throw them (up to ${squares} Squares)`;
+      throwThem.dataset.tooltip = "Ends the Grapple, then move them yourself: up to your "
+        + "Might in Squares, in any direction. Leave it and the Grapple stands.";
+      throwThem.addEventListener("click", () => applyLaunch(message, clash, squares));
+      container.append(throwThem);
+    }
+
     if (clash.collision && wonIt && !clash.collisionApplied && challenger?.isOwner) {
       const collision = document.createElement("button");
       collision.type = "button";

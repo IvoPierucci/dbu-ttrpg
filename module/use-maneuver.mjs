@@ -23,6 +23,7 @@ import {
   whyNotAnotherAbsolute,
   whyNotAnotherGrapple,
   whyNotAnotherInstant,
+  whyNotLaunch,
   whyNotWithinMelee,
   whyNotThisFoundation,
   whyNotThisProfile,
@@ -445,6 +446,7 @@ export function definitionOf(item) {
     exploit: item.system.exploit,
     empower: item.system.empower,
     grapple: item.system.grapple,
+    launch: item.system.launch,
     exploitable: item.system.exploitable,
     surge: item.system.surge,
     charge: item.system.charge,
@@ -621,6 +623,22 @@ export async function useManeuver(actor, maneuver) {
       return false;
     }
 
+    // "Against an Opponent you are currently in a Grapple with as the Grappler."
+    const nobodyToThrow = whyNotLaunch(actor, maneuver);
+    if (nobodyToThrow) {
+      ui.notifications.warn(nobodyToThrow);
+      return false;
+    }
+
+    // Who that is, resolved here rather than when the card is built: a uuid can outlive
+    // the Actor it names, and a Grapple with nobody in it has nobody to throw. Found
+    // before anything is paid, so the Maneuver can still be taken back.
+    if (maneuver.launch && !fromUuidSync(actor.system.grapple?.partner ?? "")) {
+      ui.notifications.warn(
+        `${actor.name} is holding somebody who is no longer here. Let go and start again.`);
+      return false;
+    }
+
     // "You cannot use the Grapple Maneuver if you are already in a Grapple."
     const alreadyGrappling = whyNotAnotherGrapple(actor, maneuver);
     if (alreadyGrappling) {
@@ -686,7 +704,16 @@ export async function useManeuver(actor, maneuver) {
     targets: targetActor ? [targetActor] : []
   }, { only: maneuver.itemId });
 
-  const card = maneuver.grapple
+  // A Launch aims itself: the Character being thrown is the one already being held, and
+  // asking for a target would be asking a question with one answer. Known to be there,
+  // since a Grapple with nobody in it was refused above.
+  const card = maneuver.launch
+    ? await postGrappleCheck(actor, fromUuidSync(actor.system.grapple.partner), {
+        maneuverName: maneuver.name,
+        maneuver,
+        kind: "launch"
+      })
+    : maneuver.grapple
     ? await postGrappleCheck(actor, targetActor, {
         maneuverName: maneuver.name,
         // The Maneuver itself, so the card knows whether an Instant can answer it.
@@ -928,6 +955,7 @@ export function maneuverItemFrom(definition) {
       exploit: Boolean(definition.exploit),
       empower: Boolean(definition.empower),
       grapple: Boolean(definition.grapple),
+      launch: Boolean(definition.launch),
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),
