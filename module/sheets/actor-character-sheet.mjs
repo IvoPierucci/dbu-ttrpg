@@ -30,6 +30,7 @@ import {
   MANEUVER_TYPES,
   PROFILES,
   maneuverKiCost,
+  maneuverTip,
   maneuverUsesLeft,
   usageLimitLabel
 } from "../maneuvers.mjs";
@@ -467,6 +468,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // the round. Seen before clicking rather than after.
             exhausted: maneuverUsesLeft(this.actor, maneuver) <= 0,
             unaffordable: this.#shortOfActions(maneuver),
+            // The published entry, word for word, and beneath it the reason it cannot
+            // be played if there is one. That reason used to replace the text
+            // altogether, which answered "why is this greyed out" at the cost of
+            // answering "what does it do".
+            tip: maneuverTip(maneuver, [
+              maneuverUsesLeft(this.actor, maneuver) <= 0
+                ? `No uses of this left this ${maneuver.usageLimit?.per ?? "encounter"}.`
+                : "",
+              this.#shortOfActions(maneuver) ? "No Actions left this round for this." : "",
+              group.playable || this.#playableAlone(maneuver)
+                ? ""
+                : "Played from the attack it answers, in chat."
+            ]),
             // Instant and Counter Maneuvers spend no Standard Action, so what they
             // cost is worth showing per type rather than assuming.
             actionLabel: MANEUVER_TYPES[maneuver.type].action

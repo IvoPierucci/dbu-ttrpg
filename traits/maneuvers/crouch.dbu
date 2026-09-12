@@ -8,4 +8,10 @@ source: Core Rule
 description: >
   Placeholder Instant maneuver, used to exercise responses.
 
+# No printed entry here.
+#
+# Written to exercise Instant Maneuvers - something that could be played in answer to a
+# Standard Maneuver - rather than from its rulebook entry. Paste the entry in as
+# `text: >` and the hover will show it.
+
 ---

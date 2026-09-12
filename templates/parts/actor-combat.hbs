@@ -250,16 +250,21 @@
             uses it - the same call this row's own button makes. }}
         <li class="maneuver {{#if maneuver.exhausted}}maneuver-exhausted{{/if}}{{#if maneuver.unaffordable}} maneuver-unaffordable{{/if}}"
             data-item-id="{{maneuver.itemId}}" draggable="true">
+          {{! The entry as the rulebook prints it, which is why it is data-tooltip-html
+              and not data-tooltip: both are injected as HTML, and only the second
+              keeps the line breaks that make an entry readable. }}
           {{#if maneuver.playable}}
+          {{! Not disabled, even when it cannot be played: a disabled button fires no
+              pointer events, so it cannot be hovered, and the row would go quiet in
+              both directions at once. The click is refused by name where the rule
+              lives instead, and the row stays readable. }}
           <button type="button" class="maneuver-name rollable" data-action="useManeuver"
                   data-item-id="{{maneuver.itemId}}"
-                  {{#if maneuver.unaffordable}}disabled
-                  data-tooltip="No Actions left this round for this"
-                  {{else}}data-tooltip="{{maneuver.description}}"{{/if}}>{{maneuver.name}}</button>
+                  {{#if maneuver.tip}}data-tooltip-html="{{maneuver.tip}}"{{/if}}>{{maneuver.name}}</button>
           {{else}}
           {{! Reactive: it is played from the message of the attack it answers. }}
           <span class="maneuver-name maneuver-triggered"
-                data-tooltip="{{maneuver.description}}">{{maneuver.name}}</span>
+                {{#if maneuver.tip}}data-tooltip-html="{{maneuver.tip}}"{{/if}}>{{maneuver.name}}</span>
           {{/if}}
 
           {{#if maneuver.usageLabel}}
@@ -270,6 +275,12 @@
           <span class="maneuver-source">{{maneuver.source}}</span>
           <span class="maneuver-cost">{{maneuver.actionLabel}}</span>
           <span class="maneuver-cost">{{maneuver.kiCost}} KP</span>
+
+          {{! A Maneuver is an Item, so its name, its wording and what it costs are all
+              the player's to change - the same pencil a Talent has. }}
+          <button type="button" class="maneuver-control" data-action="editItem"
+                  data-item-id="{{maneuver.itemId}}"
+                  data-tooltip="Edit this Maneuver: its name, its wording, what it costs">&#9998;</button>
         </li>
         {{/each}}
       </ul>

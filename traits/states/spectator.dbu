@@ -4,21 +4,21 @@ kind: state
 description: >
   You step out of the fight to watch it, and to steady an ally from the side.
 text: >
-  (1) [Triggered/Spectator, Triggered/Start of Turn]: Target an Ally. Increase
+  (1)-[Triggered/Spectator, Triggered/Start of Turn]: Target an Ally. Increase
   their Combat Rolls by 1(bT) until the start of your next turn or until you
   leave the Spectator State (whichever occurs first).
 
-  (2) [Triggered/Start of Turn]: Exit the Spectator State.
+  (2)-[Triggered/Start of Turn]: Exit the Spectator State.
 
-  (3) [Automatic/Start of Turn]: If you did not use the second effect of the
+  (3)-[Automatic/Start of Turn]: If you did not use the second effect of the
   Spectator State, you lose all of your Actions (except Counter Actions), end
   your turn, and regain 2d10(bT) Life and Ki Points.
 
-  (4) [Passive]: You cannot use the Power Up Maneuver, the Transformation
+  (4)-[Passive]: You cannot use the Power Up Maneuver, the Transformation
   Maneuver, the Energy Charge Maneuver, or any Attacking Maneuvers, Special
   Maneuvers, or Unique Abilities that target another Character.
 
-  (5) [Passive]: You cannot trigger any [Triggered/Start of Turn] or
+  (5)-[Passive]: You cannot trigger any [Triggered/Start of Turn] or
   [Triggered/Start of Combat Round] effects, except those from the Spectator
   State.
 

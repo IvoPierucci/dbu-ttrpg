@@ -8,4 +8,9 @@ source: Core Rule
 description: >
   Placeholder maneuver, used to exercise the action economy.
 
+# No printed entry here.
+#
+# Written to exercise the Action economy rather than from its rulebook entry. Paste the
+# entry in as `text: >` and the hover will show it.
+
 ---

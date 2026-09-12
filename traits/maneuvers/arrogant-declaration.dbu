@@ -13,12 +13,19 @@ description: >
   Point your thumb at yourself and make a statement about your own superiority,
   emboldening you in the process.
 text: >
-  Enter the Superior State until the end of your next turn. Then, upon leaving
-  the Superior State entered through this effect, reduce your Combat Rolls,
-  Surgency, and Soak Value by 1(bT) for the remainder of the Combat Encounter.
+  Arrogant Declaration Maneuver [1/Encounter]: Point your thumb at yourself and
+  make a statement about your own superiority, emboldening you in the process.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: All adjacent Opponents.
+  –Effect: Enter the Superior State until the end of your next turn. Then, upon
+  leaving the Superior State entered through this effect, reduce your Combat
+  Rolls, Surgency, and Soak Value by 1(bT) for the remainder of the Combat
+  Encounter.
 
-  Only 1 of your Minions may use the Arrogant Declaration Maneuver in each
-  Combat Encounter.
+  Only 1 of your Minions may use the Arrogant Declaration Maneuver in each Combat
+  Encounter.
 
 ---
 

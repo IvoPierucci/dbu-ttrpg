@@ -14,28 +14,32 @@ description: >
   Send your power to an ally. Spend as many Actions as you like; each one is
   worth twice your Might in Ki Points, and twice that again in Melee Range.
 text: >
-  You can decide how many Actions you spend on this Maneuver. Declare an Ally,
-  and for each Action spent on this Maneuver, you can transfer a number of Ki
-  Points up to twice your Might to the declared Ally. If the declared Ally is
+  Empower [1/Round]: Send your power to an ally!
+  –Maneuver Type: Standard
+  –Action Cost: Variable
+  –KP Cost: N/A
+  –Exploitable: All adjacent Opponents.
+  –Effect: You can decide how many Actions you spend on this Maneuver. Declare an
+  Ally, and for each Action spent on this Maneuver, you can transfer a number of
+  Ki Points up to twice your Might to the declared Ally. If the declared Ally is
   within your Melee Range, double the amount of Ki Points you can transfer to
   them. Transferring Ki Points does not reduce your Capacity.
 
-  Full Empowerment: Upon using this Maneuver, if you are not a Minion, you can
-  choose to reduce your Capacity to 0 and gain a stack of the Fatigued Combat
-  Condition and the Impediment Combat Condition. If you do, you may transfer any
-  amount of Ki Points through this use of the Empower Maneuver.
+  * Full Empowerment: Upon using this Maneuver, if you are not a Minion, you can
+    choose to reduce your Capacity to 0 and gain a stack of the Fatigued Combat
+    Condition and the Impediment Combat Condition. If you do, you may transfer any
+    amount of Ki Points through this use of the Empower Maneuver.
+  * Miracle Empowerment: If, during the same Combat Round, a Character is declared
+    through the Empower Maneuver by 4+ Characters who spent at least 3 Actions and
+    the maximum amount of Ki Points, or a Character who had used Full Empowerment
+    to transfer as many Ki Points as possible (reducing their amount of Ki Points
+    to 0), that Character enters the Entrusted Special State until the end of their
+    next turn.
 
-  Miracle Empowerment: If, during the same Combat Round, a Character is declared
-  through the Empower Maneuver by 4+ Characters who spent at least 3 Actions and
-  the maximum amount of Ki Points, or a Character who had used Full Empowerment
-  to transfer as many Ki Points as possible (reducing their amount of Ki Points
-  to 0), that Character enters the Entrusted Special State until the end of their
-  next turn.
-
-  You can only enter the Entrusted Special State once per Combat Encounter
-  through Miracle Empowerment, and you cannot benefit from Miracle Empowerment if
-  one of your Allies has entered the Entrusted Special State through its effects
-  during this Combat Encounter.
+  You can only enter the Entrusted Special State once per Combat Encounter through
+  Miracle Empowerment, and you cannot benefit from Miracle Empowerment if one of
+  your Allies has entered the Entrusted Special State through its effects during
+  this Combat Encounter.
 
 ---
 

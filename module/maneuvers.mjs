@@ -1,5 +1,5 @@
 import { applySlot } from "./effects/interpreter.mjs";
-import { traitsOfKind } from "./effects/traits.mjs";
+import { printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { featureAsks } from "./signature.mjs";
 
 /**
@@ -958,25 +958,73 @@ export function areaLabel(area) {
 }
 
 /**
- * A Profile's entry, as its own lines again.
+ * Published lines and asides, as the markup a tooltip carries.
  *
- * The text is stored word for word as the rulebook prints it, wrapped in the source only
- * so the file stays readable. A line that opens with the rulebook's en dash or with a
- * bullet begins a line of its own; anything else is the rest of the line above, and is
- * joined back onto it. So what comes out is the entry as printed, not as wrapped here.
+ * Shared by Profiles and Maneuvers because it is the same thing on the page: the
+ * rulebook's own words laid out as it prints them, and underneath, kept visibly apart,
+ * whatever this implementation or this character has added to them.
+ *
+ * Built as HTML rather than as lines joined by newlines: `data-tooltip` is injected as
+ * HTML, so a newline in it is just whitespace and the whole entry came out as one
+ * run-on paragraph. `data-tooltip-html` is the attribute that means it.
  */
-function profileLines(profile) {
-  const lines = [];
+export function entryTip(lines, notes = []) {
+  const body = lines.map(line => {
+    // An empty line is a paragraph break the text itself has, so it is drawn as one
+    // rather than closed up.
+    if (!line) return `<div class="dbu-entry-break"></div>`;
 
-  for (const piece of String(profile.text ?? "").split("\n")) {
-    const trimmed = piece.trim();
-    if (!trimmed) continue;
+    const bullet = /^[*•]/.test(line);
+    return `<div class="dbu-profile-line${bullet ? " dbu-profile-bullet" : ""}">${
+      Handlebars.escapeExpression(line)}</div>`;
+  }).join("");
 
-    if (!lines.length || /^[–*]/.test(trimmed)) lines.push(trimmed);
-    else lines[lines.length - 1] += ` ${trimmed}`;
-  }
+  const aside = notes.filter(Boolean).map(note =>
+    `<div class="dbu-profile-note">${Handlebars.escapeExpression(note)}</div>`).join("");
 
-  return lines;
+  if (!body && !aside) return "";
+  return `<div class="dbu-profile-tip">${body}${aside}</div>`;
+}
+
+/**
+ * What a Maneuver says, on hover.
+ *
+ * The published entry word for word, which is what a Profile's hover shows and for the
+ * same reason: somebody reading a Maneuver is reading the text they know, and a
+ * tidied-up version of it is one more thing to reconcile at the table.
+ *
+ * The description goes underneath, and only when it is this character's own rather than
+ * the one the definition ships with. Renaming and re-describing a Maneuver is much of
+ * the point of their being Items - a Basic Attack reflavoured as something of your own -
+ * so what somebody writes there has to read somewhere. The shipped summary does not
+ * need to: the entry above it says the same thing and says it better.
+ *
+ * @param {object} maneuver  a definition, from definitionOf() or the registry
+ * @param {string[]} notes   anything to say beneath the entry, e.g. why it cannot be
+ *                           played right now
+ */
+export function maneuverTip(maneuver, notes = []) {
+  // The file's entry wherever the file has one, rather than the copy's. A character
+  // granted a Maneuver last week holds the wording the file had last week, and six of
+  // these were granted with an entry the parser had truncated at its first blank line -
+  // so every one of those copies carries a third of its entry. The rules live in
+  // traits/, and this is one of them.
+  //
+  // The copy's own wording is what a Maneuver with no file has: a Signature Technique or
+  // a Unique Ability is bought per character and exists only as an Item, so the Item is
+  // the only place its wording could live.
+  const published = maneuvers.get(maneuver.id);
+  const printed = printedLines(published?.text || maneuver.text || "");
+
+  const own = String(maneuver.description ?? "").trim();
+  const shipped = String(published?.description ?? "").trim();
+
+  // With no entry to quote, the description is all there is - the case for a homebrew
+  // Maneuver and for the five Core ones whose printed entry was never given here. Then
+  // it is the text rather than an aside.
+  if (!printed.length) return entryTip(printedLines(own), notes);
+
+  return entryTip(printed, [...notes, (own && (own !== shipped)) ? own : ""]);
 }
 
 /**
@@ -994,7 +1042,7 @@ function profileLines(profile) {
  * run-on paragraph. `data-tooltip-html` is the attribute that means it.
  */
 function profileTip(profile) {
-  const printed = profileLines(profile);
+  const printed = printedLines(profile.text);
   const notes = [];
 
   if (profile.grantsAdvantage === "charging-assault") {
@@ -1013,19 +1061,10 @@ function profileTip(profile) {
   }
   if (profile.needs) notes.push(`Not automated: ${profile.needs}`);
 
-  if (!printed.length && !notes.length) return "";
+  const tip = entryTip(printed, notes);
+  if (!tip) return "";
 
-  const body = printed.map(line => {
-    const bullet = line.startsWith("*");
-    return `<div class="dbu-profile-line${bullet ? " dbu-profile-bullet" : ""}">${
-      Handlebars.escapeExpression(line)}</div>`;
-  }).join("");
-
-  const aside = notes.map(note =>
-    `<div class="dbu-profile-note">${Handlebars.escapeExpression(note)}</div>`).join("");
-
-  return ` data-tooltip-html="${Handlebars.escapeExpression(
-    `<div class="dbu-profile-tip">${body}${aside}</div>`)}"`;
+  return ` data-tooltip-html="${Handlebars.escapeExpression(tip)}"`;
 }
 
 /**

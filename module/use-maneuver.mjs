@@ -323,6 +323,10 @@ export function definitionOf(item) {
     tags: item.system.tags ?? [],
     source: item.system.source,
     description: item.system.description,
+    // The published entry, which is what the sheet shows on hover. Carried here because
+    // it had been reaching the Item and stopping: written in the file, stored on the
+    // document, and read by nothing that a player ever looked at.
+    text: item.system.text,
     usageLimit: item.system.limit,
     clash: item.system.clashSkill ? { skill: item.system.clashSkill } : null
   };

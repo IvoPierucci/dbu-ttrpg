@@ -11,4 +11,41 @@ description: >
   Long Range is hit by an Attacking Maneuver; the effect chosen sets the Ki cost.
   The first Counter Maneuver that can be used without being the target.
 
+text: >
+  Intervene Maneuver: Step in the way of danger to help an ally!
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter
+  –KP Cost: Varies (depends on chosen effect)
+  –Effect: When an Ally who is not at Long Range is hit by an Attacking Maneuver
+  (that did not also target you), you may use this Maneuver to use one of the
+  following effects:
+
+  * Defense Wall [0]. Move yourself to an unoccupied Square that is within range of
+    your Boosted Speed and is between your Ally and the Character who used the
+    Attacking Maneuver, then take the Wound Roll for that Attacking Maneuver instead
+    of your Ally (if you are Defeated by this Attacking Maneuver, any excess Damage
+    is inflicted to that Ally – but is reduced by their Soak Value and Damage
+    Reduction as usual for that Attacking Maneuver and its Damage Category). If the
+    Attacking Maneuver hits multiple targets, all other targets receive the Wound
+    Roll as usual. Instead of moving to an unoccupied Square, you can move your
+    targeted Ally back a single Square and move yourself into the position as long as
+    they are within range of your Boosted Speed. For the duration of this Attacking
+    Maneuver, increase your Soak Value by 1/2 (rounded up).
+  * Deflect [2(bT)]. Move yourself to an unoccupied Square that is within range of
+    your Boosted Speed and is between your Ally and the Character who used the
+    Attacking Maneuver or adjacent to that Ally, then make a Might Clash against the
+    attacking Opponent (reduce your Dice Score by 1(T) for each Energy Charge or Rank
+    of Power Shot the Attacking Maneuver possesses). If you win, the Attacking
+    Maneuver is successfully deflected away from all targets. If you lose, you take
+    the Wound Roll for that Attacking Maneuver instead of the chosen Ally and you
+    increase the Damage Category of that Attacking Maneuver by 1 Category for the
+    sake of calculating your Damage.
+  * Distant Deflect [8(bT)]. Make a Might Clash against the attacking Opponent
+    (reduce your Dice Score by 1(T) for each Energy Charge or rank of Power Shot the
+    Attacking Maneuver possesses). If you win, the Attacking Maneuver is successfully
+    deflected away from all targets.
+
+  If you use the Intervene Maneuver, no other Character can use the Intervene
+  Maneuver for your selected Ally against that Attacking Maneuver.
+
 ---

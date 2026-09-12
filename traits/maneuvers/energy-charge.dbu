@@ -9,14 +9,21 @@ source: Core Rule
 description: >
   Charge up your energy into a single, high-power attack.
 text: >
-  Declare an Attacking Maneuver through either the Basic Attack Maneuver or
-  Signature Technique Maneuver. That declared Attacking Maneuver gains an Energy
+  Energy Charge Maneuver: Charge up your energy into a single, high-power attack.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: 2(bT)
+  –Exploitable: All adjacent Opponents.
+  –Effect: Declare an Attacking Maneuver through either the Basic Attack Maneuver
+  or Signature Technique Maneuver. That declared Attacking Maneuver gains an Energy
   Charge. Each time you would use the Energy Charge Maneuver after declaring an
   Attacking Maneuver but before using the declared Attacking Maneuver, any use of
-  the Energy Charge Maneuver instead only grants an additional Energy Charge to
-  the originally declared Attacking Maneuver. Until you use the chosen Attacking
-  Maneuver, you suffer from the Guard Down Combat Condition and you cannot use
-  any other Attacking Maneuver or Standard Maneuver.
+  the Energy Charge Maneuver instead only grants an additional Energy Charge to the
+  originally declared Attacking Maneuver.
+
+  Until you use the chosen Attacking Maneuver, you suffer from the Guard Down
+  Combat Condition and you cannot use any other Attacking Maneuver or Standard
+  Maneuver.
 
 ---
 

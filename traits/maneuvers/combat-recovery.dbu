@@ -14,23 +14,28 @@ description: >
   Talk or rest to recover as much stamina as possible. Costs between 2 and 3
   Actions, and every one of them is worth another handful of dice.
 text: >
-  You can spend between 2 and 3 Actions on Combat Recovery. For each Action
-  spent, reduce your Defense Value by 1(T) until the start of your next turn and
-  regain 1d10(bT) Life and Ki Points. If you are hit by an Attacking Maneuver
-  used through the Exploit Maneuver (and receive Damage) in response to this
-  Maneuver, you lose any Life Points regained due to this use of Combat Recovery.
+  Combat Recovery [1/Round]: Talk or rest to recover as much stamina as possible.
+  –Maneuver Type: Standard
+  –Action Cost: Variable (2~3 Actions)
+  –KP Cost: N/A
+  –Exploitable: All Opponents that are not at Long Range.
+  –Effect: You can spend between 2 and 3 Actions on Combat Recovery. For each
+  Action spent, reduce your Defense Value by 1(T) until the start of your next
+  turn and regain 1d10(bT) Life and Ki Points. If you are hit by an Attacking
+  Maneuver used through the Exploit Maneuver (and receive Damage) in response to
+  this Maneuver, you lose any Life Points regained due to this use of Combat
+  Recovery.
 
-  Condition Recovery: When using Combat Recovery, you may forgo gaining any Life
-  Points to make a Steadfast Check. If you succeed, you can remove any Damage
-  over Time (DOT) or a stack of a Combat Condition (except Suffocating,
-  Transfigured, or Pinned) from yourself (if that Combat Condition does not have
-  stacks, remove the entire Combat Condition) for each Action spent. If you are
-  hit by an Attacking Maneuver used through the Exploit Maneuver (and receive
-  Damage) in response to this Maneuver, you automatically fail the Steadfast
-  Check.
-
-  Spectate: After using Combat Recovery, you can choose to spend your remaining
-  Actions (minimum 1 Action) to enter the Spectator Special State.
+  * Condition Recovery: When using Combat Recovery, you may forgo gaining any Life
+    Points to make a Steadfast Check. If you succeed, you can remove any Damage
+    over Time (DOT) or a stack of a Combat Condition (except Suffocating,
+    Transfigured, or Pinned) from yourself (if that Combat Condition does not have
+    stacks, remove the entire Combat Condition) for each Action spent. If you are
+    hit by an Attacking Maneuver used through the Exploit Maneuver (and receive
+    Damage) in response to this Maneuver, you automatically fail the Steadfast
+    Check.
+  * Spectate: After using Combat Recovery, you can choose to spend your remaining
+    Actions (minimum 1 Action) to enter the Spectator Special State.
 
 ---
 

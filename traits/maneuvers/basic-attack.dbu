@@ -11,4 +11,14 @@ description: >
   Attack with any Profile. Strike against the target's Dodge; on a win, Wound
   less their Soak Value.
 
+# No printed entry here.
+#
+# What a Basic Attack does was given as rules rather than as its rulebook entry - the
+# Profile sets the Ki Point Cost, the Strike Roll goes against a Dodge Roll, the Wound
+# Roll less the Soak Value is the Damage. All of that is built, and the Profiles each
+# carry their own entry word for word.
+#
+# So the hover falls back to the description below. Paste the entry over `text: >` and
+# it will show that instead, with nothing else to change.
+
 ---

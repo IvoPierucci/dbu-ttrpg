@@ -10,4 +10,48 @@ description: >
   Actively defend yourself against dangerous attacks. Played in response to an
   Attacking Maneuver; the effect chosen sets the Ki cost.
 
+text: >
+  Defend Maneuver: Actively defend yourself against dangerous attacks.
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter
+  –KP Cost: Varies (depends on chosen effect)
+  –Effect: You can use this Maneuver when you are targeted by an Attacking
+  Maneuver. When you do, select one of the following effects to use (each one has
+  their KP Cost shown in brackets):
+
+  * Parry [0]: Use your Strike Roll (as if you rolled a Physical Attack) instead of
+    your Dodge Roll for the Attacking Maneuver’s Clash. If you win, you avoid that
+    Attacking Maneuver. Reduce your Dice Score by 1(bT) for each Energy Charge or
+    rank of Power Shot on the Attacking Maneuver.
+  * Direct Hit [0]: You forgo your Dodge Roll for the Attacking Maneuver’s Clash
+    and are automatically hit by that Attacking Maneuver. Increase your current Soak
+    Value by 1/2 for this Attacking Maneuver. If this Attacking Maneuver inflicts no
+    Damage and has 2+ Energy Charges or a Ki Wager equal to or higher than 1/4 of
+    their Max Capacity, the attacker suffers from the Shaken Combat Condition until
+    the end of their next turn.
+  * Power Flare [0]: You automatically fail all clashes against the Strike Roll of
+    the incoming Attacking Maneuver, but do not apply any effects from being hit by
+    this Attacking Maneuver until after you receive Damage (except those that
+    increase the Wound Roll). When your Opponent rolls their Wound Roll, immediately
+    afterwards, you roll your Wound Roll (as if you made an Energy or Magic Attack,
+    including any Ki Wager you wish to spend). If the Dice Score of your Wound Roll
+    exceeds the Dice Score of your Opponent’s Wound Roll, you receive 0 Damage and
+    any effects that would occur upon hitting you with this Attacking Maneuver do
+    not apply.
+  * Cross Counter [0]: Your Opponent uses their Attacking Maneuver as usual, but
+    your Defense Value is halved. Immediately after the Attacking Maneuver’s Clash
+    is resolved, make a Basic Attack Maneuver as an Out-of-Sequence Maneuver against
+    that same Opponent.
+  * Guard [8(bT)]: You forgo your Dodge Roll for the Attacking Maneuver’s Clash.
+    When calculating your Damage from this Attacking Maneuver, the Dice Score of the
+    Wound Roll is halved and its Damage Category is reduced by 1 Category. Increase
+    the Ki Point Cost for this Maneuver by 1(bT) for each Energy Charge on your
+    Opponent’s Attacking Maneuver (max. +4(bT)).
+
+  If you use the Defend Maneuver in response to an Attacking Maneuver, you do not
+  gain any stacks of Diminishing Defense from that Attacking Maneuver.
+
+  If you use the Parry option of the Defend Maneuver and successfully defend against
+  the Attacking Maneuver, you may use the Reflect Maneuver.
+
 ---

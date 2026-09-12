@@ -677,13 +677,12 @@
   color: var(--dbu-accent);
 }
 
-/* Spent for this encounter: still listed, but nothing left to play. */
+/* Spent for this encounter: still listed, but nothing left to play. Dimmed and no
+   more - the click is refused by name where the rule lives, and taking the pointer
+   events away would take the hover with them, so the row could no longer be read
+   either. */
 .dbu-ttrpg .maneuver-exhausted {
   opacity: 0.45;
-}
-
-.dbu-ttrpg .maneuver-exhausted button.maneuver-name {
-  pointer-events: none;
 }
 
 .dbu-ttrpg .maneuver-source {
@@ -761,7 +760,8 @@
   color: var(--dbu-accent);
 }
 
-.dbu-ttrpg .trait-control {
+.dbu-ttrpg .trait-control,
+.dbu-ttrpg .maneuver-control {
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
@@ -772,7 +772,9 @@
 
 /* --- Talent item sheet ------------------------------------------------------ */
 
-/* The description is a rich-text field, so give its editor room to be used. */
+/* The description is a rich-text field, so give its editor room to be used. A
+   Maneuver's shares its tab with the published wording, so it asks for less - see
+   further down. */
 .dbu-ttrpg [data-tab="description"] prose-mirror {
   display: block;
   min-height: 220px;
@@ -1956,6 +1958,12 @@
   resize: vertical;
 }
 
+/* A Maneuver's description editor shares its tab with the published wording, so it
+   takes less of the height than a Talent's does on a tab of its own. */
+.dbu-ttrpg.maneuver [data-tab="description"] prose-mirror {
+  min-height: 150px;
+}
+
 /* --- Combat Conditions ---------------------------------------------------- */
 
 /* Collapsed by default when the character has none, so the Combat tab is not
@@ -2191,7 +2199,6 @@
    Encounter, so it is dimmed rather than struck through. */
 .dbu-ttrpg .maneuver-unaffordable .maneuver-name {
   opacity: 0.45;
-  cursor: default;
 }
 
 /* --- Dropdown lists -------------------------------------------------------- */
@@ -2271,12 +2278,19 @@
   color: var(--dbu-accent);
 }
 
-/* A Profile's entry on hover: the rulebook's own words, laid out as it prints them
-   rather than run together into a paragraph. The stat lines open with an en dash and
-   the effects with a bullet, both of which are the text's, not ours - so the only thing
-   done to them here is the indent that makes a bullet look like one. */
+/* A published entry on hover - a Profile's or a Maneuver's: the rulebook's own words,
+   laid out as it prints them rather than run together into a paragraph. The stat lines
+   open with an en dash and the effects with a bullet, both of which are the text's, not
+   ours - so the only thing done to them here is the indent that makes a bullet look
+   like one.
+
+   Wide enough for the long ones, and capped so a tooltip stays on the screen: the whole
+   Defend Maneuver is five options of a paragraph each, and at a Profile's width that is
+   taller than the display. The pencil on the row opens the entry in full. */
 .dbu-profile-tip {
-  max-width: 46ch;
+  max-width: min(58ch, 70vw);
+  max-height: 70vh;
+  overflow-y: auto;
   text-align: left;
   white-space: normal;
 }
@@ -2288,6 +2302,13 @@
 .dbu-profile-bullet {
   padding-left: 1em;
   text-indent: -1em;
+}
+
+/* A paragraph break the entry itself has. Drawn rather than closed up: a Maneuver's
+   entry breaks between its effect and its options, and running those together is how
+   the text stops being the text. */
+.dbu-entry-break {
+  height: 6px;
 }
 
 /* What the system leaves to the table, kept visibly apart from the rule: it is not part

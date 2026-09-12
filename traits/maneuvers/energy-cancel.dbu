@@ -11,10 +11,16 @@ description: >
   strategies immediately, even if you will lose the stamina you dedicated to
   charging.
 text: >
-  If you are currently suffering from the effects of the Energy Charge Maneuver
-  when you are targeted by an Attacking Maneuver (or at the start of your turn),
-  you can use this Maneuver to immediately lose all Energy Charges gained from
-  the Energy Charge Maneuver but also stop suffering from the other effects of
+  Energy Cancel [1/Round]: Plans change. Standing around charging an attack
+  didn’t work, so change strategies immediately, even if you’ll lose the stamina
+  you dedicated to charging.
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter
+  –KP Cost: N/A
+  –Effect: If you are currently suffering from the effects of the Energy Charge
+  Maneuver when you are targeted by an Attacking Maneuver (or at the start of your
+  turn), you can use this Maneuver to immediately lose all Energy Charges gained
+  from the Energy Charge Maneuver but also stop suffering from the other effects of
   the Energy Charge Maneuver.
 
 ---

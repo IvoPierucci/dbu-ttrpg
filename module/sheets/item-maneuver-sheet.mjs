@@ -2,7 +2,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { compile } from "../effects/parser.mjs";
-import { MANEUVER_TYPES } from "../maneuvers.mjs";
+import { MANEUVER_TYPES, getManeuver } from "../maneuvers.mjs";
 
 /**
  * Sheet for a Maneuver Item.
@@ -15,7 +15,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
 
   static DEFAULT_OPTIONS = {
     classes: ["dbu-ttrpg", "maneuver"],
-    position: { width: 520, height: 500 },
+    position: { width: 520, height: 560 },
     window: { resizable: true },
     actions: {
       dbuChangeTab: DBUManeuverSheet._onChangeTab,
@@ -28,6 +28,10 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     header: { template: "systems/dbu-ttrpg/templates/parts/maneuver-header.hbs" },
     tabs: { template: "systems/dbu-ttrpg/templates/parts/sheet-tabs.hbs" },
     rules: { template: "systems/dbu-ttrpg/templates/parts/maneuver-rules.hbs", scrollable: [""] },
+    description: {
+      template: "systems/dbu-ttrpg/templates/parts/maneuver-description.hbs",
+      scrollable: [""]
+    },
     effect: { template: "systems/dbu-ttrpg/templates/parts/maneuver-effect.hbs", scrollable: [""] }
   };
 
@@ -35,6 +39,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
 
   static TABS = {
     rules: { id: "rules", group: "primary", label: "Rules" },
+    description: { id: "description", group: "primary", label: "Description" },
     effect: { id: "effect", group: "primary", label: "Effect" }
   };
 
@@ -46,6 +51,17 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     context.tabs = this._getTabs();
     context.types = Object.entries(MANEUVER_TYPES)
       .map(([value, type]) => ({ value, label: type.label }));
+    // formInput needs the field itself to know which editor to build.
+    context.fields = this.item.system.schema.fields;
+
+    // Whether this Maneuver is one the rules publish, which decides whose wording the
+    // sheet shows: the file's for a published Maneuver, this copy's for one that exists
+    // only here. Said on the tab rather than left for somebody to discover by typing
+    // into a field and watching nothing change.
+    const definition = getManeuver(this.item.system.maneuverId);
+    context.publishedEntry = definition?.text
+      ? `traits/maneuvers/${this.item.system.maneuverId}.dbu`
+      : "";
 
     const { errors } = compile(this.item.system.script, this.item.actor?.system);
     context.errors = errors;

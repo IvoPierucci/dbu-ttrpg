@@ -79,7 +79,14 @@ export function traitsOfKind(kind, owner = null) {
  * alternative was a script escaped inside a JSON string, which nobody can edit by hand.
  */
 export function parseTraitFile(text, path = "") {
-  const [head, ...rest] = String(text).split(/^---\s*$/m);
+  // Read with Windows line endings normalised away first. Every pattern below ends in
+  // `$` without the multiline flag, so a trailing carriage return used to mean no key
+  // matched at all: the file parsed as nothing but the id taken from its filename, and
+  // said nothing about it. One `git checkout` on a machine with core.autocrlf on is
+  // enough to do that to every file in the library.
+  const whole = String(text).replace(/\r\n?/g, "\n");
+
+  const [head, ...rest] = whole.split(/^---\s*$/m);
   const script = rest.join("---").replace(/^\n/, "");
 
   const meta = {};
@@ -98,16 +105,94 @@ export function parseTraitFile(text, path = "") {
       continue;
     }
 
-    // A folded block: every following indented line belongs to it.
+    // A folded block: every following indented line belongs to it, and a blank line
+    // inside one is a paragraph break rather than the end of it. It used to end the
+    // block, which quietly truncated every multi-paragraph entry in the library - the
+    // whole of Condition Recovery and Spectate among them.
     const block = [];
-    while ((i + 1 < lines.length) && /^\s+\S/.test(lines[i + 1])) {
-      block.push(lines[++i].trim());
+    while (i + 1 < lines.length) {
+      const next = lines[i + 1];
+      if (/^\s+\S/.test(next)) {
+        block.push(next.trim());
+        i++;
+        continue;
+      }
+      // A blank line belongs to the block only if the block goes on after it.
+      if (!next.trim() && continuesAfter(lines, i + 1)) {
+        block.push("");
+        i++;
+        continue;
+      }
+      break;
     }
-    meta[key] = block.join(" ");
+    meta[key] = printedLines(block.join(BREAK)).join(BREAK);
   }
 
   if (!meta.id) meta.id = path.split("/").pop()?.replace(/\.\w+$/, "") ?? "";
   return { ...meta, script };
+}
+
+/** Whether anything indented still follows, past one or more blank lines. */
+function continuesAfter(lines, from) {
+  for (let i = from; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    return /^\s+\S/.test(lines[i]);
+  }
+  return false;
+}
+
+/** What separates one printed line from the next. */
+const BREAK = "\n";
+
+/**
+ * What opens a line of its own in published text.
+ *
+ * The rulebook's stat lines open with an en dash and its sub-effects with a bullet, and
+ * a Special State's effects are numbered "(1)-[Passive]". None of those are ours - they
+ * are how the entry is printed, and the only reason to recognise them is so that a long
+ * file line, wrapped to stay readable, does not become a line break the text never had.
+ */
+const OPENS_A_LINE = /^(?:[\u2013\u2014*\u2022]|\(\d+\))/;
+
+/**
+ * Published text as its own lines again.
+ *
+ * A line that opens a printed line begins one; anything else is the rest of the line
+ * above and is joined back onto it. A blank line stays blank, a paragraph break being
+ * part of the entry too. So what comes out is the text as printed, not as wrapped in
+ * whatever carried it here - a file, or a template literal in the source.
+ *
+ * Idempotent, which is what lets both callers use it: a string this has already folded
+ * is one where every line either opens with a marker or follows a break, so folding it
+ * again changes nothing.
+ *
+ * @param {string} text
+ * @returns {string[]} the printed lines, with "" for each paragraph break
+ */
+export function printedLines(text) {
+  const out = [];
+  // The line after a break opens a printed line whether or not it carries a marker:
+  // it is the start of a paragraph, which is reason enough.
+  let fresh = true;
+
+  for (const piece of String(text ?? "").split(BREAK)) {
+    const line = piece.trim();
+
+    if (!line) {
+      if (out.length && (out[out.length - 1] !== "")) out.push("");
+      fresh = true;
+      continue;
+    }
+
+    if (fresh || !out.length || OPENS_A_LINE.test(line)) {
+      out.push(line);
+      fresh = false;
+    }
+    else out[out.length - 1] += ` ${line}`;
+  }
+
+  while (out.length && (out[out.length - 1] === "")) out.pop();
+  return out;
 }
 
 /** Numbers stay numbers, true/false stay booleans, lists split on commas. */

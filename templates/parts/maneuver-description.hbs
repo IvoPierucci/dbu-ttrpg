@@ -1,0 +1,41 @@
+<div class="tab {{tabs.description.cssClass}}" data-group="primary" data-tab="description">
+  {{! The two pieces of prose a Maneuver carries, together, because the window the
+      pencil opens is where they are written. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Description
+      <span class="panel-note">This character's own. Yours to rewrite.</span>
+    </h3>
+    {{! A rich-text field, so it is edited through Foundry's own editor rather than a
+        plain input - which is what the schema said it was all along. }}
+    {{formInput fields.description value=system.description enriched=enrichedDescription
+                toggled=false editable=editable}}
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">
+      Published wording
+      <span class="panel-note">Shown on the sheet, on hover</span>
+    </h3>
+
+    {{#if publishedEntry}}
+    {{! A published Maneuver's entry comes from its file, so that this character's copy
+        shows what the rules say now rather than what they said when it was granted. }}
+    <p class="tab-placeholder">
+      This Maneuver's entry is published, and comes from <code>{{publishedEntry}}</code>.
+      That is what the sheet shows on hover. Edit the file to change it - anything typed
+      below is kept with this copy but not shown, since the file has an entry of its own.
+    </p>
+    {{else}}
+    <p class="tab-placeholder">
+      The Maneuver's entry as the rulebook prints it: its name and tagline, the stat
+      lines that open with an en dash, then the Effect and its options. Those are the
+      text's own line breaks, so they are kept - leave a line blank between paragraphs
+      and it stays blank. Left empty, the hover falls back to the description above.
+    </p>
+    {{/if}}
+
+    <textarea class="effect-text" name="system.text" rows="12"
+              placeholder="Combat Recovery [1/Round]: Talk or rest to recover as much stamina as possible.&#10;&#8211;Maneuver Type: Standard&#10;&#8211;Action Cost: Variable (2~3 Actions)">{{system.text}}</textarea>
+  </section>
+</div>
