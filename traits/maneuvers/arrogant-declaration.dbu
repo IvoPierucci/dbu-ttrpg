@@ -1,0 +1,51 @@
+id: arrogant-declaration
+name: Arrogant Declaration
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+usageLimit: 1/encounter
+exploitable: All adjacent Opponents
+resource: arrogance
+resourceMax: 1
+source: Core Rule
+description: >
+  Point your thumb at yourself and make a statement about your own superiority,
+  emboldening you in the process.
+text: >
+  Enter the Superior State until the end of your next turn. Then, upon leaving
+  the Superior State entered through this effect, reduce your Combat Rolls,
+  Surgency, and Soak Value by 1(bT) for the remainder of the Combat Encounter.
+
+  Only 1 of your Minions may use the Arrogant Declaration Maneuver in each
+  Combat Encounter.
+
+---
+
+# The Minion limit is not here. It is a limit across a group of characters rather
+# than on any one of them, and there is no notion in this system of whose Minions
+# somebody is - so it is left to the player and the Gamemaster, the way every other
+# thing a table says out loud is.
+
+[on used]
+enterState(superior, 1, next-turn);
+
+# "Upon leaving the Superior State entered through this effect." Which Superior it
+# was is not tracked, and does not need to be: you cannot enter a State you are
+# already standing in, and entering it again cannot lengthen your stay - so while
+# this is running there is no other Superior to confuse it with.
+#
+# `left-state` rather than `on-removed`: that one is the State's own Moment about
+# itself, heard only by Superior's own effects, and this is not one of those.
+[automatic/left-state/superior]
+arrogance.stacks += 1;
+
+# What the boast costs once it wears off. The Resource is the carrier, and the right
+# one: a Resource is lost when the Combat Encounter ends, which is exactly the span
+# the rule names - so nothing has to remember to take this off.
+[passive]
+if (arrogance.stacks > 0) {
+    combatRolls -= 1(bT);
+    surgency    -= 1(bT);
+    soakValue   -= 1(bT);
+}

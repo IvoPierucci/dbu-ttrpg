@@ -217,6 +217,10 @@ async function announceChanges(actor, before, after, kind) {
     }
     else if (now === 0) {
       await fireMoment(actor, "on-removed", context, { only: source, stacks: was });
+      // And the other end of entering one, which anything may answer. `on-removed` is
+      // scoped to the thing being removed, so only Superior's own effects hear that -
+      // and "upon leaving the Superior State" is written by things that are not Superior.
+      if (kind === "state") await fireMoment(actor, `left-state/${key}`, context);
     }
   }
 }

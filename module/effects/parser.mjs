@@ -197,9 +197,9 @@ class Parser {
             took = (String(rest[1]?.value ?? "").startsWith("action")) ? 3 : 2;
             break;
           case "on":
-            // `[on applied]` and `[on removed]` are moments of their own.
+            // `[on applied]`, `[on removed]` and `[on used]` are moments of their own.
             mode = "automatic";
-            moment = (rest[0]?.value === "removed") ? "on-removed" : "on-applied";
+            moment = { removed: "on-removed", used: "on-used" }[rest[0]?.value] ?? "on-applied";
             took = 2;
             break;
           case "instant":

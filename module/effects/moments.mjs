@@ -82,9 +82,22 @@ const TABLE = [
     parameterised: true,
     doc: "Written as the State's own name, e.g. triggered/raging."
   },
+  {
+    key: "left-state",
+    label: "You leave a State",
+    provides: [CTX.STATE],
+    parameterised: true,
+    doc: "Written as the State's own name, e.g. automatic/left-state/superior. The "
+       + "other end of entering one, and answerable by anything - `on-removed` is the "
+       + "State's own Moment about itself and only its own effects hear it."
+  },
 
   // --- From the flow of combat this system already implements ------------------
   { key: "declare-maneuver", label: "A Maneuver is declared", provides: [CTX.MANEUVER, CTX.TARGETS] },
+  { key: "on-used", label: "This Maneuver is used", provides: [CTX.MANEUVER, CTX.TARGETS],
+    doc: "What a Maneuver does when it is used, written in its own file as `[on used]`. "
+       + "Only that Maneuver's own script hears it - it is about this Maneuver, not "
+       + "about every Maneuver you play, which is what `declare-maneuver` is for." },
   { key: "combat-roll", label: "A Combat Roll is about to be made", provides: [CTX.ROLL] },
   {
     key: "clash-resolved",

@@ -314,6 +314,14 @@ export async function useManeuver(actor, maneuver) {
     targets: targetActor ? [targetActor] : []
   });
 
+  // And what this Maneuver itself does, which is a different question: `declare-maneuver`
+  // is heard by everything the character holds, and this is heard only by the Maneuver
+  // being used. Scoped by the Item's own id, which is what `only` is for.
+  await fireMoment(actor, "on-used", {
+    maneuver,
+    targets: targetActor ? [targetActor] : []
+  }, { only: maneuver.itemId });
+
   const card = maneuver.clash
     ? await postSkillClash(actor, targetActor, maneuver)
     : declared

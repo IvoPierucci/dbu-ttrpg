@@ -70,7 +70,11 @@ export function programsFor(actor, { report = () => {} } = {}) {
   const entries = [];
 
   for (const item of actor.items ?? []) {
-    if (item.type !== "talent") continue;
+    // Talents and Maneuvers both. A Maneuver's `script` field has existed since the Item
+    // was written and nothing ever compiled it - so a Maneuver whose rules needed an
+    // effect had to be given a header flag and a branch in the code instead, which is
+    // why there are five of those.
+    if ((item.type !== "talent") && (item.type !== "maneuver")) continue;
 
     const { program, errors } = compile(
       item.uuid,

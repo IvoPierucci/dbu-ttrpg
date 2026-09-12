@@ -212,6 +212,12 @@ export async function enterState(actor, name, level, duration, source = "") {
   const { setState } = await import("../conditions.mjs");
   const key = String(name).toLowerCase();
 
+  // Already in it, and nothing happens: you cannot enter a State you are standing in,
+  // and an effect that would put you in it again cannot lengthen your stay either. So
+  // this is refused outright rather than quietly resetting the clock - a second
+  // Arrogant Declaration must not buy another turn of Superior.
+  if (Number(actor.system.states?.[key]) > 0) return false;
+
   const wanted = Number.isFinite(Number(level)) && (Number(level) > 0) ? Number(level) : 1;
   if (!await setState(actor, key, wanted)) return false;
 
