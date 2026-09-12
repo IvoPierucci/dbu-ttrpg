@@ -20,7 +20,8 @@ import {
   recordManeuverUse,
   spendManeuverCost,
   whyNotAnotherAbsolute,
-  whyNotAnotherInstant
+  whyNotAnotherInstant,
+  whyNotThisFoundation
 } from "./maneuvers.mjs";
 import {
   postAttack,
@@ -269,6 +270,16 @@ export async function useManeuver(actor, maneuver) {
     const outOfReach = targetActor && whyNotInReach(actor, targetActor, declared ?? {});
     if (outOfReach) {
       ui.notifications.warn(outOfReach);
+      return false;
+    }
+
+    // What the Foundation asks of the attacker, which is a different question from where
+    // the target is standing: an Energy Attack needs a Force Score of 3 whoever it is
+    // aimed at, and whether it is aimed at anybody.
+    const wrongFoundation = declared && whyNotThisFoundation(actor, declared.foundation,
+      DBUCharacterData.FOUNDATIONS[declared.foundation]?.label);
+    if (wrongFoundation) {
+      ui.notifications.warn(wrongFoundation);
       return false;
     }
 

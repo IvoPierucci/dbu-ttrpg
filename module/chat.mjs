@@ -25,6 +25,7 @@ import {
   maneuverKiCost,
   recordManeuverType,
   whyNotAnotherAbsolute,
+  whyNotThisFoundation,
   whyNotIntervene,
   maxKiWager,
   refundManeuverCost,
@@ -302,7 +303,8 @@ export function registerChatHooks() {
  * do about it. Callers apply their own policy: a lone check offers the critical die
  * as a button, while a Skill Clash has to settle both sides at once.
  */
-export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null) {
+export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null,
+                                    { minimumNatural = 0, criticalTarget = null } = {}) {
   // The whole `baseDie` Slot, not only its `set`. Only `set` was ever read, so an
   // effect *adjusting* the Natural Result - which is what Impaired does, and the only
   // way anything reaches the Botch Range that a penalty to the roll cannot - was
@@ -325,9 +327,16 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
   // Adjusted the way every other value is, which settles what a `set` and an adjustment
   // do together without a rule of its own: adds land, then a `set` overrides them. An
   // effect that states the Natural Result outright states it.
-  const natural = (typeof baseDie === "object" && baseDie)
+  const adjusted = (typeof baseDie === "object" && baseDie)
     ? Math.max(0, applySlot({ baseDie }, "baseDie", rolled))
     : rolled;
+
+  // A floor under the Natural Result, which the Clearing Profile puts at 5: "if your
+  // Natural Result is less than 5, it becomes 5. This is applied after rolling and
+  // applying any increases to your Natural Result." Last, as it says - after the die and
+  // after anything that moved it, so an effect cannot be pushed under the floor by
+  // arriving later.
+  const natural = Math.max(adjusted, minimumNatural);
 
   return {
     roll,
@@ -342,7 +351,11 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
     // Target. The Botch Range is held below the Critical Target when it is derived, so
     // the two can never both be true - which used to rest on the Botch always being 1.
     botch: natural <= (actor.system.botchRange ?? 1),
-    critical: natural >= actor.system.criticalTarget
+    // The character's own Critical Target unless the roll states one. Cutting states one
+    // for its Wound Roll - "the Critical Target is 5 (ignoring the usual limit)" - and
+    // that limit is the floor the character's own target is held to, so a stated target
+    // goes in as it is written rather than through it.
+    critical: natural >= (criticalTarget ?? actor.system.criticalTarget)
   };
 }
 
@@ -2062,7 +2075,9 @@ function rolledDice(roll, { rolled, natural, forcedNatural }, groups = [], criti
  */
 async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combatRoll = false,
                                            slot = null, collect = true,
-                                           attackingManeuver = false } = {}) {
+                                           attackingManeuver = false,
+                                           minimumNatural = 0, criticalTarget = null,
+                                           botchUnlessCritical = false } = {}) {
   // A single netted number cannot be taken apart again, so what went into it is kept
   // as labelled parts and only summed for the roll itself.
   const parts = (typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers;
@@ -2116,9 +2131,18 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   ].filter(group => group.formula);
 
   const evaluated = await evaluateCheck(actor, bonus,
-    groups.map(group => group.formula).join(" + "), baseDie);
+    groups.map(group => group.formula).join(" + "), baseDie,
+    { minimumNatural, criticalTarget });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
+
+  // Cutting: "if you do not score a Critical Result, then you score a Botch Result
+  // regardless of the Natural Result." Every roll that is not the best is the worst, and
+  // the Natural Result stops being consulted at all - which is why it is written here
+  // rather than as a Botch Range, a Range being a thing the Natural Result is read
+  // against.
+  const botchedByRule = botchUnlessCritical && !critical;
+  if (botchUnlessCritical) botch = botchedByRule;
   // What the die actually showed, before an effect moved it. The shift is the whole of
   // the difference, so this is the one subtraction that recovers it.
   const rolled = natural - naturalShift;
@@ -2188,6 +2212,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   if (refusedWilling) {
     outcome = "urgent";
     lines.push(noteLine("Urgent - a willing failure was refused"));
+  }
+
+  if (botchedByRule) {
+    lines.push(noteLine("Anything short of a Critical Result is a Botch"));
   }
 
   if (botch) {
@@ -2646,6 +2674,15 @@ async function takeOutOfSequence(message, actor, offer) {
       ui.notifications.warn(noMoreAbsolute);
       return;
     }
+
+    // The Foundation's own demand of the attacker. No exception out of sequence, as
+    // with the Melee Range above.
+    const wrongFoundation = whyNotThisFoundation(actor, declared.foundation,
+      DBUCharacterData.FOUNDATIONS[declared.foundation]?.label);
+    if (wrongFoundation) {
+      ui.notifications.warn(wrongFoundation);
+      return;
+    }
   }
 
   // An Out-of-Sequence Maneuver ignores its Action Cost, but not its Ki cost.
@@ -2738,10 +2775,13 @@ export async function postAttack(actor, target, maneuver,
           // this attack and are spent with it. Each adds a die to the Wound Roll.
           // Powered "gains an Energy Charge", on top of anything the Energy Charge
           // Maneuver fed into it - and still held to the seven the rules allow.
+          // Beam's is added after the ceiling rather than under it: "an Energy Charge
+          // that does not count towards your maximum number of Energy Charges". Powered's
+          // is an ordinary one and is held to the maximum with the rest.
           energyCharges: Math.min(
             charges + (PROFILES[profile].grantsEnergyCharge ?? 0),
             maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES)
-          ),
+          ) + (PROFILES[profile].grantsUncappedEnergyCharge ?? 0),
           signature: (maneuver.tags ?? []).includes("signature"),
           foundation,
           foundationLabel: DBUCharacterData.FOUNDATIONS[foundation].label,
@@ -3355,7 +3395,14 @@ async function resolveAttack(message, attack) {
     ...musclePenalty(attacker),
     { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty },
     ...thresholdPenalty(attacker)
-  ], { ...attackerOptions, slot: "strike", attackingManeuver: true });
+  ], {
+    ...attackerOptions, slot: "strike", attackingManeuver: true,
+    // Clearing puts a floor under the Natural Result; Cutting makes anything short of a
+    // Critical a Botch. Both belong to the Profile rather than to the character, so they
+    // travel with the roll instead of being written to a Slot.
+    minimumNatural: PROFILES[attack.profile]?.minimumNatural ?? 0,
+    botchUnlessCritical: Boolean(PROFILES[attack.profile]?.botchUnlessCritical)
+  });
 
   // From here it branches. What each of them did about that Strike is theirs alone, and
   // one of them being missed says nothing about the next.
@@ -3411,7 +3458,15 @@ async function resolveAttack(message, attack) {
     // clamped, so an attack pushed well past Lethal is still above one merely at it.
     // Per target, because the defence is part of it: a Guard drops the Category for
     // whoever guarded and for nobody else.
+    // Cutting: "on a Critical Result for the Strike Roll, increase the Damage Category
+    // by 1 Category." Summed with the rest rather than applied on its own, so a Guard
+    // pulling the Category down still meets it in the middle.
+    const criticalStep = (strike.outcome === "critical")
+      ? (PROFILES[attack.profile]?.categoryUpOnCriticalStrike ?? 0)
+      : 0;
+
     const shift = (attack.damageCategoryShift ?? 0)
+      + criticalStep
       + (defence.damageCategoryShift ?? 0)
       + (incoming?.slots?.["incoming.damage.category.shift"]?.add ?? 0);
 
@@ -3899,7 +3954,11 @@ async function rollAttackWound(message, attack) {
     criticalDice: attacker.system.dice.critical.formula,
     combatRoll: true,
     slot: "wound",
-    attackingManeuver: true
+    attackingManeuver: true,
+    // Cutting: "on the Wound Roll, the Critical Target is 5 (ignoring the usual limit)."
+    // The usual limit is the floor a character's own Critical Target is held to when it
+    // is derived, so a stated one goes in as written rather than through it.
+    criticalTarget: PROFILES[attack.profile]?.woundCriticalTarget ?? null
   });
 
   // What an attack can get past of somebody's Damage Reduction, for this attack only.
@@ -3990,7 +4049,16 @@ async function rollAttackWound(message, attack) {
     // Category has already had its say on the Soak above and gets no say here, and the
     // defence's own multiplier is applied to `counted` rather than to this - which is
     // what makes a point of it worth more than a point of Soak.
-    const reduction = Math.max(0, (target.system.damageReduction ?? 0) - pierced);
+    // Concentrated: "ignore 1/2 of your target's Damage Reduction." A fraction of
+    // theirs, so it is taken here rather than through `damageReduction.pierced`, which
+    // is an amount the attacker brings. Taken off what the piercing left, and rounded
+    // down like every other halving - ignoring half of what is already gone would be
+    // worth more than ignoring half of what is there.
+    const afterPierce = Math.max(0, (target.system.damageReduction ?? 0) - pierced);
+    const halved = PROFILES[attack.profile]?.ignoresHalfDamageReduction
+      ? Math.floor(afterPierce / 2)
+      : 0;
+    const reduction = Math.max(0, afterPierce - halved);
 
     const negated = counterWound && (counterWound.total > wound.total);
     const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);

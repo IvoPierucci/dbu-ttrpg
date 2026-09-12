@@ -356,6 +356,138 @@ export const PROFILES = Object.freeze({
         Diminishing Defense stacks a target would receive from this Attacking Maneuver.`,
     area: { shape: "sphere", magnitude: "minor", centredOnSelf: true, sparesAllies: true },
     doublesDiminishingDefense: true,
+  },
+
+  // --- Energy ---------------------------------------------------------------
+  // Bound by the Foundation's own rules: an Energy Attack reaches anywhere on the
+  // Battlefield, and cannot be made at all with a Force Score below 3.
+
+  beam: {
+    label: "Beam",
+    foundations: ["energy"],
+    kiCostPerTier: 8,
+    damageCategory: "direct",
+    text: `
+      Beam: A concentrated beam of energy that has incredible power.
+      –Damage Category: Direct
+      –KP Cost: 8(T)
+      –Effect: This Attacking Maneuver gains an Energy Charge that does not count
+      towards your maximum number of Energy Charges.`,
+    // Not `grantsEnergyCharge`, which Powered uses and which is held to the Profile's
+    // maximum along with every other Charge. This one is "an Energy Charge that does not
+    // count towards your maximum", so it is added after the ceiling rather than under it.
+    grantsUncappedEnergyCharge: 1
+  },
+
+  blast: {
+    label: "Blast",
+    foundations: ["energy"],
+    kiCostPerTier: 5,
+    damageCategory: "direct",
+    text: `
+      Blast: A cone-shaped wave of energy that can expand.
+      –Damage Category: Direct
+      –KP Cost: 5(T)
+      –Effect: This Attacking Maneuver has a Cone AoE.`,
+    // No Magnitude: the rule says "a Cone AoE" and names none, unlike Soaring's
+    // "Standard Line AoE". Left unnamed rather than guessed at.
+    area: { shape: "cone" }
+  },
+
+  clearing: {
+    label: "Clearing",
+    foundations: ["energy"],
+    kiCostPerTier: 6,
+    damageCategory: "standard",
+    text: `
+      Clearing: A huge surge of energy that strikes a large area.
+      –Damage Category: Standard
+      –KP Cost: 6(T)
+      –Effect: This Profile has multiple effects:
+      * Target a Square that is not at Long Range. This Attacking Maneuver has a Sphere
+        AoE centered on your chosen Square.
+      * The minimum Natural Result for the Strike Roll for this Attacking Maneuver is 5
+        (if your Natural Result is less than 5, it becomes 5). This is applied after
+        rolling and applying any increases to your Natural Result.`,
+    // Centred on a Square rather than on a character, which is the first Profile to do
+    // so - who that covers is the table's to agree, as with every other Area.
+    area: { shape: "sphere", centredOnSquare: true },
+    // "The minimum Natural Result for the Strike Roll is 5", applied last, after the die
+    // and after anything that moved it.
+    minimumNatural: 5
+  },
+
+  concentrated: {
+    label: "Concentrated",
+    foundations: ["energy"],
+    kiCostPerTier: 10,
+    damageCategory: "lethal",
+    text: `
+      Concentrated: A further concentrated beam that carries the ability to penetrate
+      through all defenses.
+      –Damage Category: Lethal
+      –KP Cost: 10(T)
+      –Effect: This Profile has multiple effects:
+      * This Attacking Maneuver has a Line AoE.
+      * Ignore 1/2 of your target's Damage Reduction.
+      * The AoE for this Attacking Maneuver cannot have a Magnitude larger than Standard,
+        nor can it have an AoE applied to it other than the Line AoE.`,
+    area: { shape: "line", magnitude: "standard" },
+    // "Ignore 1/2 of your target's Damage Reduction" - a fraction of theirs rather than
+    // an amount of your own, so it cannot go through `damageReduction.pierced`, which is
+    // a number the attacker brings.
+    ignoresHalfDamageReduction: true,
+    // "The AoE cannot have a Magnitude larger than Standard, nor can it have an AoE
+    // applied to it other than the Line AoE." Carried rather than enforced: nothing in
+    // the system changes an attack's Area yet, so there is nothing here to refuse. The
+    // day something does, this is what it has to ask.
+    areaLocked: { magnitude: "standard" }
+  },
+
+  cutting: {
+    label: "Cutting",
+    foundations: ["energy"],
+    kiCostPerTier: 6,
+    damageCategory: "direct",
+    text: `
+      Cutting: A disk or small arc of energy focused to possess a cutting edge.
+      –Damage Category: Direct
+      –KP Cost: 6(T)
+      –Effect: This Profile has multiple effects:
+      * On the Strike Roll for this Attacking Maneuver, if you do not score a Critical
+        Result, then you score a Botch Result regardless of the Natural Result.
+      * On a Critical Result for the Strike Roll of this Attacking Maneuver, increase the
+        Damage Category by 1 Category.
+      * On the Wound Roll for this Attacking Maneuver, the Critical Target is 5 (ignoring
+        the usual limit).`,
+    // All or nothing on the Strike: anything short of a Critical Result is a Botch,
+    // whatever the Natural Result was.
+    botchUnlessCritical: true,
+    // And a Critical is worth a Damage Category, which is settled per target because the
+    // defence has its own say in the same sum.
+    categoryUpOnCriticalStrike: 1,
+    // On the Wound Roll only, and "ignoring the usual limit" - the floor a character's
+    // own Critical Target is held to.
+    woundCriticalTarget: 5
+  },
+
+  wave: {
+    label: "Wave",
+    foundations: ["energy"],
+    kiCostPerTier: 6,
+    damageCategory: "direct",
+    text: `
+      Wave: An attack that strikes down a number of enemies lined up together.
+      –Damage Category: Direct
+      –KP Cost: 6(T)
+      –Effect: Target a Square that is not at Long Range. This Attacking Maneuver has
+      a Line AoE centered on your chosen Square, pointing in any cardinal direction of
+      your choice.`,
+    // Which cardinal direction the Line points is the player's to pick, and who it
+    // covers the table's to agree - but that is true of every Area here, and the tip
+    // already says it for all of them. `needs` is for machinery the system lacks, and
+    // this is not that: nothing is missing, the answer simply belongs to the table.
+    area: { shape: "line", centredOnSquare: true }
   }
 });
 
@@ -368,14 +500,43 @@ export const PROFILES = Object.freeze({
  */
 export const FOUNDATION_NOTES = Object.freeze({
   physical: "Physical Attacks can only be made against Opponents within your Melee "
-    + "Range, unless specified otherwise."
+    + "Range, unless specified otherwise.",
+  energy: "Energy Attacks can be made against an Opponent at any distance from you "
+    + "within the Battlefield (unless they possess an AoE). You cannot use an Energy "
+    + "Attack if your Force Score is below 3."
 });
 
 export const FOUNDATION_RULES = Object.freeze({
   physical: { meleeOnly: true },
-  energy: {},
+  // "You cannot use an Energy Attack if your Force Score is below 3." The Score, not the
+  // Modifier - the two part company early and this one names the Score.
+  energy: { minimum: { attribute: "force", score: 3 } },
   magic: {}
 });
+
+/**
+ * Whether this character may make an attack with this Foundation at all.
+ *
+ * Apart from reach, which is its own question and its own answer: this one is about the
+ * character rather than about where the target is standing.
+ *
+ * The Foundation's name is passed in rather than looked up, for the reason declareAttack
+ * takes the whole Foundation table as an argument: this module stays clear of the data
+ * model, and importing it here to read one label pulled the model into every harness
+ * that loads a Maneuver.
+ *
+ * @returns {null|string} null if they may, otherwise why they may not
+ */
+export function whyNotThisFoundation(actor, foundation, name = foundation) {
+  const required = FOUNDATION_RULES[foundation]?.minimum;
+  if (!required) return null;
+
+  const score = actor?.system?.attributes?.[required.attribute]?.score ?? 0;
+  if (score >= required.score) return null;
+
+  const label = required.attribute.charAt(0).toUpperCase() + required.attribute.slice(1);
+  return `An ${name} Attack needs a ${label} Score of ${required.score}. ${actor.name} has ${score}.`;
+}
 
 /**
  * How many empty Squares lie between two tokens.
