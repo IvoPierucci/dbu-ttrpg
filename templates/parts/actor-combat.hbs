@@ -248,39 +248,71 @@
         {{#each group.maneuvers as |maneuver|}}
         {{! Draggable so it can be dropped on the hotbar, where it becomes a macro that
             uses it - the same call this row's own button makes. }}
-        <li class="maneuver {{#if maneuver.exhausted}}maneuver-exhausted{{/if}}{{#if maneuver.unaffordable}} maneuver-unaffordable{{/if}}"
+        <li class="maneuver {{#if maneuver.exhausted}}maneuver-exhausted{{/if}}{{#if maneuver.unaffordable}} maneuver-unaffordable{{/if}}{{#if maneuver.open}} maneuver-open{{/if}}"
             data-item-id="{{maneuver.itemId}}" draggable="true">
-          {{! The entry as the rulebook prints it, which is why it is data-tooltip-html
-              and not data-tooltip: both are injected as HTML, and only the second
-              keeps the line breaks that make an entry readable. }}
-          {{#if maneuver.playable}}
-          {{! Not disabled, even when it cannot be played: a disabled button fires no
-              pointer events, so it cannot be hovered, and the row would go quiet in
-              both directions at once. The click is refused by name where the rule
-              lives instead, and the row stays readable. }}
-          <button type="button" class="maneuver-name rollable" data-action="useManeuver"
-                  data-item-id="{{maneuver.itemId}}"
-                  {{#if maneuver.tip}}data-tooltip-html="{{maneuver.tip}}"{{/if}}>{{maneuver.name}}</button>
-          {{else}}
-          {{! Reactive: it is played from the message of the attack it answers. }}
-          <span class="maneuver-name maneuver-triggered"
-                {{#if maneuver.tip}}data-tooltip-html="{{maneuver.tip}}"{{/if}}>{{maneuver.name}}</span>
-          {{/if}}
 
-          {{#if maneuver.usageLabel}}
-          <span class="maneuver-uses" data-tooltip="Uses left this encounter">
-            {{maneuver.usageLabel}} &middot; {{maneuver.usesLeft}} left
-          </span>
-          {{/if}}
-          <span class="maneuver-source">{{maneuver.source}}</span>
-          <span class="maneuver-cost">{{maneuver.actionLabel}}</span>
-          <span class="maneuver-cost">{{maneuver.kiCost}} KP</span>
+          {{! The whole row opens it, bar the two things on it that do something else.
+              ApplicationV2 dispatches a click to the nearest [data-action], so the name
+              and the pencil keep their own and nothing here has to ask what was
+              clicked. }}
+          <div class="maneuver-head" data-action="toggleManeuver">
+            <span class="maneuver-mark" aria-hidden="true"></span>
 
-          {{! A Maneuver is an Item, so its name, its wording and what it costs are all
-              the player's to change - the same pencil a Talent has. }}
-          <button type="button" class="maneuver-control" data-action="editItem"
-                  data-item-id="{{maneuver.itemId}}"
-                  data-tooltip="Edit this Maneuver: its name, its wording, what it costs">&#9998;</button>
+            {{#if maneuver.playable}}
+            {{! Not disabled when it cannot be played: the click is refused by name where
+                the rule lives, which says which rule, and a disabled button says
+                nothing at all. }}
+            <button type="button" class="maneuver-name rollable" data-action="useManeuver"
+                    data-item-id="{{maneuver.itemId}}">{{maneuver.name}}</button>
+            {{else}}
+            {{! Reactive: it is played from the message of the attack it answers. }}
+            <span class="maneuver-name maneuver-triggered">{{maneuver.name}}</span>
+            {{/if}}
+
+            {{#if maneuver.usageLabel}}
+            <span class="maneuver-uses">{{maneuver.usageLabel}} &middot; {{maneuver.usesLeft}} left</span>
+            {{/if}}
+            <span class="maneuver-source">{{maneuver.source}}</span>
+            <span class="maneuver-cost">{{maneuver.actionLabel}}</span>
+            <span class="maneuver-cost">{{maneuver.kiCost}} KP</span>
+
+            {{! A Maneuver is an Item, so its name, its description and what it costs are
+                all the player's to change - the same pencil a Talent has. }}
+            <button type="button" class="maneuver-control" data-action="editItem"
+                    data-item-id="{{maneuver.itemId}}"
+                    data-tooltip="Edit this Maneuver: its name, its description, what it costs">&#9998;</button>
+          </div>
+
+          <div class="maneuver-body">
+            {{#if maneuver.description}}
+            {{! This character's own, as they wrote it. HTML, since the pencil edits it
+                through Foundry's own editor - so it is rendered, not escaped. }}
+            <div class="maneuver-description">{{{maneuver.description}}}</div>
+            {{/if}}
+
+            {{#if maneuver.lines}}
+            {{! The published entry, laid out as the rulebook prints it: the stat lines
+                open with an en dash and the options with a bullet, both of which are
+                the text's own. }}
+            <div class="maneuver-entry">
+              {{#each maneuver.lines as |line|}}
+              {{#if line.gap}}
+              <div class="dbu-entry-break"></div>
+              {{else}}
+              <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>
+              {{/if}}
+              {{/each}}
+            </div>
+            {{/if}}
+
+            {{#if maneuver.empty}}
+            <p class="maneuver-nothing">Nothing written for this one yet. The pencil opens it.</p>
+            {{/if}}
+
+            {{#each maneuver.notes as |note|}}
+            <div class="dbu-profile-note">{{note}}</div>
+            {{/each}}
+          </div>
         </li>
         {{/each}}
       </ul>

@@ -15,7 +15,7 @@
   <section class="panel">
     <h3 class="panel-title">
       Published wording
-      <span class="panel-note">Shown on the sheet, on hover</span>
+      <span class="panel-note">Shown on the sheet when the row is opened</span>
     </h3>
 
     {{#if publishedEntry}}
@@ -23,7 +23,8 @@
         shows what the rules say now rather than what they said when it was granted. }}
     <p class="tab-placeholder">
       This Maneuver's entry is published, and comes from <code>{{publishedEntry}}</code>.
-      That is what the sheet shows on hover. Edit the file to change it - anything typed
+      That is what opens under the row on the sheet. Edit the file to change it -
+      anything typed
       below is kept with this copy but not shown, since the file has an entry of its own.
     </p>
     {{else}}
@@ -31,7 +32,7 @@
       The Maneuver's entry as the rulebook prints it: its name and tagline, the stat
       lines that open with an en dash, then the Effect and its options. Those are the
       text's own line breaks, so they are kept - leave a line blank between paragraphs
-      and it stays blank. Left empty, the hover falls back to the description above.
+      and it stays blank. Left empty, the row shows the description above instead.
     </p>
     {{/if}}
 

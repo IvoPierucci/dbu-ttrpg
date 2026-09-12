@@ -987,23 +987,32 @@ export function entryTip(lines, notes = []) {
 }
 
 /**
- * What a Maneuver says, on hover.
+ * What a Maneuver has to say, as the pieces a row lays out when it is opened.
  *
- * The published entry word for word, which is what a Profile's hover shows and for the
- * same reason: somebody reading a Maneuver is reading the text they know, and a
- * tidied-up version of it is one more thing to reconcile at the table.
+ * Two bodies of text, answering different questions. The description is this character's
+ * - the pencil on the row edits it, through Foundry's own editor, so it is HTML and is
+ * rendered rather than escaped: what somebody wrote as two paragraphs shows as two
+ * paragraphs. The entry is the rule, word for word as the rulebook prints it, which is
+ * what a Profile's own hover shows and for the same reason: somebody reading a Maneuver
+ * is reading the text they know, and a tidied-up version of it is one more thing to
+ * reconcile at the table.
  *
- * The description goes underneath, and only when it is this character's own rather than
- * the one the definition ships with. Renaming and re-describing a Maneuver is much of
- * the point of their being Items - a Basic Attack reflavoured as something of your own -
- * so what somebody writes there has to read somewhere. The shipped summary does not
- * need to: the entry above it says the same thing and says it better.
+ * A row rather than a hover, because a hover cannot be read at leisure or scrolled, and
+ * the whole Defend Maneuver in one was taller than the display. The Profile picker keeps
+ * its hover: that is a dialog being chosen from, not a list being read.
+ *
+ * The description is shown when it is theirs rather than the one the definition ships
+ * with. Re-describing a Maneuver is much of the point of their being Items - a Basic
+ * Attack reflavoured as something of your own - so what somebody writes there has to
+ * read somewhere. The shipped summary does not need to: the entry below it says the same
+ * thing and says it better, which is why the entries were written out in the first
+ * place.
  *
  * @param {object} maneuver  a definition, from definitionOf() or the registry
- * @param {string[]} notes   anything to say beneath the entry, e.g. why it cannot be
- *                           played right now
+ * @returns {{lines: {text: string, bullet: boolean, gap: boolean}[], description: string,
+ *           empty: boolean}}
  */
-export function maneuverTip(maneuver, notes = []) {
+export function maneuverEntry(maneuver) {
   // The file's entry wherever the file has one, rather than the copy's. A character
   // granted a Maneuver last week holds the wording the file had last week, and six of
   // these were granted with an entry the parser had truncated at its first blank line -
@@ -1021,10 +1030,18 @@ export function maneuverTip(maneuver, notes = []) {
 
   // With no entry to quote, the description is all there is - the case for a homebrew
   // Maneuver and for the five Core ones whose printed entry was never given here. Then
-  // it is the text rather than an aside.
-  if (!printed.length) return entryTip(printedLines(own), notes);
+  // it is shown whether or not it is theirs, because it is the only thing there is.
+  const description = printed.length ? (((own !== shipped)) ? own : "") : own;
 
-  return entryTip(printed, [...notes, (own && (own !== shipped)) ? own : ""]);
+  const lines = printed.map(line => ({
+    text: line,
+    // The rulebook's own markers, not ours: a bullet opens an option, and an empty line
+    // is a paragraph break the text itself has.
+    bullet: /^[*\u2022]/.test(line),
+    gap: !line
+  }));
+
+  return { lines, description, empty: !lines.length && !description };
 }
 
 /**

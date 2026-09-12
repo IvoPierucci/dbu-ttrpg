@@ -632,11 +632,80 @@
 }
 
 .dbu-ttrpg .maneuver {
+  border-bottom: 1px solid var(--dbu-border);
+}
+
+/* The line you click. Anywhere on it opens the row, bar the name and the pencil, which
+   have clicks of their own - so the whole strip is the control and there is no separate
+   little arrow to aim at. */
+.dbu-ttrpg .maneuver-head {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 3px 4px;
-  border-bottom: 1px solid var(--dbu-border);
+  cursor: pointer;
+}
+
+.dbu-ttrpg .maneuver-head:hover {
+  background: var(--dbu-panel-raised);
+}
+
+/* Turns to point down when the row is open. Drawn rather than a glyph in the markup, so
+   there is nothing on the row for a click to land on by accident. */
+.dbu-ttrpg .maneuver-mark {
+  flex: 0 0 auto;
+  width: 8px;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--dbu-text-dim);
+  transition: transform 120ms ease;
+}
+
+.dbu-ttrpg .maneuver-mark::before {
+  content: "\25B8";
+}
+
+.dbu-ttrpg .maneuver-open > .maneuver-head .maneuver-mark {
+  transform: rotate(90deg);
+}
+
+/* What opens under it. Closed by the class rather than by the `hidden` attribute: a
+   class here is a rule an author wrote, and it wins against a display of its own
+   without a specificity argument. */
+.dbu-ttrpg .maneuver-body {
+  display: none;
+}
+
+.dbu-ttrpg .maneuver-open > .maneuver-body {
+  display: block;
+  padding: 1px 8px 8px 20px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* This character's description, as they wrote it - which is HTML, since the pencil
+   edits it through Foundry's own editor. */
+.dbu-ttrpg .maneuver-description p {
+  margin: 0 0 4px;
+}
+
+.dbu-ttrpg .maneuver-description p:last-child {
+  margin-bottom: 0;
+}
+
+/* The published entry below it, kept apart - one is theirs and the other is the rule.
+   The divider belongs to whichever is underneath, so a row with only one of the two does
+   not end in a line with nothing after it. */
+.dbu-ttrpg .maneuver-description + .maneuver-entry {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid var(--dbu-border);
+}
+
+.dbu-ttrpg .maneuver-nothing {
+  margin: 0;
+  color: var(--dbu-text-dim);
+  font-style: italic;
 }
 
 .dbu-ttrpg button.maneuver-name {
@@ -677,11 +746,10 @@
   color: var(--dbu-accent);
 }
 
-/* Spent for this encounter: still listed, but nothing left to play. Dimmed and no
-   more - the click is refused by name where the rule lives, and taking the pointer
-   events away would take the hover with them, so the row could no longer be read
-   either. */
-.dbu-ttrpg .maneuver-exhausted {
+/* Spent for this encounter: still listed, but nothing left to play. The line is dimmed
+   and nothing else - the click is refused by name where the rule lives, and what opens
+   under the row is text you may well be reading to plan the next round. */
+.dbu-ttrpg .maneuver-exhausted > .maneuver-head {
   opacity: 0.45;
 }
 

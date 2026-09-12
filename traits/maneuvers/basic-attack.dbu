@@ -18,7 +18,7 @@ description: >
 # Roll less the Soak Value is the Damage. All of that is built, and the Profiles each
 # carry their own entry word for word.
 #
-# So the hover falls back to the description below. Paste the entry over `text: >` and
-# it will show that instead, with nothing else to change.
+# So the row shows the description below instead. Paste the entry in as `text: >` and
+# it will show that, with nothing else to change.
 
 ---

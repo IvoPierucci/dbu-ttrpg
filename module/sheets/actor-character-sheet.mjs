@@ -29,8 +29,8 @@ import {
 import {
   MANEUVER_TYPES,
   PROFILES,
+  maneuverEntry,
   maneuverKiCost,
-  maneuverTip,
   maneuverUsesLeft,
   usageLimitLabel
 } from "../maneuvers.mjs";
@@ -85,6 +85,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       grantManeuvers: DBUCharacterSheet._onGrantManeuvers,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
+      toggleManeuver: DBUCharacterSheet._onToggleManeuver,
       deleteItem: DBUCharacterSheet._onDeleteItem,
       toggleCombatEdit: DBUCharacterSheet._onToggleCombatEdit,
       toggleCondition: DBUCharacterSheet._onToggleCondition,
@@ -468,11 +469,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // the round. Seen before clicking rather than after.
             exhausted: maneuverUsesLeft(this.actor, maneuver) <= 0,
             unaffordable: this.#shortOfActions(maneuver),
-            // The published entry, word for word, and beneath it the reason it cannot
-            // be played if there is one. That reason used to replace the text
-            // altogether, which answered "why is this greyed out" at the cost of
-            // answering "what does it do".
-            tip: maneuverTip(maneuver, [
+            // What opens under the row: this character's description, then the
+            // published entry. Rendered already open if it was left open, so the list
+            // does not change height after the fact.
+            ...maneuverEntry(maneuver),
+            open: Boolean(this.#openSections[`maneuver-${maneuver.itemId}`]),
+            // And why it cannot be played, if it cannot. Said as well as the entry
+            // rather than instead of it: replacing the text answered "why is this
+            // greyed out" at the cost of answering "what does it do".
+            notes: [
               maneuverUsesLeft(this.actor, maneuver) <= 0
                 ? `No uses of this left this ${maneuver.usageLimit?.per ?? "encounter"}.`
                 : "",
@@ -480,7 +485,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
               group.playable || this.#playableAlone(maneuver)
                 ? ""
                 : "Played from the attack it answers, in chat."
-            ]),
+            ].filter(Boolean),
             // Instant and Counter Maneuvers spend no Standard Action, so what they
             // cost is worth showing per type rather than assuming.
             actionLabel: MANEUVER_TYPES[maneuver.type].action
@@ -901,6 +906,26 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.actor.update({
       "system.armedTalents": armed.includes(id) ? armed.filter(other => other !== id) : [...armed, id]
     });
+  }
+
+  /**
+   * Open or close what a Maneuver's row has to say.
+   *
+   * Bound to the row rather than to a control of its own, so anywhere on it works -
+   * ApplicationV2 dispatches a click to `closest("[data-action]")`, which means the name
+   * and the pencil keep their own clicks and everything else in the row lands here.
+   *
+   * Recorded and toggled in place rather than re-rendered: the list would jump, and
+   * re-rendering a whole sheet to remember that somebody opened a row is the same
+   * mistake the collapsible sections already avoid.
+   */
+  static _onToggleManeuver(event, target) {
+    const row = target.closest(".maneuver");
+    if (!row) return;
+
+    const open = !row.classList.contains("maneuver-open");
+    row.classList.toggle("maneuver-open", open);
+    this.#openSections[`maneuver-${row.dataset.itemId}`] = open;
   }
 
   /** Open an owned Item's own sheet. */

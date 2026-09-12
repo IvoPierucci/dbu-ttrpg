@@ -13,6 +13,6 @@ description: >
 #
 # The Surge rules were given as rules - a Surge is a Healing Surge or a Ki Surge, once
 # an Encounter through this Maneuver - rather than as the Maneuver's printed entry.
-# Paste the entry in as `text: >` and the hover will show it.
+# Paste the entry in as `text: >` and the row will show it.
 
 ---
