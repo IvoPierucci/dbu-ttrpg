@@ -505,7 +505,10 @@ export const FOUNDATION_NOTES = Object.freeze({
     + "Range, unless specified otherwise.",
   energy: "Energy Attacks can be made against an Opponent at any distance from you "
     + "within the Battlefield (unless they possess an AoE). You cannot use an Energy "
-    + "Attack if your Force Score is below 3."
+    + "Attack if your Force Score is below 3.",
+  magic: "Magic Attacks can be made against an Opponent at any distance from you within "
+    + "the Battlefield (unless they possess an AoE). You cannot use a Magic Attack if "
+    + "your Magic Score is below 3."
 });
 
 export const FOUNDATION_RULES = Object.freeze({
@@ -513,7 +516,14 @@ export const FOUNDATION_RULES = Object.freeze({
   // "You cannot use an Energy Attack if your Force Score is below 3." The Score, not the
   // Modifier - the two part company early and this one names the Score.
   energy: { minimum: { attribute: "force", score: 3 } },
-  magic: {}
+  // And the same shape for Magic, which asks for its own Attribute: "you cannot use a
+  // Magic Attack if your Magic Score is below 3."
+  //
+  // The Profiles themselves are not here yet - they have effects strange enough to need
+  // a rule of their own explained first - but what the Foundation demands of the
+  // attacker stands without them, and a Multi-Foundation Profile declared as Magic is
+  // bound by it today.
+  magic: { minimum: { attribute: "magic", score: 3 } }
 });
 
 /**
@@ -537,7 +547,11 @@ export function whyNotThisFoundation(actor, foundation, name = foundation) {
   if (score >= required.score) return null;
 
   const label = required.attribute.charAt(0).toUpperCase() + required.attribute.slice(1);
-  return `An ${name} Attack needs a ${label} Score of ${required.score}. ${actor.name} has ${score}.`;
+  // "An Energy Attack" but "A Magic Attack". One Foundation hid this and the second one
+  // found it - the article is the only word in the sentence that depends on the name.
+  const article = /^[aeiou]/i.test(name) ? "An" : "A";
+  return `${article} ${name} Attack needs a ${label} Score of ${required.score}. `
+    + `${actor.name} has ${score}.`;
 }
 
 /**
