@@ -2,7 +2,7 @@
   "id": "dbu-ttrpg",
   "title": "DBU TTRPG",
   "description": "An unofficial Foundry VTT implementation of the Dragon Ball Universe Tabletop RPG (dbu-rpg.com).",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "compatibility": {
     "minimum": "13",
     "verified": "14",
