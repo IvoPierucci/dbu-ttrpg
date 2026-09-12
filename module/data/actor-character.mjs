@@ -738,6 +738,32 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Stackable bonuses a Trait grants by name. Lost at the end of a Combat Encounter.
     schema.resources = new fields.ObjectField({ required: true, initial: () => ({}) });
 
+    // --- Things on a clock ---
+    // What is on this character until some moment takes it off. A list rather than an
+    // object keyed by what it holds, because two effects can put the same State on you
+    // with different clocks and the shorter one must not take the longer one away.
+    //
+    // `edges` is how many of that turn edge still have to pass, and it is worked out
+    // when the clock is set rather than read from the wording later: "your turn" and
+    // "your next turn" both mean the next turn of yours that still has that edge ahead
+    // of it, and whether one does depends on whether you were standing in your own turn
+    // at the time. Written down as a count, the question is asked once.
+    schema.timed = new fields.ArrayField(
+      new fields.SchemaField({
+        /** What kind of thing is on the clock: a State, a Condition, or a Resource. */
+        kind: new fields.StringField({ required: true, blank: false, initial: "state" }),
+        /** Which one. */
+        key: new fields.StringField({ required: true, blank: false, initial: "" }),
+        /** Which edge takes it off: "start", "end", or "encounter". */
+        edge: new fields.StringField({ required: true, blank: false, initial: "end" }),
+        /** How many of that edge still have to pass. Ignored by "encounter". */
+        edges: new fields.NumberField({ required: true, integer: true, initial: 1, min: 0 }),
+        /** What put it there, so the card can say what ran out. */
+        source: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+      { required: true, initial: [] }
+    );
+
     // --- Karma Points ---
     // Not a Resource, despite looking like one: Resources are lost when an Encounter
     // ends, and Karma is carried through a campaign. Moved by hand, since it is earned

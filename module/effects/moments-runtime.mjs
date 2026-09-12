@@ -137,6 +137,12 @@ async function runVerb(actor, call, context) {
     case "leaveState":
       return leaveState(actor, args[0] ?? context.state);
 
+    case "enterState":
+      // No source name to hand it: a verb is run from a queue and the entry that queued
+      // it is not carried here. The State's own name is what the card will say ran out,
+      // which is the thing a reader wants anyway.
+      return enterState(actor, args[0], args[1], args[2]);
+
     case "mightClash": {
       // Opened for real now that the system has Might Clashes. It used to print a line
       // saying one could be made and do nothing, so Pinned spent an Action on a
@@ -190,6 +196,43 @@ export async function gainCondition(actor, name, stacks = 1) {
   if (!name) return;
   const { setCondition } = await import("../conditions.mjs");
   return setCondition(actor, String(name).toLowerCase(), stacks);
+}
+
+/**
+ * Enter a State, optionally on a clock.
+ *
+ * The counterpart of leaveState, which had no counterpart: nothing could put a State on
+ * a character, so every State in the system arrived by somebody ticking a box. The
+ * duration is named in the rulebook's own words and turned into edges where that rule
+ * lives, rather than being counted here.
+ */
+export async function enterState(actor, name, level, duration, source = "") {
+  if (!name) return false;
+
+  const { setState } = await import("../conditions.mjs");
+  const key = String(name).toLowerCase();
+
+  const wanted = Number.isFinite(Number(level)) && (Number(level) > 0) ? Number(level) : 1;
+  if (!await setState(actor, key, wanted)) return false;
+
+  if (!duration) return true;
+
+  const { lasting, EDGES, KINDS } = await import("../durations.mjs");
+  const clocks = {
+    "turn": { edge: EDGES.END, next: false },
+    "next-turn": { edge: EDGES.END, next: true },
+    "start-of-turn": { edge: EDGES.START, next: false },
+    "start-of-next-turn": { edge: EDGES.START, next: true },
+    "encounter": { edge: EDGES.ENCOUNTER, next: false }
+  };
+
+  const clock = clocks[String(duration).toLowerCase()];
+  if (!clock) {
+    console.warn(`DBU TTRPG | "${duration}" is not a duration this system knows.`);
+    return true;
+  }
+
+  return lasting(actor, { kind: KINDS.STATE, key, ...clock, source: source || key });
 }
 
 /** Leave a State - named, or all of them, which is what Defeat does. */

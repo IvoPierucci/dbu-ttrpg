@@ -29,6 +29,12 @@ export const VERBS = Object.freeze({
     doc: "Leave a State. With no name, every State - which is what returning to your "
        + "Normal State means."
   },
+  enterState: {
+    args: [1, 3],
+    doc: "Enter a State. A level after the name, and a duration after that - \"turn\", "
+       + "\"next-turn\", \"start-of-turn\", \"start-of-next-turn\" or \"encounter\". "
+       + "With no duration it stays until something takes it off."
+  },
   grantOutOfSequence: {
     args: [0, 1],
     doc: "Offer an Out-of-Sequence Maneuver. Offered rather than played: it is still "

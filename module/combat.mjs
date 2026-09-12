@@ -11,6 +11,7 @@
  */
 
 import DBUCharacterData from "./data/actor-character.mjs";
+import { EDGES, edgeReached, encounterEnded } from "./durations.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { replaceObject, setCondition } from "./conditions.mjs";
 
@@ -144,7 +145,12 @@ async function startEncounter(combat) {
  * client is that one, the same way relayed chat edits work.
  */
 /** A turn beginning, said in chat. Its Moment is the turn-taker's own. */
-async function announceTurn(actor, { skipped = false } = {}) {
+async function announceTurn(actor, { skipped = false, ran = [] } = {}) {
+  const notes = [
+    skipped ? "The turn still began and still ends - only the acting is lost." : "",
+    ran.length ? `Ran out: ${ran.join(", ")}` : ""
+  ].filter(Boolean);
+
   return announce("start-of-turn", {
     title: skipped
       ? `${actor.name}'s turn is skipped`
@@ -152,7 +158,23 @@ async function announceTurn(actor, { skipped = false } = {}) {
     subjectUuid: actor.uuid,
     subjectName: actor.name,
     subjects: [actor.uuid],
-    detail: skipped ? "The turn still began and still ends - only the acting is lost." : ""
+    detail: notes.join(" ")
+  });
+}
+
+/**
+ * What ran out at the end of somebody's turn.
+ *
+ * Said out loud because a thing that quietly comes off is a thing nobody notices has
+ * gone - and the whole point of a duration is that everybody knows when it ended.
+ */
+async function announceRanOut(actor, ran) {
+  return announce("end-of-turn", {
+    title: `${actor.name}: ${ran.join(", ")} ran out`,
+    subjectUuid: actor.uuid,
+    subjectName: actor.name,
+    subjects: [actor.uuid],
+    detail: "End of their turn."
   });
 }
 
@@ -173,6 +195,11 @@ async function announceTurn(actor, { skipped = false } = {}) {
  * @returns {Promise<boolean>} Whether the character may act. False means pass the turn on.
  */
 async function beginTurn(actor) {
+  // What ran out here goes first. "Until the start of your turn" means up to it and not
+  // through it, so by the time anything answers the start of the turn it is already
+  // gone - an effect asking whether you are still Superior has to get the right answer.
+  const ran = await edgeReached(actor, EDGES.START);
+
   // Fired before anything is decided, because something may skip the turn as it begins
   // rather than for as long as it lasts - the Determined State ends and costs you the
   // turn in the same breath - so the answer has to be read after the Moment, not before.
@@ -185,7 +212,7 @@ async function beginTurn(actor) {
     || (actor.system.effects?.slots?.skipTurn === true)
     || (slots["turn.skip"] === true);
 
-  await announceTurn(actor, { skipped });
+  await announceTurn(actor, { skipped, ran });
 
   // "For each stack of DOT you possess, reduce your Life Points by 1(bT) at the start of
   // your turn." After the Moment rather than before it, so an effect that answers the
@@ -254,6 +281,12 @@ export function registerCombatHooks() {
       ? combat.combatants.get(previous.combatantId)?.actor : null;
     if (leaving?.type === "character") {
       await fireMoment(leaving, "end-of-turn");
+
+      // After the Moment, not before it. "Until the end of your turn" lasts for the whole
+      // of your turn, and the end of your turn is part of your turn - so whatever answers
+      // that Moment still has it, and it goes once the answering is done.
+      const ran = await edgeReached(leaving, EDGES.END);
+      if (ran.length) await announceRanOut(leaving, ran);
       // Zeroed after the moment and not before it, since the moment is what reads it:
       // Compelled's Life Point loss asks how many Actions went into attacking during
       // the turn that just ended. "Since the last check" is what the counter means, and
@@ -290,6 +323,9 @@ export function registerCombatHooks() {
         ...NOT_CHARGING
       });
       await stopCharging(actor);
+      // Every clock stops here, not only the ones counting the Encounter: a turn edge
+      // that never arrives is a duration that never ends, and there are no more turns.
+      await encounterEnded(actor);
     }
 
     await announceEncounterEnd(rounds);
