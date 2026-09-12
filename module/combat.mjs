@@ -214,6 +214,13 @@ export function registerCombatHooks() {
   Hooks.on("combatTurnChange", async (combat, previous, current) => {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
 
+    // Nothing before the Encounter has begun. Pressing Begin Combat moves the turn from
+    // nowhere to the first combatant, and Foundry reports that as a turn change - which
+    // arrives before `combatStart` does, so the first thing in the log was somebody's
+    // turn starting above the Encounter that had not started yet. There are no turns
+    // before an Encounter, because there is no Encounter for them to be turns of.
+    if (!combat.started) return;
+
     // Through the Combatant rather than by actor id, so an unlinked token gets its own
     // Actor rather than the one in the sidebar it was made from.
     const leaving = previous?.combatantId
@@ -237,6 +244,11 @@ export function registerCombatHooks() {
 
   Hooks.on("deleteCombat", async combat => {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
+
+    // Read before the Combat is gone, and said after the clearing below: what is being
+    // announced is that it is over, and it is not over until that has happened.
+    const rounds = combat.round ?? 0;
+
     // Leaving an Encounter clears what only lasted for it.
     for (const actor of combatants(combat)) {
       await actor.update({
@@ -252,6 +264,24 @@ export function registerCombatHooks() {
       });
       await stopCharging(actor);
     }
+
+    await announceEncounterEnd(rounds);
+  });
+}
+
+/**
+ * A line closing the Encounter.
+ *
+ * Nothing in the rules happens at the end of one, so this is not a Moment and carries
+ * nobody to answer it - it is a marker, so that a log scrolled back through has an end to
+ * each Encounter as well as a beginning. The day something does happen there, it becomes
+ * a Moment like the rest and this grows the subjects to go with it.
+ */
+async function announceEncounterEnd(rounds) {
+  return announce("end-of-encounter", {
+    title: "End of the Combat Encounter",
+    detail: rounds ? `${rounds} round${(rounds === 1) ? "" : "s"}` : "",
+    subjects: []
   });
 }
 
