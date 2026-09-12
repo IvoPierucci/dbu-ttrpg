@@ -140,6 +140,11 @@ function validateStatement(s, ctx) {
         errors.push(at(`"${s.slot}" holds dice; only add-dice makes sense on it.`));
       }
 
+      // A dice amount on a number Slot is rolled and the total used, which is how the
+      // rulebook writes half its recoveries: "regain 1d10(bT) Life and Ki Points". It
+      // used to be refused twice over - here, and again where the amount was resolved -
+      // so every such line had to be written in code rather than in its own file.
+
       // A block only ever lands on Slots of its own phase - a passive is folded into
       // derived data, a reactive one is collected at a Moment - and anything else was
       // being quietly discarded when the two were gathered. That is the failure this
@@ -240,7 +245,10 @@ function validateAmount(a, slot, phase, ctx) {
       return;
 
     case "dice":
-      if (slot && (slot.kind !== KINDS.DICE)) {
+      // A number Slot takes dice: they are rolled and the total is the number, which is
+      // how the rulebook writes half its recoveries. Only a Slot that takes neither is
+      // an error - a flag, say.
+      if (slot && (slot.kind !== KINDS.DICE) && (slot.kind !== KINDS.NUMBER)) {
         errors.push(at(`"${slot.key}" holds a number, not dice.`));
       }
       return;

@@ -137,6 +137,9 @@ async function runVerb(actor, call, context) {
     case "leaveState":
       return leaveState(actor, args[0] ?? context.state);
 
+    case "expires":
+      return expiresAt(actor, args[0], args[1]);
+
     case "enterState":
       // No source name to hand it: a verb is run from a queue and the entry that queued
       // it is not carried here. The State's own name is what the card will say ran out,
@@ -196,6 +199,52 @@ export async function gainCondition(actor, name, stacks = 1) {
   if (!name) return;
   const { setCondition } = await import("../conditions.mjs");
   return setCondition(actor, String(name).toLowerCase(), stacks);
+}
+
+/** The wordings a duration can be written in, and the edges they come to. */
+async function clockFor(duration) {
+  const { EDGES } = await import("../durations.mjs");
+  return {
+    "turn": { edge: EDGES.END, next: false },
+    "next-turn": { edge: EDGES.END, next: true },
+    "start-of-turn": { edge: EDGES.START, next: false },
+    "start-of-next-turn": { edge: EDGES.START, next: true },
+    "encounter": { edge: EDGES.ENCOUNTER, next: false }
+  }[String(duration).toLowerCase()] ?? null;
+}
+
+/**
+ * Put something the character already holds on a clock.
+ *
+ * The kind is worked out from what they are holding rather than named, because an effect
+ * saying "this lasts until the start of your next turn" is not also saying what sort of
+ * thing it is - the file already said that when it granted it.
+ */
+export async function expiresAt(actor, name, duration) {
+  if (!actor || !name) return false;
+
+  const clock = await clockFor(duration);
+  if (!clock) {
+    console.warn(`DBU TTRPG | "${duration}" is not a duration this system knows.`);
+    return false;
+  }
+
+  const key = String(name).toLowerCase();
+  const { KINDS, lasting } = await import("../durations.mjs");
+
+  // States first, then Conditions, then Resources - the order they are checked in makes
+  // no practical difference, since a name is one of the three and not two of them.
+  const kind = actor.system.states?.[key] ? KINDS.STATE
+    : actor.system.conditions?.[key] ? KINDS.CONDITION
+    : actor.system.resources?.[name] ? KINDS.RESOURCE
+    : null;
+
+  if (!kind) {
+    console.warn(`DBU TTRPG | ${actor.name} is not holding "${name}", so nothing was put on a clock.`);
+    return false;
+  }
+
+  return lasting(actor, { kind, key: (kind === KINDS.RESOURCE) ? name : key, ...clock, source: name });
 }
 
 /**

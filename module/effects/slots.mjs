@@ -365,9 +365,16 @@ export function getSlot(key, data = null) {
   return undefined;
 }
 
-/** Whether an operation is allowed on a Slot. */
+/**
+ * Whether an operation is allowed on a Slot.
+ *
+ * Adding dice to a number Slot is allowed wherever adding a number is: the dice are
+ * rolled and the total is the number. "Regain 1d10(bT) Life and Ki Points" is the shape,
+ * and it is a number by the time anything reads it.
+ */
 export function allowsOperation(slot, operation) {
-  return slot.ops.includes(operation);
+  if (slot.ops.includes(operation)) return true;
+  return (operation === "add-dice") && (slot.kind === KINDS.NUMBER) && slot.ops.includes("add");
 }
 
 /** Every exact Slot, for the sheet's reference list and for the tests. */

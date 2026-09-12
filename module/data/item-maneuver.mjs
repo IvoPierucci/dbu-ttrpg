@@ -35,6 +35,15 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
 
       /** What it costs to use. */
       actionCost: new fields.NumberField({ required: true, integer: true, initial: 1, min: 0 }),
+      /**
+       * The most Actions this Maneuver may be given, when it takes a range of them -
+       * "Action Cost: Variable (2~3 Actions)". Zero means it costs what it costs.
+       *
+       * The player is asked which, and what they answer is readable in the Maneuver's
+       * own script as `actionsSpent`, since a Maneuver priced in a range is always one
+       * that does more for more.
+       */
+      actionCostMax: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       kiCost: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       kiCostPerBaseTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
 

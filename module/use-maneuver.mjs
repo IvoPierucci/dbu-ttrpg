@@ -41,14 +41,59 @@ import { fireMoment } from "./effects/moments-runtime.mjs";
  * Out of Sequence is paid for by whatever granted it rather than by the Actions of a
  * turn that is not yours.
  */
-function actionCostOf(maneuver) {
+function actionCostOf(maneuver, spent = null) {
   if ((maneuver.type === "instant") || (maneuver.type === "outOfSequence")) {
     return { kind: "standard", amount: 0 };
   }
   return {
     kind: (maneuver.type === "counter") ? "counter" : "standard",
-    amount: maneuver.actionCost ?? 1
+    amount: spent ?? maneuver.actionCost ?? 1
   };
+}
+
+/**
+ * How many Actions a Maneuver priced in a range is being given.
+ *
+ * "Action Cost: Variable (2~3 Actions)" - so the player says, between the two. Asked
+ * before anything is paid, and the answer travels to the Maneuver's own script as
+ * `actionsSpent`, since a Maneuver priced in a range is always one that does more for
+ * more and has to know which.
+ *
+ * @returns {Promise<number|null>} the count, or null if the player backed out
+ */
+async function askActionsSpent(actor, maneuver) {
+  const least = maneuver.actionCost ?? 1;
+  const most = maneuver.actionCostMax ?? 0;
+  if (most <= least) return least;
+
+  // Only what they can actually afford. Offering four Actions to somebody holding two is
+  // offering a choice that ends in a refusal two steps later.
+  const kind = (maneuver.type === "counter") ? "counter" : "standard";
+  const affordable = game.combat?.started ? actionsLeft(actor, kind) : most;
+  const ceiling = Math.min(most, Math.max(least, affordable));
+
+  const options = [];
+  for (let n = least; n <= ceiling; n++) {
+    options.push({ action: String(n), label: `${n} Action${(n === 1) ? "" : "s"}` });
+  }
+
+  if (!options.length) {
+    ui.notifications.warn(
+      `${actor.name} needs at least ${least} ${kind} Action(s) for ${maneuver.name}.`);
+    return null;
+  }
+  if (options.length === 1) return Number(options[0].action);
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${maneuver.name} - Actions` },
+    content: `<p>How many Actions is ${Handlebars.escapeExpression(actor.name)} giving
+      this? Each one is worth more, and costs more.</p>`,
+    buttons: [...options, { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+
+  return (chosen && (chosen !== "cancel")) ? Number(chosen) : null;
 }
 
 /**
@@ -114,8 +159,8 @@ function permitted(actor, maneuver) {
 }
 
 /** Take the Actions, once the Maneuver has actually committed. */
-async function payActions(actor, maneuver) {
-  const { kind, amount } = actionCostOf(maneuver);
+async function payActions(actor, maneuver, spent = null) {
+  const { kind, amount } = actionCostOf(maneuver, spent);
   await spendActions(actor, amount, kind);
 }
 
@@ -133,6 +178,7 @@ export function definitionOf(item) {
     name: item.name,
     type: item.system.type,
     actionCost: item.system.actionCost,
+    actionCostMax: item.system.actionCostMax,
     kiCost: item.system.kiCost,
     kiCostPerBaseTier: item.system.kiCostPerBaseTier,
     attacking: item.system.attacking,
@@ -184,6 +230,12 @@ export async function useManeuver(actor, maneuver) {
   // Checked here and spent further down, so that a Maneuver abandoned at the target or
   // Profile prompt costs nothing - the same way its Ki Point Cost is handled.
   if (!canAffordActions(actor, maneuver)) return false;
+
+  // "Action Cost: Variable (2~3 Actions)" - so the player says how many, before anything
+  // is paid and while the whole thing can still be dropped. One for a Maneuver that costs
+  // what it costs, which is every other one.
+  const actionsSpent = await askActionsSpent(actor, maneuver);
+  if (actionsSpent === null) return false;
 
   // A Surge is what the Maneuver does, and it can be declined once opened - so nothing
   // is spent or recorded until it has actually been taken.
@@ -297,7 +349,7 @@ export async function useManeuver(actor, maneuver) {
     return false;
   }
 
-  await payActions(actor, maneuver);
+  await payActions(actor, maneuver, actionsSpent);
   await recordManeuverUse(actor, maneuver);
 
   // Whatever was charged into this one comes with it, and the charging ends here -
@@ -319,6 +371,9 @@ export async function useManeuver(actor, maneuver) {
   // being used. Scoped by the Item's own id, which is what `only` is for.
   await fireMoment(actor, "on-used", {
     maneuver,
+    // What the player gave it, for a Maneuver that asked. Readable in its own script as
+    // `actionsSpent`, and one everywhere else.
+    actionsSpent,
     targets: targetActor ? [targetActor] : []
   }, { only: maneuver.itemId });
 
@@ -539,6 +594,7 @@ export function maneuverItemFrom(definition) {
       description: definition.description ?? "",
       source: definition.source ?? "",
       actionCost: definition.actionCost ?? 1,
+      actionCostMax: definition.actionCostMax ?? 0,
       kiCost: definition.kiCost ?? 0,
       kiCostPerBaseTier: definition.kiCostPerBaseTier ?? 0,
       attacking: Boolean(definition.attacking),

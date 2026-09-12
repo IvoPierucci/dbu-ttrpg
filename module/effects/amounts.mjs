@@ -85,10 +85,23 @@ export function resolveAmount(amount, scope) {
       // was being resolved to 0 here, which quietly dropped it.
       return amount.value;
 
-    case "dice":
-      // Dice are a formula, not a number; a caller that wanted a number asked wrongly.
-      scope.errors?.push("A dice amount cannot be used where a number is expected.");
-      return 0;
+    case "dice": {
+      // Rolled, and the total is the number. The rulebook writes half its recoveries as
+      // dice - "regain 1d10(bT) Life and Ki Points" - and refusing them here meant every
+      // one of those had to be written in code instead of in its own file.
+      //
+      // A Slot that holds dice takes the formula; this is the other caller, the one that
+      // wanted a number, and a number is what a rolled handful of dice is.
+      const formula = resolveDice(amount, scope);
+      if (!formula) return 0;
+
+      const roll = new Roll(formula);
+      // Synchronous on purpose: an amount is resolved in the middle of folding effects
+      // into derived data, and there is nowhere in that to await. Foundry's own
+      // evaluateSync is exactly for this.
+      roll.evaluateSync();
+      return roll.total;
+    }
 
     default:
       scope.errors?.push(`Unknown amount "${amount.type}".`);
@@ -137,6 +150,11 @@ export function resolvePath(p, scope) {
   // as `stacks` because that is how the rulebook says it, and needed by any effect whose
   // amount is not simply repeated per stack.
   if (p === "stacks") return scope.stacks ?? 1;
+
+  // How many Actions the player gave a Maneuver priced in a range - "Variable (2~3
+  // Actions)". Readable only in that Maneuver's own script, since it is the answer to a
+  // question only that Maneuver asked, and one everywhere else.
+  if (p === "actionsSpent") return scope.context?.actionsSpent ?? 1;
 
   const CONTEXTUAL = ["attack", "attacker", "target", "incoming", "clash", "roll",
                       "damage", "burst", "proc"];

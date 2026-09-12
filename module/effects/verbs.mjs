@@ -29,6 +29,12 @@ export const VERBS = Object.freeze({
     doc: "Leave a State. With no name, every State - which is what returning to your "
        + "Normal State means."
   },
+  expires: {
+    args: [2, 2],
+    doc: "Put something you hold on a clock: a Resource, a Combat Condition or a State, "
+       + "and then \"turn\", \"next-turn\", \"start-of-turn\", \"start-of-next-turn\" "
+       + "or \"encounter\". It is taken off when that moment arrives."
+  },
   enterState: {
     args: [1, 3],
     doc: "Enter a State. A level after the name, and a duration after that - \"turn\", "

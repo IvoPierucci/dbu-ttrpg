@@ -27,6 +27,7 @@
     "karma/karmic-save.dbu",
     "maneuvers/arrogant-declaration.dbu",
     "maneuvers/basic-attack.dbu",
+    "maneuvers/combat-recovery.dbu",
     "maneuvers/crouch.dbu",
     "maneuvers/defend.dbu",
     "maneuvers/energy-cancel.dbu",

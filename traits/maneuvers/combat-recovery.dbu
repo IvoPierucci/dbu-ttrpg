@@ -1,0 +1,85 @@
+id: combat-recovery
+name: Combat Recovery
+type: standard
+actionCost: 2
+actionCostMax: 3
+kiCost: 0
+attacking: false
+usageLimit: 1/round
+exploitable: All Opponents that are not at Long Range
+resource: recovery
+resourceMax: 3
+source: Core Rule
+description: >
+  Talk or rest to recover as much stamina as possible. Costs between 2 and 3
+  Actions, and every one of them is worth another handful of dice.
+text: >
+  You can spend between 2 and 3 Actions on Combat Recovery. For each Action
+  spent, reduce your Defense Value by 1(T) until the start of your next turn and
+  regain 1d10(bT) Life and Ki Points. If you are hit by an Attacking Maneuver
+  used through the Exploit Maneuver (and receive Damage) in response to this
+  Maneuver, you lose any Life Points regained due to this use of Combat Recovery.
+
+  Condition Recovery: When using Combat Recovery, you may forgo gaining any Life
+  Points to make a Steadfast Check. If you succeed, you can remove any Damage
+  over Time (DOT) or a stack of a Combat Condition (except Suffocating,
+  Transfigured, or Pinned) from yourself (if that Combat Condition does not have
+  stacks, remove the entire Combat Condition) for each Action spent. If you are
+  hit by an Attacking Maneuver used through the Exploit Maneuver (and receive
+  Damage) in response to this Maneuver, you automatically fail the Steadfast
+  Check.
+
+  Spectate: After using Combat Recovery, you can choose to spend your remaining
+  Actions (minimum 1 Action) to enter the Spectator Special State.
+
+---
+
+# What is here and what is not.
+#
+# The body of the Maneuver is here: the Actions, the Defense Value it costs while
+# you are catching your breath, and the Life and Ki it gives back.
+#
+# Condition Recovery and Spectate are not, and neither is the Exploit reprisal.
+# Each needs something the system does not have yet, and half of one of them would
+# be worse than none:
+#
+#   - Condition Recovery trades the Life for a Steadfast Check and removals. The
+#     Check exists and the removals exist; what does not is a way for a Maneuver
+#     to offer the player a choice between two of its own effects, the way the
+#     Defend Maneuver's options do - and those are options in code, not in a file.
+#   - the Exploit reprisal has to know that the attack that hit you was the one
+#     your own Maneuver provoked. The offer knows; the attack it turns into does
+#     not carry it yet.
+#   - Spectate needs the Spectator Special State, which does not exist.
+
+# The Defense Value is not lost per use but per Action, so the count is what is
+# held: one stack an Action, on a clock that runs out at the start of your next
+# turn. A Resource is the carrier because it is the one thing a file can raise and
+# a duration can take away.
+[on used]
+recovery.stacks += actionsSpent;
+expires(recovery, start-of-next-turn);
+
+# "For each Action spent ... regain 1d10(bT) Life and Ki Points" - so a handful of
+# dice each, rolled separately. Written out per Action rather than as one roll
+# multiplied: three rolls of 1d10(bT) and one tripled have the same average and
+# nothing else in common, and the rule says three.
+if (actionsSpent >= 1) {
+    life.value += 1d10(bT);
+    ki.value += 1d10(bT);
+}
+if (actionsSpent >= 2) {
+    life.value += 1d10(bT);
+    ki.value += 1d10(bT);
+}
+if (actionsSpent >= 3) {
+    life.value += 1d10(bT);
+    ki.value += 1d10(bT);
+}
+
+# "Reduce your Defense Value by 1(T) until the start of your next turn" - for each
+# Action, so the penalty is the count times the Tier of Power.
+[passive]
+if (recovery.stacks > 0) {
+    defenseValue -= (recovery.stacks * tierOfPower);
+}

@@ -1675,6 +1675,7 @@ export async function loadManeuvers() {
   const definitions = traitsOfKind("maneuvers").map(trait => ({
     ...trait,
     actionCost: trait.actionCost ?? 1,
+    actionCostMax: trait.actionCostMax ?? 0,
     kiCost: trait.kiCost ?? 0,
     attacking: Boolean(trait.attacking),
     requiresTarget: Boolean(trait.requiresTarget),
