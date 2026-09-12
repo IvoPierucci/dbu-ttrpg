@@ -5335,6 +5335,31 @@ function renderAttack(message, html) {
   // decide what the Wound Roll is worth - so they are their own step and the Wound
   // button waits for them. Rolling them inside the Wound Roll settled the same number
   // without anybody seeing it happen.
+  // Stepping in for somebody: the one Counter Maneuver that can be played without being
+  // the target, so it is drawn before anything that belongs to the two people in the
+  // exchange. It used to sit after Combination's extra Strikes, and that block returns
+  // early for anyone who is not the attacker - so against a Combination, the one attack
+  // that puts a step between the hit and the Wound Roll, nobody could step in at all.
+  //
+  // The window the rule opens is exactly this: the Ally has been hit, and the Wound Roll
+  // has not been made. Combination's extra Strikes happen inside it, not before it.
+  if (!result.wound && !deflection(attack)) {
+    const usable = possibleInterveners(attack)
+      .filter(who => shieldableTargets(attack, who).length);
+
+    if (usable.length) {
+      const step = document.createElement("button");
+      step.type = "button";
+      step.className = "dbu-clash-button";
+      step.textContent = "Intervene";
+      step.dataset.tooltip = "Step in front of an Ally this attack hit. Costs a Counter "
+        + "Action, and the effect you choose sets the Ki cost. Needs the Intervene "
+        + "Maneuver - a character made before it existed gets it from Add core maneuvers.";
+      step.addEventListener("click", () => openIntervene(message, attack));
+      container.append(step);
+    }
+  }
+
   if (awaitsFollowUps(attack)) {
     const attacker = fromUuidSync(attack.attackerUuid);
     if (!attacker?.isOwner) return;
@@ -5349,26 +5374,6 @@ function renderAttack(message, html) {
     more.addEventListener("click", () => rollFollowUpStrikes(message, attack, attacker));
     container.append(more);
     return;
-  }
-
-  // Stepping in for somebody, which is the one Counter Maneuver that can be played
-  // without being the target. Offered in the window the rule opens - the Ally has been
-  // hit, and the Wound Roll has not been made - to anyone the reader owns who holds the
-  // Maneuver, whether or not the attack was aimed at them too.
-  if (!result.wound && !deflection(attack)) {
-    const usable = possibleInterveners(attack)
-      .filter(who => shieldableTargets(attack, who).length);
-
-    if (usable.length) {
-      const step = document.createElement("button");
-      step.type = "button";
-      step.className = "dbu-clash-button";
-      step.textContent = "Intervene";
-      step.dataset.tooltip = "Step in front of an Ally this attack hit. Costs a Counter "
-        + "Action, and the effect you choose sets the Ki cost.";
-      step.addEventListener("click", () => openIntervene(message, attack));
-      container.append(step);
-    }
   }
 
   // The attacker rolls their own Wound, so that step belongs to them.
