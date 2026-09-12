@@ -52,6 +52,10 @@
         <em>Is Exploit</em>
         <input type="checkbox" name="system.exploit" {{#if system.exploit}}checked{{/if}}/>
       </div>
+      <div class="stat" data-tooltip="Hands Ki Points to the character it is aimed at, without touching your Capacity.">
+        <em>Is Empower</em>
+        <input type="checkbox" name="system.empower" {{#if system.empower}}checked{{/if}}/>
+      </div>
       <div class="stat" data-tooltip="Who this Maneuver gives an opening to, in the rulebook's own words - 'All adjacent Opponents'. Blank gives none.">
         <em>Exploitable by</em>
         <input type="text" name="system.exploitable" value="{{system.exploitable}}" placeholder="nobody"/>

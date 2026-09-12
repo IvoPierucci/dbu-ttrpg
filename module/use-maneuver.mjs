@@ -19,6 +19,7 @@ import {
   recordManeuverType,
   recordManeuverUse,
   spendManeuverCost,
+  squaresAway,
   whyNotAnotherAbsolute,
   whyNotAnotherInstant,
   whyNotThisFoundation
@@ -63,13 +64,24 @@ function actionCostOf(maneuver, spent = null) {
  */
 async function askActionsSpent(actor, maneuver) {
   const least = maneuver.actionCost ?? 1;
-  const most = maneuver.actionCostMax ?? 0;
-  if (most <= least) return least;
+  const kind = (maneuver.type === "counter") ? "counter" : "standard";
 
   // Only what they can actually afford. Offering four Actions to somebody holding two is
   // offering a choice that ends in a refusal two steps later.
-  const kind = (maneuver.type === "counter") ? "counter" : "standard";
-  const affordable = game.combat?.started ? actionsLeft(actor, kind) : most;
+  const affordable = game.combat?.started
+    ? actionsLeft(actor, kind)
+    : (maneuver.actionCostMax || least);
+
+  // "Action Cost: Variable", with no number after it - what you have left is the
+  // ceiling. Which is a different thing from a Maneuver that names one and happens to be
+  // unaffordable today, and reads differently to the player: one is a limit of the rule
+  // and the other is a limit of the moment.
+  const most = maneuver.actionCostOpen
+    ? Math.max(least, affordable)
+    : (maneuver.actionCostMax ?? 0);
+
+  if (most <= least) return least;
+
   const ceiling = Math.min(most, Math.max(least, affordable));
 
   const options = [];
@@ -182,6 +194,96 @@ function permitted(actor, maneuver) {
   return true;
 }
 
+/**
+ * Hand Ki Points to somebody else.
+ *
+ * "For each Action spent on this Maneuver, you can transfer a number of Ki Points up to
+ * twice your Might to the declared Ally. If the declared Ally is within your Melee
+ * Range, double the amount of Ki Points you can transfer to them. Transferring Ki Points
+ * does not reduce your Capacity."
+ *
+ * Written here rather than in the Maneuver's own file because what it does is ask two
+ * questions and move a number between two characters, and a script changes values on the
+ * character carrying it - there is no way for a file to reach somebody else.
+ *
+ * The last sentence is the one worth being careful about: Capacity is what caps your
+ * spending within a round, and this deliberately does not touch it. So the Ki comes off
+ * the pool and nothing else.
+ *
+ * @returns {Promise<boolean>} false if the player backed out, and nothing was moved.
+ */
+async function transferKi(actor, ally, actionsSpent) {
+  if (!ally) {
+    ui.notifications.warn(`${actor.name} needs an Ally to Empower. Target a token first.`);
+    return false;
+  }
+
+  const might = actor.system.might ?? 0;
+
+  // Within Melee Range doubles it. Unmeasurable is not within - out of combat there are
+  // no Squares, and a rule about them is not enforced where there are none, which is the
+  // same answer the Melee Range gives everywhere else.
+  const squares = squaresAway(actor, ally);
+  const reach = Math.max(0, actor.system.meleeRange ?? 0) + 1;
+  const close = (squares !== null) && (squares <= reach);
+
+  const cap = Math.max(0, Math.min(
+    actionsSpent * 2 * might * (close ? 2 : 1),
+    actor.system.ki.value
+  ));
+
+  if (cap <= 0) {
+    ui.notifications.warn(`${actor.name} has no Ki Points to send.`);
+    return false;
+  }
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `Empower - ${ally.name}` },
+    content: `<p>${Handlebars.escapeExpression(actor.name)} is sending Ki Points to
+        ${Handlebars.escapeExpression(ally.name)}.</p>
+      <label class="dbu-wager">
+        <span>Ki Points</span>
+        <input type="number" name="ki" value="${cap}" min="0" max="${cap}"/>
+        <em>${actionsSpent} Action(s) &middot; twice your Might${close ? ", doubled for Melee Range" : ""}
+          &middot; max ${cap}</em>
+      </label>`,
+    buttons: [
+      {
+        action: "send",
+        label: "Send",
+        callback: (event, button, dialog) =>
+          Number(dialog.element.querySelector('input[name="ki"]')?.value)
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  const sent = Math.max(0, Math.min(cap, Math.floor(Number(chosen) || 0)));
+  if (!sent) return false;
+
+  // Off the pool and nothing else: "transferring Ki Points does not reduce your
+  // Capacity", so what caps your spending for the round is left exactly where it was.
+  await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - sent) });
+
+  // Theirs is written through the relay: the Ally is very often somebody else's.
+  const { requestActorUpdate } = await import("./chat.mjs");
+  await requestActorUpdate(ally, {
+    "system.ki.value": Math.min(ally.system.ki.max, ally.system.ki.value + sent)
+  });
+
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}
+      sends <strong>${sent}</strong> Ki Points to
+      ${Handlebars.escapeExpression(ally.name)}
+      <em>Capacity untouched</em></div>`
+  });
+
+  return true;
+}
+
 /** Take the Actions, once the Maneuver has actually committed. */
 async function payActions(actor, maneuver, spent = null) {
   const { kind, amount } = actionCostOf(maneuver, spent);
@@ -203,6 +305,7 @@ export function definitionOf(item) {
     type: item.system.type,
     actionCost: item.system.actionCost,
     actionCostMax: item.system.actionCostMax,
+    actionCostOpen: item.system.actionCostOpen,
     kiCost: item.system.kiCost,
     kiCostPerBaseTier: item.system.kiCostPerBaseTier,
     attacking: item.system.attacking,
@@ -211,6 +314,7 @@ export function definitionOf(item) {
     defend: item.system.defend,
     intervene: item.system.intervene,
     exploit: item.system.exploit,
+    empower: item.system.empower,
     exploitable: item.system.exploitable,
     surge: item.system.surge,
     charge: item.system.charge,
@@ -383,6 +487,10 @@ export async function useManeuver(actor, maneuver) {
   if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, declared, actor))) {
     return false;
   }
+
+  // Empower hands Ki over before anything is recorded, so backing out of the amount
+  // leaves the Maneuver unused rather than spent on nothing.
+  if (maneuver.empower && !await transferKi(actor, targetActor, actionsSpent)) return false;
 
   await payActions(actor, maneuver, actionsSpent);
   await recordManeuverUse(actor, maneuver);
@@ -630,6 +738,7 @@ export function maneuverItemFrom(definition) {
       source: definition.source ?? "",
       actionCost: definition.actionCost ?? 1,
       actionCostMax: definition.actionCostMax ?? 0,
+      actionCostOpen: Boolean(definition.actionCostOpen),
       kiCost: definition.kiCost ?? 0,
       kiCostPerBaseTier: definition.kiCostPerBaseTier ?? 0,
       attacking: Boolean(definition.attacking),
@@ -638,6 +747,7 @@ export function maneuverItemFrom(definition) {
       defend: Boolean(definition.defend),
       intervene: Boolean(definition.intervene),
       exploit: Boolean(definition.exploit),
+      empower: Boolean(definition.empower),
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),

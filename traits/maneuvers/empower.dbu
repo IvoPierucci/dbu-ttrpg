@@ -1,0 +1,59 @@
+id: empower
+name: Empower
+type: standard
+actionCost: 1
+actionCostOpen: true
+kiCost: 0
+attacking: false
+requiresTarget: true
+empower: true
+usageLimit: 1/round
+exploitable: All adjacent Opponents
+source: Core Rule
+description: >
+  Send your power to an ally. Spend as many Actions as you like; each one is
+  worth twice your Might in Ki Points, and twice that again in Melee Range.
+text: >
+  You can decide how many Actions you spend on this Maneuver. Declare an Ally,
+  and for each Action spent on this Maneuver, you can transfer a number of Ki
+  Points up to twice your Might to the declared Ally. If the declared Ally is
+  within your Melee Range, double the amount of Ki Points you can transfer to
+  them. Transferring Ki Points does not reduce your Capacity.
+
+  Full Empowerment: Upon using this Maneuver, if you are not a Minion, you can
+  choose to reduce your Capacity to 0 and gain a stack of the Fatigued Combat
+  Condition and the Impediment Combat Condition. If you do, you may transfer any
+  amount of Ki Points through this use of the Empower Maneuver.
+
+  Miracle Empowerment: If, during the same Combat Round, a Character is declared
+  through the Empower Maneuver by 4+ Characters who spent at least 3 Actions and
+  the maximum amount of Ki Points, or a Character who had used Full Empowerment
+  to transfer as many Ki Points as possible (reducing their amount of Ki Points
+  to 0), that Character enters the Entrusted Special State until the end of their
+  next turn.
+
+  You can only enter the Entrusted Special State once per Combat Encounter
+  through Miracle Empowerment, and you cannot benefit from Miracle Empowerment if
+  one of your Allies has entered the Entrusted Special State through its effects
+  during this Combat Encounter.
+
+---
+
+# No script, and not for want of one. What this Maneuver does is ask two questions
+# and move a number between two characters, and a script changes values on the
+# character carrying it - there is no way for a file to reach somebody else. So
+# `empower: true` hands it to the code that can, the same way `surge` and `defend`
+# are handled, and what it comes to is written there.
+#
+# What is built: the Actions, the ceiling on what may be sent - twice your Might an
+# Action, doubled inside your Melee Range - and the transfer itself, which comes off
+# the pool and leaves Capacity exactly where it was.
+#
+# What is not:
+#
+#   - Full Empowerment needs a Maneuver to offer the player a choice between two of
+#     its own effects, which only the Defend options have and only in code. It also
+#     needs Capacity set rather than spent, which nothing can do yet.
+#   - Miracle Empowerment counts what four characters did to a fifth across a Combat
+#     Round. Nothing here records who Empowered whom, and a count kept on one
+#     character cannot see what the other three did.

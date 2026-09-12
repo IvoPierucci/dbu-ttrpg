@@ -1330,9 +1330,29 @@ export function whyNotAnotherInstant(actor) {
  * The most Ki a character may wager on one attack: half their Capacity by the rule,
  * and no more than they could actually pay for.
  */
-export function maxKiWager(actor) {
+export function maxKiWager(actor, advantages = []) {
   const { capacity, ki } = actor.system;
-  return Math.max(0, Math.min(Math.floor(capacity.max / 2), capacity.remaining, ki.value));
+
+  // Full Wager: "the amount of Ki Points you can Ki Wager is only limited by your
+  // remaining Capacity." So the half-Capacity limit is lifted and the other two stay -
+  // "only limited by your remaining Capacity" still cannot let you spend Ki you do not
+  // have, and a wager of Ki that is not there is not a wager.
+  const half = advantages.includes("full-wager")
+    ? Number.POSITIVE_INFINITY
+    : Math.floor(capacity.max / 2);
+
+  return Math.max(0, Math.min(half, capacity.remaining, ki.value));
+}
+
+/**
+ * The least that may be wagered, when an effect says it must be everything.
+ *
+ * All or Nothing: "you must make the highest Ki Wager possible for this Signature
+ * Technique." A floor set to the ceiling, which is the only way to say "all of it" to a
+ * question that asks for a number.
+ */
+export function forcedFullWager(advantages = []) {
+  return advantages.includes("all-or-nothing");
 }
 
 /**
@@ -1403,8 +1423,14 @@ async function pickProfile(maneuver, foundations, actor) {
   // Wagered Ki is added to the Wound Roll and comes out of Capacity, so the ceiling
   // is the lower of the rule's half-Capacity limit and what can actually be paid.
   // The floor is normally nothing, and is what Compelled raises.
-  const wagerMax = maxKiWager(actor);
-  const wagerMin = minimumKiWager(actor, maneuver);
+  // What this Technique brings changes what may be wagered: Full Wager lifts the
+  // ceiling, All or Nothing pins the floor to it. Read off the Maneuver rather than the
+  // character, because they belong to the Technique and not to whoever throws it.
+  const features = maneuver.advantages ?? [];
+  const wagerMax = maxKiWager(actor, features);
+  const wagerMin = forcedFullWager(features)
+    ? wagerMax
+    : minimumKiWager(actor, maneuver);
   const wager = `
     <label class="dbu-wager">
       <span>Ki Wager</span>
@@ -1676,12 +1702,14 @@ export async function loadManeuvers() {
     ...trait,
     actionCost: trait.actionCost ?? 1,
     actionCostMax: trait.actionCostMax ?? 0,
+    actionCostOpen: Boolean(trait.actionCostOpen),
     kiCost: trait.kiCost ?? 0,
     attacking: Boolean(trait.attacking),
     requiresTarget: Boolean(trait.requiresTarget),
     defend: Boolean(trait.defend),
     intervene: Boolean(trait.intervene),
     exploit: Boolean(trait.exploit),
+    empower: Boolean(trait.empower),
     // Kept as written: "All adjacent Opponents" is a range the table reads, not one the
     // system measures. It had been sitting in a Maneuver file since Energy Charge was
     // written and nothing had ever carried it this far.

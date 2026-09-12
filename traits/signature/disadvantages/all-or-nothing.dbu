@@ -1,0 +1,24 @@
+id: all-or-nothing
+name: All or Nothing
+kind: signature
+side: disadvantages
+tpCost: -5
+requirement: N/A
+description: >
+  Give it your all! This Signature Technique draws out all of your power.
+text: >
+  You must make the highest Ki Wager possible for this Signature Technique. If,
+  after using this Signature Technique, your Capacity is not 0 - set your
+  Capacity to 0.
+
+---
+
+# No script, for the same reason Full Wager has none: this one sets the *floor* of
+# the Ki Wager to whatever its ceiling is, which is a thing about the question and
+# not about the character.
+#
+# The second half - emptying what is left of your Capacity afterwards - is not built.
+# Capacity is spent rather than set, and there is no way yet for an effect to say
+# "whatever is left of this, it is gone". That is worth having on its own and is not
+# worth faking here: half of this Disadvantage would be a Disadvantage that costs
+# you nothing.

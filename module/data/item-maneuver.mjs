@@ -44,6 +44,12 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * that does more for more.
        */
       actionCostMax: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      /**
+       * Whether the range has no ceiling of its own - "Action Cost: Variable", with no
+       * number after it. What you have left is the ceiling then, which is a different
+       * thing from a Maneuver that names one and happens to be unaffordable today.
+       */
+      actionCostOpen: new fields.BooleanField({ required: true, initial: false }),
       kiCost: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       kiCostPerBaseTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
 
@@ -61,6 +67,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       intervene: new fields.BooleanField({ required: true, initial: false }),
       /** Punishes an opening: taking it hands over an Out-of-Sequence Basic Attack. */
       exploit: new fields.BooleanField({ required: true, initial: false }),
+      /** Hands Ki Points to the character it is aimed at. */
+      empower: new fields.BooleanField({ required: true, initial: false }),
 
       /**
        * Who this Maneuver gives an opening to, in the rulebook's own words - "All

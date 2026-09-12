@@ -1,0 +1,22 @@
+id: full-wager
+name: Full Wager
+kind: signature
+side: advantages
+tpCost: 10
+requirement: N/A
+description: >
+  You are able to unleash all of your energy in this single attack!
+text: >
+  For this Attacking Maneuver, the amount of Ki Points you can Ki Wager is only
+  limited by your remaining Capacity.
+
+---
+
+# No script. What this changes is the ceiling on a number a dialog asks for, and a
+# script changes values on a character rather than the questions put to them - so
+# the Ki Wager's own ceiling reads this Advantage by name, where that ceiling lives.
+#
+# What it comes to: the usual limit is the lower of half your Max Capacity, your
+# remaining Capacity, and the Ki you actually hold. This lifts the first of those
+# three and leaves the other two, because "only limited by your remaining Capacity"
+# still cannot let you spend Ki you do not have.
