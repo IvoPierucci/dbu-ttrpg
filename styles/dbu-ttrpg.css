@@ -708,14 +708,16 @@
   font-style: italic;
 }
 
-/* To the right, where it sits against the usage column and lines up with every other
-   name in the list.
+/* To the left, where every name in the list starts at the same place: after the
+   chevron, whatever follows the name on that row.
 
-   `justify-content`, not `text-align`: Foundry makes every button a flex container that
-   centres its contents, so the label is a flex item and text-align never reaches it.
-   That is why this button had read `text-align: left` since it was written and drawn
-   centred anyway - and why a Counter Maneuver, which is a span rather than a button, was
-   left-aligned in the same list. */
+   Both properties, because which one does the placing is not ours to decide. Foundry
+   makes every button a flex container, and in one of those the label is a flex item that
+   justify-content places and text-align never reaches - which is why this button read
+   `text-align: left` from the day it was written and drew centred anyway, while a
+   Counter Maneuver's name, a span, obeyed it. Two alignments in one list, neither the one
+   declared. Without Foundry's rule the button is an ordinary block and the browser's own
+   `button { text-align: center }` is what places it, so both are said. */
 .dbu-ttrpg button.maneuver-name {
   flex: 1 1 auto;
   width: auto;
@@ -726,7 +728,8 @@
   border: none;
   background: none;
   box-shadow: none;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  text-align: left;
   line-height: inherit;
   font-size: inherit;
   font-weight: bold;
@@ -742,7 +745,7 @@
 .dbu-ttrpg span.maneuver-name {
   flex: 1 1 auto;
   font-weight: bold;
-  text-align: right;
+  text-align: left;
 }
 
 /* Only playable when something grants it, so it is listed but not offered. */
@@ -751,9 +754,9 @@
   cursor: help;
 }
 
-/* Its own column, on every row, empty where a Maneuver has no limit. The name ends
-   where this begins, so a column that appeared on some rows and not others moved the
-   names with it - which is what made them look ragged. */
+/* Its own column, on every row, empty where a Maneuver has no limit. Sized here rather
+   than left to its text so that what comes after it - where the Maneuver is from, and
+   the two costs - sits in the same place whether or not that Maneuver has a limit. */
 .dbu-ttrpg .maneuver-uses {
   flex: 0 0 104px;
   font-size: 10px;
@@ -767,6 +770,8 @@
   opacity: 0.45;
 }
 
+/* A floor under it for the same reason: "Core Rule" is 45px wide and "Signature" is 43,
+   and left to itself that difference moved the cost columns beside it. */
 .dbu-ttrpg .maneuver-source {
   flex: 0 0 auto;
   min-width: 56px;
