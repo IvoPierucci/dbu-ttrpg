@@ -2347,3 +2347,13 @@
   font-size: 0.9em;
   color: var(--dbu-text-dim);
 }
+
+/* The opening a Maneuver just gave, in the rulebook's own words. Said on the card even
+   before anybody takes it: the range is a thing the table rules on, and a ruling is
+   easier to make with the wording in front of everybody. */
+.dbu-maneuver-exploit {
+  margin-top: 2px;
+  font-size: 0.9em;
+  font-style: italic;
+  color: var(--dbu-text-dim);
+}

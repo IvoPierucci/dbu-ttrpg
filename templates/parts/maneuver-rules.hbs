@@ -48,6 +48,14 @@
         <em>Is Defend</em>
         <input type="checkbox" name="system.defend" {{#if system.defend}}checked{{/if}}/>
       </div>
+      <div class="stat" data-tooltip="Punishes an opening. Taking it spends a Counter Action and hands over the Basic Attack Maneuver as an Out-of-Sequence Maneuver.">
+        <em>Is Exploit</em>
+        <input type="checkbox" name="system.exploit" {{#if system.exploit}}checked{{/if}}/>
+      </div>
+      <div class="stat" data-tooltip="Who this Maneuver gives an opening to, in the rulebook's own words - 'All adjacent Opponents'. Blank gives none.">
+        <em>Exploitable by</em>
+        <input type="text" name="system.exploitable" value="{{system.exploitable}}" placeholder="nobody"/>
+      </div>
       <div class="stat" data-tooltip="Played when an Ally is hit by an Attacking Maneuver, without having to be a target of it.">
         <em>Is Intervene</em>
         <input type="checkbox" name="system.intervene" {{#if system.intervene}}checked{{/if}}/>

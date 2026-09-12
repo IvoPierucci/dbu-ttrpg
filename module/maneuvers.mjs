@@ -1680,6 +1680,11 @@ export async function loadManeuvers() {
     requiresTarget: Boolean(trait.requiresTarget),
     defend: Boolean(trait.defend),
     intervene: Boolean(trait.intervene),
+    exploit: Boolean(trait.exploit),
+    // Kept as written: "All adjacent Opponents" is a range the table reads, not one the
+    // system measures. It had been sitting in a Maneuver file since Energy Charge was
+    // written and nothing had ever carried it this far.
+    exploitable: trait.exploitable ?? "",
     surge: Boolean(trait.surge),
     charge: Boolean(trait.charge),
     cancelCharge: Boolean(trait.cancelCharge),

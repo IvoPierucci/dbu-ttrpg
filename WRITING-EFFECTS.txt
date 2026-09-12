@@ -505,6 +505,22 @@ Rolls        strike  dodge  parry  wound  initiative  combatRolls
              baseDie  criticalTarget  botchRange  botch.penalty
              willingFailure
 
+Openings
+--------
+
+A Maneuver's `exploitable:` line says who it gives an opening to, in the
+rulebook's own words - "All adjacent Opponents". Anybody holding the Exploit
+Maneuver is offered it off that Maneuver's card, and taking it spends a Counter
+Action and hands over the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+
+Whether somebody is in that range is the table's to say, as every question
+about where people stand is here. The wording is written on the offer so the
+ruling is easy to make.
+
+It is offered whatever type the Maneuver was played as: "various Standard
+Maneuvers (even if they are used as another type of Maneuver) ... trigger the
+Exploit Maneuver".
+
 Damage Over Time
 ----------------
 

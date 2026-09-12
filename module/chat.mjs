@@ -209,7 +209,14 @@ async function applyOffer(messageId, offer) {
 async function applyOfferTaken(messageId, actorUuid) {
   const message = game.messages.get(messageId);
   if (!message) return;
-  await message.setFlag(SCOPE, OOS_TAKEN_FLAG, actorUuid);
+  // A list, because each person's opening is their own trigger. Held as a single uuid,
+  // one Cross Counter settled the card and the other three defenders who had chosen it
+  // and paid for it lost their strike back - and an Exploit provoked for "all adjacent
+  // Opponents" would have been one opening shared between them.
+  //
+  // An older card holds a bare uuid, which reads as a list of one.
+  const taken = takenOffers(message);
+  await message.setFlag(SCOPE, OOS_TAKEN_FLAG, [...new Set([...taken, actorUuid])]);
 }
 
 async function applyActorUpdate(actorUuid, changes) {
@@ -1196,16 +1203,32 @@ export async function postManeuver(actor, maneuver, { asOutOfSequence = false, f
   // Handed back, because the card an Instant was played on is part of the Instant rule:
   // an Out-of-Sequence Maneuver this one goes on to offer does not count as getting out
   // from under it.
-  return ChatMessage.create({
+  const card = await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `
       <div class="dbu-maneuver">
         <div class="dbu-maneuver-name">${Handlebars.escapeExpression(maneuver.name)}</div>
         <div class="dbu-maneuver-meta">${label} &middot; ${cost} &middot; ${maneuver.kiCost} KP</div>
         ${attackLine(actor, maneuver, foundation)}
+        ${exploitLine(maneuver)}
       </div>`,
     flags: { [SCOPE]: { [RESPONDABLE_FLAG]: isRespondable(maneuver, asOutOfSequence) } }
   });
+
+  offerExploits(card, actor, maneuver);
+  return card;
+}
+
+/**
+ * Who this Maneuver just gave an opening to, in the rulebook's own words.
+ *
+ * Said on the card even before anybody takes it, because the range is a thing the table
+ * rules on and a ruling is easier to make when the wording is in front of everybody.
+ */
+function exploitLine(maneuver) {
+  if (!maneuver?.exploitable) return "";
+  return `<div class="dbu-maneuver-exploit">Exploitable &middot; ${
+    Handlebars.escapeExpression(maneuver.exploitable)}</div>`;
 }
 
 /**
@@ -1221,6 +1244,51 @@ function attackLine(actor, maneuver, foundation) {
 
   return `<div class="dbu-maneuver-attack">${Handlebars.escapeExpression(profile.label)} Profile
     &middot; ${Handlebars.escapeExpression(foundationLabel)} &middot; Wound ${wound}</div>`;
+}
+
+/**
+ * Offer the Exploit Maneuver to everyone the Maneuver just used gave an opening to.
+ *
+ * "Various Standard Maneuvers (even if they are used as another type of Maneuver) and
+ * their effects trigger the Exploit Maneuver" - so it is offered off the card whatever
+ * type the Maneuver was played as, which is why this hangs off posting a card rather
+ * than off the Standard path.
+ *
+ * Who is in range is the table's to say. The range is written on the offer in the
+ * rulebook's own words - "All adjacent Opponents" - and everyone else on the scene
+ * holding the Maneuver is offered it, the same answer this system gives every other
+ * question about where people are standing. Offered, never played: a Counter Action is
+ * the player's to spend.
+ *
+ * Opponents rather than everyone is the table's call too: there is no notion here of who
+ * is on whose side, and inventing one to decide who may punish an opening would be
+ * deciding more than the rules asked.
+ */
+function offerExploits(card, actor, maneuver) {
+  if (!card || !maneuver?.exploitable) return;
+
+  const seen = new Map();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const other = token.actor;
+    if (!other || (other.type !== "character")) continue;
+    if (other.uuid === actor.uuid) continue;
+    if (!other.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
+    seen.set(other.uuid, other);
+  }
+
+  for (const other of seen.values()) {
+    requestEdit(card, {
+      type: "offer",
+      offer: {
+        actorUuid: other.uuid,
+        actorName: other.name,
+        maneuverId: "exploit",
+        maneuverName: "Exploit",
+        targetUuid: actor.uuid,
+        reason: `${maneuver.name} - ${maneuver.exploitable}`
+      }
+    });
+  }
 }
 
 /**
@@ -2017,6 +2085,17 @@ const CLASH_FLAG = "clash";
 /** Flag holding a declared attack and, once resolved, how it went. */
 const ATTACK_FLAG = "attack";
 
+/**
+ * Whoever has already taken what a card offered them.
+ *
+ * Written as a bare uuid once, so a card from before that reads as a list of one.
+ */
+function takenOffers(message) {
+  const held = message.getFlag(SCOPE, OOS_TAKEN_FLAG);
+  if (!held) return [];
+  return Array.isArray(held) ? held : [held];
+}
+
 /** Flag holding a Moment the table has been called to answer. */
 const MOMENT_FLAG = "moment";
 
@@ -2634,7 +2713,7 @@ async function resolveSkillClash(message, clash) {
 function renderOutOfSequence(message, html) {
   const container = html.querySelector(".message-content") ?? html;
   const offers = message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? [];
-  const takenBy = message.getFlag(SCOPE, OOS_TAKEN_FLAG) ?? null;
+  const taken = takenOffers(message);
 
   if (offers.length) {
     const list = document.createElement("ul");
@@ -2648,9 +2727,10 @@ function renderOutOfSequence(message, html) {
         <span class="dbu-oos-reason">${Handlebars.escapeExpression(offer.reason ?? "")}</span>`;
 
       const actor = fromUuidSync(offer.actorUuid);
-      // Only one Out-of-Sequence Maneuver may come from a single trigger, so once
-      // any of these is taken the others are no longer on offer.
-      if (!takenBy && actor?.isOwner) {
+      // One Out-of-Sequence Maneuver per trigger, and each of these is somebody's own
+      // trigger: four defenders who each chose Cross Counter each struck back, and an
+      // Exploit provoked for every adjacent Opponent is an opening each of them saw.
+      if (!taken.includes(offer.actorUuid) && actor?.isOwner) {
         const use = document.createElement("button");
         use.type = "button";
         use.className = "dbu-oos-button";
@@ -2663,12 +2743,16 @@ function renderOutOfSequence(message, html) {
     container.append(list);
   }
 
-  if (takenBy) {
+  if (taken.length) {
+    const names = taken
+      .map(uuid => fromUuidSync(uuid)?.name)
+      .filter(Boolean);
     const note = document.createElement("div");
     note.className = "dbu-settled-note";
-    note.textContent = "Out-of-Sequence Maneuver used";
+    note.textContent = names.length
+      ? `Out-of-Sequence Maneuver used by ${names.join(", ")}`
+      : "Out-of-Sequence Maneuver used";
     container.append(note);
-    return;
   }
 
 }
@@ -2682,6 +2766,22 @@ function renderOutOfSequence(message, html) {
 async function takeOutOfSequence(message, actor, offer) {
   const maneuver = getManeuver(offer.maneuverId);
   if (!maneuver) return;
+
+  // Exploit is a Counter Maneuver whose whole effect is an Out-of-Sequence Basic Attack:
+  // "if you do, use the Basic Attack Maneuver as an Out-of-Sequence Maneuver". So it
+  // costs its own Counter Action - an Out-of-Sequence Maneuver waives an Action Cost, and
+  // this one is not the Out-of-Sequence Maneuver, it is what hands one over.
+  if (maneuver.exploit) {
+    if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+    // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
+    await recordManeuverType(actor, "counter");
+
+    return takeOutOfSequence(message, actor, {
+      ...offer,
+      maneuverId: "basic-attack",
+      maneuverName: "Basic Attack"
+    });
+  }
 
   // Played out of sequence or not, an attack still has to be aimed and declared, and
   // still has to be rolled. Only its Action Cost is waived.
@@ -2848,6 +2948,9 @@ export async function postAttack(actor, target, maneuver,
           // finds nothing. It cost every defence chosen by somebody who was not the
           // last to confirm - those were written to the flag, mangled on the way, and
           // read back as no defence at all, which is a Dodge.
+          // The range at which this one gives an opening, carried so the card can say it
+          // and so the offers can name it. Blank on most.
+          exploitable: maneuver.exploitable ?? "",
           defences: [],
           // Everyone who stepped in front of somebody else. A list rather than an object
           // keyed by uuid, for the reason every other list here is one: a uuid is full of
@@ -2859,6 +2962,7 @@ export async function postAttack(actor, target, maneuver,
     }
   });
 
+  offerExploits(card, actor, maneuver);
   return card;
 }
 

@@ -50,6 +50,18 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       defend: new fields.BooleanField({ required: true, initial: false }),
       /** Steps in for somebody else. Played from an attack aimed at an Ally. */
       intervene: new fields.BooleanField({ required: true, initial: false }),
+      /** Punishes an opening: taking it hands over an Out-of-Sequence Basic Attack. */
+      exploit: new fields.BooleanField({ required: true, initial: false }),
+
+      /**
+       * Who this Maneuver gives an opening to, in the rulebook's own words - "All
+       * adjacent Opponents". Blank when it gives none.
+       *
+       * The range is carried as it is written rather than measured. Whether somebody is
+       * in it is the table's to say, as every other question about where people stand
+       * is here, and the wording differs from Maneuver to Maneuver.
+       */
+      exploitable: new fields.StringField({ required: true, blank: true, initial: "" }),
       surge: new fields.BooleanField({ required: true, initial: false }),
       /** Feeds an Energy Charge into an Attacking Maneuver declared through it. */
       charge: new fields.BooleanField({ required: true, initial: false }),
