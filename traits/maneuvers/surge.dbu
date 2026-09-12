@@ -9,10 +9,11 @@ source: Core Rule
 description: >
   Gather yourself and recover: take either a Healing Surge or a Ki Surge.
 
-# No printed entry here.
-#
-# The Surge rules were given as rules - a Surge is a Healing Surge or a Ki Surge, once
-# an Encounter through this Maneuver - rather than as the Maneuver's printed entry.
-# Paste the entry in as `text: >` and the row will show it.
+text: >
+  Surge Maneuver [1/Encounter]: Gather yourself and recover.
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: Use either a Healing Surge or a Ki Surge (see — Surges).
 
 ---

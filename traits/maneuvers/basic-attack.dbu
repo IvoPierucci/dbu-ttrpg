@@ -11,14 +11,28 @@ description: >
   Attack with any Profile. Strike against the target's Dodge; on a win, Wound
   less their Soak Value.
 
-# No printed entry here.
+text: >
+  Basic Attack Maneuver: Make a basic, unnamed attack.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: Varies (uses the Ki Point Cost of the chosen Profile)
+  –Exploitable: N/A
+  –Effect: Target an Opponent with an Attacking Maneuver using a Profile (see —
+  Foundations & Profiles) of your choice. If the Profile has an Area of Effect, use
+  that to select the target(s) instead. You can only use each Profile once per Combat
+  Round when using a Basic Attack Maneuver, except for the Simple Profile.
+
+# One rule in the entry above is not enforced.
 #
-# What a Basic Attack does was given as rules rather than as its rulebook entry - the
-# Profile sets the Ki Point Cost, the Strike Roll goes against a Dodge Roll, the Wound
-# Roll less the Soak Value is the Damage. All of that is built, and the Profiles each
-# carry their own entry word for word.
+# "You can only use each Profile once per Combat Round when using a Basic Attack
+# Maneuver, except for the Simple Profile." Nothing counts which Profiles have been
+# used through a Basic Attack this round, so the picker offers all of them every
+# time.
 #
-# So the row shows the description below instead. Paste the entry in as `text: >` and
-# it will show that, with nothing else to change.
+# Everything needed is here - a use is already recorded against the round it was
+# spent in, which is what makes 1/Round work for a Maneuver - but this counts
+# Profiles rather than Maneuvers, and nothing keeps that tally. Until it does, the
+# table keeps it: the entry on the row says the rule, which is the part a player
+# reads.
 
 ---
