@@ -505,6 +505,20 @@ Rolls        strike  dodge  parry  wound  initiative  combatRolls
              baseDie  criticalTarget  botchRange  botch.penalty
              willingFailure
 
+Damage that is not there
+------------------------
+
+  Wound Roll - Soak Value - Damage Reduction = Damage
+
+If that comes to nothing, there is no Damage. Not a Damage of zero waiting to
+be raised - none at all, so `incoming.damage` has nothing to change and is not
+asked. The Superior State is the one that meets this first: "increase the
+Damage you take by 2(T)" takes 2(T) more of something, and does not conjure it.
+
+That is a different question from whether the attack hit. A hit that deals no
+Damage is still a hit - the rules say so where they define missing - it simply
+deals nothing.
+
 How far away somebody is
 ------------------------
 

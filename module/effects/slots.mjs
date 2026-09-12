@@ -225,7 +225,10 @@ const TABLE = [
   { key: "damage.dealt", phase: PHASES.REACTIVE, kind: N, ops: NUMERIC,
     doc: "Damage you deal, once Soak has been taken off." },
   { key: "incoming.damage", phase: PHASES.REACTIVE, kind: N, ops: NUMERIC,
-    doc: "Damage you receive." },
+    doc: "Damage you receive. Not asked at all when the Wound Roll less your Soak Value "
+       + "and Damage Reduction came to nothing: there is no Damage then, so there is "
+       + "nothing here to change - an effect that increases what you take takes more of "
+       + "something rather than conjuring it." },
   { key: "attack.autoHit", phase: PHASES.CORE, kind: F, ops: ["set"],
     doc: "Your Attacking Maneuvers hit regardless of the Clash. A standing property "
        + "while it lasts - the Determined State - rather than something that happens." },

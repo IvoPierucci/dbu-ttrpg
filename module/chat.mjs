@@ -982,8 +982,7 @@ async function resettleWound(message, situation, attack, result) {
     const raw = negated
       ? 0
       : Math.max(0, effectiveWound - (own.soak ?? 0) - (own.reduction ?? 0));
-    const damage = Math.max(0, applySlot(
-      { "incoming.damage": own.incomingDamage }, "incoming.damage", raw));
+    const damage = damageTaken(raw, { "incoming.damage": own.incomingDamage });
 
     // A Karmic Effect that takes the Damage down to nothing rattles the attacker
     // exactly as a Direct Hit that did so on its own would.
@@ -3178,6 +3177,30 @@ async function playIntervene(message, attack, { who, ally, effect }) {
 }
 
 /**
+ * The Damage a hit finally deals, once the defender's own effects have had their say.
+ *
+ * The Wound Roll less the Soak Value and the Damage Reduction is the Damage. **If that
+ * comes to nothing, there is no Damage** - not a Damage of zero sitting there waiting to
+ * be raised, but none at all, so an effect that increases the Damage you take has
+ * nothing to increase. The Superior State is the first to meet it: "increase the Damage
+ * you take by 2(T)" takes 2(T) more of something, and does not conjure it.
+ *
+ * Which is a different question from whether it was a hit. A hit that deals no Damage is
+ * still a hit - the rules say so where they define missing - it simply deals nothing.
+ *
+ * The bags are applied in the order they are given, each to what the last left.
+ */
+function damageTaken(raw, ...changes) {
+  if (raw <= 0) return 0;
+
+  let damage = raw;
+  for (const bag of changes) {
+    if (bag) damage = applySlot(bag, "incoming.damage", damage);
+  }
+  return Math.max(0, damage);
+}
+
+/**
  * What an Absolute Attack does to somebody it failed to hit.
  *
  * "If you fail to hit a target with an Attacking Maneuver, you still roll the Wound Roll
@@ -4136,13 +4159,18 @@ async function rollAttackWound(message, attack) {
     // - the Superior State takes 2(T) more - and that was worked out on the defender's
     // client and carried here on the attack. Before the Wound Roll is settled now,
     // since Broken needs the Soak Value it could not use, which is only known here.
-    const onHit = applySlot(
-      { "incoming.damage": own.incomingDamage }, "incoming.damage", raw);
+    //
+    // Neither is asked when the Soak and the Damage Reduction already swallowed the
+    // whole Wound Roll: there is no Damage then, so there is nothing to answer about.
+    // Asked anyway, a one-shot effect armed for this would be spent raising nothing.
+    const beforeWound = (raw > 0)
+      ? atMoment(target, "before-wound", { attack: 1, damageCategory: 1 })
+      : null;
+    if (beforeWound) spendChosen(target, beforeWound);
 
-    const beforeWound = atMoment(target, "before-wound", { attack: 1, damageCategory: 1 });
-    spendChosen(target, beforeWound);
-
-    const damage = Math.max(0, applySlot(beforeWound.slots, "incoming.damage", onHit));
+    const damage = damageTaken(raw,
+      { "incoming.damage": own.incomingDamage },
+      beforeWound?.slots);
 
     await maybeShakeAttacker(attacker, attack, defence, damage);
 
