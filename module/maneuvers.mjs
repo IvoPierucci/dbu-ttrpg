@@ -575,6 +575,56 @@ export function squaresBetween(a, b) {
 }
 
 /**
+ * How far away somebody is, in Squares, counted the way the rules count them.
+ *
+ * `squaresBetween` answers how many Squares lie *between* two tokens - zero when they
+ * are touching - and the rules count the target's own Square as the first one. So a
+ * character standing next to you is 1 Square away and the two numbers differ by one,
+ * which is exactly the sort of thing that gets a range band off by one and is why this
+ * is written down rather than done at each call site.
+ *
+ * @returns {number|null} null when it cannot be measured - no token, or two scenes.
+ */
+export function squaresAway(actor, target) {
+  const from = actor?.getActiveTokens?.(false, true)?.[0];
+  const to = target?.getActiveTokens?.(false, true)?.[0];
+  const between = squaresBetween(from, to);
+  return (between === null) ? null : between + 1;
+}
+
+/**
+ * "Characters are considered to be at Long Range, from your Character's perspective, if
+ * they are 9+ Squares away from your Character."
+ *
+ * From your perspective, which is why it takes both of you: it is a fact about the gap
+ * rather than about either of you, and a Profile that tells you to target a Square "not
+ * at Long Range" is measuring from the character choosing it.
+ */
+export const LONG_RANGE_SQUARES = 9;
+
+/** Whether this target is at Long Range from this character. */
+export function atLongRange(actor, target) {
+  const away = squaresAway(actor, target);
+  // Unmeasurable is not far: out of combat there are no Squares, and a rule about them
+  // cannot be enforced where there are none - the same answer the Melee Range gives.
+  return (away === null) ? false : (away >= LONG_RANGE_SQUARES);
+}
+
+/**
+ * "Reduce your Strike Rolls against any Character at Long Range by 2(bT)."
+ *
+ * Against a Character, so it belongs to the pairing and not to the roll: one Strike Roll
+ * can reach several people at several distances, and what it is worth against each of
+ * them is not the same number.
+ */
+export const LONG_RANGE_PENALTY_PER_BASE_TIER = 2;
+
+export function longRangePenalty(actor, target) {
+  if (!atLongRange(actor, target)) return 0;
+  return LONG_RANGE_PENALTY_PER_BASE_TIER * (actor?.system?.baseTierOfPower ?? 1);
+}
+
+/**
  * Whether a Physical Attack can reach this target at all.
  *
  * "Physical Attacks can only be made against Opponents within your Melee Range, unless

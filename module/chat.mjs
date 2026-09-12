@@ -22,6 +22,7 @@ import {
   defendOptionCost,
   getManeuver,
   interveneOptionCost,
+  longRangePenalty,
   maneuverKiCost,
   recordManeuverType,
   whyNotAnotherAbsolute,
@@ -905,7 +906,13 @@ async function resettleAttack(message, situation) {
   for (const entry of branches) {
     const own = entry.own;
     const answer = isAttacker ? own.answer : settled;
-    const hit = own.automatic || (answer ? (strike.total > answer.total) : true);
+
+    // The distance is still between them: a Karmic Effect changed a roll, not where
+    // anybody is standing. Worked out when the Clash first settled and kept on the line,
+    // so this does not have to find the tokens again - and cannot come to a different
+    // answer than the first settling did.
+    const against = Math.max(0, strike.total - (own.longRange ?? 0));
+    const hit = own.automatic || (answer ? (against > answer.total) : true);
 
     // The defender's own answer to being hit was collected when the Clash first
     // settled, and only if it landed. An attack that only now connects has never asked.
@@ -920,7 +927,7 @@ async function resettleAttack(message, situation) {
     }
 
     settledTargets = settledTargets.map(line =>
-      (line.uuid === entry.uuid) ? { ...own, answer, hit, incomingDamage } : line);
+      (line.uuid === entry.uuid) ? { ...own, answer, hit, against, incomingDamage } : line);
   }
 
   requestEdit(message, {
@@ -3488,8 +3495,18 @@ async function resolveAttack(message, attack) {
 
     const automatic = Boolean(forced);
 
+    // "Reduce your Strike Rolls against any Character at Long Range by 2(bT)." Against a
+    // Character - so it is taken off here, where the Strike meets this defence, and not
+    // off the roll itself. One Strike Roll can reach several people standing at several
+    // distances, and what it is worth against each of them is not the same number.
+    //
+    // Floored at nothing like every other roll: a Strike reduced past zero is a Strike
+    // of zero, not one an opponent has to beat from below.
+    const longRange = longRangePenalty(attacker, target);
+    const against = Math.max(0, strike.total - longRange);
+
     // The defender wins ties, as everywhere else: the attacker has to beat them.
-    const hit = automatic || (answer ? (strike.total > answer.total) : true);
+    const hit = automatic || (answer ? (against > answer.total) : true);
 
     // What this defender's own effects do about being hit - Superior taking more
     // Damage, Prone taking it a category harder. Collected once, used at the Wound Roll.
@@ -3546,6 +3563,11 @@ async function resolveAttack(message, attack) {
       answer,
       hit,
       automatic,
+      // What the Strike was worth against this one, and what the distance cost it. Both
+      // said on the card: a Strike of 20 losing to a Dodge of 15 reads as a bug unless
+      // the five that went missing are named.
+      longRange,
+      against,
       // Said on the card, since a defence that was never rolled needs a reason beside
       // it or it looks like it was simply forgotten.
       forced,
@@ -3891,9 +3913,13 @@ async function rollFollowUpStrikes(message, attack, attacker) {
   // with the roll they defended the first Strike with - the same number that lost - and
   // measuring against the dice alone left them answering three more Strikes with a bare
   // die while every bonus on the roll went missing.
-  const answer = (attack.result?.targets ?? [])
-    .find(line => line.hit && line.answer)?.answer ?? null;
+  // The line these are measured against, and what the Strike was worth against that
+  // person - the Long Range penalty among it. These are three more Strike Rolls against
+  // the same Character, so the distance costs them what it cost the first one.
+  const line = (attack.result?.targets ?? []).find(entry => entry.hit && entry.answer) ?? null;
+  const answer = line?.answer ?? null;
   const beatable = answer ? (answer.total ?? 0) : null;
+  const longRange = line?.longRange ?? 0;
 
   const rolls = [];
   for (let i = 0; i < plan.rolls; i++) {
@@ -3909,7 +3935,7 @@ async function rollFollowUpStrikes(message, attack, attacker) {
 
   const beat = (beatable === null)
     ? 0
-    : rolls.filter(roll => roll.total > beatable).length;
+    : rolls.filter(roll => Math.max(0, roll.total - longRange) > beatable).length;
 
   requestEdit(message, {
     type: "attack",
@@ -4989,7 +5015,11 @@ function targetRow(attack, target) {
   // Rolled and beaten anyway keeps its number: the roll is not wasted, since the Strikes
   // that follow are measured against it, and the reason it did not stop the first one
   // is said beside it - a defence that plainly won otherwise reads as a bug.
-  if (own.answer) return attackSide(label, target.name, own.answer, own.forced ?? "");
+  if (own.answer) {
+    const note = own.forced
+      || (own.longRange ? `Long Range - Strike ${own.against} against them` : "");
+    return attackSide(label, target.name, own.answer, note);
+  }
 
   // Direct Hit, Guard and Power Flare forgo the roll by choice; being Sleeping or
   // facing something Determined forgoes it for you. Both end with no roll, and only

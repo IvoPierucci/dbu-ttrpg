@@ -505,6 +505,21 @@ Rolls        strike  dodge  parry  wound  initiative  combatRolls
              baseDie  criticalTarget  botchRange  botch.penalty
              willingFailure
 
+How far away somebody is
+------------------------
+
+  Long Range   9 or more Squares away, counting theirs as the first. Measured
+               from whoever is looking: it is a fact about the gap, not about
+               either character.
+
+A Strike Roll against somebody at Long Range is reduced by 2(bT). Against them,
+not on the roll - one Strike Roll can reach several people standing at several
+distances, and what it is worth against each of them is not the same number. So
+an area attack can land on the near half and miss the far half off one roll.
+
+Out of combat there are no Squares, and a rule about them is not enforced where
+there are none. Nothing there is at Long Range.
+
 How long something lasts
 ------------------------
 
