@@ -2877,7 +2877,7 @@ export async function postAttack(actor, target, maneuver,
  * Attacking Maneuver by 1 Category for the sake of calculating your Damage" - for
  * calculating theirs, and nobody else's.
  */
-function interventionOutcome(attack, entry, wound) {
+async function interventionOutcome(attack, entry, wound) {
   const actor = fromUuidSync(entry.uuid);
   const ally = fromUuidSync(entry.allyUuid);
   if (!actor) return null;
@@ -2898,7 +2898,20 @@ function interventionOutcome(attack, entry, wound) {
   const soak = Math.max(0,
     Math.floor((base + bulwark) * DAMAGE_CATEGORIES[category].soakMultiplier));
   const reduction = Math.max(0, actor.system.damageReduction ?? 0);
-  const damage = Math.max(0, wound.total - soak - reduction);
+
+  // Their own Soak and Damage Reduction against the whole Wound Roll, and then their own
+  // effects on what got through - the same two passes anybody hit takes, because taking a
+  // Wound Roll is taking a Wound Roll whether or not it was aimed at you.
+  const raw = Math.max(0, wound.total - soak - reduction);
+
+  const beforeWound = (raw > 0)
+    ? atMoment(actor, "before-wound", { attack: 1, damageCategory: 1 })
+    : null;
+  if (beforeWound) spendChosen(actor, beforeWound);
+
+  const damage = damageTaken(raw,
+    { "incoming.damage": entry.incomingDamage },
+    beforeWound?.slots);
 
   // "If you are Defeated by this Attacking Maneuver, any excess Damage is inflicted to
   // that Ally - but is reduced by their Soak Value and Damage Reduction as usual for
@@ -2911,7 +2924,7 @@ function interventionOutcome(attack, entry, wound) {
   const excess = (option.takesWound && (damage > life)) ? (damage - life) : 0;
 
   const spill = (excess && ally)
-    ? spilloverTo(ally, excess, attack)
+    ? await spilloverTo(ally, excess, attack)
     : null;
 
   return {
@@ -2927,8 +2940,19 @@ function interventionOutcome(attack, entry, wound) {
   };
 }
 
-/** What is left over reaches the Ally through their own Soak and Damage Reduction. */
-function spilloverTo(ally, excess, attack) {
+/**
+ * What is left over reaches the Ally through their own Soak and Damage Reduction.
+ *
+ * "Any excess Damage is inflicted to that Ally - but is reduced by their Soak Value and
+ * Damage Reduction as usual for that Attacking Maneuver and its Damage Category."
+ *
+ * And if anything is still standing after those two, it is Damage they are receiving, so
+ * whatever raises the Damage they take raises it. The rule names only the reductions, but
+ * it names them to say the excess is not a special kind of Damage - it arrives the
+ * ordinary way and is treated the ordinary way, which is also what stops it when the two
+ * swallow it whole.
+ */
+async function spilloverTo(ally, excess, attack) {
   const own = targetResult(attack, ally.uuid);
   const category = own?.damageCategory ?? attack.damageCategory;
 
@@ -2936,12 +2960,23 @@ function spilloverTo(ally, excess, attack) {
     (ally.system.soakValue ?? 0) * DAMAGE_CATEGORIES[category].soakMultiplier));
   const reduction = Math.max(0, ally.system.damageReduction ?? 0);
 
+  const raw = Math.max(0, excess - soak - reduction);
+
+  const beforeWound = (raw > 0)
+    ? atMoment(ally, "before-wound", { attack: 1, damageCategory: 1 })
+    : null;
+  if (beforeWound) spendChosen(ally, beforeWound);
+
   return {
     uuid: ally.uuid,
     name: ally.name,
     soak,
     reduction,
-    damage: Math.max(0, excess - soak - reduction),
+    // Their own, gathered when the attack first landed on them - they were a target of
+    // it, whatever was standing in the way afterwards.
+    damage: damageTaken(raw,
+      { "incoming.damage": own?.incomingDamage },
+      beforeWound?.slots),
     applied: false
   };
 }
@@ -3136,6 +3171,16 @@ async function playIntervene(message, attack, { who, ally, effect }) {
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
   await recordManeuverType(actor, "counter");
 
+  // What their own effects do to Damage they receive - the Superior State taking 2(T)
+  // more of it. Collected here because nothing else would: it is gathered at `being-hit`
+  // for each target of the attack, and somebody stepping in front of one is not a target.
+  // Nobody had ever received a Wound Roll without being aimed at before.
+  //
+  // On their own client, like a defender's, and carried on the entry: the Wound Roll is
+  // settled by whichever client gets there first, and that is as often the attacker's.
+  const incoming = atMoment(actor, "being-hit", { attack: 1, attacker: 1 });
+  spendChosen(actor, incoming);
+
   const entry = {
     uuid: actor.uuid,
     name: actor.name,
@@ -3144,6 +3189,7 @@ async function playIntervene(message, attack, { who, ally, effect }) {
     effect,
     clash: null,
     deflected: false,
+    incomingDamage: incoming?.slots?.["incoming.damage"] ?? null,
     outcome: null
   };
 
@@ -4178,8 +4224,15 @@ async function rollAttackWound(message, attack) {
   }
 
   // What the Wound Roll came to for each person who took one in somebody else's place.
-  const settledInterventions = interventions(attack).map(entry =>
-    takesWoundFor(entry) ? { ...entry, outcome: interventionOutcome(attack, entry, wound) } : entry);
+  // A loop rather than a map, because working one out fires Moments and has to be waited
+  // for - a map would hand on a list of promises and every number on the card would read
+  // as undefined.
+  const settledInterventions = [];
+  for (const entry of interventions(attack)) {
+    settledInterventions.push(takesWoundFor(entry)
+      ? { ...entry, outcome: await interventionOutcome(attack, entry, wound) }
+      : entry);
+  }
 
   requestEdit(message, {
     type: "attack",
