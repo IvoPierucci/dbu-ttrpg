@@ -1194,9 +1194,13 @@ export async function declareAttack(maneuver, foundations, actor) {
   if (!profile) return { profile: "", foundation: "physical", kiWager, advantages, ...answers };
 
   // A Foundation this character cannot use is offered greyed out rather than left off
-  // the list: a missing button reads as a bug, and a disabled one carrying its reason
-  // answers the question the player was about to ask. A disabled button also cannot
-  // submit, so clicking it does nothing and the dialog stays where it is.
+  // the list: a missing button reads as a bug. A disabled button also cannot submit, so
+  // clicking it does nothing and the dialog stays where it is.
+  //
+  // The name and nothing else. The reason used to be written into the label, and a
+  // button is not a place for a sentence - two of them side by side became blocks of
+  // wrapped text with the Foundation's name lost in the middle. It is said where there
+  // is room for it: on the group these Profiles were chosen from, one step back.
   const available = PROFILES[profile].foundations;
   const shut = shutFoundations(actor, foundations);
 
@@ -1207,9 +1211,7 @@ export async function declareAttack(maneuver, foundations, actor) {
         "Which Foundation is this attack made with?",
         available.map(key => ({
           action: key,
-          label: shut[key]
-            ? `${foundations[key].label} - ${shut[key]}`
-            : foundations[key].label,
+          label: foundations[key].label,
           disabled: Boolean(shut[key])
         }))
       );
