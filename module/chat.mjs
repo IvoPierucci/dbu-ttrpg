@@ -1019,26 +1019,47 @@ async function rerollBaseDie(actor, side) {
   // case, you may take the first roll." Only asked when it is actually lower, so the
   // ordinary case costs nobody a click.
   if ((again.total < before) && await keepTheFirstRoll(actor, before, again.total)) {
+    // Nothing was replaced, so nothing the first Base Die decided comes off the card.
+    // Said out loud because the caller strips those rows by default - which left a total
+    // that still carried a Botch beside a column with no Botch in it.
     return {
+      kept: true,
       total: side.total,
       outcome: side.outcome ?? "",
       lines: [noteLine(`Karmic Chance rolled ${again.total}, keeping ${before}`)]
     };
   }
 
-  let total = (side.beforeOutcome ?? side.total) - before + again.total;
+  // The same rules the first roll was made under. A floor under the Natural Result is
+  // one of them, and it applies to the new die exactly as it did to the old.
+  const rules = side.rules ?? {};
+  const natural = Math.max(again.total, rules.minimumNatural ?? 0);
+
+  let total = (side.beforeOutcome ?? side.total) - before + natural;
   let outcome = "";
   // The Base Die was replaced, so what is shown is the swap and not a second die: the
   // first one is no longer part of the roll and a row implying it still counts would be
   // a row that lies.
   const lines = [partLine({
     label: "Karmic Chance",
-    written: `${before} → ${again.total}`,
-    value: again.total - before
+    written: `${before} → ${natural}`,
+    value: natural - before
   })];
 
-  const botch = again.total <= (actor.system.botchRange ?? 1);
-  const critical = again.total >= (actor.system.criticalTarget ?? 10);
+  // The Critical Target the roll was made against, which a Profile can state outright -
+  // Cutting's Wound Roll does - rather than the character's own.
+  const critical = natural >= (rules.criticalTarget ?? actor.system.criticalTarget ?? 10);
+
+  // And whether falling short of it is a Botch by itself, which is Cutting's whole
+  // Strike: "if you do not score a Critical Result, then you score a Botch Result
+  // regardless of the Natural Result". Regardless of it, so the Botch Range is not asked.
+  const botch = rules.botchUnlessCritical
+    ? !critical
+    : (natural <= (actor.system.botchRange ?? 1));
+
+  if (rules.botchUnlessCritical && botch) {
+    lines.push(noteLine("Anything short of a Critical Result is a Botch"));
+  }
 
   if (botch) {
     // A Skill roll loses a flat 2 where everything else loses 2(bT), so the caller may
@@ -1116,7 +1137,10 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
     const again = await rerollBaseDie(actor, side);
     total = again.total;
     outcome = again.outcome;
-    lines.splice(0, lines.length, ...withoutOutcome(lines), ...again.lines);
+    // The rows the old Base Die decided come off with it - unless it was kept, in which
+    // case it decided them still and they stay.
+    const before = again.kept ? lines : withoutOutcome(lines);
+    lines.splice(0, lines.length, ...before, ...again.lines);
   }
 
   for (const granted of slots["roll.dice"] ?? []) {
@@ -2214,8 +2238,11 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     lines.push(noteLine("Urgent - a willing failure was refused"));
   }
 
+  // Marked as the Base Die's doing, like the Botch row it explains: replace the die and
+  // this has to go with it, or a roll rerolled into a Critical keeps a line saying it
+  // was not one.
   if (botchedByRule) {
-    lines.push(noteLine("Anything short of a Critical Result is a Botch"));
+    lines.push(fromOutcome(noteLine("Anything short of a Critical Result is a Botch")));
   }
 
   if (botch) {
@@ -2264,6 +2291,12 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     // Karmic Chance replaces the Base Die and re-reads the result from scratch, so it
     // needs the total without the old die's consequences already baked in.
     beforeOutcome: roll.total,
+    // What this particular roll does that the character's own sheet does not say, kept
+    // with it because Karmic Chance replaces the Base Die and settles the outcome again
+    // from scratch. Read off the sheet alone, that second reading loses whatever the
+    // Profile brought - a Cutting attack rerolled into a 9 stopped being a Botch, which
+    // is the one thing Cutting says it always is.
+    rules: { minimumNatural, criticalTarget, botchUnlessCritical },
     // What went into it besides the dice, so the same roll can be made again without
     // rebuilding it from the sheet - which would quietly drop whatever an effect added.
     bonus,
