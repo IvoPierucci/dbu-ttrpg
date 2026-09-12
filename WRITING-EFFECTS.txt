@@ -505,6 +505,35 @@ Rolls        strike  dodge  parry  wound  initiative  combatRolls
              baseDie  criticalTarget  botchRange  botch.penalty
              willingFailure
 
+How long something lasts
+------------------------
+
+Four durations come up constantly, and they are really three:
+
+  until the end of your turn
+  until the end of your next turn
+  until the start of your turn
+  until the start of your next turn
+
+One rule covers all four:
+
+  "your turn" and "your next turn" both mean the next turn of yours that
+  still has that edge ahead of it.
+
+The start of your turn is never ahead of you while you are standing in it - it
+already happened - so the two start-of durations are the same duration written
+two ways, always. They cannot be told apart.
+
+The two end-of ones can, and only in one case: something you gain during your
+own turn. Then "the end of your turn" is the end of the turn you are in, and
+"the end of your next turn" is a full Combat Round later. Gained at any other
+time they also mean the same thing - the end of the turn that is coming.
+
+A skipped turn is still your turn. You lost it; it did not stop existing. Both
+of its edges arrive, so a duration measured from either one ends there rather
+than outliving the character it was put on - which is what a Defeated character
+lying in the Initiative Order would otherwise do to every buff on them.
+
 Two terms the rules use about a roll, and they are not the same thing:
 
   Natural Result   the Base Die alone. A Botch and a Critical are read off it

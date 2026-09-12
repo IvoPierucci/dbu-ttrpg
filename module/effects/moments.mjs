@@ -68,7 +68,11 @@ const TABLE = [
   { key: "start-of-encounter", label: "The Combat Encounter begins", provides: [],
     doc: "Fires when you enter the Encounter, so joining late still earns it." },
   { key: "start-of-round", label: "The Combat Round begins", provides: [] },
-  { key: "start-of-turn", label: "Your turn begins", provides: [] },
+  { key: "start-of-turn", label: "Your turn begins", provides: [],
+    doc: "Fires even when the turn is then skipped - for being Defeated, for Slowed at "
+       + "three stacks, for anything answering this that takes the turn away. A skipped "
+       + "turn is still your turn: you lost it, it did not stop existing. Durations "
+       + "measured from this edge end on it either way." },
   { key: "power", label: "You use the Power Up Maneuver", provides: [] },
   { key: "transform", label: "You enter this Transformation", provides: [] },
   {
@@ -114,7 +118,8 @@ const TABLE = [
   { key: "being-hit", label: "An attack connects on you", provides: [CTX.ATTACK, CTX.ATTACKER] },
   { key: "before-wound", label: "Before the Wound Roll", provides: [CTX.ATTACK, CTX.CATEGORY] },
   { key: "damage-applied", label: "Damage is dealt", provides: [CTX.DAMAGE, CTX.ATTACKER] },
-  { key: "end-of-turn", label: "Your turn ends", provides: [] },
+  { key: "end-of-turn", label: "Your turn ends", provides: [],
+    doc: "The other edge of the same turn, and it fires on a skipped turn too." },
   { key: "steadfast-check", label: "You make a Steadfast Check", provides: [CTX.RESULT] },
   { key: "healing-surge", label: "You take a Healing Surge", provides: [CTX.AMOUNT] },
   { key: "ki-surge", label: "You take a Ki Surge", provides: [CTX.AMOUNT] },

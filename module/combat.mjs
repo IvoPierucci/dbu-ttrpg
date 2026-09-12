@@ -144,13 +144,51 @@ async function startEncounter(combat) {
  * client is that one, the same way relayed chat edits work.
  */
 /** A turn beginning, said in chat. Its Moment is the turn-taker's own. */
-async function announceTurn(actor) {
+async function announceTurn(actor, { skipped = false } = {}) {
   return announce("start-of-turn", {
-    title: `Start of ${actor.name}'s turn`,
+    title: skipped
+      ? `${actor.name}'s turn is skipped`
+      : `Start of ${actor.name}'s turn`,
     subjectUuid: actor.uuid,
     subjectName: actor.name,
-    subjects: [actor.uuid]
+    subjects: [actor.uuid],
+    detail: skipped ? "The turn still began and still ends - only the acting is lost." : ""
   });
+}
+
+/**
+ * Begin a character's turn, and say whether the turn itself is theirs to take.
+ *
+ * **A skipped turn is still your turn.** You lost it; it did not stop existing. So both
+ * of its edges arrive - the Moment fires as the turn begins, and `end-of-turn` fires
+ * when the Order moves off them - and a duration written "until the start of your turn"
+ * ends on one of them rather than outliving the character it was put on.
+ *
+ * That is what settles an asymmetry this function used to hold three ways at once. A
+ * turn skipped for being Defeated fired no `start-of-turn` at all but fired `end-of-turn`
+ * anyway; a turn skipped by the Determined State fired both; and the first turn of an
+ * Encounter checked nothing, so a Defeated character standing first in the Order simply
+ * took a turn. Written once, they cannot disagree.
+ *
+ * @returns {Promise<boolean>} Whether the character may act. False means pass the turn on.
+ */
+async function beginTurn(actor) {
+  // Fired before anything is decided, because something may skip the turn as it begins
+  // rather than for as long as it lasts - the Determined State ends and costs you the
+  // turn in the same breath - so the answer has to be read after the Moment, not before.
+  const { slots } = await fireMoment(actor, "start-of-turn");
+
+  // Defeated keeps its place in the Initiative Order and is only skipped, so that
+  // getting back up puts the character straight back into the round. Slowed at three
+  // stacks skips it the same way.
+  const skipped = Boolean(actor.system.defeated)
+    || (actor.system.effects?.slots?.skipTurn === true)
+    || (slots["turn.skip"] === true);
+
+  await announceTurn(actor, { skipped });
+
+  if (skipped) ui.notifications.info(`${actor.name} is skipped this round.`);
+  return !skipped;
 }
 
 export function registerCombatHooks() {
@@ -158,11 +196,10 @@ export function registerCombatHooks() {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
     await startEncounter(combat);
     await startRound(combat);
+    // Through the same door as every other turn: a Defeated character standing first in
+    // the Initiative Order used to be handed one, because this path checked nothing.
     const first = combat.combatant?.actor;
-    if (first?.type === "character") {
-      await fireMoment(first, "start-of-turn");
-      await announceTurn(first);
-    }
+    if ((first?.type === "character") && !await beginTurn(first)) return combat.nextTurn();
   });
 
   // Foundry has a hook of its own for this, and it says which way the round moved.
@@ -193,26 +230,8 @@ export function registerCombatHooks() {
     }
 
     const arriving = combat.combatant?.actor;
-    if (arriving?.type === "character") {
-      // Slowed at three stacks skips your turn entirely, so the turn is passed on
-      // rather than begun.
-      // Defeated keeps its place in the Initiative Order - it is only skipped - so that
-      // getting back up puts the character straight back into the round.
-      if (arriving.system.defeated || arriving.system.effects?.slots?.skipTurn) {
-        ui.notifications.info(`${arriving.name} is skipped this round.`);
-        return combat.nextTurn();
-      }
-
-      // Something may skip the turn as it begins rather than for as long as it lasts -
-      // Determined ends and costs you the turn in the same breath - so the moment is
-      // fired first and its answer read after.
-      const { slots } = await fireMoment(arriving, "start-of-turn");
-      if (slots["turn.skip"] === true) {
-        ui.notifications.info(`${arriving.name} is skipped this round.`);
-        return combat.nextTurn();
-      }
-
-      await announceTurn(arriving);
+    if ((arriving?.type === "character") && !await beginTurn(arriving)) {
+      return combat.nextTurn();
     }
   });
 
