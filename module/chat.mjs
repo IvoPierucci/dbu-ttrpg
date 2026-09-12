@@ -2228,7 +2228,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 
   // The floor the penalties met, shown rather than left for the reader to discover by
   // failing to add the column up.
-  const held = floorLine(bonus - netted, "Penalties stop at the dice");
+  // `bonus` is where the penalties came to rest, which is what the row says. The
+  // difference is only how far they overran, and saying that as "+3" read as a bonus.
+  const held = floorLine(bonus - netted, bonus,
+    "Penalties took the bonuses to nothing, and stop there");
   if (held) lines.push(held);
 
   // Said out loud, because it is why the roll happened at all: the player asked to fail
@@ -2279,7 +2282,13 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // The finished total is a system value like any other: a Botch takes what it takes,
   // but never past zero. Otherwise a bad roll turns into a negative that an opponent
   // has to beat from below, which is not a thing the rules ask anyone to do.
-  const floored = floorLine(Math.max(0, total) - total, "Nothing below zero");
+  // Marked as the Base Die's doing, because only a Botch can drive a total under zero -
+  // the bonuses are already floored at nothing and the dice never come to less. So when
+  // Karmic Chance replaces the die the Botch goes, and this has to go with it. Left
+  // standing, a roll rerolled out of its Botch kept a row saying it had been rescued
+  // from a negative it no longer had.
+  const floored = fromOutcome(floorLine(Math.max(0, total) - total, 0,
+    "A Botch takes what it takes, and stops at nothing"));
   if (floored) lines.push(floored);
   total = Math.max(0, total);
 

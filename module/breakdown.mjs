@@ -168,19 +168,39 @@ export function noteLine(text) {
 }
 
 /**
- * What a floor handed back.
+ * Where a floor stopped the number.
  *
  * A table of signed numbers with an answer ruled off underneath is an addition, and a
  * reader who cannot make it come out will conclude the card is lying rather than that a
  * rule quietly clamped something. So every clamp that bites gets a row: the rules do
  * this in two places, and neither of them was visible.
  *
- * Returns nothing when the floor did not bite, since a row saying a rule left the
- * number alone is a row to read past.
+ * What the row shows is where the number came to rest, not what the floor handed back to
+ * get it there. Written as a compensation it read as one more bonus - a column with
+ * "-8 (Dim. Defense)" above "+3 (Penalties stop at the dice)" looks like something gave
+ * three points back, when what happened is that the penalties ran out of bonuses to take
+ * and stopped at nothing.
+ *
+ * `written` carries the sentence and the value column carries the floor itself, so the
+ * row reads as a statement and still lets the column be followed down to the total.
+ *
+ * Returns nothing when the floor did not bite, since a row saying a rule left the number
+ * alone is a row to read past.
+ *
+ * @param {number} given  what the clamp handed back; zero means it did not bite
+ * @param {number} floor  where the number stopped
+ * @param {string} source what stopped it
  */
-export function floorLine(given, source) {
+export function floorLine(given, floor, source) {
   if (!given) return null;
-  return { ...partLine({ label: source, value: given }), rank: LINE_ORDER.floor };
+  return {
+    kind: "part",
+    rank: LINE_ORDER.floor,
+    written: "stops at",
+    value: floor,
+    shown: String(floor),
+    source
+  };
 }
 
 /** A number with its sign always shown, since a column of them is read by sign. */

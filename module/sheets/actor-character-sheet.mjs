@@ -15,7 +15,8 @@ import {
 } from "../conditions.mjs";
 import { actionsLeft, isTheirTurn, newRoundFor, spendActions } from "../combat.mjs";
 import { whyNotAnotherInstant } from "../maneuvers.mjs";
-import { baseDieLine, extraDiceLine, partLine, noteLine, floorLine } from "../breakdown.mjs";
+import { baseDieLine, extraDiceLine, partLine, noteLine, floorLine,
+         fromOutcome } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
   checkCard,
@@ -1139,7 +1140,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const dice = extraDiceLine(extras, "Extra dice");
       if (dice) lines.push(dice);
       for (const part of parts) if (part.value) lines.push(partLine(part));
-      const held = floorLine(bonus - netted, "Penalties stop at the dice");
+      const held = floorLine(bonus - netted, bonus,
+        "Penalties took the bonuses to nothing, and stop there");
       if (held) lines.push(held);
       return lines;
     };
@@ -1195,7 +1197,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           value: -botchPenalty,
           rank: "botch"
         }),
-        floorLine(botched - (roll.total - botchPenalty), "Nothing below zero")
+        // The Base Die's doing, like the Botch above it: a Karmic Chance that replaces
+        // the die takes both rows with it.
+        fromOutcome(floorLine(botched - (roll.total - botchPenalty), botched,
+          "A Botch takes what it takes, and stops at nothing"))
       ].filter(Boolean);
 
       await ChatMessage.create({
