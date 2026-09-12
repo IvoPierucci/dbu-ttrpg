@@ -505,6 +505,24 @@ Rolls        strike  dodge  parry  wound  initiative  combatRolls
              baseDie  criticalTarget  botchRange  botch.penalty
              willingFailure
 
+Damage Over Time
+----------------
+
+  dot            stacks of DOT you hold
+  dot.perStack   what one costs you, 1(bT) by default
+
+Each stack takes 1(bT) Life Points at the start of your turn. It is not a
+Combat Condition - it is not one of the named ones and nothing about it is a
+Condition - but it stacks the same way, so `dot += 1` is how one is applied.
+
+Nothing here says how long a stack lasts: "over a period of time decided by the
+effect", so whatever applied it is what takes it away, and it stays until
+something does.
+
+It reduces Life Points rather than dealing Damage, which is the same wording
+Collision Damage uses and the same thing Soak has no say in. And it is taken on
+a skipped turn as much as any other: a skipped turn is still your turn.
+
 Damage that is not there
 ------------------------
 

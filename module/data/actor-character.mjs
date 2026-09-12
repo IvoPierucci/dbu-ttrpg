@@ -337,6 +337,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   static MAX_ABSOLUTE_ATTACKS_PER_ROUND = 2;
 
   /**
+   * "For each stack of DOT you possess, reduce your Life Points by 1(bT) at the start of
+   * your turn."
+   *
+   * No ceiling: the rule states none, and how long a stack lasts is the business of
+   * whatever applied it rather than of the stack.
+   */
+  static DOT_PER_STACK_PER_BASE_TIER = 1;
+
+  /**
    * The most Super Stacks a character can hold: "You can possess up to 3 Super Stacks."
    *
    * The one ceiling there is. The stored count is not clamped to it, so that a source
@@ -644,6 +653,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // swallowed on the way in - a field clamping below its own rule is how Mega Flare
     // lost three of its Energy Charges.
     schema.superStacks = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
+
+    // --- Damage Over Time ---
+    // Stacks of DOT held. Not a Combat Condition - it is not one of the named ones and
+    // nothing about it is a Condition - but it stacks the same way and is counted the
+    // same way, so it is a count on the character like the Diminishing ones.
+    //
+    // Nothing here says how long a stack lasts: "over a period of time decided by the
+    // effect", so the effect that applied it is what takes it away.
+    schema.dotStacks = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 
     // Actions spent on Attacking Maneuvers since this was last read, which is the end
     // of the character's own turn. Compelled is what asks: "if you do not spend at
@@ -1352,6 +1370,22 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       max: DBUCharacterData.MAX_ABSOLUTE_ATTACKS_PER_ROUND,
       left: Math.max(0,
         DBUCharacterData.MAX_ABSOLUTE_ATTACKS_PER_ROUND - this.absoluteAttacksThisRound)
+    };
+
+    // --- Damage Over Time ---
+    // 1(bT) a stack, taken at the start of your turn. (bT), so a Transformation does not
+    // make what is already burning you burn faster.
+    const dotStacks = Math.max(0, this.dotStacks + slot(this, "dot"));
+    const dotPerStack = withEffects(this, "dot.perStack",
+      this.perBaseTier(DBUCharacterData.DOT_PER_STACK_PER_BASE_TIER));
+
+    // Plain values rather than a getter for the total: derived data gets cloned and
+    // handed to templates, and a getter is the sort of thing that survives one of those
+    // and not the other.
+    this.dot = {
+      stacks: dotStacks,
+      perStack: dotPerStack,
+      total: dotStacks * dotPerStack
     };
 
     // --- Health Thresholds ---

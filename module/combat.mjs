@@ -187,8 +187,35 @@ async function beginTurn(actor) {
 
   await announceTurn(actor, { skipped });
 
+  // "For each stack of DOT you possess, reduce your Life Points by 1(bT) at the start of
+  // your turn." After the Moment rather than before it, so an effect that answers the
+  // start of your turn by taking a stack off takes it off before it burns you - the
+  // rules do not say which way round, and the order that can save you is the one worth
+  // choosing.
+  //
+  // On a skipped turn as much as any other: a skipped turn is still your turn, which is
+  // the whole reason both of its edges arrive.
+  await burnDot(actor);
+
   if (skipped) ui.notifications.info(`${actor.name} is skipped this round.`);
   return !skipped;
+}
+
+/**
+ * What Damage Over Time takes at the start of a turn.
+ *
+ * A Life Point reduction rather than Damage: the rule says "reduce your Life Points",
+ * which is the same wording Collision Damage uses and the same thing Soak has no say in.
+ */
+async function burnDot(actor) {
+  const taken = actor.system.dot?.total ?? 0;
+  if (taken <= 0) return;
+
+  const { reduceLifePoints } = await import("./chat.mjs");
+  const stacks = actor.system.dot.stacks;
+  await reduceLifePoints(actor, taken, {
+    reason: `Damage Over Time - ${stacks} stack${(stacks === 1) ? "" : "s"}`
+  });
 }
 
 export function registerCombatHooks() {

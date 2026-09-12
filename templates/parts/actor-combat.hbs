@@ -89,6 +89,21 @@
         <i class="stat-note">Dodge -{{system.diminishing.defense.penalty}} &middot; +{{system.diminishing.defense.perAttack}} per attack</i>
       </div>
 
+      {{! Not a Combat Condition, though it stacks like one - and not per-round wear
+          either: how long a stack lasts is decided by whatever applied it. }}
+      <div class="stat"
+           data-tooltip="Each stack costs you 1(bT) Life Points at the start of your turn. How long a stack lasts is decided by whatever applied it.">
+        <em>Damage Over Time</em>
+        {{#if combatEditMode}}
+        <input type="number" name="system.dotStacks" value="{{system.dotStacks}}" min="0"/>
+        {{else}}
+        <span>{{system.dot.stacks}}</span>
+        {{/if}}
+        {{#if system.dot.stacks}}
+        <i class="stat-note">-{{system.dot.total}} Life at the start of your turn</i>
+        {{/if}}
+      </div>
+
       {{! Not per-round wear like the two above: Super Stacks are held until something
           takes them away. Shown beside them because this is where the counters live. }}
       <div class="stat"

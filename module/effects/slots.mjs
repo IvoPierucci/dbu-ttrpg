@@ -262,6 +262,13 @@ const TABLE = [
   { key: "diminishing.defense.perAttack", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Stacks of Diminishing Defense gained per attack aimed at you." },
 
+  // --- Damage Over Time --------------------------------------------------------
+  { key: "dot", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Stacks of DOT you hold. Each costs you Life Points at the start of your turn. "
+       + "Not a Combat Condition, though it stacks like one." },
+  { key: "dot.perStack", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "What one stack of DOT costs at the start of your turn. 1(bT) by default." },
+
   // --- Super Stacks ------------------------------------------------------------
   // The count is resolved in CORE because everything it feeds - the Soak Value, and
   // the two roll bonuses read off the sheet - is settled from CORE onwards.
