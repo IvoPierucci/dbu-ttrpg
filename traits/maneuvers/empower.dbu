@@ -54,6 +54,8 @@ text: >
 #   - Full Empowerment needs a Maneuver to offer the player a choice between two of
 #     its own effects, which only the Defend options have and only in code. It also
 #     needs Capacity set rather than spent, which nothing can do yet.
-#   - Miracle Empowerment counts what four characters did to a fifth across a Combat
-#     Round. Nothing here records who Empowered whom, and a count kept on one
-#     character cannot see what the other three did.
+# Miracle Empowerment is not here either, and that one is settled rather than
+# pending: it counts what four characters did to a fifth across a Combat Round, and
+# the table would rather keep that count itself than have the system keep it. Which
+# is the same answer the Minion limits got, and for the same reason - a thing a
+# group says out loud does not need a number kept for it.
