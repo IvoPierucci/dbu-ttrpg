@@ -37,7 +37,9 @@ import {
 import {
   coreManeuverItems,
   definitionOf,
+  escapeGrapple,
   importCoreManeuvers,
+  releaseGrapple,
   useOwnedManeuver
 } from "../use-maneuver.mjs";
 import {
@@ -86,6 +88,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
       toggleManeuver: DBUCharacterSheet._onToggleManeuver,
+      releaseGrapple: DBUCharacterSheet._onReleaseGrapple,
+      escapeGrapple: DBUCharacterSheet._onEscapeGrapple,
       deleteItem: DBUCharacterSheet._onDeleteItem,
       toggleCombatEdit: DBUCharacterSheet._onToggleCombatEdit,
       toggleCondition: DBUCharacterSheet._onToggleCondition,
@@ -258,6 +262,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .join(", ");
     context.conditionAbilities = this.#conditionAbilities();
 
+    context.grapple = this.#grapple();
     context.states = statesFor(this.actor);
     const entered = context.states.filter(s => s.active);
     context.anyState = entered.length > 0;
@@ -414,6 +419,40 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         rankCap
       };
     });
+  }
+
+  /**
+   * The Grapple this character is in, if they are in one.
+   *
+   * Which half of it they are is most of what matters: the Grappler ends it, the
+   * Grappled has to win a Grapple Check to get out, and neither can do the other's
+   * half. So the row says which they are rather than leaving it to be worked out from
+   * which button is showing.
+   */
+  #grapple() {
+    const { partner, role } = this.actor.system.grapple ?? {};
+    if (!partner || !role) return null;
+
+    const other = fromUuidSync(partner);
+    return {
+      role,
+      grappler: role === "grappler",
+      // A partner whose token has gone leaves a Grapple with nobody in it. Said rather
+      // than drawn as a blank, and the button still works - letting go of nothing is
+      // how you get out of it.
+      name: other?.name ?? "somebody who is no longer here",
+      actions: actionsLeft(this.actor, "standard")
+    };
+  }
+
+  /** The Grappler lets go. An Instant Maneuver, on their turn. */
+  static async _onReleaseGrapple() {
+    return releaseGrapple(this.actor);
+  }
+
+  /** The Grappled spends Actions on a Grapple Check to break free. */
+  static async _onEscapeGrapple() {
+    return escapeGrapple(this.actor);
   }
 
   /**

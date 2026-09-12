@@ -21,18 +21,21 @@ import {
   spendManeuverCost,
   squaresAway,
   whyNotAnotherAbsolute,
+  whyNotAnotherGrapple,
   whyNotAnotherInstant,
+  whyNotWithinMelee,
   whyNotThisFoundation,
   whyNotThisProfile,
   recordProfileUse
 } from "./maneuvers.mjs";
 import {
   postAttack,
+  postGrappleCheck,
   postManeuver,
   postSkillClash,
   takeSurge
 } from "./chat.mjs";
-import { actionsLeft, spendActions, NOT_CHARGING, stopCharging } from "./combat.mjs";
+import { actionsLeft, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } from "./combat.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
@@ -286,6 +289,130 @@ async function transferKi(actor, ally, actionsSpent) {
   return true;
 }
 
+/**
+ * The Grappler lets go: "the Grappler can end a Grapple as an Instant Maneuver on their
+ * turn."
+ *
+ * An Instant Maneuver, so it is bound by the rule that governs those - one cannot follow
+ * another - and recorded as one afterwards, which is what holds the next.
+ */
+export async function releaseGrapple(actor) {
+  const partner = fromUuidSync(actor.system.grapple?.partner ?? "");
+  if (!partner) {
+    ui.notifications.warn(`${actor.name} is not in a Grapple.`);
+    return false;
+  }
+  if (actor.system.grapple.role !== "grappler") {
+    ui.notifications.warn(
+      `Only the Grappler can end a Grapple. ${actor.name} is the Grappled, and has to `
+      + "escape it.");
+    return false;
+  }
+  if (!isTheirTurn(actor)) {
+    ui.notifications.warn(`${actor.name} can only end a Grapple on their own turn.`);
+    return false;
+  }
+
+  const blocked = whyNotAnotherInstant(actor);
+  if (blocked) {
+    ui.notifications.warn(`${actor.name}: ${blocked}`);
+    return false;
+  }
+
+  const { endGrapple } = await import("./chat.mjs");
+  await endGrapple(actor, partner);
+
+  const card = await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}
+      lets go of ${Handlebars.escapeExpression(partner.name)}
+      <em>Grapple ended &middot; Instant Maneuver</em></div>`
+  });
+
+  await recordManeuverType(actor, "instant", { messageId: card?.id });
+  return true;
+}
+
+/**
+ * The Grappled tries to break free: "by spending 1 Action, the Grappled can make a
+ * Grapple Check against the Grappler. If they win, they escape the Grapple. For each
+ * Action spent after the first, increase the Dice Score of their Grapple Check by 1(T)
+ * until the end of their turn."
+ *
+ * Not a Maneuver - Actions spent, and nothing else - so the Instant rule does not touch
+ * it and neither does a usage limit.
+ *
+ * The Check is opened with the Grappler as challenger however it was started, because
+ * the roles in a Grapple do not swap. Which is also what settles a tie: the Defender
+ * takes one, and within a Grapple the Defender is always the Grappled.
+ */
+export async function escapeGrapple(actor) {
+  const grappler = fromUuidSync(actor.system.grapple?.partner ?? "");
+  if (!grappler) {
+    ui.notifications.warn(`${actor.name} is not in a Grapple.`);
+    return false;
+  }
+  if (actor.system.grapple.role !== "grappled") {
+    ui.notifications.warn(
+      `Only the Grappled escapes a Grapple. ${actor.name} is the Grappler, and can end `
+      + "it instead.");
+    return false;
+  }
+
+  const most = game.combat?.started ? actionsLeft(actor, "standard") : 3;
+  if (most < 1) {
+    ui.notifications.warn(`${actor.name} has no Actions left this round.`);
+    return false;
+  }
+
+  const spent = await askEscapeActions(actor, most);
+  if (spent === null) return false;
+
+  if (!await spendActions(actor, spent, "standard")) return false;
+
+  const { postGrappleCheck } = await import("./chat.mjs");
+  await postGrappleCheck(grappler, actor, {
+    maneuverName: "Escaping a Grapple",
+    kind: "escape",
+    defenderActions: spent,
+    // The Grappled is the one doing something, so the card speaks for them even though
+    // the Grappler is its challenger.
+    speaker: ChatMessage.getSpeaker({ actor }),
+    reason: `${actor.name} spends ${spent} Action${spent === 1 ? "" : "s"} to break free`
+  });
+
+  return true;
+}
+
+/** How many Actions to put into an escape. One is the rule's floor; the rest buy dice. */
+async function askEscapeActions(actor, most) {
+  if (most <= 1) return 1;
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: "Escaping a Grapple" },
+    content: `<label class="dbu-wager">
+        <span>Actions</span>
+        <input type="number" name="actions" value="1" min="1" max="${most}"/>
+        <em>1 Action makes the Grapple Check. Each one after that raises your Dice Score
+          by 1(T).</em>
+      </label>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) =>
+          Number(dialog.element.querySelector('input[name="actions"]')?.value)
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  const typed = Math.floor(Number(chosen));
+  return Number.isFinite(typed) ? Math.max(1, Math.min(most, typed)) : null;
+}
+
 /** Take the Actions, once the Maneuver has actually committed. */
 async function payActions(actor, maneuver, spent = null) {
   const { kind, amount } = actionCostOf(maneuver, spent);
@@ -317,6 +444,7 @@ export function definitionOf(item) {
     intervene: item.system.intervene,
     exploit: item.system.exploit,
     empower: item.system.empower,
+    grapple: item.system.grapple,
     exploitable: item.system.exploitable,
     surge: item.system.surge,
     charge: item.system.charge,
@@ -493,6 +621,22 @@ export async function useManeuver(actor, maneuver) {
       return false;
     }
 
+    // "You cannot use the Grapple Maneuver if you are already in a Grapple."
+    const alreadyGrappling = whyNotAnotherGrapple(actor, maneuver);
+    if (alreadyGrappling) {
+      ui.notifications.warn(alreadyGrappling);
+      return false;
+    }
+
+    // "Target a Character within your Melee Range." The same measurement a Physical
+    // Attack makes, with a different sentence around it.
+    const outOfGrasp = maneuver.grapple && targetActor
+      && whyNotWithinMelee(actor, targetActor, "The Grapple Maneuver");
+    if (outOfGrasp) {
+      ui.notifications.warn(outOfGrasp);
+      return false;
+    }
+
     // Two Absolute Attacks a Combat Round. Checked here for the same reason the reach
     // is: before anything is paid, so the declaration can still be taken back.
     const noMoreAbsolute = whyNotAnotherAbsolute(actor, maneuver);
@@ -542,7 +686,20 @@ export async function useManeuver(actor, maneuver) {
     targets: targetActor ? [targetActor] : []
   }, { only: maneuver.itemId });
 
-  const card = maneuver.clash
+  const card = maneuver.grapple
+    ? await postGrappleCheck(actor, targetActor, {
+        maneuverName: maneuver.name,
+        // The Maneuver itself, so the card knows whether an Instant can answer it.
+        maneuver,
+        // Said where the table will be looking rather than refused: "Grappling a Grapple"
+        // allows this, after a Might Clash against the Grappler, and that Clash is one of
+        // the parts this system leaves to the table.
+        reason: targetActor?.system?.grapple?.partner
+          ? `${targetActor.name} is already in a Grapple - Grappling a Grapple asks for a `
+            + "Might Clash against their Grappler first."
+          : ""
+      })
+    : maneuver.clash
     ? await postSkillClash(actor, targetActor, maneuver)
     : declared
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges })
@@ -770,6 +927,7 @@ export function maneuverItemFrom(definition) {
       intervene: Boolean(definition.intervene),
       exploit: Boolean(definition.exploit),
       empower: Boolean(definition.empower),
+      grapple: Boolean(definition.grapple),
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),

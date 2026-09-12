@@ -321,6 +321,33 @@
     {{/each}}
   </section>
 
+  {{#if grapple}}
+  {{! A Grapple holds two characters and each of them has half of it. The row says which
+      half this one is, because most of the rules in the entry turn on that, and offers
+      only the button that half has. }}
+  <section class="panel dbu-grapple">
+    <h3 class="panel-title">
+      Grapple
+      <span class="panel-note">
+        {{#if grapple.grappler}}Grappler &middot; holding {{grapple.name}}
+        {{else}}Grappled &middot; held by {{grapple.name}}{{/if}}
+      </span>
+    </h3>
+
+    <p class="dbu-grapple-note">Guard Down for as long as it lasts, and it cannot be
+      taken off while you are in it.</p>
+
+    {{#if grapple.grappler}}
+    <button type="button" data-action="releaseGrapple" class="capacity-reset"
+            data-tooltip="End the Grapple. An Instant Maneuver, on your turn.">Let go</button>
+    {{else}}
+    <button type="button" data-action="escapeGrapple" class="capacity-reset"
+            data-tooltip="Spend 1 Action to make a Grapple Check against the Grappler. Each Action after the first raises your Dice Score by 1(T).">Escape</button>
+    <span class="capacity-note">{{grapple.actions}} Actions left this round</span>
+    {{/if}}
+  </section>
+  {{/if}}
+
   {{! States. Entered by hand for the same reason Conditions are, and shown next to
       them because the two reference each other constantly in the rules. }}
   <section class="panel">

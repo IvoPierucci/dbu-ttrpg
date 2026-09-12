@@ -116,6 +116,21 @@ export async function toggleState(actor, key) {
  * Zero or less means removing it outright rather than storing a zero, so that
  * `system.conditions` only ever holds what the character actually has.
  */
+/**
+ * What is holding a Combat Condition in place, if anything.
+ *
+ * Said rather than silently refused: a toggle on the sheet that does nothing looks
+ * exactly like a bug, and this one is a rule.
+ *
+ * @returns {string} the reason it cannot be removed, or "" when nothing holds it
+ */
+function heldInPlace(actor, key) {
+  if ((key === "guard-down") && actor.system?.grapple?.partner) {
+    return `${actor.name} cannot remove Guard Down while in a Grapple.`;
+  }
+  return "";
+}
+
 export async function setCondition(actor, key, stacks) {
   const definition = allConditions().find(c => c.key === key);
   if (!definition) {
@@ -127,6 +142,18 @@ export async function setCondition(actor, key, stacks) {
   // Condition that silently fails to land looks exactly like a bug.
   const current = Number(actor.system.conditions?.[key]) || 0;
   const wanted = Math.min(definition.maxStacks, Math.max(0, Math.round(Number(stacks) || 0)));
+
+  // Held in place by something that is not a Slot. "While in a Grapple, all Characters
+  // suffer from the Guard Down Combat Condition and cannot remove it while in the
+  // Grapple" - which is not the same as being immune to it, and is the first rule here
+  // that stops a Condition being taken off rather than put on.
+  if (wanted < current) {
+    const held = heldInPlace(actor, key);
+    if (held) {
+      ui.notifications?.warn(held);
+      return false;
+    }
+  }
 
   if ((wanted > current) && (actor.system.effects?.slots?.[`condition.${key}`] === false)) {
     ui.notifications?.info(`${actor.name} cannot gain ${definition.name} right now.`);

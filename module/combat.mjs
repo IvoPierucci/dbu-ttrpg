@@ -46,6 +46,15 @@ function combatants(combat) {
 }
 
 /**
+ * Not in a Grapple. Written as a pair because a Grapple is a pair: a partner with no
+ * role, or a role with no partner, is half a Grapple and there is no such thing.
+ */
+export const NOT_GRAPPLING = Object.freeze({
+  "system.grapple.partner": "",
+  "system.grapple.role": ""
+});
+
+/**
  * What a Combat Round turning over clears.
  *
  * Diminishing Offense counts attacks made this round; Diminishing Defense counts
@@ -128,6 +137,8 @@ async function startEncounter(combat) {
       // nothing left to offer these.
       "system.enteredEncounter": true,
       ...NOT_CHARGING,
+      // Nobody starts an Encounter already being held.
+      ...NOT_GRAPPLING,
       // Every Resource is lost when an Encounter ends, so one starts with none.
       "system.resources": replaceObject({})
     });
@@ -322,8 +333,10 @@ export function registerCombatHooks() {
         "system.defeatsEscaped": 0,
         // The next Encounter is a different one, and begins for them again.
         "system.enteredEncounter": false,
-        // A charge that was never thrown does not follow you out of the Encounter.
-        ...NOT_CHARGING
+        // A charge that was never thrown does not follow you out of the Encounter,
+        // and neither does a hold: a Grapple is a hold in a fight, and the fight is over.
+        ...NOT_CHARGING,
+        ...NOT_GRAPPLING
       });
       await stopCharging(actor);
       // Every clock stops here, not only the ones counting the Encounter: a turn edge

@@ -824,6 +824,27 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       required: true, integer: true, initial: 0, min: 0
     });
 
+    // --- The Grapple this character is in, if any ---
+    // The first thing here that is a link between two characters rather than something
+    // one of them carries alone. Held by both sides, each naming the other: both are
+    // asked constantly - the Guard Down that cannot come off, the refusal to start a
+    // second Grapple - and searching the scene for a partner would be wrong the moment
+    // one of the two is off it.
+    schema.grapple = new fields.SchemaField({
+      /** The other character in it, by uuid. Blank when not in a Grapple. */
+      partner: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
+       * Which half of it this character is: "grappler" or "grappled".
+       *
+       * Fixed when the Grapple begins and never swapped. "The Grappler is still
+       * considered the Initiator and the Grappled is still considered the Defender for
+       * any further Grapple Checks made within the Grapple, regardless of who initiated
+       * the Grapple Check" - so an escape attempt is rolled by the Grappled and is still
+       * the Grappler's Check to defend.
+       */
+      role: new fields.StringField({ required: true, blank: true, initial: "" })
+    });
+
     // --- Profiles used through a Basic Attack this Combat Round ---
     // "You can only use each Profile once per Combat Round when using a Basic Attack
     // Maneuver, except for the Simple Profile."

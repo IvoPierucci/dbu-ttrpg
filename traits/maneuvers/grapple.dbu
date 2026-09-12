@@ -1,0 +1,104 @@
+id: grapple
+name: Grapple
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+grapple: true
+usageLimit: 1/round
+source: Core Rule
+description: >
+  Grab an Opponent within your Melee Range. A Clash of Strike against their Strike
+  or Dodge; win and you are both in a Grapple, lose and you have given them an
+  opening.
+text: >
+  Grapple Maneuver [1/Round]: Beyond just punching people, grabbing an Opponent is
+  a valid option too.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: If you lose the initial Grapple Check, this triggers the Exploit
+  Maneuver from the target of that Grapple Check.
+  –Effect: Target a Character within your Melee Range and make a Clash (Strike vs
+  Strike/Dodge) against them – this Clash is known as a Grapple Check. If you win,
+  you and your target are in a Grapple but if you lose, you provoke the Exploit
+  Maneuver from your target. The Initiator of the first Grapple Check for a Grapple
+  is known as the Grappler, while the Defender of that Grapple Check is the
+  Grappled. The Grappler is still considered the Initiator and the Grappled is still
+  considered the Defender for any further Grapple Checks made within the Grapple,
+  regardless of who initiated the Grapple Check.
+
+  You cannot use the Grapple Maneuver if you are already in a Grapple. While in a
+  Grapple, there are certain rules in play:
+
+  * Grapple Penalty: While in a Grapple, all Characters suffer from the Guard Down
+    Combat Condition and cannot remove it while in the Grapple.
+  * Ending a Grapple: The Grappler can end a Grapple as an Instant Maneuver on their
+    turn.
+  * Escaping a Grapple: By spending 1 Action, the Grappled can make a Grapple Check
+    against the Grappler. If they win, they escape the Grapple. For each Action spent
+    after the first, increase the Dice Score of their Grapple Check by 1(T) until the
+    end of their turn.
+  * Movement in a Grapple: While in a Grapple, if you would use an effect to move
+    your Character or another Character within your Grapple, you must first make a
+    Might Clash against your opposing Character in a Grapple (the Grappler if you are
+    the Grappled and vice-versa). If you win, use the effect as intended but the other
+    Character in the Grapple moves an equal number of Squares in the same direction.
+    If you lose, you cannot use that effect (you still pay the Ki Point Cost or Action
+    Cost for any effect or Maneuver used).
+  * Pulled In: If you are the Grappler in a Grapple and the Grappled is not on a
+    Square adjacent to you, you may make a Might Clash against the Grappled as an
+    Instant Maneuver. If you win, move them to the closest unoccupied Square adjacent
+    to you.
+  * Moving a Character: If a Character outside of the Grapple attempts to use an
+    effect that would move a Character within a Grapple, they must make a Might Clash
+    against the Grappler. If they win, they move the targeted Character as usual and
+    the Grappled escapes the Grapple. If they lose, they cannot use that effect (they
+    still pay the Ki Point Cost or Action Cost for any effect or Maneuver used).
+  * Grappling a Grapple: If a Character outside of the Grapple attempts to use the
+    Grapple Maneuver against a Character in the Grapple, they must first make a Might
+    Clash against the Grappler. If they win, the current Grappled Character escapes
+    the initial Grapple and they can continue with their Grapple Maneuver as usual. If
+    they lose, they cannot use that effect (they still pay the Action Cost for the
+    Grapple Maneuver).
+  * Tail Restraint: When using a Grapple Maneuver against a Character who has access
+    to the Tail Attack Maneuver or is a Saiyan with a Tail, you can take a penalty of
+    2(T) to your initial Grapple Check to attempt and grab their Tail. If you do, they
+    cannot use the Tail Attack Maneuver while in this Grapple.
+
+# The Exploitable line is not in the `exploitable` field, and that is deliberate.
+#
+# That field hands out the Exploit Maneuver when a Maneuver is used. This one hands it
+# out only when the initial Grapple Check is lost, which is not known until the Clash
+# settles - so it is offered off the Clash card instead, to the target and to nobody
+# else. Putting it in the field would provoke an Exploit from every adjacent Opponent
+# every time anybody grabbed anybody.
+
+---
+
+# What is here and what is not.
+#
+# Here: the Grapple Check itself, which is the first Clash this system has made out of
+# Combat Rolls rather than Skills or Might; who ends up the Grappler and who the
+# Grappled; the Guard Down that comes with it and cannot be taken off; ending it;
+# escaping it; the refusal to start a second one; and the Exploit the target is offered
+# when the initial Check is lost.
+#
+# Not here, and each for a reason that is not about effort:
+#
+#   - Movement in a Grapple, Pulled In and Moving a Character are all a Might Clash
+#     gating a movement. The Clash exists and is built. The movement does not: this
+#     system does not move anybody, on purpose - where you may go is a question about
+#     the map, and the map is the table's. So there is nothing for the Clash to gate,
+#     and a button that made the Clash and then did nothing would be worse than the
+#     rule being read off the row.
+#   - Grappling a Grapple is the same shape with the same missing half, plus one piece
+#     that is buildable and would be half a rule on its own: a third character's Grapple
+#     Maneuver being made to wait on a Might Clash first.
+#   - Tail Restraint needs the Tail Attack Maneuver, which does not exist here yet, and
+#     a Saiyan's Tail, which is not a thing any character carries. A penalty of 2(T) for
+#     a benefit that cannot be checked is a penalty for nothing.
+#
+# All of it is in the entry above, which is what the row shows - so the table has the
+# wording even where the system has nothing to do with it.

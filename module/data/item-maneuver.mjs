@@ -69,6 +69,16 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       exploit: new fields.BooleanField({ required: true, initial: false }),
       /** Hands Ki Points to the character it is aimed at. */
       empower: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Grabs the character it is aimed at: a Clash of Strike against their Strike or
+       * Dodge, and the winner decides whether the two of them end up in a Grapple.
+       *
+       * A flag rather than the Maneuver's id, because several of the Grapple's own rules
+       * talk about "the Grapple Maneuver" being used by somebody else - a third
+       * character grappling into an existing Grapple - and those have to recognise it
+       * however it was reached.
+       */
+      grapple: new fields.BooleanField({ required: true, initial: false }),
 
       /**
        * Who this Maneuver gives an opening to, in the rulebook's own words - "All

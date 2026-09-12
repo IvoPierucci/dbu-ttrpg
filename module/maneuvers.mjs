@@ -655,7 +655,22 @@ export function longRangePenalty(actor, target) {
 export function whyNotInReach(actor, target, { foundation, profile } = {}) {
   if (!FOUNDATION_RULES[foundation]?.meleeOnly) return null;
   if (PROFILES[profile]?.ignoresMeleeRule) return null;
+  return whyNotWithinMelee(actor, target, "A Physical Attack");
+}
 
+/**
+ * Whether a target is within this character's Melee Range, and why not if not.
+ *
+ * The measurement on its own, without the question of which rule is asking it. A
+ * Physical Attack asks; so does the Grapple Maneuver - "target a Character within your
+ * Melee Range" - and both want the same Squares counted the same way.
+ *
+ * Unmeasurable is within, as everywhere else here: out of combat there are no Squares,
+ * and a rule about them is not enforced where there are none.
+ *
+ * @param {string} what  what it is that only reaches, for the sentence
+ */
+export function whyNotWithinMelee(actor, target, what) {
   const from = actor?.getActiveTokens?.(false, true)?.[0];
   const to = target?.getActiveTokens?.(false, true)?.[0];
   const squares = squaresBetween(from, to);
@@ -667,8 +682,24 @@ export function whyNotInReach(actor, target, { foundation, profile } = {}) {
   const range = reach
     ? `${reach + 1} Squares`
     : "adjacent Squares";
-  return `A Physical Attack only reaches your Melee Range (${range}). `
+  return `${what} only reaches your Melee Range (${range}). `
     + `${target.name} is ${squares + 1} Squares away.`;
+}
+
+/**
+ * Whether this character may start a Grapple: "You cannot use the Grapple Maneuver if
+ * you are already in a Grapple."
+ *
+ * Only about the user. The target being in one is a different rule - Grappling a Grapple
+ * - which allows it after a Might Clash rather than refusing it.
+ *
+ * @returns {null|string} null if they may, otherwise why not
+ */
+export function whyNotAnotherGrapple(actor, maneuver) {
+  if (!maneuver?.grapple) return null;
+  if (!actor?.system?.grapple?.partner) return null;
+  return `${actor.name} is already in a Grapple, and cannot use the Grapple Maneuver `
+    + "while in one.";
 }
 
 /**
@@ -1844,6 +1875,7 @@ export async function loadManeuvers() {
     intervene: Boolean(trait.intervene),
     exploit: Boolean(trait.exploit),
     empower: Boolean(trait.empower),
+    grapple: Boolean(trait.grapple),
     // Kept as written: "All adjacent Opponents" is a range the table reads, not one the
     // system measures. It had been sitting in a Maneuver file since Energy Charge was
     // written and nothing had ever carried it this far.

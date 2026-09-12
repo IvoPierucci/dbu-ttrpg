@@ -2052,6 +2052,14 @@
   min-height: 150px;
 }
 
+/* A Grapple: two characters, one hold, and half of it each. */
+.dbu-ttrpg .dbu-grapple-note {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--dbu-text-dim);
+}
+
 /* --- Combat Conditions ---------------------------------------------------- */
 
 /* Collapsed by default when the character has none, so the Combat tab is not

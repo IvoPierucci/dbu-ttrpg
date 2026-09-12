@@ -271,6 +271,126 @@ async function applyClash(messageId, clash) {
   const message = game.messages.get(messageId);
   if (!message) return;
   await message.setFlag(SCOPE, CLASH_FLAG, clash);
+
+  // A Grapple Check does something when it lands, and this is the one place a Clash is
+  // written: exactly one client gets here - the message's author, or the GM acting for
+  // them - so the Grapple is applied once rather than once per person watching.
+  if (clash.grapple && clash.result && !clash.grapple.applied) {
+    await settleGrapple(message, clash);
+  }
+}
+
+/**
+ * What a settled Grapple Check leaves behind.
+ *
+ * Two shapes, and which it is was decided when the card was opened. Starting one: the
+ * Initiator has to win, and losing "provokes the Exploit Maneuver from your target" -
+ * which is why the Exploitable line is not on the Maneuver itself, since that would hand
+ * an Exploit to every adjacent Opponent every time anybody grabbed anybody.
+ *
+ * Escaping one: the Grappled has to win, and they are the Defender of it however it was
+ * opened - "the Grappler is still considered the Initiator and the Grappled is still
+ * considered the Defender for any further Grapple Checks made within the Grapple". So a
+ * tie frees them, a tie going to the Defender here as everywhere else.
+ */
+async function settleGrapple(message, clash) {
+  const grappler = fromUuidSync(clash.challengerUuid);
+  const grappled = fromUuidSync(clash.defenderUuid);
+  if (!grappler || !grappled) return;
+
+  // Marked first. Whatever happens below, this Check has been settled, and a failure
+  // halfway through must not leave a card that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, grapple: { ...clash.grapple, applied: true }
+  });
+
+  const winner = whoWonClash(clash.result);
+
+  if (clash.grapple.kind === "escape") {
+    if (winner !== "defender") {
+      await settledNote(message, `${grappled.name} does not break free.`);
+      return;
+    }
+    await endGrapple(grappler, grappled);
+    await settledNote(message, `${grappled.name} escapes the Grapple.`);
+    return;
+  }
+
+  if (winner !== "challenger") {
+    // "If you lose, you provoke the Exploit Maneuver from your target." From the target
+    // and from nobody else, so this is offered by name rather than swept for.
+    await settledNote(message,
+      `${grappler.name} loses the Grapple Check and gives ${grappled.name} an opening.`);
+    if (grappled.items.some(item => (item.type === "maneuver") && item.system.exploit)) {
+      requestEdit(message, {
+        type: "offer",
+        offer: {
+          actorUuid: grappled.uuid,
+          actorName: grappled.name,
+          maneuverId: "exploit",
+          maneuverName: "Exploit",
+          targetUuid: grappler.uuid,
+          reason: "Grapple - lost the initial Grapple Check"
+        }
+      });
+    }
+    return;
+  }
+
+  await beginGrapple(grappler, grappled);
+  await settledNote(message,
+    `${grappler.name} has ${grappled.name} in a Grapple.`);
+}
+
+/** A line under the card saying what the Clash came to. */
+async function settledNote(message, text) {
+  await ChatMessage.create({
+    speaker: message.speaker,
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(text)}</div>`
+  });
+}
+
+/**
+ * Put two characters in a Grapple, with the roles that do not swap afterwards.
+ *
+ * "While in a Grapple, all Characters suffer from the Guard Down Combat Condition and
+ * cannot remove it while in the Grapple." Applied here; what stops it coming off is in
+ * conditions.mjs, where every other refusal to change a Condition lives.
+ */
+async function beginGrapple(grappler, grappled) {
+  const { setCondition } = await import("./conditions.mjs");
+
+  await requestActorUpdate(grappler, {
+    "system.grapple.partner": grappled.uuid,
+    "system.grapple.role": "grappler"
+  });
+  await requestActorUpdate(grappled, {
+    "system.grapple.partner": grappler.uuid,
+    "system.grapple.role": "grappled"
+  });
+
+  for (const actor of [grappler, grappled]) await setCondition(actor, "guard-down", 1);
+}
+
+/**
+ * Let go. Both sides, because a Grapple is a pair and half of one is nothing.
+ *
+ * The Guard Down comes off with it. It was the Grapple that put it there and the Grapple
+ * that held it, so ending the Grapple ends both - a character who was already Guard Down
+ * for a reason of their own is the case this gets wrong, and the sheet is one click away.
+ */
+export async function endGrapple(grappler, grappled) {
+  const { setCondition } = await import("./conditions.mjs");
+  const { NOT_GRAPPLING } = await import("./combat.mjs");
+
+  for (const actor of [grappler, grappled]) {
+    if (!actor) continue;
+    await requestActorUpdate(actor, { ...NOT_GRAPPLING });
+  }
+  // After they are out of it, or the refusal that holds it in place refuses this too.
+  for (const actor of [grappler, grappled]) {
+    if (actor) await setCondition(actor, "guard-down", 0);
+  }
 }
 
 /**
@@ -2437,8 +2557,90 @@ const CLASH_ROLLS = Object.freeze({
     // Might is not a Skill, so it does not take a Skill's flat critical die - it takes
     // the character's own, which grows with the Tier of Power.
     criticalDice: (actor) => actor.system.dice.critical.formula
+  },
+
+  /**
+   * A Grapple Check: "a Clash (Strike vs Strike/Dodge)".
+   *
+   * The first Clash here with two different rolls in it. The Initiator rolls their
+   * Strike; the Defender answers with their Strike or their Dodge, and which is theirs
+   * to pick - so this is also the first that asks a side a question before rolling.
+   *
+   * Initiator and Defender are the Grapple's, not the card's, and they do not swap: "the
+   * Grappler is still considered the Initiator and the Grappled is still considered the
+   * Defender for any further Grapple Checks made within the Grapple, regardless of who
+   * initiated the Grapple Check." So an escape attempt is opened by the Grappled and is
+   * still rolled with the Grappler as challenger - which is also what decides the tie,
+   * since a tie goes to the Defender here as everywhere else.
+   */
+  grapple: {
+    label: "Grapple Check",
+    of: (actor, clash, uuid) => ((uuid === clash.defenderUuid) && (clash.defenderRoll === "dodge"))
+      ? { label: "Dodge", value: actor.system.combat.dodge }
+      : { label: "Strike", value: actor.system.combat.strike },
+
+    criticalDice: (actor) => actor.system.dice.critical.formula,
+
+    // What else a Combat Roll carries. Diminishing Offense is deliberately absent: it
+    // blunts "the Strike Roll of every Attacking Maneuver", and this is not one.
+    parts: (actor, clash, uuid) => [
+      ...musclePenalty(actor),
+      ...thresholdPenalty(actor),
+      // "For each Action spent after the first, increase the Dice Score of their Grapple
+      // Check by 1(T)." The Grappled's, and only on the Check they bought it for.
+      ...(((uuid === clash.defenderUuid) && clash.defenderBonus)
+        ? [{ label: "Extra Actions", written: `+${clash.defenderActions - 1}(T)`,
+             value: clash.defenderBonus }]
+        : [])
+    ],
+
+    options: (actor, clash, uuid) => ({
+      extraDice: actor.system.dice.extra.formula,
+      combatRoll: true,
+      // Which Slot an effect that raises this roll writes to, so "increase your Strike
+      // Rolls by 2(T)" reaches a Grapple Check made with Strike and leaves alone one
+      // answered with a Dodge.
+      slot: ((uuid === clash.defenderUuid) && (clash.defenderRoll === "dodge")) ? "dodge" : "strike"
+    }),
+
+    prompt: (actor, clash, uuid) => (uuid === clash.defenderUuid)
+      ? "Strike or Dodge"
+      : "Strike",
+
+    // The Defender's question, asked before they are marked ready and before either side
+    // has seen a number.
+    choose: async (clash, actor) => {
+      if (actor.uuid !== clash.defenderUuid) return {};
+
+      const chosen = await pick(
+        `${clash.maneuverName} - ${actor.name}`,
+        "Answer the Grapple Check with which roll?",
+        [
+          { action: "strike", label: `Strike ${actor.system.combat.strike}` },
+          { action: "dodge", label: `Dodge ${actor.system.combat.dodge}` }
+        ]
+      );
+      return chosen ? { defenderRoll: chosen } : null;
+    }
   }
 });
+
+/**
+ * Two buttons and a question, the way the Maneuver module asks one.
+ *
+ * Written out here rather than imported: maneuvers.mjs imports from this module, and a
+ * second edge between the two would close a cycle.
+ */
+async function pick(title, question, buttons) {
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title },
+    content: `<p>${Handlebars.escapeExpression(question)}</p>`,
+    buttons: [...buttons, { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  return (chosen && (chosen !== "cancel")) ? chosen : null;
+}
 
 export async function postSkillClash(actor, target, maneuver) {
   const skillKey = maneuver.clash.skill;
@@ -2466,6 +2668,61 @@ export async function postSkillClash(actor, target, maneuver) {
           // a roll made while the other was still deciding cannot be taken back.
           ready: [],
           // Both sides land here at once, or not at all.
+          result: null
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Open a Grapple Check between the two halves of a Grapple.
+ *
+ * The challenger is always the Grappler and the defender always the Grappled, whichever
+ * of them opened it: "the Grappler is still considered the Initiator and the Grappled is
+ * still considered the Defender for any further Grapple Checks made within the Grapple,
+ * regardless of who initiated the Grapple Check." For the first Check that is simply
+ * whoever used the Maneuver and whoever they aimed it at.
+ *
+ * `kind` is what winning buys - "start" for the Maneuver's own Check, "escape" for the
+ * one the Grappled pays Actions for - and it is settled here rather than worked out
+ * later, because the card is the only thing that will still know.
+ *
+ * @param {number} defenderActions  Actions the Grappled spent, on an escape. Each after
+ *                                  the first raises their Dice Score by 1(T).
+ */
+export async function postGrappleCheck(grappler, grappled, {
+  maneuverName = "Grapple", reason = "", kind = "start", defenderActions = 1, speaker = null,
+  maneuver = null
+} = {}) {
+  const extra = Math.max(0, defenderActions - 1);
+  const tier = Math.max(1, grappled.system.tierOfPower ?? 1);
+
+  return ChatMessage.create({
+    speaker: speaker ?? ChatMessage.getSpeaker({ actor: grappler }),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        // The Grapple Maneuver is a Standard Maneuver, so an Instant can be played in
+        // answer to it - the same as a Skill Clash, which is also a Maneuver wearing a
+        // Clash. An escape Check is not one: it is Actions spent, and there is nothing
+        // there to answer.
+        [RESPONDABLE_FLAG]: Boolean(maneuver) && isRespondable(maneuver),
+        [CLASH_FLAG]: {
+          category: "grapple",
+          maneuverName,
+          reason,
+          challengerUuid: grappler.uuid,
+          challengerName: grappler.name,
+          defenderUuid: grappled.uuid,
+          defenderName: grappled.name,
+          // Which roll the Defender answers with. Unset until they say, and they are
+          // asked before either side has seen a number.
+          defenderRoll: "",
+          defenderActions,
+          defenderBonus: extra * tier,
+          grapple: { kind, applied: false },
+          ready: [],
           result: null
         }
       }
@@ -2592,8 +2849,7 @@ function renderSkillClash(message, html) {
     // Clash was opened with something for winning it to buy.
     //
     // A tie goes to the defender, as everywhere else: the challenger has to beat them.
-    const wonIt = result.challenger.succeeded
-      || (!result.defender.succeeded && (result.challenger.total > result.defender.total));
+    const wonIt = whoWonClash(result) === "challenger";
 
     const challenger = fromUuidSync(clash.challengerUuid);
     if (clash.collision && wonIt && !clash.collisionApplied && challenger?.isOwner) {
@@ -2626,7 +2882,10 @@ function renderSkillClash(message, html) {
     // What this side actually rolls, which is the Skill on a Skill Clash and Might on a
     // Might Clash - the label used to be the Skill's alone, so a Might Clash offered
     // "Roll undefined".
-    button.textContent = `Roll ${CLASH_ROLLS[clash.category ?? "skill"].of(actor, clash).label}`;
+    const kind = CLASH_ROLLS[clash.category ?? "skill"];
+    button.textContent = `Roll ${kind.prompt
+      ? kind.prompt(actor, clash, uuid)
+      : kind.of(actor, clash, uuid).label}`;
     button.dataset.tooltip = "Declare what you bring, then wait for the other side";
     button.addEventListener("click", () => clashStage(message, actor));
     container.append(button);
@@ -2650,9 +2909,33 @@ function clashResult({ challenger, defender }) {
 }
 
 /**
+ * Which side took the Clash.
+ *
+ * The defender wins a tie: whoever did not start it has to be beaten outright rather
+ * than merely matched. Asked here rather than written out again wherever it matters -
+ * saying it, offering the Knockback collision to the winner, and settling a Grapple were
+ * three copies of one rule.
+ */
+function whoWonClash({ challenger, defender }) {
+  if (challenger.succeeded) return "challenger";
+  if (defender.succeeded) return "defender";
+  return (challenger.total > defender.total) ? "challenger" : "defender";
+}
+
+/**
  * Let this side declare what they are bringing, then mark them ready.
  */
 async function clashStage(message, actor) {
+  const opened = message.getFlag(SCOPE, CLASH_FLAG);
+  if (!opened || opened.result) return;
+
+  // What this side has to decide before anything is rolled. A Grapple Check's Defender
+  // answers with their Strike or their Dodge, and that is asked here for the reason
+  // everything else is asked here: neither side has seen a number yet.
+  const kind = CLASH_ROLLS[opened.category ?? "skill"];
+  const answer = kind.choose ? await kind.choose(opened, actor) : {};
+  if (!answer) return;
+
   if (!await prepareRoll(actor, [], `${actor.name}: before the roll`)) return;
 
   // Read fresh rather than trusting what the card was drawn with: the other side may
@@ -2663,6 +2946,7 @@ async function clashStage(message, actor) {
 
   return settleClash(message, {
     ...clash,
+    ...answer,
     ready: [...new Set([...(clash.ready ?? []), actor.uuid])]
   });
 }
@@ -2689,11 +2973,21 @@ async function resolveSkillClash(message, clash) {
   // and every one of those was a Skill Clash - there was nothing else to open.
   const kind = CLASH_ROLLS[clash.category ?? "skill"];
 
+  // One side, with whatever its category asks for. A Skill and a Might Clash want a
+  // single value and a critical die; a Grapple Check is a Combat Roll and wants the Tier
+  // of Power Extra Dice, the penalties one carries, and a Slot for effects to reach.
+  const side = (actor, uuid) => rollSide(
+    actor,
+    [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : [])],
+    {
+      criticalDice: kind.criticalDice(actor),
+      ...(kind.options ? kind.options(actor, clash, uuid) : {})
+    }
+  );
+
   const [challengerSide, defenderSide] = await Promise.all([
-    rollSide(challenger, [kind.of(challenger, clash)],
-      { criticalDice: kind.criticalDice(challenger) }),
-    rollSide(defender, [kind.of(defender, clash)],
-      { criticalDice: kind.criticalDice(defender) })
+    side(challenger, clash.challengerUuid),
+    side(defender, clash.defenderUuid)
   ]);
 
   requestEdit(message, {
