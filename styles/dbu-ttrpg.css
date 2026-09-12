@@ -2270,3 +2270,32 @@
   font-size: 12px;
   color: var(--dbu-accent);
 }
+
+/* A Profile's entry on hover: the rulebook's own words, laid out as it prints them
+   rather than run together into a paragraph. The stat lines open with an en dash and
+   the effects with a bullet, both of which are the text's, not ours - so the only thing
+   done to them here is the indent that makes a bullet look like one. */
+.dbu-profile-tip {
+  max-width: 46ch;
+  text-align: left;
+  white-space: normal;
+}
+
+.dbu-profile-line {
+  margin: 0 0 2px;
+}
+
+.dbu-profile-bullet {
+  padding-left: 1em;
+  text-indent: -1em;
+}
+
+/* What the system leaves to the table, kept visibly apart from the rule: it is not part
+   of the text, it is how this implementation asks to be driven. */
+.dbu-profile-note {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--dbu-border, rgba(255, 255, 255, 0.2));
+  color: var(--dbu-text-dim);
+  font-style: italic;
+}

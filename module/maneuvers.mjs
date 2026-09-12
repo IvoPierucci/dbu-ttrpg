@@ -164,8 +164,12 @@ export const PROFILES = Object.freeze({
     foundations: ["physical", "energy", "magic"],
     kiCost: 0,
     damageCategory: "standard",
-    summary: "A simple punch, kick, energy ball, or spell.",
-    rules: ["No effect of its own."]
+    text: `
+      Simple: A simple punch, kick, energy ball, or spell.
+      –Foundations: All
+      –Damage Category: Standard
+      –KP Cost: 0
+      –Effect: None.`,
   },
 
   combination: {
@@ -173,18 +177,21 @@ export const PROFILES = Object.freeze({
     foundations: ["physical", "energy", "magic"],
     kiCostPerTier: 3,
     damageCategory: "standard",
-    summary: "A combination of several attacks done in sequence.",
+    text: `
+      Combination: A combination of several attacks done in sequence.
+      –Foundations: All
+      –Damage Category: Standard
+      –KP Cost: 3(T)
+      –Effect: After you hit an Opponent with this Attacking Maneuver but before
+      you roll your Wound Roll, roll your Strike Roll for this Attacking Maneuver
+      against the Dice Score of their Dodge Roll or Strike Roll (if they used the
+      Parry option of the Defend Maneuver) an additional 3 times. For every additional
+      time your Strike Roll exceeds their Dice Score, increase the Wound Roll by an
+      additional 2(T).`,
     // Three more Strike Rolls after the hit and before the Wound Roll, each measured
     // against the defence the target already made - the same roll that lost the first
     // Clash, bonuses and all.
     followUps: { rolls: 3, woundPerHitPerTier: 2 },
-    rules: [
-      "After you hit, and before the Wound Roll, roll your Strike Roll three more times.",
-      "Each is measured against the roll they answered the first Strike with.",
-      "Every one that beats it adds 2(T) to the Wound Roll.",
-      "A hit that landed automatically still faces that defence here - the first Strike "
-        + "is the one that could not be stopped."
-    ]
   },
 
   launching: {
@@ -192,13 +199,18 @@ export const PROFILES = Object.freeze({
     foundations: ["physical", "energy", "magic"],
     kiCostPerTier: 3,
     damageCategory: "standard",
-    summary: "An attack that sends enemies flying away from you.",
+    text: `
+      Launching: An attack that sends enemies flying away from you.
+      –Foundations: All
+      –Damage Category: Standard
+      –KP Cost: 3(T)
+      –Effect: This Profile has multiple effects:
+      * This Attacking Maneuver gains the Knockback Advantage for free (this does not
+        increase the KP Cost, or the TP Cost if it is a Signature Technique).
+      * Double any Collision Damage a Character suffers due to any movement resulting
+        from this Attacking Maneuver's use of the Knockback Advantage.`,
     grantsAdvantage: "knockback",
     doublesCollisionDamage: true,
-    rules: [
-      "Gains the Knockback Advantage for free - no added KP, and no added TP as a Signature Technique.",
-      "Collision Damage from movement this causes is doubled."
-    ]
   },
 
   megaFlare: {
@@ -206,15 +218,21 @@ export const PROFILES = Object.freeze({
     foundations: ["physical", "energy", "magic"],
     kiCostPerTier: 4,
     damageCategory: "standard",
-    summary: "By focusing as much energy as possible, this attack is highly destructive.",
+    text: `
+      Mega Flare: By focusing as much energy as possible, this attack is highly
+      destructive.
+      –Foundations: All
+      –Damage Category: Standard
+      –KP Cost: 4(T)
+      –Effect: This Profile has multiple effects:
+      * The maximum number of Energy Charges for this Profile is 10.
+      * For every Energy Charge applied to this Attacking Maneuver, increase the Wound
+        Roll by 1(T).
+      * If the number of Energy Charges applied to this Attacking Maneuver is 7+,
+        increase the Damage Category by 1 Category.`,
     maxEnergyCharges: 10,
     woundPerChargePerTier: 1,
     categoryUpAtCharges: 7,
-    rules: [
-      "Holds up to 10 Energy Charges rather than the usual 7.",
-      "Each Energy Charge adds 1(T) to the Wound Roll, on top of its die.",
-      "At 7 or more Energy Charges the Damage Category rises by one."
-    ]
   },
 
   // --- Physical -------------------------------------------------------------
@@ -226,7 +244,18 @@ export const PROFILES = Object.freeze({
     foundations: ["physical"],
     kiCostPerTier: 4,
     damageCategory: "standard",
-    summary: "An attack made as part of a high-speed charge.",
+    text: `
+      Blitz: An attack made as part of a high-speed charge.
+      –Damage Category: Standard
+      –KP Cost: 4(T)
+      –Effect: This Profile has multiple effects:
+      * This Attacking Maneuver gains the Charging Assault Advantage for free (this
+        does not increase the KP Cost, or the TP Cost if it is a Signature Technique).
+      * If you move a number of Squares that exceeds your Normal Speed due to the
+        effects of Charging Assault, increase the Wound Roll of that Attacking
+        Maneuver by 1/2 of your Agility Modifier.
+      * If this Attacking Maneuver is a Signature Technique, reduce the KP Cost by
+        2(T).`,
     // "Gains the Charging Assault Advantage for free", and a Wound bonus of half your
     // Agility Modifier when that Advantage carried you past your Normal Speed.
     signatureDiscountPerTier: 2,
@@ -239,11 +268,6 @@ export const PROFILES = Object.freeze({
     // effects of Charging Assault", which is this Profile's own rule about somebody
     // else's Advantage - so it lives here, keyed off the same number.
     woundPerCharge: "halfAgilityBeyondNormalSpeed",
-    rules: [
-      "Gains the Charging Assault Advantage for free - no added KP, and no added TP as a Signature Technique.",
-      "Move further than your Normal Speed through Charging Assault and the Wound Roll rises by half your Agility Modifier.",
-      "As a Signature Technique, the KP Cost drops by 2(T)."
-    ]
   },
 
   crushing: {
@@ -251,12 +275,16 @@ export const PROFILES = Object.freeze({
     foundations: ["physical"],
     kiCostPerTier: 6,
     damageCategory: "lethal",
-    summary: "A heavy strike with the intent to break bones or cause internal damage.",
+    text: `
+      Crushing: A heavy strike with the intent to break bones or cause internal damage.
+      –Damage Category: Lethal
+      –KP Cost: 6(T)
+      –Effect: Only apply half of your Haste to the Strike Roll for this Attacking
+      Maneuver.`,
     // Strike is Haste + Awareness, so this is a penalty of half the Haste that went
     // into it - taken off the roll rather than rebuilt, so anything else that changed
     // Strike is untouched.
     halfHasteOnStrike: true,
-    rules: ["Only half of your Haste applies to the Strike Roll."]
   },
 
   pinpoint: {
@@ -264,12 +292,17 @@ export const PROFILES = Object.freeze({
     foundations: ["physical"],
     kiCostPerTier: 4,
     damageCategory: "standard",
-    summary: "Attacks made against pressure points, done through immense skill and precision.",
+    text: `
+      Pinpoint: Attacks made against pressure points, done through immense skill and
+      precision.
+      –Damage Category: Standard
+      –KP Cost: 4(T)
+      –Effect: This Profile has multiple effects:
+      * This Attacking Maneuver ignores an amount of the target's Soak Value equal to
+        your Insight Modifier.
+      * If you score a Critical Result on the Strike Roll for this Attacking Maneuver,
+        double your Insight Modifier for the duration of this Attacking Maneuver.`,
     ignoresSoakByInsight: true,
-    rules: [
-      "Ignores the target's Soak Value equal to your Insight Modifier.",
-      "A Critical Result on the Strike Roll doubles that Insight Modifier for this attack."
-    ]
   },
 
   powered: {
@@ -277,13 +310,15 @@ export const PROFILES = Object.freeze({
     foundations: ["physical"],
     kiCostPerTier: 8,
     damageCategory: "standard",
-    summary: "A single, powerful punch or kick charged to the brim with ki.",
+    text: `
+      Powered: A single, powerful punch or kick charged to the brim with ki.
+      –Damage Category: Standard
+      –KP Cost: 8(T)
+      –Effect: This Profile has multiple effects:
+      * Apply your Damage Attribute an additional time for this Attacking Maneuver.
+      * This Attacking Maneuver gains an Energy Charge.`,
     extraDamageAttribute: true,
     grantsEnergyCharge: 1,
-    rules: [
-      "Your Damage Attribute applies one more time.",
-      "Gains an Energy Charge."
-    ]
   },
 
   soaring: {
@@ -291,15 +326,16 @@ export const PROFILES = Object.freeze({
     foundations: ["physical"],
     kiCostPerTier: 5,
     damageCategory: "direct",
-    summary: "A physical attack that launches a concussive shock wave at a distant opponent.",
+    text: `
+      Soaring: A physical attack that launches a concussive shock wave at a distant
+      opponent.
+      –Damage Category: Direct
+      –KP Cost: 5(T)
+      –Effect: This Attacking Maneuver has a Standard Line AoE.`,
     area: { shape: "line", magnitude: "standard" },
     // A shock wave "at a distant opponent": this is the Profile that specifies
     // otherwise, so the Melee Range the Physical Foundation demands does not bind it.
     ignoresMeleeRule: true,
-    rules: [
-      "Has a Standard Line AoE.",
-      "Reaches past your Melee Range, unlike every other Physical Attack."
-    ]
   },
 
   sweeping: {
@@ -307,14 +343,19 @@ export const PROFILES = Object.freeze({
     foundations: ["physical"],
     kiCostPerTier: 4,
     damageCategory: "standard",
-    summary: "The user strikes at multiple enemies simultaneously.",
+    text: `
+      Sweeping: Through a spinning kick, some kind of physical shock wave, or any other
+      form of attack, the user strikes at multiple enemies simultaneously.
+      –Damage Category: Standard
+      –KP Cost: 4(T)
+      –Effect: This Profile has multiple effects:
+      * This Attacking Maneuver has a Minor Sphere AoE (centered on you).
+      * Allies in this Attacking Maneuver's AoE are not targeted by this Attacking
+        Maneuver.
+      * If you deal Damage with this Attacking Maneuver, double the amount of
+        Diminishing Defense stacks a target would receive from this Attacking Maneuver.`,
     area: { shape: "sphere", magnitude: "minor", centredOnSelf: true, sparesAllies: true },
     doublesDiminishingDefense: true,
-    rules: [
-      "Has a Minor Sphere AoE centred on you.",
-      "Allies within it are not targeted.",
-      "Deal Damage and a target takes twice the Diminishing Defense stacks."
-    ]
   }
 });
 
@@ -325,6 +366,11 @@ export const PROFILES = Object.freeze({
  * Attacks can only be made against Opponents within your Melee Range, unless specified
  * otherwise."
  */
+export const FOUNDATION_NOTES = Object.freeze({
+  physical: "Physical Attacks can only be made against Opponents within your Melee "
+    + "Range, unless specified otherwise."
+});
+
 export const FOUNDATION_RULES = Object.freeze({
   physical: { meleeOnly: true },
   energy: {},
@@ -660,25 +706,86 @@ export function areaLabel(area) {
   return area.centredOnSelf ? `${name} (centred on you)` : name;
 }
 
+/**
+ * A Profile's entry, as its own lines again.
+ *
+ * The text is stored word for word as the rulebook prints it, wrapped in the source only
+ * so the file stays readable. A line that opens with the rulebook's en dash or with a
+ * bullet begins a line of its own; anything else is the rest of the line above, and is
+ * joined back onto it. So what comes out is the entry as printed, not as wrapped here.
+ */
+function profileLines(profile) {
+  const lines = [];
+
+  for (const piece of String(profile.text ?? "").split("\n")) {
+    const trimmed = piece.trim();
+    if (!trimmed) continue;
+
+    if (!lines.length || /^[–*]/.test(trimmed)) lines.push(trimmed);
+    else lines[lines.length - 1] += ` ${trimmed}`;
+  }
+
+  return lines;
+}
+
+/**
+ * What a Profile says, on hover.
+ *
+ * The rulebook's own words, and nothing rewritten: a player choosing a Profile is
+ * choosing against the text they know, and a tidied-up version of it is one more thing
+ * to reconcile at the table.
+ *
+ * What the system leaves to the table goes underneath, kept visibly apart - it is not
+ * part of the rule, it is how this implementation asks to be driven.
+ *
+ * Built as HTML rather than as lines joined by newlines: `data-tooltip` is injected as
+ * HTML, so a newline in it is just whitespace and the whole entry came out as one
+ * run-on paragraph. `data-tooltip-html` is the attribute that means it.
+ */
 function profileTip(profile) {
-  const lines = [profile.summary, ...(profile.rules ?? [])].filter(Boolean);
+  const printed = profileLines(profile);
+  const notes = [];
+
   if (profile.grantsAdvantage === "charging-assault") {
-    lines.push("Move on the map first, then say how far you came - the line, the "
+    notes.push("Move on the map first, then say how far you came - the line, the "
       + "distance and where you end up are yours to make; the Squares are what the "
       + "bonuses are worked out from.");
   }
   if (profile.grantsAdvantage === "knockback") {
-    lines.push("Deal Damage and the card offers the Might Clash. Win it and move them "
+    notes.push("Deal Damage and the card offers the Might Clash. Win it and move them "
       + "yourself; what the collision costs is yours and the GM's to set, and the "
       + "button takes it straight off their Life.");
   }
   if (profile.area) {
-    lines.push("Add the others it catches with the button on the card - who the "
+    notes.push("Add the others it catches with the button on the card - who the "
       + `${areaLabel(profile.area)} covers is yours and the GM's to agree.`);
   }
-  if (profile.needs) lines.push(`Not automated: ${profile.needs}`);
-  if (!lines.length) return "";
-  return ` data-tooltip="${Handlebars.escapeExpression(lines.join("\n"))}"`;
+  if (profile.needs) notes.push(`Not automated: ${profile.needs}`);
+
+  if (!printed.length && !notes.length) return "";
+
+  const body = printed.map(line => {
+    const bullet = line.startsWith("*");
+    return `<div class="dbu-profile-line${bullet ? " dbu-profile-bullet" : ""}">${
+      Handlebars.escapeExpression(line)}</div>`;
+  }).join("");
+
+  const aside = notes.map(note =>
+    `<div class="dbu-profile-note">${Handlebars.escapeExpression(note)}</div>`).join("");
+
+  return ` data-tooltip-html="${Handlebars.escapeExpression(
+    `<div class="dbu-profile-tip">${body}${aside}</div>`)}"`;
+}
+
+/**
+ * What a Foundation demands of every Profile under it, on the group that holds them.
+ *
+ * The rulebook says it once, at the head of the Foundation's Profiles, rather than on
+ * each of them - so it is said once here too, where the group is.
+ */
+function groupTip(group) {
+  const note = FOUNDATION_NOTES[group.key];
+  return note ? ` data-tooltip="${Handlebars.escapeExpression(note)}"` : "";
 }
 
 function profileGroups(foundations) {
@@ -817,7 +924,7 @@ export async function pickProfileOnly(maneuver, foundations, hint = "", actor = 
     }).join("");
 
     return `<details class="dbu-profile-group" open>
-      <summary>${Handlebars.escapeExpression(group.label)}</summary>
+      <summary${groupTip(group)}>${Handlebars.escapeExpression(group.label)}</summary>
       ${items}
     </details>`;
   }).join("");
@@ -969,7 +1076,7 @@ async function pickProfile(maneuver, foundations, actor) {
 
     // Groups that hold something open by default; empty ones stay shut.
     return `<details class="dbu-profile-group" open>
-      <summary>${Handlebars.escapeExpression(group.label)}</summary>
+      <summary${groupTip(group)}>${Handlebars.escapeExpression(group.label)}</summary>
       ${items}
     </details>`;
   }).join("");
