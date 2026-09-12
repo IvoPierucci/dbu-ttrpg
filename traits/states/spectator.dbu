@@ -33,18 +33,25 @@ text: >
 #   - (1) hands a bonus to somebody else, on a clock, with two ends. Effects reach
 #     only the character carrying them: there is no way for a file to say "give
 #     that Ally this". Nor to end a duration on the earlier of two conditions.
-#   - (3) fires only "if you did not use the second effect", and using (2) leaves
-#     the State - so the condition is really "are you still a Spectator when this
-#     resolves". But an automatic effect and a triggered one both answer the start
-#     of the turn, and the automatic one fires while the player is still being
-#     offered the triggered one. Built as it stands, (3) would fire every time and
-#     (2) would never get the chance to stop it.
 #   - (5) forbids a class of triggers rather than a thing. Nothing can say that.
 
-# (2) is a Maneuver of its own to offer - a triggered effect the player takes at
-# the start of their turn - and leaving is all it does.
+# (2) is the player's to take at the start of their turn, and leaving is all it does.
 [triggered/start-of-turn]
 leaveState(spectator);
+
+# (3). "If you did not use the second effect" - and using the second effect leaves the
+# State, so the condition is simply that this is still on you when it resolves. What
+# the player chose is settled before anything automatic is looked at, which is what
+# makes that true rather than merely likely: take (2) and you are no longer a
+# Spectator, so this is no longer yours.
+#
+# Losing the turn is written as a skip: at the start of your turn the two are the same
+# thing, and `turn.skip` is what the Initiative Order reads.
+[automatic/start-of-turn]
+actions.remaining = 0;
+turn.skip = true;
+life.value += 2d10(bT);
+ki.value += 2d10(bT);
 
 # (4). The three named Maneuvers are named, because the rule names them rather
 # than describing them - and two of them do not exist yet, which costs nothing:

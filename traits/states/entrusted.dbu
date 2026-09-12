@@ -20,17 +20,22 @@ text: >
 
 # (1) and (2) are here and are the whole of themselves. (3) and (4) are not:
 #
-#   - (3) gains an Action. Actions are spent against what the round gave you and
-#     `actions.remaining` is what an effect writes to - but that Slot is read at a
-#     Moment during an exchange, and this one fires on entering the State. Giving
-#     somebody an Action outside an exchange has nowhere to be written yet.
 #   - (4) hangs two Signature features onto a Basic Attack that is not a Signature
 #     Technique, refills Capacity first and leaves the State afterwards. The two
 #     features exist now; what does not is a way to put them on an attack that did
 #     not declare them, or to refill Capacity, which is spent rather than set.
 
-# (1). The same line Superior uses, and the same Slot: the Greater Dice ride along
-# with every Combat Roll.
+# (1) and (2). The Greater Dice line is the same one Superior uses, and the same Slot.
 [passive]
 combatRolls.dice += greaterDice;
 stressBonus += 1;
+
+# (3). "Gain 1 Action" - one more until your turn ends, which is what an Action is
+# worth: they are handed back when the round turns over anyway, so an Action that
+# outlived your turn would be an Action nobody could spend.
+#
+# Written as unspending one rather than as raising the round's allowance, because that
+# is what "gain" means here - what is held is how many you spent, and what is left is
+# the allowance less that.
+[triggered/state/entrusted]
+actions.remaining += 1;

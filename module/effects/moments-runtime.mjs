@@ -26,7 +26,20 @@ import { getMoment } from "./moments.mjs";
 const STATEFUL = {
   "life.value": { path: "system.life.value", read: a => a.system.life.value },
   "ki.value": { path: "system.ki.value", read: a => a.system.ki.value },
-  "capacity.spent": { path: "system.capacity.spent", read: a => a.system.capacity.spent }
+  "capacity.spent": { path: "system.capacity.spent", read: a => a.system.capacity.spent },
+
+  // Actions left, which is not a number the character holds: what is held is how many
+  // were spent, and what is left is the round's own allowance less that. So this one
+  // reads forwards and writes backwards - an effect that hands you an Action is an
+  // effect that unspends one, and an effect that takes them all away has spent them.
+  //
+  // It was declared and written by nobody, which made "you lose all of your Actions" a
+  // line that compiled and did nothing.
+  "actions.remaining": {
+    path: "system.actionsSpent.standard",
+    read: a => Math.max(0, (a.system.actions?.standard ?? 0) - (a.system.actionsSpent?.standard ?? 0)),
+    write: (a, left) => Math.max(0, (a.system.actions?.standard ?? 0) - left)
+  }
 };
 
 /**
@@ -68,8 +81,49 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
 
   if (!entries.length) return nothing;
 
+  // Two passes, and the order between them is a rule rather than a convenience: what the
+  // player chose happens first, and only then is what fires by itself looked at.
+  //
+  // The Spectator State is what asks for it. Its second effect is the player's - leave
+  // the State - and its third is automatic and reads "if you did not use the second
+  // effect". Collected together, the third was gathered up before the second had run and
+  // fired whatever the player did; and since using the second leaves the State, the
+  // third is a Spectator effect on somebody who is no longer a Spectator.
+  //
+  // So the character is re-read between the two. Anything the first pass did - a State
+  // left, a Condition gone, a number changed - is true before the second pass decides
+  // whether it applies at all.
+  const chosen = await runPass(actor, moment, definition, entries, context, "triggered");
+  const byItself = await runPass(actor, moment, definition,
+    reactiveAgain(actor, entries, { only, stacks }), context, "automatic");
+
+  const fired = chosen.fired + byItself.fired;
+  if (!fired) return nothing;
+
+  return { slots: { ...chosen.slots, ...byItself.slots }, fired };
+}
+
+/**
+ * The same list, read off the character again.
+ *
+ * The first pass can have changed what the second is even looking at - left a State,
+ * taken a Condition off - and an entry list gathered before that is a list of things
+ * that were true a moment ago.
+ */
+function reactiveAgain(actor, before, { only = null, stacks = null }) {
+  let entries = reactiveFor(actor).filter(entry => entry.available && entry.armed);
+  if (only) entries = entries.filter(entry => entry.sourceId === only);
+  if (stacks !== null) entries = entries.map(entry => ({ ...entry, stacks }));
+  return entries;
+}
+
+/** One half of a Moment: everything of one kind that answers it. */
+async function runPass(actor, moment, definition, entries, context, mode) {
+  const nothing = { slots: {}, fired: 0 };
+  if (!entries.length) return nothing;
+
   const scope = { data: actor.system, errors: [], context, queue: [] };
-  const { slots, spent } = collectReactive(entries, moment, scope);
+  const { slots, spent } = collectReactive(entries, moment, scope, { mode });
 
   for (const message of scope.errors) {
     console.warn(`DBU TTRPG | ${actor.name}: ${message}`);
@@ -89,10 +143,14 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
 async function writeStateful(actor, slots) {
   const updates = {};
 
-  for (const [key, { path, read }] of Object.entries(STATEFUL)) {
+  for (const [key, { path, read, write }] of Object.entries(STATEFUL)) {
     if (!(key in slots)) continue;
 
     const settled = applySlot(slots, key, read(actor));
+    if (write) {
+      updates[path] = Math.max(0, Math.round(write(actor, settled)));
+      continue;
+    }
     // Life Points are the one value with a stated exception to the floor, and even that
     // has to be granted by something - the Undying State.
     const negative = (key === "life.value")

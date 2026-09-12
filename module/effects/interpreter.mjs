@@ -84,7 +84,7 @@ export function applyPassives(entries, phase, scope) {
  * Returns the Slot values the same way passives do, plus the parts and flags the
  * exchange needs, so a caller adds them to a roll without knowing where they came from.
  */
-export function collectReactive(entries, moment, scope) {
+export function collectReactive(entries, moment, scope, { mode = null } = {}) {
   const contributions = new Map();
   const parts = [];
   const spent = [];
@@ -92,6 +92,11 @@ export function collectReactive(entries, moment, scope) {
   for (const entry of entries) {
     for (const b of entry.program?.blocks ?? []) {
       if ((b.mode !== "triggered") && (b.mode !== "automatic")) continue;
+      // Asked for one kind at a time when the caller says so. What a player chooses has
+      // to have happened before what fires by itself is looked at, because the second
+      // can be conditioned on the first - "if you did not use the second effect" is a
+      // question with no answer until the player has had their say.
+      if (mode && (b.mode !== mode)) continue;
       if (!matchesMoment(b, moment)) continue;
       if (!levelReached(b, entry)) continue;
 
