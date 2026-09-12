@@ -432,7 +432,9 @@ export const PROFILES = Object.freeze({
       * Ignore 1/2 of your target's Damage Reduction.
       * The AoE for this Attacking Maneuver cannot have a Magnitude larger than Standard,
         nor can it have an AoE applied to it other than the Line AoE.`,
-    area: { shape: "line", magnitude: "standard" },
+    // No Magnitude here either: the text says "a Line AoE" and names none, so it is
+    // Standard by default - which is also exactly where the cap below holds it.
+    area: { shape: "line" },
     // "Ignore 1/2 of your target's Damage Reduction" - a fraction of theirs rather than
     // an amount of your own, so it cannot go through `damageReduction.pierced`, which is
     // a number the attacker brings.
@@ -860,10 +862,34 @@ async function pick(title, question, buttons) {
  * plainly, so a Profile that is half machinery and half table ruling says so where it
  * is chosen rather than after it is thrown.
  */
-/** How an Area of Effect is named on the card and in the picker. */
+/**
+ * The Magnitude an Area has when it does not say: "if an AoE does not have its Magnitude
+ * declared, it is Standard by default."
+ *
+ * Kept as a rule rather than written into each Profile that omits one, so the published
+ * text and the data say the same thing - Blast has "a Cone AoE" and names no Magnitude,
+ * and that is what its entry says too.
+ */
+export const DEFAULT_AREA_MAGNITUDE = "standard";
+
+/** What Magnitude this Area actually has, stated or defaulted. */
+export function areaMagnitude(area) {
+  return area?.magnitude ?? DEFAULT_AREA_MAGNITUDE;
+}
+
+/**
+ * How an Area of Effect is named on the card and in the picker.
+ *
+ * A name and nothing more. Nothing in this system measures an Area: what it covers is
+ * the player's and the GM's to agree, and the attacker says who was caught with the
+ * button on the card. So the shape and the Magnitude are words a reader checks their own
+ * ruling against, which is exactly why a missing Magnitude has to read as Standard
+ * rather than as nothing - it used to come out as "Undefined Cone".
+ */
 export function areaLabel(area) {
   if (!area) return "";
-  const name = `${area.magnitude} ${area.shape}`.replace(/(^|\s)\w/g, c => c.toUpperCase());
+  const name = `${areaMagnitude(area)} ${area.shape}`
+    .replace(/(^|\s)\w/g, c => c.toUpperCase());
   return area.centredOnSelf ? `${name} (centred on you)` : name;
 }
 
