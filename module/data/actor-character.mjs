@@ -622,6 +622,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     schema.absoluteAttacksThisRound = new fields.NumberField({
       required: true, integer: true, initial: 0, min: 0
     });
+
+    // --- Entering the Encounter ---
+    // Whether this character has taken the start of the Combat Encounter yet.
+    //
+    // "Fires when you enter the Encounter, so joining late still earns it" - and joining
+    // late is the case nothing covered. The Encounter begins for everyone standing in it
+    // when it begins, and it begins for anybody else the moment they walk in, which is
+    // not a moment Foundry has a hook for. So the character says when, once, and this is
+    // what stops them saying it twice.
+    schema.enteredEncounter = new fields.BooleanField({ required: true, initial: false });
     schema.diminishingDefense = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 
     // --- Super Stacks ---

@@ -119,6 +119,10 @@ async function startEncounter(combat) {
       "system.armedTalents": [],
       "system.usedManeuvers": [],
       "system.defeatsEscaped": 0,
+      // Standing in it when it begins is one way of entering it, and it is this one -
+      // so the button that offers the same thing to somebody who walks in later has
+      // nothing left to offer these.
+      "system.enteredEncounter": true,
       ...NOT_CHARGING,
       // Every Resource is lost when an Encounter ends, so one starts with none.
       "system.resources": replaceObject({})
@@ -222,6 +226,8 @@ export function registerCombatHooks() {
         "system.usedManeuvers": [],
         "system.resources": replaceObject({}),
         "system.defeatsEscaped": 0,
+        // The next Encounter is a different one, and begins for them again.
+        "system.enteredEncounter": false,
         // A charge that was never thrown does not follow you out of the Encounter.
         ...NOT_CHARGING
       });

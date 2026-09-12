@@ -20,6 +20,7 @@ import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
   checkCard,
   evaluateCheck,
+  enterEncounter,
   prepareRoll,
   rollSteadfastCheck,
   whyNotWilling
@@ -74,6 +75,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useManeuver: DBUCharacterSheet._onUseManeuver,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
       resetEncounter: DBUCharacterSheet._onResetEncounter,
+      enterEncounter: DBUCharacterSheet._onEnterEncounter,
       steadfastCheck: DBUCharacterSheet._onSteadfastCheck,
       importTalents: DBUCharacterSheet._onImportTalents,
       reloadTalents: DBUCharacterSheet._onReloadTalents,
@@ -230,6 +232,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }));
 
     context.combatEditMode = this.#combatEditMode;
+    // Offered until it is taken. Not gated on there being a Combat in the tracker: a
+    // table running an Encounter without one still has an Encounter, and this is the
+    // only door to its start for them.
+    context.canEnterEncounter = !this.actor.system.enteredEncounter;
     // What is left of each pool right now. Derived rather than stored: what is stored
     // is what has been spent, so the sheet cannot drift from what the rules allow.
     context.actionsLeft = {
@@ -1068,10 +1074,24 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Clear what only refreshes between Combat Encounters. */
+  /**
+   * Take the start of the Combat Encounter, once.
+   *
+   * For somebody who walked into an Encounter already under way: it began for everyone
+   * else when it began, and it begins for them now. The rule itself lives in chat.mjs,
+   * beside the card that offers the same thing to everyone who was already there.
+   */
+  static async _onEnterEncounter() {
+    return enterEncounter(this.actor);
+  }
+
   static async _onResetEncounter() {
     return this.actor.update({
       "system.usedManeuvers": [],
       "system.talentUses.encounter": [],
+      // A new Encounter begins for them again, so the start of it is theirs to take
+      // once more. A table not running a formal Encounter reaches it only this way.
+      "system.enteredEncounter": false,
       "system.armedTalents": []
     });
   }

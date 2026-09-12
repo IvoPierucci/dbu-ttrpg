@@ -202,6 +202,13 @@
               data-tooltip="Give back the Actions and the Capacity, and clear the attacks made and the Diminishing stacks. A Combat does this on its own each round.">New round</button>
       <button type="button" data-action="resetEncounter" class="capacity-reset"
               data-tooltip="Restore maneuvers limited to once per encounter">New encounter</button>
+      {{#if canEnterEncounter}}
+      {{! For somebody who walked into an Encounter already under way: it began for
+          everyone else when it began, and it begins for them now. Gone once taken, and
+          back with the next Encounter. }}
+      <button type="button" data-action="enterEncounter" class="capacity-reset"
+              data-tooltip="The Combat Encounter begins for you now. Applies your start-of-Encounter effects, once.">Enter the encounter</button>
+      {{/if}}
       <span class="capacity-note">{{system.capacity.remaining}} left this round</span>
     </div>
   </section>

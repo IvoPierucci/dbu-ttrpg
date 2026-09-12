@@ -4578,6 +4578,32 @@ async function settleDefeat(message, card) {
 }
 
 /**
+ * Take the start of the Combat Encounter: the automatic half and then the chosen half.
+ *
+ * The same thing the Encounter's card offers, reached from the sheet instead - because
+ * the card is posted to the people who were standing there when the Encounter began, and
+ * somebody who walks in afterwards is not one of them. For them the Encounter begins
+ * when they arrive, which is a moment Foundry has no hook for and only they can say.
+ *
+ * Recorded as taken whether or not anything answered it. What the flag means is that
+ * this character has had their start of the Encounter, not that it was worth something.
+ */
+export async function enterEncounter(actor) {
+  if (!actor || actor.system.enteredEncounter) return false;
+
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  await fireMoment(actor, "start-of-encounter");
+
+  const triggers = triggersFor(actor, ["start-of-encounter"]);
+  if (triggers.length) {
+    await prepareRoll(actor, triggers, "Start of the Combat Encounter", "", { rolling: false });
+  }
+
+  await actor.update({ "system.enteredEncounter": true });
+  return true;
+}
+
+/**
  * Roll a Steadfast Check for every Threshold reached and not yet answered.
  *
  * "Crossing several at once fails all but the lowest automatically", so only the lowest
