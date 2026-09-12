@@ -708,18 +708,28 @@
   font-style: italic;
 }
 
+/* To the right, where it sits against the usage column and lines up with every other
+   name in the list.
+
+   `justify-content`, not `text-align`: Foundry makes every button a flex container that
+   centres its contents, so the label is a flex item and text-align never reaches it.
+   That is why this button had read `text-align: left` since it was written and drawn
+   centred anyway - and why a Counter Maneuver, which is a span rather than a button, was
+   left-aligned in the same list. */
 .dbu-ttrpg button.maneuver-name {
   flex: 1 1 auto;
   width: auto;
+  height: auto;
+  min-height: 0;
   margin: 0;
   padding: 0;
   border: none;
   background: none;
   box-shadow: none;
+  justify-content: flex-end;
   line-height: inherit;
   font-size: inherit;
   font-weight: bold;
-  text-align: left;
   color: var(--dbu-text);
   cursor: pointer;
 }
@@ -732,6 +742,7 @@
 .dbu-ttrpg span.maneuver-name {
   flex: 1 1 auto;
   font-weight: bold;
+  text-align: right;
 }
 
 /* Only playable when something grants it, so it is listed but not offered. */
@@ -740,8 +751,11 @@
   cursor: help;
 }
 
+/* Its own column, on every row, empty where a Maneuver has no limit. The name ends
+   where this begins, so a column that appeared on some rows and not others moved the
+   names with it - which is what made them look ragged. */
 .dbu-ttrpg .maneuver-uses {
-  flex: 0 0 auto;
+  flex: 0 0 104px;
   font-size: 10px;
   color: var(--dbu-accent);
 }
@@ -755,6 +769,7 @@
 
 .dbu-ttrpg .maneuver-source {
   flex: 0 0 auto;
+  min-width: 56px;
   font-size: 10px;
   color: var(--dbu-text-dim);
 }

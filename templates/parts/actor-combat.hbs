@@ -269,9 +269,10 @@
             <span class="maneuver-name maneuver-triggered">{{maneuver.name}}</span>
             {{/if}}
 
-            {{#if maneuver.usageLabel}}
-            <span class="maneuver-uses">{{maneuver.usageLabel}} &middot; {{maneuver.usesLeft}} left</span>
-            {{/if}}
+            {{! Drawn on every row, empty where there is no limit: it is the column the
+                names end against, so one that came and went would take them with it. }}
+            <span class="maneuver-uses">{{#if maneuver.usageLabel}}{{maneuver.usageLabel}}
+              &middot; {{maneuver.usesLeft}} left{{/if}}</span>
             <span class="maneuver-source">{{maneuver.source}}</span>
             <span class="maneuver-cost">{{maneuver.actionLabel}}</span>
             <span class="maneuver-cost">{{maneuver.kiCost}} KP</span>
