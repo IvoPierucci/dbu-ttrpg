@@ -151,10 +151,34 @@ function permitted(actor, maneuver) {
     ui.notifications.warn(`${actor.name} cannot use any Maneuver right now.`);
     return false;
   }
-  if (maneuver.attacking && !permits(slots, "attackingManeuvers")) {
-    ui.notifications.warn(`${actor.name} cannot use Attacking Maneuvers right now.`);
+
+  // The rest of the family, which was declared and read by nobody. Six of the nine
+  // things an effect could forbid had no reader at all, so Transfigured forbade
+  // Signature Techniques and Unique Abilities and neither noticed, Stress Exhaustion
+  // forbade Transformations and none were stopped, and Pinned and Staggered forbade
+  // movement - which the system does not model, and is the one that still has nowhere
+  // to be read.
+  //
+  // A tag rather than a list of names: "any Maneuver tagged uniqueAbility" is how the
+  // rulebook writes it, and it is what the tags on a Maneuver are for.
+  const refused = [
+    [maneuver.attacking, "attackingManeuvers", "Attacking Maneuvers"],
+    [(maneuver.tags ?? []).includes("signature"), "signatureTechniques", "Signature Techniques"],
+    [(maneuver.tags ?? []).includes("uniqueAbility"), "uniqueAbilities", "Unique Abilities"],
+    [(maneuver.tags ?? []).includes("transformation"), "transformations", "Transformations"]
+  ].find(([applies, flag]) => applies && !permits(slots, flag));
+
+  if (refused) {
+    ui.notifications.warn(`${actor.name} cannot use ${refused[2]} right now.`);
     return false;
   }
+
+  // And one named outright, for a rule that lists Maneuvers rather than describing them.
+  if (maneuver.id && !permits(slots, `maneuver.${maneuver.id}`)) {
+    ui.notifications.warn(`${actor.name} cannot use ${maneuver.name} right now.`);
+    return false;
+  }
+
   return true;
 }
 
@@ -334,6 +358,17 @@ export async function useManeuver(actor, maneuver) {
       DBUCharacterData.FOUNDATIONS[declared.foundation]?.label);
     if (wrongFoundation) {
       ui.notifications.warn(wrongFoundation);
+      return false;
+    }
+
+    // "Attacking Maneuvers of any Attack Type other than Physical." Judged here rather
+    // than with the rest, because it is about the Foundation and nothing knows which one
+    // until it has been declared - which is also why it was the one flag in the family
+    // that could not simply be read at the gate.
+    if (declared && (declared.foundation !== "physical")
+      && !permits(actor.system.effects?.slots, "nonPhysicalAttacks")) {
+      ui.notifications.warn(
+        `${actor.name} can only make Physical Attacks right now.`);
       return false;
     }
 

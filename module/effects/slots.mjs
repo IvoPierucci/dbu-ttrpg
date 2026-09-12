@@ -161,9 +161,15 @@ const TABLE = [
        + "at three stacks forbid this." },
   { key: "attackingManeuvers", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Using Attacking Maneuvers. Pinned forbids this." },
+  // Said to the table rather than enforced, and the only two of these that are. This
+  // system does not move anybody - the players move the tokens - and it does not track
+  // who you were told to attack, which is a thing the table settled it would rather
+  // handle itself. Both are still worth writing: a Condition that forbids something
+  // silently is a Condition nobody reads.
   { key: "movement", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "The Movement Maneuver, the Soar Maneuver, and moving through your own "
-       + "effects. Staggered and Pinned forbid this." },
+       + "effects. Staggered and Pinned forbid this. Said to the table, not enforced: "
+       + "nothing here moves a token." },
   { key: "transformations", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Entering an Enhancement or a Form. Stress Exhaustion forbids this." },
   { key: "signatureTechniques", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
@@ -173,7 +179,9 @@ const TABLE = [
   { key: "nonPhysicalAttacks", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Attacking Maneuvers of any Attack Type other than Physical." },
   { key: "attacksOnOthers", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
-    doc: "Attacking anyone but the target you were given. Compelled forbids this." },
+    doc: "Attacking anyone but the target you were given. Compelled forbids this. Said "
+       + "to the table, not enforced: who you were told to attack is not tracked, which "
+       + "is a thing the table chose to keep." },
   { key: "defeat", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Being registered as Defeated at all. The Undying State forbids it, which is "
        + "what lets Life Points go negative without the fight ending." },
@@ -314,6 +322,11 @@ const PATTERNS = [
   { match: /^save\.(\w+)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.savingThrows ?? {}),
     doc: "A Saving Throw." },
+  { match: /^maneuver\.([\w-]+)$/, phase: PHASES.CORE, kind: F,
+    ops: ["allow", "forbid", "set"],
+    valid: () => true,
+    doc: "Using one named Maneuver, by its id - `forbid maneuver.energy-charge`. For a "
+       + "rule that names Maneuvers one by one rather than by what they are." },
   { match: /^defend\.(\w+)\.kiCost$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: () => true,
     doc: "Ki Point Cost of one option of the Defend Maneuver." },
