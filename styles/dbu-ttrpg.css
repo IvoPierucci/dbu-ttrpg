@@ -2325,3 +2325,25 @@
 .dbu-moment-defeated .dbu-moment-title {
   color: var(--dbu-danger, #c0392b);
 }
+
+/* A Foundation this character cannot use. Deliberately not a <details>: the point is
+   that it does not open, and one that is merely closed is a single click from being
+   open. So it is a plain block wearing the group's name and the reason, with nothing
+   under it to reveal and nothing in it to select. */
+.dbu-profile-shut {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dbu-profile-shut-name {
+  padding: 4px 6px;
+  font-weight: 600;
+}
+
+.dbu-profile-shut-name em {
+  display: block;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 0.9em;
+  color: var(--dbu-text-dim);
+}

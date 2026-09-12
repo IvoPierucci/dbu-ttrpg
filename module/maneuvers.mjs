@@ -970,6 +970,57 @@ function profileTip(profile) {
  * The rulebook says it once, at the head of the Foundation's Profiles, rather than on
  * each of them - so it is said once here too, where the group is.
  */
+/**
+ * Why each Foundation is shut to this character, if any is.
+ *
+ * Keyed by Foundation, and the value is the reason - which is what the player is shown,
+ * since a control that is greyed out and says nothing is a control that looks broken.
+ *
+ * Worked out once per dialog rather than per row: the answer is the same for every
+ * Profile under a Foundation, that being what a Foundation rule is.
+ */
+function shutFoundations(actor, foundations) {
+  const shut = {};
+  if (!actor) return shut;
+
+  for (const key of Object.keys(foundations ?? {})) {
+    const refused = whyNotThisFoundation(actor, key, foundations[key]?.label ?? key);
+    if (refused) shut[key] = refused;
+  }
+  return shut;
+}
+
+/**
+ * One group of Profiles, drawn either as a list to choose from or as a shut door.
+ *
+ * A Foundation the character cannot use is not a disclosure widget at all - the whole
+ * point is that it does not open, and a `<details>` that is merely closed is one click
+ * from being open. So it is drawn as a plain block that says the group's name and why it
+ * is shut, and the Profiles under it are not rendered: nothing to select, nothing to
+ * reveal, and a reason on the face of it.
+ */
+function profileSection(group, items, shut) {
+  const reason = shut[group.key];
+  if (reason) {
+    return `<div class="dbu-profile-group dbu-profile-shut"
+                 data-tooltip="${Handlebars.escapeExpression(reason)}">
+      <div class="dbu-profile-shut-name">${Handlebars.escapeExpression(group.label)}
+        <em>${Handlebars.escapeExpression(reason)}</em></div>
+    </div>`;
+  }
+
+  if (!items) {
+    return `<details class="dbu-profile-group dbu-profile-empty">
+      <summary>${Handlebars.escapeExpression(group.label)} <em>none yet</em></summary>
+    </details>`;
+  }
+
+  return `<details class="dbu-profile-group" open>
+    <summary${groupTip(group)}>${Handlebars.escapeExpression(group.label)}</summary>
+    ${items}
+  </details>`;
+}
+
 function groupTip(group) {
   const note = FOUNDATION_NOTES[group.key];
   return note ? ` data-tooltip="${Handlebars.escapeExpression(note)}"` : "";
@@ -1022,13 +1073,25 @@ export async function declareAttack(maneuver, foundations, actor) {
 
   if (!profile) return { profile: "", foundation: "physical", kiWager, advantages, ...answers };
 
+  // A Foundation this character cannot use is offered greyed out rather than left off
+  // the list: a missing button reads as a bug, and a disabled one carrying its reason
+  // answers the question the player was about to ask. A disabled button also cannot
+  // submit, so clicking it does nothing and the dialog stays where it is.
   const available = PROFILES[profile].foundations;
+  const shut = shutFoundations(actor, foundations);
+
   const foundation = (available.length === 1)
     ? available[0]
     : await pick(
         `${maneuver.name} - ${PROFILES[profile].label} Profile`,
         "Which Foundation is this attack made with?",
-        available.map(key => ({ action: key, label: foundations[key].label }))
+        available.map(key => ({
+          action: key,
+          label: shut[key]
+            ? `${foundations[key].label} - ${shut[key]}`
+            : foundations[key].label,
+          disabled: Boolean(shut[key])
+        }))
       );
   if (!foundation) return null;
 
@@ -1097,8 +1160,14 @@ export async function pickProfileOnly(maneuver, foundations, hint = "", actor = 
   const groups = profileGroups(foundations);
   let checked = false;
 
+  const shut = shutFoundations(actor, foundations);
+
   const sections = groups.map(group => {
     if (!group.profiles.length) return "";
+    // Nothing under a shut Foundation is drawn, so nothing under one can be selected -
+    // and the first Profile that starts selected is never one of them.
+    if (shut[group.key]) return profileSection(group, "", shut);
+
     const items = group.profiles.map(profile => {
       const attr = checked ? "" : "checked";
       checked = true;
@@ -1110,10 +1179,7 @@ export async function pickProfileOnly(maneuver, foundations, hint = "", actor = 
       </label>`;
     }).join("");
 
-    return `<details class="dbu-profile-group" open>
-      <summary${groupTip(group)}>${Handlebars.escapeExpression(group.label)}</summary>
-      ${items}
-    </details>`;
+    return profileSection(group, items, shut);
   }).join("");
 
   const chosen = await foundry.applications.api.DialogV2.wait({
@@ -1241,12 +1307,10 @@ async function pickProfile(maneuver, foundations, actor) {
   const noProfile = !maneuver.profile;
   let checked = false;
 
+  const shut = shutFoundations(actor, foundations);
+
   const sections = groups.map(group => {
-    if (!group.profiles.length) {
-      return `<details class="dbu-profile-group dbu-profile-empty">
-        <summary>${Handlebars.escapeExpression(group.label)} <em>none yet</em></summary>
-      </details>`;
-    }
+    if (!group.profiles.length || shut[group.key]) return profileSection(group, "", shut);
 
     const items = group.profiles.map(profile => {
       // The first Profile in the first non-empty group starts selected, so confirming
@@ -1261,11 +1325,8 @@ async function pickProfile(maneuver, foundations, actor) {
       </label>`;
     }).join("");
 
-    // Groups that hold something open by default; empty ones stay shut.
-    return `<details class="dbu-profile-group" open>
-      <summary${groupTip(group)}>${Handlebars.escapeExpression(group.label)}</summary>
-      ${items}
-    </details>`;
+    // Groups that hold something open by default; empty and shut ones do not open.
+    return profileSection(group, items, shut);
   }).join("");
 
   const body = noProfile
