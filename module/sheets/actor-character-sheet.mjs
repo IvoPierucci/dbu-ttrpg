@@ -21,6 +21,7 @@ import {
   checkCard,
   evaluateCheck,
   prepareRoll,
+  rollSteadfastCheck,
   whyNotWilling
 } from "../chat.mjs";
 import {
@@ -1060,32 +1061,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * automatic failure except the lowest, which is the only one actually rolled for.
    */
   static async _onSteadfastCheck() {
-    const pending = this.actor.system.threshold.pending;
-    if (!pending.length) return;
-
-    const { STEADFAST_DIE, STEADFAST_TARGET, THRESHOLDS } = DBUCharacterData;
-    const updates = {};
-
-    // All but the last are passed through rather than stopped at.
-    const automatic = pending.slice(0, -1);
-    const rolled = pending[pending.length - 1];
-    for (const key of automatic) updates[`system.thresholdChecks.${key}`] = "fail";
-
-    const roll = new Roll(STEADFAST_DIE);
-    await roll.evaluate();
-    const passed = roll.total >= STEADFAST_TARGET;
-    updates[`system.thresholdChecks.${rolled}`] = passed ? "pass" : "fail";
-
-    await this.actor.update(updates);
-
-    const carried = automatic.length
-      ? ` (${automatic.map(key => THRESHOLDS[key].label).join(", ")} failed automatically)`
-      : "";
-
-    await roll.toMessage({
-      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - ${passed ? "passed" : "failed"}${carried}`
-    });
+    // The rule itself lives in chat.mjs, because two places ask for it now: this button
+    // and the card posted when somebody is knocked through a Threshold. Written twice it
+    // would drift, and the two would disagree about what a Check costs.
+    return rollSteadfastCheck(this.actor);
   }
 
   /** Clear what only refreshes between Combat Encounters. */

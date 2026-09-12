@@ -10,8 +10,32 @@
  * Actions away. None of them have anywhere to happen without it.
  */
 
+import DBUCharacterData from "./data/actor-character.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { replaceObject, setCondition } from "./conditions.mjs";
+
+/**
+ * Announce a Moment in chat, so the table can answer it.
+ *
+ * Automatic effects fire on their own and always did; what had nowhere to happen was a
+ * triggered one. Every place this system offers an effect hangs off a card, and these
+ * Moments had no card - so a Talent written "when the Combat Round begins, you may..."
+ * was waiting for a button that did not exist anywhere.
+ *
+ * Imported when it is used rather than at the top: chat.mjs imports this module for the
+ * Action economy, and two modules importing each other as they load is how one of them
+ * ends up half-built. The same dance use-maneuver.mjs already does.
+ */
+async function announce(moment, options) {
+  const { postMoment } = await import("./chat.mjs");
+  return postMoment(moment, options);
+}
+
+/** Whether anybody here holds something that answers this Moment. */
+async function anybodyAnswers(moment, uuids) {
+  const { anyoneAnswers } = await import("./chat.mjs");
+  return anyoneAnswers(moment, uuids);
+}
 
 /** Every character taking part, as Actors. */
 function combatants(combat) {
@@ -32,6 +56,11 @@ async function startRound(combat) {
     await actor.update(newRoundFor(actor));
     await fireMoment(actor, "start-of-round");
   }
+
+  await announce("start-of-round", {
+    title: `Start of Combat Round ${combat.round}`,
+    subjects: combatants(combat).map(actor => actor.uuid)
+  });
 }
 
 /**
@@ -97,6 +126,11 @@ async function startEncounter(combat) {
     await stopCharging(actor);
     await fireMoment(actor, "start-of-encounter");
   }
+
+  await announce("start-of-encounter", {
+    title: "Start of the Combat Encounter",
+    subjects: combatants(combat).map(actor => actor.uuid)
+  });
 }
 
 /**
@@ -105,13 +139,26 @@ async function startEncounter(combat) {
  * Only one client may act, or every change happens once per connected player. The GM's
  * client is that one, the same way relayed chat edits work.
  */
+/** A turn beginning, said in chat. Its Moment is the turn-taker's own. */
+async function announceTurn(actor) {
+  return announce("start-of-turn", {
+    title: `Start of ${actor.name}'s turn`,
+    subjectUuid: actor.uuid,
+    subjectName: actor.name,
+    subjects: [actor.uuid]
+  });
+}
+
 export function registerCombatHooks() {
   Hooks.on("combatStart", async combat => {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
     await startEncounter(combat);
     await startRound(combat);
     const first = combat.combatant?.actor;
-    if (first?.type === "character") await fireMoment(first, "start-of-turn");
+    if (first?.type === "character") {
+      await fireMoment(first, "start-of-turn");
+      await announceTurn(first);
+    }
   });
 
   // Foundry has a hook of its own for this, and it says which way the round moved.
@@ -160,6 +207,8 @@ export function registerCombatHooks() {
         ui.notifications.info(`${arriving.name} is skipped this round.`);
         return combat.nextTurn();
       }
+
+      await announceTurn(arriving);
     }
   });
 
@@ -189,17 +238,39 @@ export function registerCombatHooks() {
  * every Transformation and State. Using one Moment for both would pull you out of a
  * Transformation on the way to a defeat that never happened.
  */
+/**
+ * Everyone who might answer something that happened to one character.
+ *
+ * The character themselves, and everyone else in the Encounter - both Moments here are
+ * written so that somebody else can answer them: `defeated` says "name a character to
+ * answer their defeat instead of your own", and being knocked through a Threshold is as
+ * often worth something to whoever did the knocking.
+ *
+ * Outside an Encounter it is just the one character. There is no Initiative Order to
+ * read, and announcing a defeat to a scene full of bystanders is not the same thing.
+ */
+function witnesses(actor) {
+  const others = game.combat?.started ? combatants(game.combat) : [];
+  return [...new Set([actor.uuid, ...others.map(other => other.uuid)])];
+}
+
 export function registerDefeatHooks() {
   Hooks.on("preUpdateActor", (actor, changes, options) => {
     if (actor.type !== "character") return;
     if (foundry.utils.getProperty(changes, "system.life.value") === undefined) return;
     options.dbuWasDefeated = actor.system.defeated;
+    // Where they stood before the Life changed. A Health Threshold is derived from Life,
+    // so crossing one leaves no record of its own - the only way to know it happened is
+    // to have looked just before.
+    options.dbuThreshold = actor.system.threshold.key;
   });
 
   Hooks.on("updateActor", async (actor, changes, options) => {
     if (actor.type !== "character") return;
     if (options.dbuWasDefeated === undefined) return;
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
+
+    await announceThreshold(actor, options.dbuThreshold);
 
     const was = options.dbuWasDefeated;
     const now = actor.system.defeated;
@@ -220,11 +291,59 @@ export function registerDefeatHooks() {
       return;
     }
 
-    await fireMoment(actor, "defeat-resolved");
-    await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor }),
-      content: `<div class="dbu-check"><div class="dbu-check-parts">Defeated</div></div>`
+    // Whether anything is still coming decides what the card says, and whether the
+    // defeat waits for it. Nothing to wait for is the common case, and then it is
+    // settled here and announced as settled - a card saying "incoming defeat" that
+    // nobody can answer is a step the table has to click past for no reason.
+    const who = witnesses(actor);
+    const pending = await anybodyAnswers("defeated", who);
+
+    if (!pending) {
+      await fireMoment(actor, "defeat-resolved");
+    }
+
+    await announce("defeated", {
+      title: pending ? `${actor.name} - incoming defeat` : `${actor.name} is Defeated`,
+      subjectUuid: actor.uuid,
+      subjectName: actor.name,
+      subjects: who,
+      pending,
+      detail: pending
+        ? "Not settled yet - something here can still answer it."
+        : ""
     });
+  });
+}
+
+/**
+ * Announce a Health Threshold somebody has been knocked through.
+ *
+ * Nothing fired this Moment before, and nothing announced it: the Threshold is derived
+ * from Life Points, so crossing one left no trace and the Steadfast Check it calls for
+ * was something a player had to notice on their own sheet.
+ *
+ * Only downward. Healing back up through a Threshold is not being knocked through one,
+ * and it clears the Checks recorded below by itself.
+ */
+async function announceThreshold(actor, before) {
+  if (!before) return;
+
+  const { THRESHOLDS } = DBUCharacterData;
+  const keys = Object.keys(THRESHOLDS);
+  const now = actor.system.threshold.key;
+  if (keys.indexOf(now) <= keys.indexOf(before)) return;
+
+  // The Moment says it "fires after the Maneuver that pushed you through finishes",
+  // and this is that: Life Points are written when the Damage is applied, which is the
+  // last step of the Maneuver and a deliberate one.
+  await fireMoment(actor, "threshold", { threshold: now });
+
+  await announce("threshold", {
+    title: `${actor.name} is knocked through a Health Threshold`,
+    subjectUuid: actor.uuid,
+    subjectName: actor.name,
+    subjects: witnesses(actor),
+    detail: `${THRESHOLDS[before].label} to ${THRESHOLDS[now].label}`
   });
 }
 

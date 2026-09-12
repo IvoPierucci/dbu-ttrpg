@@ -2299,3 +2299,29 @@
   color: var(--dbu-text-dim);
   font-style: italic;
 }
+
+/* A Moment the table has been called to answer: the Encounter starting, a round turning
+   over, somebody's turn, a Health Threshold crossed, somebody falling. Deliberately
+   quieter than a Maneuver card - it is an announcement with a button on it, not an
+   exchange - and the title carries the weight. */
+.dbu-moment {
+  padding: 4px 0;
+}
+
+.dbu-moment-title {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.dbu-moment-detail {
+  color: var(--dbu-text-dim);
+  font-size: 0.9em;
+  margin-top: 2px;
+}
+
+/* The two that are about one character in trouble carry a mark, so they are findable in
+   a log full of rounds and turns. */
+.dbu-moment-threshold .dbu-moment-title,
+.dbu-moment-defeated .dbu-moment-title {
+  color: var(--dbu-danger, #c0392b);
+}

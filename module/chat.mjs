@@ -151,6 +151,7 @@ function applyRequest(request) {
     case "cancel": return applyCancel(request.messageId, request.actorUuid);
     case "clash": return applyClash(request.messageId, request.clash);
     case "attack": return applyAttack(request.messageId, request.attack);
+    case "moment": return applyMoment(request.messageId, request.moment);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
@@ -247,6 +248,13 @@ async function applyAttack(messageId, attack) {
   const message = game.messages.get(messageId);
   if (!message) return;
   await message.setFlag(SCOPE, ATTACK_FLAG, attack);
+}
+
+/** Write a Moment card's state back onto its message. */
+async function applyMoment(messageId, moment) {
+  const message = game.messages.get(messageId);
+  if (!message) return;
+  await message.setFlag(SCOPE, MOMENT_FLAG, moment);
 }
 
 /** Write a settled Skill Clash back onto its message. */
@@ -371,6 +379,7 @@ function onRenderChatMessage(message, html) {
   renderCriticalButton(message, html);
   renderSkillClash(message, html);
   renderAttack(message, html);
+  renderMoment(message, html);
   renderInstantResponses(message, html);
   renderOutOfSequence(message, html);
   renderAfterTheFact(message, html);
@@ -1327,6 +1336,31 @@ function triggerText(entry) {
   return entry.program?.blocks?.[0]?.text ?? "";
 }
 
+/**
+ * What this character holds that answers any of these Moments, and could still be used.
+ *
+ * Only the triggered ones. An Automatic effect fires by itself, so listing it would be
+ * asking the player to choose something that was never theirs to choose.
+ *
+ * A Karmic Effect answers Moments like anything else, but it is bought rather than
+ * merely armed - it has a list of its own, and offering it here as a free checkbox would
+ * hand it over without the Karma Point.
+ *
+ * A Moment is written `threshold(bruised)` or `state/raging`, and what is matched is the
+ * name in front of the parameter - an effect answering one Threshold still answers the
+ * Moment of being knocked through one.
+ */
+function triggersFor(actor, moments) {
+  if (!actor || !moments.length) return [];
+
+  return reactiveFor(actor).filter(entry =>
+    !entry.sourceId.startsWith("karma:")
+    && entry.available && (entry.program.blocks ?? []).some(b =>
+      (b.mode === "triggered")
+      && moments.includes(String(b.moment ?? "").split(/[(/]/)[0]))
+  );
+}
+
 function relevantTriggers(actor, message, stage) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack) return [];
@@ -1334,21 +1368,8 @@ function relevantTriggers(actor, message, stage) {
   // Both sides take part in both stages; what differs is which effects each holds.
   if (!attackParticipants(attack).includes(actor.uuid)) return [];
 
-  // Whatever answers one of this side's Moments and still has uses. Only the triggered
-  // ones: an Automatic effect fires by itself, so listing it here would be asking the
-  // player to choose something that was never theirs to choose.
   const side = (actor.uuid === attack.attackerUuid) ? "attacker" : "target";
-  const moments = TRIGGER_STAGES[stage]?.[side] ?? [];
-
-  return reactiveFor(actor).filter(entry =>
-    // A Karmic Effect answers Moments like anything else, but it is bought rather than
-    // merely armed - it has its own list, and offering it here as a free checkbox would
-    // hand it over without the Karma Point.
-    !entry.sourceId.startsWith("karma:")
-    && entry.available && (entry.program.blocks ?? []).some(b =>
-      (b.mode === "triggered")
-      && moments.includes(String(b.moment ?? "").split(/[(/]/)[0]))
-  );
+  return triggersFor(actor, TRIGGER_STAGES[stage]?.[side] ?? []);
 }
 
 /**
@@ -1952,6 +1973,9 @@ const CLASH_FLAG = "clash";
 
 /** Flag holding a declared attack and, once resolved, how it went. */
 const ATTACK_FLAG = "attack";
+
+/** Flag holding a Moment the table has been called to answer. */
+const MOMENT_FLAG = "moment";
 
 /**
  * Whatever the character's effects contribute at one Moment.
@@ -4386,6 +4410,211 @@ async function applyInterventionDamage(message, attack, entry) {
           : line)
     }
   });
+}
+
+// --- Moments the table has to answer ------------------------------------------
+//
+// A handful of Moments are not part of anybody's exchange: the Encounter begins, the
+// round turns over, somebody's turn starts, somebody is knocked through a Health
+// Threshold, somebody falls. Automatic effects answered these already and nobody saw it
+// happen; triggered ones had nowhere at all to be offered, because every place this
+// system offers an effect hangs off a card and these had no card.
+//
+// So each of them posts one. It says what happened and carries an Apply effects button
+// for every character that holds something answering it - which is also what makes the
+// moment visible at the table, rather than a thing somebody has to remember.
+
+/**
+ * Post the card for a Moment.
+ *
+ * `subjects` is who may answer it, recorded when the card is made rather than worked out
+ * when it is read: who was in the Encounter when the round turned over is a fact about
+ * that moment, and a player joining afterwards did not live through it.
+ *
+ * Posted by one client - the GM's, the same one that fires the Moment - so the card
+ * appears once rather than once per connected player.
+ */
+export async function postMoment(moment, {
+  title, subjectUuid = "", subjectName = "", subjects = [], pending = false, detail = ""
+} = {}) {
+  return ChatMessage.create({
+    speaker: subjectUuid
+      ? ChatMessage.getSpeaker({ actor: fromUuidSync(subjectUuid) })
+      : ChatMessage.getSpeaker(),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        // Nothing here is a Maneuver, so there is nothing for an Instant to answer.
+        [RESPONDABLE_FLAG]: false,
+        [MOMENT_FLAG]: {
+          moment, title, subjectUuid, subjectName, subjects, pending, detail,
+          // Who has answered it. The card keeps offering until they have, so a player
+          // who was away when it was posted still finds it waiting.
+          applied: []
+        }
+      }
+    }
+  });
+}
+
+/** Everyone on this card the reader plays who still holds something to answer it with. */
+function momentAnswerers(card) {
+  return (card.subjects ?? [])
+    .map(uuid => fromUuidSync(uuid))
+    .filter(actor => actor?.isOwner
+      && !(card.applied ?? []).includes(actor.uuid)
+      && triggersFor(actor, [card.moment]).length);
+}
+
+/** Whether anybody at all could still answer this Moment, whoever they belong to. */
+export function anyoneAnswers(moment, uuids) {
+  return uuids.some(uuid => triggersFor(fromUuidSync(uuid), [moment]).length);
+}
+
+function renderMoment(message, html) {
+  const card = message.getFlag(SCOPE, MOMENT_FLAG);
+  if (!card) return;
+
+  const content = html.querySelector(".message-content");
+  if (!content) return;
+
+  const box = document.createElement("div");
+  box.className = `dbu-moment dbu-moment-${card.moment}`;
+  box.innerHTML = `
+    <div class="dbu-moment-title">${Handlebars.escapeExpression(card.title)}</div>
+    ${card.detail
+      ? `<div class="dbu-moment-detail">${Handlebars.escapeExpression(card.detail)}</div>`
+      : ""}`;
+  content.append(box);
+
+  const buttons = document.createElement("div");
+  buttons.className = "dbu-clash-buttons";
+
+  // The Steadfast Check belongs to whoever was knocked through, and comes first: it is
+  // the thing the rule asks for, and the effects answering the Moment are beside it.
+  const subject = card.subjectUuid ? fromUuidSync(card.subjectUuid) : null;
+  if ((card.moment === "threshold") && subject?.isOwner && subject.system.threshold.pending.length) {
+    const roll = document.createElement("button");
+    roll.type = "button";
+    roll.className = "dbu-clash-button";
+    roll.textContent = "Steadfast Check";
+    roll.dataset.tooltip = "Crossing several Thresholds at once fails all but the lowest "
+      + "automatically; that one is rolled for.";
+    roll.addEventListener("click", () => rollSteadfastCheck(subject));
+    buttons.append(roll);
+  }
+
+  for (const actor of momentAnswerers(card)) {
+    const apply = document.createElement("button");
+    apply.type = "button";
+    apply.className = "dbu-clash-button";
+    apply.textContent = (card.subjects.length > 1)
+      ? `Apply effects - ${actor.name}`
+      : "Apply effects";
+    apply.dataset.tooltip = "Trigger effects that answer this";
+    apply.addEventListener("click", () => answerMoment(message, card, actor));
+    buttons.append(apply);
+  }
+
+  // A defeat that something might still answer is not settled yet, and saying so is the
+  // whole point of announcing it before it stands. Somebody has to say when it does.
+  if (card.pending && (subject?.isOwner || game.user.isGM)) {
+    const settle = document.createElement("button");
+    settle.type = "button";
+    settle.className = "dbu-clash-button";
+    settle.textContent = "Settle the defeat";
+    settle.dataset.tooltip = "Nothing else is coming. This is when Transformations and "
+      + "States are left behind.";
+    settle.addEventListener("click", () => settleDefeat(message, card));
+    buttons.append(settle);
+  }
+
+  if (buttons.childElementCount) content.append(buttons);
+}
+
+/** Apply what this character brings to a Moment, and note that they have. */
+async function answerMoment(message, card, actor) {
+  const triggers = triggersFor(actor, [card.moment]);
+  if (!triggers.length) return;
+
+  const applied = await prepareRoll(actor, triggers, card.title, "", { rolling: false });
+  if (applied === false) return;
+
+  requestEdit(message, {
+    type: "moment",
+    moment: { ...card, applied: [...new Set([...(card.applied ?? []), actor.uuid])] }
+  });
+}
+
+/**
+ * Let a defeat stand.
+ *
+ * `defeat-resolved` is deliberately not the same Moment as `defeated`: the first fires
+ * while something can still reach through and stop it, and this one once nothing can.
+ * Firing both in one breath would pull a character out of a Transformation on the way to
+ * a defeat that never happened.
+ */
+async function settleDefeat(message, card) {
+  const actor = fromUuidSync(card.subjectUuid);
+  if (!actor) return;
+
+  // They may have been picked back up in the meantime, by the very effects this card was
+  // posted to offer. Nothing to settle then.
+  if (!actor.system.defeated) {
+    requestEdit(message, {
+      type: "moment",
+      moment: { ...card, pending: false, title: `${actor.name} is back on their feet` }
+    });
+    return;
+  }
+
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  await fireMoment(actor, "defeat-resolved");
+
+  requestEdit(message, {
+    type: "moment",
+    moment: { ...card, pending: false, title: `${actor.name} is Defeated` }
+  });
+}
+
+/**
+ * Roll a Steadfast Check for every Threshold reached and not yet answered.
+ *
+ * "Crossing several at once fails all but the lowest automatically", so only the lowest
+ * is rolled for and the rest are recorded as failed.
+ *
+ * Lives here rather than on the sheet because two places ask for it now - the sheet's
+ * own button and the card posted when somebody is knocked through - and a rule written
+ * twice is a rule that will drift.
+ */
+export async function rollSteadfastCheck(actor) {
+  const pending = actor.system.threshold.pending;
+  if (!pending.length) return null;
+
+  const { STEADFAST_DIE, STEADFAST_TARGET, THRESHOLDS } = DBUCharacterData;
+  const updates = {};
+
+  const automatic = pending.slice(0, -1);
+  const rolled = pending[pending.length - 1];
+  for (const key of automatic) updates[`system.thresholdChecks.${key}`] = "fail";
+
+  const roll = new Roll(STEADFAST_DIE);
+  await roll.evaluate();
+  const passed = roll.total >= STEADFAST_TARGET;
+  updates[`system.thresholdChecks.${rolled}`] = passed ? "pass" : "fail";
+
+  await actor.update(updates);
+
+  const carried = automatic.length
+    ? ` (${automatic.map(key => THRESHOLDS[key].label).join(", ")} failed automatically)`
+    : "";
+
+  await roll.toMessage({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - ${passed ? "passed" : "failed"}${carried}`
+  });
+
+  return passed;
 }
 
 /**
