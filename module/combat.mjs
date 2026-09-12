@@ -107,6 +107,9 @@ export function newRoundFor(actor) {
     // Capacity is spent within a round and comes back with the next one.
     "system.capacity.spent": 0,
     "system.talentUses.round": [],
+    // "once per Combat Round", so the Profiles spent through a Basic Attack come back
+    // with the round exactly as the Diminishing counts do.
+    "system.basicAttackProfiles": [],
     "system.usedManeuvers": (actor.system.usedManeuvers ?? [])
       .filter(entry => !entry.startsWith("round:"))
   };

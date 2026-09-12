@@ -1265,6 +1265,36 @@ async function askFeatures(maneuver, actor, advantages) {
 }
 
 /**
+ * One Profile as a row in the picker.
+ *
+ * Shared by the two places a Profile is chosen - when the attack is made, and in advance
+ * when the Energy Charge Maneuver declares one - so a Profile that cannot be used is
+ * refused the same way in both.
+ *
+ * A refused one is drawn greyed out with its reason rather than left off the list: a
+ * missing row reads as a bug, and a disabled one answers the question the player was
+ * about to ask. The radio is disabled too, so there is no way to confirm it.
+ *
+ * @param {{first: boolean, onFirst: function}} state  whether this row is the one that
+ *        starts selected, and how to say that it took the slot
+ */
+function profileOption(profile, maneuver, actor, state) {
+  const refused = whyNotThisProfile(actor, maneuver, profile.id);
+  const selected = state.first && !refused;
+  if (selected) state.onFirst();
+
+  return `<label class="dbu-profile-option${refused ? " dbu-profile-spent" : ""}"
+      ${refused ? `data-tooltip="${Handlebars.escapeExpression(refused)}"` : ""}>
+    <input type="radio" name="profile" value="${profile.id}"
+           ${selected ? "checked" : ""} ${refused ? "disabled" : ""}/>
+    <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(profile.label)}</span>
+    ${refused ? `<em class="dbu-profile-spent-note">${PROFILE_SPENT_LABEL}</em>` : ""}
+    <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
+    <span class="dbu-profile-cost">${profileOptionCost(maneuver, profile.id, actor)} KP</span>
+  </label>`;
+}
+
+/**
  * Just the Profile, with no wager and no Foundation.
  *
  * The Energy Charge Maneuver declares an Attacking Maneuver before it is thrown, and
@@ -1288,16 +1318,10 @@ export async function pickProfileOnly(maneuver, foundations, hint = "", actor = 
     // and the first Profile that starts selected is never one of them.
     if (shut[group.key]) return profileSection(group, "", shut);
 
-    const items = group.profiles.map(profile => {
-      const attr = checked ? "" : "checked";
-      checked = true;
-      return `<label class="dbu-profile-option">
-        <input type="radio" name="profile" value="${profile.id}" ${attr}/>
-        <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(profile.label)}</span>
-        <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
-        <span class="dbu-profile-cost">${profileOptionCost(maneuver, profile.id, actor)} KP</span>
-      </label>`;
-    }).join("");
+    const items = group.profiles.map(profile => profileOption(profile, maneuver, actor, {
+      first: !checked,
+      onFirst: () => { checked = true; }
+    })).join("");
 
     return profileSection(group, items, shut);
   }).join("");
@@ -1452,18 +1476,12 @@ async function pickProfile(maneuver, foundations, actor) {
   const sections = groups.map(group => {
     if (!group.profiles.length || shut[group.key]) return profileSection(group, "", shut);
 
-    const items = group.profiles.map(profile => {
-      // The first Profile in the first non-empty group starts selected, so confirming
-      // straight away is always a valid choice.
-      const attr = checked ? "" : "checked";
-      checked = true;
-      return `<label class="dbu-profile-option">
-        <input type="radio" name="profile" value="${profile.id}" ${attr}/>
-        <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(profile.label)}</span>
-        <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
-        <span class="dbu-profile-cost">${profileOptionCost(maneuver, profile.id, actor)} KP</span>
-      </label>`;
-    }).join("");
+    // The first Profile that can actually be chosen starts selected, so confirming
+    // straight away is always a valid choice - and never lands on a spent one.
+    const items = group.profiles.map(profile => profileOption(profile, maneuver, actor, {
+      first: !checked,
+      onFirst: () => { checked = true; }
+    })).join("");
 
     // Groups that hold something open by default; empty and shut ones do not open.
     return profileSection(group, items, shut);
@@ -1586,6 +1604,64 @@ export function whyNotAnotherAbsolute(actor, maneuver) {
   return (used < max)
     ? null
     : `${actor.name} has already made ${max} Absolute Attacks this Combat Round.`;
+}
+
+/**
+ * The Maneuver the once-a-Profile-a-round rule is about.
+ *
+ * Named rather than flagged on the schema because the rule names it: "when using a Basic
+ * Attack Maneuver". A Maneuver that behaves like one but is not it - a Signature
+ * Technique with the Crushing Profile - is not limited by this, and may use a Profile
+ * the same round a Basic Attack did.
+ */
+const BASIC_ATTACK = "basic-attack";
+
+/** "...except for the Simple Profile." One exemption, in one place. */
+const UNLIMITED_THROUGH_BASIC_ATTACK = Object.freeze(new Set(["simple"]));
+
+/** What the picker puts on a row it will not let you choose. */
+export const PROFILE_SPENT_LABEL = "used this round";
+
+/**
+ * Why this Profile cannot be used through this Maneuver, if it cannot.
+ *
+ * A sentence rather than a flag, because it is said out loud in two places - on the
+ * picker's row and in the refusal if something reaches the attack another way.
+ *
+ * @returns {string} the reason, or "" when there is none
+ */
+export function whyNotThisProfile(actor, maneuver, profileId) {
+  if (!actor || !profileId) return "";
+  if (maneuver?.id !== BASIC_ATTACK) return "";
+  if (UNLIMITED_THROUGH_BASIC_ATTACK.has(profileId)) return "";
+
+  const spent = actor.system?.basicAttackProfiles ?? [];
+  if (!spent.includes(profileId)) return "";
+
+  const label = PROFILES[profileId]?.label ?? profileId;
+  return `${actor.name} has already used the ${label} Profile through a Basic Attack `
+    + "this Combat Round.";
+}
+
+/**
+ * Record a Profile as used through a Basic Attack.
+ *
+ * Only while a Combat Round is running, which the caller decides: outside an Encounter
+ * there are no rounds, so nothing would ever clear this and a Profile used once out of
+ * combat would be spent for ever.
+ *
+ * Nothing to do for the Simple Profile, or for any other Maneuver - both of which are
+ * checked here rather than at the call site, so the rule is stated once.
+ */
+export async function recordProfileUse(actor, maneuver, profileId) {
+  if (!actor || !profileId) return;
+  if (maneuver?.id !== BASIC_ATTACK) return;
+  if (UNLIMITED_THROUGH_BASIC_ATTACK.has(profileId)) return;
+
+  const spent = actor.system?.basicAttackProfiles ?? [];
+  if (spent.includes(profileId)) return;
+
+  await actor.update({ "system.basicAttackProfiles": [...spent, profileId] });
 }
 
 /**

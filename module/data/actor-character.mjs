@@ -824,6 +824,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       required: true, integer: true, initial: 0, min: 0
     });
 
+    // --- Profiles used through a Basic Attack this Combat Round ---
+    // "You can only use each Profile once per Combat Round when using a Basic Attack
+    // Maneuver, except for the Simple Profile."
+    //
+    // Kept apart from usedManeuvers below because it counts a different thing. A Basic
+    // Attack has no usage limit of its own - you may make as many as you have Actions
+    // for - and what runs out is the Profile behind it. So this is a list of Profile
+    // ids, and it belongs to the round the way the Diminishing counts do.
+    schema.basicAttackProfiles = new fields.ArrayField(
+      new fields.StringField({ required: true, blank: false }),
+      { required: true, initial: [] }
+    );
+
     // --- Maneuver uses ---
     // One entry per use of a Maneuver that is limited per Encounter, so a Maneuver
     // allowed more than once can be counted rather than merely flagged.

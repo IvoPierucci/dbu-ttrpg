@@ -22,7 +22,9 @@ import {
   squaresAway,
   whyNotAnotherAbsolute,
   whyNotAnotherInstant,
-  whyNotThisFoundation
+  whyNotThisFoundation,
+  whyNotThisProfile,
+  recordProfileUse
 } from "./maneuvers.mjs";
 import {
   postAttack,
@@ -480,6 +482,17 @@ export async function useManeuver(actor, maneuver) {
       return false;
     }
 
+    // "You can only use each Profile once per Combat Round when using a Basic Attack
+    // Maneuver, except for the Simple Profile." The picker will not offer a spent one,
+    // so this catches the route that does not go through it: the Energy Charge Maneuver
+    // declares the Profile in advance, and what it declared can be spent in between by
+    // a Cross Counter's Out-of-Sequence Basic Attack.
+    const profileSpent = declared && whyNotThisProfile(actor, maneuver, declared.profile);
+    if (profileSpent) {
+      ui.notifications.warn(profileSpent);
+      return false;
+    }
+
     // Two Absolute Attacks a Combat Round. Checked here for the same reason the reach
     // is: before anything is paid, so the declaration can still be taken back.
     const noMoreAbsolute = whyNotAnotherAbsolute(actor, maneuver);
@@ -498,6 +511,11 @@ export async function useManeuver(actor, maneuver) {
 
   await payActions(actor, maneuver, actionsSpent);
   await recordManeuverUse(actor, maneuver);
+
+  // And the Profile it was made with, if this is the Maneuver that limit is about. Only
+  // inside a Combat Round: there are no rounds outside an Encounter, so nothing would
+  // clear the tally and a Profile used once would be spent for ever.
+  if (game.combat?.started) await recordProfileUse(actor, maneuver, declared?.profile);
 
   // Whatever was charged into this one comes with it, and the charging ends here -
   // Guard Down with it. Only for the Maneuver that was actually declared: throwing a

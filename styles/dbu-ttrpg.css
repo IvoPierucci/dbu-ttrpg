@@ -2444,6 +2444,21 @@
   cursor: not-allowed;
 }
 
+/* A Profile already used through a Basic Attack this Combat Round. Drawn rather than
+   left off the list, for the same reason a shut Foundation is: a missing row reads as a
+   bug, and a greyed one carrying its reason answers the question. */
+.dbu-profile-option.dbu-profile-spent {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dbu-profile-spent-note {
+  flex: 0 0 auto;
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--dbu-text-dim);
+}
+
 .dbu-profile-shut-name {
   padding: 4px 6px;
   font-weight: 600;

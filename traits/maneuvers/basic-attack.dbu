@@ -22,17 +22,4 @@ text: >
   that to select the target(s) instead. You can only use each Profile once per Combat
   Round when using a Basic Attack Maneuver, except for the Simple Profile.
 
-# One rule in the entry above is not enforced.
-#
-# "You can only use each Profile once per Combat Round when using a Basic Attack
-# Maneuver, except for the Simple Profile." Nothing counts which Profiles have been
-# used through a Basic Attack this round, so the picker offers all of them every
-# time.
-#
-# Everything needed is here - a use is already recorded against the round it was
-# spent in, which is what makes 1/Round work for a Maneuver - but this counts
-# Profiles rather than Maneuvers, and nothing keeps that tally. Until it does, the
-# table keeps it: the entry on the row says the rule, which is the part a player
-# reads.
-
 ---
