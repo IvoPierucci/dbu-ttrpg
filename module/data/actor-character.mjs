@@ -510,6 +510,39 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   }
 
   /**
+   * The Score at which an Attribute's own rule turns on, and the Score at which it
+   * doubles.
+   *
+   * Two Attributes carry one, and both are written to the same pattern: "If your X Score
+   * is 4+, <bonus>. Double this bonus if your X Score is 8+." Named here so the two read
+   * as the one rule they are, rather than as two coincidences.
+   */
+  static ATTRIBUTE_RULE_SCORE = 4;
+  static ATTRIBUTE_RULE_DOUBLED_SCORE = 8;
+
+  /** Gifted Student: "+1 the Dice Score of your Skill Checks", at Scholarship 4+. */
+  static GIFTED_STUDENT_SKILL_CHECK = 1;
+
+  /**
+   * Gifted Student: "+3 the amount of Technique Points you gain from Skill
+   * Improvements", at Scholarship 4+.
+   */
+  static GIFTED_STUDENT_TECHNIQUE_POINTS = 3;
+
+  /** Determination: "increase your Stress Bonus by 1", at Personality 4+. */
+  static DETERMINATION_STRESS_BONUS = 1;
+
+  /**
+   * What an Attribute's own rule is worth at a given Score: nothing below 4, the whole
+   * of it from 4, and twice that from 8.
+   */
+  static attributeRule(score, amount) {
+    if (score >= DBUCharacterData.ATTRIBUTE_RULE_DOUBLED_SCORE) return amount * 2;
+    if (score >= DBUCharacterData.ATTRIBUTE_RULE_SCORE) return amount;
+    return 0;
+  }
+
+  /**
    * TP granted by a progression row. Only a Skill Improvement grants any, and the
    * fixed Level 1 slot is worth 25 rather than the usual 15.
    */
@@ -1077,6 +1110,26 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       );
     }
 
+    // --- What the Attributes themselves grant ---
+    // Two of the seven carry a rule of their own, and both turn on at a Score of 4 and
+    // double at 8. Worked out here, beside the Scores they are read off, because each is
+    // wanted somewhere further down - the Technique Points a Skill Improvement grants,
+    // the Dice Score of a Skill Check, the Stress Bonus - and a rule read in three places
+    // should be decided in one.
+    //
+    // Read off the Score before effects run, which is where every Score is read: they are
+    // settled up front on purpose, so that an effect's condition can ask about one while
+    // its amount is still being worked out.
+    this.giftedStudent = {
+      skillCheck: DBUCharacterData.attributeRule(
+        atts.scholarship.score, DBUCharacterData.GIFTED_STUDENT_SKILL_CHECK),
+      perSkillImprovement: DBUCharacterData.attributeRule(
+        atts.scholarship.score, DBUCharacterData.GIFTED_STUDENT_TECHNIQUE_POINTS)
+    };
+
+    this.determination = DBUCharacterData.attributeRule(
+      atts.personality.score, DBUCharacterData.DETERMINATION_STRESS_BONUS);
+
     // --- Effects ---
     // Everything effects contribute lands in a bag rebuilt from scratch on every pass,
     // never in the stored fields. Those stay as the GM's own manual overrides, and
@@ -1126,6 +1179,22 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // TP is never entered by hand - each row's grant is derived from its option.
     for (const entry of this.progression) {
       entry.technique = DBUCharacterData.techniquePointsFor(entry);
+
+      // Gifted Student: "increase ... the amount of Technique Points you gain from Skill
+      // Improvements by 3". Added to the row rather than to the total, because that is
+      // where the rule puts it - what this Improvement granted - and the progression
+      // table then shows it.
+      //
+      // Which is also the whole of its retroactivity. "Your current Technique Points
+      // would be increased by 3 for each Skill Improvement you've received" describes a
+      // total counted from these rows on every pass, so raising Scholarship to 4 raises
+      // every Improvement already taken, with nothing migrated and nothing stored.
+      //
+      // The fixed Level 1 Improvement is worth 25 rather than 15 and takes the bonus
+      // like any other: it is a Skill Improvement, and the rule names no exception.
+      if (entry.choice === "Skill Improvement") {
+        entry.technique += this.giftedStudent.perSkillImprovement;
+      }
     }
 
     // Total TP available: every grant from Level 1 up to the current Power Level.
@@ -1489,15 +1558,20 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // assembled - against a base of nothing it would double the bonuses to the roll
     // and leave the Skill Bonus, which is most of it, untouched.
     for (const [key, entry] of Object.entries(this.skills)) {
-      entry.roll = withEffects(this, `skill.${key}`, entry.bonus);
+      // Gifted Student raises "the Dice Score of your Skill Checks", which is the roll
+      // rather than the Skill Bonus - so it rides here and not up in the Bonus, and
+      // Blinded halving Perception halves the Bonus without halving this.
+      entry.roll = withEffects(this, `skill.${key}`, entry.bonus + this.giftedStudent.skillCheck);
     }
 
     this.threshold.penalty = Math.max(0,
       withEffects(this, "threshold.penalty", this.threshold.penalty));
 
     // Stress Bonus is what a Transformation's Stress Test is measured against; each
-    // Steadfast failure takes 1 off it.
-    this.stressBonus = withEffects(this, "stressBonus", (this.powerLevel + 1) - failures);
+    // Steadfast failure takes 1 off it, and Determination adds to it - the only rule
+    // Personality has.
+    this.stressBonus = withEffects(this, "stressBonus",
+      (this.powerLevel + 1) - failures + this.determination);
 
     // Might: higher of Force / Magic Modifier.
     //
