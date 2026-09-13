@@ -34,11 +34,14 @@ text: >
 # the Initiator here as in every other Grapple Check, which is also what makes losing
 # it release the Grappled rather than tie.
 #
-# What winning buys is an offer rather than something that happens. "You MAY end the
-# Grapple to move that Character" - two things, and the first is the price of the
-# second, so declining is a real answer and the Grapple simply stays. The offer is a
-# button on the settled card, the same shape Knockback's collision uses.
+# Winning throws them. "You may end the Grapple to move that Character" is written as a
+# choice, and it is taken as done: using a Maneuver and then being asked whether you
+# meant it is a strange thing to hand somebody, and the throw is what the Maneuver is
+# for. So the Grapple ends on the win and the card says how far they go.
 #
 # The throw itself is the table's, as every movement here is. What the system owes is
-# the number: "a number of Squares up to your Might", read off the Grappler when the
-# button is drawn rather than when the Check was opened, so it is their Might now.
+# the number - "a number of Squares up to your Might", read when the Check settles, so
+# it is the Grappler's Might as it stands when they let go - and what the landing costs,
+# which is the button that follows: Collision Damage, the same one Knockback offers,
+# because sending somebody that far can put them into something. The amount is asked
+# rather than derived, since what they hit is the table's to say.

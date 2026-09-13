@@ -317,11 +317,19 @@ async function settleGrapple(message, clash) {
       return;
     }
 
-    // "You MAY end the Grapple to move that Character." Two things, and the first is the
-    // price of the second - so it is offered rather than done, and declining leaves the
-    // Grapple exactly where it was.
+    // "You may end the Grapple to move that Character." Taken as done rather than
+    // offered: using a Maneuver and then being asked whether you meant it is a strange
+    // thing to hand somebody, and the throw is what the Maneuver is for.
+    //
+    // The distance is read now rather than when the Check was opened, so it is the
+    // Grappler's Might as it stands when they let go. Where they land is the table's, as
+    // every movement here is - and what they land against is the collision the card goes
+    // on to offer.
+    const squares = Math.max(0, grappler.system.might ?? 0);
+    await endGrapple(grappler, grappled);
     await settledNote(message,
-      `${grappler.name} wins, and may let go of ${grappled.name} to throw them.`);
+      `${grappler.name} throws ${grappled.name} - the Grapple ends, and they move up to `
+      + `${squares} Squares in any direction.`);
     return;
   }
 
@@ -359,36 +367,6 @@ async function settleGrapple(message, clash) {
   await beginGrapple(grappler, grappled);
   await settledNote(message,
     `${grappler.name} has ${grappled.name} in a Grapple.`);
-}
-
-/**
- * Take the throw a won Launch offered: let go, and say how far they may be sent.
- *
- * The movement itself is the table's, as every movement here is. What this does is the
- * half the rules put a number on - ending the Grapple, and saying what that number is -
- * and then gets out of the way.
- */
-async function applyLaunch(message, clash, squares) {
-  const grappler = fromUuidSync(clash.challengerUuid);
-  const grappled = fromUuidSync(clash.defenderUuid);
-  if (!grappler || !grappled) return;
-
-  // Marked first, so a second click while the first is still working cannot end the
-  // Grapple twice and say so twice.
-  requestEdit(message, {
-    type: "clash",
-    clash: { ...clash, grapple: { ...clash.grapple, thrown: true } }
-  });
-
-  await endGrapple(grappler, grappled);
-
-  await ChatMessage.create({
-    speaker: message.speaker,
-    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(grappler.name)}
-      throws ${Handlebars.escapeExpression(grappled.name)}
-      <em>Grapple ended &middot; up to ${squares} Squares, in any direction &middot;
-      move them on the map</em></div>`
-  });
 }
 
 /** A line under the card saying what the Clash came to. */
@@ -2770,6 +2748,14 @@ export async function postGrappleCheck(grappler, grappled, {
           defenderRoll: "",
           defenderActions,
           defenderBonus: extra * tier,
+          // Winning a Launch throws somebody several Squares in a direction of your
+          // choosing, and a Character sent that far can end up hitting something. That
+          // is the question Knockback already asks, so the card asks it the same way:
+          // this is what draws the collision button once the Check is won. Nothing
+          // doubles it - the Launching Profile doubles a Knockback's collision, and this
+          // is the Launch Maneuver, which is a different thing with a similar name.
+          collision: (kind === "launch") ? { doubles: false, doubledBy: "" } : null,
+          collisionApplied: false,
           grapple: { kind, applied: false },
           ready: [],
           result: null
@@ -2901,22 +2887,6 @@ function renderSkillClash(message, html) {
     const wonIt = whoWonClash(result) === "challenger";
 
     const challenger = fromUuidSync(clash.challengerUuid);
-
-    // A won Launch: the throw is the Grappler's to take or leave, and taking it costs
-    // them the Grapple. The distance is read now rather than when the Check was opened,
-    // so it is their Might as it stands when they let go.
-    if ((clash.grapple?.kind === "launch") && wonIt && !clash.grapple.thrown
-      && challenger?.isOwner) {
-      const squares = Math.max(0, challenger.system.might ?? 0);
-      const throwThem = document.createElement("button");
-      throwThem.type = "button";
-      throwThem.className = "dbu-clash-button";
-      throwThem.textContent = `Let go and throw them (up to ${squares} Squares)`;
-      throwThem.dataset.tooltip = "Ends the Grapple, then move them yourself: up to your "
-        + "Might in Squares, in any direction. Leave it and the Grapple stands.";
-      throwThem.addEventListener("click", () => applyLaunch(message, clash, squares));
-      container.append(throwThem);
-    }
 
     if (clash.collision && wonIt && !clash.collisionApplied && challenger?.isOwner) {
       const collision = document.createElement("button");
