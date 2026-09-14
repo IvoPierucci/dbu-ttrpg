@@ -76,11 +76,34 @@ export function getTrait(id) {
  */
 export function resourceLimits() {
   const limits = {};
+  for (const [name, { max }] of Object.entries(resourceDefinitions())) limits[name] = max;
+  return limits;
+}
+
+/**
+ * Everything the library says about each Resource, the ceiling included.
+ *
+ * The same header that gives the ceiling gives the rest of it: which Trait declares the
+ * Resource, and what to call it in front of a player. `resourceLabel:` names it where
+ * the rules name it - "Power is a Resource", says the Power Up Maneuver - and the key
+ * capitalised stands in where they do not, since the Resources the rulebook never named
+ * are bookkeeping this system keeps for an effect that lasts.
+ *
+ * @returns {Record<string, {max: number, label: string, source: string, description: string}>}
+ */
+export function resourceDefinitions() {
+  const found = {};
   for (const trait of traits.values()) {
     if (!trait.resource) continue;
-    limits[String(trait.resource).toLowerCase()] = Math.max(0, Number(trait.resourceMax) || 0);
+    const name = String(trait.resource).toLowerCase();
+    found[name] = {
+      max: Math.max(0, Number(trait.resourceMax) || 0),
+      label: trait.resourceLabel || (name.charAt(0).toUpperCase() + name.slice(1)),
+      source: trait.name ?? "",
+      description: trait.description ?? ""
+    };
   }
-  return limits;
+  return found;
 }
 
 /** Every Trait of one kind, in name order. Optionally narrowed to one owner. */

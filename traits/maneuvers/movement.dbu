@@ -10,6 +10,7 @@ usageLimit: 2/round
 exploitable: If you leave the Melee Range of an Opponent.
 resource: rapid
 resourceMax: 1
+resourceLabel: Rapid Movement
 source: Core Rule
 description: >
   Cross the battlefield. Normal Speed for nothing, or Boosted Speed for 3(T);

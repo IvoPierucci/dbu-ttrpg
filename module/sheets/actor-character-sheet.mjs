@@ -4,7 +4,8 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
 import { reactiveFor } from "../effects/registry.mjs";
-import { traitsOfKind } from "../effects/traits.mjs";
+import { resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
+import { EDGES, KINDS } from "../durations.mjs";
 import {
   conditionsFor,
   setCondition,
@@ -171,6 +172,74 @@ function atRollTime(system, which) {
   if (extra) notes.push(`+${extra} Tier of Power Extra Dice, on every Combat Roll`);
 
   return notes;
+}
+
+/**
+ * The Resources a character is holding, as rows for the sheet.
+ *
+ * Not a checklist like the Conditions and the States: nobody has a Resource until
+ * something gives them one, so this lists what is held rather than everything that
+ * exists. A Resource at nothing is not held either - the runtime deletes the key rather
+ * than leaving a zero behind - so there is no empty row to filter out.
+ *
+ * Every Resource rather than the interesting one, because they are all invisible the
+ * same way and each is doing something worth seeing: Power raises every Combat Roll,
+ * Recovery is the Defense Value that Combat Recovery cost, Rapid Movement is the Strike
+ * bonus, Arrogance is the penalty waiting for you when Superior ends.
+ */
+function resourceRows(system) {
+  const held = system.resources ?? {};
+  const known = resourceDefinitions();
+  const timed = system.timed ?? [];
+
+  return Object.entries(held)
+    .filter(([, resource]) => (Number(resource?.stacks) || 0) > 0)
+    .map(([key, resource]) => {
+      const definition = known[key] ?? {};
+      const name = definition.label || (key.charAt(0).toUpperCase() + key.slice(1));
+      return {
+        key,
+        name,
+        stacks: Number(resource.stacks) || 0,
+        // The file's ceiling wins over the one written onto the character: the file is
+        // where the rule lives, and a character still carrying an older copy of it
+        // should not go on being measured against that one.
+        max: definition.max || (Number(resource.max) || 0),
+        note: resourceClocks(timed, key).join(" \u00b7 "),
+        tooltip: definition.source
+          ? `From ${definition.source}. ${definition.description ?? ""}`.trim()
+          : `${name}, held as a Resource.`
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * When the stacks of one Resource run out, counted rather than summarised.
+ *
+ * Each stack is put on a clock of its own where the rule gives it one - "gain a stack of
+ * Power until the end of your next turn" - so stacks taken in different turns leave in
+ * different turns, and the row says so: "1 at the end of your turn - 1 at the end of your
+ * next turn" rather than a flat 2.
+ *
+ * "Your turn" means the next turn of yours that still has that edge ahead of it, which is
+ * what the edges left on the entry are counting. A stack with no clock at all is a stack
+ * nothing will take away, and says nothing here rather than claiming a turn it has not
+ * got - the GM put it there and the GM takes it off.
+ */
+function resourceClocks(timed, key) {
+  const counts = new Map();
+
+  for (const entry of timed) {
+    if ((entry?.kind !== KINDS.RESOURCE) || (entry.key !== key)) continue;
+    const when = entry.edge === EDGES.ENCOUNTER
+      ? "when the Encounter ends"
+      : `at the ${entry.edge === EDGES.START ? "start" : "end"} of your `
+        + `${((entry.edges ?? 1) > 1) ? "next turn" : "turn"}`;
+    counts.set(when, (counts.get(when) ?? 0) + 1);
+  }
+
+  return [...counts].map(([when, count]) => `${count} ${when}`);
 }
 
 export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
@@ -457,6 +526,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .join(", ");
     context.conditionAbilities = this.#conditionAbilities();
 
+    context.resources = resourceRows(this.actor.system);
     context.grapple = this.#grapple();
     context.states = statesFor(this.actor);
     const entered = context.states.filter(s => s.active);

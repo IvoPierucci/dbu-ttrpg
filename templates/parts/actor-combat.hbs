@@ -121,6 +121,20 @@
           &middot; Wound +{{system.superStack.massivePower}}</i>
         {{/if}}
       </div>
+
+      {{! Resources. Neither per-round wear nor kept by hand: something gives you one and
+          a clock takes it away again, and until this row existed the sheet never said
+          you were holding any. Only what is held is listed - a Resource at nothing is a
+          Resource nobody has. }}
+      {{#each resources as |resource|}}
+      <div class="stat" data-tooltip="{{resource.tooltip}}">
+        <em>{{resource.name}}</em>
+        <span>{{resource.stacks}}{{#if resource.max}}<span class="stat-of">/{{resource.max}}</span>{{/if}}</span>
+        {{#if resource.note}}
+        <i class="stat-note">{{resource.note}}</i>
+        {{/if}}
+      </div>
+      {{/each}}
     </div>
   </section>
 
