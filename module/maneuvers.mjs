@@ -727,6 +727,55 @@ export function whyNotAnotherGrapple(actor, maneuver) {
 }
 
 /**
+ * How far the Movement Maneuver takes you, and what each costs.
+ *
+ * "Move a number of Squares up to your Normal Speed. You may increase the KP Cost of this
+ * Maneuver to 3(T) to instead move up to your Boosted Speed." A choice rather than an
+ * upgrade: the cost is not added to, it is what the Maneuver costs once you have decided.
+ *
+ * `speed` names which of the character's two Speeds bounds the movement, so the dialog can
+ * say how many Squares that actually is - "up to your Boosted Speed" means nothing on its
+ * own, and the number is the whole of what the system knows about this.
+ */
+export const MOVEMENT_SPEEDS = Object.freeze({
+  normal: { label: "Normal Speed", kiCost: 0, speed: "normal" },
+  boosted: { label: "Boosted Speed", kiCostPerTier: 3, speed: "boosted" }
+});
+
+/**
+ * "You can increase the Ki Point Cost by 2(T) to use Rapid Movement."
+ *
+ * On top of whichever Speed was chosen, rather than instead of it - "increase", where the
+ * Boosted Speed's own line says "increase ... to 3(T)".
+ */
+export const RAPID_MOVEMENT_PER_TIER = 2;
+
+/**
+ * What a Movement costs, given what was chosen.
+ *
+ * Both halves are written in (T), so both grow with the Tier of Power rather than the
+ * Base Tier - a Transformation makes crossing the field dearer, which is what the
+ * notation says.
+ */
+export function movementKiCost(actor, { speed = "normal", rapid = false } = {}) {
+  const tier = Math.max(1, actor?.system?.tierOfPower ?? 1);
+  const chosen = MOVEMENT_SPEEDS[speed] ?? MOVEMENT_SPEEDS.normal;
+
+  const base = chosen.kiCostPerTier ? chosen.kiCostPerTier * tier : (chosen.kiCost ?? 0);
+  const extra = rapid ? RAPID_MOVEMENT_PER_TIER * tier : 0;
+
+  // Named so an effect can discount the Maneuver as a whole, the way every other price
+  // here goes through the engine rather than a hand-rolled sum.
+  return Math.max(0, applySlot(actor?.system?.effects?.slots, "movement.kiCost", base + extra));
+}
+
+/** How many Squares a chosen Speed is worth to this character. */
+export function movementSquares(actor, speed = "normal") {
+  const which = MOVEMENT_SPEEDS[speed]?.speed ?? "normal";
+  return Math.max(0, actor?.system?.speed?.[which] ?? 0);
+}
+
+/**
  * The effects the Defend Maneuver can be used for. Each is chosen when the Maneuver
  * is played, and each carries its own Ki Point cost - which is why the Maneuver's own
  * cost is listed as varying.
@@ -1901,6 +1950,7 @@ export async function loadManeuvers() {
     empower: Boolean(trait.empower),
     grapple: Boolean(trait.grapple),
     launch: Boolean(trait.launch),
+    movement: Boolean(trait.movement),
     // Kept as written: "All adjacent Opponents" is a range the table reads, not one the
     // system measures. It had been sitting in a Maneuver file since Energy Charge was
     // written and nothing had ever carried it this far.

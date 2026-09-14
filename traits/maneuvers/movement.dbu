@@ -1,0 +1,75 @@
+id: movement
+name: Movement
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+movement: true
+usageLimit: 2/round
+exploitable: If you leave the Melee Range of an Opponent.
+resource: rapid
+resourceMax: 1
+source: Core Rule
+description: >
+  Cross the battlefield. Normal Speed for nothing, or Boosted Speed for 3(T);
+  leaving somebody's Melee Range hands them an Exploit.
+text: >
+  Movement Maneuver [2/Round]: Getting from point A to point B as fast as
+  possible.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: If you leave the Melee Range of an Opponent.
+  –Effect: Move a number of Squares up to your Normal Speed. You may increase the
+  KP Cost of this Maneuver to 3(T) to instead move up to your Boosted Speed.
+
+  * Rapid Movement: When using the Movement Maneuver, you can increase the Ki
+    Point Cost by 2(T) to use Rapid Movement. If you do, increase your Strike
+    Rolls by 1(T) until the end of your turn and increase your Dodge Roll against
+    an Exploit Maneuver provoked by this instance of Movement by 1(T).
+  * Exploit on Movement: If you leave the Melee Range of an Opponent when using
+    this Maneuver, you provoke the Exploit Maneuver from that Opponent. If an
+    Attacking Maneuver used through the Exploit Maneuver deals Damage when used in
+    response to this Maneuver, you do not move any additional Squares (you still
+    move any number of Squares you would until the Exploit Maneuver was triggered
+    and the Action Cost is still spent). For example, if you moved into an
+    Opponent’s Melee Range and then continued out of their Melee Range for your
+    4th Square of movement as part of an 8 Square movement, they may trigger the
+    Exploit Maneuver. If that Exploit Maneuver inflicts Damage, you move the
+    initial 4 Squares, but you do not continue your intended 8 Square movement.
+
+# No target, because the target is a Square. How far you may go is a rule and the
+# card says it; where you end up is yours to make on the map, as every movement
+# here is.
+
+---
+
+# The Strike bonus Rapid Movement buys. "Increase your Strike Rolls by 1(T) until
+# the end of your turn" - held as a Resource so the clock can take it away, which
+# is the same shape Combat Recovery uses for the Defense Value it costs.
+#
+# Granted from the code rather than from here, because what grants it is a choice
+# made when the Maneuver is used and a script has no way to be told which options
+# were taken. The rule itself lives here, where a reader looks for it.
+[passive]
+if (rapid.stacks > 0) {
+    strike += 1(T);
+}
+
+# --- What is not built, and why ---------------------------------------------------
+#
+# Rapid Movement's second half: "increase your Dodge Roll against an Exploit
+# Maneuver provoked by this instance of Movement by 1(T)". The bonus is easy; what
+# is not is "provoked by this instance". An Exploit offer becomes a Basic Attack
+# that carries nothing about what provoked it, so a Dodge against it cannot tell
+# that one from any other attack in the round. The same half-built thing that
+# stopped Combat Recovery's Exploit reprisal, and it will take the same fix: the
+# attack has to carry the offer it came from.
+#
+# Exploit on Movement's second half: "you do not move any additional Squares."
+# This system moves nobody - where a Character stands is the table's, and the
+# Squares are what the rules turn into arithmetic. So the offer goes out, the card
+# says what provoked it in the rulebook's own words, and whether the Damage landed
+# in time to stop the rest of the movement is a thing the players say out loud.
+# The example in the entry is the ruling, and it is on the card for them to read.

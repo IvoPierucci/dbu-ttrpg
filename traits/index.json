@@ -38,6 +38,7 @@
     "maneuvers/intervene.dbu",
     "maneuvers/jump.dbu",
     "maneuvers/launch.dbu",
+    "maneuvers/movement.dbu",
     "maneuvers/surge.dbu",
     "maneuvers/thumb-war.dbu",
     "signature/advantages/charging-assault.dbu",

@@ -24,6 +24,10 @@ import {
   whyNotAnotherGrapple,
   whyNotAnotherInstant,
   whyNotLaunch,
+  MOVEMENT_SPEEDS,
+  RAPID_MOVEMENT_PER_TIER,
+  movementKiCost,
+  movementSquares,
   whyNotWithinMelee,
   whyNotThisFoundation,
   whyNotThisProfile,
@@ -392,6 +396,77 @@ export async function escapeGrapple(actor) {
   return true;
 }
 
+
+/**
+ * How far this Movement goes, and whether it is a Rapid one.
+ *
+ * One dialog, because it is one decision. The Squares are on it: "up to your Boosted
+ * Speed" is not a number, and the two numbers it stands for are ones the character has
+ * been carrying all along.
+ *
+ * @returns {Promise<?{speed: string, rapid: boolean}>} null if it was backed out of
+ */
+async function askMovement(actor) {
+  const tier = Math.max(1, actor.system.tierOfPower ?? 1);
+
+  const options = Object.entries(MOVEMENT_SPEEDS).map(([key, speed], index) => {
+    const cost = movementKiCost(actor, { speed: key });
+    return `<label class="dbu-profile-option">
+      <input type="radio" name="speed" value="${key}" ${index ? "" : "checked"}/>
+      <span class="dbu-profile-name">${Handlebars.escapeExpression(speed.label)}</span>
+      <span class="dbu-profile-category">up to ${movementSquares(actor, key)} Squares</span>
+      <span class="dbu-profile-cost">${cost} KP</span>
+    </label>`;
+  }).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: "Movement" },
+    content: `<div class="dbu-profile-picker">${options}</div>
+      <label class="dbu-wager">
+        <span>Rapid Movement</span>
+        <input type="checkbox" name="rapid"/>
+        <em>+${RAPID_MOVEMENT_PER_TIER * tier} KP &middot; increase your Strike Rolls by
+          1(T) until the end of your turn</em>
+      </label>
+      <p class="dbu-respond-hint">Move on the map yourself. Leaving an Opponent's Melee
+        Range hands them the Exploit Maneuver.</p>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Move",
+        callback: (event, button, dialog) => ({
+          speed: dialog.element.querySelector('input[name="speed"]:checked')?.value ?? "normal",
+          rapid: Boolean(dialog.element.querySelector('input[name="rapid"]')?.checked)
+        })
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  return (chosen && (typeof chosen === "object")) ? chosen : null;
+}
+
+/**
+ * Take Rapid Movement: one stack of the Resource the Maneuver's passive reads, on a clock
+ * that runs out at the end of this turn.
+ *
+ * Written through the same two calls a script would make, so there is one way a Resource
+ * is granted and one way it is put on a clock.
+ */
+async function takeRapidMovement(actor) {
+  const { expiresAt } = await import("./effects/moments-runtime.mjs");
+  const held = { ...(actor.system.resources ?? {}) };
+  const { replaceObject } = await import("./conditions.mjs");
+
+  held.rapid = { stacks: 1, max: 1 };
+  await actor.update({ "system.resources": replaceObject(held) });
+
+  // "Until the end of your turn", which is what this system calls "turn".
+  await expiresAt(actor, "rapid", "turn");
+}
+
 /** Take the Actions, once the Maneuver has actually committed. */
 async function payActions(actor, maneuver, spent = null) {
   const { kind, amount } = actionCostOf(maneuver, spent);
@@ -425,6 +500,7 @@ export function definitionOf(item) {
     empower: item.system.empower,
     grapple: item.system.grapple,
     launch: item.system.launch,
+    movement: item.system.movement,
     exploitable: item.system.exploitable,
     surge: item.system.surge,
     charge: item.system.charge,
@@ -544,6 +620,9 @@ export async function useManeuver(actor, maneuver) {
   // The Profile and its Foundation are declared before anything is paid, since both
   // choices can still be aborted - and the Profile is what sets the price.
   let declared = null;
+  // What a Movement was declared as: which Speed bounds it, and whether Rapid Movement
+  // was paid for. Both settled before anything is spent, for the same reason.
+  let crossing = null;
   // Opened for an Attacking Maneuver even when it names no Profile: the Ki Wager
   // belongs to the attack rather than to the Profile, and Compelled sets a floor under
   // it that has to be asked for somewhere.
@@ -617,6 +696,13 @@ export async function useManeuver(actor, maneuver) {
       return false;
     }
 
+    // How far, and how hard. Asked here because the answer is what the Maneuver costs,
+    // and because backing out of it has to leave the Maneuver unused.
+    if (maneuver.movement) {
+      crossing = await askMovement(actor);
+      if (!crossing) return false;
+    }
+
     // "You cannot use the Grapple Maneuver if you are already in a Grapple."
     const alreadyGrappling = whyNotAnotherGrapple(actor, maneuver);
     if (alreadyGrappling) {
@@ -641,9 +727,13 @@ export async function useManeuver(actor, maneuver) {
       return false;
     }
 
-  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, declared, actor))) {
-    return false;
-  }
+  // A Movement's price is what was chosen rather than what the file lists: "N/A", until
+  // you decide to go faster. Everything else pays what its Profile and its effects say.
+  const price = crossing
+    ? movementKiCost(actor, crossing)
+    : maneuverKiCost(maneuver, declared, actor);
+
+  if (!await spendManeuverCost(actor, maneuver, price)) return false;
 
   // Empower hands Ki over before anything is recorded, so backing out of the amount
   // leaves the Maneuver unused rather than spent on nothing.
@@ -651,6 +741,13 @@ export async function useManeuver(actor, maneuver) {
 
   await payActions(actor, maneuver, actionsSpent);
   await recordManeuverUse(actor, maneuver);
+
+  // "Increase your Strike Rolls by 1(T) until the end of your turn." Granted here rather
+  // than from the Maneuver's own script, because what grants it is a choice made at this
+  // moment and a script has no way to be told which options were taken. The bonus itself
+  // is in the file, as a passive reading the Resource - which is where a reader looks for
+  // the rule.
+  if (crossing?.rapid) await takeRapidMovement(actor);
 
   // And the Profile it was made with, if this is the Maneuver that limit is about. Only
   // inside a Combat Round: there are no rounds outside an Encounter, so nothing would
@@ -934,6 +1031,7 @@ export function maneuverItemFrom(definition) {
       empower: Boolean(definition.empower),
       grapple: Boolean(definition.grapple),
       launch: Boolean(definition.launch),
+      movement: Boolean(definition.movement),
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),

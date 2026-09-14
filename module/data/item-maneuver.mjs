@@ -85,6 +85,12 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * Character and the Grapple already knows which.
        */
       launch: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Crosses the battlefield, and asks how: Normal Speed for nothing or Boosted Speed
+       * for 3(T), with Rapid Movement another 2(T) on top. The first Maneuver whose own
+       * Ki Point Cost is a choice rather than a number.
+       */
+      movement: new fields.BooleanField({ required: true, initial: false }),
 
       /**
        * Who this Maneuver gives an opening to, in the rulebook's own words - "All
