@@ -1978,6 +1978,7 @@ export async function loadManeuvers() {
     pin: Boolean(trait.pin),
     powerUp: Boolean(trait.powerUp),
     signatureTechnique: Boolean(trait.signatureTechnique),
+    thrust: Boolean(trait.thrust),
     // `coerce` splits a header on commas and leaves a single value a string, so
     // `tags: signature` arrived as the word rather than a list of one and every reader
     // asking `tags.includes(...)` saw the letters instead. No file had ever written a

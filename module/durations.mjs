@@ -65,7 +65,8 @@ export function edgesToWait(edge, { next = false, theirTurn = false } = {}) {
  * it does. Two clocks on the same thing are two entries: one effect's Superior running
  * out must not take away another's.
  */
-export async function lasting(actor, { kind, key, edge, next = false, source = "" }) {
+export async function lasting(actor, { kind, key, edge, next = false, source = "",
+                                       on = "" }) {
   if (!actor || !kind || !key) return false;
 
   const entry = {
@@ -73,7 +74,11 @@ export async function lasting(actor, { kind, key, edge, next = false, source = "
     key,
     edge,
     edges: edgesToWait(edge, { next, theirTurn: isTheirTurnNow(actor) }),
-    source
+    source,
+    // Whose thing this is, where that is not the character keeping the clock. "They
+    // suffer from Guard Down until the end of your turn" is one rule split across two
+    // characters: the edges counted are yours and the Condition is theirs.
+    ...(on && (on !== actor.uuid) ? { on } : {})
   };
 
   await actor.update({ "system.timed": [...(actor.system.timed ?? []), entry] });
@@ -150,8 +155,18 @@ export async function encounterEnded(actor) {
   return ran;
 }
 
-/** Take one thing off, whatever kind of thing it is. */
-async function takeOff(actor, entry) {
+/**
+ * Take one thing off, whatever kind of thing it is.
+ *
+ * Off whoever it was about, which is usually the character whose clock it was and is not
+ * always: an entry naming somebody else is a duration one character keeps over another.
+ * A named character who is no longer here leaves nothing to take off - the clock still
+ * ran out, and the entry has already been dropped by whoever was counting it.
+ */
+async function takeOff(owner, entry) {
+  const actor = entry.on ? fromUuidSync(entry.on) : owner;
+  if (!actor) return false;
+
   if (entry.kind === KINDS.STATE) return setState(actor, entry.key, 0);
   if (entry.kind === KINDS.CONDITION) return setCondition(actor, entry.key, 0);
 

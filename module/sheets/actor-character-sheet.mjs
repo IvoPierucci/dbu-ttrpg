@@ -972,7 +972,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.#rollCheck({
       parts: [{ label: save.label, value: save.value }],
       flavor: `${save.label} Saving Throw`,
-      criticalDice: this.actor.system.dice.critical.formula
+      criticalDice: this.actor.system.dice.critical.formula,
+      // A racial Saving Throw "crits one point more easily". The data model has worked
+      // that out for every Saving Throw since they were built, and nothing had ever read
+      // it - so the racial half of the rule did nothing at all.
+      criticalTarget: save.criticalTarget
     });
   }
 
@@ -1484,7 +1488,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * its adjusted total in the flavor, and a critical is flagged for the chat hook,
    * which offers the extra die as a button on the message (see chat.mjs).
    */
-  async #rollCheck({ parts = [], flavor, criticalDice, skillRoll = false, urgent = false }) {
+  async #rollCheck({ parts = [], flavor, criticalDice, skillRoll = false, urgent = false,
+                    criticalTarget = null }) {
     // Same rule as a Combat Roll: penalties cancel bonuses but never take a roll below
     // what the dice said - and what the floor hands back is shown rather than left for
     // the reader to discover by failing to add the column up.
@@ -1496,7 +1501,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const botchPenalty = skillRoll
       ? (this.actor.system.botch?.skill ?? DBUCharacterData.BOTCH_PENALTY)
       : (this.actor.system.botch?.penalty ?? DBUCharacterData.BOTCH_PENALTY);
-    const { roll, natural, botch, critical } = await evaluateCheck(this.actor, bonus);
+    // The Critical Target this roll is measured against, where it has one of its own:
+    // a racial Saving Throw crits a point more easily, which is worked out per Saving
+    // Throw and had nowhere to be read. Null means the character's own.
+    const { roll, natural, botch, critical } =
+      await evaluateCheck(this.actor, bonus, "", null, { criticalTarget });
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
 

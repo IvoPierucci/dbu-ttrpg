@@ -40,6 +40,7 @@ import {
   postGrappleCheck,
   postManeuver,
   postSkillClash,
+  postThrust,
   takeSurge
 } from "./chat.mjs";
 import { actionsLeft, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } from "./combat.mjs";
@@ -701,6 +702,7 @@ export function definitionOf(item) {
     pin: item.system.pin,
     powerUp: item.system.powerUp,
     signatureTechnique: item.system.signatureTechnique,
+    thrust: item.system.thrust,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
      * from whether it throws one.
@@ -956,6 +958,15 @@ export async function useManeuver(actor, maneuver) {
       return false;
     }
 
+    // "Target an Opponent within your Melee Range" - the same sentence again, for the
+    // Maneuver that shoves rather than grabs.
+    const outOfShove = maneuver.thrust && targetActor
+      && whyNotWithinMelee(actor, targetActor, "The Thrust Maneuver");
+    if (outOfShove) {
+      ui.notifications.warn(outOfShove);
+      return false;
+    }
+
     // Two Absolute Attacks a Combat Round. Checked here for the same reason the reach
     // is: before anything is paid, so the declaration can still be taken back.
     const noMoreAbsolute = whyNotAnotherAbsolute(actor, maneuver);
@@ -1042,6 +1053,8 @@ export async function useManeuver(actor, maneuver) {
             + "Might Clash against their Grappler first."
           : ""
       })
+    : maneuver.thrust
+    ? await postThrust(actor, targetActor, maneuver)
     : maneuver.clash
     ? await postSkillClash(actor, targetActor, maneuver)
     : declared
@@ -1279,6 +1292,7 @@ export function maneuverItemFrom(definition) {
       pin: Boolean(definition.pin),
       powerUp: Boolean(definition.powerUp),
       signatureTechnique: Boolean(definition.signatureTechnique),
+      thrust: Boolean(definition.thrust),
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),

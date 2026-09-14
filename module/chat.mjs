@@ -2,6 +2,7 @@ import DBUCharacterData from "./data/actor-character.mjs";
 import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { spendActions } from "./combat.mjs";
+import { EDGES, KINDS, lasting } from "./durations.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, pushes } from "./signature.mjs";
 import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, floorLine,
@@ -278,6 +279,168 @@ async function applyClash(messageId, clash) {
   if (clash.grapple && clash.result && !clash.grapple.applied) {
     await settleGrapple(message, clash);
   }
+
+  // The same arrangement for the Thrust, and for the same reason: exactly one client
+  // reaches here, so what a settled Clash leaves behind is left once.
+  if (clash.thrust && clash.result && !clash.thrust.applied) {
+    await settleThrust(message, clash);
+  }
+}
+
+/**
+ * What a settled Thrust Clash leaves behind.
+ *
+ * Two stages, and which it is was decided when the card was opened. The first is the
+ * Maneuver's own Clash: winning it buys the choice between the two effects, and the
+ * entry says nothing whatever about losing it - so losing does nothing, which is said
+ * plainly rather than left as a card with no answer on it.
+ *
+ * The second is Knock Prone's: "if you win, they are knocked Prone. If you lose, they
+ * suffer from the Guard Down Combat Condition until the end of your turn." Both halves
+ * land on the target - you have already won the first Clash, and this one decides only
+ * how much good it did.
+ */
+async function settleThrust(message, clash) {
+  const thruster = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!thruster || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a
+  // card that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, thrust: { ...clash.thrust, applied: true }
+  });
+
+  const winner = whoWonClash(clash.result);
+
+  if (clash.thrust.stage === "prone") {
+    const { setCondition } = await import("./conditions.mjs");
+
+    if (winner === "challenger") {
+      await setCondition(target, "prone", 1);
+      await settledNote(message, `${target.name} is knocked Prone.`);
+      return;
+    }
+
+    // "Until the end of your turn" - the Thruster's turn, not the target's. So the clock
+    // is kept by the Thruster and the Condition sits on the target, which is what a
+    // duration `on` somebody else is for.
+    await setCondition(target, "guard-down", 1);
+    await lasting(thruster, {
+      kind: KINDS.CONDITION,
+      key: "guard-down",
+      edge: EDGES.END,
+      on: target.uuid,
+      source: "Thrust"
+    });
+    await settledNote(message,
+      `${thruster.name} does not put ${target.name} down, but leaves them Guard Down `
+      + `until the end of ${thruster.name}'s turn.`);
+    return;
+  }
+
+  // The Maneuver's own Clash. A tie goes to the Defender, here as everywhere.
+  if (winner !== "challenger") {
+    await settledNote(message, `${target.name} holds their ground.`);
+    return;
+  }
+
+  await settledNote(message,
+    `${thruster.name} wins, and chooses what it buys.`);
+}
+
+/**
+ * "Choose one of the effects below to apply." Taken on the card, by whoever won it.
+ *
+ * Push Back is the whole effect: how far and which way is said, the moving is the
+ * player's, and what they hit is the collision - which this arms at double, since
+ * "double any Collision Damage they suffer due to this movement".
+ *
+ * Knock Prone is a second Clash, and lands either way.
+ */
+async function chooseThrust(message, clash, choice) {
+  if (clash.thrust?.chosen) return;
+
+  const thruster = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!thruster || !target) return;
+
+  if (choice === "push") {
+    // "A number of Squares equal to 1/2 of your Might", read now rather than when the
+    // card was opened, so it is the Might they had when they shoved.
+    const squares = Math.floor(Math.max(0, thruster.system.might ?? 0) / 2);
+
+    await requestEdit(message, {
+      type: "clash",
+      clash: {
+        ...clash,
+        thrust: { ...clash.thrust, chosen: "push" },
+        collision: { doubles: true, doubledBy: "Push Back" }
+      }
+    });
+
+    await settledNote(message,
+      `${target.name} is pushed back ${squares} Square${squares === 1 ? "" : "s"}, in a `
+      + `straight line away from ${thruster.name}. Any Collision Damage is doubled.`);
+    return;
+  }
+
+  await requestEdit(message, {
+    type: "clash",
+    clash: { ...clash, thrust: { ...clash.thrust, chosen: "prone" } }
+  });
+
+  // "Make a second Clash (Impulsive/Corporeal)." Both Saving Throws are offered to both
+  // sides - see the Maneuver's file for why that reading, and for the other one.
+  await postSaveClash(thruster, target, {
+    maneuverName: "Thrust",
+    clashLabel: "Knock Prone",
+    reason: `${thruster.name} tries to put ${target.name} on the ground. Win and they `
+      + `are Prone; lose and they are Guard Down until the end of ${thruster.name}'s turn.`,
+    saves: ["impulsive", "corporeal"],
+    thrust: { stage: "prone", applied: false, chosen: "" }
+  });
+}
+
+/**
+ * Open a Clash of Saving Throws.
+ *
+ * `saves` is which ones the rule named. More than one means each side picks from that
+ * list, which is how "(Impulsive/Corporeal)" is read - the slash is the same slash as in
+ * "Strike/Dodge", which is a choice.
+ */
+export async function postSaveClash(actor, target, {
+  maneuverName, clashLabel = "", reason = "", saves = ["impulsive"], thrust = null
+} = {}) {
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        // Not a Maneuver of its own: it arrives out of one that has already been used,
+        // so there is nothing here for an Instant to answer.
+        [RESPONDABLE_FLAG]: false,
+        [CLASH_FLAG]: {
+          category: "save",
+          clashLabel: clashLabel || "Saving Throw Clash",
+          maneuverName,
+          reason,
+          saves,
+          // Which each side answered with. Unset until they say, and they are asked
+          // before either has seen a number.
+          challengerSave: "",
+          defenderSave: "",
+          ...(thrust ? { thrust } : {}),
+          challengerUuid: actor.uuid,
+          challengerName: actor.name,
+          defenderUuid: target.uuid,
+          defenderName: target.name,
+          ready: [],
+          result: null
+        }
+      }
+    }
+  });
 }
 
 /**
@@ -730,8 +893,10 @@ function clashSides(message) {
       { uuid: clash.defenderUuid, side: defender,
         lost: beaten(defender, challenger, true) }
     ]
-      // Both sides roll the same Skill, which is what makes it a Skill Clash.
-      .map(entry => ({ ...entry, kind: "clash", category: "skill",
+      // Which of the four this Clash was settled on, so an effect that names one can be
+      // offered on it. Hard-coded to "skill" before, which is why an effect written
+      // `clash.might` could never fire on a Might Clash.
+      .map(entry => ({ ...entry, kind: "clash", category: clashFamily(clash),
                        answering: entry.uuid === clash.defenderUuid }))
       .flatMap(entry => mine(entry));
   }
@@ -1875,7 +2040,18 @@ export async function prepareRoll(actor, effects, title, hint = "",
  */
 function rollsCombat(message) {
   if (message.getFlag(SCOPE, ATTACK_FLAG)) return true;
-  return message.getFlag(SCOPE, CLASH_FLAG)?.category === "combat";
+
+  // Asked of the roll pair rather than of the field, which holds the pair's name and not
+  // one of the four. It used to compare the field to "combat" directly, which no card has
+  // ever been posted with - so a Grapple Check, which is Strike against Strike or Dodge,
+  // said it was not a Combat Roll and Compelled could not reach it.
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  return Boolean(clash) && (clashFamily(clash) === "combat");
+}
+
+/** Which of the four kinds of Clash this card is. */
+function clashFamily(clash) {
+  return CLASH_ROLLS[clash?.category ?? "skill"]?.family ?? "skill";
 }
 
 function rollsOnMessage(message, actor) {
@@ -2644,9 +2820,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
  * would be comparing nothing. So the category is a property of the Clash and each side
  * reads its own number the same way.
  */
-const CLASH_ROLLS = Object.freeze({
+const CLASH_ROLLS = ({
   skill: {
     label: "Skill Clash",
+    family: "skill",
     of: (actor, clash) => ({
       label: clash.skillLabel,
       value: actor.system.skills[clash.skill].roll
@@ -2655,6 +2832,7 @@ const CLASH_ROLLS = Object.freeze({
   },
   might: {
     label: "Might Clash",
+    family: "might",
     of: (actor) => ({ label: "Might", value: actor.system.might }),
     // Might is not a Skill, so it does not take a Skill's flat critical die - it takes
     // the character's own, which grows with the Tier of Power.
@@ -2662,11 +2840,16 @@ const CLASH_ROLLS = Object.freeze({
   },
 
   /**
-   * A Grapple Check: "a Clash (Strike vs Strike/Dodge)".
+   * "A Clash (Strike vs Strike/Dodge)" - the Grapple Check, and the Thrust Maneuver's
+   * first Clash, which is the same pair of rolls under another name.
    *
    * The first Clash here with two different rolls in it. The Initiator rolls their
    * Strike; the Defender answers with their Strike or their Dodge, and which is theirs
    * to pick - so this is also the first that asks a side a question before rolling.
+   *
+   * What a card calls itself is the card's own business - `clashLabel` - because the
+   * rules name this pair twice: a Grapple Check when a Grapple asks for it, and nothing
+   * in particular when a Thrust does.
    *
    * Initiator and Defender are the Grapple's, not the card's, and they do not swap: "the
    * Grappler is still considered the Initiator and the Grappled is still considered the
@@ -2675,8 +2858,11 @@ const CLASH_ROLLS = Object.freeze({
    * still rolled with the Grappler as challenger - which is also what decides the tie,
    * since a tie goes to the Defender here as everywhere else.
    */
-  grapple: {
-    label: "Grapple Check",
+  strike: {
+    label: "Strike Clash",
+    // Strike and Dodge are Combat Rolls, so this is a Combat Roll Clash - which is what
+    // makes Compelled's "your Combat Rolls are Urgent" reach a Grapple Check.
+    family: "combat",
     of: (actor, clash, uuid) => ((uuid === clash.defenderUuid) && (clash.defenderRoll === "dodge"))
       ? { label: "Dodge", value: actor.system.combat.dodge }
       : { label: "Strike", value: actor.system.combat.strike },
@@ -2724,7 +2910,7 @@ const CLASH_ROLLS = Object.freeze({
 
       const chosen = await pick(
         `${clash.maneuverName} - ${actor.name}`,
-        "Answer the Grapple Check with which roll?",
+        `Answer the ${clash.clashLabel ?? "Clash"} with which roll?`,
         [
           { action: "strike", label: `Strike ${actor.system.combat.strike}` },
           { action: "dodge", label: `Dodge ${actor.system.combat.dodge}` }
@@ -2732,8 +2918,89 @@ const CLASH_ROLLS = Object.freeze({
       );
       return chosen ? { defenderRoll: chosen } : null;
     }
+  },
+
+  /**
+   * A Clash of Saving Throws. The Thrust Maneuver's second one is the first there has
+   * ever been, though "save" has been one of the four categories since they were told
+   * apart - and until now nothing could open one.
+   *
+   * Which Saving Throw is the card's, in `clash.saves`, because the rule that asks for
+   * one names them: "a second Clash (Impulsive/Corporeal)". Where it names more than
+   * one, each side picks from that list.
+   *
+   * Not a Combat Roll and not a Skill, so it takes the character's own Critical Extra
+   * Dice, and its Critical Target is its own: a racial Saving Throw "crits one point
+   * more easily", which the sheet works out and nothing had ever read.
+   */
+  save: {
+    label: "Saving Throw Clash",
+    family: "save",
+
+    of: (actor, clash, uuid) => {
+      const key = savePicked(clash, uuid);
+      const save = actor.system.savingThrows[key];
+      return { label: save?.label ?? key, value: save?.value ?? 0 };
+    },
+
+    criticalDice: (actor) => actor.system.dice.critical.formula,
+
+    options: (actor, clash, uuid) => ({
+      criticalTarget: actor.system.savingThrows[savePicked(clash, uuid)]?.criticalTarget ?? null,
+      // Which Slot an effect that raises this roll writes to, so "increase your Corporeal
+      // Saving Throws by 1(T)" reaches the side that answered with Corporeal.
+      slot: `save.${savePicked(clash, uuid)}`
+    }),
+
+    prompt: (actor, clash, uuid) => (clash.saves ?? []).length > 1
+      ? (clash.saves ?? []).map(key => saveLabel(actor, key)).join(" or ")
+      : saveLabel(actor, savePicked(clash, uuid)),
+
+    // Both sides, not only the Defender: where the rule offers a choice of Saving Throw
+    // it offers it to whoever is rolling, and both of them are.
+    choose: async (clash, actor) => {
+      const offered = clash.saves ?? [];
+      if (offered.length < 2) return {};
+
+      const chosen = await pick(
+        `${clash.maneuverName} - ${actor.name}`,
+        "Answer the Clash with which Saving Throw?",
+        offered.map(key => ({
+          action: key,
+          label: `${saveLabel(actor, key)} ${actor.system.savingThrows[key]?.value ?? 0}`
+        }))
+      );
+      if (!chosen) return null;
+      return (actor.uuid === clash.defenderUuid)
+        ? { defenderSave: chosen }
+        : { challengerSave: chosen };
+    }
   }
 });
+
+/**
+ * The alias the cards already in people's chat logs are keyed by.
+ *
+ * The pair used to be called "grapple", which named one of its two users rather than
+ * what it rolls. A card posted before the rename still says so, and rendering it as a
+ * Skill Clash - which is what an unrecognised key falls back to - would be worse than
+ * the name being old.
+ */
+CLASH_ROLLS.grapple = CLASH_ROLLS.strike;
+Object.freeze(CLASH_ROLLS);
+
+/** Which Saving Throw this side of a Clash is answering with. */
+function savePicked(clash, uuid) {
+  const offered = clash.saves ?? [];
+  const chosen = (uuid === clash.defenderUuid) ? clash.defenderSave : clash.challengerSave;
+  return chosen || offered[0] || "impulsive";
+}
+
+/** A Saving Throw's name, as the character's own sheet gives it. */
+function saveLabel(actor, key) {
+  return actor.system.savingThrows[key]?.label
+    ?? `${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+}
 
 /**
  * Two buttons and a question, the way the Maneuver module asks one.
@@ -2819,7 +3086,10 @@ export async function postGrappleCheck(grappler, grappled, {
         // there to answer.
         [RESPONDABLE_FLAG]: Boolean(maneuver) && isRespondable(maneuver),
         [CLASH_FLAG]: {
-          category: "grapple",
+          category: "strike",
+          // "This Clash is known as a Grapple Check", which is the card's name for it
+          // and not the name of the pair of rolls underneath.
+          clashLabel: "Grapple Check",
           maneuverName,
           reason,
           challengerUuid: grappler.uuid,
@@ -2840,6 +3110,50 @@ export async function postGrappleCheck(grappler, grappled, {
           collision: (kind === "launch") ? { doubles: false, doubledBy: "" } : null,
           collisionApplied: false,
           grapple: { kind, applied: false },
+          ready: [],
+          result: null
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Open the Thrust Maneuver's first Clash.
+ *
+ * "Target an Opponent within your Melee Range and make a Clash (Strike vs Strike/Dodge)
+ * against them." The same pair of rolls a Grapple Check is made of, under another name -
+ * so it is opened as the same category with a label of its own, rather than as a second
+ * copy of the same thing.
+ *
+ * Nothing is decided here beyond who is rolling. "If you win, choose one of the effects
+ * below" is a choice made after the roll, and the card is what offers it.
+ */
+export async function postThrust(actor, target, maneuver) {
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        // A Standard Maneuver, so an Instant can be played in answer to it.
+        [RESPONDABLE_FLAG]: isRespondable(maneuver),
+        [CLASH_FLAG]: {
+          category: "strike",
+          clashLabel: "Thrust",
+          maneuverName: maneuver.name,
+          reason: `${actor.name} shoves ${target.name}. Win and they are pushed back or `
+            + "put on the ground.",
+          challengerUuid: actor.uuid,
+          challengerName: actor.name,
+          defenderUuid: target.uuid,
+          defenderName: target.name,
+          defenderRoll: "",
+          // Push Back doubles the Collision Damage, and that is armed when Push Back is
+          // chosen rather than now: choosing the other effect must not leave a collision
+          // button on a card where nobody was moved.
+          collision: null,
+          collisionApplied: false,
+          thrust: { stage: "strike", applied: false, chosen: "" },
           ready: [],
           result: null
         }
@@ -2957,7 +3271,8 @@ function renderSkillClash(message, html) {
   card.innerHTML = `
     <div class="dbu-clash-title">${Handlebars.escapeExpression(clash.maneuverName)}
       <span class="dbu-clash-skill">${
-        Handlebars.escapeExpression(CLASH_ROLLS[clash.category ?? "skill"].label)}${
+        Handlebars.escapeExpression(clash.clashLabel
+          ?? CLASH_ROLLS[clash.category ?? "skill"].label)}${
         clash.skillLabel ? ` &middot; ${Handlebars.escapeExpression(clash.skillLabel)}` : ""}</span>
     </div>
     ${clash.reason ? `<div class="dbu-clash-reason">${Handlebars.escapeExpression(clash.reason)}</div>` : ""}
@@ -2975,6 +3290,26 @@ function renderSkillClash(message, html) {
     const wonIt = whoWonClash(result) === "challenger";
 
     const challenger = fromUuidSync(clash.challengerUuid);
+
+    // "If you win, choose one of the effects below to apply." Offered to whoever won it,
+    // once, and only on the Maneuver's own Clash - the second one applies itself.
+    if ((clash.thrust?.stage === "strike") && wonIt && !clash.thrust.chosen
+      && challenger?.isOwner) {
+      for (const [choice, label, tip] of [
+        ["push", "Push Back", "They are moved half your Might in Squares, in a straight "
+          + "line away from you. Any Collision Damage is doubled."],
+        ["prone", "Knock Prone", "A second Clash of Impulsive or Corporeal. Win and they "
+          + "are Prone; lose and they are Guard Down until the end of your turn."]
+      ]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "dbu-clash-button";
+        button.textContent = label;
+        button.dataset.tooltip = tip;
+        button.addEventListener("click", () => chooseThrust(message, clash, choice));
+        container.append(button);
+      }
+    }
 
     if (clash.collision && wonIt && !clash.collisionApplied && challenger?.isOwner) {
       const collision = document.createElement("button");

@@ -1,0 +1,75 @@
+id: thrust
+name: Thrust
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+thrust: true
+usageLimit: 1/round
+source: Core Rule
+description: >
+  Shove an Opponent in your Melee Range. A Clash of Strike against their Strike or
+  Dodge; win and you either blow them back half your Might in Squares, with any
+  Collision Damage doubled, or wrestle them to the ground.
+text: >
+  Thrust Maneuver [1/Round]: You strike an Opponent to knock them off-balance or
+  blow them away.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Target an Opponent within your Melee Range and make a Clash (Strike vs
+  Strike/Dodge) against them. If you win, choose one of the effects below to apply:
+
+  * Push Back. The target is moved a number of Squares equal to 1/2 of your Might.
+    The movement is in a straight line and away from you. Double any Collision
+    Damage they suffer due to this movement.
+  * Knock Prone. Make a second Clash (Impulsive/Corporeal). If you win, they are
+    knocked Prone. If you lose, they suffer from the Guard Down Combat Condition
+    until the end of your turn.
+
+---
+
+# No script. The whole of this Maneuver is two Clashes and a choice between them,
+# and a script can neither open a Clash nor wait for one to land - so `thrust: true`
+# hands it to the code that can, the same way `grapple` and `launch` are handled.
+#
+# What it comes to:
+#   - the first Clash is a Grapple Check in every respect but its name: Strike
+#     against their Strike or Dodge, their choice, and a tie goes to them
+#   - winning offers the two effects as buttons on the card, because "choose one of
+#     the effects below" is a choice made after the roll rather than before it
+#   - Push Back says how many Squares and in which direction, and arms the collision
+#     button at double - "double any Collision Damage they suffer due to this
+#     movement"
+#   - Knock Prone opens the second Clash, and that one lands either way: Prone if
+#     you win it, Guard Down on them if you do not
+#
+# Losing the first Clash does nothing at all. The entry says what winning buys and
+# says nothing about losing, so nothing is what happens - this Maneuver is not
+# Exploitable and there is no second sentence to build.
+#
+# --- What is not built, and why -----------------------------------------------
+#
+# The movement. "The movement is in a straight line and away from you" is a fact
+# about the map, and this system moves nobody: the card says how far and which way,
+# and the token is the player's to drag. What they hit on the way is the collision,
+# which is a question the card does ask.
+#
+# "1/2 of your Might" is read as half, rounded down, because every other half in
+# these rules is - the Minimum Ki Point Cost is "half the Profile's listed cost,
+# rounded down" and the Ki Wager limit is half your Capacity the same way. The entry
+# does not say, and this is the reading that matches the book's habit.
+#
+# --- One thing the entry leaves open ------------------------------------------
+#
+# "Make a second Clash (Impulsive/Corporeal)." The first Clash in this entry is
+# written "(Strike vs Strike/Dodge)", where `vs` separates the two sides and the
+# slash offers a choice. This one has no `vs` - so the slash is read here as the
+# same slash: a choice, offered to each side, of which of the two Saving Throws
+# they answer with.
+#
+# The other reading is that the Initiator rolls Impulsive and the Defender rolls
+# Corporeal. If that is the one meant, the change is one line - the `choose` on the
+# save Clash stops asking and the two sides are fixed.

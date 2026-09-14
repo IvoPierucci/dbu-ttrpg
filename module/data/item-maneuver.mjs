@@ -112,6 +112,15 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       signatureTechnique: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * Shoves the Character it is aimed at: a Clash of Strike against their Strike or
+       * Dodge, and winning offers a choice of two effects on the card.
+       *
+       * A flag rather than the Maneuver's id, like every other one here - what it marks
+       * is a shape the code knows how to run, and a homebrew Maneuver written to that
+       * shape should run the same way.
+       */
+      thrust: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and
