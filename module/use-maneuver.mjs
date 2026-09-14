@@ -32,6 +32,7 @@ import {
   movementSquares,
   whyNotWithinMelee,
   whyNotThisFoundation,
+  whyNotModify,
   whyNotThisProfile,
   recordProfileUse
 } from "./maneuvers.mjs";
@@ -595,6 +596,137 @@ function throughSignatureTechnique(door, technique) {
   };
 }
 
+
+/**
+ * The Modifier Maneuvers this character could apply to the one they are doing.
+ *
+ * Theirs, applicable, and with a use left - a Modifier limited to once a round is out of
+ * uses like anything else. What it would cost is worked out here too, since that is the
+ * whole of what a player weighs when they are offered one.
+ */
+export function modifiersFor(actor, base) {
+  return actor.items
+    .filter(item => (item.type === "maneuver") && (item.system.type === "modifier"))
+    .map(definitionOf)
+    .filter(modifier => !whyNotModify(modifier, base))
+    .map(modifier => ({
+      modifier,
+      // The Base Maneuver's currency: a Modifier is part of doing that Maneuver rather
+      // than a second thing done beside it, so a Modifier on a Counter costs Counter
+      // Actions.
+      actions: modifier.actionCost ?? 0,
+      kind: (base.type === "counter") ? "counter" : "standard",
+      ki: maneuverKiCost(modifier, null, actor),
+      left: maneuverUsesLeft(actor, modifier)
+    }))
+    .sort((a, b) => a.modifier.name.localeCompare(b.modifier.name));
+}
+
+/**
+ * Which Modifier Maneuvers are being applied to this one.
+ *
+ * Asked before anything is paid, with the rest of what can still be taken back: a
+ * Modifier costs Actions and Ki, and a player who sees the price and changes their mind
+ * has to be able to change it.
+ *
+ * Several at once, because nothing in the rule says one - "certain Maneuvers that can be
+ * applied onto other Maneuvers" is a list, not a choice between them.
+ *
+ * @returns {Promise<?object[]>} the chosen entries, or null if the Maneuver was dropped
+ */
+async function askModifiers(actor, base) {
+  const offered = modifiersFor(actor, base);
+  if (!offered.length) return [];
+
+  const rows = offered.map(entry => {
+    const price = [
+      entry.actions ? `${entry.actions} ${entry.kind} Action(s)` : "",
+      entry.ki ? `${entry.ki} KP` : ""
+    ].filter(Boolean).join(" \u00b7 ") || "free";
+    const spent = entry.left <= 0;
+
+    return `<label class="dbu-respond-option${spent ? " dbu-respond-blocked" : ""}"
+             ${spent ? `data-tooltip="No uses of this left."` : ""}>
+        <input type="checkbox" name="modifier" value="${entry.modifier.itemId}"
+               ${spent ? "disabled" : ""}/>
+        <span class="dbu-respond-name">${Handlebars.escapeExpression(entry.modifier.name)}</span>
+        <span class="dbu-respond-source">${Handlebars.escapeExpression(price)}</span>
+      </label>`;
+  }).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${base.name} - Modifier Maneuvers` },
+    content: `<p class="dbu-respond-hint">Applied onto this ${
+        Handlebars.escapeExpression(base.name)}. What each costs is on top of what the
+        Maneuver itself costs.</p>
+      <div class="dbu-respond-dialog">${rows}</div>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) =>
+          [...dialog.element.querySelectorAll('input[name="modifier"]:checked')]
+            .map(input => input.value)
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if (!Array.isArray(chosen)) return null;
+  return offered.filter(entry => chosen.includes(entry.modifier.itemId));
+}
+
+/**
+ * Pay for the Modifiers, and let each of them do what it does.
+ *
+ * Everything is checked before anything is spent: a character who can afford the first of
+ * two and not the second must not be left having paid for the first. Anything that fires
+ * afterwards is in place before the Base Maneuver is declared, which is what "applied onto
+ * the Maneuver you are doing" means for a roll.
+ *
+ * @returns {Promise<boolean>} false when nothing was paid and nothing should happen
+ */
+async function applyModifiers(actor, applied) {
+  if (!applied.length) return true;
+
+  const actions = { standard: 0, counter: 0 };
+  let ki = 0;
+  for (const entry of applied) {
+    actions[entry.kind] += entry.actions;
+    ki += entry.ki;
+  }
+
+  for (const [kind, amount] of Object.entries(actions)) {
+    if (amount && (actionsLeft(actor, kind) < amount)) {
+      ui.notifications.warn(
+        `${actor.name} needs ${amount} ${kind} Action(s) for those Modifier Maneuvers.`);
+      return false;
+    }
+  }
+
+  // One price for all of them, so the Capacity check is made against the whole of what is
+  // being spent rather than against each piece of it.
+  if (ki && !await spendManeuverCost(actor, { name: "those Modifier Maneuvers" }, ki)) {
+    return false;
+  }
+
+  for (const [kind, amount] of Object.entries(actions)) {
+    if (amount) await spendActions(actor, amount, kind);
+  }
+
+  for (const entry of applied) {
+    await recordManeuverUse(actor, entry.modifier);
+    // Scoped to its own Item, like every `on used`: what a Modifier does is its own
+    // business, and the Base Maneuver's script is fired separately when that is used.
+    await fireMoment(actor, "on-used", { maneuver: entry.modifier, actionsSpent: entry.actions },
+      { only: entry.modifier.itemId });
+  }
+
+  return true;
+}
+
 /**
  * How far this Movement goes, and whether it is a Rapid one.
  *
@@ -706,6 +838,7 @@ export function definitionOf(item) {
     blockade: item.system.blockade,
     suddenStop: item.system.suddenStop,
     reflect: item.system.reflect,
+    baseManeuver: item.system.baseManeuver ?? [],
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -744,6 +877,16 @@ export function definitionOf(item) {
  */
 export async function useManeuver(actor, maneuver) {
   if (!actor || !maneuver) return false;
+
+  // "Applied onto other Maneuvers you are doing", so there is no using one on its own.
+  // The sheet does not offer it either, and this is the same refusal said where the rule
+  // is rather than only where the button is.
+  if (maneuver.type === "modifier") {
+    ui.notifications.warn(
+      `${maneuver.name} is a Modifier Maneuver. It is applied to another Maneuver as you `
+      + "use that one, not played on its own.");
+    return false;
+  }
 
   // The sheet does not offer these, but a stale render should not be a way past the
   // rules either.
@@ -979,11 +1122,20 @@ export async function useManeuver(actor, maneuver) {
       return false;
     }
 
+  // "Certain Maneuvers that can be applied onto other Maneuvers you are doing." Asked
+  // last of the questions that can still be walked away from, and paid first of the
+  // things that are paid - so whatever a Modifier does is in place before the Maneuver it
+  // was applied to is declared.
+  const modifiers = await askModifiers(actor, maneuver);
+  if (!modifiers) return false;
+
   // A Movement's price is what was chosen rather than what the file lists: "N/A", until
   // you decide to go faster. Everything else pays what its Profile and its effects say.
   const price = crossing
     ? movementKiCost(actor, crossing)
     : maneuverKiCost(maneuver, declared, actor);
+
+  if (!await applyModifiers(actor, modifiers)) return false;
 
   if (!await spendManeuverCost(actor, maneuver, price)) return false;
 
@@ -1309,6 +1461,7 @@ export function maneuverItemFrom(definition) {
       blockade: Boolean(definition.blockade),
       suddenStop: Boolean(definition.suddenStop),
       reflect: Boolean(definition.reflect),
+      baseManeuver: [].concat(definition.baseManeuver ?? []),
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),

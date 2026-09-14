@@ -865,7 +865,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // only as a chance something that just happened handed you, and the row is still
       // where a player reads what their own Maneuver does.
       { key: "outOfSequence", playable: false,
-        note: "Played from the card of whatever offered it" }
+        note: "Played from the card of whatever offered it" },
+      // Applied onto another Maneuver rather than used, so never played from here either.
+      // The row is where a player reads what their own Modifier does, and what it says it
+      // applies to.
+      { key: "modifier", playable: false,
+        note: "Applied to another Maneuver as you use that one" }
     ];
 
     return groups
@@ -914,6 +919,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
                 ? ""
                 : (maneuver.type === "outOfSequence")
                 ? "Played from the card of whatever offers it - nothing takes one from here."
+                : (maneuver.type === "modifier")
+                ? `Applied to ${(maneuver.baseManeuver ?? []).join(" or ") || "nothing yet"}`
+                  + " when you use it, and offered as you declare that Maneuver."
                 : "Played from the attack it answers, in chat."
             ].filter(Boolean),
             // Instant and Counter Maneuvers spend no Standard Action, so what they

@@ -156,6 +156,17 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       reflect: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * What a Modifier Maneuver may be applied to: its Base Maneuver.
+       *
+       * "A Maneuver (or type of Maneuver)", which is both shapes and sometimes several -
+       * an id from the library, one of the four kinds, or `attacking` for every Attacking
+       * Maneuver. Empty on every Maneuver that is not a Modifier, and a Modifier with an
+       * empty one attaches to nothing rather than to everything.
+       */
+      baseManeuver: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }
+      ),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and

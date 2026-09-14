@@ -79,6 +79,28 @@ export const MANEUVER_TYPES = Object.freeze({
     respondsTo: ["standard"]
   },
 
+  /**
+   * Applied onto another Maneuver rather than used on its own.
+   *
+   * "Sometimes, there are certain Maneuvers that can be applied onto other Maneuvers you
+   * are doing." So it is never played from a list: it is offered as the Maneuver it
+   * attaches to is declared, and what it attaches to is its Base Maneuver.
+   *
+   * Its Action Cost is spent in the Base Maneuver's own currency - a Modifier on a Counter
+   * Maneuver costs Counter Actions - because it is part of doing that Maneuver rather than
+   * a second thing done beside it.
+   *
+   * It does not count as a Maneuver used for the Instant rule. What you used is the Base
+   * Maneuver, which records itself; a Modifier is how you used it.
+   */
+  modifier: {
+    label: "Modifier",
+    // Not a currency of its own. Which Actions it spends is the Base Maneuver's business.
+    action: null,
+    ownTurnOnly: false,
+    appliedToAnother: true
+  },
+
   outOfSequence: {
     label: "Out-of-Sequence",
     action: null,
@@ -1476,6 +1498,44 @@ export async function pickProfileOnly(maneuver, foundations, hint = "", actor = 
   return (typeof chosen === "string") ? chosen : null;
 }
 
+/**
+ * Whether this Modifier Maneuver can be applied to that Maneuver.
+ *
+ * "Each Modifier Maneuver has a Maneuver (or type of Maneuver) that it can be applied
+ * to." Both shapes, because the rule names both: `baseManeuver: basic-attack` is one
+ * Maneuver by its id, `baseManeuver: attacking` is every Attacking Maneuver, and the four
+ * kinds name themselves. Several, separated by commas, is any of them.
+ *
+ * A Modifier that names nothing attaches to nothing. That is deliberate: a Base Maneuver
+ * is part of what a Modifier *is*, and one written without it is unfinished rather than
+ * universal.
+ *
+ * @returns {null|string} null if it may be applied, otherwise why it may not
+ */
+export function whyNotModify(modifier, base) {
+  const wanted = [].concat(modifier?.baseManeuver ?? []).map(entry => String(entry).trim())
+    .filter(Boolean);
+
+  if (!wanted.length) {
+    return `${modifier?.name ?? "This Modifier"} does not say which Maneuver it applies to.`;
+  }
+  if (!base) return "There is no Maneuver here to apply it to.";
+
+  // A Modifier is not applied to another Modifier: what it attaches to is a Maneuver you
+  // are doing, and a Modifier is not one of those on its own.
+  if (base.type === "modifier") {
+    return "A Modifier Maneuver cannot be applied to another Modifier Maneuver.";
+  }
+
+  const matches = wanted.some(entry => (entry === base.id)
+    || (entry === base.type)
+    || ((entry === "attacking") && base.attacking));
+
+  return matches
+    ? null
+    : `${modifier.name} applies to ${wanted.join(" or ")}, not to ${base.name}.`;
+}
+
 /** The four kinds a Maneuver can be. Dodging is not among them: it is not a Maneuver. */
 const MANEUVER_KINDS = new Set(["standard", "instant", "counter", "outOfSequence"]);
 
@@ -1987,6 +2047,9 @@ export async function loadManeuvers() {
     blockade: Boolean(trait.blockade),
     suddenStop: Boolean(trait.suddenStop),
     reflect: Boolean(trait.reflect),
+    // A list, however the header wrote it: `coerce` splits on commas and leaves a lone
+    // value a string, and a Modifier that names one Maneuver is the ordinary case.
+    baseManeuver: [].concat(trait.baseManeuver ?? []),
     kiCostPerTier: trait.kiCostPerTier ?? 0,
     // `coerce` splits a header on commas and leaves a single value a string, so
     // `tags: signature` arrived as the word rather than a list of one and every reader
