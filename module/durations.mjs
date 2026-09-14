@@ -109,6 +109,11 @@ export async function edgeReached(actor, edge) {
 
   const kept = [];
   const done = [];
+  // Whether this edge changed anything at all - a step taken off a clock counts, not only
+  // a clock running out. Without this the step was computed and thrown away, so a
+  // duration of two edges never became one and never ended: "until the end of your next
+  // turn" lasted for ever.
+  let moved = false;
 
   for (const entry of held) {
     if (entry.edge !== edge) {
@@ -116,17 +121,22 @@ export async function edgeReached(actor, edge) {
       continue;
     }
 
+    moved = true;
     const left = Math.max(0, (entry.edges ?? 1) - 1);
     if (left > 0) kept.push({ ...entry, edges: left });
     else done.push(entry);
   }
 
-  if (!done.length) return [];
+  if (!moved) return [];
 
   // The list is written first. Taking the thing off can re-derive the character and fire
   // Moments of its own, and an entry still sitting on the clock while that happens is an
   // entry that can be counted down twice.
   await actor.update({ "system.timed": kept });
+
+  // A step was taken and nothing ran out, which is the ordinary case for anything with
+  // more than one edge to wait.
+  if (!done.length) return [];
 
   const ran = [];
   for (const entry of done) {
