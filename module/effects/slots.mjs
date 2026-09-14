@@ -78,6 +78,10 @@ const TABLE = [
   { key: "ki.max", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Maximum Ki Points." },
   { key: "capacity.flat", phase: PHASES.CORE, kind: N, ops: ["add"],
     doc: "Added to Max Capacity before the multiplier, as the rules order it." },
+  { key: "capacity.maxFraction", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Extra Max Capacity, as a fraction of it: 0.25 is \"increase your Max Capacity "
+       + "by 1/4\". Added rather than multiplied, so two of them are a half and not a "
+       + "quarter twice over." },
   { key: "capacity.multiplier", phase: PHASES.CORE, kind: N, ops: ["multiply"],
     doc: "Multiplies Max Capacity, after every flat change." },
   { key: "surge.life.dice", phase: PHASES.CORE, kind: D, ops: ["add-dice"],

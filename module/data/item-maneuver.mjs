@@ -97,6 +97,11 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * Character, as it does for the Launch Maneuver.
        */
       pin: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Gains a stack of Power, and offers to drop one first. The offer is the whole of
+       * what needs asking: everything else this Maneuver does is in its own script.
+       */
+      powerUp: new fields.BooleanField({ required: true, initial: false }),
 
       /**
        * Who this Maneuver gives an opening to, in the rulebook's own words - "All

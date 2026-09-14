@@ -9,6 +9,7 @@
  * Priority of whatever granted them, and it hands back what each Slot came to.
  */
 
+import { VERBS } from "./verbs.mjs";
 import { getSlot, CONFLICTING, KINDS, PHASES } from "./slots.mjs";
 import { resolveAmount, resolveDice } from "./amounts.mjs";
 import { evaluate } from "./conditions.mjs";
@@ -175,13 +176,34 @@ function run(statements, scope) {
       case "call":
         // Verbs act on the world rather than on a Slot, so they are queued for whoever
         // asked - the interpreter has no business applying damage or removing a State.
-        scope.queue?.push({ verb: s.verb, args: (s.args ?? []).map(a => resolveAmount(a, scope)) });
+        //
+        // A word in a position the verb declares as a name is passed through as the word.
+        // Read as an amount it is a path off the character, finds nothing, and comes out
+        // as 0 - which is what every duration written in a file was doing.
+        scope.queue?.push({
+          verb: s.verb,
+          args: (s.args ?? []).map((a, index) => verbArgument(s.verb, index, a, scope))
+        });
         break;
 
       default:
         scope.errors?.push(`Unknown statement "${s.type}".`);
     }
   }
+}
+
+/**
+ * One argument of a verb: a word where the verb says that position is a name, and an
+ * amount everywhere else.
+ *
+ * A quoted string is already a name and needs nothing; this is for the bare words the
+ * files are written in, which is all of them - "expires(recovery, start-of-next-turn)"
+ * rather than "expires(\"recovery\", \"start-of-next-turn\")".
+ */
+function verbArgument(verb, index, amount, scope) {
+  const names = VERBS[verb]?.names ?? [];
+  if (names.includes(index) && (amount?.type === "path")) return amount.path;
+  return resolveAmount(amount, scope);
 }
 
 function gather(contributions, slot, op, value, kind, entry, b, phase, scope) {

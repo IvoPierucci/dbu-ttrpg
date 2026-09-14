@@ -1355,10 +1355,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       + (DBUCharacterData.CAPACITY_PER_LEVEL * (this.powerLevel - 1))
       + this.capacityModifiers.flat + slot(this, "capacity.flat");
 
+    // "Increase your Max Capacity by 1/4", which the Power Up Maneuver writes once per
+    // stack. A fraction of the whole rather than a multiplier, so two of them are a half:
+    // the rule says a quarter each, not a quarter of a quarter more.
+    const capacityFraction = Math.max(0, slot(this, "capacity.maxFraction"));
+
     // The Ki Multiplier lands on the finished Capacity, after everything that builds
     // it up - it increases the maximum, not any one part of it.
     const capacityMultiplier = this.capacityModifiers.multiplier
       * (this.effects.slots["capacity.multiplier"]?.multiply ?? 1)
+      * (1 + capacityFraction)
       * (this.debug.kiMultiplier ? DBUCharacterData.KI_MULTIPLIER_CAPACITY : 1);
 
     this.capacity.max = Math.max(0, Math.floor(baseCapacity * capacityMultiplier));

@@ -157,7 +157,18 @@ async function takeOff(actor, entry) {
 
   if (entry.kind === KINDS.RESOURCE) {
     const resources = { ...(actor.system.resources ?? {}) };
-    delete resources[entry.key];
+    const held = resources[entry.key];
+    if (!held) return false;
+
+    // One stack, not the whole Resource. Each stack is put on a clock of its own where
+    // the rule gives it one - "gain a stack of Power until the end of your next turn" -
+    // and a stack gained this turn taking away one gained last turn is the bug this
+    // avoids. The key goes when the last stack does, because a Resource at nothing is
+    // one nobody has.
+    const left = Math.max(0, (held.stacks ?? 0) - 1);
+    if (left > 0) resources[entry.key] = { ...held, stacks: left };
+    else delete resources[entry.key];
+
     return actor.update({ "system.resources": replaceObject(resources) });
   }
 

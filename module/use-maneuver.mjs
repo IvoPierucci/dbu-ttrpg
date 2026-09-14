@@ -398,6 +398,76 @@ export async function escapeGrapple(actor) {
 }
 
 
+
+/**
+ * Whether to drop a stack of Power before gaining one.
+ *
+ * "You may remove a stack of Power before applying this effect." It looks like giving
+ * something away and is not: two is the ceiling, so at two the gain would do nothing, and
+ * what dropping one buys is a fresh clock on the stack you take back.
+ *
+ * @returns {Promise<?boolean>} true to drop one, false to keep them, null if the Maneuver
+ *                              was backed out of
+ */
+async function askDropPower(actor) {
+  const { stacks = 0, max = 0 } = actor.system.resources?.power ?? {};
+  const full = max && (stacks >= max);
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: "Power Up" },
+    content: `<p>${Handlebars.escapeExpression(actor.name)} holds
+        <strong>${stacks}</strong> stack(s) of Power.</p>
+      <p class="dbu-respond-hint">${full
+        ? "You are at the most Power you can hold, so gaining a stack does nothing on its "
+          + "own. Drop the oldest and the one you take back starts its clock again."
+        : "Dropping the oldest and taking a fresh stack back leaves you with as many as "
+          + "you have now, on a clock that runs from this turn."}</p>`,
+    buttons: [
+      { action: "drop", label: "Drop the oldest first" },
+      { action: "keep", label: "Keep them all" },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if (!chosen || (chosen === "cancel")) return null;
+  return chosen === "drop";
+}
+
+/**
+ * Drop one stack of Power, and the clock that was holding it.
+ *
+ * The oldest clock, which is the one that would have run out first: dropping a stack and
+ * keeping the clock that was about to end it would be giving the stack away twice.
+ */
+async function dropPowerStack(actor) {
+  const { replaceObject } = await import("./conditions.mjs");
+
+  const resources = { ...(actor.system.resources ?? {}) };
+  const held = resources.power;
+  if (!held?.stacks) return;
+
+  const left = held.stacks - 1;
+  if (left > 0) resources.power = { ...held, stacks: left };
+  else delete resources.power;
+
+  // The entry with the fewest edges left to wait is the one nearest running out.
+  const timed = [...(actor.system.timed ?? [])];
+  let soonest = -1;
+  for (let i = 0; i < timed.length; i++) {
+    const entry = timed[i];
+    if ((entry.kind !== "resource") || (entry.key !== "power")) continue;
+    if ((soonest < 0) || ((entry.edges ?? 1) < (timed[soonest].edges ?? 1))) soonest = i;
+  }
+  if (soonest >= 0) timed.splice(soonest, 1);
+
+  await actor.update({
+    "system.resources": replaceObject(resources),
+    "system.timed": timed
+  });
+}
+
 /**
  * How far this Movement goes, and whether it is a Rapid one.
  *
@@ -503,6 +573,7 @@ export function definitionOf(item) {
     launch: item.system.launch,
     movement: item.system.movement,
     pin: item.system.pin,
+    powerUp: item.system.powerUp,
     exploitable: item.system.exploitable,
     surge: item.system.surge,
     charge: item.system.charge,
@@ -680,6 +751,14 @@ export async function useManeuver(actor, maneuver) {
     if (profileSpent) {
       ui.notifications.warn(profileSpent);
       return false;
+    }
+
+    // "You may remove a stack of Power before applying this effect." Asked here, with
+    // the rest of what can still be taken back, and only when there is one to drop.
+    if (maneuver.powerUp && ((actor.system.resources?.power?.stacks ?? 0) > 0)) {
+      const dropped = await askDropPower(actor);
+      if (dropped === null) return false;
+      if (dropped) await dropPowerStack(actor);
     }
 
     // "If you are the Grappler in a Grapple", which the entry then says again on a line
@@ -1046,6 +1125,7 @@ export function maneuverItemFrom(definition) {
       launch: Boolean(definition.launch),
       movement: Boolean(definition.movement),
       pin: Boolean(definition.pin),
+      powerUp: Boolean(definition.powerUp),
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),

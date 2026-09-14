@@ -1976,6 +1976,7 @@ export async function loadManeuvers() {
     launch: Boolean(trait.launch),
     movement: Boolean(trait.movement),
     pin: Boolean(trait.pin),
+    powerUp: Boolean(trait.powerUp),
     // Kept as written: "All adjacent Opponents" is a range the table reads, not one the
     // system measures. It had been sitting in a Maneuver file since Energy Charge was
     // written and nothing had ever carried it this far.

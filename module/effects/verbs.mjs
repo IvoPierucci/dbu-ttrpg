@@ -11,38 +11,59 @@
  * it: the compiler checks names against it, and the runtime dispatches on them.
  */
 
+/**
+ * Which of a verb's arguments are names rather than amounts.
+ *
+ * A bare word in an argument list is a word - the name of a Condition, a State, a
+ * Resource, a duration - and it used to be read as a path off the character, find
+ * nothing, and resolve to 0. `expires(recovery, start-of-next-turn)` reached the runtime
+ * as `expires(0, 0)`, which refuses on its first line and says nothing, so no duration
+ * written in a file had ever been set.
+ *
+ * Declared per verb rather than guessed from the shape of the argument, because the shape
+ * does not say: `enterState(superior, tierOfPower)` wants a word and then a number, and
+ * both are bare words on the page.
+ */
 export const VERBS = Object.freeze({
   remove: {
     args: [0, 1],
+    names: [0],
     doc: "Take a Combat Condition off. With no name, the one carrying this effect."
   },
   gain: {
     args: [1, 2],
+    names: [0],
     doc: "Put a Combat Condition on, optionally at a number of stacks."
   },
   surge: {
     args: [0, 1],
+    names: [0],
     doc: "Take a Surge. Name \"healing\" or \"ki\" to force which, or neither to be asked."
   },
   leaveState: {
     args: [0, 1],
+    names: [0],
     doc: "Leave a State. With no name, every State - which is what returning to your "
        + "Normal State means."
   },
   expires: {
     args: [2, 2],
+    names: [0, 1],
     doc: "Put something you hold on a clock: a Resource, a Combat Condition or a State, "
        + "and then \"turn\", \"next-turn\", \"start-of-turn\", \"start-of-next-turn\" "
        + "or \"encounter\". It is taken off when that moment arrives."
   },
   enterState: {
     args: [1, 3],
+    // The name and the duration. The level between them is a number.
+    names: [0, 2],
     doc: "Enter a State. A level after the name, and a duration after that - \"turn\", "
        + "\"next-turn\", \"start-of-turn\", \"start-of-next-turn\" or \"encounter\". "
        + "With no duration it stays until something takes it off."
   },
   grantOutOfSequence: {
     args: [0, 1],
+    names: [0],
     doc: "Offer an Out-of-Sequence Maneuver. Offered rather than played: it is still "
        + "the player's to take."
   },
@@ -53,6 +74,7 @@ export const VERBS = Object.freeze({
   },
   mightClash: {
     args: [0, 1],
+    names: [0],
     doc: "Make a Might Clash against whoever is named, or against whoever inflicted "
        + "the Condition carrying this effect."
   }

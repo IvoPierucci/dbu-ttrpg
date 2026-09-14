@@ -1,0 +1,71 @@
+id: power-up
+name: Power Up
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+powerUp: true
+usageLimit: 2/round
+resource: power
+resourceMax: 2
+source: Core Rule
+description: >
+  Push your power to its limits. A stack of Power until the end of your next turn:
+  1(T) on every Combat Roll and a quarter more Max Capacity, twice over at two.
+text: >
+  Power Up Maneuver [2/Round]: Concentrate your power and push it to its limits!
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Gain a stack of Power until the end of your next turn; if you already
+  possess a stack of Power, you may remove a stack of Power before applying this
+  effect. For each stack of Power, increase your Combat Rolls by 1(T) and your Max
+  Capacity by 1/4 (this increase to your Max Capacity only applies for the first 2
+  stacks of Power).
+
+  Power is a Resource and you cannot possess more than 2 stacks of Power. If an
+  effect would stop you from losing a stack(s) of Power, instead lose those
+  stack(s) at the end of your next turn.
+
+---
+
+# A stack, and a clock of its own for it. "Gain a stack of Power until the end of
+# your next turn" - each stack carries its own duration, which is why one gained
+# this turn does not leave when one gained last turn runs out.
+[on used]
+power.stacks += 1;
+expires(power, next-turn);
+
+# "For each stack of Power, increase your Combat Rolls by 1(T) and your Max
+# Capacity by 1/4."
+#
+# combatRolls fans out to the Strike, the Dodge and the Wound Roll, which is what
+# the rulebook means by the term - so this is one line rather than three.
+#
+# The Capacity is a fraction of the whole rather than a multiplier: two stacks are
+# a quarter each, which is a half, and not a quarter of a quarter more. The cap in
+# the entry's brackets - "only for the first 2 stacks" - needs nothing here, since
+# the Resource itself cannot go above two.
+[passive]
+if (power.stacks > 0) {
+    combatRolls += (power.stacks * tierOfPower);
+    capacity.maxFraction += (power.stacks * 0.25);
+}
+
+# --- What is not built, and why ---------------------------------------------------
+#
+# "If an effect would stop you from losing a stack(s) of Power, instead lose those
+# stack(s) at the end of your next turn."
+#
+# Nothing in this system stops anybody losing a Resource: there is no way for an
+# effect to say it, so there is nothing for this to answer. It is a rule about a
+# rule that does not exist yet, and writing the second half of it now would be
+# writing a branch nothing can ever reach. When something can hold a Resource in
+# place, this is where the other half goes.
+#
+# The choice at the front of the effect - "you may remove a stack of Power before
+# applying this effect" - is asked when the Maneuver is used, because a script has
+# no way to ask a player anything. What it buys is a fresh clock: the stack you
+# drop is the one that would have run out first.

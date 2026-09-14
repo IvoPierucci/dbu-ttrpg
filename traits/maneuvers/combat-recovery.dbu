@@ -65,23 +65,30 @@ text: >
 # a duration can take away.
 [on used]
 recovery.stacks += actionsSpent;
-expires(recovery, start-of-next-turn);
 
 # "For each Action spent ... regain 1d10(bT) Life and Ki Points" - so a handful of
 # dice each, rolled separately. Written out per Action rather than as one roll
 # multiplied: three rolls of 1d10(bT) and one tripled have the same average and
 # nothing else in common, and the rule says three.
+# A clock per Action too, for the same reason: "reduce your Defense Value by 1(T)
+# until the start of your next turn" is a duration each Action buys, not one the use
+# buys once. Set in the same turn they all run out together, so this changes nothing
+# at a table - but a stack with no clock of its own is a stack that leaves when
+# somebody else's does.
 if (actionsSpent >= 1) {
     life.value += 1d10(bT);
     ki.value += 1d10(bT);
+    expires(recovery, start-of-next-turn);
 }
 if (actionsSpent >= 2) {
     life.value += 1d10(bT);
     ki.value += 1d10(bT);
+    expires(recovery, start-of-next-turn);
 }
 if (actionsSpent >= 3) {
     life.value += 1d10(bT);
     ki.value += 1d10(bT);
+    expires(recovery, start-of-next-turn);
 }
 
 # "Reduce your Defense Value by 1(T) until the start of your next turn" - for each
