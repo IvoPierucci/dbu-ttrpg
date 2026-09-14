@@ -1,0 +1,115 @@
+id: attack-absorption
+name: Attack Absorption
+type: outOfSequence
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+absorb: true
+source: Core Rule
+description: >
+  Swallow an Energy or Magic attack your Parry turned aside. Your Opponent rolls its
+  Wound Roll as if it had hit you, and half that Dice Score comes back to you as Ki -
+  and if that is a fifth of your maximum, you may Power Up out of sequence.
+text: >
+  Attack Absorption Maneuver: You consume an enemy’s attack, taking its energy for
+  your own.
+  –Maneuver Type: Out-of-Sequence Maneuver
+  –Action Cost: N/A
+  –Minions: N/A
+  –KP Cost: N/A
+  –Effect: If you use the Parry option of the Defend Maneuver to successfully avoid an
+  Attacking Maneuver of the Energy or Magic Foundation, you may absorb that Attacking
+  Maneuver (meaning that Attacking Maneuver does not exist and therefore you cannot use
+  the Reflect Maneuver in response to the successful Parry). Your Opponent makes an
+  Urgent Wound Roll for their Attacking Maneuver as if you were hit, and you regain Ki
+  Points equal to 1/2 of the Dice Score.
+
+  If you regain Ki Points that equal or exceed 1/5 of your Maximum Ki Points through
+  this effect, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# No script, for the reason every Out-of-Sequence Maneuver has none: it is never used
+# from a list. It exists only as a chance something that just happened handed you, and
+# that is the offer machinery rather than anything a script can reach. `absorb: true` is
+# what hands it to the code, as `reflect` does for the Maneuver it sits beside.
+#
+# --- Where the offer comes from ---------------------------------------------------
+#
+# One door, and a narrower one than Reflect's: "the Parry option of the Defend Maneuver
+# to successfully avoid an Attacking Maneuver". Reflect is offered from that door and
+# from a won Might Clash on a Deflect as well; this entry names only the Parry, so only
+# the Parry offers it.
+#
+# And no Area of Effect clause. Reflect's entry says "that did not possess an AoE" and
+# this one does not, so an Area attack a Parry turned aside can be swallowed even though
+# it could not be thrown back. Read from the two entries side by side rather than assumed
+# to match, because they are one paragraph apart and differ.
+#
+# --- "That Attacking Maneuver does not exist" -------------------------------------
+#
+# Built as the sentence's own consequence and no further: "and therefore you cannot use
+# the Reflect Maneuver in response to the successful Parry". That much is enforced, and
+# it is enforced by a rule that was already there - one Out-of-Sequence Maneuver per
+# character per card - so taking the Absorption closes the Reflect that was offered
+# beside it without anything here having to say so.
+#
+# What it might mean for anybody else the same attack reached is left to the table. Two
+# reasons. The sentence limits itself to your Parry and your Reflect; and an attack
+# reaching four people is one Strike Roll and one Wound Roll in this system, so an
+# absorption erasing it would be undoing Damage already settled against three people who
+# had no part in this. If your table reads it the wide way, the attack is simply not
+# applied to the rest - which is a ruling, and rulings are the table's.
+#
+# --- The Wound Roll ------------------------------------------------------------------
+#
+# "Your Opponent makes an Urgent Wound Roll for their Attacking Maneuver as if you were
+# hit." Theirs, for their own attack - its Ki Wager, its Energy Charges, its Profile's
+# own additions - which is exactly the Wound Roll the card already knows how to ask for.
+# So nothing new is rolled: what changes is that an attack which hit nobody now owes one,
+# and the button appears on the attacker's client the way it always does.
+#
+# It deals no Damage to you. You avoided it; the Parry won. "As if you were hit" is there
+# to say there is a Wound Roll at all, and what it is for is the Ki.
+#
+# Urgent means it cannot be failed on purpose, which is the same flag a reflected
+# attack's Wound Roll carries and the same thing Compelled does to a Combat Roll.
+#
+# --- The Ki ---------------------------------------------------------------------------
+#
+# "1/2 of the Dice Score" - the Dice Score is the whole roll, dice and bonuses together,
+# and the half is rounded down as every half in these rules is.
+#
+# What you regain is what there was room for: three Ki short of full, you regain three
+# whatever the roll came to. Which is also what the second paragraph measures, since "if
+# you regain Ki Points that equal or exceed 1/5 of your Maximum" is about the Ki that
+# actually came back. A character at full Ki absorbs an attack and gets no Power Up out
+# of it, and that reading is deliberate.
+#
+# The fifth is asked by multiplying rather than dividing, so no rounding has to be
+# invented: a fifth of 23 is 4.6, and 5 clears it where 4 does not.
+#
+# --- The Power Up ----------------------------------------------------------------------
+#
+# "You may use the Power Up Maneuver as an Out-of-Sequence Maneuver." Offered on a card of
+# its own rather than on the attack, because the attack's one Out-of-Sequence Maneuver has
+# just been taken - by this. That limit is right and this is not an exception to it: the
+# Power Up is a second chance handed over by the absorption, not a second use of the
+# absorption's own opening.
+#
+# Out of sequence waives the Action Cost and nothing else, so it is offered unpaid rather
+# than free - Power Up's KP Cost is N/A, so that comes to the same thing here, and would
+# not for anything else offered this way.
+#
+# Building this is what found that an offered Maneuver never ran its own script. The
+# Out-of-Sequence door posted the card and stopped, so a Power Up handed over by an effect
+# gained no stack of Power - and so did a Maneuver held by Triggered and released later.
+# Both doors fire it now.
+#
+# --- What is not built ----------------------------------------------------------------
+#
+# "Minions: N/A." There are no Minions in this system - the Arrogant Declaration and
+# Analysis files say the same about their own Minion lines. Carried as printed; what it
+# buys is the table's.

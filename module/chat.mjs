@@ -29,9 +29,11 @@ import {
   movementKiCost,
   movementSquares,
   recordManeuverType,
+  recordManeuverUse,
   whyNotAnotherAbsolute,
   whyNotThisFoundation,
   whyNotIntervene,
+  whyNotSpecial,
   maxKiWager,
   refundManeuverCost,
   spendManeuverCost
@@ -3906,6 +3908,15 @@ async function takeOutOfSequence(message, actor, offer) {
   const maneuver = getManeuver(offer.maneuverId);
   if (!maneuver) return;
 
+  // "You cannot use any Special Maneuvers until you have gained access to them." Asked
+  // here as well as at the sheet's door, because being handed a chance to use one is not
+  // being given it - access can also have been taken away between the offer and the click.
+  const closed = whyNotSpecial(actor, maneuver);
+  if (closed) {
+    ui.notifications.warn(closed);
+    return;
+  }
+
   // Exploit is a Counter Maneuver whose whole effect is an Out-of-Sequence Basic Attack:
   // "if you do, use the Basic Attack Maneuver as an Out-of-Sequence Maneuver". So it
   // costs its own Counter Action - an Out-of-Sequence Maneuver waives an Action Cost, and
@@ -4020,6 +4031,13 @@ async function takeOutOfSequence(message, actor, offer) {
 
   requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
 
+  // What a held Maneuver was paid for, read before the holding is let go of because
+  // letting go is what clears it. A script asking `actionsSpent` is asking what the player
+  // paid, and for a held Maneuver that was paid when it was held: Combat Recovery's whole
+  // effect is one stack per Action spent, and zero here would be a Recovery that recovers
+  // nothing.
+  const heldActions = offer.free ? (actor.system.delayed?.actions ?? 0) : 0;
+
   // A held Maneuver is held no longer once it is used. Cleared here rather than by the
   // card, because the holding is on the character and the character is what has to stop
   // saying they are holding something.
@@ -4027,6 +4045,33 @@ async function takeOutOfSequence(message, actor, offer) {
     const { dropDelayed } = await import("./use-maneuver.mjs");
     await dropDelayed(actor);
   }
+
+  // And what the Maneuver itself does, which is the same question out of sequence as in
+  // sequence. The door in use-maneuver.mjs fires this for everything used through it;
+  // this is the other door, and it fired nothing - so a Power Up handed over by an effect
+  // posted its card and gained no stack of Power, and a Maneuver held by Triggered and
+  // released later did nothing at all.
+  //
+  // Scoped to the character's own copy, the way the main door scopes it. A Maneuver
+  // granted by name that they do not hold - Cross Counter's Basic Attack - has no script
+  // of theirs to run, and firing this unscoped would run every `on used` they own.
+  const own = actor.items?.find(item =>
+    (item.type === "maneuver") && ((item.system.maneuverId || item.id) === maneuver.id));
+  if (own) {
+    const { fireMoment } = await import("./effects/moments-runtime.mjs");
+    await fireMoment(actor, "on-used", {
+      maneuver: { ...maneuver, itemId: own.id },
+      // What the player paid, which out of sequence is nothing - unless this is a Maneuver
+      // they held, where it is what they paid to hold it.
+      actionsSpent: heldActions,
+      targets: target ? [target] : []
+    }, { only: own.id });
+  }
+
+  // The tally, for a Maneuver with a limit written on it. Not for a held one: "delay its
+  // use but pay the Action Cost and KP Cost immediately" was the use, and it was counted
+  // then - `free` is what marks an offer that has already been paid for.
+  if (!offer.free) await recordManeuverUse(actor, maneuver);
 
   // The Exploit's recursion spreads the offer, so what provoked it has come all this way
   // untouched and goes onto the attack itself.
@@ -4037,6 +4082,11 @@ async function takeOutOfSequence(message, actor, offer) {
     const { takeRapidMovement } = await import("./use-maneuver.mjs");
     await takeRapidMovement(actor);
   }
+
+  // Attack Absorption is not an attack, and posts no Maneuver card of its own: what it
+  // does is written onto the attack it swallowed, and that card is what asks for the
+  // Wound Roll paying for it.
+  if (maneuver.absorb) return absorbAttack(message, actor, maneuver);
 
   return declared
     ? postAttack(actor, target, maneuver, declared,
@@ -5082,6 +5132,9 @@ async function resolveAttack(message, attack) {
     const own = branches.find(entry => entry.uuid === uuid);
     if ((own?.defense !== "parry") || own.hit) continue;
     offerReflect(message, attack, target, "Reflect - your Parry turned it aside");
+    // The other thing that can be done with a caught attack, from the same moment. Both
+    // are offered and one may be taken, which is the whole of the exclusion between them.
+    offerAbsorb(message, attack, target, "Attack Absorption - your Parry turned it aside");
   }
 }
 
@@ -5153,6 +5206,168 @@ function offerReflect(message, attack, actor, reason) {
   });
 }
 
+/**
+ * Why this attack cannot be absorbed, or null.
+ *
+ * "An Attacking Maneuver of the Energy or Magic Foundation", and that is the whole of the
+ * condition on the attack itself. No Area of Effect clause: the Reflect entry has one -
+ * "that did not possess an AoE" - and this one does not, so an Area attack a Parry turned
+ * aside can be swallowed although it could not be thrown back. Read off the two entries
+ * side by side rather than assumed to match, because they are a paragraph apart and
+ * differ.
+ *
+ * Where it is offered from is narrower than Reflect's, and that is asked at the door
+ * rather than here: Reflect comes from a won Parry and from a won Might Clash on a
+ * Deflect, and this entry names only "the Parry option of the Defend Maneuver".
+ */
+function whyNotAbsorb(attack) {
+  if (!["energy", "magic"].includes(attack.foundation)) {
+    return "only an Energy or Magic Attack can be absorbed";
+  }
+  return null;
+}
+
+/**
+ * Offer Attack Absorption to somebody whose Parry turned an Energy or Magic attack aside.
+ *
+ * Offered beside the Reflect rather than instead of it: they are the two things that can
+ * be done with an attack you caught, and which one is the player's to say. Taking either
+ * closes the other, because one Out-of-Sequence Maneuver per character per card is a rule
+ * this machinery already keeps - and that is exactly what "you cannot use the Reflect
+ * Maneuver in response to the successful Parry" asks for, so nothing here repeats it.
+ *
+ * A Special Maneuver, so holding the Item is not access. It has to have been opened, by
+ * an effect or by the Skill Ranks that open one, and an offer nobody may take is worse
+ * than no offer at all.
+ */
+function offerAbsorb(message, attack, actor, reason) {
+  if (!actor || whyNotAbsorb(attack)) return;
+
+  const item = actor.items?.find(entry => (entry.type === "maneuver") && entry.system.absorb);
+  if (!item) return;
+
+  const maneuver = getManeuver(item.system.maneuverId || item.id);
+  if (!maneuver || whyNotSpecial(actor, maneuver)) return;
+
+  requestEdit(message, {
+    type: "offer",
+    offer: {
+      actorUuid: actor.uuid,
+      actorName: actor.name,
+      maneuverId: maneuver.id,
+      maneuverName: maneuver.name,
+      reason
+    }
+  });
+}
+
+/**
+ * Swallow the attack a Parry turned aside.
+ *
+ * Nothing is rolled here. What the entry asks for is a roll of the Opponent's - "an Urgent
+ * Wound Roll for their Attacking Maneuver as if you were hit" - and that is the Wound Roll
+ * the card already knows how to ask for, with that attack's own Ki Wager, Energy Charges
+ * and Profile behind it. So this writes the absorption onto the attack and the button
+ * grows on their client: an attack that hit nobody does not ordinarily owe a Wound Roll,
+ * and an absorbed one does.
+ *
+ * It deals the absorber no Damage. They avoided it - the Parry won - and "as if you were
+ * hit" is there to say there is a roll at all. What the roll is for is the Ki.
+ */
+async function absorbAttack(message, actor, maneuver) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.absorbed) return;
+
+  requestEdit(message, {
+    type: "attack",
+    attack: {
+      ...attack,
+      absorbed: {
+        uuid: actor.uuid,
+        name: actor.name,
+        maneuverName: maneuver.name,
+        // Filled in when the roll is made. Null rather than zero, so a card drawn between
+        // the two says the roll is owed rather than saying it came to nothing.
+        regained: null,
+        fifth: false
+      },
+      // "An Urgent Wound Roll." The same flag a reflected attack sets and the same thing
+      // it means: this one cannot be failed on purpose.
+      urgentWound: true
+    }
+  });
+
+  return settledNote(message,
+    `${actor.name} absorbs ${attack.maneuverName}. ${attack.attackerName} rolls its Wound `
+    + `Roll as if it had hit, and half the Dice Score comes back to ${actor.name} as Ki.`);
+}
+
+/**
+ * Pay out an absorption, once the Wound Roll it asked for has been made.
+ *
+ * "You regain Ki Points equal to 1/2 of the Dice Score." The Dice Score is the whole of
+ * the roll - the Base Die, every other die, and every bonus - as it is everywhere else in
+ * these rules, and the half is rounded down as every half here is.
+ *
+ * What is regained is what there was room for: three Ki short of full, you regain three,
+ * whatever the roll came to. That is also what the second paragraph measures, since "if
+ * you regain Ki Points that equal or exceed 1/5 of your Maximum" is about the Ki that
+ * actually came back - so a character at full Ki absorbs an attack and gets no Power Up
+ * out of it.
+ *
+ * @returns {Promise<object>} the absorption with what it came to written on it
+ */
+async function settleAbsorption(message, attack, wound) {
+  const absorbed = attack.absorbed;
+  const absorber = fromUuidSync(absorbed.uuid);
+  if (!absorber) return absorbed;
+
+  const half = Math.floor((wound.total ?? 0) / 2);
+  const { value, max } = absorber.system.ki;
+  const regained = Math.min(max, value + half) - value;
+
+  // Relayed, because whoever is settling this is whoever rolled the Wound - which is the
+  // Opponent, and they do not own the character being paid.
+  await requestActorUpdate(absorber, { "system.ki.value": value + regained });
+
+  // "Equal or exceed 1/5 of your Maximum Ki Points", asked by multiplying rather than by
+  // dividing so that no rounding has to be invented: a fifth of 23 is 4.6, and 5 clears
+  // it where 4 does not.
+  const fifth = (regained * 5) >= max;
+
+  const card = await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: absorber }),
+    content: checkCard({
+      parts: `${Handlebars.escapeExpression(absorbed.maneuverName)} &middot; `
+        + `half of ${wound.total}`,
+      total: `+${regained} KP`,
+      outcome: "surge"
+    })
+  });
+
+  // "You may use the Power Up Maneuver as an Out-of-Sequence Maneuver." Offered on this
+  // card rather than on the attack, because the attack's one Out-of-Sequence Maneuver has
+  // just been taken - by this. That limit is right and this is not an exception to it: the
+  // Power Up is a fresh chance the absorption handed over, not a second use of the opening
+  // the absorption itself came through.
+  //
+  // Named rather than swept for, as Cross Counter names the Basic Attack it gives away.
+  if (fifth && card) {
+    requestEdit(card, {
+      type: "offer",
+      offer: {
+        actorUuid: absorber.uuid,
+        actorName: absorber.name,
+        maneuverId: "power-up",
+        maneuverName: "Power Up",
+        reason: `Attack Absorption - ${regained} KP is a fifth of ${max}`
+      }
+    });
+  }
+
+  return { ...absorbed, regained, fifth };
+}
+
 /** What one target chose to answer with, before any of it was rolled. */
 function defenceFor(attack, uuid) {
   return (attack.defences ?? []).find(entry => entry.uuid === uuid) ?? null;
@@ -5167,6 +5382,33 @@ function replaceTarget(attack, uuid, changes) {
 /** Every target of an attack, paired with what happened to them. */
 function targetResults(attack) {
   return attackTargets(attack).map(target => ({ ...target, own: targetResult(attack, target.uuid) }));
+}
+
+/**
+ * The row saying an attack was swallowed, and what it was worth.
+ *
+ * Its own row rather than a note in the title, because it is two facts arriving at
+ * different times: the absorption is written the moment the Maneuver is taken, and what it
+ * paid is only known once the Opponent has rolled. A null `regained` is a roll still owed
+ * and says so, where a zero would read as an absorption that came to nothing.
+ */
+function absorbRow(attack) {
+  const absorbed = attack.absorbed;
+  if (!absorbed) return "";
+
+  const gain = (absorbed.regained === null) || (absorbed.regained === undefined)
+    ? "awaiting the Wound Roll"
+    : `+${absorbed.regained} KP`;
+
+  // The same two classes every other row on this card is built from, rather than a pair
+  // of its own that the stylesheet has never heard of.
+  return `
+    <div class="dbu-clash-side">
+      <span class="dbu-clash-name">${Handlebars.escapeExpression(absorbed.name)}<em> absorbs
+        ${Handlebars.escapeExpression(absorbed.maneuverName)}${
+          absorbed.fifth ? " - a fifth of their maximum Ki" : ""}</em></span>
+      <span class="dbu-clash-total">${Handlebars.escapeExpression(gain)}</span>
+    </div>`;
 }
 
 /**
@@ -5428,7 +5670,11 @@ function owesWound(attack) {
   // A won Deflect turns the whole thing aside - "deflected away from all targets" - so
   // there is nothing left to roll, for anybody, Absolute or not.
   if (deflection(attack)) return false;
-  return anyoneHit(attack) || Boolean(attack.absolute);
+  // An absorption asks for one where nothing was hit: "your Opponent makes an Urgent Wound
+  // Roll for their Attacking Maneuver as if you were hit". Half its Dice Score is the
+  // whole point of the Maneuver, so the roll is owed even when the attack landed on
+  // nobody at all.
+  return anyoneHit(attack) || Boolean(attack.absolute) || Boolean(attack.absorbed);
 }
 
 /** Whether this line is an Absolute Attack's answer to having missed. */
@@ -5728,12 +5974,20 @@ async function rollAttackWound(message, attack) {
       : entry);
   }
 
+  // "You regain Ki Points equal to 1/2 of the Dice Score." Settled here because this is
+  // the Dice Score: one Wound Roll serves everyone an attack reached, and what the
+  // absorber takes is half of what that one roll came to.
+  const absorbed = attack.absorbed
+    ? await settleAbsorption(message, attack, wound)
+    : null;
+
   requestEdit(message, {
     type: "attack",
     // Damage is worked out here but not dealt: applying it is a separate, deliberate
     // step, so the table can rule on it before anyone loses Life.
     attack: {
       ...attack,
+      ...(absorbed ? { absorbed } : {}),
       interventions: settledInterventions,
       result: { ...attack.result, wound, targets: settledTargets }
     }
@@ -6988,6 +7242,7 @@ function renderAttack(message, html) {
       ? attackSide("Wound", attack.woundByName || attack.attackerName, result.wound)
       : ""}
     ${flareRows(attack)}
+    ${absorbRow(attack)}
     <div class="dbu-clash-result">${result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
 
@@ -7164,6 +7419,10 @@ function renderAttack(message, html) {
     if (attack.woundBy) {
       roll.dataset.tooltip = `${attack.maneuverName} was thrown back at you. You roll its `
         + "Wound Roll, and it is Urgent - it cannot be failed on purpose.";
+    } else if (attack.absorbed) {
+      roll.dataset.tooltip = `${attack.absorbed.name} absorbed this. Roll its Wound Roll as `
+        + "if it had hit them - half the Dice Score comes back to them as Ki. It is Urgent, "
+        + "so it cannot be failed on purpose.";
     }
     roll.addEventListener("click", () => woundStage(message, attack));
     container.append(roll);

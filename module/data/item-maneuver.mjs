@@ -156,6 +156,18 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       reflect: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * Swallows an avoided Energy or Magic attack instead of throwing it back: the one
+       * who threw it rolls its Wound Roll as if it had hit, and half that Dice Score
+       * comes back to you as Ki.
+       *
+       * Offered rather than used, like `reflect`, and offered from the same moment - a
+       * Parry that turned an attack aside. The two are alternatives, which the offer
+       * machinery settles on its own: one Out-of-Sequence Maneuver per character per
+       * card is exactly what "you cannot use the Reflect Maneuver in response to the
+       * successful Parry" asks for.
+       */
+      absorb: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * What a Modifier Maneuver may be applied to: its Base Maneuver.
        *
        * "A Maneuver (or type of Maneuver)", which is both shapes and sometimes several -

@@ -29,6 +29,7 @@
     "karma/karmic-save.dbu",
     "maneuvers/analysis.dbu",
     "maneuvers/arrogant-declaration.dbu",
+    "maneuvers/attack-absorption.dbu",
     "maneuvers/basic-attack.dbu",
     "maneuvers/blockade.dbu",
     "maneuvers/called-shot.dbu",
