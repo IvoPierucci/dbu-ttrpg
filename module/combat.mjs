@@ -238,8 +238,36 @@ async function beginTurn(actor) {
   // the whole reason both of its edges arrive.
   await burnDot(actor);
 
+  // "If that trigger occurs before the start of your next turn." The start of this turn is
+  // where that ends, so anything still held is let go here - after the Moment and after
+  // the DOT, since both of those are still part of arriving at the turn and a trigger
+  // could have been called on either.
+  await lapseDelayed(actor);
+
   if (skipped) ui.notifications.info(`${actor.name} is skipped this round.`);
   return !skipped;
+}
+
+/**
+ * Let go of a Maneuver that was held and never used.
+ *
+ * "Before the start of your next turn" is the whole of the window, and this is where it
+ * shuts. What was paid for it is gone: the entry hands the Actions back only for the
+ * Exploit that interrupted the holding, and says nothing about a trigger that simply
+ * never happened.
+ */
+async function lapseDelayed(actor) {
+  const { delayedManeuver, dropDelayed } = await import("./use-maneuver.mjs");
+
+  const held = delayedManeuver(actor);
+  if (!held) return;
+
+  await dropDelayed(actor);
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${actor.name} lets go of ${held.name} - the `
+      + `trigger never came.</div>`
+  });
 }
 
 /**

@@ -38,6 +38,7 @@ import {
 import {
   coreManeuverItems,
   definitionOf,
+  delayedManeuver,
   escapeGrapple,
   importCoreManeuvers,
   releaseGrapple,
@@ -653,6 +654,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // What is being charged, if anything. Named rather than shown as an id, since the
     // point of saying it is that the reader knows which attack is waiting.
+    // What is being held back by the Triggered Maneuver, if anything. Said on the sheet
+    // because the trigger is in the player's own words and nothing watches for it - the
+    // table has to be able to read what they are waiting on.
+    context.delayed = delayedManeuver(this.actor);
+
     const charging = this.actor.system.charging;
     context.charging = charging?.maneuverId
       ? {

@@ -1,0 +1,90 @@
+id: triggered
+name: Triggered
+type: modifier
+actionCost: 0
+kiCost: 0
+usageLimit: 1/round
+baseManeuver: standard, counter, instant, outOfSequence
+delays: true
+asks: Select a trigger
+exploitable: Any Opponent within a Sphere AoE centered on you
+source: Core Rule
+description: >
+  Hold a Maneuver back. Pay for it now, name a trigger, and use it free and out of
+  sequence if that trigger happens before your next turn starts.
+text: >
+  Triggered Maneuver [1/Round]: A unique type of Maneuver that allows you to delay
+  your Maneuvers.
+  –Action Cost: N/A
+  –Base Maneuver: Any Maneuver
+  –KP Cost: N/A
+  –Effect: When making any type of Maneuver, you may use this Maneuver to delay its
+  use but pay the Action Cost and KP Cost immediately. When you do, you must select
+  a trigger. If that trigger occurs before the start of your next turn, you may use
+  that Maneuver without paying the Action Cost or KP Cost as an Out-of-Sequence
+  Maneuver. Below is the list of potential triggers (you may speak with your ARC to
+  make any kind of trigger, but a trigger should at least be as specific as those
+  below):
+
+  * Damage: Select a Character. If that Character receives Damage, use your chosen
+    Maneuver.
+  * Movement: Select a Character. If that Character would use any effect to move,
+    use your chosen Maneuver before they move.
+  * Attack: Select a Character. If that Character uses an Attacking Maneuver, use
+    your chosen Maneuver before that Attacking Maneuver is used.
+  * Turn End: Select an Ally. Once that Character’s turn ends, use your chosen
+    Maneuver.
+  * Combat Condition: Select an Opponent and a Combat Condition. If the Opponent
+    gains your selected Combat Condition, immediately use your chosen Maneuver.
+
+  When using the Triggered Maneuver to delay a Maneuver, you provoke the Exploit
+  Maneuver for any Opponent within a Sphere AoE centered on you. If you take Damage
+  from an Attacking Maneuver used through the Exploit Maneuver in response to this
+  Maneuver, you do not gain the effects of the Triggered Maneuver and do not use the
+  selected Maneuver but you gain a number of Counter Actions equal to the Action
+  Cost spent.
+
+---
+
+# `delays: true` is the whole of what this needed that no other Modifier has. Called
+# Shot changes two numbers on the attack it was applied to; this one stops the Base
+# Maneuver happening at all and hands it back later, which is a shape rather than a
+# number and so has a flag.
+#
+# "Base Maneuver: Any Maneuver" is written as the four kinds rather than left blank,
+# because a Modifier with no Base Maneuver attaches to nothing here - naming all four
+# is how "any" is said.
+#
+# What it comes to:
+#   - the Action Cost and the KP Cost are paid as the Maneuver is declared, which is
+#     what the entry asks for, and then nothing else about it happens: no card, no
+#     script, no Profile spent
+#   - the trigger is typed in your own words and written on the card
+#   - the Maneuver is held on the character and offered on that card as an
+#     Out-of-Sequence Maneuver, free - the offer machinery already waives the Action
+#     Cost, and `free` on the offer waives the Ki as well
+#   - it lapses at the start of your next turn, which is where the entry puts it
+#   - the card provokes the Exploit, because that is the Maneuver's own Exploitable
+#     line written into the Effect rather than above it
+#
+# --- The trigger, which is the table's -------------------------------------------------
+#
+# "You may speak with your ARC to make any kind of trigger, but a trigger should at
+# least be as specific as those below." So the five are examples of how specific to
+# be, not a list to choose from, and nothing here watches for one: this system cannot
+# know that a Character "would use any effect to move" before they move, and the
+# entry does not ask it to. What it does is hold the Maneuver, write the trigger where
+# everyone can read it, and put the button in front of the player whose Maneuver it
+# is. Who says the trigger happened is the table, as it is for every range here.
+#
+# --- The reprisal ----------------------------------------------------------------------
+#
+# "If you take Damage from an Attacking Maneuver used through the Exploit Maneuver in
+# response to this Maneuver, you do not gain the effects of the Triggered Maneuver and
+# do not use the selected Maneuver but you gain a number of Counter Actions equal to
+# the Action Cost spent."
+#
+# Built, and it is the first of its shape: an Exploit an offer opened carries which
+# card opened it, so the Damage landing can be traced back to this one. The Ki is not
+# given back - the entry hands back Counter Actions "equal to the Action Cost spent"
+# and says nothing about the Ki Points, which are spent either way.

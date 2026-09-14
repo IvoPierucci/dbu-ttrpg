@@ -1700,7 +1700,7 @@ function beingMovedOn(message, actor) {
 
 export async function postManeuver(actor, maneuver,
                                    { asOutOfSequence = false, foundation = null,
-                                     rapidMovement = false, spent = null } = {}) {
+                                     rapidMovement = false, spent = null, note = "" } = {}) {
   const type = MANEUVER_TYPES[maneuver.type];
   const label = asOutOfSequence ? MANEUVER_TYPES.outOfSequence.label : type.label;
   const cost = (type.action && !asOutOfSequence)
@@ -1716,6 +1716,7 @@ export async function postManeuver(actor, maneuver,
       <div class="dbu-maneuver">
         <div class="dbu-maneuver-name">${Handlebars.escapeExpression(maneuver.name)}</div>
         <div class="dbu-maneuver-meta">${label} &middot; ${cost} &middot; ${maneuver.kiCost} KP</div>
+        ${note ? `<div class="dbu-maneuver-note">${Handlebars.escapeExpression(note)}</div>` : ""}
         ${attackLine(actor, maneuver, foundation)}
         ${exploitLine(maneuver)}
       </div>`,
@@ -1758,6 +1759,35 @@ export async function postManeuver(actor, maneuver,
 
   offerExploits(card, actor, maneuver);
   return card;
+}
+
+/**
+ * Offer a held Maneuver back to whoever is holding it.
+ *
+ * "If that trigger occurs before the start of your next turn, you may use that Maneuver
+ * without paying the Action Cost or KP Cost as an Out-of-Sequence Maneuver." The offer
+ * machinery is already all of that bar the Ki: one chance, taken once, out of sequence.
+ * `free` is what waives the Ki, and this is the only thing that sets it - an offer nobody
+ * paid for in advance must not be free.
+ *
+ * Nothing watches for the trigger. It is written on the offer in the player's own words,
+ * where the table can read it and say when it happened.
+ */
+export function offerDelayed(card, actor, maneuver, trigger) {
+  if (!card || !maneuver) return;
+
+  requestEdit(card, {
+    type: "offer",
+    offer: {
+      actorUuid: actor.uuid,
+      actorName: actor.name,
+      maneuverId: maneuver.id,
+      maneuverName: maneuver.name,
+      itemId: maneuver.itemId ?? "",
+      free: true,
+      reason: `Triggered - ${trigger || "no trigger stated"}`
+    }
+  });
 }
 
 /**
@@ -3972,10 +4002,16 @@ async function takeOutOfSequence(message, actor, offer) {
   //
   // A Reflect pays its own price and not the Profile's: "KP Cost: 5(T)" is the whole of
   // what the entry asks, and the Profile was paid for by whoever threw it the first time.
-  const price = crossing
+  // A held Maneuver was paid for when it was held: "you may use that Maneuver without
+  // paying the Action Cost or KP Cost as an Out-of-Sequence Maneuver". Out of sequence
+  // waives the Action Cost for everything; `free` is what waives the Ki as well, and only
+  // an offer that was already paid for carries it.
+  const price = offer.free
+    ? 0
+    : crossing
     ? movementKiCost(actor, crossing)
     : maneuverKiCost(maneuver, reflecting ? null : declared, actor);
-  if (!await spendManeuverCost(actor, maneuver, price)) return;
+  if (price && !await spendManeuverCost(actor, maneuver, price)) return;
 
   // An Out-of-Sequence Maneuver counts as having used another kind - unless the thing
   // that offered it was the Instant still holding you, which is what the message id is
@@ -3983,6 +4019,14 @@ async function takeOutOfSequence(message, actor, offer) {
   await recordManeuverType(actor, "outOfSequence", { messageId: message.id });
 
   requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+
+  // A held Maneuver is held no longer once it is used. Cleared here rather than by the
+  // card, because the holding is on the character and the character is what has to stop
+  // saying they are holding something.
+  if (offer.free && actor.system.delayed?.itemId) {
+    const { dropDelayed } = await import("./use-maneuver.mjs");
+    await dropDelayed(actor);
+  }
 
   // The Exploit's recursion spreads the offer, so what provoked it has come all this way
   // untouched and goes onto the attack itself.
@@ -6049,12 +6093,61 @@ async function applyAttackDamage(message, target, attack) {
     if (attacker) await openKnockback(attack, attacker, target);
   }
 
+  // "If you take Damage from an Attacking Maneuver used through the Exploit Maneuver in
+  // response to this Maneuver." Answered here, which is the first moment the Damage is
+  // known - and only here, since an attack that hits for nothing is not Damage taken.
+  if (damage > 0) await interruptDelayed(target, attack);
+
   requestEdit(message, {
     type: "attack",
     attack: {
       ...attack,
       result: { ...attack.result, targets: replaceTarget(attack, target.uuid, { applied: true }) }
     }
+  });
+}
+
+/**
+ * An Exploit provoked by a holding, landing on whoever was holding.
+ *
+ * "You do not gain the effects of the Triggered Maneuver and do not use the selected
+ * Maneuver but you gain a number of Counter Actions equal to the Action Cost spent."
+ *
+ * Three things have to be true, and each is a different half of "in response to this
+ * Maneuver": the attack came through an Exploit, that Exploit was provoked by a card,
+ * and that card is the one this character's holding was announced on. A character who
+ * held something and is hit by an unrelated Exploit keeps their holding.
+ *
+ * Counter Actions rather than the ones that were spent. The entry says which, and it is
+ * the one place in these rules that hands back a different currency than it took -
+ * "equal to the Action Cost spent" is the amount, not the kind.
+ */
+async function interruptDelayed(target, attack) {
+  const held = target.system.delayed;
+  if (!held?.messageId) return;
+  if (attack?.provokedBy?.messageId !== held.messageId) return;
+
+  const { dropDelayed } = await import("./use-maneuver.mjs");
+  const given = Math.max(0, held.actions ?? 0);
+  const name = held.name;
+
+  await dropDelayed(target);
+
+  if (given) {
+    // Given as Actions not yet spent, which is how this system holds what is left: the
+    // pool is what the round grants and the count is what has gone out of it.
+    await requestActorUpdate(target, {
+      "system.actionsSpent.counter":
+        Math.max(0, (target.system.actionsSpent?.counter ?? 0) - given)
+    });
+  }
+
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="dbu-settled-note">${target.name} is hit out of the hold - `
+      + `${name} is not used${given
+        ? `, and they gain ${given} Counter Action${given === 1 ? "" : "s"}`
+        : ""}.</div>`
   });
 }
 

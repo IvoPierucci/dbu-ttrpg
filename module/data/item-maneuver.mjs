@@ -194,6 +194,15 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       asks: new fields.StringField({ required: true, blank: true, initial: "" }),
       /**
+       * Holds the Base Maneuver back instead of letting it happen.
+       *
+       * The one thing a Modifier does that is a shape rather than a number, which is why
+       * it is a flag where the rest are fields: the Action Cost and the Ki are paid, the
+       * Maneuver is put on the character with a trigger written beside it, and it is
+       * handed back later as an Out-of-Sequence Maneuver that costs nothing.
+       */
+      delays: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and

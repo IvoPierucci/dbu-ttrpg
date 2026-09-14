@@ -34,6 +34,18 @@
       </div>
       {{/if}}
 
+      {{#if delayed}}
+      {{! A Maneuver paid for and held back. Nothing watches for the trigger - it is in
+          the player's own words and the table is what calls it - so what this row is for
+          is having it written where everybody can read it. }}
+      <div class="stat stat-charging"
+           data-tooltip="Paid for and waiting. Use it from the card that announced it, as an Out-of-Sequence Maneuver costing nothing. It lapses at the start of your next turn.">
+        <em>Holding</em>
+        <span>{{delayed.name}}</span>
+        <i class="stat-note">on {{delayed.trigger}}</i>
+      </div>
+      {{/if}}
+
       {{! What is left this round over what the round gives you. Both refill when the
           round turns over, so the second number is the one that is yours to change. }}
       <div class="stat" data-tooltip="Standard Actions left this round, of what each round gives you">

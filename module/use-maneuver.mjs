@@ -41,6 +41,7 @@ import {
   postGrappleCheck,
   postManeuver,
   postSkillClash,
+  offerDelayed,
   postThrust,
   takeSurge
 } from "./chat.mjs";
@@ -793,6 +794,87 @@ async function applyModifiers(actor, applied) {
   return true;
 }
 
+
+/**
+ * Hold a Maneuver back instead of using it.
+ *
+ * "You may use this Maneuver to delay its use but pay the Action Cost and KP Cost
+ * immediately." So everything up to the payment has already happened by the time this is
+ * reached, and everything after it does not: no script, no Profile spent, no card for the
+ * Maneuver itself. What is posted is the holding.
+ *
+ * The Maneuver is offered straight back on that card as an Out-of-Sequence Maneuver
+ * marked free, which is the whole of "you may use that Maneuver without paying the Action
+ * Cost or KP Cost": out of sequence waives the Action for everything, and `free` waives
+ * the Ki for this.
+ *
+ * @returns {Promise<boolean>} true, because the Maneuver was declared and paid for even
+ *                             though it has not happened
+ */
+async function holdManeuver(actor, maneuver, held, actionsSpent) {
+  const cost = actionCostOf(maneuver, actionsSpent);
+
+  // The Triggered Maneuver's own card: its name, its Exploitable line, and a line saying
+  // what is being held and on what.
+  const card = await postManeuver(actor, held.modifier, {
+    note: `Holding ${maneuver.name} - ${held.note || "no trigger stated"}`
+  });
+
+  await actor.update({
+    "system.delayed": {
+      itemId: maneuver.itemId ?? "",
+      maneuverId: maneuver.id ?? "",
+      name: maneuver.name,
+      trigger: held.note ?? "",
+      actions: cost.amount,
+      actionKind: cost.kind,
+      messageId: card?.id ?? ""
+    }
+  });
+
+  // Offered on that card, to this character, free. One offer, taken once - which is what
+  // the offer machinery already enforces.
+  if (card) {
+    offerDelayed(card, actor, maneuver, held.note ?? "");
+  }
+
+  return true;
+}
+
+/**
+ * Whether this character is holding a Maneuver back, as the sheet wants to say it.
+ *
+ * Read rather than worked out: the trigger is in the player's own words and the Actions
+ * are what they actually paid, and neither can be derived from anything else.
+ */
+export function delayedManeuver(actor) {
+  const held = actor.system.delayed;
+  if (!held?.itemId && !held?.maneuverId) return null;
+  return {
+    ...held,
+    // Said on the sheet, since a holding with no trigger written on it is one nobody can
+    // rule on.
+    trigger: held.trigger || "no trigger stated"
+  };
+}
+
+/**
+ * Let go of what was being held, without using it.
+ *
+ * Two things end a holding early: the start of your next turn, which is where the entry
+ * puts it, and an Exploit provoked by the holding taking Damage off you.
+ */
+export async function dropDelayed(actor) {
+  if (!delayedManeuver(actor)) return false;
+  await actor.update({
+    "system.delayed": {
+      itemId: "", maneuverId: "", name: "", trigger: "", actions: 0,
+      actionKind: "standard", messageId: ""
+    }
+  });
+  return true;
+}
+
 /**
  * How far this Movement goes, and whether it is a Rapid one.
  *
@@ -909,6 +991,7 @@ export function definitionOf(item) {
     damageCategoryShift: item.system.damageCategoryShift ?? 0,
     strikePerTier: item.system.strikePerTier ?? 0,
     asks: item.system.asks ?? "",
+    delays: item.system.delays,
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -1199,6 +1282,16 @@ export async function useManeuver(actor, maneuver) {
   const modifiers = await askModifiers(actor, maneuver);
   if (!modifiers) return false;
 
+  // One Maneuver held at a time: the character has one place to keep it, and a second
+  // holding would quietly throw the first away.
+  const held = modifiers.find(entry => entry.modifier.delays);
+  if (held && delayedManeuver(actor)) {
+    ui.notifications.warn(
+      `${actor.name} is already holding ${actor.system.delayed.name}. Use it or let their `
+      + "turn come round before holding another.");
+    return false;
+  }
+
   // A Movement's price is what was chosen rather than what the file lists: "N/A", until
   // you decide to go faster. Everything else pays what its Profile and its effects say.
   const price = crossing
@@ -1215,6 +1308,11 @@ export async function useManeuver(actor, maneuver) {
 
   await payActions(actor, maneuver, actionsSpent);
   await recordManeuverUse(actor, maneuver);
+
+  // "Delay its use but pay the Action Cost and KP Cost immediately." Everything that
+  // costs has been paid by here and nothing below it has happened yet, which is exactly
+  // where a held Maneuver stops: no script, no Profile spent, no card of its own.
+  if (held) return holdManeuver(actor, maneuver, held, actionsSpent);
   // A Signature Technique thrown through its Maneuver spends a use of both, where it has
   // one of its own: the Maneuver's limit is across every Technique, and the Technique's
   // is on that Technique.
@@ -1537,6 +1635,7 @@ export function maneuverItemFrom(definition) {
       damageCategoryShift: definition.damageCategoryShift ?? 0,
       strikePerTier: definition.strikePerTier ?? 0,
       asks: definition.asks ?? "",
+      delays: Boolean(definition.delays),
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),

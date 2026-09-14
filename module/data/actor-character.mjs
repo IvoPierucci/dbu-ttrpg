@@ -850,6 +850,36 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // it, because the Energy Charge Maneuver is used, ends, and is used again before
     // the attack it is feeding is ever thrown. So the declaration is kept here and the
     // charges ride along with it until the attack collects them.
+    /**
+     * A Maneuver held back by the Triggered Maneuver: paid for, not used, and waiting on
+     * a trigger somebody at the table will call.
+     *
+     * Kept on the character rather than on the card because it is the character who is
+     * holding it - it has to lapse at the start of their next turn whatever became of the
+     * card, and the sheet has to be able to say they are holding something.
+     */
+    schema.delayed = new fields.SchemaField({
+      /** The Item held, which is what is finally used. Empty when nothing is held. */
+      itemId: new fields.StringField({ required: true, blank: true, initial: "" }),
+      maneuverId: new fields.StringField({ required: true, blank: true, initial: "" }),
+      name: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
+       * The trigger, in the player's own words. "You may speak with your ARC to make any
+       * kind of trigger" - so it is text rather than one of a list, and nothing watches
+       * for it: whoever is at the table says when it happened.
+       */
+      trigger: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
+       * What was paid. Only the Actions come back, and only when an Exploit provoked by
+       * the holding takes Damage off you - "you gain a number of Counter Actions equal to
+       * the Action Cost spent", which says nothing about the Ki Points.
+       */
+      actions: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      actionKind: new fields.StringField({ required: true, blank: true, initial: "standard" }),
+      /** The card that announced the holding, so an Exploit can be traced back to it. */
+      messageId: new fields.StringField({ required: true, blank: true, initial: "" })
+    }, { required: true });
+
     schema.charging = new fields.SchemaField({
       /** The Attacking Maneuver that was declared, by its id. Empty when not charging. */
       maneuverId: new fields.StringField({ required: true, blank: true, initial: "" }),
