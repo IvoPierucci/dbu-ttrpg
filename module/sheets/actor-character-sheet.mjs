@@ -15,7 +15,7 @@ import {
 } from "../conditions.mjs";
 import { actionsLeft, isTheirTurn, newRoundFor, spendActions } from "../combat.mjs";
 import { whyNotAnotherInstant } from "../maneuvers.mjs";
-import { baseDieLine, extraDiceLine, partLine, noteLine, floorLine,
+import { baseDieLine, breakdownTable, extraDiceLine, partLine, noteLine, floorLine,
          fromOutcome } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
@@ -55,6 +55,124 @@ import {
  * DBU TTRPG character sheet, built on the modern ApplicationV2 / ActorSheetV2
  * API (recommended approach as of Foundry v13+, required going forward in v14+).
  */
+
+/**
+ * What one Slot contribution is called, and which way it points.
+ *
+ * The rules name these operations rather than writing them as arithmetic - "reduce your
+ * Soak Value by 2(bT)", "the Dice Score of the Wound Roll is halved" - so each row says
+ * the operation and lets the number speak for itself.
+ */
+function contributionLine(part) {
+  const value = Number(part.value) || 0;
+  const label = part.source || "an effect";
+
+  switch (part.op) {
+    case "multiply":
+      return { ...partLine({ label, value: 0, rank: "negative" }),
+        written: `x${value}`, shown: `x${value}` };
+    case "set":
+      return { ...partLine({ label, value, rank: "positive" }),
+        written: `set ${value}`, shown: `= ${value}` };
+    case "min":
+      return { ...partLine({ label, value, rank: "positive" }),
+        written: `at least ${value}`, shown: `>= ${value}` };
+    case "max":
+      return { ...partLine({ label, value, rank: "negative" }),
+        written: `at most ${value}`, shown: `<= ${value}` };
+    default:
+      return partLine({ label, value });
+  }
+}
+
+/**
+ * One derived value's workings, as the table a roll's hover uses.
+ *
+ * `key` may be a chain, for a value that went through more than one Slot on its way -
+ * the Soak Value is `soakValue` and then `soakValue.external`, one for what the character
+ * has and one for what anybody else did to it. The base and its ingredients come from the
+ * first; every Slot's contributions follow in the order they were applied; the total is
+ * the last one's.
+ *
+ * `extra` is for what the sheet cannot fold into the number: anything applied when the
+ * dice come out rather than when the character is derived. Those arrive as notes, which
+ * sit below the total rather than inside the sum.
+ *
+ * `total` overrides the answer, for the values clamped once more outside every Slot. A
+ * table whose answer differs from the number it is attached to is worse than no table.
+ */
+function workingsTable(system, key, { extra = [], total = null } = {}) {
+  const keys = Array.isArray(key) ? key : [key];
+  const steps = keys.map(one => system.effects?.workings?.[one]).filter(Boolean);
+  if (!steps.length) return "";
+
+  const lines = [];
+  const first = steps[0];
+
+  // The base by its ingredients where the data model named them, and as one number where
+  // it did not. A part worth nothing is left out: "Size 0" is a row saying only that Size
+  // did not apply.
+  const named = (first.parts ?? []).filter(part => Number(part.value) !== 0);
+  if (named.length) for (const part of named) lines.push(partLine({ label: part.label, value: part.value }));
+  else lines.push(partLine({ label: "Base", value: first.base }));
+
+  for (const step of steps) {
+    for (const part of step.contributions ?? []) lines.push(contributionLine(part));
+
+    if ((step.floored !== null) && (step.floored !== undefined)) {
+      lines.push(floorLine(step.base, step.floored, "nothing goes below zero"));
+    }
+  }
+
+  for (const note of extra) if (note) lines.push(noteLine(note));
+
+  return breakdownTable(lines, total ?? steps[steps.length - 1].value);
+}
+
+/**
+ * Everything a Combat Roll picks up between the sheet and the dice.
+ *
+ * None of it is in the number above, and none of it can be: Diminishing Offense counts
+ * the attacks made this Combat Round, the Health Threshold penalty follows the Life
+ * Points, and the Muscle Penalty follows the Super Stacks held right now. All three are
+ * true of a roll rather than of a character, so they are said rather than folded in - the
+ * number on the sheet stays the one the rules call the Strike Roll.
+ */
+function atRollTime(system, which) {
+  const notes = [];
+
+  if (which === "strike") {
+    const { stacks = 0, penalty = 0 } = system.diminishing?.offense ?? {};
+    if (penalty) notes.push(`-${penalty} Diminishing Offense, from ${stacks} stack(s) this round`);
+  }
+  if (which === "dodge") {
+    const { penalty = 0 } = system.diminishing?.defense ?? {};
+    if (penalty) notes.push(`-${penalty} Diminishing Defense, from ${penalty} stack(s) this round`);
+  }
+
+  // On the Strike and the Dodge, not on the Wound: the Muscle Penalty is written against
+  // the rolls you make with your body rather than the damage they do.
+  if ((which === "strike") || (which === "dodge")) {
+    const muscle = system.superStack?.musclePenalty ?? 0;
+    if (muscle) notes.push(`-${muscle} Muscle Penalty, from ${system.superStack.stacks} Super Stack(s)`);
+  }
+
+  // Every Combat Roll, the Wound Roll included. Failed Steadfast Checks, not the
+  // Threshold itself: reaching one costs nothing, and losing the Check it asks for costs
+  // 1(bT) on every Combat Roll from then on.
+  const threshold = system.threshold?.penalty ?? 0;
+  const failures = system.threshold?.failures ?? 0;
+  if (threshold) {
+    notes.push(`-${threshold} from ${failures} failed Steadfast Check${
+      failures === 1 ? "" : "s"} at a Health Threshold`);
+  }
+
+  const extra = system.dice?.extra?.formula ?? "";
+  if (extra) notes.push(`+${extra} Tier of Power Extra Dice, on every Combat Roll`);
+
+  return notes;
+}
+
 export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static DEFAULT_OPTIONS = {
@@ -211,6 +329,63 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+
+  /**
+   * What every value on the sheet is made of, as a table per value.
+   *
+   * Built here rather than in the data model because it is a description for a reader,
+   * not a number anything computes with - and because two of the three things it has to
+   * say are the sheet's own business: which values are worth explaining, and what a
+   * Combat Roll picks up on its way to the dice.
+   *
+   * Keyed by the Slot the value came from, which is the same key the data model filed
+   * its workings under. A value whose key is wrong shows no table rather than somebody
+   * else's - workingsTable returns nothing for a key it has never heard of.
+   */
+  #workings() {
+    const system = this.actor.system;
+    const of = (key, extra = []) => workingsTable(system, key, { extra });
+
+    const tables = {
+      // Aptitudes.
+      might: of("might"),
+      surgency: of("surgency"),
+      // Two Slots: what this character has, then what anybody else did to it. And the
+      // total given outright, because the Soak Value is floored at zero once more after
+      // both of them - `soakShortfall` is what that floor swallowed.
+      soakValue: workingsTable(system, ["soakValue", "soakValue.external"],
+        { total: system.soakValue }),
+      damageReduction: of("damageReduction"),
+      initiative: of("initiative"),
+      haste: of("haste"),
+      awareness: of("awareness"),
+      defenseValue: of("defenseValue"),
+      meleeRange: of("meleeRange"),
+      stressBonus: of("stressBonus"),
+      "life.max": of("life.max"),
+      "ki.max": of("ki.max"),
+
+      // Combat Rolls, each with what it gathers when the dice come out.
+      strike: of("strike", atRollTime(system, "strike")),
+      dodge: of("dodge", atRollTime(system, "dodge")),
+      parry: of("parry", atRollTime(system, "strike"))
+    };
+
+    // A Wound Roll per Foundation: one Slot, three values, three tables.
+    for (const key of Object.keys(DBUCharacterData.FOUNDATIONS)) {
+      tables[`wound.${key}`] = of(`wound.${key}`, atRollTime(system, "wound"));
+    }
+
+    for (const key of Object.keys(system.attributes)) tables[`${key}.mod`] = of(`${key}.mod`);
+    for (const key of Object.keys(system.skills)) {
+      tables[`skill.${key}`] = of(`skill.${key}`);
+      tables[`skill.${key}.bonus`] = of(`skill.${key}.bonus`);
+    }
+    for (const key of Object.keys(system.savingThrows)) tables[`save.${key}`] = of(`save.${key}`);
+
+    return tables;
+  }
+
   /** @override */
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
@@ -235,7 +410,27 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Wound is per Foundation, so the labels come from the same config the values do.
     context.woundRolls = Object.entries(DBUCharacterData.FOUNDATIONS).map(([key, foundation]) => ({
       label: foundation.label,
-      value: this.actor.system.combat.wound[key]
+      value: this.actor.system.combat.wound[key],
+      workings: workingsTable(this.actor.system, `wound.${key}`,
+        { extra: atRollTime(this.actor.system, "wound") })
+    }));
+
+    // What each value is made of, for the hover on it.
+    context.workings = this.#workings();
+
+    // Attributes and Saving Throws as rows rather than as the raw objects: each needs
+    // the table for its own key, and a template cannot build "agility" + ".mod".
+    context.attributeCards = Object.entries(this.actor.system.attributes).map(([key, attribute]) => ({
+      key,
+      mod: attribute.mod,
+      bonus: attribute.bonus,
+      workings: context.workings[`${key}.mod`]
+    }));
+
+    context.saves = Object.entries(this.actor.system.savingThrows).map(([key, save]) => ({
+      key,
+      ...save,
+      workings: context.workings[`save.${key}`]
     }));
 
     context.combatEditMode = this.#combatEditMode;
@@ -310,7 +505,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       value: capacity.spent,
       max: capacity.max
     });
-    context.skillGroups = this._prepareSkillGroups();
+    context.skillGroups = this._prepareSkillGroups(context.workings);
     context.maneuverGroups = this._prepareManeuverGroups();
     context.racialSkillRanks = this._prepareRacialSkillRanks();
     context.racialAttributeChoices = this._prepareRacialAttributeChoices();
@@ -540,8 +735,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * Attributes themselves are listed. Force and Tenacity govern none, so they are
    * left out rather than shown empty.
    */
-  _prepareSkillGroups() {
-    const skills = Object.values(this.actor.system.skills);
+  _prepareSkillGroups(workings = {}) {
+    // Each Skill carries the table for its own roll. The roll, not the Bonus: what the
+    // sheet shows is what the button rolls, and the Bonus is a row inside it.
+    const skills = Object.values(this.actor.system.skills)
+      .map(skill => ({ ...skill, workings: workings[`skill.${skill.key}`] ?? "" }));
     return Object.keys(this.actor.system.attributes)
       .map(attribute => ({
         attribute,

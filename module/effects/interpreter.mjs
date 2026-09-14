@@ -229,6 +229,14 @@ function resolveNumber(entries, scope) {
   const conflicting = entries.filter(e => CONFLICTING.includes(e.op));
 
   return {
+    // Who did what, in the order it was gathered, so a finished number can be taken
+    // apart again. The totals below are what the arithmetic reads; this is what a
+    // reader asking "where did the 14 come from" reads, and it costs one array.
+    //
+    // Which of these actually bit is not decided here - a `set` that lost on Priority
+    // is still a contribution somebody made, and saying so is more use than silently
+    // dropping it.
+    parts: entries.map(e => ({ op: e.op, value: e.value, source: e.source ?? "" })),
     add: entries.filter(e => e.op === "add").reduce((total, e) => total + e.value, 0),
     // Multiplications are kept apart rather than folded in, because they have to land
     // on the finished value: "when an effect multiplies or divides a value, that is

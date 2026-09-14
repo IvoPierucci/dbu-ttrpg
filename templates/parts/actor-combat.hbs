@@ -159,13 +159,19 @@
       <span class="panel-note">Rolled as 1d10{{#if system.dice.extra.formula}} + {{system.dice.extra.formula}}{{/if}} + the value</span>
     </h3>
     <div class="stat-grid">
-      <div class="stat" data-tooltip="Haste + Awareness"><em>Strike</em><span>{{system.combat.strike}}</span></div>
-      <div class="stat" data-tooltip="Defense Value"><em>Dodge</em><span>{{system.combat.dodge}}</span></div>
+      {{! Each of these says what it is made of, and what it will pick up on the way to
+          the dice - Diminishing Offense, a Health Threshold, the Extra Dice - none of
+          which is in the number, because none of it is true of a character rather than
+          of a roll. }}
+      <div class="stat"><em>Strike</em>
+        <span data-tooltip-html="{{workings.strike}}">{{system.combat.strike}}</span></div>
+      <div class="stat"><em>Dodge</em>
+        <span data-tooltip-html="{{workings.dodge}}">{{system.combat.dodge}}</span></div>
       {{! Wound uses the Damage Attribute, which depends on the attack's Foundation. }}
       {{#each woundRolls as |wound|}}
-      <div class="stat" data-tooltip="Damage Attribute for {{wound.label}} attacks">
+      <div class="stat">
         <em>Wound &middot; {{wound.label}}</em>
-        <span>{{wound.value}}</span>
+        <span data-tooltip-html="{{wound.workings}}">{{wound.value}}</span>
       </div>
       {{/each}}
     </div>

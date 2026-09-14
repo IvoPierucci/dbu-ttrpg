@@ -73,9 +73,48 @@ function slot(data, key) {
  * Undying letting Life Points go negative is one - and are opted into here rather than
  * being the default.
  */
-function withEffects(data, key, base, { min = 0 } = {}) {
+function withEffects(data, key, base, { min = 0, parts = null, as = "" } = {}) {
   const value = applySlot(data.effects?.slots, key, base);
-  return (min === null) ? value : Math.max(min, value);
+  const floored = (min === null) ? value : Math.max(min, value);
+
+  // Filed under the Slot unless the caller says otherwise. One Slot can make several
+  // values - the Wound Roll is three, one per Foundation - and filed under the Slot they
+  // would overwrite one another, leaving the sheet showing the last one's workings
+  // against all three numbers.
+  recordWorkings(data, as || key, { base, parts, raw: value, value: floored, min });
+  return floored;
+}
+
+/**
+ * What a value is made of, kept beside the value.
+ *
+ * Two halves, and only one of them can be worked out here. What effects did is in the
+ * Slot - every contribution arrives with the name of the effect that made it - and what
+ * the base is made of is an expression the caller wrote, which is why a caller that has
+ * ingredients worth naming passes them in. One that does not says "Base", which is the
+ * honest answer for a number the rules state outright.
+ *
+ * Written into the effects bag, which is rebuilt from scratch on every pass, so this can
+ * never persist onto the document: it is a description of one derivation, not data.
+ */
+function recordWorkings(data, key, { base, parts, raw, value, min }) {
+  if (!data.effects) return;
+  data.effects.workings ??= {};
+
+  const slot = data.effects.slots?.[key];
+  const contributions = Array.isArray(slot?.parts) ? slot.parts : [];
+
+  data.effects.workings[key] = {
+    base,
+    // Named ingredients where the caller gave them, and nothing invented where it did
+    // not: a base with no parts is one number and says so.
+    parts: Array.isArray(parts) ? parts.filter(part => part && part.label) : [],
+    contributions,
+    // Where a floor stopped it. Only worth a line when it actually bit - a value that
+    // was never going to go below zero has nothing to explain.
+    floored: (min !== null) && (raw < min) ? min : null,
+    value
+  };
 }
 
 /**
@@ -1134,7 +1173,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Everything effects contribute lands in a bag rebuilt from scratch on every pass,
     // never in the stored fields. Those stay as the GM's own manual overrides, and
     // keeping them apart means a stray update can never persist a transient bonus.
-    this.effects = { slots: {}, active: [], errors: [], programs: [] };
+    this.effects = { slots: {}, active: [], errors: [], programs: [], workings: {} };
     // Built after the bag exists: the report callback writes into it, and calling
     // programsFor inside the assignment would fire that callback before there was
     // anywhere for it to write.
@@ -1215,7 +1254,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     for (const key of Object.keys(atts)) {
       // Modifier defaults to the Score, adjusted by any Bonus from effects/Transformations.
-      atts[key].mod = withEffects(this, `${key}.mod`, atts[key].score + atts[key].bonus);
+      atts[key].mod = withEffects(this, `${key}.mod`, atts[key].score + atts[key].bonus, {
+        parts: [
+          { label: "Score", value: atts[key].score },
+          { label: "Bonus", value: atts[key].bonus }
+        ]
+      });
     }
 
     // --- Skills ---
@@ -1247,7 +1291,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // it. That last step had been missing: the Slot existed and was written by two
         // Conditions, and nothing here ever read it.
         bonus: withEffects(this, `skill.${key}.bonus`,
-          atts[skill.attribute].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment),
+          atts[skill.attribute].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment, {
+            parts: [
+              { label: `${skill.attribute.charAt(0).toUpperCase()}${skill.attribute.slice(1)} Score`,
+                value: atts[skill.attribute].score },
+              { label: `${ranks} Rank${ranks === 1 ? "" : "s"}`,
+                value: DBUCharacterData.SKILL_RANK_BONUS * ranks },
+              { label: "Size", value: sizeAdjustment }
+            ]
+          }),
         // What is rolled, filled in after the last phase: `skill.<key>` is a LATE
         // Slot and Skills are settled before it runs. Starts as the Bonus, since
         // that is what it is a modification of.
@@ -1303,7 +1355,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     };
 
     // Haste: 1/2 Agility Modifier, added to Strike Rolls.
-    this.haste = withEffects(this, "haste", Math.floor(atts.agility.mod / 2));
+    this.haste = withEffects(this, "haste", Math.floor(atts.agility.mod / 2), {
+      parts: [{ label: "Agility Modifier / 2", value: Math.floor(atts.agility.mod / 2) }]
+    });
 
     // Melee Range, counted in Squares *beyond* the ones you are touching: 0 reaches
     // everything adjacent, which is what Melee Range means for most characters, and
@@ -1323,7 +1377,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     };
 
     // Initiative bonus: 1/2 Agility Score.
-    this.initiativeBonus = withEffects(this, "initiative", Math.floor(atts.agility.score / 2));
+    this.initiativeBonus = withEffects(this, "initiative", Math.floor(atts.agility.score / 2), {
+      parts: [{ label: "Agility Score / 2", value: Math.floor(atts.agility.score / 2) }]
+    });
 
     // --- Super Stacks ---
     // Extreme muscle, and it cuts both ways: it slows you down, it makes you harder to
@@ -1401,7 +1457,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // it, so that anything multiplying your Soak Value multiplies this with it, which
     // is what Calculation Priority asks of a multiplier on a finished value.
     const beforeFloor = withEffects(this, "soakValue.external",
-      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk)
+      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk, {
+        parts: [
+          { label: "Own Soak", value: ownSoak },
+          { label: "Solid Bulk", value: this.superStack.solidBulk }
+        ]
+      })
         + this.externalModifiers.soak,
       { min: null });
 
@@ -1415,10 +1476,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.damageReduction = Math.max(0, withEffects(this, "damageReduction", 0));
 
     // Surgency: increases the Life/Ki Points regained through a Surge.
-    this.surgency = withEffects(this, "surgency", atts.force.mod);
+    this.surgency = withEffects(this, "surgency", atts.force.mod, {
+      parts: [{ label: "Force Modifier", value: atts.force.mod }]
+    });
 
     // Awareness: Insight Modifier, added to Strike Rolls.
-    this.awareness = withEffects(this, "awareness", atts.insight.mod);
+    this.awareness = withEffects(this, "awareness", atts.insight.mod, {
+      parts: [{ label: "Insight Modifier", value: atts.insight.mod }]
+    });
 
     // --- Dice ---
     // Extra Dice ride alongside the Base Die and grow with the Tier of Power. The
@@ -1561,7 +1626,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // Gifted Student raises "the Dice Score of your Skill Checks", which is the roll
       // rather than the Skill Bonus - so it rides here and not up in the Bonus, and
       // Blinded halving Perception halves the Bonus without halving this.
-      entry.roll = withEffects(this, `skill.${key}`, entry.bonus + this.giftedStudent.skillCheck);
+      entry.roll = withEffects(this, `skill.${key}`, entry.bonus + this.giftedStudent.skillCheck, {
+        parts: [
+          { label: "Skill Bonus", value: entry.bonus },
+          { label: "Gifted Student", value: this.giftedStudent.skillCheck }
+        ]
+      });
     }
 
     this.threshold.penalty = Math.max(0,
@@ -1571,7 +1641,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Steadfast failure takes 1 off it, and Determination adds to it - the only rule
     // Personality has.
     this.stressBonus = withEffects(this, "stressBonus",
-      (this.powerLevel + 1) - failures + this.determination);
+      (this.powerLevel + 1) - failures + this.determination, {
+        parts: [
+          { label: "Power Level + 1", value: this.powerLevel + 1 },
+          { label: `${failures} Steadfast failure${failures === 1 ? "" : "s"}`, value: -failures },
+          { label: "Determination", value: this.determination }
+        ]
+      });
 
     // Might: higher of Force / Magic Modifier.
     //
@@ -1580,7 +1656,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // raised every Wound Roll you made, and an effect raising your Wound Rolls raised
     // what you brought to a Might Clash. They are told apart now, and Might is read by
     // the Clash category that asks for it.
-    this.might = withEffects(this, "might", Math.max(atts.force.mod, atts.magic.mod));
+    this.might = withEffects(this, "might", Math.max(atts.force.mod, atts.magic.mod), {
+      parts: [{
+        // Which of the two it is, since "the higher of" is the rule and the answer is
+        // more use than the rule when you are looking at the number.
+        label: (atts.magic.mod > atts.force.mod) ? "Magic Modifier" : "Force Modifier",
+        value: Math.max(atts.force.mod, atts.magic.mod)
+      }]
+    });
 
     // Life Points are the stated exception: Undying lets damage take them below zero,
     // and they are settled against that rather than against the general floor.
@@ -1599,14 +1682,32 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Every Combat Roll picks up what was written to `combatRolls`, which is why that
     // Slot fans out to these three: an effect saying "+1(T) to your Combat Rolls" has to
     // show in the Strike on the sheet, not wait to be remembered at the table.
+    // Worked out before the block, because two of its entries are the same number: a
+    // Parry rolls the Strike value. Computing it inside the block would record the Strike
+    // Slot's workings twice, and the second time as the Parry's base. A local rather than
+    // a field - the same number under two names is one name too many.
+    const combatStrike = withEffects(this, "strike", this.haste + this.awareness, {
+      parts: [
+        { label: "Haste", value: this.haste },
+        { label: "Awareness", value: this.awareness }
+      ]
+    });
+
     this.combat = {
-      strike: withEffects(this, "strike", this.haste + this.awareness),
+      strike: combatStrike,
       // The whole Dodge Roll. Its Defense Value component stays reachable on its own,
       // since that is the part an effect can halve.
-      dodge: withEffects(this, "dodge", this.defenseValue + this.rollModifiers.dodge),
+      dodge: withEffects(this, "dodge", this.defenseValue + this.rollModifiers.dodge, {
+        parts: [
+          { label: "Defense Value", value: this.defenseValue },
+          { label: "Dodge modifier", value: this.rollModifiers.dodge }
+        ]
+      }),
       // A Parry rolls the Strike value, so it takes Strike's effects and adds its own -
       // which exist for effects that only apply when Strike is rolled defensively.
-      parry: withEffects(this, "parry", withEffects(this, "strike", this.haste + this.awareness)),
+      parry: withEffects(this, "parry", combatStrike, {
+        parts: [{ label: "Strike Roll", value: combatStrike }]
+      }),
       // The Wound Roll is the Damage Attribute the Foundation names, and that alone.
       // It used to carry Might as well, which counted the same Modifier twice for
       // anyone whose Might came from the attribute they attack with - Force for a
@@ -1616,7 +1717,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       wound: Object.fromEntries(
         Object.entries(DBUCharacterData.FOUNDATIONS)
           .map(([key, foundation]) =>
-            [key, withEffects(this, "wound", atts[foundation.attribute].mod)])
+            [key, withEffects(this, "wound", atts[foundation.attribute].mod, {
+              as: `wound.${key}`,
+              parts: [{
+                // The Damage Attribute this Foundation names, by name: a Wound Roll of
+                // 7 says nothing about which Attribute it came from, and that is the
+                // first thing anybody asks of it.
+                label: `${foundation.attribute.charAt(0).toUpperCase()}`
+                  + `${foundation.attribute.slice(1)} Modifier`,
+                value: atts[foundation.attribute].mod
+              }]
+            })])
       )
     };
 
