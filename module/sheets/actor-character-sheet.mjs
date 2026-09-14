@@ -297,6 +297,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     tabs: { template: "systems/dbu-ttrpg/templates/parts/sheet-tabs.hbs" },
     main: { template: "systems/dbu-ttrpg/templates/parts/actor-main.hbs", scrollable: [""] },
     combat: { template: "systems/dbu-ttrpg/templates/parts/actor-combat.hbs", scrollable: [""] },
+    maneuvers: {
+      template: "systems/dbu-ttrpg/templates/parts/actor-maneuvers.hbs",
+      scrollable: [""]
+    },
     traits: { template: "systems/dbu-ttrpg/templates/parts/actor-traits.hbs", scrollable: [""] },
     progression: {
       template: "systems/dbu-ttrpg/templates/parts/actor-progression.hbs",
@@ -385,6 +389,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static TABS = {
     main: { id: "main", group: "primary", label: "Main" },
     combat: { id: "combat", group: "primary", label: "Combat" },
+    // Beside the Combat tab rather than inside it. Four lists of rows that each open to
+    // a published entry is most of a page on its own, and it was the part of that tab a
+    // player scrolled past everything else to reach.
+    maneuvers: { id: "maneuvers", group: "primary", label: "Maneuvers" },
     traits: { id: "traits", group: "primary", label: "Traits" },
     progression: { id: "progression", group: "primary", label: "Progression" },
     biography: { id: "biography", group: "primary", label: "Biography" }
