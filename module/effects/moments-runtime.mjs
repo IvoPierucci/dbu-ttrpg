@@ -14,6 +14,7 @@
 
 import { reactiveFor } from "./registry.mjs";
 import { collectReactive, applySlot } from "./interpreter.mjs";
+import { resourceLimits } from "./traits.mjs";
 import { getMoment } from "./moments.mjs";
 
 /**
@@ -139,9 +140,67 @@ async function runPass(actor, moment, definition, entries, context, mode) {
   return { slots, fired: spent.length };
 }
 
+/**
+ * A Slot named "<name>.stacks" is how an effect raises or lowers a Resource.
+ *
+ * The only Slot pattern that ends that way, and the only thing that ever put a Resource
+ * on a character - which it did not do, until it did.
+ */
+const RESOURCE_STACKS = /^(\w+)\.stacks$/;
+
+/**
+ * What the Moment did to the Resources, as one update to the bag that holds them.
+ *
+ * Written whole with a ForcedReplacement, because that is the only way a removal sticks
+ * on an ObjectField: merged in the ordinary way, a key that has gone is a key that was
+ * simply not mentioned, and it stays.
+ *
+ * A Resource at nothing is removed rather than left at zero. `hasResource` asks whether
+ * the character has one at all, and a duration takes one away by deleting its key - so a
+ * zero left lying about is a Resource that is still there as far as both are concerned.
+ */
+function resourceUpdates(actor, slots) {
+  const names = Object.keys(slots)
+    .map(key => RESOURCE_STACKS.exec(key))
+    .filter(Boolean)
+    .map(match => match[1]);
+  if (!names.length) return null;
+
+  const limits = resourceLimits();
+  const held = { ...(actor.system.resources ?? {}) };
+  let changed = false;
+
+  for (const name of names) {
+    const current = held[name]?.stacks ?? 0;
+    // The declared ceiling, or none at all where the Trait declares no maximum: a
+    // Resource nobody bounded is unbounded, not bounded at zero.
+    const max = limits[name] ?? held[name]?.max ?? 0;
+    const raw = Math.round(applySlot(slots, `${name}.stacks`, current));
+    const stacks = Math.max(0, max ? Math.min(raw, max) : raw);
+
+    if (stacks === current) continue;
+    changed = true;
+
+    if (stacks > 0) held[name] = { stacks, max };
+    else delete held[name];
+  }
+
+  return changed ? held : null;
+}
+
 /** Put what the Moment changed onto the character. */
 async function writeStateful(actor, slots) {
   const updates = {};
+
+  // Resources first, since the rest of this is one update and this is part of it.
+  const resources = resourceUpdates(actor, slots);
+  if (resources) {
+    // Reached dynamically, like every other call from here into conditions.mjs: that
+    // module imports fireMoment from this one, and a static import back closes the
+    // circle.
+    const { replaceObject } = await import("../conditions.mjs");
+    updates["system.resources"] = replaceObject(resources);
+  }
 
   for (const [key, { path, read, write }] of Object.entries(STATEFUL)) {
     if (!(key in slots)) continue;

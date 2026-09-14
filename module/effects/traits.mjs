@@ -64,6 +64,25 @@ export function getTrait(id) {
   return traits.get(id);
 }
 
+/**
+ * The Resources the library declares, and the most of each that may be held.
+ *
+ * A Trait declares one in its header - `resource: recovery`, `resourceMax: 3` - and the
+ * effects that raise it name it as a Slot. This is what joins the two: the Slot says how
+ * many, the header says how many are allowed, and without the header a Resource has no
+ * ceiling at all rather than a ceiling of zero.
+ *
+ * @returns {Record<string, number>} resource name to its maximum, 0 meaning no maximum
+ */
+export function resourceLimits() {
+  const limits = {};
+  for (const trait of traits.values()) {
+    if (!trait.resource) continue;
+    limits[String(trait.resource).toLowerCase()] = Math.max(0, Number(trait.resourceMax) || 0);
+  }
+  return limits;
+}
+
 /** Every Trait of one kind, in name order. Optionally narrowed to one owner. */
 export function traitsOfKind(kind, owner = null) {
   return [...traits.values()]
