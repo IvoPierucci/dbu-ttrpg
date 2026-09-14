@@ -1,0 +1,69 @@
+id: sudden-stop
+name: Sudden Stop
+type: counter
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+suddenStop: true
+source: Core Rule
+description: >
+  Dig in when somebody sends you flying. Cut up to half your Might off the Squares
+  you are moved, halve any Collision Damage, and if nothing was hit, take a
+  Movement Maneuver out of sequence.
+text: >
+  Sudden Stop Maneuver: By hitting the ground, stabbing your Ki into the floor,
+  using your flight to suddenly stop as if you hit an invisible wall, or any other
+  method, you stop your movement.
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter
+  –KP Cost: N/A
+  –Effect: If you are moved by the effect of another Character, you may use this
+  Maneuver to reduce the number of Squares you move by a number of Squares up to
+  1/2 of your Might. Additionally, halve any Collision damage you take as a result
+  of this movement and you may choose to ignore the effects of any Feature
+  Qualities or Environment Qualities that affect you for Feature Collision or
+  Ground Collision respectively.
+
+  If you end this movement without Collision, you may use the Movement Maneuver as
+  an Out-of-Sequence Maneuver.
+
+---
+
+# No script. What this answers is a card - somebody else's Clash, won, with a
+# movement behind it - and a script cannot reach one. `suddenStop: true` hands it to
+# the code, as every Counter Maneuver that does more than pay for itself is handed.
+#
+# "If you are moved by the effect of another Character." In this system that is one
+# shape and not several: every effect that moves somebody opens a Clash carrying a
+# collision - the Launch Maneuver, the Thrust Maneuver's Push Back, the Knockback
+# Advantage - and the Character moved is the Defender of it. So this is offered on
+# any settled Clash whose collision is armed, to the side being thrown, before
+# anybody has said what the collision cost.
+#
+# What it comes to:
+#   - you say how many Squares to cut, up to half your Might rounded down, and the
+#     card says it
+#   - the collision on that card is halved from then on, whoever ends up entering a
+#     number into it. Launching doubles the same number, and the two are settled
+#     together as one multiplier rather than one after the other, so double-then-
+#     halve comes out at what was typed rather than a point short of it
+#   - the Movement Maneuver is offered out of sequence, with its condition named
+#
+# --- What is not built, and why -----------------------------------------------------
+#
+# "You may choose to ignore the effects of any Feature Qualities or Environment
+# Qualities that affect you for Feature Collision or Ground Collision respectively."
+#
+# There are no Feature Qualities or Environment Qualities in this system, and no
+# Feature Collision or Ground Collision either: what a collision costs is a number
+# the table agrees on and the card takes off your Life Points. So there is nothing
+# here for this to switch off. The card says you ignore them, which is the whole of
+# what can honestly be done until those exist, and this is where the other half goes
+# when they do.
+#
+# "If you end this movement without Collision." Whether anything was hit is the
+# table's - the collision is a number somebody types, and not typing one is how a
+# movement that hit nothing looks. So the Movement Maneuver is offered with the
+# condition written on it rather than withheld until a machine can tell: an offer
+# nobody may take is worse than one that says when it may be taken.

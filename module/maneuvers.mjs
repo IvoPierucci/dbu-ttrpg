@@ -1985,6 +1985,7 @@ export async function loadManeuvers() {
     signatureTechnique: Boolean(trait.signatureTechnique),
     thrust: Boolean(trait.thrust),
     blockade: Boolean(trait.blockade),
+    suddenStop: Boolean(trait.suddenStop),
     kiCostPerTier: trait.kiCostPerTier ?? 0,
     // `coerce` splits a header on commas and leaves a single value a string, so
     // `tags: signature` arrived as the word rather than a list of one and every reader

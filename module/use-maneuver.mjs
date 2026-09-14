@@ -604,7 +604,7 @@ function throughSignatureTechnique(door, technique) {
  *
  * @returns {Promise<?{speed: string, rapid: boolean}>} null if it was backed out of
  */
-async function askMovement(actor) {
+export async function askMovement(actor) {
   const tier = Math.max(1, actor.system.tierOfPower ?? 1);
 
   const options = Object.entries(MOVEMENT_SPEEDS).map(([key, speed], index) => {
@@ -653,7 +653,7 @@ async function askMovement(actor) {
  * Written through the same two calls a script would make, so there is one way a Resource
  * is granted and one way it is put on a clock.
  */
-async function takeRapidMovement(actor) {
+export async function takeRapidMovement(actor) {
   const { expiresAt } = await import("./effects/moments-runtime.mjs");
   const held = { ...(actor.system.resources ?? {}) };
   const { replaceObject } = await import("./conditions.mjs");
@@ -704,6 +704,7 @@ export function definitionOf(item) {
     signatureTechnique: item.system.signatureTechnique,
     thrust: item.system.thrust,
     blockade: item.system.blockade,
+    suddenStop: item.system.suddenStop,
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -1305,6 +1306,7 @@ export function maneuverItemFrom(definition) {
       signatureTechnique: Boolean(definition.signatureTechnique),
       thrust: Boolean(definition.thrust),
       blockade: Boolean(definition.blockade),
+      suddenStop: Boolean(definition.suddenStop),
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),

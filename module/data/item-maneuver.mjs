@@ -138,6 +138,15 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       blockade: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * Digs in when somebody else's effect is moving you: played from the card that is
+       * doing the moving, by the Character being moved.
+       *
+       * Every effect in these rules that moves somebody opens a Clash carrying a
+       * collision and the Character moved is its Defender, so that is one shape rather
+       * than a list of Maneuvers to keep up with.
+       */
+      suddenStop: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and

@@ -25,6 +25,7 @@ import {
   interveneOptionCost,
   longRangePenalty,
   maneuverKiCost,
+  movementKiCost,
   movementSquares,
   recordManeuverType,
   whyNotAnotherAbsolute,
@@ -1674,6 +1675,28 @@ function movementOnCard(message) {
   return message?.getFlag?.(SCOPE, MOVEMENT_FLAG) ?? null;
 }
 
+/**
+ * Whether this card is moving that character right now.
+ *
+ * "If you are moved by the effect of another Character." Every effect in these rules
+ * that moves somebody opens a Clash carrying a collision - the Launch Maneuver, the
+ * Thrust Maneuver's Push Back, the Knockback Advantage - and the one being moved is its
+ * Defender. So this is one question rather than a list of Maneuvers to keep up with.
+ *
+ * Only while the movement is still ahead of them: once the collision has been settled
+ * they have already hit whatever they hit, and a Sudden Stop then would be stopping
+ * something that has finished happening.
+ */
+function beingMovedOn(message, actor) {
+  const clash = message?.getFlag?.(SCOPE, CLASH_FLAG);
+  if (!clash?.collision || !clash.result || clash.collisionApplied) return null;
+  if (clash.defenderUuid !== actor.uuid) return null;
+  // A tie goes to the Defender, so the movement only happens when the challenger took it
+  // outright - which is the same rule that decides whether the collision is offered.
+  if (whoWonClash(clash.result) !== "challenger") return null;
+  return clash;
+}
+
 export async function postManeuver(actor, maneuver,
                                    { asOutOfSequence = false, foundation = null,
                                      rapidMovement = false, spent = null } = {}) {
@@ -1702,10 +1725,13 @@ export async function postManeuver(actor, maneuver,
         // be answered by a card that already knows what was paid for.
         ...(rapidMovement ? { [RAPID_FLAG]: { actorUuid: actor.uuid } } : {}),
         // A Movement is the one Maneuver somebody else can answer without being aimed at,
-        // so its card says who moved and what it took. Out of sequence it says nothing:
-        // an Out-of-Sequence Movement is not "uses the Movement Maneuver" on their turn,
-        // which is what the Blockade is written against.
-        ...((maneuver.movement && !asOutOfSequence)
+        // so its card says who moved and what it took.
+        //
+        // Out of sequence too. "If a Character within range of your Normal Speed uses the
+        // Movement Maneuver" is the whole of the Blockade's condition, and it says nothing
+        // about whose turn it is - an Out-of-Sequence Movement is somebody using the
+        // Movement Maneuver, and standing in the way of one is the same act.
+        ...((maneuver.movement)
           ? {
               [MOVEMENT_FLAG]: {
                 actorUuid: actor.uuid,
@@ -1875,10 +1901,15 @@ function renderInstantResponses(message, html) {
   const awaiting = Boolean(attack && !attack.result
     && attackTargets(attack).some(target => fromUuidSync(target.uuid)?.isOwner));
 
+  // Being thrown across the field is a third reason to want the dialog, and the card
+  // doing the throwing has neither of the other two: a Knockback's Might Clash is not a
+  // Maneuver an Instant can answer, and it is not an attack waiting on a roll.
+  const thrown = ownedCharacters().some(actor => beingMovedOn(message, actor));
+
   // Once every target has answered, there is nothing left to answer with: what follows
   // belongs to the Wound Roll and to being hit, which have their own stages.
   if (attack?.result) return;
-  if (!respondable && !awaiting) return;
+  if (!respondable && !awaiting && !thrown) return;
 
   const container = html.querySelector(".message-content") ?? html;
   const responses = message.getFlag(SCOPE, RESPONSES_FLAG) ?? [];
@@ -2285,12 +2316,26 @@ async function respondDialog(message, respondable) {
     const canBlock = Boolean(movement) && !movement.stopped
       && (movement.actorUuid !== actor.uuid);
 
+    // "If you are moved by the effect of another Character." Judged off the card that is
+    // moving them, and only once: a movement is stopped suddenly once however hard you
+    // dig in.
+    const moved = beingMovedOn(message, actor);
+    const canStop = Boolean(moved) && !moved.suddenStop;
+
     const counters = counterManeuvers().map(maneuver => {
       // A Counter Maneuver answers an Attacking Maneuver aimed at you, so a character
       // who is not the target is shown it but cannot take it.
       let blocked = !unresolved;
       let reason = blocked
         ? "only the target of an attack may answer it, and only before it resolves" : "";
+
+      // The Sudden Stop answers being moved, which is a third thing again.
+      if (maneuver.suddenStop) {
+        blocked = !canStop;
+        reason = moved
+          ? "you have already dug in against this one"
+          : "only while somebody else's effect is moving you";
+      }
 
       // The Blockade answers a Movement instead, so it is judged against that and not
       // against being attacked.
@@ -2325,7 +2370,7 @@ async function respondDialog(message, respondable) {
     // Thumb War is answered on its own card, not defended against. With no attack here
     // the whole group is left off rather than shown with everything in it disabled:
     // greying out an option says "not now", and the truth is "not for this".
-    const counterGroup = (attack || canBlock)
+    const counterGroup = (attack || canBlock || canStop)
       ? `<details class="dbu-respond-group">
            <summary>Counter Maneuvers</summary>
            ${counters || `<p class="dbu-respond-note">None.</p>`}
@@ -2611,6 +2656,7 @@ async function playCounter(message, actor, answer, attack) {
   // reached before the guard that says there has to be one.
   const blockade = getManeuver(answer);
   if (blockade?.blockade) return playBlockade(message, actor, blockade);
+  if (blockade?.suddenStop) return playSuddenStop(message, actor, blockade);
 
   if (!attack || attack.result) return;
   // Dodging is not a Maneuver, so it neither costs a Counter Action nor gets you out
@@ -2674,6 +2720,90 @@ async function playBlockade(message, actor, maneuver) {
     saves: ["impulsive"],
     blockade: { messageId: message.id, applied: false }
   });
+}
+
+/**
+ * Dig in against being thrown.
+ *
+ * "Reduce the number of Squares you move by a number of Squares up to 1/2 of your Might."
+ * How many is theirs to say, because the rule says "up to" - somebody may want to keep
+ * most of the distance and only take the edge off the landing.
+ *
+ * What it leaves on the card is the halving, which is read when the collision is finally
+ * entered - by whoever threw them, minutes later. The card is the only thing that will
+ * still know this was answered.
+ */
+async function playSuddenStop(message, actor, maneuver) {
+  const clash = beingMovedOn(message, actor);
+  if (!clash || clash.suddenStop) return;
+
+  // "Up to 1/2 of your Might", rounded down, as every half in these rules is.
+  const most = Math.floor(Math.max(0, actor.system.might ?? 0) / 2);
+
+  const typed = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: maneuver.name },
+    content: `
+      <label class="dbu-wager">
+        <span>Squares cut</span>
+        <input type="number" name="squares" value="${most}" min="0" max="${most}"/>
+        <em>Up to ${most} - half your Might, rounded down. Any Collision Damage from this
+          movement is halved either way, and you ignore any Feature or Environment
+          Qualities that would have applied to it.</em>
+      </label>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Dig in",
+        callback: (event, button, dialog) => {
+          const value = Math.floor(Number(dialog.element.querySelector('input[name="squares"]').value));
+          return Number.isFinite(value) ? Math.min(Math.max(0, value), most) : 0;
+        }
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if (typeof typed !== "number") return;
+
+  // Paid once the number is in, so backing out of the question costs nothing. No Ki -
+  // "KP Cost: N/A" - so the Counter Action is the whole price.
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+
+  // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
+  await recordManeuverType(actor, "counter");
+
+  await requestEdit(message, {
+    type: "clash",
+    clash: {
+      ...clash,
+      suddenStop: { actorUuid: actor.uuid, squares: typed },
+      collision: { ...clash.collision, halves: true, halvedBy: maneuver.name }
+    }
+  });
+
+  await settledNote(message,
+    `${actor.name} digs in${typed ? `, and moves ${typed} Square${typed === 1 ? "" : "s"} `
+      + "fewer" : ""}. Any Collision Damage from this movement is halved, and they ignore `
+    + "any Feature or Environment Qualities that would have applied to it.");
+
+  // "If you end this movement without Collision, you may use the Movement Maneuver as an
+  // Out-of-Sequence Maneuver." Whether anything was hit is the table's, so the offer goes
+  // up with its condition written on it rather than being withheld until a machine can
+  // tell - an offer nobody may take is worse than one that says when it may be taken.
+  if (actor.items.some(item => (item.type === "maneuver") && item.system.movement)) {
+    requestEdit(message, {
+      type: "offer",
+      offer: {
+        actorUuid: actor.uuid,
+        actorName: actor.name,
+        maneuverId: "movement",
+        maneuverName: "Movement",
+        reason: "Sudden Stop - only if that movement ended without a Collision"
+      }
+    });
+  }
 }
 
 /** Take back a response, refunding what it cost to the Actor that played it. */
@@ -3811,8 +3941,22 @@ async function takeOutOfSequence(message, actor, offer) {
     }
   }
 
+  // A Movement's price is a choice rather than a number - Normal Speed for nothing,
+  // Boosted for 3(T), Rapid Movement another 2(T) on top - so it is asked here too.
+  // Without this an Out-of-Sequence Movement was Normal Speed and free, whatever the
+  // player would have paid for.
+  let crossing = null;
+  if (maneuver.movement) {
+    const { askMovement } = await import("./use-maneuver.mjs");
+    crossing = await askMovement(actor);
+    if (!crossing) return;
+  }
+
   // An Out-of-Sequence Maneuver ignores its Action Cost, but not its Ki cost.
-  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, declared, actor))) return;
+  const price = crossing
+    ? movementKiCost(actor, crossing)
+    : maneuverKiCost(maneuver, declared, actor);
+  if (!await spendManeuverCost(actor, maneuver, price)) return;
 
   // An Out-of-Sequence Maneuver counts as having used another kind - unless the thing
   // that offered it was the Instant still holding you, which is what the message id is
@@ -3823,10 +3967,24 @@ async function takeOutOfSequence(message, actor, offer) {
 
   // The Exploit's recursion spreads the offer, so what provoked it has come all this way
   // untouched and goes onto the attack itself.
+  // "Increase your Strike Rolls by 1(T) until the end of your turn." The same grant the
+  // Maneuver makes in sequence: what is paid for is what is had, whichever door it came
+  // through.
+  if (crossing?.rapid) {
+    const { takeRapidMovement } = await import("./use-maneuver.mjs");
+    await takeRapidMovement(actor);
+  }
+
   return declared
     ? postAttack(actor, target, maneuver, declared,
         { asOutOfSequence: true, provokedBy: offer.provokedBy ?? null })
-    : postManeuver(actor, maneuver, { asOutOfSequence: true });
+    : postManeuver(actor, maneuver, {
+        asOutOfSequence: true,
+        rapidMovement: Boolean(crossing?.rapid),
+        // No Action was spent, which is what out of sequence means. The Ki was, and a
+        // Blockade that wins hands it back.
+        spent: { actions: 0, kind: "standard", ki: price }
+      });
 }
 
 /**
@@ -5599,6 +5757,7 @@ async function applyCollisionDamage(message, clash) {
   if (!target || clash.collisionApplied) return;
 
   const doubled = Boolean(clash.collision?.doubles);
+  const halved = Boolean(clash.collision?.halves);
 
   const typed = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
@@ -5610,6 +5769,8 @@ async function applyCollisionDamage(message, clash) {
         <em>Taken straight off ${Handlebars.escapeExpression(target.name)}'s Life Points,
           past their Soak Value and Damage Reduction.${doubled
             ? ` ${Handlebars.escapeExpression(clash.collision.doubledBy)} doubles it.`
+            : ""}${halved
+            ? ` ${Handlebars.escapeExpression(clash.collision.halvedBy)} halves it.`
             : ""}</em>
       </label>`,
     buttons: [
@@ -5628,10 +5789,15 @@ async function applyCollisionDamage(message, clash) {
 
   if (!typed) return;
 
-  const amount = doubled ? typed * 2 : typed;
-  const reason = doubled
-    ? `Collision Damage, doubled by ${clash.collision.doubledBy}`
-    : "Collision Damage";
+  // Both at once rather than one after the other. Launching doubles this and a Sudden
+  // Stop halves it, and rounding between the two would take a point off a number that
+  // the rules leave exactly where it started.
+  const amount = Math.floor(typed * (doubled ? 2 : 1) * (halved ? 0.5 : 1));
+  const changed = [
+    doubled ? `doubled by ${clash.collision.doubledBy}` : "",
+    halved ? `halved by ${clash.collision.halvedBy}` : ""
+  ].filter(Boolean).join(", ");
+  const reason = changed ? `Collision Damage, ${changed}` : "Collision Damage";
 
   await reduceLifePoints(target, amount, { reason });
 
