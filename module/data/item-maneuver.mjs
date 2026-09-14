@@ -147,6 +147,15 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       suddenStop: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * Throws an avoided Energy or Magic attack back: you roll the Strike with their
+       * Profile and they roll the Wound Roll for it.
+       *
+       * Offered rather than used - an Out-of-Sequence Maneuver is a chance something
+       * handed you - so what this marks is a shape the offer machinery knows how to
+       * carry, the way `exploit` marks the Maneuver that gives away a Basic Attack.
+       */
+      reflect: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and

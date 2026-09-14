@@ -705,6 +705,7 @@ export function definitionOf(item) {
     thrust: item.system.thrust,
     blockade: item.system.blockade,
     suddenStop: item.system.suddenStop,
+    reflect: item.system.reflect,
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -1307,6 +1308,7 @@ export function maneuverItemFrom(definition) {
       thrust: Boolean(definition.thrust),
       blockade: Boolean(definition.blockade),
       suddenStop: Boolean(definition.suddenStop),
+      reflect: Boolean(definition.reflect),
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),

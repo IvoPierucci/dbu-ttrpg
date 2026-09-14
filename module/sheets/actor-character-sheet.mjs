@@ -747,7 +747,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         playable: !blocked,
         note: blocked ?? ""
       },
-      { key: "counter", playable: false, note: "Played from the attack they answer, in chat" }
+      { key: "counter", playable: false, note: "Played from the attack they answer, in chat" },
+      // Never played from here, and listed anyway: an Out-of-Sequence Maneuver exists
+      // only as a chance something that just happened handed you, and the row is still
+      // where a player reads what their own Maneuver does.
+      { key: "outOfSequence", playable: false,
+        note: "Played from the card of whatever offered it" }
     ];
 
     return groups
@@ -794,6 +799,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
               this.#playedThrough(maneuver),
               group.playable || this.#playableAlone(maneuver)
                 ? ""
+                : (maneuver.type === "outOfSequence")
+                ? "Played from the card of whatever offers it - nothing takes one from here."
                 : "Played from the attack it answers, in chat."
             ].filter(Boolean),
             // Instant and Counter Maneuvers spend no Standard Action, so what they

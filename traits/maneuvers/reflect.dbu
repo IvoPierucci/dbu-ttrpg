@@ -1,0 +1,69 @@
+id: reflect
+name: Reflect
+type: outOfSequence
+actionCost: 0
+kiCostPerTier: 5
+attacking: true
+requiresTarget: true
+reflect: true
+source: Core Rule
+description: >
+  Turn an Energy or Magic attack around. Offered when a Parry avoids one, or when a
+  Deflect or Distant Deflect wins its Might Clash; you roll Strike with their
+  Profile and they roll the Wound Roll, Ki Wager and Energy Charges and all.
+text: >
+  Reflect Maneuver: Throw back an attack against an opponent!
+  –Maneuver Type: Out-of-Sequence
+  –Action Cost: N/A
+  –KP Cost: 5(T)
+  –Effect: If you avoid an Attacking Maneuver (that did not possess an AoE) due to
+  using the Parry option of the Defend Maneuver or succeed at the Might Clash for
+  the Deflect or Distant Deflect options of the Intervene Maneuver, you may use
+  this Maneuver if the Attacking Maneuver was of the Energy or Magic Foundation.
+  Roll Strike against an Opponent of your choice using the Profile of the initial
+  Attacking Maneuver. If they are hit, the original attacking Opponent rolls the
+  Wound Roll for their initial Attacking Maneuver instead as an Urgent Roll,
+  including any Ki Wagers and Energy Charges included on that Attacking Maneuver.
+  Damage calculation occurs as usual from this point.
+
+---
+
+# No script. An Out-of-Sequence Maneuver is never used from a list: it exists only
+# as a chance something that just happened handed you, and that is the offer
+# machinery rather than anything a script can reach. `reflect: true` hands it to the
+# code, as `exploit` does for the Basic Attack that Maneuver gives away.
+#
+# Where the offer comes from, which is the whole of the "if" in the entry:
+#   - the Parry option of the Defend Maneuver, where the Parry won and the attack
+#     was avoided
+#   - the Deflect and Distant Deflect options of the Intervene Maneuver, where the
+#     Might Clash was won - the two the Intervene file marks `clashes`
+#   - in both cases only when the attack was Energy or Magic and its Profile had no
+#     Area of Effect
+#
+# "An Opponent of your choice" is a target you pick, not the one who threw it: the
+# entry says any Opponent, so the token you have targeted is the one it goes to.
+#
+# --- The half of this that is new ------------------------------------------------
+#
+# "The original attacking Opponent rolls the Wound Roll for their initial Attacking
+# Maneuver instead." One attack, two characters: you roll the Strike and they roll
+# the Wound. Nothing here had ever split those - every attack in the system was one
+# person's from the declaration to the Damage - so an attack now says who owes its
+# Wound Roll where that is not the one who made it, and the button appears on their
+# client rather than on yours.
+#
+# What they roll is their attack rather than a fresh one: their Wound, their Ki
+# Wager, their Energy Charges, their Profile's own additions. So the reflected
+# attack carries those across whole rather than working them out again from the
+# Profile - a Beam's free Energy Charge is on that attack once, and deriving it a
+# second time would hand it to them twice.
+#
+# "As an Urgent Roll", which in this system means a roll that cannot be failed on
+# purpose - the option is closed with the reason beside it, as Compelled closes it.
+#
+# --- What the KP Cost is -----------------------------------------------------------
+#
+# "KP Cost: 5(T)", and nothing else. An attack ordinarily pays its Profile's cost
+# too, and this one does not: the entry prices the Maneuver outright, and the Profile
+# was paid for by whoever threw it the first time.

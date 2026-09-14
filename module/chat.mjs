@@ -3908,10 +3908,25 @@ async function takeOutOfSequence(message, actor, offer) {
   }
 
   let declared = null;
+
+  // A Reflect is declared already: "using the Profile of the initial Attacking Maneuver",
+  // and with that attack's own Ki Wager rather than one of yours. So there is nothing to
+  // ask - the Profile, the Foundation and the wager all came with the offer.
+  const reflecting = (maneuver.reflect && offer.reflect) ? offer.reflect : null;
+  if (reflecting) {
+    declared = {
+      profile: reflecting.profile,
+      foundation: reflecting.foundation,
+      kiWager: reflecting.kiWager ?? 0,
+      advantages: reflecting.advantages ?? [],
+      squaresCharged: reflecting.squaresCharged ?? 0
+    };
+  }
+
   // Opened for an Attacking Maneuver even when it names no Profile: the Ki Wager
   // belongs to the attack rather than to the Profile, and Compelled sets a floor under
   // it that has to be asked for somewhere.
-  if (maneuver.profile || maneuver.attacking) {
+  if (!declared && (maneuver.profile || maneuver.attacking)) {
     declared = await declareAttack(maneuver, DBUCharacterData.FOUNDATIONS, actor);
     if (!declared) return;
 
@@ -3953,9 +3968,12 @@ async function takeOutOfSequence(message, actor, offer) {
   }
 
   // An Out-of-Sequence Maneuver ignores its Action Cost, but not its Ki cost.
+  //
+  // A Reflect pays its own price and not the Profile's: "KP Cost: 5(T)" is the whole of
+  // what the entry asks, and the Profile was paid for by whoever threw it the first time.
   const price = crossing
     ? movementKiCost(actor, crossing)
-    : maneuverKiCost(maneuver, declared, actor);
+    : maneuverKiCost(maneuver, reflecting ? null : declared, actor);
   if (!await spendManeuverCost(actor, maneuver, price)) return;
 
   // An Out-of-Sequence Maneuver counts as having used another kind - unless the thing
@@ -3977,7 +3995,7 @@ async function takeOutOfSequence(message, actor, offer) {
 
   return declared
     ? postAttack(actor, target, maneuver, declared,
-        { asOutOfSequence: true, provokedBy: offer.provokedBy ?? null })
+        { asOutOfSequence: true, provokedBy: offer.provokedBy ?? null, reflecting })
     : postManeuver(actor, maneuver, {
         asOutOfSequence: true,
         rapidMovement: Boolean(crossing?.rapid),
@@ -3995,7 +4013,8 @@ async function takeOutOfSequence(message, actor, offer) {
 export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, charges = 0,
                                    advantages = [], squaresCharged = 0 },
-                                 { asOutOfSequence = false, provokedBy = null } = {}) {
+                                 { asOutOfSequence = false, provokedBy = null,
+                                   reflecting = null } = {}) {
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
   // Strike Roll - the attack after your third is itself the one that suffers.
   //
@@ -4059,7 +4078,12 @@ export async function postAttack(actor, target, maneuver,
           // before anything is clamped. Mega Flare is the first thing to write here:
           // "if the number of Energy Charges applied is 7+, increase the Damage
           // Category by 1 Category."
-          damageCategoryShift: profileCategoryShift(profile, charges),
+          // A reflected attack keeps the steps the original had rather than working them
+          // out again: Mega Flare's is a fact about that attack's Charges, and those are
+          // carried across rather than re-derived.
+          damageCategoryShift: reflecting
+            ? (reflecting.damageCategoryShift ?? 0)
+            : profileCategoryShift(profile, charges),
           kiWager,
           // Energy Charges live on the Maneuver, not the character: they were fed into
           // this attack and are spent with it. Each adds a die to the Wound Roll.
@@ -4068,11 +4092,28 @@ export async function postAttack(actor, target, maneuver,
           // Beam's is added after the ceiling rather than under it: "an Energy Charge
           // that does not count towards your maximum number of Energy Charges". Powered's
           // is an ordinary one and is held to the maximum with the rest.
-          energyCharges: Math.min(
-            charges + (PROFILES[profile].grantsEnergyCharge ?? 0),
-            maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES)
-          ) + (PROFILES[profile].grantsUncappedEnergyCharge ?? 0),
-          signature: (maneuver.tags ?? []).includes("signature"),
+          // "Including any Ki Wagers and Energy Charges included on that Attacking
+          // Maneuver." Taken across whole, because they are already settled: the Profile's
+          // own grants are inside that number, and deriving them again would hand them
+          // out a second time.
+          energyCharges: reflecting
+            ? (reflecting.energyCharges ?? 0)
+            : Math.min(
+                charges + (PROFILES[profile].grantsEnergyCharge ?? 0),
+                maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES)
+              ) + (PROFILES[profile].grantsUncappedEnergyCharge ?? 0),
+          // Whose Technique it was, which is what decides the size of an Energy Charge's
+          // die - and it is their attack being thrown back, not the reflector's.
+          signature: reflecting
+            ? Boolean(reflecting.signature)
+            : (maneuver.tags ?? []).includes("signature"),
+          // Who owes the Wound Roll, where that is not the one who made the Strike. Blank
+          // on every attack anybody simply threw.
+          woundBy: reflecting?.attackerUuid ?? "",
+          woundByName: reflecting?.attackerName ?? "",
+          // "As an Urgent Roll" - which here means one that cannot be failed on purpose.
+          urgentWound: Boolean(reflecting),
+          reflectedFrom: reflecting?.maneuverName ?? "",
           foundation,
           foundationLabel: DBUCharacterData.FOUNDATIONS[foundation].label,
           attackerUuid: actor.uuid,
@@ -4466,6 +4507,15 @@ async function playIntervene(message, attack, { who, ally, effect }) {
     type: "attack",
     attack: { ...attack, interventions: [...interventions(attack), entry] }
   });
+
+  // "Or succeed at the Might Clash for the Deflect or Distant Deflect options of the
+  // Intervene Maneuver." Those two are the ones the Intervene table marks as clashing, so
+  // this asks that rather than naming them - a third option that clashes would want this
+  // too, and would get it.
+  if (entry.deflected) {
+    offerReflect(message, attack, actor,
+      `Reflect - your ${option.label} won the Might Clash`);
+  }
 }
 
 /**
@@ -4919,6 +4969,15 @@ async function resolveAttack(message, attack) {
       }
     });
   }
+
+  // "If you avoid an Attacking Maneuver due to using the Parry option of the Defend
+  // Maneuver." Avoided, not merely answered: a Parry that lost is a Parry that was hit,
+  // and there is nothing in your hands to throw.
+  for (const { uuid, actor: target } of targets) {
+    const own = branches.find(entry => entry.uuid === uuid);
+    if ((own?.defense !== "parry") || own.hit) continue;
+    offerReflect(message, attack, target, "Reflect - your Parry turned it aside");
+  }
 }
 
 /**
@@ -4932,6 +4991,60 @@ async function resolveAttack(message, attack) {
  */
 function targetResult(attack, uuid) {
   return (attack.result?.targets ?? []).find(entry => entry.uuid === uuid) ?? null;
+}
+
+/**
+ * Why this attack cannot be thrown back, or null.
+ *
+ * "You may use this Maneuver if the Attacking Maneuver was of the Energy or Magic
+ * Foundation", and "that did not possess an AoE". The rest of the condition is about
+ * *how* it was avoided and is asked where each of those is settled - a Parry that won,
+ * or a Deflect that took its Might Clash.
+ */
+function whyNotReflect(attack) {
+  if (!["energy", "magic"].includes(attack.foundation)) {
+    return "only an Energy or Magic Attack can be thrown back";
+  }
+  if (PROFILES[attack.profile]?.area) {
+    return "an Attacking Maneuver with an Area of Effect cannot be thrown back";
+  }
+  return null;
+}
+
+/**
+ * Offer the Reflect Maneuver to somebody who just turned an attack aside.
+ *
+ * The attack travels with the offer rather than being looked up when it is taken: what
+ * is thrown back is that attack as it stood - its Profile, its Ki Wager, its Energy
+ * Charges - and the card it came from goes on being edited after this.
+ */
+function offerReflect(message, attack, actor, reason) {
+  if (!actor || whyNotReflect(attack)) return;
+  if (!actor.items?.some(item => (item.type === "maneuver") && item.system.reflect)) return;
+
+  requestEdit(message, {
+    type: "offer",
+    offer: {
+      actorUuid: actor.uuid,
+      actorName: actor.name,
+      maneuverId: "reflect",
+      maneuverName: "Reflect",
+      reason,
+      reflect: {
+        maneuverName: attack.maneuverName,
+        attackerUuid: attack.attackerUuid,
+        attackerName: attack.attackerName,
+        profile: attack.profile,
+        foundation: attack.foundation,
+        kiWager: attack.kiWager ?? 0,
+        energyCharges: attack.energyCharges ?? 0,
+        damageCategoryShift: attack.damageCategoryShift ?? 0,
+        signature: Boolean(attack.signature),
+        advantages: attack.advantages ?? [],
+        squaresCharged: attack.squaresCharged ?? 0
+      }
+    }
+  });
 }
 
 /** What one target chose to answer with, before any of it was rolled. */
@@ -5065,12 +5178,33 @@ async function attackerStage(message, attack, attacker) {
   return readyAttacker(message);
 }
 
-async function woundStage(message, attack, attacker) {
+async function woundStage(message, attack) {
+  const attacker = woundRoller(attack);
+  if (!attacker) return;
+
   const triggers = relevantTriggers(attacker, message, "hit");
   const ready = await prepareRoll(attacker, triggers, "On hitting",
-    "", { combatRoll: true, attackingManeuver: true });
+    "", {
+      combatRoll: true,
+      attackingManeuver: true,
+      // "As an Urgent Roll." A reflected attack's Wound Roll cannot be failed on purpose
+      // - the option is closed with its reason beside it, the way Compelled closes it.
+      urgent: Boolean(attack.urgentWound)
+    });
   if (!ready) return;
   return rollAttackWound(message, attack);
+}
+
+/**
+ * Who owes this attack's Wound Roll.
+ *
+ * The one who made it, on every attack but a reflected one: "the original attacking
+ * Opponent rolls the Wound Roll for their initial Attacking Maneuver instead". That is
+ * the only rule in these rules that splits one attack between two characters, and it is
+ * asked here so that nothing has to remember it twice.
+ */
+function woundRoller(attack) {
+  return fromUuidSync(attack.woundBy || attack.attackerUuid);
 }
 
 /**
@@ -5294,7 +5428,10 @@ function combinationFollowUps(attacker, attack) {
  * be argued over before it becomes a number.
  */
 async function rollAttackWound(message, attack) {
-  const attacker = fromUuidSync(attack.attackerUuid);
+  // Whoever owes the Wound Roll, which is the one who made the Strike on every attack
+  // but a reflected one. Everything below reads off them - their Wound, their Extra
+  // Dice, their effects - because the roll is theirs.
+  const attacker = woundRoller(attack);
   const targets = attackTargets(attack)
     .map(entry => ({ ...entry, actor: fromUuidSync(entry.uuid), own: targetResult(attack, entry.uuid) }))
     .filter(entry => entry.actor && entry.own);
@@ -6810,18 +6947,24 @@ function renderAttack(message, html) {
     return;
   }
 
-  // The attacker rolls their own Wound, so that step belongs to them.
+  // Whoever owes the Wound Roll, which is the attacker on everything but a reflected
+  // attack - there it is the Character whose attack was thrown back, and the button
+  // belongs on their client rather than on the reflector's.
   // Landed on anybody. One Wound Roll serves everyone it hit, and one of them having
   // dodged is no reason for the rest to go unwounded.
   if (!result.wound && owesWound(attack)) {
-    const attacker = fromUuidSync(attack.attackerUuid);
-    if (!attacker?.isOwner) return;
+    const roller = woundRoller(attack);
+    if (!roller?.isOwner) return;
 
     const roll = document.createElement("button");
     roll.type = "button";
     roll.className = "dbu-clash-button";
     roll.textContent = "Roll Wound";
-    roll.addEventListener("click", () => woundStage(message, attack, attacker));
+    if (attack.woundBy) {
+      roll.dataset.tooltip = `${attack.maneuverName} was thrown back at you. You roll its `
+        + "Wound Roll, and it is Urgent - it cannot be failed on purpose.";
+    }
+    roll.addEventListener("click", () => woundStage(message, attack));
     container.append(roll);
     return;
   }
