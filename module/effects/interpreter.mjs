@@ -168,10 +168,18 @@ function run(statements, scope) {
         run(evaluate(s.condition, scope) ? s.then : s.else, scope);
         break;
 
-      case "forbid":
-        scope.collect(getSlot(s.what, scope.data) ?? { key: s.what, kind: KINDS.FLAG, ops: ["forbid"] },
-          "forbid", true, KINDS.FLAG);
+      case "forbid": {
+        // `allow` and `forbid` are one node with a flag on it, and this read the node and
+        // not the flag: every `allow` in a file was collected as a forbid, which is the
+        // opposite of the word. The parser has known it since the language was written
+        // and nothing had ever written one, because nothing needed granting until Special
+        // Maneuvers did.
+        const op = s.allow ? "allow" : "forbid";
+        scope.collect(
+          getSlot(s.what, scope.data) ?? { key: s.what, kind: KINDS.FLAG, ops: [op] },
+          op, true, KINDS.FLAG);
         break;
+      }
 
       case "call":
         // Verbs act on the world rather than on a Slot, so they are queued for whoever
@@ -287,6 +295,23 @@ function resolveNumber(entries, scope) {
  */
 export function permits(slots, key) {
   return slots?.[key] !== false;
+}
+
+/**
+ * Whether something nobody has until an effect gives it has been given.
+ *
+ * The other way round from `permits`, and deliberately not the same question. Almost
+ * everything in these rules is yours until something takes it away, which is why "not
+ * mentioned" and "allowed" are one answer there. A Special Maneuver is the opposite:
+ * "you cannot use any Special Maneuvers until you have gained access to them through an
+ * effect", so not mentioned is no.
+ *
+ * The same Slot answers both, which is right - one key for one Maneuver, said either
+ * way. An effect that grants access writes `allow maneuver.x` and one that takes it away
+ * writes `forbid maneuver.x`, and a Special Maneuver has to pass both questions.
+ */
+export function granted(slots, key) {
+  return slots?.[key] === true;
 }
 
 export function applySlot(slots, key, base) {

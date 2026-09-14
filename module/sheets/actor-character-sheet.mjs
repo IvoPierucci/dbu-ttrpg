@@ -4,6 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
 import { reactiveFor } from "../effects/registry.mjs";
+import { granted } from "../effects/interpreter.mjs";
 import { resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import {
@@ -876,7 +877,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // The row is where a player reads what their own Modifier does, and what it says it
       // applies to.
       { key: "modifier", playable: false,
-        note: "Applied to another Maneuver as you use that one" }
+        note: "Applied to another Maneuver as you use that one" },
+      // Playable like a Standard Maneuver, but only once something has granted it: a
+      // Special Maneuver is nobody's until an effect gives it to them. The group is
+      // playable and each row is judged on its own, which is where that is said.
+      { key: "special", playable: true,
+        note: "Gained through an effect, and usable once you have been" }
     ];
 
     return groups
@@ -901,7 +907,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             usesLeft: maneuverUsesLeft(this.actor, maneuver),
             // Off the group, unless the Maneuver has a reason of its own to be here.
             playable: (group.playable || this.#playableAlone(maneuver))
-              && !this.#playedThrough(maneuver),
+              && !this.#playedThrough(maneuver)
+              && !this.#withoutAccess(maneuver),
             // Two different ways to be unable to play it, and the row says which:
             // out of uses is a limit of the Maneuver, out of Actions is a limit of
             // the round. Seen before clicking rather than after.
@@ -921,6 +928,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
                 : "",
               this.#shortOfActions(maneuver) ? "No Actions left this round for this." : "",
               this.#playedThrough(maneuver),
+              this.#withoutAccess(maneuver),
               group.playable || this.#playableAlone(maneuver)
                 ? ""
                 : (maneuver.type === "outOfSequence")
@@ -1152,6 +1160,22 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   #playableAlone(maneuver) {
     return Boolean(maneuver.cancelCharge) && Boolean(this.actor.system.charging?.maneuverId);
+  }
+
+  /**
+   * Why this Special Maneuver cannot be used yet, if it cannot.
+   *
+   * "You cannot use any Special Maneuvers until you have gained access to them through an
+   * effect." Owning the Item is not access - it is on the sheet, and what the rule asks
+   * for is an effect that grants it - so the row is drawn, greyed, and says what is
+   * missing rather than being left off the list.
+   */
+  #withoutAccess(maneuver) {
+    if (!MANEUVER_TYPES[maneuver.type]?.requiresAccess) return "";
+    const slots = this.actor.system.effects?.slots;
+    return granted(slots, `maneuver.${maneuver.id}`)
+      ? ""
+      : "Nothing has granted access to this yet. A Special Maneuver is gained through an effect.";
   }
 
   /**

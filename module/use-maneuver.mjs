@@ -9,6 +9,7 @@
 
 import DBUCharacterData from "./data/actor-character.mjs";
 import {
+  MANEUVER_TYPES,
   PROFILES,
   allManeuvers,
   declareAttack,
@@ -46,7 +47,7 @@ import {
   takeSurge
 } from "./chat.mjs";
 import { actionsLeft, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } from "./combat.mjs";
-import { permits } from "./effects/interpreter.mjs";
+import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 
@@ -203,6 +204,21 @@ function permitted(actor, maneuver) {
   // And one named outright, for a rule that lists Maneuvers rather than describing them.
   if (maneuver.id && !permits(slots, `maneuver.${maneuver.id}`)) {
     ui.notifications.warn(`${actor.name} cannot use ${maneuver.name} right now.`);
+    return false;
+  }
+
+  // "You cannot use any Special Maneuvers until you have gained access to them through an
+  // effect." The other five kinds are yours naturally; this one is nobody's until
+  // something says otherwise, so the question is asked the other way round - not "has
+  // anything forbidden it" but "has anything granted it".
+  //
+  // The same Slot answers both, which is why the forbid above still applies: an effect can
+  // grant access and another can take it away, and a Special Maneuver has to pass both.
+  if (MANEUVER_TYPES[maneuver.type]?.requiresAccess
+    && !granted(slots, `maneuver.${maneuver.id}`)) {
+    ui.notifications.warn(
+      `${actor.name} has not been granted access to ${maneuver.name}. A Special Maneuver `
+      + "is gained through an effect.");
     return false;
   }
 
