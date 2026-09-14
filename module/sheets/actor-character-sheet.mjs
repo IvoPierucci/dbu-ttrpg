@@ -215,6 +215,45 @@ function resourceRows(system) {
 }
 
 /**
+ * Everything this character is carrying stacks of.
+ *
+ * The Resources, and the two Diminishing counters with them. Those two are not Resources
+ * - they are wear a round puts on you and takes off again, and the Turn State panel goes
+ * on holding the editable copy of each with what it is costing - but they stack, and
+ * "what am I carrying stacks of" is one question that ought to have one answer.
+ *
+ * They lead the list because they are always there. A Resource appears only while it is
+ * held, so a list that sorted everything together would have rows arriving and leaving
+ * above ones that never move.
+ */
+function stackRows(system) {
+  const { offense, defense } = system.diminishing ?? {};
+
+  return [
+    {
+      key: "diminishing.offense",
+      name: "Diminishing Offense",
+      stacks: offense?.stacks ?? 0,
+      // Neither has a ceiling: you go on gathering them until the round turns over.
+      max: 0,
+      note: offense?.penalty ? `Strike -${offense.penalty}` : "",
+      tooltip: "One stack for each Attacking Maneuver after the third this round. Each "
+        + "takes 1(bT) off your Strike Rolls."
+    },
+    {
+      key: "diminishing.defense",
+      name: "Diminishing Defense",
+      stacks: defense?.stacks ?? 0,
+      max: 0,
+      note: defense?.penalty ? `Dodge -${defense.penalty}` : "",
+      tooltip: "One stack for each Attacking Maneuver aimed at you, unless you use the "
+        + "Defend Maneuver. Each takes 1 off your Dodge Rolls."
+    },
+    ...resourceRows(system)
+  ];
+}
+
+/**
  * When the stacks of one Resource run out, counted rather than summarised.
  *
  * Each stack is put on a clock of its own where the rule gives it one - "gain a stack of
@@ -534,7 +573,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .join(", ");
     context.conditionAbilities = this.#conditionAbilities();
 
-    context.resources = resourceRows(this.actor.system);
+    // Everything with stacks, the two Diminishing counters included. Not the Resources
+    // alone, which is why it is not called that: the section is about what you are
+    // carrying, and those two are carried the same way even though they are not Resources.
+    context.stacks = stackRows(this.actor.system);
+    // What the summary line says when the section is shut - the same shape the States and
+    // the Combat Conditions use, and only what is actually there.
+    const carried = context.stacks.filter(row => row.stacks > 0);
+    context.anyStacks = carried.length > 0;
+    context.stackSummary = carried
+      .map(row => `${row.name} ${row.stacks}${row.max ? `/${row.max}` : ""}`)
+      .join(", ");
     context.grapple = this.#grapple();
     context.states = statesFor(this.actor);
     const entered = context.states.filter(s => s.active);

@@ -2199,6 +2199,29 @@
   flex: 0 0 auto;
 }
 
+/* Wider columns than a Condition's. "Diminishing Offense" and its count come to about
+   a hundred and fifty pixels together, which is exactly where the Conditions' columns
+   start - so every one of those rows wrapped its name onto a second line and the grid
+   came out ragged. */
+.dbu-ttrpg .dbu-stack-list {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+/* What the stacks under the Resources section are costing, under the roll-call. The
+   count alone says you are carrying two of something and not what two is worth. */
+.dbu-ttrpg .dbu-stack-notes {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .dbu-stack-notes em {
+  font-style: normal;
+  color: var(--dbu-text);
+}
+
 .dbu-ttrpg .stack-count {
   min-width: 26px;
   text-align: center;

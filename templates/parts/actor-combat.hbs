@@ -122,19 +122,6 @@
         {{/if}}
       </div>
 
-      {{! Resources. Neither per-round wear nor kept by hand: something gives you one and
-          a clock takes it away again, and until this row existed the sheet never said
-          you were holding any. Only what is held is listed - a Resource at nothing is a
-          Resource nobody has. }}
-      {{#each resources as |resource|}}
-      <div class="stat" data-tooltip="{{resource.tooltip}}">
-        <em>{{resource.name}}</em>
-        <span>{{resource.stacks}}{{#if resource.max}}<span class="stat-of">/{{resource.max}}</span>{{/if}}</span>
-        {{#if resource.note}}
-        <i class="stat-note">{{resource.note}}</i>
-        {{/if}}
-      </div>
-      {{/each}}
     </div>
   </section>
 
@@ -378,6 +365,49 @@
             {{ability.label}}
           </button>
         </li>
+        {{/each}}
+      </ul>
+      {{/if}}
+    </details>
+  </section>
+
+  {{! Everything with stacks on it, beside the two checklists above because it answers
+      the same kind of question: not what this round is made of, but what you are
+      carrying. The two Diminishing counters are here as well as in the Turn State panel -
+      that one is where they are edited and where what each costs you is said, and this is
+      where you count them with everything else. }}
+  <section class="panel">
+    <details class="condition-group" data-section="resources"
+             {{#if openSections.resources}}open{{/if}}>
+      <summary class="panel-title">
+        Resources
+        {{#if anyStacks}}
+        <span class="panel-note">{{stackSummary}}</span>
+        {{else}}
+        <span class="panel-note">None</span>
+        {{/if}}
+      </summary>
+
+      <ul class="condition-list dbu-stack-list">
+        {{#each stacks as |row|}}
+        <li class="condition {{#if row.stacks}}condition-active{{/if}}"
+            data-tooltip="{{row.tooltip}}">
+          <span class="condition-name">{{row.name}}</span>
+          {{! A Resource with no ceiling says how many and nothing more: "3/0" would be
+              a maximum of nothing rather than no maximum at all. }}
+          <span class="stack-count">{{row.stacks}}{{#if row.max}}/{{row.max}}{{/if}}</span>
+        </li>
+        {{/each}}
+      </ul>
+
+      {{#if anyStacks}}
+      {{! What the ones that are doing something are doing, under the roll-call - the
+          count alone says you have two of something and not what two costs. }}
+      <ul class="condition-abilities dbu-stack-notes">
+        {{#each stacks as |row|}}
+        {{#if row.note}}
+        <li><em>{{row.name}}</em> {{row.note}}</li>
+        {{/if}}
         {{/each}}
       </ul>
       {{/if}}
