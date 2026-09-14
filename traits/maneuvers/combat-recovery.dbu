@@ -9,6 +9,12 @@ usageLimit: 1/round
 exploitable: All Opponents that are not at Long Range
 resource: recovery
 resourceMax: 3
+# Not a Resource the rules name: the rulebook calls exactly one thing a Resource,
+# and it is Power. This is bookkeeping, held as a Resource because that is the
+# thing here that takes a clock. `resourceInternal` keeps it off the sheet's
+# Resources list rather than teaching a player a word the book does not use.
+# What it holds: the Defense Value each Action spent on this costs, one per Action.
+resourceInternal: true
 source: Core Rule
 description: >
   Talk or rest to recover as much stamina as possible. Costs between 2 and 3

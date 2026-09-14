@@ -193,7 +193,12 @@ function resourceRows(system) {
   const timed = system.timed ?? [];
 
   return Object.entries(held)
-    .filter(([, resource]) => (Number(resource?.stacks) || 0) > 0)
+    .filter(([key, resource]) => (Number(resource?.stacks) || 0) > 0)
+    // Only the ones the rules name. The rest are this system's own bookkeeping - they
+    // are held as Resources because that is what takes a clock here, and a player has
+    // never been told that word for them. What each is doing is said where it happens:
+    // on the roll it changes, and on the card that applied it.
+    .filter(([key]) => !known[key]?.internal)
     .map(([key, resource]) => {
       const definition = known[key] ?? {};
       const name = definition.label || (key.charAt(0).toUpperCase() + key.slice(1));
@@ -228,6 +233,7 @@ function resourceRows(system) {
  */
 function stackRows(system) {
   const { offense, defense } = system.diminishing ?? {};
+  const { superStack } = system;
 
   return [
     {
@@ -248,6 +254,23 @@ function stackRows(system) {
       note: defense?.penalty ? `Dodge -${defense.penalty}` : "",
       tooltip: "One stack for each Attacking Maneuver aimed at you, unless you use the "
         + "Defend Maneuver. Each takes 1 off your Dodge Rolls."
+    },
+    {
+      key: "superStack",
+      name: "Super Stacks",
+      stacks: superStack?.stacks ?? 0,
+      // The one of the three with a ceiling of its own, and it is a real one - held
+      // until something takes it away rather than cleared by the round like the two
+      // above.
+      max: superStack?.max ?? 0,
+      note: [
+        superStack?.musclePenalty ? `Strike & Dodge -${superStack.musclePenalty}` : "",
+        superStack?.solidBulk ? `Soak +${superStack.solidBulk}` : "",
+        superStack?.massivePower ? `Wound +${superStack.massivePower}` : ""
+      ].filter(Boolean).join(" \u00b7 "),
+      tooltip: "Muscle Penalty: 1(bT) off Strike and Dodge per stack, 1(bT) more at "
+        + "three. Solid Bulk: 1(bT) of Soak per stack. Massive Power: 1/4 of your Force "
+        + "Modifier on the Wound Rolls of Physical and Energy Attacks, per stack."
     },
     ...resourceRows(system)
   ];

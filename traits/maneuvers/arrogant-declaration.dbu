@@ -8,6 +8,12 @@ usageLimit: 1/encounter
 exploitable: All adjacent Opponents
 resource: arrogance
 resourceMax: 1
+# Not a Resource the rules name: the rulebook calls exactly one thing a Resource,
+# and it is Power. This is bookkeeping, held as a Resource because that is the
+# thing here that takes a clock. `resourceInternal` keeps it off the sheet's
+# Resources list rather than teaching a player a word the book does not use.
+# What it holds: the penalty waiting for you when this Superior State ends.
+resourceInternal: true
 source: Core Rule
 description: >
   Point your thumb at yourself and make a statement about your own superiority,

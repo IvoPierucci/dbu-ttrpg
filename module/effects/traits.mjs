@@ -100,7 +100,12 @@ export function resourceDefinitions() {
       max: Math.max(0, Number(trait.resourceMax) || 0),
       label: trait.resourceLabel || (name.charAt(0).toUpperCase() + name.slice(1)),
       source: trait.name ?? "",
-      description: trait.description ?? ""
+      description: trait.description ?? "",
+      // Whether this is a Resource the rules name, or one this system keeps because an
+      // effect had to last and a Resource is the thing here that takes a clock. The
+      // rulebook calls exactly one of them a Resource, and a sheet that lists the rest
+      // under that heading teaches a player a word the book does not use.
+      internal: Boolean(trait.resourceInternal)
     };
   }
   return found;

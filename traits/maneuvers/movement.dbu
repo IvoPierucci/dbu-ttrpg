@@ -11,6 +11,12 @@ exploitable: If you leave the Melee Range of an Opponent.
 resource: rapid
 resourceMax: 1
 resourceLabel: Rapid Movement
+# Not a Resource the rules name: the rulebook calls exactly one thing a Resource,
+# and it is Power. This is bookkeeping, held as a Resource because that is the
+# thing here that takes a clock. `resourceInternal` keeps it off the sheet's
+# Resources list rather than teaching a player a word the book does not use.
+# What it holds: the Strike bonus Rapid Movement buys, until the end of your turn.
+resourceInternal: true
 source: Core Rule
 description: >
   Cross the battlefield. Normal Speed for nothing, or Boosted Speed for 3(T);

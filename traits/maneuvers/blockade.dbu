@@ -8,6 +8,12 @@ blockade: true
 resource: blockaded
 resourceMax: 1
 resourceLabel: Blockaded
+# Not a Resource the rules name: the rulebook calls exactly one thing a Resource,
+# and it is Power. This is bookkeeping, held as a Resource because that is the
+# thing here that takes a clock. `resourceInternal` keeps it off the sheet's
+# Resources list rather than teaching a player a word the book does not use.
+# What it holds: the Movement Maneuver, shut off for the rest of their turn.
+resourceInternal: true
 source: Core Rule
 description: >
   Cut somebody off mid-Movement. A Clash of Impulsive against theirs; win and they
