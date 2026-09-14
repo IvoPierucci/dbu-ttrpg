@@ -1,0 +1,78 @@
+id: called-shot
+name: Called Shot
+type: modifier
+actionCost: 1
+kiCostPerTier: 2
+usageLimit: 1/round
+baseManeuver: attacking
+baseForbids: area
+damageCategoryShift: 1
+strikePerTier: -2
+asks: State the area you targeted
+source: Core Rule
+description: >
+  Aim for something in particular. One Damage Category harder, 2(T) off the Strike
+  Roll, and the area you called is on the card for the ARC to rule on.
+text: >
+  Called Shot [1/Round]: A unique type of Maneuver that allows you to target
+  specific weaknesses.
+  –Action Cost: 1 Action
+  –Base Maneuver: Any Attacking Maneuver.
+  –KP Cost: 2(T)
+  –Effect: At Attack Declaration, when making an Attacking Maneuver that does not
+  have an Area of Effect, you can use this Maneuver to increase the Damage Category
+  of that Attacking Maneuver by 1 but decrease the Strike Roll for that Attacking
+  Maneuver by 2(T).
+  State the area you targeted with this Attacking Maneuver. Your ARC may allow for
+  special effects to occur if you knock that Opponent through a Health Threshold or
+  deal Damage equal to or exceeding 1/5th of that target’s Maximum Life Points. A
+  few potential example targets are:
+
+  * Head: That Character gains the Impediment Combat Condition until the start of
+    your next turn.
+  * Eyes: That Character gains the Blinded Combat Condition until the end of their
+    next turn.
+  * Arm: That Character gains the Guard Down Combat Condition until the start of
+    your next turn.
+  * Leg: That Character has their Speeds and Defense Value halved until the start of
+    your next turn.
+  * Gut: That Character is knocked Prone.
+
+---
+
+# No script, and none wanted. What this Maneuver does to an attack is two numbers and
+# a question, and all three are said in the header:
+#
+#   damageCategoryShift: 1     "increase the Damage Category of that Attacking
+#                               Maneuver by 1"
+#   strikePerTier: -2          "decrease the Strike Roll for that Attacking Maneuver
+#                               by 2(T)"
+#   asks: ...                  "state the area you targeted with this Attacking
+#                               Maneuver"
+#
+# Said in the header rather than given a flag and a branch in the code, because this is
+# the first Modifier Maneuver and the next one should need no code at all. A Modifier
+# that shifts a Category and takes something off a Strike is a shape, not a special
+# case.
+#
+# `baseForbids: area` is the other half of the condition. The Base Maneuver line says
+# "any Attacking Maneuver" and the Effect narrows it to "that does not have an Area of
+# Effect", so the two are written separately: what it applies to, and what it will not
+# apply to.
+#
+# --- What the ARC decides ------------------------------------------------------------
+#
+# "Your ARC may allow for special effects to occur if you knock that Opponent through
+# a Health Threshold or deal Damage equal to or exceeding 1/5th of that target's
+# Maximum Life Points."
+#
+# That is a ruling, not a rule: "may allow", and the five below it are "a few potential
+# example targets" rather than a list to choose from. So the area you called is written
+# on the card in your own words, where the ARC and the table can see it, and what it
+# comes to is theirs. Nothing here picks a Condition off that list, because the entry
+# does not say that hitting the Head applies Impediment - it says an ARC may decide it
+# does.
+#
+# The two thresholds it names are both visible without being asked for: a Health
+# Threshold crossed is announced by the system already, and the Damage dealt is on the
+# card beside the target's Life Points.

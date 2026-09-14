@@ -1531,9 +1531,19 @@ export function whyNotModify(modifier, base) {
     || (entry === base.type)
     || ((entry === "attacking") && base.attacking));
 
-  return matches
-    ? null
-    : `${modifier.name} applies to ${wanted.join(" or ")}, not to ${base.name}.`;
+  if (!matches) {
+    return `${modifier.name} applies to ${wanted.join(" or ")}, not to ${base.name}.`;
+  }
+
+  // And what it will not apply to, which is a second sentence in the entry rather than a
+  // narrowing of the first: Called Shot's Base Maneuver is "any Attacking Maneuver" and
+  // its Effect says "that does not have an Area of Effect".
+  const forbidden = [].concat(modifier.baseForbids ?? []).map(entry => String(entry).trim());
+  if (forbidden.includes("area") && PROFILES[base.profile]?.area) {
+    return `${modifier.name} cannot be applied to an Attacking Maneuver with an Area of Effect.`;
+  }
+
+  return null;
 }
 
 /** The four kinds a Maneuver can be. Dodging is not among them: it is not a Maneuver. */
@@ -2050,6 +2060,10 @@ export async function loadManeuvers() {
     // A list, however the header wrote it: `coerce` splits on commas and leaves a lone
     // value a string, and a Modifier that names one Maneuver is the ordinary case.
     baseManeuver: [].concat(trait.baseManeuver ?? []),
+    baseForbids: [].concat(trait.baseForbids ?? []),
+    damageCategoryShift: trait.damageCategoryShift ?? 0,
+    strikePerTier: trait.strikePerTier ?? 0,
+    asks: trait.asks ?? "",
     kiCostPerTier: trait.kiCostPerTier ?? 0,
     // `coerce` splits a header on commas and leaves a single value a string, so
     // `tags: signature` arrived as the word rather than a list of one and every reader

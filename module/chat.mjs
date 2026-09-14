@@ -4015,7 +4015,7 @@ export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, charges = 0,
                                    advantages = [], squaresCharged = 0 },
                                  { asOutOfSequence = false, provokedBy = null,
-                                   reflecting = null } = {}) {
+                                   reflecting = null, modifiers = [] } = {}) {
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
   // Strike Roll - the attack after your third is itself the one that suffers.
   //
@@ -4086,12 +4086,20 @@ export async function postAttack(actor, target, maneuver,
           // before anything is clamped. Mega Flare is the first thing to write here:
           // "if the number of Energy Charges applied is 7+, increase the Damage
           // Category by 1 Category."
+          // The Modifier Maneuvers applied to this attack, with what each of them did to
+          // it. On the card because the attack is settled later and often elsewhere, and
+          // the Item they came from may have been edited in between.
+          modifiers,
           // A reflected attack keeps the steps the original had rather than working them
           // out again: Mega Flare's is a fact about that attack's Charges, and those are
           // carried across rather than re-derived.
-          damageCategoryShift: reflecting
+          //
+          // A Modifier's step is added on top: "increase the Damage Category of that
+          // Attacking Maneuver by 1" is a step this attack has, whatever gave it.
+          damageCategoryShift: (reflecting
             ? (reflecting.damageCategoryShift ?? 0)
-            : profileCategoryShift(profile, charges),
+            : profileCategoryShift(profile, charges))
+            + modifierCategoryShift(modifiers),
           kiWager,
           // Energy Charges live on the Maneuver, not the character: they were fed into
           // this attack and are spent with it. Each adds a die to the Wound Roll.
@@ -4656,6 +4664,31 @@ function energyChargeDice(attacker, attack) {
   return `${count}d${faces}`;
 }
 
+/** The steps the Modifier Maneuvers on an attack put on its Damage Category. */
+function modifierCategoryShift(modifiers) {
+  return (modifiers ?? []).reduce((sum, entry) => sum + (entry.damageCategoryShift ?? 0), 0);
+}
+
+/**
+ * What the Modifier Maneuvers on an attack do to its Strike Roll.
+ *
+ * A row each rather than one summed row, because each is a Maneuver the player chose and
+ * paid for, and the breakdown is where they see what it bought them. Written in (T), which
+ * is how the entries write it - "decrease the Strike Roll for that Attacking Maneuver by
+ * 2(T)".
+ */
+function modifierStrikeParts(attacker, attack) {
+  const tier = attacker.system.tierOfPower ?? 1;
+
+  return (attack.modifiers ?? [])
+    .filter(entry => entry.strikePerTier)
+    .map(entry => ({
+      label: entry.name,
+      written: `${entry.strikePerTier > 0 ? "+" : ""}${entry.strikePerTier}(T)`,
+      value: entry.strikePerTier * tier
+    }));
+}
+
 /**
  * What an attack's Energy Charges and Power Shot take off a Parry.
  *
@@ -4824,6 +4857,7 @@ async function resolveAttack(message, attack) {
   const strike = await rollSide(attacker, [
     { label: "Strike", value: attacker.system.combat.strike },
     ...profileStrikeParts(attacker, attack),
+    ...modifierStrikeParts(attacker, attack),
     ...musclePenalty(attacker),
     { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty },
     ...thresholdPenalty(attacker)

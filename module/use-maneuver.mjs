@@ -675,7 +675,73 @@ async function askModifiers(actor, base) {
   });
 
   if (!Array.isArray(chosen)) return null;
-  return offered.filter(entry => chosen.includes(entry.modifier.itemId));
+
+  const taken = offered.filter(entry => chosen.includes(entry.modifier.itemId));
+
+  // "State the area you targeted with this Attacking Maneuver." Asked once each, after
+  // they have been chosen and before anything is paid - the answer is for the table to
+  // read rather than for the system to act on, so an empty one is an answer too.
+  for (const entry of taken) {
+    if (!entry.modifier.asks) continue;
+    const said = await askModifierNote(entry.modifier);
+    if (said === null) return null;
+    entry.note = said;
+  }
+
+  return taken;
+}
+
+/**
+ * What the card keeps of the Modifiers applied to an attack.
+ *
+ * The numbers and the words, and nothing else: an attack is settled minutes later and
+ * often on another client, so what a Modifier did has to be on the card rather than
+ * looked up from the Item - which may have been edited in between, or belong to somebody
+ * whose Actor that client cannot reach.
+ */
+export function appliedModifiers(entries) {
+  return (entries ?? []).map(entry => ({
+    id: entry.modifier.id,
+    name: entry.modifier.name,
+    damageCategoryShift: entry.modifier.damageCategoryShift ?? 0,
+    strikePerTier: entry.modifier.strikePerTier ?? 0,
+    note: entry.note ?? ""
+  }));
+}
+
+/**
+ * The one question a Modifier Maneuver asks as it is applied.
+ *
+ * In the rulebook's own words, because the words are the question - "state the area you
+ * targeted with this Attacking Maneuver" is not a list to choose from, and Called Shot's
+ * five examples are examples rather than options. What is typed goes on the attack's card
+ * for the ARC and the table to rule on.
+ *
+ * @returns {Promise<?string>} what was said, or null if the whole thing was dropped
+ */
+async function askModifierNote(modifier) {
+  const said = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: modifier.name },
+    content: `
+      <label class="dbu-wager">
+        <span>${Handlebars.escapeExpression(modifier.asks)}</span>
+        <input type="text" name="note" value=""/>
+        <em>Written on the card in your own words. What it comes to is the ARC's.</em>
+      </label>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) =>
+          String(dialog.element.querySelector('input[name="note"]').value ?? "").trim()
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  return (typeof said === "string") ? said : null;
 }
 
 /**
@@ -839,6 +905,10 @@ export function definitionOf(item) {
     suddenStop: item.system.suddenStop,
     reflect: item.system.reflect,
     baseManeuver: item.system.baseManeuver ?? [],
+    baseForbids: item.system.baseForbids ?? [],
+    damageCategoryShift: item.system.damageCategoryShift ?? 0,
+    strikePerTier: item.system.strikePerTier ?? 0,
+    asks: item.system.asks ?? "",
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -1214,7 +1284,8 @@ export async function useManeuver(actor, maneuver) {
     : maneuver.clash
     ? await postSkillClash(actor, targetActor, maneuver)
     : declared
-    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges })
+    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges },
+        { modifiers: appliedModifiers(modifiers) })
     // A Movement card carries whether Rapid Movement was paid for, because the Dodge
     // bonus it buys is against "an Exploit Maneuver provoked by this instance" - and this
     // card is that instance. It carries what was paid for the same reason: a Blockade
@@ -1462,6 +1533,10 @@ export function maneuverItemFrom(definition) {
       suddenStop: Boolean(definition.suddenStop),
       reflect: Boolean(definition.reflect),
       baseManeuver: [].concat(definition.baseManeuver ?? []),
+      baseForbids: [].concat(definition.baseForbids ?? []),
+      damageCategoryShift: definition.damageCategoryShift ?? 0,
+      strikePerTier: definition.strikePerTier ?? 0,
+      asks: definition.asks ?? "",
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),

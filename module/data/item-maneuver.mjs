@@ -167,6 +167,33 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }
       ),
       /**
+       * What a Modifier Maneuver will not apply to, on top of what it applies to.
+       *
+       * Called Shot's Base Maneuver is "any Attacking Maneuver" and its Effect narrows
+       * that to "one that does not have an Area of Effect" - two separate sentences, so
+       * two separate fields. `area` is the only thing anything forbids so far.
+       */
+      baseForbids: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }
+      ),
+      /**
+       * Steps this Modifier puts on the Damage Category of the attack it was applied to.
+       * "Increase the Damage Category of that Attacking Maneuver by 1."
+       */
+      damageCategoryShift: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      /**
+       * What it does to the Strike Roll of that attack, per Tier of Power. Negative takes
+       * it off: "decrease the Strike Roll for that Attacking Maneuver by 2(T)" is -2.
+       */
+      strikePerTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      /**
+       * A question this Modifier asks as it is applied, in the rulebook's own words -
+       * "state the area you targeted with this Attacking Maneuver". The answer is written
+       * on the attack's card, because the answer is for the table to read rather than for
+       * the system to act on.
+       */
+      asks: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and
