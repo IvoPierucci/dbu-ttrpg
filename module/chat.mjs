@@ -4,7 +4,8 @@ import { permits } from "./effects/interpreter.mjs";
 import { refundActions, spendActions } from "./combat.mjs";
 import { EDGES, KINDS, lasting } from "./durations.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
-import { advantageWoundParts, pushes } from "./signature.mjs";
+import { advantageWoundParts, featureRanks, pushes, POWER_SHOT_MAX_RANKS }
+  from "./signature.mjs";
 import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, floorLine,
          fromOutcome, withoutOutcome, breakdownTable, breakdownText } from "./breakdown.mjs";
 import { collectReactive, applySlot } from "./effects/interpreter.mjs";
@@ -4068,6 +4069,13 @@ export async function postAttack(actor, target, maneuver,
           // Advantage applies to the attack it was declared on, and the Technique it
           // came from may be edited between the declaration and the Wound Roll.
           advantages,
+          // How many ranks of Power Shot came with it. Carried as a number of its own
+          // rather than counted again wherever it is wanted: two rolls that are not this
+          // attack's read it - the Parry option of the Defend Maneuver and the Intervene
+          // Maneuver's two Deflects - and a reflected attack hands it across whole.
+          powerShotRanks: reflecting
+            ? (reflecting.powerShotRanks ?? 0)
+            : Math.min(featureRanks(advantages, "power-shot"), POWER_SHOT_MAX_RANKS),
           squaresCharged,
           profile,
           profileLabel: PROFILES[profile].label,
@@ -4649,22 +4657,32 @@ function energyChargeDice(attacker, attack) {
 }
 
 /**
- * What the Energy Charges on an attack take off a Parry.
+ * What an attack's Energy Charges and Power Shot take off a Parry.
  *
  * "Reduce your Dice Score by 1(bT) for each Energy Charge or rank of Power Shot on the
- * Attacking Maneuver." Power Shot is not in the system yet - there is one Profile, and
- * it has no ranks - so only the Charges are counted, and the day a ranked Profile
- * arrives this is where its ranks are added.
+ * Attacking Maneuver." Both halves count now: Power Shot is a Signature Technique
+ * Advantage with ranks, and until it existed this had only the Charges to count.
+ *
+ * One row rather than two, because the rule is one rule - "for each Energy Charge or
+ * rank" is a single count of both - and the row says which it is made of when it is made
+ * of both. The Intervene Maneuver's Deflect options are the same sentence in (T) rather
+ * than (bT), and are counted by `deflectPenalty` the same way.
  *
  * An empty list when there is nothing to take off, so the breakdown does not carry a
  * line saying zero.
  */
 function chargePenalty(actor, attack) {
   const charges = attack?.energyCharges ?? 0;
-  if (charges <= 0) return [];
+  const powerShot = attack?.powerShotRanks ?? 0;
+  const counted = charges + powerShot;
+  if (counted <= 0) return [];
 
-  const perCharge = actor.system.baseTierOfPower ?? 1;
-  return [{ label: "Energy Charges", written: `-${charges}(bT)`, value: -(charges * perCharge) }];
+  const perStep = actor.system.baseTierOfPower ?? 1;
+  return [{
+    label: powerShot ? "Charges and Power Shot" : "Energy Charges",
+    written: `-${counted}(bT)`,
+    value: -(counted * perStep)
+  }];
 }
 
 /**
@@ -5041,6 +5059,7 @@ function offerReflect(message, attack, actor, reason) {
         damageCategoryShift: attack.damageCategoryShift ?? 0,
         signature: Boolean(attack.signature),
         advantages: attack.advantages ?? [],
+        powerShotRanks: attack.powerShotRanks ?? 0,
         squaresCharged: attack.squaresCharged ?? 0
       }
     }

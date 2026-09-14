@@ -1,0 +1,58 @@
+id: power-shot
+name: Power Shot
+kind: signature
+side: advantages
+tpCost: 4
+tpCostPerRank: 4, 6, 8
+ranks: 3
+requirement: This Signature Technique does not have the Low Penetration Disadvantage.
+description: >
+  Your Signature Technique hits harder, by a rank at a time: 2(T) on its Wound Roll
+  for each rank bought. The ranks are what a Parry or a Deflect has to answer.
+text: >
+  Power Shot: Your signature technique has more power.
+  –TP Cost: 4 (First Rank), 6 (Second Rank), 8 (Third Rank)
+  –Requirement: This Signature Technique does not have the Low Penetration
+  Disadvantage.
+  –Effect: Increase your Wound Rolls for this Signature Technique by 2(T) for each
+  rank of this Advantage.
+
+---
+
+# No script. What this does is add to the Wound Roll of the attack that carries it,
+# and an Advantage is not something a character holds - it is something an attack was
+# built with, so it is read where the attack is rolled rather than off a sheet.
+#
+# --- The first feature with ranks -------------------------------------------------
+#
+# Every other one is had or not had. This one is had one, two or three times, and
+# what it is worth is counted per rank - so a Maneuver carries it once per rank, and
+# the rank is how many times it is in the list. `advantages.includes("power-shot")`
+# goes on answering "does this attack have it" for anything that only wants to know
+# that, and `featureRanks` is what asks how many.
+#
+# `ranks: 3` is the ceiling the entry names by listing three prices and no fourth.
+#
+# --- What the ranks cost ----------------------------------------------------------
+#
+# "4 (First Rank), 6 (Second Rank), 8 (Third Rank)", kept here as written. Whether
+# the third rank costs 8 or costs 4+6+8 is not something the entry settles, and
+# nothing in this system spends Technique Points yet - so the three numbers are
+# carried as they are printed and the sum is the table's until there is something
+# here to spend against.
+#
+# --- The Requirement, which cannot be checked -------------------------------------
+#
+# "This Signature Technique does not have the Low Penetration Disadvantage." There is
+# no Low Penetration Disadvantage in this system - the Disadvantages folder holds one
+# file, All or Nothing - so there is nothing to check this against. The requirement
+# is carried as written and shown wherever a feature's requirement is shown, which is
+# what can honestly be done until that file exists.
+#
+# --- Where the ranks are answered --------------------------------------------------
+#
+# The Wound Roll is one place. The other two are somebody else's rolls: the Parry
+# option of the Defend Maneuver reduces its Dice Score "by 1(bT) for each Energy
+# Charge or rank of Power Shot on the Attacking Maneuver", and the Deflect and
+# Distant Deflect options of the Intervene Maneuver do the same in (T). Both of those
+# have been written for a rank count since they were built and had none to read.

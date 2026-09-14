@@ -66,6 +66,11 @@ export function featureSummary(id) {
  * The cap is on this Advantage's bonus alone, not on the Wound Roll and not on what
  * anything else adds - so a long charge stops paying at 2(T) while everything else on
  * the attack goes on counting.
+ *
+ * Power Shot: "increase your Wound Rolls for this Signature Technique by 2(T) for each
+ * rank of this Advantage." Held to the three ranks the entry prices, so a list that
+ * somehow carries four is worth three - the ceiling is the rule rather than an accident
+ * of how the feature was written down.
  */
 export function advantageWoundParts(attacker, attack) {
   const parts = [];
@@ -77,11 +82,40 @@ export function advantageWoundParts(attacker, attack) {
     if (bonus) parts.push({ label: "Charging Assault", value: bonus });
   }
 
+  const powerShot = Math.min(
+    featureRanks(attack.advantages, "power-shot"), POWER_SHOT_MAX_RANKS);
+  if (powerShot) {
+    const per = powerShot * POWER_SHOT_PER_RANK;
+    parts.push({
+      label: `Power Shot ${powerShot}`,
+      written: `+${per}(T)`,
+      value: per * tier
+    });
+  }
+
   return parts;
 }
 
 /** The Squares a charge covers before any of them are worth anything. */
 export const CHARGING_FREE_SQUARES = 3;
+
+/**
+ * How many ranks of one feature an attack carries.
+ *
+ * Every feature but Power Shot is had or not had, and a list of ids says that perfectly
+ * well. A ranked one is in the list once per rank, so the rank is the count - which
+ * leaves `advantages.includes(id)` answering "does it have it" for everything that only
+ * wants to know that, and adds nothing to any feature that has no ranks.
+ */
+export function featureRanks(advantages, id) {
+  return (advantages ?? []).filter(entry => entry === id).length;
+}
+
+/** "2(T) for each rank of this Advantage." */
+export const POWER_SHOT_PER_RANK = 2;
+
+/** Three prices are listed and no fourth, which is where the ranks stop. */
+export const POWER_SHOT_MAX_RANKS = 3;
 
 /**
  * Features that push a character around, and so can cause Collision Damage.
