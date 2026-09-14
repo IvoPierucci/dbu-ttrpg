@@ -2,6 +2,8 @@ id: analyzed
 name: Analyzed
 kind: conditions
 maxStacks: 1
+# Not a Combat Condition: the entry says "they become Analyzed" and never calls it one.
+combatCondition: no
 source: Core Rule
 description: >
   Somebody has your measure. Whoever Analyzed you rolls better against you until the

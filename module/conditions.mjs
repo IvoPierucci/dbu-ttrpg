@@ -30,7 +30,17 @@ export function replaceObject(value) {
   return foundry.data.operators.ForcedReplacement.create(value);
 }
 
-/** Every Combat Condition the system knows, in the order the sheet lists them. */
+/**
+ * Every mark this folder holds, in the order the sheet lists them.
+ *
+ * Most of them are Combat Conditions and a couple are not. Hyped and Analyzed are marks
+ * a Maneuver puts on somebody - "you become Hyped!", "they become Analyzed" - and neither
+ * entry calls them Combat Conditions, where the ones that mean it say "gains the
+ * Impediment Combat Condition". They live here because this is where a mark with a clock
+ * on it lives and everything that puts one on or takes one off is keyed to this folder;
+ * `combatCondition: no` is how one says it is not one of the published eighteen, so the
+ * checklist can be the eighteen.
+ */
 export function allConditions() {
   return traitsOfKind("conditions").map(trait => ({
     key: trait.id,
@@ -38,8 +48,26 @@ export function allConditions() {
     description: trait.description ?? "",
     text: trait.text ?? "",
     // A Condition with a maximum above one stacks; the rest are simply on or off.
-    maxStacks: Number(trait.maxStacks) || 1
+    maxStacks: Number(trait.maxStacks) || 1,
+    // True unless the file says otherwise, because almost every one of them is.
+    combatCondition: trait.combatCondition !== false
   }));
+}
+
+/** The published Combat Conditions, which is what the checklist on the sheet is. */
+export function combatConditionsFor(actor) {
+  return conditionsFor(actor).filter(condition => condition.combatCondition);
+}
+
+/**
+ * The marks this character is carrying that are not Combat Conditions.
+ *
+ * Said where the sheet says what you are in the middle of rather than in a checklist of
+ * their own: there are two of them, neither is something you tick, and both are things a
+ * Maneuver did to somebody a moment ago.
+ */
+export function marksFor(actor) {
+  return conditionsFor(actor).filter(mark => !mark.combatCondition && mark.active);
 }
 
 /** What a character has, as the sheet wants to render it. */

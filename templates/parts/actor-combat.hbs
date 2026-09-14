@@ -34,6 +34,18 @@
       </div>
       {{/if}}
 
+      {{#each marks as |mark|}}
+      {{! Hyped, Analyzed - marks a Maneuver put on somebody. Not Combat Conditions: the
+          entries that create them do not call them that, and the checklist below is the
+          published ones. Said here because this is where the sheet says what you are in
+          the middle of. }}
+      <div class="stat stat-charging" data-tooltip="{{mark.description}}">
+        <em>{{mark.name}}</em>
+        <span>{{#if mark.stacking}}{{mark.stacks}}{{else}}yes{{/if}}</span>
+        {{#if mark.note}}<i class="stat-note">{{mark.note}}</i>{{/if}}
+      </div>
+      {{/each}}
+
       {{#if delayed}}
       {{! A Maneuver paid for and held back. Nothing watches for the trigger - it is in
           the player's own words and the table is what calls it - so what this row is for

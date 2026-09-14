@@ -7,7 +7,8 @@ import { reactiveFor } from "../effects/registry.mjs";
 import { resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import {
-  conditionsFor,
+  combatConditionsFor,
+  marksFor,
   setCondition,
   setState,
   statesFor,
@@ -308,6 +309,37 @@ function traitsOwned(actor) {
     .filter(item => item.type === "maneuver")
     .map(item => item.system.maneuverId)
     .filter(Boolean));
+}
+
+/**
+ * When a mark on this character lifts, in the words the clock is kept in.
+ *
+ * The clock can be on somebody else - Analyzed is timed by whoever Analyzed you, because
+ * "until the end of YOUR next turn" is their turn - so this looks on the character first
+ * and then on everybody a token on the scene belongs to. A mark whose timer is nowhere to
+ * be found says nothing rather than claiming a turn it has not got: a GM who ticked it by
+ * hand is the usual reason, and it is theirs to lift.
+ */
+function markClock(actor, key) {
+  const mine = (actor.system.timed ?? []).filter(entry =>
+    (entry?.kind === KINDS.CONDITION) && (entry.key === key) && !entry.on);
+  if (mine.length) return resourceClocks(mine.map(entry => ({ ...entry, key })), key).join(" · ");
+
+  for (const token of canvas?.tokens?.placeables ?? []) {
+    const other = token.actor;
+    if (!other || (other.uuid === actor.uuid)) continue;
+
+    const theirs = (other.system.timed ?? []).filter(entry =>
+      (entry?.kind === KINDS.CONDITION) && (entry.key === key) && (entry.on === actor.uuid));
+    if (!theirs.length) continue;
+
+    const when = resourceClocks(theirs, key).join(" · ")
+      .replace(/your turn/g, `${other.name}'s turn`)
+      .replace(/your next turn/g, `${other.name}'s next turn`);
+    return when;
+  }
+
+  return "";
 }
 
 /**
@@ -622,7 +654,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // Combat Conditions: every one the system knows, marked with what this character
     // has, so the section is a checklist rather than a list of what is already wrong.
-    context.conditions = conditionsFor(this.actor);
+    context.conditions = combatConditionsFor(this.actor);
     const held = context.conditions.filter(c => c.active);
     context.anyCondition = held.length > 0;
     context.conditionSummary = held
@@ -641,6 +673,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.stackSummary = carried
       .map(row => `${row.name} ${row.stacks}${row.max ? `/${row.max}` : ""}`)
       .join(", ");
+    // The marks that are not Combat Conditions - Hyped, Analyzed - said beside Charging
+    // and Holding, because they are the same kind of thing: something you are in the
+    // middle of, with a name and an end. Each carries when it lifts, which is on whoever
+    // is counting it rather than on whoever is carrying it.
+    context.marks = marksFor(this.actor).map(mark => ({
+      ...mark,
+      note: markClock(this.actor, mark.key)
+    }));
+
     context.grapple = this.#grapple();
     context.states = statesFor(this.actor);
     const entered = context.states.filter(s => s.active);

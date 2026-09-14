@@ -2,6 +2,8 @@ id: hyped
 name: Hyped
 kind: conditions
 maxStacks: 1
+# Not a Combat Condition: the entry says "you become Hyped!" and never calls it one.
+combatCondition: no
 source: Core Rule
 description: >
   Carried by your own performance. Every Combat Roll gains 1(T) plus a quarter of
