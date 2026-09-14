@@ -52,6 +52,14 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       actionCostOpen: new fields.BooleanField({ required: true, initial: false }),
       kiCost: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       kiCostPerBaseTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      /**
+       * A Ki Point Cost written "2(T)", which grows with the Tier of Power rather than
+       * with the Base Tier.
+       *
+       * The Profiles have had one since they were built; no Maneuver had, because until
+       * the Blockade Maneuver none was priced that way.
+       */
+      kiCostPerTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
 
       /** How it behaves in an exchange. */
       attacking: new fields.BooleanField({ required: true, initial: false }),
@@ -120,6 +128,15 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * shape should run the same way.
        */
       thrust: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Steps into somebody's path: played from a Movement Maneuver's card, and a Clash
+       * of Impulsive against the Character who moved.
+       *
+       * The first Counter Maneuver that answers something other than an attack aimed at
+       * you - Energy Cancel spends its Counter Action beside an attack rather than on
+       * anything, and every other one meets one.
+       */
+      blockade: new fields.BooleanField({ required: true, initial: false }),
       /**
        * The Signature Technique features this Maneuver was built with, by id.
        *

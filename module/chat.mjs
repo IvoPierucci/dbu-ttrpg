@@ -1,7 +1,7 @@
 import DBUCharacterData from "./data/actor-character.mjs";
 import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
-import { spendActions } from "./combat.mjs";
+import { refundActions, spendActions } from "./combat.mjs";
 import { EDGES, KINDS, lasting } from "./durations.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, pushes } from "./signature.mjs";
@@ -25,6 +25,7 @@ import {
   interveneOptionCost,
   longRangePenalty,
   maneuverKiCost,
+  movementSquares,
   recordManeuverType,
   whyNotAnotherAbsolute,
   whyNotThisFoundation,
@@ -285,6 +286,115 @@ async function applyClash(messageId, clash) {
   if (clash.thrust && clash.result && !clash.thrust.applied) {
     await settleThrust(message, clash);
   }
+
+  if (clash.blockade && clash.result && !clash.blockade.applied) {
+    await settleBlockade(message, clash);
+  }
+}
+
+/**
+ * What a settled Blockade leaves behind.
+ *
+ * Winning stops the Movement where it is: the Squares already crossed stand, the Actions
+ * and the Ki come back, and the Character cannot use the Movement Maneuver again this
+ * turn. Losing hands them an opening - "you trigger their Exploit Maneuver" - and their
+ * Movement goes on.
+ *
+ * A tie goes to the Defender here as everywhere, and the Defender is the one who moved:
+ * standing in somebody's way has to be done outright.
+ */
+async function settleBlockade(message, clash) {
+  const blocker = fromUuidSync(clash.challengerUuid);
+  const mover = fromUuidSync(clash.defenderUuid);
+  if (!blocker || !mover) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a
+  // card that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, blockade: { ...clash.blockade, applied: true }
+  });
+
+  const moved = game.messages.get(clash.blockade.messageId);
+  const movement = movementOnCard(moved);
+
+  if (whoWonClash(clash.result) !== "challenger") {
+    // "That Character may continue to use their Movement Maneuver and you trigger their
+    // Exploit Maneuver." Theirs alone, and aimed at whoever stepped in the way.
+    await settledNote(message,
+      `${mover.name} goes through, and ${blocker.name} has given them an opening.`);
+
+    if (mover.items.some(item => (item.type === "maneuver") && item.system.exploit)) {
+      requestEdit(message, {
+        type: "offer",
+        offer: {
+          actorUuid: mover.uuid,
+          actorName: mover.name,
+          maneuverId: "exploit",
+          maneuverName: "Exploit",
+          targetUuid: blocker.uuid,
+          reason: "Blockade - they stepped into your path and lost the Clash"
+        }
+      });
+    }
+    return;
+  }
+
+  // "You may immediately move to any Square within your Normal Speed that is adjacent to
+  // that Character." How far is a rule and the card says it; where is the table's.
+  const speed = movementSquares(blocker, "normal");
+
+  // One Movement is stopped once, however many people were standing in the way.
+  if (moved && movement) {
+    await moved.setFlag(SCOPE, MOVEMENT_FLAG, { ...movement, stopped: true });
+  }
+
+  // "They regain any Actions or Ki Points spent." What this Movement cost them, which
+  // the card kept because by now there is nothing on the character that says.
+  const spent = movement?.spent ?? { actions: 0, kind: "standard", ki: 0 };
+  if (spent.actions > 0) await refundActions(mover, spent.actions, spent.kind || "standard");
+  if (spent.ki > 0) {
+    await refundManeuverCost(mover, { name: "Movement", kiCost: spent.ki });
+  }
+
+  // "Cannot use the Movement Maneuver for the remainder of their Turn." Held as a
+  // Resource with a clock of their own turn's end, and read by a passive in the Movement
+  // Maneuver's file - which is the only one that runs on the character it binds.
+  await setResource(mover, "blockaded", 1);
+  await lasting(mover, {
+    kind: KINDS.RESOURCE, key: "blockaded", edge: EDGES.END, source: "Blockade"
+  });
+
+  const givenBack = [
+    spent.actions > 0 ? `${spent.actions} Action${spent.actions === 1 ? "" : "s"}` : "",
+    spent.ki > 0 ? `${spent.ki} Ki Points` : ""
+  ].filter(Boolean).join(" and ");
+
+  await settledNote(message,
+    `${mover.name} is stopped${givenBack ? `, and gets back ${givenBack}` : ""}. They `
+    + "cannot use the Movement Maneuver again this turn. "
+    + `${blocker.name} may step to any Square within ${speed} - their Normal Speed - that `
+    + `is adjacent to ${mover.name}.`);
+}
+
+/**
+ * Put a Resource on a character from outside the effects engine.
+ *
+ * Everything else that writes one is a Slot settled in a Moment, and this is not: the
+ * Blockade's Resource is handed out by a Clash landing, which no Moment describes. Capped
+ * at what the library declares, like every other write to the bag.
+ */
+async function setResource(actor, name, stacks) {
+  const { replaceObject } = await import("./conditions.mjs");
+  const { resourceLimits } = await import("./effects/traits.mjs");
+
+  const held = { ...(actor.system.resources ?? {}) };
+  const max = resourceLimits()[name] ?? 0;
+  const capped = Math.max(0, max ? Math.min(stacks, max) : stacks);
+
+  if (capped > 0) held[name] = { stacks: capped, max };
+  else delete held[name];
+
+  return actor.update({ "system.resources": replaceObject(held) });
 }
 
 /**
@@ -1553,9 +1663,20 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
  * `asOutOfSequence` covers a Maneuver played through an effect that lets it resolve
  * out of sequence: it ignores its usual Action Cost, and nothing may answer it.
  */
+/**
+ * What a Movement card says about itself, or null when this is not one.
+ *
+ * Read off the card rather than worked out again: by the time anybody blocks it, the
+ * Actions and the Ki have been spent and there is nothing left on the character saying
+ * what this particular Movement took.
+ */
+function movementOnCard(message) {
+  return message?.getFlag?.(SCOPE, MOVEMENT_FLAG) ?? null;
+}
+
 export async function postManeuver(actor, maneuver,
                                    { asOutOfSequence = false, foundation = null,
-                                     rapidMovement = false } = {}) {
+                                     rapidMovement = false, spent = null } = {}) {
   const type = MANEUVER_TYPES[maneuver.type];
   const label = asOutOfSequence ? MANEUVER_TYPES.outOfSequence.label : type.label;
   const cost = (type.action && !asOutOfSequence)
@@ -1579,7 +1700,31 @@ export async function postManeuver(actor, maneuver,
         [RESPONDABLE_FLAG]: isRespondable(maneuver, asOutOfSequence),
         // Set before the offers are written, so an Exploit provoked by this Movement can
         // be answered by a card that already knows what was paid for.
-        ...(rapidMovement ? { [RAPID_FLAG]: { actorUuid: actor.uuid } } : {})
+        ...(rapidMovement ? { [RAPID_FLAG]: { actorUuid: actor.uuid } } : {}),
+        // A Movement is the one Maneuver somebody else can answer without being aimed at,
+        // so its card says who moved and what it took. Out of sequence it says nothing:
+        // an Out-of-Sequence Movement is not "uses the Movement Maneuver" on their turn,
+        // which is what the Blockade is written against.
+        ...((maneuver.movement && !asOutOfSequence)
+          ? {
+              [MOVEMENT_FLAG]: {
+                actorUuid: actor.uuid,
+                actorName: actor.name,
+                maneuverId: maneuver.id,
+                maneuverName: maneuver.name,
+                // What a Blockade hands back if it wins. Read from what was actually
+                // paid rather than from the Maneuver's listed price, since a Movement's
+                // price is what was chosen: Normal Speed for nothing, Boosted for 3(T),
+                // Rapid Movement another 2(T) on top.
+                spent: {
+                  actions: spent?.actions ?? maneuver.actionCost ?? 0,
+                  kind: spent?.kind ?? "standard",
+                  ki: spent?.ki ?? 0
+                },
+                stopped: false
+              }
+            }
+          : {})
       }
     }
   });
@@ -2067,6 +2212,9 @@ function rollsOnMessage(message, actor) {
 async function respondDialog(message, respondable) {
   const characters = ownedCharacters();
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  // The other thing a Counter Maneuver can answer. Until the Blockade Maneuver, every
+  // one of them met an attack aimed at the person playing it.
+  const movement = movementOnCard(message);
   const answered = new Set((message.getFlag(SCOPE, RESPONSES_FLAG) ?? []).map(entry => entry.actorUuid));
 
   const sections = characters.map(actor => {
@@ -2130,12 +2278,32 @@ async function respondDialog(message, respondable) {
 
     // One Counter Action answers one Maneuver, so these are one choice between them -
     // Dodge included, since answering an attack is what the group is for.
+    // "If a Character within range of your Normal Speed uses the Movement Maneuver."
+    // Whether they are in range is the table's call, like every range in these rules, so
+    // what is checked here is everything else: that somebody moved, that the Movement is
+    // still going, and that it was not this character who moved.
+    const canBlock = Boolean(movement) && !movement.stopped
+      && (movement.actorUuid !== actor.uuid);
+
     const counters = counterManeuvers().map(maneuver => {
       // A Counter Maneuver answers an Attacking Maneuver aimed at you, so a character
       // who is not the target is shown it but cannot take it.
       let blocked = !unresolved;
       let reason = blocked
         ? "only the target of an attack may answer it, and only before it resolves" : "";
+
+      // The Blockade answers a Movement instead, so it is judged against that and not
+      // against being attacked.
+      if (maneuver.blockade) {
+        blocked = !canBlock;
+        reason = !movement
+          ? "only when somebody uses the Movement Maneuver"
+          : movement.stopped
+          ? "this Movement has already been stopped"
+          : (movement.actorUuid === actor.uuid)
+          ? "you cannot stand in your own way"
+          : "";
+      }
 
       // Energy Cancel needs a charge to let go of, whoever is looking at it.
       if (!blocked && maneuver.cancelCharge && !actor.system.charging?.maneuverId) {
@@ -2145,6 +2313,8 @@ async function respondDialog(message, respondable) {
 
       const note = maneuver.cancelCharge
         ? `${maneuver.source} - you still Dodge`
+        : maneuver.blockade
+        ? `${maneuver.source} - ${maneuverKiCost(maneuver, null, actor)} KP`
         : maneuver.source;
 
       return option(`counter-${actor.id}`, maneuver.id, maneuver.name, note, blocked, reason);
@@ -2155,7 +2325,7 @@ async function respondDialog(message, respondable) {
     // Thumb War is answered on its own card, not defended against. With no attack here
     // the whole group is left off rather than shown with everything in it disabled:
     // greying out an option says "not now", and the truth is "not for this".
-    const counterGroup = attack
+    const counterGroup = (attack || canBlock)
       ? `<details class="dbu-respond-group">
            <summary>Counter Maneuvers</summary>
            ${counters || `<p class="dbu-respond-note">None.</p>`}
@@ -2437,6 +2607,11 @@ async function playInstant(message, actor, maneuverId) {
  * resolve the exchange, which is why they share one group of choices.
  */
 async function playCounter(message, actor, answer, attack) {
+  // The Blockade is the one Counter Maneuver that does not answer an attack, so it is
+  // reached before the guard that says there has to be one.
+  const blockade = getManeuver(answer);
+  if (blockade?.blockade) return playBlockade(message, actor, blockade);
+
   if (!attack || attack.result) return;
   // Dodging is not a Maneuver, so it neither costs a Counter Action nor gets you out
   // from under an Instant.
@@ -2459,6 +2634,46 @@ async function playCounter(message, actor, answer, attack) {
 
   if (!maneuver.defend) return;
   return defendAgainst(message, actor, attack);
+}
+
+/**
+ * Stand in somebody's way.
+ *
+ * "If a Character within range of your Normal Speed uses the Movement Maneuver, you may
+ * use this Maneuver to make a Clash (Impulsive) against that Character."
+ *
+ * Paid for here rather than through useManeuver, the way a Defend is: this path starts
+ * from a card that has to be carried into the Clash, and useManeuver has no way to be
+ * told which one. What that costs is saying the Action and the Ki out loud - both below,
+ * both before anything is opened.
+ */
+async function playBlockade(message, actor, maneuver) {
+  const movement = movementOnCard(message);
+  const mover = movement && fromUuidSync(movement.actorUuid);
+
+  if (!movement || movement.stopped || !mover || (movement.actorUuid === actor.uuid)) return;
+
+  // Ki first, then the Counter Action, so a character who cannot pay for it has spent
+  // neither. "KP Cost: 2(T)", which is what the Maneuver's own price comes to.
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+    await refundManeuverCost(actor, maneuver);
+    return;
+  }
+
+  // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
+  await recordManeuverType(actor, "counter");
+
+  // "A Clash (Impulsive)" - one Saving Throw named, so there is nothing to choose
+  // between and neither side is asked anything.
+  return postSaveClash(actor, mover, {
+    maneuverName: maneuver.name,
+    clashLabel: "Blockade",
+    reason: `${actor.name} steps into ${mover.name}'s path. Win and the Movement stops; `
+      + `lose and ${mover.name} moves on and has an opening.`,
+    saves: ["impulsive"],
+    blockade: { messageId: message.id, applied: false }
+  });
 }
 
 /** Take back a response, refunding what it cost to the Actor that played it. */
@@ -2496,6 +2711,16 @@ const MOMENT_FLAG = "moment";
  * with Rapid Movement on one of them is exactly the case that tells the two apart.
  */
 const RAPID_FLAG = "rapidMovement";
+
+/**
+ * A Movement Maneuver, on its own card: who moved, and what it cost them.
+ *
+ * The cost is carried because of the Blockade Maneuver - "they regain any Actions or Ki
+ * Points spent" - and a refund made from a card has no other way to know what to give
+ * back. `stopped` is whether a Blockade has already cut this Movement off: one Movement
+ * is stopped once, however many people were standing in the way.
+ */
+const MOVEMENT_FLAG = "movement";
 
 /**
  * Whatever the character's effects contribute at one Moment.

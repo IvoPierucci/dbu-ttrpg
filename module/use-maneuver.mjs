@@ -703,6 +703,8 @@ export function definitionOf(item) {
     powerUp: item.system.powerUp,
     signatureTechnique: item.system.signatureTechnique,
     thrust: item.system.thrust,
+    blockade: item.system.blockade,
+    kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
      * from whether it throws one.
@@ -1061,8 +1063,17 @@ export async function useManeuver(actor, maneuver) {
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges })
     // A Movement card carries whether Rapid Movement was paid for, because the Dodge
     // bonus it buys is against "an Exploit Maneuver provoked by this instance" - and this
-    // card is that instance.
-    : await postManeuver(actor, maneuver, { rapidMovement: Boolean(crossing?.rapid) });
+    // card is that instance. It carries what was paid for the same reason: a Blockade
+    // that wins hands it all back, and by then there is nothing on the character that
+    // says what this particular Movement took.
+    : await postManeuver(actor, maneuver, {
+        rapidMovement: Boolean(crossing?.rapid),
+        spent: {
+          actions: actionCostOf(maneuver, actionsSpent).amount,
+          kind: actionCostOf(maneuver, actionsSpent).kind,
+          ki: price
+        }
+      });
 
   // Recorded once the card exists, since which card an Instant was played on is part
   // of the rule: an Out-of-Sequence Maneuver this one offers is not a way out from
@@ -1293,6 +1304,8 @@ export function maneuverItemFrom(definition) {
       powerUp: Boolean(definition.powerUp),
       signatureTechnique: Boolean(definition.signatureTechnique),
       thrust: Boolean(definition.thrust),
+      blockade: Boolean(definition.blockade),
+      kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),

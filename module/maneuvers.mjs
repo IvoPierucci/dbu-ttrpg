@@ -1684,9 +1684,14 @@ async function pickProfile(maneuver, foundations, actor) {
  * other.
  */
 function baseKiCost(maneuver, actor) {
-  return maneuver.kiCostPerBaseTier
-    ? maneuver.kiCostPerBaseTier * (actor?.system?.baseTierOfPower ?? 1)
-    : (maneuver.kiCost ?? 0);
+  if (maneuver.kiCostPerBaseTier) {
+    return maneuver.kiCostPerBaseTier * (actor?.system?.baseTierOfPower ?? 1);
+  }
+  // "2(T)" - the Tier of Power, which a Breakthrough raises and the Base Tier does not.
+  if (maneuver.kiCostPerTier) {
+    return maneuver.kiCostPerTier * (actor?.system?.tierOfPower ?? 1);
+  }
+  return maneuver.kiCost ?? 0;
 }
 
 /**
@@ -1979,6 +1984,8 @@ export async function loadManeuvers() {
     powerUp: Boolean(trait.powerUp),
     signatureTechnique: Boolean(trait.signatureTechnique),
     thrust: Boolean(trait.thrust),
+    blockade: Boolean(trait.blockade),
+    kiCostPerTier: trait.kiCostPerTier ?? 0,
     // `coerce` splits a header on commas and leaves a single value a string, so
     // `tags: signature` arrived as the word rather than a list of one and every reader
     // asking `tags.includes(...)` saw the letters instead. No file had ever written a

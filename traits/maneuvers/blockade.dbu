@@ -1,0 +1,69 @@
+id: blockade
+name: Blockade
+type: counter
+actionCost: 1
+kiCostPerTier: 2
+attacking: false
+blockade: true
+resource: blockaded
+resourceMax: 1
+resourceLabel: Blockaded
+source: Core Rule
+description: >
+  Cut somebody off mid-Movement. A Clash of Impulsive against theirs; win and they
+  stop where they are, get their Actions and Ki back, and cannot use the Movement
+  Maneuver again this turn.
+text: >
+  Blockade Maneuver: Protect your allies by standing in the way.
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter
+  –KP Cost: 2(T)
+  –Effect: If a Character within range of your Normal Speed uses the Movement
+  Maneuver, you may use this Maneuver to make a Clash (Impulsive) against that
+  Character. If you win, you may immediately move to any Square within your Normal
+  Speed that is adjacent to that Character. That Character stops using the Movement
+  Maneuver and cannot use the Movement Maneuver for the remainder of their Turn
+  (they regain any Actions or Ki Points spent). If you lose, that Character may
+  continue to use their Movement Maneuver and you trigger their Exploit Maneuver.
+
+---
+
+# No script here, and one belonging to somebody else.
+#
+# `blockade: true` hands this to the code, for the reason every Counter Maneuver
+# that does more than pay for itself is handed there: it is played from the card of
+# the Maneuver it answers, and a script cannot reach one.
+#
+# What it comes to:
+#   - offered on a Movement Maneuver's card, to anybody but the Character moving
+#   - a Clash of Impulsive against Impulsive - one Saving Throw named, so there is
+#     nothing to choose and nobody is asked
+#   - winning says how far you may step to reach them, stops the Movement, hands
+#     back the Actions and the Ki it cost, and leaves them Blockaded
+#   - losing provokes their Exploit Maneuver against you, and their Movement goes on
+#
+# --- The Resource, and whose file its rule is in ------------------------------------
+#
+# "Cannot use the Movement Maneuver for the remainder of their Turn." That is a
+# forbid, and a forbid has to be written by a passive on the Character it binds - so
+# it cannot be here: a Trait's passives run on whoever owns it, and the Character
+# being blocked does not own this Maneuver.
+#
+# What they do own is the Movement Maneuver itself, which every character carries a
+# copy of. So the Resource is declared here, where the rule that hands it out lives,
+# and read by a passive in maneuvers/movement.dbu, which is the only file that runs
+# on the right person. That file says the same thing pointing this way.
+#
+# It is a Resource rather than a Combat Condition because there is no published
+# Condition for this and inventing one would be inventing rules. A Resource is the
+# system's own bookkeeping, it takes a clock of its own - the end of their turn - and
+# it shows on their sheet beside the other counters, so the player can see what is
+# stopping them and when it lifts.
+#
+# --- What is not built, and why -----------------------------------------------------
+#
+# "A Character within range of your Normal Speed", and "any Square within your Normal
+# Speed that is adjacent to that Character". Both are facts about the map, and this
+# system moves nobody: the card says how many Squares your Normal Speed is and the
+# token is yours to drag. Whether they were in range at all is the table's call, the
+# same as every other range in these rules.

@@ -58,6 +58,20 @@ if (rapid.stacks > 0) {
     strike += 1(T);
 }
 
+# Blockaded. "That Character stops using the Movement Maneuver and cannot use the
+# Movement Maneuver for the remainder of their Turn" - the Blockade Maneuver's, and
+# written here rather than there because a forbid has to be written by a passive on
+# the Character it binds. A Trait's passives run on whoever owns it, and the
+# Character being blocked does not own somebody else's Blockade; what they do own is
+# this, since every character carries a copy of the Core Maneuvers.
+#
+# The Resource is declared in maneuvers/blockade.dbu, where the rule that hands it
+# out lives, and it carries a clock to the end of their turn.
+[passive]
+if (blockaded.stacks > 0) {
+    forbid maneuver.movement;
+}
+
 # --- What is not built, and why ---------------------------------------------------
 #
 # Rapid Movement is built, both halves. The Strike bonus is the passive above; the
