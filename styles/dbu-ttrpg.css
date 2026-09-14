@@ -1322,7 +1322,9 @@
 .dbu-clash,
 .dbu-check,
 .dbu-clash-button,
-.dbu-respond-button {
+.dbu-respond-button,
+.dbu-crit-button,
+.dbu-oos-button {
   --dbu-accent: #f5a623;
   --dbu-ready: #2f9e55;
   --dbu-pending: #d1544a;
@@ -1415,9 +1417,13 @@
 
 /* The single way in to answering a Maneuver, and the card's own controls.
 
-   Every button drawn into the chat log belongs here. One that is left out takes
-   Foundry's default button text - black, on a card that is not - and it will not
-   look wrong until somebody happens to be shown it. */
+   Every button drawn into the chat log belongs in both of these: this rule, and the
+   palette above that declares --dbu-action. One that is in this rule and not in that one
+   is worse off than one that is in neither - rgba(var(--dbu-action), 0.24) with nothing
+   to resolve is invalid at computed-value time, so the background and the border are
+   dropped and what is left is a transparent rectangle on a dark card. That is what
+   happened to the two buttons drawn straight into .message-content rather than inside a
+   .dbu-clash: they had no card to inherit the palette from. */
 .dbu-clash-button,
 .dbu-respond-button,
 .dbu-crit-button,
@@ -1605,6 +1611,14 @@
 
 /* GM only: closes the maneuver to further responses. */
 /* Out-of-Sequence chances granted by a message. */
+/* The Out-of-Sequence offer, in the accent yellow rather than the blue the rest of the
+   chat buttons share. Worth the difference: those are how you answer something on your
+   own turn, and this is a chance handed to somebody who is not acting - Cross Counter
+   striking back, an Exploit taken on an opening. */
+.dbu-oos-button {
+  --dbu-action: 245, 166, 35;
+}
+
 .dbu-oos-list {
   margin: 4px 0 0;
   padding: 0;
