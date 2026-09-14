@@ -308,6 +308,14 @@ export function registerCombatHooks() {
       if (leaving.system.attackActionsThisTurn) {
         await leaving.update({ "system.attackActionsThisTurn": 0 });
       }
+
+      // And what trying to break free has built up. "Increase the Dice Score of their
+      // Grapple Check by 1(T) until the end of their turn" - so the attempts a turn made
+      // are worth nothing to the next one, and the count that carries them goes here for
+      // the same reason the one above does.
+      if (leaving.system.grapple?.escapeActions) {
+        await leaving.update({ "system.grapple.escapeActions": 0 });
+      }
     }
 
     const arriving = combat.combatant?.actor;

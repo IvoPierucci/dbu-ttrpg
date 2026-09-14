@@ -625,13 +625,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * which button is showing.
    */
   #grapple() {
-    const { partner, role } = this.actor.system.grapple ?? {};
+    const { partner, role, escapeActions = 0 } = this.actor.system.grapple ?? {};
     if (!partner || !role) return null;
 
     const other = fromUuidSync(partner);
     return {
       role,
       grappler: role === "grappler",
+      // What the attempts already made this turn are worth to the next one, which is the
+      // one thing worth knowing before spending another Action on it.
+      tried: escapeActions,
+      nextBonus: escapeActions * Math.max(1, this.actor.system.tierOfPower ?? 1),
       // A partner whose token has gone leaves a Grapple with nobody in it. Said rather
       // than drawn as a blank, and the button still works - letting go of nothing is
       // how you get out of it.
@@ -645,7 +649,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return releaseGrapple(this.actor);
   }
 
-  /** The Grappled spends Actions on a Grapple Check to break free. */
+  /** The Grappled spends an Action on a Grapple Check to break free. */
   static async _onEscapeGrapple() {
     return escapeGrapple(this.actor);
   }

@@ -347,8 +347,14 @@
     <button type="button" data-action="releaseGrapple" class="capacity-reset"
             data-tooltip="End the Grapple. An Instant Maneuver, on your turn.">Let go</button>
     {{else}}
+    {{! One Action, one Check. What the earlier attempts this turn bought shows beside
+        it, since that is what decides whether another one is worth an Action. }}
     <button type="button" data-action="escapeGrapple" class="capacity-reset"
-            data-tooltip="Spend 1 Action to make a Grapple Check against the Grappler. Each Action after the first raises your Dice Score by 1(T).">Escape</button>
+            data-tooltip="Spend 1 Action on a Grapple Check against the Grappler. Lose it and you can try again: every Action spent this turn raises the next Check by 1(T).">Escape</button>
+    {{#if grapple.tried}}
+    <span class="capacity-note">{{grapple.tried}} tried this turn &middot; next Check
+      +{{grapple.nextBonus}}</span>
+    {{/if}}
     <span class="capacity-note">{{grapple.actions}} Actions left this round</span>
     {{/if}}
   </section>

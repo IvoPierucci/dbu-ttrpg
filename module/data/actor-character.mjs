@@ -914,7 +914,26 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
        * the Grapple Check" - so an escape attempt is rolled by the Grappled and is still
        * the Grappler's Check to defend.
        */
-      role: new fields.StringField({ required: true, blank: true, initial: "" })
+      role: new fields.StringField({ required: true, blank: true, initial: "" }),
+
+      /**
+       * Actions spent trying to break free during this turn.
+       *
+       * "By spending 1 Action, the Grappled can make a Grapple Check against the
+       * Grappler... for each Action spent after the first, increase the Dice Score of
+       * their Grapple Check by 1(T) until the end of their turn."
+       *
+       * So this is a tally of attempts rather than a budget bought in advance: each one
+       * costs an Action and makes a Check, and what the earlier ones leave behind is the
+       * bonus on the next. Three Actions is three Checks, and the third only happens
+       * because the first two lost.
+       *
+       * Belongs to the turn, which is what "until the end of their turn" makes it, and
+       * is zeroed with the rest of what a turn leaves behind.
+       */
+      escapeActions: new fields.NumberField({
+        required: true, integer: true, initial: 0, min: 0
+      })
     });
 
     // --- Profiles used through a Basic Attack this Combat Round ---

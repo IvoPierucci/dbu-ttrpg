@@ -2614,9 +2614,11 @@ const CLASH_ROLLS = Object.freeze({
       ...musclePenalty(actor),
       ...thresholdPenalty(actor),
       // "For each Action spent after the first, increase the Dice Score of their Grapple
-      // Check by 1(T)." The Grappled's, and only on the Check they bought it for.
+      // Check by 1(T) until the end of their turn." What the attempts already made this
+      // turn are worth to this one - so the first is at nothing and every one after it
+      // is better than the last.
       ...(((uuid === clash.defenderUuid) && clash.defenderBonus)
-        ? [{ label: "Extra Actions", written: `+${clash.defenderActions - 1}(T)`,
+        ? [{ label: "Earlier attempts", written: `+${clash.earlierAttempts}(T)`,
              value: clash.defenderBonus }]
         : [])
     ],
@@ -2715,14 +2717,14 @@ export async function postSkillClash(actor, target, maneuver) {
  * one the Grappled pays Actions for - and it is settled here rather than worked out
  * later, because the card is the only thing that will still know.
  *
- * @param {number} defenderActions  Actions the Grappled spent, on an escape. Each after
- *                                  the first raises their Dice Score by 1(T).
+ * @param {number} earlierAttempts  How many Actions the Grappled has already spent trying
+ *                                  to break free this turn, not counting this one. Each
+ *                                  is worth 1(T) on the Dice Score of this Check.
  */
 export async function postGrappleCheck(grappler, grappled, {
-  maneuverName = "Grapple", reason = "", kind = "start", defenderActions = 1, speaker = null,
+  maneuverName = "Grapple", reason = "", kind = "start", earlierAttempts = 0, speaker = null,
   maneuver = null
 } = {}) {
-  const extra = Math.max(0, defenderActions - 1);
   const tier = Math.max(1, grappled.system.tierOfPower ?? 1);
 
   return ChatMessage.create({
@@ -2746,8 +2748,8 @@ export async function postGrappleCheck(grappler, grappled, {
           // Which roll the Defender answers with. Unset until they say, and they are
           // asked before either side has seen a number.
           defenderRoll: "",
-          defenderActions,
-          defenderBonus: extra * tier,
+          earlierAttempts,
+          defenderBonus: earlierAttempts * tier,
           // Winning a Launch throws somebody several Squares in a direction of your
           // choosing, and a Character sent that far can end up hitting something. That
           // is the question Knockback already asks, so the card asks it the same way:

@@ -360,58 +360,36 @@ export async function escapeGrapple(actor) {
     return false;
   }
 
-  const most = game.combat?.started ? actionsLeft(actor, "standard") : 3;
-  if (most < 1) {
+  if (game.combat?.started && (actionsLeft(actor, "standard") < 1)) {
     ui.notifications.warn(`${actor.name} has no Actions left this round.`);
     return false;
   }
 
-  const spent = await askEscapeActions(actor, most);
-  if (spent === null) return false;
+  // One Action, one Check. Not a number bought in advance: the Actions after the first
+  // buy a bonus on the attempts that follow, and you only make a second because the
+  // first one lost - which a player cannot know until they have made it.
+  if (!await spendActions(actor, 1, "standard")) return false;
 
-  if (!await spendActions(actor, spent, "standard")) return false;
+  // What the earlier attempts this turn are worth to this one, read before this attempt
+  // is counted: the first is made at no bonus, which is what "each Action spent after the
+  // first" means.
+  const already = actor.system.grapple.escapeActions ?? 0;
+  await actor.update({ "system.grapple.escapeActions": already + 1 });
 
   const { postGrappleCheck } = await import("./chat.mjs");
   await postGrappleCheck(grappler, actor, {
     maneuverName: "Escaping a Grapple",
     kind: "escape",
-    defenderActions: spent,
+    earlierAttempts: already,
     // The Grappled is the one doing something, so the card speaks for them even though
     // the Grappler is its challenger.
     speaker: ChatMessage.getSpeaker({ actor }),
-    reason: `${actor.name} spends ${spent} Action${spent === 1 ? "" : "s"} to break free`
+    reason: already
+      ? `${actor.name} tries again - attempt ${already + 1} this turn`
+      : `${actor.name} spends an Action to break free`
   });
 
   return true;
-}
-
-/** How many Actions to put into an escape. One is the rule's floor; the rest buy dice. */
-async function askEscapeActions(actor, most) {
-  if (most <= 1) return 1;
-
-  const chosen = await foundry.applications.api.DialogV2.wait({
-    classes: ["dbu-dialog"],
-    window: { title: "Escaping a Grapple" },
-    content: `<label class="dbu-wager">
-        <span>Actions</span>
-        <input type="number" name="actions" value="1" min="1" max="${most}"/>
-        <em>1 Action makes the Grapple Check. Each one after that raises your Dice Score
-          by 1(T).</em>
-      </label>`,
-    buttons: [
-      {
-        action: "confirm",
-        label: "Confirm",
-        callback: (event, button, dialog) =>
-          Number(dialog.element.querySelector('input[name="actions"]')?.value)
-      },
-      { action: "cancel", label: "Cancel" }
-    ],
-    rejectClose: false
-  });
-
-  const typed = Math.floor(Number(chosen));
-  return Number.isFinite(typed) ? Math.max(1, Math.min(most, typed)) : null;
 }
 
 /** Take the Actions, once the Maneuver has actually committed. */
