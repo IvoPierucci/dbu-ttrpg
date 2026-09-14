@@ -89,7 +89,8 @@ export function resourceLimits() {
  * capitalised stands in where they do not, since the Resources the rulebook never named
  * are bookkeeping this system keeps for an effect that lasts.
  *
- * @returns {Record<string, {max: number, label: string, source: string, description: string}>}
+ * @returns {Record<string, {id: string, max: number, label: string, source: string,
+ *                           description: string, internal: boolean}>}
  */
 export function resourceDefinitions() {
   const found = {};
@@ -97,6 +98,9 @@ export function resourceDefinitions() {
     if (!trait.resource) continue;
     const name = String(trait.resource).toLowerCase();
     found[name] = {
+      // The Trait's id, not only its name: the name is for a reader and this is what
+      // answers "does this character have the thing that hands this out".
+      id: trait.id ?? "",
       max: Math.max(0, Number(trait.resourceMax) || 0),
       label: trait.resourceLabel || (name.charAt(0).toUpperCase() + name.slice(1)),
       source: trait.name ?? "",

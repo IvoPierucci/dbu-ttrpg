@@ -187,19 +187,37 @@ function atRollTime(system, which) {
  * Recovery is the Defense Value that Combat Recovery cost, Rapid Movement is the Strike
  * bonus, Arrogance is the penalty waiting for you when Superior ends.
  */
-function resourceRows(system) {
+function resourceRows(system, owned = null) {
   const held = system.resources ?? {};
   const known = resourceDefinitions();
   const timed = system.timed ?? [];
 
-  return Object.entries(held)
-    .filter(([key, resource]) => (Number(resource?.stacks) || 0) > 0)
+  // Everything this character could have, and everything they do. A Resource you can get
+  // belongs on the list at nothing - everybody has the Power Up Maneuver, so everybody
+  // can hold Power, and a row that appears only once you have some cannot tell you the
+  // Resource is there. That is why the two checklists above it list what you could have.
+  //
+  // "Could have" is holding the Trait that hands it out, which today means owning that
+  // Maneuver: every Resource in the library is declared by one. When a Condition or a
+  // Talent declares one, this is the line that grows.
+  const reachable = Object.entries(known)
+    .filter(([, definition]) => !definition.internal
+      && definition.id && owned?.has(definition.id))
+    .map(([key]) => key);
+
+  const keys = [...new Set([
+    ...Object.keys(held).filter(key => (Number(held[key]?.stacks) || 0) > 0),
+    ...reachable
+  ])];
+
+  return keys
     // Only the ones the rules name. The rest are this system's own bookkeeping - they
     // are held as Resources because that is what takes a clock here, and a player has
     // never been told that word for them. What each is doing is said where it happens:
     // on the roll it changes, and on the card that applied it.
-    .filter(([key]) => !known[key]?.internal)
-    .map(([key, resource]) => {
+    .filter(key => !known[key]?.internal)
+    .map(key => {
+      const resource = held[key] ?? {};
       const definition = known[key] ?? {};
       const name = definition.label || (key.charAt(0).toUpperCase() + key.slice(1));
       return {
@@ -231,7 +249,7 @@ function resourceRows(system) {
  * held, so a list that sorted everything together would have rows arriving and leaving
  * above ones that never move.
  */
-function stackRows(system) {
+function stackRows(system, owned = null) {
   const { offense, defense } = system.diminishing ?? {};
   const { superStack } = system;
 
@@ -272,8 +290,23 @@ function stackRows(system) {
         + "three. Solid Bulk: 1(bT) of Soak per stack. Massive Power: 1/4 of your Force "
         + "Modifier on the Wound Rolls of Physical and Energy Attacks, per stack."
     },
-    ...resourceRows(system)
+    ...resourceRows(system, owned)
   ];
+}
+
+/**
+ * The Traits this character carries, by the id a Trait file is keyed under.
+ *
+ * Which is what answers "could they get this Resource". Maneuvers only, because a
+ * Maneuver is the only kind of Trait that declares one today - a Maneuver Item carries
+ * the id of the file it came from, and one built by hand carries none, which is right:
+ * a Maneuver somebody wrote themselves declares no Resource.
+ */
+function traitsOwned(actor) {
+  return new Set(actor.items
+    .filter(item => item.type === "maneuver")
+    .map(item => item.system.maneuverId)
+    .filter(Boolean));
 }
 
 /**
@@ -599,7 +632,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Everything with stacks, the two Diminishing counters included. Not the Resources
     // alone, which is why it is not called that: the section is about what you are
     // carrying, and those two are carried the same way even though they are not Resources.
-    context.stacks = stackRows(this.actor.system);
+    context.stacks = stackRows(this.actor.system, traitsOwned(this.actor));
     // What the summary line says when the section is shut - the same shape the States and
     // the Combat Conditions use, and only what is actually there.
     const carried = context.stacks.filter(row => row.stacks > 0);
