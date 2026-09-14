@@ -19,7 +19,8 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     window: { resizable: true },
     actions: {
       dbuChangeTab: DBUManeuverSheet._onChangeTab,
-      editImage: DBUManeuverSheet._onEditImage
+      editImage: DBUManeuverSheet._onEditImage,
+      toggleSignature: DBUManeuverSheet._onToggleSignature
     },
     form: { submitOnChange: true }
   };
@@ -66,6 +67,10 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     const { errors } = compile(this.item.system.script, this.item.actor?.system);
     context.errors = errors;
 
+    // Read off the tag, which is where it lives: three rules match on it, and none of
+    // them would see a separate field.
+    context.isSignature = (this.item.system.tags ?? []).includes("signature");
+
     context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation
       .enrichHTML(this.item.system.description, { relativeTo: this.item });
 
@@ -83,6 +88,25 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     const { tab, group } = target.dataset;
     this.tabGroups[group] = tab;
     this.changeTab(tab, group, { event, navElement: target, force: true });
+  }
+
+  /**
+   * Mark this Maneuver as one of the character's Signature Techniques, or unmark it.
+   *
+   * The tag rather than a field of its own: "any Maneuver tagged signature" is how the
+   * rulebook writes the rules that care, and a second place to say the same thing is a
+   * second place for it to be wrong. A checkbox cannot post one entry of a list, so it
+   * is toggled here instead of submitted.
+   */
+  static async _onToggleSignature(event, target) {
+    if (!this.isEditable) return;
+
+    const tags = this.item.system.tags ?? [];
+    const next = target.checked
+      ? [...new Set([...tags, "signature"])]
+      : tags.filter(tag => tag !== "signature");
+
+    return this.item.update({ "system.tags": next });
   }
 
   static async _onEditImage(event, target) {

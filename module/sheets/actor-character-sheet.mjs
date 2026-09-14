@@ -771,7 +771,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             usageLabel: usageLimitLabel(maneuver),
             usesLeft: maneuverUsesLeft(this.actor, maneuver),
             // Off the group, unless the Maneuver has a reason of its own to be here.
-            playable: group.playable || this.#playableAlone(maneuver),
+            playable: (group.playable || this.#playableAlone(maneuver))
+              && !this.#playedThrough(maneuver),
             // Two different ways to be unable to play it, and the row says which:
             // out of uses is a limit of the Maneuver, out of Actions is a limit of
             // the round. Seen before clicking rather than after.
@@ -790,6 +791,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
                 ? `No uses of this left this ${maneuver.usageLimit?.per ?? "encounter"}.`
                 : "",
               this.#shortOfActions(maneuver) ? "No Actions left this round for this." : "",
+              this.#playedThrough(maneuver),
               group.playable || this.#playableAlone(maneuver)
                 ? ""
                 : "Played from the attack it answers, in chat."
@@ -1012,6 +1014,24 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   #playableAlone(maneuver) {
     return Boolean(maneuver.cancelCharge) && Boolean(this.actor.system.charging?.maneuverId);
+  }
+
+  /**
+   * Why this Maneuver is not played from its own row, if it is not.
+   *
+   * A Signature Technique is the one case. It is a Maneuver the character owns and it
+   * appears in the Standard list like any other, but it is not used on its own: the
+   * Signature Technique Maneuver is what costs the Action and carries the [1/Round],
+   * and a row that threw the Technique directly would be a second way in with no limit
+   * behind it.
+   *
+   * Said rather than hidden. The row is still worth having - it is where the player
+   * reads what their own Technique does.
+   */
+  #playedThrough(maneuver) {
+    const technique = (maneuver.tags ?? []).includes("signature")
+      && !maneuver.signatureTechnique;
+    return technique ? "Played through the Signature Technique Maneuver." : "";
   }
 
   /**

@@ -1,0 +1,57 @@
+id: signature-technique
+name: Signature Technique
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: true
+requiresTarget: true
+signatureTechnique: true
+usageLimit: 1/round
+tags: signature
+source: Core Rule
+description: >
+  Throw one of your own Signature Techniques. One Action and once a Combat Round,
+  whichever you pick, and the Technique's own KP Cost is what you pay.
+text: >
+  Signature Technique Maneuver [1/Round]: Blast an Opponent away with a Signature
+  Technique!
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: Varies (each Signature Technique will have their own KP Cost – that is
+  the KP Cost you pay for this Maneuver)
+  –Exploitable: N/A
+  –Effect: Make an Attacking Maneuver using a Signature Technique you have access
+  to.
+
+---
+
+# No script. What this Maneuver does is use a different Maneuver, and a script has
+# no way to ask a player which - so `signatureTechnique: true` hands it to the code
+# that can, the same way `charge` and `movement` are handled.
+#
+# What it comes to:
+#   - you are asked which Signature Technique you have access to, before anything
+#     is paid, so backing out of the question costs nothing
+#   - the Action Cost is this Maneuver's: 1 Action, whatever the Technique's own
+#     header says. A Technique is not a Maneuver you use, it is what you use this
+#     one with
+#   - the KP Cost is the Technique's - "that is the KP Cost you pay for this
+#     Maneuver" - and so is the Profile, the target, the script and the card
+#   - the use is recorded against this Maneuver, which is what makes [1/Round] a
+#     limit across all of your Techniques rather than one apiece
+#
+# `tags: signature` is on this file rather than only on the Techniques, because
+# this Maneuver is the only way to use one: a rule that forbids Signature
+# Techniques - Transfigured does - has to stop this, and it reads the tag.
+#
+# --- What is not built, and why -----------------------------------------------
+#
+# Buying a Signature Technique with Technique Points. The rules for what a Technique
+# costs to design and what its Advantages and Disadvantages are worth are not in
+# this system yet, so there is nothing to spend TP against and no list to spend it
+# from. A Technique is a Maneuver Item you build on the sheet and mark as one, and
+# what it costs you at character creation is the table's to agree until that exists.
+#
+# The Advantages and Disadvantages themselves are half here: the files are under
+# traits/signature/, `advantageWoundParts` does the arithmetic, and a Maneuver can
+# now carry a list of them - what is missing is the part that prices them.

@@ -9,6 +9,7 @@
 
 import DBUCharacterData from "./data/actor-character.mjs";
 import {
+  PROFILES,
   allManeuvers,
   declareAttack,
   whyNotInReach,
@@ -469,6 +470,131 @@ async function dropPowerStack(actor) {
 }
 
 /**
+ * Every Signature Technique this character has access to.
+ *
+ * A Technique is a Maneuver Item of their own tagged `signature`. The Maneuver that
+ * throws them carries the tag too - a rule forbidding Signature Techniques has to stop
+ * the only door to one - so the door is kept out of its own list.
+ */
+export function signatureTechniquesOf(actor) {
+  return actor.items
+    .filter(item => (item.type === "maneuver")
+      && (item.system.tags ?? []).includes("signature")
+      && !item.system.signatureTechnique)
+    .map(definitionOf)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Which Signature Technique is being thrown.
+ *
+ * Asked before anything is paid, like every other question this Maneuver could still be
+ * abandoned at. What each one costs is shown beside it, because that cost is this
+ * Maneuver's cost - "each Signature Technique will have their own KP Cost, that is the
+ * KP Cost you pay for this Maneuver" - and it is the only thing that differs between the
+ * options at the moment of choosing.
+ *
+ * @returns {Promise<?object>} the Technique's definition, or null if nothing was chosen
+ */
+async function pickSignatureTechnique(actor, maneuver) {
+  const techniques = signatureTechniquesOf(actor);
+
+  if (!techniques.length) {
+    ui.notifications.warn(
+      `${actor.name} has no Signature Techniques. Build one as a Maneuver and mark it a `
+      + "Signature Technique on its Rules tab.");
+    return null;
+  }
+
+  let checked = false;
+
+  const options = techniques.map(technique => {
+    const cost = maneuverKiCost(technique, null, actor);
+    // Its own limit, if it was given one. The door's [1/Round] is a limit across all of
+    // them; this is a limit on this one, and the two are different statements.
+    const spent = maneuverUsesLeft(actor, technique) <= 0;
+    const first = !spent && !checked;
+    if (first) checked = true;
+    // The Profile's own cost is not in that number - it is added once the Profile is
+    // declared, which happens after this - so a Technique that names one says which
+    // rather than a price that would be wrong.
+    const profile = technique.profile && (technique.profile !== "any")
+      ? PROFILES[technique.profile]?.label ?? technique.profile
+      : "";
+    const note = [
+      cost ? `${cost} KP` : "",
+      profile,
+      spent ? `no uses left this ${technique.usageLimit?.per ?? "encounter"}` : ""
+    ].filter(Boolean).join(" \u00b7 ");
+
+    return `<label class="dbu-technique${spent ? " dbu-technique-spent" : ""}">
+        <input type="radio" name="technique" value="${technique.itemId}"
+               ${first ? "checked" : ""} ${spent ? "disabled" : ""}/>
+        <span class="dbu-technique-name">${Handlebars.escapeExpression(technique.name)}</span>
+        ${note ? `<span class="dbu-technique-note">${note}</span>` : ""}
+      </label>`;
+  }).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: maneuver.name },
+    content: `<p class="dbu-respond-hint">Which Signature Technique? This Maneuver costs
+        1 Action and may be used once a Combat Round, whichever you pick.</p>
+      <div class="dbu-technique-picker">${options}</div>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) =>
+          dialog.element.querySelector('input[name="technique"]:checked')?.value ?? null
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  return (typeof chosen === "string")
+    ? techniques.find(technique => technique.itemId === chosen) ?? null
+    : null;
+}
+
+/**
+ * The Technique, used through the door.
+ *
+ * Which half wins is the whole of the rule. The door keeps what it charges and what it
+ * limits: 1 Action, once a Combat Round, and the id the use is recorded against - that
+ * last one is what makes [1/Round] a limit across every Technique rather than one
+ * apiece. The Technique keeps everything about the attack, its own Item id included, so
+ * its script fires and a charge declared on it is collected by it.
+ *
+ * `requiresTarget` is the door's: "Blast an Opponent away" is an Opponent whatever the
+ * Technique's own header was left set to.
+ */
+function throughSignatureTechnique(door, technique) {
+  return {
+    ...technique,
+    id: door.id,
+    type: door.type,
+    actionCost: door.actionCost,
+    actionCostMax: 0,
+    actionCostOpen: false,
+    usageLimit: door.usageLimit,
+    requiresTarget: true,
+    // The union, so a Technique carrying a tag of its own keeps it and the door's
+    // `signature` is there however the Technique was built.
+    tags: [...new Set([...(door.tags ?? []), ...(technique.tags ?? [])])],
+    signature: true,
+    // Not a door itself, or using it would ask which Technique again.
+    signatureTechnique: false,
+    // What is left of the Technique to count separately. Only its limit: everything else
+    // about it is what this definition already is.
+    through: technique.usageLimit
+      ? { id: technique.id, name: technique.name, usageLimit: technique.usageLimit }
+      : null
+  };
+}
+
+/**
  * How far this Movement goes, and whether it is a Rapid one.
  *
  * One dialog, because it is one decision. The Squares are on it: "up to your Boosted
@@ -574,6 +700,18 @@ export function definitionOf(item) {
     movement: item.system.movement,
     pin: item.system.pin,
     powerUp: item.system.powerUp,
+    signatureTechnique: item.system.signatureTechnique,
+    /**
+     * Whether this Maneuver *is* a Signature Technique, which is a different question
+     * from whether it throws one.
+     *
+     * Read off the tag, because the tag is what the rules match on - "any Maneuver tagged
+     * signature". Carried here because `profileKiCost` has always asked a definition for
+     * it and no definition has ever had it: Blitz's "reduce the KP Cost by 2(T) if this
+     * Attacking Maneuver is a Signature Technique" has never once been applied.
+     */
+    signature: (item.system.tags ?? []).includes("signature"),
+    advantages: item.system.advantages ?? [],
     exploitable: item.system.exploitable,
     surge: item.system.surge,
     charge: item.system.charge,
@@ -627,6 +765,16 @@ export async function useManeuver(actor, maneuver) {
   // what it costs, which is every other one.
   const actionsSpent = await askActionsSpent(actor, maneuver);
   if (actionsSpent === null) return false;
+
+  // "Make an Attacking Maneuver using a Signature Technique you have access to." Asked
+  // here, after this Maneuver's own limits have been checked against it and before
+  // anything is paid: the door is what costs an Action and what may be used once a
+  // Combat Round, and the Technique is what the attack then is.
+  if (maneuver.signatureTechnique) {
+    const technique = await pickSignatureTechnique(actor, maneuver);
+    if (!technique) return false;
+    maneuver = throughSignatureTechnique(maneuver, technique);
+  }
 
   // A Surge is what the Maneuver does, and it can be declined once opened - so nothing
   // is spent or recorded until it has actually been taken.
@@ -830,6 +978,10 @@ export async function useManeuver(actor, maneuver) {
 
   await payActions(actor, maneuver, actionsSpent);
   await recordManeuverUse(actor, maneuver);
+  // A Signature Technique thrown through its Maneuver spends a use of both, where it has
+  // one of its own: the Maneuver's limit is across every Technique, and the Technique's
+  // is on that Technique.
+  if (maneuver.through) await recordManeuverUse(actor, maneuver.through);
 
   // "Increase your Strike Rolls by 1(T) until the end of your turn." Granted here rather
   // than from the Maneuver's own script, because what grants it is a choice made at this
@@ -1126,13 +1278,15 @@ export function maneuverItemFrom(definition) {
       movement: Boolean(definition.movement),
       pin: Boolean(definition.pin),
       powerUp: Boolean(definition.powerUp),
+      signatureTechnique: Boolean(definition.signatureTechnique),
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),
       cancelCharge: Boolean(definition.cancelCharge),
       profile: definition.profile ?? "",
       clashSkill: definition.clash?.skill ?? definition.clashSkill ?? "",
-      tags: definition.tags ?? [],
+      tags: [].concat(definition.tags ?? []),
+      advantages: [].concat(definition.advantages ?? []),
       usageLimit: definition.usageLimit
         ? `${definition.usageLimit.amount}/${definition.usageLimit.per}`
         : "",

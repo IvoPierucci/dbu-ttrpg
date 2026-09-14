@@ -76,6 +76,14 @@
         <em>Clash Skill</em>
         <input type="text" name="system.clashSkill" value="{{system.clashSkill}}"/>
       </div>
+      {{! The tag rather than a field of its own, because the tag is what the rules match
+          on - Transfigured forbids "any Maneuver tagged signature". Toggled through an
+          action because a checkbox cannot post one entry of a list. }}
+      <div class="stat" data-tooltip="A Signature Technique of this character's own. Thrown with the Signature Technique Maneuver, which costs 1 Action and may be used once a Combat Round; this Maneuver's Ki Point Cost is what you pay for it.">
+        <em>Signature Technique</em>
+        <input type="checkbox" data-action="toggleSignature"
+               {{#if isSignature}}checked{{/if}} {{#unless editable}}disabled{{/unless}}/>
+      </div>
     </div>
   </section>
 </div>

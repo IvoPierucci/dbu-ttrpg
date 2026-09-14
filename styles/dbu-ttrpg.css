@@ -344,6 +344,49 @@
   opacity: 0.7;
 }
 
+/* The Signature Technique picker. One row per Technique the character has access to,
+   with what throwing it will cost beside its name - that cost is the whole of what
+   differs between the options, since "each Signature Technique will have their own KP
+   Cost, that is the KP Cost you pay for this Maneuver".
+
+   Built to the same shape as a Profile row, because it is the same question asked about
+   a different list, and a player should not have to learn two pickers. */
+.dbu-technique-picker {
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dbu-technique {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+  cursor: pointer;
+}
+
+.dbu-technique:first-child {
+  border-top: none;
+}
+
+.dbu-technique-name {
+  flex: 1 1 auto;
+}
+
+.dbu-technique-note {
+  flex: 0 0 auto;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* Out of its own uses. Greyed rather than left off, like a spent Profile: a missing row
+   reads as a bug, and a greyed one carrying its reason answers the question. */
+.dbu-technique.dbu-technique-spent {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .dbu-profile-fixed {
   margin: 0 0 6px;
 }

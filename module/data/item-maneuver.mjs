@@ -102,6 +102,29 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * what needs asking: everything else this Maneuver does is in its own script.
        */
       powerUp: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Throws one of the character's own Signature Techniques: asks which, spends this
+       * Maneuver's Action and the Technique's Ki, and is the Technique from there on.
+       *
+       * The flag is on the door, not on what is behind it. "[1/Round]" is a limit across
+       * every Technique a character has, and it can only be that if the use is counted
+       * against the Maneuver they all go through.
+       */
+      signatureTechnique: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * The Signature Technique features this Maneuver was built with, by id.
+       *
+       * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and
+       * is read out of this list like every other feature. What side a feature is on is
+       * its own file's business - `featureSummary(id).side` - and no reader here has ever
+       * needed to ask.
+       *
+       * Read since Charging Assault was built and written by nothing until now, so a
+       * Technique could only ever carry the features its Profile handed it.
+       */
+      advantages: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }
+      ),
 
       /**
        * Who this Maneuver gives an opening to, in the rulebook's own words - "All
