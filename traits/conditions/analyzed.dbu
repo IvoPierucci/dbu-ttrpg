@@ -1,0 +1,28 @@
+id: analyzed
+name: Analyzed
+kind: conditions
+maxStacks: 1
+source: Core Rule
+description: >
+  Somebody has your measure. Whoever Analyzed you rolls better against you until the
+  end of their next turn.
+text: >
+  Analyzed: the Analysis Maneuver's mark. "Target an Opponent. They become Analyzed
+  until the end of your next turn."
+
+---
+
+# Not a Combat Condition the rulebook lists, and the entry that creates it does not
+# call it one: "they become Analyzed", where Called Shot's examples say "gains the
+# Impediment Combat Condition". It is kept here because this is where a mark on a
+# character with a clock on it lives, and building a third family for one mark would
+# be worse than borrowing the right one.
+#
+# No effects of its own, which is the other half of why it fits here. What being
+# Analyzed costs you is written in the Analysis Maneuver, because the bonus belongs to
+# whoever Analyzed you rather than to everybody: "increase YOUR Combat Rolls against
+# Analyzed Opponents". A passive here would hand it to the whole table.
+#
+# Who Analyzed you is the clock. The mark sits on you and the clock that takes it off
+# sits on them - "until the end of YOUR next turn" is their turn - so the entry on
+# their character naming you is both the timer and the record of who it was.

@@ -1,0 +1,69 @@
+id: analysis
+name: Analysis
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+analysis: true
+usageLimit: 1/round
+source: Core Rule
+description: >
+  Read an Opponent. They are Analyzed until the end of your next turn, and your
+  Combat Rolls against them gain 1(T) plus a quarter of your Scholarship Modifier.
+text: >
+  Analysis Maneuver [1/Round]: Study your opponents and find the perfect vital point
+  to strike.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Free
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Target an Opponent. They become Analyzed until the end of your next turn.
+  Increase your Combat Rolls against Analyzed Opponents by 1(T)+1/4 (rounded up) of
+  your Scholarship Modifier.
+
+---
+
+# The first Special Maneuver, and the entry is what settled what Special means here:
+# "Maneuver Type: Standard Maneuver". So Special is not a kind of Maneuver - it is
+# something a Maneuver of any kind can be, and what makes one Special is that you have
+# not got it until an effect gives it to you.
+#
+# No script. The mark goes on somebody else and the bonus is measured against them,
+# and the language has no way to say either: a passive writes Slots onto the character
+# holding it, and both halves of this are about a pair.
+#
+# What it comes to:
+#   - the target is marked Analyzed, a Condition with no effects of its own
+#   - the clock sits on you, not on them: "until the end of YOUR next turn" is your
+#     turn, and a duration one character keeps over another is what `on` is for
+#   - that clock is also the record of who Analyzed whom, which is what makes "your
+#     Combat Rolls" answerable without a second place to keep it
+#   - the bonus is 1(T) plus a quarter of your Scholarship Modifier rounded up, and it
+#     is applied where a per-target adjustment is already applied
+#
+# --- The reading of "your Combat Rolls against Analyzed Opponents" ------------------
+#
+# Taken as: yours against the Opponent you Analyzed. The other reading is that any
+# Analyzed Opponent is fair game for anybody who has this Maneuver, and the sentence
+# will carry it - "Analyzed Opponents" is plural and unowned.
+#
+# The narrower one is built because it is the one that cannot be wrong by accident: if
+# two characters Analyze two different Opponents, nobody gets a bonus they did not
+# work for. If the wider reading is meant, the change is the one line that asks whose
+# clock it is.
+#
+# --- What is not built, and why ------------------------------------------------------
+#
+# "Minions: Free." There are no Minions in this system - the Arrogant Declaration file
+# says the same thing about its own Minion limit, and for the same reason: there is no
+# notion here of whose Minions somebody is. The line is carried as printed and what it
+# buys is the table's.
+#
+# The Wound Roll. "Combat Rolls" is the Strike, the Dodge and the Wound Roll, and the
+# first two are measured against one Opponent at a time - which is where this bonus
+# goes in. A Wound Roll is one roll for everyone an attack reaches, so a bonus that
+# applies to some of them and not others has to be applied where the Damage is worked
+# out per person, and it is: the same place a Guard halves it.

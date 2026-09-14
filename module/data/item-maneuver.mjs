@@ -203,6 +203,28 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       delays: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * A Special Maneuver: one nobody has until an effect gives it to them.
+       *
+       * "While you can use all forms of Maneuver naturally, you cannot use any Special
+       * Maneuvers until you have gained access to them through an effect." Something a
+       * Maneuver of any kind can be rather than a kind of its own - the Analysis
+       * Maneuver is Special and its entry reads "Maneuver Type: Standard Maneuver".
+       *
+       * Access is a Slot an effect writes, `allow maneuver.<id>`, and the same Slot can
+       * take it away: a Special Maneuver has to be granted and not forbidden. Owning the
+       * Item is not access, because "through an effect" is what the rule asks for.
+       */
+      special: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Marks the Opponent it is aimed at as Analyzed, and hands whoever did it a bonus
+       * against them.
+       *
+       * A flag rather than a script, because both halves are about a pair: the mark goes
+       * on somebody else and the bonus is measured against them, and a passive writes
+       * Slots onto the character holding it.
+       */
+      analysis: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and

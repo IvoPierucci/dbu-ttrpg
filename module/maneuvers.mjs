@@ -101,29 +101,6 @@ export const MANEUVER_TYPES = Object.freeze({
     appliedToAnother: true
   },
 
-  /**
-   * A Maneuver nobody has until something gives it to them.
-   *
-   * "While you can use all forms of Maneuver naturally, you cannot use any Special
-   * Maneuvers until you have gained access to them through an effect." That sentence is
-   * the whole of what makes one Special, so it is the whole of what this kind carries:
-   * every other question about a Special Maneuver - what it costs, when it may be used -
-   * is answered by its own entry, exactly as it is for the other five.
-   *
-   * Access is a Slot an effect writes - `allow maneuver.<id>` - and the same Slot can
-   * take it away again, so a Special Maneuver has to be granted and not forbidden.
-   * Owning the Item is not access: "through an effect" is what the rule says, and a
-   * Maneuver sitting on a sheet with nothing granting it is one nobody has been given.
-   */
-  special: {
-    label: "Special",
-    // Its own entry says what it spends, and the Standard Action is what a Maneuver
-    // spends unless it says otherwise - which is the rule the default has always been.
-    action: "standard",
-    ownTurnOnly: true,
-    requiresAccess: true
-  },
-
   outOfSequence: {
     label: "Out-of-Sequence",
     action: null,
@@ -2088,6 +2065,8 @@ export async function loadManeuvers() {
     strikePerTier: trait.strikePerTier ?? 0,
     asks: trait.asks ?? "",
     delays: Boolean(trait.delays),
+    special: Boolean(trait.special),
+    analysis: Boolean(trait.analysis),
     kiCostPerTier: trait.kiCostPerTier ?? 0,
     // `coerce` splits a header on commas and leaves a single value a string, so
     // `tags: signature` arrived as the word rather than a list of one and every reader

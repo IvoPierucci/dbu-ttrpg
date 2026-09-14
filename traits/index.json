@@ -1,6 +1,7 @@
 {
   "_comment": "Generated at release. A browser cannot list a directory, and FilePicker.browse needs a permission an ordinary player does not have - so every file is named here.",
   "traits": [
+    "conditions/analyzed.dbu",
     "conditions/blinded.dbu",
     "conditions/broken.dbu",
     "conditions/compelled.dbu",
@@ -25,6 +26,7 @@
     "karma/karmic-chance.dbu",
     "karma/karmic-desperation.dbu",
     "karma/karmic-save.dbu",
+    "maneuvers/analysis.dbu",
     "maneuvers/arrogant-declaration.dbu",
     "maneuvers/basic-attack.dbu",
     "maneuvers/blockade.dbu",

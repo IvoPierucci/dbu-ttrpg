@@ -877,12 +877,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // The row is where a player reads what their own Modifier does, and what it says it
       // applies to.
       { key: "modifier", playable: false,
-        note: "Applied to another Maneuver as you use that one" },
-      // Playable like a Standard Maneuver, but only once something has granted it: a
-      // Special Maneuver is nobody's until an effect gives it to them. The group is
-      // playable and each row is judged on its own, which is where that is said.
-      { key: "special", playable: true,
-        note: "Gained through an effect, and usable once you have been" }
+        note: "Applied to another Maneuver as you use that one" }
     ];
 
     return groups
@@ -1171,7 +1166,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * missing rather than being left off the list.
    */
   #withoutAccess(maneuver) {
-    if (!MANEUVER_TYPES[maneuver.type]?.requiresAccess) return "";
+    if (!maneuver.special) return "";
     const slots = this.actor.system.effects?.slots;
     return granted(slots, `maneuver.${maneuver.id}`)
       ? ""

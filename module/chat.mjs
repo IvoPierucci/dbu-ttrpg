@@ -4964,7 +4964,12 @@ async function resolveAttack(message, attack) {
     // Floored at nothing like every other roll: a Strike reduced past zero is a Strike
     // of zero, not one an opponent has to beat from below.
     const longRange = longRangePenalty(attacker, target);
-    const against = Math.max(0, strike.total - longRange);
+
+    // "Increase your Combat Rolls against Analyzed Opponents." Added here for the same
+    // reason the Long Range penalty is taken here: one Strike Roll reaches several people
+    // and what it is worth against each of them is not the same number.
+    const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0);
+    const against = Math.max(0, (strike.total + analysis) - longRange);
 
     // The defender wins ties, as everywhere else: the attacker has to beat them.
     const hit = automatic || (answer ? (against > answer.total) : true);
@@ -5028,6 +5033,10 @@ async function resolveAttack(message, attack) {
       // said on the card: a Strike of 20 losing to a Dodge of 15 reads as a bug unless
       // the five that went missing are named.
       longRange,
+      // Said on the card beside the distance, and for the same reason: a Strike of 15
+      // beating a Dodge of 17 reads as a bug unless the two that came from somewhere are
+      // named.
+      analysis,
       against,
       // Said on the card, since a defence that was never rolled needs a reason beside
       // it or it looks like it was simply forgotten.
@@ -5660,7 +5669,12 @@ async function rollAttackWound(message, attack) {
     const base = target.system.soakValue + soakBonus;
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
     const soak = Math.max(0, defence.soak(counted) - ignored);
-    const effectiveWound = defence.wound(wound.total);
+
+    // One Wound Roll serves everyone the attack reached, and this bonus is against one of
+    // them - so it is added where what the roll comes to is already worked out per person,
+    // which is the same place a Guard halves it.
+    const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0);
+    const effectiveWound = defence.wound(wound.total + analysis);
 
     // Damage Reduction comes off the same Wound Roll, and off it whole. The Damage
     // Category has already had its say on the Soak above and gets no say here, and the
@@ -5748,6 +5762,9 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push({ label: "Dim. Defense", value: -actor.system.diminishing.defense.penalty });
   parts.push(...thresholdPenalty(actor));
   parts.push(...rapidMovementDodge(actor, attack));
+  // Your Dodge against somebody you Analyzed. The attacker is named on the attack, which
+  // is what makes this answerable from the defender's side.
+  parts.push(...analysisBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   return parts;
 }
 
@@ -5773,6 +5790,38 @@ function rapidMovementDodge(actor, attack) {
 
   const tier = Math.max(1, actor.system.tierOfPower ?? 1);
   return [{ label: "Rapid Movement", written: "+1(T)", value: tier }];
+}
+
+/**
+ * What Analysis is worth to one character against one other.
+ *
+ * "Increase your Combat Rolls against Analyzed Opponents by 1(T)+1/4 (rounded up) of your
+ * Scholarship Modifier."
+ *
+ * Yours against the Opponent you Analyzed, which is the narrower of the two readings the
+ * sentence will carry - the file says why that one. The clock is what answers it: the mark
+ * is on them and the entry timing it is on you, naming them, so a character who Analyzed
+ * somebody else gets nothing here and neither does one whose mark has run out.
+ *
+ * Rounded up, which the entry says outright and almost nothing else in these rules does.
+ *
+ * Returned as a list so it drops out of a breakdown entirely rather than showing as a row
+ * worth nothing.
+ */
+function analysisBonus(actor, target) {
+  if (!actor || !target) return [];
+
+  const theirs = (actor.system.timed ?? []).some(entry =>
+    (entry?.kind === "condition") && (entry.key === "analyzed") && (entry.on === target.uuid));
+  if (!theirs) return [];
+
+  const tier = Math.max(1, actor.system.tierOfPower ?? 1);
+  const scholarship = actor.system.attributes?.scholarship?.mod ?? 0;
+  const quarter = Math.ceil(scholarship / 4);
+  const total = tier + quarter;
+  if (total <= 0) return [];
+
+  return [{ label: "Analysis", written: `+1(T)+${quarter}`, value: total }];
 }
 
 /**

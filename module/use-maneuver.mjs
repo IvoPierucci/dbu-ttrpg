@@ -214,8 +214,7 @@ function permitted(actor, maneuver) {
   //
   // The same Slot answers both, which is why the forbid above still applies: an effect can
   // grant access and another can take it away, and a Special Maneuver has to pass both.
-  if (MANEUVER_TYPES[maneuver.type]?.requiresAccess
-    && !granted(slots, `maneuver.${maneuver.id}`)) {
+  if (maneuver.special && !granted(slots, `maneuver.${maneuver.id}`)) {
     ui.notifications.warn(
       `${actor.name} has not been granted access to ${maneuver.name}. A Special Maneuver `
       + "is gained through an effect.");
@@ -892,6 +891,30 @@ export async function dropDelayed(actor) {
 }
 
 /**
+ * Mark an Opponent as Analyzed, with the clock on whoever did it.
+ *
+ * "They become Analyzed until the end of your next turn." Two characters and one rule:
+ * the Condition is theirs and the turn is yours, which is what a duration `on` somebody
+ * else is for. Keeping the clock on the analyser is also what makes "your Combat Rolls
+ * against Analyzed Opponents" answerable - the entry naming them is the record of who it
+ * was, so nothing has to be written down twice.
+ */
+async function analyze(actor, target) {
+  const { setCondition } = await import("./conditions.mjs");
+  const { lasting, EDGES, KINDS } = await import("./durations.mjs");
+
+  await setCondition(target, "analyzed", 1);
+  return lasting(actor, {
+    kind: KINDS.CONDITION,
+    key: "analyzed",
+    edge: EDGES.END,
+    next: true,
+    on: target.uuid,
+    source: "Analysis"
+  });
+}
+
+/**
  * How far this Movement goes, and whether it is a Rapid one.
  *
  * One dialog, because it is one decision. The Squares are on it: "up to your Boosted
@@ -1008,6 +1031,8 @@ export function definitionOf(item) {
     strikePerTier: item.system.strikePerTier ?? 0,
     asks: item.system.asks ?? "",
     delays: item.system.delays,
+    special: item.system.special,
+    analysis: item.system.analysis,
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -1334,6 +1359,11 @@ export async function useManeuver(actor, maneuver) {
   // is on that Technique.
   if (maneuver.through) await recordManeuverUse(actor, maneuver.through);
 
+  // "Target an Opponent. They become Analyzed until the end of your next turn." The mark
+  // sits on them and the clock sits on you, because the turn the entry names is yours -
+  // and that clock is also the record of who Analyzed whom.
+  if (maneuver.analysis && targetActor) await analyze(actor, targetActor);
+
   // "Increase your Strike Rolls by 1(T) until the end of your turn." Granted here rather
   // than from the Maneuver's own script, because what grants it is a choice made at this
   // moment and a script has no way to be told which options were taken. The bonus itself
@@ -1652,6 +1682,8 @@ export function maneuverItemFrom(definition) {
       strikePerTier: definition.strikePerTier ?? 0,
       asks: definition.asks ?? "",
       delays: Boolean(definition.delays),
+      special: Boolean(definition.special),
+      analysis: Boolean(definition.analysis),
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
