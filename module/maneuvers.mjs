@@ -1,4 +1,4 @@
-import { applySlot } from "./effects/interpreter.mjs";
+import { applySlot, granted, permits } from "./effects/interpreter.mjs";
 import { printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { featureAsks } from "./signature.mjs";
 
@@ -1544,6 +1544,43 @@ export function whyNotModify(modifier, base) {
   }
 
   return null;
+}
+
+/**
+ * Whether this character may use this Special Maneuver, and why not when they may not.
+ *
+ * "You cannot use any Special Maneuvers until you have gained access to them through an
+ * effect", and "a Special Maneuver for gaining 2+ Skill Ranks in that Skill" is the first
+ * of the various sources that grant one. So there are two ways in and one way out: an
+ * effect that wrote `allow`, a Skill with the Ranks for it, and a `forbid` that closes it
+ * whichever way it was opened.
+ *
+ * Said rather than answered yes or no, because "you have not got this" is not useful on
+ * its own - what a player wants to know is what would open it.
+ *
+ * @returns {null|string} null if it may be used, otherwise why it may not
+ */
+export function whyNotSpecial(actor, maneuver) {
+  if (!maneuver?.special) return null;
+
+  const slots = actor?.system?.effects?.slots;
+  if (!permits(slots, `maneuver.${maneuver.id}`)) {
+    return `Something is keeping ${actor.name} from using ${maneuver.name}.`;
+  }
+  if (granted(slots, `maneuver.${maneuver.id}`)) return null;
+
+  const fromSkill = (actor?.system?.specialManeuvers ?? [])
+    .find(entry => entry.maneuver === maneuver.id);
+  if (fromSkill?.open) return null;
+
+  // What would open it, where a Skill would. A Maneuver nothing in the library opens is
+  // one some effect has to hand over, and the reason says that instead of naming a Skill
+  // that does not exist.
+  return fromSkill
+    ? `${maneuver.name} opens at ${fromSkill.needs} Ranks of ${fromSkill.skill}, and `
+      + `${actor.name} has ${fromSkill.ranks}.`
+    : `${actor.name} has not been granted access to ${maneuver.name}. A Special Maneuver `
+      + "is gained through an effect.";
 }
 
 /** The four kinds a Maneuver can be. Dodging is not among them: it is not a Maneuver. */

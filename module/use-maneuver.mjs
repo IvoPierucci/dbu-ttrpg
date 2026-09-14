@@ -34,6 +34,7 @@ import {
   whyNotWithinMelee,
   whyNotThisFoundation,
   whyNotModify,
+  whyNotSpecial,
   whyNotThisProfile,
   recordProfileUse
 } from "./maneuvers.mjs";
@@ -214,10 +215,12 @@ function permitted(actor, maneuver) {
   //
   // The same Slot answers both, which is why the forbid above still applies: an effect can
   // grant access and another can take it away, and a Special Maneuver has to pass both.
-  if (maneuver.special && !granted(slots, `maneuver.${maneuver.id}`)) {
-    ui.notifications.warn(
-      `${actor.name} has not been granted access to ${maneuver.name}. A Special Maneuver `
-      + "is gained through an effect.");
+  // Asked in one place, because there are two ways in - an effect that wrote `allow`, and
+  // a Skill with the Ranks for it - and the refusal is more use than a no: what a player
+  // wants to know is what would open it.
+  const closed = whyNotSpecial(actor, maneuver);
+  if (closed) {
+    ui.notifications.warn(closed);
     return false;
   }
 

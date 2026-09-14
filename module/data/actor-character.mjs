@@ -219,8 +219,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
   /**
    * Every Skill, keyed by id, with the Attribute that governs it.
-   *   required     - cannot be rolled at all without at least one Rank.
-   *   encompassing - covers a field broad enough to need a written specialisation.
+   *   required        - cannot be rolled at all without at least one Rank.
+   *   encompassing    - covers a field broad enough to need a written specialisation.
+   *   specialManeuver - the Special Maneuver two Ranks in it grants access to.
    * Force and Tenacity govern no Skills.
    */
   static SKILLS = Object.freeze({
@@ -230,7 +231,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     thievery:         { label: "Thievery",         attribute: "agility" },
 
     craft:            { label: "Craft",            attribute: "scholarship", required: true, encompassing: true },
-    investigation:    { label: "Investigation",    attribute: "scholarship" },
+    investigation:    { label: "Investigation",    attribute: "scholarship",
+                        specialManeuver: "analysis" },
     knowledge:        { label: "Knowledge",        attribute: "scholarship", encompassing: true },
     medicine:         { label: "Medicine",         attribute: "scholarship", required: true },
 
@@ -247,7 +249,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     bluff:            { label: "Bluff",            attribute: "personality" },
     cooking:          { label: "Cooking",          attribute: "personality" },
     intimidation:     { label: "Intimidation",     attribute: "personality" },
-    performance:      { label: "Performance",      attribute: "personality" },
+    performance:      { label: "Performance",      attribute: "personality",
+                        specialManeuver: "hype" },
     persuasion:       { label: "Persuasion",       attribute: "personality" }
   });
 
@@ -256,6 +259,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * always used; if the rules call for a different one, this is the only place to change.
    */
   static BASE_DIE = "1d10";
+
+  /**
+   * The Ranks a Skill wants before it opens its Special Maneuver.
+   *
+   * "A Special Maneuver for gaining 2+ Skill Ranks in that Skill." Two, and the "+" is
+   * what makes it a floor rather than a step - a third Rank opens nothing further.
+   */
+  static SKILL_MANEUVER_RANKS = 2;
 
   /** A natural 1 is a Botch: this much is subtracted from the result. */
   static BOTCH_PENALTY = 2;
@@ -1786,6 +1797,31 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       )
     };
 
+
+    /**
+     * The Special Maneuvers this character's Skills have opened, and which Skill opened
+     * each.
+     *
+     * Named rather than reduced to a list of ids, because the sheet has to be able to
+     * say why a Maneuver is available - and, for one that is not, what would open it.
+     *
+     * This is one of the "various sources" the Special Maneuvers rule names. An effect
+     * writing `allow maneuver.<id>` is another, which is why access is a question rather
+     * than one Slot: both have to be able to answer it, and a `forbid` still closes it
+     * either way.
+     */
+    this.specialManeuvers = Object.values(this.skills)
+      .filter(skill => skill.specialManeuver)
+      .map(skill => ({
+        maneuver: skill.specialManeuver,
+        skill: skill.label,
+        ranks: skill.ranks,
+        // What it wants, carried beside what they have: the sentence that says a Maneuver
+        // is not open yet has both numbers in it, and reaching for the constant from
+        // maneuvers.mjs would have that module importing this one back.
+        needs: DBUCharacterData.SKILL_MANEUVER_RANKS,
+        open: skill.ranks >= DBUCharacterData.SKILL_MANEUVER_RANKS
+      }));
 
     // Saving Throws: tied to Attribute Score (not Modifier) per the rules. The race's
     // focused Saving Throw gains +1(bT) - which does not grow with a Breakthrough,

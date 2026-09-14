@@ -4,7 +4,6 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
 import { reactiveFor } from "../effects/registry.mjs";
-import { granted } from "../effects/interpreter.mjs";
 import { resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import {
@@ -16,7 +15,7 @@ import {
   toggleState
 } from "../conditions.mjs";
 import { actionsLeft, isTheirTurn, newRoundFor, spendActions } from "../combat.mjs";
-import { whyNotAnotherInstant } from "../maneuvers.mjs";
+import { whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
 import { baseDieLine, breakdownTable, extraDiceLine, partLine, noteLine, floorLine,
          fromOutcome } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
@@ -1166,11 +1165,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * missing rather than being left off the list.
    */
   #withoutAccess(maneuver) {
-    if (!maneuver.special) return "";
-    const slots = this.actor.system.effects?.slots;
-    return granted(slots, `maneuver.${maneuver.id}`)
-      ? ""
-      : "Nothing has granted access to this yet. A Special Maneuver is gained through an effect.";
+    return whyNotSpecial(this.actor, maneuver) ?? "";
   }
 
   /**
