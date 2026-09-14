@@ -6774,6 +6774,10 @@ function renderAttack(message, html) {
       <span class="dbu-clash-skill">${Handlebars.escapeExpression(attack.profileLabel)} &middot;
         ${Handlebars.escapeExpression(attack.foundationLabel)} &middot;
         ${Handlebars.escapeExpression(DAMAGE_CATEGORIES[attack.damageCategory]?.label ?? "")}${
+          attack.reflectedFrom
+            ? ` &middot; ${Handlebars.escapeExpression(attack.reflectedFrom)} thrown back at `
+              + `${Handlebars.escapeExpression(attack.woundByName ?? "")}`
+            : ""}${
           attack.kiWager ? ` &middot; ${attack.kiWager} KP wagered` : ""}${attack.energyCharges
           ? ` &middot; ${attack.energyCharges} Energy Charge${attack.energyCharges === 1 ? "" : "s"}`
           : ""}${PROFILES[attack.profile]?.area
@@ -6785,7 +6789,9 @@ function renderAttack(message, html) {
       : attackerRow(attack)}
     ${attackTargets(attack).map(target => targetRow(attack, target)).join("")}
     ${followUpRows(attack)}
-    ${result?.wound ? attackSide("Wound", attack.attackerName, result.wound) : ""}
+    ${result?.wound
+      ? attackSide("Wound", attack.woundByName || attack.attackerName, result.wound)
+      : ""}
     ${flareRows(attack)}
     <div class="dbu-clash-result">${result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
