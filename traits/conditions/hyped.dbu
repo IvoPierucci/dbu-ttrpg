@@ -1,0 +1,30 @@
+id: hyped
+name: Hyped
+kind: conditions
+maxStacks: 1
+source: Core Rule
+description: >
+  Carried by your own performance. Every Combat Roll gains 1(T) plus a quarter of
+  your Personality Modifier, rounded up.
+text: >
+  Hyped: the Hype Maneuver's mark. "You become Hyped! While Hyped, increase your
+  Combat Rolls by 1(T)+1/4 (rounded up) of your Personality Modifier until the end
+  of your next turn."
+
+---
+
+# Not a Combat Condition the rulebook lists, and the entry that creates it does not
+# call it one - "you become Hyped!", where Called Shot's examples say "gains the
+# Impediment Combat Condition". It is kept here for the reason Analyzed is: this is
+# where a mark on a character with a clock on it lives.
+#
+# Unlike Analyzed, this one carries its own rule. "Increase YOUR Combat Rolls" is
+# about whoever is Hyped and nobody else, and a passive is exactly a rule about
+# whoever is holding it - so it goes here rather than in the Maneuver, and anything
+# else that ever makes somebody Hyped gets the same bonus without being told.
+#
+# `combatRolls` is the rulebook's own term for the three - the Strike, the Dodge and
+# the Wound Roll - and the Slot fans out to all three, so this is one line rather than
+# three.
+[passive]
+combatRolls += 1(T) + ceil(personality.mod / 4);

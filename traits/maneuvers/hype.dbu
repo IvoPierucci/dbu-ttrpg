@@ -1,0 +1,53 @@
+id: hype
+name: Hype
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+source: Core Rule
+description: >
+  Play to the crowd. You are Hyped until the end of your next turn: 1(T) plus a
+  quarter of your Personality Modifier on every Combat Roll.
+text: >
+  Hype Maneuver [1/Round]: Hype the crowds, your allies, or yourself with a powerful
+  performance.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Free
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: You become Hyped! While Hyped, increase your Combat Rolls by 1(T)+1/4
+  (rounded up) of your Personality Modifier until the end of your next turn.
+
+---
+
+# Two lines and no code, which is the first Maneuver in a while that needed nothing
+# but its own file. Everything it does is about the character using it, which is what
+# this language is for - the Analysis Maneuver needed a flag because both halves of it
+# were about a pair.
+#
+# `gain` puts the mark on and `expires` starts its clock. "Until the end of your next
+# turn", used on your own turn, is two turn edges away: the end of this one and the end
+# of the next. The clock counts them, which it did not until the version before this -
+# a duration of more than one edge was stepped down and the step thrown away.
+#
+# What being Hyped is worth is in conditions/hyped.dbu rather than here. It is a rule
+# about whoever is Hyped, and a passive on the mark is exactly that - so anything else
+# that ever makes somebody Hyped gets the same bonus without being told about it.
+[on used]
+gain(hyped);
+expires(hyped, next-turn);
+
+# --- What is not built, and why -----------------------------------------------------
+#
+# "Minions: Free." There are no Minions in this system, which the Arrogant Declaration
+# file says about its own Minion limit and for the same reason: there is no notion here
+# of whose Minions somebody is. The line is carried as printed and what it buys is the
+# table's.
+#
+# "Hype the crowds, your allies, or yourself" is the tagline rather than the Effect,
+# and the Effect names one beneficiary: you. Nothing here reaches an Ally, because the
+# rule does not.
