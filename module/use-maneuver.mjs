@@ -24,6 +24,7 @@ import {
   whyNotAnotherGrapple,
   whyNotAnotherInstant,
   whyNotLaunch,
+  whyNotPin,
   MOVEMENT_SPEEDS,
   RAPID_MOVEMENT_PER_TIER,
   movementKiCost,
@@ -501,6 +502,7 @@ export function definitionOf(item) {
     grapple: item.system.grapple,
     launch: item.system.launch,
     movement: item.system.movement,
+    pin: item.system.pin,
     exploitable: item.system.exploitable,
     surge: item.system.surge,
     charge: item.system.charge,
@@ -680,19 +682,27 @@ export async function useManeuver(actor, maneuver) {
       return false;
     }
 
+    // "If you are the Grappler in a Grapple", which the entry then says again on a line
+    // of its own.
+    const nobodyToPin = whyNotPin(actor, maneuver);
+    if (nobodyToPin) {
+      ui.notifications.warn(nobodyToPin);
+      return false;
+    }
+
+    // Both of these aim themselves, so a partner whose Actor is gone is a refusal here
+    // rather than a card that reads a Tier of Power off nothing.
+    if ((maneuver.launch || maneuver.pin)
+      && !fromUuidSync(actor.system.grapple?.partner ?? "")) {
+      ui.notifications.warn(
+        `${actor.name} is holding somebody who is no longer here. Let go and start again.`);
+      return false;
+    }
+
     // "Against an Opponent you are currently in a Grapple with as the Grappler."
     const nobodyToThrow = whyNotLaunch(actor, maneuver);
     if (nobodyToThrow) {
       ui.notifications.warn(nobodyToThrow);
-      return false;
-    }
-
-    // Who that is, resolved here rather than when the card is built: a uuid can outlive
-    // the Actor it names, and a Grapple with nobody in it has nobody to throw. Found
-    // before anything is paid, so the Maneuver can still be taken back.
-    if (maneuver.launch && !fromUuidSync(actor.system.grapple?.partner ?? "")) {
-      ui.notifications.warn(
-        `${actor.name} is holding somebody who is no longer here. Let go and start again.`);
       return false;
     }
 
@@ -782,11 +792,11 @@ export async function useManeuver(actor, maneuver) {
   // A Launch aims itself: the Character being thrown is the one already being held, and
   // asking for a target would be asking a question with one answer. Known to be there,
   // since a Grapple with nobody in it was refused above.
-  const card = maneuver.launch
+  const card = (maneuver.launch || maneuver.pin)
     ? await postGrappleCheck(actor, fromUuidSync(actor.system.grapple.partner), {
         maneuverName: maneuver.name,
         maneuver,
-        kind: "launch"
+        kind: maneuver.pin ? "pin" : "launch"
       })
     : maneuver.grapple
     ? await postGrappleCheck(actor, targetActor, {
@@ -1035,6 +1045,7 @@ export function maneuverItemFrom(definition) {
       grapple: Boolean(definition.grapple),
       launch: Boolean(definition.launch),
       movement: Boolean(definition.movement),
+      pin: Boolean(definition.pin),
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),

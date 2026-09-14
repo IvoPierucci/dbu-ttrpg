@@ -1,0 +1,47 @@
+id: pin
+name: Pin
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: false
+requiresTarget: false
+pin: true
+usageLimit: 1/round
+source: Core Rule
+description: >
+  Hold the Character you are Grappling down. A Grapple Check at 1(bT) off, then a
+  Might Clash; win both and they are Pinned, lose either and they get away.
+text: >
+  Pin Maneuver [1/Round]: Pin your Opponents, preventing escape!
+  –Maneuver Type: Standard
+  –Action Cost: 2 Actions
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: If you are the Grappler in a Grapple, make a Grapple Check against the
+  Grappled with your Dice Score reduced by 1(bT). If you win, make a Might Clash
+  against the Grappled. If you win, they gain the Pinned Combat Condition while in
+  this Grapple. If you lose either of these Clashes, they escape the Grapple.
+
+  You can only use this Maneuver if you are in a Grapple.
+
+# No target to pick, for the same reason the Launch Maneuver has none: "the
+# Grappled" names exactly one Character and the Grapple already knows which.
+
+---
+
+# Two Clashes in a row, and losing either one frees them - which is why this costs
+# two Actions and is worth the risk only when the hold is worth more than the
+# Grapple.
+#
+# The first is a Grapple Check like any other: the Grappler is the Initiator, the
+# Grappled the Defender, and a tie goes to the Defender. What is unusual is the
+# 1(bT) off the Grappler's Dice Score, which is the only time a Grapple Check is
+# made at a penalty.
+#
+# The second is a Might Clash, opened only if the first was won. It carries the
+# Grapple with it, so the same settlement that reads a Grapple Check reads this
+# too - one place decides what a Clash within a Grapple leaves behind.
+#
+# "While in this Grapple" is what ties the Condition to the hold rather than to a
+# clock: Pinned goes when the Grapple does, wherever the Grapple ends - escaped,
+# let go, thrown, or the Encounter over.

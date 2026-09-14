@@ -91,6 +91,12 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * Ki Point Cost is a choice rather than a number.
        */
       movement: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Holds the Character this one is Grappling down: a Grapple Check at a penalty and
+       * then a Might Clash, with no target to pick - being the Grappler names exactly one
+       * Character, as it does for the Launch Maneuver.
+       */
+      pin: new fields.BooleanField({ required: true, initial: false }),
 
       /**
        * Who this Maneuver gives an opening to, in the rulebook's own words - "All

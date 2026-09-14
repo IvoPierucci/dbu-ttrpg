@@ -687,6 +687,30 @@ export function whyNotWithinMelee(actor, target, what) {
 }
 
 /**
+ * Whether this character may hold down the one they are Grappling.
+ *
+ * "If you are the Grappler in a Grapple" and "you can only use this Maneuver if you are in
+ * a Grapple" - the entry says it twice, once as the effect's condition and once on its
+ * own line, and both halves are the same two questions the Launch Maneuver asks.
+ *
+ * @returns {null|string} null if they may, otherwise why not
+ */
+export function whyNotPin(actor, maneuver) {
+  if (!maneuver?.pin) return null;
+
+  const { partner, role } = actor?.system?.grapple ?? {};
+  if (!partner) {
+    return `${actor.name} is not in a Grapple, and the Pin Maneuver holds down somebody `
+      + "you are Grappling.";
+  }
+  if (role !== "grappler") {
+    return `${actor.name} is the Grappled, not the Grappler, and can only hold down `
+      + "somebody they are holding.";
+  }
+  return null;
+}
+
+/**
  * Whether this character may throw the one they are holding.
  *
  * "Make a Grapple Check against an Opponent you are currently in a Grapple with as the
@@ -1951,6 +1975,7 @@ export async function loadManeuvers() {
     grapple: Boolean(trait.grapple),
     launch: Boolean(trait.launch),
     movement: Boolean(trait.movement),
+    pin: Boolean(trait.pin),
     // Kept as written: "All adjacent Opponents" is a range the table reads, not one the
     // system measures. It had been sitting in a Maneuver file since Energy Charge was
     // written and nothing had ever carried it this far.

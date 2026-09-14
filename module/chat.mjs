@@ -306,6 +306,46 @@ async function settleGrapple(message, clash) {
 
   const winner = whoWonClash(clash.result);
 
+  // The first of the Pin's two Clashes. "If you win, make a Might Clash against the
+  // Grappled. If you lose either of these Clashes, they escape the Grapple."
+  if (clash.grapple.kind === "pin") {
+    if (winner !== "challenger") {
+      await endGrapple(grappler, grappled);
+      await settledNote(message,
+        `${grappler.name} loses the Grapple Check, and ${grappled.name} escapes.`);
+      return;
+    }
+
+    await settledNote(message,
+      `${grappler.name} wins, and closes for the hold.`);
+
+    // The second Clash, carrying the Grapple so that it settles here too.
+    await postMightClash(grappler, grappled, {
+      maneuverName: "Pin",
+      reason: `${grappler.name} holds ${grappled.name} down. Win and they are Pinned; `
+        + "lose and they escape the Grapple.",
+      grapple: { kind: "pin-hold", applied: false }
+    });
+    return;
+  }
+
+  // The second. "If you win, they gain the Pinned Combat Condition while in this
+  // Grapple" - and losing this one frees them exactly as losing the first would.
+  if (clash.grapple.kind === "pin-hold") {
+    if (winner !== "challenger") {
+      await endGrapple(grappler, grappled);
+      await settledNote(message,
+        `${grappler.name} loses the Might Clash, and ${grappled.name} escapes.`);
+      return;
+    }
+
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(grappled, "pinned", 1);
+    await settledNote(message,
+      `${grappled.name} is Pinned, for as long as this Grapple lasts.`);
+    return;
+  }
+
   if (clash.grapple.kind === "launch") {
     // "If you lose, the Grappled Opponent escapes the Grapple." A tie is a loss here, as
     // it is in every Grapple Check: the Defender takes one, and the Defender is the
@@ -417,6 +457,14 @@ export async function endGrapple(grappler, grappled) {
   // After they are out of it, or the refusal that holds it in place refuses this too.
   for (const actor of [grappler, grappled]) {
     if (actor) await setCondition(actor, "guard-down", 0);
+  }
+
+  // "They gain the Pinned Combat Condition while in this Grapple." Tied to the hold
+  // rather than to a clock, so it goes wherever a Grapple ends - escaped, let go, thrown,
+  // or the Encounter over. Taken off both, since only one of them can have it and asking
+  // which is a question with no better answer than doing it twice.
+  for (const actor of [grappler, grappled]) {
+    if (actor) await setCondition(actor, "pinned", 0);
   }
 }
 
@@ -2647,6 +2695,12 @@ const CLASH_ROLLS = Object.freeze({
       ...(((uuid === clash.defenderUuid) && clash.defenderBonus)
         ? [{ label: "Earlier attempts", written: `+${clash.earlierAttempts}(T)`,
              value: clash.defenderBonus }]
+        : []),
+      // "Make a Grapple Check against the Grappled with your Dice Score reduced by
+      // 1(bT)." The Grappler's alone, and the only Grapple Check made at a penalty.
+      ...(((uuid === clash.challengerUuid) && (clash.grapple?.kind === "pin"))
+        ? [{ label: "Pinning", written: "-1(bT)",
+             value: -Math.max(1, actor.system.baseTierOfPower ?? 1) }]
         : [])
     ],
 
@@ -2806,7 +2860,8 @@ export async function postGrappleCheck(grappler, grappled, {
  * something else - winning one is never the point by itself.
  */
 export async function postMightClash(actor, target,
-                                     { maneuverName, reason = "", collision = null } = {}) {
+                                     { maneuverName, reason = "", collision = null,
+                                       grapple = null } = {}) {
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: "",
@@ -2825,6 +2880,10 @@ export async function postMightClash(actor, target,
           // not of the Maneuver that caused it.
           collision,
           collisionApplied: false,
+          // A Might Clash between the two halves of a Grapple settles like any other
+          // Clash within one, and `applyClash` routes it there by this being here. The
+          // Pin Maneuver's second Clash is the first of them.
+          ...(grapple ? { grapple } : {}),
           challengerUuid: actor.uuid,
           challengerName: actor.name,
           defenderUuid: target.uuid,
