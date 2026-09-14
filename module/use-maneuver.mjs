@@ -805,7 +805,10 @@ export async function useManeuver(actor, maneuver) {
     ? await postSkillClash(actor, targetActor, maneuver)
     : declared
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges })
-    : await postManeuver(actor, maneuver);
+    // A Movement card carries whether Rapid Movement was paid for, because the Dodge
+    // bonus it buys is against "an Exploit Maneuver provoked by this instance" - and this
+    // card is that instance.
+    : await postManeuver(actor, maneuver, { rapidMovement: Boolean(crossing?.rapid) });
 
   // Recorded once the card exists, since which card an Instant was played on is part
   // of the rule: an Out-of-Sequence Maneuver this one offers is not a way out from

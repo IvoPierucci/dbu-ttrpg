@@ -53,8 +53,10 @@ text: >
 #     to offer the player a choice between two of its own effects, the way the
 #     Defend Maneuver's options do - and those are options in code, not in a file.
 #   - the Exploit reprisal has to know that the attack that hit you was the one
-#     your own Maneuver provoked. The offer knows; the attack it turns into does
-#     not carry it yet.
+#     your own Maneuver provoked. It can: an offer carries which card opened the
+#     door and the attack keeps it, which the Movement Maneuver needed first. What
+#     is left is this end of it - noticing, once the Damage lands, that the Life
+#     Points this Maneuver gave back are owed.
 #   - Spectate needs the Spectator Special State, which does not exist.
 
 # The Defense Value is not lost per use but per Action, so the count is what is

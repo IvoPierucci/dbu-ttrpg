@@ -59,13 +59,12 @@ if (rapid.stacks > 0) {
 
 # --- What is not built, and why ---------------------------------------------------
 #
-# Rapid Movement's second half: "increase your Dodge Roll against an Exploit
-# Maneuver provoked by this instance of Movement by 1(T)". The bonus is easy; what
-# is not is "provoked by this instance". An Exploit offer becomes a Basic Attack
-# that carries nothing about what provoked it, so a Dodge against it cannot tell
-# that one from any other attack in the round. The same half-built thing that
-# stopped Combat Recovery's Exploit reprisal, and it will take the same fix: the
-# attack has to carry the offer it came from.
+# Rapid Movement is built, both halves. The Strike bonus is the passive above; the
+# Dodge bonus is against "an Exploit Maneuver provoked by this instance of
+# Movement", and this card is that instance - an offer carries which card opened
+# the door, the attack it becomes keeps it, and the Dodge reads it back. A
+# character who moves twice and pays for Rapid Movement once gets it on the one
+# they paid for.
 #
 # Exploit on Movement's second half: "you do not move any additional Squares."
 # This system moves nobody - where a Character stands is the table's, and the

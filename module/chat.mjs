@@ -1340,7 +1340,9 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
  * `asOutOfSequence` covers a Maneuver played through an effect that lets it resolve
  * out of sequence: it ignores its usual Action Cost, and nothing may answer it.
  */
-export async function postManeuver(actor, maneuver, { asOutOfSequence = false, foundation = null } = {}) {
+export async function postManeuver(actor, maneuver,
+                                   { asOutOfSequence = false, foundation = null,
+                                     rapidMovement = false } = {}) {
   const type = MANEUVER_TYPES[maneuver.type];
   const label = asOutOfSequence ? MANEUVER_TYPES.outOfSequence.label : type.label;
   const cost = (type.action && !asOutOfSequence)
@@ -1359,7 +1361,14 @@ export async function postManeuver(actor, maneuver, { asOutOfSequence = false, f
         ${attackLine(actor, maneuver, foundation)}
         ${exploitLine(maneuver)}
       </div>`,
-    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: isRespondable(maneuver, asOutOfSequence) } }
+    flags: {
+      [SCOPE]: {
+        [RESPONDABLE_FLAG]: isRespondable(maneuver, asOutOfSequence),
+        // Set before the offers are written, so an Exploit provoked by this Movement can
+        // be answered by a card that already knows what was paid for.
+        ...(rapidMovement ? { [RAPID_FLAG]: { actorUuid: actor.uuid } } : {})
+      }
+    }
   });
 
   offerExploits(card, actor, maneuver);
@@ -1432,7 +1441,16 @@ function offerExploits(card, actor, maneuver) {
         maneuverId: "exploit",
         maneuverName: "Exploit",
         targetUuid: actor.uuid,
-        reason: `${maneuver.name} - ${maneuver.exploitable}`
+        reason: `${maneuver.name} - ${maneuver.exploitable}`,
+        // What opened the door, carried so the attack this becomes can still answer for
+        // it. Two rules ask - Rapid Movement's Dodge bonus and Combat Recovery's
+        // reprisal - and both ask about a particular use rather than a kind of Maneuver,
+        // which is why the message is here and not only the id.
+        provokedBy: {
+          maneuverId: maneuver.id,
+          maneuverName: maneuver.name,
+          messageId: card.id
+        }
       }
     });
   }
@@ -2245,6 +2263,15 @@ function takenOffers(message) {
 
 /** Flag holding a Moment the table has been called to answer. */
 const MOMENT_FLAG = "moment";
+
+/**
+ * Rapid Movement, on the Movement card that was paid for with it.
+ *
+ * On the card rather than on the character because the rule is about a particular use:
+ * "an Exploit Maneuver provoked by this instance of Movement". Two Movements in a round
+ * with Rapid Movement on one of them is exactly the case that tells the two apart.
+ */
+const RAPID_FLAG = "rapidMovement";
 
 /**
  * Whatever the character's effects contribute at one Moment.
@@ -3175,8 +3202,11 @@ async function takeOutOfSequence(message, actor, offer) {
 
   requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
 
+  // The Exploit's recursion spreads the offer, so what provoked it has come all this way
+  // untouched and goes onto the attack itself.
   return declared
-    ? postAttack(actor, target, maneuver, declared, { asOutOfSequence: true })
+    ? postAttack(actor, target, maneuver, declared,
+        { asOutOfSequence: true, provokedBy: offer.provokedBy ?? null })
     : postManeuver(actor, maneuver, { asOutOfSequence: true });
 }
 
@@ -3188,7 +3218,7 @@ async function takeOutOfSequence(message, actor, offer) {
 export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, charges = 0,
                                    advantages = [], squaresCharged = 0 },
-                                 { asOutOfSequence = false } = {}) {
+                                 { asOutOfSequence = false, provokedBy = null } = {}) {
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
   // Strike Roll - the attack after your third is itself the one that suffers.
   //
@@ -3225,6 +3255,9 @@ export async function postAttack(actor, target, maneuver,
           maneuverName: asOutOfSequence
             ? `${maneuver.name} (Out-of-Sequence)`
             : maneuver.name,
+          // The opening this attack came through, where it came through one. Null for
+          // every attack anybody simply chose to make.
+          provokedBy,
           actionCost: maneuver.actionCost ?? 1,
           tags: maneuver.tags ?? [],
           // Carried on the attack rather than looked up at the Wound Roll: whether this
@@ -4690,7 +4723,7 @@ async function rollAttackWound(message, attack) {
  * each part is kept separate rather than folded into one number that would be halved
  * wholesale.
  */
-function dodgeBonus(actor, { halved = false } = {}) {
+function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   const defenseValue = actor.system.defenseValue;
   const parts = [{
     label: halved ? "Defense Value (halved)" : "Defense Value",
@@ -4703,7 +4736,32 @@ function dodgeBonus(actor, { halved = false } = {}) {
   parts.push(...musclePenalty(actor));
   parts.push({ label: "Dim. Defense", value: -actor.system.diminishing.defense.penalty });
   parts.push(...thresholdPenalty(actor));
+  parts.push(...rapidMovementDodge(actor, attack));
   return parts;
+}
+
+/**
+ * Rapid Movement's Dodge bonus: "increase your Dodge Roll against an Exploit Maneuver
+ * provoked by this instance of Movement by 1(T)".
+ *
+ * Three things have to be true, and each is a different half of "this instance": the
+ * attack came through an Exploit, the Exploit was provoked by a Movement card, and Rapid
+ * Movement was paid for on that card by the character now dodging. A character who moved
+ * twice and paid once gets it on the one they paid for and not on the other.
+ *
+ * Returned as a list so it drops out of the breakdown entirely rather than showing as a
+ * row worth nothing.
+ */
+function rapidMovementDodge(actor, attack) {
+  const provoked = attack?.provokedBy;
+  if (!provoked?.messageId) return [];
+
+  const card = game.messages?.get(provoked.messageId);
+  const rapid = card?.getFlag(SCOPE, RAPID_FLAG);
+  if (!rapid || (rapid.actorUuid !== actor.uuid)) return [];
+
+  const tier = Math.max(1, actor.system.tierOfPower ?? 1);
+  return [{ label: "Rapid Movement", written: "+1(T)", value: tier }];
 }
 
 /**
@@ -4767,7 +4825,8 @@ const DEFENCES = {
   dodge: {
     label: "Dodge",
     // Diminishing Defense reduces Dodge Rolls, and only Dodge Rolls.
-    answer: (actor, options) => rollSide(actor, dodgeBonus(actor), { ...options, slot: "dodge" }),
+    answer: (actor, options, attack) =>
+      rollSide(actor, dodgeBonus(actor, { attack }), { ...options, slot: "dodge" }),
     // Named here so the two halves stay visible in the breakdown.
     // Dodging is not the Defend Maneuver, so it does not spare you the stacks.
     gainsDiminishingDefense: true,
@@ -4822,8 +4881,9 @@ const DEFENCES = {
     // The clash happens as usual, but with the Defense Value halved. It is still a
     // Dodge Roll, so Diminishing Defense applies - to the roll, after the halving,
     // since what is halved is the Defense Value and not the result.
-    answer: (actor, options) =>
-      rollSide(actor, dodgeBonus(actor, { halved: true }), { ...options, slot: "dodge" }),
+    answer: (actor, options, attack) =>
+      rollSide(actor, dodgeBonus(actor, { halved: true, attack }),
+        { ...options, slot: "dodge" }),
     soak: (soak) => soak,
     wound: (total) => total
   },
