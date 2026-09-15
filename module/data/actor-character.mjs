@@ -242,7 +242,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     intuition:        { label: "Intuition",        attribute: "insight" },
     perception:       { label: "Perception",       attribute: "insight" },
     pilot:            { label: "Pilot",            attribute: "insight",     required: true },
-    survival:         { label: "Survival",         attribute: "insight" },
+    // "Special Maneuver: you gain access to the Brace Maneuver." Two Ranks opens it, like
+    // every other Skill's; the 4+ in Brace's own entry is a different threshold in the
+    // same Skill, and doubles what it is worth rather than opening it.
+    //
+    // Survival also grants the Forage Adventuring Maneuver, which is not recorded here
+    // because there are no Adventuring Maneuvers in this system and no Forage entry to
+    // build one from. A field naming a Maneuver the library has not got is the one thing
+    // this table refuses to carry.
+    survival:         { label: "Survival",         attribute: "insight",
+                        specialManeuver: "brace" },
 
     useMagic:         { label: "Use Magic",        attribute: "magic",       required: true },
 

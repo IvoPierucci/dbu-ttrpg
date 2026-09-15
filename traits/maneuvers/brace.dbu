@@ -55,15 +55,15 @@ expires(braced, start-of-next-turn);
 #
 # --- How it is gained --------------------------------------------------------------------
 #
-# A Special Maneuver, so nobody has it until an effect hands it over. No Skill opens it
-# yet, so the sheet says "gained through an effect" rather than naming one.
+# A Special Maneuver, so nobody has it until something hands it over, and Survival is what
+# does: "Special Maneuver: you gain access to the Brace Maneuver" is in the Skill's own
+# entry, at the 2+ Ranks every Skill grants one at.
 #
-# Survival is the obvious candidate - it is the Skill this entry already reads, and the
-# rule is "each Skill either provides an Adventuring Maneuver and/or a Special Maneuver for
-# gaining 2+ Skill Ranks in that Skill". It is not built on a guess: the Survival entry
-# will say, and connecting it is one line in the Skill table beside Investigation's and
-# Performance's.
+# So this entry reads Survival Ranks twice, at two numbers that are not the same rule. 2+
+# opens the Maneuver and is nowhere in this entry - it is in Survival's. 4+ is the one
+# written here, and it doubles what the Maneuver is worth rather than opening anything.
+# Collapsing them into one threshold would be wrong in both directions at once.
 #
-# Worth noticing when that line is written: this entry reads Survival Ranks twice at two
-# different numbers. 2+ would be what opens the Maneuver and 4+ is what doubles it, and
-# neither is the other.
+# Survival grants the Forage Adventuring Maneuver as well. Not built: there are no
+# Adventuring Maneuvers in this system and no Forage entry to build one from, and the Skill
+# table will not carry a name the Maneuver library has not got.
