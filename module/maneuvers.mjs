@@ -2147,6 +2147,9 @@ export async function loadManeuvers() {
     analysis: Boolean(trait.analysis),
     dirtyTrick: Boolean(trait.dirtyTrick),
     feint: Boolean(trait.feint),
+    moveSkill: trait.moveSkill ?? "",
+    movePerRank: trait.movePerRank ?? 0,
+    says: trait.says ?? "",
     // A list however the header wrote it, like `baseManeuver` above: one Skill named is a
     // string and two are a list, and "(Bluff vs Intuition/Perception)" is the only entry
     // so far that writes two.

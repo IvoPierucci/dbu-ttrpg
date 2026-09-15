@@ -820,6 +820,37 @@ async function applyModifiers(actor, applied) {
 
 
 /**
+ * What this Maneuver's card says at the table, beyond its own name.
+ *
+ * For the Maneuvers whose effect this system deliberately does not carry out. The Flip
+ * Maneuver is the first of them: "move a number of Squares up to twice your number of
+ * Skill Ranks in Acrobatics" - and this system moves nobody, so the number is what the
+ * card can give, and the rest of the rule goes with it in the entry's own words.
+ *
+ * The number is read when the Maneuver is used rather than when the Item was made, so a
+ * Rank gained mid-Encounter counts. At no Ranks there is no allowance, and it says so
+ * rather than offering a zero dressed up as one.
+ *
+ * @returns {string} what to print under the Maneuver's name, or "" for most of them
+ */
+function maneuverNote(actor, maneuver) {
+  const said = String(maneuver.says ?? "").trim();
+  if (!maneuver.moveSkill || !maneuver.movePerRank) return said;
+
+  const skill = actor.system.skills?.[maneuver.moveSkill];
+  const ranks = skill?.ranks ?? 0;
+  const squares = maneuver.movePerRank * ranks;
+  const name = skill?.label ?? maneuver.moveSkill;
+
+  const far = squares
+    ? `Move up to ${squares} Square${squares === 1 ? "" : "s"} - `
+      + `${maneuver.movePerRank} per Rank of ${name}, and you have ${ranks}.`
+    : `No Ranks in ${name}, so this moves you nowhere.`;
+
+  return said ? `${far} ${said}` : far;
+}
+
+/**
  * Hold a Maneuver back instead of using it.
  *
  * "You may use this Maneuver to delay its use but pay the Action Cost and KP Cost
@@ -1037,6 +1068,9 @@ export function definitionOf(item) {
     absorb: item.system.absorb,
     dirtyTrick: item.system.dirtyTrick,
     feint: item.system.feint,
+    moveSkill: item.system.moveSkill,
+    movePerRank: item.system.movePerRank,
+    says: item.system.says,
     baseManeuver: item.system.baseManeuver ?? [],
     baseForbids: item.system.baseForbids ?? [],
     damageCategoryShift: item.system.damageCategoryShift ?? 0,
@@ -1458,6 +1492,9 @@ export async function useManeuver(actor, maneuver) {
     // says what this particular Movement took.
     : await postManeuver(actor, maneuver, {
         rapidMovement: Boolean(crossing?.rapid),
+        // What a Maneuver whose whole effect is a number and a sentence says at the table.
+        // Blank on everything that does something the system can do for itself.
+        note: maneuverNote(actor, maneuver),
         spent: {
           actions: actionCostOf(maneuver, actionsSpent).amount,
           kind: actionCostOf(maneuver, actionsSpent).kind,
@@ -1700,6 +1737,9 @@ export function maneuverItemFrom(definition) {
       absorb: Boolean(definition.absorb),
       dirtyTrick: Boolean(definition.dirtyTrick),
       feint: Boolean(definition.feint),
+      moveSkill: definition.moveSkill ?? "",
+      movePerRank: definition.movePerRank ?? 0,
+      says: definition.says ?? "",
       clashDefenderSkills: [].concat(
         definition.clash?.defenderSkills ?? definition.clashDefenderSkills ?? []),
       baseManeuver: [].concat(definition.baseManeuver ?? []),

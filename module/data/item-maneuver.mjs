@@ -201,14 +201,25 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       feint: new fields.BooleanField({ required: true, initial: false }),
       /**
-       * Wins a Skill Clash and hands over a Basic Attack with conditions attached.
+       * A Skill whose Ranks say how far this Maneuver moves you, and how many Squares each
+       * Rank is worth.
        *
-       * The Exploit Maneuver's shape - "you may use the Basic Attack Maneuver as an
-       * Out-of-Sequence Maneuver" - with four things travelling on the offer: a bonus to
-       * the Strike and the Wound, a defence narrowed to Cross Counter, no Area of Effect,
-       * and a ceiling on the Ki Wager.
+       * "Move a number of Squares up to twice your number of Skill Ranks in Acrobatics."
+       * Written as the Skill and the multiplier rather than as code, because it is a rule
+       * and rules live in the files. Nothing here moves a token - the number is said on the
+       * card and the player moves themselves - so this is the whole of what is built.
        */
-      feint: new fields.BooleanField({ required: true, initial: false }),
+      moveSkill: new fields.StringField({ required: true, blank: true, initial: "" }),
+      movePerRank: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      /**
+       * What this Maneuver tells the table, in the entry's own words.
+       *
+       * The companion to `asks`: that one is a question a Modifier puts to the player, and
+       * this is a statement the card puts to everybody. For the parts of a rule that are
+       * about where a token is or what somebody may do next - things this system does not
+       * track on purpose - being said clearly on the card is the whole of what it can do.
+       */
+      says: new fields.StringField({ required: true, blank: true, initial: "" }),
       /**
        * What a Modifier Maneuver may be applied to: its Base Maneuver.
        *
@@ -240,12 +251,6 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * it off: "decrease the Strike Roll for that Attacking Maneuver by 2(T)" is -2.
        */
       strikePerTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
-      /**
-       * And what it does to the Wound Roll, per Tier of Power. Feint raises both -
-       * "increase the Strike and Wound Rolls for this Attacking Maneuver by 1(T)" - and
-       * before it nothing applied to an attack had ever touched the second.
-       */
-      woundPerTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
       /**
        * And what it does to the Wound Roll, per Tier of Power. Feint raises both -
        * "increase the Strike and Wound Rolls for this Attacking Maneuver by 1(T)" - and

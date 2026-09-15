@@ -1,0 +1,76 @@
+id: flip
+name: Flip
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+moveSkill: acrobatics
+movePerRank: 2
+says: >
+  You may move through Squares an Opponent occupies, as long as you do not end your
+  movement on an occupied Square. This movement does not provoke the Exploit Maneuver,
+  even if you leave the Melee Range of an Opponent.
+source: Core Rule
+description: >
+  Tumble clear. Move up to twice your Acrobatics Ranks in Squares, through Opponents if
+  you like, and nothing gets a free swing at you for it.
+text: >
+  Flip Maneuver [1/Round]: Acrobatically maneuver yourself away from your opponent!
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Free
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Move a number of Squares up to twice your number of Skill Ranks in Acrobatics
+  (you may move through Squares occupied by an Opponent, as long as you do not end your
+  movement on an occupied Square). This movement does not provoke the Exploit Maneuver,
+  even if you leave the Melee Range of an Opponent.
+
+---
+
+# No script. What this Maneuver does is move you, and this system moves nobody - the
+# players move the tokens, which is a thing the table settled it would rather keep. So
+# what the card can give them is the number and the two sentences that go with it, and
+# that is what it gives them.
+#
+# --- The number -------------------------------------------------------------------------
+#
+# "Twice your number of Skill Ranks in Acrobatics", written as the Skill and the multiplier
+# rather than as code: `moveSkill` and `movePerRank`. Read off the character when the
+# Maneuver is used, so a Rank gained since the Encounter started counts.
+#
+# At no Ranks it is nothing, and the card says nothing rather than a zero dressed up as an
+# allowance - which is the honest answer: an Acrobatics you never trained buys no Squares.
+#
+# --- What it does not provoke ---------------------------------------------------------------
+#
+# "This movement does not provoke the Exploit Maneuver, even if you leave the Melee Range
+# of an Opponent."
+#
+# Nothing here has to be switched off for that. An Exploit is offered off a card by
+# `exploitable`, which is the line the entry prints - and this entry prints "N/A", so there
+# is no line and nothing is offered. The Movement Maneuver's line is "If you leave the
+# Melee Range of an Opponent", and this is not the Movement Maneuver.
+#
+# So it is said rather than enforced, and being said is the point: nothing in this system
+# watches a token cross a Square, so the only thing that would have provoked an Exploit
+# here is somebody at the table remembering that movement usually does. The card tells them
+# not to.
+#
+# --- What is not built --------------------------------------------------------------------
+#
+# Moving through an occupied Square and not stopping on one. Both are about where a token
+# is, and nothing here knows or cares - the sentence is carried to the table whole.
+#
+# "Minions: Free." There are no Minions in this system, which the Arrogant Declaration,
+# Analysis, Hype and Brace files all say about their own Minion lines.
+#
+# --- How it is gained ------------------------------------------------------------------------
+#
+# A Special Maneuver, and what opens it has not been read yet. Acrobatics is the Skill this
+# entry counts, which is not the same as the Skill that hands the Maneuver over: Dirty
+# Trick is a Clash made with Bluff and Bluff opens the Feint instead. The Acrobatics entry
+# will say, or something else will.
