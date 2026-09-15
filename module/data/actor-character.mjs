@@ -225,7 +225,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * Force and Tenacity govern no Skills.
    */
   static SKILLS = Object.freeze({
-    acrobatics:       { label: "Acrobatics",       attribute: "agility" },
+    // "Special Maneuver: you gain access to the Flip Maneuver", at the 2+ Ranks every
+    // Skill grants one at - and it is also the Skill the Flip entry counts for distance.
+    // Those two being the same Skill is a coincidence of this entry rather than a rule:
+    // Bluff opens the Feint and the Dirty Trick rolls Bluff without being opened by it.
+    //
+    // Acrobatics grants the Stretch Adventuring Maneuver too. Not recorded, like Forage,
+    // Scam and Fraud: there are no Adventuring Maneuvers in this system and no entries to
+    // build them from.
+    acrobatics:       { label: "Acrobatics",       attribute: "agility",
+                        specialManeuver: "flip" },
     flight:           { label: "Flight",           attribute: "agility",     required: true },
     stealth:          { label: "Stealth",          attribute: "agility" },
     thievery:         { label: "Thievery",         attribute: "agility" },

@@ -70,7 +70,11 @@ text: >
 #
 # --- How it is gained ------------------------------------------------------------------------
 #
-# A Special Maneuver, and what opens it has not been read yet. Acrobatics is the Skill this
-# entry counts, which is not the same as the Skill that hands the Maneuver over: Dirty
-# Trick is a Clash made with Bluff and Bluff opens the Feint instead. The Acrobatics entry
-# will say, or something else will.
+# Acrobatics, at the 2+ Ranks every Skill grants a Special Maneuver at: "Special Maneuver:
+# you gain access to the Flip Maneuver" is in the Skill's own entry.
+#
+# Which is the same Skill this entry counts for distance - and that is a coincidence of
+# this Maneuver rather than a rule. Dirty Trick is a Clash made with Bluff and Bluff opens
+# the Feint instead, so the Skill a Maneuver uses and the Skill that hands it over are two
+# separate questions with two separate answers. Built from the entry either way, which is
+# why the guess being right cost nothing.
