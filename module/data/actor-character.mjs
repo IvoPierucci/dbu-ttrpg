@@ -255,7 +255,18 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     useMagic:         { label: "Use Magic",        attribute: "magic",       required: true },
 
-    bluff:            { label: "Bluff",            attribute: "personality" },
+    // "Special Maneuver: you gain access to the Feint Maneuver", at the 2+ Ranks every
+    // Skill grants one at.
+    //
+    // Not the Dirty Trick Maneuver, although that is a Clash made with Bluff too - what
+    // opens that one is something else, and has not been read yet. A Skill being the one a
+    // Maneuver rolls is not the same question as being the one that hands it over.
+    //
+    // Bluff grants the Scam and Fraud Adventuring Maneuvers as well - two of them, where
+    // Survival named one. Not recorded, for the same reason Forage is not: there are no
+    // Adventuring Maneuvers in this system and no entries to build them from.
+    bluff:            { label: "Bluff",            attribute: "personality",
+                        specialManeuver: "feint" },
     cooking:          { label: "Cooking",          attribute: "personality" },
     intimidation:     { label: "Intimidation",     attribute: "personality" },
     performance:      { label: "Performance",      attribute: "personality",

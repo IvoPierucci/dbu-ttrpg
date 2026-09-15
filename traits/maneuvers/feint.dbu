@@ -83,6 +83,11 @@ text: >
 #
 # --- How it is gained ------------------------------------------------------------------------
 #
-# A Special Maneuver, and no Skill opens it yet. Bluff is the obvious candidate, as it is
-# for Dirty Trick - both are Clashes made with it - but the Bluff entry is what says so and
-# it has not been read here.
+# Bluff, at the 2+ Ranks every Skill grants a Special Maneuver at: "Special Maneuver: you
+# gain access to the Feint Maneuver" is in the Skill's own entry, which is the only place
+# that ever says so.
+#
+# Worth saying, because it looked otherwise: the Dirty Trick Maneuver is also a Clash made
+# with Bluff and is NOT opened by it. Being the Skill a Maneuver rolls and being the Skill
+# that hands it over are two different questions, and only the Skill's entry answers the
+# second.

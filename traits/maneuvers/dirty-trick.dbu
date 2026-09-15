@@ -107,7 +107,10 @@ text: >
 #
 # --- How it is gained -----------------------------------------------------------------------
 #
-# A Special Maneuver, so nobody has it until something hands it over. No Skill opens it
-# yet. Bluff is the obvious candidate - it is the Skill the Clash is made with - but the
-# Bluff entry is what says so, and it has not been read here. Attack Absorption is waiting
-# on the same kind of line.
+# A Special Maneuver, so nobody has it until something hands it over, and what hands this
+# one over has not been read yet.
+#
+# Not Bluff, which was the obvious guess and is wrong: Bluff's entry opens the Feint
+# Maneuver and says nothing about this one. Being the Skill a Clash is made with is not the
+# same as being the Skill that grants the Maneuver - this rolls Bluff and comes from
+# somewhere else entirely. Attack Absorption is waiting on the same kind of line.
