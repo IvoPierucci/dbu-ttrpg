@@ -230,7 +230,7 @@ function resourceRows(system, owned = null) {
         // where the rule lives, and a character still carrying an older copy of it
         // should not go on being measured against that one.
         max: definition.max || (Number(resource.max) || 0),
-        note: resourceClocks(timed, key).join(" \u00b7 "),
+        note: clockNotes(timed, key).join(" \u00b7 "),
         tooltip: definition.source
           ? `From ${definition.source}. ${definition.description ?? ""}`.trim()
           : `${name}, held as a Resource.`
@@ -323,7 +323,7 @@ function traitsOwned(actor) {
 function markClock(actor, key) {
   const mine = (actor.system.timed ?? []).filter(entry =>
     (entry?.kind === KINDS.CONDITION) && (entry.key === key) && !entry.on);
-  if (mine.length) return resourceClocks(mine.map(entry => ({ ...entry, key })), key).join(" · ");
+  if (mine.length) return clockNotes(mine, key, KINDS.CONDITION).join(" · ");
 
   for (const token of canvas?.tokens?.placeables ?? []) {
     const other = token.actor;
@@ -333,7 +333,7 @@ function markClock(actor, key) {
       (entry?.kind === KINDS.CONDITION) && (entry.key === key) && (entry.on === actor.uuid));
     if (!theirs.length) continue;
 
-    const when = resourceClocks(theirs, key).join(" · ")
+    const when = clockNotes(theirs, key, KINDS.CONDITION).join(" · ")
       .replace(/your turn/g, `${other.name}'s turn`)
       .replace(/your next turn/g, `${other.name}'s next turn`);
     return when;
@@ -343,7 +343,7 @@ function markClock(actor, key) {
 }
 
 /**
- * When the stacks of one Resource run out, counted rather than summarised.
+ * When the clocks on one thing run out, counted rather than summarised.
  *
  * Each stack is put on a clock of its own where the rule gives it one - "gain a stack of
  * Power until the end of your next turn" - so stacks taken in different turns leave in
@@ -351,15 +351,20 @@ function markClock(actor, key) {
  * next turn" rather than a flat 2.
  *
  * "Your turn" means the next turn of yours that still has that edge ahead of it, which is
- * what the edges left on the entry are counting. A stack with no clock at all is a stack
- * nothing will take away, and says nothing here rather than claiming a turn it has not
- * got - the GM put it there and the GM takes it off.
+ * what the edges left on the entry are counting. Something with no clock at all is
+ * something nothing will take away, and says nothing here rather than claiming a turn it
+ * has not got - the GM put it there and the GM takes it off.
+ *
+ * The kind is asked for rather than assumed. This was written for Resources and what it
+ * actually reads is a clock, which Conditions and States are on too - and it quietly
+ * dropped every entry that was not a Resource, so the mark rows beside Charging and
+ * Holding were asking when Hyped lifts and being answered about nothing at all.
  */
-function resourceClocks(timed, key) {
+function clockNotes(timed, key, kind = KINDS.RESOURCE) {
   const counts = new Map();
 
   for (const entry of timed) {
-    if ((entry?.kind !== KINDS.RESOURCE) || (entry.key !== key)) continue;
+    if ((entry?.kind !== kind) || (entry.key !== key)) continue;
     const when = entry.edge === EDGES.ENCOUNTER
       ? "when the Encounter ends"
       : `at the ${entry.edge === EDGES.START ? "start" : "end"} of your `
@@ -681,6 +686,27 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       ...mark,
       note: markClock(this.actor, mark.key)
     }));
+
+    // "Treat all Battle Weathers as if they were 1 Weather Tier lower." There are no
+    // Battle Weathers in this system, so what this does is say the number: the table takes
+    // it off whatever Weather is in play, and a Tier reduced to 0 is a Weather that does
+    // nothing to you.
+    //
+    // Read off the Slot rather than off the Brace Maneuver, so anything else that lowers a
+    // Weather Tier lands in the same row without this having to hear about it.
+    const weatherTiers = this.actor.system.effects?.slots?.["weather.tiers"] ?? 0;
+    context.weather = weatherTiers
+      ? {
+          tiers: weatherTiers,
+          // The template pluralises off this rather than off the number, the way the
+          // Charging row does.
+          one: weatherTiers === 1,
+          note: `Battle Weathers count ${weatherTiers} Tier`
+            + `${weatherTiers === 1 ? "" : "s"} lower for you. A Tier reduced to 0 is a `
+            + "Battle Weather that does nothing to you. Said here rather than applied: "
+            + "this system has no Battle Weathers to take it off."
+        }
+      : null;
 
     context.grapple = this.#grapple();
     context.states = statesFor(this.actor);

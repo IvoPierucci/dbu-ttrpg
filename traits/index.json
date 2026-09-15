@@ -3,6 +3,7 @@
   "traits": [
     "conditions/analyzed.dbu",
     "conditions/blinded.dbu",
+    "conditions/braced.dbu",
     "conditions/broken.dbu",
     "conditions/compelled.dbu",
     "conditions/drained.dbu",
@@ -32,6 +33,7 @@
     "maneuvers/attack-absorption.dbu",
     "maneuvers/basic-attack.dbu",
     "maneuvers/blockade.dbu",
+    "maneuvers/brace.dbu",
     "maneuvers/called-shot.dbu",
     "maneuvers/combat-recovery.dbu",
     "maneuvers/crouch.dbu",

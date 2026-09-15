@@ -1,0 +1,69 @@
+id: brace
+name: Brace
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+exploitable: All adjacent Opponents.
+source: Core Rule
+description: >
+  Set yourself against the weather. Until the start of your next turn, Battle Weathers
+  count a Tier lower - two Tiers with 4+ Ranks in Survival, and a Tier of 0 is a
+  Weather that does nothing to you.
+text: >
+  Brace Maneuver [1/Round]: Prepare yourself to withstand the weather.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Free
+  –KP Cost: N/A
+  –Exploitable: All adjacent Opponents.
+  –Effect: Until the start of your next turn, treat all Battle Weathers as if they were
+  1 Weather Tier lower. If this would reduce the Weather Tier to 0, ignore the effects
+  of that Battle Weather. If you have 4+ Skill Ranks in Survival, you may treat it as 2
+  Weather Tiers lower instead.
+
+---
+
+# The whole of what this does is a duration, so the whole of the script is putting one on
+# and setting its clock. What being Braced is worth is in the mark's own file, which is
+# where a reader looks for it.
+[on used]
+gain(braced);
+expires(braced, start-of-next-turn);
+
+# --- The clock ------------------------------------------------------------------------
+#
+# "Until the START of your next turn", which is a different edge from the one most of these
+# use and the system already knows the difference: a start edge is never ahead of you
+# during your own turn, so it is always the next one whichever turn you are standing in.
+# Brace on your turn and it lifts when your next turn begins; nothing about it can be made
+# to last two turns by using it out of sequence.
+#
+# --- What is not built, and why ---------------------------------------------------------
+#
+# Battle Weathers. This system has none - no Weather list, no Weather Tiers, nothing that
+# reads one - so the reduction is said rather than applied: `weather.tiers` carries what
+# you are entitled to, the sheet says what it comes to, and the table takes it off whatever
+# Weather is in play. When Battle Weathers land there is one number to read and one place
+# to read it from.
+#
+# "Minions: Free." There are no Minions in this system, which the Arrogant Declaration,
+# Analysis and Hype files all say about their own Minion lines. Carried as printed.
+#
+# --- How it is gained --------------------------------------------------------------------
+#
+# A Special Maneuver, so nobody has it until an effect hands it over. No Skill opens it
+# yet, so the sheet says "gained through an effect" rather than naming one.
+#
+# Survival is the obvious candidate - it is the Skill this entry already reads, and the
+# rule is "each Skill either provides an Adventuring Maneuver and/or a Special Maneuver for
+# gaining 2+ Skill Ranks in that Skill". It is not built on a guess: the Survival entry
+# will say, and connecting it is one line in the Skill table beside Investigation's and
+# Performance's.
+#
+# Worth noticing when that line is written: this entry reads Survival Ranks twice at two
+# different numbers. 2+ would be what opens the Maneuver and 4+ is what doubles it, and
+# neither is the other.

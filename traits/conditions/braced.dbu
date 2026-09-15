@@ -1,0 +1,64 @@
+id: braced
+name: Braced
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: nothing calls it one, and the Brace entry does not name it at
+# all. The name is this system's, for a duration that has to be held somewhere.
+combatCondition: no
+source: Core Rule
+description: >
+  Set against the weather. Battle Weathers count a Tier lower until the start of your
+  next turn - two Tiers with 4+ Ranks in Survival.
+text: >
+  Braced: the Brace Maneuver's mark. "Until the start of your next turn, treat all
+  Battle Weathers as if they were 1 Weather Tier lower. If this would reduce the
+  Weather Tier to 0, ignore the effects of that Battle Weather. If you have 4+ Skill
+  Ranks in Survival, you may treat it as 2 Weather Tiers lower instead."
+
+---
+
+# --- The name is this system's, and that is worth saying outright ---------------------
+#
+# The Brace entry names no Condition. It gives a duration - "until the start of your next
+# turn" - and something has to hold that, and a mark with a clock on it is what holds a
+# duration here. So this file exists as machinery rather than as a rule, and the word
+# "Braced" is not one a player will find in the rulebook.
+#
+# Not a Combat Condition, for the same reason Hyped and Analyzed are not: the entries that
+# mean it say "gains the Impediment Combat Condition", and nothing here says anything of
+# the sort. The checklist on the sheet stays the published eighteen.
+#
+# --- How many Tiers ---------------------------------------------------------------------
+#
+# "1 Weather Tier lower", and "2 ... instead" at 4+ Ranks in Survival. Both are read off
+# the character as it stands rather than frozen when the Maneuver was used, which is the
+# simpler of the two readings and the one that cannot go stale.
+#
+# The 4+ clause says "you MAY treat it as 2 instead", so this is a ceiling and not an
+# order. What is written is what you are entitled to; taking less is the player's, and
+# there is nothing here to stop them.
+#
+# Written as one and then another rather than as a choice between one and two, because an
+# amount in this language holds no ternary - only a condition does. It reads better this
+# way in any case: the Tier is the rule, and the Ranks buy a second one.
+[passive]
+weather.tiers += 1;
+if (survival.ranks >= 4) {
+  weather.tiers += 1;
+}
+
+# --- What is not built, and why ----------------------------------------------------------
+#
+# Battle Weathers. There are none in this system: no Weather list, no Weather Tiers,
+# nothing that reads one. So the reduction is a number said out loud rather than applied -
+# it is written to `weather.tiers`, the sheet says what it comes to, and the table takes
+# it off whatever Weather is in play.
+#
+# That is the same shape `movement` and `attacksOnOthers` already have in the Slot table:
+# written, said, and not enforced, because enforcing them would mean this system deciding
+# something the table decides. The difference is only the reason - those two are a choice,
+# and this one is a subsystem that has not arrived.
+#
+# "If this would reduce the Weather Tier to 0, ignore the effects of that Battle Weather"
+# needs no code for the same reason: a Tier of 0 is a Weather doing nothing, and there is
+# no Weather here to do nothing.

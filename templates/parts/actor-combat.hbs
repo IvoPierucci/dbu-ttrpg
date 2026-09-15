@@ -46,6 +46,15 @@
       </div>
       {{/each}}
 
+      {{#if weather}}
+      {{! What Battle Weathers count as for this character. A row of its own rather than
+          part of a mark: it is a fact about them as they stand, whatever put it there. }}
+      <div class="stat stat-charging" data-tooltip="{{weather.note}}">
+        <em>Weather</em>
+        <span>{{weather.tiers}} Tier{{#unless weather.one}}s{{/unless}} lower</span>
+      </div>
+      {{/if}}
+
       {{#if delayed}}
       {{! A Maneuver paid for and held back. Nothing watches for the trigger - it is in
           the player's own words and the table is what calls it - so what this row is for
