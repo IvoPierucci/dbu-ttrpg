@@ -246,7 +246,18 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     medicine:         { label: "Medicine",         attribute: "scholarship", required: true },
 
     clairvoyance:     { label: "Clairvoyance",     attribute: "insight",     required: true },
-    concealment:      { label: "Concealment",      attribute: "insight",     required: true },
+    // "Special Maneuver: you gain access to the Holding Back Maneuver", at the 2+ Ranks
+    // every Skill grants one at - and the Skill the Maneuver's own stacks improve, which
+    // is a coincidence of this entry rather than a rule.
+    //
+    // Required, which the entry marks as "Concealment (R)": no Rank, no roll. So the
+    // Maneuver opens one Rank after the Skill becomes rollable at all.
+    //
+    // It grants the Power Regulation Adventuring Maneuver too - a fifth alongside Forage,
+    // Scam, Fraud and Stretch, none of them recorded: there are no Adventuring Maneuvers
+    // in this system and no entries to build them from.
+    concealment:      { label: "Concealment",      attribute: "insight",     required: true,
+                        specialManeuver: "holding-back" },
     creatureHandling: { label: "Creature Handling", attribute: "insight" },
     intuition:        { label: "Intuition",        attribute: "insight" },
     perception:       { label: "Perception",       attribute: "insight" },

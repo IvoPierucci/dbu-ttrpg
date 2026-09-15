@@ -100,6 +100,13 @@ if (holdingback.stacks > 0) {
 #
 # --- How it is gained ---------------------------------------------------------------------------
 #
-# A Special Maneuver, and what opens it has not been read yet. Concealment is the Skill this
-# entry touches, which is not the same question as the Skill that hands the Maneuver over -
-# Dirty Trick rolls Bluff and Bluff opens the Feint instead.
+# Concealment, at the 2+ Ranks every Skill grants a Special Maneuver at: "Special Maneuver:
+# you gain access to the Holding Back Maneuver" is in the Skill's own entry.
+#
+# Which is the Skill this Maneuver's stacks improve, and that is a coincidence of this
+# entry rather than a rule - Dirty Trick is a Clash made with Bluff and Bluff opens the
+# Feint instead.
+#
+# Concealment is a Required Skill: no Rank, no roll at all. So this opens one Rank after
+# the Skill becomes rollable, and the Concealment bonus the stacks give is a bonus to
+# something you can already do.
