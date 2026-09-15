@@ -1029,6 +1029,7 @@ export function definitionOf(item) {
     suddenStop: item.system.suddenStop,
     reflect: item.system.reflect,
     absorb: item.system.absorb,
+    dirtyTrick: item.system.dirtyTrick,
     baseManeuver: item.system.baseManeuver ?? [],
     baseForbids: item.system.baseForbids ?? [],
     damageCategoryShift: item.system.damageCategoryShift ?? 0,
@@ -1062,7 +1063,14 @@ export function definitionOf(item) {
     // document, and read by nothing that a player ever looked at.
     text: item.system.text,
     usageLimit: item.system.limit,
-    clash: item.system.clashSkill ? { skill: item.system.clashSkill } : null
+    clash: item.system.clashSkill
+      ? {
+          skill: item.system.clashSkill,
+          // "Bluff vs Intuition". Blank on every Clash that names one Skill, and read as
+          // "the same one on both sides" where it is.
+          defenderSkill: item.system.clashDefenderSkill || ""
+        }
+      : null
   };
 }
 
@@ -1681,6 +1689,8 @@ export function maneuverItemFrom(definition) {
       suddenStop: Boolean(definition.suddenStop),
       reflect: Boolean(definition.reflect),
       absorb: Boolean(definition.absorb),
+      dirtyTrick: Boolean(definition.dirtyTrick),
+      clashDefenderSkill: definition.clash?.defenderSkill ?? definition.clashDefenderSkill ?? "",
       baseManeuver: [].concat(definition.baseManeuver ?? []),
       baseForbids: [].concat(definition.baseForbids ?? []),
       damageCategoryShift: definition.damageCategoryShift ?? 0,

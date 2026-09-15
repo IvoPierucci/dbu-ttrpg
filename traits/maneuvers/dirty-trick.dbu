@@ -1,0 +1,109 @@
+id: dirty-trick
+name: Dirty Trick
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+clashSkill: bluff
+clashDefenderSkill: intuition
+dirtyTrick: true
+source: Core Rule
+description: >
+  Cheat. A Clash of your Bluff against their Intuition, and winning buys one of three:
+  Blinded, Guard Down until you are hit, or Compelled against somebody of your choosing.
+text: >
+  Dirty Trick Maneuver [1/Round]: Refusing to accept failure, you’ll cheat, lie, and
+  connive your way to victory, whether by throwing dirt in your opponent’s eyes,
+  declaring the presence of a powerful figure, or emotionally manipulating an ally by
+  killing their family and making it look like the enemy did it.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: When you use this Special Maneuver, target a Character within a Sphere AoE
+  (centered on you). Make a Clash (Bluff vs Intuition) against that Character. If you
+  win, apply one of the following effects:
+
+  * Pocket Sand: Your target gains the Blinded Combat Condition until the end of your
+  turn.
+
+  * Made ya look!: Your target gains the Guard Down Combat Condition until the end of
+  your turn or until they are hit by an Attacking Maneuver (whichever comes first).
+
+  * It’s Such a Tragedy!: Your target gains the Compelled Combat Condition until the end
+  of their turn against a target of your choice. Additionally, if you scored a Critical
+  Result or your target scored a Botch Result in your Clash, they must either use the
+  Transformation Maneuver or Power Up Maneuver during their next turn. You can only use
+  this effect once per Combat Encounter.
+
+---
+
+# --- The Clash -------------------------------------------------------------------------
+#
+# "A Clash (Bluff vs Intuition)" - the first Skill Clash in these rules with a different
+# Skill on each side. Every other one names one Skill and both sides roll it, which is why
+# a Clash only ever carried one. `clashDefenderSkill` is the second, and a Clash without
+# one behaves exactly as it always did.
+#
+# A tie goes to the Defender, here as everywhere else: cheating has to be done outright.
+#
+# --- Where it reaches ---------------------------------------------------------------------
+#
+# "Target a Character within a Sphere AoE (centered on you)." Said and not policed, like
+# every other range in this system: nothing here moves a token and nothing here measures
+# one. The Maneuver takes a target and the table agrees whether they are inside it.
+#
+# Worth saying that it is a Character rather than an Opponent. An ally is a legal target,
+# which the third effect leans on - "emotionally manipulating an ALLY".
+#
+# --- The three effects ----------------------------------------------------------------------
+#
+# Offered on the card once the Clash is won, the way the Thrust Maneuver's two are. Not
+# chosen when the Maneuver is declared: "if you win, apply one of the following effects" is
+# a choice made after the dice.
+#
+# Pocket Sand and Made ya look! are both "until the end of YOUR turn", so the clock is kept
+# by whoever played the trick and the Condition sits on whoever it was played on. It's Such
+# a Tragedy! is "until the end of THEIR turn", so that clock is the target's own. Three
+# lines, two different characters counting, and the entry says which each time.
+#
+# --- "Or until they are hit by an Attacking Maneuver" -----------------------------------------
+#
+# The first duration in these rules with two ways to end. The turn edge is counted as it
+# always was, and `until` names the Moment that can end it first - `being-hit`, which is
+# already fired on a target the moment a Strike beats their defence.
+#
+# Swept by the GM's client alone, as the turn edges are. With no GM connected the Guard
+# Down still comes off at the end of your turn, which is the other half of "whichever comes
+# first" - it lasts longer than it should rather than sticking for ever.
+#
+# --- The Compelled target -------------------------------------------------------------------
+#
+# "Against a target of your choice." Read off whoever you have targeted when you choose the
+# effect, and written on the card. Not tracked, because Compelled's own Slot has said from
+# the day it was written that who you were told to attack is the table's to keep: "said to
+# the table, not enforced". This gives the table the sentence to keep.
+#
+# --- The rider, and what is not built ----------------------------------------------------------
+#
+# "They must either use the Transformation Maneuver or Power Up Maneuver during their next
+# turn." Said, not enforced, and it could not be enforced anyway: there is no Transformation
+# Maneuver in this system, so half of the choice does not exist to be offered. The condition
+# for it is real and is checked - a Critical of yours or a Botch of theirs, read off the
+# Clash that was just rolled - and the card says so when it happens.
+#
+# "Once per Combat Encounter", and only this effect. The Maneuver is 1/Round and this is a
+# third limit inside it, so it is counted against its own name rather than the Maneuver's:
+# a per-Encounter tally that a new Round leaves alone and a new Encounter clears, which is
+# what the round reset already promises anything not written `round:`.
+#
+# --- How it is gained -----------------------------------------------------------------------
+#
+# A Special Maneuver, so nobody has it until something hands it over. No Skill opens it
+# yet. Bluff is the obvious candidate - it is the Skill the Clash is made with - but the
+# Bluff entry is what says so, and it has not been read here. Attack Absorption is waiting
+# on the same kind of line.

@@ -66,7 +66,7 @@ export function edgesToWait(edge, { next = false, theirTurn = false } = {}) {
  * out must not take away another's.
  */
 export async function lasting(actor, { kind, key, edge, next = false, source = "",
-                                       on = "" }) {
+                                       on = "", until = "" }) {
   if (!actor || !kind || !key) return false;
 
   const entry = {
@@ -75,6 +75,11 @@ export async function lasting(actor, { kind, key, edge, next = false, source = "
     edge,
     edges: edgesToWait(edge, { next, theirTurn: isTheirTurnNow(actor) }),
     source,
+    // A second way for this clock to run out, beside the edge it is counting: "until the
+    // end of your turn or until they are hit by an Attacking Maneuver (whichever comes
+    // first)". The edge goes on counting either way - this is only the other half of the
+    // "whichever", and whichever arrives first is the one that ends it.
+    ...(until ? { until } : {}),
     // Whose thing this is, where that is not the character keeping the clock. "They
     // suffer from Guard Down until the end of your turn" is one rule split across two
     // characters: the edges counted are yours and the Condition is theirs.
@@ -143,6 +148,54 @@ export async function edgeReached(actor, edge) {
     await takeOff(actor, entry);
     ran.push(entry.source || entry.key);
   }
+  return ran;
+}
+
+/**
+ * Take off everything that was set to end when this happens to this character.
+ *
+ * The other half of "whichever comes first". The edge is still counted by `edgeReached`
+ * and is untouched by this - a duration with both simply ends at whichever arrives.
+ *
+ * The clock is not always kept by the character it is about: Dirty Trick's Guard Down is
+ * counted by whoever played it and sits on whoever it was played on, because the turn the
+ * entry names is the player's. So this looks at the character's own list and then at
+ * everybody on the scene for an entry naming them.
+ *
+ * @returns {Promise<string[]>} what ran out, named, so the table can be told
+ */
+export async function endedBy(actor, moment) {
+  if (!actor || !moment) return [];
+
+  const others = (canvas?.tokens?.placeables ?? [])
+    .map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid));
+
+  const ran = [];
+  const seen = new Set();
+
+  for (const owner of [actor, ...others]) {
+    if (seen.has(owner.uuid)) continue;
+    seen.add(owner.uuid);
+
+    const held = owner.system.timed ?? [];
+    // Theirs to end: an entry with no `on` is about whoever is keeping it, and one with
+    // an `on` is about whoever it names.
+    const done = held.filter(entry =>
+      (entry.until === moment) && ((entry.on || owner.uuid) === actor.uuid));
+    if (!done.length) continue;
+
+    // Written first, as `edgeReached` writes first: taking the thing off re-derives the
+    // character and can fire Moments of its own, and an entry still on the list while
+    // that happens is an entry that can be ended twice.
+    await owner.update({ "system.timed": held.filter(entry => !done.includes(entry)) });
+
+    for (const entry of done) {
+      await takeOff(owner, entry);
+      ran.push(entry.source || entry.key);
+    }
+  }
+
   return ran;
 }
 

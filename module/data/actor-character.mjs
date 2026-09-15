@@ -851,7 +851,29 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         /** How many of that edge still have to pass. Ignored by "encounter". */
         edges: new fields.NumberField({ required: true, integer: true, initial: 1, min: 0 }),
         /** What put it there, so the card can say what ran out. */
-        source: new fields.StringField({ required: true, blank: true, initial: "" })
+        source: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /**
+         * Whose thing this is, where that is not the character keeping the clock.
+         *
+         * "They become Analyzed until the end of YOUR next turn" is one rule split across
+         * two characters: the edges counted are yours and the Condition is theirs. Blank
+         * on every clock somebody keeps over themselves, which is nearly all of them.
+         *
+         * Declared late, and written from the day `lasting` learned the word. A
+         * SchemaField deletes what it does not know, so every entry came back without it
+         * and the Condition was taken off whoever was counting instead of whoever had it -
+         * which left the target marked for the rest of the Encounter and briefly cleared a
+         * Condition from somebody who never had one.
+         */
+        on: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /**
+         * A second way for this clock to run out, named as a Moment.
+         *
+         * "Until the end of your turn or until they are hit by an Attacking Maneuver
+         * (whichever comes first)." The edge above goes on counting; this ends it early if
+         * that happens first. Blank on a clock with only one way to end, which is most.
+         */
+        until: new fields.StringField({ required: true, blank: true, initial: "" })
       }),
       { required: true, initial: [] }
     );

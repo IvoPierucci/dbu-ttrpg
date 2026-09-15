@@ -168,6 +168,24 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       absorb: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * The Skill the *defender* of a Skill Clash answers with, where the rule names a
+       * different one from the challenger's.
+       *
+       * "A Clash (Bluff vs Intuition)" is the first of those; every other Skill Clash in
+       * these rules names one Skill and both sides roll it. Blank means exactly that, so
+       * nothing written before this existed changes.
+       */
+      clashDefenderSkill: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
+       * Wins a Skill Clash and then offers one of three Combat Conditions to hang on the
+       * loser.
+       *
+       * A flag rather than three fields, because the three differ in more than their
+       * Condition: two are timed by the trickster's turn and one by the target's, one ends
+       * early on being hit, and one carries a rider and a limit of its own.
+       */
+      dirtyTrick: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * What a Modifier Maneuver may be applied to: its Base Maneuver.
        *
        * "A Maneuver (or type of Maneuver)", which is both shapes and sometimes several -

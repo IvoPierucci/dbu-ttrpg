@@ -2,7 +2,7 @@ import DBUCharacterData from "./data/actor-character.mjs";
 import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { refundActions, spendActions } from "./combat.mjs";
-import { EDGES, KINDS, lasting } from "./durations.mjs";
+import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, featureRanks, pushes, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
@@ -28,6 +28,8 @@ import {
   maneuverKiCost,
   movementKiCost,
   movementSquares,
+  effectUsesLeft,
+  recordEffectUse,
   recordManeuverType,
   recordManeuverUse,
   whyNotAnotherAbsolute,
@@ -294,6 +296,160 @@ async function applyClash(messageId, clash) {
   if (clash.blockade && clash.result && !clash.blockade.applied) {
     await settleBlockade(message, clash);
   }
+
+  if (clash.dirtyTrick && clash.result && !clash.dirtyTrick.applied) {
+    await settleDirtyTrick(message, clash);
+  }
+}
+
+/**
+ * The three things a Dirty Trick can turn out to have been.
+ *
+ * A table rather than three branches, because what differs between them is small and
+ * particular: which Condition, whose turn counts it, whether being hit ends it early, and
+ * whether it has a limit of its own.
+ */
+const TRICKS = Object.freeze({
+  sand: {
+    label: "Pocket Sand",
+    condition: "blinded",
+    tip: "They are Blinded until the end of your turn."
+  },
+  look: {
+    label: "Made ya look!",
+    condition: "guard-down",
+    // "Or until they are hit by an Attacking Maneuver (whichever comes first)."
+    until: "being-hit",
+    tip: "They are Guard Down until the end of your turn, or until they are hit by an "
+       + "Attacking Maneuver - whichever comes first."
+  },
+  tragedy: {
+    label: "It's Such a Tragedy!",
+    condition: "compelled",
+    // "Until the end of THEIR turn", where the other two are yours. So this clock is the
+    // target's own and the other two are kept by whoever played the trick.
+    theirClock: true,
+    once: "encounter",
+    tip: "They are Compelled against a target of your choice until the end of their turn. "
+       + "On your Critical or their Botch they must also Transform or Power Up next turn. "
+       + "Once a Combat Encounter."
+  }
+});
+
+/**
+ * What a settled Dirty Trick leaves behind: a choice, or nothing at all.
+ *
+ * A tie goes to the Defender here as everywhere else - cheating has to be done outright.
+ */
+async function settleDirtyTrick(message, clash) {
+  const tricker = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!tricker || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, dirtyTrick: { ...clash.dirtyTrick, applied: true }
+  });
+
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} sees through it.`);
+    return;
+  }
+
+  await settledNote(message, `${tricker.name} wins, and chooses what the trick was.`);
+}
+
+/**
+ * Whether the Clash went the way the third effect's rider asks for.
+ *
+ * "If you scored a Critical Result or your target scored a Botch Result in your Clash."
+ * Either one, and read off the Clash that was actually rolled rather than worked out
+ * again - a Karmic Effect that changed the outcome changed this with it.
+ */
+function forcedToPower(clash) {
+  return (clash.result?.challenger?.outcome === "critical")
+    || (clash.result?.defender?.outcome === "botch");
+}
+
+/**
+ * "Apply one of the following effects." Taken on the card, by whoever won it.
+ *
+ * The Condition goes on the target and the clock goes wherever the entry says: two of
+ * these are counted by the trickster's turn and one by the target's.
+ */
+async function chooseDirtyTrick(message, clash, choice) {
+  if (clash.dirtyTrick?.chosen) return;
+
+  const trick = TRICKS[choice];
+  const tricker = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!trick || !tricker || !target) return;
+
+  const maneuver = getManeuver("dirty-trick");
+  if (trick.once && maneuver
+    && !effectUsesLeft(tricker, maneuver, choice, { per: trick.once })) {
+    ui.notifications.warn(
+      `${tricker.name} has already used ${trick.label} this Combat Encounter.`);
+    return;
+  }
+
+  // "Against a target of your choice", read on the client that is choosing and said on the
+  // card. Not tracked: Compelled's own Slot has said since it was written that who you
+  // were told to attack is the table's to keep, and this is what gives them the sentence.
+  const against = trick.theirClock ? (game.user.targets.first()?.actor ?? null) : null;
+
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, trick.condition, 1);
+
+  await lasting(trick.theirClock ? target : tricker, {
+    kind: KINDS.CONDITION,
+    key: trick.condition,
+    edge: EDGES.END,
+    // Whose turn the entry named. A clock the trickster keeps is about somebody else, and
+    // says so; the target's own clock is about the target and needs no `on`.
+    ...(trick.theirClock ? {} : { on: target.uuid }),
+    ...(trick.until ? { until: trick.until } : {}),
+    source: "Dirty Trick"
+  });
+
+  if (trick.once && maneuver) {
+    await recordEffectUse(tricker, maneuver, choice, { per: trick.once });
+  }
+
+  await requestEdit(message, {
+    type: "clash",
+    clash: { ...clash, dirtyTrick: { ...clash.dirtyTrick, chosen: choice } }
+  });
+
+  await settledNote(message, trickNote(trick, tricker, target, against, clash));
+}
+
+/**
+ * What the trick came to, said at the table.
+ *
+ * The rider is said rather than enforced, and could not be enforced anyway: there is no
+ * Transformation Maneuver in this system, so half of the choice it demands does not exist
+ * to be offered.
+ */
+function trickNote(trick, tricker, target, against, clash) {
+  if (trick.condition === "blinded") {
+    return `${target.name} is Blinded until the end of ${tricker.name}'s turn.`;
+  }
+
+  if (trick.condition === "guard-down") {
+    return `${target.name} is Guard Down until the end of ${tricker.name}'s turn, or until `
+      + "they are hit by an Attacking Maneuver - whichever comes first.";
+  }
+
+  const whom = against ? against.name : `a target of ${tricker.name}'s choice`;
+  const note = `${target.name} is Compelled against ${whom} until the end of `
+    + `${target.name}'s turn.`;
+
+  return forcedToPower(clash)
+    ? `${note} ${target.name} must also use the Transformation Maneuver or the Power Up `
+      + "Maneuver during their next turn."
+    : note;
 }
 
 /**
@@ -3212,10 +3368,20 @@ const CLASH_ROLLS = ({
   skill: {
     label: "Skill Clash",
     family: "skill",
-    of: (actor, clash) => ({
-      label: clash.skillLabel,
-      value: actor.system.skills[clash.skill].roll
-    }),
+    /**
+     * "A Clash (Bluff vs Intuition)" - the first Skill Clash in these rules with a
+     * different Skill on each side. Every other one names a single Skill and both sides
+     * roll it, which is what a blank `defenderSkill` means and what every Clash opened
+     * before this carries.
+     */
+    of: (actor, clash, uuid) => {
+      const theirs = (uuid === clash.defenderUuid) && Boolean(clash.defenderSkill);
+      const key = theirs ? clash.defenderSkill : clash.skill;
+      return {
+        label: theirs ? (clash.defenderSkillLabel || clash.skillLabel) : clash.skillLabel,
+        value: actor.system.skills[key].roll
+      };
+    },
     criticalDice: () => DBUCharacterData.SKILL_CRITICAL_DIE
   },
   might: {
@@ -3410,6 +3576,10 @@ async function pick(title, question, buttons) {
 export async function postSkillClash(actor, target, maneuver) {
   const skillKey = maneuver.clash.skill;
 
+  // The Skill the other side answers with, where the rule names a different one. Blank on
+  // every Clash that names one Skill, and read there as "the same one again".
+  const defenderKey = maneuver.clash.defenderSkill || "";
+
   // Handed back for the reason postManeuver hands its card back: which card a Maneuver
   // was played on is part of the Instant rule.
   return ChatMessage.create({
@@ -3423,11 +3593,16 @@ export async function postSkillClash(actor, target, maneuver) {
           category: "skill",
           skill: skillKey,
           skillLabel: actor.system.skills[skillKey].label,
+          defenderSkill: defenderKey,
+          defenderSkillLabel: defenderKey ? target.system.skills[defenderKey].label : "",
           maneuverName: maneuver.name,
           challengerUuid: actor.uuid,
           challengerName: actor.name,
           defenderUuid: target.uuid,
           defenderName: target.name,
+          // Winning buys a choice of three, offered on the card once the dice are in -
+          // "if you win, apply one of the following effects" is a choice made after them.
+          dirtyTrick: maneuver.dirtyTrick ? { chosen: "", applied: false } : null,
           // Who has finished preparing. Neither side's dice are picked up until both
           // appear here: each may have a willing failure or an effect to declare, and
           // a roll made while the other was still deciding cannot be taken back.
@@ -3695,6 +3870,32 @@ function renderSkillClash(message, html) {
         button.textContent = label;
         button.dataset.tooltip = tip;
         button.addEventListener("click", () => chooseThrust(message, clash, choice));
+        container.append(button);
+      }
+    }
+
+    // "If you win, apply one of the following effects." The same shape the Thrust's two
+    // options have, with a third and with one of them able to run out.
+    if (clash.dirtyTrick && wonIt && !clash.dirtyTrick.chosen && challenger?.isOwner) {
+      const maneuver = getManeuver("dirty-trick");
+
+      for (const [choice, trick] of Object.entries(TRICKS)) {
+        const spent = trick.once && maneuver
+          && !effectUsesLeft(challenger, maneuver, choice, { per: trick.once });
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "dbu-clash-button";
+        button.textContent = trick.label;
+        // Shown and refused rather than hidden: an option that is gone for the Encounter
+        // is worth seeing, and an option that silently vanishes looks like a bug.
+        button.disabled = Boolean(spent);
+        button.dataset.tooltip = spent
+          ? `${trick.label} has already been used this Combat Encounter.`
+          : trick.tip;
+        if (!spent) {
+          button.addEventListener("click", () => chooseDirtyTrick(message, clash, choice));
+        }
         container.append(button);
       }
     }
@@ -5027,6 +5228,22 @@ async function resolveAttack(message, attack) {
     // What this defender's own effects do about being hit - Superior taking more
     // Damage, Prone taking it a category harder. Collected once, used at the Wound Roll.
     const incoming = hit ? atMoment(target, "being-hit", { attack: 1, attacker: 1 }) : null;
+
+    // "Or until they are hit by an Attacking Maneuver (whichever comes first)." The other
+    // half of a whichever: the turn edge goes on counting and this ends it early.
+    //
+    // The GM's client alone, as the turn edges are swept by the GM's client alone - the
+    // clock can be kept by somebody this client does not own. With no GM connected the
+    // Guard Down comes off at the end of the turn instead, which is the other half of the
+    // same sentence: it outlasts its welcome rather than sticking for ever.
+    if (hit && (game.users.activeGM === game.user)) {
+      const ran = await endedBy(target, "being-hit");
+      if (ran.length) {
+        await settledNote(message,
+          `${target.name} is hit, and that ends ${ran.join(", ")}.`);
+      }
+    }
+
     if (incoming) spendChosen(target, incoming);
 
     // Every step for and against the Damage Category is summed before anything is

@@ -2034,6 +2034,28 @@ export async function recordManeuverUse(actor, maneuver) {
   await actor.update({ "system.usedManeuvers": [...actor.system.usedManeuvers, entry] });
 }
 
+/**
+ * How many times one effect *inside* a Maneuver can still be used.
+ *
+ * A second limit under the first: Dirty Trick is 1/Round and its third effect is "once per
+ * Combat Encounter". Counted against its own name - `encounter:dirty-trick.tragedy` - so
+ * neither limit can spend the other, and so `usedIs` goes on matching only the Maneuver's.
+ *
+ * The period is part of the entry, which is what tells a new Combat Round that this is not
+ * one of the uses it hands back.
+ */
+export function effectUsesLeft(actor, maneuver, effect, { per = "encounter", amount = 1 } = {}) {
+  const entry = `${per}:${maneuver.id}.${effect}`;
+  const spent = (actor.system.usedManeuvers ?? []).filter(used => used === entry).length;
+  return Math.max(0, amount - spent);
+}
+
+/** Record one use of an effect with a limit of its own. */
+export async function recordEffectUse(actor, maneuver, effect, { per = "encounter" } = {}) {
+  const entry = `${per}:${maneuver.id}.${effect}`;
+  await actor.update({ "system.usedManeuvers": [...actor.system.usedManeuvers, entry] });
+}
+
 /** "[1/Encounter]", as the rules write it in a Maneuver's name. */
 export function usageLimitLabel(maneuver) {
   if (!maneuver.usageLimit) return "";
