@@ -300,6 +300,83 @@ async function applyClash(messageId, clash) {
   if (clash.dirtyTrick && clash.result && !clash.dirtyTrick.applied) {
     await settleDirtyTrick(message, clash);
   }
+
+  if (clash.feint && clash.result && !clash.feint.applied) {
+    await settleFeint(message, clash);
+  }
+}
+
+/**
+ * What a won Feint hands over: a Basic Attack, out of sequence, with strings attached.
+ *
+ * "If you win, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver" is
+ * the Exploit Maneuver's sentence, so it reaches the same door - an offer on the card,
+ * taken by the player, waiving the Action Cost and nothing else.
+ *
+ * The four conditions travel on the offer. They have to: the attack is declared on the
+ * player's own client minutes later, and by then the Clash card is the only thing that
+ * still knows a Feint bought it.
+ */
+async function settleFeint(message, clash) {
+  const feinter = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!feinter || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, feint: { ...clash.feint, applied: true }
+  });
+
+  // A tie goes to the Defender, here as everywhere: a feint has to be sold outright.
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} is not taken in.`);
+    return;
+  }
+
+  requestEdit(message, {
+    type: "offer",
+    offer: {
+      actorUuid: feinter.uuid,
+      actorName: feinter.name,
+      // Named rather than swept for, as Cross Counter names the Basic Attack it gives away.
+      maneuverId: "basic-attack",
+      maneuverName: "Basic Attack",
+      targetUuid: target.uuid,
+      reason: "Feint - they bought it",
+      grants: feintGrants(feinter)
+    }
+  });
+}
+
+/**
+ * The conditions a Feint attaches to the attack it bought.
+ *
+ * Two for and two against, and the two against are worked out here rather than at the
+ * picker: "1/4 of your MAXIMUM Capacity" is a number about the character who feinted, and
+ * the client declaring the attack is theirs but the moment is not - the cap belongs to the
+ * Feint, so it is settled when the Feint is won.
+ *
+ * Rounded up, which is unusual in these rules and is what the entry says.
+ */
+function feintGrants(feinter) {
+  return {
+    // Shaped like a Modifier Maneuver, because that is what the list on an attack holds:
+    // a named thing that changed it, with a row of its own on the breakdown.
+    modifiers: [{
+      id: "feint",
+      name: "Feint",
+      damageCategoryShift: 0,
+      strikePerTier: 1,
+      woundPerTier: 1,
+      note: ""
+    }],
+    // "Cannot use any option of the Defend Maneuver in response to this Attacking Maneuver
+    // except Cross Counter."
+    defencesAllowed: ["crossCounter"],
+    noArea: true,
+    wagerCap: Math.ceil((feinter.system.capacity.max ?? 0) / 4)
+  };
 }
 
 /**
@@ -3369,20 +3446,42 @@ const CLASH_ROLLS = ({
     label: "Skill Clash",
     family: "skill",
     /**
-     * "A Clash (Bluff vs Intuition)" - the first Skill Clash in these rules with a
-     * different Skill on each side. Every other one names a single Skill and both sides
-     * roll it, which is what a blank `defenderSkill` means and what every Clash opened
+     * "A Clash (Bluff vs Intuition)", and "(Bluff vs Intuition/Perception)" where the
+     * defender has a choice. Every Skill Clash written before those names one Skill and
+     * both sides roll it, which is what an empty list means and what every Clash opened
      * before this carries.
      */
     of: (actor, clash, uuid) => {
-      const theirs = (uuid === clash.defenderUuid) && Boolean(clash.defenderSkill);
-      const key = theirs ? clash.defenderSkill : clash.skill;
+      const key = skillPicked(clash, uuid);
       return {
-        label: theirs ? (clash.defenderSkillLabel || clash.skillLabel) : clash.skillLabel,
+        label: actor.system.skills[key]?.label ?? clash.skillLabel,
         value: actor.system.skills[key].roll
       };
     },
-    criticalDice: () => DBUCharacterData.SKILL_CRITICAL_DIE
+    criticalDice: () => DBUCharacterData.SKILL_CRITICAL_DIE,
+
+    prompt: (actor, clash, uuid) => ((uuid === clash.defenderUuid)
+      && ((clash.defenderSkills ?? []).length > 1))
+      ? (clash.defenderSkills ?? []).map(key => skillLabel(actor, key)).join(" or ")
+      : skillLabel(actor, skillPicked(clash, uuid)),
+
+    // The defender's question alone: the challenger's Skill is named outright by the rule,
+    // and there is nothing for them to choose between.
+    choose: async (clash, actor) => {
+      const offered = clash.defenderSkills ?? [];
+      if ((actor.uuid !== clash.defenderUuid) || (offered.length < 2)) return {};
+
+      const chosen = await pick(
+        `${clash.maneuverName} - ${actor.name}`,
+        "Answer the Clash with which Skill?",
+        offered.map(key => ({
+          action: key,
+          label: `${skillLabel(actor, key)} ${actor.system.skills[key]?.roll ?? 0}`
+        }))
+      );
+      if (!chosen) return null;
+      return { defenderSkill: chosen };
+    }
   },
   might: {
     label: "Might Clash",
@@ -3543,6 +3642,26 @@ const CLASH_ROLLS = ({
 CLASH_ROLLS.grapple = CLASH_ROLLS.strike;
 Object.freeze(CLASH_ROLLS);
 
+/**
+ * Which Skill this side of a Clash is rolling.
+ *
+ * The challenger rolls the one the rule names. The defender rolls whichever of theirs they
+ * picked, or the first they were offered if they have not been asked - and the
+ * challenger's own Skill where the rule named none for them, which is every Skill Clash
+ * written before a rule named two.
+ */
+function skillPicked(clash, uuid) {
+  if (uuid !== clash.defenderUuid) return clash.skill;
+  const offered = clash.defenderSkills ?? [];
+  return clash.defenderSkill || offered[0] || clash.skill;
+}
+
+/** A Skill's name, as the character's own sheet gives it. */
+function skillLabel(actor, key) {
+  return actor.system.skills?.[key]?.label
+    ?? `${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+}
+
 /** Which Saving Throw this side of a Clash is answering with. */
 function savePicked(clash, uuid) {
   const offered = clash.saves ?? [];
@@ -3576,9 +3695,10 @@ async function pick(title, question, buttons) {
 export async function postSkillClash(actor, target, maneuver) {
   const skillKey = maneuver.clash.skill;
 
-  // The Skill the other side answers with, where the rule names a different one. Blank on
-  // every Clash that names one Skill, and read there as "the same one again".
-  const defenderKey = maneuver.clash.defenderSkill || "";
+  // The Skills the other side may answer with, where the rule names something other than
+  // the challenger's. Empty on every Clash that names one Skill, and read there as "the
+  // same one again"; more than one is a question the defender is asked before they roll.
+  const offered = [...(maneuver.clash.defenderSkills ?? [])];
 
   // Handed back for the reason postManeuver hands its card back: which card a Maneuver
   // was played on is part of the Instant rule.
@@ -3593,8 +3713,10 @@ export async function postSkillClash(actor, target, maneuver) {
           category: "skill",
           skill: skillKey,
           skillLabel: actor.system.skills[skillKey].label,
-          defenderSkill: defenderKey,
-          defenderSkillLabel: defenderKey ? target.system.skills[defenderKey].label : "",
+          defenderSkills: offered,
+          // Which of them they took. Unset until they say, and they are asked before
+          // either side has seen a number - as a Saving Throw Clash asks.
+          defenderSkill: "",
           maneuverName: maneuver.name,
           challengerUuid: actor.uuid,
           challengerName: actor.name,
@@ -3603,6 +3725,9 @@ export async function postSkillClash(actor, target, maneuver) {
           // Winning buys a choice of three, offered on the card once the dice are in -
           // "if you win, apply one of the following effects" is a choice made after them.
           dirtyTrick: maneuver.dirtyTrick ? { chosen: "", applied: false } : null,
+          // Winning hands over a Basic Attack with conditions attached, which travel with
+          // the offer rather than being remembered anywhere.
+          feint: maneuver.feint ? { applied: false } : null,
           // Who has finished preparing. Neither side's dice are picked up until both
           // appear here: each may have a willing failure or an effect to declare, and
           // a roll made while the other was still deciding cannot be taken back.
@@ -4169,8 +4294,16 @@ async function takeOutOfSequence(message, actor, offer) {
   // Opened for an Attacking Maneuver even when it names no Profile: the Ki Wager
   // belongs to the attack rather than to the Profile, and Compelled sets a floor under
   // it that has to be asked for somewhere.
+  // What the thing that handed this over attached to it. A Feint's Basic Attack cannot
+  // have an Area of Effect and cannot be wagered past a quarter of the Capacity, and both
+  // are said at the picker rather than checked after it is built.
+  const granted = offer.grants ?? null;
+
   if (!declared && (maneuver.profile || maneuver.attacking)) {
-    declared = await declareAttack(maneuver, DBUCharacterData.FOUNDATIONS, actor);
+    declared = await declareAttack(maneuver, DBUCharacterData.FOUNDATIONS, actor, {
+      noArea: Boolean(granted?.noArea),
+      wagerCap: granted?.wagerCap
+    });
     if (!declared) return;
 
     // The same rule on the way in out of sequence: a Physical Attack only reaches your
@@ -4290,8 +4423,15 @@ async function takeOutOfSequence(message, actor, offer) {
   if (maneuver.absorb) return absorbAttack(message, actor, maneuver);
 
   return declared
-    ? postAttack(actor, target, maneuver, declared,
-        { asOutOfSequence: true, provokedBy: offer.provokedBy ?? null, reflecting })
+    ? postAttack(actor, target, maneuver, declared, {
+        asOutOfSequence: true,
+        provokedBy: offer.provokedBy ?? null,
+        reflecting,
+        // Shaped like the Modifier Maneuvers applied at the door, because they are the
+        // same thing to this attack: a named change with a row of its own.
+        modifiers: granted?.modifiers ?? [],
+        defencesAllowed: granted?.defencesAllowed ?? []
+      })
     : postManeuver(actor, maneuver, {
         asOutOfSequence: true,
         rapidMovement: Boolean(crossing?.rapid),
@@ -4310,7 +4450,8 @@ export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, charges = 0,
                                    advantages = [], squaresCharged = 0 },
                                  { asOutOfSequence = false, provokedBy = null,
-                                   reflecting = null, modifiers = [] } = {}) {
+                                   reflecting = null, modifiers = [],
+                                   defencesAllowed = [] } = {}) {
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
   // Strike Roll - the attack after your third is itself the one that suffers.
   //
@@ -4385,6 +4526,9 @@ export async function postAttack(actor, target, maneuver,
           // it. On the card because the attack is settled later and often elsewhere, and
           // the Item they came from may have been edited in between.
           modifiers,
+          // Which options of the Defend Maneuver may answer this, where something has
+          // narrowed them. Empty means all of them, which is every attack but one.
+          defencesAllowed,
           // A reflected attack keeps the steps the original had rather than working them
           // out again: Mega Flare's is a fact about that attack's Charges, and those are
           // carried across rather than re-derived.
@@ -4981,6 +5125,26 @@ function modifierStrikeParts(attacker, attack) {
       label: entry.name,
       written: `${entry.strikePerTier > 0 ? "+" : ""}${entry.strikePerTier}(T)`,
       value: entry.strikePerTier * tier
+    }));
+}
+
+/**
+ * What was applied to an attack does to its Wound Roll.
+ *
+ * The other half of `modifierStrikeParts`, and empty until the Feint Maneuver: "increase
+ * the Strike AND Wound Rolls for this Attacking Maneuver by 1(T)" is the first rule that
+ * reaches both. A row each, for the same reason the Strike gets one - the breakdown is
+ * where a player sees what a thing bought them.
+ */
+function modifierWoundParts(attacker, attack) {
+  const tier = attacker.system.tierOfPower ?? 1;
+
+  return (attack.modifiers ?? [])
+    .filter(entry => entry.woundPerTier)
+    .map(entry => ({
+      label: entry.name,
+      written: `${entry.woundPerTier > 0 ? "+" : ""}${entry.woundPerTier}(T)`,
+      value: entry.woundPerTier * tier
     }));
 }
 
@@ -6029,6 +6193,7 @@ async function rollAttackWound(message, attack) {
     ...profileWoundParts(attacker, attack),
     ...advantageWoundParts(attacker, attack),
     ...superStackWoundParts(attacker, attack),
+    ...modifierWoundParts(attacker, attack),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...thresholdPenalty(attacker)
   ], {
@@ -7034,7 +7199,22 @@ async function defendAgainst(message, target, attack) {
 
   const wagerMax = maxKiWager(target);
 
-  const options = Object.entries(DEFEND_OPTIONS).map(([key, option], index) => {
+  // "Your Opponent cannot use any option of the Defend Maneuver in response to this
+  // Attacking Maneuver except Cross Counter." Narrowed rather than refused outright: the
+  // Defend Maneuver is still usable, and what is left of it is one option.
+  //
+  // An empty list is every attack that nobody narrowed, which is all of them but one.
+  const allowed = attack.defencesAllowed ?? [];
+  const offered = allowed.length
+    ? Object.entries(DEFEND_OPTIONS).filter(([key]) => allowed.includes(key))
+    : Object.entries(DEFEND_OPTIONS);
+
+  if (!offered.length) {
+    ui.notifications.warn("No option of the Defend Maneuver can answer this attack.");
+    return;
+  }
+
+  const options = offered.map(([key, option], index) => {
     const cost = defendOptionCost(key, target, attack);
     // Power Flare makes a Wound Roll of its own, so it is the one option that can
     // carry a wager. The field sits with it rather than under the whole dialog.

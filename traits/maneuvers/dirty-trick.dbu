@@ -8,7 +8,7 @@ requiresTarget: true
 special: true
 usageLimit: 1/round
 clashSkill: bluff
-clashDefenderSkill: intuition
+clashDefenderSkills: intuition
 dirtyTrick: true
 source: Core Rule
 description: >
@@ -46,8 +46,12 @@ text: >
 #
 # "A Clash (Bluff vs Intuition)" - the first Skill Clash in these rules with a different
 # Skill on each side. Every other one names one Skill and both sides roll it, which is why
-# a Clash only ever carried one. `clashDefenderSkill` is the second, and a Clash without
-# one behaves exactly as it always did.
+# a Clash only ever carried one. `clashDefenderSkills` is what the other side may answer
+# with, and a Clash with none behaves exactly as it always did.
+#
+# A list of one here. It is a list because the Feint Maneuver names two with a slash
+# between them - "(Bluff vs Intuition/Perception)" - and that slash is a choice, the same
+# one as in "Strike/Dodge". One in the list is a defender with nothing to decide.
 #
 # A tie goes to the Defender, here as everywhere else: cheating has to be done outright.
 #

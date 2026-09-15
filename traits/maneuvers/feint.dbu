@@ -1,0 +1,88 @@
+id: feint
+name: Feint
+type: instant
+actionCost: 0
+kiCostPerTier: 2
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+clashSkill: bluff
+clashDefenderSkills: intuition, perception
+feint: true
+source: Core Rule
+description: >
+  Sell the wrong move. A Clash of your Bluff against their Intuition or Perception, and
+  winning buys a Basic Attack out of sequence at 1(T) better and almost undefendable -
+  with no Area of Effect and a quarter of your Capacity as the most you may wager.
+text: >
+  Feint Maneuver [1/Round]: Draw your opponent’s attention away from your true
+  intentions before you strike!
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –Minions: N/A
+  –KP Cost: 2(T)
+  –Effect: Target an Opponent within your Melee Range. Make a Clash (Bluff vs
+  Intuition/Perception) against that Opponent. If you win, you may use the Basic Attack
+  Maneuver as an Out-of-Sequence Maneuver. Increase the Strike and Wound Rolls for this
+  Attacking Maneuver by 1(T) and your Opponent cannot use any option of the Defend
+  Maneuver in response to this Attacking Maneuver except Cross Counter, but this
+  Attacking Maneuver cannot possess an AoE and you cannot Ki Wager more than 1/4
+  (rounded up) of your Maximum Capacity on this Attacking Maneuver.
+
+---
+
+# --- The Clash ---------------------------------------------------------------------------
+#
+# "(Bluff vs Intuition/Perception)". The slash is a choice made by whoever is rolling -
+# the same slash as in "Strike/Dodge" and "(Impulsive/Corporeal)", both of which are read
+# that way - so the defender is asked which of the two before either side sees a number.
+#
+# A tie goes to the Defender, here as everywhere: a feint has to be sold outright.
+#
+# --- What winning buys ----------------------------------------------------------------------
+#
+# "You may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver", which is the
+# Exploit Maneuver's shape and reaches the same door - an offer on the card, taken by the
+# player, waiving the Action Cost and nothing else.
+#
+# What is new is that the attack arrives with conditions attached. Four of them, two for
+# and two against, and they travel with the offer rather than being remembered anywhere:
+#
+#   - +1(T) on the Strike Roll and on the Wound Roll, as a row each on the breakdown
+#   - no option of the Defend Maneuver but Cross Counter
+#   - no Area of Effect
+#   - a Ki Wager of at most 1/4 of your Maximum Capacity, rounded up
+#
+# The two against are refused where the attack is declared rather than checked after it:
+# a Profile with an Area is offered greyed out with the reason on it, and the wager field's
+# ceiling comes down. Being told afterwards that the attack you built is illegal is worse
+# than not being able to build it.
+#
+# "1/4 of your MAXIMUM Capacity", not what is left of it - so it is a ceiling on this
+# attack and not a second reading of what you can afford. The ordinary limits still apply
+# underneath: you cannot wager Capacity you have spent or Ki you have not got.
+#
+# Rounded up, which is unusual here and is what the entry says.
+#
+# --- Melee Range -----------------------------------------------------------------------------
+#
+# "Target an Opponent within your Melee Range." Said and not policed, like every other
+# range in this system: nothing here measures a distance. The attack it buys is a Basic
+# Attack and carries its own reach rules, which are policed where every attack's are.
+#
+# --- Instant ------------------------------------------------------------------------------------
+#
+# The first Special Maneuver that is not a Standard one. Being an Instant brings the rule
+# with it: not two in a row, and only in answer to a Standard Maneuver - both of which live
+# in `whyNotAnotherInstant` and the respond machinery already, and neither needed anything
+# here.
+#
+# Worth noticing: the Out-of-Sequence Basic Attack this hands over does not count as a
+# Maneuver in the Instant's place, which is what the Out-of-Sequence door has always said.
+#
+# --- How it is gained ------------------------------------------------------------------------
+#
+# A Special Maneuver, and no Skill opens it yet. Bluff is the obvious candidate, as it is
+# for Dirty Trick - both are Clashes made with it - but the Bluff entry is what says so and
+# it has not been read here.

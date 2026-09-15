@@ -1321,10 +1321,15 @@ function profileGroups(foundations) {
  * to be declared the same way however it is reached - from the sheet, or out of
  * sequence.
  *
+ * `limits` is what something else has imposed on this particular attack, where anything
+ * has: `noArea` refuses a Profile with an Area of Effect, and `wagerCap` brings the Ki
+ * Wager's ceiling down. Empty for every attack nobody put conditions on, which is nearly
+ * all of them.
+ *
  * @returns {Promise<?{profile: string, foundation: string}>}
  */
-export async function declareAttack(maneuver, foundations, actor) {
-  const declared = await pickProfile(maneuver, foundations, actor);
+export async function declareAttack(maneuver, foundations, actor, limits = {}) {
+  const declared = await pickProfile(maneuver, foundations, actor, limits);
   if (!declared) return null;
 
   const { profile, kiWager } = declared;
@@ -1430,8 +1435,15 @@ async function askFeatures(maneuver, actor, advantages) {
  * @param {{first: boolean, onFirst: function}} state  whether this row is the one that
  *        starts selected, and how to say that it took the slot
  */
-function profileOption(profile, maneuver, actor, state) {
-  const refused = whyNotThisProfile(actor, maneuver, profile.id);
+function profileOption(profile, maneuver, actor, state, limits = {}) {
+  // What this attack was granted under comes first. A Profile refused because the grant
+  // forbids it is refused for a different reason than one already spent, and the note
+  // beside it says which - "spent" against a Profile nobody has spent reads as a bug.
+  const forbidden = Boolean(limits.noArea && profile.area);
+  const refused = forbidden
+    ? `${profile.label} has an Area of Effect, and this Attacking Maneuver cannot.`
+    : whyNotThisProfile(actor, maneuver, profile.id);
+  const note = forbidden ? "Area of Effect" : PROFILE_SPENT_LABEL;
   const selected = state.first && !refused;
   if (selected) state.onFirst();
 
@@ -1440,7 +1452,7 @@ function profileOption(profile, maneuver, actor, state) {
     <input type="radio" name="profile" value="${profile.id}"
            ${selected ? "checked" : ""} ${refused ? "disabled" : ""}/>
     <span class="dbu-profile-name"${profileTip(profile)}>${Handlebars.escapeExpression(profile.label)}</span>
-    ${refused ? `<em class="dbu-profile-spent-note">${PROFILE_SPENT_LABEL}</em>` : ""}
+    ${refused ? `<em class="dbu-profile-spent-note">${note}</em>` : ""}
     <span class="dbu-profile-category">${DAMAGE_CATEGORIES[profile.damageCategory].label}</span>
     <span class="dbu-profile-cost">${profileOptionCost(maneuver, profile.id, actor)} KP</span>
   </label>`;
@@ -1699,7 +1711,7 @@ export function minimumKiWager(actor, maneuver = null) {
  * A Maneuver that names its own Profile still opens this, because the wager is asked
  * either way; it simply has nothing to choose between.
  */
-async function pickProfile(maneuver, foundations, actor) {
+async function pickProfile(maneuver, foundations, actor, limits = {}) {
   const groups = profileGroups(foundations);
   const fixed = (maneuver.profile !== "any") ? PROFILES[maneuver.profile] : null;
   // An Attacking Maneuver that names no Profile at all - which the schema allows, and
@@ -1718,7 +1730,7 @@ async function pickProfile(maneuver, foundations, actor) {
     const items = group.profiles.map(profile => profileOption(profile, maneuver, actor, {
       first: !checked,
       onFirst: () => { checked = true; }
-    })).join("");
+    }, limits)).join("");
 
     // Groups that hold something open by default; empty and shut ones do not open.
     return profileSection(group, items, shut);
@@ -1737,8 +1749,14 @@ async function pickProfile(maneuver, foundations, actor) {
   // What this Technique brings changes what may be wagered: Full Wager lifts the
   // ceiling, All or Nothing pins the floor to it. Read off the Maneuver rather than the
   // character, because they belong to the Technique and not to whoever throws it.
+  // And what this attack in particular was granted under. Feint: "you cannot Ki Wager
+  // more than 1/4 (rounded up) of your Maximum Capacity on this Attacking Maneuver" - a
+  // ceiling on top of the ordinary ones rather than instead of them, so you still cannot
+  // wager Capacity you have spent or Ki you have not got.
   const features = maneuver.advantages ?? [];
-  const wagerMax = maxKiWager(actor, features);
+  const wagerMax = Math.min(
+    maxKiWager(actor, features),
+    Number.isFinite(limits.wagerCap) ? limits.wagerCap : Number.POSITIVE_INFINITY);
   const wagerMin = forcedFullWager(features)
     ? wagerMax
     : minimumKiWager(actor, maneuver);
@@ -2122,10 +2140,17 @@ export async function loadManeuvers() {
     baseForbids: [].concat(trait.baseForbids ?? []),
     damageCategoryShift: trait.damageCategoryShift ?? 0,
     strikePerTier: trait.strikePerTier ?? 0,
+    woundPerTier: trait.woundPerTier ?? 0,
     asks: trait.asks ?? "",
     delays: Boolean(trait.delays),
     special: Boolean(trait.special),
     analysis: Boolean(trait.analysis),
+    dirtyTrick: Boolean(trait.dirtyTrick),
+    feint: Boolean(trait.feint),
+    // A list however the header wrote it, like `baseManeuver` above: one Skill named is a
+    // string and two are a list, and "(Bluff vs Intuition/Perception)" is the only entry
+    // so far that writes two.
+    clashDefenderSkills: [].concat(trait.clashDefenderSkills ?? []),
     kiCostPerTier: trait.kiCostPerTier ?? 0,
     // `coerce` splits a header on commas and leaves a single value a string, so
     // `tags: signature` arrived as the word rather than a list of one and every reader
@@ -2141,7 +2166,15 @@ export async function loadManeuvers() {
     charge: Boolean(trait.charge),
     cancelCharge: Boolean(trait.cancelCharge),
     usageLimit: parseLimit(trait.usageLimit),
-    clash: trait.clashSkill ? { skill: trait.clashSkill } : null
+    // Both halves of the Clash. The second was written into the Item and not into this,
+    // so the library's own copy of a Maneuver disagreed with the copy a character holds -
+    // which nothing read yet, and would have.
+    clash: trait.clashSkill
+      ? {
+          skill: trait.clashSkill,
+          defenderSkills: [].concat(trait.clashDefenderSkills ?? [])
+        }
+      : null
   }));
 
   for (const maneuver of definitions) {

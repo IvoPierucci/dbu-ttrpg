@@ -168,14 +168,20 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       absorb: new fields.BooleanField({ required: true, initial: false }),
       /**
-       * The Skill the *defender* of a Skill Clash answers with, where the rule names a
-       * different one from the challenger's.
+       * The Skills the *defender* of a Skill Clash may answer with, where the rule names
+       * something other than the challenger's.
        *
-       * "A Clash (Bluff vs Intuition)" is the first of those; every other Skill Clash in
-       * these rules names one Skill and both sides roll it. Blank means exactly that, so
-       * nothing written before this existed changes.
+       * "A Clash (Bluff vs Intuition)" names one and "(Bluff vs Intuition/Perception)"
+       * names two - and that slash is the same slash as in "Strike/Dodge", which is a
+       * choice made by whoever is rolling. So this is a list, and more than one in it is
+       * a question asked of the defender before either side sees a number.
+       *
+       * Empty means what every Skill Clash written before this meant: one Skill named, and
+       * both sides roll it.
        */
-      clashDefenderSkill: new fields.StringField({ required: true, blank: true, initial: "" }),
+      clashDefenderSkills: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }
+      ),
       /**
        * Wins a Skill Clash and then offers one of three Combat Conditions to hang on the
        * loser.
@@ -185,6 +191,24 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * early on being hit, and one carries a rider and a limit of its own.
        */
       dirtyTrick: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Wins a Skill Clash and hands over a Basic Attack with conditions attached.
+       *
+       * The Exploit Maneuver's shape - "you may use the Basic Attack Maneuver as an
+       * Out-of-Sequence Maneuver" - with four things travelling on the offer: a bonus to
+       * the Strike and the Wound, a defence narrowed to Cross Counter, no Area of Effect,
+       * and a ceiling on the Ki Wager.
+       */
+      feint: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Wins a Skill Clash and hands over a Basic Attack with conditions attached.
+       *
+       * The Exploit Maneuver's shape - "you may use the Basic Attack Maneuver as an
+       * Out-of-Sequence Maneuver" - with four things travelling on the offer: a bonus to
+       * the Strike and the Wound, a defence narrowed to Cross Counter, no Area of Effect,
+       * and a ceiling on the Ki Wager.
+       */
+      feint: new fields.BooleanField({ required: true, initial: false }),
       /**
        * What a Modifier Maneuver may be applied to: its Base Maneuver.
        *
@@ -216,6 +240,18 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * it off: "decrease the Strike Roll for that Attacking Maneuver by 2(T)" is -2.
        */
       strikePerTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      /**
+       * And what it does to the Wound Roll, per Tier of Power. Feint raises both -
+       * "increase the Strike and Wound Rolls for this Attacking Maneuver by 1(T)" - and
+       * before it nothing applied to an attack had ever touched the second.
+       */
+      woundPerTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      /**
+       * And what it does to the Wound Roll, per Tier of Power. Feint raises both -
+       * "increase the Strike and Wound Rolls for this Attacking Maneuver by 1(T)" - and
+       * before it nothing applied to an attack had ever touched the second.
+       */
+      woundPerTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
       /**
        * A question this Modifier asks as it is applied, in the rulebook's own words -
        * "state the area you targeted with this Attacking Maneuver". The answer is written

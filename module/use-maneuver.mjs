@@ -711,12 +711,17 @@ async function askModifiers(actor, base) {
 }
 
 /**
- * What the card keeps of the Modifiers applied to an attack.
+ * What the card keeps of what was applied to an attack.
  *
  * The numbers and the words, and nothing else: an attack is settled minutes later and
- * often on another client, so what a Modifier did has to be on the card rather than
- * looked up from the Item - which may have been edited in between, or belong to somebody
- * whose Actor that client cannot reach.
+ * often on another client, so what was applied has to be on the card rather than looked
+ * up from the Item - which may have been edited in between, or belong to somebody whose
+ * Actor that client cannot reach.
+ *
+ * A Modifier Maneuver is the usual source and no longer the only one: the Feint Maneuver
+ * hands its Basic Attack an entry of the same shape, because what the list holds is "a
+ * named thing that changed this attack" and that is what a Feint is to the attack it
+ * bought.
  */
 export function appliedModifiers(entries) {
   return (entries ?? []).map(entry => ({
@@ -724,6 +729,7 @@ export function appliedModifiers(entries) {
     name: entry.modifier.name,
     damageCategoryShift: entry.modifier.damageCategoryShift ?? 0,
     strikePerTier: entry.modifier.strikePerTier ?? 0,
+    woundPerTier: entry.modifier.woundPerTier ?? 0,
     note: entry.note ?? ""
   }));
 }
@@ -1030,10 +1036,12 @@ export function definitionOf(item) {
     reflect: item.system.reflect,
     absorb: item.system.absorb,
     dirtyTrick: item.system.dirtyTrick,
+    feint: item.system.feint,
     baseManeuver: item.system.baseManeuver ?? [],
     baseForbids: item.system.baseForbids ?? [],
     damageCategoryShift: item.system.damageCategoryShift ?? 0,
     strikePerTier: item.system.strikePerTier ?? 0,
+    woundPerTier: item.system.woundPerTier ?? 0,
     asks: item.system.asks ?? "",
     delays: item.system.delays,
     special: item.system.special,
@@ -1066,9 +1074,10 @@ export function definitionOf(item) {
     clash: item.system.clashSkill
       ? {
           skill: item.system.clashSkill,
-          // "Bluff vs Intuition". Blank on every Clash that names one Skill, and read as
-          // "the same one on both sides" where it is.
-          defenderSkill: item.system.clashDefenderSkill || ""
+          // "Bluff vs Intuition/Perception". Empty on every Clash that names one Skill,
+          // and read there as "the same one on both sides"; more than one is a choice the
+          // defender makes.
+          defenderSkills: [...(item.system.clashDefenderSkills ?? [])]
         }
       : null
   };
@@ -1690,11 +1699,14 @@ export function maneuverItemFrom(definition) {
       reflect: Boolean(definition.reflect),
       absorb: Boolean(definition.absorb),
       dirtyTrick: Boolean(definition.dirtyTrick),
-      clashDefenderSkill: definition.clash?.defenderSkill ?? definition.clashDefenderSkill ?? "",
+      feint: Boolean(definition.feint),
+      clashDefenderSkills: [].concat(
+        definition.clash?.defenderSkills ?? definition.clashDefenderSkills ?? []),
       baseManeuver: [].concat(definition.baseManeuver ?? []),
       baseForbids: [].concat(definition.baseForbids ?? []),
       damageCategoryShift: definition.damageCategoryShift ?? 0,
       strikePerTier: definition.strikePerTier ?? 0,
+      woundPerTier: definition.woundPerTier ?? 0,
       asks: definition.asks ?? "",
       delays: Boolean(definition.delays),
       special: Boolean(definition.special),
