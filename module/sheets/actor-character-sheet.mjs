@@ -4,7 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
 import { reactiveFor } from "../effects/registry.mjs";
-import { resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
+import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import {
   combatConditionsFor,
@@ -229,7 +229,11 @@ function resourceRows(system, owned = null) {
         // The file's ceiling wins over the one written onto the character: the file is
         // where the rule lives, and a character still carrying an older copy of it
         // should not go on being measured against that one.
-        max: definition.max || (Number(resource.max) || 0),
+        //
+        // And a ceiling the file states as a value about the character - "the maximum you
+        // can possess is equal to your base Tier of Power" - is worked out here, from the
+        // same data the row is drawn from.
+        max: resourceCeiling(definition, { system }) || (Number(resource.max) || 0),
         note: clockNotes(timed, key).join(" \u00b7 "),
         tooltip: definition.source
           ? `From ${definition.source}. ${definition.description ?? ""}`.trim()

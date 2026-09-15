@@ -209,6 +209,14 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * and rules live in the files. Nothing here moves a token - the number is said on the
        * card and the player moves themselves - so this is the whole of what is built.
        */
+      /**
+       * Asks how many stacks of its own Resource to hold, and writes that as the total.
+       *
+       * "Gain any number... you can instead choose to remove any number of them or gain
+       * more up to your maximum." Both halves of that are one question with one answer -
+       * a new total - which is why this is a flag and not two.
+       */
+      holdingBack: new fields.BooleanField({ required: true, initial: false }),
       moveSkill: new fields.StringField({ required: true, blank: true, initial: "" }),
       movePerRank: new fields.NumberField({ required: true, integer: true, initial: 0 }),
       /**

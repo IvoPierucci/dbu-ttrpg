@@ -620,12 +620,12 @@ async function settleBlockade(message, clash) {
  * Blockade's Resource is handed out by a Clash landing, which no Moment describes. Capped
  * at what the library declares, like every other write to the bag.
  */
-async function setResource(actor, name, stacks) {
+export async function setResource(actor, name, stacks) {
   const { replaceObject } = await import("./conditions.mjs");
   const { resourceLimits } = await import("./effects/traits.mjs");
 
   const held = { ...(actor.system.resources ?? {}) };
-  const max = resourceLimits()[name] ?? 0;
+  const max = resourceLimits(actor)[name] ?? 0;
   const capped = Math.max(0, max ? Math.min(stacks, max) : stacks);
 
   if (capped > 0) held[name] = { stacks: capped, max };

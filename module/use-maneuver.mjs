@@ -820,6 +820,66 @@ async function applyModifiers(actor, applied) {
 
 
 /**
+ * How many stacks of its own Resource to hold, asked as a total rather than a change.
+ *
+ * "Gain any number of Holding Back Stacks (the maximum you can possess is equal to your
+ * base Tier of Power)", and "you can instead choose to remove any number of them or gain
+ * more up to your maximum". Two sentences, one number: where the field ends up is what you
+ * hold, whether that is more than before or less.
+ *
+ * The field starts where you already are, so confirming without touching it changes
+ * nothing - which is the safe answer to a question the player may have opened by accident.
+ *
+ * Which Resource it is about is asked of the library rather than carried on the Maneuver:
+ * every Resource records which Trait hands it out, and that is this Maneuver.
+ *
+ * @returns {Promise<?{name: string, stacks: number}>} the Resource and its new total, or
+ *   null if the question was dropped
+ */
+async function askHoldingBack(actor, maneuver) {
+  const { resourceCeiling, resourceDefinitions } = await import("./effects/traits.mjs");
+
+  const found = Object.entries(resourceDefinitions())
+    .find(([, definition]) => definition.id === maneuver.id);
+  if (!found) return null;
+
+  const [name, definition] = found;
+  const most = resourceCeiling(definition, actor);
+  const now = actor.system.resources?.[name]?.stacks ?? 0;
+  const label = definition?.label ?? maneuver.name;
+
+  const typed = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: maneuver.name },
+    content: `
+      <label class="dbu-wager">
+        <span>${Handlebars.escapeExpression(label)} stacks</span>
+        <input type="number" name="stacks" value="${now}" min="0" max="${most}"/>
+        <em>Up to ${most} - your base Tier of Power. You have ${now}. Each one takes a Tier
+          of Power off and adds 1 to your Concealment (up to 3); all ${most} sets your Tier
+          of Power to 1 and costs 1(bT) on every Combat Roll.</em>
+      </label>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) => {
+          const value = Math.floor(
+            Number(dialog.element.querySelector('input[name="stacks"]').value));
+          // Clamped here as well as on the input: `max` on a number field is advice to the
+          // browser and a typed number gets through it.
+          return Number.isFinite(value) ? Math.min(Math.max(0, value), most) : now;
+        }
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  return (typeof typed === "number") ? { name, stacks: typed } : null;
+}
+
+/**
  * What this Maneuver's card says at the table, beyond its own name.
  *
  * For the Maneuvers whose effect this system deliberately does not carry out. The Flip
@@ -1068,6 +1128,7 @@ export function definitionOf(item) {
     absorb: item.system.absorb,
     dirtyTrick: item.system.dirtyTrick,
     feint: item.system.feint,
+    holdingBack: item.system.holdingBack,
     moveSkill: item.system.moveSkill,
     movePerRank: item.system.movePerRank,
     says: item.system.says,
@@ -1305,6 +1366,18 @@ export async function useManeuver(actor, maneuver) {
       const dropped = await askDropPower(actor);
       if (dropped === null) return false;
       if (dropped) await dropPowerStack(actor);
+    }
+
+    // "Gain any number of Holding Back Stacks... you can instead choose to remove any
+    // number of them or gain more up to your maximum." One question, because both halves
+    // of it come to the same thing: a new total, between nothing and your ceiling.
+    if (maneuver.holdingBack) {
+      const chosen = await askHoldingBack(actor, maneuver);
+      if (!chosen) return false;
+      // Written through the one place that clamps a Resource, rather than a second copy of
+      // the clamping here.
+      const { setResource } = await import("./chat.mjs");
+      await setResource(actor, chosen.name, chosen.stacks);
     }
 
     // "If you are the Grappler in a Grapple", which the entry then says again on a line
@@ -1737,6 +1810,7 @@ export function maneuverItemFrom(definition) {
       absorb: Boolean(definition.absorb),
       dirtyTrick: Boolean(definition.dirtyTrick),
       feint: Boolean(definition.feint),
+      holdingBack: Boolean(definition.holdingBack),
       moveSkill: definition.moveSkill ?? "",
       movePerRank: definition.movePerRank ?? 0,
       says: definition.says ?? "",

@@ -1,0 +1,105 @@
+id: holding-back
+name: Holding Back
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+resource: holdingback
+resourceLabel: Holding Back
+resourceMaxFrom: baseTierOfPower
+holdingBack: true
+source: Core Rule
+description: >
+  Pull your power down. A stack takes a Tier of Power off and puts a point on your
+  Concealment; filling up to your base Tier drops you to Tier 1 and costs 1(bT) on
+  every Combat Roll.
+text: >
+  Holding Back Maneuver [1/Round]: Hold back your power to avoid detection or warm up in
+  a fight.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –Minions: Free
+  –KP Cost: N/A
+  –Effect: Gain any number of Holding Back Stacks (the maximum you can possess is equal
+  to your base Tier of Power). For each stack of Holding Back, reduce your Tier of Power
+  by 1. If your number of Holding Back Stacks is equal to your base Tier of Power, reduce
+  your Combat Rolls by 1(bT) and set your Tier of Power to 1.
+
+  For each stack of Holding Back you possess, increase the Skill Bonus for your
+  Concealment Skill Checks by 1 (max. 3).
+
+  If you already possess a Holding Back Stack, you can instead choose to remove any
+  number of them or gain more up to your maximum.
+
+---
+
+# --- The Resource ---------------------------------------------------------------------
+#
+# "The maximum you can possess is equal to your base Tier of Power." The first Resource in
+# this system whose ceiling is not a number the file can write down: it differs per
+# character and grows with them. `resourceMaxFrom` names the value to read instead, and
+# both places that clamp a Resource have the character to read it off.
+#
+# No clock. Every other Resource here runs out on a turn edge; these come off when you take
+# them off, which is what the entry's last paragraph is for.
+#
+# --- How many ---------------------------------------------------------------------------
+#
+# "Gain any number", and "you can instead choose to remove any number of them or gain more
+# up to your maximum." So the Maneuver asks: a number between nothing and your ceiling, and
+# what you already hold is where the field starts. Taking them off is the same question
+# answered lower, which is why it is one question rather than two - the entry writes it as
+# a choice between gaining and removing and they come to the same number.
+#
+# Asked rather than scripted, because a script has no way to ask a player anything. Set
+# rather than added, for the same reason: "remove any number" and "gain more up to your
+# maximum" are both a new total.
+#
+# --- What a stack does ---------------------------------------------------------------------
+#
+# Three things, and the third replaces the first at the top of the scale.
+#
+# `tierOfPower` is settled before anything else is, which is why the amounts here are in
+# (bT) - the Tier of Power is what (T) means and it is not known yet.
+#
+# The full-stack case is written as its own branch rather than as a `set` landing on top of
+# the subtraction. Both would come to the same number, and one of them says why: at the
+# ceiling the entry stops subtracting and states the answer, because subtracting your whole
+# base Tier would leave you at nothing and there is no Tier 0.
+#
+# ">=" rather than "==", which the entry writes. The ceiling makes more than equal
+# unreachable through the Maneuver, and a GM who sets the stacks by hand should get the
+# floor rather than a Tier of Power below 1 - the reading that cannot go wrong either way.
+[passive]
+if (holdingback.stacks > 0 && holdingback.stacks < baseTierOfPower) {
+    tierOfPower -= holdingback.stacks;
+}
+
+if (holdingback.stacks >= baseTierOfPower && holdingback.stacks > 0) {
+    tierOfPower = 1;
+    combatRolls -= 1(bT);
+}
+
+# "Increase the Skill Bonus for your Concealment Skill Checks by 1 (max. 3)." The cap is on
+# what the stacks are worth rather than on the stacks - a character with a base Tier of 5
+# may hold five and still only gets three.
+if (holdingback.stacks > 0) {
+    skill.concealment.bonus += min(holdingback.stacks, 3);
+}
+
+# --- What is not built ------------------------------------------------------------------------
+#
+# "Avoid detection." What Concealment is rolled against, and who is looking, is the table's.
+# The Skill Bonus is the whole of what this can do about it.
+#
+# "Minions: Free." There are no Minions in this system, which the Arrogant Declaration,
+# Analysis, Hype, Brace and Flip files all say about their own Minion lines.
+#
+# --- How it is gained ---------------------------------------------------------------------------
+#
+# A Special Maneuver, and what opens it has not been read yet. Concealment is the Skill this
+# entry touches, which is not the same question as the Skill that hands the Maneuver over -
+# Dirty Trick rolls Bluff and Bluff opens the Feint instead.

@@ -72,12 +72,35 @@ export function getTrait(id) {
  * many, the header says how many are allowed, and without the header a Resource has no
  * ceiling at all rather than a ceiling of zero.
  *
+ * A character is asked for, because a ceiling is not always a number the file can state:
+ * "the maximum you can possess is equal to your base Tier of Power" differs per character
+ * and changes as they grow. Without one, a Resource bounded that way comes back unbounded -
+ * both places that clamp have a character, so nothing reaches that.
+ *
  * @returns {Record<string, number>} resource name to its maximum, 0 meaning no maximum
  */
-export function resourceLimits() {
+export function resourceLimits(actor = null) {
   const limits = {};
-  for (const [name, { max }] of Object.entries(resourceDefinitions())) limits[name] = max;
+  for (const [name, definition] of Object.entries(resourceDefinitions())) {
+    limits[name] = resourceCeiling(definition, actor);
+  }
   return limits;
+}
+
+/**
+ * The most of one Resource a character may hold.
+ *
+ * `resourceMax` where the rule states a number, and `resourceMaxFrom` where it names
+ * something about the character instead - a path off their prepared data, so it is the
+ * value the sheet shows rather than one worked out a second time.
+ *
+ * Floored at nothing and rounded down: a ceiling is a count of stacks.
+ */
+export function resourceCeiling(definition, actor = null) {
+  if (!definition?.maxFrom) return definition?.max ?? 0;
+  if (!actor?.system) return 0;
+  return Math.max(0,
+    Math.floor(Number(foundry.utils.getProperty(actor.system, definition.maxFrom)) || 0));
 }
 
 /**
@@ -102,6 +125,9 @@ export function resourceDefinitions() {
       // answers "does this character have the thing that hands this out".
       id: trait.id ?? "",
       max: Math.max(0, Number(trait.resourceMax) || 0),
+      // Where the ceiling is a value about the character rather than a number the rule
+      // states. Blank on every Resource whose limit is simply written down.
+      maxFrom: trait.resourceMaxFrom ?? "",
       label: trait.resourceLabel || (name.charAt(0).toUpperCase() + name.slice(1)),
       source: trait.name ?? "",
       description: trait.description ?? "",

@@ -166,7 +166,7 @@ function resourceUpdates(actor, slots) {
     .map(match => match[1]);
   if (!names.length) return null;
 
-  const limits = resourceLimits();
+  const limits = resourceLimits(actor);
   const held = { ...(actor.system.resources ?? {}) };
   let changed = false;
 

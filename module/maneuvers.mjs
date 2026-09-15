@@ -2147,6 +2147,7 @@ export async function loadManeuvers() {
     analysis: Boolean(trait.analysis),
     dirtyTrick: Boolean(trait.dirtyTrick),
     feint: Boolean(trait.feint),
+    holdingBack: Boolean(trait.holdingBack),
     moveSkill: trait.moveSkill ?? "",
     movePerRank: trait.movePerRank ?? 0,
     says: trait.says ?? "",
