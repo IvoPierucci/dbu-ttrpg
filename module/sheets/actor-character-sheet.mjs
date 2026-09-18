@@ -6,7 +6,7 @@ import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.m
 import { reactiveFor } from "../effects/registry.mjs";
 import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
-import { FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
+import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import {
   combatConditionsFor,
   marksFor,
@@ -781,6 +781,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // and the Value is theirs - "twice the Hardness Rank multiplied by the base Tier of
     // Power of the Character who is suffering the Collision Damage" - so a table printed
     // with the Ranks alone would be a table nobody can use without doing the sum.
+    context.collisionDamage = COLLISION_DAMAGE;
     context.baseTierOfPower = system.baseTierOfPower ?? 1;
     context.hardnessRanks = HARDNESS_RANKS.map(hardness => ({
       rank: hardness.rank,

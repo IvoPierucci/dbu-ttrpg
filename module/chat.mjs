@@ -3,7 +3,7 @@ import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { refundActions, spendActions } from "./combat.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
-import { COLLISION_QUALITIES, HARDNESS_RANKS, hardnessValue } from "./features.mjs";
+import { COLLISION_DAMAGE, COLLISION_QUALITIES, HARDNESS_RANKS, hardnessValue } from "./features.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, featureRanks, pushes, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
@@ -8046,6 +8046,7 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
             ? ` ${Handlebars.escapeExpression(doubledBy)} doubles it.` : ""}${halved
             ? ` ${Handlebars.escapeExpression(halvedBy)} halves it.` : ""}</em>
       </label>
+      <p class="dbu-respond-hint">${Handlebars.escapeExpression(COLLISION_DAMAGE)}</p>
       <p class="dbu-respond-hint">Did the Feature they hit have any of these Qualities?
         Usually none. The rest of what a Quality is - its Life Points, its Squares, what
         happens when it is destroyed - stays the table's.</p>

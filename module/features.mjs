@@ -208,6 +208,20 @@ export const HARDNESS_RANKS = Object.freeze([
 ]);
 
 /**
+ * What Collision Damage is, in one sentence, so that nothing has to work it out twice.
+ *
+ * "Collision Damage: reduce your Life Points by the Hardness Value of the Feature you
+ * Collided with (see - Hardness)."
+ *
+ * Which settles the thing the window is built on: the Hardness Value is not something the
+ * Collision Damage is derived from, it is the Collision Damage. There is no second step
+ * and nothing to add to it - so picking the Rank is picking the number, and the only
+ * things between the two are the doublings and halvings that other rules hand it.
+ */
+export const COLLISION_DAMAGE = "Collision Damage: reduce your Life Points by the "
+  + "Hardness Value of the Feature you Collided with (see - Hardness).";
+
+/**
  * What a Feature of this Hardness Rank costs this character to hit.
  *
  * Twice the Rank a base Tier, except at Rank 0, which is 1(bT) - so the multiplier is
