@@ -1576,6 +1576,14 @@ export function whyNotSpecial(actor, maneuver) {
   if (!maneuver?.special) return null;
 
   const slots = actor?.system?.effects?.slots;
+
+  // The class, which is a different question from this Maneuver by name. The Spectator
+  // State closes the class - "you cannot use ... any Attacking Maneuvers, Special
+  // Maneuvers, or Unique Abilities" - and said nothing for as long as there was no such
+  // category here to close.
+  if (!permits(slots, "specialManeuvers")) {
+    return `${actor.name} cannot use Special Maneuvers right now.`;
+  }
   if (!permits(slots, `maneuver.${maneuver.id}`)) {
     return `Something is keeping ${actor.name} from using ${maneuver.name}.`;
   }
@@ -2150,6 +2158,7 @@ export async function loadManeuvers() {
     holdingBack: Boolean(trait.holdingBack),
     insult: Boolean(trait.insult),
     internalAttack: Boolean(trait.internalAttack),
+    togglesState: trait.togglesState ?? "",
     clashDefenderSaves: [].concat(trait.clashDefenderSaves ?? []),
     // A list however the header wrote it, like `clashDefenderSkills`: one Saving Throw
     // named is a string and two are a list.

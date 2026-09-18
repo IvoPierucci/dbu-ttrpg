@@ -254,6 +254,16 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * number any other Maneuver would want.
        */
       internalAttack: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * A State this Maneuver throws like a switch: into it, or out of it if you are
+       * already there.
+       *
+       * "You enter the Liquid Special State. If you use this Maneuver while in the Liquid
+       * Special State, you exit." One Maneuver with two outcomes, and which one is read
+       * when it is used - a script cannot ask, because it would be asking about a change
+       * that has not landed yet.
+       */
+      togglesState: new fields.StringField({ required: true, blank: true, initial: "" }),
       moveSkill: new fields.StringField({ required: true, blank: true, initial: "" }),
       movePerRank: new fields.NumberField({ required: true, integer: true, initial: 0 }),
       /**

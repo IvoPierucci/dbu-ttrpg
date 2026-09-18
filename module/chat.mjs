@@ -2255,6 +2255,11 @@ function attackLine(actor, maneuver, foundation) {
 function offerExploits(card, actor, maneuver) {
   if (!card || !maneuver?.exploitable) return;
 
+  // "Your Movement Maneuver does not provoke the Exploit Maneuver." The card is the only
+  // place an Exploit is ever offered from, so this is the only place it has to be asked -
+  // and it is asked of the Movement alone, which is what the rule names.
+  if (maneuver.movement && !permits(actor.system.effects?.slots, "movement.provokes")) return;
+
   const seen = new Map();
   for (const token of (canvas?.tokens?.placeables ?? [])) {
     const other = token.actor;
@@ -3718,6 +3723,12 @@ const CLASH_ROLLS = ({
         ? [{ label: "Earlier attempts", written: `+${clash.earlierAttempts}(T)`,
              value: clash.defenderBonus }]
         : []),
+      // "Increase all of your Grapple Checks made as the Grappled by 1(T)." The Grappled is
+      // always the Defender of a Grapple Check, whoever opened it - so this is the one
+      // place a bonus that names that side can land.
+      ...(((uuid === clash.defenderUuid) && clash.grapple)
+        ? grappleDefenceParts(actor)
+        : []),
       // "Make a Grapple Check against the Grappled with your Dice Score reduced by
       // 1(bT)." The Grappler's alone, and the only Grapple Check made at a penalty.
       ...(((uuid === clash.challengerUuid) && (clash.grapple?.kind === "pin"))
@@ -3824,6 +3835,20 @@ const CLASH_ROLLS = ({
  */
 CLASH_ROLLS.grapple = CLASH_ROLLS.strike;
 Object.freeze(CLASH_ROLLS);
+
+/**
+ * What an effect adds to a Grapple Check you make as the Grappled.
+ *
+ * Its own Slot rather than `strike`, because the rule names the side: a Grapple Check made
+ * as the Grappler is a Strike Roll like any other and gets nothing from this.
+ *
+ * Returned as a list so it drops out of the breakdown entirely rather than showing as a
+ * row worth nothing.
+ */
+function grappleDefenceParts(actor) {
+  const value = Math.round(applySlot(actor.system.effects?.slots, "grapple.defending", 0));
+  return value ? [{ label: "Grappled", value }] : [];
+}
 
 /**
  * Which Skill this side of a Clash is rolling.

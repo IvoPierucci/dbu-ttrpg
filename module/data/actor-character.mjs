@@ -1343,15 +1343,30 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Its modifiers are written in (T), so they grow with the Tier of Power. `steps`
     // is how far from Medium the character is, which is what the Skill adjustments and
     // every relative-size rule are counted in.
-    const size = DBUCharacterData.SIZES[this.size] ?? DBUCharacterData.SIZES[DBUCharacterData.DEFAULT_SIZE];
+    // "Reduce your Size Category by 1." A number of Categories away from the one the
+    // character was built with, rather than a Size named outright - which is how every rule
+    // that moves somebody's Size states it.
+    //
+    // Clamped to the ends of the list: there is nothing smaller than Nano and nothing
+    // larger than Colossal, and a shift past either leaves you standing at it.
     const sizeKeys = Object.keys(DBUCharacterData.SIZES);
+    const chosenSize = this.size;
+    const chosenAt = sizeKeys.indexOf(chosenSize);
+    const sizeShift = Math.round(applySlot(this.effects?.slots, "size.steps", 0));
+    const sizeKey = (chosenAt < 0)
+      ? DBUCharacterData.DEFAULT_SIZE
+      : sizeKeys[Math.min(sizeKeys.length - 1, Math.max(0, chosenAt + sizeShift))];
+
+    const size = DBUCharacterData.SIZES[sizeKey] ?? DBUCharacterData.SIZES[DBUCharacterData.DEFAULT_SIZE];
 
     this.size = {
-      key: this.size,
+      key: sizeKey,
+      // What they were built as, kept so the sheet can say an effect moved them.
+      chosen: chosenSize,
       label: size.label,
       meleeRange: size.meleeRange,
       squares: size.squares,
-      steps: sizeKeys.indexOf(this.size) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
+      steps: sizeKeys.indexOf(sizeKey) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
       defenseModifier: size.defensePerTier * this.tierOfPower,
       soakModifier: size.soakPerTier * this.tierOfPower,
       speedModifier: size.speed

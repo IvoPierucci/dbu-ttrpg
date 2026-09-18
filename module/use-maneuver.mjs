@@ -897,6 +897,21 @@ async function askHoldingBack(actor, maneuver) {
 }
 
 /**
+ * Which way a Maneuver that throws a State went, said on its card.
+ *
+ * The one thing about it a reader cannot work out for themselves: the Maneuver is the same
+ * either way and the card would otherwise look identical whether somebody had just gone
+ * liquid or just come back.
+ */
+function stateNote(maneuver, toggled) {
+  if (!maneuver.togglesState || !toggled) return "";
+  const name = maneuver.togglesState.charAt(0).toUpperCase() + maneuver.togglesState.slice(1);
+  return (toggled === "in")
+    ? `Now in the ${name} Special State.`
+    : `Out of the ${name} Special State.`;
+}
+
+/**
  * What this Maneuver's card says at the table, beyond its own name.
  *
  * For the Maneuvers whose effect this system deliberately does not carry out. The Flip
@@ -1148,6 +1163,7 @@ export function definitionOf(item) {
     holdingBack: item.system.holdingBack,
     insult: item.system.insult,
     internalAttack: item.system.internalAttack,
+    togglesState: item.system.togglesState,
     clashSaves: [...(item.system.clashSaves ?? [])],
     clashDefenderSaves: [...(item.system.clashDefenderSaves ?? [])],
     moveSkill: item.system.moveSkill,
@@ -1321,6 +1337,9 @@ export async function useManeuver(actor, maneuver) {
   // The Profile and its Foundation are declared before anything is paid, since both
   // choices can still be aborted - and the Profile is what sets the price.
   let declared = null;
+  // Which way a Maneuver that throws a State went, so the card can say it. Blank on
+  // everything that throws none, which is all of them but one.
+  let toggled = "";
   // What a Movement was declared as: which Speed bounds it, and whether Rapid Movement
   // was paid for. Both settled before anything is spent, for the same reason.
   let crossing = null;
@@ -1387,6 +1406,16 @@ export async function useManeuver(actor, maneuver) {
       const dropped = await askDropPower(actor);
       if (dropped === null) return false;
       if (dropped) await dropPowerStack(actor);
+    }
+
+    // "You enter the Liquid Special State. If you use this Maneuver while in the Liquid
+    // Special State, you exit." Read now rather than written in the file: one Maneuver
+    // with two outcomes, and which it is depends on where the character already stands.
+    if (maneuver.togglesState) {
+      const { setState } = await import("./conditions.mjs");
+      const wasIn = (Number(actor.system.states?.[maneuver.togglesState]) || 0) > 0;
+      if (!await setState(actor, maneuver.togglesState, wasIn ? 0 : 1)) return false;
+      toggled = wasIn ? "out" : "in";
     }
 
     // "Gain any number of Holding Back Stacks... you can instead choose to remove any
@@ -1597,9 +1626,11 @@ export async function useManeuver(actor, maneuver) {
     // says what this particular Movement took.
     : await postManeuver(actor, maneuver, {
         rapidMovement: Boolean(crossing?.rapid),
-        // What a Maneuver whose whole effect is a number and a sentence says at the table.
-        // Blank on everything that does something the system can do for itself.
-        note: maneuverNote(actor, maneuver),
+        // What a Maneuver whose whole effect is a number and a sentence says at the table,
+        // and which way one that throws a State went. Blank on everything that does
+        // something the system can do for itself and says so by doing it.
+        note: [maneuverNote(actor, maneuver), stateNote(maneuver, toggled)]
+          .filter(Boolean).join(" "),
         spent: {
           actions: actionCostOf(maneuver, actionsSpent).amount,
           kind: actionCostOf(maneuver, actionsSpent).kind,
@@ -1845,6 +1876,7 @@ export function maneuverItemFrom(definition) {
       holdingBack: Boolean(definition.holdingBack),
       insult: Boolean(definition.insult),
       internalAttack: Boolean(definition.internalAttack),
+      togglesState: definition.togglesState ?? "",
       clashSaves: [].concat(definition.clashSaves ?? []),
       clashDefenderSaves: [].concat(definition.clashDefenderSaves ?? []),
       moveSkill: definition.moveSkill ?? "",

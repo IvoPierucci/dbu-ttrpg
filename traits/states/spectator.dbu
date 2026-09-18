@@ -57,11 +57,19 @@ ki.value += 2d10(bT);
 # than describing them - and two of them do not exist yet, which costs nothing:
 # a forbid on a Maneuver nobody holds forbids nothing.
 #
-# "Special Maneuvers" is not among these. There is no such category in this system
-# yet, and inventing one to have something to forbid would be inventing a rule.
+# Special Maneuvers were left out of this for as long as there was no such category here
+# to close, and inventing one to have something to forbid would have been inventing a rule.
+# The category arrived with the Analysis Maneuver, so the line the entry writes is written
+# now: `specialManeuvers` closes the class, where `maneuver.<id>` closes one by name.
+#
+# The entry's last clause - "that target another Character" - is left where the rest of
+# this line already left it: applied to none of the three. Which of them it qualifies is
+# one sentence and three readings, and narrowing a forbid on a guess is the half-built kind
+# of wrong that looks like it works.
 [passive]
 forbid maneuver.power-up;
 forbid maneuver.transformation;
 forbid maneuver.energy-charge;
 forbid attackingManeuvers;
+forbid specialManeuvers;
 forbid uniqueAbilities;

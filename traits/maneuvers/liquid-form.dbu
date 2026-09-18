@@ -1,0 +1,50 @@
+id: liquid-form
+name: Liquid Form
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+togglesState: liquid
+source: Core Rule
+description: >
+  Liquefy, or solidify again. One Maneuver both ways: it puts you into the Liquid
+  Special State, and used again it takes you out.
+text: >
+  Liquid Form Maneuver [1/Round]: You are able to liquefy your body, allowing you to
+  become amorphous, move as you please, and fit into smaller spaces.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –Minions: N/A
+  –KP Cost: N/A
+  –Effect: You enter the Liquid Special State. If you use this Maneuver while in the
+  Liquid Special State, you exit the Liquid Special State.
+
+---
+
+# The whole of the Maneuver is a switch, and `togglesState` is what says which State it
+# throws. Which way it goes is read when it is used rather than written in the file: "if
+# you use this Maneuver while in the Liquid Special State, you exit" is one Maneuver with
+# two outcomes, not two Maneuvers.
+#
+# Done in code rather than as a script because a script cannot ask what happened first: a
+# block that left the State and then asked whether it was still in it would be reading a
+# change that has not landed. What the State is worth is in the State's own file, which is
+# where a reader looks for it.
+#
+# An Instant, so the Instant rule comes with it: not two in a row, and only in answer to a
+# Standard Maneuver. Turning back solid is as much an Instant as turning liquid, which the
+# entry settles by making them the same Maneuver.
+#
+# --- What is not built ----------------------------------------------------------------------
+#
+# The Liquid State's sixth effect. Said in that file, with why.
+#
+# "Move as you please, and fit into smaller spaces" is the tagline rather than the Effect,
+# and what it buys is the Size Category the State takes off you.
+#
+# --- How it is gained ------------------------------------------------------------------------
+#
+# A Special Maneuver, and what opens it has not been read yet.

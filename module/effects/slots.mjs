@@ -55,6 +55,13 @@ const TABLE = [
     doc: "Life Points gained per Power Level." },
   { key: "ki.perLevel", phase: PHASES.TIER, kind: N, ops: NUMERIC,
     doc: "Ki Points gained per Power Level." },
+  // "Reduce your Size Category by 1." A number of Categories up or down the list from the
+  // one the character was built with, because that is how every rule that moves somebody's
+  // Size states it. Settled in the Tier pass, which is the one that has run by the time the
+  // Size is resolved - so an effect that moves it may be written in (bT) and never in (T).
+  { key: "size.steps", phase: PHASES.TIER, kind: N, ops: NUMERIC,
+    doc: "Size Categories up or down from the one you chose. Negative is smaller. Clamped "
+       + "to the ends of the list: nothing is smaller than Nano or larger than Colossal." },
   { key: "life.allowNegative", phase: PHASES.TIER, kind: F, ops: ["set"],
     doc: "Lets damage take Life Points below zero, as the Undying State does." },
 
@@ -126,6 +133,12 @@ const TABLE = [
   { key: "initiative", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Initiative Bonus." },
 
   // Writing here lands on all three, because those three are the Combat Rolls.
+  // "Increase all of your Grapple Checks made as the Grappled by 1(T)." The Grappled is
+  // always the Defender of a Grapple Check, whoever opened it, so this is read there - and
+  // only there, which is what makes it different from `strike`.
+  { key: "grapple.defending", phase: PHASES.LATE, kind: N, ops: NUMERIC,
+    doc: "Grapple Checks you make as the Grappled. Not the ones you make as the Grappler, "
+       + "which are Strike Rolls like any other." },
   { key: "combatRolls", phase: PHASES.LATE, kind: N, ops: NUMERIC,
     fanOut: ["strike", "dodge", "wound"],
     doc: "Every Combat Roll. Contributes to Strike, Dodge and Wound at once - a Parry "
@@ -178,6 +191,17 @@ const TABLE = [
     doc: "Entering an Enhancement or a Form. Stress Exhaustion forbids this." },
   { key: "signatureTechniques", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Using a Signature Technique." },
+  { key: "specialManeuvers", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Using Special Maneuvers at all, as a class - which is a different question from "
+       + "`maneuver.<id>`, the Slot that grants or closes one by name. The Spectator State "
+       + "forbids the class." },
+  // "Your Movement Maneuver does not provoke the Exploit Maneuver." Said to the table
+  // rather than measured - nothing here watches a token leave a Melee Range - but it does
+  // decide whether the card offers the Exploit, which is the only place an Exploit is ever
+  // offered from.
+  { key: "movement.provokes", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Whether your Movement Maneuver provokes the Exploit Maneuver. Forbidding it "
+       + "stops the card offering one." },
   { key: "uniqueAbilities", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Using a Unique Ability." },
   { key: "nonPhysicalAttacks", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],

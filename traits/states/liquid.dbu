@@ -1,0 +1,68 @@
+id: liquid
+name: Liquid
+kind: state
+description: >
+  Amorphous. A Size Category smaller, harder to hold and impossible to Pin, quieter,
+  free to move - and unable to attack.
+text: >
+  (1)-[Passive]: Reduce your Size Category by 1.
+
+  (2)-[Passive]: Increase all of your Grapple Checks made as the Grappled by 1(T) and
+  you cannot be Pinned.
+
+  (3)-[Passive]: Increase your Stealth Skill Checks by 2.
+
+  (4)-[Passive]: Your Movement Maneuver does not provoke the Exploit Maneuver.
+
+  (5)-[Passive]: You cannot use any form of Attacking Maneuver or Unique Ability.
+
+  (6)-[1/Round]: As a Standard Action with an Action Cost of 1 Action, you may use a
+  Healing Surge.
+
+---
+
+# (1) through (5). Each one is a Slot, and each Slot is read somewhere - which is worth
+# saying because four of the five were written for this and a Slot nobody reads is an
+# effect that quietly does nothing.
+#
+# (1) is a step down the list of Size Categories rather than a Size named outright, which
+# is how the rules state every move: `size.steps` is settled in the Tier pass, before the
+# Size is resolved, so everything a Size decides follows from it - the Defense and Soak
+# modifiers, the Melee Range, the Speed, the Squares, and the Skill adjustments. A step
+# past the end of the list leaves you at the end of the list.
+#
+# (2) names a side: the Grappled is always the Defender of a Grapple Check, whoever opened
+# it, so `grapple.defending` is read there and nowhere else. A Grapple Check you make as
+# the Grappler is a Strike Roll like any other and gets nothing from this.
+#
+# "You cannot be Pinned" is immunity to the Combat Condition, which is what forbidding the
+# Condition itself means here.
+#
+# (3) is flat, not scaled: "by 2" and not "by 2(T)", which is what the entry says.
+#
+# (4) is asked where an Exploit is offered, which is the only place one is ever offered
+# from. Nothing here watches a token leave a Melee Range, so this does not have to: what it
+# stops is the card handing the opening out.
+[passive]
+size.steps -= 1;
+grapple.defending += 1(T);
+forbid condition.pinned;
+skill.stealth.bonus += 2;
+forbid movement.provokes;
+forbid attackingManeuvers;
+forbid uniqueAbilities;
+
+# --- (6), which is said and not built ---------------------------------------------------
+#
+# "As a Standard Action with an Action Cost of 1 Action, you may use a Healing Surge",
+# once a Combat Round.
+#
+# Written as an effect it would be `[1/round, costs 1 action]` with a Healing Surge in it,
+# and that block would compile and never run: an effect is collected by the Moment it names
+# and this one names none, so nothing would ever look for it. The `costs` keyword is parsed
+# and spent by nobody as well - Pinned and Prone both write it, and neither takes the
+# Action - so even a block that did fire would be free.
+#
+# So it is said rather than half-built. The Surge machinery is all there and the table can
+# use it; what is missing is the door, which is a Maneuver this entry does not name and
+# this system will not invent.
