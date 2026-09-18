@@ -1,0 +1,70 @@
+id: power-drain
+name: Power Drain
+type: standard
+actionCost: 1
+actionCostMax: 3
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+powerDrain: true
+source: Core Rule
+description: >
+  Only as the Grappler. Up to 3 Actions, and each one takes half your Might off the
+  Grappled's Life and Ki - and the Ki they actually lose comes to you.
+text: >
+  Power Drain Maneuver [1/Round]: Steal life force energy from an opponent.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: Variable
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: You can only use this Maneuver if you are in a Grapple Maneuver as the
+  Grappler. Target the Grappled and spend up to 3 Actions. For each Action you spend,
+  reduce their Life and Ki Points by 1/2 (rounded up) of your Might and regain Ki Points
+  equal to the total amount of Ki Points lost by the target.
+
+---
+
+# --- Who may use it, and at whom ------------------------------------------------------
+#
+# "You can only use this Maneuver if you are in a Grapple Maneuver as the Grappler."
+# Two halves and both are rules - in a Grapple at all, and the Grappler half of it - which
+# is the same pair the Pin and the Launch ask, and asked the same way.
+#
+# "Target the Grappled" aims itself: the one you are holding is the only answer, so the
+# Maneuver takes no target of its own and asking for one would be asking a question with
+# one answer. The Launch does the same.
+#
+# --- Variable, up to three ---------------------------------------------------------------
+#
+# "Action Cost: Variable", and "spend up to 3 Actions" in the Effect - so the ceiling is in
+# the sentence rather than in the cost line, and the floor is one. Written as a cost of 1
+# with a maximum of 3, which is the shape Combat Recovery already uses; `actionCostOpen` is
+# for the ones whose ceiling is only what you have left, and this one is not.
+#
+# --- What each Action takes ---------------------------------------------------------------
+#
+# "Reduce their Life and Ki Points by 1/2 (rounded up) of your Might." Rounded up, which
+# almost nothing else in these rules does and this does say. Per Action, so the whole is the
+# per-Action amount times the Actions - worked out as one multiplication rather than as a
+# loop, because rounding once per Action is what the sentence describes and rounding once at
+# the end would quietly differ on an odd Might.
+#
+# A Life Point reduction and a Ki Point reduction, which in these rules means straight off
+# the number: past the Soak Value and the Damage Reduction, the same as a collision.
+#
+# --- What comes back ------------------------------------------------------------------------
+#
+# "Regain Ki Points equal to the total amount of Ki Points lost by the target." Lost, not
+# taken - so a Grappled with 3 Ki Points left against a drain of 10 loses 3 and hands over
+# 3. What you gain is what they actually paid, and it is capped again by your own maximum on
+# the way in.
+#
+# The same reading Attack Absorption takes of its own "you regain Ki Points equal to", and
+# for the same reason: what is regained is what there was to regain.
+#
+# --- How it is gained ---------------------------------------------------------------------------
+#
+# A Special Maneuver, and what opens it has not been read yet.

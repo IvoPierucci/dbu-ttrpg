@@ -7000,6 +7000,41 @@ const DEFENCES = {
  * The floor is the one exception the rules grant anywhere: Undying lets Life go
  * negative, and nothing else does.
  */
+/**
+ * Take Ki Points off somebody, and say how many actually came off.
+ *
+ * `reduceLifePoints`'s companion, and the reason it returns a number where that one does
+ * not: a rule that hands the loss to somebody else has to know what the loss was. "Regain
+ * Ki Points equal to the total amount of Ki Points lost by the target" - a target with
+ * three left against a drain of ten loses three, and three is what is handed over.
+ *
+ * Floored at nothing. There is no Undying for Ki Points: nothing in these rules lets them
+ * go below zero, so the floor is not opted out of the way Life's is.
+ *
+ * @returns {Promise<number>} how many Ki Points were actually taken
+ */
+export async function reduceKiPoints(target, amount, { reason = "Ki Point reduction" } = {}) {
+  const wanted = Math.max(0, Math.floor(amount));
+  if (!wanted) return 0;
+
+  const { value } = target.system.ki;
+  const taken = Math.min(wanted, Math.max(0, value));
+  if (!taken) return 0;
+
+  await requestActorUpdate(target, { "system.ki.value": value - taken });
+
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: checkCard({
+      parts: `${Handlebars.escapeExpression(reason)}`,
+      total: `-${taken} KP`,
+      outcome: "botch"
+    })
+  });
+
+  return taken;
+}
+
 export async function reduceLifePoints(target, amount, { reason = "Life Point reduction" } = {}) {
   const taken = Math.max(0, Math.floor(amount));
   if (!taken) return;

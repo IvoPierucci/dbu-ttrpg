@@ -717,6 +717,30 @@ export function whyNotWithinMelee(actor, target, what) {
  *
  * @returns {null|string} null if they may, otherwise why not
  */
+/**
+ * Whether this character may drain the one they are holding.
+ *
+ * "You can only use this Maneuver if you are in a Grapple Maneuver as the Grappler." The
+ * same pair of rules the Pin asks - in a Grapple at all, and the Grappler half of it - and
+ * asked the same way rather than a second way that could disagree with it.
+ *
+ * @returns {null|string} null if they may, otherwise why they may not
+ */
+export function whyNotDrain(actor, maneuver) {
+  if (!maneuver?.powerDrain) return null;
+
+  const { partner, role } = actor?.system?.grapple ?? {};
+  if (!partner) {
+    return `${actor.name} is not in a Grapple, and ${maneuver.name} drains somebody you `
+      + "are Grappling.";
+  }
+  if (role !== "grappler") {
+    return `${actor.name} is the Grappled, not the Grappler, and can only drain somebody `
+      + "they are holding.";
+  }
+  return null;
+}
+
 export function whyNotPin(actor, maneuver) {
   if (!maneuver?.pin) return null;
 
@@ -2154,6 +2178,7 @@ export async function loadManeuvers() {
     special: Boolean(trait.special),
     analysis: Boolean(trait.analysis),
     intuit: Boolean(trait.intuit),
+    powerDrain: Boolean(trait.powerDrain),
     dirtyTrick: Boolean(trait.dirtyTrick),
     feint: Boolean(trait.feint),
     holdingBack: Boolean(trait.holdingBack),

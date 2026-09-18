@@ -26,6 +26,7 @@ import {
   whyNotAnotherGrapple,
   whyNotAnotherInstant,
   whyNotLaunch,
+  whyNotDrain,
   whyNotPin,
   MOVEMENT_SPEEDS,
   RAPID_MOVEMENT_PER_TIER,
@@ -1141,6 +1142,61 @@ async function analyze(actor, target) {
 }
 
 /**
+ * Take Life and Ki off the one being held, and keep the Ki.
+ *
+ * "For each Action you spend, reduce their Life and Ki Points by 1/2 (rounded up) of your
+ * Might and regain Ki Points equal to the total amount of Ki Points lost by the target."
+ *
+ * Rounded up per Action rather than once at the end: the sentence prices one Action and
+ * says to do it for each, and on an odd Might the two differ - three Actions at half of 5
+ * is nine, where half of fifteen is eight.
+ *
+ * What comes back is what they actually lost, which is not always what was taken off the
+ * top: a Grappled with three Ki left against a drain of ten loses three and hands over
+ * three. And it is capped again on the way in by the drainer's own maximum, because that is
+ * what regaining Ki Points means everywhere else in this system.
+ *
+ * @returns {Promise<boolean>} false if nothing could be drained, so the Maneuver is unused
+ */
+async function drainFrom(actor, grappled, maneuver, actionsSpent) {
+  const { reduceKiPoints, reduceLifePoints } = await import("./chat.mjs");
+
+  const actions = Math.max(1, actionsSpent || actionCostOf(maneuver, actionsSpent).amount);
+  const each = Math.ceil(Math.max(0, actor.system.might ?? 0) / 2);
+  const total = each * actions;
+
+  if (total <= 0) {
+    ui.notifications.warn(
+      `${actor.name} has no Might to drain with, so there is nothing to take.`);
+    return false;
+  }
+
+  const reason = `${maneuver.name} - half of ${actor.name}'s Might, ${actions} time`
+    + `${actions === 1 ? "" : "s"}`;
+
+  await reduceLifePoints(grappled, total, { reason });
+  const lost = await reduceKiPoints(grappled, total, { reason });
+
+  // "Regain Ki Points equal to the total amount of Ki Points lost by the target", and
+  // regaining is bounded by your own maximum like every other regain here.
+  const { value, max } = actor.system.ki;
+  const regained = Math.min(max, value + lost) - value;
+  if (regained > 0) {
+    const { requestActorUpdate } = await import("./chat.mjs");
+    await requestActorUpdate(actor, { "system.ki.value": value + regained });
+  }
+
+  await postManeuver(actor, maneuver, {
+    note: `${grappled.name} loses ${total} Life and ${lost} Ki. `
+      + (regained > 0
+        ? `${actor.name} takes ${regained} of it back.`
+        : `${actor.name} had no room for any of it.`)
+  });
+
+  return true;
+}
+
+/**
  * Mark an Opponent as Seen, with the clock on whoever read them.
  *
  * "That Opponent becomes 'Seen' until the end of your next turn." Two characters and one
@@ -1300,6 +1356,7 @@ export function definitionOf(item) {
     special: item.system.special,
     analysis: item.system.analysis,
     intuit: item.system.intuit,
+    powerDrain: item.system.powerDrain,
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -1428,6 +1485,24 @@ export async function useManeuver(actor, maneuver) {
     await recordManeuverUse(actor, maneuver);
     await recordManeuverType(actor, maneuver.type,
       { messageId: (await postManeuver(actor, maneuver, { foundation: null }))?.id });
+    return true;
+  }
+
+  if (maneuver.powerDrain) {
+    // "Target the Grappled" aims itself: the one being held is the only answer. Known to
+    // be there, since the guard above refused a Grapple with nobody in it.
+    const grappled = fromUuidSync(actor.system.grapple?.partner ?? "");
+    if (!grappled) {
+      ui.notifications.warn(
+        `${actor.name} is holding somebody who is no longer here.`);
+      return false;
+    }
+
+    if (!await drainFrom(actor, grappled, maneuver, actionsSpent)) return false;
+
+    await payActions(actor, maneuver, actionsSpent);
+    await recordManeuverUse(actor, maneuver);
+    await recordManeuverType(actor, maneuver.type);
     return true;
   }
 
@@ -1568,6 +1643,15 @@ export async function useManeuver(actor, maneuver) {
       // the clamping here.
       const { setResource } = await import("./chat.mjs");
       await setResource(actor, chosen.name, chosen.stacks);
+    }
+
+    // "You can only use this Maneuver if you are in a Grapple Maneuver as the Grappler."
+    // Refused here, with the rest of what can still be taken back - before the Actions are
+    // paid and before anything is asked about how many.
+    const nobodyToDrain = whyNotDrain(actor, maneuver);
+    if (nobodyToDrain) {
+      ui.notifications.warn(nobodyToDrain);
+      return false;
     }
 
     // "If you are the Grappler in a Grapple", which the entry then says again on a line
@@ -2054,6 +2138,7 @@ export function maneuverItemFrom(definition) {
       special: Boolean(definition.special),
       analysis: Boolean(definition.analysis),
       intuit: Boolean(definition.intuit),
+      powerDrain: Boolean(definition.powerDrain),
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),

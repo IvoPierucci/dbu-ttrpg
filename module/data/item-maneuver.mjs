@@ -402,6 +402,15 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       intuit: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * Takes Life and Ki off the Grappled, and hands the Ki to the Grappler.
+       *
+       * Only usable as the Grappler, aimed at itself - the one you are holding is the only
+       * answer - and priced per Action up to three. A flag because none of that is a number
+       * another Maneuver would want, and the amount is the one thing it does share with
+       * anything: half the user's Might, rounded up.
+       */
+      powerDrain: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and
