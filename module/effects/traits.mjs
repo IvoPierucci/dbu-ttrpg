@@ -25,6 +25,11 @@ export const KINDS = Object.freeze({
   races: { label: "Racial Trait", priority: PRIORITY.racial },
   talents: { label: "Talent", priority: PRIORITY.talent },
   conditions: { label: "Combat Condition", priority: PRIORITY.condition },
+  // What the ground you are standing on does to you. At base Priority, like a Karmic
+  // Effect and for the same reason: a Light Level only adds and multiplies, and nothing
+  // is competing with it for a Slot. The day a Battlefield rule sets or forbids something,
+  // that is the line to look at.
+  battlefields: { label: "Battlefield", priority: PRIORITY.base },
   maneuvers: { label: "Maneuver", priority: PRIORITY.base },
   // A Karmic Effect is bought with a Karma Point rather than granted by anything, so
   // it sits at base Priority - nothing else is competing with it for a Slot.

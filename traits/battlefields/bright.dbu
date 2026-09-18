@@ -1,0 +1,25 @@
+id: bright
+name: Bright
+kind: battlefield
+lightLevel: 1
+source: Core Rule
+description: >
+  Hard to see. Awareness and Defense Value down 2(bT), Perception Skill Bonus down 2.
+text: >
+  * Bright (1). Reduce your Awareness and Defense Value by 2(bT) and reduce the Skill
+  Bonus for your Perception Skill by 2.
+
+---
+
+# Word for word what Dark does, and deliberately so: the entry prints the same sentence at
+# -1 and at +1. Too much light and too little are equally bad for seeing, which is the point
+# the table is making.
+#
+# Written out rather than pointed at Dark. These are two Light Levels and a reader looking
+# up Bright should find the rule rather than a redirection - and if the two are ever told
+# apart, they are already apart.
+
+[passive]
+awareness -= 2(bT);
+defenseValue -= 2(bT);
+skill.perception.bonus -= 2;

@@ -1,0 +1,18 @@
+id: normal
+name: Normal
+kind: battlefield
+lightLevel: 0
+source: Core Rule
+description: >
+  Ordinary light. Nothing is changed.
+text: >
+  * Normal (0). No effect.
+
+---
+
+# No script, because the entry says "no effect" - and a passive that does nothing still
+# shows up in the workings claiming to have done something.
+#
+# The file exists all the same. It is what the sheet names when there is nothing wrong with
+# the light, and a Light Level with no file would be a hole in the middle of a table of
+# five.

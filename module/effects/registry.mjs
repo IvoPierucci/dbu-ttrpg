@@ -100,6 +100,7 @@ export function programsFor(actor, { report = () => {} } = {}) {
   entries.push(...karmaPrograms(report));
   entries.push(...statePrograms(actor, report));
   entries.push(...conditionPrograms(actor, report));
+  entries.push(...battlefieldPrograms(actor, report));
 
   return entries;
 }
@@ -230,6 +231,64 @@ function statePrograms(actor, report) {
  * file of the same name. That is what lets the GM hand one out with a checkbox without
  * creating a document for it.
  */
+/**
+ * What the ground this character is standing on does to them.
+ *
+ * One Light Level at a time, read off the character rather than off a Square: every
+ * Battlefield rule here is about one character, and what the rest of the map is doing is
+ * the table's. The player sets it, or another effect does.
+ *
+ * Which Trait is which Level is in the Trait files - `lightLevel: -1` - rather than in a
+ * table here, so the number sits beside the rule it carries. Normal is a file with no
+ * script, so it contributes nothing and is skipped before it can be reported as active.
+ *
+ * Not built, and not guessed at: Scale and Light Sources. "Each Square has its Light Level
+ * calculated individually" and "each Light Source will present an AoE" are both about
+ * Squares, and this system has none - it measures no distances and draws no areas. What a
+ * Square is lit like is settled at the table and typed in here.
+ */
+function battlefieldPrograms(actor, report) {
+  const level = Number(actor.system?.battlefield?.lightLevel) || 0;
+
+  const trait = traitsOfKind("battlefields")
+    .find(candidate => Number(candidate.lightLevel) === level);
+
+  if (!trait) {
+    // Named rather than ignored, as an unknown Condition is: a Light Level with no file
+    // is a file that failed to load, and doing nothing quietly sends you looking in the
+    // wrong place.
+    report(`Light Level ${level} is not one this system has a Battlefield file for.`);
+    return [];
+  }
+
+  const { program, errors } = compile(
+    `battlefield:${trait.id}`,
+    { script: trait.script },
+    message => report(`${trait.name}: ${message}`)
+  );
+  if (errors.length) return [];
+
+  // Normal's file is all commentary and no statements - "no effect" is the rule. A
+  // program with no blocks in it would contribute nothing anyway; it is dropped here so
+  // it cannot be counted among the entries either.
+  //
+  // Asked of the compiled program rather than of the file's text: everything after the
+  // `---` is the script, comments included, so a file with nothing but comments has a
+  // `script` that is not empty and a program that is.
+  if (!program?.blocks?.length) return [];
+
+  return [{
+    program,
+    priority: PRIORITY.base,
+    sourceId: `battlefield:${trait.id}`,
+    sourceUuid: null,
+    // The Level's own name, so the workings say "Dark" rather than a number.
+    sourceName: trait.name,
+    level: 0,
+    stacks: 1
+  }];
+}
+
 function conditionPrograms(actor, report) {
   const entries = [];
 

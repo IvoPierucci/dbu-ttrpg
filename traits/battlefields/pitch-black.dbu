@@ -1,0 +1,27 @@
+id: pitch-black
+name: Pitch Black
+kind: battlefield
+lightLevel: -2
+source: Core Rule
+description: >
+  You cannot see. Halve your Awareness, Defense Value and Perception Skill Bonus.
+text: >
+  * Pitch Black (-2). Halve your Awareness, Defense Value, and the Skill Bonus for
+  your Perception Skill.
+
+---
+
+# The far end of the dark half, and the same three values the Blinding Light Level takes
+# at the far end of the bright one. Too much light and too little come to exactly the same
+# numbers, which is the shape of the whole table rather than a coincidence: it is
+# symmetrical about Normal.
+#
+# Halved rather than reduced, which is the difference between this and Dark. A halving
+# lands on the finished value - "when an effect multiplies or divides a value, that is
+# applied after all other modifications to said value" - so this halves whatever the rest
+# of the character came to, not some part of it.
+
+[passive]
+awareness *= 0.5;
+defenseValue *= 0.5;
+skill.perception.bonus *= 0.5;

@@ -4,27 +4,49 @@
     table is standing in rather than a number on one character, and the Combat tab is
     already a column of this character's own tracking values.
 
-    Empty on purpose: the rules for this section have not been given yet. What goes here
-    is written once they are, rather than guessed at from the name. }}
+    Every rule here is about this character alone. What the rest of the map is like is
+    the table's - nothing in this system has Squares to ask - so what is on this tab is
+    set by the player, or by whatever else the table decides. }}
   <section class="panel">
-    <h3 class="panel-title">Battlefields</h3>
+    <h3 class="panel-title">
+      Light Level
+      <span class="panel-hint">Set by you, or by an effect</span>
+    </h3>
 
-    <p class="tab-placeholder">
-      Nothing here yet. The Battlefields rules have not been built.
-    </p>
+    <div class="stat-grid">
+      <div class="stat" data-tooltip="What the light where you are standing is doing to you. Too bright and too dark cost the same: the table is symmetrical about Normal.">
+        <em>Level</em>
+        <select name="system.battlefield.lightLevel" data-dtype="Number">
+          {{#each lightLevels as |level|}}
+          <option value="{{level.value}}" {{#if level.chosen}}selected{{/if}}>{{level.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+
+    {{#if lightLevel.effect}}
+    {{! What the chosen Level is doing, in the rulebook's own words. Drawn only when it is
+        doing something: Normal says "no effect", and a row repeating that is a row to
+        read past. }}
+    <p class="tab-placeholder">{{lightLevel.effect}}</p>
+    {{/if}}
   </section>
 
   <section class="panel">
-    <h3 class="panel-title">What already points this way</h3>
+    <h3 class="panel-title">What is the table's</h3>
 
-    {{! Named rather than moved. The Weather row on the Combat tab is a fact about this
-        character - what Battle Weathers count as for them - and it belongs there whatever
-        Battlefields turns out to be. This is a pointer, so that whoever fills this tab in
-        knows the Slot is already written and already read. }}
+    {{! Said here rather than left out. Both of these are about Squares, and this system
+        measures no distances and draws no areas - so they are settled at the table and
+        the answer is typed in above. }}
     <p class="tab-placeholder">
-      Battle Weathers have a Slot (<code>weather.tiers</code>) and the Brace Maneuver
-      writes it. There are no Battle Weathers in the library for it to be taken off, so
-      the Combat tab states what it comes to and leaves the applying to the table.
+      <strong>Scale.</strong> Each Square has its Light Level worked out on its own, and
+      an ARC may cast the whole Battlefield in darkness. Nothing here tracks Squares, so
+      what the light is where you are standing is yours to set.
+    </p>
+    <p class="tab-placeholder">
+      <strong>Light Sources.</strong> A Light Source raises or sets the Light Level of an
+      area and presents an Area of Effect. Areas are the table's here as well: apply one
+      by changing the Level above.
     </p>
   </section>
 </div>

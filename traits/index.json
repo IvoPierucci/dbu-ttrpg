@@ -1,6 +1,11 @@
 {
   "_comment": "Generated at release. A browser cannot list a directory, and FilePicker.browse needs a permission an ordinary player does not have - so every file is named here.",
   "traits": [
+    "battlefields/blinding.dbu",
+    "battlefields/bright.dbu",
+    "battlefields/dark.dbu",
+    "battlefields/normal.dbu",
+    "battlefields/pitch-black.dbu",
     "conditions/analyzed.dbu",
     "conditions/blinded.dbu",
     "conditions/braced.dbu",

@@ -1,0 +1,24 @@
+id: dark
+name: Dark
+kind: battlefield
+lightLevel: -1
+source: Core Rule
+description: >
+  Hard to see. Awareness and Defense Value down 2(bT), Perception Skill Bonus down 2.
+text: >
+  * Dark (-1). Reduce your Awareness and Defense Value by 2(bT) and reduce the Skill
+  Bonus for your Perception Skill by 2.
+
+---
+
+# Two kinds of number, not one: the two Combat values are taken in (bT) and the Skill
+# Bonus is taken flat. That is what the entry says, and it is the same split the Skill
+# Check rules make everywhere - a Botch on a Skill Check is a flat 2 where every other roll
+# loses 2(bT).
+#
+# (bT) rather than (T), so a Transformation does not make the dark easier to see in.
+
+[passive]
+awareness -= 2(bT);
+defenseValue -= 2(bT);
+skill.perception.bonus -= 2;

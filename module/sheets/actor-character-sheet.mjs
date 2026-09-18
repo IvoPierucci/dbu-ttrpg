@@ -740,6 +740,28 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         }
       : null;
 
+    // The Light Levels, named and numbered by their own Trait files rather than by a list
+    // here: the number sits beside the rule it carries, and a Level nobody wrote a file
+    // for should go missing from the picker rather than be offered and do nothing.
+    const levels = traitsOfKind("battlefields")
+      .map(trait => ({ value: Number(trait.lightLevel) || 0, trait }))
+      .sort((a, b) => a.value - b.value);
+
+    const standing = Number(system.battlefield?.lightLevel) || 0;
+
+    context.lightLevels = levels.map(({ value, trait }) => ({
+      value,
+      label: `${trait.name} (${value > 0 ? "+" : ""}${value})`,
+      chosen: value === standing
+    }));
+
+    // What the chosen one is doing, in the rulebook's own words. Blank where it does
+    // nothing, which is what the template draws nothing for.
+    const here = levels.find(level => level.value === standing)?.trait;
+    context.lightLevel = {
+      effect: here?.script ? (here.description ?? "") : ""
+    };
+
     context.weather = weatherTiers
       ? {
           tiers: weatherTiers,

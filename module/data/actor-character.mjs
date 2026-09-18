@@ -399,6 +399,34 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   static SKILL_CRITICAL_DIE = "1d4";
 
   /**
+   * Which Attribute each Saving Throw is rolled off.
+   *
+   * A static rather than a literal inside `prepareDerivedData`, because something else
+   * needs to know the names before the Saving Throws themselves exist: a Slot written
+   * `save.corporeal` is checked against this list, and that check runs in a phase that
+   * happens before they are worked out. It used to be checked against the derived object,
+   * which is empty at that point - so every `save.<name>` an effect wrote was thrown away
+   * as an unknown Slot.
+   */
+  static SAVING_THROWS = Object.freeze({
+    impulsive: "agility",
+    corporeal: "tenacity",
+    cognitive: "insight",
+    morale: "personality"
+  });
+
+  /**
+   * The Light Levels run from -2 to 2, which is what the table prints.
+   *
+   * The names and the numbers live in the Trait files, one per Level, where the rules
+   * they carry live. These two are the ends of the range, so the field can refuse
+   * anything outside it without the schema having to read the library.
+   */
+  static LIGHT_LEVEL_MIN = -2;
+
+  static LIGHT_LEVEL_MAX = 2;
+
+  /**
    * The Difficulty Categories a Skill Check can be rolled against, and their Target
    * Numbers.
    *
@@ -1062,6 +1090,26 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // On the character rather than only on the Clash card that named it: the card scrolls
     // away inside a round and this lasts the fight. Text, because there are no objects in
     // this system to point at - what the player chose is a name.
+    // --- Battlefield ---
+    // What the ground this character is standing on is doing to them. Set by the player,
+    // or by whatever else the table decides - "the effects of the Battlefield are set by
+    // the player themselves or by other effects".
+    //
+    // On the character rather than on a Scene or a Square. Every Battlefield rule in this
+    // system is about one character: what the rest of the map is like is the table's, and
+    // nothing here has Squares to ask.
+    schema.battlefield = new fields.SchemaField({
+      /**
+       * The Light Level, -2 to 2, as the table numbers them. Zero is Normal and does
+       * nothing, which is why it is the initial value: a character nobody has said
+       * anything about is standing in ordinary light.
+       */
+      lightLevel: new fields.NumberField({
+        required: true, integer: true, initial: 0,
+        min: DBUCharacterData.LIGHT_LEVEL_MIN, max: DBUCharacterData.LIGHT_LEVEL_MAX
+      })
+    }, { required: true });
+
     schema.transfigured = new fields.SchemaField({
       item: new fields.StringField({ required: true, blank: true, initial: "" }),
       byName: new fields.StringField({ required: true, blank: true, initial: "" })
@@ -2040,14 +2088,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // focused Saving Throw gains +1(bT) - which does not grow with a Breakthrough,
     // unlike a (T) bonus - and crits one point more easily.
     const racialSaves = racialSavingThrows(this.race);
-    const saveAttributes = {
-      impulsive: "agility",
-      corporeal: "tenacity",
-      cognitive: "insight",
-      morale: "personality"
-    };
 
-    this.savingThrows = Object.fromEntries(Object.entries(saveAttributes).map(([save, attribute]) => {
+    this.savingThrows = Object.fromEntries(
+      Object.entries(DBUCharacterData.SAVING_THROWS).map(([save, attribute]) => {
       const racial = racialSaves.includes(save);
       return [save, {
         label: save.charAt(0).toUpperCase() + save.slice(1),

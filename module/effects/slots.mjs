@@ -353,11 +353,19 @@ const PATTERNS = [
   { match: /^skill\.(\w+)$/, phase: PHASES.LATE, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.skills ?? {}),
     doc: "A bonus to rolls using that Skill." },
+  // Checked against the Skill table rather than the derived Skills, because this is a
+  // CORE Slot and the Skills are worked out after the CORE phase has run. Reading the
+  // derived object meant asking a question whose answer was always "no" this early, so
+  // every `skill.<name>.bonus` an effect wrote was dropped as an unknown Slot - Blinded's
+  // Perception halving, Sleeping's two, Holding Back's Concealment bonus and Liquid's
+  // Stealth among them. None of them had ever applied.
   { match: /^skill\.(\w+)\.bonus$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
-    valid: (data, [k]) => k in (data.skills ?? {}),
+    valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "The Skill Bonus itself, as the sheet shows it." },
+  // The same shape and the same fix: a CORE Slot whose values are derived later still.
+  // Nothing in the library writes one yet, so this was latent rather than biting.
   { match: /^save\.(\w+)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
-    valid: (data, [k]) => k in (data.savingThrows ?? {}),
+    valid: (data, [k]) => k in (data.savingThrows ?? data.constructor?.SAVING_THROWS ?? {}),
     doc: "A Saving Throw." },
   { match: /^maneuver\.([\w-]+)$/, phase: PHASES.CORE, kind: F,
     ops: ["allow", "forbid", "set"],

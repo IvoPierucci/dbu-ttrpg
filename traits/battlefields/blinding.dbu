@@ -1,0 +1,30 @@
+id: blinding
+name: Blinding
+kind: battlefield
+lightLevel: 2
+source: Core Rule
+description: >
+  You cannot see. Halve your Awareness, Defense Value and Perception Skill Bonus.
+text: >
+  * Blinding (2). Halve your Awareness, Defense Value, and the Skill Bonus for your
+  Perception Skill.
+
+---
+
+# Pitch Black's numbers at the other end of the table, for the same reason Bright repeats
+# Dark.
+#
+# This is the one the Blinded Combat Condition names: "suffer from the effects of the
+# Blinding Light Level, regardless of what the current Light Level is." Blinded writes the
+# same three lines itself rather than reading this file, because it applies whatever the
+# light is doing.
+#
+# Which means a Character who is Blinded while standing in Blinding light halves all three
+# twice. Nothing in the rules says they do not, and two multiplications is what this engine
+# does with two halvings - "a multiply is applied after all other modifications", and there
+# are two of them.
+
+[passive]
+awareness *= 0.5;
+defenseValue *= 0.5;
+skill.perception.bonus *= 0.5;
