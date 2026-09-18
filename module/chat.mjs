@@ -8013,43 +8013,46 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   // answer to "what does this cost me", and the point of a dropdown is that nobody should
   // be doing that multiplication at the table. The material comes with it, because that
   // is the question actually being asked - what did they hit.
-  const ranks = HARDNESS_RANKS.map(hardness => {
-    const material = hardness.text
-      .replace("This Hardness Rank represents ", "")
-      .replace(/\.[\s\S]*$/, "");
-    return `<option value="${hardness.rank}">Rank ${hardness.rank} &middot; ${
+  const ranks = HARDNESS_RANKS.map(hardness =>
+    `<option value="${hardness.rank}">Rank ${hardness.rank} &middot; ${
       hardnessValue(hardness.rank, baseTier)} Damage &middot; ${
-      Handlebars.escapeExpression(material)}</option>`;
-  }).join("");
+      Handlebars.escapeExpression(hardness.material)}</option>`).join("");
 
-  // What the Feature they hit was made of. One row each, the rule's own words under the
-  // name, because which of these applies is a thing the ARC decided about that Feature
-  // and the player ticking the box has probably never read it.
+  // The rule, and the arithmetic behind the numbers in that list, for whoever wants it.
+  // Built here rather than inline so the character's name goes through the escape like
+  // everything else does.
+  const howItWorks = `${COLLISION_DAMAGE} The Value is twice the Rank a base Tier of `
+    + `Power - Rank 0 is 1(bT) - worked out here against ${target.name}'s base Tier of `
+    + `Power of ${baseTier}, and taken past their Soak Value and Damage Reduction.`;
+
+  // What the Feature they hit was made of. A name to tick, and the rule on hover.
+  //
+  // The rules were printed under each name to begin with, on the reasoning that whoever is
+  // ticking the box did not decide what that wall was made of and has probably never read
+  // it. Five paragraphs of small print is not how somebody reads them, though - it is how
+  // somebody closes the window. The words are still there for the one time they are wanted,
+  // and the list is short enough to see at a glance the rest of the time.
   const qualities = COLLISION_QUALITIES.map(quality => `
-    <label class="dbu-respond-option dbu-quality">
+    <label class="dbu-respond-option dbu-quality"
+           data-tooltip="${Handlebars.escapeExpression(quality.text)}">
       <input type="checkbox" name="quality" value="${quality.key}"/>
       <span class="dbu-respond-name">${Handlebars.escapeExpression(quality.name)}</span>
-      <em>${Handlebars.escapeExpression(quality.text)}</em>
     </label>`).join("");
 
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title },
     content: `
-      <label class="dbu-wager dbu-hardness">
+      <label class="dbu-wager dbu-hardness"
+             data-tooltip="${Handlebars.escapeExpression(howItWorks)}">
         <span>Hardness Rank</span>
-        <select name="hardness">${ranks}</select>
-        <em>The Hardness Value is twice the Rank a base Tier of Power, and Rank 0 is
-          1(bT) - worked out here against ${Handlebars.escapeExpression(target.name)}'s
-          base Tier of Power of ${baseTier}. Taken straight off their Life Points, past
-          their Soak Value and Damage Reduction.${doubled
-            ? ` ${Handlebars.escapeExpression(doubledBy)} doubles it.` : ""}${halved
-            ? ` ${Handlebars.escapeExpression(halvedBy)} halves it.` : ""}</em>
+        <select name="hardness">${ranks}</select>${(doubled || halved) ? `
+        <em>${[
+          doubled ? `${Handlebars.escapeExpression(doubledBy)} doubles it.` : "",
+          halved ? `${Handlebars.escapeExpression(halvedBy)} halves it.` : ""
+        ].filter(Boolean).join(" ")}</em>` : ""}
       </label>
-      <p class="dbu-respond-hint">${Handlebars.escapeExpression(COLLISION_DAMAGE)}</p>
-      <p class="dbu-respond-hint">Did the Feature they hit have any of these Qualities?
-        Usually none. The rest of what a Quality is - its Life Points, its Squares, what
-        happens when it is destroyed - stays the table's.</p>
+      <p class="dbu-respond-hint dbu-list-label">Feature Qualities</p>
       ${qualities}`,
     buttons: [
       {

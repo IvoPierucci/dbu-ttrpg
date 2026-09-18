@@ -2611,21 +2611,15 @@
   cursor: help;
 }
 
-/* One Quality as a row to tick, in the dialog that applies Collision Damage. The
-   rule's own words sit under the name: which of these applied is something the ARC
-   decided about that wall, and whoever is ticking the box has not read it. */
-.application.dbu-dialog .dbu-quality {
-  flex-wrap: wrap;
-  align-items: flex-start;
-}
+/* One Quality as a row to tick, in the window that applies Collision Damage. A name
+   and a box, with the rule on hover.
 
-.application.dbu-dialog .dbu-quality > em {
-  flex-basis: 100%;
-  margin-left: 20px;
-  font-style: italic;
-  font-size: 10px;
-  line-height: 1.3;
-  opacity: 0.7;
+   The rules were printed under each name to begin with. Five of them turned a window
+   somebody passes through in two seconds into a page of small print, which is not how
+   anybody reads a rule - it is how they close the window. */
+.application.dbu-dialog .dbu-quality {
+  align-items: center;
+  cursor: help;
 }
 
 /* The Hardness Rank picker in the collision window. Wider than a number field: each
@@ -2634,4 +2628,13 @@
 .application.dbu-dialog .dbu-hardness select {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* "Feature Qualities", over the list of them. A label, not a paragraph - and its own
+   class, because `dbu-respond-hint` elsewhere carries real sentences that should not
+   suddenly be shouted. */
+.application.dbu-dialog .dbu-list-label {
+  margin: 10px 0 2px;
+  font-weight: bold;
+  opacity: 0.8;
 }

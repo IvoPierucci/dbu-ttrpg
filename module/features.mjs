@@ -174,6 +174,10 @@ export const HARDNESS_RANKS = Object.freeze([
   {
     rank: 0,
     perBaseTier: 1,
+    // `material` is the entry's own nouns, short enough to read in a dropdown. The rule is
+    // `text`, which is what the tab prints and what the picker carries on hover - a line
+    // that has to be scrolled sideways to be read is a line nobody reads.
+    material: "sand, the surface of water",
     text: "This Hardness Rank represents substances that are not structurally sound, such "
         + "as sand or the surface of water. Features cannot have a Hardness value of 0, "
         + "but the Squares themselves can."
@@ -181,27 +185,32 @@ export const HARDNESS_RANKS = Object.freeze([
   {
     rank: 1,
     perBaseTier: 2,
+    material: "wood, gravel",
     text: "This Hardness Rank represents structures made of wood or a collection of "
         + "harder substances, like gravel."
   },
   {
     rank: 2,
     perBaseTier: 4,
+    material: "stone, bone, cement",
     text: "This Hardness Rank represents structures made of stone, bone or cement."
   },
   {
     rank: 3,
     perBaseTier: 6,
+    material: "metal, resilient stone",
     text: "This Hardness Rank represents structures made of metal or more resilient stone."
   },
   {
     rank: 4,
     perBaseTier: 8,
+    material: "reinforced metals",
     text: "This Hardness Rank represents structures that are made from reinforced metals."
   },
   {
     rank: 5,
     perBaseTier: 10,
+    material: "Katchin, or its equal",
     text: "This Hardness Rank represents structures forged of Katchin, the strongest metal "
         + "in the universe, or other comparable materials."
   }
