@@ -329,7 +329,26 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     bluff:            { label: "Bluff",            attribute: "personality",
                         specialManeuver: "feint" },
     cooking:          { label: "Cooking",          attribute: "personality" },
-    intimidation:     { label: "Intimidation",     attribute: "personality" },
+    // "Special Maneuver: you gain access to the Terrify Maneuver", at the 2+ Ranks every
+    // Skill grants one at - and the Skill that Maneuver's own Clash is rolled with, on both
+    // sides of it, since its slash offers the defender Intimidation back. The fifth entry
+    // where the Skill that opens a Maneuver is the Skill it rolls, and still not a rule:
+    // Bluff opens the Feint and the Dirty Trick rolls Bluff without being opened by it.
+    //
+    // Not Required, unlike Clairvoyance: no "(R)" on the entry. So this one opens at two
+    // Ranks from nothing rather than two Ranks after the Skill became rollable.
+    //
+    // It grants the Frighten Adventuring Maneuver too - an eighth alongside Forage, Scam,
+    // Fraud, Stretch, Power Regulation, Profiling and Gauge, none of them recorded: there
+    // are no Adventuring Maneuvers in this system and no entries to build them from. Worth
+    // noticing that Frighten and Terrify are two different Maneuvers out of the one Skill,
+    // which is what the two lines are for.
+    //
+    // Its ARC Tips ask for nothing this system has not got - guards, street thieves and
+    // weaker NPCs are all a Skill Check the GM calls for, which is what an Intimidation
+    // Check already is.
+    intimidation:     { label: "Intimidation",     attribute: "personality",
+                        specialManeuver: "terrify" },
     performance:      { label: "Performance",      attribute: "personality",
                         specialManeuver: "hype" },
     persuasion:       { label: "Persuasion",       attribute: "personality" }

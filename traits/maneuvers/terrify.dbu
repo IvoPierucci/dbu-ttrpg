@@ -106,10 +106,21 @@ text: >
 #
 # --- How it is gained -----------------------------------------------------------------------
 #
-# Not known. Intimidation's entry has not been given, so no Skill in the table opens this
-# yet.
+# Intimidation, at the 2+ Ranks every Skill grants a Special Maneuver at: "Special
+# Maneuver: you gain access to the Terrify Maneuver" is in the Skill's own entry.
 #
-# Intimidation is the obvious guess and the guess is worth nothing: the Dirty Trick is a
-# Clash made with Bluff and Bluff opens the Feint instead. Being the Skill a Maneuver rolls
-# and being the Skill that hands it over are two different questions, and only the Skill's
-# own entry answers the second.
+# Which is the Skill this Clash is rolled with - on both sides of it, since the slash offers
+# the defender Intimidation back. That is a coincidence of this entry rather than a rule:
+# the Dirty Trick is a Clash made with Bluff and Bluff opens the Feint instead. Being the
+# Skill a Maneuver rolls and being the Skill that hands it over are two different questions,
+# and only the Skill's own entry answers the second - which is why it was left unanswered
+# here until that entry arrived, obvious guess or not.
+#
+# Not Required, so it opens at two Ranks from nothing. Where Sense waits for Clairvoyance to
+# become rollable at all first, this does not: a character with two Ranks of Intimidation
+# has always been able to roll it.
+#
+# Which means the defender's half of this Clash can be answered by somebody who cannot use
+# the Maneuver. Intuition is not Required either, and Intimidation at no Ranks still rolls -
+# so nobody is ever stuck without an answer to it. That is not true of the Sense Maneuver,
+# whose defence is a Required Skill, and the difference is the two entries' own.
