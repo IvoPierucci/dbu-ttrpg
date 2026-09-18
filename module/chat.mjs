@@ -388,6 +388,62 @@ async function settleTreatment(message, clash) {
 }
 
 /**
+ * What an Attacking Maneuver thrown at a Feature comes to.
+ *
+ * "Features can be targets for any Attacking Maneuver, just like Characters can. However,
+ * you always automatically hit a Feature and only inflict Damage equal to your Tier of
+ * Power."
+ *
+ * So there is no Strike Roll and no Wound Roll: both are settled before the dice would
+ * have been picked up, and the whole card is one number. The attack still cost what it
+ * costs - the Actions, the Ki, the Profile, the Ki Wager - because it is an Attacking
+ * Maneuver and those are paid for making one, not for hitting with it.
+ *
+ * "For every 2 Energy Charges applied to an Attacking Maneuver, treat your Tier of Power
+ * as if it was 1 higher when calculating Damage to a Feature." Two, so an odd charge is
+ * worth nothing on its own - rounded down, which is what this system does everywhere it
+ * does not say otherwise.
+ *
+ * Nothing is written to anybody. A Feature has Life Points equal to its Hardness Rank and
+ * this system has no Features to keep them on, so the number is said and the table takes
+ * it off whatever they are holding.
+ */
+export async function postFeatureAttack(actor, maneuver, declared, charges = 0) {
+  const tier = Math.max(1, actor.system.tierOfPower ?? 1);
+  const fromCharges = Math.floor(Math.max(0, charges) / 2);
+  const damage = tier + fromCharges;
+
+  const profile = PROFILES[declared?.profile];
+
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `
+      <div class="dbu-maneuver">
+        <div class="dbu-maneuver-name">${Handlebars.escapeExpression(maneuver.name)} - at a Feature</div>
+        <div class="dbu-maneuver-meta">Automatic hit &middot; ${
+          profile ? `${Handlebars.escapeExpression(profile.label)} Profile &middot; ` : ""
+        }${maneuver.kiCost} KP</div>
+        <div class="dbu-check">
+          <div class="dbu-check-parts">Tier of Power ${tier}${
+            fromCharges ? ` &middot; +${fromCharges} from ${charges} Energy Charges` : ""
+          }</div>
+          <div class="dbu-check-total">${damage}</div>
+        </div>
+        <div class="dbu-maneuver-note">Damage to the Feature. Its Life Points are its
+          Hardness Rank, which is the table's to keep - nothing here holds a Feature.</div>
+      </div>`,
+    flags: {
+      [SCOPE]: {
+        // An Attacking Maneuver at a Feature is still a Maneuver being used, so an Instant
+        // can answer it - the rule is about what kind of Maneuver it is, not about what it
+        // was aimed at.
+        [RESPONDABLE_FLAG]: isRespondable(maneuver)
+      }
+    }
+  });
+}
+
+/**
  * Open the Transfiguration's first Clash: "(Physical Strike vs Strike/Dodge)".
  *
  * The Grapple Check's pair of rolls, which is the only Strike-against-Strike-or-Dodge
@@ -7867,15 +7923,27 @@ async function applyCollisionDamage(message, clash) {
   const doubled = Boolean(clash.collision?.doubles);
   const halved = Boolean(clash.collision?.halves);
 
+  // "When anything collides with a Feature, it takes Collision Damage... equal to 1/2
+  // (rounded up) of the Tier of Power of the Character whose Maneuver or Effect caused
+  // the Collision." What they hit is the table's to say - there are no Features here - so
+  // this is offered rather than imposed: it is the number for a Feature, and hitting
+  // something else is a different number the table already had to decide.
+  //
+  // Rounded up, which the entry says outright and almost nothing else in these rules does.
+  const causer = fromUuidSync(clash.challengerUuid);
+  const intoFeature = Math.ceil(Math.max(1, causer?.system?.tierOfPower ?? 1) / 2);
+
   const typed = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${clash.maneuverName} - Collision Damage` },
     content: `
       <label class="dbu-wager">
         <span>Collision Damage</span>
-        <input type="number" name="collision" value="0" min="0"/>
-        <em>Taken straight off ${Handlebars.escapeExpression(target.name)}'s Life Points,
-          past their Soak Value and Damage Reduction.${doubled
+        <input type="number" name="collision" value="${intoFeature}" min="0"/>
+        <em>Into a Feature it is ${intoFeature} - half of
+          ${Handlebars.escapeExpression(causer?.name ?? "the causer")}'s Tier of Power,
+          rounded up. Taken straight off ${Handlebars.escapeExpression(target.name)}'s Life
+          Points, past their Soak Value and Damage Reduction.${doubled
             ? ` ${Handlebars.escapeExpression(clash.collision.doubledBy)} doubles it.`
             : ""}${halved
             ? ` ${Handlebars.escapeExpression(clash.collision.halvedBy)} halves it.`

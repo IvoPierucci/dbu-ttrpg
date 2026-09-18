@@ -33,11 +33,68 @@
   </section>
 
   <section class="panel">
+    <h3 class="panel-title">
+      Cover
+      <span class="panel-hint">Turned on by you, for as long as it lasts</span>
+    </h3>
+
+    <div class="stat-grid">
+      <div class="stat" data-tooltip="A Feature between you and whoever is attacking you. Nothing here knows where anything is standing, so this is yours to turn on and off.">
+        <em>Behind cover</em>
+        <input type="checkbox" name="system.battlefield.cover.active"
+               {{#if system.battlefield.cover.active}}checked{{/if}}/>
+      </div>
+      <div class="stat" data-tooltip="The Hardness Value of the Feature you are behind. Twice this comes off the Damage you would suffer. Not the Hardness Rank, which is a Feature's own Life Points.">
+        <em>Hardness Value</em>
+        <input type="number" name="system.battlefield.cover.hardness"
+               value="{{system.battlefield.cover.hardness}}" min="0"/>
+      </div>
+    </div>
+
+    {{#if cover.note}}
+    <p class="tab-placeholder">{{cover.note}}</p>
+    {{/if}}
+
+    {{! The one case the rule takes itself back in. Said beside the toggle, because that is
+        where somebody deciding whether to leave it on is looking. }}
+    <p class="tab-placeholder">
+      Cover does not apply if the Attacking Maneuver has an Area of Effect that includes
+      the Feature as a target. Areas are the table's here: turn this off for that attack.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">
+      Battle Terrain
+      <span class="panel-hint">Features are the table's to keep</span>
+    </h3>
+
+    {{#if featureAttacks.length}}
+    <p class="tab-placeholder">
+      You always hit a Feature, and the Damage is your Tier of Power - two Energy Charges
+      on the attack are worth one more. The attack costs what it costs; nothing is rolled.
+    </p>
+    <div class="maneuver-list">
+      {{#each featureAttacks as |attack|}}
+      <button type="button" class="dbu-clash-button" data-action="attackFeature"
+              data-item-id="{{attack.itemId}}"
+              data-tooltip="Throw it at a Feature rather than at a Character. No Strike Roll and no Wound Roll: the card says the Damage.">
+        {{attack.name}}
+      </button>
+      {{/each}}
+    </div>
+    {{else}}
+    <p class="tab-placeholder">
+      No Attacking Maneuvers to throw at a Feature yet.
+    </p>
+    {{/if}}
+  </section>
+
+  <section class="panel">
     <h3 class="panel-title">What is the table's</h3>
 
-    {{! Said here rather than left out. Both of these are about Squares, and this system
-        measures no distances and draws no areas - so they are settled at the table and
-        the answer is typed in above. }}
+    {{! Said here rather than left out. All of these are about Squares, and this system
+        measures no distances and draws no areas - so they are settled at the table. }}
     <p class="tab-placeholder">
       <strong>Scale.</strong> Each Square has its Light Level worked out on its own, and
       an ARC may cast the whole Battlefield in darkness. Nothing here tracks Squares, so
@@ -45,8 +102,18 @@
     </p>
     <p class="tab-placeholder">
       <strong>Light Sources.</strong> A Light Source raises or sets the Light Level of an
-      area and presents an Area of Effect. Areas are the table's here as well: apply one
-      by changing the Level above.
+      area and presents an Area of Effect. Areas are the table's as well: apply one by
+      changing the Level above.
+    </p>
+    <p class="tab-placeholder">
+      <strong>Features.</strong> Their Squares, their shape, their material and their Life
+      Points - which are their Hardness Rank - are all the ARC's. Nothing here holds a
+      Feature, so the Damage a card reports is taken off whatever the table is keeping.
+    </p>
+    <p class="tab-placeholder">
+      <strong>Collisions.</strong> Anything that collides with a Feature takes Collision
+      Damage equal to half the Tier of Power - rounded up - of whoever caused the
+      collision. The collision button on a Clash card offers that number.
     </p>
   </section>
 </div>

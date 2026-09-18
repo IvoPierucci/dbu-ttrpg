@@ -1107,7 +1107,23 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       lightLevel: new fields.NumberField({
         required: true, integer: true, initial: 0,
         min: DBUCharacterData.LIGHT_LEVEL_MIN, max: DBUCharacterData.LIGHT_LEVEL_MAX
-      })
+      }),
+
+      /**
+       * A Feature between this character and whoever is shooting at them.
+       *
+       * Both halves are typed in. There are no Squares here, no Features and no notion of
+       * what is between two people, so nothing can work out whether somebody is behind a
+       * rock or how hard that rock is.
+       *
+       * `active` is what gathers the Cover Trait at all - it is not read inside the script,
+       * the way a Combat Condition is not read inside its own.
+       */
+      cover: new fields.SchemaField({
+        active: new fields.BooleanField({ required: true, initial: false }),
+        /** The Hardness Value, which is what Cover halves Damage by twice of. */
+        hardness: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      }, { required: true })
     }, { required: true });
 
     schema.transfigured = new fields.SchemaField({

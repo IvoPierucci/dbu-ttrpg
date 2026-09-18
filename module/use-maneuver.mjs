@@ -47,6 +47,7 @@ import {
   postGrappleCheck,
   postManeuver,
   postSaveClash,
+  postFeatureAttack,
   postSkillClash,
   postTransfiguration,
   offerDelayed,
@@ -1738,7 +1739,7 @@ async function revertTransfiguration(actor, target, maneuver) {
   });
 }
 
-export async function useManeuver(actor, maneuver) {
+export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   if (!actor || !maneuver) return false;
 
   // "Applied onto other Maneuvers you are doing", so there is no using one on its own.
@@ -1863,7 +1864,11 @@ export async function useManeuver(actor, maneuver) {
   // The target is resolved before anything is paid, so a Maneuver that cannot be aimed
   // does not cost Ki.
   let targetActor = null;
-  if (maneuver.requiresTarget) {
+  // "Features can be targets for any Attacking Maneuver, just like Characters can." So a
+  // Maneuver aimed at one needs no Character to aim at, and the door that would refuse it
+  // for having no target steps aside. Everything else about the Maneuver still applies:
+  // the cost, the Profile, the limit, the Instant rule.
+  if (maneuver.requiresTarget && !atFeature) {
     targetActor = game.user.targets.first()?.actor ?? null;
     if (!targetActor) {
       ui.notifications.warn(`${maneuver.name} needs a target. Target a token first.`);
@@ -2233,6 +2238,11 @@ export async function useManeuver(actor, maneuver) {
         ...(maneuver.insult ? { insult: { applied: false } } : {}),
         ...(maneuver.internalAttack ? { internalAttack: { applied: false, inside: false } } : {})
       })
+    // Thrown at a Feature: no Strike Roll and no Wound Roll, because the entry settles
+    // both before the dice - "you always automatically hit a Feature and only inflict
+    // Damage equal to your Tier of Power".
+    : (atFeature && declared)
+    ? await postFeatureAttack(actor, maneuver, declared, charges)
     : declared
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges },
         { modifiers: appliedModifiers(modifiers) })
@@ -2390,14 +2400,19 @@ export async function collectCharges(actor) {
   return charges;
 }
 
-/** Use a Maneuver the character owns, by the Item's id. */
-export async function useOwnedManeuver(actor, itemId) {
+/**
+ * Use a Maneuver the character owns, by the Item's id.
+ *
+ * `atFeature` throws it at a Feature instead of at a Character - one door, so a Maneuver
+ * aimed at a wall is bound by everything a Maneuver aimed at somebody is bound by.
+ */
+export async function useOwnedManeuver(actor, itemId, { atFeature = false } = {}) {
   const item = actor?.items?.get(itemId);
   if (!item || (item.type !== "maneuver")) {
     ui.notifications.warn("That Maneuver is not on this character any more.");
     return false;
   }
-  return useManeuver(actor, definitionOf(item));
+  return useManeuver(actor, definitionOf(item), { atFeature });
 }
 
 /**

@@ -101,6 +101,7 @@ export function programsFor(actor, { report = () => {} } = {}) {
   entries.push(...statePrograms(actor, report));
   entries.push(...conditionPrograms(actor, report));
   entries.push(...battlefieldPrograms(actor, report));
+  entries.push(...coverPrograms(actor, report));
 
   return entries;
 }
@@ -250,7 +251,11 @@ function statePrograms(actor, report) {
 function battlefieldPrograms(actor, report) {
   const level = Number(actor.system?.battlefield?.lightLevel) || 0;
 
+  // Only the files that declare one. Cover is a Battlefield Trait too and has no Light
+  // Level at all - leaving it in the search made the answer depend on how a missing header
+  // coerces, which is not a thing to leave to chance.
   const trait = traitsOfKind("battlefields")
+    .filter(candidate => candidate.lightLevel !== undefined)
     .find(candidate => Number(candidate.lightLevel) === level);
 
   if (!trait) {
@@ -283,6 +288,44 @@ function battlefieldPrograms(actor, report) {
     sourceId: `battlefield:${trait.id}`,
     sourceUuid: null,
     // The Level's own name, so the workings say "Dark" rather than a number.
+    sourceName: trait.name,
+    level: 0,
+    stacks: 1
+  }];
+}
+
+/**
+ * Cover, when the player says they are behind something.
+ *
+ * The toggle is the whole gate. There is nothing in the Trait's own script that asks
+ * whether it applies, the same way a Combat Condition's script does not ask whether the
+ * character has it - being gathered is what "you have this" means here, and a rule written
+ * in both places is a rule that can disagree with itself.
+ *
+ * Kept apart from the Light Level above because they are not alternatives: you can be
+ * behind a rock in the dark.
+ */
+function coverPrograms(actor, report) {
+  if (!actor.system?.battlefield?.cover?.active) return [];
+
+  const trait = getTrait("cover");
+  if (!trait) {
+    report("Cover is not a Battlefield file this system has.");
+    return [];
+  }
+
+  const { program, errors } = compile(
+    "battlefield:cover",
+    { script: trait.script },
+    message => report(`${trait.name}: ${message}`)
+  );
+  if (errors.length) return [];
+
+  return [{
+    program,
+    priority: PRIORITY.base,
+    sourceId: "battlefield:cover",
+    sourceUuid: null,
     sourceName: trait.name,
     level: 0,
     stacks: 1

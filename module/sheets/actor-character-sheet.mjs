@@ -410,6 +410,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       importTalents: DBUCharacterSheet._onImportTalents,
       reloadTalents: DBUCharacterSheet._onReloadTalents,
       importManeuvers: DBUCharacterSheet._onImportManeuvers,
+      attackFeature: DBUCharacterSheet._onAttackFeature,
       grantManeuvers: DBUCharacterSheet._onGrantManeuvers,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -761,6 +762,22 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.lightLevel = {
       effect: here?.script ? (here.description ?? "") : ""
     };
+
+    // What Cover is worth while it is on, in numbers rather than in notation: the
+    // player is deciding whether to leave a toggle on and 2(T) is not an answer to that.
+    const cover = system.battlefield?.cover ?? {};
+    context.cover = {
+      note: cover.active
+        ? `Dodge +${2 * Math.max(1, system.tierOfPower ?? 1)}, and `
+          + `${2 * Math.max(0, cover.hardness ?? 0)} off the Damage you would suffer.`
+        : ""
+    };
+
+    // Every Attacking Maneuver they own, which is what can be thrown at a Feature -
+    // "Features can be targets for any Attacking Maneuver, just like Characters can."
+    context.featureAttacks = this.#ownedManeuvers()
+      .filter(maneuver => maneuver.attacking)
+      .map(maneuver => ({ itemId: maneuver.itemId, name: maneuver.name }));
 
     context.weather = weatherTiers
       ? {
@@ -1944,6 +1961,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * Bonus. A Required Skill with no Ranks cannot be rolled at all - the template does
    * not make those clickable, and this refuses them as well.
    */
+  /**
+   * Throw an Attacking Maneuver at a Feature rather than at a Character.
+   *
+   * The same door every other use goes through, with one thing turned off: the refusal
+   * for having no target. Everything else is the Maneuver's own - the Actions, the Ki, the
+   * Profile, the Ki Wager, the Energy Charges, the usage limit and the Instant rule - and
+   * what changes is only what comes out the far end, because the entry settles the Strike
+   * and the Wound before either would be rolled.
+   */
+  static async _onAttackFeature(event, target) {
+    return useOwnedManeuver(this.actor, target.dataset.itemId, { atFeature: true });
+  }
+
   static async _onSkillRoll(event, target) {
     const skill = this.actor.system.skills[target.dataset.skill];
     if (!skill) return;

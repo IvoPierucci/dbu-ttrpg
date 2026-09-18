@@ -1,0 +1,71 @@
+id: cover
+name: Cover
+kind: battlefield
+source: Core Rule
+description: >
+  A Feature between you and whoever is shooting at you. Dodge 2(T) better, and take twice
+  its Hardness Value less Damage.
+text: >
+  Cover. If a Feature on an Adjacent Square to you is between you and an Opponent that is
+  targeting you with an Attacking Maneuver, increase your Dodge Roll by 2(T) for the
+  duration of that Attacking Maneuver and reduce the Damage you would suffer by twice the
+  Hardness Value of that Feature. This effect does not apply if the Attacking Maneuver
+  possesses an AoE that also includes the Feature as a target.
+
+---
+
+# --- Turned on by hand -------------------------------------------------------------------
+#
+# "A Feature on an Adjacent Square to you is between you and an Opponent." Three things
+# this system has none of: Squares, Features, and any notion of what is between two
+# people. So nothing works this out - the player says whether they are behind something,
+# and says how hard it is.
+#
+# Which is the whole of the Battlefield section's shape: the rules are about one character,
+# and what the map looks like is the table's.
+#
+# The toggle is what decides whether this file runs at all. There is no condition inside
+# it: a Trait that is on you applies, and one that is not is not gathered - the same way a
+# Combat Condition works. Writing the test into the script as well would be one rule in two
+# places.
+#
+# --- The Dodge ------------------------------------------------------------------------------
+#
+# "Increase your Dodge Roll by 2(T) for the duration of that Attacking Maneuver." (T), the
+# Tier of Power, which is what an unmarked (T) means everywhere here.
+#
+# A standing bonus while the toggle is on, because a duration this system cannot see the
+# start or the end of is a duration the player holds. Turn it on for the attack and off
+# afterwards; the sheet says it is on.
+#
+# --- The Damage -------------------------------------------------------------------------------
+#
+# "Reduce the Damage you would suffer by twice the Hardness Value of that Feature."
+#
+# Written to `incoming.damage` rather than to Damage Reduction, and the difference is not
+# cosmetic: Damage Reduction is a stat of yours that a Profile can pierce or halve, and
+# this is a wall taking the hit instead of you. A Concentrated attack ignoring half your
+# Damage Reduction has nothing to say about the rock you are standing behind.
+#
+# Which is also why it is an automatic block on `before-wound` rather than a passive: that
+# is the moment the Damage this reduces exists, and it is the moment Broken's own
+# `incoming.damage` answers.
+#
+# "Twice the Hardness Value" - the Value, which is the number the player types. The entry
+# also names a Hardness Rank, and that is the Feature's Life Points rather than this.
+#
+# --- What is not built --------------------------------------------------------------------------
+#
+# "This effect does not apply if the Attacking Maneuver possesses an AoE that also includes
+# the Feature as a target." An Area of Effect is a shape over Squares, and a Feature is a
+# thing in them - neither exists here. So the exception is the table's to spot, and the
+# answer is to turn the toggle off for that attack.
+#
+# Said on the sheet beside the toggle, where somebody deciding whether to leave it on is
+# looking.
+
+[passive]
+dodge += 2(T);
+
+[automatic/before-wound]
+incoming.damage -= 2 * battlefield.cover.hardness;
