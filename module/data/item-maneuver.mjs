@@ -432,6 +432,16 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       terrify: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * Turns an Opponent into an object: two Clashes in sequence, and winning both takes
+       * them out of the fight for the Encounter.
+       *
+       * A flag because almost none of it is shared with anything. Two chained Clashes of
+       * different categories, an Item named by the winner and kept on the loser, a branch
+       * that undoes an earlier use instead of rolling at all, a Counter Action that turns
+       * the Maneuver on its user, and a death with a Karma Point in front of it.
+       */
+      transfiguration: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * An Instant that is itself an attack, made with the Simple Profile or with the one
        * other Profile its owner's tail was built for.
        *

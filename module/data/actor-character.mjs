@@ -1011,6 +1011,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       messageId: new fields.StringField({ required: true, blank: true, initial: "" })
     }, { required: true });
 
+    // --- Turned into an Item ---
+    // Which Item a Transfigured Character was turned into, and by whom. The Transfigured
+    // Combat Condition says that they were; this says what they are, which the rule needs
+    // for the rest of the Encounter - "for all intents and purposes, becomes that Item".
+    //
+    // On the character rather than only on the Clash card that named it: the card scrolls
+    // away inside a round and this lasts the fight. Text, because there are no objects in
+    // this system to point at - what the player chose is a name.
+    schema.transfigured = new fields.SchemaField({
+      item: new fields.StringField({ required: true, blank: true, initial: "" }),
+      byName: new fields.StringField({ required: true, blank: true, initial: "" })
+    }, { required: true });
+
     schema.delayed = new fields.SchemaField({
       /** The Item held, which is what is finally used. Empty when nothing is held. */
       itemId: new fields.StringField({ required: true, blank: true, initial: "" }),

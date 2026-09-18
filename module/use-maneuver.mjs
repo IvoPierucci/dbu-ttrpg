@@ -48,6 +48,7 @@ import {
   postManeuver,
   postSaveClash,
   postSkillClash,
+  postTransfiguration,
   offerDelayed,
   postThrust,
   takeSurge
@@ -1362,6 +1363,7 @@ export function definitionOf(item) {
     powerDrain: item.system.powerDrain,
     sense: item.system.sense,
     terrify: item.system.terrify,
+    transfiguration: item.system.transfiguration,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
     kiCostCoversProfile: item.system.kiCostCoversProfile,
@@ -1495,6 +1497,55 @@ async function recordTailVariant(actor, maneuver, variant) {
   const item = actor.items.get(maneuver.itemId);
   if (!item) return;
   await item.update({ "system.tailVariant": variant });
+}
+
+/**
+ * Whether this Character has been turned into an Item - the second Clash, not the first.
+ *
+ * Read off the Resource that holds it rather than off the Transfigured Combat Condition: a
+ * Transfigured Character who only lost the first Clash is still in the fight, and this
+ * asks about the one who is a teacup.
+ */
+function isAnItem(target) {
+  return (Number(target?.system?.resources?.anitem?.stacks) || 0) > 0;
+}
+
+/**
+ * Turn a Character who is an Item back to normal.
+ *
+ * Both halves come off: the Resource that stops them acting and the Transfigured Combat
+ * Condition, which the same use put on them.
+ *
+ * And both clocks, which is the part worth doing rather than leaving. A clock that runs out
+ * is announced by name whether or not the thing was still there, so one left behind by
+ * something undone early says "Transfiguration ran out" at the end of the Encounter for a
+ * Character who was turned back rounds ago. The clocks are kept by whoever cast it and name
+ * the one who was turned, so dropping them means looking somewhere other than at the
+ * target - which is what `clockOff` sweeps for.
+ *
+ * Whose Transfiguration it was does not matter: the entry says "a Character turned into an
+ * Item", not one you turned.
+ */
+async function revertTransfiguration(actor, target, maneuver) {
+  const { setCondition } = await import("./conditions.mjs");
+  const { setResource, postManeuver } = await import("./chat.mjs");
+  const { clockOff, KINDS } = await import("./durations.mjs");
+
+  const was = target.system.transfigured?.item || "an object";
+
+  await setResource(target, "anitem", 0);
+  await setCondition(target, "transfigured", 0);
+  await clockOff(target, KINDS.RESOURCE, ["anitem"]);
+  await clockOff(target, KINDS.CONDITION, ["transfigured"]);
+  await target.update({
+    "system.transfigured.item": "",
+    "system.transfigured.byName": ""
+  });
+
+  return postManeuver(actor, maneuver, {
+    note: `${target.name} was ${was}, and is back to normal. No Clash: the entry turns `
+      + "them back rather than rolling for it."
+  });
 }
 
 export async function useManeuver(actor, maneuver) {
@@ -1943,6 +1994,18 @@ export async function useManeuver(actor, maneuver) {
       })
     : maneuver.thrust
     ? await postThrust(actor, targetActor, maneuver)
+    // "If you target a Character turned into an Item with the Transfiguration Maneuver,
+    // turn them back to normal." No Clash, no Item named, nothing rolled - and the Actions
+    // and the Ki are already paid, because the entry describes a use of the Maneuver and
+    // takes nothing off its cost.
+    //
+    // "A Character turned into an Item" is one who has been through the second Clash, not
+    // one who is merely Transfigured: that is the phrase the entry uses three paragraphs
+    // earlier, and it is the only reading where this is worth an Action.
+    : (maneuver.transfiguration && isAnItem(targetActor))
+    ? await revertTransfiguration(actor, targetActor, maneuver)
+    : maneuver.transfiguration
+    ? await postTransfiguration(actor, targetActor, maneuver)
     // Two of the Magic Trick's three effects open its Clash and the third opens nothing.
     // Asked before the Clash routes below, so the third does not fall into one.
     : (maneuver.magicTrick && (trick === "move"))
@@ -2262,6 +2325,7 @@ export function maneuverItemFrom(definition) {
       powerDrain: Boolean(definition.powerDrain),
       sense: Boolean(definition.sense),
       terrify: Boolean(definition.terrify),
+      transfiguration: Boolean(definition.transfiguration),
       outsideDiminishing: Boolean(definition.outsideDiminishing),
       tailAttack: Boolean(definition.tailAttack),
       kiCostCoversProfile: Boolean(definition.kiCostCoversProfile),

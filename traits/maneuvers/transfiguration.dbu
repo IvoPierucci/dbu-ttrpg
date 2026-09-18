@@ -1,0 +1,242 @@
+id: transfiguration
+name: Transfiguration
+type: standard
+actionCost: 2
+kiCostPerTier: 10
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+transfiguration: true
+exploitable: >
+  All adjacent Opponents. If you are knocked through a Health Threshold due to an
+  Attacking Maneuver from the Exploit Maneuver in response to this Maneuver, you
+  automatically fail the Strike Roll for this Maneuver's effects.
+resource: anitem
+resourceLabel: An Item
+resourceMax: 1
+resourceInternal: true
+source: Core Rule
+description: >
+  Turn an Opponent in your Melee Range into an object. A Clash of your Strike against
+  their Strike or Dodge leaves them Transfigured for the Encounter; a Might Clash after it
+  makes them the Item outright, unable to act - and destroying that Item kills them.
+text: >
+  Transfiguration Maneuver [1/Round]: Transform your target into an object of some kind.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 2 Actions
+  –Minions: Non-Minion
+  –KP Cost: 10(T)
+  –Exploitable: All adjacent Opponents. If you are knocked through a Health Threshold due
+  to an Attacking Maneuver from the Exploit Maneuver in response to this Maneuver, you
+  automatically fail the Strike Roll for this Maneuver’s effects.
+  –Effect: Make a Clash (Physical Strike vs Strike/Dodge) against an Opponent within your
+  Melee Range. If you win, choose an Item – your Opponent becomes that Item until the end
+  of the Combat Encounter and has their Size Category changed to suit this Item (your ARC
+  decides). This Opponent is Transfigured (see — Transfigured).
+
+  After your Opponent becomes an Item, make a Might Clash against that Opponent, though
+  if that Opponent’s Tier of Power is higher than yours, reduce your Dice Score for this
+  Clash by 1(T). If you win this second Clash, the Transfigured Opponent, for all intents
+  and purposes, becomes that Item and cannot make any type of Maneuver until the end of
+  the Combat Encounter (after which, if they are still alive, they return to normal). If
+  that Item would be destroyed or used up (such as a Snack), that Character dies. They
+  must spend a Karma Point to avoid dying and have their body appear in the closest
+  unoccupied Square. They are still Defeated.
+
+  If you target a Character turned into an Item with the Transfiguration Maneuver, turn
+  them back to normal.
+
+  A Character targeted by this Maneuver may spend 1 Counter Action. If they do, and they
+  beat the initial Clash for the effects of the Transfiguration Maneuver, then you must
+  change the target of this use of the Transfiguration Maneuver to yourself and make the
+  rolls as if you were targeted by another Character (all rolls involved become Urgent).
+
+---
+
+# --- Two Clashes, in sequence rather than by choice -----------------------------------------
+#
+# The Thrust's shape, and the second Maneuver here to have it: win the first and a second
+# one follows. What differs is that the Thrust's second Clash is one of two effects a player
+# chooses between, and this one simply comes next - "after your Opponent becomes an Item,
+# make a Might Clash against that Opponent". Nothing is chosen, so nothing is asked.
+#
+# A tie goes to the Defender in both, here as everywhere else.
+#
+# `transfiguration: true` rather than a script, for the reason the Thrust gives: a script
+# can neither open a Clash nor wait for one to land.
+#
+# --- "Physical Strike" -----------------------------------------------------------------------
+#
+# There is one Strike Roll in this system. A Foundation decides which Damage Attribute the
+# Wound Roll reads and nothing about Strike, so "Physical Strike" names the kind of attack
+# this stands in for rather than a second Strike value to look up.
+#
+# Built as the Strike Roll, which is also what the Grapple Check and the Thrust use for
+# "(Strike vs Strike/Dodge)". If a per-Foundation Strike ever exists, this is the line that
+# would want changing, and it is the only one.
+#
+# The slash on the other side is a choice made by whoever is rolling it, as it is in every
+# other "Strike/Dodge" here.
+#
+# --- The Item ---------------------------------------------------------------------------------
+#
+# "Choose an Item." There are no objects in this system - no equipment, no inventory, and a
+# Foundry Item here is a Maneuver or a Talent - so what is chosen is a name, typed by the
+# player who won the Clash.
+#
+# Asked on the card rather than when the Maneuver is used, because the entry asks it after
+# the Clash is won: naming a teacup for a Clash you then lose is a question that should not
+# have been put.
+#
+# Kept on the character, not only on the card. "For all intents and purposes, becomes that
+# Item" lasts the rest of the Encounter, and the card that said which Item scrolls away
+# inside a round.
+#
+# "Has their Size Category changed to suit this Item (your ARC decides)." The ARC decides,
+# so nothing here does. Said on the card, with the Slot that would change a Size Category
+# named, so whoever is running it knows where to put the answer if they want it recorded.
+#
+# --- The Might Clash's penalty ------------------------------------------------------------------
+#
+# "If that Opponent's Tier of Power is higher than yours, reduce your Dice Score for this
+# Clash by 1(T)." The second rule in these rules to set the two sides' Tiers against each
+# other - the Terrify's -2 is the first, and this one is scaled where that one is flat.
+#
+# Yours, not theirs: a row on the challenger's side. Strictly higher, so equal Tiers are
+# not higher. And 1(T) of the challenger's own Tier of Power, which is what (T) means on a
+# number that belongs to whoever is rolling it.
+#
+# --- Becoming the Item outright ------------------------------------------------------------------
+#
+# "Cannot make any type of Maneuver until the end of the Combat Encounter."
+#
+# `forbid maneuvers` is the Slot for that and it is already read at the door - it is what
+# Sleeping and Slowed at three stacks write. What it needed was somewhere to be written
+# from, on a clock nobody else's could take off, so it is held as a Resource with an
+# Encounter clock and read by the passive below.
+#
+# The passive is in this file and runs on everybody, which is how the Blockade does the
+# same trick: every character carries a copy of the Core Maneuvers, so a Core Maneuver's
+# passive is the one place a rule can be read on the character it binds. The character
+# being turned into a teacup does not own the Transfiguration that did it - what they own
+# is their own copy of it.
+#
+# Not folded into the Transfigured Combat Condition. Transfigured is what losing the FIRST
+# Clash leaves, and a Transfigured Character still fights: its own entry gives them -2(bT)
+# on Combat Rolls and Physical attacks only, which is a rule about somebody who can still
+# act. Only the second Clash stops them.
+#
+# "After which, if they are still alive, they return to normal." The Encounter clock is the
+# whole of that: it comes off when the Encounter ends, and the Transfigured Condition is on
+# the same clock. "If they are still alive" needs nothing - a dead Character is not brought
+# back by a clock running out.
+#
+# --- Dying as an Item ------------------------------------------------------------------------------
+#
+# "If that Item would be destroyed or used up (such as a Snack), that Character dies. They
+# must spend a Karma Point to avoid dying and have their body appear in the closest
+# unoccupied Square. They are still Defeated."
+#
+# Nothing here can know that a teacup was broken, so it is a button on the settled card
+# rather than something watched for. Pressed by whoever is running the fight.
+#
+# What follows is built: they are Defeated either way, and the Karma Point is offered to
+# whoever owns them rather than spent for them - "they MUST spend a Karma Point to avoid
+# dying" is a choice with a price, and a system that spends somebody's last Karma Point
+# without asking has made the choice for them.
+#
+# "Have their body appear in the closest unoccupied Square" is said and not done, like
+# every Square here.
+#
+# Read carefully, "that Character dies" and "they are still Defeated" are not the same
+# outcome twice: the Karma Point buys you out of dying and not out of being Defeated. So
+# the button leads to Defeated in both branches and the difference is whether they are also
+# dead - which this system records as a defeat that was not bought out of, because it has
+# no separate state for dead. Said on the card in those words.
+#
+# --- Turning them back -------------------------------------------------------------------------
+#
+# "If you target a Character turned into an Item with the Transfiguration Maneuver, turn
+# them back to normal."
+#
+# A branch before the Clash: no Clash, no Item named, nothing rolled. It takes the Actions
+# and the Ki like any other use, because the entry describes a use of the Maneuver and
+# takes nothing off its cost.
+#
+# "A Character turned into an Item" is read as one who has been through the second Clash -
+# the one who is the Item - rather than merely Transfigured. That is what the phrase names
+# three paragraphs earlier, and it is also the only reading where this is worth an Action:
+# a merely Transfigured Character can be un-Transfigured by anything that removes a Combat
+# Condition.
+#
+# Whose Transfiguration it was does not matter. The entry says "a Character turned into an
+# Item", not one you turned - so anybody with this Maneuver can undo anybody's.
+#
+# --- The Counter Action ---------------------------------------------------------------------------
+#
+# "A Character targeted by this Maneuver may spend 1 Counter Action. If they do, and they
+# beat the initial Clash for the effects of the Transfiguration Maneuver, then you must
+# change the target of this use of the Transfiguration Maneuver to yourself and make the
+# rolls as if you were targeted by another Character (all rolls involved become Urgent)."
+#
+# Offered on the first Clash's card, to the side it was aimed at, while the Clash is still
+# open - the Counter Action has to be spent before the rolls, since it is what decides what
+# beating them does.
+#
+# "Beat" is beating, not tying. A tie goes to the Defender everywhere here, so a tie is
+# already theirs and the Maneuver already fails - what the Counter Action buys is the part
+# beyond that, and the entry asks for a beat by name.
+#
+# "Make the rolls as if you were targeted by another Character." So the Maneuver stays
+# yours and you are its target: your Strike against your own Strike or Dodge, both sides
+# rolled by you. Which is what the card does - one character on both sides of a Clash,
+# which nothing here had done before and which the machinery took without changes.
+#
+# "All rolls involved become Urgent" - so neither of your own rolls can be failed on
+# purpose to get out of it. Urgent is already a property a roll can carry.
+#
+# A Counter Action spent on a Clash that is then lost is spent: the entry gives nothing
+# back, and the Counter Action bought the chance rather than the outcome.
+#
+# --- What is not built ------------------------------------------------------------------------------
+#
+# The Exploitable line's rider. "If you are knocked through a Health Threshold due to an
+# Attacking Maneuver from the Exploit Maneuver in response to this Maneuver, you
+# automatically fail the Strike Roll for this Maneuver's effects."
+#
+# Three facts have to be joined: that a Threshold was crossed, that the attack that did it
+# came through the Exploit Maneuver, and that the Exploit answered this card. The first two
+# exist - Thresholds are a Moment with a pending list, and an attack carries `provokedBy`.
+# The third does not: an Exploit offer knows which card provoked it, and nothing carries
+# that as far as the damage. So the rider is carried as written on the Exploitable line,
+# where the table reads it, and is not applied.
+#
+# Worth saying what it would do if it were: fail the Strike Roll of the first Clash, which
+# means the Maneuver's effects do not happen - not that the Clash is lost for other
+# purposes, since nothing else hangs on it.
+#
+# "Minions: Non-Minion" - the first Minion line in these rules that is a restriction rather
+# than "Free" or "N/A": it may not be aimed at a Minion. There are no Minions in this
+# system, so there is nothing to refuse.
+#
+# "Within your Melee Range", and the unoccupied Square. Said and not policed, like every
+# distance here.
+#
+# --- How it is gained ---------------------------------------------------------------------------------
+#
+# Not known. No Skill's entry names it, and a Maneuver at 10(T) that turns somebody into a
+# teacup for a whole Encounter reads more like a racial or a Talent than like something two
+# Skill Ranks hand over. Until an entry says, it is one of the Special Maneuvers an effect
+# has to grant.
+
+# --- Cannot act while they are the Item -----------------------------------------------------
+#
+# The Resource is declared in this file's header, since this is the rule that hands it out,
+# and it carries a clock to the end of the Combat Encounter. Read here because this file's
+# passive runs on every character that owns a copy of the Maneuver, which is everybody -
+# and the one being held as a teacup is not the one who used it.
+[passive]
+if (anitem.stacks > 0) {
+    forbid maneuvers;
+}

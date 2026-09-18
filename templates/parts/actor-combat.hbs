@@ -56,6 +56,17 @@
       </div>
       {{/if}}
 
+      {{#if transfigured}}
+      {{! What they were turned into by the Transfiguration Maneuver. The Condition is in
+          the list above; this is the Item, which the rule needs by name for the rest of
+          the Encounter - "for all intents and purposes, becomes that Item". }}
+      <div class="stat stat-charging" data-tooltip="Turned into this until the end of the Combat Encounter. If the Item is destroyed or used up, they die - a Karma Point avoids dying and not being Defeated. Targeting them with the Transfiguration Maneuver turns them back.">
+        <em>Turned into</em>
+        <span>{{transfigured.item}}</span>
+        <i class="stat-note">{{transfigured.note}}</i>
+      </div>
+      {{/if}}
+
       {{#if weather}}
       {{! What Battle Weathers count as for this character. A row of its own rather than
           part of a mark: it is a fact about them as they stand, whatever put it there. }}

@@ -714,6 +714,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         }
       : null;
 
+    // What Item they were turned into, and whether the second Clash landed. The Condition
+    // says they are Transfigured; this says what they are, which is the thing the table
+    // needs for the rest of the Encounter and which the card that named it does not keep.
+    const asItem = (Number(system.resources?.anitem?.stacks) || 0) > 0;
+    context.transfigured = system.transfigured?.item
+      ? {
+          item: system.transfigured.item,
+          note: asItem
+            ? "An Item outright: no Maneuvers of any kind until the Encounter ends"
+            : "Transfigured, but still able to act"
+        }
+      : null;
+
     context.weather = weatherTiers
       ? {
           tiers: weatherTiers,

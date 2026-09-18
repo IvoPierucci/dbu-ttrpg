@@ -325,6 +325,351 @@ async function applyClash(messageId, clash) {
   if (clash.terrify && clash.result && !clash.terrify.applied) {
     await settleTerrify(message, clash);
   }
+
+  if (clash.transfiguration && clash.result && !clash.transfiguration.applied) {
+    await settleTransfiguration(message, clash);
+  }
+}
+
+/**
+ * Open the Transfiguration's first Clash: "(Physical Strike vs Strike/Dodge)".
+ *
+ * The Grapple Check's pair of rolls, which is the only Strike-against-Strike-or-Dodge
+ * there is here - there is one Strike Roll in this system, and a Foundation decides what
+ * the Wound reads rather than what Strike is.
+ *
+ * `urgent` is the Counter Action's doing. "Make the rolls as if you were targeted by
+ * another Character (all rolls involved become Urgent)" - so a re-aimed Transfiguration
+ * opens with one character on both sides and neither of their rolls can be failed on
+ * purpose.
+ */
+export async function postTransfiguration(actor, target, maneuver, { urgent = false } = {}) {
+  const aimedAtSelf = actor.uuid === target.uuid;
+
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        // A Standard Maneuver, so an Instant can answer it - except when it is the
+        // re-aimed one, which is not a Maneuver being used but the same use turned round.
+        [RESPONDABLE_FLAG]: !urgent && isRespondable(maneuver),
+        [CLASH_FLAG]: {
+          category: "strike",
+          clashLabel: "Transfiguration",
+          maneuverName: maneuver.name,
+          reason: aimedAtSelf
+            ? `${actor.name} has their own Transfiguration turned back on them. Both rolls `
+              + "are theirs, and both are Urgent."
+            : `${actor.name} tries to turn ${target.name} into an object. Win and they are `
+              + "Transfigured, and a Might Clash follows.",
+          challengerUuid: actor.uuid,
+          challengerName: actor.name,
+          defenderUuid: target.uuid,
+          defenderName: target.name,
+          defenderRoll: "",
+          // Neither side may fail on purpose once the Counter Action has turned this round.
+          urgent,
+          transfiguration: {
+            stage: "strike",
+            applied: false,
+            // What the winner named it, filled in on the card once there is a winner.
+            item: "",
+            // Whether the target has paid a Counter Action to turn this back on its user.
+            // Spent while the Clash is still open, because it is what decides what beating
+            // them does - and it cannot be offered on a Clash that is already aimed at
+            // its own user.
+            counter: false,
+            counterOffered: !aimedAtSelf
+          },
+          ready: [],
+          result: null
+        }
+      }
+    }
+  });
+}
+
+/**
+ * What a settled Transfiguration Clash leaves, at whichever of its two stages this is.
+ *
+ * The first is "(Physical Strike vs Strike/Dodge)". Winning it buys the Item and the
+ * Transfigured Combat Condition; losing it does nothing, unless the target paid a Counter
+ * Action and beat it - in which case the whole use turns round onto whoever threw it.
+ *
+ * The second is the Might Clash that follows. Winning that makes them the Item outright.
+ *
+ * A tie goes to the Defender in both, here as everywhere.
+ */
+async function settleTransfiguration(message, clash) {
+  const caster = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!caster || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, transfiguration: { ...clash.transfiguration, applied: true }
+  });
+
+  const winner = whoWonClash(clash.result);
+
+  if (clash.transfiguration.stage === "might") {
+    return settleTransfigurationMight(message, clash, caster, target, winner);
+  }
+
+  if (winner === "challenger") {
+    await settledNote(message,
+      `${caster.name} has ${target.name}. They choose what ${target.name} has become.`);
+    return;
+  }
+
+  // "If they do, and they beat the initial Clash." Beating, not tying: a tie is already
+  // the Defender's and the Maneuver already fails, so what the Counter Action buys is the
+  // part beyond that - and the entry asks for a beat by name.
+  const beatIt = !clash.result.challenger.succeeded
+    && (clash.result.defender.succeeded
+      || (clash.result.defender.total > clash.result.challenger.total));
+
+  if (clash.transfiguration.counter && beatIt) {
+    await settledNote(message,
+      `${target.name} spent a Counter Action and beat it, so the Transfiguration turns `
+      + `back on ${caster.name} - who now rolls both sides of it, Urgently.`);
+
+    // "You must change the target of this use of the Transfiguration Maneuver to
+    // yourself." The Maneuver stays the caster's and the caster is its target, so both
+    // sides of the new Clash are them.
+    await postTransfiguration(caster, caster,
+      { name: clash.maneuverName, type: "standard" }, { urgent: true });
+    return;
+  }
+
+  await settledNote(message, clash.transfiguration.counter
+    ? `${target.name} holds their shape, but did not beat it outright - the Counter Action `
+      + "is spent and nothing turns back."
+    : `${target.name} holds their shape.`);
+}
+
+/**
+ * The Might Clash that follows becoming an Item, settled.
+ *
+ * Winning it is the whole of the Maneuver: "the Transfigured Opponent, for all intents and
+ * purposes, becomes that Item and cannot make any type of Maneuver until the end of the
+ * Combat Encounter". Held as a Resource with an Encounter clock, read by a passive in the
+ * Maneuver's own file - which is the only passive that runs on the character it binds.
+ *
+ * Losing it leaves them Transfigured and able to act, which is what Transfigured's own
+ * entry is about: -2(bT) on Combat Rolls, Physical attacks only, and no Signature
+ * Techniques. A rule about somebody who is still in the fight.
+ */
+async function settleTransfigurationMight(message, clash, caster, target, winner) {
+  const item = clash.transfiguration.item || "an object";
+
+  if (winner !== "challenger") {
+    await settledNote(message,
+      `${target.name} is still ${item} and still Transfigured, but not only ${item}: they `
+      + "can act.");
+    return;
+  }
+
+  await setResource(target, "anitem", 1);
+  await lasting(caster, {
+    kind: KINDS.RESOURCE,
+    key: "anitem",
+    edge: EDGES.ENCOUNTER,
+    on: target.uuid,
+    source: "Transfiguration"
+  });
+
+  await settledNote(message,
+    `${target.name} is ${item}, for all intents and purposes, and can make no Maneuver of `
+    + "any kind until the Encounter ends - after which, if they are alive, they return to "
+    + `normal. If ${item} is destroyed or used up, ${target.name} dies.`);
+}
+
+/**
+ * "Choose an Item." Named by whoever won the first Clash, on the card, after they won it.
+ *
+ * There are no objects in this system, so what is chosen is a name. It is written onto the
+ * character as well as the card: "for all intents and purposes, becomes that Item" lasts
+ * the Encounter and the card scrolls away inside a round.
+ *
+ * Naming it is also what applies the Condition and opens the Might Clash, because the
+ * entry puts them in that order - "your Opponent becomes that Item... after your Opponent
+ * becomes an Item, make a Might Clash".
+ */
+async function chooseTransfiguredItem(message, clash) {
+  if (clash.transfiguration?.item) return;
+
+  const caster = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!caster || !target) return;
+
+  const named = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${clash.maneuverName} - what have they become?` },
+    content: `
+      <p>${Handlebars.escapeExpression(target.name)} becomes this until the end of the
+        Combat Encounter.</p>
+      <label class="dbu-wager">
+        <span>Item</span>
+        <input type="text" name="item" value="" placeholder="a teacup" autofocus/>
+        <em>Their Size Category changes to suit it - your ARC decides, and the Slot for it
+          is <code>size.steps</code>.</em>
+      </label>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) =>
+          dialog.element.querySelector('input[name="item"]').value.trim() || "an object"
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if ((typeof named !== "string") || !named || (named === "cancel")) return;
+
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "transfigured", 1);
+  await requestActorUpdate(target, {
+    "system.transfigured.item": named,
+    "system.transfigured.byName": caster.name
+  });
+
+  await lasting(caster, {
+    kind: KINDS.CONDITION,
+    key: "transfigured",
+    edge: EDGES.ENCOUNTER,
+    on: target.uuid,
+    source: "Transfiguration"
+  });
+
+  await requestEdit(message, {
+    type: "clash",
+    clash: { ...clash, transfiguration: { ...clash.transfiguration, item: named } }
+  });
+
+  await settledNote(message,
+    `${target.name} is ${named}, and Transfigured until the Encounter ends. Their Size `
+    + "Category changes to suit it, which is the ARC's to say.");
+
+  // "After your Opponent becomes an Item, make a Might Clash against that Opponent."
+  await postMightClash(caster, target, {
+    maneuverName: clash.maneuverName,
+    clashLabel: "Transfiguration",
+    reason: `${caster.name} presses it home. Win and ${target.name} is ${named} outright, `
+      + "unable to act for the rest of the Encounter.",
+    transfiguration: { stage: "might", applied: false, item: named, counter: false,
+                       counterOffered: false }
+  });
+}
+
+/**
+ * A Counter Action spent to turn the Maneuver back on whoever threw it.
+ *
+ * Spent while the Clash is still open: it is what decides what beating the Clash does, so
+ * it cannot be declared after the dice. Refused if the Clash has already been rolled, and
+ * refused by `spendActions` if there is no Counter Action to spend - which also refuses it
+ * outside a Combat Encounter, where nothing would hand it back.
+ */
+async function counterTransfiguration(message, clash) {
+  if (clash.result || clash.transfiguration?.counter) return;
+
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return;
+
+  const { spendActions } = await import("./combat.mjs");
+  if (!await spendActions(target, 1, "counter")) return;
+
+  await requestEdit(message, {
+    type: "clash",
+    clash: { ...clash, transfiguration: { ...clash.transfiguration, counter: true } }
+  });
+
+  await settledNote(message,
+    `${target.name} spends a Counter Action. Beat the Clash and the Transfiguration turns `
+    + `back on ${clash.challengerName}.`);
+}
+
+/**
+ * "If that Item would be destroyed or used up (such as a Snack), that Character dies."
+ *
+ * Nothing here can know that a teacup was broken, so this is a button pressed by whoever
+ * is running the fight rather than something watched for.
+ *
+ * "They must spend a Karma Point to avoid dying." Offered rather than spent for them: it
+ * is a choice with a price, and a system that spends somebody's last Karma Point without
+ * asking has made the choice for them.
+ *
+ * "They are still Defeated." Either way - the Karma Point buys you out of dying and not
+ * out of being Defeated. This system has no separate record of being dead, so what it
+ * writes is the defeat, and the card says which of the two happened.
+ */
+async function transfigurationDestroyed(message, clash) {
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return;
+
+  const item = clash.transfiguration?.item || "the object";
+
+  const answer = await pick(
+    `${item} is destroyed`,
+    `${target.name} dies. They may spend a Karma Point to avoid dying - they are Defeated `
+    + "either way.",
+    [
+      { action: "karma", label: `Spend a Karma Point (${target.system.karma ?? 0} left)` },
+      { action: "die", label: "Let them die" }
+    ]);
+  if (!answer) return;
+
+  if (answer === "karma") {
+    const { spendKarma } = await import("./karma.mjs");
+    // A Karmic Effect's own shape, since that is what the spender takes: a name for the
+    // dialog it may open and a price. This one's price is stated, so nothing is asked and
+    // the refusal for not having it is the one every Karmic Effect gets.
+    if (!await spendKarma(target, { name: "Transfiguration", cost: 1 })) return;
+  }
+
+  // "They are still Defeated" - either way, so this is written in both branches. Being
+  // Defeated is not a field: it is derived from Life Points at nothing, and writing it
+  // directly wrote nothing at all. So what is written is the Life, which is also what
+  // makes the existing defeat machinery notice - the Moments, the card, Undying's chance
+  // to reach through.
+  //
+  // Which leaves dying and being Defeated recorded the same way, because this system has
+  // no separate record of being dead. The card says which of the two it was.
+  await reduceLifePoints(target, target.system.life.value,
+    { reason: `${item} destroyed - Transfiguration` });
+
+  await settledNote(message, (answer === "karma")
+    ? `${item} is destroyed. ${target.name} spends a Karma Point and lives - their body `
+      + "appears in the closest unoccupied Square. They are still Defeated."
+    : `${item} is destroyed, and ${target.name} dies with it. Defeated.`);
+}
+
+/**
+ * The Transfiguration's Might Clash penalty for punching up.
+ *
+ * "If that Opponent's Tier of Power is higher than yours, reduce your Dice Score for this
+ * Clash by 1(T)." The challenger's row alone, and scaled where the Terrify's -2 is flat -
+ * 1(T) of the challenger's own Tier, which is what (T) means on a number belonging to
+ * whoever is rolling it.
+ *
+ * Strictly higher: equal Tiers are not higher.
+ */
+function transfigurationPenalty(actor, clash, uuid) {
+  if (!clash.transfiguration) return [];
+  if (uuid !== clash.challengerUuid) return [];
+
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return [];
+
+  const theirs = Math.max(1, target.system.tierOfPower ?? 1);
+  const mine = Math.max(1, actor.system.tierOfPower ?? 1);
+  if (theirs <= mine) return [];
+
+  return [{ label: "Transfiguration - higher Tier", written: "-1(T)", value: -mine }];
 }
 
 /**
@@ -3932,7 +4277,11 @@ const CLASH_ROLLS = ({
     of: (actor) => ({ label: "Might", value: actor.system.might }),
     // Might is not a Skill, so it does not take a Skill's flat critical die - it takes
     // the character's own, which grows with the Tier of Power.
-    criticalDice: (actor) => actor.system.dice.critical.formula
+    criticalDice: (actor) => actor.system.dice.critical.formula,
+
+    // The first thing to put a row on a Might Clash: "if that Opponent's Tier of Power is
+    // higher than yours, reduce your Dice Score for this Clash by 1(T)."
+    parts: (actor, clash, uuid) => transfigurationPenalty(actor, clash, uuid)
   },
 
   /**
@@ -4345,8 +4694,8 @@ export async function postThrust(actor, target, maneuver) {
  * something else - winning one is never the point by itself.
  */
 export async function postMightClash(actor, target,
-                                     { maneuverName, reason = "", collision = null,
-                                       grapple = null } = {}) {
+                                     { maneuverName, clashLabel = "", reason = "",
+                                       collision = null, grapple = null, ...leaves } = {}) {
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: "",
@@ -4356,8 +4705,15 @@ export async function postMightClash(actor, target,
         [RESPONDABLE_FLAG]: false,
         [CLASH_FLAG]: {
           category: "might",
+          clashLabel,
           maneuverName,
           reason,
+          // What settling this one leaves behind, whatever it is called - the same
+          // arrangement a Skill Clash and a Saving Throw Clash have, and for the same
+          // reason: naming the keys one at a time is how the Blockade's payload went
+          // missing. The Grapple's is still named below because it was here first and is
+          // read by more than the settlement.
+          ...leaves,
           // What winning this one lets the challenger do. Knockback sets it: win and
           // the movement can cost the loser Life Points. Carried here rather than
           // looked up from the attack, because this card is the one that knows who
@@ -4523,6 +4879,37 @@ function renderSkillClash(message, html) {
       container.append(out);
     }
 
+    // "If you win, choose an Item." Whoever won the first Clash names it, and naming it
+    // is what applies the Condition and opens the Might Clash - the entry puts them in
+    // that order.
+    if (clash.transfiguration && (clash.transfiguration.stage === "strike") && wonIt
+      && !clash.transfiguration.item && challenger?.isOwner) {
+      const name = document.createElement("button");
+      name.type = "button";
+      name.className = "dbu-clash-button";
+      name.textContent = "Choose the Item";
+      name.dataset.tooltip = "What they become until the end of the Combat Encounter. "
+        + "Their Size Category changes to suit it, which is the ARC's to say. A Might "
+        + "Clash follows.";
+      name.addEventListener("click", () => chooseTransfiguredItem(message, clash));
+      container.append(name);
+    }
+
+    // "If that Item would be destroyed or used up, that Character dies." Nothing here can
+    // know that a teacup broke, so it is pressed by whoever is running the fight - which
+    // is also who may spend the Karma Point, since the one being spent is the teacup's.
+    if (clash.transfiguration && (clash.transfiguration.stage === "might") && wonIt
+      && (defender?.isOwner || game.user.isGM)) {
+      const broken = document.createElement("button");
+      broken.type = "button";
+      broken.className = "dbu-clash-button";
+      broken.textContent = `${clash.transfiguration.item || "The Item"} is destroyed`;
+      broken.dataset.tooltip = "They die, unless they spend a Karma Point - and are "
+        + "Defeated either way. Their body appears in the closest unoccupied Square.";
+      broken.addEventListener("click", () => transfigurationDestroyed(message, clash));
+      container.append(broken);
+    }
+
     if (clash.collision && wonIt && !clash.collisionApplied && challenger?.isOwner) {
       const collision = document.createElement("button");
       collision.type = "button";
@@ -4538,10 +4925,28 @@ function renderSkillClash(message, html) {
     return;
   }
 
+  // "A Character targeted by this Maneuver may spend 1 Counter Action." Offered while the
+  // Clash is open, because it is what decides what beating it does - and only to the side
+  // it was aimed at.
+  if (clash.transfiguration?.counterOffered && !clash.transfiguration.counter) {
+    const defender = fromUuidSync(clash.defenderUuid);
+    if (defender?.isOwner) {
+      const turn = document.createElement("button");
+      turn.type = "button";
+      turn.className = "dbu-clash-button";
+      turn.textContent = "Spend a Counter Action";
+      turn.dataset.tooltip = "Beat this Clash and the Transfiguration turns back on "
+        + "whoever threw it - they become its target and roll both sides, Urgently. The "
+        + "Counter Action is spent whether you beat it or not.";
+      turn.addEventListener("click", () => counterTransfiguration(message, clash));
+      container.append(turn);
+    }
+  }
+
   // Both sides confirm the same way, and each only for themselves. The challenger has
   // as much to declare as the defender does - a willing failure, an effect - so the
   // card asks them both rather than rolling the challenger's dice unasked.
-  for (const uuid of clashParticipants(clash)) {
+  for (const uuid of new Set(clashParticipants(clash))) {
     if ((clash.ready ?? []).includes(uuid)) continue;
 
     const actor = fromUuidSync(uuid);
@@ -4607,7 +5012,10 @@ async function clashStage(message, actor) {
   const answer = kind.choose ? await kind.choose(opened, actor) : {};
   if (!answer) return;
 
-  if (!await prepareRoll(actor, [], `${actor.name}: before the roll`)) return;
+  // "All rolls involved become Urgent." A re-aimed Transfiguration says so on the card,
+  // and Urgent here means what it means everywhere: it cannot be failed on purpose.
+  if (!await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
+    { urgent: Boolean(opened.urgent) })) return;
 
   // Read fresh rather than trusting what the card was drawn with: the other side may
   // have confirmed while this dialog was open, and writing a stale copy back would

@@ -199,6 +199,54 @@ export async function endedBy(actor, moment) {
   return ran;
 }
 
+/**
+ * Drop a clock because the thing it was counting has been undone early.
+ *
+ * Not the same as running out. `edgeReached` names whatever ran out so the table can be
+ * told, and it names it whether or not the thing was still there - so a Condition taken
+ * off early leaves a clock that announces itself at the edge for something that has been
+ * gone for rounds. This drops the entry instead, and takes nothing off anybody: the caller
+ * has already done that, which is why it is calling.
+ *
+ * Swept the way `endedBy` sweeps, and for the same reason: a clock is not always kept by
+ * the character it is about. The Transfiguration's are kept by whoever cast it and name
+ * the character who was turned into a teacup.
+ *
+ * @param {Actor} subject   who the clock is about
+ * @param {string} kind     one of KINDS
+ * @param {string[]} keys   which keys to drop
+ * @returns {Promise<number>} how many entries were dropped
+ */
+export async function clockOff(subject, kind, keys = []) {
+  if (!subject || !kind || !keys.length) return 0;
+
+  const wanted = new Set(keys);
+  const others = (globalThis.canvas?.tokens?.placeables ?? [])
+    .map(token => token.actor)
+    .filter(other => other && (other.uuid !== subject.uuid));
+
+  let dropped = 0;
+  const seen = new Set();
+
+  for (const owner of [subject, ...others]) {
+    if (seen.has(owner.uuid)) continue;
+    seen.add(owner.uuid);
+
+    const held = owner.system.timed ?? [];
+    const kept = held.filter(entry => !(
+      (entry.kind === kind)
+      && wanted.has(entry.key)
+      && ((entry.on || owner.uuid) === subject.uuid)));
+
+    if (kept.length === held.length) continue;
+
+    dropped += held.length - kept.length;
+    await owner.update({ "system.timed": kept });
+  }
+
+  return dropped;
+}
+
 /** Everything on a clock that ends with the Encounter, taken off as it ends. */
 export async function encounterEnded(actor) {
   const held = actor.system.timed ?? [];
