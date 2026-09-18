@@ -200,16 +200,9 @@
       <div class="stat" data-tooltip="1(bT) per failed Steadfast Check, off Strike, Dodge and Wound">
         <em>Combat Rolls</em><span>-{{system.threshold.penalty}}</span>
       </div>
-      <div class="stat" data-tooltip="Power Level + 1, less one per failure">
+      <div class="stat" data-tooltip="A Stress Test is 1d10 plus this. Power Level + 1, less one per Steadfast failure.">
         <em>Stress Bonus</em><span>{{system.stressBonus}}</span>
       </div>
-      {{#if stressDice}}
-      {{! What the Test itself rolls, where something has changed it. Beside the number it
-          is measured against, because the two are read together or not at all. }}
-      <div class="stat stat-charging" data-tooltip="{{stressDice.note}}">
-        <em>Stress Test</em><span>{{stressDice.written}}</span>
-      </div>
-      {{/if}}
     </div>
   </section>
 

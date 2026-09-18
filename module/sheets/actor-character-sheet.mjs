@@ -850,20 +850,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .filter(maneuver => maneuver.attacking)
       .map(maneuver => ({ itemId: maneuver.itemId, name: maneuver.name }));
 
-    // What a Stress Test rolls, where something has changed it. Said rather than applied:
-    // nothing here rolls one, so this is for whoever is holding the Transformation rules.
-    const stressDice = system.stressDice ?? 0;
-    context.stressDice = stressDice
-      ? {
-          value: stressDice,
-          written: `${stressDice > 0 ? "+" : ""}${stressDice}`,
-          note: `Stress Tests roll ${Math.abs(stressDice)} ${
-            stressDice > 0 ? "higher" : "lower"} for you. Said here rather than applied: `
-            + "nothing in this system rolls a Stress Test, because Transformations are "
-            + "not in it yet."
-        }
-      : null;
-
     context.weather = weatherTiers
       ? {
           tiers: weatherTiers,

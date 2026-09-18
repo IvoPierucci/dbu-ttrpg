@@ -56,13 +56,17 @@ text: >
 #
 # "Reduce the Dice Score of your Stress Tests by 1(WT)."
 #
-# Nothing in this system rolls a Stress Test. They belong to Transformations, which are not
-# in it yet - so this is written to `stress.dice`, said on the Combat tab beside the Stress
-# Bonus, and applied by whoever is holding the Transformation rules.
+# A Stress Test is 1d10 plus your Stress Bonus, so the Bonus *is* the Dice Score above the
+# die - reducing one is reducing the other, and there is no second number for the roll.
 #
-# Which is the same shape `weather.tiers` has had since the Brace Maneuver, and for the
-# same reason: a subsystem that has not arrived rather than a rule anybody chose to leave
-# out. When Stress Tests exist there is one number to read and one place to read it from.
+# Written to `stress.dice` at first, a Slot of its own said on the sheet and applied by the
+# table, on the reasoning that nothing here rolls a Stress Test. That was a number invented
+# beside one that already existed and did the job, which is how two values end up
+# disagreeing about the same thing. The Slot is gone.
+#
+# So this one is applied rather than said, even though the Test itself belongs to
+# Transformations and there are none yet: whenever one is rolled, the Bonus it uses is the
+# one on the sheet, and the poison is already in it.
 #
 # --- Cataclysmic (3): every Combat Roll ----------------------------------------------------------
 #
@@ -84,7 +88,7 @@ text: >
 botchRange.combat min= 2(WT);
 
 if (battlefield.weather.tier >= 2) {
-  stress.dice -= 1(WT);
+  stressBonus -= 1(WT);
 }
 
 if (battlefield.weather.tier >= 3) {

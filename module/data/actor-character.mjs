@@ -2055,9 +2055,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.threshold.penalty = Math.max(0,
       withEffects(this, "threshold.penalty", this.threshold.penalty));
 
-    // Stress Bonus is what a Transformation's Stress Test is measured against; each
-    // Steadfast failure takes 1 off it, and Determination adds to it - the only rule
-    // Personality has.
+    // Stress Bonus. A Stress Test is 1d10 plus this, so it is not what the Test is
+    // measured against - it is the Test, above the die. Each Steadfast failure takes 1
+    // off it, Determination adds to it, and Vile Weather takes 1(WT).
     this.stressBonus = withEffects(this, "stressBonus",
       (this.powerLevel + 1) - failures + this.determination, {
         parts: [
@@ -2066,11 +2066,6 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
           { label: "Determination", value: this.determination }
         ]
       });
-
-    // What a Stress Test rolls, beside what it is measured against. Nothing rolls one
-    // here, so this is a number the sheet says and the table applies - and when
-    // Transformations arrive there is one place to read it from.
-    this.stressDice = slot(this, "stress.dice");
 
     // Might: higher of Force / Magic Modifier.
     //
