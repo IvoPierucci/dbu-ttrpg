@@ -3747,6 +3747,12 @@ const CLASH_ROLLS = ({
         value: actor.system.skills[key].roll
       };
     },
+
+    // "Increase the Dice Score of your Skill Checks ... in Clashes against a Seen Opponent
+    // by 2." Here rather than on the Skill itself, because "in Clashes" is the whole of the
+    // scope and "against a Seen Opponent" has no meaning off one.
+    parts: (actor, clash, uuid) => seenBonus(actor, clashOpponent(clash, uuid), "skill"),
+
     criticalDice: () => DBUCharacterData.SKILL_CRITICAL_DIE,
 
     prompt: (actor, clash, uuid) => ((uuid === clash.defenderUuid)
@@ -3892,6 +3898,10 @@ const CLASH_ROLLS = ({
     },
 
     criticalDice: (actor) => actor.system.dice.critical.formula,
+
+    // "...and Saving Throws in Clashes against a Seen Opponent by ... 1(T)." The other
+    // half of the same sentence, and a different number - which is why they are two rows.
+    parts: (actor, clash, uuid) => seenBonus(actor, clashOpponent(clash, uuid), "save"),
 
     options: (actor, clash, uuid) => ({
       criticalTarget: actor.system.savingThrows[savePicked(clash, uuid)]?.criticalTarget ?? null,
@@ -6766,6 +6776,47 @@ function rapidMovementDodge(actor, attack) {
 
   const tier = Math.max(1, actor.system.tierOfPower ?? 1);
   return [{ label: "Rapid Movement", written: "+1(T)", value: tier }];
+}
+
+/**
+ * Who this side of a Clash is rolling against.
+ *
+ * A Clash has exactly two sides, so the other one is whichever this is not - and it is
+ * looked up rather than passed in because the only thing on the card is a uuid.
+ */
+function clashOpponent(clash, uuid) {
+  const other = (uuid === clash.defenderUuid) ? clash.challengerUuid : clash.defenderUuid;
+  return other ? fromUuidSync(other) : null;
+}
+
+/**
+ * What Intuit is worth to one character against one other, on one kind of roll.
+ *
+ * "Increase the Dice Score of your Skill Checks and Saving Throws in Clashes against a
+ * Seen Opponent by 2 and 1(T) respectively." Two numbers for two rolls, so this is asked
+ * per family and answers for one of them: flat 2 on a Skill Check, 1(T) on a Saving Throw,
+ * and nothing on anything else - a Might Clash is neither, and a Grapple Check is a Combat
+ * Roll, which is Analysis's half of the pair.
+ *
+ * Yours against the Opponent you read, which the clock is what answers: the mark is on them
+ * and the entry timing it is on you, naming them. A character who read somebody else gets
+ * nothing here, and neither does one whose mark has run out.
+ *
+ * Returned as a list so it drops out of a breakdown entirely rather than showing as a row
+ * worth nothing.
+ */
+function seenBonus(actor, target, family) {
+  if (!actor || !target) return [];
+
+  const theirs = (actor.system.timed ?? []).some(entry =>
+    (entry?.kind === "condition") && (entry.key === "seen") && (entry.on === target.uuid));
+  if (!theirs) return [];
+
+  if (family === "skill") return [{ label: "Intuit", written: "+2", value: 2 }];
+  if (family !== "save") return [];
+
+  const tier = Math.max(1, actor.system.tierOfPower ?? 1);
+  return [{ label: "Intuit", written: "+1(T)", value: tier }];
 }
 
 /**

@@ -2153,6 +2153,7 @@ export async function loadManeuvers() {
     delays: Boolean(trait.delays),
     special: Boolean(trait.special),
     analysis: Boolean(trait.analysis),
+    intuit: Boolean(trait.intuit),
     dirtyTrick: Boolean(trait.dirtyTrick),
     feint: Boolean(trait.feint),
     holdingBack: Boolean(trait.holdingBack),

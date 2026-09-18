@@ -1141,6 +1141,28 @@ async function analyze(actor, target) {
 }
 
 /**
+ * Mark an Opponent as Seen, with the clock on whoever read them.
+ *
+ * "That Opponent becomes 'Seen' until the end of your next turn." Two characters and one
+ * rule, the same way Analysis splits it: the Condition is theirs and the turn is yours, and
+ * the entry timing it is also the record of who read whom.
+ */
+async function markSeen(actor, target) {
+  const { setCondition } = await import("./conditions.mjs");
+  const { lasting, EDGES, KINDS } = await import("./durations.mjs");
+
+  await setCondition(target, "seen", 1);
+  return lasting(actor, {
+    kind: KINDS.CONDITION,
+    key: "seen",
+    edge: EDGES.END,
+    next: true,
+    on: target.uuid,
+    source: "Intuit"
+  });
+}
+
+/**
  * How far this Movement goes, and whether it is a Rapid one.
  *
  * One dialog, because it is one decision. The Squares are on it: "up to your Boosted
@@ -1277,6 +1299,7 @@ export function definitionOf(item) {
     delays: item.system.delays,
     special: item.system.special,
     analysis: item.system.analysis,
+    intuit: item.system.intuit,
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -1659,6 +1682,10 @@ export async function useManeuver(actor, maneuver) {
   // and that clock is also the record of who Analyzed whom.
   if (maneuver.analysis && targetActor) await analyze(actor, targetActor);
 
+  // "Target an Opponent, that Opponent becomes 'Seen' until the end of your next turn."
+  // The same split Analysis uses: the mark is theirs and the clock is yours.
+  if (maneuver.intuit && targetActor) await markSeen(actor, targetActor);
+
   // "Increase your Strike Rolls by 1(T) until the end of your turn." Granted here rather
   // than from the Maneuver's own script, because what grants it is a choice made at this
   // moment and a script has no way to be told which options were taken. The bonus itself
@@ -2026,6 +2053,7 @@ export function maneuverItemFrom(definition) {
       delays: Boolean(definition.delays),
       special: Boolean(definition.special),
       analysis: Boolean(definition.analysis),
+      intuit: Boolean(definition.intuit),
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),

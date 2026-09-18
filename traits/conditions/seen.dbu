@@ -1,0 +1,31 @@
+id: seen
+name: Seen
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the Intuit entry says the Opponent "becomes 'Seen'", in quotation
+# marks, and never calls it one. The same shape as Analyzed, which it is a sibling of.
+combatCondition: no
+source: Core Rule
+description: >
+  Somebody has read you. Whoever Seen you rolls better against you in a Clash until the
+  end of their next turn.
+text: >
+  Seen: the Intuit Maneuver's mark. "Target an Opponent, that Opponent becomes 'Seen'
+  until the end of your next turn."
+
+---
+
+# The Analyzed mark's sibling, and built the same way for the same reasons.
+#
+# No effects of its own. What being Seen costs you is written in the Intuit Maneuver,
+# because the bonus belongs to whoever Seen you rather than to everybody: "increase the
+# Dice Score of YOUR Skill Checks and Saving Throws in Clashes against a Seen Opponent". A
+# passive here would hand it to the whole table.
+#
+# Who read you is the clock. The mark sits on you and the entry timing it sits on them -
+# "until the end of YOUR next turn" is their turn - so that entry is both the timer and the
+# record of who it was, which is what makes "your Clashes" answerable without a second
+# place to keep it.
+#
+# Not a Combat Condition, so the checklist on the sheet stays the published eighteen. It is
+# in this folder because this is where a mark with a clock on it lives.

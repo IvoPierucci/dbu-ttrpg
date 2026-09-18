@@ -1,0 +1,71 @@
+id: intuit
+name: Intuit
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+intuit: true
+source: Core Rule
+description: >
+  Read an Opponent. They are Seen until the end of your next turn, and your Skill Checks
+  and Saving Throws in Clashes against them gain 2 and 1(T).
+text: >
+  Intuit Maneuver [1/Round]: Following your gut, you predict your opponent’s next move.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Target an Opponent, that Opponent becomes ‘Seen’ until the end of your next
+  turn. Increase the Dice Score of your Skill Checks and Saving Throws in Clashes against
+  a Seen Opponent by 2 and 1(T) respectively.
+
+---
+
+# The Analysis Maneuver's sibling: a mark on somebody else, a clock kept by you, and a
+# bonus that is yours against them. Built the same way, and the file says where each half
+# lives.
+#
+# No script. Both halves are about a pair - the mark goes on somebody else and the bonus is
+# measured against them - and a passive writes Slots onto the character holding it.
+#
+# What it comes to:
+#   - the target is marked Seen, a Condition with no effects of its own
+#   - the clock sits on you: "until the end of YOUR next turn" is your turn, and a duration
+#     one character keeps over another is what `on` is for
+#   - that clock is also the record of who read whom
+#   - the bonus is applied where a Clash builds the side that is rolling
+#
+# --- "Respectively", which is two numbers and two rolls -------------------------------------
+#
+# "Increase the Dice Score of your Skill Checks and Saving Throws in Clashes against a Seen
+# Opponent by 2 and 1(T) respectively." Two different amounts for two different rolls, and
+# the second is scaled where the first is flat - so they are two rows rather than one, and
+# a Clash gets whichever of them it is made of.
+#
+# --- "In Clashes" is the whole of the scope ----------------------------------------------------
+#
+# Not every Skill Check and not every Saving Throw: only the ones made in a Clash, which is
+# what the sentence says and is also the only place "against a Seen Opponent" has a meaning.
+# A Skill Check rolled off the sheet is against nobody.
+#
+# So it is applied where a Clash assembles the side that is rolling, and the two categories
+# that get it are the two the sentence names: a Skill Clash and a Clash of Saving Throws. A
+# Might Clash is neither and gets nothing; a Grapple Check is a Combat Roll and gets nothing
+# either - that is Analysis's half of the pair.
+#
+# --- The reading of "your Clashes against a Seen Opponent" ----------------------------------------
+#
+# Taken as: yours against the Opponent you read. The wider reading - that any Seen Opponent
+# is fair game for anybody who has this Maneuver - is the same one the Analysis file weighs
+# and rejects, for the same reason: the narrow one cannot be wrong by accident, and if the
+# wider one is meant the change is the one line that asks whose clock it is.
+#
+# --- How it is gained ------------------------------------------------------------------------------
+#
+# A Special Maneuver, and what opens it has not been read yet. Intuition is the obvious
+# guess, which is worth nothing - the Dirty Trick is a Clash made with Bluff and Bluff opens
+# the Feint instead.

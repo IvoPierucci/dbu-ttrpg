@@ -392,6 +392,16 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       analysis: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * Marks the Opponent it is aimed at as Seen, and hands whoever did it a bonus on the
+       * Clashes they make against them.
+       *
+       * Analysis's sibling, and a flag for the same reason: both halves are about a pair,
+       * and a passive writes Slots onto the character holding it. What differs is which
+       * rolls it reaches - a Skill Clash and a Clash of Saving Throws, where Analysis
+       * reaches the Combat Rolls.
+       */
+      intuit: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and
