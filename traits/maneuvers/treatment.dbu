@@ -153,6 +153,26 @@ text: >
 #
 # --- How it is gained ---------------------------------------------------------------------------------
 #
-# Not known, and Medicine is the obvious guess - it is the Skill both halves of the poison
-# clause roll. The guess is worth nothing: the Dirty Trick is a Clash made with Bluff and
-# Bluff opens the Feint instead. Only the Skill's own entry answers it.
+# Medicine, at the 2+ Ranks every Skill grants a Special Maneuver at.
+#
+# Which was the obvious guess - Medicine is the Skill both halves of the poison clause roll
+# and the Skill the healing reads a Bonus off - and the guess was worth nothing until it
+# was said: the Dirty Trick is a Clash made with Bluff and Bluff opens the Feint instead.
+# Only the Skill's own entry answers it, which is why this line waited for one.
+#
+# Medicine is Required, so it opens one Rank after the Skill becomes rollable at all.
+#
+# --- Which makes one of the refusals above unreachable from here -------------------------------
+#
+# Two Ranks of Medicine is one more than rolling it needs, so nobody who opened this
+# Maneuver through the Skill can ever meet the untrained refusal on its poison half.
+#
+# That does not make it dead. A Special Maneuver has two roads and this is one of them: an
+# effect that grants Treatment hands it to whoever it likes, Ranks or none, and that
+# character has a Maneuver whose healing works and whose poison half cannot be rolled. It
+# is the only way to meet the refusal, and it is the reason it is worth keeping.
+#
+# Worth noticing what it is not: the refusal is about the character using the Maneuver.
+# Whoever they Clash with may still answer with a Medicine or a Craft they have no Rank in,
+# because a Clash asks nobody - which the Sense Maneuver's file records and this one cannot
+# fix from its own door.

@@ -243,7 +243,20 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     investigation:    { label: "Investigation",    attribute: "scholarship",
                         specialManeuver: "analysis" },
     knowledge:        { label: "Knowledge",        attribute: "scholarship", encompassing: true },
-    medicine:         { label: "Medicine",         attribute: "scholarship", required: true },
+    // "2 Skill Ranks in Medicine give the Treatment Maneuver" - the 2+ every Skill grants
+    // one at. The sixth entry where the Skill that opens a Maneuver is a Skill that
+    // Maneuver rolls, and still not a rule: Bluff opens the Feint and the Dirty Trick rolls
+    // Bluff without being opened by it.
+    //
+    // Required, which the entry marks as no "(R)" here but the Skill list does: no Rank, no
+    // roll. So Treatment opens one Rank after Medicine becomes rollable.
+    //
+    // Which makes the Treatment's own refusal for an untrained Medicine unreachable down
+    // this road - two Ranks is one more than the roll needs. It is still live on the other
+    // road, where an effect hands the Maneuver to somebody with no Rank at all, and that is
+    // the only way to meet it.
+    medicine:         { label: "Medicine",         attribute: "scholarship", required: true,
+                        specialManeuver: "treatment" },
 
     // "Special Maneuver: you gain access to the Sense Maneuver", at the 2+ Ranks every
     // Skill grants one at - and the Skill that Maneuver's own Clash is rolled with. The
