@@ -9,6 +9,7 @@ special: true
 usageLimit: 1/round
 profile: any
 tailAttack: true
+kiCostCoversProfile: true
 outsideDiminishing: true
 tags: unarmed
 source: Core Rule
@@ -44,44 +45,50 @@ text: >
 #
 # Everything Special before it either marked somebody, opened a Clash, or handed an attack
 # over for somebody to declare afterwards. This one is the attack: `attacking` is on it, so
-# it goes down the road a Basic Attack goes down - Profile and Foundation declared, the
-# price settled by the Profile, Strike against a defence, Wound less Soak.
+# it goes down the road a Basic Attack goes down - Profile and Foundation declared, Strike
+# against a defence, Wound less Soak. What it does not take from that road is the price;
+# see below.
 #
 # An Instant, which is what makes it worth having. No Action, only in answer to a Standard
 # Maneuver, and never two in a row - all three of which live in the Instant rule already
 # and needed nothing here.
 #
-# --- What it costs, which is the one reading worth arguing about --------------------------
+# --- What it costs -------------------------------------------------------------------------
 #
 # "KP Cost: 2(T)", and each variant "increases the KP Cost of this Maneuver" by 2(T), 2(T),
 # 4(T) or 6(T).
 #
-# Built the way this system prices every other attack: what the Maneuver states and what
-# the Profile states are added. That is what `maneuverKiCost` has always done, and this
-# entry never says the Profile is free - so a Tail Attack on the Sweeping Profile is 2(T)
-# for the Maneuver, 2(T) for the variant and 4(T) for Sweeping itself.
+# What is written is the whole price. The Profile's own cost is not added on top, which
+# makes this the one Attacking Maneuver here that does not pay it - `kiCostCoversProfile`.
+# Every other one pays both, and paying both costs nothing extra because their own price is
+# nothing: "KP Cost: Varies (uses the Ki Point Cost of the chosen Profile)" is the Basic
+# Attack's line. This Maneuver states a price and then names which Profiles that price
+# buys, so charging the Profile again charges for it twice.
 #
-# The other reading is written down here because the numbers point at it hard. Take the
-# Maneuver's 2(T) as the whole price and add only the variant:
+# Which is also the reading the entry's own numbers point at. Set the written total beside
+# what each Profile costs anywhere else:
 #
-#     Simple       2(T)                 Simple's own cost is 0
-#     Sweeping     2 + 2 = 4(T)         Sweeping's own cost is 4(T)
-#     Combination  2 + 2 = 4(T)         Combination's own cost is 3(T)
-#     Crushing     2 + 4 = 6(T)         Crushing's own cost is 6(T)
-#     Powered      2 + 6 = 8(T)         Powered's own cost is 8(T)
+#     Simple       2(T)              Simple's own cost is 0
+#     Sweeping     2 + 2 = 4(T)      Sweeping's own cost is 4(T)      same
+#     Combination  2 + 2 = 4(T)      Combination's own cost is 3(T)   1(T) more
+#     Crushing     2 + 4 = 6(T)      Crushing's own cost is 6(T)      same
+#     Powered      2 + 6 = 8(T)      Powered's own cost is 8(T)       same
 #
-# Three of the four land exactly on the Profile's own listed cost, which is the number you
-# get if the variant amounts were worked out as "what the Profile costs, less the 2(T)
-# already paid". That is a strong hint that the intended total is the Profile's price and
-# no more. It is a hint rather than a rule, so it is not what is built, and Combination
-# misses it by one either way.
+# Three of the four land exactly on it, which is the number you get if the variant amounts
+# were worked out as "what the Profile costs, less the 2(T) already paid". Combination is
+# the odd one: through a Tail Attack it costs 1(T) more than Combination costs anywhere
+# else.
 #
-# If the table wants the other reading it is one line - the surcharge stands and the
-# Profile's own cost comes off. Nothing else in the build depends on which it is.
+# Written wins, decided at the table, so the odd one stands as written rather than being
+# bent to 3(T) to match its Profile. Which is why there is no special case for it in the
+# code: the price is the Maneuver's stated cost plus the variant, every time, and
+# Combination coming out 1(T) high is that rule applied rather than an exception to it.
+# Said here because it looks like a bug when you meet it and is not one.
 #
-# The Minimum Ki Point Cost is untouched by the surcharge, which is right either way: that
-# floor is half the Profile's *listed* cost, and a surcharge is this Maneuver's own price
-# rising rather than the Profile's.
+# The Minimum Ki Point Cost is untouched by any of this. That floor is half the Profile's
+# *listed* cost and it is a rule about attacks rather than about this Maneuver, so it still
+# sits underneath - it simply never bites, because a written price that buys a Profile is
+# always more than half what that Profile lists.
 #
 # --- The choice made once -----------------------------------------------------------------
 #

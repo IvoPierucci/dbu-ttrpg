@@ -2105,9 +2105,18 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // branch that answers "what does this cost" for the sheet had quietly lost the
   // half that applies to Attacking Maneuvers - so Drained raising the price of every
   // attack was true when you paid and invisible when you looked.
+  // The Profile's own cost, except where the Maneuver's stated price already covers it.
+  // Every Attacking Maneuver but one pays both: "KP Cost: Varies (uses the Ki Point Cost of
+  // the chosen Profile)" is the Basic Attack's line, and its own cost is nothing. The Tail
+  // Attack states a price and names the Profiles that price buys, so adding the Profile's
+  // on top would charge for it twice.
+  const forProfile = (declared && !maneuver.kiCostCoversProfile)
+    ? profileKiCost(declared.profile, maneuver, actor)
+    : 0;
+
   const base = baseKiCost(maneuver, actor)
     + surchargeKiCost(maneuver, declared?.profile, actor)
-    + (declared ? profileKiCost(declared.profile, maneuver, actor) : 0);
+    + forProfile;
 
   const slots = actor?.system?.effects?.slots;
 
@@ -2265,6 +2274,7 @@ export async function loadManeuvers() {
     powerDrain: Boolean(trait.powerDrain),
     sense: Boolean(trait.sense),
     tailAttack: Boolean(trait.tailAttack),
+    kiCostCoversProfile: Boolean(trait.kiCostCoversProfile),
     // The library's copy is nobody's, so it holds no variant: the choice belongs to a
     // character's own Item. Its Profiles are derived from that all the same, so the
     // library's copy offers the Simple Profile and the sheet prices it correctly.

@@ -1363,6 +1363,7 @@ export function definitionOf(item) {
     sense: item.system.sense,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
+    kiCostCoversProfile: item.system.kiCostCoversProfile,
     tailVariant: item.system.tailVariant ?? "",
     // Derived from the variant rather than stored beside it: which Profiles this Maneuver
     // offers, what the second of them adds to the price, and the Foundation the entry pins
@@ -2256,6 +2257,7 @@ export function maneuverItemFrom(definition) {
       sense: Boolean(definition.sense),
       outsideDiminishing: Boolean(definition.outsideDiminishing),
       tailAttack: Boolean(definition.tailAttack),
+      kiCostCoversProfile: Boolean(definition.kiCostCoversProfile),
       tailVariant: definition.tailVariant ?? "",
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",

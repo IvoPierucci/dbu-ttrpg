@@ -431,6 +431,21 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       tailAttack: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * This Maneuver's stated Ki Point Cost is the whole price, the Profile's included.
+       *
+       * False everywhere else, and rightly: the Basic Attack's cost line reads "Varies
+       * (uses the Ki Point Cost of the chosen Profile)" and its own cost is nothing, so
+       * adding the two is adding nothing to something. A Maneuver that states a price and
+       * then names which Profiles that price buys is the case this exists for - charging
+       * the Profile again would charge for it twice.
+       *
+       * The Minimum Ki Point Cost is untouched by this. That floor is half the Profile's
+       * listed cost and it is a rule about attacks rather than about this Maneuver, so it
+       * still applies underneath - it simply never bites here, because a stated price that
+       * buys a Profile is more than half what the Profile lists.
+       */
+      kiCostCoversProfile: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * Which of the Tail Attack's four additional effects this character took.
        *
        * On the Item because it is a choice about this character's own copy of a Maneuver,
