@@ -411,6 +411,16 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       powerDrain: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * Reads an Opponent: a Clash, and winning tells the winner how much of their
+       * Opponent's power is being held back.
+       *
+       * A flag because what it leaves behind is not a Condition, a clock or a number on
+       * anybody - it is a sentence sent to one side. The first Maneuver here whose whole
+       * effect is that somebody now knows something, which is also why its note is
+       * whispered where every other settled Clash's is read out.
+       */
+      sense: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and

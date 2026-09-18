@@ -2179,6 +2179,7 @@ export async function loadManeuvers() {
     analysis: Boolean(trait.analysis),
     intuit: Boolean(trait.intuit),
     powerDrain: Boolean(trait.powerDrain),
+    sense: Boolean(trait.sense),
     dirtyTrick: Boolean(trait.dirtyTrick),
     feint: Boolean(trait.feint),
     holdingBack: Boolean(trait.holdingBack),

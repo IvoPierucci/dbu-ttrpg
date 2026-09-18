@@ -317,6 +317,68 @@ async function applyClash(messageId, clash) {
   if (clash.magicTrick && clash.result && !clash.magicTrick.applied) {
     await settleMagicTrick(message, clash);
   }
+
+  if (clash.sense && clash.result && !clash.sense.applied) {
+    await settleSense(message, clash);
+  }
+}
+
+/**
+ * What a settled Sense leaves: a sentence, and only for one side.
+ *
+ * "If you win, you can tell how many stacks of Holding Back they possess and if they are
+ * currently in their Transformation with the highest Tier of Power Requirement." Half of
+ * that is a Resource this system keeps and half of it is about Transformations, which this
+ * system has none of - so the first is read and the second is asked.
+ *
+ * The reading is whispered, where every other settled Clash's note is read out. What the
+ * others leave is a thing that happened and belongs to the table; this one buys knowing,
+ * and reading it out gives the answer to the people the entry keeps it from. That it
+ * landed is said publicly, since the card already shows who won.
+ */
+async function settleSense(message, clash) {
+  const sensor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!sensor || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, sense: { ...clash.sense, applied: true }
+  });
+
+  // A tie goes to the Defender, here as everywhere else.
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${sensor.name} cannot get a fix on ${target.name}.`);
+    return;
+  }
+
+  await settledNote(message,
+    `${sensor.name} gets a read on ${target.name} - what they sense is theirs.`);
+  await settledNote(message, senseReading(target), { to: sensor });
+}
+
+/**
+ * The two things a won Sense tells you, in the order the entry names them.
+ *
+ * The Stacks are read off the target's own Resource, which is what "how many stacks of
+ * Holding Back they possess" means - and none is an answer worth having, since the whole
+ * point of the Maneuver is telling the difference.
+ *
+ * The Transformation is asked rather than answered. There are no Transformations in this
+ * system: nothing records which one a character is in and no entry gives one a Tier of
+ * Power Requirement to be the highest of. Guessing from the Tier of Power would be
+ * guessing - that is the number a Transformation raises, not a record of being in one.
+ */
+function senseReading(target) {
+  const stacks = Number(target.system.resources?.holdingback?.stacks) || 0;
+  const held = stacks
+    ? `${target.name} is holding back ${stacks} Stack${stacks === 1 ? "" : "s"}`
+    : `${target.name} is holding nothing back`;
+
+  return `${held}. Whether they are in their Transformation with the highest Tier of `
+    + "Power Requirement is the table's to answer - this system has no Transformations "
+    + "in it yet.";
 }
 
 /**
@@ -1197,12 +1259,37 @@ async function settleGrapple(message, clash) {
     `${grappler.name} has ${grappled.name} in a Grapple.`);
 }
 
-/** A line under the card saying what the Clash came to. */
-async function settledNote(message, text) {
+/**
+ * A line under the card saying what the Clash came to.
+ *
+ * `to` keeps it to one character's side - whoever owns them, and every GM. Left off
+ * everywhere else on purpose: what a Clash came to is a thing that happened, and somebody
+ * knocked Prone is knocked Prone in front of the room.
+ *
+ * Which is not the reading `hidePrivateBreakdowns` declined. There a roll's workings are
+ * held back as a courtesy and the total still reaches the table, because the total is what
+ * the table is waiting for. A note kept to one side is for a Maneuver where the sentence
+ * itself is what was bought.
+ */
+async function settledNote(message, text, { to = null } = {}) {
   await ChatMessage.create({
     speaker: message.speaker,
-    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(text)}</div>`
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(text)}</div>`,
+    ...(to ? { whisper: whisperTo(to) } : {})
   });
+}
+
+/**
+ * Everybody who may be told something about one character: whoever owns them, and every
+ * GM.
+ *
+ * The GMs unconditionally. A secret the GM cannot see is a secret from the person running
+ * the fight, and every other relay in this file goes through them.
+ */
+function whisperTo(actor) {
+  return [...new Set(game.users
+    .filter(user => user.isGM || actor.testUserPermission(user, "OWNER"))
+    .map(user => user.id))];
 }
 
 /**

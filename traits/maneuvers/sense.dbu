@@ -1,0 +1,107 @@
+id: sense
+name: Sense
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+clashSkill: clairvoyance
+clashDefenderSkills: concealment
+sense: true
+source: Core Rule
+description: >
+  Lock on to an Opponent's energy. A Clash of your Clairvoyance against their
+  Concealment, and winning reads how many Holding Back Stacks they are carrying - told
+  to you rather than to the table, since the whole of what it buys is knowing.
+text: >
+  Sense Maneuver [1/Round]: Lock on to the energy of an opponent.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Free
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Target an Opponent. Make a Skill Clash (Clairvoyance vs Concealment) against
+  them. If you win, you can tell how many stacks of Holding Back they possess and if
+  they are currently in their Transformation with the highest Tier of Power Requirement
+  (you do not know which Transformation they possess – you just have a general feeling
+  whether or not they are still holding back their full power).
+
+---
+
+# --- The Clash ---------------------------------------------------------------------------
+#
+# "(Clairvoyance vs Concealment)", and one Skill each side - so nobody is asked which,
+# where the Feint's "(Bluff vs Intuition/Perception)" asks the defender.
+#
+# Worth noticing what the pairing does: Concealment is the Skill the Holding Back
+# Maneuver's own stacks improve, by 1 each to a maximum of 3. So the thing being looked
+# for is what makes it harder to find, which is the one place in these rules where a
+# Resource defends itself.
+#
+# A tie goes to the Defender, here as everywhere else.
+#
+# No script. Winning reads two things off somebody else and writes nothing anywhere -
+# the first Maneuver in this system whose whole effect is that one person now knows
+# something - and a passive writes Slots onto the character holding it.
+#
+# --- The half that can be answered -------------------------------------------------------
+#
+# "You can tell how many stacks of Holding Back they possess." A Resource with a count,
+# read off the target and stated as a number.
+#
+# --- The half that cannot ----------------------------------------------------------------
+#
+# "And if they are currently in their Transformation with the highest Tier of Power
+# Requirement."
+#
+# There are no Transformations in this system. Not "none built for this Maneuver" - none
+# at all: `traits/` has no transformations directory, nothing records which Transformation
+# a character is in, and no entry anywhere gives one a Tier of Power Requirement to be the
+# highest of. The kind exists in the Trait loader and in the Slots table, waiting for a
+# file.
+#
+# So this half is put on the card as the question it is, for the table to answer, rather
+# than guessed at from the Tier of Power - which is the number a Transformation would
+# raise and is not the same thing as being in one. The day Transformations exist, what
+# changes here is one sentence of the reading.
+#
+# --- Told to one side ---------------------------------------------------------------------
+#
+# The reading is whispered: whoever owns the sensing character, and every GM. Everything
+# else a settled Clash leaves behind goes out in front of everybody, because it is a thing
+# that happened - somebody knocked Prone is knocked Prone at the table.
+#
+# This is not that, and it is not the reading the private-breakdown rule declined either.
+# There, a roll's workings are hidden as a courtesy and the total still reaches the table,
+# because the total is what the table is waiting for. Here the answer IS what the Maneuver
+# buys, and reading it out hands it to exactly the people the entry is keeping it from.
+# The entry is careful about how little is learned even by the one who paid for it - "you
+# do not know which Transformation they possess" - and a public note would tell the rest
+# of the room more than that.
+#
+# What the table does see is that it landed, which is not a secret: both sides rolled in
+# public and the card already says who won.
+#
+# Losing is said out loud. Nothing private happened.
+#
+# --- What is not built ------------------------------------------------------------------------
+#
+# "Minions: Free." There are no Minions in this system, which the Arrogant Declaration,
+# Analysis, Hype, Brace, Flip and Holding Back files all say about their own Minion lines.
+#
+# "Target an Opponent" with no range on it, so there is no distance to police - and this
+# system measures none anyway.
+#
+# --- How it is gained ---------------------------------------------------------------------------
+#
+# Not known. Clairvoyance is a Required Skill and its entry has not been given, so no
+# Skill in the table opens this yet - it is the seventh Special Maneuver reachable only
+# through an effect that grants it, alongside Attack Absorption, Dirty Trick, Insult,
+# Internal Attack, Liquid Form and Power Drain.
+#
+# Clairvoyance is the obvious guess, and the guess is worth nothing: the Dirty Trick is a
+# Clash made with Bluff and Bluff opens the Feint instead. Being the Skill a Maneuver rolls
+# and being the Skill that hands it over are two different questions, and only the Skill's
+# own entry answers the second.

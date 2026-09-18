@@ -1357,6 +1357,7 @@ export function definitionOf(item) {
     analysis: item.system.analysis,
     intuit: item.system.intuit,
     powerDrain: item.system.powerDrain,
+    sense: item.system.sense,
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -1842,7 +1843,11 @@ export async function useManeuver(actor, maneuver) {
         ...(maneuver.magicTrick
           ? { magicTrick: { option: trick, applied: false },
               reason: magicTrickNote(actor, maneuver, trick, targetActor) }
-          : {})
+          : {}),
+        // Winning reads something off the other side, and the reading goes to one side
+        // rather than to the room. Nothing is decided here: what is known is what they
+        // hold when the Clash settles, not what they held when it opened.
+        ...(maneuver.sense ? { sense: { applied: false } } : {})
       })
     // "Make a Morale Clash against them." A Clash of Saving Throws opened from the sheet
     // rather than out of a card, which is what every other one in these rules comes from.
@@ -2139,6 +2144,7 @@ export function maneuverItemFrom(definition) {
       analysis: Boolean(definition.analysis),
       intuit: Boolean(definition.intuit),
       powerDrain: Boolean(definition.powerDrain),
+      sense: Boolean(definition.sense),
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
