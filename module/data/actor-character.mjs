@@ -2174,8 +2174,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // Everything that makes up the Saving Throw goes in before the Slot, so a
         // multiplication written against it lands on the finished value - which is
         // what Calculation Priority asks. The Slot had had no reader at all.
-        value: withEffects(this, `save.${save}`,
-          atts[attribute].score + (racial ? this.perBaseTier(1) : 0)),
+        // Two Slots, one inside the other: the one named for this Throw, and then the
+        // one that names all of them. Outermost so that a blanket halving lands on the
+        // finished Throw, which is what Calculation Priority asks.
+        value: withEffects(this, "save.all",
+          withEffects(this, `save.${save}`,
+            atts[attribute].score + (racial ? this.perBaseTier(1) : 0)),
+          { as: `save.${save}` }),
         criticalTarget: racial
           ? Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, this.criticalTarget - 1)
           : this.criticalTarget

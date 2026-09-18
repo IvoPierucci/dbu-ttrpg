@@ -1,0 +1,75 @@
+id: cold-weather
+name: Cold Weather
+kind: battlefield
+weather: true
+profile: elemental-ice
+source: Core Rule
+description: >
+  The cold. Saving Throws roll 1(WT) lower, and past Natural it halves your Surgency
+  and drains 10(bT) Ki Points a Combat Round.
+text: >
+  Cold Weather: The chilling cold seeps into your bones, freezing you to the core.
+
+  Connected Profile: Elemental (Ice)
+
+  Natural Weather (Tier 1) Effect(s):
+  * Reduce the Dice Score of your Saving Throws by 1(WT).
+
+  Unnatural Weather (Tier 2) Effect(s):
+  * Halve your Surgency.
+
+  Cataclysmic Weather (Tier 3) Effect(s):
+  * At the start of each Combat Round, reduce your Ki Points by 10(bT).
+
+---
+
+# Hot Weather's mirror, rule for rule: a roll at Natural, a halved value at Unnatural, and
+# ten a base Tier drained every Combat Round at Cataclysmic. The Tiers stack here for the
+# same reason and are tested the same way.
+#
+# --- Natural (1) ---------------------------------------------------------------------------------
+#
+# "Reduce the Dice Score of your Saving Throws by 1(WT)."
+#
+# Your Saving Throws - all four of them. Written to `save.all` rather than to the four by
+# name, because a file listing them is a list that would quietly miss a fifth. That Slot is
+# applied outside the one named for a single Throw, so it lands on the finished value.
+#
+# The Dice Score, which is what the roll comes to. A Saving Throw rolls the Base Die plus
+# its value, so reducing the value is reducing the score - there is no separate number for
+# the roll the way there is for a Steadfast Check.
+#
+# --- Unnatural (2) -------------------------------------------------------------------------------
+#
+# "Halve your Surgency."
+#
+# Surgency is what a Surge adds to the Life and Ki Points it gives back, so halving it is
+# halving what rest is worth in this cold. A multiplication on the finished value, the way
+# Hot Weather halves the Soak Value.
+#
+# --- Cataclysmic (3) -----------------------------------------------------------------------------
+#
+# "At the start of each Combat Round, reduce your Ki Points by 10(bT)."
+#
+# Ki rather than Life, which is the only thing that separates this from Hot Weather's third
+# Tier - and it is the meaner of the two in a long fight, because Ki is what every Maneuver
+# is paid for.
+#
+# The Round rather than the turn, so it lands once on everybody standing in it.
+#
+# --- What is not built ----------------------------------------------------------------------------
+#
+# "Connected Profile: Elemental (Ice)." The Elemental Profiles are the Magic Profiles, and
+# there are none in this system yet. Carried in the header and read by nobody.
+
+[passive]
+save.all -= 1(WT);
+
+if (battlefield.weather.tier >= 2) {
+  surgency *= 0.5;
+}
+
+[automatic/start-of-round]
+if (battlefield.weather.tier >= 3) {
+  ki.value -= 10(bT);
+}

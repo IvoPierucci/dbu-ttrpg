@@ -3,6 +3,7 @@
   "traits": [
     "battlefields/blinding.dbu",
     "battlefields/bright.dbu",
+    "battlefields/cold-weather.dbu",
     "battlefields/cover.dbu",
     "battlefields/dark.dbu",
     "battlefields/hot-weather.dbu",

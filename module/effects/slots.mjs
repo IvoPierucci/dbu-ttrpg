@@ -333,6 +333,15 @@ const TABLE = [
   // --- Thresholds --------------------------------------------------------------
   { key: "threshold.penalty", phase: PHASES.LATE, kind: N, ops: NUMERIC,
     doc: "What failed Steadfast Checks cost your Combat Rolls." },
+  // Every Saving Throw at once. "Reduce the Dice Score of your Saving Throws by 1(WT)"
+  // names all of them, and writing the four out in a file would be a list that quietly
+  // misses the fifth if one is ever added.
+  //
+  // Applied outside `save.<x>`, so a halving written here lands on the finished Saving
+  // Throw rather than on the Attribute Score it started as.
+  { key: "save.all", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Every Saving Throw. Applied after the one named for a single Throw." },
+
   { key: "steadfast.target", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "What a Steadfast Check has to meet. 6 by default." },
   { key: "steadfast.dice", phase: PHASES.CORE, kind: N, ops: NUMERIC,
