@@ -245,7 +245,29 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     knowledge:        { label: "Knowledge",        attribute: "scholarship", encompassing: true },
     medicine:         { label: "Medicine",         attribute: "scholarship", required: true },
 
-    clairvoyance:     { label: "Clairvoyance",     attribute: "insight",     required: true },
+    // "Special Maneuver: you gain access to the Sense Maneuver", at the 2+ Ranks every
+    // Skill grants one at - and the Skill that Maneuver's own Clash is rolled with. The
+    // fourth entry where those two are the same Skill, after Acrobatics/Flip,
+    // Concealment/Holding Back and Intuition/Intuit, and still not a rule: Bluff opens the
+    // Feint and the Dirty Trick rolls Bluff without being opened by it. Being the Skill a
+    // Maneuver rolls and being the Skill that hands it over stay two questions, and only
+    // the Skill's own entry answers the second.
+    //
+    // Required, which the entry marks as "Clairvoyance (R)": no Rank, no roll at all. So
+    // the Maneuver opens one Rank after the Skill becomes rollable.
+    //
+    // It grants the Gauge Adventuring Maneuver as well - a seventh alongside Forage, Scam,
+    // Fraud, Stretch, Power Regulation and Profiling, none of them recorded.
+    //
+    // Two lines of its ARC Tips point at machinery that is not here, and both are the GM's
+    // to run as ARC Tips are. "It's fine to let this Skill Check be against a Difficulty
+    // Category when sensing some NPCs": there are no Difficulty Categories in this system
+    // at all - a Skill Check is rolled off the sheet or it is one half of a Clash, and
+    // nothing measures one against a stated number. And "Ranks in the Clairvoyance Skill
+    // are also used for Hide and Seek", which is a rule in a section this system has not
+    // got.
+    clairvoyance:     { label: "Clairvoyance",     attribute: "insight",     required: true,
+                        specialManeuver: "sense" },
     // "Special Maneuver: you gain access to the Holding Back Maneuver", at the 2+ Ranks
     // every Skill grants one at - and the Skill the Maneuver's own stacks improve, which
     // is a coincidence of this entry rather than a rule.

@@ -96,12 +96,31 @@ text: >
 #
 # --- How it is gained ---------------------------------------------------------------------------
 #
-# Not known. Clairvoyance is a Required Skill and its entry has not been given, so no
-# Skill in the table opens this yet - it is the seventh Special Maneuver reachable only
-# through an effect that grants it, alongside Attack Absorption, Dirty Trick, Insult,
-# Internal Attack, Liquid Form and Power Drain.
+# Clairvoyance, at the 2+ Ranks every Skill grants a Special Maneuver at: "Special
+# Maneuver: you gain access to the Sense Maneuver" is in the Skill's own entry.
 #
-# Clairvoyance is the obvious guess, and the guess is worth nothing: the Dirty Trick is a
-# Clash made with Bluff and Bluff opens the Feint instead. Being the Skill a Maneuver rolls
-# and being the Skill that hands it over are two different questions, and only the Skill's
-# own entry answers the second.
+# Which is the Skill this Clash is rolled with, and that is a coincidence of this entry
+# rather than a rule - the Dirty Trick is a Clash made with Bluff and Bluff opens the Feint
+# instead. Being the Skill a Maneuver rolls and being the Skill that hands it over are two
+# different questions, and only the Skill's own entry answers the second. Which is why it
+# was left unanswered here until that entry arrived, obvious guess or not.
+#
+# Clairvoyance is a Required Skill: no Rank, no roll at all. So this opens one Rank after
+# the Skill becomes rollable, and the Clash it makes is one you could already roll.
+#
+# Worth following through: the defender rolls Concealment, which is Required as well. So
+# this is the first Clash in these rules where neither side can be rolled by a character
+# without a Rank in it - the Magic Trick's challenger rolls Use Magic, but its defender may
+# answer with Intuition instead, and this entry offers no second Skill.
+#
+# Which turns up a gap that was here before this Maneuver was. "A Required Skill cannot be
+# rolled at all without at least one Rank" is enforced where a Skill is rolled off the
+# sheet, and it is asked nowhere in a Clash - so a Clash will roll a Skill the sheet would
+# refuse. Not invented a way out of: what happens when a Clash names a Skill you cannot
+# roll is not in any entry here. The readings are that you lose it outright, that you roll
+# it at no Ranks anyway, or that the GM says; nothing in the rulebook picks one, so nothing
+# here does either.
+#
+# The consolation is that the pair rhymes. A character with no Rank in Concealment has no
+# Holding Back Stacks to find either, unless an effect handed them the Maneuver: it is
+# Concealment that grants it. So somebody who cannot defend this mostly has nothing to hide.
