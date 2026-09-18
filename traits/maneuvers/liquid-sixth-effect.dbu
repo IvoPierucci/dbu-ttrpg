@@ -1,0 +1,56 @@
+id: liquid-sixth-effect
+name: 6th effect of Liquid State
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+surge: true
+surgeKind: healing
+fromTrait: liquid
+fromEffect: 6
+source: Core Rule
+description: >
+  The Liquid Special State's sixth effect, as a Maneuver: a Healing Surge for 1 Action,
+  once a Combat Round, for as long as you are Liquid.
+text: >
+  (6)-[1/Round]: As a Standard Action with an Action Cost of 1 Action, you may use a
+  Healing Surge.
+
+---
+
+# The first Maneuver in this system that is somebody else's effect.
+#
+# Some effects hand you a Maneuver rather than doing something themselves, and the Liquid
+# Special State's sixth is one: "as a Standard Action with an Action Cost of 1 Action, you
+# may use a Healing Surge". Everything the system needs to know about that is what it
+# knows about any Maneuver - a type, an Action Cost, a limit, and what using it does - so
+# it is one, rather than a shape invented to hold it.
+#
+# --- Why it is a Maneuver Item like the rest ----------------------------------------------
+#
+# Because a player will change it. The name here is a description rather than a name - the
+# rulebook gives this effect none - and somebody whose character liquefies every fight will
+# want to call it what they call it. An Item is what remembers that.
+#
+# So every character owns this from the day they are made, exactly like the Basic Attack,
+# and `fromTrait` is what keeps it out of their list until they are actually Liquid. The
+# alternative - creating it when the State is entered and deleting it when the State ends -
+# would take their name with it every time they solidified.
+#
+# --- What it names -------------------------------------------------------------------------
+#
+# `fromTrait: liquid` is the Trait it belongs to and `fromEffect: 6` is which of that
+# Trait's numbered effects it is. Both are read: the first decides when the row appears and
+# the second is what the name is built from, so a reader can find the sentence this came
+# from.
+#
+# `surgeKind: healing` is the other half of the rule. The Surge Maneuver offers both and
+# asks which; this one names Healing, and asking would be asking a question the entry has
+# already answered.
+#
+# --- What is not here -----------------------------------------------------------------------
+#
+# Anything about being Liquid. What the State is worth is in the State's file, and this is
+# one line out of it - the line that happens to be a Maneuver.

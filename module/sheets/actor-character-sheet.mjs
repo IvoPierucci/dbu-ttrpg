@@ -10,6 +10,7 @@ import {
   combatConditionsFor,
   marksFor,
   setCondition,
+  traitActive,
   setState,
   statesFor,
   toggleCondition,
@@ -976,6 +977,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // in one.
         maneuvers: this.#ownedManeuvers()
           .filter(maneuver => maneuver.type === group.key)
+          // A Maneuver nothing has opened yet is not listed. The Item is still theirs -
+          // renamed, edited, whatever they have done to it - and it comes back the moment
+          // whatever opens it is true again.
+          .filter(maneuver => !this.#notYetOpen(maneuver))
           .map(maneuver => ({
             ...maneuver,
             // The cost as it will really be charged: `kiCost` on its own misses the
@@ -1249,6 +1254,25 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * for is an effect that grants it - so the row is drawn, greyed, and says what is
    * missing rather than being left off the list.
    */
+  /**
+   * Whether this Maneuver is one the character has but cannot yet reach.
+   *
+   * Two ways to be that, and both mean the same thing to the list: the row is not drawn.
+   *
+   *   - a Special Maneuver nothing has opened. "You cannot use any Special Maneuvers until
+   *     you have gained access to them through an effect" - so until something has, the
+   *     list is not the place to read about it.
+   *   - a Maneuver that is one of a Trait's own numbered effects, while that Trait is not
+   *     on them. The Liquid State's sixth effect is a Maneuver only while you are Liquid.
+   *
+   * The Item is never taken away, which is the point: a player who renames theirs finds it
+   * under that name the next time it opens, rather than finding a fresh one.
+   */
+  #notYetOpen(maneuver) {
+    if (maneuver.fromTrait && !traitActive(this.actor, maneuver.fromTrait)) return true;
+    return Boolean(whyNotSpecial(this.actor, maneuver));
+  }
+
   #withoutAccess(maneuver) {
     return whyNotSpecial(this.actor, maneuver) ?? "";
   }

@@ -1164,6 +1164,9 @@ export function definitionOf(item) {
     insult: item.system.insult,
     internalAttack: item.system.internalAttack,
     togglesState: item.system.togglesState,
+    fromTrait: item.system.fromTrait,
+    fromEffect: item.system.fromEffect,
+    surgeKind: item.system.surgeKind,
     clashSaves: [...(item.system.clashSaves ?? [])],
     clashDefenderSaves: [...(item.system.clashDefenderSaves ?? [])],
     moveSkill: item.system.moveSkill,
@@ -1312,7 +1315,14 @@ export async function useManeuver(actor, maneuver) {
   if (maneuver.surge) {
     // takeSurge announces the outcome itself, naming the Maneuver; announcing the
     // Maneuver separately would put the same event in chat twice.
-    if (!await takeSurge(actor, { source: maneuver.name })) return false;
+    //
+    // A Maneuver that names its Surge is not offering a choice between the two: the
+    // Liquid State's sixth effect is a Healing Surge and nothing else, and asking which
+    // would be asking a question the rule already answered.
+    if (!await takeSurge(actor, {
+      source: maneuver.name,
+      kind: maneuver.surgeKind || null
+    })) return false;
     await payActions(actor, maneuver);
     await recordManeuverUse(actor, maneuver);
     await recordManeuverType(actor, maneuver.type);
@@ -1877,6 +1887,9 @@ export function maneuverItemFrom(definition) {
       insult: Boolean(definition.insult),
       internalAttack: Boolean(definition.internalAttack),
       togglesState: definition.togglesState ?? "",
+      fromTrait: definition.fromTrait ?? "",
+      fromEffect: definition.fromEffect ?? 0,
+      surgeKind: definition.surgeKind ?? "",
       clashSaves: [].concat(definition.clashSaves ?? []),
       clashDefenderSaves: [].concat(definition.clashDefenderSaves ?? []),
       moveSkill: definition.moveSkill ?? "",

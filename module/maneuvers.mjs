@@ -2159,6 +2159,9 @@ export async function loadManeuvers() {
     insult: Boolean(trait.insult),
     internalAttack: Boolean(trait.internalAttack),
     togglesState: trait.togglesState ?? "",
+    fromTrait: trait.fromTrait ?? "",
+    fromEffect: Number(trait.fromEffect) || 0,
+    surgeKind: trait.surgeKind ?? "",
     clashDefenderSaves: [].concat(trait.clashDefenderSaves ?? []),
     // A list however the header wrote it, like `clashDefenderSkills`: one Saving Throw
     // named is a string and two are a list.

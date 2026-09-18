@@ -12,7 +12,7 @@
  * worse than one that never fires at all.
  */
 
-import { traitsOfKind } from "./effects/traits.mjs";
+import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 
 /**
@@ -105,6 +105,42 @@ export function statesFor(actor) {
       levelled: (Number(trait.levels) || 1) > 1
     };
   });
+}
+
+/**
+ * Whether one Trait is actually on this character right now, whatever kind it is.
+ *
+ * Asked by anything that turns on a Trait being held rather than on what the Trait does -
+ * the first of those being a Maneuver an effect hands you, which is listed while that
+ * effect holds and not otherwise.
+ *
+ * One question with a branch per kind, because each kind is held in a different place: a
+ * State and a Condition are counts in a bag, a Racial Trait is an id in a list, and a
+ * Talent is an Item. A kind nobody has taught this yet answers no rather than yes, which
+ * is the safe direction: an effect that never appears is a bug somebody reports, and one
+ * that never goes away is a rule nobody can get out of.
+ *
+ * @returns {boolean}
+ */
+export function traitActive(actor, id) {
+  if (!actor || !id) return false;
+
+  const trait = getTrait(id);
+  if (!trait) return false;
+
+  switch (trait.kind) {
+    case "states":
+      return (Number(actor.system?.states?.[id]) || 0) > 0;
+    case "conditions":
+      return (Number(actor.system?.conditions?.[id]) || 0) > 0;
+    case "races":
+      return (actor.system?.racialTraits ?? []).includes(id);
+    case "talents":
+      return (actor.items ?? []).some(item =>
+        (item.type === "talent") && (item.flags?.["dbu-ttrpg"]?.sourceId === id));
+    default:
+      return false;
+  }
 }
 
 /** Enter a State at a level, or leave it. */

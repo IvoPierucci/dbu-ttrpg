@@ -52,17 +52,22 @@ forbid movement.provokes;
 forbid attackingManeuvers;
 forbid uniqueAbilities;
 
-# --- (6), which is said and not built ---------------------------------------------------
+# --- (6), which is a Maneuver -------------------------------------------------------------
 #
-# "As a Standard Action with an Action Cost of 1 Action, you may use a Healing Surge",
-# once a Combat Round.
+# "As a Standard Action with an Action Cost of 1 Action, you may use a Healing Surge", once
+# a Combat Round.
 #
-# Written as an effect it would be `[1/round, costs 1 action]` with a Healing Surge in it,
-# and that block would compile and never run: an effect is collected by the Moment it names
-# and this one names none, so nothing would ever look for it. The `costs` keyword is parsed
-# and spent by nobody as well - Pinned and Prone both write it, and neither takes the
-# Action - so even a block that did fire would be free.
+# It is not written here, and not because it could not be: written as an effect it would be
+# `[1/round, costs 1 action]` with a Healing Surge in it, and that block would compile and
+# never run - an effect is collected by the Moment it names and this one names none, so
+# nothing would ever look for it. The `costs` keyword is parsed and spent by nobody either;
+# Pinned and Prone both write it and neither takes the Action.
 #
-# So it is said rather than half-built. The Surge machinery is all there and the table can
-# use it; what is missing is the door, which is a Maneuver this entry does not name and
-# this system will not invent.
+# It is written where it belongs instead. A Standard Action with an Action Cost, a limit of
+# once a Round, and something it does when used is a Maneuver in every way this system
+# cares about - so it is one: maneuvers/liquid-sixth-effect.dbu, owned by every character
+# from the day they are made and listed only while they are Liquid.
+#
+# Which is the general shape for this, not a special case for this State. An effect that
+# hands you a Maneuver says so with `fromTrait`, and the Maneuver is a real Item the player
+# can rename - so a name they gave it survives solidifying and coming back.

@@ -264,6 +264,30 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * that has not landed yet.
        */
       togglesState: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
+       * The Trait whose own effect this Maneuver is, and which of that Trait's numbered
+       * effects it is.
+       *
+       * Some effects hand you a Maneuver rather than doing something themselves: the
+       * Liquid Special State's sixth is "as a Standard Action with an Action Cost of 1
+       * Action, you may use a Healing Surge". That is a Maneuver in every way the system
+       * cares about, so it is one - a real Item on the character, editable and renameable
+       * like any other, which is what makes a player's changes to it stick.
+       *
+       * What `fromTrait` buys is the listing: the row only appears while that Trait is
+       * actually on them. So the Maneuver is always theirs and only sometimes offered,
+       * rather than appearing from nowhere and taking their edits with it when it goes.
+       */
+      fromTrait: new fields.StringField({ required: true, blank: true, initial: "" }),
+      fromEffect: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      /**
+       * Which Surge this Maneuver takes, where the rule names one.
+       *
+       * The Surge Maneuver offers both and asks; an effect that names one is not offering
+       * a choice - "you may use a Healing Surge" is one Surge, and asking which would be
+       * wrong. Blank means ask, which is what the Surge Maneuver does.
+       */
+      surgeKind: new fields.StringField({ required: true, blank: true, initial: "" }),
       moveSkill: new fields.StringField({ required: true, blank: true, initial: "" }),
       movePerRank: new fields.NumberField({ required: true, integer: true, initial: 0 }),
       /**
