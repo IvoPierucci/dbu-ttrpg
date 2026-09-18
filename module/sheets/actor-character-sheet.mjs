@@ -771,7 +771,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.cover = {
       note: cover.active
         ? `Dodge +${2 * Math.max(1, system.tierOfPower ?? 1)}, and `
-          + `${2 * Math.max(0, cover.hardness ?? 0)} off the Damage you would suffer.`
+          + `${2 * Math.max(0, cover.hardness ?? 0)} off the Damage you would suffer `
+          + `- twice a Hardness Value of ${Math.max(0, cover.hardness ?? 0)}.`
         : ""
     };
 
@@ -786,7 +787,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.hardnessRanks = HARDNESS_RANKS.map(hardness => ({
       rank: hardness.rank,
       text: hardness.text,
-      value: hardnessValue(hardness.rank, context.baseTierOfPower)
+      material: hardness.material,
+      value: hardnessValue(hardness.rank, context.baseTierOfPower),
+      // Which one the Cover picker opens on. The same list serves both, because a Rank is
+      // a Rank whether you are behind it or walking into it.
+      behind: hardness.rank === (system.battlefield?.cover?.rank ?? 0)
     }));
 
     // The Feature Qualities, for reading. Flattened here rather than reached into from

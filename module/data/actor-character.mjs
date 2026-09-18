@@ -3,6 +3,7 @@ const { fields } = foundry.data;
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
+import { hardnessValue } from "../features.mjs";
 import {
   categoryFormula,
   greaterDiceCategory,
@@ -422,6 +423,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * they carry live. These two are the ends of the range, so the field can refuse
    * anything outside it without the schema having to read the library.
    */
+  /** The highest Hardness Rank there is: "There are 6 Hardness Ranks", 0 to 5. */
+  static MAX_HARDNESS_RANK = 5;
+
   static LIGHT_LEVEL_MIN = -2;
 
   static LIGHT_LEVEL_MAX = 2;
@@ -1112,17 +1116,25 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       /**
        * A Feature between this character and whoever is shooting at them.
        *
-       * Both halves are typed in. There are no Squares here, no Features and no notion of
-       * what is between two people, so nothing can work out whether somebody is behind a
-       * rock or how hard that rock is.
+       * Both halves are said by the player. There are no Squares here, no Features and no
+       * notion of what is between two people, so nothing can work out whether somebody is
+       * behind a rock or which rock it is.
        *
        * `active` is what gathers the Cover Trait at all - it is not read inside the script,
        * the way a Combat Condition is not read inside its own.
+       *
+       * What is stored is the Hardness Rank, and the Value is worked out from it. The
+       * Value is not a property of the Feature - it scales with the base Tier of Power of
+       * whoever it is protecting - so storing the Value would mean a number that quietly
+       * stopped matching the wall the moment the character's base Tier changed.
        */
       cover: new fields.SchemaField({
         active: new fields.BooleanField({ required: true, initial: false }),
-        /** The Hardness Value, which is what Cover halves Damage by twice of. */
-        hardness: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+        /** The Hardness Rank of what they are behind, 0 to 5. */
+        rank: new fields.NumberField({
+          required: true, integer: true, initial: 0,
+          min: 0, max: DBUCharacterData.MAX_HARDNESS_RANK
+        })
       }, { required: true })
     }, { required: true });
 
@@ -1510,6 +1522,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Base Tier of Power follows from Power Level alone: 1 for Levels 1-4, then one
     // more per five Levels, reaching 7 at Level 30.
     this.baseTierOfPower = DBUCharacterData.tierOfPowerFor(this.powerLevel);
+
+    // Cover's Hardness Value, from the Rank the player picked. Worked out here rather
+    // than stored because it scales with the base Tier of Power, and here rather than
+    // anywhere later because Cover's script reads it and a script runs after this.
+    //
+    // Written onto the cleaned schema object, which is a plain object by this point - the
+    // same thing every other derived value does.
+    this.battlefield.cover.hardness =
+      hardnessValue(this.battlefield.cover.rank, this.baseTierOfPower);
 
     // The current Tier of Power is the Base Tier as altered by Transformations and
     // effects. Breakthrough caps it at two Tiers above the Base; it can be lowered

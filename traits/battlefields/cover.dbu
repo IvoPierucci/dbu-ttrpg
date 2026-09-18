@@ -51,8 +51,17 @@ text: >
 # is the moment the Damage this reduces exists, and it is the moment Broken's own
 # `incoming.damage` answers.
 #
-# "Twice the Hardness Value" - the Value, which is the number the player types. The entry
-# also names a Hardness Rank, and that is the Feature's Life Points rather than this.
+# "Twice the Hardness Value" - the Value, which is not what the player picks. They pick
+# the Hardness Rank of what they are behind and the Value follows from it: twice the Rank
+# a base Tier of Power, except Rank 0, which is 1(bT).
+#
+# Worked out rather than stored, because it is not a property of the Feature at all - it
+# scales with the base Tier of Power of whoever it is protecting, so a stored Value would
+# quietly stop matching the wall the moment that Tier changed. The Rank is the Feature's
+# and does not move.
+#
+# The entry names the Rank for a second thing as well: it is the Feature's own Life Points.
+# That is the table's to keep, and is not this.
 #
 # --- What is not built --------------------------------------------------------------------------
 #

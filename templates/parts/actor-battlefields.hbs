@@ -44,10 +44,13 @@
         <input type="checkbox" name="system.battlefield.cover.active"
                {{#if system.battlefield.cover.active}}checked{{/if}}/>
       </div>
-      <div class="stat" data-tooltip="The Hardness Value of the Feature you are behind. Twice this comes off the Damage you would suffer. Not the Hardness Rank, which is a Feature's own Life Points.">
-        <em>Hardness Value</em>
-        <input type="number" name="system.battlefield.cover.hardness"
-               value="{{system.battlefield.cover.hardness}}" min="0"/>
+      <div class="stat" data-tooltip="What the Feature you are behind is made of. Twice its Hardness Value comes off the Damage you would suffer, and the Value is worked out from your base Tier of Power.">
+        <em>Hardness</em>
+        <select name="system.battlefield.cover.rank" data-dtype="Number">
+          {{#each hardnessRanks as |hardness|}}
+          <option value="{{hardness.rank}}" {{#if hardness.behind}}selected{{/if}}>Rank {{hardness.rank}} &middot; {{hardness.material}}</option>
+          {{/each}}
+        </select>
       </div>
     </div>
 
