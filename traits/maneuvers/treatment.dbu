@@ -1,0 +1,158 @@
+id: treatment
+name: Treatment
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+exploitable: All adjacent Opponents.
+clashSkill: medicine
+clashDefenderSkills: medicine, craft
+treatment: true
+source: Core Rule
+description: >
+  Heal an Ally in your Melee Range for 2d10(bT) plus your Medicine Skill Bonus. If they
+  are Poisoned you may halve that to go after the poison - a Clash of Medicine against
+  whoever gave it to them, or a Medicine Check where nobody did.
+text: >
+  Treatment Maneuver [1/Round]: Heal an ally’s wounds.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 2 Actions
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: All adjacent Opponents.
+  –Effects: Target an Ally within your Melee Range. Increase their Life Points by
+  2d10(bT) plus your Skill Bonus in Medicine. If an Ally is suffering from the Poisoned
+  Combat Condition, you can reduce the amount of Life Points they gain by 1/2 to make a
+  Skill Clash (Medicine vs Medicine/Craft: Basic Item) against the Character who gave
+  that character the Poisoned Combat Condition. If you win, remove the Combat Condition.
+  If they gained the Poisoned Combat Condition other than through the effects of another
+  Character, simply make an Medicine Skill Check with the Apprentice Difficulty to remove
+  the poison.
+
+---
+
+# --- Healing somebody else ------------------------------------------------------------------
+#
+# The first Maneuver here that puts Life Points on another character. Combat Recovery gives
+# them back to whoever used it and does it from its own script, which is the ordinary way -
+# but a script writes onto the character running it, so it cannot reach an Ally. The
+# Empower Maneuver had the same problem with Ki and is answered the same way: in code.
+#
+# "2d10(bT)" is two dice per Base Tier of Power - four d10s at Base Tier 2 - which is how
+# every other (bT) handful of dice in these rules is read. The Base Tier, so a
+# Transformation does not make a doctor better at medicine.
+#
+# "Plus your Skill Bonus in Medicine", which is the Bonus and not a roll of it. So an
+# untrained Medicine still adds something: the Bonus is the Scholarship Score plus 2 a
+# Rank, and a character with no Ranks has the Score.
+#
+# Capped at their maximum, like every other regain here. What actually went on is what the
+# card reports, so healing somebody who is nearly full says so rather than claiming a
+# number that went nowhere.
+#
+# --- An Ally, not an Opponent ------------------------------------------------------------------
+#
+# Refused without a target, the way the Empower refuses: "target an Ally" needs one and
+# there is nobody to guess at. Who counts as an Ally is the table's - nothing here records
+# sides - so anybody may be targeted and the card says who was.
+#
+# --- The poison ---------------------------------------------------------------------------------
+#
+# "If an Ally is suffering from the Poisoned Combat Condition, you can reduce the amount of
+# Life Points they gain by 1/2 to make a Skill Clash..."
+#
+# A choice, and one that has to be made before the healing is worked out rather than after -
+# it is what the healing is halved for. So it is asked when the Maneuver is used, with the
+# rest of what can still be taken back.
+#
+# Offered only when they are actually Poisoned, because the whole clause is conditional on
+# it. A card with a button nobody can use is a card that has to be read past.
+#
+# The halved Life Points are not handed back on a loss. The entry spends them on the
+# attempt rather than on the result, and says nothing about getting them back - which is
+# the reading every other price in these rules has: what a Maneuver costs is paid for
+# using it.
+#
+# Rounded down, which the entry does not say. Every halving in these rules that does not
+# say is read that way - the Thrust's half of your Might, the Ki Wager's half of your
+# Capacity - and the ones that round up say so, as the Power Drain and the Feint do.
+#
+# --- Who gave it to them ---------------------------------------------------------------------
+#
+# "Against the Character who gave that character the Poisoned Combat Condition."
+#
+# Nothing in this system records who inflicted a Condition. Shaken's file has said so since
+# it was written, and this is the first Maneuver that needs the answer rather than merely
+# describing something that would.
+#
+# There is one place it could be recorded, and it is real: a Condition given on a clock
+# names the character keeping the clock. That is how the Terrify's Shaken works - the
+# Condition sits on the target and the entry timing it sits on whoever caused it - so
+# `whoInflicted` reads it, and it answers for anything inflicted that way.
+#
+# Nothing inflicts Poisoned at all yet, and if something did it would probably not put a
+# clock on it: Poisoned has no duration of its own and comes off when something takes it
+# off. So the answer is asked, with whatever the clock knows offered first. Asking is not a
+# fallback here - it is the only thing that can be right about a fact the system does not
+# hold, and the table is the one that knows.
+#
+# --- The two routes ------------------------------------------------------------------------------
+#
+# "A Skill Clash (Medicine vs Medicine/Craft: Basic Item) against the Character who gave"
+# it, or, "if they gained the Poisoned Combat Condition other than through the effects of
+# another Character, simply make an Medicine Skill Check with the Apprentice Difficulty".
+#
+# So: somebody did it, and you race them; or nothing did, and you only have to be good
+# enough. Which of the two is the answer to the question above.
+#
+# The slash on the defender's side is a choice, as every slash here is. "Craft: Basic Item"
+# names a specialisation - Craft is an Encompassing Skill and the player writes theirs in -
+# and nothing checks what somebody's Craft is about. Said on the card: whether their Craft
+# is Basic Items is the table's to judge, and the Skill they roll is Craft either way.
+#
+# --- The Apprentice Difficulty --------------------------------------------------------------------
+#
+# There are no Difficulty Categories in this system. Not none for this Maneuver - none at
+# all: a Skill Check here is rolled off the sheet or it is one half of a Clash, and nothing
+# measures one against a stated number.
+#
+# So the Check is not rolled by this Maneuver. The card says which Skill and which
+# Difficulty, the player rolls Medicine from their own sheet - where the Base Die, the
+# critical, the Botch, the Karmic Effects and the refusal for an untrained Required Skill
+# all already live - and a button on the card takes the poison off when they made it.
+#
+# Rolling it here would mean either inventing a number for Apprentice or building a second
+# Skill Check path beside the one that works. The first is a rule this file does not have
+# and the second is worse than the button.
+#
+# The Clairvoyance Skill's ARC Tips asked for a Difficulty Category too. That was advice;
+# this is a stat line, which makes it the first place the gap is load-bearing.
+#
+# --- Medicine is Required --------------------------------------------------------------------------
+#
+# No Rank, no roll. So the poison half is refused outright to a character with no Rank in
+# Medicine, and said where the choice is offered rather than two steps later - both routes
+# are a Medicine roll and neither can be made.
+#
+# The healing is not refused: it adds the Skill Bonus rather than rolling the Skill, and a
+# Bonus is a number an untrained character still has.
+#
+# Worth saying what this does not fix. A Clash still never asks whether the Skill it names
+# can be rolled - the Sense Maneuver's file records that, and it is asked here at the door
+# rather than in the Clash, because the door is what this Maneuver owns.
+#
+# --- What is not built -------------------------------------------------------------------------------
+#
+# "Within your Melee Range." Said and not policed, like every range here.
+#
+# No script. Both halves are about somebody else - the Life Points and the Condition are
+# theirs - and a passive writes Slots onto the character holding it.
+#
+# --- How it is gained ---------------------------------------------------------------------------------
+#
+# Not known, and Medicine is the obvious guess - it is the Skill both halves of the poison
+# clause roll. The guess is worth nothing: the Dirty Trick is a Clash made with Bluff and
+# Bluff opens the Feint instead. Only the Skill's own entry answers it.

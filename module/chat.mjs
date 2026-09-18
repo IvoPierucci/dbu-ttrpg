@@ -163,6 +163,7 @@ function applyRequest(request) {
     case "clash": return applyClash(request.messageId, request.clash);
     case "attack": return applyAttack(request.messageId, request.attack);
     case "moment": return applyMoment(request.messageId, request.moment);
+    case "cure": return applyCure(request.messageId, request.cure);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
@@ -261,6 +262,13 @@ function spendTriggeredEffect(actor, blockId) {
   });
 }
 
+/** Write a cured poison back onto its message, so the button goes. */
+async function applyCure(messageId, cure) {
+  const message = game.messages.get(messageId);
+  if (!message) return;
+  await message.setFlag(SCOPE, CURE_FLAG, cure);
+}
+
 /** Write a resolved attack back onto its message. */
 async function applyAttack(messageId, attack) {
   const message = game.messages.get(messageId);
@@ -329,6 +337,54 @@ async function applyClash(messageId, clash) {
   if (clash.transfiguration && clash.result && !clash.transfiguration.applied) {
     await settleTransfiguration(message, clash);
   }
+
+  if (clash.treatment && clash.result && !clash.treatment.applied) {
+    await settleTreatment(message, clash);
+  }
+}
+
+/**
+ * What a settled Treatment Clash leaves: the poison out, or still in.
+ *
+ * "If you win, remove the Combat Condition." Off the Ally, who is neither side of this
+ * Clash - it is rolled against whoever gave them the poison, and the card is what knows
+ * who it was for. A tie goes to the Defender, here as everywhere: the poison was theirs
+ * and holding on to it needs no effort.
+ *
+ * The halved Life Points are not handed back on a loss. The entry spends them on the
+ * attempt rather than on the result, and says nothing about getting them back.
+ */
+async function settleTreatment(message, clash) {
+  const treater = fromUuidSync(clash.challengerUuid);
+  const culprit = fromUuidSync(clash.defenderUuid);
+  const ally = fromUuidSync(clash.treatment.allyUuid);
+  if (!treater || !culprit) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, treatment: { ...clash.treatment, applied: true }
+  });
+
+  const name = ally?.name ?? clash.treatment.allyName ?? "their patient";
+
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message,
+      `The poison holds. ${name} is still Poisoned, and the Life Points that bought the `
+      + "attempt are spent.");
+    return;
+  }
+
+  if (!ally) {
+    await settledNote(message,
+      `${treater.name} wins, but ${name} is no longer here to treat.`);
+    return;
+  }
+
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(ally, "poisoned", 0);
+
+  await settledNote(message, `${treater.name} draws it out: ${name} is no longer Poisoned.`);
 }
 
 /**
@@ -1877,8 +1933,55 @@ function onRenderChatMessage(message, html) {
   renderInstantResponses(message, html);
   renderOutOfSequence(message, html);
   renderAfterTheFact(message, html);
+  renderCurePoison(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
+}
+
+/**
+ * The button that takes a poison off once the Medicine Check has been made.
+ *
+ * Drawn for whoever used the Maneuver, and for the GM. Not for whoever is Poisoned: the
+ * Check is the treater's and so is the call about whether they made it.
+ *
+ * Gone once it has been pressed, like every other button here that is drawn from a flag.
+ */
+function renderCurePoison(message, html) {
+  const cure = message.getFlag(SCOPE, CURE_FLAG);
+  if (!cure || cure.applied) return;
+
+  // Named on the card rather than worked out from the speaker: `speaker.actor` is an id
+  // and not a uuid, and an unlinked token's actor has none at all.
+  const treater = fromUuidSync(cure.treaterUuid);
+  if (!game.user.isGM && !treater?.isOwner) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "The Check was made - remove the poison";
+  button.dataset.tooltip = "Roll Medicine from the sheet. What the Apprentice Difficulty "
+    + "asks for is the ARC's: there are no Difficulty Categories in this system.";
+  button.addEventListener("click", () => curePoison(message, cure));
+
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/**
+ * Take the poison off, and say so.
+ *
+ * Marked on the card first, so a second press cannot take a second Condition off somebody
+ * who only had the one.
+ */
+async function curePoison(message, cure) {
+  const ally = fromUuidSync(cure.allyUuid);
+  if (!ally) return;
+
+  await requestEdit(message, { type: "cure", cure: { ...cure, applied: true } });
+
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(ally, "poisoned", 0);
+
+  await settledNote(message, `${ally.name} is no longer Poisoned.`);
 }
 
 /**
@@ -2703,7 +2806,8 @@ function beingMovedOn(message, actor) {
 
 export async function postManeuver(actor, maneuver,
                                    { asOutOfSequence = false, foundation = null,
-                                     rapidMovement = false, spent = null, note = "" } = {}) {
+                                     rapidMovement = false, spent = null, note = "",
+                                     curePoison = null } = {}) {
   const type = MANEUVER_TYPES[maneuver.type];
   const label = asOutOfSequence ? MANEUVER_TYPES.outOfSequence.label : type.label;
   const cost = (type.action && !asOutOfSequence)
@@ -2729,6 +2833,10 @@ export async function postManeuver(actor, maneuver,
         // Set before the offers are written, so an Exploit provoked by this Movement can
         // be answered by a card that already knows what was paid for.
         ...(rapidMovement ? { [RAPID_FLAG]: { actorUuid: actor.uuid } } : {}),
+        // A poison this Maneuver went after without a Clash, waiting on a roll made off
+        // the sheet. The card carries who it is on, because by the time the Check is made
+        // the only thing that still knows is the card.
+        ...(curePoison ? { [CURE_FLAG]: curePoison } : {}),
         // A Movement is the one Maneuver somebody else can answer without being aimed at,
         // so its card says who moved and what it took.
         //
@@ -3896,6 +4004,18 @@ const RAPID_FLAG = "rapidMovement";
  * is stopped once, however many people were standing in the way.
  */
 const MOVEMENT_FLAG = "movement";
+
+/**
+ * A poison waiting on a Medicine Skill Check that this system cannot judge.
+ *
+ * The Treatment Maneuver's second route: "if they gained the Poisoned Combat Condition
+ * other than through the effects of another Character, simply make an Medicine Skill Check
+ * with the Apprentice Difficulty to remove the poison." There are no Difficulty Categories
+ * here, so the Check is rolled from the sheet - where the Base Die, the critical, the Botch
+ * and the Karmic Effects already live - and this is the button that takes the poison off
+ * once the table says it was made.
+ */
+const CURE_FLAG = "curePoison";
 
 /**
  * Whatever the character's effects contribute at one Moment.

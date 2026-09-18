@@ -1364,6 +1364,7 @@ export function definitionOf(item) {
     sense: item.system.sense,
     terrify: item.system.terrify,
     transfiguration: item.system.transfiguration,
+    treatment: item.system.treatment,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
     kiCostCoversProfile: item.system.kiCostCoversProfile,
@@ -1497,6 +1498,191 @@ async function recordTailVariant(actor, maneuver, variant) {
   const item = actor.items.get(maneuver.itemId);
   if (!item) return;
   await item.update({ "system.tailVariant": variant });
+}
+
+/**
+ * The Treatment Maneuver: Life Points onto an Ally, and a choice about their poison.
+ *
+ * Both halves reach somebody else, which is why none of this is a script - a script writes
+ * Slots onto the character running it, and the Empower Maneuver's Ki Points are answered
+ * the same way.
+ *
+ * The choice comes first because it is what the healing is halved for: "you can reduce the
+ * amount of Life Points they gain by 1/2 to make a Skill Clash". Asked while the whole
+ * thing can still be taken back.
+ */
+async function treatAlly(actor, ally, maneuver) {
+  if (!ally) {
+    ui.notifications.warn(
+      `${actor.name} needs an Ally to treat. Target a token first.`);
+    return false;
+  }
+
+  const poisoned = (Number(ally.system.conditions?.poisoned) || 0) > 0;
+  const chosen = poisoned ? await askTreatment(actor, ally) : { cure: false };
+  if (!chosen) return false;
+
+  const healed = await healAlly(actor, ally, maneuver, chosen.cure);
+
+  if (!chosen.cure) return healed;
+
+  // "Against the Character who gave that character the Poisoned Combat Condition." Which
+  // this system does not record, so it was asked - and "nobody did" is one of the answers,
+  // and the one the entry gives a different rule for.
+  const { postSkillClash, postManeuver } = await import("./chat.mjs");
+  const culprit = chosen.byUuid ? fromUuidSync(chosen.byUuid) : null;
+
+  if (culprit) {
+    return postSkillClash(actor, culprit, maneuver, {
+      clashLabel: "Treatment",
+      reason: `${actor.name} works against ${culprit.name}'s poison in ${ally.name}. Win `
+        + "and it comes out. Their side may answer with Medicine or with Craft - whether "
+        + "their Craft is Basic Items is the table's to say.",
+      treatment: { applied: false, allyUuid: ally.uuid, allyName: ally.name }
+    });
+  }
+
+  // "Simply make an Medicine Skill Check with the Apprentice Difficulty to remove the
+  // poison." There are no Difficulty Categories in this system, so the Check is not rolled
+  // here: the card says which Skill and which Difficulty, the player rolls Medicine from
+  // their own sheet - where the Base Die, the critical, the Botch and the Karmic Effects
+  // already are - and the card takes the poison off when they made it.
+  return postManeuver(actor, maneuver, {
+    note: `Nothing gave ${ally.name} that poison, so there is nobody to Clash with: `
+      + `${actor.name} makes a Medicine Skill Check at the Apprentice Difficulty. Roll it `
+      + "from the sheet - there are no Difficulty Categories in this system, so what "
+      + "Apprentice asks for is the ARC's.",
+    curePoison: {
+      allyUuid: ally.uuid,
+      allyName: ally.name,
+      // Whoever is owed the Check, since they are the one whose button it is.
+      treaterUuid: actor.uuid,
+      applied: false
+    }
+  });
+}
+
+/**
+ * "Increase their Life Points by 2d10(bT) plus your Skill Bonus in Medicine."
+ *
+ * Two dice per Base Tier of Power, which is how every (bT) handful of dice here is read -
+ * and the Base Tier, so a Transformation does not make a doctor better at medicine.
+ *
+ * The Skill Bonus and not a roll of it, so an untrained Medicine still adds something: the
+ * Bonus is the governing Score plus 2 a Rank, and no Ranks leaves the Score.
+ *
+ * Halved when the poison is being gone after. Rounded down, which the entry does not say -
+ * the halvings here that round up say so.
+ *
+ * Capped at their maximum like every other regain, and what the card reports is what
+ * actually went on rather than what was rolled.
+ */
+async function healAlly(actor, ally, maneuver, halved) {
+  const dice = 2 * Math.max(1, actor.system.baseTierOfPower ?? 1);
+  const bonus = actor.system.skills?.medicine?.bonus ?? 0;
+
+  const roll = new Roll(`${dice}d10 + @bonus`, { bonus });
+  await roll.evaluate();
+
+  const rolled = halved ? Math.floor(roll.total / 2) : roll.total;
+
+  const { requestActorUpdate } = await import("./chat.mjs");
+  const { value, max } = ally.system.life;
+  const given = Math.min(max, value + rolled) - value;
+  if (given > 0) await requestActorUpdate(ally, { "system.life.value": value + given });
+
+  await roll.toMessage({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: `${maneuver.name} - ${ally.name} regains ${given} Life Point`
+      + `${given === 1 ? "" : "s"}`
+      + (halved ? ` (half of ${roll.total}, to go after the poison)` : "")
+      + (given < rolled ? " - the rest had nowhere to go" : "")
+  });
+
+  return true;
+}
+
+/**
+ * The Treatment's one question: heal in full, or halve it and go after the poison.
+ *
+ * Both routes are a Medicine roll, and Medicine is a Required Skill - no Rank, no roll. So
+ * a character with no Rank in it is told here rather than two steps later, and the healing
+ * is offered on its own. This does not fix the wider gap: a Clash still never asks whether
+ * the Skill it names can be rolled, which the Sense Maneuver's file records.
+ *
+ * Who gave them the poison is asked, because nothing records it. Whatever a clock does
+ * know is offered first - a Condition given on a clock names whoever keeps it, which is
+ * how the Terrify's Shaken works - and "nobody did" is one of the answers, since the entry
+ * gives it a rule of its own.
+ *
+ * @returns {Promise<?{cure: boolean, byUuid: string}>} null if the player backed out
+ */
+async function askTreatment(actor, ally) {
+  const untrained = Boolean(actor.system.skills?.medicine?.untrained);
+
+  const { whoInflicted, KINDS } = await import("./durations.mjs");
+  const recorded = whoInflicted(ally, KINDS.CONDITION, "poisoned");
+
+  const others = (canvas?.tokens?.placeables ?? [])
+    .map(token => token.actor)
+    .filter(other => other && (other.uuid !== ally.uuid))
+    .filter((other, at, all) => all.findIndex(o => o.uuid === other.uuid) === at);
+
+  const options = others.map(other => `
+    <option value="${other.uuid}" ${(other.uuid === recorded) ? "selected" : ""}>
+      ${Handlebars.escapeExpression(other.name)}</option>`).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `Treatment - ${ally.name}` },
+    content: `
+      <div class="dbu-defend-list">
+        <label class="dbu-defend-option">
+          <input type="radio" name="route" value="heal" checked/>
+          <span class="dbu-defend-body">
+            <span class="dbu-defend-head"><strong>Heal them</strong></span>
+            <span class="dbu-defend-summary">2d10(bT) plus your Medicine Skill Bonus, and
+              leave the poison where it is.</span>
+          </span>
+        </label>
+        <label class="dbu-defend-option">
+          <input type="radio" name="route" value="cure" ${untrained ? "disabled" : ""}/>
+          <span class="dbu-defend-body">
+            <span class="dbu-defend-head"><strong>Halve it and go after the poison</strong></span>
+            <span class="dbu-defend-summary">${untrained
+              ? "Medicine is a Required Skill and cannot be rolled without at least one "
+                + "Rank, and both routes are a Medicine roll."
+              : "Half the Life Points, and a Clash of your Medicine against whoever gave "
+                + "it to them - or a Medicine Check at the Apprentice Difficulty where "
+                + "nobody did."}</span>
+          </span>
+        </label>
+      </div>
+      <label class="dbu-wager">
+        <span>Who poisoned them</span>
+        <select name="by" ${untrained ? "disabled" : ""}>
+          <option value="">Nobody did - a Medicine Check instead</option>
+          ${options}
+        </select>
+        <em>Nothing here records who inflicted a Condition unless it was put on a clock,
+          so this is yours to say.</em>
+      </label>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) => ({
+          route: dialog.element.querySelector('input[name="route"]:checked')?.value ?? "heal",
+          by: dialog.element.querySelector('select[name="by"]').value
+        })
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if (!chosen || (typeof chosen !== "object")) return null;
+  return { cure: chosen.route === "cure", byUuid: chosen.by || "" };
 }
 
 /**
@@ -2006,6 +2192,10 @@ export async function useManeuver(actor, maneuver) {
     ? await revertTransfiguration(actor, targetActor, maneuver)
     : maneuver.transfiguration
     ? await postTransfiguration(actor, targetActor, maneuver)
+    // Asked above the generic Clash branch: the Clash this Maneuver declares is only ever
+    // opened for the poison half, and every other use of it opens none at all.
+    : maneuver.treatment
+    ? await treatAlly(actor, targetActor, maneuver)
     // Two of the Magic Trick's three effects open its Clash and the third opens nothing.
     // Asked before the Clash routes below, so the third does not fall into one.
     : (maneuver.magicTrick && (trick === "move"))
@@ -2326,6 +2516,7 @@ export function maneuverItemFrom(definition) {
       sense: Boolean(definition.sense),
       terrify: Boolean(definition.terrify),
       transfiguration: Boolean(definition.transfiguration),
+      treatment: Boolean(definition.treatment),
       outsideDiminishing: Boolean(definition.outsideDiminishing),
       tailAttack: Boolean(definition.tailAttack),
       kiCostCoversProfile: Boolean(definition.kiCostCoversProfile),

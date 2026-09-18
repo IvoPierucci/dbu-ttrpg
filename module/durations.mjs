@@ -200,6 +200,45 @@ export async function endedBy(actor, moment) {
 }
 
 /**
+ * Who put this on them, where anything recorded it.
+ *
+ * Nothing in this system records who inflicted a Condition - Shaken's file has said so
+ * since it was written - with one exception, and it is a real one: a Condition given on a
+ * clock names whoever is keeping the clock. "They are Shaken until the end of YOUR next
+ * turn" is one rule split across two characters, and the entry timing it sits on the one
+ * who caused it.
+ *
+ * So this answers for anything inflicted that way and answers nothing for the rest. A
+ * caller that needs the name has to be able to ask instead, because most of the library
+ * does not write one.
+ *
+ * Swept across the scene, since the clock is not kept by the character it is about.
+ *
+ * @returns {?string} the uuid of whoever is keeping it, or null
+ */
+export function whoInflicted(subject, kind, key) {
+  if (!subject || !kind || !key) return null;
+
+  const others = (globalThis.canvas?.tokens?.placeables ?? [])
+    .map(token => token.actor)
+    .filter(other => other && (other.uuid !== subject.uuid));
+
+  for (const owner of others) {
+    const theirs = (owner.system.timed ?? []).some(entry =>
+      (entry.kind === kind) && (entry.key === key) && (entry.on === subject.uuid));
+    if (theirs) return owner.uuid;
+  }
+
+  // Their own list last and separately: an entry with no `on` is about whoever keeps it,
+  // so a Condition a character put on themselves names themselves - which is true and is
+  // not somebody who did it to them. Returned all the same, because the caller asked who,
+  // and "they did it to themselves" is an answer.
+  const own = (subject.system.timed ?? []).some(entry =>
+    (entry.kind === kind) && (entry.key === key) && !entry.on);
+  return own ? subject.uuid : null;
+}
+
+/**
  * Drop a clock because the thing it was counting has been undone early.
  *
  * Not the same as running out. `edgeReached` names whatever ran out so the table can be

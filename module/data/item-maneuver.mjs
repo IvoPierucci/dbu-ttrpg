@@ -442,6 +442,14 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       transfiguration: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * Puts Life Points on an Ally, and may go after a poison instead of half of them.
+       *
+       * A flag because both halves are about somebody else - the Life Points and the
+       * Condition are theirs - and a script writes onto whoever is running it. The Empower
+       * Maneuver had the same problem with Ki Points and is answered the same way.
+       */
+      treatment: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * An Instant that is itself an attack, made with the Simple Profile or with the one
        * other Profile its owner's tail was built for.
        *
