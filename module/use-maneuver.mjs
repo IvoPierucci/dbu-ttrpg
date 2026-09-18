@@ -1361,6 +1361,7 @@ export function definitionOf(item) {
     intuit: item.system.intuit,
     powerDrain: item.system.powerDrain,
     sense: item.system.sense,
+    terrify: item.system.terrify,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
     kiCostCoversProfile: item.system.kiCostCoversProfile,
@@ -1957,7 +1958,12 @@ export async function useManeuver(actor, maneuver) {
         // Winning reads something off the other side, and the reading goes to one side
         // rather than to the room. Nothing is decided here: what is known is what they
         // hold when the Clash settles, not what they held when it opened.
-        ...(maneuver.sense ? { sense: { applied: false } } : {})
+        ...(maneuver.sense ? { sense: { applied: false } } : {}),
+        // Winning leaves a Condition, and whether it leaves a second one depends on what
+        // the target was carrying when it settles - so nothing about that is decided here
+        // either. The flag is on the card because the Clash's own roll needs it: the
+        // penalty for aiming above your Tier is a row on the challenger's side.
+        ...(maneuver.terrify ? { terrify: { applied: false } } : {})
       })
     // "Make a Morale Clash against them." A Clash of Saving Throws opened from the sheet
     // rather than out of a card, which is what every other one in these rules comes from.
@@ -2255,6 +2261,7 @@ export function maneuverItemFrom(definition) {
       intuit: Boolean(definition.intuit),
       powerDrain: Boolean(definition.powerDrain),
       sense: Boolean(definition.sense),
+      terrify: Boolean(definition.terrify),
       outsideDiminishing: Boolean(definition.outsideDiminishing),
       tailAttack: Boolean(definition.tailAttack),
       kiCostCoversProfile: Boolean(definition.kiCostCoversProfile),

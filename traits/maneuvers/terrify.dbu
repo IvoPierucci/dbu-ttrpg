@@ -1,0 +1,115 @@
+id: terrify
+name: Terrify
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+clashSkill: intimidation
+clashDefenderSkills: intuition, intimidation
+terrify: true
+source: Core Rule
+description: >
+  Frighten an Opponent within 4 Squares. A Clash of your Intimidation against their
+  Intuition or Intimidation; winning leaves them Shaken until the end of your next turn,
+  and knocks them Prone if they were Shaken already. Punching up costs you 2 on the roll.
+text: >
+  Terrify Maneuver [1/Round]: Intimidate an opponent into submission.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Target an Opponent within 4 Squares of you. Make a Skill Clash (Intimidation
+  vs Intuition/Intimidation) against them. If you win, your target gains the Shaken
+  Combat Condition until the end of your next turn. If they already possessed the Shaken
+  Combat Condition, they are additionally knocked Prone.
+
+  Reduce the Dice Score of your Skill Clash by 2 if your target is of a higher Tier of
+  Power than you.
+
+---
+
+# --- The Clash ----------------------------------------------------------------------------
+#
+# "(Intimidation vs Intuition/Intimidation)". The slash is a choice made by whoever is
+# rolling it, as it is in the Feint's "(Bluff vs Intuition/Perception)" - so the defender is
+# asked which of the two before either side sees a number.
+#
+# The second option is the challenger's own Skill, which the Magic Trick's "(Use Magic vs
+# Intuition/Use Magic)" also does: you may stare back instead of reading them. Nothing here
+# needed changing for that - the two lists are separate and always were.
+#
+# A tie goes to the Defender, here as everywhere else.
+#
+# No script. What it leaves is a Condition on somebody else on a clock kept by you, and a
+# passive writes Slots onto the character holding it.
+#
+# --- Punching up --------------------------------------------------------------------------
+#
+# "Reduce the Dice Score of your Skill Clash by 2 if your target is of a higher Tier of
+# Power than you."
+#
+# Its own paragraph, outside the Effect, so it applies whether or not the Clash is won -
+# which it must, since it is what decides that.
+#
+# Yours and not theirs. The sentence is addressed to whoever used the Maneuver and "your
+# target" is who they aimed it at, so it is a row on the challenger's side and the defender
+# never takes it. A defender answering with Intimidation against somebody above their own
+# Tier gets nothing for it: the sentence is about this Maneuver's user.
+#
+# Strictly higher. Equal Tiers are not higher, which is what the word says and is also the
+# reading that does not quietly penalise a fair fight.
+#
+# The current Tier of Power on both sides, not the Base: (T) is what "Tier of Power" means
+# everywhere in these rules, and a Transformation or a Holding Back Stack changes who is
+# above whom. Which is worth noticing - somebody holding their power back is easier to
+# frighten, and that follows from the two rules rather than from anything here.
+#
+# Applied where a Clash builds the side that is rolling, beside Intuit's bonus, because
+# that is the only place that knows both who is rolling and who they are rolling against.
+#
+# --- What winning leaves ---------------------------------------------------------------------
+#
+# "Your target gains the Shaken Combat Condition until the end of your next turn." Your
+# turn, so the clock is kept by you and the Condition sits on them - the same split Analysis
+# and Intuit use, and the entry that times it is also the record of who frightened whom.
+#
+# Shaken has no stacks: its entry is a flat -2(T) on Strike Rolls and a rule about moving
+# towards whoever inflicted it. So a second Terrify does not stack it, and the second clock
+# is a second entry rather than a replacement - one running out must not take the Condition
+# off while the other is still counting.
+#
+# "If they already possessed the Shaken Combat Condition, they are additionally knocked
+# Prone." Already, so it is read before this Maneuver writes it: the Shaken this use is
+# about to apply must not be what counts as having had it. That ordering is the whole of the
+# rule and is the one thing here that a reasonable build gets backwards.
+#
+# Prone gets no clock. It is not given one by this entry and it has none of its own - it
+# comes off the way Prone always comes off.
+#
+# --- What is not built ----------------------------------------------------------------------
+#
+# "Within 4 Squares of you." Said and not policed, like every range in this system: nothing
+# here measures a distance. It is on the card so the table can see the number it is being
+# asked to agree about.
+#
+# "You cannot willingly use any effect to move towards the Character that inflicted this
+# Combat Condition" - Shaken's own first half, which its file already records as unbuilt.
+# Nothing records who inflicted a Condition, and this system moves nobody. Worth saying
+# here because Terrify is the first Maneuver that inflicts it, so it is the first time that
+# gap has anybody standing in it: the clock this leaves does name who did it, and it is not
+# what that rule would need - it times the Condition rather than attaching the Character to
+# it, and it is gone when the Condition is.
+#
+# --- How it is gained -----------------------------------------------------------------------
+#
+# Not known. Intimidation's entry has not been given, so no Skill in the table opens this
+# yet.
+#
+# Intimidation is the obvious guess and the guess is worth nothing: the Dirty Trick is a
+# Clash made with Bluff and Bluff opens the Feint instead. Being the Skill a Maneuver rolls
+# and being the Skill that hands it over are two different questions, and only the Skill's
+# own entry answers the second.

@@ -2273,6 +2273,7 @@ export async function loadManeuvers() {
     intuit: Boolean(trait.intuit),
     powerDrain: Boolean(trait.powerDrain),
     sense: Boolean(trait.sense),
+    terrify: Boolean(trait.terrify),
     tailAttack: Boolean(trait.tailAttack),
     kiCostCoversProfile: Boolean(trait.kiCostCoversProfile),
     // The library's copy is nobody's, so it holds no variant: the choice belongs to a

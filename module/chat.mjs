@@ -321,6 +321,64 @@ async function applyClash(messageId, clash) {
   if (clash.sense && clash.result && !clash.sense.applied) {
     await settleSense(message, clash);
   }
+
+  if (clash.terrify && clash.result && !clash.terrify.applied) {
+    await settleTerrify(message, clash);
+  }
+}
+
+/**
+ * What a settled Terrify leaves: a Condition, and sometimes a second one.
+ *
+ * "If you win, your target gains the Shaken Combat Condition until the end of your next
+ * turn." Your turn, so the clock is kept by the one who frightened them and the Condition
+ * sits on the target - the split Analysis and Intuit both use.
+ *
+ * "If they already possessed the Shaken Combat Condition, they are additionally knocked
+ * Prone." Already, so it is read before this use writes it. Get that ordering backwards and
+ * every Terrify knocks its target Prone, because every Terrify has just made them Shaken.
+ */
+async function settleTerrify(message, clash) {
+  const terrifier = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!terrifier || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, terrify: { ...clash.terrify, applied: true }
+  });
+
+  // A tie goes to the Defender, here as everywhere else.
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} does not flinch.`);
+    return;
+  }
+
+  const { setCondition } = await import("./conditions.mjs");
+
+  // Read before it is written. This is the whole of the second sentence.
+  const already = (Number(target.system.conditions?.shaken) || 0) > 0;
+
+  await setCondition(target, "shaken", 1);
+
+  await lasting(terrifier, {
+    kind: KINDS.CONDITION,
+    key: "shaken",
+    edge: EDGES.END,
+    next: true,
+    on: target.uuid,
+    source: "Terrify"
+  });
+
+  // No clock of its own: the entry gives Prone none, so it comes off the way Prone always
+  // comes off.
+  if (already) await setCondition(target, "prone", 1);
+
+  await settledNote(message, already
+    ? `${target.name} was Shaken already, so they are knocked Prone - and Shaken until the `
+      + `end of ${terrifier.name}'s next turn.`
+    : `${target.name} is Shaken until the end of ${terrifier.name}'s next turn.`);
 }
 
 /**
@@ -3838,7 +3896,10 @@ const CLASH_ROLLS = ({
     // "Increase the Dice Score of your Skill Checks ... in Clashes against a Seen Opponent
     // by 2." Here rather than on the Skill itself, because "in Clashes" is the whole of the
     // scope and "against a Seen Opponent" has no meaning off one.
-    parts: (actor, clash, uuid) => seenBonus(actor, clashOpponent(clash, uuid), "skill"),
+    parts: (actor, clash, uuid) => [
+      ...seenBonus(actor, clashOpponent(clash, uuid), "skill"),
+      ...terrifyPenalty(actor, clash, uuid)
+    ],
 
     criticalDice: () => DBUCharacterData.SKILL_CRITICAL_DIE,
 
@@ -6908,6 +6969,28 @@ function clashOpponent(clash, uuid) {
  * Returned as a list so it drops out of a breakdown entirely rather than showing as a row
  * worth nothing.
  */
+function terrifyPenalty(actor, clash, uuid) {
+  if (!clash.terrify) return [];
+
+  // The challenger's row alone. "Reduce the Dice Score of YOUR Skill Clash by 2 if YOUR
+  // TARGET is of a higher Tier of Power than you" is addressed to whoever used the
+  // Maneuver, so a defender answering with Intimidation against somebody above their own
+  // Tier gets nothing for it.
+  if (uuid !== clash.challengerUuid) return [];
+
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return [];
+
+  // The current Tier of Power on both sides, which is what "Tier of Power" means
+  // everywhere here - so a Transformation or a Holding Back Stack changes who is above
+  // whom. Strictly higher: equal Tiers are not higher.
+  const theirs = Math.max(1, target.system.tierOfPower ?? 1);
+  const mine = Math.max(1, actor.system.tierOfPower ?? 1);
+  if (theirs <= mine) return [];
+
+  return [{ label: "Terrify - higher Tier", written: "-2", value: -2 }];
+}
+
 function seenBonus(actor, target, family) {
   if (!actor || !target) return [];
 

@@ -421,6 +421,17 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       sense: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * Frightens an Opponent: a Clash, and winning leaves them Shaken - or Prone as well,
+       * if they were Shaken before this landed.
+       *
+       * A flag because the two things it brings are particular to it. One is an ordering:
+       * "if they ALREADY possessed the Shaken Combat Condition" has to be read before this
+       * use writes it, or every Terrify knocks its target Prone. The other is a penalty on
+       * its own Clash for aiming above your Tier of Power, which is the first thing in
+       * these rules to compare the two sides' Tiers to each other.
+       */
+      terrify: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * An Instant that is itself an attack, made with the Simple Profile or with the one
        * other Profile its owner's tail was built for.
        *
