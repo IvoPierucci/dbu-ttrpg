@@ -7,6 +7,7 @@ import { reactiveFor } from "../effects/registry.mjs";
 import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
+import { WEATHER_RULES, WEATHER_TIERS } from "../weather.mjs";
 import {
   combatConditionsFor,
   marksFor,
@@ -782,6 +783,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // and the Value is theirs - "twice the Hardness Rank multiplied by the base Tier of
     // Power of the Character who is suffering the Collision Damage" - so a table printed
     // with the Ranks alone would be a table nobody can use without doing the sum.
+    // Battle Weather, for reading. Two lists rather than one: the Tiers are what a Weather
+    // is set at, and the rules are what holds whichever Weather that is.
+    //
+    // `context.weather` is already taken, by the Brace Maneuver's Tier reduction on the
+    // Combat tab. Named apart on purpose - one is a number about this character and the
+    // other is the rulebook.
+    context.weatherTiers = WEATHER_TIERS;
+    context.weatherRules = WEATHER_RULES;
+
     context.collisionDamage = COLLISION_DAMAGE;
     context.baseTierOfPower = system.baseTierOfPower ?? 1;
     context.hardnessRanks = HARDNESS_RANKS.map(hardness => ({

@@ -135,6 +135,40 @@
     </details>
   </section>
 
+  {{! Battle Weather, for reading. The frame ahead of the Weathers themselves: the three
+      Tiers, and the rules that hold whichever one is in play.
+
+      Nothing to set here yet. A Battle Weather stands over some number of Squares and this
+      system has none, so when the Weathers arrive it will take the shape Light Level
+      already has - the player says which one they are standing in and at what Tier. }}
+  <section class="panel">
+    <details class="condition-group" data-section="weather"
+             {{#if openSections.weather}}open{{/if}}>
+      <summary class="panel-title">
+        Battle Weather
+        <span class="panel-note">The Weathers themselves are not here yet</span>
+      </summary>
+
+      <ul class="quality-list">
+        {{#each weatherTiers as |tier|}}
+        <li class="quality">
+          <strong>{{tier.name}} <span class="quality-mark">Tier {{tier.tier}}</span></strong>
+          <span>{{tier.text}}</span>
+        </li>
+        {{/each}}
+      </ul>
+
+      <ul class="quality-list">
+        {{#each weatherRules as |rule|}}
+        <li class="quality">
+          <strong>{{rule.name}}</strong>
+          <span>{{rule.text}}</span>
+        </li>
+        {{/each}}
+      </ul>
+    </details>
+  </section>
+
   {{! Feature Qualities, for reading. A Quality belongs to a Feature and a Feature is the
       ARC's, so there is nothing here to set - this is the list, in the rules' own words,
       kept where somebody deciding what a wall is made of can find it.
