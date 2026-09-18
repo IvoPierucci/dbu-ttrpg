@@ -1894,12 +1894,26 @@ export function registerChatHooks() {
 }
 
 /**
+ * The highest Natural Result that is a Botch on this kind of roll.
+ *
+ * Two ranges, because Vile Weather widens one and not the other: "you score a Botch
+ * Result for a Combat Roll on a Natural Result of 2(WT) or lower" says Combat Roll, and a
+ * Skill Check made in the poison is no likelier to go wrong than one made in clean air.
+ */
+function botchRangeFor(actor, combatRoll) {
+  return combatRoll
+    ? (actor.system.botchRangeCombat ?? actor.system.botchRange ?? 1)
+    : (actor.system.botchRange ?? 1);
+}
+
+/**
  * Roll the Base Die plus a bonus and classify the result, without deciding what to
  * do about it. Callers apply their own policy: a lone check offers the critical die
  * as a button, while a Skill Clash has to settle both sides at once.
  */
 export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null,
-                                    { minimumNatural = 0, criticalTarget = null } = {}) {
+                                    { minimumNatural = 0, criticalTarget = null,
+                                      combatRoll = false } = {}) {
   // The whole `baseDie` Slot, not only its `set`. Only `set` was ever read, so an
   // effect *adjusting* the Natural Result - which is what Impaired does, and the only
   // way anything reaches the Botch Range that a penalty to the roll cannot - was
@@ -1945,7 +1959,10 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
     // Result at or below the Botch Range, a Critical any at or above the Critical
     // Target. The Botch Range is held below the Critical Target when it is derived, so
     // the two can never both be true - which used to rest on the Botch always being 1.
-    botch: natural <= (actor.system.botchRange ?? 1),
+    // Which Botch Range this roll is measured against. A Combat Roll may have a wider
+    // one than a Skill Check does - Vile Weather gives it one - so the caller says which
+    // kind of roll this is rather than being assumed into the harsher of the two.
+    botch: natural <= botchRangeFor(actor, combatRoll),
     // The character's own Critical Target unless the roll states one. Cutting states one
     // for its Wound Roll - "the Critical Target is 5 (ignoring the usual limit)" - and
     // that limit is the floor the character's own target is held to, so a stated target
@@ -2729,7 +2746,7 @@ async function rerollBaseDie(actor, side) {
   // regardless of the Natural Result". Regardless of it, so the Botch Range is not asked.
   const botch = rules.botchUnlessCritical
     ? !critical
-    : (natural <= (actor.system.botchRange ?? 1));
+    : (natural <= (rules.botchRange ?? actor.system.botchRange ?? 1));
 
   if (rules.botchUnlessCritical && botch) {
     lines.push(noteLine("Anything short of a Critical Result is a Botch"));
@@ -4266,7 +4283,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 
   const evaluated = await evaluateCheck(actor, bonus,
     groups.map(group => group.formula).join(" + "), baseDie,
-    { minimumNatural, criticalTarget });
+    { minimumNatural, criticalTarget, combatRoll: true });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
 
@@ -4415,7 +4432,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     // from scratch. Read off the sheet alone, that second reading loses whatever the
     // Profile brought - a Cutting attack rerolled into a 9 stopped being a Botch, which
     // is the one thing Cutting says it always is.
-    rules: { minimumNatural, criticalTarget, botchUnlessCritical },
+    rules: { minimumNatural, criticalTarget, botchUnlessCritical,
+             // The range this roll was measured against, so Karmic Chance rolls the
+             // replacement under it rather than under whichever one it guesses at.
+             botchRange: botchRangeFor(actor, true) },
     // What went into it besides the dice, so the same roll can be made again without
     // rebuilding it from the sheet - which would quietly drop whatever an effect added.
     bonus,

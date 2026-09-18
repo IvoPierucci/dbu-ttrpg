@@ -115,6 +115,13 @@ const TABLE = [
     doc: "Might, which is what a Might Clash rolls. Not what a Wound Roll is made of - "
        + "the two are separate terms, and an effect raising one raises only that one." },
   { key: "stressBonus", phase: PHASES.LATE, kind: N, ops: NUMERIC, doc: "Stress Bonus." },
+  // The roll, not the number it is measured against. Nothing rolls a Stress Test yet -
+  // they belong to Transformations, which this system has none of - so this is written,
+  // said on the sheet, and applied by the table. The same shape `weather.tiers` has, and
+  // for the same reason: a subsystem that has not arrived rather than a choice.
+  { key: "stress.dice", phase: PHASES.LATE, kind: N, ops: NUMERIC,
+    doc: "What is added to the Dice Score of your Stress Tests. Vile Weather takes "
+       + "1(WT) off it. Said to the table, not applied: nothing here rolls one." },
   { key: "awareness", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Awareness." },
   { key: "surgency", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Surgency." },
   { key: "haste", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Haste." },
@@ -164,6 +171,11 @@ const TABLE = [
     doc: "Lowest Natural Result that scores a Critical. Never below 7." },
   { key: "botchRange", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Highest Natural Result that scores a Botch. Starts at 1." },
+  // Vile Weather widens the Botch Range "for a Combat Roll", and nothing else: a Skill
+  // Check made in the poison is no likelier to go wrong than one made in clean air.
+  { key: "botchRange.combat", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Highest Natural Result that scores a Botch on a Combat Roll, where that is "
+       + "wider than the ordinary one. Vile Weather sets it to 2(WT)." },
   { key: "botch.penalty", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "What a Botch costs: 2 flat on Skill rolls, 2(bT) on everything else." },
   { key: "willingFailure", phase: PHASES.REACTIVE, kind: F, ops: ["set", "allow", "forbid"],

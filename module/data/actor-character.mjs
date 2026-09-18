@@ -1913,6 +1913,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.botchRange = Math.max(0, Math.min(this.criticalTarget - 1,
       withEffects(this, "botchRange", DBUCharacterData.BOTCH_RANGE_DEFAULT)));
 
+    // The same line again for Combat Rolls alone. Built on the ordinary range rather
+    // than beside it, so anything that widens the Botch for every roll widens this one
+    // too and a Combat Roll is never the safer of the two.
+    //
+    // Held under the Critical Target the same way: with both derived, a single Natural
+    // Result could otherwise be a Botch and a Critical at once.
+    this.botchRangeCombat = Math.max(0, Math.min(this.criticalTarget - 1,
+      withEffects(this, "botchRange.combat", this.botchRange)));
+
     // What a Botch costs depends on the kind of roll: a Skill roll loses 2 flat, every
     // other roll loses 2(bT). It was one flat constant everywhere, which is right only
     // while the Base Tier is 1 - so from Power Level 5 a botched Combat Roll was costing
@@ -2057,6 +2066,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
           { label: "Determination", value: this.determination }
         ]
       });
+
+    // What a Stress Test rolls, beside what it is measured against. Nothing rolls one
+    // here, so this is a number the sheet says and the table applies - and when
+    // Transformations arrive there is one place to read it from.
+    this.stressDice = slot(this, "stress.dice");
 
     // Might: higher of Force / Magic Modifier.
     //

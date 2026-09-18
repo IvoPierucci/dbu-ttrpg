@@ -1,0 +1,92 @@
+id: vile-weather
+name: Vile Weather
+kind: battlefield
+weather: true
+profile: elemental-poison
+source: Core Rule
+description: >
+  The poison. Combat Rolls Botch on 2(WT) or lower, Stress Tests roll 1(WT) lower past
+  Natural, and at Cataclysmic every Combat Roll is 1(bT) worse.
+text: >
+  Vile Weather: Poison rains down from the skies or bubbles up from below the surface,
+  filling the air with deadly toxin.
+
+  Connected Profile: Elemental (Poison)
+
+  Natural Weather (Tier 1) Effect(s):
+  * You score a Botch Result for a Combat Roll on a Natural Result of 2(WT) or lower.
+
+  Unnatural Weather (Tier 2) Effect(s):
+  * Reduce the Dice Score of your Stress Tests by 1(WT).
+
+  Cataclysmic Weather (Tier 3) Effect(s):
+  * Reduce all of your Combat Rolls by 1(bT).
+
+---
+
+# The only Weather that makes a roll go wrong rather than making it worse, which is a
+# different kind of cruel: a Botch is not a low number, it is a result with a rule of its
+# own attached.
+#
+# --- Natural (1): the Botch Range ------------------------------------------------------------------
+#
+# "You score a Botch Result for a Combat Roll on a Natural Result of 2(WT) or lower."
+#
+# For a Combat Roll. Not for a Skill Check - a Perception Check made in the poison is no
+# likelier to go wrong than one made in clean air - so this writes to `botchRange.combat`,
+# which is a second Botch Range that only a Combat Roll is measured against. It was added
+# for this.
+#
+# `min=` rather than `=`. The rule says a Natural Result of 2(WT) or lower is a Botch,
+# which is a floor under how easily you botch and not a ceiling: something else that had
+# already widened the range further keeps its wider one, and the poison does not make a
+# botching character safer.
+#
+# `min=` is the floor and `max=` is the ceiling in this language - "at least" and "at
+# most", not "take the larger" and "take the smaller". Written the other way round first,
+# and a ceiling of 2 on a range of 1 changes nothing at all, so it read as the Weather
+# simply not working.
+#
+# 2(WT), so the range is 2 at Natural, 4 at Unnatural and 6 at Cataclysmic - and against a
+# Critical Target of 10 that is better than half the die at the top Tier. The derived value
+# is held below the Critical Target, so it can never reach a Natural Result that is already
+# a Critical.
+#
+# --- Unnatural (2): the Stress Test -----------------------------------------------------------------
+#
+# "Reduce the Dice Score of your Stress Tests by 1(WT)."
+#
+# Nothing in this system rolls a Stress Test. They belong to Transformations, which are not
+# in it yet - so this is written to `stress.dice`, said on the Combat tab beside the Stress
+# Bonus, and applied by whoever is holding the Transformation rules.
+#
+# Which is the same shape `weather.tiers` has had since the Brace Maneuver, and for the
+# same reason: a subsystem that has not arrived rather than a rule anybody chose to leave
+# out. When Stress Tests exist there is one number to read and one place to read it from.
+#
+# --- Cataclysmic (3): every Combat Roll ----------------------------------------------------------
+#
+# "Reduce all of your Combat Rolls by 1(bT)."
+#
+# All of them, which is what `combatRolls` is: it fans out to the Strike, the Dodge and the
+# Wound, so one line reaches all three and a fourth Combat Roll would be reached without
+# this file being touched.
+#
+# (bT) rather than (WT) - written as the rule writes it, and by the top Tier the Botch
+# Range is doing the heavy work anyway.
+#
+# --- What is not built ------------------------------------------------------------------------------
+#
+# "Connected Profile: Elemental (Poison)." The Elemental Profiles are the Magic Profiles,
+# and there are none in this system yet. Carried in the header and read by nobody.
+
+[passive]
+botchRange.combat min= 2(WT);
+
+if (battlefield.weather.tier >= 2) {
+  stress.dice -= 1(WT);
+}
+
+if (battlefield.weather.tier >= 3) {
+  combatRolls -= 1(bT);
+}

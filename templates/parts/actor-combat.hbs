@@ -203,6 +203,13 @@
       <div class="stat" data-tooltip="Power Level + 1, less one per failure">
         <em>Stress Bonus</em><span>{{system.stressBonus}}</span>
       </div>
+      {{#if stressDice}}
+      {{! What the Test itself rolls, where something has changed it. Beside the number it
+          is measured against, because the two are read together or not at all. }}
+      <div class="stat stat-charging" data-tooltip="{{stressDice.note}}">
+        <em>Stress Test</em><span>{{stressDice.written}}</span>
+      </div>
+      {{/if}}
     </div>
   </section>
 
