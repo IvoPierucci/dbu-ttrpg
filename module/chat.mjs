@@ -7923,27 +7923,15 @@ async function applyCollisionDamage(message, clash) {
   const doubled = Boolean(clash.collision?.doubles);
   const halved = Boolean(clash.collision?.halves);
 
-  // "When anything collides with a Feature, it takes Collision Damage... equal to 1/2
-  // (rounded up) of the Tier of Power of the Character whose Maneuver or Effect caused
-  // the Collision." What they hit is the table's to say - there are no Features here - so
-  // this is offered rather than imposed: it is the number for a Feature, and hitting
-  // something else is a different number the table already had to decide.
-  //
-  // Rounded up, which the entry says outright and almost nothing else in these rules does.
-  const causer = fromUuidSync(clash.challengerUuid);
-  const intoFeature = Math.ceil(Math.max(1, causer?.system?.tierOfPower ?? 1) / 2);
-
   const typed = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${clash.maneuverName} - Collision Damage` },
     content: `
       <label class="dbu-wager">
         <span>Collision Damage</span>
-        <input type="number" name="collision" value="${intoFeature}" min="0"/>
-        <em>Into a Feature it is ${intoFeature} - half of
-          ${Handlebars.escapeExpression(causer?.name ?? "the causer")}'s Tier of Power,
-          rounded up. Taken straight off ${Handlebars.escapeExpression(target.name)}'s Life
-          Points, past their Soak Value and Damage Reduction.${doubled
+        <input type="number" name="collision" value="0" min="0"/>
+        <em>Taken straight off ${Handlebars.escapeExpression(target.name)}'s Life Points,
+          past their Soak Value and Damage Reduction.${doubled
             ? ` ${Handlebars.escapeExpression(clash.collision.doubledBy)} doubles it.`
             : ""}${halved
             ? ` ${Handlebars.escapeExpression(clash.collision.halvedBy)} halves it.`
