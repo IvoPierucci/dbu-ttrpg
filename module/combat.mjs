@@ -14,6 +14,7 @@ import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded } from "./durations.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { replaceObject, setCondition } from "./conditions.mjs";
+import { getTrait } from "./effects/traits.mjs";
 
 /**
  * Announce a Moment in chat, so the table can answer it.
@@ -73,7 +74,6 @@ async function startRound(combat) {
 
     await actor.update(newRoundFor(actor));
     await fireMoment(actor, "start-of-round");
-    await strikeLightning(actor);
   }
 
   await announce("start-of-round", {
@@ -280,7 +280,22 @@ async function lapseDelayed(actor) {
 }
 
 /**
- * Storm Weather's lightning, at the start of a Combat Round.
+ * The Battle Weather this character has to roll for, if any.
+ *
+ * A header on the file rather than an id written into the code, so the second Weather with
+ * something to roll is a file and not a branch in here. `rolls` and `weather` both, because
+ * only a Weather has a Weather Tier for the roll to read.
+ */
+export function weatherToRoll(actor) {
+  const id = actor?.system?.battlefield?.weather?.id;
+  if (!id) return null;
+
+  const trait = getTrait(id);
+  return (trait?.weather === true) && (trait?.rolls === true) ? trait : null;
+}
+
+/**
+ * Storm Weather's lightning, when the player says so.
  *
  * "Roll a 1d10. If the result is a 1(WT) or lower, you are struck by Lightning. Reduce
  * your Life Points by 6(WT)."
@@ -299,8 +314,8 @@ async function lapseDelayed(actor) {
  * decides how likely the strike is, how hard it lands, and whether being struck leaves
  * anything behind.
  */
-async function strikeLightning(actor) {
-  if (actor.system.battlefield?.weather?.id !== "storm-weather") return;
+export async function strikeLightning(actor) {
+  if (!weatherToRoll(actor)) return;
 
   const tier = Math.max(1, Number(actor.system.battlefield.weather.tier) || 1);
   const baseTier = Math.max(1, actor.system.baseTierOfPower ?? 1);
@@ -328,8 +343,7 @@ async function strikeLightning(actor) {
   // the end of the Combat Round." Cataclysmic only, and only when the strike landed.
   if (tier < 3) return;
 
-  const { setCondition } = await import("./conditions.mjs");
-  const { EDGES, KINDS, lasting } = await import("./durations.mjs");
+  const { KINDS, lasting } = await import("./durations.mjs");
 
   if (!await setCondition(actor, "impediment", 1)) return;
   await lasting(actor, {

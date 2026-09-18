@@ -1,7 +1,8 @@
 import DBUCharacterData from "./data/actor-character.mjs";
 import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
-import { refundActions, spendActions } from "./combat.mjs";
+import { refundActions, spendActions, strikeLightning, weatherToRoll }
+  from "./combat.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, HARDNESS_RANKS, hardnessValue } from "./features.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
@@ -8344,7 +8345,10 @@ export async function postMoment(moment, {
           moment, title, subjectUuid, subjectName, subjects, pending, detail,
           // Who has answered it. The card keeps offering until they have, so a player
           // who was away when it was posted still finds it waiting.
-          applied: []
+          applied: [],
+          // And who has rolled their Battle Weather. A separate list: answering the
+          // Moment and rolling for the weather are two different things to have done.
+          weathered: []
         }
       }
     }
@@ -8398,6 +8402,26 @@ function renderMoment(message, html) {
     buttons.append(roll);
   }
 
+  // The Battle Weather, for anybody standing in one that has something to roll. Offered
+  // rather than rolled: the Round used to roll it on its own, and a number that arrives
+  // without anybody touching it is one nobody feels they had any part in.
+  //
+  // Its own list rather than `applied`, because answering the Moment with a Talent and
+  // rolling for the weather are two different things to have done - and a character with
+  // no Talent to answer with must still get their roll.
+  for (const actor of weatherRollers(card)) {
+    const weather = document.createElement("button");
+    weather.type = "button";
+    weather.className = "dbu-clash-button";
+    weather.textContent = (card.subjects.length > 1)
+      ? `Apply Battle Weather - ${actor.name}`
+      : "Apply Battle Weather";
+    weather.dataset.tooltip = `${weatherToRoll(actor).name}, at Weather Tier ${
+      actor.system.battlefield.weather.tier}. Once a Round, and yours to roll.`;
+    weather.addEventListener("click", () => rollWeatherFor(message, card, actor));
+    buttons.append(weather);
+  }
+
   for (const actor of momentAnswerers(card)) {
     const apply = document.createElement("button");
     apply.type = "button";
@@ -8424,6 +8448,34 @@ function renderMoment(message, html) {
   }
 
   if (buttons.childElementCount) content.append(buttons);
+}
+
+/**
+ * Everyone on this card the reader plays who still has a Battle Weather to roll for.
+ *
+ * Only on the Round's own card: a Battle Weather that rolls does it once a Round, and
+ * every other Moment card would be a second chance at the same roll.
+ */
+function weatherRollers(card) {
+  if (card.moment !== "start-of-round") return [];
+
+  return (card.subjects ?? [])
+    .map(uuid => fromUuidSync(uuid))
+    .filter(actor => actor?.isOwner
+      && !(card.weathered ?? []).includes(actor.uuid)
+      && weatherToRoll(actor));
+}
+
+/** Roll this character's Battle Weather, once. */
+async function rollWeatherFor(message, card, actor) {
+  // Marked before it is rolled. A second click while the first is still resolving is one
+  // character struck twice by the same storm.
+  await requestEdit(message, {
+    type: "moment",
+    moment: { ...card, weathered: [...new Set([...(card.weathered ?? []), actor.uuid])] }
+  });
+
+  return strikeLightning(actor);
 }
 
 /** Apply what this character brings to a Moment, and note that they have. */

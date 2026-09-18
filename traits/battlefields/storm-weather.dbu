@@ -2,6 +2,7 @@ id: storm-weather
 name: Storm Weather
 kind: battlefield
 weather: true
+rolls: true
 profile: elemental-lightning
 source: Core Rule
 description: >
@@ -39,8 +40,16 @@ text: >
 # the sheet was opened, and the strike would land and unland as somebody scrolled.
 #
 # So the strike is an event rather than an effect. It lives in `strikeLightning` in
-# combat.mjs, fired once for each character at the start of each Combat Round, the same way
-# Damage Over Time's burn does - rolled once, shown on a card, and applied.
+# combat.mjs - rolled once, shown on a card, and applied.
+#
+# Offered rather than fired. The start-of-round card carries an "Apply Battle Weather"
+# button for anybody standing in a Weather whose file says `rolls: true`, and the player
+# presses it. It was automatic first, and a number that arrives without anybody touching it
+# is one nobody feels they had any part in - which matters more for a storm that may kill
+# you than for almost anything else here.
+#
+# Once a Round. The card keeps the list of who has rolled, so a player who was away when it
+# was posted still finds their button waiting.
 #
 # The Tier does three things at once there, which is what makes the card worth reading:
 #
