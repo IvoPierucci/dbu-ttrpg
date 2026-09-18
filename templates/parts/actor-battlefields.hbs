@@ -117,4 +117,37 @@
       nothing here holds a Feature to take it off.
     </p>
   </section>
+
+  {{! Feature Qualities, for reading. A Quality belongs to a Feature and a Feature is the
+      ARC's, so there is nothing here to set - this is the list, in the rules' own words,
+      kept where somebody deciding what a wall is made of can find it.
+
+      Six of them are asked about when Collision Damage is applied, which is the one
+      moment any of this reaches a character. The list is the same list. }}
+  <section class="panel">
+    <details class="condition-group" data-section="featureQualities"
+             {{#if openSections.featureQualities}}open{{/if}}>
+      <summary class="panel-title">
+        Feature Qualities
+        <span class="panel-note">The ARC's, for reading</span>
+      </summary>
+
+      <p class="tab-placeholder">
+        The material is what a Square, Feature or other object is made out of. Generally
+        the ARC decides the material and picks an appropriate Hardness Rank for it - and
+        some Features have Qualities on top of that, decided the same way.
+      </p>
+
+      <ul class="quality-list">
+        {{#each featureQualities as |quality|}}
+        <li class="quality">
+          <strong>{{quality.name}}{{#if quality.onCollision}} <span
+            class="quality-mark" data-tooltip="Offered when Collision Damage is applied, because that is the moment it does something.">asked on collision</span>{{/if}}</strong>
+          <span>{{quality.text}}</span>
+          {{#if quality.note}}<em>{{quality.note}}</em>{{/if}}
+        </li>
+        {{/each}}
+      </ul>
+    </details>
+  </section>
 </div>

@@ -2569,3 +2569,61 @@
   font-style: italic;
   color: var(--dbu-text-dim);
 }
+
+/* --- Feature Qualities ------------------------------------------------------
+
+   A list to read rather than to use: nothing in it is set here, because a Quality
+   belongs to a Feature and a Feature is the ARC's. Collapsed by default for the
+   same reason the Conditions are - ten paragraphs is not what the tab is for. */
+.dbu-ttrpg .quality-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dbu-ttrpg .quality {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.dbu-ttrpg .quality > span {
+  opacity: 0.85;
+}
+
+.dbu-ttrpg .quality > em {
+  font-size: 10px;
+  opacity: 0.65;
+}
+
+/* Which of them the collision dialog will ask about. */
+.dbu-ttrpg .quality-mark {
+  font-size: 9px;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.55;
+  cursor: help;
+}
+
+/* One Quality as a row to tick, in the dialog that applies Collision Damage. The
+   rule's own words sit under the name: which of these applied is something the ARC
+   decided about that wall, and whoever is ticking the box has not read it. */
+.application.dbu-dialog .dbu-quality {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.application.dbu-dialog .dbu-quality > em {
+  flex-basis: 100%;
+  margin-left: 20px;
+  font-style: italic;
+  font-size: 10px;
+  line-height: 1.3;
+  opacity: 0.7;
+}

@@ -3,6 +3,7 @@ import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { refundActions, spendActions } from "./combat.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
+import { COLLISION_QUALITIES } from "./features.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, featureRanks, pushes, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
@@ -7903,6 +7904,90 @@ async function openKnockback(attack, attacker, target) {
 }
 
 /**
+ * "A, B and C", or "A and B", or "A".
+ */
+function listed(names) {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
+/**
+ * What a Feature's Qualities do to whoever just took Collision Damage from it.
+ *
+ * The halving is not here - it is part of the number, and is settled with the doubling
+ * and the Sudden Stop in one multiply. What is here is everything a Quality leaves on the
+ * character afterwards, and the clock each of them runs on.
+ *
+ * All three durations read "for 1 Combat Round (ending on the end of this turn, next
+ * Combat Round)". "This turn" is the turn being played, which in a Knockback is the
+ * thrower's and not the thrown - so the edges are counted by whoever is taking it, with
+ * the Condition sitting on the character. Outside a Combat the character keeps their own
+ * clock, which is the nearest thing to a turn there is.
+ *
+ * @returns {Promise<string[]>} a sentence for each, so the card can say what landed.
+ */
+async function applyFeatureQualities(target, qualities, source) {
+  const said = [];
+  if (!qualities.length) return said;
+
+  const { setCondition } = await import("./conditions.mjs");
+
+  // Whoever's turn it is keeps the clock. Not the winner of the Clash: a Knockback can be
+  // thrown on somebody else's turn - by an Instant, or by a Reaction - and the rule names
+  // the turn being played rather than the character who caused it.
+  const keeper = game.combat?.started ? (game.combat.combatant?.actor ?? target) : target;
+  const whose = (keeper.uuid === target.uuid) ? "their own" : `${keeper.name}'s`;
+
+  for (const quality of qualities) {
+    const { condition, stacks = 1, dot = 0, manual = "" } = quality.collision;
+
+    if (condition) {
+      // "Gain a stack", so on top of what they are already carrying rather than set to
+      // one - setCondition caps it at the Condition's own maximum on the way in.
+      const held = Number(target.system.conditions?.[condition]) || 0;
+      const got = await setCondition(target, condition, held + stacks);
+
+      if (got) {
+        for (let n = 0; n < stacks; n += 1) {
+          await lasting(keeper, {
+            kind: KINDS.CONDITION,
+            key: condition,
+            edge: EDGES.END,
+            next: true,
+            on: target.uuid,
+            source: `${source} - ${quality.name}`
+          });
+        }
+        said.push(`${quality.name} leaves them with ${stacks} more stack`
+          + `${(stacks === 1) ? "" : "s"} until the end of ${whose} next turn.`);
+      }
+    }
+
+    if (dot > 0) {
+      await target.update({ "system.dotStacks": (target.system.dotStacks ?? 0) + dot });
+      for (let n = 0; n < dot; n += 1) {
+        await lasting(keeper, {
+          kind: KINDS.DOT,
+          key: "dot",
+          edge: EDGES.END,
+          next: true,
+          on: target.uuid,
+          source: `${source} - ${quality.name}`
+        });
+      }
+      said.push(`${quality.name} leaves ${dot} stacks of Damage Over Time on them until `
+        + `the end of ${whose} next turn.`);
+    }
+
+    // The half this system does not do. Said on the card rather than left out, because
+    // nothing here moves anybody and a Feature is not something it holds.
+    if (manual) said.push(`${quality.name}: ${manual}`);
+  }
+
+  return said;
+}
+
+/**
  * Collision Damage, as a Life Point reduction.
  *
  * Offered off the Might Clash that Knockback opened, and only to the winner of it: the
@@ -7915,6 +8000,12 @@ async function openKnockback(attack, attacker, target) {
  *
  * What the system does is take it off the right way: straight off Life, past the Soak
  * Value and past Damage Reduction, and doubled when Launching threw them.
+ *
+ * And what they hit is asked for in the same breath, because a Feature's Qualities are
+ * read at exactly this moment and nowhere else: six of them do something to a character
+ * receiving Collision Damage, and this is the only place a character receives any. Asked
+ * rather than derived, like the number itself - which Feature it was is the ARC's, and
+ * none is the ordinary answer.
  */
 async function applyCollisionDamage(message, clash) {
   const target = fromUuidSync(clash.defenderUuid);
@@ -7923,7 +8014,17 @@ async function applyCollisionDamage(message, clash) {
   const doubled = Boolean(clash.collision?.doubles);
   const halved = Boolean(clash.collision?.halves);
 
-  const typed = await foundry.applications.api.DialogV2.wait({
+  // What the Feature they hit was made of. One row each, the rule's own words under the
+  // name, because which of these applies is a thing the ARC decided about that Feature
+  // and the player ticking the box has probably never read it.
+  const qualities = COLLISION_QUALITIES.map(quality => `
+    <label class="dbu-respond-option dbu-quality">
+      <input type="checkbox" name="quality" value="${quality.key}"/>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(quality.name)}</span>
+      <em>${Handlebars.escapeExpression(quality.text)}</em>
+    </label>`).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${clash.maneuverName} - Collision Damage` },
     content: `
@@ -7936,14 +8037,22 @@ async function applyCollisionDamage(message, clash) {
             : ""}${halved
             ? ` ${Handlebars.escapeExpression(clash.collision.halvedBy)} halves it.`
             : ""}</em>
-      </label>`,
+      </label>
+      <p class="dbu-respond-hint">Did the Feature they hit have any of these Qualities?
+        Usually none. The rest of what a Quality is - its Life Points, its Squares, what
+        happens when it is destroyed - stays the table's.</p>
+      ${qualities}`,
     buttons: [
       {
         action: "confirm",
         label: "Apply",
         callback: (event, button, dialog) => {
           const value = Math.floor(Number(dialog.element.querySelector('input[name="collision"]').value));
-          return Number.isFinite(value) ? Math.max(0, value) : 0;
+          return {
+            typed: Number.isFinite(value) ? Math.max(0, value) : 0,
+            keys: [...dialog.element.querySelectorAll('input[name="quality"]:checked')]
+              .map(box => box.value)
+          };
         }
       },
       { action: "cancel", label: "Cancel" }
@@ -7951,19 +8060,36 @@ async function applyCollisionDamage(message, clash) {
     rejectClose: false
   });
 
-  if (!typed) return;
+  // Cancelled. A typed nothing with a Quality ticked is not nothing: Burning still burns
+  // whoever it caught, so only an answer that never came back stops here.
+  if (!chosen) return;
 
-  // Both at once rather than one after the other. Launching doubles this and a Sudden
-  // Stop halves it, and rounding between the two would take a point off a number that
-  // the rules leave exactly where it started.
-  const amount = Math.floor(typed * (doubled ? 2 : 1) * (halved ? 0.5 : 1));
+  const { typed } = chosen;
+  const applied = COLLISION_QUALITIES.filter(quality => chosen.keys.includes(quality.key));
+
+  // All of the halvings at once rather than one after the other. Launching doubles this,
+  // a Sudden Stop halves it and a Rubbery or Fragile Feature halves it again - and
+  // rounding between any two of them would take a point off a number the rules leave
+  // exactly where it started.
+  const halvings = (halved ? 1 : 0)
+    + applied.filter(quality => quality.collision.halves).length;
+  const amount = Math.floor(typed * (doubled ? 2 : 1) * (0.5 ** halvings));
   const changed = [
     doubled ? `doubled by ${clash.collision.doubledBy}` : "",
-    halved ? `halved by ${clash.collision.halvedBy}` : ""
+    halved ? `halved by ${clash.collision.halvedBy}` : "",
+    ...applied.filter(quality => quality.collision.halves)
+      .map(quality => `halved by ${quality.name}`)
   ].filter(Boolean).join(", ");
   const reason = changed ? `Collision Damage, ${changed}` : "Collision Damage";
 
   await reduceLifePoints(target, amount, { reason });
+
+  const said = await applyFeatureQualities(target, applied, clash.maneuverName);
+  if (said.length) {
+    await settledNote(message,
+      `What ${target.name} hit was ${listed(applied.map(quality => quality.name))}. `
+      + said.join(" "));
+  }
 
   // Marked on the Clash that allowed it, so one win buys one collision. Another
   // character thrown by the same Maneuver has a Clash of their own, and is asked for

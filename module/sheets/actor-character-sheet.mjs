@@ -6,6 +6,7 @@ import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.m
 import { reactiveFor } from "../effects/registry.mjs";
 import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
+import { FEATURE_QUALITIES } from "../features.mjs";
 import {
   combatConditionsFor,
   marksFor,
@@ -775,6 +776,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // Every Attacking Maneuver they own, which is what can be thrown at a Feature -
     // "Features can be targets for any Attacking Maneuver, just like Characters can."
+    // The Feature Qualities, for reading. Flattened here rather than reached into from
+    // the page, because a template cannot ask whether a key exists without one.
+    context.featureQualities = FEATURE_QUALITIES.map(quality => ({
+      name: quality.name,
+      text: quality.text,
+      note: quality.note ?? "",
+      onCollision: Boolean(quality.collision)
+    }));
+
     context.featureAttacks = this.#ownedManeuvers()
       .filter(maneuver => maneuver.attacking)
       .map(maneuver => ({ itemId: maneuver.itemId, name: maneuver.name }));

@@ -37,7 +37,14 @@ export const EDGES = Object.freeze({
 export const KINDS = Object.freeze({
   STATE: "state",
   CONDITION: "condition",
-  RESOURCE: "resource"
+  RESOURCE: "resource",
+  /**
+   * Stacks of Damage Over Time. Not a Combat Condition and not a Resource - it is a count
+   * of its own on the character - and it needs a clock of its own because the rules leave
+   * how long a stack lasts to whatever handed it out: "over a period of time decided by
+   * the effect". Sharp is the first effect to decide.
+   */
+  DOT: "dot"
 });
 
 /**
@@ -335,6 +342,14 @@ async function takeOff(owner, entry) {
     else delete resources[entry.key];
 
     return actor.update({ "system.resources": replaceObject(resources) });
+  }
+
+  if (entry.kind === KINDS.DOT) {
+    // One stack an entry, for the same reason a Resource is: two stacks handed out for a
+    // Combat Round are two clocks, and a stack that arrived later must not be taken off
+    // by a clock that started sooner.
+    const left = Math.max(0, (actor.system.dotStacks ?? 0) - 1);
+    return actor.update({ "system.dotStacks": left });
   }
 
   console.warn(`DBU TTRPG | Nothing knows how to take off a "${entry.kind}".`);
