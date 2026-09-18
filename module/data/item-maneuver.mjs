@@ -288,6 +288,23 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * wrong. Blank means ask, which is what the Surge Maneuver does.
        */
       surgeKind: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
+       * Three effects to pick between, chosen before anything is paid for.
+       *
+       * "Apply one of the following effects", where two of the three open a Clash and the
+       * third does not - so the choice cannot wait for the dice the way the Thrust's and
+       * the Dirty Trick's do. Theirs is a choice about what winning buys; this one decides
+       * whether there is anything to win.
+       */
+      magicTrick: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * An Exploitable line that fires on a lost Clash rather than when the Maneuver is
+       * used, and to the one person it was aimed at rather than to everybody in reach.
+       *
+       * The line itself is carried as printed, for a reader; this is what keeps it out of
+       * the door that hands the ordinary ones out.
+       */
+      exploitOnLoss: new fields.BooleanField({ required: true, initial: false }),
       moveSkill: new fields.StringField({ required: true, blank: true, initial: "" }),
       movePerRank: new fields.NumberField({ required: true, integer: true, initial: 0 }),
       /**

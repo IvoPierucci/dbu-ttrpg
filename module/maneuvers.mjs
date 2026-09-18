@@ -2162,6 +2162,8 @@ export async function loadManeuvers() {
     fromTrait: trait.fromTrait ?? "",
     fromEffect: Number(trait.fromEffect) || 0,
     surgeKind: trait.surgeKind ?? "",
+    magicTrick: Boolean(trait.magicTrick),
+    exploitOnLoss: Boolean(trait.exploitOnLoss),
     clashDefenderSaves: [].concat(trait.clashDefenderSaves ?? []),
     // A list however the header wrote it, like `clashDefenderSkills`: one Saving Throw
     // named is a string and two are a list.
@@ -2183,7 +2185,12 @@ export async function loadManeuvers() {
     // Kept as written: "All adjacent Opponents" is a range the table reads, not one the
     // system measures. It had been sitting in a Maneuver file since Energy Charge was
     // written and nothing had ever carried it this far.
-    exploitable: trait.exploitable ?? "",
+    //
+    // Joined rather than taken as it comes, because `coerce` splits a header value on
+    // commas - and the first Exploitable line with a comma in it arrived as two strings,
+    // which is a sentence that has stopped being one. A file should write this folded; the
+    // join is what keeps a file that does not from breaking something three modules away.
+    exploitable: [].concat(trait.exploitable ?? []).join(", "),
     surge: Boolean(trait.surge),
     charge: Boolean(trait.charge),
     cancelCharge: Boolean(trait.cancelCharge),

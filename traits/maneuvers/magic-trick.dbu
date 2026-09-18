@@ -1,0 +1,97 @@
+id: magic-trick
+name: Magic Trick
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+clashSkill: useMagic
+clashDefenderSkills: intuition, useMagic
+moveSkill: useMagic
+movePerRank: 1
+magicTrick: true
+# Folded, because `coerce` splits a header value on commas and this line has one in it.
+exploitable: >
+  If you fail the initial Clash, this triggers the Exploit Maneuver from the target.
+exploitOnLoss: true
+says: >
+  This movement does not trigger the Exploit Maneuver.
+source: Core Rule
+description: >
+  Three tricks and you pick one first: Impaired on a won Clash, shoving somebody your
+  Use Magic Ranks in Squares, or moving yourself that far with nothing to answer it.
+text: >
+  Magic Trick Maneuver [1/Round]: You use your mystical prowess to manipulate the
+  battlefield, moving yourself and your enemies around at-will.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: If you fail the initial Clash, this triggers the Exploit Maneuver from
+  the target.
+  –Effect: Apply one of the following effects:
+
+  * Target an Opponent within your Melee Range. Make a Clash (Use Magic vs Intuition/Use
+  Magic) against them. If you win, the target gains the Impaired Combat Condition until
+  the start of your next turn.
+
+  * Target a Character within your Melee Range. Make a Clash (Use Magic vs Intuition/Use
+  Magic) against them. If you win, move that target by a number of Squares equal to your
+  number of Skill Ranks in the Use Magic Skill.
+
+  * Move a number of Squares equal to your number of Skill Ranks in the Use Magic Skill.
+  This movement does not trigger the Exploit Maneuver.
+
+---
+
+# --- The choice comes first ------------------------------------------------------------
+#
+# "Apply one of the following effects", and the three are not three outcomes of one thing:
+# two open a Clash and the third does not, and one needs an Opponent where another will
+# take any Character. So the question is asked before anything is paid for, which is the
+# first Maneuver here to work that way - the Thrust and the Dirty Trick both choose after
+# the dice, because what they are choosing between is what winning buys.
+#
+# --- The Clash ---------------------------------------------------------------------------
+#
+# "(Use Magic vs Intuition/Use Magic)" - a different Skill on each side, and a slash on the
+# defender's, which is a choice they make. The same shape the Feint has.
+#
+# The first two effects make the same Clash and differ only in what winning buys and who
+# may be aimed at: an Opponent for the first, any Character for the second. That second one
+# is why the Maneuver takes a target rather than an Opponent, and the difference is said on
+# the card rather than policed - who counts as an Opponent is the table's.
+#
+# --- What winning buys ---------------------------------------------------------------------
+#
+# The first: Impaired "until the start of your next turn", which is your turn - so the clock
+# is kept by you and the Condition sits on them, the split Analysis and Dirty Trick use. A
+# start edge, which this system counts as always the next one whichever turn you are
+# standing in.
+#
+# The second: a number of Squares off your Use Magic Ranks. Said and not done, like every
+# Square here - the number is what the card can give, and the moving is the player's.
+#
+# --- The third, which is not a Clash -----------------------------------------------------------
+#
+# Move that far yourself. No Clash, so nothing to fail, so nothing to Exploit - which the
+# entry says again on its own line: "this movement does not trigger the Exploit Maneuver".
+# Both halves come to the same place here, because the only thing that would have offered
+# one is the Exploitable line, and that line is about failing a Clash this effect never
+# makes.
+#
+# --- The Exploitable line -----------------------------------------------------------------------
+#
+# "If you fail the initial Clash, this triggers the Exploit Maneuver from the target." Not
+# when the Maneuver is used, which is when every other Exploitable line fires, and not to
+# everybody in reach - to the one person it was aimed at, and only on a loss. So the line is
+# carried as printed for a reader and `exploitOnLoss` keeps it out of the door that offers
+# the rest, which hands it out from the Clash instead.
+#
+# --- How it is gained --------------------------------------------------------------------------
+#
+# A Special Maneuver, and what opens it has not been read yet. Use Magic is the Skill it
+# rolls and counts, which is not the same question - Dirty Trick rolls Bluff and Bluff opens
+# the Feint instead.

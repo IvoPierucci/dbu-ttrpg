@@ -897,6 +897,100 @@ async function askHoldingBack(actor, maneuver) {
 }
 
 /**
+ * What the Magic Trick's chosen effect is, in a sentence for the card.
+ *
+ * The number is the same for two of the three and is read off the character when the
+ * Maneuver is used, so a Rank gained mid-Encounter counts.
+ */
+function magicTrickNote(actor, maneuver, trick, target) {
+  const ranks = actor.system.skills?.[maneuver.moveSkill]?.ranks ?? 0;
+  const squares = (maneuver.movePerRank ?? 1) * ranks;
+  const many = `${squares} Square${squares === 1 ? "" : "s"}`;
+  const them = target?.name ?? "them";
+
+  if (trick === "impair") {
+    return `${actor.name} works a trick on ${them}. Win and they are Impaired until the `
+      + `start of ${actor.name}'s next turn; lose and ${them} may Exploit.`;
+  }
+  if (trick === "shove") {
+    return `${actor.name} works a trick on ${them}. Win and ${them} moves ${many} - `
+      + `${actor.name}'s Use Magic Ranks; lose and ${them} may Exploit.`;
+  }
+  return `Move up to ${many} - ${actor.name}'s Use Magic Ranks. This movement does not `
+    + "trigger the Exploit Maneuver.";
+}
+
+/**
+ * Which of the Magic Trick's three effects is being used.
+ *
+ * Asked before anything is paid for. The first two need somebody to aim at and the third
+ * does not, so aiming is checked here rather than by the Maneuver's own `requiresTarget` -
+ * which would have demanded a target for the one effect that has none.
+ *
+ * @returns {Promise<string>} "impair", "shove", "move", or "" if the question was dropped
+ */
+async function askMagicTrick(actor, maneuver, target) {
+  const ranks = actor.system.skills?.[maneuver.moveSkill]?.ranks ?? 0;
+  const squares = (maneuver.movePerRank ?? 1) * ranks;
+  const aimed = target ? target.name : "";
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: maneuver.name },
+    content: `
+      <div class="dbu-defend-list">
+        <label class="dbu-defend-option">
+          <input type="radio" name="trick" value="impair" checked/>
+          <span class="dbu-defend-body">
+            <span class="dbu-defend-head"><strong>Impair them</strong></span>
+            <span class="dbu-defend-summary">An Opponent in your Melee Range. A Clash of
+              Use Magic against their Intuition or Use Magic; win and they are Impaired
+              until the start of your next turn.${aimed ? ` Aimed at ${aimed}.` : ""}</span>
+          </span>
+        </label>
+        <label class="dbu-defend-option">
+          <input type="radio" name="trick" value="shove"/>
+          <span class="dbu-defend-body">
+            <span class="dbu-defend-head"><strong>Move them</strong></span>
+            <span class="dbu-defend-summary">Any Character in your Melee Range, the same
+              Clash; win and they move ${squares} Square${squares === 1 ? "" : "s"} - your
+              Use Magic Ranks.${aimed ? ` Aimed at ${aimed}.` : ""}</span>
+          </span>
+        </label>
+        <label class="dbu-defend-option">
+          <input type="radio" name="trick" value="move"/>
+          <span class="dbu-defend-body">
+            <span class="dbu-defend-head"><strong>Move yourself</strong></span>
+            <span class="dbu-defend-summary">${squares}
+              Square${squares === 1 ? "" : "s"}, no Clash, and nothing to Exploit.</span>
+          </span>
+        </label>
+      </div>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) =>
+          dialog.element.querySelector('input[name="trick"]:checked')?.value ?? ""
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if ((typeof chosen !== "string") || !chosen || (chosen === "cancel")) return "";
+
+  // The two that open a Clash need somebody to open it against. Refused here rather than
+  // by the Maneuver asking for a target outright, since the third effect needs none.
+  if ((chosen !== "move") && !target) {
+    ui.notifications.warn(`${maneuver.name} needs a target for that. Target a token first.`);
+    return "";
+  }
+
+  return chosen;
+}
+
+/**
  * Which way a Maneuver that throws a State went, said on its card.
  *
  * The one thing about it a reader cannot work out for themselves: the Maneuver is the same
@@ -1167,6 +1261,8 @@ export function definitionOf(item) {
     fromTrait: item.system.fromTrait,
     fromEffect: item.system.fromEffect,
     surgeKind: item.system.surgeKind,
+    magicTrick: item.system.magicTrick,
+    exploitOnLoss: item.system.exploitOnLoss,
     clashSaves: [...(item.system.clashSaves ?? [])],
     clashDefenderSaves: [...(item.system.clashDefenderSaves ?? [])],
     moveSkill: item.system.moveSkill,
@@ -1350,6 +1446,9 @@ export async function useManeuver(actor, maneuver) {
   // Which way a Maneuver that throws a State went, so the card can say it. Blank on
   // everything that throws none, which is all of them but one.
   let toggled = "";
+  // Which of a Maneuver's own effects the player picked, where it has several and the
+  // choice comes before the dice rather than after them.
+  let trick = "";
   // What a Movement was declared as: which Speed bounds it, and whether Rapid Movement
   // was paid for. Both settled before anything is spent, for the same reason.
   let crossing = null;
@@ -1416,6 +1515,14 @@ export async function useManeuver(actor, maneuver) {
       const dropped = await askDropPower(actor);
       if (dropped === null) return false;
       if (dropped) await dropPowerStack(actor);
+    }
+
+    // "Apply one of the following effects." Asked before anything is paid for, because two
+    // of the three open a Clash and the third does not - the answer decides what the rest
+    // of this function does, so it cannot wait until after it.
+    if (maneuver.magicTrick) {
+      trick = await askMagicTrick(actor, maneuver, targetActor);
+      if (!trick) return false;
     }
 
     // "You enter the Liquid Special State. If you use this Maneuver while in the Liquid
@@ -1613,8 +1720,19 @@ export async function useManeuver(actor, maneuver) {
       })
     : maneuver.thrust
     ? await postThrust(actor, targetActor, maneuver)
+    // Two of the Magic Trick's three effects open its Clash and the third opens nothing.
+    // Asked before the Clash routes below, so the third does not fall into one.
+    : (maneuver.magicTrick && (trick === "move"))
+    ? await postManeuver(actor, maneuver, {
+        note: magicTrickNote(actor, maneuver, trick, null)
+      })
     : maneuver.clash
-    ? await postSkillClash(actor, targetActor, maneuver)
+    ? await postSkillClash(actor, targetActor, maneuver, {
+        ...(maneuver.magicTrick
+          ? { magicTrick: { option: trick, applied: false },
+              reason: magicTrickNote(actor, maneuver, trick, targetActor) }
+          : {})
+      })
     // "Make a Morale Clash against them." A Clash of Saving Throws opened from the sheet
     // rather than out of a card, which is what every other one in these rules comes from.
     : maneuver.clashSaves?.length
@@ -1890,6 +2008,8 @@ export function maneuverItemFrom(definition) {
       fromTrait: definition.fromTrait ?? "",
       fromEffect: definition.fromEffect ?? 0,
       surgeKind: definition.surgeKind ?? "",
+      magicTrick: Boolean(definition.magicTrick),
+      exploitOnLoss: Boolean(definition.exploitOnLoss),
       clashSaves: [].concat(definition.clashSaves ?? []),
       clashDefenderSaves: [].concat(definition.clashDefenderSaves ?? []),
       moveSkill: definition.moveSkill ?? "",

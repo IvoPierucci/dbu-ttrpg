@@ -313,6 +313,102 @@ async function applyClash(messageId, clash) {
   if (clash.internalAttack && clash.result && !clash.internalAttack.applied) {
     await settleInternalAttack(message, clash);
   }
+
+  if (clash.magicTrick && clash.result && !clash.magicTrick.applied) {
+    await settleMagicTrick(message, clash);
+  }
+}
+
+/**
+ * What a settled Magic Trick leaves, which depends on which trick was chosen and on
+ * whether it landed.
+ *
+ * Winning: the first effect leaves the target Impaired "until the start of your next turn"
+ * - your turn, so that clock is kept by you and the Condition sits on them. The second
+ * moves them a number of Squares, which is said and not done like every Square here.
+ *
+ * Losing: "if you fail the initial Clash, this triggers the Exploit Maneuver from the
+ * target." One person and only on a loss, which is why it is handed out here rather than
+ * by the door that offers every other Exploitable line when a card is posted.
+ */
+async function settleMagicTrick(message, clash) {
+  const caster = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!caster || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, magicTrick: { ...clash.magicTrick, applied: true }
+  });
+
+  // A tie goes to the Defender, here as everywhere - and a tie is a failure, which is what
+  // hands them the opening.
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} shrugs it off.`);
+    offerExploitTo(message, target, caster, `${clash.maneuverName} - the Clash was lost`);
+    return;
+  }
+
+  if (clash.magicTrick.option === "impair") {
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(target, "impaired", 1);
+    await lasting(caster, {
+      kind: KINDS.CONDITION,
+      key: "impaired",
+      edge: EDGES.START,
+      next: true,
+      on: target.uuid,
+      source: clash.maneuverName
+    });
+
+    await settledNote(message,
+      `${target.name} is Impaired until the start of ${caster.name}'s next turn.`);
+    return;
+  }
+
+  // "Move that target by a number of Squares equal to your number of Skill Ranks in the Use
+  // Magic Skill." Read now rather than when the card was opened, so it is the Ranks they
+  // have when it lands.
+  const squares = casterSquares(caster, clash);
+  await settledNote(message,
+    `${caster.name} moves ${target.name} ${squares} Square${squares === 1 ? "" : "s"} - `
+    + `${caster.name}'s Use Magic Ranks. Where to is ${caster.name}'s to say.`);
+}
+
+/** How far a Magic Trick moves somebody: the caster's Ranks in the Skill it is made with. */
+function casterSquares(caster, clash) {
+  const ranks = caster.system.skills?.[clash.skill]?.ranks ?? 0;
+  return Math.max(0, ranks);
+}
+
+/**
+ * Hand one character the Exploit Maneuver, where a rule names who gets it.
+ *
+ * `offerExploits` sweeps everybody in reach, which is what "all adjacent Opponents" wants.
+ * A line that names one person - "this triggers the Exploit Maneuver from the target" -
+ * wants this instead.
+ */
+function offerExploitTo(message, who, against, reason) {
+  if (!who || !against) return;
+  if (!who.items?.some(item => (item.type === "maneuver") && item.system.exploit)) return;
+
+  requestEdit(message, {
+    type: "offer",
+    offer: {
+      actorUuid: who.uuid,
+      actorName: who.name,
+      maneuverId: "exploit",
+      maneuverName: "Exploit",
+      targetUuid: against.uuid,
+      reason,
+      provokedBy: {
+        maneuverId: "magic-trick",
+        maneuverName: message.getFlag(SCOPE, CLASH_FLAG)?.maneuverName ?? "",
+        messageId: message.id
+      }
+    }
+  });
 }
 
 /**
@@ -2260,6 +2356,11 @@ function offerExploits(card, actor, maneuver) {
   // and it is asked of the Movement alone, which is what the rule names.
   if (maneuver.movement && !permits(actor.system.effects?.slots, "movement.provokes")) return;
 
+  // And a line that fires on a lost Clash rather than on the Maneuver being used is not
+  // this door's to open. The Magic Trick's reads "if you fail the initial Clash, this
+  // triggers the Exploit Maneuver from the target" - one person, and only on a loss.
+  if (maneuver.exploitOnLoss) return;
+
   const seen = new Map();
   for (const token of (canvas?.tokens?.placeables ?? [])) {
     const other = token.actor;
@@ -3912,7 +4013,7 @@ async function pick(title, question, buttons) {
   return (chosen && (chosen !== "cancel")) ? chosen : null;
 }
 
-export async function postSkillClash(actor, target, maneuver) {
+export async function postSkillClash(actor, target, maneuver, leaves = {}) {
   const skillKey = maneuver.clash.skill;
 
   // The Skills the other side may answer with, where the rule names something other than
@@ -3945,6 +4046,10 @@ export async function postSkillClash(actor, target, maneuver) {
           // Winning buys a choice of three, offered on the card once the dice are in -
           // "if you win, apply one of the following effects" is a choice made after them.
           dirtyTrick: maneuver.dirtyTrick ? { chosen: "", applied: false } : null,
+          // And what settling this one leaves behind, whatever it is called - the same
+          // arrangement a Saving Throw Clash has, and for the same reason: naming the keys
+          // one at a time is how the Blockade's payload went missing.
+          ...leaves,
           // Winning hands over a Basic Attack with conditions attached, which travel with
           // the offer rather than being remembered anywhere.
           feint: maneuver.feint ? { applied: false } : null,
