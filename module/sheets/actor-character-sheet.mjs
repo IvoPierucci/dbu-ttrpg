@@ -441,6 +441,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       scrollable: [""]
     },
     traits: { template: "systems/dbu-ttrpg/templates/parts/actor-traits.hbs", scrollable: [""] },
+    battlefields: {
+      template: "systems/dbu-ttrpg/templates/parts/actor-battlefields.hbs",
+      scrollable: [""]
+    },
     progression: {
       template: "systems/dbu-ttrpg/templates/parts/actor-progression.hbs",
       scrollable: [""]
@@ -533,6 +537,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // player scrolled past everything else to reach.
     maneuvers: { id: "maneuvers", group: "primary", label: "Maneuvers" },
     traits: { id: "traits", group: "primary", label: "Traits" },
+    // A section of the rules that has not been given yet. The tab is here so there is
+    // somewhere for it to go; what fills it is written when the rules arrive rather than
+    // guessed at from the name.
+    //
+    // Beside Traits rather than inside Combat: a Battlefield is something the whole table
+    // is standing in, and the Combat tab is this character's own tracking values.
+    battlefields: { id: "battlefields", group: "primary", label: "Battlefields" },
     progression: { id: "progression", group: "primary", label: "Progression" },
     biography: { id: "biography", group: "primary", label: "Biography" }
   };

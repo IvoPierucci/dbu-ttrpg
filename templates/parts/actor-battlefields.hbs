@@ -1,0 +1,30 @@
+<div class="tab {{tabs.battlefields.cssClass}}" data-group="primary" data-tab="battlefields">
+
+{{! Its own tab rather than a panel inside Combat. A Battlefield is a thing the whole
+    table is standing in rather than a number on one character, and the Combat tab is
+    already a column of this character's own tracking values.
+
+    Empty on purpose: the rules for this section have not been given yet. What goes here
+    is written once they are, rather than guessed at from the name. }}
+  <section class="panel">
+    <h3 class="panel-title">Battlefields</h3>
+
+    <p class="tab-placeholder">
+      Nothing here yet. The Battlefields rules have not been built.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">What already points this way</h3>
+
+    {{! Named rather than moved. The Weather row on the Combat tab is a fact about this
+        character - what Battle Weathers count as for them - and it belongs there whatever
+        Battlefields turns out to be. This is a pointer, so that whoever fills this tab in
+        knows the Slot is already written and already read. }}
+    <p class="tab-placeholder">
+      Battle Weathers have a Slot (<code>weather.tiers</code>) and the Brace Maneuver
+      writes it. There are no Battle Weathers in the library for it to be taken off, so
+      the Combat tab states what it comes to and leaves the applying to the table.
+    </p>
+  </section>
+</div>
