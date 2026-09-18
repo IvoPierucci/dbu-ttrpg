@@ -46,6 +46,16 @@
       </div>
       {{/each}}
 
+      {{#if inside}}
+      {{! Inside somebody, from the Internal Attack Maneuver. Out of the Initiative Order
+          until they burst out, which is a thing everyone at the table needs to see. }}
+      <div class="stat stat-charging" data-tooltip="They lose 2(T) of Soak Value and Defense Value until you come back out. Burst out from the card that put you in there.">
+        <em>Inside</em>
+        <span>{{inside.name}}</span>
+        <i class="stat-note">{{inside.note}}</i>
+      </div>
+      {{/if}}
+
       {{#if weather}}
       {{! What Battle Weathers count as for this character. A row of its own rather than
           part of a mark: it is a fact about them as they stand, whatever put it there. }}

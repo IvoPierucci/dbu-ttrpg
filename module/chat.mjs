@@ -34,6 +34,7 @@ import {
   recordManeuverUse,
   whyNotAnotherAbsolute,
   whyNotThisFoundation,
+  whyNotAnotherInstant,
   whyNotIntervene,
   whyNotSpecial,
   maxKiWager,
@@ -308,6 +309,122 @@ async function applyClash(messageId, clash) {
   if (clash.insult && clash.result && !clash.insult.applied) {
     await settleInsult(message, clash);
   }
+
+  if (clash.internalAttack && clash.result && !clash.internalAttack.applied) {
+    await settleInternalAttack(message, clash);
+  }
+}
+
+/**
+ * What a won Internal Attack leaves: two marks, and an Initiative written down.
+ *
+ * "Remove yourself from the Combat Encounter (record your Initiative)." The Initiative
+ * Order is the ARC's to change and this system does not add or remove combatants, so what
+ * happens here is the record and the state - the card says what the Order said, and
+ * whoever runs the tracker does the rest.
+ *
+ * The state is the pair: the attacker is inside somebody, and the target is Internalized.
+ * That pair is what "while you are not a member of the Combat Encounter" comes to, and it
+ * is what carries the penalty - which lives in the mark's own file.
+ */
+async function settleInternalAttack(message, clash) {
+  const attacker = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!attacker || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, internalAttack: { ...clash.internalAttack, applied: true }
+  });
+
+  // A tie goes to the Defender, here as everywhere.
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} keeps ${attacker.name} out.`);
+    return;
+  }
+
+  // What the Order said, read now because it is about to stop being true. Blank outside an
+  // Encounter, where there is no Order to record and nothing to re-enter.
+  const initiative = String(
+    game.combat?.combatants?.find(entry => entry.actor?.uuid === attacker.uuid)?.initiative ?? "");
+
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "internalized", 1);
+
+  await requestActorUpdate(attacker, {
+    "system.inside": {
+      targetUuid: target.uuid,
+      targetName: target.name,
+      initiative,
+      messageId: message.id
+    }
+  });
+
+  await requestEdit(message, {
+    type: "clash",
+    clash: {
+      ...clash,
+      internalAttack: { ...clash.internalAttack, applied: true, inside: true }
+    }
+  });
+
+  await settledNote(message,
+    `${attacker.name} is inside ${target.name}${initiative ? ` at Initiative ${initiative}` : ""}. `
+    + `Take ${attacker.name} out of the Initiative Order; ${target.name} loses 2(T) of Soak `
+    + "Value and Defense Value until they come back out.");
+}
+
+/**
+ * Coming back out, which is an Instant Maneuver of its own.
+ *
+ * "As an Instant Maneuver... you can appear on a Square adjacent to the target, re-enter
+ * the Combat Encounter (using your recorded Initiative), and reduce their Life Points by
+ * 2x your Might."
+ *
+ * The Might is read now rather than when they went in: "your Might" is present tense, and
+ * a Power Up while they were in there is theirs.
+ *
+ * A Life Point reduction, which in these rules is straight off the Life Points past the
+ * Soak Value and the Damage Reduction - the same thing a collision is, through the same
+ * function. Which is also why the Soak penalty being gone by then does not matter: nothing
+ * about this goes through Soak.
+ */
+async function burstOut(message, clash) {
+  const attacker = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!attacker || !target || !clash.internalAttack?.inside) return;
+
+  // An Instant, so the Instant rule applies to it like any other.
+  const held = whyNotAnotherInstant(attacker);
+  if (held) {
+    ui.notifications.warn(held);
+    return;
+  }
+
+  const initiative = attacker.system.inside?.initiative ?? "";
+
+  await requestEdit(message, {
+    type: "clash",
+    clash: { ...clash, internalAttack: { ...clash.internalAttack, inside: false } }
+  });
+
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "internalized", 0);
+  await requestActorUpdate(attacker, {
+    "system.inside": { targetUuid: "", targetName: "", initiative: "", messageId: "" }
+  });
+
+  // Played as an Instant, so it releases whoever was held by one and holds them in turn.
+  await recordManeuverType(attacker, "instant", { messageId: message.id });
+
+  await reduceLifePoints(target, 2 * (attacker.system.might ?? 0),
+    { reason: `Internal Attack - twice ${attacker.name}'s Might` });
+
+  await settledNote(message,
+    `${attacker.name} bursts out beside ${target.name}`
+    + `${initiative ? `, back in the Order at Initiative ${initiative}` : ""}. `
+    + `Put them on a Square adjacent to ${target.name}.`);
 }
 
 /**
@@ -812,7 +929,8 @@ async function chooseThrust(message, clash, choice) {
  * "Strike/Dodge", which is a choice.
  */
 export async function postSaveClash(actor, target, {
-  maneuverName, clashLabel = "", reason = "", saves = ["impulsive"], ...leaves
+  maneuverName, clashLabel = "", reason = "", saves = ["impulsive"], defenderSaves = [],
+  ...leaves
 } = {}) {
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
@@ -828,6 +946,9 @@ export async function postSaveClash(actor, target, {
           maneuverName,
           reason,
           saves,
+          // What the other side may answer with, where the rule named something different
+          // for them. Empty is every Clash that named one list for both.
+          defenderSaves,
           // Which each side answered with. Unset until they say, and they are asked
           // before either has seen a number.
           challengerSave: "",
@@ -3667,14 +3788,14 @@ const CLASH_ROLLS = ({
       slot: `save.${savePicked(clash, uuid)}`
     }),
 
-    prompt: (actor, clash, uuid) => (clash.saves ?? []).length > 1
-      ? (clash.saves ?? []).map(key => saveLabel(actor, key)).join(" or ")
+    prompt: (actor, clash, uuid) => (savesOffered(clash, uuid).length > 1)
+      ? savesOffered(clash, uuid).map(key => saveLabel(actor, key)).join(" or ")
       : saveLabel(actor, savePicked(clash, uuid)),
 
-    // Both sides, not only the Defender: where the rule offers a choice of Saving Throw
-    // it offers it to whoever is rolling, and both of them are.
+    // Whoever was offered a choice is asked, which where the rule names one list is both
+    // sides and where it names two is whichever side got the longer one.
     choose: async (clash, actor) => {
-      const offered = clash.saves ?? [];
+      const offered = savesOffered(clash, actor.uuid);
       if (offered.length < 2) return {};
 
       const chosen = await pick(
@@ -3724,9 +3845,21 @@ function skillLabel(actor, key) {
     ?? `${key.charAt(0).toUpperCase()}${key.slice(1)}`;
 }
 
-/** Which Saving Throw this side of a Clash is answering with. */
+/**
+ * Which Saving Throw this side of a Clash is answering with.
+ *
+ * `saves` is what the rule named, and `defenderSaves` is what it named for the other side
+ * where it named something different: "(Impulsive vs Impulsive/Corporeal)" is one for the
+ * challenger and two for the defender, where "(Impulsive/Corporeal)" with no `vs` in it is
+ * one list offered to both.
+ */
+function savesOffered(clash, uuid) {
+  const theirs = clash.defenderSaves ?? [];
+  return ((uuid === clash.defenderUuid) && theirs.length) ? theirs : (clash.saves ?? []);
+}
+
 function savePicked(clash, uuid) {
-  const offered = clash.saves ?? [];
+  const offered = savesOffered(clash, uuid);
   const chosen = (uuid === clash.defenderUuid) ? clash.defenderSave : clash.challengerSave;
   return chosen || offered[0] || "impulsive";
 }
@@ -4085,6 +4218,21 @@ function renderSkillClash(message, html) {
         }
         container.append(button);
       }
+    }
+
+    // "As an Instant Maneuver... you can appear on a Square adjacent to the target."
+    // Offered for as long as they are in there, on the card that put them there, and to
+    // them alone - it is their Instant, not a step in settling the Clash.
+    if (clash.internalAttack?.inside && challenger?.isOwner) {
+      const out = document.createElement("button");
+      out.type = "button";
+      out.className = "dbu-clash-button";
+      out.textContent = "Burst out";
+      out.dataset.tooltip = "An Instant Maneuver. Appear on a Square adjacent to them, "
+        + "re-enter the Order at your recorded Initiative, and take twice your Might "
+        + "straight off their Life Points - past their Soak Value and Damage Reduction.";
+      out.addEventListener("click", () => burstOut(message, clash));
+      container.append(out);
     }
 
     if (clash.collision && wonIt && !clash.collisionApplied && challenger?.isOwner) {

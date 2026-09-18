@@ -699,6 +699,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Read off the Slot rather than off the Brace Maneuver, so anything else that lowers a
     // Weather Tier lands in the same row without this having to hear about it.
     const weatherTiers = this.actor.system.effects?.slots?.["weather.tiers"] ?? 0;
+    // Inside somebody, which is a thing you are in the middle of like Charging or Holding -
+    // and the one of them that takes you out of the Initiative Order, so it is worth saying
+    // where the turn state is said rather than only on a card that scrolls away.
+    const inside = this.actor.system.inside;
+    context.inside = inside?.targetUuid
+      ? {
+          name: inside.targetName,
+          initiative: inside.initiative,
+          note: inside.initiative
+            ? `Back in the Order at Initiative ${inside.initiative}`
+            : "No Initiative was recorded"
+        }
+      : null;
+
     context.weather = weatherTiers
       ? {
           tiers: weatherTiers,

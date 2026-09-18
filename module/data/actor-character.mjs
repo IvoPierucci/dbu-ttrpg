@@ -931,6 +931,26 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
      * holding it - it has to lapse at the start of their next turn whatever became of the
      * card, and the sheet has to be able to say they are holding something.
      */
+    /**
+     * Whose body this character is currently inside, and where they left off.
+     *
+     * The Internal Attack Maneuver: "remove yourself from the Combat Encounter (record
+     * your Initiative)". The Initiative Order is the ARC's to change, so what is kept here
+     * is the record - who it was, what the Order said, and the card it happened on - and
+     * the table takes them out of the tracker and puts them back.
+     *
+     * The pair of it is the Internalized mark on the target, which is what carries the
+     * penalty. This half is what says the Instant that ends it is still available.
+     */
+    schema.inside = new fields.SchemaField({
+      targetUuid: new fields.StringField({ required: true, blank: true, initial: "" }),
+      targetName: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** What the Order said when they left it. Blank when there was no Order to record. */
+      initiative: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** The card that put them in there, which is where the way out is offered. */
+      messageId: new fields.StringField({ required: true, blank: true, initial: "" })
+    }, { required: true });
+
     schema.delayed = new fields.SchemaField({
       /** The Item held, which is what is finally used. Empty when nothing is held. */
       itemId: new fields.StringField({ required: true, blank: true, initial: "" }),

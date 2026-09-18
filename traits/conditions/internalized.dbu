@@ -1,0 +1,42 @@
+id: internalized
+name: Internalized
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the Internal Attack entry names none. This is the mark that
+# holds "while you are not a member of the Combat Encounter", and the name is this
+# system's.
+combatCondition: no
+source: Core Rule
+description: >
+  Somebody is inside you. Soak Value and Defense Value down by 2(T) until they come
+  back out.
+text: >
+  Internalized: the Internal Attack Maneuver's mark. "While you are not a member of the
+  Combat Encounter, reduce their Soak Value and Defense Value by 2(T)."
+
+---
+
+# --- The name is this system's --------------------------------------------------------
+#
+# The Internal Attack entry names no Condition. What it states is a pair of penalties and
+# the span they hold for - "while you are not a member of the Combat Encounter" - and
+# something has to hold that, which is what a mark is for here. So the word "Internalized"
+# is not one a player will find in the rulebook.
+#
+# Not a Combat Condition, for the reason Hyped, Analyzed and Braced are not: nothing calls
+# it one. The checklist stays the published eighteen.
+#
+# --- Whose Tier of Power -----------------------------------------------------------------
+#
+# "Reduce their Soak Value and Defense Value by 2(T)", and (T) here is read as the Tier of
+# Power of whoever is suffering it - which is how every other inflicted penalty in this
+# system reads, because a passive runs on whoever holds it. Guard Down's "reduce your Dodge
+# Rolls by 2(T)" is the same shape and the same reading.
+#
+# The other reading is the attacker's Tier, which the sentence will carry: it is their
+# Maneuver. If your table takes it that way the number has to come off the attacker and be
+# written onto this mark when it is applied, rather than read here - a different shape, not
+# a different line.
+[passive]
+soakValue -= 2(T);
+defenseValue -= 2(T);

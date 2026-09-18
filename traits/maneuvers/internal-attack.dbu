@@ -1,0 +1,95 @@
+id: internal-attack
+name: Internal Attack
+type: standard
+actionCost: 2
+kiCostPerTier: 6
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+clashSaves: impulsive
+clashDefenderSaves: impulsive, corporeal
+internalAttack: true
+source: Core Rule
+description: >
+  Get inside them. Win the Clash and you leave the Encounter while they lose 2(T) of
+  Soak Value and Defense Value - and you come back out where you like, for twice your
+  Might straight off their Life Points.
+text: >
+  Internal Attack Maneuver [1/Round]: You are able to enter a target’s body and attack
+  them from within!
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 2 Actions
+  –Minions: Non-Minion
+  –KP Cost: 6(T)
+  –Exploitable: N/A
+  –Effect: Target an Opponent within your Melee Range. Make a Clash (Impulsive vs
+  Impulsive/Corporeal) against them. If you win, remove yourself from the Combat Encounter
+  (record your Initiative) and while you are not a member of the Combat Encounter, reduce
+  their Soak Value and Defense Value by 2(T). As an Instant Maneuver, despite not being
+  involved in the Combat Encounter, you can appear on a Square adjacent to the target of
+  this Maneuver, re-enter the Combat Encounter (using your recorded Initiative), and
+  reduce their Life Points by 2x your Might.
+
+---
+
+# --- The Clash ---------------------------------------------------------------------------
+#
+# "(Impulsive vs Impulsive/Corporeal)" - the first Saving Throw Clash in these rules with a
+# different throw on each side. One named for the challenger and two for the defender, and
+# that slash is a choice the defender makes, the same slash as in "Strike/Dodge".
+#
+# The Thrust's "(Impulsive/Corporeal)" has no `vs` in it and stays what it was: one list
+# offered to both sides.
+#
+# A tie goes to the Defender, here as everywhere.
+#
+# --- Being inside somebody ---------------------------------------------------------------
+#
+# Two halves, and only one of them is this system's to do.
+#
+# "Remove yourself from the Combat Encounter (record your Initiative)" is a change to the
+# Initiative Order, and this system does not add or remove combatants - the Order is the
+# ARC's, and taking somebody out of it mid-round is exactly the sort of thing that should
+# happen where everyone can see it. So the Initiative is recorded, the card says it, and
+# whoever runs the tracker does the rest.
+#
+# What IS done is the state itself: the attacker is marked as being inside somebody, and
+# the target is marked as having somebody inside them. That pair is what "while you are not
+# a member of the Combat Encounter" comes to at this table - it begins when the Clash is
+# won and ends when you burst out - and it is what carries the penalty.
+#
+# The penalty lives in the mark's own file, which is where a reader looks for what being
+# Internalized costs.
+#
+# --- Coming back out ----------------------------------------------------------------------
+#
+# "As an Instant Maneuver... you can appear on a Square adjacent to the target, re-enter the
+# Combat Encounter (using your recorded Initiative), and reduce their Life Points by 2x your
+# Might."
+#
+# An Instant, so it releases the Instant rule and cannot follow another Instant, and the
+# card is where it is taken from - the button is on the Clash that put you in there, and it
+# belongs to the one who is inside.
+#
+# The Might is read when you come out rather than when you went in: it is "your Might",
+# present tense, and a Power Up while you were inside is yours.
+#
+# A Life Point reduction, which in these rules means straight off their Life Points past
+# the Soak Value and the Damage Reduction - the same thing a collision is, and it goes
+# through the same function.
+#
+# Where you appear is the table's, like every Square in this system.
+#
+# --- What is not built ---------------------------------------------------------------------
+#
+# "Minions: Non-Minion" - the first entry to name that restriction rather than Free or N/A,
+# and there are no Minions here to refuse. Carried as printed.
+#
+# Nothing stops a second character getting inside the same target, and nothing stops you
+# acting while you are in there beyond the Order not reaching you - both of which follow
+# from the Encounter membership being the table's.
+#
+# --- How it is gained -----------------------------------------------------------------------
+#
+# A Special Maneuver, and what opens it has not been read yet.

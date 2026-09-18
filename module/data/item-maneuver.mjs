@@ -236,6 +236,24 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * and stays until something takes it off.
        */
       insult: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * The Saving Throws the *defender* of a Clash may answer with, where the rule names
+       * something other than the challenger's.
+       *
+       * "(Impulsive vs Impulsive/Corporeal)" is one for them and two for the other side,
+       * where "(Impulsive/Corporeal)" with no `vs` in it is one list offered to both.
+       */
+      clashDefenderSaves: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }
+      ),
+      /**
+       * Wins a Clash and puts the winner inside the loser until they choose to come out.
+       *
+       * A state on two characters at once - one is inside, one has somebody in them - and
+       * an Instant that only exists while it holds. A flag, because none of that is a
+       * number any other Maneuver would want.
+       */
+      internalAttack: new fields.BooleanField({ required: true, initial: false }),
       moveSkill: new fields.StringField({ required: true, blank: true, initial: "" }),
       movePerRank: new fields.NumberField({ required: true, integer: true, initial: 0 }),
       /**

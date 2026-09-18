@@ -821,6 +821,22 @@ async function applyModifiers(actor, applied) {
 
 
 /**
+ * What a Clash of Saving Throws says it is for, in the words of the Maneuver that opened it.
+ *
+ * The reason line is what the two players read before they decide whether to spend anything
+ * on the roll, so it says what winning buys rather than only who is rolling.
+ */
+function saveClashReason(actor, target, maneuver) {
+  if (maneuver.internalAttack) {
+    return `${actor.name} goes for the inside of ${target.name}. Win and ${actor.name} `
+      + `leaves the Encounter, ${target.name} loses 2(T) of Soak Value and Defense Value, `
+      + `and ${actor.name} comes back out when they choose to.`;
+  }
+  return `${actor.name} goes at ${target.name} where it hurts. Win and they are Impaired, `
+    + `and Compelled against ${actor.name} until the end of ${actor.name}'s next turn.`;
+}
+
+/**
  * How many stacks of its own Resource to hold, asked as a total rather than a change.
  *
  * "Gain any number of Holding Back Stacks (the maximum you can possess is equal to your
@@ -1131,7 +1147,9 @@ export function definitionOf(item) {
     feint: item.system.feint,
     holdingBack: item.system.holdingBack,
     insult: item.system.insult,
+    internalAttack: item.system.internalAttack,
     clashSaves: [...(item.system.clashSaves ?? [])],
+    clashDefenderSaves: [...(item.system.clashDefenderSaves ?? [])],
     moveSkill: item.system.moveSkill,
     movePerRank: item.system.movePerRank,
     says: item.system.says,
@@ -1564,10 +1582,10 @@ export async function useManeuver(actor, maneuver) {
     ? await postSaveClash(actor, targetActor, {
         maneuverName: maneuver.name,
         saves: maneuver.clashSaves,
-        reason: `${actor.name} goes at ${targetActor.name} where it hurts. Win and they `
-          + `are Impaired, and Compelled against ${actor.name} until the end of `
-          + `${actor.name}'s next turn.`,
-        ...(maneuver.insult ? { insult: { applied: false } } : {})
+        defenderSaves: maneuver.clashDefenderSaves ?? [],
+        reason: saveClashReason(actor, targetActor, maneuver),
+        ...(maneuver.insult ? { insult: { applied: false } } : {}),
+        ...(maneuver.internalAttack ? { internalAttack: { applied: false, inside: false } } : {})
       })
     : declared
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges },
@@ -1826,7 +1844,9 @@ export function maneuverItemFrom(definition) {
       feint: Boolean(definition.feint),
       holdingBack: Boolean(definition.holdingBack),
       insult: Boolean(definition.insult),
+      internalAttack: Boolean(definition.internalAttack),
       clashSaves: [].concat(definition.clashSaves ?? []),
+      clashDefenderSaves: [].concat(definition.clashDefenderSaves ?? []),
       moveSkill: definition.moveSkill ?? "",
       movePerRank: definition.movePerRank ?? 0,
       says: definition.says ?? "",
