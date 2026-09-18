@@ -3,7 +3,7 @@ import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { refundActions, spendActions } from "./combat.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
-import { COLLISION_QUALITIES } from "./features.mjs";
+import { COLLISION_QUALITIES, HARDNESS_RANKS, hardnessValue } from "./features.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, featureRanks, pushes, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
@@ -7988,31 +7988,39 @@ async function applyFeatureQualities(target, qualities, source) {
 }
 
 /**
- * Collision Damage, as a Life Point reduction.
+ * The Collision Damage window: how hard what they hit was, and what it was made of.
  *
- * Offered off the Might Clash that Knockback opened, and only to the winner of it: the
- * movement is what causes the collision, and there is no movement without the win.
+ * One window, two ways in - off the Clash that threw them, and off the Battlefields tab
+ * for everything that throws nobody. Walking into a wall, a Feature falling on you, a
+ * Splintering one going off beside you: the rules have plenty of collisions that no card
+ * here opens, and every one of them lands the same way.
  *
- * How much it is depends on what they hit and how far they went, which is the table's
- * to work out - so the amount is asked for rather than derived, and asked once per
- * Clash. Two characters thrown by one Maneuver each have a Clash of their own and are
- * each asked their own number, because they did not hit the same wall.
+ * The Rank is picked rather than the number typed. "The Hardness Value is twice the
+ * Hardness Rank multiplied by the base Tier of Power of the Character who is suffering the
+ * Collision Damage" - so it is the one number in a collision this system can work out on
+ * its own, and it is a different number for each character, which is exactly why asking
+ * for it by hand went wrong. What it cannot know is what the wall was made of, and that is
+ * the question.
  *
- * What the system does is take it off the right way: straight off Life, past the Soak
- * Value and past Damage Reduction, and doubled when Launching threw them.
- *
- * And what they hit is asked for in the same breath, because a Feature's Qualities are
- * read at exactly this moment and nowhere else: six of them do something to a character
- * receiving Collision Damage, and this is the only place a character receives any. Asked
- * rather than derived, like the number itself - which Feature it was is the ARC's, and
- * none is the ordinary answer.
+ * @returns {Promise<object|null>} what was taken, or null if the window was closed.
  */
-async function applyCollisionDamage(message, clash) {
-  const target = fromUuidSync(clash.defenderUuid);
-  if (!target || clash.collisionApplied) return;
+async function askCollisionDamage(target, { title = "Collision Damage", doubled = false,
+                                            doubledBy = "", halved = false,
+                                            halvedBy = "" } = {}) {
+  const baseTier = Math.max(1, target.system.baseTierOfPower ?? 1);
 
-  const doubled = Boolean(clash.collision?.doubles);
-  const halved = Boolean(clash.collision?.halves);
+  // Each Rank with its Value already worked out for this character. "6(bT)" is not an
+  // answer to "what does this cost me", and the point of a dropdown is that nobody should
+  // be doing that multiplication at the table. The material comes with it, because that
+  // is the question actually being asked - what did they hit.
+  const ranks = HARDNESS_RANKS.map(hardness => {
+    const material = hardness.text
+      .replace("This Hardness Rank represents ", "")
+      .replace(/\.[\s\S]*$/, "");
+    return `<option value="${hardness.rank}">Rank ${hardness.rank} &middot; ${
+      hardnessValue(hardness.rank, baseTier)} Damage &middot; ${
+      Handlebars.escapeExpression(material)}</option>`;
+  }).join("");
 
   // What the Feature they hit was made of. One row each, the rule's own words under the
   // name, because which of these applies is a thing the ARC decided about that Feature
@@ -8026,17 +8034,17 @@ async function applyCollisionDamage(message, clash) {
 
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
-    window: { title: `${clash.maneuverName} - Collision Damage` },
+    window: { title },
     content: `
-      <label class="dbu-wager">
-        <span>Collision Damage</span>
-        <input type="number" name="collision" value="0" min="0"/>
-        <em>Taken straight off ${Handlebars.escapeExpression(target.name)}'s Life Points,
-          past their Soak Value and Damage Reduction.${doubled
-            ? ` ${Handlebars.escapeExpression(clash.collision.doubledBy)} doubles it.`
-            : ""}${halved
-            ? ` ${Handlebars.escapeExpression(clash.collision.halvedBy)} halves it.`
-            : ""}</em>
+      <label class="dbu-wager dbu-hardness">
+        <span>Hardness Rank</span>
+        <select name="hardness">${ranks}</select>
+        <em>The Hardness Value is twice the Rank a base Tier of Power, and Rank 0 is
+          1(bT) - worked out here against ${Handlebars.escapeExpression(target.name)}'s
+          base Tier of Power of ${baseTier}. Taken straight off their Life Points, past
+          their Soak Value and Damage Reduction.${doubled
+            ? ` ${Handlebars.escapeExpression(doubledBy)} doubles it.` : ""}${halved
+            ? ` ${Handlebars.escapeExpression(halvedBy)} halves it.` : ""}</em>
       </label>
       <p class="dbu-respond-hint">Did the Feature they hit have any of these Qualities?
         Usually none. The rest of what a Quality is - its Life Points, its Squares, what
@@ -8046,26 +8054,24 @@ async function applyCollisionDamage(message, clash) {
       {
         action: "confirm",
         label: "Apply",
-        callback: (event, button, dialog) => {
-          const value = Math.floor(Number(dialog.element.querySelector('input[name="collision"]').value));
-          return {
-            typed: Number.isFinite(value) ? Math.max(0, value) : 0,
-            keys: [...dialog.element.querySelectorAll('input[name="quality"]:checked')]
-              .map(box => box.value)
-          };
-        }
+        callback: (event, button, dialog) => ({
+          rank: Number(dialog.element.querySelector('select[name="hardness"]').value),
+          keys: [...dialog.element.querySelectorAll('input[name="quality"]:checked')]
+            .map(box => box.value)
+        })
       },
       { action: "cancel", label: "Cancel" }
     ],
     rejectClose: false
   });
 
-  // Cancelled. A typed nothing with a Quality ticked is not nothing: Burning still burns
-  // whoever it caught, so only an answer that never came back stops here.
-  if (!chosen) return;
+  // Cancelled. Rank 0 is a real answer and still costs 1(bT), and a Quality ticked against
+  // a halved nothing still burns whoever it caught - so only a window that was closed
+  // stops here.
+  if (!chosen) return null;
 
-  const { typed } = chosen;
   const applied = COLLISION_QUALITIES.filter(quality => chosen.keys.includes(quality.key));
+  const value = hardnessValue(chosen.rank, baseTier);
 
   // All of the halvings at once rather than one after the other. Launching doubles this,
   // a Sudden Stop halves it and a Rubbery or Fragile Feature halves it again - and
@@ -8073,27 +8079,74 @@ async function applyCollisionDamage(message, clash) {
   // exactly where it started.
   const halvings = (halved ? 1 : 0)
     + applied.filter(quality => quality.collision.halves).length;
-  const amount = Math.floor(typed * (doubled ? 2 : 1) * (0.5 ** halvings));
+  const amount = Math.floor(value * (doubled ? 2 : 1) * (0.5 ** halvings));
   const changed = [
-    doubled ? `doubled by ${clash.collision.doubledBy}` : "",
-    halved ? `halved by ${clash.collision.halvedBy}` : "",
+    doubled ? `doubled by ${doubledBy}` : "",
+    halved ? `halved by ${halvedBy}` : "",
     ...applied.filter(quality => quality.collision.halves)
       .map(quality => `halved by ${quality.name}`)
   ].filter(Boolean).join(", ");
-  const reason = changed ? `Collision Damage, ${changed}` : "Collision Damage";
+  const reason = `Collision Damage, Hardness Rank ${chosen.rank}`
+    + (changed ? `, ${changed}` : "");
 
   await reduceLifePoints(target, amount, { reason });
 
-  const said = await applyFeatureQualities(target, applied, clash.maneuverName);
+  const said = await applyFeatureQualities(target, applied, "the collision");
   if (said.length) {
-    await settledNote(message,
-      `What ${target.name} hit was ${listed(applied.map(quality => quality.name))}. `
-      + said.join(" "));
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: target }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+        `What ${target.name} hit was ${listed(applied.map(quality => quality.name))}. `
+        + said.join(" "))}</div>`
+    });
   }
 
-  // Marked on the Clash that allowed it, so one win buys one collision. Another
-  // character thrown by the same Maneuver has a Clash of their own, and is asked for
-  // their own number - what a collision costs depends on what they hit.
+  return { rank: chosen.rank, value, amount, applied };
+}
+
+/**
+ * Collision Damage taken because the character says so.
+ *
+ * The button on the Battlefields tab. Most collisions in these rules are not a card this
+ * system opened - pushed into a wall by something that never rolled, a fall, a Splintering
+ * Feature going off beside you - and the tab is where everything about a Battlefield that
+ * the player sets for themselves already lives.
+ *
+ * Nothing doubles it and nothing halves it on this door: a Launching Profile and a Sudden
+ * Stop are both things a card knows about, and this is the way in for the collisions no
+ * card saw.
+ */
+export async function takeCollisionDamage(actor) {
+  if (!actor) return null;
+  return askCollisionDamage(actor, { title: `${actor.name} - Collision Damage` });
+}
+
+/**
+ * Collision Damage off the Clash that caused it.
+ *
+ * Offered off the Might Clash that Knockback opened, and only to the winner of it: the
+ * movement is what causes the collision, and there is no movement without the win.
+ *
+ * What they hit is asked for rather than derived - which Feature it was is the ARC's - and
+ * asked once per Clash. Two characters thrown by one Maneuver each have a Clash of their
+ * own and are each asked their own question, because they did not hit the same wall, and
+ * the same wall would not have cost them the same anyway.
+ */
+async function applyCollisionDamage(message, clash) {
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target || clash.collisionApplied) return;
+
+  const settled = await askCollisionDamage(target, {
+    title: `${clash.maneuverName} - Collision Damage`,
+    doubled: Boolean(clash.collision?.doubles),
+    doubledBy: clash.collision?.doubledBy ?? "",
+    halved: Boolean(clash.collision?.halves),
+    halvedBy: clash.collision?.halvedBy ?? ""
+  });
+  if (!settled) return;
+
+  // Marked on the Clash that allowed it, so one win buys one collision. Another character
+  // thrown by the same Maneuver has a Clash of their own, and is asked their own question.
   return requestEdit(message, { type: "clash", clash: { ...clash, collisionApplied: true } });
 }
 

@@ -6,7 +6,7 @@ import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.m
 import { reactiveFor } from "../effects/registry.mjs";
 import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
-import { FEATURE_QUALITIES } from "../features.mjs";
+import { FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import {
   combatConditionsFor,
   marksFor,
@@ -412,6 +412,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       reloadTalents: DBUCharacterSheet._onReloadTalents,
       importManeuvers: DBUCharacterSheet._onImportManeuvers,
       attackFeature: DBUCharacterSheet._onAttackFeature,
+      takeCollision: DBUCharacterSheet._onTakeCollision,
       grantManeuvers: DBUCharacterSheet._onGrantManeuvers,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -776,6 +777,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // Every Attacking Maneuver they own, which is what can be thrown at a Feature -
     // "Features can be targets for any Attacking Maneuver, just like Characters can."
+    // Hardness, with the Value worked out for this character. The Rank is the Feature's
+    // and the Value is theirs - "twice the Hardness Rank multiplied by the base Tier of
+    // Power of the Character who is suffering the Collision Damage" - so a table printed
+    // with the Ranks alone would be a table nobody can use without doing the sum.
+    context.baseTierOfPower = system.baseTierOfPower ?? 1;
+    context.hardnessRanks = HARDNESS_RANKS.map(hardness => ({
+      rank: hardness.rank,
+      text: hardness.text,
+      value: hardnessValue(hardness.rank, context.baseTierOfPower)
+    }));
+
     // The Feature Qualities, for reading. Flattened here rather than reached into from
     // the page, because a template cannot ask whether a key exists without one.
     context.featureQualities = FEATURE_QUALITIES.map(quality => ({
@@ -1982,6 +1994,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onAttackFeature(event, target) {
     return useOwnedManeuver(this.actor, target.dataset.itemId, { atFeature: true });
+  }
+
+  /**
+   * Say that this character hit something.
+   *
+   * The same window the Knockback's card opens, without the card. Nothing doubles or
+   * halves it here: a Launching Profile and a Sudden Stop are things a Clash knows about,
+   * and this door exists for the collisions no Clash saw.
+   */
+  static async _onTakeCollision() {
+    const { takeCollisionDamage } = await import("../chat.mjs");
+    return takeCollisionDamage(this.actor);
   }
 
   static async _onSkillRoll(event, target) {

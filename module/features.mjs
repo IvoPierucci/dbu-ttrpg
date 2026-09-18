@@ -148,3 +148,74 @@ export const COLLISION_QUALITIES = Object.freeze(
 export function featureQuality(key) {
   return FEATURE_QUALITIES.find(quality => quality.key === key) ?? null;
 }
+
+/**
+ * Hardness.
+ *
+ * "Hardness represents the resilience of Features and how much they would hurt to be
+ * knocked into it or struck with." Two numbers wearing one name, which is the whole
+ * difficulty of it:
+ *
+ *   Hardness Rank  - what the Feature is made of, 0 to 5. It is also the Feature's Life
+ *                    Points, which are the table's to keep.
+ *   Hardness Value - what colliding with it costs, in square brackets in the entry, and
+ *                    scaling with the base Tier of Power of whoever hit it.
+ *
+ * "The easiest way to remember it is that (aside from Hardness Rank 0), the Hardness
+ * Value is twice the Hardness Rank multiplied by the base Tier of Power of the Character
+ * who is suffering the Collision Damage." Rank 0 is the exception and is 1(bT), not
+ * nothing - sand and the surface of water still cost something to hit.
+ *
+ * So the Value is not a property of the Feature at all. The same wall costs two
+ * characters two different numbers, which is why the collision dialog works it out from
+ * whoever is taking the damage rather than storing it anywhere.
+ */
+export const HARDNESS_RANKS = Object.freeze([
+  {
+    rank: 0,
+    perBaseTier: 1,
+    text: "This Hardness Rank represents substances that are not structurally sound, such "
+        + "as sand or the surface of water. Features cannot have a Hardness value of 0, "
+        + "but the Squares themselves can."
+  },
+  {
+    rank: 1,
+    perBaseTier: 2,
+    text: "This Hardness Rank represents structures made of wood or a collection of "
+        + "harder substances, like gravel."
+  },
+  {
+    rank: 2,
+    perBaseTier: 4,
+    text: "This Hardness Rank represents structures made of stone, bone or cement."
+  },
+  {
+    rank: 3,
+    perBaseTier: 6,
+    text: "This Hardness Rank represents structures made of metal or more resilient stone."
+  },
+  {
+    rank: 4,
+    perBaseTier: 8,
+    text: "This Hardness Rank represents structures that are made from reinforced metals."
+  },
+  {
+    rank: 5,
+    perBaseTier: 10,
+    text: "This Hardness Rank represents structures forged of Katchin, the strongest metal "
+        + "in the universe, or other comparable materials."
+  }
+]);
+
+/**
+ * What a Feature of this Hardness Rank costs this character to hit.
+ *
+ * Twice the Rank a base Tier, except at Rank 0, which is 1(bT) - so the multiplier is
+ * carried on the entry rather than worked out, and the exception is data instead of an
+ * `if`.
+ */
+export function hardnessValue(rank, baseTierOfPower) {
+  const entry = HARDNESS_RANKS.find(hardness => hardness.rank === Number(rank));
+  if (!entry) return 0;
+  return entry.perBaseTier * Math.max(1, Number(baseTierOfPower) || 1);
+}

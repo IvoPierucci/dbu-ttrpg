@@ -88,6 +88,46 @@
       No Attacking Maneuvers to throw at a Feature yet.
     </p>
     {{/if}}
+
+    {{! The other direction. Most collisions in these rules are not a card this system
+        opened - walked into, fallen onto, pushed by something that never rolled - and
+        this is where a player says one happened. }}
+    <div class="maneuver-list">
+      <button type="button" class="dbu-clash-button" data-action="takeCollision"
+              data-tooltip="You hit something. Pick what it was made of and the damage is worked out from your base Tier of Power.">
+        Receive Collision Damage
+      </button>
+    </div>
+  </section>
+
+  {{! Hardness, for reading. Two numbers wearing one name, and the one that matters at the
+      table is not stored anywhere - the Value is worked out against whoever is taking the
+      damage, so the same wall costs two characters two different numbers. }}
+  <section class="panel">
+    <details class="condition-group" data-section="hardness"
+             {{#if openSections.hardness}}open{{/if}}>
+      <summary class="panel-title">
+        Hardness
+        <span class="panel-note">Your Values, at base Tier {{baseTierOfPower}}</span>
+      </summary>
+
+      <p class="tab-placeholder">
+        The Hardness Rank is what a Feature is made of, and is also its Life Points. The
+        Hardness Value is what hitting it costs - twice the Rank a base Tier of Power,
+        except Rank 0, which is 1(bT). The Values below are yours: they scale with the
+        base Tier of Power of whoever suffers the Collision Damage, so another character
+        hitting the same wall takes a different number.
+      </p>
+
+      <ul class="quality-list">
+        {{#each hardnessRanks as |hardness|}}
+        <li class="quality">
+          <strong>Rank {{hardness.rank}} <span class="quality-mark">{{hardness.value}} Damage to you</span></strong>
+          <span>{{hardness.text}}</span>
+        </li>
+        {{/each}}
+      </ul>
+    </details>
   </section>
 
   <section class="panel">
