@@ -304,6 +304,61 @@ async function applyClash(messageId, clash) {
   if (clash.feint && clash.result && !clash.feint.applied) {
     await settleFeint(message, clash);
   }
+
+  if (clash.insult && clash.result && !clash.insult.applied) {
+    await settleInsult(message, clash);
+  }
+}
+
+/**
+ * What a won Insult leaves on the Opponent it was aimed at.
+ *
+ * "The target suffers from the Impaired Combat Condition and gains the Compelled Combat
+ * Condition against you until the end of your next turn." Two Conditions, and only one of
+ * them is timed: the clause at the end belongs to the Compelled, which is the half it also
+ * gives a subject to. Impaired is stated flat, and a Combat Condition with no duration on
+ * it stays until something takes it off.
+ *
+ * "Until the end of YOUR next turn" is the insulter's turn, so that clock is kept by them
+ * and the Condition sits on the target - the split Analysis and Dirty Trick already use.
+ *
+ * "Against you" is said and not tracked: Compelled's own Slot has said since it was
+ * written that who you were told to attack is the table's to keep, so what this can give
+ * them is the sentence with the name in it.
+ */
+async function settleInsult(message, clash) {
+  const insulter = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!insulter || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, insult: { ...clash.insult, applied: true }
+  });
+
+  // A tie goes to the Defender, here as everywhere else.
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} does not rise to it.`);
+    return;
+  }
+
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "impaired", 1);
+  await setCondition(target, "compelled", 1);
+
+  await lasting(insulter, {
+    kind: KINDS.CONDITION,
+    key: "compelled",
+    edge: EDGES.END,
+    next: true,
+    on: target.uuid,
+    source: "Insult"
+  });
+
+  await settledNote(message,
+    `${target.name} is Impaired, and Compelled against ${insulter.name} until the end of `
+    + `${insulter.name}'s next turn. The Impaired stays until something takes it off.`);
 }
 
 /**
@@ -757,7 +812,7 @@ async function chooseThrust(message, clash, choice) {
  * "Strike/Dodge", which is a choice.
  */
 export async function postSaveClash(actor, target, {
-  maneuverName, clashLabel = "", reason = "", saves = ["impulsive"], thrust = null
+  maneuverName, clashLabel = "", reason = "", saves = ["impulsive"], ...leaves
 } = {}) {
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
@@ -777,7 +832,13 @@ export async function postSaveClash(actor, target, {
           // before either has seen a number.
           challengerSave: "",
           defenderSave: "",
-          ...(thrust ? { thrust } : {}),
+          // What settling this Clash leaves behind, whatever it is called - `thrust`,
+          // `blockade`, `insult`. Carried whole rather than named one at a time, because
+          // naming them one at a time is how the Blockade's went missing: it was passed by
+          // the Maneuver, taken by nobody here, and `applyClash` waited for a key that
+          // never arrived. Winning a Blockade stopped no Movement for as long as that
+          // lasted.
+          ...leaves,
           challengerUuid: actor.uuid,
           challengerName: actor.name,
           defenderUuid: target.uuid,
@@ -2977,7 +3038,8 @@ async function playBlockade(message, actor, maneuver) {
   await recordManeuverType(actor, "counter");
 
   // "A Clash (Impulsive)" - one Saving Throw named, so there is nothing to choose
-  // between and neither side is asked anything.
+  // between and neither side is asked anything. The `blockade` below is what settling it
+  // leaves behind, and it reaches the card with the rest of what is passed.
   return postSaveClash(actor, mover, {
     maneuverName: maneuver.name,
     clashLabel: "Blockade",

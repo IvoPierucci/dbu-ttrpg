@@ -2148,6 +2148,10 @@ export async function loadManeuvers() {
     dirtyTrick: Boolean(trait.dirtyTrick),
     feint: Boolean(trait.feint),
     holdingBack: Boolean(trait.holdingBack),
+    insult: Boolean(trait.insult),
+    // A list however the header wrote it, like `clashDefenderSkills`: one Saving Throw
+    // named is a string and two are a list.
+    clashSaves: [].concat(trait.clashSaves ?? []),
     moveSkill: trait.moveSkill ?? "",
     movePerRank: trait.movePerRank ?? 0,
     says: trait.says ?? "",

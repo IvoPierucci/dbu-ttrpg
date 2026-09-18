@@ -1,0 +1,69 @@
+id: insult
+name: Insult
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+clashSaves: morale
+insult: true
+source: Core Rule
+description: >
+  Get under their skin. A Morale Clash, and winning leaves them Impaired and Compelled
+  against you until the end of your next turn.
+text: >
+  Insult Maneuver [1/Round]: If physical attacks don’t work, emotional ones just might!
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Target an Opponent and make a Morale Clash against them. If you win, the
+  target suffers from the Impaired Combat Condition and gains the Compelled Combat
+  Condition against you until the end of your next turn.
+
+---
+
+# --- The Clash -----------------------------------------------------------------------------
+#
+# "A Morale Clash." Morale is one of the four Saving Throws, so this is a Clash of Saving
+# Throws with one named - the shape the Blockade's "Clash (Impulsive)" already has, and the
+# same one the Thrust's second Clash uses with two. One named means neither side is asked
+# anything: there is nothing to choose between.
+#
+# The first Maneuver to open one from the sheet. Every Saving Throw Clash so far has come
+# out of a card - a Movement to stand in the way of, a Thrust that was already won - so
+# `clashSaves` is what lets a Maneuver say it opens one when it is simply used.
+#
+# A tie goes to the Defender, here as everywhere else.
+#
+# --- What winning leaves --------------------------------------------------------------------
+#
+# Two Combat Conditions, and only one of them is timed.
+#
+# "The target suffers from the Impaired Combat Condition and gains the Compelled Combat
+# Condition against you until the end of your next turn." Read as: the clause at the end
+# belongs to the Compelled, which is the half it also gives a subject to - "against you".
+# Impaired is stated flat, and a Combat Condition with no duration stated is one that stays
+# until something takes it off, which is what Condition Recovery is for.
+#
+# The other reading is that the clause covers both. It will carry that - it is one sentence
+# with an "and" in the middle - and if that is what your table takes it to mean, the change
+# is one line beside the Compelled's clock. The narrower one is built because it is the one
+# that cannot quietly make the Maneuver weaker than printed: a wrongly-timed Impaired wears
+# off and nobody notices, where a wrongly-permanent one gets argued about and settled.
+#
+# "Until the end of YOUR next turn" is the insulter's turn, so that clock is kept by them
+# and the Condition sits on the target - the same split Analysis and Dirty Trick use.
+#
+# "Against you" is said and not tracked, which is what Compelled's own Slot has said since
+# it was written: who you were told to attack is the table's to keep. The card gives them
+# the sentence with the name in it.
+#
+# --- How it is gained ------------------------------------------------------------------------
+#
+# A Special Maneuver, and what opens it has not been read yet. Nothing in the entry even
+# names a Skill this time - the Clash is a Saving Throw - so there is not so much as a
+# candidate to note down.

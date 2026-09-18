@@ -217,6 +217,25 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * a new total - which is why this is a flag and not two.
        */
       holdingBack: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * The Saving Throws a Clash this Maneuver opens is made of.
+       *
+       * "Make a Morale Clash against them" - one named, so neither side is asked anything.
+       * More than one is the slash in "(Impulsive/Corporeal)", which is a choice made by
+       * whoever is rolling. Empty on every Maneuver that opens no Clash of Saving Throws,
+       * and on the ones that reach that shape from a card instead of from the sheet.
+       */
+      clashSaves: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }
+      ),
+      /**
+       * Wins a Morale Clash and leaves two Combat Conditions on the loser.
+       *
+       * A flag rather than fields, because the two differ in the thing that matters: one is
+       * timed by the insulter's turn and against them by name, and the other is stated flat
+       * and stays until something takes it off.
+       */
+      insult: new fields.BooleanField({ required: true, initial: false }),
       moveSkill: new fields.StringField({ required: true, blank: true, initial: "" }),
       movePerRank: new fields.NumberField({ required: true, integer: true, initial: 0 }),
       /**

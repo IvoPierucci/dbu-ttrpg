@@ -42,6 +42,7 @@ import {
   postAttack,
   postGrappleCheck,
   postManeuver,
+  postSaveClash,
   postSkillClash,
   offerDelayed,
   postThrust,
@@ -1129,6 +1130,8 @@ export function definitionOf(item) {
     dirtyTrick: item.system.dirtyTrick,
     feint: item.system.feint,
     holdingBack: item.system.holdingBack,
+    insult: item.system.insult,
+    clashSaves: [...(item.system.clashSaves ?? [])],
     moveSkill: item.system.moveSkill,
     movePerRank: item.system.movePerRank,
     says: item.system.says,
@@ -1555,6 +1558,17 @@ export async function useManeuver(actor, maneuver) {
     ? await postThrust(actor, targetActor, maneuver)
     : maneuver.clash
     ? await postSkillClash(actor, targetActor, maneuver)
+    // "Make a Morale Clash against them." A Clash of Saving Throws opened from the sheet
+    // rather than out of a card, which is what every other one in these rules comes from.
+    : maneuver.clashSaves?.length
+    ? await postSaveClash(actor, targetActor, {
+        maneuverName: maneuver.name,
+        saves: maneuver.clashSaves,
+        reason: `${actor.name} goes at ${targetActor.name} where it hurts. Win and they `
+          + `are Impaired, and Compelled against ${actor.name} until the end of `
+          + `${actor.name}'s next turn.`,
+        ...(maneuver.insult ? { insult: { applied: false } } : {})
+      })
     : declared
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges },
         { modifiers: appliedModifiers(modifiers) })
@@ -1811,6 +1825,8 @@ export function maneuverItemFrom(definition) {
       dirtyTrick: Boolean(definition.dirtyTrick),
       feint: Boolean(definition.feint),
       holdingBack: Boolean(definition.holdingBack),
+      insult: Boolean(definition.insult),
+      clashSaves: [].concat(definition.clashSaves ?? []),
       moveSkill: definition.moveSkill ?? "",
       movePerRank: definition.movePerRank ?? 0,
       says: definition.says ?? "",
