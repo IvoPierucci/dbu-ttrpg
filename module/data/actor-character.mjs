@@ -259,7 +259,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     concealment:      { label: "Concealment",      attribute: "insight",     required: true,
                         specialManeuver: "holding-back" },
     creatureHandling: { label: "Creature Handling", attribute: "insight" },
-    intuition:        { label: "Intuition",        attribute: "insight" },
+    // "Special Maneuver: you gain access to the Intuit Maneuver", at the 2+ Ranks every
+    // Skill grants one at - and the Skill that Maneuver is named after, which is a
+    // coincidence of this entry rather than a rule.
+    //
+    // It grants the Profiling Adventuring Maneuver as well: a sixth alongside Forage, Scam,
+    // Fraud, Stretch and Power Regulation, none of them recorded.
+    intuition:        { label: "Intuition",        attribute: "insight",
+                        specialManeuver: "intuit" },
     perception:       { label: "Perception",       attribute: "insight" },
     pilot:            { label: "Pilot",            attribute: "insight",     required: true },
     // "Special Maneuver: you gain access to the Brace Maneuver." Two Ranks opens it, like
@@ -273,7 +280,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     survival:         { label: "Survival",         attribute: "insight",
                         specialManeuver: "brace" },
 
-    useMagic:         { label: "Use Magic",        attribute: "magic",       required: true },
+    // "Special Maneuver: you gain access to the Magic Trick Maneuver."
+    //
+    // And the first Skill whose Adventuring Maneuver line reads N/A - every other one so
+    // far has named at least one. Nothing to record either way while there are no
+    // Adventuring Maneuvers here, but it is the first Skill that would still have nothing
+    // to record once there are.
+    //
+    // Its prose says "it lacks a Combat Maneuver due to the skill being used for a large
+    // amount of effects", which sits oddly beside the Special Maneuver line naming one -
+    // the Magic Trick is a Standard Maneuver used in combat. The stat lines are what is
+    // built from, since they are the ones that say what a character gets.
+    useMagic:         { label: "Use Magic",        attribute: "magic",       required: true,
+                        specialManeuver: "magic-trick" },
 
     // "Special Maneuver: you gain access to the Feint Maneuver", at the 2+ Ranks every
     // Skill grants one at.

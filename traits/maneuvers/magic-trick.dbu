@@ -92,6 +92,15 @@ text: >
 #
 # --- How it is gained --------------------------------------------------------------------------
 #
-# A Special Maneuver, and what opens it has not been read yet. Use Magic is the Skill it
-# rolls and counts, which is not the same question - Dirty Trick rolls Bluff and Bluff opens
-# the Feint instead.
+# Use Magic, at the 2+ Ranks every Skill grants a Special Maneuver at - which is also the
+# Skill this Maneuver rolls and counts. A coincidence of this entry rather than a rule: the
+# Dirty Trick rolls Bluff and Bluff opens the Feint instead.
+#
+# Use Magic is Required, so no Rank is no roll at all - and this Maneuver counts its Ranks
+# for distance, so a character who has just opened it at two Ranks moves two Squares.
+#
+# Worth noting from that entry: it is the first Skill whose Adventuring Maneuver line reads
+# N/A, and its prose says "it lacks a Combat Maneuver due to the skill being used for a
+# large amount of effects" - which sits oddly beside the line granting this one, since this
+# is a Standard Maneuver used in combat. Built from the stat lines, which are the ones that
+# say what a character gets.
