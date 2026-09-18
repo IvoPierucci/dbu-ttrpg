@@ -729,6 +729,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // What Item they were turned into, and whether the second Clash landed. The Condition
     // says they are Transfigured; this says what they are, which is the thing the table
     // needs for the rest of the Encounter and which the card that named it does not keep.
+    const { system } = this.actor;
     const asItem = (Number(system.resources?.anitem?.stacks) || 0) > 0;
     context.transfigured = system.transfigured?.item
       ? {
