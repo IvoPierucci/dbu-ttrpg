@@ -115,21 +115,20 @@ text: >
 #
 # --- The Apprentice Difficulty --------------------------------------------------------------------
 #
-# There are no Difficulty Categories in this system. Not none for this Maneuver - none at
-# all: a Skill Check here is rolled off the sheet or it is one half of a Clash, and nothing
-# measures one against a stated number.
+# Apprentice is Target Number 10, matched or exceeded. The Difficulty Categories are built
+# now - they were not when this file was first written, and this was the entry that made
+# the gap load-bearing rather than merely noted.
 #
-# So the Check is not rolled by this Maneuver. The card says which Skill and which
-# Difficulty, the player rolls Medicine from their own sheet - where the Base Die, the
-# critical, the Botch, the Karmic Effects and the refusal for an untrained Required Skill
-# all already live - and a button on the card takes the poison off when they made it.
+# The Check is still not rolled by this Maneuver. It is rolled from the sheet, where the
+# Base Die, the critical die, the Botch, the Karmic Effects and the refusal for an
+# untrained Required Skill all already live, and where the roll window now offers the
+# Difficulty - so the card that rolls it is the card that says whether it was met.
 #
-# Rolling it here would mean either inventing a number for Apprentice or building a second
-# Skill Check path beside the one that works. The first is a rule this file does not have
-# and the second is worse than the button.
-#
-# The Clairvoyance Skill's ARC Tips asked for a Difficulty Category too. That was advice;
-# this is a stat line, which makes it the first place the gap is load-bearing.
+# What this card does is name the Check that is owed, with its number, and hold the button
+# that takes the poison off. The two are separate cards and nothing joins them: this one
+# cannot see that roll land. Joining them would mean either a second Skill Check path
+# beside the one that works, or lifting the sheet's roll out into something both can call -
+# which is worth doing and is not this Maneuver's to do.
 #
 # --- Medicine is Required --------------------------------------------------------------------------
 #

@@ -1543,15 +1543,19 @@ async function treatAlly(actor, ally, maneuver) {
   }
 
   // "Simply make an Medicine Skill Check with the Apprentice Difficulty to remove the
-  // poison." There are no Difficulty Categories in this system, so the Check is not rolled
-  // here: the card says which Skill and which Difficulty, the player rolls Medicine from
-  // their own sheet - where the Base Die, the critical, the Botch and the Karmic Effects
-  // already are - and the card takes the poison off when they made it.
+  // poison." Rolled from the sheet rather than here, where the Base Die, the critical, the
+  // Botch and the Karmic Effects already live - and the sheet's roll window is what offers
+  // the Difficulty, so it can be picked there and the card says whether it was met.
+  //
+  // The two cards stay separate: this one owes a Check, the Check is its own card, and
+  // nothing joins them. So the poison still comes off by the button here, now with the
+  // number it is being judged against stated rather than left to the table.
+  const apprentice = DBUCharacterData.DIFFICULTIES.apprentice;
   return postManeuver(actor, maneuver, {
     note: `Nothing gave ${ally.name} that poison, so there is nobody to Clash with: `
-      + `${actor.name} makes a Medicine Skill Check at the Apprentice Difficulty. Roll it `
-      + "from the sheet - there are no Difficulty Categories in this system, so what "
-      + "Apprentice asks for is the ARC's.",
+      + `${actor.name} makes a Medicine Skill Check at the ${apprentice.label} Difficulty `
+      + `- Target Number ${apprentice.tn}, matched or exceeded. Roll it from the sheet and `
+      + "pick that Difficulty there; the card will say whether it was met.",
     curePoison: {
       allyUuid: ally.uuid,
       allyName: ally.name,

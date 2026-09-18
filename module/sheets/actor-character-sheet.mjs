@@ -23,6 +23,7 @@ import { baseDieLine, breakdownTable, extraDiceLine, partLine, noteLine, floorLi
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
   checkCard,
+  difficultyLine,
   evaluateCheck,
   enterEncounter,
   prepareRoll,
@@ -1759,7 +1760,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * which offers the extra die as a button on the message (see chat.mjs).
    */
   async #rollCheck({ parts = [], flavor, criticalDice, skillRoll = false, urgent = false,
-                    criticalTarget = null }) {
+                    criticalTarget = null, difficulty = "" }) {
+    // The Difficulty this Check is measured against, where it has one. Resolved once here
+    // rather than looked up in each of the three branches below, all of which say whether
+    // it was met - a willing failure that totals 0 has still missed a Target Number, and
+    // saying nothing there would read as though the Difficulty had been forgotten.
+    const against = DBUCharacterData.DIFFICULTIES[difficulty] ?? null;
     // Same rule as a Combat Roll: penalties cancel bonuses but never take a roll below
     // what the dice said - and what the floor hands back is shown rather than left for
     // the reader to discover by failing to add the column up.
@@ -1819,7 +1825,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         flavor: `${flavor} — Willing failure`,
         rolls: [roll],
         content: checkCard({
-          lines: [...rows(), noteLine("Willing failure - the total is 0")],
+          lines: [...rows(), noteLine("Willing failure - the total is 0"),
+                  difficultyLine(0, against)].filter(Boolean),
           total: 0,
           outcome: "willing",
           owner: this.actor.uuid
@@ -1849,7 +1856,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // The Base Die's doing, like the Botch above it: a Karmic Chance that replaces
         // the die takes both rows with it.
         fromOutcome(floorLine(botched - (roll.total - botchPenalty), botched,
-          "A Botch takes what it takes, and stops at nothing"))
+          "A Botch takes what it takes, and stops at nothing")),
+        difficultyLine(botched, against)
       ].filter(Boolean);
 
       await ChatMessage.create({
@@ -1858,7 +1866,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         rolls: [roll],
         content: checkCard({ lines, total: botched, outcome: "botch", owner: this.actor.uuid }),
         flags: {
-          "dbu-ttrpg": { check: { ...rerollable, total: botched, outcome: "botch", lines } }
+          "dbu-ttrpg": {
+            check: { ...rerollable, total: botched, outcome: "botch", lines, against }
+          }
         }
       });
       return;
@@ -1867,7 +1877,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Posted as our own card rather than Foundry's, so a Skill Check is read the same
     // way as everything else. The Roll rides along on the message, which is what the
     // Critical Die button reaches for and what lets Foundry animate the dice.
-    const lines = rows();
+    const lines = [...rows(), difficultyLine(roll.total, against)].filter(Boolean);
     await ChatMessage.create({
       speaker,
       flavor: critical ? `${flavor} — Critical` : flavor,
@@ -1885,7 +1895,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           criticalPending: critical,
           criticalDice,
           check: {
-            ...rerollable, total: roll.total, outcome: critical ? "critical" : "", lines
+            ...rerollable, total: roll.total, outcome: critical ? "critical" : "", lines,
+            // Carried so the Critical Die's card can judge again: the extra die is exactly
+            // the thing that can take a Check over a Target Number it had missed.
+            against
           }
         }
       }
@@ -1920,9 +1933,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // The confirmation and the roll window are the same dialog: asking twice for one
     // roll would be a click for nothing.
     // The specialisation is free text typed by the player, so it must be escaped.
+    // "A Skill Check is how you use your Skills, both in combat and out... against an
+    // Opponent in the form of a Clash or against a set Difficulty Category." The Clash is
+    // opened by whatever rule calls for one; this is the other half, and it is the only
+    // roll in the system that is offered a Target Number.
     const ready = await prepareRoll(
       this.actor, [], `${name} Check`,
-      `Roll <strong>${Handlebars.escapeExpression(name)}</strong>? (${BASE_DIE} ${bonus})`
+      `Roll <strong>${Handlebars.escapeExpression(name)}</strong>? (${BASE_DIE} ${bonus})`,
+      { difficulties: true }
     );
     if (!ready) return;
 
@@ -1937,7 +1955,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       ],
       flavor: `${name} Check`,
       criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,
-      skillRoll: true
+      skillRoll: true,
+      difficulty: ready.difficulty
     });
   }
 

@@ -1900,6 +1900,28 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
  * Card for a check whose result needs to stand out. The parts line keeps the working
  * visible; the total is what the player actually reads, so it carries the emphasis.
  */
+/**
+ * The row that says whether a Check met the Target Number it was rolled against.
+ *
+ * "You must match or exceed the listed value of the TN" - so this is `>=`, where a Clash
+ * is settled by beating the other side outright. The difference is that a Clash has
+ * somebody on the other side for a tie to go to and a Target Number is nobody.
+ *
+ * Both the name and the number, because the table talks in names and the roll is measured
+ * against the number - a card saying only "Apprentice" makes the reader look it up, and
+ * one saying only "10" makes them work out which Category that was.
+ *
+ * Returns nothing when there was no Target Number, since almost no Check has one.
+ *
+ * @param {number} total  what the Check came to
+ * @param {?{label: string, tn: number}} against  the Difficulty, or null
+ */
+export function difficultyLine(total, against) {
+  if (!against) return null;
+  const met = total >= against.tn;
+  return noteLine(`${against.label} ${against.tn} - ${met ? "met" : "not met"}`);
+}
+
 export function checkCard({ parts, total, outcome, owner = null, lines = null }) {
   // `owner` marks the line as a breakdown of somebody's roll rather than a statement of
   // what happened. A Karma spend or a Ki Surge names itself and stays public; the dice
@@ -1959,8 +1981,11 @@ function renderCurePoison(message, html) {
   button.type = "button";
   button.className = "dbu-clash-button";
   button.textContent = "The Check was made - remove the poison";
-  button.dataset.tooltip = "Roll Medicine from the sheet. What the Apprentice Difficulty "
-    + "asks for is the ARC's: there are no Difficulty Categories in this system.";
+  const apprentice = DBUCharacterData.DIFFICULTIES.apprentice;
+  button.dataset.tooltip = "Roll Medicine from the sheet, picking the "
+    + `${apprentice.label} Difficulty in the roll window - Target Number ${apprentice.tn}, `
+    + "matched or exceeded. That card says whether it was met; this one takes the poison "
+    + "off.";
   button.addEventListener("click", () => curePoison(message, cure));
 
   (html.querySelector(".message-content") ?? html).append(button);
@@ -3246,7 +3271,8 @@ export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll 
 
 export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
-                                    combatRoll = false, attackingManeuver = false } = {}) {
+                                    combatRoll = false, attackingManeuver = false,
+                                    difficulties = false } = {}) {
   const rows = effects.map(entry => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
@@ -3296,11 +3322,30 @@ export async function prepareRoll(actor, effects, title, hint = "",
          <span class="dbu-respond-source">Fail on purpose: this roll totals 0, however the dice land.</span>
        </label>`;
 
+  // "Against an Opponent in the form of a Clash or against a set Difficulty Category."
+  // Asked in the window that confirms the roll rather than in one of its own: that window
+  // exists so a roll takes one click, and a second dialog to pick a number would undo it.
+  //
+  // Offered only where the caller says a Difficulty can apply, which is the Skill Check and
+  // nothing else. A Combat Roll is not measured against a Target Number.
+  const difficultyRows = difficulties
+    ? `<label class="dbu-respond-option dbu-respond-difficulty">
+         <span class="dbu-respond-name">Difficulty</span>
+         <select name="difficulty">
+           <option value="">None - just the roll</option>
+           ${Object.entries(DBUCharacterData.DIFFICULTIES).map(([key, entry]) =>
+             `<option value="${key}">${Handlebars.escapeExpression(entry.label)} - ${entry.tn}</option>`).join("")}
+         </select>
+         <span class="dbu-respond-source">Match or exceed the Target Number. The ARC picks
+           the Category; the card says whether it was met.</span>
+       </label>`
+    : "";
+
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title },
     content: `<div class="dbu-respond-dialog">
-      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${rows}${willing}${karmicGroup}
+      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${rows}${difficultyRows}${willing}${karmicGroup}
     </div>`,
     buttons: [
       {
@@ -3309,7 +3354,8 @@ export async function prepareRoll(actor, effects, title, hint = "",
         callback: (event, button, dialog) => ({
           triggers: [...dialog.element.querySelectorAll('input[name="trigger"]:checked')].map(input => input.value),
           willing: dialog.element.querySelector('input[name="willing"]')?.checked ?? null,
-          karmic: dialog.element.querySelector('input[name="karmic"]:checked')?.value ?? null
+          karmic: dialog.element.querySelector('input[name="karmic"]:checked')?.value ?? null,
+          difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? ""
         })
       },
       { action: "cancel", label: "Cancel" }
@@ -3339,7 +3385,10 @@ export async function prepareRoll(actor, effects, title, hint = "",
     else if (karmic?.check) await takeOnCheck(karmic.message, actor, karmic.check, chosen.karmic);
   }
 
-  return true;
+  // An object rather than `true` where a Difficulty was offered, so the caller can read
+  // what was picked. Truthy either way, which is what every other caller tests - and the
+  // one that tests `=== false` still gets what it was looking for from a cancel.
+  return difficulties ? { difficulty: chosen.difficulty || "" } : true;
 }
 
 /**
@@ -9035,6 +9084,17 @@ function renderCriticalButton(message, html) {
 }
 
 /**
+ * Whether this row is a Difficulty verdict, so a card being rebuilt can drop the old one.
+ *
+ * Matched on the sentence it is built from rather than on a kind of its own: a verdict is
+ * a note like any other note, and giving it a kind would mean teaching the breakdown table
+ * a row type that is drawn exactly like the one it already has.
+ */
+function isVerdict(line) {
+  return (line?.kind === "note") && / \d+ - (met|not met)$/.test(line.source ?? "");
+}
+
+/**
  * Roll the extra die, then replace the original check with a single card showing the
  * combined total. Replacing rather than appending keeps one result in the log instead
  * of a small number the reader has to add up themselves.
@@ -9053,10 +9113,19 @@ async function rollCriticalDie(message, button, criticalDice) {
   // rebuilt: the original said which Skill, which Saving Throw, what an effect added,
   // and a card that threw all that away to say "check = 14" told the reader less after
   // the Critical than before it.
+  const total = baseTotal + critRoll.total;
+
+  // The verdict is worked out again rather than carried over: the Critical Die is exactly
+  // the thing that can take a Check over a Target Number it had missed, and a card that
+  // repeated the old answer under a new number would be the worst of both.
+  //
+  // Which means the old row has to go before the new one is added - `check.lines` has the
+  // verdict as it stood, and two of them on one card is a card that says both.
   const lines = [
-    ...(check?.lines ?? []),
-    fromOutcome(diceLine(critRoll, "Critical", { rank: "extra" }))
-  ];
+    ...(check?.lines ?? []).filter(line => !isVerdict(line)),
+    fromOutcome(diceLine(critRoll, "Critical", { rank: "extra" })),
+    difficultyLine(total, check?.against ?? null)
+  ].filter(Boolean);
 
   await ChatMessage.create({
     speaker: message.speaker,
@@ -9065,7 +9134,7 @@ async function rollCriticalDie(message, button, criticalDice) {
     rolls: [critRoll],
     content: checkCard({
       lines,
-      total: baseTotal + critRoll.total,
+      total,
       outcome: "critical",
       owner: check?.actorUuid ?? null
     })

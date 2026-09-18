@@ -399,6 +399,36 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   static SKILL_CRITICAL_DIE = "1d4";
 
   /**
+   * The Difficulty Categories a Skill Check can be rolled against, and their Target
+   * Numbers.
+   *
+   * "You may be required to make a Skill Check against an Opponent in the form of a Clash
+   * or against a set Difficulty Category." The Clash half has always been here; this is
+   * the other one.
+   *
+   * "You must match or exceed the listed value of the TN" - so meeting it is enough, which
+   * is the opposite of how a Clash is settled. There a tie goes to the Defender, because
+   * there is somebody on the other side for it to go to; a number is nobody.
+   *
+   * Flat, and the same for everybody. Nothing here scales with the Tier of Power - what
+   * grows against a fixed Target Number is the Skill Bonus, which is the Attribute Score
+   * plus two a Rank.
+   *
+   * "The names represent a general idea of the skill level that should be required to beat
+   * them, for the sake of ARCs who introduce Skill Checks when engaging in more narrative
+   * storytelling." So the name is the part a table talks in and the number is what the
+   * roll is measured against - which is why both are carried onto the card.
+   */
+  static DIFFICULTIES = Object.freeze({
+    novice:      { label: "Novice",      tn: 6 },
+    apprentice:  { label: "Apprentice",  tn: 10 },
+    qualified:   { label: "Qualified",   tn: 14 },
+    expert:      { label: "Expert",      tn: 18 },
+    master:      { label: "Master",      tn: 22 },
+    grandmaster: { label: "Grandmaster", tn: 26 }
+  });
+
+  /**
    * A roll crits when the Base Die meets or beats the Critical Target. It starts at 10
    * and effects can lower it, but never below 7.
    */
