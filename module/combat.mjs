@@ -62,9 +62,18 @@ export const NOT_GRAPPLING = Object.freeze({
  * is the same moment from here.
  */
 async function startRound(combat) {
+  const { EDGES, edgeReached } = await import("./durations.mjs");
+
   for (const actor of combatants(combat)) {
+    // Before anything else this Round. "Until the end of the Combat Round" ends here -
+    // the start of the next one is the end of the last from where this stands, since
+    // nothing happens between them - and it has to end before the new Round can hand out
+    // another one, or a second helping would come off with the first.
+    await edgeReached(actor, EDGES.ROUND);
+
     await actor.update(newRoundFor(actor));
     await fireMoment(actor, "start-of-round");
+    await strikeLightning(actor);
   }
 
   await announce("start-of-round", {
@@ -267,6 +276,67 @@ async function lapseDelayed(actor) {
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">${actor.name} lets go of ${held.name} - the `
       + `trigger never came.</div>`
+  });
+}
+
+/**
+ * Storm Weather's lightning, at the start of a Combat Round.
+ *
+ * "Roll a 1d10. If the result is a 1(WT) or lower, you are struck by Lightning. Reduce
+ * your Life Points by 6(WT)."
+ *
+ * Here rather than in the Weather's own file, and it is the only Battle Weather rule so
+ * far that could not stay there. An effect's script writes values; it cannot roll a die,
+ * keep the result and take one branch or the other on it. Nor should it try: a script is
+ * run again every time the character is prepared, and a roll inside one would come out
+ * differently each time the sheet was opened.
+ *
+ * So the random half is an event - rolled once, shown on a card, and applied - the way
+ * Damage Over Time's burn is. What Storm Weather can say for itself, it says for itself:
+ * the halved Awareness is in the file.
+ *
+ * The Tier does three things at once here, which is what makes the card worth reading: it
+ * decides how likely the strike is, how hard it lands, and whether being struck leaves
+ * anything behind.
+ */
+async function strikeLightning(actor) {
+  if (actor.system.battlefield?.weather?.id !== "storm-weather") return;
+
+  const tier = Math.max(1, Number(actor.system.battlefield.weather.tier) || 1);
+  const baseTier = Math.max(1, actor.system.baseTierOfPower ?? 1);
+
+  const roll = new Roll("1d10");
+  await roll.evaluate();
+
+  // "A 1(WT) or lower", so the storm is ten times more likely to find you at Cataclysmic
+  // than at Natural - one face in ten becomes three.
+  const struck = roll.total <= tier;
+
+  await roll.toMessage({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: `Storm Weather - ${tier} or lower is a strike - ${
+      struck ? "struck by Lightning" : "the lightning passes"}`
+  });
+
+  if (!struck) return;
+
+  const { reduceLifePoints } = await import("./chat.mjs");
+  await reduceLifePoints(actor, 6 * tier * baseTier,
+    { reason: `Struck by Lightning - 6(WT) at Weather Tier ${tier}` });
+
+  // "If you are struck by Lightning, you suffer from the Impediment Combat Condition until
+  // the end of the Combat Round." Cataclysmic only, and only when the strike landed.
+  if (tier < 3) return;
+
+  const { setCondition } = await import("./conditions.mjs");
+  const { EDGES, KINDS, lasting } = await import("./durations.mjs");
+
+  if (!await setCondition(actor, "impediment", 1)) return;
+  await lasting(actor, {
+    kind: KINDS.CONDITION,
+    key: "impediment",
+    edge: EDGES.ROUND,
+    source: "Struck by Lightning"
   });
 }
 

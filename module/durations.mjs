@@ -29,6 +29,19 @@ import { setState, setCondition, replaceObject } from "./conditions.mjs";
 export const EDGES = Object.freeze({
   START: "start",
   END: "end",
+  /**
+   * The Combat Round, rather than anybody's turn in it.
+   *
+   * "Until the end of the Combat Round" is a duration the turn edges cannot express: it
+   * ends at the same moment for everybody, whoever is standing where in the order. Storm
+   * Weather's Impediment is the first to ask for it.
+   *
+   * Counted at the start of each Round, which is the end of the one before it and the same
+   * moment from here - nothing happens between the two, and a Round with no start after it
+   * is a Round the Encounter ended in.
+   */
+  ROUND: "round",
+
   /** The whole Combat Encounter, which ends when the Encounter does. */
   ENCOUNTER: "encounter"
 });
@@ -61,6 +74,9 @@ export const KINDS = Object.freeze({
  */
 export function edgesToWait(edge, { next = false, theirTurn = false } = {}) {
   if (edge === EDGES.ENCOUNTER) return 0;
+  // A Round edge is ahead of you whoever you are: it is not your turn that ends it. One
+  // for this Round, two for the next.
+  if (edge === EDGES.ROUND) return next ? 2 : 1;
   if (edge === EDGES.START) return 1;
   return (next && theirTurn) ? 2 : 1;
 }

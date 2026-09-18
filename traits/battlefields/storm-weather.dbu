@@ -1,0 +1,70 @@
+id: storm-weather
+name: Storm Weather
+kind: battlefield
+weather: true
+profile: elemental-lightning
+source: Core Rule
+description: >
+  The lightning. A 1(WT)-in-10 strike each Combat Round for 6(WT) Life Points, halved
+  Awareness past Natural, and Impediment on a strike at Cataclysmic.
+text: >
+  Storm Weather: A flash of lightning illuminates the sky as a crash of thunder shatters
+  the skies overhead, randomly striking down anyone willing to brave the storm.
+
+  Connected Profile: Elemental (Lightning)
+
+  Natural Weather (Tier 1) Effect(s):
+  * At the start of each Combat Round, roll a 1d10. If the result is a 1(WT) or lower,
+  you are struck by Lightning. Reduce your Life Points by 6(WT).
+
+  Unnatural Weather (Tier 2) Effect(s):
+  * Halve your Awareness.
+
+  Cataclysmic Weather (Tier 3) Effect(s):
+  * If you are struck by Lightning, you suffer from the Impediment Combat Condition until
+  the end of the Combat Round.
+
+---
+
+# The first Battle Weather that cannot be written here whole, and the reason is worth
+# saying plainly rather than leaving somebody to find the missing block.
+#
+# --- Natural (1), and Cataclysmic (3): the strike ---------------------------------------------------
+#
+# "Roll a 1d10. If the result is a 1(WT) or lower, you are struck by Lightning."
+#
+# A script in this language writes values. It cannot roll a die, hold the result and take
+# one branch or the other on it - and it should not be able to: a script runs again every
+# time the character is prepared, so a roll inside one would come out differently each time
+# the sheet was opened, and the strike would land and unland as somebody scrolled.
+#
+# So the strike is an event rather than an effect. It lives in `strikeLightning` in
+# combat.mjs, fired once for each character at the start of each Combat Round, the same way
+# Damage Over Time's burn does - rolled once, shown on a card, and applied.
+#
+# The Tier does three things at once there, which is what makes the card worth reading:
+#
+#   how likely  "a 1(WT) or lower" - one face in ten at Natural, three at Cataclysmic
+#   how hard    6(WT) Life Points, so 6(bT) at Natural and 18(bT) at Cataclysmic
+#   what it leaves  Impediment, at Cataclysmic and only on a strike
+#
+# "Until the end of the Combat Round" is a duration the turn edges could not express: it
+# ends at the same moment for everybody, whoever is standing where in the Initiative Order.
+# That is what `EDGES.ROUND` is, added for this and counted when the Round turns over.
+#
+# --- Unnatural (2): the Awareness -----------------------------------------------------------------
+#
+# "Halve your Awareness."
+#
+# This half is an effect and stays here. Awareness feeds the Strike Roll, so the storm is
+# the same trade Tornado Weather makes - it blinds you before it slows you.
+#
+# --- What is not built ------------------------------------------------------------------------------
+#
+# "Connected Profile: Elemental (Lightning)." The Elemental Profiles are the Magic Profiles,
+# and there are none in this system yet. Carried in the header and read by nobody.
+
+[passive]
+if (battlefield.weather.tier >= 2) {
+  awareness *= 0.5;
+}
