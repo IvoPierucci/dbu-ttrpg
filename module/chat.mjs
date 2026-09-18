@@ -8511,16 +8511,24 @@ export async function rollSteadfastCheck(actor) {
   const pending = actor.system.threshold.pending;
   if (!pending.length) return null;
 
-  const { STEADFAST_DIE, STEADFAST_TARGET, THRESHOLDS } = DBUCharacterData;
+  const { THRESHOLDS } = DBUCharacterData;
   const updates = {};
+
+  // Off the character rather than off the constants. The die and the target were both
+  // written into this function, so `steadfast.target` sat in the Slot table with nothing
+  // reading it - and Hot Weather's "reduce the Dice Score of your Steadfast Checks by
+  // 1(WT)" had nowhere at all to land.
+  const { die, bonus, target } = actor.system.steadfast;
 
   const automatic = pending.slice(0, -1);
   const rolled = pending[pending.length - 1];
   for (const key of automatic) updates[`system.thresholdChecks.${key}`] = "fail";
 
-  const roll = new Roll(STEADFAST_DIE);
+  // The bonus is part of the formula rather than added afterwards, so that the card shows
+  // the whole sum - a Check that failed by one is a thing somebody will want to see.
+  const roll = new Roll(bonus ? `${die} + ${bonus}` : die);
   await roll.evaluate();
-  const passed = roll.total >= STEADFAST_TARGET;
+  const passed = roll.total >= target;
   updates[`system.thresholdChecks.${rolled}`] = passed ? "pass" : "fail";
 
   await actor.update(updates);
@@ -8531,7 +8539,8 @@ export async function rollSteadfastCheck(actor) {
 
   await roll.toMessage({
     speaker: ChatMessage.getSpeaker({ actor }),
-    flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - ${passed ? "passed" : "failed"}${carried}`
+    flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - needing ${target} - ${
+      passed ? "passed" : "failed"}${carried}`
   });
 
   return passed;

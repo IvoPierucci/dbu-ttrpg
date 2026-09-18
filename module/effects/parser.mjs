@@ -361,7 +361,12 @@ class Parser {
       const value = this.next().value;
       const scale = this.accept(T.SCALE);
       if (!scale) return A.flat(value);
-      return (scale.value === "T") ? A.perTier(value) : A.perBaseTier(value);
+      if (scale.value === "T") return A.perTier(value);
+      // "(WT)" - multiplied by the Weather Tier of the Battle Weather this character is
+      // standing in. Written on a Battle Weather's own effects, where the Tier is the one
+      // that Weather was set at.
+      if (scale.value === "WT") return A.perWeatherTier(value);
+      return A.perBaseTier(value);
     }
 
     if (this.is(T.DICE)) {

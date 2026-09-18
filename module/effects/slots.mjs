@@ -334,7 +334,10 @@ const TABLE = [
   { key: "threshold.penalty", phase: PHASES.LATE, kind: N, ops: NUMERIC,
     doc: "What failed Steadfast Checks cost your Combat Rolls." },
   { key: "steadfast.target", phase: PHASES.CORE, kind: N, ops: NUMERIC,
-    doc: "What a Steadfast Check has to meet." }
+    doc: "What a Steadfast Check has to meet. 6 by default." },
+  { key: "steadfast.dice", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "What is added to the Dice Score of your Steadfast Checks. Hot Weather takes "
+       + "1(WT) off it." }
 ];
 
 /**

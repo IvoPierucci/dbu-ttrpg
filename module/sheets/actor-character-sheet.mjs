@@ -747,7 +747,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // The Light Levels, named and numbered by their own Trait files rather than by a list
     // here: the number sits beside the rule it carries, and a Level nobody wrote a file
     // for should go missing from the picker rather than be offered and do nothing.
+    //
+    // Filtered on the header that carries the number, which is the same test the registry
+    // makes. Without it every Battlefield file was in the picker: Cover has no Light Level
+    // and `Number(undefined) || 0` is 0, so it was being offered as "Cover (0)" beside
+    // Normal, and picking it set the Level to 0.
     const levels = traitsOfKind("battlefields")
+      .filter(trait => trait.lightLevel !== undefined)
       .map(trait => ({ value: Number(trait.lightLevel) || 0, trait }))
       .sort((a, b) => a.value - b.value);
 
@@ -789,8 +795,35 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // `context.weather` is already taken, by the Brace Maneuver's Tier reduction on the
     // Combat tab. Named apart on purpose - one is a number about this character and the
     // other is the rulebook.
-    context.weatherTiers = WEATHER_TIERS;
+    // Every Battle Weather file there is, for the picker. Filtered on the header rather
+    // than on the folder: Cover and the five Light Levels are Battlefield files too.
+    const standingIn = system.battlefield?.weather?.id ?? "";
+    context.weathers = traitsOfKind("battlefields")
+      .filter(trait => trait.weather === true)
+      .map(trait => ({
+        id: trait.id,
+        name: trait.name,
+        chosen: trait.id === standingIn
+      }));
+
+    // The Tiers, each marked if it is the one set. The same list the reference section
+    // below walks, which is why `chosen` is added rather than the list rebuilt.
+    const tierNow = Number(system.battlefield?.weather?.tier) || 1;
+    context.weatherTiers = WEATHER_TIERS.map(tier => ({
+      ...tier,
+      chosen: tier.tier === tierNow
+    }));
     context.weatherRules = WEATHER_RULES;
+
+    // What the Weather they are standing in does, in its own words. Drawn only when they
+    // are standing in one: "Clear" has nothing to say.
+    const weatherTrait = standingIn
+      ? traitsOfKind("battlefields").find(trait => trait.id === standingIn)
+      : null;
+    context.weatherNow = {
+      id: standingIn,
+      effect: weatherTrait?.description ?? ""
+    };
 
     context.collisionDamage = COLLISION_DAMAGE;
     context.baseTierOfPower = system.baseTierOfPower ?? 1;

@@ -15,7 +15,7 @@ export const T = Object.freeze({
   OPERATOR: "operator",
   NUMBER: "number",
   DICE: "dice",           // 1d10
-  SCALE: "scale",         // the (T) or (bT) that follows an amount
+  SCALE: "scale",         // the (T), (bT) or (WT) that follows an amount
   WORD: "word",           // an identifier or a dotted path
   STRING: "string",
   EOF: "eof"
@@ -75,7 +75,7 @@ export function tokenize(source) {
       const previous = tokens[tokens.length - 1];
       const touching = previous && (previous.line === line)
         && ((previous.column + String(previous.value).length) === column());
-      const scale = source.slice(i).match(/^\((T|bT)\)/);
+      const scale = source.slice(i).match(/^\((T|bT|WT)\)/);
 
       // A level scales like any other amount: Raging at level 2 gives Wound +2(T), not
       // +1(T), so L has to be able to carry a scale the same way a number does.

@@ -135,6 +135,37 @@
     </details>
   </section>
 
+  <section class="panel">
+    <h3 class="panel-title">
+      Battle Weather
+      <span class="panel-hint">Set by you, or by an effect</span>
+    </h3>
+
+    <div class="stat-grid">
+      <div class="stat" data-tooltip="Which Battle Weather you are standing in. Its effects only apply to you while you are in the Squares it covers, and which Squares those are is the table's.">
+        <em>Weather</em>
+        <select name="system.battlefield.weather.id">
+          <option value="" {{#unless weatherNow.id}}selected{{/unless}}>Clear</option>
+          {{#each weathers as |weather|}}
+          <option value="{{weather.id}}" {{#if weather.chosen}}selected{{/if}}>{{weather.name}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat" data-tooltip="How bad it is. Each Tier gains the effects of the earlier Tiers, and a number written (WT) is multiplied by this.">
+        <em>Weather Tier</em>
+        <select name="system.battlefield.weather.tier" data-dtype="Number">
+          {{#each weatherTiers as |tier|}}
+          <option value="{{tier.tier}}" {{#if tier.chosen}}selected{{/if}}>{{tier.name}} ({{tier.tier}})</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+
+    {{#if weatherNow.effect}}
+    <p class="tab-placeholder">{{weatherNow.effect}}</p>
+    {{/if}}
+  </section>
+
   {{! Battle Weather, for reading. The frame ahead of the Weathers themselves: the three
       Tiers, and the rules that hold whichever one is in play.
 

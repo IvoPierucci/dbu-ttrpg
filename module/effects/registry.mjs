@@ -102,6 +102,7 @@ export function programsFor(actor, { report = () => {} } = {}) {
   entries.push(...conditionPrograms(actor, report));
   entries.push(...battlefieldPrograms(actor, report));
   entries.push(...coverPrograms(actor, report));
+  entries.push(...weatherPrograms(actor, report));
 
   return entries;
 }
@@ -255,7 +256,7 @@ function battlefieldPrograms(actor, report) {
   // Level at all - leaving it in the search made the answer depend on how a missing header
   // coerces, which is not a thing to leave to chance.
   const trait = traitsOfKind("battlefields")
-    .filter(candidate => candidate.lightLevel !== undefined)
+    .filter(candidate => (candidate.lightLevel !== undefined) && (candidate.weather !== true))
     .find(candidate => Number(candidate.lightLevel) === level);
 
   if (!trait) {
@@ -288,6 +289,54 @@ function battlefieldPrograms(actor, report) {
     sourceId: `battlefield:${trait.id}`,
     sourceUuid: null,
     // The Level's own name, so the workings say "Dark" rather than a number.
+    sourceName: trait.name,
+    level: 0,
+    stacks: 1
+  }];
+}
+
+/**
+ * The Battle Weather this character is standing in.
+ *
+ * Gathered by id rather than by a number, unlike the Light Level: there is one Light Level
+ * scale and every point on it has a file, and Weathers are a list that grows. An id that
+ * names nothing is reported rather than ignored, the same way an unknown Condition is.
+ *
+ * The Tier is not a gate here. "Each Tier gains the effects of the earlier Tiers", so a
+ * Weather at Cataclysmic is doing all three sets at once - which the file says for itself
+ * with `battlefield.weather.tier >= 2`, one block per Tier. Gating out here would mean
+ * choosing which of the three to gather, and the answer is all of them up to the Tier.
+ *
+ * Kept apart from Cover and the Light Level because none of the three is an alternative to
+ * the others: you can be behind a rock, in the dark, in a storm.
+ */
+function weatherPrograms(actor, report) {
+  const id = String(actor.system?.battlefield?.weather?.id ?? "");
+  if (!id) return [];
+
+  const trait = traitsOfKind("battlefields").find(candidate => candidate.id === id);
+  if (!trait) {
+    report(`"${id}" is not a Battle Weather this system has a file for.`);
+    return [];
+  }
+  if (trait.weather !== true) {
+    report(`"${id}" is a Battlefield file, but it is not a Battle Weather.`);
+    return [];
+  }
+
+  const { program, errors } = compile(
+    `battlefield:${trait.id}`,
+    { script: trait.script },
+    message => report(`${trait.name}: ${message}`)
+  );
+  if (errors.length) return [];
+  if (!program?.blocks?.length) return [];
+
+  return [{
+    program,
+    priority: PRIORITY.base,
+    sourceId: `battlefield:${trait.id}`,
+    sourceUuid: null,
     sourceName: trait.name,
     level: 0,
     stacks: 1

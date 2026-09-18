@@ -1,0 +1,94 @@
+id: hot-weather
+name: Hot Weather
+kind: battlefield
+weather: true
+profile: elemental-fire
+source: Core Rule
+description: >
+  The heat. Steadfast Checks roll 1(WT) lower, and past Natural it halves your Soak
+  Value and burns 10(bT) Life Points a Combat Round.
+text: >
+  Hot Weather: The extreme heat is enough to make even powerful warriors sweat!
+
+  Connected Profile: Elemental (Fire)
+
+  Natural Weather (Tier 1) Effect(s):
+  * Reduce the Dice Score of your Steadfast Checks by 1(WT).
+
+  Unnatural Weather (Tier 2) Effect(s):
+  * Halve your Soak Value.
+
+  Cataclysmic Weather (Tier 3) Effect(s):
+  * At the start of each Combat Round, reduce your Life Points by 10(bT).
+
+---
+
+# The first Battle Weather, so it is also where the shape of one is settled.
+#
+# --- Standing in it ------------------------------------------------------------------------
+#
+# Gathered by the id on the character rather than by a number, and the Tier the player set
+# it at comes with it. "The effects of any Battle Weather only apply if you are in the
+# Squares that they influence" - and there are no Squares here, so standing in it is the
+# player saying so, the way the Light Level is.
+#
+# --- The Tiers, and why they are tested in here ------------------------------------------------
+#
+# "Each Tier gains the effects of the earlier Tiers." So this is not three files or three
+# alternatives: it is one Weather doing more the worse it gets, and the tests are `>=`
+# rather than `==` for exactly that reason. At Cataclysmic all three blocks below are true.
+#
+# Tested in the file rather than gated outside it, because the alternative is the registry
+# choosing which of the three sets to gather - and the answer is always "all of them up to
+# the Tier", which is a thing the file can say for itself in one line.
+#
+# --- Natural (1) ---------------------------------------------------------------------------------
+#
+# "Reduce the Dice Score of your Steadfast Checks by 1(WT)."
+#
+# The Dice Score, which is what the roll comes to - not the target it has to meet. This is
+# the first effect in these rules to touch either, and the Check had been rolling a bare
+# 1d10 against a bare 6 with `steadfast.target` sitting in the Slot table unread. Both are
+# derived now, and this writes to the one the rule names.
+#
+# 1(WT) is not 1: at Cataclysmic it is 3. Which is the whole of what (WT) is for, and the
+# reason the Tiers are numbered rather than only named.
+#
+# --- Unnatural (2) -------------------------------------------------------------------------------
+#
+# "Halve your Soak Value."
+#
+# A multiplication on the finished value, the way Pitch Black halves Awareness - "when an
+# effect multiplies or divides a value, that is applied to the final value". Written to
+# `soakValue`, which floors at the Tier of Power and then at zero, so a halved Soak never
+# goes below what a character provides for themselves.
+#
+# --- Cataclysmic (3) -----------------------------------------------------------------------------
+#
+# "At the start of each Combat Round, reduce your Life Points by 10(bT)."
+#
+# Reduce Life Points, not Damage: nothing Soaks this and no Damage Reduction touches it,
+# which is the same wording Collision Damage and Poisoned use. (bT) rather than (WT) -
+# written as the rule writes it, and at Cataclysmic the two would come to different
+# numbers anyway.
+#
+# The Round rather than the turn, so it lands once for everybody standing in it rather
+# than once per character per turn.
+#
+# --- What is not built ----------------------------------------------------------------------------
+#
+# "Connected Profile: Elemental (Fire)." The Elemental Profiles are the Magic Profiles, and
+# there are none in this system yet. The id is carried in the header so that whatever comes
+# to read the connection has it waiting, and nothing reads it today.
+
+[passive]
+steadfast.dice -= 1(WT);
+
+if (battlefield.weather.tier >= 2) {
+  soakValue *= 0.5;
+}
+
+[automatic/start-of-round]
+if (battlefield.weather.tier >= 3) {
+  life.value -= 10(bT);
+}

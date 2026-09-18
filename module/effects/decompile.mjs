@@ -74,6 +74,7 @@ function amountText(a) {
     case "boolean": return a.value ? "true" : "false";
     case "perTier": return `${a.value}(T)`;
     case "perBaseTier": return `${a.value}(bT)`;
+    case "perWeatherTier": return `${a.value}(WT)`;
     case "level": return a.scale ? `L(${a.scale})` : "L";
     case "dice":
       if (a.from) return `${a.from}Dice`;

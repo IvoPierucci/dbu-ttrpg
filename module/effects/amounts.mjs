@@ -38,10 +38,19 @@ export function resolveAmount(amount, scope) {
     case "perBaseTier":
       return (amount.value ?? 0) * (scope.data?.baseTierOfPower ?? 0);
 
+    // "If an effect has a number with (WT) after it, this means that the number is
+    // multiplied by the Weather Tier." Nothing when the character is standing in no
+    // Battle Weather, which is what a Weather's effects coming to nothing means.
+    case "perWeatherTier":
+      return (amount.value ?? 0) * (scope.data?.battlefield?.weather?.tier ?? 0);
+
     case "level": {
       const level = scope.level ?? 0;
       if (amount.scale === "T") return level * (scope.data?.tierOfPower ?? 0);
       if (amount.scale === "bT") return level * (scope.data?.baseTierOfPower ?? 0);
+      if (amount.scale === "WT") {
+        return level * (scope.data?.battlefield?.weather?.tier ?? 0);
+      }
       return level;
     }
 
@@ -128,6 +137,7 @@ export function resolveDice(amount, scope) {
 
   const multiplier = (amount.scale === "T") ? (scope.data?.tierOfPower ?? 1)
     : (amount.scale === "bT") ? (scope.data?.baseTierOfPower ?? 1)
+    : (amount.scale === "WT") ? (scope.data?.battlefield?.weather?.tier ?? 0)
     : 1;
 
   const total = n * multiplier;

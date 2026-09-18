@@ -41,6 +41,7 @@ export const flat = value => ({ type: "flat", value });
 export const boolean = value => ({ type: "boolean", value });
 export const perTier = value => ({ type: "perTier", value });
 export const perBaseTier = value => ({ type: "perBaseTier", value });
+export const perWeatherTier = value => ({ type: "perWeatherTier", value });
 export const level = (scale = null) => ({ type: "level", scale });
 export const dice = (formula, scale = null, from = null) =>
   ({ type: "dice", formula, scale, from });
@@ -208,6 +209,9 @@ function validateAmount(a, slot, phase, ctx) {
   switch (a.type) {
     case "flat":
     case "perBaseTier":
+    // (WT) is read off a field the character carries, so it is known in every phase, the
+    // way (bT) is. What it comes to is nothing when they are standing in no Weather.
+    case "perWeatherTier":
       return;
 
     case "boolean":

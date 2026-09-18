@@ -4,6 +4,7 @@ import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
 import { hardnessValue } from "../features.mjs";
+import { MAX_WEATHER_TIER } from "../weather.mjs";
 import {
   categoryFormula,
   greaterDiceCategory,
@@ -667,6 +668,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   /** A Steadfast Check is a bare d10 against this - no Extra Dice, no crits, no botches. */
   static STEADFAST_DIE = "1d10";
   static STEADFAST_TARGET = 6;
+  /** The die a Steadfast Check rolls, without its size, so a bonus can be added to it. */
+  static STEADFAST_DICE = 1;
+  static STEADFAST_FACES = 10;
 
   /** A Healing Surge restores this many d10 per Tier of Power. */
   static HEALING_SURGE_DICE_PER_TIER = 2;
@@ -1128,6 +1132,25 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
        * whoever it is protecting - so storing the Value would mean a number that quietly
        * stopped matching the wall the moment the character's base Tier changed.
        */
+      /**
+       * The Battle Weather this character is standing in, and at what Tier.
+       *
+       * One, not several. "Battle Weather effects can be combined in any fashion" is
+       * about a Battlefield, which may have rain over one half of it and fog over the
+       * other - and the rule that governs a Square is the other one: "Each Square can
+       * (with few exceptions) only have a single Battle Weather applied to it." This
+       * tracks one character standing in one place, so it holds one.
+       *
+       * Empty is clear weather, and is what a character nobody has said anything about
+       * is standing in.
+       */
+      weather: new fields.SchemaField({
+        id: new fields.StringField({ required: true, blank: true, initial: "" }),
+        tier: new fields.NumberField({
+          required: true, integer: true, initial: 1, min: 1, max: MAX_WEATHER_TIER
+        })
+      }, { required: true }),
+
       cover: new fields.SchemaField({
         active: new fields.BooleanField({ required: true, initial: false }),
         /** The Hardness Rank of what they are behind, 0 to 5. */
@@ -1928,6 +1951,22 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       max: DBUCharacterData.MAX_ABSOLUTE_ATTACKS_PER_ROUND,
       left: Math.max(0,
         DBUCharacterData.MAX_ABSOLUTE_ATTACKS_PER_ROUND - this.absoluteAttacksThisRound)
+    };
+
+    // --- The Steadfast Check ---
+    // "Reduce the Dice Score of your Steadfast Checks by 1(WT)" is the first effect in
+    // these rules to touch one, and it needed somewhere to land: the Check was rolling a
+    // bare 1d10 against a bare 6, and `steadfast.target` had been sitting in the Slot
+    // table with nothing reading it.
+    //
+    // Both halves are derived now, so a Slot written to either one is a Slot that does
+    // something. The bonus is what a roll adds to its total; the target is what it has to
+    // meet.
+    this.steadfast = {
+      die: DBUCharacterData.STEADFAST_DIE,
+      bonus: slot(this, "steadfast.dice"),
+      target: Math.max(1,
+        DBUCharacterData.STEADFAST_TARGET + slot(this, "steadfast.target"))
     };
 
     // --- Damage Over Time ---
