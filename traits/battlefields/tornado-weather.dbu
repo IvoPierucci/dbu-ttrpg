@@ -1,0 +1,82 @@
+id: tornado-weather
+name: Tornado Weather
+kind: battlefield
+weather: true
+profile: elemental-wind
+source: Core Rule
+description: >
+  The wind. Speeds and Defense Value 2(WT) lower, and past Natural it halves your
+  Haste. At Cataclysmic it drags everybody towards an epicenter, which is the table's.
+text: >
+  Tornado Weather: Strong, cyclical winds lift the terrain and block visibility,
+  buffering you around the battlefield.
+
+  Connected Profile: Elemental (Wind)
+
+  Natural Weather (Tier 1) Effect(s):
+  * Reduce your Speeds and Defense Value by 2(WT).
+
+  Unnatural Weather (Tier 2) Effect(s):
+  * Halve your Haste.
+
+  Cataclysmic Weather (Tier 3) Effect(s):
+  * Upon the creation of this Battle Weather, the creator (ARC or otherwise) will select
+  a point within the Battle Weather to be the epicenter. At the start of each Combat
+  Round, you are moved 3 Squares towards the epicenter in the most direct path possible
+  (if any Feature or Character is in the way, then proceed to follow the typical rules
+  for Collision - see Battlefields).
+
+---
+
+# The third Weather, and the first whose top Tier is not a number.
+#
+# --- Natural (1) ---------------------------------------------------------------------------------
+#
+# "Reduce your Speeds and Defense Value by 2(WT)."
+#
+# Your Speeds - both of them, Normal and Boosted - so this writes to `speed.all` rather
+# than to the two by name. A file that knew how many Speeds there are is a file that would
+# have to be found again if there were ever a third.
+#
+# 2(WT), so it is 2 at Natural and 6 at Cataclysmic. The Defense Value carries into the
+# Dodge Roll, which is where most of this will actually be felt.
+#
+# --- Unnatural (2) -------------------------------------------------------------------------------
+#
+# "Halve your Haste."
+#
+# Haste feeds the Strike Roll, so this is the attacking half of the same idea: the wind
+# takes the Defense at Natural and the Strike at Unnatural. A multiplication on the
+# finished value, like every other halving here.
+#
+# --- Cataclysmic (3) -----------------------------------------------------------------------------
+#
+# "You are moved 3 Squares towards the epicenter in the most direct path possible."
+#
+# Not built, and not buildable here. Every noun in it is one this system does not have: an
+# epicenter is a point on a map, "3 Squares towards" is a distance and a direction, and
+# "the most direct path possible" is a route through whatever is standing in it. This
+# system moves nobody and measures nothing.
+#
+# So the Tier is real and its effect is the table's, which is the same answer Scale and
+# Replacing Weathers already get. What is worth saying is that the one part of it that does
+# reach a character is already built: "proceed to follow the typical rules for Collision"
+# is the Receive Collision Damage button on the Battlefields tab, and whoever is dragged
+# into something presses it.
+#
+# Deliberately not written as a start-of-round block that does nothing. A block that fires
+# and changes no value is indistinguishable from a broken one, and it would put Tornado
+# Weather's third Tier in the same shape as Hot and Cold's - which it is not.
+#
+# --- What is not built ----------------------------------------------------------------------------
+#
+# "Connected Profile: Elemental (Wind)." The Elemental Profiles are the Magic Profiles, and
+# there are none in this system yet. Carried in the header and read by nobody.
+
+[passive]
+speed.all -= 2(WT);
+defenseValue -= 2(WT);
+
+if (battlefield.weather.tier >= 2) {
+  haste *= 0.5;
+}

@@ -1756,11 +1756,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       DBUCharacterData.applySizeModifier(atts.agility.mod, this.size.defenseModifier));
 
     // Speed: Normal = 2 + (1/2 Agility Mod); Boosted = Agility Mod + 2.
+    // Each Speed through its own Slot, then both through the one that names them
+    // together. Outermost, so a blanket change lands on the finished Speed.
     this.speed = {
-      normal: withEffects(this, "speed.normal",
-        2 + Math.floor(atts.agility.mod / 2) + this.size.speedModifier),
-      boosted: withEffects(this, "speed.boosted",
-        atts.agility.mod + 2 + this.size.speedModifier)
+      normal: withEffects(this, "speed.all",
+        withEffects(this, "speed.normal",
+          2 + Math.floor(atts.agility.mod / 2) + this.size.speedModifier),
+        { as: "speed.normal" }),
+      boosted: withEffects(this, "speed.all",
+        withEffects(this, "speed.boosted",
+          atts.agility.mod + 2 + this.size.speedModifier),
+        { as: "speed.boosted" })
     };
 
     // Initiative bonus: 1/2 Agility Score.

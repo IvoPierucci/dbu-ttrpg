@@ -253,6 +253,13 @@ const TABLE = [
     doc: "Actions gained each Combat Round." },
   { key: "actions.remaining", phase: PHASES.REACTIVE, kind: N, ops: NUMERIC,
     doc: "Actions left this round. Changed as they are spent or taken away." },
+  // Both Speeds at once. "Reduce your Speeds and Defense Value by 2(WT)" names them
+  // together, and there is no reason for a file to know how many there are.
+  //
+  // Applied outside the two named ones, so a halving written here lands on the finished
+  // Speed - the same shape `save.all` has.
+  { key: "speed.all", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Both Speeds. Applied after the one named for a single Speed." },
   { key: "speed.normal", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Speed." },
   { key: "speed.boosted", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Boosted Speed." },
 
