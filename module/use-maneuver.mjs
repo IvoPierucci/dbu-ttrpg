@@ -13,6 +13,9 @@ import {
   PROFILES,
   allManeuvers,
   declareAttack,
+  tailProfiles,
+  TAIL_VARIANTS,
+  TAIL_BASE_PROFILE,
   whyNotInReach,
   maxEnergyCharges,
   maneuverKiCost,
@@ -1358,6 +1361,14 @@ export function definitionOf(item) {
     intuit: item.system.intuit,
     powerDrain: item.system.powerDrain,
     sense: item.system.sense,
+    outsideDiminishing: item.system.outsideDiminishing,
+    tailAttack: item.system.tailAttack,
+    tailVariant: item.system.tailVariant ?? "",
+    // Derived from the variant rather than stored beside it: which Profiles this Maneuver
+    // offers, what the second of them adds to the price, and the Foundation the entry pins
+    // for one of them. Derived here so every reader gets them - the row on the sheet that
+    // prices it, the picker, and the payment - rather than only the path that asks.
+    ...(item.system.tailAttack ? tailProfiles(item.system.tailVariant ?? "") : {}),
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -1402,6 +1413,88 @@ export function definitionOf(item) {
  * @param {object} maneuver  a definition, from definitionOf() or the core table
  * @returns {Promise<boolean>} False when nothing happened, for any reason.
  */
+/**
+ * The Tail Attack's one-time choice: which additional effect this character's tail has.
+ *
+ * "When you first gain access to this Special Maneuver, you may select one of these
+ * additional effects to have access to while you have access to this Maneuver." Asked once
+ * and kept on the Item, so it survives the Maneuver leaving the list and coming back.
+ *
+ * Every option is priced at this character's own Tier of Power, through the same function
+ * that will charge for it - a choice kept for the rest of a campaign should not be made
+ * against a notation the player has to work out.
+ *
+ * Declining is one of the answers: the entry says "you may select", and "none" is recorded
+ * so the question is not put again every round.
+ *
+ * @returns {Promise<string>} a variant key, "none", or "" if the player backed out
+ */
+async function askTailVariant(actor, maneuver) {
+  const priceOf = (key) => {
+    const variant = TAIL_VARIANTS[key];
+    const shaped = { ...maneuver, tailVariant: key, ...tailProfiles(key) };
+    return maneuverKiCost(shaped, { profile: variant.profile }, actor);
+  };
+  const basePrice = maneuverKiCost(
+    { ...maneuver, tailVariant: "none", ...tailProfiles("none") },
+    { profile: TAIL_BASE_PROFILE }, actor);
+
+  const options = Object.entries(TAIL_VARIANTS).map(([key, variant]) => `
+    <label class="dbu-defend-option">
+      <input type="radio" name="variant" value="${key}"/>
+      <span class="dbu-defend-body">
+        <span class="dbu-defend-head"><strong>${Handlebars.escapeExpression(variant.label)}</strong></span>
+        <span class="dbu-defend-summary">${Handlebars.escapeExpression(variant.tip)}
+          ${priceOf(key)} KP at your Tier of Power, against ${basePrice} for the Simple
+          Profile.</span>
+      </span>
+    </label>`).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${maneuver.name} - your tail` },
+    content: `
+      <p>Chosen once, and kept for as long as you have this Maneuver. You can change it
+        later on the Maneuver's own sheet.</p>
+      <div class="dbu-defend-list">
+        ${options}
+        <label class="dbu-defend-option">
+          <input type="radio" name="variant" value="none" checked/>
+          <span class="dbu-defend-body">
+            <span class="dbu-defend-head"><strong>None</strong></span>
+            <span class="dbu-defend-summary">The Simple Profile only, for ${basePrice} KP.</span>
+          </span>
+        </label>
+      </div>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Confirm",
+        callback: (event, button, dialog) =>
+          dialog.element.querySelector('input[name="variant"]:checked')?.value ?? ""
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if ((typeof chosen !== "string") || !chosen || (chosen === "cancel")) return "";
+  return chosen;
+}
+
+/**
+ * Write the choice onto the character's own copy of the Maneuver.
+ *
+ * The Item and not the character: a second Tail Attack, renamed and kept beside the first,
+ * is a different tail. And the Item is where every other change a player makes to their
+ * copy of a Maneuver already lives.
+ */
+async function recordTailVariant(actor, maneuver, variant) {
+  const item = actor.items.get(maneuver.itemId);
+  if (!item) return;
+  await item.update({ "system.tailVariant": variant });
+}
+
 export async function useManeuver(actor, maneuver) {
   if (!actor || !maneuver) return false;
 
@@ -1537,6 +1630,22 @@ export async function useManeuver(actor, maneuver) {
       ui.notifications.warn(`${maneuver.name} cannot target its own user.`);
       return false;
     }
+  }
+
+  // "When you first gain access to this Special Maneuver, you may select one of these
+  // additional effects." Asked here because the answer decides which Profiles the picker
+  // offers three lines down, and because this is still a point where the whole thing can
+  // be called off with nothing spent.
+  //
+  // `maneuver` is reassigned rather than shadowed: after the choice, the Maneuver being
+  // used IS the one with that variant on it, and everything below - the picker, the price,
+  // the card - has to be looking at the same one. Threading a second name through all of
+  // them is how two copies of one Maneuver come to disagree.
+  if (maneuver.tailAttack && !maneuver.tailVariant) {
+    const variant = await askTailVariant(actor, maneuver);
+    if (!variant) return false;
+    await recordTailVariant(actor, maneuver, variant);
+    maneuver = { ...maneuver, tailVariant: variant, ...tailProfiles(variant) };
   }
 
   // The Profile and its Foundation are declared before anything is paid, since both
@@ -2145,6 +2254,9 @@ export function maneuverItemFrom(definition) {
       intuit: Boolean(definition.intuit),
       powerDrain: Boolean(definition.powerDrain),
       sense: Boolean(definition.sense),
+      outsideDiminishing: Boolean(definition.outsideDiminishing),
+      tailAttack: Boolean(definition.tailAttack),
+      tailVariant: definition.tailVariant ?? "",
       kiCostPerTier: definition.kiCostPerTier ?? 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),

@@ -4902,8 +4902,14 @@ export async function postAttack(actor, target, maneuver,
   // one. In the same write as the rest, off one reading of the character.
   const absolute = Boolean(maneuver.absolute && maneuver.attacking);
 
+  // "Do not count towards the penalty from Diminishing Offense." The count is what the
+  // penalty is worked out from, so an attack outside it does not raise the count - and the
+  // attack after this one is no worse off for this one having happened. The other half of
+  // the same sentence is on the Strike Roll, further down.
+  const counts = maneuver.outsideDiminishing ? 0 : 1;
+
   await actor.update({
-    "system.attacksThisRound": actor.system.attacksThisRound + 1,
+    "system.attacksThisRound": actor.system.attacksThisRound + counts,
     "system.attackActionsThisTurn": actor.system.attackActionsThisTurn
       + (asOutOfSequence ? 0 : (maneuver.actionCost ?? 1)),
     ...(absolute
@@ -4930,6 +4936,11 @@ export async function postAttack(actor, target, maneuver,
           provokedBy,
           actionCost: maneuver.actionCost ?? 1,
           tags: maneuver.tags ?? [],
+          // "Do not suffer from... the penalty from Diminishing Offense." Carried on the
+          // attack rather than looked up at the Strike Roll: whether this attack was
+          // outside it was settled when it was declared, and the Maneuver it came from may
+          // be edited in between - the same reason `absolute` is carried.
+          outsideDiminishing: Boolean(maneuver.outsideDiminishing),
           // Carried on the attack rather than looked up at the Wound Roll: whether this
           // was an Absolute Attack was settled when it was declared, and the Maneuver it
           // came from may be edited in between.
@@ -5755,7 +5766,12 @@ async function resolveAttack(message, attack) {
     ...profileStrikeParts(attacker, attack),
     ...modifierStrikeParts(attacker, attack),
     ...musclePenalty(attacker),
-    { label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty },
+    // Left off entirely rather than shown at nothing: a row saying Diminishing Offense
+    // took nothing off is a row a reader has to work out the meaning of, and the rule is
+    // that it does not apply rather than that it applies and comes to zero.
+    ...(attack.outsideDiminishing
+      ? []
+      : [{ label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty }]),
     ...thresholdPenalty(attacker)
   ], {
     ...attackerOptions, slot: "strike", attackingManeuver: true,

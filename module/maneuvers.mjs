@@ -169,6 +169,72 @@ export function resolveDamageCategory(baseCategory, shift = 0) {
  * what it says here is shown when it is picked, so nobody discovers at the table that
  * half of it did nothing.
  */
+/**
+ * The four things a Tail Attack's tail can be, one of which is chosen once and kept.
+ *
+ * A table rather than four branches, because what differs between them is small and
+ * particular: which Profile it unlocks, what that costs on top of the Maneuver's own
+ * price, and - for the one Profile that spans more than one Foundation - which Foundation
+ * the entry pins it to.
+ *
+ * The surcharges are the entry's own numbers. Three of the four come to exactly what the
+ * Profile lists once the Maneuver's 2(T) is added, which is a pattern the trait file
+ * argues about and does not build on.
+ */
+export const TAIL_VARIANTS = Object.freeze({
+  elongated: {
+    label: "Elongated",
+    profile: "sweeping",
+    kiCostPerTier: 2,
+    tip: "Sweeping Profile, for 2(T) more."
+  },
+  multiple: {
+    label: "Multiple",
+    profile: "combination",
+    kiCostPerTier: 2,
+    // "The Combination Profile of the Physical Foundation." The only Profile here that
+    // belongs to more than one, and the only one the entry pins.
+    foundation: "physical",
+    tip: "Combination Profile of the Physical Foundation, for 2(T) more."
+  },
+  spiked: {
+    label: "Spiked",
+    profile: "crushing",
+    kiCostPerTier: 4,
+    tip: "Crushing Profile, for 4(T) more."
+  },
+  heavy: {
+    label: "Heavy",
+    profile: "powered",
+    kiCostPerTier: 6,
+    tip: "Powered Profile, for 6(T) more."
+  }
+});
+
+/** The Profile a Tail Attack always has, whatever its variant is. */
+export const TAIL_BASE_PROFILE = "simple";
+
+/**
+ * Which Profiles a Tail Attack may be made with, and what each of them adds to its price.
+ *
+ * Derived rather than stored, so the two can never disagree: one variant means one extra
+ * Profile and one surcharge, and the Simple Profile is there either way.
+ *
+ * `variant` is "" when the choice has not been made yet and "none" when it was made and
+ * declined. Both come to the same answer here - the Simple Profile alone - and they are
+ * two states because only one of them is still worth asking about.
+ */
+export function tailProfiles(variant) {
+  const chosen = TAIL_VARIANTS[variant];
+  return {
+    profileChoices: [TAIL_BASE_PROFILE, ...(chosen ? [chosen.profile] : [])],
+    profileSurcharge: chosen ? { [chosen.profile]: chosen.kiCostPerTier } : {},
+    profileFoundation: (chosen && chosen.foundation)
+      ? { [chosen.profile]: chosen.foundation }
+      : {}
+  };
+}
+
 export const PROFILES = Object.freeze({
   // --- Multi-Foundation -----------------------------------------------------
   // "Profiles that don't belong to a specific Foundation. When using any of these, you
@@ -1320,13 +1386,20 @@ function groupTip(group) {
   return note ? ` data-tooltip="${Handlebars.escapeExpression(note)}"` : "";
 }
 
-function profileGroups(foundations) {
+function profileGroups(foundations, allowed = []) {
   const groups = [{ key: "multi", label: "Multi-Foundation", profiles: [] }];
   for (const [key, foundation] of Object.entries(foundations)) {
     groups.push({ key, label: foundation.label, profiles: [] });
   }
 
+  // A Maneuver that allows some Profiles rather than one or all of them. Between the two
+  // shapes that already existed: `profile` names exactly one and skips the question, and
+  // "any" offers everything. The Tail Attack offers two, and which two depends on a choice
+  // its owner made once - so the list is passed in rather than read off the Maneuver here.
+  const only = new Set(allowed);
+
   for (const [id, profile] of Object.entries(PROFILES)) {
+    if (only.size && !only.has(id)) continue;
     const group = (profile.foundations.length > 1)
       ? groups[0]
       : groups.find(candidate => candidate.key === profile.foundations[0]);
@@ -1380,7 +1453,11 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   // button is not a place for a sentence - two of them side by side became blocks of
   // wrapped text with the Foundation's name lost in the middle. It is said where there
   // is room for it: on the group these Profiles were chosen from, one step back.
-  const available = PROFILES[profile].foundations;
+  // Where the Maneuver pins one for this Profile in particular, that is the answer and
+  // there is nothing to ask: "the Combination Profile of the Physical Foundation" names a
+  // Foundation for a Profile that would otherwise offer three.
+  const pinned = maneuver.profileFoundation?.[profile] ?? "";
+  const available = pinned ? [pinned] : PROFILES[profile].foundations;
   const shut = shutFoundations(actor, foundations);
 
   const foundation = (available.length === 1)
@@ -1495,7 +1572,7 @@ function profileOption(profile, maneuver, actor, state, limits = {}) {
 export async function pickProfileOnly(maneuver, foundations, hint = "", actor = null) {
   if (maneuver.profile && (maneuver.profile !== "any")) return maneuver.profile;
 
-  const groups = profileGroups(foundations);
+  const groups = profileGroups(foundations, maneuver.profileChoices ?? []);
   let checked = false;
 
   const shut = shutFoundations(actor, foundations);
@@ -1744,7 +1821,7 @@ export function minimumKiWager(actor, maneuver = null) {
  * either way; it simply has nothing to choose between.
  */
 async function pickProfile(maneuver, foundations, actor, limits = {}) {
-  const groups = profileGroups(foundations);
+  const groups = profileGroups(foundations, maneuver.profileChoices ?? []);
   const fixed = (maneuver.profile !== "any") ? PROFILES[maneuver.profile] : null;
   // An Attacking Maneuver that names no Profile at all - which the schema allows, and
   // a hand-written Signature Technique can be - still has a wager to declare. There is
@@ -1840,6 +1917,12 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
  * are alternatives rather than additions: a Maneuver states its price one way or the
  * other.
  */
+function surchargeKiCost(maneuver, profileId, actor) {
+  if (!profileId) return 0;
+  const perTier = maneuver.profileSurcharge?.[profileId] ?? 0;
+  return perTier * (actor?.system?.tierOfPower ?? 1);
+}
+
 function baseKiCost(maneuver, actor) {
   if (maneuver.kiCostPerBaseTier) {
     return maneuver.kiCostPerBaseTier * (actor?.system?.baseTierOfPower ?? 1);
@@ -2023,6 +2106,7 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // half that applies to Attacking Maneuvers - so Drained raising the price of every
   // attack was true when you paid and invisible when you looked.
   const base = baseKiCost(maneuver, actor)
+    + surchargeKiCost(maneuver, declared?.profile, actor)
     + (declared ? profileKiCost(declared.profile, maneuver, actor) : 0);
 
   const slots = actor?.system?.effects?.slots;
@@ -2180,6 +2264,13 @@ export async function loadManeuvers() {
     intuit: Boolean(trait.intuit),
     powerDrain: Boolean(trait.powerDrain),
     sense: Boolean(trait.sense),
+    tailAttack: Boolean(trait.tailAttack),
+    // The library's copy is nobody's, so it holds no variant: the choice belongs to a
+    // character's own Item. Its Profiles are derived from that all the same, so the
+    // library's copy offers the Simple Profile and the sheet prices it correctly.
+    tailVariant: "",
+    ...(trait.tailAttack ? tailProfiles("") : {}),
+    outsideDiminishing: Boolean(trait.outsideDiminishing),
     dirtyTrick: Boolean(trait.dirtyTrick),
     feint: Boolean(trait.feint),
     holdingBack: Boolean(trait.holdingBack),

@@ -1,0 +1,163 @@
+id: tail-attack
+name: Tail Attack
+type: instant
+actionCost: 0
+kiCostPerTier: 2
+attacking: true
+requiresTarget: true
+special: true
+usageLimit: 1/round
+profile: any
+tailAttack: true
+outsideDiminishing: true
+tags: unarmed
+source: Core Rule
+description: >
+  Strike with your tail as an Instant. An attack that costs no Action, sits outside
+  Diminishing Offense in both directions, and uses the Simple Profile - or the one other
+  Profile your tail was built for, for more Ki.
+text: >
+  Tail Attack Maneuver [1/Round]: Strike out at an opponent using your tail.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –Minions: Free
+  –KP Cost: 2(T)
+  –Effects: Target an Opponent with an Unarmed Attacking Maneuver using the Simple
+  Profile. When you first gain access to this Special Maneuver, you may select one of
+  these additional effects to have access to while you have access to this Maneuver:
+
+  * Elongated. You may increase the KP Cost of this Maneuver by 2(T) to instead use the
+    Sweeping Profile.
+  * Multiple. You may increase the KP Cost of this Maneuver by 2(T) to instead use the
+    Combination Profile of the Physical Foundation.
+  * Spiked. You may increase the KP Cost of this Maneuver by 4(T) to instead use the
+    Crushing Profile.
+  * Heavy. You may increase the KP Cost of this Maneuver by 6(T) to instead use the
+    Powered Profile.
+
+  Attacking Maneuvers made through the Tail Attack Maneuver do not suffer from, or count
+  towards, the penalty from Diminishing Offense.
+
+---
+
+# --- The first Special Maneuver that is itself an attack ----------------------------------
+#
+# Everything Special before it either marked somebody, opened a Clash, or handed an attack
+# over for somebody to declare afterwards. This one is the attack: `attacking` is on it, so
+# it goes down the road a Basic Attack goes down - Profile and Foundation declared, the
+# price settled by the Profile, Strike against a defence, Wound less Soak.
+#
+# An Instant, which is what makes it worth having. No Action, only in answer to a Standard
+# Maneuver, and never two in a row - all three of which live in the Instant rule already
+# and needed nothing here.
+#
+# --- What it costs, which is the one reading worth arguing about --------------------------
+#
+# "KP Cost: 2(T)", and each variant "increases the KP Cost of this Maneuver" by 2(T), 2(T),
+# 4(T) or 6(T).
+#
+# Built the way this system prices every other attack: what the Maneuver states and what
+# the Profile states are added. That is what `maneuverKiCost` has always done, and this
+# entry never says the Profile is free - so a Tail Attack on the Sweeping Profile is 2(T)
+# for the Maneuver, 2(T) for the variant and 4(T) for Sweeping itself.
+#
+# The other reading is written down here because the numbers point at it hard. Take the
+# Maneuver's 2(T) as the whole price and add only the variant:
+#
+#     Simple       2(T)                 Simple's own cost is 0
+#     Sweeping     2 + 2 = 4(T)         Sweeping's own cost is 4(T)
+#     Combination  2 + 2 = 4(T)         Combination's own cost is 3(T)
+#     Crushing     2 + 4 = 6(T)         Crushing's own cost is 6(T)
+#     Powered      2 + 6 = 8(T)         Powered's own cost is 8(T)
+#
+# Three of the four land exactly on the Profile's own listed cost, which is the number you
+# get if the variant amounts were worked out as "what the Profile costs, less the 2(T)
+# already paid". That is a strong hint that the intended total is the Profile's price and
+# no more. It is a hint rather than a rule, so it is not what is built, and Combination
+# misses it by one either way.
+#
+# If the table wants the other reading it is one line - the surcharge stands and the
+# Profile's own cost comes off. Nothing else in the build depends on which it is.
+#
+# The Minimum Ki Point Cost is untouched by the surcharge, which is right either way: that
+# floor is half the Profile's *listed* cost, and a surcharge is this Maneuver's own price
+# rising rather than the Profile's.
+#
+# --- The choice made once -----------------------------------------------------------------
+#
+# "When you first gain access to this Special Maneuver, you may select one of these
+# additional effects to have access to while you have access to this Maneuver."
+#
+# One of four, or none - "you may select" - and then kept. So it is stored on the Item,
+# which is the thing here that remembers what a player did to their own copy of a Maneuver:
+# the same place a rename lives, and it survives the Maneuver going off the list and coming
+# back.
+#
+# "When you first gain access" is a moment this system has no hook for. Access is a
+# question asked fresh every time anything wants the answer - a Skill's Ranks, or a Slot an
+# effect wrote - and nothing fires when the answer changes. So the choice is asked at the
+# first use instead, which is the first moment there is anybody to ask it of, and it is
+# editable on the Maneuver's own sheet afterwards like everything else about the Item.
+#
+# Blank means it has not been asked yet; "none" means it was asked and declined. Two states
+# rather than one, because a player who took nothing must not be asked again every round.
+#
+# --- Which Foundation ---------------------------------------------------------------------
+#
+# The entry pins one, once: "the Combination Profile of the Physical Foundation." Built
+# exactly there and nowhere else.
+#
+# Which leaves a question the entry does not answer. Sweeping, Crushing and Powered are
+# Physical Profiles already, so they need no pinning. Simple is not - it belongs to all
+# three Foundations - and the entry says nothing about it, so a Tail Attack on the Simple
+# Profile is asked which Foundation carries it, the way every other Simple attack is.
+#
+# A tail is a limb and the obvious reading is that all of this is Physical. But the entry
+# had its chance to say so in the one place saying it was needed, and pinning a Foundation
+# the text leaves open takes an option off a player. Recorded rather than decided: if
+# Physical throughout is meant, it is one more line in the same table that pins
+# Combination's.
+#
+# --- Outside Diminishing Offense, both ways -----------------------------------------------
+#
+# "Attacking Maneuvers made through the Tail Attack Maneuver do not suffer from, or count
+# towards, the penalty from Diminishing Offense."
+#
+# One sentence, two pieces of machinery, so it is built as two:
+#
+#   - "do not suffer from" is the Strike Roll. The Dim. Offense row is left off the
+#     breakdown entirely rather than shown at nothing: a row saying it took nothing off is
+#     a row a reader has to work out the meaning of.
+#   - "do not count towards" is the round's attack count, which every other attack raises
+#     as it is declared. This one leaves it alone, so the attack after it is no worse off
+#     for this one having happened.
+#
+# The second half is the one that would have gone unnoticed. Diminishing Offense is worked
+# out from a count on the character, and a count is easy to read and easy to forget not to
+# write.
+#
+# --- "Unarmed" ----------------------------------------------------------------------------
+#
+# Carried as a tag, because a tag is what these rules match on - "any Maneuver tagged
+# signature" is how Transfigured refuses one. Nothing reads `unarmed` yet: there are no
+# weapons in this system, so there is nothing for the word to be the opposite of. It is
+# recorded because the entry says it, and the day something asks for an Unarmed Attacking
+# Maneuver the answer is already on the Maneuver.
+#
+# --- What is not built --------------------------------------------------------------------
+#
+# "Minions: Free." There are no Minions in this system, which the Arrogant Declaration,
+# Analysis, Hype, Brace, Flip, Holding Back and Sense files all say about their own Minion
+# lines.
+#
+# Having a tail. Nothing here knows whether a character has one - there are no Racial Trait
+# files in the library and no body parts anywhere - so what opens this is an effect
+# granting it, like every Special Maneuver no Skill opens. The Tail Restraint rule is on
+# the same list of things waiting for a tail to exist.
+#
+# --- How it is gained ---------------------------------------------------------------------
+#
+# Not known. No Skill's entry names it, and four variants chosen once read more like a
+# racial or a Talent choice than like something Ranks hand over - "when you first gain
+# access" is written as though access arrives once and stays. Until an entry says so, it is
+# one of the Special Maneuvers an effect has to grant.

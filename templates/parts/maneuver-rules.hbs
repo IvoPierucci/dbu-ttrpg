@@ -72,6 +72,19 @@
         <em>Profile</em>
         <input type="text" name="system.profile" value="{{system.profile}}" placeholder="any"/>
       </div>
+      {{#if tailVariants}}
+      {{! Only on the Tail Attack. The one field on this tab that belongs to a single
+          Maneuver rather than to all of them, drawn because the choice it holds is made
+          once and kept, and a player should be able to see and change what they took. }}
+      <div class="stat" data-tooltip="The additional effect chosen when you first gained access to this Maneuver. It decides the second Profile this Maneuver may be made with, and what that Profile adds to its Ki Point Cost.">
+        <em>Tail</em>
+        <select name="system.tailVariant">
+          {{#each tailVariants as |variant|}}
+          <option value="{{variant.value}}" {{#if (eq variant.value ../system.tailVariant)}}selected{{/if}}>{{variant.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{/if}}
       <div class="stat" data-tooltip="If this is a Skill Clash, which Skill both sides roll.">
         <em>Clash Skill</em>
         <input type="text" name="system.clashSkill" value="{{system.clashSkill}}"/>

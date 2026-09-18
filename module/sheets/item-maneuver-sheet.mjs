@@ -2,7 +2,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { compile } from "../effects/parser.mjs";
-import { MANEUVER_TYPES, getManeuver } from "../maneuvers.mjs";
+import { MANEUVER_TYPES, TAIL_VARIANTS, getManeuver } from "../maneuvers.mjs";
 
 /**
  * Sheet for a Maneuver Item.
@@ -70,6 +70,23 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     // Read off the tag, which is where it lives: three rules match on it, and none of
     // them would see a separate field.
     context.isSignature = (this.item.system.tags ?? []).includes("signature");
+
+    // The Tail Attack's one-time choice, editable here for as long as the Item exists.
+    // Asked at the first use, because "when you first gain access" is a moment nothing
+    // here fires on - but a choice kept for a campaign belongs somewhere a player can see
+    // it and change it, and this is where the rest of their copy of a Maneuver lives.
+    //
+    // Drawn only on the Maneuver it is about. Every other field on this tab is one every
+    // Maneuver has.
+    context.tailVariants = this.item.system.tailAttack
+      ? [
+          { value: "", label: "Not chosen yet" },
+          ...Object.entries(TAIL_VARIANTS).map(([value, variant]) => ({
+            value, label: `${variant.label} - ${variant.tip}`
+          })),
+          { value: "none", label: "None - the Simple Profile only" }
+        ]
+      : null;
 
     context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation
       .enrichHTML(this.item.system.description, { relativeTo: this.item });

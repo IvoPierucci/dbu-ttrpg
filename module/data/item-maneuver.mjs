@@ -421,6 +421,35 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        */
       sense: new fields.BooleanField({ required: true, initial: false }),
       /**
+       * An Instant that is itself an attack, made with the Simple Profile or with the one
+       * other Profile its owner's tail was built for.
+       *
+       * A flag rather than a set of fields, because what it brings is a shape no other
+       * Maneuver has: a Profile list of two, a surcharge on its own price for the second
+       * of them, and a choice made once and kept. The choice is `tailVariant` below; the
+       * list and the surcharge are derived from it, so the two cannot disagree.
+       */
+      tailAttack: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Which of the Tail Attack's four additional effects this character took.
+       *
+       * On the Item because it is a choice about this character's own copy of a Maneuver,
+       * kept for as long as they have it - the same place their rename of it lives, and it
+       * survives the Maneuver going off the list and coming back.
+       *
+       * Blank means it has not been asked yet; "none" means it was asked and declined.
+       * Two states rather than one, because only one of them is worth asking about again.
+       */
+      tailVariant: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
+       * Neither suffers Diminishing Offense nor counts towards it.
+       *
+       * Two pieces of machinery in one sentence: the Strike Roll leaves the row off, and
+       * the round's attack count is not raised. The second is the half that would have
+       * gone unnoticed - a count is easy to read and easy to forget not to write.
+       */
+      outsideDiminishing: new fields.BooleanField({ required: true, initial: false }),
+      /**
        * The Signature Technique features this Maneuver was built with, by id.
        *
        * Both sides of the ledger, despite the name: All or Nothing is a Disadvantage and
