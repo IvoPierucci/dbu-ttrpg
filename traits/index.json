@@ -16,6 +16,7 @@
     "battlefields/storm-weather.dbu",
     "battlefields/tornado-weather.dbu",
     "battlefields/unbreathable-environment.dbu",
+    "battlefields/underwater-environment.dbu",
     "battlefields/vile-weather.dbu",
     "conditions/analyzed.dbu",
     "conditions/blinded.dbu",

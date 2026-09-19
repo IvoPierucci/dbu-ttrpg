@@ -1,0 +1,54 @@
+id: underwater-environment
+name: Underwater Environment
+kind: battlefield
+environment: true
+unbreathable: true
+hardnessMin: 0
+hardnessMax: 0
+source: Core Rule
+description: >
+  Deep water. Unbreathable, so it wants a Survival Check on the way in and a stack of
+  Held Breath a Round after that, and your Normal Speed is halved. Hardness Rank 0.
+text: >
+  Underwater Environment: A harsh environment where the water is deep enough to even
+  submerge an Oozaru and where holding one's breath is a necessity for most.
+
+  Hardness Rank: 0
+
+  Effects: This Battle Environment has multiple effects:
+
+  * This is an Unbreathable Environment.
+
+  * While in this Battle Environment, halve your Normal Speed.
+
+---
+
+# "This is an Unbreathable Environment."
+#
+# Which settles something the Unbreathable rules left open: Unbreathable is a property an
+# Environment has, not only an Environment of its own. `unbreathable: true` on the header
+# is exactly that, and everything already reads it there - entering and leaving are watched
+# by the same hook, the Survival Check is offered by the same button, the Combat Round and
+# the Health Threshold take the same stack.
+#
+# So there is nothing to build here for it. The file says it is one and it is one, which is
+# the whole point of having put that on a header rather than into a branch.
+#
+# --- Halve your Normal Speed ---------------------------------------------------------------------
+#
+# Normal Speed, named outright - and it settles the Bog's "halve your Speed" while it is at
+# it. The rulebook is careful about this: Tornado Weather says "your Speeds" and reaches
+# both, the Bog says "your Speed", and this says "your Normal Speed". Three wordings, two
+# of which are the same thing, and none of them accidental.
+#
+# So `speed.normal`, like the Bog. A character swimming can still Boost, which is the only
+# way anybody crosses water at speed.
+#
+# --- Hardness Rank 0 -----------------------------------------------------------------------------
+#
+# "Features cannot have a Hardness value of 0, but the Squares themselves can" - and the
+# surface of water is the entry's own example of Rank 0. Being thrown into deep water costs
+# 1(bT) and nothing else. What it costs is not the landing.
+
+[passive]
+speed.normal *= 0.5;
