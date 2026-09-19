@@ -1,0 +1,37 @@
+id: bouncy
+name: Bouncy
+kind: battlefield
+envQuality: true
+groundCollision: halves
+source: Core Rule
+description: >
+  Ground that gives. Half the Collision Damage from hitting it, and you bounce up to its
+  Hardness Rank in Squares.
+text: >
+  Bouncy: If you would Collide with this Square, halve the amount of Collision Damage you
+  would receive and then you may move a number of Squares in any direction up to the
+  Hardness Rank of this Square.
+
+---
+
+# The Square's own Rubbery, and written to read the same way: halve the Collision Damage,
+# then move. Where Rubbery throws you straight away from the Feature, this lets you pick a
+# direction - you land on it rather than into it.
+#
+# --- The halving ---------------------------------------------------------------------------------
+#
+# `groundCollision: halves`, read by the collision window in its Ground Collision branch
+# and nowhere else. "If you would Collide with this Square" is the Square, and a Feature
+# standing on a Bouncy Square is not bouncy.
+#
+# Folded in with every other halving and the Launching doubling, so it is one multiply and
+# one rounding - which is the rule that keeps 7 at 7 when something doubles it and
+# something else halves it.
+#
+# --- The movement --------------------------------------------------------------------------------
+#
+# "You may move a number of Squares in any direction up to the Hardness Rank of this
+# Square." Squares, a direction and a choice: three things this system has none of. Said on
+# the card and done by the table, the same as Rubbery's.
+#
+# No statements. Everything here is a collision, and a collision is an event.

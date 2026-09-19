@@ -1,0 +1,36 @@
+id: obscured
+name: Obscured
+kind: battlefield
+envQuality: true
+source: Core Rule
+description: >
+  You cannot see out of it, and neither can anyone see into it. Strike Rolls, Dodge Rolls
+  and Impulsive Saves 2(bT) lower.
+text: >
+  Obscured: While you occupy this Square, reduce your Strike Rolls, Dodge Rolls, and
+  Impulsive Saves by 2(bT). This Environmental Quality can be applied to Squares within
+  High Environments.
+
+---
+
+# "While you occupy this Square", which is the whole of the condition and is not written
+# below: being gathered is what occupying it means.
+#
+# Three named rolls and not "all of your Combat Rolls", so this is three lines rather than
+# `combatRolls` - the Wound Roll is a Combat Roll and is deliberately not among them. Smoke
+# makes you harder to aim and harder to dodge with; it does not make your fist softer.
+#
+# The Impulsive Save is the Agility one, and the only Saving Throw named - so `save.impulsive`
+# rather than `save.all`. A character choking in the smoke resists a mind-affecting effect
+# exactly as well as they did.
+#
+# --- The last sentence ------------------------------------------------------------------------------
+#
+# "This Environmental Quality can be applied to Squares within High Environments." A
+# permission about where the ARC may put it, and there are no High Environments yet. Carried
+# in the text and built into nothing.
+
+[passive]
+strike -= 2(bT);
+dodge -= 2(bT);
+save.impulsive -= 2(bT);

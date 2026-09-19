@@ -3,9 +3,11 @@ const { fields } = foundry.data;
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
+import { getTrait } from "../effects/traits.mjs";
 import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
-import { STANDARD_ENVIRONMENT } from "../environments.mjs";
+import { STANDARD_ENVIRONMENT, groundHardnessWith, qualitiesOf }
+  from "../environments.mjs";
 import {
   categoryFormula,
   greaterDiceCategory,
@@ -1149,6 +1151,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       }),
 
       /**
+       * The Environmental Qualities the player has ticked for this Square.
+       *
+       * The ones the Environment's own file declares are not in here: those come with the
+       * ground and go when the character leaves it, and storing them would be a second
+       * copy of something the file already says.
+       */
+      qualities: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }),
+        { required: true, initial: [] }),
+
+      /**
        * The Hardness Rank of the ground they are standing on.
        *
        * An Environment has one the way a Feature does, and it is the same Hardness: what
@@ -1607,6 +1620,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Base Tier of Power follows from Power Level alone: 1 for Levels 1-4, then one
     // more per five Levels, reaching 7 at Level 30.
     this.baseTierOfPower = DBUCharacterData.tierOfPowerFor(this.powerLevel);
+
+    // The ground's Hardness Rank as the Square's Qualities leave it. Derived rather than
+    // stored, because the Rank the ARC picked and what Glass or Metallic do to it are two
+    // different facts and only the first is anybody's to set.
+    //
+    // Here rather than later because the collision window and the tab both read it, and
+    // one number read in two places is one number.
+    {
+      const standing = getTrait(this.battlefield.environment ?? "");
+      const qualities = qualitiesOf(this, standing).map(id => getTrait(id)).filter(Boolean);
+      this.battlefield.groundRank = groundHardnessWith(
+        this.battlefield.groundHardness, qualities, DBUCharacterData.MAX_HARDNESS_RANK);
+    }
 
     // Cover's Hardness Value, from the Rank the player picked. Worked out here rather
     // than stored because it scales with the base Tier of Power, and here rather than

@@ -1,0 +1,33 @@
+id: glass
+name: Glass
+kind: battlefield
+envQuality: true
+hardnessShift: 1
+source: Core Rule
+description: >
+  A sheet of glass over the ground, one Hardness Rank harder than what is under it.
+text: >
+  Glass: This Square is encased in glass, increasing its Hardness Rank by 1. If this
+  Environmental Quality is applied through an effect, remove all other Environmental
+  Qualities on this Feature.
+
+---
+
+# The same Quality a Feature can have, word for word, and it does the same thing to a Square
+# that it does to a Feature: one Rank harder.
+#
+# `hardnessShift: 1`, added to the ground's Hardness Rank wherever that Rank is read - the
+# row on the tab, and the Ground Collision in the window. Held inside the Ranks that exist,
+# so glass over Katchin is still Rank 5 rather than a sixth Rank nobody wrote.
+#
+# --- What is not built ----------------------------------------------------------------------------
+#
+# "If this Environmental Quality is applied through an effect, remove all other
+# Environmental Qualities on this Feature."
+#
+# Through an effect. No effect in this system applies an Environmental Quality - the ARC
+# does, and the player ticks it - so the clause has nothing to fire on. When an effect that
+# applies one arrives, this is the rule it has to carry.
+#
+# Until then the exclusivity is the table's, and ticking Glass beside Metallic is a thing
+# the sheet will let you do. It says so rather than refusing quietly.

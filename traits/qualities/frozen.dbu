@@ -1,0 +1,42 @@
+id: frozen
+name: Frozen
+kind: battlefield
+envQuality: true
+source: Core Rule
+description: >
+  Ice underfoot. 4(bT) Ki Points at the start and end of your turn, and moving on it is
+  either slow or a Qualified Acrobatics Check away from going over.
+text: >
+  Frozen: If you start or end your Turn in this Battle Environment, reduce your Ki Points
+  by 4(bT). If you use the Movement Maneuver, either halve your Speed for the duration of
+  that Maneuver or make an Acrobatics Skill Check with a Difficulty of Qualified. If you
+  succeed, nothing happens. If you fail, you are knocked Prone instead (regain the Action
+  and any Ki Points spent on this Maneuver).
+
+---
+
+# Ki rather than Life, which is what separates this from Electrified beside it - and 4(bT)
+# rather than 2, because Ki is cheaper to lose and there is more of it.
+#
+# --- The Movement Maneuver, which is the table's ------------------------------------------------
+#
+# "Either halve your Speed for the duration of that Maneuver or make an Acrobatics Skill
+# Check with a Difficulty of Qualified."
+#
+# A choice the player makes each time they move, and this system has no Movement Maneuver
+# to hang it on - `movement` is a Slot written, said and not enforced, because nothing here
+# moves anybody. So the choice is the table's: halve the Speed for that move, or roll
+# Acrobatics against Qualified from the sheet and take the Prone on a failure.
+#
+# The failure hands the Action and the Ki back, which is the unusual half and the half
+# worth having written down: a Movement Maneuver that puts you on your back costs nothing.
+#
+# The Difficulty is one the system already knows - Qualified is a Target Number of 14 - so
+# the Acrobatics Check rolled from the Skills tab against that Difficulty is the Check the
+# rule asks for, with nothing to build.
+
+[automatic/start-of-turn]
+ki.value -= 4(bT);
+
+[automatic/end-of-turn]
+ki.value -= 4(bT);

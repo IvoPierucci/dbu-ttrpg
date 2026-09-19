@@ -8,6 +8,8 @@ import { COLLISION_DAMAGE, COLLISION_QUALITIES, HARDNESS_RANKS, hardnessValue } 
 // `environmentOf` lives beside the breath: "what are they standing in" had to be
 // answered there first, and two answers to one question is how they come to disagree.
 import { environmentOf } from "./breath.mjs";
+import { qualitiesOf } from "./environments.mjs";
+import { getTrait } from "./effects/traits.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, featureRanks, pushes, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
@@ -8049,9 +8051,19 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   // Hardness Rank has none, and an option that resolves to nothing is worse than no
   // option.
   const standing = environmentOf(target);
-  const groundRank = Number(target.system.battlefield?.groundHardness);
+  // The Rank as the Square's Qualities leave it - Glass one harder, Metallic never below
+  // three - rather than the one the ARC picked. Derived on the character, so this window
+  // and the tab are reading the same number.
+  const groundRank = Number(target.system.battlefield?.groundRank);
   const hasGround = Number.isFinite(Number(standing?.hardnessMin))
     && Number.isFinite(groundRank);
+
+  // What the Qualities of this Square do to a collision with it. Bouncy halves and
+  // Dangerous doubles, both "with this Square" - so a Feature standing on a Bouncy Square
+  // is not bouncy, and neither of these is asked about anywhere but the Ground Collision.
+  const groundQualities = qualitiesOf(target.system, standing)
+    .map(id => getTrait(id))
+    .filter(quality => quality?.groundCollision);
 
   const groundRow = hasGround
     ? `<option value="ground">The ground &middot; ${
@@ -8132,18 +8144,28 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   const rank = hitGround ? groundRank : Number(chosen.picked);
   const value = hardnessValue(rank, baseTier);
 
+  // Only on a Ground Collision. Both of these say "this Square", and a Feature is not one.
+  const fromGround = hitGround ? groundQualities : [];
+
   // All of the halvings at once rather than one after the other. Launching doubles this,
   // a Sudden Stop halves it and a Rubbery or Fragile Feature halves it again - and
   // rounding between any two of them would take a point off a number the rules leave
   // exactly where it started.
   const halvings = (halved ? 1 : 0)
-    + applied.filter(quality => quality.collision.halves).length;
-  const amount = Math.floor(value * (doubled ? 2 : 1) * (0.5 ** halvings));
+    + applied.filter(quality => quality.collision.halves).length
+    + fromGround.filter(quality => quality.groundCollision === "halves").length;
+  // Dangerous doubles the way Launching does, so the two multiply rather than stacking:
+  // a Dangerous Square under a Launching attack is four times what the Rank is worth.
+  const doublings = (doubled ? 1 : 0)
+    + fromGround.filter(quality => quality.groundCollision === "doubles").length;
+  const amount = Math.floor(value * (2 ** doublings) * (0.5 ** halvings));
   const changed = [
     doubled ? `doubled by ${doubledBy}` : "",
     halved ? `halved by ${halvedBy}` : "",
     ...applied.filter(quality => quality.collision.halves)
-      .map(quality => `halved by ${quality.name}`)
+      .map(quality => `halved by ${quality.name}`),
+    ...fromGround.map(quality =>
+      `${quality.groundCollision === "doubles" ? "doubled" : "halved"} by ${quality.name}`)
   ].filter(Boolean).join(", ");
   const reason = `Collision Damage, ${
     hitGround ? `the ground - Hardness Rank ${rank}` : `Hardness Rank ${rank}`}`

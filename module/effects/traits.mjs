@@ -30,6 +30,11 @@ export const KINDS = Object.freeze({
   // is competing with it for a Slot. The day a Battlefield rule sets or forbids something,
   // that is the line to look at.
   battlefields: { label: "Battlefield", priority: PRIORITY.base },
+  // An Environmental Quality is a Battlefield rule in every way that matters, and it lives
+  // in a folder of its own for the reason the others do not: four searches already run
+  // over traits/battlefields/ and each has to say which files are its own. A fifth in the
+  // same folder is a fifth chance for a header to be forgotten.
+  qualities: { label: "Environmental Quality", priority: PRIORITY.base },
   maneuvers: { label: "Maneuver", priority: PRIORITY.base },
   // A Karmic Effect is bought with a Karma Point rather than granted by anything, so
   // it sits at base Priority - nothing else is competing with it for a Slot.

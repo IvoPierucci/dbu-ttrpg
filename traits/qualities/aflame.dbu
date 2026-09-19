@@ -1,0 +1,37 @@
+id: aflame
+name: Aflame
+kind: battlefield
+envQuality: true
+source: Core Rule
+description: >
+  Burning ground. 2(bT) Life Points at the start and end of your turn, and 1(bT) more
+  for every stack of Broken you are carrying.
+text: >
+  Aflame: If you start or end your Turn in this Battle Environment, reduce your Life
+  Points by 2(bT). Increase this reduction by 1(bT) for every stack of the Broken Combat
+  Condition you're suffering from.
+
+---
+
+# "If you start or end your Turn" - both, so this is two blocks and not one. They are the
+# same rule written twice rather than one block on two Moments, because a block belongs to
+# one Moment and saying it twice is honest about how often it fires: standing in fire for a
+# full turn costs you twice.
+#
+# --- The Broken it feeds on ------------------------------------------------------------------------
+#
+# "Increase this reduction by 1(bT) for every stack of the Broken Combat Condition you're
+# suffering from."
+#
+# Read off the character rather than counted here, so a stack arriving from anywhere counts
+# - the Lava and Magma Environments hand them out, and being Aflame in the lava is the
+# obvious way to find out what that is worth.
+#
+# Life Points reduced rather than Damage: nothing Soaks this, which is the wording
+# Poisoned, Suffocating and Collision Damage all use.
+
+[automatic/start-of-turn]
+life.value -= 2(bT) + 1(bT) * conditions.broken;
+
+[automatic/end-of-turn]
+life.value -= 2(bT) + 1(bT) * conditions.broken;

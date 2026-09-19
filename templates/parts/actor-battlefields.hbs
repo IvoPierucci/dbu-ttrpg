@@ -159,12 +159,44 @@
           {{/each}}
         </select>
       </div>
+      {{#if ground.shifted}}
+      {{! What the Square's own Qualities leave it at. Shown only when it differs from the
+          Rank picked above, because a row repeating that number is a row to read past. }}
+      <div class="stat" data-tooltip="{{ground.shifted.note}}">
+        <em>After Qualities</em><span>Rank {{ground.shifted.rank}}</span>
+      </div>
+      {{/if}}
       {{/if}}
     </div>
 
     {{#if environmentNow.effect}}
     <p class="tab-placeholder">{{environmentNow.effect}}</p>
     {{/if}}
+
+    {{! The Environmental Qualities of the Square. "Applied on a Square-by-Square basis and
+        ultimately decided by the ARC" - so they are ticked here, except the ones the
+        Environment's own file brings with it, which are shown and not tickable. }}
+    <details class="condition-group" data-section="qualities"
+             {{#if openSections.qualities}}open{{/if}}>
+      <summary class="panel-title">
+        Environmental Qualities
+        <span class="panel-note">{{qualitySummary}}</span>
+      </summary>
+
+      <ul class="condition-list">
+        {{#each qualities as |quality|}}
+        <li class="condition {{#if quality.active}}condition-active{{/if}}">
+          <button type="button" class="condition-toggle" data-action="toggleQuality"
+                  data-quality="{{quality.id}}" data-tooltip="{{quality.text}}"
+                  aria-pressed="{{#if quality.active}}true{{else}}false{{/if}}"
+                  {{#if quality.fixed}}disabled{{/if}}>
+            <span class="condition-mark">{{#if quality.active}}&#10003;{{/if}}</span>
+            <span class="condition-name">{{quality.name}}</span>
+          </button>
+        </li>
+        {{/each}}
+      </ul>
+    </details>
 
     {{#if breath}}
     {{! Held Breath, which only an Unbreathable Environment has. The stacks are shown

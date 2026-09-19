@@ -18,6 +18,54 @@
  * you are underwater or you are not.
  */
 
+/**
+ * The Environmental Qualities a character's Square has.
+ *
+ * "Qualities are applied on a Square-by-Square basis and ultimately decided by the ARC
+ * unless an effect directly allows you to apply them."
+ *
+ * Two sources and they are added together. The Environment's own file may declare some -
+ * "a certain Environment has elements that apply to every space", which is what the Lava
+ * and Magma Environments' Aflame is - and the player ticks the rest, which is the ARC
+ * having decided something about that Square in particular.
+ *
+ * The Environment's own are not tickable: they come with the ground and go when you leave
+ * it. Written as one list so that everything downstream asks one question.
+ */
+export function qualitiesOf(system, environmentTrait) {
+  const own = String(environmentTrait?.qualities ?? "")
+    .split(",").map(id => id.trim()).filter(Boolean);
+  const picked = Array.isArray(system?.battlefield?.qualities)
+    ? system.battlefield.qualities.map(String)
+    : [];
+  return [...new Set([...own, ...picked])];
+}
+
+/**
+ * The Hardness Rank of the ground, after the Qualities of the Square have had their say.
+ *
+ * Two of them touch it and they touch it differently, which is the distinction worth
+ * keeping: Glass is "increasing its Hardness Rank by 1" - one harder than whatever is
+ * under it - and Metallic is "it must have a Hardness Rank of 3+", which is a floor. Glass
+ * over stone is harder than stone; metal is metal whatever was there before.
+ *
+ * So the shift is added and the floor is applied afterwards, and both are held inside the
+ * Ranks that exist: glass over Katchin is still Rank 5 rather than a sixth Rank nobody
+ * wrote.
+ *
+ * @param {number} rank        the Rank the ARC picked
+ * @param {object[]} qualities the Quality Traits of this Square
+ * @param {number} max         the highest Hardness Rank there is
+ */
+export function groundHardnessWith(rank, qualities, max) {
+  const shift = qualities.reduce(
+    (sum, quality) => sum + (Number(quality?.hardnessShift) || 0), 0);
+  const floor = qualities.reduce(
+    (lowest, quality) => Math.max(lowest, Number(quality?.hardnessMin) || 0), 0);
+
+  return Math.min(max, Math.max(0, floor, (Number(rank) || 0) + shift));
+}
+
 /** What a character is standing on when nobody has said otherwise. */
 export const STANDARD_ENVIRONMENT = "standard-environment";
 

@@ -1,0 +1,24 @@
+id: poisonous
+name: Poisonous
+kind: battlefield
+envQuality: true
+source: Core Rule
+description: >
+  Poison in the air or the ground. End your turn in it and you are Poisoned.
+text: >
+  Poisonous: If you end your Turn in this Battle Environment, gain the Poisoned Combat
+  Condition.
+
+---
+
+# The end of your turn alone, and no clock: the entry gives none, so the Poisoned stays
+# until something takes it off. Which is the difference between this and Electrified's
+# Impediment - that one lifts on its own, and this one is a thing you have to deal with.
+#
+# It does nothing to a character who cannot be Poisoned. Unnatural forbids it, and
+# `setCondition` refuses an immunity out loud rather than silently - so an Unnatural
+# character walking through poison is told nothing happened, which is the right answer and
+# a visible one.
+
+[automatic/end-of-turn]
+gain(poisoned);

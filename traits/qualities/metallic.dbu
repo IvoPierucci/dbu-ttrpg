@@ -1,0 +1,29 @@
+id: metallic
+name: Metallic
+kind: battlefield
+envQuality: true
+hardnessMin: 3
+source: Core Rule
+description: >
+  Metal underfoot. Hardness Rank 3 at the least.
+text: >
+  Metallic: This Square is made of metal. It must have a Hardness Rank of 3+. If this
+  Environmental Quality is applied through an effect, remove all other Environmental
+  Qualities on this Feature.
+
+---
+
+# "It must have a Hardness Rank of 3+."
+#
+# A floor rather than a shift, which is the difference between this and Glass: glass over
+# stone is one Rank harder than the stone, and metal is metal whatever was there before.
+#
+# `hardnessMin: 3` on a Quality reads the same way it does on an Environment - the lowest
+# Rank this allows - so the picker on the tab offers Rank 3 upwards while it is ticked, and
+# a Rank already picked below that is pulled up to it.
+#
+# --- What is not built ----------------------------------------------------------------------------
+#
+# "If this Environmental Quality is applied through an effect, remove all other
+# Environmental Qualities on this Feature." Nothing in this system applies one through an
+# effect, so the clause has nothing to fire on - the same as Glass's.

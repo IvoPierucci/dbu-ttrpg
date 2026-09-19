@@ -12,7 +12,7 @@ import { legacyToProgram } from "./migrate.mjs";
 import { compile as compileScript } from "./parser.mjs";
 import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
-import { STANDARD_ENVIRONMENT } from "../environments.mjs";
+import { STANDARD_ENVIRONMENT, qualitiesOf } from "../environments.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -105,6 +105,7 @@ export function programsFor(actor, { report = () => {} } = {}) {
   entries.push(...coverPrograms(actor, report));
   entries.push(...weatherPrograms(actor, report));
   entries.push(...environmentPrograms(actor, report));
+  entries.push(...qualityPrograms(actor, report));
 
   return entries;
 }
@@ -296,6 +297,57 @@ function battlefieldPrograms(actor, report) {
     level: 0,
     stacks: 1
   }];
+}
+
+/**
+ * The Environmental Qualities of the Square this character is standing in.
+ *
+ * Several at once, unlike everything else on the Battlefield: a Square can be Aflame and
+ * Obscured, and the rules list no exclusions between them that are not the ARC's to
+ * enforce. So this gathers a program per Quality rather than choosing one.
+ *
+ * Both sources at once - what the Environment's own file declares and what the player has
+ * ticked - because `qualitiesOf` is the one place that answers "which Qualities does this
+ * Square have" and two answers to it would be two lists to keep in step.
+ */
+function qualityPrograms(actor, report) {
+  const standing = getTrait(actor.system?.battlefield?.environment ?? "");
+  const ids = qualitiesOf(actor.system, standing);
+  if (!ids.length) return [];
+
+  const entries = [];
+  for (const id of ids) {
+    const trait = getTrait(id);
+    if (!trait) {
+      report(`"${id}" is not an Environmental Quality this system has a file for.`);
+      continue;
+    }
+    if (trait.envQuality !== true) {
+      report(`"${id}" is a Trait, but it is not an Environmental Quality.`);
+      continue;
+    }
+
+    const { program, errors } = compile(
+      `quality:${trait.id}`,
+      { script: trait.script },
+      message => report(`${trait.name}: ${message}`)
+    );
+    if (errors.length) continue;
+    // Bouncy and Dangerous are collisions and nothing else, so their files have no
+    // statements. Dropped here rather than gathered as an entry that contributes nothing.
+    if (!program?.blocks?.length) continue;
+
+    entries.push({
+      program,
+      priority: PRIORITY.base,
+      sourceId: `quality:${trait.id}`,
+      sourceUuid: null,
+      sourceName: trait.name,
+      level: 0,
+      stacks: 1
+    });
+  }
+  return entries;
 }
 
 /**

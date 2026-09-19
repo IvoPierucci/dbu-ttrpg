@@ -1,0 +1,25 @@
+id: dangerous
+name: Dangerous
+kind: battlefield
+envQuality: true
+groundCollision: doubles
+source: Core Rule
+description: >
+  Ground that bites back. Twice the Collision Damage from hitting it.
+text: >
+  Dangerous: Double any Collision Damage you receive from this Environment.
+
+---
+
+# The shortest Quality and the meanest. `groundCollision: doubles`, read by the collision
+# window in its Ground Collision branch.
+#
+# "From this Environment", so it is the ground and not a Feature standing on it - the same
+# line every Quality here is drawn on.
+#
+# It doubles the way the Launching Profile doubles, which means the two multiply rather than
+# stacking: a Dangerous Square under a Launching attack is four times what the Rank is
+# worth. Both are settled in the one multiply that already holds every doubling and
+# halving, so the arithmetic is the same arithmetic.
+#
+# No statements. A collision is an event.

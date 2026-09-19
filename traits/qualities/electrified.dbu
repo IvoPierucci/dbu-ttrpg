@@ -1,0 +1,32 @@
+id: electrified
+name: Electrified
+kind: battlefield
+envQuality: true
+source: Core Rule
+description: >
+  Live ground. 2(bT) Life Points at the start and end of your turn, and ending a turn on
+  it leaves you Impeded until your next one begins.
+text: >
+  Electrified: If you start or end your Turn in this Battle Environment, reduce your Life
+  Points by 2(bT). If you end your turn in this Battle Environment, gain the Impediment
+  Combat Condition until the start of your next turn.
+
+---
+
+# Aflame's damage without the Broken rider, and a Condition on the way out.
+#
+# Two sentences with two different triggers, which is the thing to read carefully: the
+# damage is "start or end", and the Impediment is "end" alone. So the end of a turn does
+# both and the start does one, and writing it as a single block would have quietly given
+# Impediment twice a turn.
+#
+# "Until the start of your next turn" is the edge Brace uses: a start edge is never ahead of
+# you during your own turn, so it lifts as your next turn begins.
+
+[automatic/start-of-turn]
+life.value -= 2(bT);
+
+[automatic/end-of-turn]
+life.value -= 2(bT);
+gain(impediment);
+expires(impediment, start-of-next-turn);

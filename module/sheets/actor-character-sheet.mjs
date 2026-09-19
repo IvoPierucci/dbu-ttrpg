@@ -8,7 +8,8 @@ import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/t
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_RULES, WEATHER_TIERS } from "../weather.mjs";
-import { ENVIRONMENT_RULES, STANDARD_ENVIRONMENT } from "../environments.mjs";
+import { ENVIRONMENT_RULES, STANDARD_ENVIRONMENT, qualitiesOf }
+  from "../environments.mjs";
 import { canSuffocate, difficultiesMet, heldBreath, isUnbreathable, settleBreath }
   from "../breath.mjs";
 import {
@@ -417,6 +418,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       importManeuvers: DBUCharacterSheet._onImportManeuvers,
       attackFeature: DBUCharacterSheet._onAttackFeature,
       takeCollision: DBUCharacterSheet._onTakeCollision,
+      toggleQuality: DBUCharacterSheet._onToggleQuality,
       holdBreath: DBUCharacterSheet._onHoldBreath,
       grantManeuvers: DBUCharacterSheet._onGrantManeuvers,
       armTalent: DBUCharacterSheet._onArmTalent,
@@ -828,6 +830,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           note: `What the ground here is made of, ${environmentTrait.name} being Hardness `
             + `Rank ${lowest} to ${highest}. This is what a Ground Collision costs you, `
             + "and it is the ARC's to pick.",
+          // What the Square's own Qualities leave the Rank at, where that differs from
+          // the one picked. Glass is one harder and Metallic is never below three, and a
+          // player looking at a Ground Collision wants the number they will take.
+          shifted: (system.battlefield?.groundRank !== system.battlefield?.groundHardness)
+            ? {
+                rank: system.battlefield.groundRank,
+                note: "What the Qualities of this Square leave the Hardness Rank at. "
+                  + "This is the one a Ground Collision is worked out from."
+              }
+            : null,
           ranks: HARDNESS_RANKS
             .filter(hardness => (hardness.rank >= lowest) && (hardness.rank <= highest))
             .map(hardness => ({
@@ -837,6 +849,29 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             }))
         }
       : null;
+
+    // The Environmental Qualities there are, each marked with whether this Square has it
+    // and whether that is the player's doing. The Environment's own come with the ground:
+    // shown so the player can see what they are standing in, and not tickable, because
+    // untickable is what "it comes with the ground" means.
+    const environmentQualities = String(environmentTrait?.qualities ?? "")
+      .split(",").map(id => id.trim()).filter(Boolean);
+    // Not `held`: `_prepareContext` already has one, for the Combat Conditions this
+    // character is carrying. Two `const`s of one name in one function is a SyntaxError,
+    // and V8 reported it against a private method four hundred lines away.
+    const squareHas = qualitiesOf(system, environmentTrait);
+
+    context.qualities = traitsOfKind("qualities").map(quality => ({
+      id: quality.id,
+      name: quality.name,
+      text: quality.description || quality.name,
+      active: squareHas.includes(quality.id),
+      fixed: environmentQualities.includes(quality.id)
+    }));
+    context.qualitySummary = squareHas.length
+      ? context.qualities.filter(quality => quality.active)
+          .map(quality => quality.name).join(", ")
+      : "None";
 
     context.environmentRules = ENVIRONMENT_RULES;
 
@@ -2170,6 +2205,22 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
 
     return held;
+  }
+
+  /**
+   * Tick an Environmental Quality for the Square this character is standing in.
+   *
+   * Only the ones the player put there. An Environment's own come with the ground and are
+   * drawn disabled - taking one off would be standing somewhere else.
+   */
+  static async _onToggleQuality(event, target) {
+    const id = target.dataset.quality;
+    const held = this.actor.system.battlefield.qualities ?? [];
+    const next = held.includes(id)
+      ? held.filter(quality => quality !== id)
+      : [...held, id];
+
+    return this.actor.update({ "system.battlefield.qualities": next });
   }
 
   static async _onSkillRoll(event, target) {
