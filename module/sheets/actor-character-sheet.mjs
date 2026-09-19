@@ -8,6 +8,7 @@ import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/t
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_RULES, WEATHER_TIERS } from "../weather.mjs";
+import { ENVIRONMENT_RULES, STANDARD_ENVIRONMENT } from "../environments.mjs";
 import {
   combatConditionsFor,
   marksFor,
@@ -795,6 +796,26 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // `context.weather` is already taken, by the Brace Maneuver's Tier reduction on the
     // Combat tab. Named apart on purpose - one is a number about this character and the
     // other is the rulebook.
+    // Every Battle Environment file there is, for the picker. No blank option: a
+    // character is standing on something, and what they are standing on is the Standard
+    // Environment unless somebody says otherwise.
+    const standingOn = system.battlefield?.environment || STANDARD_ENVIRONMENT;
+    context.environments = traitsOfKind("battlefields")
+      .filter(trait => trait.environment === true)
+      .map(trait => ({
+        id: trait.id,
+        name: trait.name,
+        chosen: trait.id === standingOn
+      }));
+
+    const environmentTrait = traitsOfKind("battlefields")
+      .find(trait => trait.id === standingOn);
+    context.environmentNow = {
+      id: standingOn,
+      effect: environmentTrait?.description ?? ""
+    };
+    context.environmentRules = ENVIRONMENT_RULES;
+
     // Every Battle Weather file there is, for the picker. Filtered on the header rather
     // than on the folder: Cover and the five Light Levels are Battlefield files too.
     const standingIn = system.battlefield?.weather?.id ?? "";

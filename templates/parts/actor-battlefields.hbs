@@ -137,6 +137,51 @@
 
   <section class="panel">
     <h3 class="panel-title">
+      Battle Environment
+      <span class="panel-hint">The land you are standing on</span>
+    </h3>
+
+    <div class="stat-grid">
+      <div class="stat" data-tooltip="What you are standing on. An Environment may cover a whole Battlefield or only part of one - which Squares are which is the table's, and stepping into them is picking one here.">
+        <em>Environment</em>
+        <select name="system.battlefield.environment">
+          {{#each environments as |environment|}}
+          <option value="{{environment.id}}" {{#if environment.chosen}}selected{{/if}}>{{environment.name}}</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+
+    {{#if environmentNow.effect}}
+    <p class="tab-placeholder">{{environmentNow.effect}}</p>
+    {{/if}}
+  </section>
+
+  {{! The Environment frame, for reading. Both rules are about Squares, which is to say
+      both are the table's: one says an Environment may cover part of a Battlefield rather
+      than all of it, and the other is a Maneuver that moves you between them. }}
+  <section class="panel">
+    <details class="condition-group" data-section="environments"
+             {{#if openSections.environments}}open{{/if}}>
+      <summary class="panel-title">
+        Environments
+        <span class="panel-note">Where a Battlefield ends and another begins</span>
+      </summary>
+
+      <ul class="quality-list">
+        {{#each environmentRules as |rule|}}
+        <li class="quality">
+          <strong>{{rule.name}}</strong>
+          <span>{{rule.text}}</span>
+          {{#if rule.note}}<em>{{rule.note}}</em>{{/if}}
+        </li>
+        {{/each}}
+      </ul>
+    </details>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">
       Battle Weather
       <span class="panel-hint">Set by you, or by an effect</span>
     </h3>

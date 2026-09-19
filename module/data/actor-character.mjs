@@ -5,6 +5,7 @@ import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
 import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
+import { STANDARD_ENVIRONMENT } from "../environments.mjs";
 import {
   categoryFormula,
   greaterDiceCategory,
@@ -1132,6 +1133,21 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
        * whoever it is protecting - so storing the Value would mean a number that quietly
        * stopped matching the wall the moment the character's base Tier changed.
        */
+      /**
+       * The Battle Environment this character is standing in.
+       *
+       * "The very land you stand on." There is no "none" for it the way there is for a
+       * Weather - a character is always standing on something - so this defaults to the
+       * Standard Environment rather than to an empty string, and that is a file like any
+       * other whose whole rule is that it does nothing.
+       *
+       * One Environment, and no Tier. A Weather comes in three strengths; an Environment
+       * does not - you are underwater or you are not.
+       */
+      environment: new fields.StringField({
+        required: true, blank: false, initial: STANDARD_ENVIRONMENT
+      }),
+
       /**
        * The Battle Weather this character is standing in, and at what Tier.
        *

@@ -12,6 +12,7 @@ import { legacyToProgram } from "./migrate.mjs";
 import { compile as compileScript } from "./parser.mjs";
 import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
+import { STANDARD_ENVIRONMENT } from "../environments.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -103,6 +104,7 @@ export function programsFor(actor, { report = () => {} } = {}) {
   entries.push(...battlefieldPrograms(actor, report));
   entries.push(...coverPrograms(actor, report));
   entries.push(...weatherPrograms(actor, report));
+  entries.push(...environmentPrograms(actor, report));
 
   return entries;
 }
@@ -256,7 +258,8 @@ function battlefieldPrograms(actor, report) {
   // Level at all - leaving it in the search made the answer depend on how a missing header
   // coerces, which is not a thing to leave to chance.
   const trait = traitsOfKind("battlefields")
-    .filter(candidate => (candidate.lightLevel !== undefined) && (candidate.weather !== true))
+    .filter(candidate => (candidate.lightLevel !== undefined)
+      && (candidate.weather !== true) && (candidate.environment !== true))
     .find(candidate => Number(candidate.lightLevel) === level);
 
   if (!trait) {
@@ -289,6 +292,48 @@ function battlefieldPrograms(actor, report) {
     sourceId: `battlefield:${trait.id}`,
     sourceUuid: null,
     // The Level's own name, so the workings say "Dark" rather than a number.
+    sourceName: trait.name,
+    level: 0,
+    stacks: 1
+  }];
+}
+
+/**
+ * The Battle Environment this character is standing in.
+ *
+ * Always one, unlike a Weather: a character is standing on something whatever nobody has
+ * said, and the Standard Environment is the file that says it does nothing. So there is no
+ * early return for an empty id - an empty one is a character whose data predates this, and
+ * the Standard Environment is what they are in.
+ */
+function environmentPrograms(actor, report) {
+  const id = String(actor.system?.battlefield?.environment ?? "") || STANDARD_ENVIRONMENT;
+
+  const trait = traitsOfKind("battlefields").find(candidate => candidate.id === id);
+  if (!trait) {
+    report(`"${id}" is not a Battle Environment this system has a file for.`);
+    return [];
+  }
+  if (trait.environment !== true) {
+    report(`"${id}" is a Battlefield file, but it is not a Battle Environment.`);
+    return [];
+  }
+
+  const { program, errors } = compile(
+    `battlefield:${trait.id}`,
+    { script: trait.script },
+    message => report(`${trait.name}: ${message}`)
+  );
+  if (errors.length) return [];
+  // The Standard Environment is all commentary and no statements, the way the Normal Light
+  // Level is. Dropped here so it is not counted among the entries either.
+  if (!program?.blocks?.length) return [];
+
+  return [{
+    program,
+    priority: PRIORITY.base,
+    sourceId: `battlefield:${trait.id}`,
+    sourceUuid: null,
     sourceName: trait.name,
     level: 0,
     stacks: 1

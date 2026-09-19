@@ -1,0 +1,25 @@
+id: standard-environment
+name: Standard Environment
+kind: battlefield
+environment: true
+source: Core Rule
+description: >
+  Solid ground under you and air around you. No effect - this is what every other
+  Environment is a departure from.
+text: >
+  In most cases, combat will occur within a Standard Environment, but there are many
+  cases in this galaxy- and universe-hopping setting in which Characters may have to
+  fight in more strange or dangerous locales.
+
+---
+
+# What a character is standing on when nobody has said otherwise, and the one Environment
+# that does nothing.
+#
+# A file rather than an empty string, for the same reason the Normal Light Level is a file:
+# "no effect" is a rule with a name, and the picker showing it is the picker saying that
+# somebody has thought about where this fight is happening. An empty option would read as
+# a question nobody answered.
+#
+# No statements below the line, so the registry drops the program and this costs nothing to
+# gather - exactly what the Normal Light Level does.
