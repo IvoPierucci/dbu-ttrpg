@@ -1,0 +1,60 @@
+id: bog-environment
+name: Bog Environment
+kind: battlefield
+environment: true
+hardnessMin: 0
+hardnessMax: 1
+source: Core Rule
+description: >
+  Mud to the knees. Every Combat Roll 1(bT) worse and your Speed halved for as long as
+  you are in it. Hardness Rank 0 or 1, the ARC's to pick.
+text: >
+  Bog Environment: A harsh environment where the ground is a bog, sapping the strength
+  from anyone who finds themselves caught in it.
+
+  Hardness Rank: 0~1 (decided by the ARC)
+
+  Effects: While in this Battle Environment, reduce all of your Combat Rolls by 1(bT)
+  and halve your Speed.
+
+---
+
+# The first Environment that does something to a character standing still in it, which
+# makes it the first with a script at all.
+#
+# "While in this Battle Environment" is the whole of the condition, and it is not written
+# below: being gathered is what standing in it means. The registry looks up the Environment
+# the character is in and compiles that one file, the same way a Combat Condition's script
+# does not ask whether the character has it.
+#
+# --- Every Combat Roll ----------------------------------------------------------------------------
+#
+# "Reduce all of your Combat Rolls by 1(bT)."
+#
+# All of them, which is what `combatRolls` is: it fans out to the Strike, the Dodge and the
+# Wound, so one line reaches all three. The same line Vile Weather's top Tier writes, and
+# the two stack - a bog in the poison is 2(bT) off everything.
+#
+# --- The Speed --------------------------------------------------------------------------------------
+#
+# "Halve your Speed."
+#
+# Your Speed, singular, so `speed.normal` and not `speed.all`. The distinction is the
+# rulebook's own and it is consistent about it: Tornado Weather says "reduce your Speeds",
+# plural, and reaches both. Boosted Speed is a named thing of its own, and a bog that
+# halved it as well would be a harsher rule than the one written.
+#
+# `speed.all` is there if this reading is ever corrected - one word, in one place.
+#
+# A multiplication on the finished value, the way every other halving here is: "when an
+# effect multiplies or divides a value, that is applied to the final value".
+#
+# --- The Hardness Rank -------------------------------------------------------------------------------
+#
+# "0~1 (decided by the ARC)." Mud or the reeds and roots in it. Either way it is the
+# softest ground in the game after deep snow, and being thrown into a bog costs almost
+# nothing - which is the trade for being slow in it.
+
+[passive]
+combatRolls -= 1(bT);
+speed.normal *= 0.5;
