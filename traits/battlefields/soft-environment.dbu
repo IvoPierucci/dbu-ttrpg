@@ -1,0 +1,53 @@
+id: soft-environment
+name: Soft Environment
+kind: battlefield
+environment: true
+hardnessMin: 0
+hardnessMax: 0
+collisionCondition: prone
+source: Core Rule
+description: >
+  Deep sand or snow. Hardness Rank 0, so hitting it barely hurts - and it puts you on
+  your back, which is the point.
+text: >
+  Soft Environment: An environment where the ground is soft and pliable, making it
+  difficult to quickly get back up. Often used to represent an environment with deep
+  sand or snow.
+
+  Hardness Rank: 0
+
+  Effects: If a Character collides with a Square of this Battle Environment, they are
+  knocked Prone.
+
+---
+
+# The first Environment whose Hardness Rank is not a range. "Hardness Rank: 0" and nothing
+# else, so the ARC has nothing to pick and the row says so by offering one thing.
+#
+# Rank 0 is 1(bT) rather than nothing - "Features cannot have a Hardness value of 0, but
+# the Squares themselves can", and a Square is exactly what this is. So landing in deep
+# snow costs a point a base Tier and leaves you on your back, which is the trade: it barely
+# hurts and it is the hardest ground in the game to fight from.
+#
+# --- Knocked Prone ------------------------------------------------------------------------------
+#
+# "If a Character collides with a Square of this Battle Environment, they are knocked
+# Prone."
+#
+# A Square of this Environment, which is the ground - not a Feature standing on it. Those
+# are two different collisions and the rules have always told them apart: Sudden Stop names
+# "Feature Collision or Ground Collision respectively". The collision window knew the
+# difference and only hinted at it, labelling whichever Rank matched the ground; it asks
+# outright now, and this is what made the difference worth asking about.
+#
+# `collisionCondition` is the header that carries it. A Condition by name rather than a
+# script, because the collision is an event - a window somebody fills in - and there is no
+# value here for a passive to write.
+#
+# No duration. The entry gives none, so Prone comes off the way Prone always comes off:
+# by getting up.
+#
+# --- Effects, otherwise ---------------------------------------------------------------------------
+#
+# None. No statements below the line, so the registry drops the program - the Environment
+# does nothing to a character standing in it, only to one arriving at speed.

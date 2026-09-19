@@ -5,6 +5,9 @@ import { refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, HARDNESS_RANKS, hardnessValue } from "./features.mjs";
+// `environmentOf` lives beside the breath: "what are they standing in" had to be
+// answered there first, and two answers to one question is how they come to disagree.
+import { environmentOf } from "./breath.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, featureRanks, pushes, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
@@ -8034,17 +8037,35 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   // answer to "what does this cost me", and the point of a dropdown is that nobody should
   // be doing that multiplication at the table. The material comes with it, because that
   // is the question actually being asked - what did they hit.
-  // Which Rank the ground they are standing on is, so a Ground Collision is one click and
-  // obviously the right one. Marked rather than pre-selected: most collisions are with a
-  // Feature, and a window that opens on the wrong answer is worse than one that opens on
-  // none.
-  const ground = Number(target.system.battlefield?.groundHardness);
+  // The ground is an answer of its own rather than a Rank that happens to match one.
+  //
+  // These are two different collisions and the rules have always told them apart - Sudden
+  // Stop names "Feature Collision or Ground Collision respectively" - and it stopped being
+  // a distinction only a reader cares about the moment an Environment hung a rule on it.
+  // The Soft Environment knocks you Prone for hitting the ground, and not for hitting a
+  // rock standing on it.
+  //
+  // Offered only where there is ground to hit: an Environment whose file states no
+  // Hardness Rank has none, and an option that resolves to nothing is worse than no
+  // option.
+  const standing = environmentOf(target);
+  const groundRank = Number(target.system.battlefield?.groundHardness);
+  const hasGround = Number.isFinite(Number(standing?.hardnessMin))
+    && Number.isFinite(groundRank);
 
+  const groundRow = hasGround
+    ? `<option value="ground">The ground &middot; ${
+        hardnessValue(groundRank, baseTier)} Damage &middot; ${
+        Handlebars.escapeExpression(standing.name)}${
+        standing.collisionCondition ? ", which knocks you down" : ""}</option>`
+    : "";
+
+  // Not first. Most collisions are with a Feature, and a window that opens on the rarer
+  // answer is a window that is wrong by default.
   const ranks = HARDNESS_RANKS.map(hardness =>
     `<option value="${hardness.rank}">Rank ${hardness.rank} &middot; ${
       hardnessValue(hardness.rank, baseTier)} Damage &middot; ${
-      Handlebars.escapeExpression(hardness.material)}${
-      (hardness.rank === ground) ? " &middot; the ground here" : ""}</option>`).join("");
+      Handlebars.escapeExpression(hardness.material)}</option>`).join("") + groundRow;
 
   // The rule, and the arithmetic behind the numbers in that list, for whoever wants it.
   // Built here rather than inline so the character's name goes through the escape like
@@ -8087,7 +8108,10 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
         action: "confirm",
         label: "Apply",
         callback: (event, button, dialog) => ({
-          rank: Number(dialog.element.querySelector('select[name="hardness"]').value),
+          // "ground" rather than a number when they hit the floor. Kept as it came back
+          // and resolved below, so the two answers stay told apart all the way through -
+          // a Rank that happens to equal the ground's is still a Feature.
+          picked: dialog.element.querySelector('select[name="hardness"]').value,
           keys: [...dialog.element.querySelectorAll('input[name="quality"]:checked')]
             .map(box => box.value)
         })
@@ -8103,7 +8127,10 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   if (!chosen) return null;
 
   const applied = COLLISION_QUALITIES.filter(quality => chosen.keys.includes(quality.key));
-  const value = hardnessValue(chosen.rank, baseTier);
+
+  const hitGround = chosen.picked === "ground";
+  const rank = hitGround ? groundRank : Number(chosen.picked);
+  const value = hardnessValue(rank, baseTier);
 
   // All of the halvings at once rather than one after the other. Launching doubles this,
   // a Sudden Stop halves it and a Rubbery or Fragile Feature halves it again - and
@@ -8118,10 +8145,29 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
     ...applied.filter(quality => quality.collision.halves)
       .map(quality => `halved by ${quality.name}`)
   ].filter(Boolean).join(", ");
-  const reason = `Collision Damage, Hardness Rank ${chosen.rank}`
+  const reason = `Collision Damage, ${
+    hitGround ? `the ground - Hardness Rank ${rank}` : `Hardness Rank ${rank}`}`
     + (changed ? `, ${changed}` : "");
 
   await reduceLifePoints(target, amount, { reason });
+
+  // What this Environment does to whoever lands on it. "If a Character collides with a
+  // Square of this Battle Environment, they are knocked Prone" - a Square of it, which is
+  // the ground and not a Feature standing on it.
+  //
+  // A Condition named on the file rather than a script, because a collision is an event
+  // and there is no value here for a passive to write. No duration: the entry gives none,
+  // so it comes off the way that Condition always comes off.
+  if (hitGround && standing?.collisionCondition) {
+    const { setCondition } = await import("./conditions.mjs");
+    if (await setCondition(target, standing.collisionCondition, 1)) {
+      await ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: target }),
+        content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+          `${target.name} hits the ground in a ${standing.name}.`)}</div>`
+      });
+    }
+  }
 
   const said = await applyFeatureQualities(target, applied, "the collision");
   if (said.length) {
@@ -8133,7 +8179,7 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
     });
   }
 
-  return { rank: chosen.rank, value, amount, applied };
+  return { rank, value, amount, applied, hitGround };
 }
 
 /**
