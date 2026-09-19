@@ -1,0 +1,63 @@
+id: magma-environment
+name: Magma Environment
+kind: battlefield
+environment: true
+unbreathable: true
+hardnessMin: 4
+hardnessMax: 4
+qualities: aflame
+source: Core Rule
+description: >
+  Deep molten rock. Unbreathable and Aflame, and ending your turn in it is two stacks of
+  Broken until your next turn begins. Hardness Rank 4.
+text: >
+  Magma Environment: A harsh environment with deep pools of underground molten rock,
+  where the amount is enough to submerge even a giant.
+
+  Hardness Rank: 4
+
+  Effects: This Battle Environment has multiple effects:
+
+  * This is an Unbreathable Environment.
+
+  * This Environment possesses the Aflame Environmental Quality.
+
+  * If you end your Turn in this Battle Environment, gain 2 stacks of the Broken Combat
+  Condition until the start of your next turn.
+
+---
+
+# The Lava Environment with the water's problem on top: you cannot breathe it, and it burns
+# twice as fast. Hardness Rank 4 rather than 3, which is the difference between standing on
+# molten rock and being in it.
+#
+# --- What needed nothing built ---------------------------------------------------------------------
+#
+# "This is an Unbreathable Environment" is `unbreathable: true`, and every piece already
+# reads it there - the hook that watches entering and leaving, the Survival Check on the
+# tab, the Combat Round and the Health Threshold that each take a stack of Held Breath.
+#
+# "This Environment possesses the Aflame Environmental Quality" is `qualities: aflame`,
+# carried and read by nobody, the same as the Lava Environment's. Environmental Qualities
+# are their own list and it has not arrived.
+#
+# --- Two stacks, on two clocks -----------------------------------------------------------------------
+#
+# "Gain 2 stacks of the Broken Combat Condition until the start of your next turn."
+#
+# Two, which found the mirror of a bug the Lava Environment found. `gain` set a Condition
+# rather than adding to it, and a clock on a Condition cleared it rather than taking a stack
+# off - so two stacks gained here would have come off together, and taken a third with them
+# if anything else had put one on.
+#
+# Both are one stack at a time now, which is the rule a Resource has always followed. The
+# number after the duration is how many clocks to set: two stacks gained together need two,
+# or the second stays on for ever.
+#
+# At Broken's cap of three, two a turn means a character who ends two turns in the magma is
+# at three and stays there while they are in it - the third clock running out as the fourth
+# and fifth are set. Which is the rule working, not the cap papering over it.
+
+[automatic/end-of-turn]
+gain(broken, 2);
+expires(broken, start-of-next-turn, 2);

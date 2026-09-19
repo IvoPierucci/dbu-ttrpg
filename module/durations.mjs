@@ -341,7 +341,20 @@ async function takeOff(owner, entry) {
   if (!actor) return false;
 
   if (entry.kind === KINDS.STATE) return setState(actor, entry.key, 0);
-  if (entry.kind === KINDS.CONDITION) return setCondition(actor, entry.key, 0);
+
+  if (entry.kind === KINDS.CONDITION) {
+    // One stack, not the whole Condition - the same rule a Resource already followed and
+    // for the same reason. "Gain 2 stacks of Broken until the start of your next turn" is
+    // two clocks, and a clock that cleared the Condition outright would take a third stack
+    // off that something else had put on.
+    //
+    // It never showed, because every Condition anything put on a clock until now caps at
+    // one stack: Braced and Hyped are marks, and taking a mark's one stack off and
+    // clearing it are the same thing.
+    const held = Number(actor.system.conditions?.[entry.key]) || 0;
+    if (held <= 0) return false;
+    return setCondition(actor, entry.key, held - 1);
+  }
 
   if (entry.kind === KINDS.RESOURCE) {
     const resources = { ...(actor.system.resources ?? {}) };

@@ -255,7 +255,7 @@ async function runVerb(actor, call, context) {
       return leaveState(actor, args[0] ?? context.state);
 
     case "expires":
-      return expiresAt(actor, args[0], args[1]);
+      return expiresAt(actor, args[0], args[1], args[2] ?? 1);
 
     case "enterState":
       // No source name to hand it: a verb is run from a queue and the entry that queued
@@ -349,7 +349,7 @@ async function clockFor(duration) {
  * saying "this lasts until the start of your next turn" is not also saying what sort of
  * thing it is - the file already said that when it granted it.
  */
-export async function expiresAt(actor, name, duration) {
+export async function expiresAt(actor, name, duration, stacks = 1) {
   if (!actor || !name) return false;
 
   const clock = await clockFor(duration);
@@ -373,7 +373,15 @@ export async function expiresAt(actor, name, duration) {
     return false;
   }
 
-  return lasting(actor, { kind, key: (kind === KINDS.RESOURCE) ? name : key, ...clock, source: name });
+  // One clock per stack. A Condition's or a Resource's clock takes one stack off, so two
+  // stacks gained together need two - and a single clock would leave the second one on
+  // for ever.
+  const each = { kind, key: (kind === KINDS.RESOURCE) ? name : key, ...clock, source: name };
+  const many = Math.max(1, Math.round(Number(stacks) || 1));
+
+  let set = false;
+  for (let n = 0; n < many; n += 1) set = await lasting(actor, each) || set;
+  return set;
 }
 
 /**

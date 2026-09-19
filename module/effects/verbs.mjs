@@ -49,11 +49,13 @@ export const VERBS = Object.freeze({
        + "Normal State means."
   },
   expires: {
-    args: [2, 2],
+    args: [2, 3],
     names: [0, 1],
     doc: "Put something you hold on a clock: a Resource, a Combat Condition or a State, "
        + "and then \"turn\", \"next-turn\", \"start-of-turn\", \"start-of-next-turn\" "
-       + "or \"encounter\". It is taken off when that moment arrives."
+       + "or \"encounter\". It is taken off when that moment arrives. A number after "
+       + "the duration puts that many stacks on clocks of their own, which is what a rule "
+       + "handing out several at once needs."
   },
   enterState: {
     args: [1, 3],
