@@ -1,0 +1,57 @@
+id: lava-environment
+name: Lava Environment
+kind: battlefield
+environment: true
+hardnessMin: 3
+hardnessMax: 3
+qualities: aflame
+source: Core Rule
+description: >
+  Molten ground. Ending your turn standing in it is a stack of Broken until your next
+  turn begins, and it is Aflame. Hardness Rank 3.
+text: >
+  Lava Environment: A harsh environment where the ground is molten and excessively hot,
+  but not enough to be completely submerged.
+
+  Hardness Rank: 3
+
+  Effects: This Battle Environment has multiple effects:
+
+  * This Environment possesses the Aflame Environmental Quality.
+
+  * If you end your Turn in this Battle Environment, gain a stack of the Broken Combat
+  Condition until the start of your next turn.
+
+---
+
+# Hardness Rank 3 and nothing to pick, which is odd for molten rock and is what the entry
+# says: "metal or more resilient stone". Being thrown into lava hurts like being thrown
+# into a wall, and the burning is a separate rule.
+#
+# --- Ending your turn in it --------------------------------------------------------------------
+#
+# "If you end your Turn in this Battle Environment, gain a stack of the Broken Combat
+# Condition until the start of your next turn."
+#
+# The whole condition is "in this Battle Environment", and that is not written below: being
+# gathered is what standing in it means. What is left is the Moment - the end of your turn -
+# and the stack it hands out.
+#
+# "Until the start of your next turn", which is the edge Brace already uses. A start edge is
+# never ahead of you during your own turn, so it is always the next one: end your turn in
+# the lava and it lifts as your next turn begins. Stand in it for three turns and you have
+# three stacks, because each one is put on at the end of a turn and taken off at the start
+# of the following one - which is a stack at a time, and Broken caps at three.
+#
+# --- The Aflame Environmental Quality -------------------------------------------------------------
+#
+# Carried in the header and read by nobody. Environmental Qualities are their own list and
+# it has not arrived yet - the same shape a Feature's Qualities had before they did, and the
+# same shape the Elemental Profiles have now.
+#
+# `qualities` rather than `quality`, because a Feature can have several and there is no
+# reason to think an Environment cannot.
+
+[automatic/end-of-turn]
+gain(broken);
+expires(broken, start-of-next-turn);

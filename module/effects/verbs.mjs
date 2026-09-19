@@ -33,7 +33,9 @@ export const VERBS = Object.freeze({
   gain: {
     args: [1, 2],
     names: [0],
-    doc: "Put a Combat Condition on, optionally at a number of stacks."
+    doc: "Gain a Combat Condition, optionally several stacks of it. On top of what is "
+       + "already held, which is what gaining one means - the Condition's own maximum "
+       + "still caps it."
   },
   surge: {
     args: [0, 1],

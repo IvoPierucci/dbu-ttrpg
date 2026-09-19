@@ -315,7 +315,19 @@ export async function removeCondition(actor, name) {
 export async function gainCondition(actor, name, stacks = 1) {
   if (!name) return;
   const { setCondition } = await import("../conditions.mjs");
-  return setCondition(actor, String(name).toLowerCase(), stacks);
+
+  // Gained, so on top of what they already have. `setCondition` takes an absolute number,
+  // and this handed it the amount gained - so "gain a stack of the Broken Combat
+  // Condition" set a character already Broken twice back down to once.
+  //
+  // It never showed, because every Condition anything gained until now caps at one stack:
+  // Braced and Hyped are marks, and setting a mark to one and adding one to it are the
+  // same thing. The Lava Environment is the first to hand out a stack of something that
+  // stacks, and Fatigued - which caps at two - has been quietly refusing its second since
+  // Surging was written.
+  const key = String(name).toLowerCase();
+  const held = Number(actor.system?.conditions?.[key]) || 0;
+  return setCondition(actor, key, held + stacks);
 }
 
 /** The wordings a duration can be written in, and the edges they come to. */
