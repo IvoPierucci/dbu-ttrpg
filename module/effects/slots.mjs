@@ -358,6 +358,15 @@ const TABLE = [
   { key: "save.all", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Every Saving Throw. Applied after the one named for a single Throw." },
 
+  { key: "unnatural", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    // "A Character that is Unnatural cannot gain the Suffocating or Poisoned Combat
+    // Conditions." Which is two immunities the system already has, so this fans out to
+    // them rather than being a third thing to read: `forbid unnatural` and everything
+    // that already respects an immunity respects this one.
+    fanOut: ["condition.suffocating", "condition.poisoned"],
+    doc: "Unnatural biology. Forbidding it makes the character immune to Suffocating and "
+       + "Poisoned at once - which is the whole of what being Unnatural is." },
+
   { key: "steadfast.target", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "What a Steadfast Check has to meet. 6 by default." },
   { key: "steadfast.dice", phase: PHASES.CORE, kind: N, ops: NUMERIC,

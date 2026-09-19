@@ -11,7 +11,7 @@ import { coreManeuverItems, registerHotbarDrop, registerMacroApi } from "./use-m
 import { loadRaces, racialAttributeIncrease, racialLifeModifier } from "./races.mjs";
 import { loadManeuvers } from "./maneuvers.mjs";
 import { loadTraits } from "./effects/traits.mjs";
-import { registerCombatHooks, registerDefeatHooks } from "./combat.mjs";
+import { registerCombatHooks, registerBreathHooks, registerDefeatHooks } from "./combat.mjs";
 import { registerConditionHooks } from "./conditions.mjs";
 
 Hooks.once("init", () => {
@@ -62,6 +62,7 @@ Hooks.once("init", () => {
   registerHotbarDrop();
   registerCombatHooks();
   registerDefeatHooks();
+  registerBreathHooks();
   registerConditionHooks();
 });
 

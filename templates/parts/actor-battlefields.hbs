@@ -155,6 +155,27 @@
     {{#if environmentNow.effect}}
     <p class="tab-placeholder">{{environmentNow.effect}}</p>
     {{/if}}
+
+    {{#if breath}}
+    {{! Held Breath, which only an Unbreathable Environment has. The stacks are shown
+        rather than edited: they are handed out by one Check and taken by the Combat Round
+        and by Health Thresholds, and a field to type in beside all that is a fifth way
+        for the number to be wrong. }}
+    <div class="stat-grid">
+      <div class="stat" data-tooltip="{{breath.note}}">
+        <em>Held Breath</em><span>{{breath.held}}</span>
+      </div>
+    </div>
+
+    {{#if breath.canRoll}}
+    <div class="maneuver-list">
+      <button type="button" class="dbu-clash-button" data-action="holdBreath"
+              data-tooltip="A Survival Check, made on entering. Every Difficulty the Dice Score reaches is a stack of Held Breath.">
+        Hold Breath
+      </button>
+    </div>
+    {{/if}}
+    {{/if}}
   </section>
 
   {{! The Environment frame, for reading. Both rules are about Squares, which is to say

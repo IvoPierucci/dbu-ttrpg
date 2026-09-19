@@ -9,6 +9,8 @@ import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_RULES, WEATHER_TIERS } from "../weather.mjs";
 import { ENVIRONMENT_RULES, STANDARD_ENVIRONMENT } from "../environments.mjs";
+import { canSuffocate, difficultiesMet, heldBreath, isUnbreathable, settleBreath }
+  from "../breath.mjs";
 import {
   combatConditionsFor,
   marksFor,
@@ -415,6 +417,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       importManeuvers: DBUCharacterSheet._onImportManeuvers,
       attackFeature: DBUCharacterSheet._onAttackFeature,
       takeCollision: DBUCharacterSheet._onTakeCollision,
+      holdBreath: DBUCharacterSheet._onHoldBreath,
       grantManeuvers: DBUCharacterSheet._onGrantManeuvers,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -815,6 +818,26 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       effect: environmentTrait?.description ?? ""
     };
     context.environmentRules = ENVIRONMENT_RULES;
+
+    // Held Breath, and whether there is still a Check to make. Only where there is nothing
+    // to breathe: everywhere else the number is zero and means nothing.
+    context.breath = isUnbreathable(this.actor)
+      ? {
+          held: heldBreath(this.actor),
+          // "Unless you are Unnatural or otherwise unable to gain the Suffocating Combat
+          // Condition" - which is one question, and the answer decides whether the Check
+          // is offered at all.
+          canRoll: !system.battlefield.breathRolled && canSuffocate(this.actor),
+          note: !canSuffocate(this.actor)
+            ? "Nothing to breathe, and nothing that needs to: this character cannot "
+              + "Suffocate."
+            : heldBreath(this.actor) > 0
+              ? "One goes at the end of each Combat Round, and one each time you are "
+                + "knocked through a Health Threshold. At none of them you Suffocate, and "
+                + "nothing takes that off but air."
+              : "No breath left. Suffocating until you leave - nothing else removes it."
+        }
+      : null;
 
     // Every Battle Weather file there is, for the picker. Filtered on the header rather
     // than on the folder: Cover and the five Light Levels are Battlefield files too.
@@ -2014,7 +2037,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           }
         }
       });
-      return;
+      return botched;
     }
 
     // Posted as our own card rather than Foundry's, so a Skill Check is read the same
@@ -2046,6 +2069,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         }
       }
     });
+
+    // What the Check came to. Every caller until now threw it away, and the Survival Check
+    // an Unbreathable Environment asks for is the first that needs it: the Dice Score is
+    // what buys the stacks of Held Breath.
+    //
+    // The Critical Die is a button on the card rather than part of this total, so what
+    // comes back is the Check as it stands - which is what a Difficulty is read against
+    // everywhere else too.
+    return roll.total;
   }
 
   /**
@@ -2076,6 +2108,47 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onTakeCollision() {
     const { takeCollisionDamage } = await import("../chat.mjs");
     return takeCollisionDamage(this.actor);
+  }
+
+  /**
+   * The Survival Check made on entering an Unbreathable Environment.
+   *
+   * An ordinary Skill Check - the same roll, the same card, the same Karmic Chance - with
+   * what it buys worked out from the total afterwards. Rolled here rather than from a chat
+   * card because a Skill Check is the sheet's to make, and a second one built beside it
+   * would be a second set of rows that could disagree with these.
+   */
+  static async _onHoldBreath() {
+    const skill = this.actor.system.skills.survival;
+    if (!skill || !isUnbreathable(this.actor)) return;
+
+    // Marked before it is rolled. "Upon entering" is once, and a button still sitting
+    // there after a bad roll is an invitation to make it twice.
+    await this.actor.update({ "system.battlefield.breathRolled": true });
+
+    const total = await this.#rollCheck({
+      parts: [{ label: skill.label, value: skill.bonus }],
+      flavor: `${skill.label} Check - holding your breath`,
+      criticalDice: this.actor.system.dice.critical.formula,
+      skillRoll: true
+    });
+
+    // A willing failure and a refusal both come back as nothing rolled. Neither is a
+    // Dice Score, and neither buys any breath.
+    const held = (typeof total === "number") ? difficultiesMet(total) : 0;
+    await this.actor.update({ "system.battlefield.heldBreath": held });
+    await settleBreath(this.actor);
+
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+        held
+          ? `${this.actor.name} holds their breath - ${held} stack${held === 1 ? "" : "s"}`
+            + " of Held Breath."
+          : `${this.actor.name} could not take a breath in time.`)}</div>`
+    });
+
+    return held;
   }
 
   static async _onSkillRoll(event, target) {

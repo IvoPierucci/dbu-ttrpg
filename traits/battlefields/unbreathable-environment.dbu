@@ -1,0 +1,64 @@
+id: unbreathable-environment
+name: Unbreathable Environment
+kind: battlefield
+environment: true
+unbreathable: true
+source: Core Rule
+description: >
+  Nothing to breathe. A Survival Check on entering buys stacks of Held Breath, one
+  goes every Combat Round and every Health Threshold, and running out is Suffocating.
+text: >
+  Unbreathable Environment. Upon entering an Unbreathable Environment, make a Survival
+  Skill Check (unless you are Unnatural or otherwise unable to gain the Suffocating
+  Combat Condition). For every Difficulty you exceed with this Dice Score, gain a stack
+  of Held Breath. At the end of each Combat Round and each time you are knocked through
+  a Health Threshold, you lose a stack of Held Breath. While you are in an Unbreathable
+  Environment and have no stacks of Held Breath, you suffer from the Suffocating Combat
+  Condition (this Combat Condition cannot be removed through any means except leaving
+  the Unbreathable Environment, as explained below).
+
+  Lose all stacks of Held Breath and the Suffocating Combat Condition (if it was gained
+  through the rules on Unbreathable Environments) upon leaving an Unbreathable
+  Environment for a Battle Environment that is not Unbreathable.
+
+---
+
+# No statements, and that is not this Environment doing nothing.
+#
+# Four things happen to a stack of Held Breath and they happen in four different places:
+# the Survival Check that hands them out, the Combat Round that takes one, the Health
+# Threshold that takes one, and leaving, which takes them all. A script in this language
+# says "while X, Y" about the character as they stand - every one of those is an event, and
+# none of them is a value.
+#
+# So the whole of it is in `breath.mjs`, and what this file carries is the header that says
+# there is nothing to breathe here. `unbreathable: true` is the only thing anything reads.
+#
+# --- Where each piece lives -------------------------------------------------------------------
+#
+#   entering, leaving   registerBreathHooks in combat.mjs, watching the picker
+#   the Survival Check  the Hold Breath button on the Battlefields tab
+#   the Combat Round    startRound, beside the Round edge
+#   the Threshold       announceThreshold, which is the one place that knows one was crossed
+#   the Suffocating     settleBreath, which is the only thing that writes it
+#
+# --- Why the Condition is never set by hand ------------------------------------------------------
+#
+# "While you are in an Unbreathable Environment and have no stacks of Held Breath, you
+# suffer from the Suffocating Combat Condition."
+#
+# While. So it is not gained once and remembered - it is true or it is not, and one function
+# reads the two facts and writes it. Four callers each setting it themselves is four chances
+# to set it and one to forget.
+#
+# --- Unnatural -------------------------------------------------------------------------------------
+#
+# "Make a Survival Skill Check (unless you are Unnatural or otherwise unable to gain the
+# Suffocating Combat Condition)."
+#
+# Both halves of that are one question: Unnatural forbids the Condition, so anything that
+# forbids it answers the same way. `unnatural` is a Slot that fans out to
+# `condition.suffocating` and `condition.poisoned`, so an effect writing `forbid unnatural`
+# is immune to both - and nothing here has to know which of the two reasons it was.
+#
+# Nothing grants it yet. It belongs to a race, and there are no races in this system.

@@ -15,6 +15,8 @@ import { EDGES, edgeReached, encounterEnded } from "./durations.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { replaceObject, setCondition } from "./conditions.mjs";
 import { getTrait } from "./effects/traits.mjs";
+import { enteredUnbreathable, isUnbreathable, leftUnbreathable, loseBreath }
+  from "./breath.mjs";
 
 /**
  * Announce a Moment in chat, so the table can answer it.
@@ -74,6 +76,11 @@ async function startRound(combat) {
 
     await actor.update(newRoundFor(actor));
     await fireMoment(actor, "start-of-round");
+
+    // "At the end of each Combat Round ... you lose a stack of Held Breath." The end of
+    // the last Round and the start of this one are the same moment from here - nothing
+    // happens between them - which is the same reading the Round edge above rests on.
+    await loseBreath(actor, "the Combat Round ended");
   }
 
   await announce("start-of-round", {
@@ -508,6 +515,43 @@ function witnesses(actor) {
   return [...new Set([actor.uuid, ...others.map(other => other.uuid)])];
 }
 
+/**
+ * Entering and leaving an Unbreathable Environment.
+ *
+ * "If a Character enters any Squares that are designated as the Underwater Environment,
+ * they will therefore enter that Environment." There are no Squares here, so entering one
+ * is the player saying they have - which is the picker on the Battlefields tab changing,
+ * and that is what this watches.
+ *
+ * Both edges matter and they are different rules: entering arms the Check and starts the
+ * drowning, leaving clears the stacks and the Condition. Nothing happens when one
+ * breathable Environment becomes another.
+ */
+export function registerBreathHooks() {
+  Hooks.on("preUpdateActor", (actor, changes, options) => {
+    if (actor.type !== "character") return;
+    if (foundry.utils.getProperty(changes, "system.battlefield.environment") === undefined) {
+      return;
+    }
+    // Where they were standing before, which is the only way to tell entering from
+    // leaving: the field holds where they are now and nothing else remembers.
+    options.dbuWasUnbreathable = isUnbreathable(actor);
+  });
+
+  Hooks.on("updateActor", async (actor, changes, options) => {
+    if (actor.type !== "character") return;
+    if (options.dbuWasUnbreathable === undefined) return;
+    if (!actor.isOwner) return;
+
+    const was = options.dbuWasUnbreathable;
+    const now = isUnbreathable(actor);
+    if (was === now) return;
+
+    if (now) await enteredUnbreathable(actor);
+    else await leftUnbreathable(actor);
+  });
+}
+
 export function registerDefeatHooks() {
   Hooks.on("preUpdateActor", (actor, changes, options) => {
     if (actor.type !== "character") return;
@@ -586,6 +630,12 @@ async function announceThreshold(actor, before) {
   const keys = Object.keys(THRESHOLDS);
   const now = actor.system.threshold.key;
   if (keys.indexOf(now) <= keys.indexOf(before)) return;
+
+  // "...and each time you are knocked through a Health Threshold, you lose a stack of
+  // Held Breath." Here rather than in breath.mjs's own hook, because this is the one place
+  // in the system that knows a Threshold was crossed downward: it is derived from Life
+  // Points and leaves no record of its own.
+  await loseBreath(actor, "knocked through a Health Threshold");
 
   // The Moment says it "fires after the Maneuver that pushed you through finishes",
   // and this is that: Life Points are written when the Damage is applied, which is the

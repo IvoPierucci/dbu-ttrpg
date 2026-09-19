@@ -1149,6 +1149,34 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       }),
 
       /**
+       * Held Breath, and whether the Check that hands it out has been made.
+       *
+       * Not a Resource: the rulebook calls exactly one thing a Resource and this is not
+       * one of them. A count on the character, like the stacks of Damage Over Time.
+       *
+       * `breathRolled` is what makes the Check happen "upon entering" rather than
+       * whenever somebody feels like another try - it is cleared on entering and on
+       * leaving, and set by the roll.
+       */
+      heldBreath: new fields.NumberField({
+        required: true, integer: true, initial: 0, min: 0
+      }),
+      breathRolled: new fields.BooleanField({ required: true, initial: false }),
+
+      /**
+       * Whether the Suffocating this character has is the Environment's.
+       *
+       * "Lose ... the Suffocating Combat Condition (if it was gained through the rules on
+       * Unbreathable Environments)." The parenthesis is this: Suffocating gained some
+       * other way is not the Environment's to take off, and stepping out of the water
+       * would otherwise cure it.
+       *
+       * It is also what holds the Condition in place while it is true - "this Combat
+       * Condition cannot be removed through any means except leaving".
+       */
+      drowning: new fields.BooleanField({ required: true, initial: false }),
+
+      /**
        * The Battle Weather this character is standing in, and at what Tier.
        *
        * One, not several. "Battle Weather effects can be combined in any fashion" is

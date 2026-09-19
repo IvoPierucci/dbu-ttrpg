@@ -192,6 +192,13 @@ function heldInPlace(actor, key) {
   if ((key === "guard-down") && actor.system?.grapple?.partner) {
     return `${actor.name} cannot remove Guard Down while in a Grapple.`;
   }
+  // "This Combat Condition cannot be removed through any means except leaving the
+  // Unbreathable Environment." `drowning` is what says this one is the Environment's, and
+  // leaving clears it before it clears the Condition - so the rule holds and the way out
+  // of it still works.
+  if ((key === "suffocating") && actor.system?.battlefield?.drowning) {
+    return `${actor.name} cannot stop Suffocating without air to breathe.`;
+  }
   return "";
 }
 
