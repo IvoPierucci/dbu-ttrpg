@@ -2,24 +2,49 @@ id: standard-environment
 name: Standard Environment
 kind: battlefield
 environment: true
+hardnessMin: 1
+hardnessMax: 5
 source: Core Rule
 description: >
-  Solid ground under you and air around you. No effect - this is what every other
-  Environment is a departure from.
+  Solid ground under you. No effects of its own - this is what every other Environment
+  is a departure from. Hardness Rank 1 to 5, the ARC's to pick.
 text: >
-  In most cases, combat will occur within a Standard Environment, but there are many
-  cases in this galaxy- and universe-hopping setting in which Characters may have to
-  fight in more strange or dangerous locales.
+  Standard Environment: The typical environment that most DBU fights will take place in,
+  representing a solid floor.
+
+  Hardness Rank: 1~5 (decided by the ARC)
+
+  Effects: N/A
 
 ---
 
 # What a character is standing on when nobody has said otherwise, and the one Environment
-# that does nothing.
+# that does nothing to them.
 #
 # A file rather than an empty string, for the same reason the Normal Light Level is a file:
 # "no effect" is a rule with a name, and the picker showing it is the picker saying that
 # somebody has thought about where this fight is happening. An empty option would read as
 # a question nobody answered.
 #
+# --- The Hardness Rank -------------------------------------------------------------------------
+#
+# "Hardness Rank: 1~5 (decided by the ARC)."
+#
+# An Environment has a Hardness Rank the way a Feature does, and it is the same Hardness:
+# what the ground costs you to be thrown into it. Sudden Stop already names the two in one
+# breath - "Feature Collision or Ground Collision respectively" - and they were the same
+# number all along.
+#
+# A range rather than a number, because it is the ARC's to pick: concrete is not sand and
+# neither is a ship's deck. `hardnessMin` and `hardnessMax` are what the picker on the
+# Battlefields tab offers, and the Rank chosen sits on the character beside the Environment
+# it belongs to.
+#
+# The Value follows from the Rank as it does everywhere: twice the Rank a base Tier of
+# Power, except Rank 0, which is 1(bT). Nothing here stores it.
+#
+# --- Effects: N/A ---------------------------------------------------------------------------------
+#
 # No statements below the line, so the registry drops the program and this costs nothing to
-# gather - exactly what the Normal Light Level does.
+# gather - exactly what the Normal Light Level does. "N/A" is the whole of what this
+# Environment does, and it is worth a file saying so rather than a gap.

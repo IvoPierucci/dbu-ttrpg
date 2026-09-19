@@ -817,6 +817,27 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       id: standingOn,
       effect: environmentTrait?.description ?? ""
     };
+    // The Hardness Rank of the ground, offered within the range the Environment's own
+    // file allows - "Hardness Rank: 1~5 (decided by the ARC)". An Environment with no
+    // range stated has no ground to hit, and the row goes away rather than offering a
+    // choice the rules do not make.
+    const lowest = Number(environmentTrait?.hardnessMin);
+    const highest = Number(environmentTrait?.hardnessMax);
+    context.ground = Number.isFinite(lowest) && Number.isFinite(highest)
+      ? {
+          note: `What the ground here is made of, ${environmentTrait.name} being Hardness `
+            + `Rank ${lowest} to ${highest}. This is what a Ground Collision costs you, `
+            + "and it is the ARC's to pick.",
+          ranks: HARDNESS_RANKS
+            .filter(hardness => (hardness.rank >= lowest) && (hardness.rank <= highest))
+            .map(hardness => ({
+              rank: hardness.rank,
+              material: hardness.material,
+              chosen: hardness.rank === (system.battlefield?.groundHardness ?? lowest)
+            }))
+        }
+      : null;
+
     context.environmentRules = ENVIRONMENT_RULES;
 
     // Held Breath, and whether there is still a Check to make. Only where there is nothing

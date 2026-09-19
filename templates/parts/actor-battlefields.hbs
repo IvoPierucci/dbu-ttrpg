@@ -150,6 +150,16 @@
           {{/each}}
         </select>
       </div>
+      {{#if ground}}
+      <div class="stat" data-tooltip="{{ground.note}}">
+        <em>Ground Hardness</em>
+        <select name="system.battlefield.groundHardness" data-dtype="Number">
+          {{#each ground.ranks as |rank|}}
+          <option value="{{rank.rank}}" {{#if rank.chosen}}selected{{/if}}>Rank {{rank.rank}} &middot; {{rank.material}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{/if}}
     </div>
 
     {{#if environmentNow.effect}}

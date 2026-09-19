@@ -1149,6 +1149,24 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       }),
 
       /**
+       * The Hardness Rank of the ground they are standing on.
+       *
+       * An Environment has one the way a Feature does, and it is the same Hardness: what
+       * the ground costs to be thrown into. Sudden Stop names the two in one breath -
+       * "Feature Collision or Ground Collision respectively" - and they were the same
+       * number all along.
+       *
+       * Each Environment carries the range its file allows and the ARC picks within it, so
+       * what is stored is the pick. Clamped to the Hardness Ranks that exist rather than to
+       * one Environment's range: the range belongs to the Environment and the field
+       * outlives whichever one they are standing in.
+       */
+      groundHardness: new fields.NumberField({
+        required: true, integer: true, initial: 1,
+        min: 0, max: DBUCharacterData.MAX_HARDNESS_RANK
+      }),
+
+      /**
        * Held Breath, and whether the Check that hands it out has been made.
        *
        * Not a Resource: the rulebook calls exactly one thing a Resource and this is not

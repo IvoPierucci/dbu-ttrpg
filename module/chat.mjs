@@ -8034,10 +8034,17 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   // answer to "what does this cost me", and the point of a dropdown is that nobody should
   // be doing that multiplication at the table. The material comes with it, because that
   // is the question actually being asked - what did they hit.
+  // Which Rank the ground they are standing on is, so a Ground Collision is one click and
+  // obviously the right one. Marked rather than pre-selected: most collisions are with a
+  // Feature, and a window that opens on the wrong answer is worse than one that opens on
+  // none.
+  const ground = Number(target.system.battlefield?.groundHardness);
+
   const ranks = HARDNESS_RANKS.map(hardness =>
     `<option value="${hardness.rank}">Rank ${hardness.rank} &middot; ${
       hardnessValue(hardness.rank, baseTier)} Damage &middot; ${
-      Handlebars.escapeExpression(hardness.material)}</option>`).join("");
+      Handlebars.escapeExpression(hardness.material)}${
+      (hardness.rank === ground) ? " &middot; the ground here" : ""}</option>`).join("");
 
   // The rule, and the arithmetic behind the numbers in that list, for whoever wants it.
   // Built here rather than inline so the character's name goes through the escape like
