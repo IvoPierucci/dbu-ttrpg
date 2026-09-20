@@ -1,0 +1,83 @@
+id: earthquake-weather
+name: Earthquake Weather
+kind: battlefield
+weather: true
+profile: elemental-earth
+source: Core Rule
+description: >
+  The ground itself. Might 1(WT) lower, Defense Value halved past Natural, and knocked
+  Prone every Combat Round at Cataclysmic - and none of it touches you off the ground.
+text: >
+  Earthquake Weather: The ground beneath your feet rumbles, shakes, and splits open,
+  endangering everyone for miles around.
+
+  Connected Profile: Elemental (Earth)
+
+  Natural Weather (Tier 1) Effect(s):
+  * While you are not in a High Environment, reduce your Might by 1(WT).
+
+  Unnatural Weather (Tier 2) Effect(s):
+  * While you are not in a High Environment, halve your Defense Value.
+
+  Cataclysmic Weather (Tier 3) Effect(s):
+  * At the start of each Combat Round, if you are not in a High Environment, you are
+  knocked Prone.
+
+---
+
+# The one Weather that had to wait for the High Environments, and the reason it waited is
+# written into all three of its effects: "while you are not in a High Environment". An
+# earthquake is the ground shaking, and the ground cannot reach somebody who is not on it.
+#
+# --- Why this needs asking at all ------------------------------------------------------------------
+#
+# Three of the four High Environments forbid Battle Weather outright, and a Weather that is
+# forbidden is not gathered - so in the High Sky and above, these effects would never run
+# whether they asked or not.
+#
+# The Low Sky is the exception and is the whole of why the question exists: it forbids no
+# Weather, so an earthquake is still in play while a character hovers over it, and it is
+# the test below that stops the ground shaking somebody standing in the air.
+#
+# `battlefield.highEnvironment == 0` is the test, and Rank 0 is the ground by the rules'
+# own definition: "the typical Battle Environment that is not a High Environment is
+# considered Rank 0."
+#
+# --- Natural (1) and Unnatural (2) --------------------------------------------------------------------
+#
+# Might and the Defense Value, both while on the ground. Nested rather than written twice:
+# the Tier test is inside the height test, because being off the ground turns the whole
+# Weather off and there is no Tier at which it reaches you up there.
+#
+# The Might is 1(WT), so it is also what a Knockback throws with and how far - which is a
+# quiet second effect the entry does not mention and follows from Might being one number.
+#
+# --- Cataclysmic (3) ----------------------------------------------------------------------------------
+#
+# "At the start of each Combat Round, if you are not in a High Environment, you are knocked
+# Prone."
+#
+# The Round rather than the turn, so it lands once on everybody standing in it. No clock:
+# the entry gives none, so Prone comes off the way Prone always comes off - by getting up,
+# which is a thing you then have to do every Round.
+#
+# --- What is not built ----------------------------------------------------------------------------------
+#
+# "Connected Profile: Elemental (Earth)." The Elemental Profiles are the Magic Profiles,
+# and there are none in this system yet. Carried in the header and read by nobody.
+
+[passive]
+if (battlefield.highEnvironment == 0) {
+  might -= 1(WT);
+
+  if (battlefield.weather.tier >= 2) {
+    defenseValue *= 0.5;
+  }
+}
+
+[automatic/start-of-round]
+if (battlefield.highEnvironment == 0) {
+  if (battlefield.weather.tier >= 3) {
+    gain(prone);
+  }
+}
