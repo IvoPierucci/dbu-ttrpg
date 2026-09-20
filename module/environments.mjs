@@ -143,6 +143,39 @@ export const ENVIRONMENT_RULES = Object.freeze([
         + "as the Underwater Environment, they will therefore enter that Environment."
   },
   {
+    key: "height",
+    name: "Height and Range",
+    text: "For every difference in rank of High Environment, for which normal Battle "
+        + "Environments are considered to be Rank 0, treat the Opponent as if they are 8 "
+        + "additional Squares away from you.",
+    note: "Squares, which this system does not measure. The ranks are on both sheets and "
+        + "the difference is the table's to read off them."
+  },
+  {
+    key: "occupation",
+    name: "Square Occupation",
+    text: "If a Character is not in the same rank of High Environment as you, or not in a "
+        + "High Environment at all, they can occupy the same Square as you.",
+    note: "Nothing here holds a Square, so nothing here was stopping them."
+  },
+  {
+    key: "collision",
+    name: "Lacking Collision",
+    text: "Due to being filled with air or vacuum, you cannot suffer from Collision Damage "
+        + "with the Squares in a High Environment (you may still Collide with Features), "
+        + "due to there being nothing to collide with. Instead, you would simply sink to a "
+        + "lower rank.",
+    note: "The Collision Damage window stops offering the ground while you are up here. "
+        + "Features are still there to hit. Sinking a rank is picking a lower one."
+  },
+  {
+    key: "rank-zero",
+    name: "Ground and High Environments",
+    text: "For effects that refer to higher and/or lower ranks of High Environment, the "
+        + "typical Battle Environment that is not a High Environment is considered Rank 0.",
+    note: "Which is how the rank is stored: 0 is the ground, and the four ranks are 1 to 4."
+  },
+  {
     key: "soar",
     name: "Soar Maneuver and Environments",
     text: "While not in a High Environment, the Soar Maneuver can be used to enter the Low "

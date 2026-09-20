@@ -8,7 +8,7 @@ import { COLLISION_DAMAGE, COLLISION_QUALITIES, HARDNESS_RANKS, hardnessValue } 
 // `environmentOf` lives beside the breath: "what are they standing in" had to be
 // answered there first, and two answers to one question is how they come to disagree.
 import { environmentOf } from "./breath.mjs";
-import { qualitiesOf } from "./environments.mjs";
+import { isAirborne, qualitiesOf } from "./environments.mjs";
 import { getTrait } from "./effects/traits.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, featureRanks, pushes, POWER_SHOT_MAX_RANKS }
@@ -8051,11 +8051,20 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   // Hardness Rank has none, and an option that resolves to nothing is worse than no
   // option.
   const standing = environmentOf(target);
+
+  // "You cannot suffer from Collision Damage with the Squares in a High Environment (you
+  // may still Collide with Features), due to there being nothing to collide with."
+  //
+  // So the ground stops being an answer while they are up there, and the Features stay.
+  // Sinking a rank instead of taking the Damage is a movement, which is the table's - and
+  // a rank is a thing the player picks anyway.
+  const aloft = isAirborne(target.system);
   // The Rank as the Square's Qualities leave it - Glass one harder, Metallic never below
   // three - rather than the one the ARC picked. Derived on the character, so this window
   // and the tab are reading the same number.
   const groundRank = Number(target.system.battlefield?.groundRank);
-  const hasGround = Number.isFinite(Number(standing?.hardnessMin))
+  const hasGround = !aloft
+    && Number.isFinite(Number(standing?.hardnessMin))
     && Number.isFinite(groundRank);
 
   // What the Qualities of this Square do to a collision with it. Bouncy halves and
@@ -8113,6 +8122,10 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
           halved ? `${Handlebars.escapeExpression(halvedBy)} halves it.` : ""
         ].filter(Boolean).join(" ")}</em>` : ""}
       </label>
+      ${aloft
+        ? `<p class="dbu-respond-hint">Nothing to hit but Features up here - a Square in a
+            High Environment is air. You would sink a rank instead.</p>`
+        : ""}
       <p class="dbu-respond-hint dbu-list-label">Feature Qualities</p>
       ${qualities}`,
     buttons: [
