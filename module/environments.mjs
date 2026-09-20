@@ -65,6 +65,52 @@ export const HIGH_ENVIRONMENTS = Object.freeze([
 /** The highest High Environment there is. */
 export const MAX_HIGH_ENVIRONMENT = 4;
 
+/**
+ * Where a Soar can take this character from where they are.
+ *
+ * "If not in a High Environment, you can enter the Low Sky Environment. If in a High
+ * Environment, you can increase your rank of High Environment by +/- 1 Rank, where if it
+ * would become 0 then you enter the normal Battle Environment for the Square you are
+ * occupying."
+ *
+ * One rule with two branches and no third: from the ground there is one place to go, and
+ * from the air there are two - except at the top, where there is one again.
+ *
+ * "Can", both times, so staying put is an answer. The Defense Value is bought with the
+ * Action whatever they do with the height, which is what "additionally" means.
+ *
+ * @returns {{rank: number, label: string}[]} in the order they are offered
+ */
+export function soarOptions(system) {
+  const rank = Number(system?.battlefield?.highEnvironment) || 0;
+
+  if (!rank) {
+    return [{ rank: 1, label: "Take off into the Low Sky" }];
+  }
+
+  // Built from the ranks that exist rather than from the highest number there is. The two
+  // should say the same thing, and asking the list is what makes a rank with no entry a
+  // missing option rather than a crash halfway through drawing the question.
+  const above = highEnvironment(rank + 1);
+  const below = highEnvironment(rank - 1);
+
+  const options = [];
+  if (above) options.push({ rank: above.rank, label: `Climb to the ${above.name}` });
+
+  // "Where if it would become 0 then you enter the normal Battle Environment for the
+  // Square you are occupying." Rank 0 is the ground by the rules' own definition, and the
+  // Battle Environment they have been carrying all along is the one they land in - it was
+  // deliberately left alone when they went up.
+  //
+  // So the step down at Rank 1 has no entry to name, and is the one case where not finding
+  // one is the answer rather than a gap.
+  options.push(below
+    ? { rank: below.rank, label: `Drop to the ${below.name}` }
+    : { rank: 0, label: "Come down to the ground" });
+
+  return options;
+}
+
 /** Whether this character is off the ground. */
 export function isAirborne(system) {
   return (Number(system?.battlefield?.highEnvironment) || 0) > 0;

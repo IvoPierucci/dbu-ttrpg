@@ -1,0 +1,73 @@
+id: soar
+name: Soar
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+soars: true
+source: Core Rule
+description: >
+  Take to the air. Defense Value 1(bT) higher until your next turn begins, and go up or
+  down a rank of High Environment - or into the Low Sky from the ground.
+text: >
+  Soar Maneuver [1/Round]: Soar through the skies like a bird!
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Free
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Increase your Defense Value by 1(bT) until the start of your next turn.
+  Additionally, if not in a High Environment, you can enter the Low Sky Environment. If
+  in a High Environment, you can increase your rank of High Environment by +/- 1 Rank,
+  where if it would become 0 then you enter the normal Battle Environment for the Square
+  you are occupying.
+
+---
+
+# The Maneuver the High Environment rules have been pointing at since they arrived. It was
+# held back twice: once because the ranks did not exist, and once because the table asked.
+#
+# --- The Defense Value ------------------------------------------------------------------------
+#
+# "Increase your Defense Value by 1(bT) until the start of your next turn."
+#
+# A duration, so it is a mark: `soaring`, whose file carries the bonus. Brace's shape, and
+# Brace's edge - a start edge is never ahead of you during your own turn.
+#
+# Not the same thing as being in the air. "Additionally" is the entry's own word: the mark
+# is one effect and the height is another, and a character may Soar and stay where they
+# are. One is what you did this turn; the other is where you are standing.
+#
+# --- The height -----------------------------------------------------------------------------------
+#
+# "If not in a High Environment, you can enter the Low Sky Environment. If in a High
+# Environment, you can increase your rank of High Environment by +/- 1 Rank, where if it
+# would become 0 then you enter the normal Battle Environment for the Square you are
+# occupying."
+#
+# Which is one rule with two branches and no third: from the ground there is one place to
+# go, and from the air there are two. `soars: true` is what asks - the question is the
+# player's and the answer depends on where they already are, which is not a thing a script
+# in this language can ask before it runs.
+#
+# "Can", both times, so the height is offered and not taken: the answer includes staying
+# where you are, and the Defense Value is still bought with the Action.
+#
+# Rank 0 is the ground by the rules' own definition, so "if it would become 0 then you
+# enter the normal Battle Environment" needs nothing of its own: dropping from the Low Sky
+# sets the rank to 0, and the Battle Environment the character has been carrying all along
+# is the one they land in. That field was deliberately left alone when they went up.
+#
+# --- Free for a Minion -------------------------------------------------------------------------
+#
+# "Minions: Free." There are no Minions in this system, which the Brace, Analysis and Hype
+# files all say about their own Minion lines. Carried as printed and read by nobody, which
+# is the library's convention - a header for it would be one more thing declared in one
+# place and read in none.
+
+[on used]
+gain(soaring);
+expires(soaring, start-of-next-turn);

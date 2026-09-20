@@ -240,7 +240,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // build them from.
     acrobatics:       { label: "Acrobatics",       attribute: "agility",
                         specialManeuver: "flip" },
-    flight:           { label: "Flight",           attribute: "agility",     required: true },
+    flight:           { label: "Flight",           attribute: "agility",     required: true,
+                        specialManeuver: "soar" },
     stealth:          { label: "Stealth",          attribute: "agility" },
     thievery:         { label: "Thievery",         attribute: "agility" },
 

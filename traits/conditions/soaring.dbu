@@ -1,0 +1,36 @@
+id: soaring
+name: Soaring
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: nothing calls it one, and the Soar entry does not name it at
+# all. The name is this system's, for a duration that has to be held somewhere - exactly
+# what Braced is, and for the same reason.
+combatCondition: no
+source: Core Rule
+description: >
+  In the air, or about to be. Defense Value 1(bT) higher until the start of your next
+  turn.
+text: >
+  Soaring: the Soar Maneuver's mark. "Increase your Defense Value by 1(bT) until the
+  start of your next turn."
+
+---
+
+# --- The name is this system's ------------------------------------------------------------
+#
+# The Soar Maneuver gives a bonus that lasts, and a duration has to be held on something.
+# The rulebook names nothing, so this is named here and says so, the way Braced does.
+#
+# It is not what being in a High Environment is. A character can Soar and stay where they
+# are - the entry offers the height change as a second thing, "additionally" - and a
+# character in the Low Sky who has not Soared this turn has no mark at all. The rank is the
+# height; this is the Defense Value.
+#
+# --- The clock ----------------------------------------------------------------------------
+#
+# "Until the start of your next turn", which is the edge Brace already uses: a start edge
+# is never ahead of you during your own turn, so it lifts when your next turn begins
+# whichever turn you used it on.
+
+[passive]
+defenseValue += 1(bT);

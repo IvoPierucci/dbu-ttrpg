@@ -58,6 +58,9 @@ import { actionsLeft, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } fr
 import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
+// Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
+// dynamic import, and use-maneuver.mjs already imports enough at the top.
+import * as soarNames from "./environments.mjs";
 
 /**
  * What a Maneuver costs from the Action economy, and out of which pool.
@@ -859,6 +862,52 @@ function saveClashReason(actor, target, maneuver) {
  * @returns {Promise<?{name: string, stacks: number}>} the Resource and its new total, or
  *   null if the question was dropped
  */
+/**
+ * Where is this Soar taking them?
+ *
+ * Offered rather than taken: "can", both times in the entry, so the list always ends with
+ * staying where they are. The Defense Value is the Maneuver's whatever they pick.
+ *
+ * @returns {Promise<number|false|null>} the rank to move to, `false` for staying, `null`
+ *   if the question was closed.
+ */
+async function askSoar(actor, maneuver) {
+  const { soarOptions } = await import("./environments.mjs");
+  const options = soarOptions(actor.system);
+
+  const rows = [
+    ...options.map(option => `
+      <label class="dbu-respond-option">
+        <input type="radio" name="soar" value="${option.rank}"/>
+        <span class="dbu-respond-name">${Handlebars.escapeExpression(option.label)}</span>
+      </label>`),
+    `<label class="dbu-respond-option">
+        <input type="radio" name="soar" value="stay" checked/>
+        <span class="dbu-respond-name">Stay where you are</span>
+        <span class="dbu-respond-source">the Defense Value either way</span>
+      </label>`
+  ].join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: maneuver.name },
+    content: rows,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Soar",
+        callback: (event, button, dialog) =>
+          dialog.element.querySelector('input[name="soar"]:checked')?.value ?? "stay"
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if (!chosen) return null;
+  return (chosen === "stay") ? false : Number(chosen);
+}
+
 async function askHoldingBack(actor, maneuver) {
   const { resourceCeiling, resourceDefinitions } = await import("./effects/traits.mjs");
 
@@ -1003,6 +1052,22 @@ async function askMagicTrick(actor, maneuver, target) {
  * either way and the card would otherwise look identical whether somebody had just gone
  * liquid or just come back.
  */
+/**
+ * Where a Soar took them, for the card.
+ *
+ * Said rather than left to the sheet: a height change is a thing the other players want
+ * to know about, and the Battlefields tab is one character's own.
+ */
+function soarNote(maneuver, soarTo) {
+  if (!maneuver.soars) return "";
+  if (soarTo === false) return "Stays where they are.";
+  if (soarTo === 0) return "Comes down to the ground.";
+
+  const { HIGH_ENVIRONMENTS } = soarNames;
+  const name = HIGH_ENVIRONMENTS.find(sky => sky.rank === soarTo)?.name ?? "";
+  return name ? `Now in the ${name}.` : "";
+}
+
 function stateNote(maneuver, toggled) {
   if (!maneuver.togglesState || !toggled) return "";
   const name = maneuver.togglesState.charAt(0).toUpperCase() + maneuver.togglesState.slice(1);
@@ -1905,6 +1970,9 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // Which of a Maneuver's own effects the player picked, where it has several and the
   // choice comes before the dice rather than after them.
   let trick = "";
+  // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
+  // question closed, which is not an answer and stops the Maneuver.
+  let soarTo = false;
   // What a Movement was declared as: which Speed bounds it, and whether Rapid Movement
   // was paid for. Both settled before anything is spent, for the same reason.
   let crossing = null;
@@ -1979,6 +2047,18 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     if (maneuver.magicTrick) {
       trick = await askMagicTrick(actor, maneuver, targetActor);
       if (!trick) return false;
+    }
+
+    // "Additionally, if not in a High Environment, you can enter the Low Sky Environment.
+    // If in a High Environment, you can increase your rank of High Environment by +/- 1
+    // Rank." Which way, and whether at all - "can", so staying where you are is an answer
+    // and the Defense Value is bought with the Action either way.
+    //
+    // Asked here, before anything is paid for, because the question depends on where the
+    // character is standing and not on anything this Maneuver does.
+    if (maneuver.soars) {
+      soarTo = await askSoar(actor, maneuver);
+      if (soarTo === null) return false;
     }
 
     // "You enter the Liquid Special State. If you use this Maneuver while in the Liquid
@@ -2147,6 +2227,17 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     ? await collectCharges(actor)
     : 0;
 
+  // The height, now that it is certain to happen. The mark is the file's - `[on used]`
+  // gains it and clocks it - and this is the half a script cannot do: a rank is a field,
+  // and which one it becomes was answered before anything was paid for.
+  //
+  // "Where if it would become 0 then you enter the normal Battle Environment for the
+  // Square you are occupying" needs nothing of its own: Rank 0 is the ground, and the
+  // Battle Environment on the character is the one they have been over the whole time.
+  if (maneuver.soars && (soarTo !== false)) {
+    await actor.update({ "system.battlefield.highEnvironment": soarTo });
+  }
+
   // Declared, now that it is certain to happen. An effect answering this reads the
   // Maneuver and who it is aimed at.
   await fireMoment(actor, "declare-maneuver", {
@@ -2256,7 +2347,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
         // What a Maneuver whose whole effect is a number and a sentence says at the table,
         // and which way one that throws a State went. Blank on everything that does
         // something the system can do for itself and says so by doing it.
-        note: [maneuverNote(actor, maneuver), stateNote(maneuver, toggled)]
+        note: [maneuverNote(actor, maneuver), stateNote(maneuver, toggled),
+               soarNote(maneuver, soarTo)]
           .filter(Boolean).join(" "),
         spent: {
           actions: actionCostOf(maneuver, actionsSpent).amount,
