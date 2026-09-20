@@ -70,6 +70,18 @@ export function isAirborne(system) {
   return (Number(system?.battlefield?.highEnvironment) || 0) > 0;
 }
 
+/**
+ * The file for the rank this character is at, or nothing on the ground.
+ *
+ * Handed the Trait lookup rather than importing it: environments.mjs is the rules and
+ * traits.mjs is the library, and the library already imports enough.
+ */
+export function highTraitOf(system, getTrait) {
+  const rank = Number(system?.battlefield?.highEnvironment) || 0;
+  if (!rank) return null;
+  return getTrait.all().find(trait => Number(trait.highRank) === rank) ?? null;
+}
+
 /** One High Environment by its rank, or nothing for the ground. */
 export function highEnvironment(rank) {
   return HIGH_ENVIRONMENTS.find(entry => entry.rank === Number(rank)) ?? null;

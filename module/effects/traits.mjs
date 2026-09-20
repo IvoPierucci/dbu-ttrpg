@@ -35,6 +35,10 @@ export const KINDS = Object.freeze({
   // over traits/battlefields/ and each has to say which files are its own. A fifth in the
   // same folder is a fifth chance for a header to be forgotten.
   qualities: { label: "Environmental Quality", priority: PRIORITY.base },
+  // The four ranks of High Environment. Their own folder for the same reason: the
+  // searches over traits/battlefields/ each have to say which files are theirs, and a
+  // sixth in that folder is a sixth chance for a header to be forgotten.
+  high: { label: "High Environment", priority: PRIORITY.base },
   maneuvers: { label: "Maneuver", priority: PRIORITY.base },
   // A Karmic Effect is bought with a Karma Point rather than granted by anything, so
   // it sits at base Priority - nothing else is competing with it for a Slot.

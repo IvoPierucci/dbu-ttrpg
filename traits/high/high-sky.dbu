@@ -1,0 +1,31 @@
+id: high-sky
+name: High Sky
+kind: high
+highRank: 2
+noWeather: true
+source: Core Rule
+description: >
+  Above the clouds. No Battle Weather can exist up here.
+text: >
+  High Sky Environment: Above the clouds, with space hanging above.
+
+  Hardness Rank: N/A
+
+  Effects: Battle Weather cannot exist in this Battle Environment.
+
+---
+
+# "Battle Weather cannot exist in this Battle Environment."
+#
+# `noWeather: true`, read by the registry: the Weather the character is standing in is not
+# gathered while they are up here. Left on them rather than cleared, the same way the
+# Battle Environment below is - the storm is still there when they come down.
+#
+# Cannot exist, so this is not a Weather Tier reduced to nothing. Brace's `weather.tiers`
+# says Weathers count some number of Tiers lower and is a different rule; this says there
+# is no Weather here at all, and a Tier of nothing would still be a Weather with a name.
+#
+# The first of the three that say it, and the reason the line is drawn here: below the
+# clouds is where weather happens.
+#
+# No statements. What this does is refuse something, and refusing is the registry's.

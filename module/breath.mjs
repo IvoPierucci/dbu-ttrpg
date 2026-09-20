@@ -17,7 +17,8 @@
  * one caller and not another.
  */
 
-import { getTrait } from "./effects/traits.mjs";
+import { getTrait, traitsOfKind } from "./effects/traits.mjs";
+import { highTraitOf } from "./environments.mjs";
 import { setCondition } from "./conditions.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 
@@ -27,8 +28,19 @@ export function environmentOf(actor) {
   return id ? (getTrait(id) ?? null) : null;
 }
 
-/** Whether there is nothing to breathe where they are standing. */
+/**
+ * Whether there is nothing to breathe where they are.
+ *
+ * Two files can say so and only one of them is underfoot: Local Space and Deep Space are
+ * Unbreathable, and a character in either is not in the Battle Environment below at all.
+ * So the High Environment is asked first, and the ground only when they are on it.
+ */
 export function isUnbreathable(actor) {
+  const rank = Number(actor?.system?.battlefield?.highEnvironment) || 0;
+  if (rank) {
+    const sky = highTraitOf(actor.system, { all: () => traitsOfKind("high") });
+    return sky?.unbreathable === true;
+  }
   return environmentOf(actor)?.unbreathable === true;
 }
 

@@ -1,0 +1,54 @@
+id: local-space
+name: Local Space
+kind: high
+highRank: 3
+noWeather: true
+unbreathable: true
+grantsKnockback: true
+knockbackMight: 1
+source: Core Rule
+description: >
+  Orbit. Nothing to breathe, no Weather, and every attack throws - 1(bT) further if it
+  already did.
+text: >
+  Local Space Environment: Battles above a nearby planet.
+
+  Hardness Rank: N/A
+
+  Effects: This Battle Environment has multiple effects:
+
+  * This is an Unbreathable Environment
+
+  * Battle Weather cannot exist in this Battle Environment.
+
+  * All Attacking Maneuvers possess the Knockback Advantage in this Environment. If an
+  Attacking Maneuver already possesses the Knockback Advantage, increase your Might by
+  1(bT) for the Might Clash initiated by the Knockback Advantage and for calculating the
+  number of Squares the target(s) of that Attacking Maneuver are moved.
+
+---
+
+# Three effects, and two of them are headers that already have readers: `unbreathable`
+# brings the whole of Held Breath with it, and `noWeather` keeps the storm on the ground.
+#
+# --- Everything throws ------------------------------------------------------------------------
+#
+# "All Attacking Maneuvers possess the Knockback Advantage in this Environment."
+#
+# Which is what nothing to push against means: hit somebody in orbit and they go. Read
+# where the Advantage is read, so an attack that never had it opens the Might Clash the
+# same way one that did always has.
+#
+# --- And the ones that already threw, throw further ----------------------------------------------
+#
+# "If an Attacking Maneuver already possesses the Knockback Advantage, increase your Might
+# by 1(bT)."
+#
+# Already. So this is not a bonus for being in space - it is a bonus for having brought
+# your own Knockback to a place that hands it out for free, and an attack that only has one
+# because of this Environment does not get it. The two halves are told apart where the
+# Advantage is read, which is the one place that knows which of the two it was.
+#
+# "For the Might Clash initiated by the Knockback Advantage and for calculating the number
+# of Squares the target(s) are moved" - both, and they are the same number twice: the Clash
+# rolls Might and the distance is Might in Squares. Carried on the card so both read it.

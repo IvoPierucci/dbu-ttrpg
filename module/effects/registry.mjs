@@ -106,6 +106,7 @@ export function programsFor(actor, { report = () => {} } = {}) {
   entries.push(...weatherPrograms(actor, report));
   entries.push(...environmentPrograms(actor, report));
   entries.push(...qualityPrograms(actor, report));
+  entries.push(...highPrograms(actor, report));
 
   return entries;
 }
@@ -299,6 +300,46 @@ function battlefieldPrograms(actor, report) {
   }];
 }
 
+/** The High Environment file for the rank this character is at, or nothing. */
+function highTrait(actor) {
+  const rank = Number(actor?.system?.battlefield?.highEnvironment) || 0;
+  if (!rank) return null;
+  return traitsOfKind("high").find(trait => Number(trait.highRank) === rank) ?? null;
+}
+
+/**
+ * The High Environment this character is in.
+ *
+ * By rank rather than by id, because a rank is what the rules compare - "for every
+ * difference in rank of High Environment" - and the id is only how the file is found.
+ *
+ * Three of the four have no statements at all: what they do is refuse things, and
+ * refusing is done by the headers those files carry rather than by a script. So this
+ * gathers next to nothing today and is the door for the day one of them adds a value.
+ */
+function highPrograms(actor, report) {
+  const trait = highTrait(actor);
+  if (!trait) return [];
+
+  const { program, errors } = compile(
+    `high:${trait.id}`,
+    { script: trait.script },
+    message => report(`${trait.name}: ${message}`)
+  );
+  if (errors.length) return [];
+  if (!program?.blocks?.length) return [];
+
+  return [{
+    program,
+    priority: PRIORITY.base,
+    sourceId: `high:${trait.id}`,
+    sourceUuid: null,
+    sourceName: trait.name,
+    level: 0,
+    stacks: 1
+  }];
+}
+
 /**
  * The Environmental Qualities of the Square this character is standing in.
  *
@@ -425,6 +466,14 @@ function environmentPrograms(actor, report) {
  * the others: you can be behind a rock, in the dark, in a storm.
  */
 function weatherPrograms(actor, report) {
+  // "Battle Weather cannot exist in this Battle Environment." Cannot exist, so it is not
+  // gathered rather than reduced to nothing - a Weather Tier of zero would still be a
+  // Weather with a name, and that is Brace's rule and a different one.
+  //
+  // Left on the character rather than cleared: the storm is still there when they come
+  // down, and clearing it would be this system deciding something about the ground.
+  if (highTrait(actor)?.noWeather === true) return [];
+
   const id = String(actor.system?.battlefield?.weather?.id ?? "");
   if (!id) return [];
 

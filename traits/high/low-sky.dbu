@@ -1,0 +1,30 @@
+id: low-sky
+name: Low Sky
+kind: high
+highRank: 1
+source: Core Rule
+description: >
+  Open air. Nothing up here does anything to you - it is the Battle Environment below
+  that stops reaching you, which is the whole of what being airborne is worth.
+text: >
+  Low Sky Environment: High above the landscape, where nothing interferes with the
+  battle.
+
+  Hardness Rank: N/A
+
+  Effects: N/A
+
+---
+
+# "Where nothing interferes with the battle", and the entry means it: no Hardness Rank, no
+# effects. The Normal Light Level and the Standard Environment have the same shape and
+# exist for the same reason - "N/A" is a rule with a name.
+#
+# What it is worth is what it takes away rather than what it adds. A character in the Low
+# Sky is out of the Lava, out of the Bog and out of the water, because a High Environment
+# is layered above the Battle Environment and the Environment below stops reaching them.
+#
+# Battle Weather still does. It is the only one of the four that does not say otherwise,
+# which is the difference between the sky and everything above it.
+#
+# No statements, so the registry drops the program.

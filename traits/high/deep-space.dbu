@@ -1,0 +1,39 @@
+id: deep-space
+name: Deep Space
+kind: high
+highRank: 4
+noWeather: true
+unbreathable: true
+grantsKnockback: true
+knockbackMight: 2
+source: Core Rule
+description: >
+  The deep. Nothing to breathe, no Weather, and every attack throws - 2(bT) further if
+  it already did.
+text: >
+  Deep Space Environment: No air. No Battle Weather. Final destination.
+
+  Hardness Rank: N/A
+
+  Effects: This Battle Environment has multiple effects:
+
+  * This is an Unbreathable Environment.
+
+  * Battle Weather cannot exist in this Battle Environment.
+
+  * All Attacking Maneuvers possess the Knockback Advantage in this Environment. If an
+  Attacking Maneuver already possesses the Knockback Advantage, increase your Might by
+  2(bT) for the Might Clash initiated by the Knockback Advantage and for calculating the
+  number of Squares the target(s) of that Attacking Maneuver are moved.
+
+---
+
+# Local Space with the number doubled, and the fourth rank the frame said "functions
+# differently". Whatever that difference is, it is not in these three effects: they are
+# Local Space's with 2(bT) where it has 1(bT).
+#
+# So nothing here treats it as anything but the highest of the four, and the note on the
+# rank still says the rules have not said how it differs.
+#
+# "No air. No Battle Weather. Final destination." Three sentences, three headers:
+# `unbreathable`, `noWeather`, and the one that is a joke about a fighting game.

@@ -8,8 +8,8 @@ import { COLLISION_DAMAGE, COLLISION_QUALITIES, HARDNESS_RANKS, hardnessValue } 
 // `environmentOf` lives beside the breath: "what are they standing in" had to be
 // answered there first, and two answers to one question is how they come to disagree.
 import { environmentOf } from "./breath.mjs";
-import { isAirborne, qualitiesOf } from "./environments.mjs";
-import { getTrait } from "./effects/traits.mjs";
+import { highTraitOf, isAirborne, qualitiesOf } from "./environments.mjs";
+import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
 import { advantageWoundParts, featureRanks, pushes, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
@@ -4533,7 +4533,16 @@ const CLASH_ROLLS = ({
 
     // The first thing to put a row on a Might Clash: "if that Opponent's Tier of Power is
     // higher than yours, reduce your Dice Score for this Clash by 1(T)."
-    parts: (actor, clash, uuid) => transfigurationPenalty(actor, clash, uuid)
+    //
+    // And the second: what Local Space and Deep Space add to a Knockback that brought its
+    // own Advantage. The challenger's alone - it is their Might the rule raises, and the
+    // Clash is one they initiated.
+    parts: (actor, clash, uuid) => [
+      ...transfigurationPenalty(actor, clash, uuid),
+      ...(((uuid === clash.challengerUuid) && clash.mightBonus)
+        ? [{ label: "Knockback in space", value: clash.mightBonus }]
+        : [])
+    ]
   },
 
   /**
@@ -7913,13 +7922,22 @@ export async function reduceLifePoints(target, amount, { reason = "Life Point re
  * "You may" is still a choice - nothing is rolled until both sides say so, and a card
  * nobody answers is a card nobody answers.
  */
-async function openKnockback(attack, attacker, target) {
+async function openKnockback(attack, attacker, target, { extra = 0, from = "" } = {}) {
+  // "For the Might Clash initiated by the Knockback Advantage and for calculating the
+  // number of Squares the target(s) are moved" - both, and they are the same number
+  // twice: the Clash rolls Might and the distance is Might in Squares. Carried on the
+  // card so both read it rather than each working it out.
+  const might = attacker.system.might + extra;
+
   return postMightClash(attacker, target, {
     // Named for the Advantage, not for the Maneuver: this card is about the Knockback,
     // and which attack caused it belongs in the line below rather than in the title.
     maneuverName: "Knockback",
+    mightBonus: extra,
     reason: `${attack.maneuverName} · win and move ${target.name} up to `
-      + `${attacker.system.might} Squares in a straight line away from you.`,
+      + `${might} Squares in a straight line away from you.${
+        extra ? ` ${from} adds ${extra} to your Might for this.`
+        : from ? ` ${from} gave this attack its Knockback.` : ""}`,
     collision: {
       // Launching doubles what the movement costs, and says so itself - an Advantage
       // does not know which Profile handed it out.
@@ -8310,9 +8328,28 @@ async function applyAttackDamage(message, target, attack) {
   // Knockback asks "if you successfully Damage an Opponent", which is the other half of
   // the same sentence: Damage an Absolute Attack deals is not Damage dealt with an
   // Attacking Maneuver for anything triggering off it.
-  if ((damage > 0) && !isAbsoluteMiss(own) && pushes(attack)) {
+  if ((damage > 0) && !isAbsoluteMiss(own)) {
     const attacker = fromUuidSync(attack.attackerUuid);
-    if (attacker) await openKnockback(attack, attacker, target);
+
+    // "All Attacking Maneuvers possess the Knockback Advantage in this Environment."
+    // Which is what nothing to push against means: hit somebody in orbit and they go.
+    const sky = attacker ? highTraitOf(attacker.system, { all: () => traitsOfKind("high") })
+      : null;
+    const here = sky?.grantsKnockback === true;
+
+    // "If an Attacking Maneuver ALREADY possesses the Knockback Advantage, increase your
+    // Might by 1(bT)." Already - so this is not a bonus for being in space, it is a bonus
+    // for having brought your own Knockback to a place that hands it out for free. An
+    // attack that only has one because of the Environment does not get it, and this is
+    // the one place that knows which of the two it was.
+    const broughtItsOwn = pushes(attack);
+    const extra = (here && broughtItsOwn)
+      ? (Number(sky.knockbackMight) || 0) * Math.max(1, attacker.system.baseTierOfPower ?? 1)
+      : 0;
+
+    if (attacker && (broughtItsOwn || here)) {
+      await openKnockback(attack, attacker, target, { extra, from: here ? sky.name : "" });
+    }
   }
 
   // "If you take Damage from an Attacking Maneuver used through the Exploit Maneuver in
