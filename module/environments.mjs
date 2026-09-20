@@ -19,6 +19,63 @@
  */
 
 /**
+ * The High Environments: the sky, and above.
+ *
+ * "They are layered above the usual Battle Environments in the case of the first 3 ranks,
+ * while the 4th rank functions differently."
+ *
+ * Layered above, so a character in one is over a Battle Environment rather than in it -
+ * which the Soar Maneuver says outright from the other direction: leaving a High
+ * Environment is "to leave the High Environment and enter the Battle Environment of the
+ * Square they would be occupying". Entering it on the way down means not having been in it
+ * on the way up.
+ *
+ * Rank 0 is not one of these. It is the absence of one - standing on the ground - and it
+ * is what a character is in unless somebody says otherwise.
+ */
+export const HIGH_ENVIRONMENTS = Object.freeze([
+  {
+    rank: 1,
+    name: "Low Sky",
+    text: "This rank represents the general level that you see most airborne fights in "
+        + "the Dragon Universe."
+  },
+  {
+    rank: 2,
+    name: "High Sky",
+    text: "This rank represents the rare instances when battles can occur past the cloud "
+        + "level; this rank is used to represent battles approaching the edge of space."
+  },
+  {
+    rank: 3,
+    name: "Local Space",
+    text: "This rank represents battles that are in space, but still around a planet."
+  },
+  {
+    rank: 4,
+    name: "Deep Space",
+    text: "This rank represents battles that occur in the depth of space.",
+    // "While the 4th rank functions differently." How it differs is not stated yet, and
+    // this is the note that says so rather than a guess wearing a rule's clothes.
+    note: "The fourth rank functions differently from the first three. How is not in the "
+        + "rules yet, so nothing here treats it as anything but the highest of them."
+  }
+]);
+
+/** The highest High Environment there is. */
+export const MAX_HIGH_ENVIRONMENT = 4;
+
+/** Whether this character is off the ground. */
+export function isAirborne(system) {
+  return (Number(system?.battlefield?.highEnvironment) || 0) > 0;
+}
+
+/** One High Environment by its rank, or nothing for the ground. */
+export function highEnvironment(rank) {
+  return HIGH_ENVIRONMENTS.find(entry => entry.rank === Number(rank)) ?? null;
+}
+
+/**
  * The Environmental Qualities a character's Square has.
  *
  * "Qualities are applied on a Square-by-Square basis and ultimately decided by the ARC

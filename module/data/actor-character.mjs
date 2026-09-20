@@ -6,7 +6,7 @@ import { evaluate } from "../effects/conditions.mjs";
 import { getTrait } from "../effects/traits.mjs";
 import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
-import { STANDARD_ENVIRONMENT, groundHardnessWith, qualitiesOf }
+import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, groundHardnessWith, qualitiesOf }
   from "../environments.mjs";
 import {
   categoryFormula,
@@ -1148,6 +1148,23 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
        */
       environment: new fields.StringField({
         required: true, blank: false, initial: STANDARD_ENVIRONMENT
+      }),
+
+      /**
+       * Which High Environment they are in, or 0 for the ground.
+       *
+       * "Layered above the usual Battle Environments", so this sits beside the Battle
+       * Environment rather than replacing the field: what is below a character in the Low
+       * Sky is still a Lava Environment, and it is what they land in.
+       *
+       * What it does change is whether that Environment reaches them. It does not while
+       * they are above it - which is what the Soar Maneuver says from the other side, by
+       * calling coming down "entering the Battle Environment of the Square they would be
+       * occupying".
+       */
+      highEnvironment: new fields.NumberField({
+        required: true, integer: true, initial: 0,
+        min: 0, max: MAX_HIGH_ENVIRONMENT
       }),
 
       /**

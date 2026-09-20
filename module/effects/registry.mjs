@@ -12,7 +12,7 @@ import { legacyToProgram } from "./migrate.mjs";
 import { compile as compileScript } from "./parser.mjs";
 import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
-import { STANDARD_ENVIRONMENT, qualitiesOf } from "../environments.mjs";
+import { STANDARD_ENVIRONMENT, isAirborne, qualitiesOf } from "../environments.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -311,7 +311,15 @@ function battlefieldPrograms(actor, report) {
  * Square have" and two answers to it would be two lists to keep in step.
  */
 function qualityPrograms(actor, report) {
-  const standing = getTrait(actor.system?.battlefield?.environment ?? "");
+  // Gathered whether they are on the ground or above it. A Quality belongs to a Square and
+  // a High Environment has Squares of its own - Obscured says so outright: "this
+  // Environmental Quality can be applied to Squares within High Environments".
+  //
+  // What is not gathered while airborne is the Environment's own Qualities, since the
+  // Environment is not reaching them either: `qualitiesOf` is asked with no Environment.
+  const standing = isAirborne(actor.system)
+    ? null
+    : getTrait(actor.system?.battlefield?.environment ?? "");
   const ids = qualitiesOf(actor.system, standing);
   if (!ids.length) return [];
 
@@ -359,6 +367,15 @@ function qualityPrograms(actor, report) {
  * the Standard Environment is what they are in.
  */
 function environmentPrograms(actor, report) {
+  // Not while they are above it. "Layered above the usual Battle Environments" is what a
+  // High Environment is, and the Soar Maneuver says the same thing from the other side:
+  // coming down is "to leave the High Environment and enter the Battle Environment of the
+  // Square they would be occupying", which is not something you enter if you were in it.
+  //
+  // The Environment itself is left alone on the character: what is under somebody in the
+  // Low Sky is still a Lava Environment, and it is what they land in.
+  if (isAirborne(actor.system)) return [];
+
   const id = String(actor.system?.battlefield?.environment ?? "") || STANDARD_ENVIRONMENT;
 
   const trait = traitsOfKind("battlefields").find(candidate => candidate.id === id);

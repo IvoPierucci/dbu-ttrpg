@@ -150,6 +150,15 @@
           {{/each}}
         </select>
       </div>
+      <div class="stat" data-tooltip="How far off the ground you are. The first three ranks are layered above the Battle Environment below, which stops reaching you while you are up there - it is still what you would land in.">
+        <em>High Environment</em>
+        <select name="system.battlefield.highEnvironment" data-dtype="Number">
+          <option value="0" {{#unless high.rank}}selected{{/unless}}>On the ground</option>
+          {{#each highEnvironments as |sky|}}
+          <option value="{{sky.rank}}" {{#if sky.chosen}}selected{{/if}}>{{sky.name}} ({{sky.rank}})</option>
+          {{/each}}
+        </select>
+      </div>
       {{#if ground}}
       <div class="stat" data-tooltip="{{ground.note}}">
         <em>Ground Hardness</em>
@@ -168,6 +177,10 @@
       {{/if}}
       {{/if}}
     </div>
+
+    {{#if high.note}}
+    <p class="tab-placeholder">{{high.note}}</p>
+    {{/if}}
 
     {{#if environmentNow.effect}}
     <p class="tab-placeholder">{{environmentNow.effect}}</p>

@@ -8,8 +8,8 @@ import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/t
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_RULES, WEATHER_TIERS } from "../weather.mjs";
-import { ENVIRONMENT_RULES, STANDARD_ENVIRONMENT, qualitiesOf }
-  from "../environments.mjs";
+import { ENVIRONMENT_RULES, HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, highEnvironment,
+  qualitiesOf } from "../environments.mjs";
 import { canSuffocate, difficultiesMet, heldBreath, isUnbreathable, settleBreath }
   from "../breath.mjs";
 import {
@@ -801,6 +801,26 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // `context.weather` is already taken, by the Brace Maneuver's Tier reduction on the
     // Combat tab. Named apart on purpose - one is a number about this character and the
     // other is the rulebook.
+    // How far off the ground, and what that means for what is below. The first three
+    // ranks are layered above the Battle Environment; the fourth is stated to work
+    // differently and the rules do not yet say how, so it carries its own note.
+    const aloft = Number(system.battlefield?.highEnvironment) || 0;
+    context.highEnvironments = HIGH_ENVIRONMENTS.map(sky => ({
+      ...sky,
+      chosen: sky.rank === aloft
+    }));
+
+    const sky = highEnvironment(aloft);
+    context.high = {
+      rank: aloft,
+      name: sky?.name ?? "",
+      note: sky
+        ? `${sky.text}${sky.note ? ` ${sky.note}` : ""} While you are up here the Battle `
+          + "Environment below does not reach you - it is still what you would land in, "
+          + "and the Qualities of your Square still apply."
+        : ""
+    };
+
     // Every Battle Environment file there is, for the picker. No blank option: a
     // character is standing on something, and what they are standing on is the Standard
     // Environment unless somebody says otherwise.
