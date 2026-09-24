@@ -7,9 +7,9 @@ import { reactiveFor } from "../effects/registry.mjs";
 import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
-import { WEATHER_RULES, WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
-import { ENVIRONMENT_RULES, HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, highEnvironment,
-  qualitiesOf } from "../environments.mjs";
+import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
+import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, highEnvironment, qualitiesOf }
+  from "../environments.mjs";
 import { canSuffocate, difficultiesMet, heldBreath, isUnbreathable, settleBreath }
   from "../breath.mjs";
 import {
@@ -893,7 +893,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           .map(quality => quality.name).join(", ")
       : "None";
 
-    context.environmentRules = ENVIRONMENT_RULES;
 
     // Held Breath, and whether there is still a Check to make. Only where there is nothing
     // to breathe: everywhere else the number is zero and means nothing.
@@ -926,14 +925,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         chosen: trait.id === standingIn
       }));
 
-    // The Tiers, each marked if it is the one set. The same list the reference section
-    // below walks, which is why `chosen` is added rather than the list rebuilt.
+    // The Tiers, each marked if it is the one set, for the picker.
     const tierNow = Number(system.battlefield?.weather?.tier) || 1;
     context.weatherTiers = WEATHER_TIERS.map(tier => ({
       ...tier,
       chosen: tier.tier === tierNow
     }));
-    context.weatherRules = WEATHER_RULES;
 
     // What the Weather they are standing in does, in its own words. Drawn only when they
     // are standing in one: "Clear" has nothing to say.

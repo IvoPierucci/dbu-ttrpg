@@ -223,48 +223,6 @@
              {{#if openSections.information}}open{{/if}}>
       <summary class="panel-title">Information</summary>
 
-      {{! Battle Weather, for reading: the three Tiers, and the rules that hold whichever
-          one is in play. }}
-      <details class="condition-group" data-section="weather"
-               {{#if openSections.weather}}open{{/if}}>
-        <summary class="panel-title">Battle Weather</summary>
-
-        <ul class="quality-list">
-          {{#each weatherTiers as |tier|}}
-          <li class="quality">
-            <strong>{{tier.name}} <span class="quality-mark">Tier {{tier.tier}}</span></strong>
-            <span>{{tier.text}}</span>
-          </li>
-          {{/each}}
-        </ul>
-
-        <ul class="quality-list">
-          {{#each weatherRules as |rule|}}
-          <li class="quality">
-            <strong>{{rule.name}}</strong>
-            <span>{{rule.text}}</span>
-          </li>
-          {{/each}}
-        </ul>
-      </details>
-
-      {{! The Environment frame, for reading. Both rules are about Squares, which is to
-          say both are the table's. }}
-      <details class="condition-group" data-section="environments"
-               {{#if openSections.environments}}open{{/if}}>
-        <summary class="panel-title">Environments</summary>
-
-        <ul class="quality-list">
-          {{#each environmentRules as |rule|}}
-          <li class="quality">
-            <strong>{{rule.name}}</strong>
-            <span>{{rule.text}}</span>
-            {{#if rule.note}}<em>{{rule.note}}</em>{{/if}}
-          </li>
-          {{/each}}
-        </ul>
-      </details>
-
       {{! Hardness. Two numbers wearing one name, and the one that matters at the table is
           not stored anywhere - the Value is worked out against whoever is taking the
           damage, so the same wall costs two characters two different numbers. }}
