@@ -117,6 +117,43 @@ export const WEATHER_RULES = Object.freeze([
   }
 ]);
 
+/**
+ * The effects a Weather has at this Tier, read out of its printed entry.
+ *
+ * "Each Tier gains the effects of the earlier Tiers" - so this is every Tier at or below
+ * the one set, and nothing above it: a Natural storm is not doing what a Cataclysmic one
+ * would, and listing it would say it was.
+ *
+ * Read from the entry's own "<Name> Weather (Tier N) Effect(s):" headings and the bullets
+ * under them rather than written out a second time, so the list is the rulebook's words.
+ *
+ * @param {string} text the Weather's published entry
+ * @param {number} tierNow the Weather Tier the character is in
+ * @returns {{tier: number, name: string, text: string}[]} in Tier order
+ */
+export function weatherEffectsUpTo(text, tierNow) {
+  const effects = [];
+  let tier = null;
+
+  for (const line of String(text ?? "").split("\n")) {
+    const trimmed = line.trim();
+    const heading = trimmed.match(/\(Tier (\d+)\) Effect\(s\):$/);
+    if (heading) {
+      tier = Number(heading[1]);
+      continue;
+    }
+    if ((tier === null) || (tier > tierNow) || !trimmed.startsWith("*")) continue;
+
+    effects.push({
+      tier,
+      name: weatherTier(tier)?.name ?? "",
+      text: trimmed.replace(/^\*\s*/, "")
+    });
+  }
+
+  return effects;
+}
+
 /** One Weather Tier by its number. */
 export function weatherTier(tier) {
   return WEATHER_TIERS.find(entry => entry.tier === Number(tier)) ?? null;

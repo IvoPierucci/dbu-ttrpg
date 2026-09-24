@@ -7,7 +7,7 @@ import { reactiveFor } from "../effects/registry.mjs";
 import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
-import { WEATHER_RULES, WEATHER_TIERS } from "../weather.mjs";
+import { WEATHER_RULES, WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { ENVIRONMENT_RULES, HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, highEnvironment,
   qualitiesOf } from "../environments.mjs";
 import { canSuffocate, difficultiesMet, heldBreath, isUnbreathable, settleBreath }
@@ -940,9 +940,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const weatherTrait = standingIn
       ? traitsOfKind("battlefields").find(trait => trait.id === standingIn)
       : null;
+    // Its effects as a list, the Tier they are in and the ones under it - not the ones
+    // above, which are not happening to them. The one-line summary is on hover.
     context.weatherNow = {
       id: standingIn,
-      effect: weatherTrait?.description ?? ""
+      effect: weatherTrait?.description ?? "",
+      effects: weatherEffectsUpTo(weatherTrait?.text, tierNow)
     };
 
     context.collisionDamage = COLLISION_DAMAGE;

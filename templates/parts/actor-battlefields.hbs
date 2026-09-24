@@ -93,7 +93,7 @@
     <div class="stat-grid battlefield-row">
       <div class="stat" data-tooltip="Which Battle Weather you are standing in. Its effects only apply to you while you are in the Squares it covers, and which Squares those are is the table's.">
         <em>Weather</em>
-        <select name="system.battlefield.weather.id">
+        <select name="system.battlefield.weather.id" data-tooltip="{{weatherNow.effect}}">
           <option value="" {{#unless weatherNow.id}}selected{{/unless}}>Clear</option>
           {{#each weathers as |weather|}}
           <option value="{{weather.id}}" {{#if weather.chosen}}selected{{/if}}>{{weather.name}}</option>
@@ -118,8 +118,17 @@
       </div>
     </div>
 
-    {{#if weatherNow.effect}}
-    <p class="tab-placeholder">{{weatherNow.effect}}</p>
+    {{! What the Weather is doing to them: the Tier they are in and every one below it,
+        since each Tier gains the effects of the earlier ones. Nothing above it. }}
+    {{#if weatherNow.effects.length}}
+    <ul class="quality-list">
+      {{#each weatherNow.effects as |effect|}}
+      <li class="quality">
+        <strong>{{effect.name}} <span class="quality-mark">Tier {{effect.tier}}</span></strong>
+        <span>{{effect.text}}</span>
+      </li>
+      {{/each}}
+    </ul>
     {{/if}}
 
   </section>
