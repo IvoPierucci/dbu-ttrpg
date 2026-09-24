@@ -109,7 +109,15 @@ export async function lasting(actor, { kind, key, edge, next = false, source = "
     ...(on && (on !== actor.uuid) ? { on } : {})
   };
 
-  await actor.update({ "system.timed": [...(actor.system.timed ?? []), entry] });
+  // Relayed when the character keeping the clock is not this client's. Elemental (Dark)
+  // is the first to set one from the other side: the Damage is applied by whoever plays
+  // the one who took it, and the clock is the attacker's.
+  const changes = { "system.timed": [...(actor.system.timed ?? []), entry] };
+  if (actor.isOwner === false) {
+    const { requestActorUpdate } = await import("./chat.mjs");
+    await requestActorUpdate(actor, changes);
+  }
+  else await actor.update(changes);
   return true;
 }
 

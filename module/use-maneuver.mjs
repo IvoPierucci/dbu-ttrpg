@@ -19,6 +19,8 @@ import {
   whyNotInReach,
   maxEnergyCharges,
   maneuverKiCost,
+  lifeWagerProblem,
+  spendLifeWager,
   maneuverUsesLeft,
   pickProfileOnly,
   recordManeuverType,
@@ -2179,9 +2181,18 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     ? movementKiCost(actor, crossing)
     : maneuverKiCost(maneuver, declared, actor);
 
+  // A wager paid in Life shares the Capacity with the Ki, so both are checked before
+  // either is spent.
+  const lifeProblem = crossing ? null : lifeWagerProblem(actor, declared, price);
+  if (lifeProblem) {
+    ui.notifications.warn(lifeProblem);
+    return false;
+  }
+
   if (!await applyModifiers(actor, modifiers)) return false;
 
   if (!await spendManeuverCost(actor, maneuver, price)) return false;
+  if (!crossing) await spendLifeWager(actor, declared);
 
   // Empower hands Ki over before anything is recorded, so backing out of the amount
   // leaves the Maneuver unused rather than spent on nothing.

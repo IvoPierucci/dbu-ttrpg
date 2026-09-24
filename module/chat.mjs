@@ -33,6 +33,8 @@ import {
   interveneOptionCost,
   longRangePenalty,
   maneuverKiCost,
+  lifeWagerProblem,
+  spendLifeWager,
   movementKiCost,
   movementSquares,
   effectUsesLeft,
@@ -5523,7 +5525,18 @@ async function takeOutOfSequence(message, actor, offer) {
     : crossing
     ? movementKiCost(actor, crossing)
     : maneuverKiCost(maneuver, reflecting ? null : declared, actor);
+
+  // A wager paid in Life, where there is a wager to pay: not on a free offer, and not on
+  // a Reflect, which pays its own price and nothing of the attack it throws back.
+  const paysLife = !offer.free && !crossing && !reflecting;
+  const lifeProblem = paysLife ? lifeWagerProblem(actor, declared, price) : null;
+  if (lifeProblem) {
+    ui.notifications.warn(lifeProblem);
+    return;
+  }
+
   if (price && !await spendManeuverCost(actor, maneuver, price)) return;
+  if (paysLife) await spendLifeWager(actor, declared);
 
   // An Out-of-Sequence Maneuver counts as having used another kind - unless the thing
   // that offered it was the Instant still holding you, which is what the message id is
@@ -5614,7 +5627,8 @@ async function takeOutOfSequence(message, actor, offer) {
  * other's result in advance.
  */
 export async function postAttack(actor, target, maneuver,
-                                 { profile, foundation, kiWager = 0, charges = 0,
+                                 { profile, foundation, kiWager = 0, wagerFromLife = false,
+                                   charges = 0,
                                    advantages = [], squaresCharged = 0 },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
@@ -5718,6 +5732,9 @@ export async function postAttack(actor, target, maneuver,
             : profileCategoryShift(profile, charges))
             + modifierCategoryShift(modifiers),
           kiWager,
+          // Paid in Life Points rather than Ki. Added to the Wound Roll all the same - it
+          // is a Ki Wager either way - and only the card's note says the difference.
+          wagerFromLife: Boolean(wagerFromLife && kiWager),
           // Energy Charges live on the Maneuver, not the character: they were fed into
           // this attack and are spent with it. Each adds a die to the Wound Roll.
           // Powered "gains an Energy Charge", on top of anything the Energy Charge
@@ -8281,6 +8298,31 @@ async function applyCollisionDamage(message, clash) {
   return requestEdit(message, { type: "clash", clash: { ...clash, collisionApplied: true } });
 }
 
+/**
+ * Lower a character's Light Level by some number of Levels, until the start of the
+ * attacker's next turn.
+ *
+ * A stack of Darkened per Level, each with a clock on the attacker: the turn the entry
+ * names is theirs. The mark is on the one who took the Damage, and `lightLevelOf` reads
+ * it off the Level they set.
+ */
+async function darkenLight(attacker, target, levels) {
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  const { lasting, EDGES, KINDS } = await import("./durations.mjs");
+
+  await gainCondition(target, "darkened", levels);
+  for (let i = 0; i < levels; i++) {
+    await lasting(attacker, {
+      kind: KINDS.CONDITION,
+      key: "darkened",
+      edge: EDGES.START,
+      next: true,
+      on: target.uuid,
+      source: "Elemental (Dark)"
+    });
+  }
+}
+
 /** Take the damage off one target, once and once only. */
 async function applyAttackDamage(message, target, attack) {
   const own = targetResult(attack, target.uuid);
@@ -8350,6 +8392,17 @@ async function applyAttackDamage(message, target, attack) {
     if (attacker && (broughtItsOwn || here)) {
       await openKnockback(attack, attacker, target, { extra, from: here ? sky.name : "" });
     }
+  }
+
+  // Elemental (Dark): "Any Squares occupied by Character(s) who take Damage from this
+  // Attacking Maneuver have their Light Level reduced by 1 Level until the start of your
+  // next turn." Theirs is the Square, and the clock is the attacker's. Not off an Absolute
+  // Attack's miss, which is not Damage dealt with an Attacking Maneuver for anything that
+  // triggers off it.
+  const darkens = PROFILES[attack.profile]?.darkensLight ?? 0;
+  if ((damage > 0) && darkens && !isAbsoluteMiss(own)) {
+    const attacker = fromUuidSync(attack.attackerUuid);
+    if (attacker) await darkenLight(attacker, target, darkens);
   }
 
   // "If you take Damage from an Attacking Maneuver used through the Exploit Maneuver in
@@ -9258,7 +9311,7 @@ function renderAttack(message, html) {
             ? ` &middot; ${Handlebars.escapeExpression(attack.reflectedFrom)} thrown back at `
               + `${Handlebars.escapeExpression(attack.woundByName ?? "")}`
             : ""}${
-          attack.kiWager ? ` &middot; ${attack.kiWager} KP wagered` : ""}${attack.energyCharges
+          attack.kiWager ? ` &middot; ${attack.kiWager} ${attack.wagerFromLife ? "LP" : "KP"} wagered` : ""}${attack.energyCharges
           ? ` &middot; ${attack.energyCharges} Energy Charge${attack.energyCharges === 1 ? "" : "s"}`
           : ""}${PROFILES[attack.profile]?.area
           ? ` &middot; ${Handlebars.escapeExpression(areaLabel(PROFILES[attack.profile].area))}`

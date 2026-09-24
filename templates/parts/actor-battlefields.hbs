@@ -115,6 +115,9 @@
           <option value="{{level.value}}" {{#if level.chosen}}selected{{/if}}>{{level.label}}</option>
           {{/each}}
         </select>
+        {{#if lightLevel.darkened}}
+        <small class="stat-after">{{lightLevel.darkened}}</small>
+        {{/if}}
       </div>
     </div>
 

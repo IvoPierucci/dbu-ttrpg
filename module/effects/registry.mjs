@@ -13,6 +13,7 @@ import { compile as compileScript } from "./parser.mjs";
 import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
 import { STANDARD_ENVIRONMENT, isAirborne, qualitiesOf } from "../environments.mjs";
+import { lightLevelOf } from "../light.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -254,7 +255,8 @@ function statePrograms(actor, report) {
  * Square is lit like is settled at the table and typed in here.
  */
 function battlefieldPrograms(actor, report) {
-  const level = Number(actor.system?.battlefield?.lightLevel) || 0;
+  // The Level set, less whatever Darkened has taken off it.
+  const level = lightLevelOf(actor.system);
 
   // Only the files that declare one. Cover is a Battlefield Trait too and has no Light
   // Level at all - leaving it in the search made the answer depend on how a missing header

@@ -8,6 +8,7 @@ import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/t
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
+import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, highEnvironment, qualitiesOf }
   from "../environments.mjs";
 import { canSuffocate, difficultiesMet, heldBreath, isUnbreathable, settleBreath }
@@ -771,11 +772,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       chosen: value === standing
     }));
 
-    // What the chosen one is doing, in the rulebook's own words. Blank where it does
-    // nothing, which is what the template draws nothing for.
-    const here = levels.find(level => level.value === standing)?.trait;
+    // What the Level they are actually in is doing, in the rulebook's own words - which
+    // is the one set unless something has darkened it. Blank where it does nothing.
+    const inNow = lightLevelOf(system);
+    const here = levels.find(level => level.value === inNow)?.trait;
     context.lightLevel = {
-      effect: here?.script ? (here.description ?? "") : ""
+      effect: here?.script ? (here.description ?? "") : "",
+      // Said under the picker only while it differs from what the picker shows.
+      darkened: (inNow !== standing) && here
+        ? `Darkened: ${here.name} (${inNow > 0 ? "+" : ""}${inNow})`
+        : ""
     };
 
     // What Cover is worth while it is on, in numbers rather than in notation: the

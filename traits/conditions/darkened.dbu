@@ -1,0 +1,34 @@
+id: darkened
+name: Darkened
+kind: conditions
+# From Normal to Pitch Black is two Levels and from Blinding four, so four stacks is as
+# far as it can ever take anybody. Past that it changes nothing.
+maxStacks: 4
+# Not a Combat Condition: the entry reduces a Square's Light Level and never names one.
+combatCondition: no
+source: Core Rule
+description: >
+  The light around you is snuffed out. Your Light Level is 1 lower per stack.
+text: >
+  Darkened: the Elemental (Dark) Profile's mark. "Any Squares occupied by Character(s) who
+  take Damage from this Attacking Maneuver have their Light Level reduced by 1 Level until
+  the start of your next turn."
+
+---
+
+# --- The name is this system's ------------------------------------------------------------
+#
+# The entry lowers a Square's Light Level, and this system has no Squares. The Light Level
+# is on the character, set by the player on the Battlefields tab, so the reduction lands on
+# the character whose Square it was - the one who took the Damage.
+#
+# It is a mark rather than a change to that field because it has to run out on the
+# attacker's clock ("until the start of YOUR next turn"), and a lowered field would have to
+# be raised back past whatever the player set in the meantime. So the field stays the
+# player's and `lightLevelOf` reads both: the Level set, less one per stack.
+#
+# Stacks, one per hit, each with its own clock. Two Dark attacks on the same character
+# lower it twice, and each wears off when its own attacker's next turn starts.
+#
+# No effects of its own: what a Light Level does is in that Level's own file, and this
+# changes which file is read.

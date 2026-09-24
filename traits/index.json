@@ -40,6 +40,7 @@
     "conditions/sleeping.dbu",
     "conditions/slowed.dbu",
     "conditions/soaring.dbu",
+    "conditions/darkened.dbu",
     "conditions/staggered.dbu",
     "conditions/stress-exhaustion.dbu",
     "conditions/suffocating.dbu",

@@ -578,6 +578,42 @@ export const PROFILES = Object.freeze({
     // already says it for all of them. `needs` is for machinery the system lacks, and
     // this is not that: nothing is missing, the answer simply belongs to the table.
     area: { shape: "line", centredOnSquare: true }
+  },
+
+  // --- Magic ----------------------------------------------------------------
+  // The Elemental Profiles. Bound by the Foundation's own rules: a Magic Attack reaches
+  // anywhere on the Battlefield, and cannot be made at all with a Magic Score below 3.
+
+  elementalDark: {
+    label: "Elemental (Dark)",
+    foundations: ["magic"],
+    kiCostPerTier: 2,
+    damageCategory: "standard",
+    text: `
+      Elemental (Dark): Using the powers of darkness, you launch powerful, demonic spells
+      at your opponents. Burn your own life to empower your spell.
+      –Damage Category: Standard
+      –KP Cost: 2(T)
+      –Effect: This Profile has multiple effects:
+      * When making a Ki Wager for this Attacking Maneuver, you may spend your Life Points
+        instead of your Ki Points (reduce your Capacity as if you spent Ki Points as usual).
+      * Any Squares occupied by Character(s) who take Damage from this Attacking Maneuver
+        have their Light Level reduced by 1 Level until the start of your next turn. If
+        this Attacking Maneuver has an AoE, then all Squares within the AoE have their
+        Light Level reduced by 1 Level instead until the start of your next turn instead.
+      * If this Attacking Maneuver has the Elemental (Light) Profile applied to it,
+        increase the Wound Rolls by 2(T).`,
+    // "You MAY spend your Life Points instead" - offered beside the wager, never forced.
+    // The Capacity goes either way, which is the part in brackets.
+    wagerFromLife: true,
+    // A Level off the Light of everybody it Damages, until the attacker's next turn
+    // starts. The Square is the character's here: the Level is set on them.
+    darkensLight: 1,
+    // Both of these need an attack to have something no attack here can have yet. An
+    // attack carries one Profile, so none has Elemental (Light) applied beside this one;
+    // and this Profile has no Area, so the AoE sentence has nothing to be about.
+    needs: "the AoE sentence, and +2(T) Wound with Elemental (Light) - no attack here "
+      + "carries two Profiles or gives this one an Area."
   }
 });
 
@@ -1429,7 +1465,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   const declared = await pickProfile(maneuver, foundations, actor, limits);
   if (!declared) return null;
 
-  const { profile, kiWager } = declared;
+  const { profile, kiWager, wagerFromLife = false } = declared;
 
   // What this attack carries from the Signature Technique side: whatever the Maneuver
   // was built with, plus whatever the Profile hands out. Blitz grants Charging Assault
@@ -1473,7 +1509,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
       );
   if (!foundation) return null;
 
-  return { profile, foundation, kiWager, advantages, ...answers };
+  return { profile, foundation, kiWager, wagerFromLife, advantages, ...answers };
 }
 
 /**
@@ -1783,6 +1819,55 @@ export function maxKiWager(actor, advantages = []) {
 }
 
 /**
+ * The most Life a character may wager instead, where a Profile allows it.
+ *
+ * Elemental (Dark): "you may spend your Life Points instead of your Ki Points (reduce your
+ * Capacity as if you spent Ki Points as usual)". So the half-Capacity limit and what is
+ * left of Capacity still hold - it is still a Ki Wager - and the pool it comes out of is
+ * the Life Points rather than the Ki.
+ */
+export function maxLifeWager(actor, advantages = []) {
+  const { capacity, life } = actor.system;
+  const half = advantages.includes("full-wager")
+    ? Number.POSITIVE_INFINITY
+    : Math.floor(capacity.max / 2);
+  return Math.max(0, Math.min(half, capacity.remaining, life.value));
+}
+
+/**
+ * Why a Life Point wager cannot be paid, or null if it can.
+ *
+ * Asked before anything is spent: the Maneuver's own Ki and the wager both come out of
+ * the same Capacity, and finding out after the Ki is gone that the Capacity is not there
+ * for the wager would leave half an attack paid for.
+ */
+export function lifeWagerProblem(actor, declared, price = 0) {
+  const wager = declared?.wagerFromLife ? (declared.kiWager ?? 0) : 0;
+  if (wager <= 0) return null;
+
+  const { capacity, life } = actor.system;
+  if (life.value < wager) {
+    return `${actor.name} would wager ${wager} Life Points and has ${life.value}.`;
+  }
+  if ((price + wager) > capacity.remaining) {
+    return `${actor.name} has ${capacity.remaining} Capacity left this round, and this `
+      + `attack needs ${price + wager}.`;
+  }
+  return null;
+}
+
+/** Pay a Life Point wager: out of the Life Points, and out of Capacity as Ki would be. */
+export async function spendLifeWager(actor, declared) {
+  const wager = declared?.wagerFromLife ? (declared.kiWager ?? 0) : 0;
+  if (wager <= 0) return;
+  const { capacity, life } = actor.system;
+  await actor.update({
+    "system.life.value": life.value - wager,
+    "system.capacity.spent": capacity.spent + wager
+  });
+}
+
+/**
  * The least that may be wagered, when an effect says it must be everything.
  *
  * All or Nothing: "you must make the highest Ki Wager possible for this Signature
@@ -1869,12 +1954,26 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   const wagerMin = forcedFullWager(features)
     ? wagerMax
     : minimumKiWager(actor, maneuver);
+  // Elemental (Dark): "you may spend your Life Points instead of your Ki Points". Offered
+  // wherever a Profile on offer allows it, and honoured only if that is the one chosen.
+  // The ceiling is the same rule against a different pool.
+  const offered = fixed ? [fixed] : groups.flatMap(group => group.profiles);
+  const lifeWager = offered.some(profile => profile.wagerFromLife);
+  const lifeMax = lifeWager
+    ? Math.min(maxLifeWager(actor, features),
+      Number.isFinite(limits.wagerCap) ? limits.wagerCap : Number.POSITIVE_INFINITY)
+    : 0;
+
   const wager = `
     <label class="dbu-wager">
       <span>Ki Wager</span>
-      <input type="number" name="kiWager" value="${wagerMin}" min="${wagerMin}" max="${wagerMax}"/>
+      <input type="number" name="kiWager" value="${wagerMin}" min="${wagerMin}" max="${Math.max(wagerMax, lifeMax)}"/>
       <em>${wagerMin ? `at least ${wagerMin}, ` : ""}max ${wagerMax}, added to the Wound Roll</em>
-    </label>`;
+    </label>${lifeWager ? `
+    <label class="dbu-wager" data-tooltip="Spend Life Points instead of Ki Points. It still comes out of your Capacity. Max ${lifeMax}.">
+      <input type="checkbox" name="wagerFromLife"/>
+      <span>Wager Life Points</span>
+    </label>` : ""}`;
 
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
@@ -1894,11 +1993,17 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
 
           // Clamped here as well as on the input: `min` on a number field is advice to
           // the browser, not a guarantee, and a typed number gets through it.
+          // Paid in Life only if asked for and the Profile chosen allows it - the box is
+          // drawn for the whole list, and ticking it under another Profile means nothing.
+          const wagerFromLife = Boolean(PROFILES[profile]?.wagerFromLife
+            && dialog.element.querySelector('input[name="wagerFromLife"]')?.checked);
+          const ceiling = wagerFromLife ? lifeMax : wagerMax;
+
           const typed = Math.floor(Number(dialog.element.querySelector('input[name="kiWager"]').value));
           const kiWager = Number.isFinite(typed)
-            ? Math.min(Math.max(typed, wagerMin), wagerMax)
-            : wagerMin;
-          return { profile, kiWager };
+            ? Math.min(Math.max(typed, Math.min(wagerMin, ceiling)), ceiling)
+            : Math.min(wagerMin, ceiling);
+          return { profile, kiWager, wagerFromLife };
         }
       },
       { action: "cancel", label: "Cancel" }
@@ -2138,7 +2243,9 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // also what takes it out of Capacity. A Talent that cheapens Attacking Maneuvers
   // discounts the Maneuver, never the wager: the wager is what you chose to spend, and
   // the Minimum is a floor under the price rather than under what you choose to add.
-  return Math.max(0, cost) + (declared?.kiWager ?? 0);
+  // Unless it is paid in Life, which is not Ki: Elemental (Dark) takes it out of the
+  // Life Points instead, through `spendLifeWager`.
+  return Math.max(0, cost) + (declared?.wagerFromLife ? 0 : (declared?.kiWager ?? 0));
 }
 
 /**

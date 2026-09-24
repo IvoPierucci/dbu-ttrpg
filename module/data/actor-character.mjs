@@ -6,6 +6,7 @@ import { evaluate } from "../effects/conditions.mjs";
 import { getTrait } from "../effects/traits.mjs";
 import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
+import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, groundHardnessWith, qualitiesOf }
   from "../environments.mjs";
 import {
@@ -431,9 +432,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   /** The highest Hardness Rank there is: "There are 6 Hardness Ranks", 0 to 5. */
   static MAX_HARDNESS_RANK = 5;
 
-  static LIGHT_LEVEL_MIN = -2;
+  static LIGHT_LEVEL_MIN = LIGHT_LEVEL_MIN;
 
-  static LIGHT_LEVEL_MAX = 2;
+  static LIGHT_LEVEL_MAX = LIGHT_LEVEL_MAX;
 
   /**
    * The Difficulty Categories a Skill Check can be rolled against, and their Target
