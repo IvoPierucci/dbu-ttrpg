@@ -6,16 +6,111 @@
 
     Every rule here is about this character alone. What the rest of the map is like is
     the table's - nothing in this system has Squares to ask - so what is on this tab is
-    set by the player, or by whatever else the table decides. }}
+    set by the player, or by whatever else the table decides.
+
+    Laid out as two rows of three pickers first - where you are, then what the sky and
+    the light are doing - so the two read as one block. Then what the Square is like,
+    then Cover, then the buttons, and everything that is only for reading last, folded
+    away under one heading. }}
   <section class="panel">
     <h3 class="panel-title">
-      Light Level
+      Battle Environment
+      <span class="panel-hint">The land you are standing on</span>
+    </h3>
+
+    <div class="stat-grid battlefield-row">
+      <div class="stat" data-tooltip="What you are standing on. An Environment may cover a whole Battlefield or only part of one - which Squares are which is the table's, and stepping into them is picking one here.">
+        <em>Environment</em>
+        <select name="system.battlefield.environment">
+          {{#each environments as |environment|}}
+          <option value="{{environment.id}}" {{#if environment.chosen}}selected{{/if}}>{{environment.name}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat" data-tooltip="How far off the ground you are. The first three ranks are layered above the Battle Environment below, which stops reaching you while you are up there - it is still what you would land in.">
+        <em>High Environment</em>
+        <select name="system.battlefield.highEnvironment" data-dtype="Number">
+          <option value="0" {{#unless high.rank}}selected{{/unless}}>On the ground</option>
+          {{#each highEnvironments as |sky|}}
+          <option value="{{sky.rank}}" {{#if sky.chosen}}selected{{/if}}>{{sky.name}} ({{sky.rank}})</option>
+          {{/each}}
+        </select>
+      </div>
+      {{#if ground}}
+      <div class="stat" data-tooltip="{{ground.note}}">
+        <em>Ground Hardness</em>
+        <select name="system.battlefield.groundHardness" data-dtype="Number">
+          {{#each ground.ranks as |rank|}}
+          <option value="{{rank.rank}}" {{#if rank.chosen}}selected{{/if}}>Rank {{rank.rank}} &middot; {{rank.material}}</option>
+          {{/each}}
+        </select>
+        {{#if ground.shifted}}
+        {{! What the Square's own Qualities leave it at. Shown only when it differs from the
+            Rank picked above, and inside the same tile so the row keeps its three. }}
+        <small class="stat-after" data-tooltip="{{ground.shifted.note}}">After Qualities: Rank {{ground.shifted.rank}}</small>
+        {{/if}}
+      </div>
+      {{/if}}
+    </div>
+
+    {{#if high.note}}
+    <p class="tab-placeholder">{{high.note}}</p>
+    {{/if}}
+
+    {{#if environmentNow.effect}}
+    <p class="tab-placeholder">{{environmentNow.effect}}</p>
+    {{/if}}
+
+    {{#if breath}}
+    {{! Held Breath, which only an Unbreathable Environment has. The stacks are shown
+        rather than edited: they are handed out by one Check and taken by the Combat Round
+        and by Health Thresholds, and a field to type in beside all that is a fifth way
+        for the number to be wrong. }}
+    <div class="stat-grid">
+      <div class="stat" data-tooltip="{{breath.note}}">
+        <em>Held Breath</em><span>{{breath.held}}</span>
+      </div>
+    </div>
+
+    {{#if breath.canRoll}}
+    <div class="maneuver-list">
+      <button type="button" class="dbu-clash-button" data-action="holdBreath"
+              data-tooltip="A Survival Check, made on entering. Every Difficulty the Dice Score reaches is a stack of Held Breath.">
+        Hold Breath
+      </button>
+    </div>
+    {{/if}}
+    {{/if}}
+  </section>
+
+  {{! Battle Weather and Light Level on one row: both are what the sky is doing to you,
+      and three tiles here line up with the three above. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Battle Weather
       <span class="panel-hint">Set by you, or by an effect</span>
     </h3>
 
-    <div class="stat-grid">
+    <div class="stat-grid battlefield-row">
+      <div class="stat" data-tooltip="Which Battle Weather you are standing in. Its effects only apply to you while you are in the Squares it covers, and which Squares those are is the table's.">
+        <em>Weather</em>
+        <select name="system.battlefield.weather.id">
+          <option value="" {{#unless weatherNow.id}}selected{{/unless}}>Clear</option>
+          {{#each weathers as |weather|}}
+          <option value="{{weather.id}}" {{#if weather.chosen}}selected{{/if}}>{{weather.name}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat" data-tooltip="How bad it is. Each Tier gains the effects of the earlier Tiers, and a number written (WT) is multiplied by this.">
+        <em>Weather Tier</em>
+        <select name="system.battlefield.weather.tier" data-dtype="Number">
+          {{#each weatherTiers as |tier|}}
+          <option value="{{tier.tier}}" {{#if tier.chosen}}selected{{/if}}>{{tier.name}} ({{tier.tier}})</option>
+          {{/each}}
+        </select>
+      </div>
       <div class="stat" data-tooltip="What the light where you are standing is doing to you. Too bright and too dark cost the same: the table is symmetrical about Normal.">
-        <em>Level</em>
+        <em>Light Level</em>
         <select name="system.battlefield.lightLevel" data-dtype="Number">
           {{#each lightLevels as |level|}}
           <option value="{{level.value}}" {{#if level.chosen}}selected{{/if}}>{{level.label}}</option>
@@ -24,12 +119,43 @@
       </div>
     </div>
 
+    {{#if weatherNow.effect}}
+    <p class="tab-placeholder">{{weatherNow.effect}}</p>
+    {{/if}}
+
     {{#if lightLevel.effect}}
     {{! What the chosen Level is doing, in the rulebook's own words. Drawn only when it is
         doing something: Normal says "no effect", and a row repeating that is a row to
         read past. }}
     <p class="tab-placeholder">{{lightLevel.effect}}</p>
     {{/if}}
+  </section>
+
+  {{! The Environmental Qualities of the Square. "Applied on a Square-by-Square basis and
+      ultimately decided by the ARC" - so they are ticked here, except the ones the
+      Environment's own file brings with it, which are shown and not tickable. }}
+  <section class="panel">
+    <details class="condition-group" data-section="qualities"
+             {{#if openSections.qualities}}open{{/if}}>
+      <summary class="panel-title">
+        Environmental Qualities
+        <span class="panel-note">{{qualitySummary}}</span>
+      </summary>
+
+      <ul class="condition-list">
+        {{#each qualities as |quality|}}
+        <li class="condition {{#if quality.active}}condition-active{{/if}}">
+          <button type="button" class="condition-toggle" data-action="toggleQuality"
+                  data-quality="{{quality.id}}" data-tooltip="{{quality.text}}"
+                  aria-pressed="{{#if quality.active}}true{{else}}false{{/if}}"
+                  {{#if quality.fixed}}disabled{{/if}}>
+            <span class="condition-mark">{{#if quality.active}}&#10003;{{/if}}</span>
+            <span class="condition-name">{{quality.name}}</span>
+          </button>
+        </li>
+        {{/each}}
+      </ul>
+    </details>
   </section>
 
   <section class="panel">
@@ -66,14 +192,10 @@
     </p>
   </section>
 
+  {{! Battle Terrain: throwing an attack at a Feature, and the other direction. Two to a
+      row, so four make a square rather than a column. }}
   <section class="panel">
-    <h3 class="panel-title">
-      Battle Terrain
-      <span class="panel-hint">Features are the table's to keep</span>
-    </h3>
-
-    {{#if featureAttacks.length}}
-    <div class="maneuver-list">
+    <div class="battlefield-buttons">
       {{#each featureAttacks as |attack|}}
       <button type="button" class="dbu-clash-button" data-action="attackFeature"
               data-item-id="{{attack.itemId}}"
@@ -81,17 +203,10 @@
         {{attack.name}}
       </button>
       {{/each}}
-    </div>
-    {{else}}
-    <p class="tab-placeholder">
-      No Attacking Maneuvers to throw at a Feature yet.
-    </p>
-    {{/if}}
 
-    {{! The other direction. Most collisions in these rules are not a card this system
-        opened - walked into, fallen onto, pushed by something that never rolled - and
-        this is where a player says one happened. }}
-    <div class="maneuver-list">
+      {{! Most collisions in these rules are not a card this system opened - walked into,
+          fallen onto, pushed by something that never rolled - and this is where a player
+          says one happened. }}
       <button type="button" class="dbu-clash-button" data-action="takeCollision"
               data-tooltip="You hit something. Pick what it was made of and the damage is worked out from your base Tier of Power.">
         Receive Collision Damage
@@ -99,258 +214,113 @@
     </div>
   </section>
 
-  {{! Hardness, for reading. Two numbers wearing one name, and the one that matters at the
-      table is not stored anywhere - the Value is worked out against whoever is taking the
-      damage, so the same wall costs two characters two different numbers. }}
+  {{! Everything that is only for reading, folded away under one heading. Nothing inside
+      sets anything; the pickers above are where the numbers come from. }}
   <section class="panel">
-    <details class="condition-group" data-section="hardness"
-             {{#if openSections.hardness}}open{{/if}}>
-      <summary class="panel-title">
-        Hardness
-        <span class="panel-note">Your Values, at base Tier {{baseTierOfPower}}</span>
-      </summary>
+    <details class="condition-group" data-section="information"
+             {{#if openSections.information}}open{{/if}}>
+      <summary class="panel-title">Information</summary>
 
-      {{! Said first, and said in the rules' own words. The Value is not something the
-          Collision Damage is worked out from - it is the Collision Damage. }}
-      <p class="tab-placeholder">
-        <strong>{{collisionDamage}}</strong>
-      </p>
+      {{! Battle Weather, for reading: the three Tiers, and the rules that hold whichever
+          one is in play. }}
+      <details class="condition-group" data-section="weather"
+               {{#if openSections.weather}}open{{/if}}>
+        <summary class="panel-title">Battle Weather</summary>
 
-      <p class="tab-placeholder">
-        The Hardness Rank is what a Feature is made of, and is also its Life Points. The
-        Hardness Value is what hitting it costs - twice the Rank a base Tier of Power,
-        except Rank 0, which is 1(bT). The Values below are yours: they scale with the
-        base Tier of Power of whoever suffers the Collision Damage, so another character
-        hitting the same wall takes a different number.
-      </p>
-
-      <ul class="quality-list">
-        {{#each hardnessRanks as |hardness|}}
-        <li class="quality">
-          <strong>Rank {{hardness.rank}} <span class="quality-mark">{{hardness.value}} Damage to you</span></strong>
-          <span>{{hardness.text}}</span>
-        </li>
-        {{/each}}
-      </ul>
-    </details>
-  </section>
-
-  <section class="panel">
-    <h3 class="panel-title">
-      Battle Environment
-      <span class="panel-hint">The land you are standing on</span>
-    </h3>
-
-    <div class="stat-grid">
-      <div class="stat" data-tooltip="What you are standing on. An Environment may cover a whole Battlefield or only part of one - which Squares are which is the table's, and stepping into them is picking one here.">
-        <em>Environment</em>
-        <select name="system.battlefield.environment">
-          {{#each environments as |environment|}}
-          <option value="{{environment.id}}" {{#if environment.chosen}}selected{{/if}}>{{environment.name}}</option>
-          {{/each}}
-        </select>
-      </div>
-      <div class="stat" data-tooltip="How far off the ground you are. The first three ranks are layered above the Battle Environment below, which stops reaching you while you are up there - it is still what you would land in.">
-        <em>High Environment</em>
-        <select name="system.battlefield.highEnvironment" data-dtype="Number">
-          <option value="0" {{#unless high.rank}}selected{{/unless}}>On the ground</option>
-          {{#each highEnvironments as |sky|}}
-          <option value="{{sky.rank}}" {{#if sky.chosen}}selected{{/if}}>{{sky.name}} ({{sky.rank}})</option>
-          {{/each}}
-        </select>
-      </div>
-      {{#if ground}}
-      <div class="stat" data-tooltip="{{ground.note}}">
-        <em>Ground Hardness</em>
-        <select name="system.battlefield.groundHardness" data-dtype="Number">
-          {{#each ground.ranks as |rank|}}
-          <option value="{{rank.rank}}" {{#if rank.chosen}}selected{{/if}}>Rank {{rank.rank}} &middot; {{rank.material}}</option>
-          {{/each}}
-        </select>
-      </div>
-      {{#if ground.shifted}}
-      {{! What the Square's own Qualities leave it at. Shown only when it differs from the
-          Rank picked above, because a row repeating that number is a row to read past. }}
-      <div class="stat" data-tooltip="{{ground.shifted.note}}">
-        <em>After Qualities</em><span>Rank {{ground.shifted.rank}}</span>
-      </div>
-      {{/if}}
-      {{/if}}
-    </div>
-
-    {{#if high.note}}
-    <p class="tab-placeholder">{{high.note}}</p>
-    {{/if}}
-
-    {{#if environmentNow.effect}}
-    <p class="tab-placeholder">{{environmentNow.effect}}</p>
-    {{/if}}
-
-    {{! The Environmental Qualities of the Square. "Applied on a Square-by-Square basis and
-        ultimately decided by the ARC" - so they are ticked here, except the ones the
-        Environment's own file brings with it, which are shown and not tickable. }}
-    <details class="condition-group" data-section="qualities"
-             {{#if openSections.qualities}}open{{/if}}>
-      <summary class="panel-title">
-        Environmental Qualities
-        <span class="panel-note">{{qualitySummary}}</span>
-      </summary>
-
-      <ul class="condition-list">
-        {{#each qualities as |quality|}}
-        <li class="condition {{#if quality.active}}condition-active{{/if}}">
-          <button type="button" class="condition-toggle" data-action="toggleQuality"
-                  data-quality="{{quality.id}}" data-tooltip="{{quality.text}}"
-                  aria-pressed="{{#if quality.active}}true{{else}}false{{/if}}"
-                  {{#if quality.fixed}}disabled{{/if}}>
-            <span class="condition-mark">{{#if quality.active}}&#10003;{{/if}}</span>
-            <span class="condition-name">{{quality.name}}</span>
-          </button>
-        </li>
-        {{/each}}
-      </ul>
-    </details>
-
-    {{#if breath}}
-    {{! Held Breath, which only an Unbreathable Environment has. The stacks are shown
-        rather than edited: they are handed out by one Check and taken by the Combat Round
-        and by Health Thresholds, and a field to type in beside all that is a fifth way
-        for the number to be wrong. }}
-    <div class="stat-grid">
-      <div class="stat" data-tooltip="{{breath.note}}">
-        <em>Held Breath</em><span>{{breath.held}}</span>
-      </div>
-    </div>
-
-    {{#if breath.canRoll}}
-    <div class="maneuver-list">
-      <button type="button" class="dbu-clash-button" data-action="holdBreath"
-              data-tooltip="A Survival Check, made on entering. Every Difficulty the Dice Score reaches is a stack of Held Breath.">
-        Hold Breath
-      </button>
-    </div>
-    {{/if}}
-    {{/if}}
-  </section>
-
-  {{! The Environment frame, for reading. Both rules are about Squares, which is to say
-      both are the table's: one says an Environment may cover part of a Battlefield rather
-      than all of it, and the other is a Maneuver that moves you between them. }}
-  <section class="panel">
-    <details class="condition-group" data-section="environments"
-             {{#if openSections.environments}}open{{/if}}>
-      <summary class="panel-title">
-        Environments
-        <span class="panel-note">Where a Battlefield ends and another begins</span>
-      </summary>
-
-      <ul class="quality-list">
-        {{#each environmentRules as |rule|}}
-        <li class="quality">
-          <strong>{{rule.name}}</strong>
-          <span>{{rule.text}}</span>
-          {{#if rule.note}}<em>{{rule.note}}</em>{{/if}}
-        </li>
-        {{/each}}
-      </ul>
-    </details>
-  </section>
-
-  <section class="panel">
-    <h3 class="panel-title">
-      Battle Weather
-      <span class="panel-hint">Set by you, or by an effect</span>
-    </h3>
-
-    <div class="stat-grid">
-      <div class="stat" data-tooltip="Which Battle Weather you are standing in. Its effects only apply to you while you are in the Squares it covers, and which Squares those are is the table's.">
-        <em>Weather</em>
-        <select name="system.battlefield.weather.id">
-          <option value="" {{#unless weatherNow.id}}selected{{/unless}}>Clear</option>
-          {{#each weathers as |weather|}}
-          <option value="{{weather.id}}" {{#if weather.chosen}}selected{{/if}}>{{weather.name}}</option>
-          {{/each}}
-        </select>
-      </div>
-      <div class="stat" data-tooltip="How bad it is. Each Tier gains the effects of the earlier Tiers, and a number written (WT) is multiplied by this.">
-        <em>Weather Tier</em>
-        <select name="system.battlefield.weather.tier" data-dtype="Number">
+        <ul class="quality-list">
           {{#each weatherTiers as |tier|}}
-          <option value="{{tier.tier}}" {{#if tier.chosen}}selected{{/if}}>{{tier.name}} ({{tier.tier}})</option>
+          <li class="quality">
+            <strong>{{tier.name}} <span class="quality-mark">Tier {{tier.tier}}</span></strong>
+            <span>{{tier.text}}</span>
+          </li>
           {{/each}}
-        </select>
-      </div>
-    </div>
+        </ul>
 
-    {{#if weatherNow.effect}}
-    <p class="tab-placeholder">{{weatherNow.effect}}</p>
-    {{/if}}
-  </section>
+        <ul class="quality-list">
+          {{#each weatherRules as |rule|}}
+          <li class="quality">
+            <strong>{{rule.name}}</strong>
+            <span>{{rule.text}}</span>
+          </li>
+          {{/each}}
+        </ul>
+      </details>
 
-  {{! Battle Weather, for reading. The frame ahead of the Weathers themselves: the three
-      Tiers, and the rules that hold whichever one is in play.
+      {{! The Environment frame, for reading. Both rules are about Squares, which is to
+          say both are the table's. }}
+      <details class="condition-group" data-section="environments"
+               {{#if openSections.environments}}open{{/if}}>
+        <summary class="panel-title">Environments</summary>
 
-      Nothing to set here yet. A Battle Weather stands over some number of Squares and this
-      system has none, so when the Weathers arrive it will take the shape Light Level
-      already has - the player says which one they are standing in and at what Tier. }}
-  <section class="panel">
-    <details class="condition-group" data-section="weather"
-             {{#if openSections.weather}}open{{/if}}>
-      <summary class="panel-title">
-        Battle Weather
-        <span class="panel-note">The Weathers themselves are not here yet</span>
-      </summary>
+        <ul class="quality-list">
+          {{#each environmentRules as |rule|}}
+          <li class="quality">
+            <strong>{{rule.name}}</strong>
+            <span>{{rule.text}}</span>
+            {{#if rule.note}}<em>{{rule.note}}</em>{{/if}}
+          </li>
+          {{/each}}
+        </ul>
+      </details>
 
-      <ul class="quality-list">
-        {{#each weatherTiers as |tier|}}
-        <li class="quality">
-          <strong>{{tier.name}} <span class="quality-mark">Tier {{tier.tier}}</span></strong>
-          <span>{{tier.text}}</span>
-        </li>
-        {{/each}}
-      </ul>
+      {{! Hardness. Two numbers wearing one name, and the one that matters at the table is
+          not stored anywhere - the Value is worked out against whoever is taking the
+          damage, so the same wall costs two characters two different numbers. }}
+      <details class="condition-group" data-section="hardness"
+               {{#if openSections.hardness}}open{{/if}}>
+        <summary class="panel-title">
+          Hardness
+          <span class="panel-note">Your Values, at base Tier {{baseTierOfPower}}</span>
+        </summary>
 
-      <ul class="quality-list">
-        {{#each weatherRules as |rule|}}
-        <li class="quality">
-          <strong>{{rule.name}}</strong>
-          <span>{{rule.text}}</span>
-        </li>
-        {{/each}}
-      </ul>
-    </details>
-  </section>
+        {{! Said first, and said in the rules' own words. The Value is not something the
+            Collision Damage is worked out from - it is the Collision Damage. }}
+        <p class="tab-placeholder">
+          <strong>{{collisionDamage}}</strong>
+        </p>
 
-  {{! Feature Qualities, for reading. A Quality belongs to a Feature and a Feature is the
-      ARC's, so there is nothing here to set - this is the list, in the rules' own words,
-      kept where somebody deciding what a wall is made of can find it.
+        <p class="tab-placeholder">
+          The Hardness Rank is what a Feature is made of, and is also its Life Points. The
+          Hardness Value is what hitting it costs - twice the Rank a base Tier of Power,
+          except Rank 0, which is 1(bT). The Values below are yours: they scale with the
+          base Tier of Power of whoever suffers the Collision Damage, so another character
+          hitting the same wall takes a different number.
+        </p>
 
-      Six of them are asked about when Collision Damage is applied, which is the one
-      moment any of this reaches a character. The list is the same list. }}
-  <section class="panel">
-    <details class="condition-group" data-section="featureQualities"
-             {{#if openSections.featureQualities}}open{{/if}}>
-      <summary class="panel-title">
-        Feature Qualities
-        <span class="panel-note">The ARC's, for reading</span>
-      </summary>
+        <ul class="quality-list">
+          {{#each hardnessRanks as |hardness|}}
+          <li class="quality">
+            <strong>Rank {{hardness.rank}} <span class="quality-mark">{{hardness.value}} Damage to you</span></strong>
+            <span>{{hardness.text}}</span>
+          </li>
+          {{/each}}
+        </ul>
+      </details>
 
-      <p class="tab-placeholder">
-        The material is what a Square, Feature or other object is made out of. Generally
-        the ARC decides the material and picks an appropriate Hardness Rank for it - and
-        some Features have Qualities on top of that, decided the same way.
-      </p>
+      {{! Feature Qualities. A Quality belongs to a Feature and a Feature is the ARC's, so
+          there is nothing here to set. Six of them are asked about when Collision Damage
+          is applied, which is the one moment any of this reaches a character. }}
+      <details class="condition-group" data-section="featureQualities"
+               {{#if openSections.featureQualities}}open{{/if}}>
+        <summary class="panel-title">Feature Qualities</summary>
 
-      <ul class="quality-list">
-        {{#each featureQualities as |quality|}}
-        <li class="quality">
-          <strong>{{quality.name}}{{#if quality.onCollision}} <span
-            class="quality-mark" data-tooltip="Offered when Collision Damage is applied, because that is the moment it does something.">asked on collision</span>{{/if}}</strong>
-          <span>{{quality.text}}</span>
-          {{#if quality.note}}<em>{{quality.note}}</em>{{/if}}
-        </li>
-        {{/each}}
-      </ul>
+        <p class="tab-placeholder">
+          The material is what a Square, Feature or other object is made out of. Generally
+          the ARC decides the material and picks an appropriate Hardness Rank for it - and
+          some Features have Qualities on top of that, decided the same way.
+        </p>
+
+        <ul class="quality-list">
+          {{#each featureQualities as |quality|}}
+          <li class="quality">
+            <strong>{{quality.name}}{{#if quality.onCollision}} <span
+              class="quality-mark" data-tooltip="Offered when Collision Damage is applied, because that is the moment it does something.">asked on collision</span>{{/if}}</strong>
+            <span>{{quality.text}}</span>
+            {{#if quality.note}}<em>{{quality.note}}</em>{{/if}}
+          </li>
+          {{/each}}
+        </ul>
+      </details>
     </details>
   </section>
 </div>

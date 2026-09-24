@@ -612,6 +612,33 @@
   grid-template-columns: repeat(4, 1fr);
 }
 
+/* The Battlefields tab's two rows of pickers: three to a row whatever is in them, so the
+   Environment row and the Weather row line up tile for tile. */
+.dbu-ttrpg .stat-grid.battlefield-row {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.dbu-ttrpg .stat-grid.battlefield-row select {
+  width: 100%;
+}
+
+.dbu-ttrpg .stat .stat-after {
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+}
+
+/* Two buttons to a row, so four make a square rather than a column. */
+.dbu-ttrpg .battlefield-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 6px;
+}
+
+/* A folded list inside a folded list, stepped in so it reads as belonging to it. */
+.dbu-ttrpg .condition-group .condition-group {
+  margin: 4px 0 0 12px;
+}
+
 .dbu-ttrpg .stat {
   display: flex;
   flex-direction: column;
