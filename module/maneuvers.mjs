@@ -843,6 +843,23 @@ export const PROFILES = Object.freeze({
     // mark, whose file says what it `becomes`.
     squareMark: { condition: "flooded", stacks: 1 },
     needs: "the AoE sentence - no attack here gives this Profile an Area."
+  },
+
+  elementalWind: {
+    label: "Elemental (Wind)",
+    foundations: ["magic"],
+    kiCostPerTier: 4,
+    damageCategory: "direct",
+    text: `
+      Elemental (Wind): Using the powers of the wind, this attack is able to blow away
+      opponents with great force.
+      –Damage Category: Direct
+      –KP Cost: 4(T)
+      –Effect: This Attacking Maneuver gains the effects of the Slashing Weapon Category
+      as if this Attacking Manuever was made with a Weapon, even if it is Unarmed.`,
+    // Earth's shape: the whole effect is borrowed from the Weapons, which arrive with
+    // Equipment. "Manuever" is the entry's own spelling, kept as printed.
+    needs: "the Slashing Weapon Category - there are no Weapons in this system yet."
   }
 });
 
