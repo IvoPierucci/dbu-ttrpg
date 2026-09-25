@@ -54,6 +54,34 @@
   flex: 0 0 auto;
 }
 
+/* Two rows of four, the second set half a tab across from the first, so they sit
+   staggered like bricks rather than stacked in columns. Eight tabs in one row filled the
+   width to the edge, and Gear was the eighth.
+
+   Nine columns, each tab two of them: the first row starts on the odd columns and the
+   second on the even ones, which is the half-tab shift. Placed by position, so a ninth tab
+   would land in a third row rather than overlap anything. */
+.dbu-ttrpg .sheet-tabs {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  row-gap: 2px;
+}
+
+.dbu-ttrpg .sheet-tabs > .item {
+  grid-column-end: span 2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.dbu-ttrpg .sheet-tabs > .item:nth-child(1) { grid-area: 1 / 1 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(2) { grid-area: 1 / 3 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(3) { grid-area: 1 / 5 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(4) { grid-area: 1 / 7 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(5) { grid-area: 2 / 2 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(6) { grid-area: 2 / 4 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(7) { grid-area: 2 / 6 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(8) { grid-area: 2 / 8 / auto / span 2; }
+
 .dbu-ttrpg .tab.active {
   display: block;
   flex: 1 1 auto;
