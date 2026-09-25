@@ -1,0 +1,20 @@
+id: bunny-ears
+name: Bunny Ears
+kind: gear
+itemType: accessory
+craftDC: Apprentice
+source: Core Rule
+description: >
+  Speed 1(bT) and Boosted Speed 2(bT) higher while worn.
+text: >
+  Bunny Ears: This bunny-eared headband makes you look cool, and you feel faster somehow.
+  –Craft DC: Apprentice
+  –Effects: Increase the wearer’s Normal Speed by 1(bT) and their Boosted Speed by 2(bT).
+
+---
+
+# While worn: "Accessories are Basic Items that can be equipped and apply benefits while
+# equipped." Taken off, it does nothing.
+[passive]
+speed.normal += 1(bT);
+speed.boosted += 2(bT);
