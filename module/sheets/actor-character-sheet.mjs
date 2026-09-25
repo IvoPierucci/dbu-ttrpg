@@ -2131,7 +2131,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    *
    * "Spend 2 Actions to target a Character who is not at Long Range. Make a Clash (Energy
    * Strike/Magic Strike vs Dodge)." At the one character targeted; the range is the
-   * table's. Energy or Magic, so the thrower has to be able to make one of the two.
+   * table's. Anyone may throw it: an Energy or a Magic Strike is always there to roll, and
+   * a Score of 3 is asked only of the Attacking Profiles used through the Basic Attack
+   * Maneuver or a Signature Technique.
    */
   static async _onSnareGear(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
@@ -2141,14 +2143,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const caught = game.user.targets.first()?.actor;
     if (!caught || (caught.uuid === this.actor.uuid)) {
       ui.notifications.warn(`Target the one the ${item.name} is thrown at first.`);
-      return;
-    }
-
-    const { whyNotThisFoundation } = await import("../maneuvers.mjs");
-    const refused = (snare.foundations ?? []).map(key =>
-      whyNotThisFoundation(this.actor, key, key.charAt(0).toUpperCase() + key.slice(1)));
-    if (refused.length && refused.every(Boolean)) {
-      ui.notifications.warn(refused.join(" "));
       return;
     }
 

@@ -33,9 +33,14 @@ text: >
 # --- What the system does ---------------------------------------------------------------------
 #
 # Throw: 2 Actions, at the one character targeted, and a Clash of the thrower's Strike against
-# their Dodge - Dodge only, the entry names no other answer. "Energy Strike/Magic Strike" is
-# which Foundation the throw is made with, and the thrower has to be able to make an Energy
-# or a Magic Attack at all: a Force or a Magic Score of 3.
+# their Dodge - Dodge only, the entry names no other answer.
+#
+# "Energy Strike/Magic Strike" names the Foundation the Strike is made with, because some
+# effects raise the Strike of one Foundation in particular. Anyone may make it: the Strikes
+# are always there, and a Score of 3 is asked only of the Attacking Profiles used through the
+# Basic Attack Maneuver or a Signature Technique. Nothing in this system raises one
+# Foundation's Strike yet - the Strike is one number - so the throw does not ask which. The
+# first effect that does is when the Clash has to ask, and carry the answer.
 #
 # Won, their Defense Value drops by 1(T) - the thrower's Tier, by the table's ruling - until the
 # end of the thrower's next turn: stacks of Entangled, one per Tier, on the thrower's clock.
