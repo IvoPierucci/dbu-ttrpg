@@ -88,6 +88,10 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         difficulty: new fields.StringField({ required: true, blank: true, initial: "" })
       }),
 
+      /** The mark it gives whoever holds it lit, and whether it is - the Torch. */
+      lightMark: new fields.StringField({ required: true, blank: true, initial: "" }),
+      lit: new fields.BooleanField({ required: true, initial: false }),
+
       /** The files of the Items it can be connected to - the Remote Control's. */
       connects: new fields.ArrayField(
         new fields.StringField({ required: true, blank: false }),

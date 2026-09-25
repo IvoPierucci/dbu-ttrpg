@@ -437,6 +437,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       remoteGear: DBUCharacterSheet._onRemoteGear,
       scanGear: DBUCharacterSheet._onScanGear,
       burstGear: DBUCharacterSheet._onBurstGear,
+      lightGear: DBUCharacterSheet._onLightGear,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -1013,6 +1014,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           && item.system.clash?.condition),
         // An Item thrown to catch someone.
         snares: Boolean(item.system.snare?.condition),
+        // A Light Source, and whether it is lit.
+        lights: Boolean(item.system.lightMark),
+        lit: Boolean(item.system.lit),
         // An Item thrown to burst over an area.
         bursts: Boolean(item.system.areaMark?.condition),
         // An Item that scans someone.
@@ -2066,6 +2070,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const item = offered.find(entry => entry.id === chosen);
     if (!item) return;
+    // "While you are holding a Torch" - put away, it is not held, and goes out.
+    if (item.system.lit) await DBUCharacterSheet.#putOut(this.actor, item);
     return item.update({ "system.storedIn": capsule.id });
   }
 
@@ -2262,6 +2268,34 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
+   * Light a Light Source, or put it out - the Torch.
+   *
+   * "You can spend 1 Action to turn on a Torch. While you are holding a Torch, you are a
+   * Light Source." Lighting it costs the Action and gives its holder the mark its file names;
+   * putting it out is free, the entry pricing only the lighting.
+   */
+  static async _onLightGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system.lightMark) return;
+    if (item.system.lit) return DBUCharacterSheet.#putOut(this.actor, item);
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    const { gainCondition } = await import("../effects/moments-runtime.mjs");
+    if (await gainCondition(this.actor, item.system.lightMark, 1) === false) return;
+    return item.update({ "system.lit": true });
+  }
+
+  /** Put a lit Light Source out: its mark off its holder, a stack, and the Item unlit. */
+  static async #putOut(actor, item) {
+    const { setCondition } = await import("../conditions.mjs");
+    const held = Number(actor.system.conditions?.[item.system.lightMark]) || 0;
+    if (held > 0) await setCondition(actor, item.system.lightMark, held - 1);
+    return item.update({ "system.lit": false });
+  }
+
+  /**
    * Throw an Item that bursts over an area - the Smoke Bomb.
    *
    * "You may spend 1 Action to throw the Smoke Bomb ... In this AoE, all Squares gain the
@@ -2356,7 +2390,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   /** Remove an owned Item from this character. */
   static async _onDeleteItem(event, target) {
-    return this.actor.items.get(target.dataset.itemId)?.delete();
+    const item = this.actor.items.get(target.dataset.itemId);
+    // A lit Torch taken off the character is not held any more, and goes out with it.
+    if (item?.system?.lit) await DBUCharacterSheet.#putOut(this.actor, item);
+    return item?.delete();
   }
 
   /**

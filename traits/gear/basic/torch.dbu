@@ -1,0 +1,37 @@
+id: torch
+name: Torch
+kind: gear
+craftDC: Novice
+# "You can spend 1 Action to turn on a Torch."
+placeCost: 1
+# "While you are holding a Torch, you are a Light Source. Increase the Light Level of all
+# Squares within a Sphere AoE (centered on you) by 1 Level." The Torchlit mark on whoever
+# holds it lit, which says which way and how far in its file.
+lightMark: torchlit
+source: Core Rule
+description: >
+  An Action to light it. Lit and in hand, it raises the Light Level around you by a Level.
+text: >
+  Torch: A handheld light source you can carry with you.
+  –Craft DC: Novice
+  –Effects: You can spend 1 Action to turn on a Torch. While you are holding a Torch, you are
+  a Light Source. Increase the Light Level of all Squares within a Sphere AoE (centered on
+  you) by 1 Level.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Light: 1 Action, and the holder is Torchlit for as long as it burns - their own Light Level a
+# Level higher, read the way Brightened's is. Put out is free; the entry prices lighting it and
+# nothing else. Put in a Capsule, or taken off the character, it goes out: "while you are
+# holding a Torch".
+#
+# Two lit Torches are two Light Sources, and each raises the Level: "it increases the Light
+# Level of an area by a certain value", with nothing said about more than one.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# The rest of the Sphere. It is centred on the holder and moves with them, over Squares this
+# system does not have - so everyone else in it raises their own Light Level on the
+# Battlefields tab, the way every other Light Level here is set.

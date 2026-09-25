@@ -203,6 +203,11 @@ export function gearItemFrom(definition, actor = null) {
         difficulty: String(definition.scanDifficulty ?? "").trim().toLowerCase()
       },
 
+      // A Light Source while it is lit and held: the mark it gives its holder, and whether
+      // it is lit - the Torch.
+      lightMark: String(definition.lightMark ?? "").trim().toLowerCase(),
+      lit: false,
+
       // What it can be connected to, and what it is - the Remote Control's Item.
       connects: listOf(definition.connects),
       connectedTo: "",

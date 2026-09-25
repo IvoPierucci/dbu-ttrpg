@@ -1,0 +1,23 @@
+id: torchlit
+name: Torchlit
+kind: conditions
+# One stack per lit Torch in hand: each is a Light Source of its own.
+maxStacks: 99
+# Not a Combat Condition: the entry makes its holder a Light Source and never names one.
+combatCondition: no
+# A Level up per stack. Read by `lightLevelOf`, which names no mark.
+lightShift: 1
+source: Core Rule
+description: >
+  You are holding a lit Torch. Your Light Level is a Level higher.
+text: >
+  Torchlit: the Torch's mark. "While you are holding a Torch, you are a Light Source.
+  Increase the Light Level of all Squares within a Sphere AoE (centered on you) by 1 Level."
+
+---
+
+# Brightened's shape with no clock: it lasts as long as the Torch burns, and is taken off when
+# it is put out, stored in a Capsule, or taken off the character. The holder's own Square is
+# in the Sphere, so theirs is raised here; everyone else's is the table's.
+#
+# No effects of its own: what a Light Level does is in that Level's own file.

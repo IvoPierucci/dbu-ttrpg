@@ -44,6 +44,10 @@
                 data-item-id="{{row.itemId}}">Store</button>
         {{/if}}
         {{/if}}
+        {{#if row.lights}}
+        <button type="button" class="gear-act" data-action="lightGear"
+                data-item-id="{{row.itemId}}">{{#if row.lit}}Put out{{else}}Light{{/if}}</button>
+        {{/if}}
         {{#if row.bursts}}
         <button type="button" class="gear-act" data-action="burstGear"
                 data-item-id="{{row.itemId}}"
