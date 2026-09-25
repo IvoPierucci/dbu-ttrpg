@@ -790,10 +790,9 @@ export const PROFILES = Object.freeze({
     // to make it at all ("you may"). What the system can do is say what it is made of, on
     // the card, so nobody has to go back to the entry to find out.
     createsFeature: { hardnessRank: 1, quality: "splintering" },
-    // Not `grantsAdvantage`: there is no Staggering Attack Advantage in this system to
-    // grant, and an Advantage id with no file behind it would be carried and read by
-    // nothing.
-    needs: "the Staggering Attack Advantage - it is not in this system yet."
+    // Staggering Attack for free, the way Launching grants Knockback: added to the
+    // attack's Advantages when it is declared, and never counted towards its TP.
+    grantsAdvantage: "staggering-attack"
   }
 });
 

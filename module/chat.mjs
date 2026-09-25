@@ -12,7 +12,7 @@ import { environmentOf } from "./breath.mjs";
 import { highTraitOf, isAirborne, qualitiesOf } from "./environments.mjs";
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
-import { advantageWoundParts, featureRanks, pushes, POWER_SHOT_MAX_RANKS }
+import { advantageWoundParts, featureRanks, pushes, staggers, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
 import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, floorLine,
          fromOutcome, withoutOutcome, breakdownTable, breakdownText } from "./breakdown.mjs";
@@ -351,6 +351,44 @@ async function applyClash(messageId, clash) {
   if (clash.treatment && clash.result && !clash.treatment.applied) {
     await settleTreatment(message, clash);
   }
+
+  if (clash.stagger && clash.result && !clash.stagger.applied) {
+    await settleStagger(message, clash);
+  }
+}
+
+/**
+ * What a settled Staggering Attack Clash leaves: Staggered, or nothing.
+ *
+ * "If you win, they gain the Staggered Combat Condition until the end of their turn."
+ * Their turn, so the clock is theirs. A tie goes to the Defender, here as everywhere.
+ */
+async function settleStagger(message, clash) {
+  const attacker = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!attacker || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, stagger: { ...clash.stagger, applied: true }
+  });
+
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} keeps their footing.`);
+    return;
+  }
+
+  const { setCondition } = await import("./conditions.mjs");
+  if (await setCondition(target, "staggered", 1) === false) return;
+  await lasting(target, {
+    kind: KINDS.CONDITION,
+    key: "staggered",
+    edge: EDGES.END,
+    source: "Staggering Attack"
+  });
+
+  await settledNote(message, `${target.name} is Staggered until the end of their turn.`);
 }
 
 /**
@@ -7966,6 +8004,21 @@ async function openKnockback(attack, attacker, target, { extra = 0, from = "" } 
 }
 
 /**
+ * Open Staggering Attack's Might Clash, off one Opponent it Damaged.
+ *
+ * Named for the Advantage, as Knockback's is: this card is about the stagger, and which
+ * attack caused it belongs in the line below the title.
+ */
+async function openStagger(attack, attacker, target) {
+  return postMightClash(attacker, target, {
+    maneuverName: "Staggering Attack",
+    reason: `${attack.maneuverName} · win and ${target.name} is Staggered until the end of `
+      + "their turn.",
+    stagger: { applied: false }
+  });
+}
+
+/**
  * "A, B and C", or "A and B", or "A".
  */
 function listed(names) {
@@ -8461,6 +8514,11 @@ async function applyAttackDamage(message, target, attack) {
     if (attacker && (broughtItsOwn || here)) {
       await openKnockback(attack, attacker, target, { extra, from: here ? sky.name : "" });
     }
+
+    // Staggering Attack: "If you inflict Damage to an Opponent with this Attacking
+    // Maneuver, make a Might Clash against your Opponent." The same moment Knockback's is
+    // opened, for the same reason, and one each.
+    if (attacker && staggers(attack)) await openStagger(attack, attacker, target);
   }
 
   // Elemental (Dark): "Any Squares occupied by Character(s) who take Damage from this

@@ -1,0 +1,30 @@
+id: staggering-attack
+name: Staggering Attack
+kind: signature
+side: advantages
+tpCost: 6
+requirement: N/A
+description: >
+  Your attack disrupts your opponent's balance, making it difficult for them to move.
+text: >
+  If you inflict Damage to an Opponent with this Attacking Maneuver, make a Might Clash
+  against your Opponent. If you win, they gain the Staggered Combat Condition until the end
+  of their turn.
+
+---
+
+# No script, for Knockback's reason: what it does is open a Clash, and a Clash is a card
+# between two characters rather than a value on one of them.
+#
+# Opened the moment the Damage is taken off, which is where "if you inflict Damage" is
+# first answered - and not off an Absolute Attack's miss, which is not Damage inflicted
+# with an Attacking Maneuver for anything that triggers off it. Every Opponent it Damages
+# has a Clash of their own.
+#
+# "Make a Might Clash" - not "you may", as Knockback's is. The card is opened either way;
+# nothing is rolled until both sides say so, which is how every Clash here works.
+#
+# Winning it puts Staggered on them "until the end of THEIR turn", so the clock is theirs:
+# the turn named is the target's, and nobody else's turn ending takes it off.
+#
+# Elemental (Plantlife) grants it for free, the way Launching grants Knockback.

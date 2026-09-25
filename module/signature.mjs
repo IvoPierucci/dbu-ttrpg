@@ -130,3 +130,8 @@ const PUSHES = Object.freeze(["knockback"]);
 export function pushes(attack) {
   return (attack.advantages ?? []).some(id => PUSHES.includes(id));
 }
+
+/** Whether this attack carries Staggering Attack, bought or granted by its Profile. */
+export function staggers(attack) {
+  return (attack.advantages ?? []).includes("staggering-attack");
+}
