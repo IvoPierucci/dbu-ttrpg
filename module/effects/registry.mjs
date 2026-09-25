@@ -256,7 +256,7 @@ function statePrograms(actor, report) {
  */
 function battlefieldPrograms(actor, report) {
   // The Level set, less whatever Darkened has taken off it.
-  const level = lightLevelOf(actor.system);
+  const level = lightLevelOf(actor.system, getTrait);
 
   // Only the files that declare one. Cover is a Battlefield Trait too and has no Light
   // Level at all - leaving it in the search made the answer depend on how a missing header

@@ -607,8 +607,8 @@ export const PROFILES = Object.freeze({
     // The Capacity goes either way, which is the part in brackets.
     wagerFromLife: true,
     // A Level off the Light of everybody it Damages, until the attacker's next turn
-    // starts. The Square is the character's here: the Level is set on them.
-    darkensLight: 1,
+    // starts: a stack of Darkened, whose file says which way it moves the Level.
+    squareMark: { condition: "darkened", stacks: 1 },
     // Both of these need an attack to have something no attack here can have yet. An
     // attack carries one Profile, so none has Elemental (Light) applied beside this one;
     // and this Profile has no Area, so the AoE sentence has nothing to be about.
@@ -660,7 +660,7 @@ export const PROFILES = Object.freeze({
     onThreshold: { condition: "broken", stacks: 1 },
     // Their Square is Aflame until the start of the attacker's next turn: the Ignited mark,
     // whose file names the Quality it stands for.
-    squareMark: "ignited",
+    squareMark: { condition: "ignited", stacks: 1 },
     needs: "the AoE sentence - no attack here gives this Profile an Area."
   },
 
@@ -683,8 +683,38 @@ export const PROFILES = Object.freeze({
         the AoE become Frozen until the start of your next turn instead.`,
     // Fire's shape exactly, with Slowed for Broken and Frozen for Aflame.
     onThreshold: { condition: "slowed", stacks: 1 },
-    squareMark: "frosted",
+    squareMark: { condition: "frosted", stacks: 1 },
     needs: "the AoE sentence - no attack here gives this Profile an Area."
+  },
+
+  elementalLight: {
+    label: "Elemental (Light)",
+    foundations: ["magic"],
+    kiCostPerTier: 2,
+    damageCategory: "standard",
+    text: `
+      Elemental (Light): Using the powers of light, you create constructs or shattered
+      fragments of light to assault your foes. The more energy spent, the more lethal the
+      spell.
+      –Damage Category: Standard
+      –KP Cost: 2(T)
+      –Effect: This Profile has multiple effects:
+      * This Attacking Maneuver gains the Full Wager Advantage for free (this does not
+        increase the KP Cost, or the TP Cost if it is a Signature Technique).
+      * Any Squares occupied by Character(s) who take Damage from this Attacking Maneuver
+        have their Light Level increased by 1 Level until the start of your next turn. If
+        this Attacking Maneuver has an AoE, then all Squares within the AoE have their
+        Light Level increased by 1 Level instead until the start of your next turn instead.
+      * If this Attacking Maneuver has the Elemental (Dark) Profile applied to it,
+        increase the Strike Roll by 1(T).`,
+    // Full Wager for free, the way Launching grants Knockback: added to the attack's
+    // Advantages when it is declared, and read by the wager's ceiling in the same dialog
+    // the Profile is picked in.
+    grantsAdvantage: "full-wager",
+    // Dark's mirror: a stack of Brightened, a Level up.
+    squareMark: { condition: "brightened", stacks: 1 },
+    needs: "the AoE sentence, and +1(T) Strike with Elemental (Dark) - no attack here "
+      + "carries two Profiles or gives this one an Area."
   }
 });
 
@@ -2030,16 +2060,29 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   // The ceiling is the same rule against a different pool.
   const offered = fixed ? [fixed] : groups.flatMap(group => group.profiles);
   const lifeWager = offered.some(profile => profile.wagerFromLife);
-  const lifeMax = lifeWager
-    ? Math.min(maxLifeWager(actor, features),
-      Number.isFinite(limits.wagerCap) ? limits.wagerCap : Number.POSITIVE_INFINITY)
+  const capped = amount => Math.min(amount,
+    Number.isFinite(limits.wagerCap) ? limits.wagerCap : Number.POSITIVE_INFINITY);
+  const lifeMax = lifeWager ? capped(maxLifeWager(actor, features)) : 0;
+
+  // And what the Profile picked grants. Elemental (Light) "gains the Full Wager Advantage
+  // for free", and it is picked in this same dialog - so the ceiling is settled once the
+  // choice is known, against the Technique's Advantages and the Profile's together.
+  const withProfile = id => (PROFILES[id]?.grantsAdvantage
+    ? [...features, PROFILES[id].grantsAdvantage]
+    : features);
+  const fullOffered = !features.includes("full-wager")
+    && offered.some(profile => profile.grantsAdvantage === "full-wager");
+  const fullMax = fullOffered ? capped(maxKiWager(actor, [...features, "full-wager"])) : 0;
+  const fullLifeMax = (fullOffered && lifeWager)
+    ? capped(maxLifeWager(actor, [...features, "full-wager"]))
     : 0;
 
   const wager = `
     <label class="dbu-wager">
       <span>Ki Wager</span>
-      <input type="number" name="kiWager" value="${wagerMin}" min="${wagerMin}" max="${Math.max(wagerMax, lifeMax)}"/>
-      <em>${wagerMin ? `at least ${wagerMin}, ` : ""}max ${wagerMax}, added to the Wound Roll</em>
+      <input type="number" name="kiWager" value="${wagerMin}" min="${wagerMin}" max="${Math.max(wagerMax, lifeMax, fullMax, fullLifeMax)}"/>
+      <em>${wagerMin ? `at least ${wagerMin}, ` : ""}max ${wagerMax}${
+        fullMax > wagerMax ? ` (${fullMax} with Full Wager)` : ""}, added to the Wound Roll</em>
     </label>${lifeWager ? `
     <label class="dbu-wager" data-tooltip="Spend Life Points instead of Ki Points. It still comes out of your Capacity. Max ${lifeMax}.">
       <input type="checkbox" name="wagerFromLife"/>
@@ -2068,12 +2111,15 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
           // drawn for the whole list, and ticking it under another Profile means nothing.
           const wagerFromLife = Boolean(PROFILES[profile]?.wagerFromLife
             && dialog.element.querySelector('input[name="wagerFromLife"]')?.checked);
-          const ceiling = wagerFromLife ? lifeMax : wagerMax;
+          const own = withProfile(profile);
+          const ceiling = capped(wagerFromLife ? maxLifeWager(actor, own) : maxKiWager(actor, own));
+          // All or Nothing pins the floor to whatever the ceiling turned out to be.
+          const floor = forcedFullWager(features) ? ceiling : Math.min(wagerMin, ceiling);
 
           const typed = Math.floor(Number(dialog.element.querySelector('input[name="kiWager"]').value));
           const kiWager = Number.isFinite(typed)
-            ? Math.min(Math.max(typed, Math.min(wagerMin, ceiling)), ceiling)
-            : Math.min(wagerMin, ceiling);
+            ? Math.min(Math.max(typed, floor), ceiling)
+            : floor;
           return { profile, kiWager, wagerFromLife };
         }
       },

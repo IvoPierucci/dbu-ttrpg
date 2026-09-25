@@ -8429,12 +8429,9 @@ async function applyAttackDamage(message, target, attack) {
   const riders = PROFILES[attack.profile] ?? {};
   const attacker = fromUuidSync(attack.attackerUuid);
   if (attacker && (damage > 0) && !isAbsoluteMiss(own)) {
-    if (riders.darkensLight) {
-      await markUntilNextTurn(attacker, target, "darkened", riders.darkensLight, "start",
-        riders.label);
-    }
     if (riders.squareMark) {
-      await markUntilNextTurn(attacker, target, riders.squareMark, 1, "start", riders.label);
+      await markUntilNextTurn(attacker, target, riders.squareMark.condition,
+        riders.squareMark.stacks, "start", riders.label);
     }
     if (riders.onThreshold && knockedThrough) {
       await markUntilNextTurn(attacker, target, riders.onThreshold.condition,

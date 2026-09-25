@@ -6,6 +6,8 @@ kind: conditions
 maxStacks: 4
 # Not a Combat Condition: the entry reduces a Square's Light Level and never names one.
 combatCondition: no
+# A Level down per stack. Read by `lightLevelOf`, which names no mark.
+lightShift: -1
 source: Core Rule
 description: >
   The light around you is snuffed out. Your Light Level is 1 lower per stack.
@@ -25,7 +27,7 @@ text: >
 # It is a mark rather than a change to that field because it has to run out on the
 # attacker's clock ("until the start of YOUR next turn"), and a lowered field would have to
 # be raised back past whatever the player set in the meantime. So the field stays the
-# player's and `lightLevelOf` reads both: the Level set, less one per stack.
+# player's and `lightLevelOf` reads both: the Level set, moved by `lightShift` per stack.
 #
 # Stacks, one per hit, each with its own clock. Two Dark attacks on the same character
 # lower it twice, and each wears off when its own attacker's next turn starts.

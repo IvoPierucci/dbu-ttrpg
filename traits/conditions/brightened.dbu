@@ -1,0 +1,30 @@
+id: brightened
+name: Brightened
+kind: conditions
+# From Normal to Blinding is two Levels and from Pitch Black four, so four stacks is as far
+# as it can ever take anybody. Past that it changes nothing. Darkened's mirror.
+maxStacks: 4
+# Not a Combat Condition: the entry raises a Square's Light Level and never names one.
+combatCondition: no
+# A Level up per stack. Read by `lightLevelOf`, which names no mark.
+lightShift: 1
+source: Core Rule
+description: >
+  The light around you flares. Your Light Level is 1 higher per stack.
+text: >
+  Brightened: the Elemental (Light) Profile's mark. "Any Squares occupied by Character(s)
+  who take Damage from this Attacking Maneuver have their Light Level increased by 1 Level
+  until the start of your next turn."
+
+---
+
+# Darkened's mirror, for the same reasons: there are no Squares, so the Level that goes up
+# is the one on the character who took the Damage; it is a mark rather than a change to that
+# field, because it runs out on the attacker's clock; and it stacks, one per hit, each with a
+# clock of its own.
+#
+# A character both Darkened and Brightened is moved both ways: one of each is the Level
+# they set. Nothing in the entry says one cancels the other, and adding them is what "reduced
+# by 1" and "increased by 1" come to.
+#
+# No effects of its own: what a Light Level does is in that Level's own file.
