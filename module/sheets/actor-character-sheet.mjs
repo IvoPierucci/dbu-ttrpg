@@ -430,6 +430,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       detonateGear: DBUCharacterSheet._onDetonateGear,
       scatterGear: DBUCharacterSheet._onScatterGear,
       storeGear: DBUCharacterSheet._onStoreGear,
+      clashGear: DBUCharacterSheet._onClashGear,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -1001,6 +1002,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           || (item.system.countdown === 0)),
         // An Item left on the ground for whoever moves through it.
         scatters: Boolean(item.system.hazard?.dice),
+        // An Item thrown to Clash with whoever it catches.
+        clashes: Boolean(item.system.clash?.save && item.system.clash?.condition),
         // A Capsule, and what it holds.
         capsule: Boolean(item.system.capsule),
         heldId: held?.id ?? "",
@@ -2023,6 +2026,31 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         + `${Handlebars.escapeExpression(capsule.name)}, and `
         + `${Handlebars.escapeExpression(held.name)} appears.</p>`
     });
+  }
+
+  /**
+   * Throw an Item that Clashes with whoever it catches: its Actions, and a Clash with each.
+   *
+   * The Flash Bang: "Make a Clash (Impulsive) against all Characters within a Sphere AoE of
+   * your targeted Square." Who the Sphere catches is the table's, so it is whoever the player
+   * has targeted - one Clash each, since each answers for themselves.
+   */
+  static async _onClashGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system.clash?.save) return;
+
+    const caught = [...game.user.targets].map(token => token.actor)
+      .filter(actor => actor && (actor.uuid !== this.actor.uuid));
+    if (!caught.length) {
+      ui.notifications.warn(`Target everyone the ${item.name} catches first.`);
+      return;
+    }
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    const { postGearClash } = await import("../chat.mjs");
+    for (const actor of caught) await postGearClash(this.actor, actor, item);
   }
 
   /** Set off an Item that is out on the Battlefield. */

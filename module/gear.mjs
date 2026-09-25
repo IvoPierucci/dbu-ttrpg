@@ -187,6 +187,14 @@ export function gearItemFrom(definition, actor = null) {
       capsule: definition.capsule === true,
       storedIn: "",
 
+      // A Clash it makes against whoever it catches, and what winning leaves on them -
+      // the Flash Bang's Clash (Impulsive), and Blinded until the start of your next turn.
+      clash: {
+        save: String(definition.clashSave ?? "").trim().toLowerCase(),
+        condition: String(definition.clashCondition ?? "").trim().toLowerCase(),
+        until: String(definition.clashUntil ?? "").trim().toLowerCase()
+      },
+
       // What an Item left on the ground does to whoever moves through it - Caltrops.
       hazard: {
         dice: String(definition.hazardDice ?? ""),

@@ -355,6 +355,65 @@ async function applyClash(messageId, clash) {
   if (clash.stagger && clash.result && !clash.stagger.applied) {
     await settleStagger(message, clash);
   }
+
+  if (clash.gearClash && clash.result && !clash.gearClash.applied) {
+    await settleGearClash(message, clash);
+  }
+}
+
+/**
+ * Open the Clash an Item makes against one character it caught.
+ *
+ * The Flash Bang's Clash (Impulsive): the Saving Throw named on both sides, the way the
+ * Blockade's is.
+ */
+export async function postGearClash(thrower, target, item) {
+  const clash = item.system.clash;
+  const condition = getTrait(clash.condition)?.name ?? clash.condition;
+  const until = (clash.until === "end") ? "the end" : "the start";
+  return postSaveClash(thrower, target, {
+    maneuverName: item.name,
+    clashLabel: `Clash (${clash.save.charAt(0).toUpperCase()}${clash.save.slice(1)})`,
+    reason: `Win and ${target.name} is ${condition} until ${until} of ${thrower.name}'s `
+      + "next turn.",
+    saves: [clash.save],
+    gearClash: {
+      applied: false,
+      itemName: item.name,
+      condition: clash.condition,
+      until: clash.until
+    }
+  });
+}
+
+/**
+ * What a settled Item Clash leaves: the Condition, on the thrower's clock, or nothing.
+ *
+ * "If you win, they gain the Blinded Combat Condition until the start of your next turn."
+ * Your turn, so the clock is the thrower's. A tie goes to the Defender, here as everywhere.
+ */
+async function settleGearClash(message, clash) {
+  const thrower = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!thrower || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, gearClash: { ...clash.gearClash, applied: true }
+  });
+
+  const { condition, until, itemName } = clash.gearClash;
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} shrugs off the ${itemName}.`);
+    return;
+  }
+
+  await markUntilNextTurn(thrower, target, condition, 1, (until === "end") ? "end" : "start",
+    itemName);
+  const name = getTrait(condition)?.name ?? condition;
+  await settledNote(message, `${target.name} is ${name} until the `
+    + `${(until === "end") ? "end" : "start"} of ${thrower.name}'s next turn.`);
 }
 
 /**

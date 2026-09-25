@@ -74,6 +74,17 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** The Capsule this Item is inside, by its Item id, or blank. */
       storedIn: new fields.StringField({ required: true, blank: true, initial: "" }),
 
+      /**
+       * A Clash it makes against whoever it catches: the Saving Throw on both sides, the
+       * Condition winning leaves, and whether it lasts to the start or the end of the
+       * thrower's next turn.
+       */
+      clash: new fields.SchemaField({
+        save: new fields.StringField({ required: true, blank: true, initial: "" }),
+        condition: new fields.StringField({ required: true, blank: true, initial: "" }),
+        until: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+
       /** What it does to whoever moves through it, once it is on the ground - Caltrops. */
       hazard: new fields.SchemaField({
         dice: new fields.StringField({ required: true, blank: true, initial: "" }),

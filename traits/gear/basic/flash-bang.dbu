@@ -1,0 +1,41 @@
+id: flash-bang
+name: Flash Bang
+kind: gear
+tags: tech
+craftDC: Qualified
+# "Spend 1 Action to target a Square."
+placeCost: 1
+# "Make a Clash (Impulsive) against all Characters within a Sphere AoE of your targeted
+# Square. If you win, they gain the Blinded Combat Condition until the start of your next
+# turn."
+clashSave: impulsive
+clashCondition: blinded
+clashUntil: start
+source: Core Rule
+description: >
+  Thrown to blind everyone around where it lands. Win a Clash (Impulsive) and they are
+  Blinded until the start of your next turn.
+text: >
+  Flash Bang [Tech]: A thrown weapon that blinds and deafens targets.
+  –Craft DC: Qualified
+  –Effects: Spend 1 Action to target a Square within a Destructive Sphere AoE (centered on
+  yourself). Make a Clash (Impulsive) against all Characters within a Sphere AoE of your
+  targeted Square. If you win, they gain the Blinded Combat Condition until the start of
+  your next turn.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Throwing it spends the Action and opens a Saving Throw Clash, Impulsive on both sides, with
+# every character the player has targeted - one Clash each, since each of them answers for
+# themselves. Won, that one is Blinded, and the clock is the thrower's: "until the start of
+# YOUR next turn".
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Which Square, and who the Sphere around it catches. There are no Squares here, so the ones
+# it catches are the ones targeted when it is thrown.
+#
+# "Blinds and deafens" is the flavour line; the effect names only Blinded, and only Blinded
+# is given. Whether it is used up the entry does not say, and it stays on the character.
