@@ -1,0 +1,45 @@
+id: caltrops
+name: Caltrops
+kind: gear
+craftDC: Qualified
+# Scattering them costs 1 Action, by the table's ruling: the entry gives no Action Cost.
+placeCost: 1
+# "Any Character (except those in a High Environment) who moves through any Square in that
+# AoE has their Life Points reduced by 1d4(bT)." Rolled with the base Tier of Power of whoever
+# moves through - the one suffering it, as with burning ground or a collision - by the
+# table's ruling.
+hazardDice: 1d4
+hazardScale: bT
+hazardSparesAirborne: true
+source: Core Rule
+description: >
+  Spikes scattered across the ground. Anyone moving through them loses 1d4(bT) Life Points.
+text: >
+  Caltrops: A handful of spikes you scatter across the ground to prevent pursuit.
+  –Craft DC: Qualified
+  –Effects: Select a Square within a Destructive Sphere AoE (centered on you). Create a
+  Sphere AoE centered on that Square. Any Character (except those in a High Environment) who
+  moves through any Square in that AoE has their Life Points reduced by 1d4(bT). This effect
+  does not stack if they move through multiple Squares.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Scattering them puts a card in the chat. Anyone who moves through the spikes presses its
+# button for their own character, and loses the Life Points: 1d4 per base Tier of Power of
+# theirs, rolled, and taken off as a Life Point reduction - past Soak and Damage Reduction,
+# since it is not Damage. In a High Environment the button says so and takes nothing.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Where they are. There are no Squares here: which Square, and who the Sphere covers, are the
+# table's, and so is who moved through it - which is why the button is pressed rather than
+# anything firing by itself.
+#
+# "This effect does not stack if they move through multiple Squares." One press for one
+# movement through the spikes, however many of their Squares it crossed. That is the
+# player's to keep, the way the Squares are.
+#
+# How long they stay down, and whether they are used up, the entry does not say. The card
+# stays in the chat and the Caltrops stay on the character, for the table to decide.

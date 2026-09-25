@@ -2077,8 +2077,87 @@ function onRenderChatMessage(message, html) {
   renderOutOfSequence(message, html);
   renderAfterTheFact(message, html);
   renderCurePoison(message, html);
+  renderGearHazard(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
+}
+
+/** Post the card an Item scattered across the ground leaves behind. */
+export async function postGearHazard(actor, item) {
+  const hazard = item.system.hazard;
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(actor.name)} scatters `
+      + `${Handlebars.escapeExpression(item.name)}.</p>`,
+    flags: {
+      [SCOPE]: {
+        [RESPONDABLE_FLAG]: false,
+        [HAZARD_FLAG]: {
+          itemName: item.name,
+          dice: hazard.dice,
+          scale: hazard.scale,
+          sparesAirborne: Boolean(hazard.sparesAirborne)
+        }
+      }
+    }
+  });
+}
+
+/**
+ * The button on a scattered Item's card: pressed by whoever moves through it.
+ *
+ * For the character the reader has selected, or their own if nothing is selected - the one
+ * who moved is the reader's to say, since nothing here knows where anybody walked. Drawn for
+ * everyone, because anyone can walk into them.
+ */
+function renderGearHazard(message, html) {
+  const hazard = message.getFlag(SCOPE, HAZARD_FLAG);
+  if (!hazard?.dice) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = `Moved through the ${hazard.itemName}`;
+  button.dataset.tooltip = "For your selected token, or your character. Once for one "
+    + "movement, however many of its Squares it crossed.";
+  button.addEventListener("click", () => {
+    const victim = canvas?.tokens?.controlled?.[0]?.actor ?? game.user.character;
+    if (!victim?.isOwner) {
+      ui.notifications.warn("Select the token of the one who moved through them.");
+      return;
+    }
+    return sufferGearHazard(victim, hazard);
+  });
+
+  const content = html.querySelector(".message-content") ?? html;
+  content.append(button);
+}
+
+/**
+ * Whoever moved through it loses the Life Points.
+ *
+ * Caltrops: "Any Character (except those in a High Environment) who moves through any Square
+ * in that AoE has their Life Points reduced by 1d4(bT)." Their base Tier, rolled; a Life
+ * Point reduction and not Damage, so past Soak and Damage Reduction.
+ */
+export async function sufferGearHazard(victim, hazard) {
+  if (hazard.sparesAirborne && isAirborne(victim.system)) {
+    ui.notifications.info(`${victim.name} is in a High Environment, above the `
+      + `${hazard.itemName}.`);
+    return 0;
+  }
+
+  const { hazardFormula } = await import("./gear.mjs");
+  const formula = hazardFormula(hazard, victim);
+  if (!formula) return 0;
+
+  const roll = await new Roll(formula).evaluate();
+  await roll.toMessage({
+    speaker: ChatMessage.getSpeaker({ actor: victim }),
+    flavor: `${hazard.itemName} - ${hazard.dice}(${hazard.scale})`
+  });
+  await reduceLifePoints(victim, roll.total, { reason: hazard.itemName });
+  return roll.total;
 }
 
 /**
@@ -4186,6 +4265,12 @@ const MOVEMENT_FLAG = "movement";
  * once the table says it was made.
  */
 const CURE_FLAG = "curePoison";
+
+/**
+ * An Item left on the ground for whoever moves through it - Caltrops. The card is posted
+ * when it is scattered and stays for as long as the table says it lies there.
+ */
+const HAZARD_FLAG = "gearHazard";
 
 /**
  * Whatever the character's effects contribute at one Moment.

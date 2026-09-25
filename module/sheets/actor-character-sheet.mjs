@@ -428,6 +428,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       addGear: DBUCharacterSheet._onAddGear,
       placeGear: DBUCharacterSheet._onPlaceGear,
       detonateGear: DBUCharacterSheet._onDetonateGear,
+      scatterGear: DBUCharacterSheet._onScatterGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
       toggleManeuver: DBUCharacterSheet._onToggleManeuver,
@@ -991,7 +992,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           ? item.system.countdown : null,
         // Set off by hand from the row, unless it is on a timer that has not run out.
         canDetonate: Boolean(item.system.placed) && (GEAR_TRIGGERS[item.system.trigger]?.row
-          || (item.system.countdown === 0))
+          || (item.system.countdown === 0)),
+        // An Item left on the ground for whoever moves through it.
+        scatters: Boolean(item.system.hazard?.dice)
       });
     }
     for (const list of Object.values(context.gear)) {
@@ -1926,6 +1929,23 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         + `${Handlebars.escapeExpression(item.name)}${trigger ? ` (${trigger}` : ""}${
           rounds ? `, ${rounds} Combat Round${rounds === 1 ? "" : "s"}` : ""}${trigger ? ")" : ""}.</p>`
     });
+  }
+
+  /**
+   * Scatter an Item across the ground: its Actions, and a card for whoever moves through it.
+   *
+   * Where it lands and who the Sphere covers are the table's. The card is what the others
+   * press when they move through it.
+   */
+  static async _onScatterGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system.hazard?.dice) return;
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    const { postGearHazard } = await import("../chat.mjs");
+    return postGearHazard(this.actor, item);
   }
 
   /** Set off an Item that is out on the Battlefield. */

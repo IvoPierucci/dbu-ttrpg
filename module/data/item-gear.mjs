@@ -67,6 +67,13 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         profile: new fields.StringField({ required: true, blank: true, initial: "" }),
         foundation: new fields.StringField({ required: true, blank: true, initial: "" }),
         autoHit: new fields.BooleanField({ required: true, initial: false })
+      }),
+
+      /** What it does to whoever moves through it, once it is on the ground - Caltrops. */
+      hazard: new fields.SchemaField({
+        dice: new fields.StringField({ required: true, blank: true, initial: "" }),
+        scale: new fields.StringField({ required: true, blank: true, initial: "" }),
+        sparesAirborne: new fields.BooleanField({ required: true, initial: false })
       })
     };
   }

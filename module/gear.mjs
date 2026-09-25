@@ -181,7 +181,33 @@ export function gearItemFrom(definition, actor = null) {
         profile: String(definition.detonationProfile ?? ""),
         foundation: String(definition.detonationFoundation ?? ""),
         autoHit: definition.detonationAutoHit === true
+      },
+
+      // What an Item left on the ground does to whoever moves through it - Caltrops.
+      hazard: {
+        dice: String(definition.hazardDice ?? ""),
+        scale: String(definition.hazardScale ?? ""),
+        sparesAirborne: definition.hazardSparesAirborne === true
       }
     }
   };
+}
+
+/**
+ * The dice an Item left on the ground rolls against whoever moves through it.
+ *
+ * "1d4(bT)" is a d4 per base Tier of Power - the count multiplies and the die does not,
+ * which is how every Tier-scaled roll here reads - and it is the base Tier of whoever moves
+ * through that counts: the one suffering it.
+ */
+export function hazardFormula(hazard, victim) {
+  const [count, faces] = String(hazard?.dice ?? "").split("d");
+  const n = Number(count) || 0;
+  if (!n || !faces) return "";
+  const system = victim?.system ?? {};
+  const multiplier = (hazard.scale === "T") ? (system.tierOfPower ?? 1)
+    : (hazard.scale === "bT") ? (system.baseTierOfPower ?? 1)
+    : 1;
+  const total = n * Math.max(1, multiplier);
+  return `${total}d${faces}`;
 }
