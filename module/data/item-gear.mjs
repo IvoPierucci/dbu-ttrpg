@@ -72,6 +72,16 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** A Special Basic Item, which only the ARC hands out and nothing crafts. */
       special: new fields.BooleanField({ required: true, initial: false }),
 
+      /** One of a set - a Dragon Ball: the sizes a set may be, this one's, which ball it
+       *  is, and the least Actions gathering them all takes to use. */
+      set: new fields.SchemaField({
+        min: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        max: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        size: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        number: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        actionsMin: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      }),
+
       /** The sizes it comes in, "Label=dice", and the one it is. */
       sizes: new fields.ArrayField(
         new fields.SchemaField({

@@ -44,6 +44,14 @@
                 data-item-id="{{row.itemId}}">Store</button>
         {{/if}}
         {{/if}}
+        {{#if row.setLabel}}
+        <span class="gear-type">{{row.setLabel}}</span>
+        {{/if}}
+        {{#if row.summons}}
+        <button type="button" class="gear-act" data-action="summonGear"
+                data-item-id="{{row.itemId}}"
+                data-tooltip="Every Action left this turn, three at least.">Summon</button>
+        {{/if}}
         {{#if row.restores}}
         <button type="button" class="gear-act" data-action="restoreGear"
                 data-item-id="{{row.itemId}}">Eat</button>

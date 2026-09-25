@@ -92,6 +92,23 @@ export function conditionsRestored(held, conditions, keeps = []) {
     .map(([key]) => key);
 }
 
+/**
+ * Whether a character holds every ball of this one's set: Items from the same file, in a set
+ * of the same size, with every number from 1 to that size among them.
+ *
+ * "Once you gather all of them."
+ */
+export function setGathered(items, item) {
+  const size = Number(item?.system?.set?.size) || 0;
+  if (!size) return false;
+  const numbers = new Set((items ?? [])
+    .filter(other => (other.system?.gearId === item.system.gearId)
+      && (Number(other.system?.set?.size) === size))
+    .map(other => Number(other.system.set.number)));
+  for (let n = 1; n <= size; n++) if (!numbers.has(n)) return false;
+  return true;
+}
+
 /** The triggers a file offers, in the order written, and only the ones there are. */
 export function triggersOf(definition) {
   return listOf(definition?.triggers).filter(trigger => GEAR_TRIGGERS[trigger]);
@@ -221,6 +238,16 @@ export function gearItemFrom(definition, actor = null) {
       // A Special Basic Item: "cannot be obtained by Crafting and can only be gained from
       // your ARC".
       special: definition.special === true,
+
+      // One of a set: how large a set may be, how large this one's is, and which of it this
+      // is - a Dragon Ball - and what gathering them all costs to use.
+      set: {
+        min: Math.max(0, Number(definition.setMin) || 0),
+        max: Math.max(0, Number(definition.setMax) || 0),
+        size: 0,
+        number: 0,
+        actionsMin: Math.max(0, Number(definition.summonActionsMin) || 0)
+      },
 
       // Sizes it comes in, each with the dice for its charges - the Bag of Senzu Beans'.
       sizes: sizesOf(definition),

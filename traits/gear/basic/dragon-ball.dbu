@@ -1,0 +1,33 @@
+id: dragon-ball
+name: Dragon Ball
+kind: gear
+# A Special Basic Item: only the ARC hands them out, and nothing crafts them.
+special: true
+# "Dragon Balls come in sets of 2~7 balls." Which set, and which ball of it, asked when it is
+# given.
+setMin: 2
+setMax: 7
+# "You may spend all the Actions in your turn (minimum 3) to summon an Eternal Dragon in a
+# Combat Encounter."
+summonActionsMin: 3
+source: Core Rule
+description: >
+  One of a set of 2 to 7. Gather them all, and every Action in your turn - three at least -
+  summons the Eternal Dragon.
+text: >
+  Dragon Ball: One of the magic dragon balls. You can find them all.
+  –Effects: Dragon Balls come in sets of 2~7 balls. Once you gather all of them, you may spend
+  all the Actions in your turn (minimum 3) to summon an Eternal Dragon in a Combat Encounter.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Given: how many balls its set has and which of them this one is - named for it, "Dragon Ball
+# (3-Star)". A character holding every ball of a set is offered Summon, on the first of them.
+#
+# Summon: in a Combat Encounter, every Action left in the turn, and three at least; outside
+# one, nothing - there are no Actions to count. It is said at the table, and that is all: what
+# the Eternal Dragon does is the ARC's.
+#
+# The balls stay on the character afterwards. Where they scatter to is the story's.

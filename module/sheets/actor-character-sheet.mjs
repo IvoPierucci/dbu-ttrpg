@@ -10,8 +10,8 @@ import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable, connectedItem,
-  encounterUseKey, gearItemFrom, gearOfList, heldBy, isStored, storable, tierDice, typeOf,
-  usedThisEncounter } from "../gear.mjs";
+  encounterUseKey, gearItemFrom, gearOfList, heldBy, isStored, setGathered, storable, tierDice,
+  typeOf, usedThisEncounter } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -439,6 +439,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       burstGear: DBUCharacterSheet._onBurstGear,
       lightGear: DBUCharacterSheet._onLightGear,
       restoreGear: DBUCharacterSheet._onRestoreGear,
+      summonGear: DBUCharacterSheet._onSummonGear,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -1002,6 +1003,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // A full restore, while there is a charge left to do it with.
         restores: Boolean(item.system.restore?.full) && ((item.system.charges ?? 0) > 0),
         feeds: Boolean(item.system.restore?.feedsDefeated),
+        // One of a set: which, of how many, and - on the first of a gathered set - Summon.
+        setLabel: item.system.set?.size ? `${item.system.set.number} of ${item.system.set.size}` : "",
+        summons: Boolean(item.system.set?.size) && (item.system.set.number === 1)
+          && setGathered(gearItems, item),
         tags: (item.system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag),
         // An Item that goes off: whether it is out, and what can be done with it now.
         explosive: Boolean(item.system.detonation?.profile),
@@ -1933,6 +1938,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.system.connectedTo = chosen;
     }
 
+    // "Dragon Balls come in sets of 2~7 balls." Which set, and which ball of it - named for
+    // it, so a character holding several can tell them apart.
+    if (data.system.set.max) {
+      const set = await DBUCharacterSheet.#askSet(definition.name, data.system.set);
+      if (!set) return;
+      data.system.set.size = set.size;
+      data.system.set.number = set.number;
+      data.name = `${definition.name} (${set.number}-Star)`;
+    }
+
     // "Bags of Senzu Beans come in various sizes" - which one, asked now, and its dice are
     // what the charges are rolled with.
     if (data.system.sizes.length) {
@@ -1958,6 +1973,37 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.system.trigger = trigger;
     }
     return this.actor.createEmbeddedDocuments("Item", [data]);
+  }
+
+  /** How large a set an Item belongs to, and which of it this one is. */
+  static async #askSet(name, set) {
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${name} - Set` },
+      content: `
+        <label class="dbu-wager"><span>Balls in the set</span>
+          <input type="number" name="size" value="${set.max}" min="${set.min}" max="${set.max}"/></label>
+        <label class="dbu-wager"><span>This one</span>
+          <input type="number" name="number" value="1" min="1" max="${set.max}"/></label>`,
+      buttons: [
+        {
+          action: "confirm",
+          label: "Confirm",
+          callback: (event, button, dialog) => ({
+            size: Math.floor(Number(dialog.element.querySelector('input[name="size"]')?.value)),
+            number: Math.floor(Number(dialog.element.querySelector('input[name="number"]')?.value))
+          })
+        },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!chosen || (typeof chosen !== "object")) return null;
+
+    // Held to what the entry allows, and the ball to the set it is in.
+    const size = Math.min(set.max, Math.max(set.min, chosen.size || set.max));
+    const number = Math.min(size, Math.max(1, chosen.number || 1));
+    return { size, number };
   }
 
   /** Which size an Item that comes in several is. */
@@ -2350,6 +2396,40 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     await item.update({ "system.charges": Math.max(0, (item.system.charges ?? 0) - 1) });
     const { restoreFully } = await import("../chat.mjs");
     return restoreFully(this.actor, who, item);
+  }
+
+  /**
+   * Summon with a gathered set - the Dragon Balls.
+   *
+   * "Once you gather all of them, you may spend all the Actions in your turn (minimum 3) to
+   * summon an Eternal Dragon in a Combat Encounter." In one, every Action left, three at
+   * least; outside one there are no Actions to count. What the Eternal Dragon does is the
+   * ARC's.
+   */
+  static async _onSummonGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const gear = this.actor.items.filter(owned => owned.type === "gear");
+    if (!item || !setGathered(gear, item)) return;
+
+    if (game.combat?.started) {
+      const { actionsLeft, spendActions } = await import("../combat.mjs");
+      const left = actionsLeft(this.actor);
+      const least = item.system.set.actionsMin ?? 0;
+      if (left < least) {
+        ui.notifications.warn(`${this.actor.name} needs ${least} Actions left to summon, and `
+          + `has ${left}.`);
+        return;
+      }
+      if (!await spendActions(this.actor, left)) return;
+    }
+
+    const base = getTrait(item.system.gearId)?.name ?? "Dragon Ball";
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(this.actor.name)} gathers all `
+        + `${item.system.set.size} ${Handlebars.escapeExpression(base)}s and summons the `
+        + "Eternal Dragon!</p>"
+    });
   }
 
   /**
