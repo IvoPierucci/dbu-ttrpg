@@ -1,0 +1,36 @@
+id: snack
+name: Snack
+kind: gear
+tags: food
+craftDC: Apprentice
+# "You can spend 1 Action to consume this Item."
+placeCost: 1
+consumed: true
+# "Regain 1d10(bT) Life and Ki Points." A roll for each, the way Combat Recovery rolls its
+# "regain 1d10(bT) Life and Ki Points": the base Tier of whoever eats it.
+healDice: 1d10
+healScale: bT
+healKi: true
+source: Core Rule
+description: >
+  Eat it for an Action: regain 1d10(bT) Life Points and 1d10(bT) Ki Points.
+text: >
+  Snack [Food]: A delicious and satisfying treat to keep you going when your energy is low.
+  –Craft DC: Apprentice
+  –Effects: You can spend 1 Action to consume this Item and regain 1d10(bT) Life and Ki
+  Points. Consuming a Snack will also reduce your Hunger by 1 until the end of the Combat
+  Encounter.
+
+---
+
+# Consume: 1 Action, 1d10(bT) Life Points and 1d10(bT) Ki Points - two rolls, neither past its
+# maximum - and the Snack is eaten.
+#
+# [Food]: made with a Cooking Skill Check of the Craft DC, through the Create Maneuver or
+# Magic Materialization. Neither is in this system yet; the tag is carried for when they are.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# "Consuming a Snack will also reduce your Hunger by 1 until the end of the Combat Encounter."
+# There is no Hunger in this system yet. When it arrives, this is a reduction of 1 per Snack
+# eaten, lasting to the end of the Combat Encounter.

@@ -133,7 +133,9 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** The Life Points using it heals: dice, and the Tier they scale with - Medicine. */
       heal: new fields.SchemaField({
         dice: new fields.StringField({ required: true, blank: true, initial: "" }),
-        scale: new fields.StringField({ required: true, blank: true, initial: "" })
+        scale: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** Ki Points too, rolled for separately - the Snack. */
+        ki: new fields.BooleanField({ required: true, initial: false })
       }),
       /** "You can only use this Basic Item once per Combat Encounter." */
       oncePerEncounter: new fields.BooleanField({ required: true, initial: false }),

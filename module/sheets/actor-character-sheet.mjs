@@ -2152,16 +2152,22 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     for (const key of held) await setCondition(this.actor, key, 0);
 
     // Regained, and never past the maximum - which is what regaining is everywhere here.
+    // Life, and Ki as well where the Item says so: a roll for each, the way Combat Recovery
+    // rolls its "Life and Ki Points".
     if (heal) {
-      const roll = await new Roll(heal).evaluate();
-      await roll.toMessage({
-        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-        flavor: `${item.name} - ${item.system.heal.dice}(${item.system.heal.scale}) Life Points`
-      });
-      const life = this.actor.system.life;
-      await this.actor.update({
-        "system.life.value": Math.min(life.max, life.value + Math.max(0, roll.total))
-      });
+      const pools = item.system.heal.ki ? ["life", "ki"] : ["life"];
+      const changes = {};
+      for (const pool of pools) {
+        const roll = await new Roll(heal).evaluate();
+        await roll.toMessage({
+          speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+          flavor: `${item.name} - ${item.system.heal.dice}(${item.system.heal.scale}) `
+            + `${pool === "ki" ? "Ki" : "Life"} Points`
+        });
+        const now = this.actor.system[pool];
+        changes[`system.${pool}.value`] = Math.min(now.max, now.value + Math.max(0, roll.total));
+      }
+      await this.actor.update(changes);
     }
 
     if (item.system.oncePerEncounter) {

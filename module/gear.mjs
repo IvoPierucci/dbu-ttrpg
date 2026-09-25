@@ -233,7 +233,9 @@ export function gearItemFrom(definition, actor = null) {
       removes: listOf(definition.removes),
       heal: {
         dice: String(definition.healDice ?? ""),
-        scale: String(definition.healScale ?? "")
+        scale: String(definition.healScale ?? ""),
+        // Ki Points as well as Life, each rolled for - the Snack's "Life and Ki Points".
+        ki: definition.healKi === true
       },
       oncePerEncounter: definition.oncePerEncounter === true,
       consumed: definition.consumed === true,
