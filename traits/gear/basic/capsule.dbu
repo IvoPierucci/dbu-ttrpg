@@ -1,0 +1,46 @@
+id: capsule
+name: Capsule
+kind: gear
+tags: tech
+craftDC: Qualified
+# It is a Capsule: it holds one Basic Item, and cannot be put inside another Capsule.
+capsule: true
+# "You can spend 1 Action to throw the Capsule."
+placeCost: 1
+source: Core Rule
+description: >
+  Holds almost anything in a device small enough to carry. Throw it and what is inside
+  appears.
+text: >
+  Capsule [Tech]: An item that can hold almost anything in it, keeping it in a compact, easy
+  to carry device.
+  –Craft DC: Qualified
+  –Effects: You can store any Basic Item into a Capsule. Vehicles and Bases can also be
+  stored within Capsules through the Capsule Quality. You cannot store a living thing or a
+  Capsule within a Capsule.
+
+  You can spend 1 Action to throw the Capsule into an unoccupied Square within a Destructive
+  Sphere AoE (centered on you). If you do, and there’s enough space for the size of the item,
+  it appears instantly in that position with its central occupied square (if possible – any
+  Square of your choice, if not) being the Square you threw the Capsule to.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Store: one of the character's own Basic Items goes inside. It stays an Item of theirs -
+# renamed, described, whatever it was - marked as held by this Capsule, and the Gear tab
+# shows it on the Capsule's row instead of its own. "Any Basic Item", so Accessories too,
+# which "are also counted as Basic Items for rules and effects"; never a Capsule.
+#
+# Throw: 1 Action, and what was inside is out again. Where it lands, whether there is room
+# for it, and which Square is its centre are the table's. The Capsule stays, empty.
+#
+# One Item to a Capsule. The entry stores "any Basic Item into a Capsule" and throws the
+# Capsule to make "it" appear - one thing in, one thing out.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# "Vehicles and Bases can also be stored within Capsules through the Capsule Quality." There
+# are no Vehicles, Bases or Capsule Quality in this system yet. A living thing is not an Item
+# here, so there is nothing to refuse.

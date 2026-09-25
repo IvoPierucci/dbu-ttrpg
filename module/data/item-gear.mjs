@@ -69,6 +69,11 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         autoHit: new fields.BooleanField({ required: true, initial: false })
       }),
 
+      /** Whether it is a Capsule, which holds one Basic Item. */
+      capsule: new fields.BooleanField({ required: true, initial: false }),
+      /** The Capsule this Item is inside, by its Item id, or blank. */
+      storedIn: new fields.StringField({ required: true, blank: true, initial: "" }),
+
       /** What it does to whoever moves through it, once it is on the ground - Caltrops. */
       hazard: new fields.SchemaField({
         dice: new fields.StringField({ required: true, blank: true, initial: "" }),

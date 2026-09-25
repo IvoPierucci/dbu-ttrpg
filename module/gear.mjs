@@ -183,6 +183,10 @@ export function gearItemFrom(definition, actor = null) {
         autoHit: definition.detonationAutoHit === true
       },
 
+      // A Capsule: it holds one Basic Item. Which one is on that Item, as `storedIn`.
+      capsule: definition.capsule === true,
+      storedIn: "",
+
       // What an Item left on the ground does to whoever moves through it - Caltrops.
       hazard: {
         dice: String(definition.hazardDice ?? ""),
@@ -191,6 +195,42 @@ export function gearItemFrom(definition, actor = null) {
       }
     }
   };
+}
+
+/**
+ * The Item a Capsule holds, among a character's Items, or null.
+ *
+ * Found by the mark on the held Item rather than kept on the Capsule: the held Item stays an
+ * Item of the character's, so it can be read, renamed and thrown out whole.
+ */
+export function heldBy(items, capsule) {
+  return (items ?? []).find(item => item.system?.storedIn === capsule.id) ?? null;
+}
+
+/**
+ * Whether an Item is inside a Capsule the character still has.
+ *
+ * A Capsule removed with something in it leaves that Item marked with a Capsule that is no
+ * longer there - and an Item held by nothing is an Item in the character's hands.
+ */
+export function isStored(items, item) {
+  const id = item.system?.storedIn;
+  return Boolean(id) && (items ?? []).some(other => other.id === id);
+}
+
+/**
+ * What a Capsule can take: the character's Basic Items and Accessories, not a Capsule, not
+ * one already inside a Capsule.
+ *
+ * "You can store any Basic Item into a Capsule ... You cannot store a living thing or a
+ * Capsule within a Capsule."
+ */
+export function storable(items, capsule) {
+  return (items ?? []).filter(item => (item.id !== capsule.id)
+    && (item.type === "gear")
+    && (GEAR_TYPES[item.system?.itemType]?.list === "basic")
+    && !item.system?.capsule
+    && !isStored(items, item));
 }
 
 /**

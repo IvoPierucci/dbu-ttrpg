@@ -33,6 +33,17 @@
                 data-item-id="{{row.itemId}}" data-tooltip="{{row.triggerLabel}}">Place</button>
         {{/if}}
         {{/if}}
+        {{#if row.capsule}}
+        {{#if row.heldId}}
+        <a class="gear-type" data-action="editItem" data-item-id="{{row.heldId}}">holds {{row.heldName}}</a>
+        <button type="button" class="gear-act" data-action="throwGear"
+                data-item-id="{{row.itemId}}"
+                data-tooltip="Where it appears is the table's.">Throw</button>
+        {{else}}
+        <button type="button" class="gear-act" data-action="storeGear"
+                data-item-id="{{row.itemId}}">Store</button>
+        {{/if}}
+        {{/if}}
         {{#if row.scatters}}
         <button type="button" class="gear-act" data-action="scatterGear"
                 data-item-id="{{row.itemId}}"

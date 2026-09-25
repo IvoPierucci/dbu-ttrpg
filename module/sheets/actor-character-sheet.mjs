@@ -9,8 +9,8 @@ import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
-import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, gearItemFrom, gearOfList, typeOf }
-  from "../gear.mjs";
+import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, gearItemFrom, gearOfList, heldBy, isStored,
+  storable, typeOf } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -429,6 +429,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       placeGear: DBUCharacterSheet._onPlaceGear,
       detonateGear: DBUCharacterSheet._onDetonateGear,
       scatterGear: DBUCharacterSheet._onScatterGear,
+      storeGear: DBUCharacterSheet._onStoreGear,
+      throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
       toggleManeuver: DBUCharacterSheet._onToggleManeuver,
@@ -976,8 +978,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // The Gear the character has, by the list each is drawn in. The name is the Item's,
     // so a renamed one shows as renamed.
     context.gear = { basic: [], apparel: [], weapon: [] };
-    for (const item of this.actor.items.filter(owned => owned.type === "gear")) {
+    const gearItems = this.actor.items.filter(owned => owned.type === "gear");
+    for (const item of gearItems) {
+      // Inside a Capsule, it is shown on the Capsule's row rather than its own.
+      if (isStored(gearItems, item)) continue;
       const type = GEAR_TYPES[item.system.itemType] ?? GEAR_TYPES.basic;
+      const held = item.system.capsule ? heldBy(gearItems, item) : null;
       context.gear[type.list]?.push({
         itemId: item.id,
         name: item.name,
@@ -994,7 +1000,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         canDetonate: Boolean(item.system.placed) && (GEAR_TRIGGERS[item.system.trigger]?.row
           || (item.system.countdown === 0)),
         // An Item left on the ground for whoever moves through it.
-        scatters: Boolean(item.system.hazard?.dice)
+        scatters: Boolean(item.system.hazard?.dice),
+        // A Capsule, and what it holds.
+        capsule: Boolean(item.system.capsule),
+        heldId: held?.id ?? "",
+        heldName: held?.name ?? ""
       });
     }
     for (const list of Object.values(context.gear)) {
@@ -1946,6 +1956,73 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const { postGearHazard } = await import("../chat.mjs");
     return postGearHazard(this.actor, item);
+  }
+
+  /**
+   * Put one of the character's Basic Items inside a Capsule.
+   *
+   * "You can store any Basic Item into a Capsule." One to a Capsule, never a Capsule.
+   */
+  static async _onStoreGear(event, target) {
+    const capsule = this.actor.items.get(target.dataset.itemId);
+    if (!capsule?.system.capsule) return;
+
+    const items = this.actor.items.filter(owned => owned.type === "gear");
+    if (heldBy(items, capsule)) return;
+
+    const offered = storable(items, capsule);
+    if (!offered.length) {
+      ui.notifications.info(`${this.actor.name} has no Basic Item to put in it.`);
+      return;
+    }
+
+    const escape = Handlebars.escapeExpression;
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${capsule.name} - Store` },
+      content: `<select name="stored" class="dbu-gear-pick">${offered
+        .map(item => `<option value="${escape(item.id)}">${escape(item.name)}</option>`)
+        .join("")}</select>`,
+      buttons: [
+        {
+          action: "confirm",
+          label: "Store",
+          callback: (event, button, dialog) =>
+            dialog.element.querySelector('select[name="stored"]')?.value ?? null
+        },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+
+    const item = offered.find(entry => entry.id === chosen);
+    if (!item) return;
+    return item.update({ "system.storedIn": capsule.id });
+  }
+
+  /**
+   * Throw a Capsule: an Action, and what it held is out.
+   *
+   * "You can spend 1 Action to throw the Capsule ... it appears instantly in that position."
+   * Where, and whether there is room, are the table's. The Capsule stays, empty.
+   */
+  static async _onThrowGear(event, target) {
+    const capsule = this.actor.items.get(target.dataset.itemId);
+    if (!capsule?.system.capsule) return;
+
+    const held = heldBy(this.actor.items.filter(owned => owned.type === "gear"), capsule);
+    if (!held) return;
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, capsule.system.placeCost ?? 0)) return;
+
+    await held.update({ "system.storedIn": "" });
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(this.actor.name)} throws a `
+        + `${Handlebars.escapeExpression(capsule.name)}, and `
+        + `${Handlebars.escapeExpression(held.name)} appears.</p>`
+    });
   }
 
   /** Set off an Item that is out on the Battlefield. */
