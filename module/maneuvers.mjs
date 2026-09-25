@@ -715,6 +715,28 @@ export const PROFILES = Object.freeze({
     squareMark: { condition: "brightened", stacks: 1 },
     needs: "the AoE sentence, and +1(T) Strike with Elemental (Dark) - no attack here "
       + "carries two Profiles or gives this one an Area."
+  },
+
+  elementalLightning: {
+    label: "Elemental (Lightning)",
+    foundations: ["magic"],
+    kiCostPerTier: 8,
+    damageCategory: "direct",
+    text: `
+      Elemental (Lightning): Using the powers of lightning, you electrocute an opponent.
+      –Damage Category: Direct
+      –KP Cost: 8(T)
+      –Effect: This Profile has multiple effects:
+      * If you knock an Opponent through a Health Threshold, they gain the Impediment
+        Combat Condition until the end of your next turn.
+      * Any Squares occupied by Character(s) who take Damage from this Attacking Maneuver
+        become Electrified (see — Environmental Qualities, Battle Environments) until the
+        start of your next turn. If this Attacking Maneuver has an AoE, then all Squares
+        within the AoE become Electrified until the start of your next turn instead.`,
+    // Fire's shape again, with Impediment and Electrified.
+    onThreshold: { condition: "impediment", stacks: 1 },
+    squareMark: { condition: "crackling", stacks: 1 },
+    needs: "the AoE sentence - no attack here gives this Profile an Area."
   }
 });
 
