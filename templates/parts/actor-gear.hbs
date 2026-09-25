@@ -44,6 +44,11 @@
                 data-item-id="{{row.itemId}}">Store</button>
         {{/if}}
         {{/if}}
+        {{#if row.scans}}
+        <button type="button" class="gear-act" data-action="scanGear"
+                data-item-id="{{row.itemId}}"
+                data-tooltip="Target the one to scan first.">Scan</button>
+        {{/if}}
         {{#if row.remote}}
         <span class="gear-type">{{#if row.connectedName}}&rarr; {{row.connectedName}}{{else}}not connected{{/if}}</span>
         {{#if row.canTrigger}}

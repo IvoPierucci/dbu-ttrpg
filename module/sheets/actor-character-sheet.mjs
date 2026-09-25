@@ -435,6 +435,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       consumeGear: DBUCharacterSheet._onConsumeGear,
       snareGear: DBUCharacterSheet._onSnareGear,
       remoteGear: DBUCharacterSheet._onRemoteGear,
+      scanGear: DBUCharacterSheet._onScanGear,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -1010,6 +1011,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         clashes: Boolean(item.system.clash?.save && item.system.clash?.condition),
         // An Item thrown to catch someone.
         snares: Boolean(item.system.snare?.condition),
+        // An Item that scans someone.
+        scans: Boolean(item.system.scan?.skill),
         // A Remote Control, what it is connected to, and whether that can be set off now.
         remote: (item.system.connects ?? []).length > 0,
         connectedName: connectedItem(gearItems, item)?.name ?? "",
@@ -2228,6 +2231,29 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const { detonateGear } = await import("../chat.mjs");
     return detonateGear(this.actor, bomb);
+  }
+
+  /**
+   * Scan someone - the Scout Scope.
+   *
+   * "You can spend 3 Actions to attempt to scan the strength of another Character." The one
+   * targeted, never the scanner; the card is where the other side answers.
+   */
+  static async _onScanGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system.scan?.skill) return;
+
+    const scanned = game.user.targets.first()?.actor;
+    if (!scanned || (scanned.uuid === this.actor.uuid)) {
+      ui.notifications.warn(`Target the one the ${item.name} is aimed at first.`);
+      return;
+    }
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    const { postScan } = await import("../chat.mjs");
+    return postScan(this.actor, scanned, item);
   }
 
   /** Set off an Item that is out on the Battlefield. */

@@ -174,6 +174,7 @@ function applyRequest(request) {
     case "attack": return applyAttack(request.messageId, request.attack);
     case "moment": return applyMoment(request.messageId, request.moment);
     case "cure": return applyCure(request.messageId, request.cure);
+    case "scan": return applyScan(request.messageId, request.scan);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
@@ -273,6 +274,13 @@ function spendTriggeredEffect(actor, blockId) {
 }
 
 /** Write a cured poison back onto its message, so the button goes. */
+/** Write a settled scan back onto its message, so its buttons go. */
+async function applyScan(messageId, scan) {
+  const message = game.messages.get(messageId);
+  if (!message) return;
+  await message.setFlag(SCOPE, SCAN_FLAG, scan);
+}
+
 async function applyCure(messageId, cure) {
   const message = game.messages.get(messageId);
   if (!message) return;
@@ -2239,8 +2247,111 @@ function onRenderChatMessage(message, html) {
   renderAfterTheFact(message, html);
   renderCurePoison(message, html);
   renderGearHazard(message, html);
+  renderGearScan(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
+}
+
+/**
+ * Post a scan's card. Settled at once where the one scanned is still hidden from this kind of
+ * Item this Encounter: "they automatically succeed on any further Concealment Skill Checks".
+ */
+export async function postScan(scanner, scanned, item) {
+  const { stillHidden } = await import("./gear.mjs");
+  const hidden = stillHidden(scanned, item.system.gearId);
+  const difficulty = DBUCharacterData.DIFFICULTIES[item.system.scan.difficulty];
+  const skill = DBUCharacterData.SKILLS[item.system.scan.skill]?.label ?? item.system.scan.skill;
+
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: scanner }),
+    content: `<p>${Handlebars.escapeExpression(scanner.name)} scans `
+      + `${Handlebars.escapeExpression(scanned.name)} with the `
+      + `${Handlebars.escapeExpression(item.name)}.${hidden
+        ? ` <em>${Handlebars.escapeExpression(scanned.name)} stays hidden.</em>` : ""}</p>`,
+    flags: {
+      [SCOPE]: {
+        [RESPONDABLE_FLAG]: false,
+        [SCAN_FLAG]: {
+          scannerUuid: scanner.uuid,
+          scannedUuid: scanned.uuid,
+          itemName: item.name,
+          gearId: item.system.gearId,
+          check: difficulty ? `${skill} (${difficulty.label} ${difficulty.tn})` : skill,
+          settled: hidden
+        }
+      }
+    }
+  });
+}
+
+/**
+ * The scan card's two answers, for whoever plays the one scanned - and the GM.
+ *
+ * The Check is rolled from their own sheet, at the Difficulty named, the way the Treatment
+ * Maneuver's is; this is where they say how it went. Whether they were aware of the scan -
+ * and so whether they could make it - is the table's.
+ */
+function renderGearScan(message, html) {
+  const scan = message.getFlag(SCOPE, SCAN_FLAG);
+  if (!scan || scan.settled) return;
+
+  const scanned = fromUuidSync(scan.scannedUuid);
+  if (!game.user.isGM && !scanned?.isOwner) return;
+
+  const content = html.querySelector(".message-content") ?? html;
+  const hidden = document.createElement("button");
+  hidden.type = "button";
+  hidden.className = "dbu-clash-button";
+  hidden.textContent = "Hidden";
+  hidden.dataset.tooltip = `${scan.check} was met. Hidden from it for the rest of the Encounter, `
+    + "while the Holding Back stacks do not drop.";
+  hidden.addEventListener("click", () => settleScan(message, scan, true));
+
+  const read = document.createElement("button");
+  read.type = "button";
+  read.className = "dbu-clash-button";
+  read.textContent = "Read";
+  read.dataset.tooltip = `${scan.check} was not met, or could not be made.`;
+  read.addEventListener("click", () => settleScan(message, scan, false));
+
+  content.append(hidden, read);
+}
+
+/**
+ * Answer a scan: hidden, remembered for the Encounter with the Holding Back stacks held now;
+ * or read, told to the scanner alone.
+ */
+async function settleScan(message, scan, hid) {
+  if (scan.settled) return;
+  const scanned = fromUuidSync(scan.scannedUuid);
+  const scanner = fromUuidSync(scan.scannerUuid);
+  if (!scanned || !scanner) return;
+
+  await requestEdit(message, { type: "scan", scan: { ...scan, settled: true } });
+
+  const { hiddenKey, holdingBackStacks, scanReading } = await import("./gear.mjs");
+  if (hid) {
+    // One entry for this kind of Item, the latest - with the stacks they have now.
+    const prefix = `encounter:gear.${scan.gearId}.hidden.`;
+    const kept = (scanned.system.usedManeuvers ?? []).filter(used => !used.startsWith(prefix));
+    await requestActorUpdate(scanned, {
+      "system.usedManeuvers": [...kept, hiddenKey(scan.gearId, holdingBackStacks(scanned))]
+    });
+    return settledNote(message, `${scanned.name} stays hidden.`);
+  }
+
+  // "You become aware" - the scanner, so it is whispered to whoever plays them.
+  const { tier, powerLevel } = scanReading(scanned);
+  const whisper = game.users.filter(user => user.isGM
+    || scanner.testUserPermission(user, "OWNER")).map(user => user.id);
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: scanner }),
+    whisper,
+    content: `<p>${Handlebars.escapeExpression(scan.itemName)}: `
+      + `${Handlebars.escapeExpression(scanned.name)} is at Tier of Power <strong>${tier}</strong>`
+      + `${(powerLevel !== null) ? `, Power Level <strong>${powerLevel}</strong>` : ""}.</p>`
+  });
+  return settledNote(message, `${scanned.name} is read.`);
 }
 
 /** Post the card an Item scattered across the ground leaves behind. */
@@ -4432,6 +4543,9 @@ const CURE_FLAG = "curePoison";
  * when it is scattered and stays for as long as the table says it lies there.
  */
 const HAZARD_FLAG = "gearHazard";
+
+/** A scan by an Item - the Scout Scope - waiting for the one scanned to answer it. */
+const SCAN_FLAG = "gearScan";
 
 /**
  * Whatever the character's effects contribute at one Moment.

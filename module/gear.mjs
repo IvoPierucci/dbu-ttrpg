@@ -190,6 +190,12 @@ export function gearItemFrom(definition, actor = null) {
       chargesLabel: String(definition.chargesLabel ?? ""),
       charges: 0,
 
+      // A scan, and the Check that hides from it - the Scout Scope's Qualified Concealment.
+      scan: {
+        skill: String(definition.scanSkill ?? "").trim().toLowerCase(),
+        difficulty: String(definition.scanDifficulty ?? "").trim().toLowerCase()
+      },
+
       // What it can be connected to, and what it is - the Remote Control's Item.
       connects: listOf(definition.connects),
       connectedTo: "",
@@ -249,6 +255,47 @@ export function encounterUseKey(item) {
 /** Whether this character has already used this Item this Combat Encounter. */
 export function usedThisEncounter(actor, item) {
   return (actor?.system?.usedManeuvers ?? []).includes(encounterUseKey(item));
+}
+
+/**
+ * The entry a character hidden from a scanning Item leaves among their once-per-Encounter
+ * uses, with the Holding Back stacks they had when they hid.
+ *
+ * The Scout Scope: "they automatically succeed on any further Concealment Skill Checks to
+ * avoid being spotted by a Scout Scope for the remainder of the Combat Encounter. If their
+ * number of Holding Back stacks would decrease below their current number, they lose this
+ * benefit." Kept in `usedManeuvers`, which clears when an Encounter begins and ends.
+ */
+export function hiddenKey(gearId, stacks) {
+  return `encounter:gear.${gearId}.hidden.${Math.max(0, Number(stacks) || 0)}`;
+}
+
+/** The Holding Back stacks a character has. */
+export function holdingBackStacks(actor) {
+  return Number(actor?.system?.resources?.holdingback?.stacks) || 0;
+}
+
+/**
+ * Whether a character is still hidden from this kind of scanning Item: they hid this
+ * Encounter, and their Holding Back stacks have not dropped below what they had then.
+ */
+export function stillHidden(actor, gearId) {
+  const prefix = `encounter:gear.${gearId}.hidden.`;
+  const entry = (actor?.system?.usedManeuvers ?? []).find(used => used.startsWith(prefix));
+  if (!entry) return false;
+  return holdingBackStacks(actor) >= (Number(entry.slice(prefix.length)) || 0);
+}
+
+/**
+ * What a scan reads: the current Tier of Power, and the Power Level only when that Tier is
+ * the base one. "If their current Tier of Power is the same as their base Tier of Power, you
+ * also learn of their Power Level."
+ */
+export function scanReading(actor) {
+  const system = actor?.system ?? {};
+  const tier = system.tierOfPower ?? 1;
+  const atBase = tier === (system.baseTierOfPower ?? 1);
+  return { tier, powerLevel: atBase ? (system.powerLevel ?? null) : null };
 }
 
 /**

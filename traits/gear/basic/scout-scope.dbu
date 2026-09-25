@@ -1,0 +1,56 @@
+id: scout-scope
+name: Scout Scope
+kind: gear
+tags: tech
+craftDC: Apprentice
+# "You can spend 3 Actions to attempt to scan the strength of another Character."
+placeCost: 3
+# "Any Character that is using the Holding Back Maneuver or is aware of the scanning can make
+# a Qualified Concealment Skill Check."
+scanSkill: concealment
+scanDifficulty: qualified
+source: Core Rule
+description: >
+  Three Actions to read someone's Tier of Power - and their Power Level, if they are at
+  their base Tier - unless they hide it with a Qualified Concealment Check.
+text: >
+  Scout Scope [Tech]: A handheld device capable of indicating a combatant’s individual combat
+  strength.
+  –Craft DC: Apprentice
+  –Effects: You can spend 3 Actions to attempt to scan the strength of another Character. Any
+  Character that is using the Holding Back Maneuver or is aware of the scanning can make a
+  Qualified Concealment Skill Check. If they succeed, nothing happens and they automatically
+  succeed on any further Concealment Skill Checks to avoid being spotted by a Scout Scope for
+  the remainder of the Combat Encounter. If their number of Holding Back stacks would
+  decrease below their current number, they lose this benefit. If they fail, you become
+  aware of their current Tier of Power. If their current Tier of Power is the same as their
+  base Tier of Power, you also learn of their Power Level.
+
+  While you hold this Basic Item, you have access to the Scan Adventuring Maneuver.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Scan: 3 Actions at the one character targeted, and a card. The Concealment Check is rolled
+# from their own sheet at Qualified - the way the Treatment Maneuver's Medicine Check is - and
+# the card has the two answers, for whoever plays them: Hidden, the Check was met; Read, it
+# was not, or they could not make one.
+#
+# Read tells the scanner alone, in a whisper, their current Tier of Power - and their Power
+# Level too when that Tier is their base Tier.
+#
+# Hidden is remembered on them for the rest of the Combat Encounter, with the Holding Back
+# stacks they had: every later scan by a Scout Scope finds them hidden without a Check, until
+# those stacks drop below that number. It is kept with the other once-per-Encounter uses and
+# cleared when an Encounter begins or ends.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Whether they are aware of the scan, which is what decides whether they may make the Check
+# without Holding Back. The card offers the Check to whoever plays them either way.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# "While you hold this Basic Item, you have access to the Scan Adventuring Maneuver." The
+# Adventuring Maneuvers are not in this system yet.

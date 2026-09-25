@@ -75,6 +75,12 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       chargesLabel: new fields.StringField({ required: true, blank: true, initial: "" }),
       charges: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
 
+      /** A scan, and the Skill Check at the Difficulty that hides from it - the Scout Scope. */
+      scan: new fields.SchemaField({
+        skill: new fields.StringField({ required: true, blank: true, initial: "" }),
+        difficulty: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+
       /** The files of the Items it can be connected to - the Remote Control's. */
       connects: new fields.ArrayField(
         new fields.StringField({ required: true, blank: false }),
