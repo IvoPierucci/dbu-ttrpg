@@ -81,6 +81,12 @@ async function startRound(combat) {
     // the last Round and the start of this one are the same moment from here - nothing
     // happens between them - which is the same reading the Round edge above rests on.
     await loseBreath(actor, "the Combat Round ended");
+
+    // A placed Timed Item comes one Round closer. The Round's card offers the ones that
+    // have got there.
+    const { tickCountdowns } = await import("./gear.mjs");
+    const { updates } = tickCountdowns(actor.items.filter(item => item.type === "gear"));
+    if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
   }
 
   await announce("start-of-round", {

@@ -5667,7 +5667,7 @@ async function takeOutOfSequence(message, actor, offer) {
  */
 export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, wagerFromLife = false,
-                                   charges = 0,
+                                   charges = 0, damageAttribute = null, autoHit = false,
                                    advantages = [], squaresCharged = 0 },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
@@ -5774,6 +5774,13 @@ export async function postAttack(actor, target, maneuver,
           // Paid in Life Points rather than Ki. Added to the Wound Roll all the same - it
           // is a Ki Wager either way - and only the card's note says the difference.
           wagerFromLife: Boolean(wagerFromLife && kiWager),
+          // What stands in for the Damage Attribute, where something other than the
+          // attacker's own does - a Bomb's recorded Scholarship Modifier. Null for every
+          // attack a character makes with their own.
+          damageAttribute,
+          // "A Bomb's Strike Roll for this Attacking Maneuver will automatically succeed."
+          // Carried on the attack, since it is the attack's and not the character's.
+          autoHit: Boolean(autoHit),
           // Energy Charges live on the Maneuver, not the character: they were fed into
           // this attack and are spent with it. Each adds a die to the Wound Roll.
           // Powered "gains an Energy Charge", on top of anything the Energy Charge
@@ -6589,7 +6596,9 @@ async function resolveAttack(message, attack) {
     // attacker's side, being Sleeping on the defender's. Settled before the defence is
     // rolled, because a roll whose result cannot matter should not be made - a Sleeping
     // character winning a Dodge and being hit anyway reads as the rule not working.
-    const forced = attacker.system.effects?.slots?.["attack.autoHit"] === true
+    const forced = attack.autoHit
+      ? `${attack.maneuverName} hits automatically`
+      : attacker.system.effects?.slots?.["attack.autoHit"] === true
       ? `${attacker.name} hits automatically`
       : target.system.effects?.slots?.["incoming.autoHit"] === true
       ? `${target.name} is hit automatically`
@@ -7183,6 +7192,24 @@ function woundRoller(attack) {
  * is that Modifier added again rather than the Wound doubled, which would take Might
  * and everything else along with it.
  */
+/**
+ * The Wound Roll's own line: the Damage Attribute and what the attacker's effects add to it.
+ *
+ * Where the attack brings a Damage Attribute of its own - a Bomb's recorded Scholarship
+ * Modifier - that Modifier stands where the Foundation's Attribute would, and everything
+ * the attacker's effects add stays. "Using the recorded Scholarship Modifier as its Damage
+ * Attribute": the Attribute is swapped, not the character.
+ */
+function woundBase(attacker, attack) {
+  const wound = attacker.system.combat.wound[attack.foundation] ?? 0;
+  const own = attack.damageAttribute;
+  if (!own) return { label: "Wound", value: wound };
+
+  const attribute = DBUCharacterData.FOUNDATIONS[attack.foundation]?.attribute;
+  const theirs = attacker.system.attributes?.[attribute]?.mod ?? 0;
+  return { label: `Wound (${own.label})`, value: wound - theirs + (Number(own.value) || 0) };
+}
+
 function profileWoundParts(attacker, attack) {
   const profile = PROFILES[attack.profile];
   const parts = [];
@@ -7428,7 +7455,7 @@ async function rollAttackWound(message, attack) {
   // Reduction, and a Power Flare that answers it for them alone.
   const wound = await rollSide(attacker, [
     ...followUps,
-    { label: "Wound", value: attacker.system.combat.wound[attack.foundation] },
+    woundBase(attacker, attack),
     ...profileWoundParts(attacker, attack),
     ...advantageWoundParts(attacker, attack),
     ...superStackWoundParts(attacker, attack),
@@ -8763,6 +8790,18 @@ function renderMoment(message, html) {
     buttons.append(weather);
   }
 
+  // A Timed Item whose Rounds have passed. Offered rather than set off, the way the storm
+  // is: the attack needs somebody targeted, and that is the player's to do.
+  for (const { actor, item } of gearDue(card)) {
+    const blast = document.createElement("button");
+    blast.type = "button";
+    blast.className = "dbu-clash-button";
+    blast.textContent = `Detonate ${item.name} - ${actor.name}`;
+    blast.dataset.tooltip = "Its Rounds have passed. Target the first one it catches.";
+    blast.addEventListener("click", () => detonateGear(actor, item));
+    buttons.append(blast);
+  }
+
   for (const actor of momentAnswerers(card)) {
     const apply = document.createElement("button");
     apply.type = "button";
@@ -8789,6 +8828,71 @@ function renderMoment(message, html) {
   }
 
   if (buttons.childElementCount) content.append(buttons);
+}
+
+/**
+ * Set off an Item that goes off: the Basic Attack it makes, in the name of whoever has it.
+ *
+ * The Bomb: "It uses the Basic Attack Maneuver of the Clearing (Energy) Profile as an
+ * Out-of-Sequence Maneuver, using the recorded Scholarship Modifier as its Damage
+ * Attribute ... A Bomb's Strike Roll for this Attacking Maneuver will automatically
+ * succeed." The attack is the placer's, by the table's ruling - their Tier of Power, their
+ * bonuses, one of their attacks this Round - with the Bomb's Damage Attribute. No Ki is
+ * paid: the Bomb makes it.
+ *
+ * The first one it catches is the one targeted; the rest of the Sphere are added from the
+ * card, as for any Clearing attack. The Item stays, taken out of play, for the player to
+ * remove.
+ */
+export async function detonateGear(actor, item) {
+  const detonation = item?.system?.detonation;
+  if (!actor || !detonation?.profile || !item.system.placed) return;
+
+  const target = game.user.targets.first()?.actor;
+  if (!target) {
+    ui.notifications.warn(`Target the first one the ${item.name} catches. The rest are added `
+      + "from the card.");
+    return;
+  }
+
+  const basic = getManeuver("basic-attack");
+  if (!basic) return;
+
+  // Out of play before the attack is made, so a second click finds nothing to set off.
+  await item.update({ "system.placed": false, "system.countdown": 0 });
+
+  return postAttack(actor, target, { ...basic, name: item.name }, {
+    profile: detonation.profile,
+    foundation: detonation.foundation || "energy",
+    kiWager: 0,
+    advantages: [],
+    damageAttribute: item.system.records
+      ? { label: `${item.name}, ${item.system.records}`, value: item.system.recorded ?? 0 }
+      : null,
+    autoHit: detonation.autoHit
+  }, { asOutOfSequence: true });
+}
+
+/**
+ * The Timed Items on this card the reader plays whose Rounds have passed.
+ *
+ * Only on the Round's own card, where the countdown is taken.
+ */
+function gearDue(card) {
+  if (card.moment !== "start-of-round") return [];
+
+  const due = [];
+  for (const uuid of card.subjects ?? []) {
+    const actor = fromUuidSync(uuid);
+    if (!actor?.isOwner) continue;
+    for (const item of actor.items.filter(owned => owned.type === "gear")) {
+      if (item.system.placed && (item.system.trigger === "timed")
+        && (item.system.countdown === 0)) {
+        due.push({ actor, item });
+      }
+    }
+  }
+  return due;
 }
 
 /**

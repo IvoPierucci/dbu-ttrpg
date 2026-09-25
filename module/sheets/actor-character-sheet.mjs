@@ -9,7 +9,8 @@ import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
-import { GEAR_TAGS, GEAR_TYPES, gearItemFrom, gearOfList, typeOf } from "../gear.mjs";
+import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, gearItemFrom, gearOfList, typeOf }
+  from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -425,6 +426,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       holdBreath: DBUCharacterSheet._onHoldBreath,
       grantManeuvers: DBUCharacterSheet._onGrantManeuvers,
       addGear: DBUCharacterSheet._onAddGear,
+      placeGear: DBUCharacterSheet._onPlaceGear,
+      detonateGear: DBUCharacterSheet._onDetonateGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
       toggleManeuver: DBUCharacterSheet._onToggleManeuver,
@@ -979,7 +982,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         name: item.name,
         img: item.img,
         typeLabel: type.label,
-        tags: (item.system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag)
+        tags: (item.system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag),
+        // An Item that goes off: whether it is out, and what can be done with it now.
+        explosive: Boolean(item.system.detonation?.profile),
+        placed: Boolean(item.system.placed),
+        triggerLabel: GEAR_TRIGGERS[item.system.trigger]?.label ?? "",
+        countdown: (item.system.trigger === "timed") && item.system.placed
+          ? item.system.countdown : null,
+        // Set off by hand from the row, unless it is on a timer that has not run out.
+        canDetonate: Boolean(item.system.placed) && (GEAR_TRIGGERS[item.system.trigger]?.row
+          || (item.system.countdown === 0))
       });
     }
     for (const list of Object.values(context.gear)) {
@@ -1831,7 +1843,97 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const definition = offered.find(entry => entry.id === chosen);
     if (!definition) return;
-    return this.actor.createEmbeddedDocuments("Item", [gearItemFrom(definition)]);
+
+    // "When you create this Basic Item, record your Scholarship Modifier. Then, select a
+    // trigger." Recorded off this character, and the trigger asked now - both can be
+    // changed on the Item afterwards.
+    const data = gearItemFrom(definition, this.actor);
+    if (data.system.triggers.length > 1) {
+      const trigger = await DBUCharacterSheet.#askTrigger(definition.name, data.system.triggers);
+      if (!trigger) return;
+      data.system.trigger = trigger;
+    }
+    return this.actor.createEmbeddedDocuments("Item", [data]);
+  }
+
+  /** Which trigger an Item that goes off is set to. */
+  static async #askTrigger(name, triggers) {
+    const escape = Handlebars.escapeExpression;
+    const rows = triggers.map((trigger, index) => `
+      <label class="dbu-respond-option">
+        <input type="radio" name="trigger" value="${escape(trigger)}" ${index ? "" : "checked"}/>
+        <span class="dbu-respond-name">${escape(GEAR_TRIGGERS[trigger]?.label ?? trigger)}</span>
+      </label>`).join("");
+
+    return foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${name} - Trigger` },
+      content: rows,
+      buttons: [
+        {
+          action: "confirm",
+          label: "Confirm",
+          callback: (event, button, dialog) =>
+            dialog.element.querySelector('input[name="trigger"]:checked')?.value ?? null
+        },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    }).then(chosen => (chosen && triggers.includes(chosen)) ? chosen : null);
+  }
+
+  /**
+   * Put an Item that goes off out on the Battlefield.
+   *
+   * "A Bomb can be placed ... by spending 1 Action while adjacent to your chosen position."
+   * Where is the table's. A Timed one asks how many Combat Rounds: "When you place this
+   * Bomb, you can select any number of Combat Rounds."
+   */
+  static async _onPlaceGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || item.system.placed) return;
+
+    let rounds = 0;
+    if (item.system.trigger === "timed") {
+      rounds = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${item.name} - Timed` },
+        content: `<label class="dbu-wager"><span>Combat Rounds</span>
+          <input type="number" name="rounds" value="1" min="1"/></label>`,
+        buttons: [
+          {
+            action: "confirm",
+            label: "Place",
+            callback: (event, button, dialog) => Math.max(1, Math.floor(Number(
+              dialog.element.querySelector('input[name="rounds"]')?.value)) || 1)
+          },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!Number.isFinite(rounds) || rounds < 1) return;
+    }
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    await item.update({ "system.placed": true, "system.countdown": rounds });
+
+    const trigger = GEAR_TRIGGERS[item.system.trigger]?.label ?? "";
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(this.actor.name)} places a `
+        + `${Handlebars.escapeExpression(item.name)}${trigger ? ` (${trigger}` : ""}${
+          rounds ? `, ${rounds} Combat Round${rounds === 1 ? "" : "s"}` : ""}${trigger ? ")" : ""}.</p>`
+    });
+  }
+
+  /** Set off an Item that is out on the Battlefield. */
+  static async _onDetonateGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
+    const { detonateGear } = await import("../chat.mjs");
+    return detonateGear(this.actor, item);
   }
 
   /**

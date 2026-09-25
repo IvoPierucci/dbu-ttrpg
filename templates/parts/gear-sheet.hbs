@@ -11,6 +11,29 @@
     </div>
   </header>
 
+  {{#if hasControls}}
+  <section class="panel">
+    <div class="stat-grid">
+      {{#if recordsLabel}}
+      <div class="stat">
+        <em>{{recordsLabel}}</em>
+        <input type="number" name="system.recorded" value="{{system.recorded}}" data-dtype="Number"/>
+      </div>
+      {{/if}}
+      {{#if triggerChoices.length}}
+      <div class="stat">
+        <em>Trigger</em>
+        <select name="system.trigger">
+          {{#each triggerChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{/if}}
+    </div>
+  </section>
+  {{/if}}
+
   {{! The rulebook's entry, as printed. Read, not edited: the name and the description
       below are the player's, and this is what the Item does whatever it is called. }}
   {{#if entry.length}}

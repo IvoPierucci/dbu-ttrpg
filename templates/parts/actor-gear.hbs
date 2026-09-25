@@ -20,6 +20,19 @@
         <a class="gear-name" data-action="editItem" data-item-id="{{row.itemId}}">{{row.name}}</a>
         {{#each row.tags as |tag|}}<span class="gear-tag">[{{tag}}]</span>{{/each}}
         <span class="gear-type">{{row.typeLabel}}</span>
+        {{#if row.explosive}}
+        {{#if row.placed}}
+        <span class="gear-type">{{row.triggerLabel}}{{#if row.countdown}} &middot; {{row.countdown}} Rounds{{/if}}</span>
+        {{#if row.canDetonate}}
+        <button type="button" class="gear-act" data-action="detonateGear"
+                data-item-id="{{row.itemId}}"
+                data-tooltip="Target the first one it catches. Add the rest from the card.">Detonate</button>
+        {{/if}}
+        {{else}}
+        <button type="button" class="gear-act" data-action="placeGear"
+                data-item-id="{{row.itemId}}" data-tooltip="{{row.triggerLabel}}">Place</button>
+        {{/if}}
+        {{/if}}
         <button type="button" class="gear-remove" data-action="deleteItem"
                 data-item-id="{{row.itemId}}" data-tooltip="Remove">&times;</button>
       </div>

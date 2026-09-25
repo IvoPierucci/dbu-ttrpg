@@ -39,6 +39,65 @@ export const GEAR_TAGS = Object.freeze({
   food: { label: "Food", craftSkill: "cooking" }
 });
 
+/**
+ * What can set off an Item that goes off - the Bomb's three, as its entry names them.
+ *
+ * `row` is whether the Item's own row offers to set it off. A Timed one is not set off by
+ * hand: its Rounds are counted, and the Round's card offers it when they have passed.
+ */
+export const GEAR_TRIGGERS = Object.freeze({
+  remote: { label: "Remote Controlled", row: true },
+  timed: { label: "Timed", row: false },
+  proximity: { label: "Proximity", row: true }
+});
+
+/** A list header, from one value or several. */
+function listOf(raw) {
+  const list = Array.isArray(raw) ? raw : String(raw ?? "").split(",");
+  return list.map(entry => String(entry).trim().toLowerCase()).filter(Boolean);
+}
+
+/** The triggers a file offers, in the order written, and only the ones there are. */
+export function triggersOf(definition) {
+  return listOf(definition?.triggers).filter(trigger => GEAR_TRIGGERS[trigger]);
+}
+
+/**
+ * The modifier an Item records from whoever makes it, or null if it records none.
+ *
+ * The Bomb: "When you create this Basic Item, record your Scholarship Modifier."
+ */
+export function recordedFrom(definition, actor) {
+  const attribute = String(definition?.records ?? "").trim().toLowerCase();
+  if (!attribute) return null;
+  const modifier = actor?.system?.attributes?.[attribute]?.mod;
+  return Number.isFinite(Number(modifier)) ? Number(modifier) : 0;
+}
+
+/**
+ * The placed, Timed Items whose Rounds have now passed, and every placed Timed one's count
+ * one Round lower.
+ *
+ * "This Bomb will trigger once that number of Combat Rounds have passed." Counted at the
+ * start of each Combat Round: placed with three, it goes off at the start of the third
+ * Round after. Held at zero once it gets there, until it is set off.
+ *
+ * @param {{system: object}[]} items the character's Gear
+ * @returns {{updates: object[], due: object[]}} the writes to make, and the Items now due
+ */
+export function tickCountdowns(items) {
+  const updates = [];
+  const due = [];
+  for (const item of items ?? []) {
+    const system = item.system ?? {};
+    if (!system.placed || (system.trigger !== "timed")) continue;
+    const left = Math.max(0, (Number(system.countdown) || 0) - 1);
+    if (left !== system.countdown) updates.push({ _id: item.id, "system.countdown": left });
+    if (left === 0) due.push(item);
+  }
+  return { updates, due };
+}
+
 /** Foundry's own bag, until an Item brings a picture of its own. */
 export const GEAR_ICON = "icons/svg/item-bag.svg";
 
@@ -75,9 +134,7 @@ export function typeOf(definition) {
  * list, so both are read. Only the tags the rules name are kept.
  */
 export function tagsOf(definition) {
-  const raw = definition?.tags;
-  const list = Array.isArray(raw) ? raw : String(raw ?? "").split(",");
-  return list.map(tag => String(tag).trim().toLowerCase()).filter(tag => GEAR_TAGS[tag]);
+  return listOf(definition?.tags).filter(tag => GEAR_TAGS[tag]);
 }
 
 /** The files for one list on the Gear tab, by name. */
@@ -94,7 +151,8 @@ export function gearOfList(definitions, list) {
  * rulebook's entry is kept as `text` and shown beside it, read from the file where the
  * file still exists.
  */
-export function gearItemFrom(definition) {
+export function gearItemFrom(definition, actor = null) {
+  const triggers = triggersOf(definition);
   return {
     name: definition.name,
     type: "gear",
@@ -107,7 +165,23 @@ export function gearItemFrom(definition) {
       craftDC: String(definition.craftDC ?? ""),
       text: String(definition.text ?? ""),
       source: String(definition.source ?? ""),
-      description: ""
+      description: "",
+
+      // What an Item that records something from its maker, and goes off, needs to keep.
+      // Copied rather than read from the file each time, as everything else here is: the
+      // Item is the character's, and the file may change under it.
+      records: String(definition.records ?? "").trim().toLowerCase(),
+      recorded: recordedFrom(definition, actor),
+      triggers,
+      trigger: triggers[0] ?? "",
+      placeCost: Math.max(0, Number(definition.placeCost) || 0),
+      placed: false,
+      countdown: 0,
+      detonation: {
+        profile: String(definition.detonationProfile ?? ""),
+        foundation: String(definition.detonationFoundation ?? ""),
+        autoHit: definition.detonationAutoHit === true
+      }
     }
   };
 }

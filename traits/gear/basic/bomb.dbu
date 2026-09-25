@@ -1,0 +1,69 @@
+id: bomb
+name: Bomb
+kind: gear
+tags: tech
+craftDC: Qualified
+# "When you create this Basic Item, record your Scholarship Modifier." Recorded when it is
+# given, which is when it is made as far as this system can tell - and editable on the Item,
+# since the one who made it is not always the one holding it.
+records: scholarship
+# "Then, select a trigger" - asked when it is given, and changeable on the Item.
+triggers: remote, timed, proximity
+# "By spending 1 Action while adjacent to your chosen position to place the bomb."
+placeCost: 1
+# "It uses the Basic Attack Maneuver of the Clearing (Energy) Profile as an Out-of-Sequence
+# Maneuver ... A Bomb's Strike Roll for this Attacking Maneuver will automatically succeed."
+detonationProfile: clearing
+detonationFoundation: energy
+detonationAutoHit: true
+source: Core Rule
+description: >
+  An explosive you place and set off later: by remote, on a timer, or when someone steps
+  near it.
+text: >
+  Bomb [Tech]: An explosive device that you place in a specific location.
+  –Craft DC: Qualified
+  –Effects: When you create this Basic Item, record your Scholarship Modifier. Then, select
+  a trigger:
+
+  * Remote Controlled. You can trigger this Bomb using a Remote Control Basic Item.
+  * Timed. When you place this Bomb, you can select any number of Combat Rounds. This Bomb
+  will trigger once that number of Combat Rounds have passed.
+  * Proximity. After you have placed this Bomb, if any Character except the Character that
+  placed this Bomb moves on a Square within a Sphere AoE (centered on the Bomb), the Bomb is
+  triggered.
+
+  A Bomb can be placed on any Square, Feature, or unoccupied Vehicle/Battle jacket by
+  spending 1 Action while adjacent to your chosen position to place the bomb.
+
+  Once a Bomb is triggered, it uses the Basic Attack Maneuver of the Clearing (Energy)
+  Profile as an Out-of-Sequence Maneuver, using the recorded Scholarship Modifier as its
+  Damage Attribute for this Attacking Maneuver. A Bomb’s Strike Roll for this Attacking
+  Maneuver will automatically succeed.
+
+---
+
+# --- Whose attack it is ------------------------------------------------------------------------
+#
+# The one who placed it, by the table's ruling: their Tier of Power, their Talents and their
+# bonuses all apply, and it counts as one of their attacks this Round. Only the Damage
+# Attribute is the Bomb's - the recorded Scholarship Modifier in place of their Force - and
+# the Strike lands whatever the defence rolls. No Ki is paid for it: nothing in the entry
+# charges for the Clearing Profile, and the Bomb is what makes the attack.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Where it is. There are no Squares here: which Square, Feature or Vehicle it is on, and who
+# the Sphere of a Proximity trigger catches, are the table's. So are the others the blast
+# reaches - the first is the one targeted when it goes off, and the rest are added from the
+# card, as for any Clearing attack.
+#
+# Remote Controlled asks for a Remote Control Basic Item. That Item is not in this system yet,
+# so nothing checks for it: the Detonate button is there, and whether they have the remote is
+# the table's.
+#
+# Timed is counted: at the start of each Combat Round a placed Bomb on a timer comes one Round
+# closer, and when its Rounds have passed the Round's card offers to set it off.
+#
+# It stays on the character after it goes off, and the player takes it off - the entry does
+# not say it is used up.

@@ -81,6 +81,14 @@
   color: var(--dbu-text-dim);
 }
 
+.dbu-ttrpg .gear-act {
+  flex: 0 0 auto;
+  width: auto;
+  line-height: 1.4;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
 .dbu-ttrpg .gear-remove {
   flex: 0 0 auto;
   width: auto;

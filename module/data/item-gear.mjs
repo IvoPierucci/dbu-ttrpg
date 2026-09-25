@@ -39,7 +39,35 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** The rulebook's entry, as the file had it when this was given. */
       text: new fields.StringField({ required: true, blank: true, initial: "" }),
 
-      source: new fields.StringField({ required: true, blank: true, initial: "" })
+      source: new fields.StringField({ required: true, blank: true, initial: "" }),
+
+      // --- An Item that records something from its maker and goes off - the Bomb ------------
+
+      /** Which Attribute's Modifier it records when made, or blank for none. */
+      records: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** The Modifier it recorded. Editable: the maker is not always the one holding it. */
+      recorded: new fields.NumberField({ required: false, nullable: true, integer: true, initial: null }),
+
+      /** The triggers it can be set to, and the one it is. */
+      triggers: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }),
+        { required: true, initial: () => [] }
+      ),
+      trigger: new fields.StringField({ required: true, blank: true, initial: "" }),
+
+      /** What placing it costs, in Actions. */
+      placeCost: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      /** Whether it is out on the Battlefield, waiting to go off. */
+      placed: new fields.BooleanField({ required: true, initial: false }),
+      /** A Timed one's Combat Rounds still to pass. */
+      countdown: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+
+      /** The Basic Attack it makes when it goes off, if it goes off. */
+      detonation: new fields.SchemaField({
+        profile: new fields.StringField({ required: true, blank: true, initial: "" }),
+        foundation: new fields.StringField({ required: true, blank: true, initial: "" }),
+        autoHit: new fields.BooleanField({ required: true, initial: false })
+      })
     };
   }
 }

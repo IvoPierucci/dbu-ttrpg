@@ -2,7 +2,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines } from "../effects/traits.mjs";
-import { GEAR_TAGS, GEAR_TYPES } from "../gear.mjs";
+import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES } from "../gear.mjs";
 
 /**
  * Sheet for a piece of Gear.
@@ -40,6 +40,17 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
 
     context.typeLabel = GEAR_TYPES[system.itemType]?.label ?? "";
     context.tagLabels = (system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag);
+
+    // What it recorded from its maker, and what sets it off - both theirs to change.
+    context.recordsLabel = system.records
+      ? `Recorded ${system.records.charAt(0).toUpperCase()}${system.records.slice(1)} Modifier`
+      : "";
+    context.triggerChoices = (system.triggers ?? []).map(trigger => ({
+      value: trigger,
+      label: GEAR_TRIGGERS[trigger]?.label ?? trigger,
+      chosen: trigger === system.trigger
+    }));
+    context.hasControls = Boolean(context.recordsLabel || context.triggerChoices.length);
 
     // The file's entry where the file still has one, and the copy's otherwise - the rules
     // live in traits/, and a copy made last week holds last week's wording.
