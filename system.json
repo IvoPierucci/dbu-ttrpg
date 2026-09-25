@@ -57,7 +57,8 @@
     },
     "Item": {
       "talent": {},
-      "maneuver": {}
+      "maneuver": {},
+      "gear": {}
     }
   },
   "primaryTokenAttribute": "life",

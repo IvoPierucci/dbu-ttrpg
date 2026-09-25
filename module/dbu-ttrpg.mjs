@@ -4,6 +4,8 @@ import DBUTalentData from "./data/item-talent.mjs";
 import DBUTalentSheet from "./sheets/item-talent-sheet.mjs";
 import DBUManeuverData from "./data/item-maneuver.mjs";
 import DBUManeuverSheet from "./sheets/item-maneuver-sheet.mjs";
+import DBUGearData from "./data/item-gear.mjs";
+import DBUGearSheet from "./sheets/item-gear-sheet.mjs";
 import { registerChatHooks, registerManeuverSocket } from "./chat.mjs";
 import { registerDebugTools } from "./effects/debug.mjs";
 import { forget, forgetAll } from "./effects/registry.mjs";
@@ -21,6 +23,7 @@ Hooks.once("init", () => {
   CONFIG.Actor.dataModels.character = DBUCharacterData;
   CONFIG.Item.dataModels.talent = DBUTalentData;
   CONFIG.Item.dataModels.maneuver = DBUManeuverData;
+  CONFIG.Item.dataModels.gear = DBUGearData;
 
   // Initiative. Without this, Foundry has no formula to roll at all, and the button in
   // the Combat Tracker does nothing - which is exactly how it behaved.
@@ -56,6 +59,12 @@ Hooks.once("init", () => {
     types: ["maneuver"],
     makeDefault: true,
     label: "DBU Maneuver Sheet"
+  });
+
+  DocumentSheetConfig.registerSheet(foundry.documents.Item, "dbu-ttrpg", DBUGearSheet, {
+    types: ["gear"],
+    makeDefault: true,
+    label: "DBU Gear Sheet"
   });
 
   registerChatHooks();

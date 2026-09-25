@@ -13,7 +13,23 @@
     <details class="condition-group" data-section="gearBasic"
              {{#if openSections.gearBasic}}open{{/if}}>
       <summary class="panel-title">Basic Items &amp; Accessories</summary>
+
+      {{#each gear.basic as |row|}}
+      <div class="gear-row" data-item-id="{{row.itemId}}" draggable="true">
+        <img src="{{row.img}}" width="24" height="24"/>
+        <a class="gear-name" data-action="editItem" data-item-id="{{row.itemId}}">{{row.name}}</a>
+        {{#each row.tags as |tag|}}<span class="gear-tag">[{{tag}}]</span>{{/each}}
+        <span class="gear-type">{{row.typeLabel}}</span>
+        <button type="button" class="gear-remove" data-action="deleteItem"
+                data-item-id="{{row.itemId}}" data-tooltip="Remove">&times;</button>
+      </div>
+      {{else}}
       <p class="tab-placeholder">None yet.</p>
+      {{/each}}
+
+      <button type="button" class="dbu-clash-button" data-action="addGear" data-list="basic">
+        Add Item
+      </button>
     </details>
   </section>
 

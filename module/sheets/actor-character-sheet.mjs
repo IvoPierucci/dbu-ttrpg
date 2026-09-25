@@ -9,6 +9,7 @@ import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
+import { GEAR_TAGS, GEAR_TYPES, gearItemFrom, gearOfList, typeOf } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -423,6 +424,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleQuality: DBUCharacterSheet._onToggleQuality,
       holdBreath: DBUCharacterSheet._onHoldBreath,
       grantManeuvers: DBUCharacterSheet._onGrantManeuvers,
+      addGear: DBUCharacterSheet._onAddGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
       toggleManeuver: DBUCharacterSheet._onToggleManeuver,
@@ -517,7 +519,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Every kind of Item a character can be given. */
-  static ACCEPTS = ["talent", "maneuver"];
+  static ACCEPTS = ["talent", "maneuver", "gear"];
 
   /** Accept an Item dropped onto the sheet, copying it onto this character. */
   async _onDrop(event) {
@@ -966,6 +968,23 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       effect: weatherTrait?.description ?? "",
       effects: weatherEffectsUpTo(weatherTrait?.text, tierNow)
     };
+
+    // The Gear the character has, by the list each is drawn in. The name is the Item's,
+    // so a renamed one shows as renamed.
+    context.gear = { basic: [], apparel: [], weapon: [] };
+    for (const item of this.actor.items.filter(owned => owned.type === "gear")) {
+      const type = GEAR_TYPES[item.system.itemType] ?? GEAR_TYPES.basic;
+      context.gear[type.list]?.push({
+        itemId: item.id,
+        name: item.name,
+        img: item.img,
+        typeLabel: type.label,
+        tags: (item.system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag)
+      });
+    }
+    for (const list of Object.values(context.gear)) {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     context.collisionDamage = COLLISION_DAMAGE;
     context.baseTierOfPower = system.baseTierOfPower ?? 1;
@@ -1759,6 +1778,60 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     await this.actor.createEmbeddedDocuments("Item", missing);
     ui.notifications.info(`Gave ${this.actor.name} ${missing.length} core Maneuver(s).`);
+  }
+
+  /**
+   * Give the character an Item: pick one from the files for that list, and a copy of it
+   * becomes theirs.
+   *
+   * Every Item there is is offered, and nothing is counted: how they came by it - the Gear
+   * Kit, a find, a gift - is between the player and the ARC.
+   */
+  static async _onAddGear(event, target) {
+    const list = target.dataset.list || "basic";
+    const offered = gearOfList(traitsOfKind("gear"), list);
+
+    if (!offered.length) {
+      ui.notifications.info("There are no Items of that kind to add yet.");
+      return;
+    }
+
+    // Grouped by Item Type where a list holds more than one - Basic Items and Accessories
+    // share theirs.
+    const groups = Object.entries(GEAR_TYPES)
+      .filter(([, type]) => type.list === list)
+      .map(([key, type]) => ({
+        label: type.label,
+        items: offered.filter(definition => typeOf(definition) === key)
+      }))
+      .filter(group => group.items.length);
+
+    const escape = Handlebars.escapeExpression;
+    const options = groups.map(group => `
+      <optgroup label="${escape(group.label)}">
+        ${group.items.map(definition =>
+          `<option value="${escape(definition.id)}">${escape(definition.name)}</option>`).join("")}
+      </optgroup>`).join("");
+
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.actor.name} - Add Item` },
+      content: `<select name="gear" class="dbu-gear-pick">${options}</select>`,
+      buttons: [
+        {
+          action: "confirm",
+          label: "Add",
+          callback: (event, button, dialog) =>
+            dialog.element.querySelector('select[name="gear"]')?.value ?? null
+        },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+
+    const definition = offered.find(entry => entry.id === chosen);
+    if (!definition) return;
+    return this.actor.createEmbeddedDocuments("Item", [gearItemFrom(definition)]);
   }
 
   /**

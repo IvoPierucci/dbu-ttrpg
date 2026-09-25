@@ -1,0 +1,65 @@
+const { ItemSheetV2 } = foundry.applications.sheets;
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+
+import { getTrait, printedLines } from "../effects/traits.mjs";
+import { GEAR_TAGS, GEAR_TYPES } from "../gear.mjs";
+
+/**
+ * Sheet for a piece of Gear.
+ *
+ * One page: the name and picture, what kind of Item it is, the rulebook's entry, and the
+ * player's own description. The name and the description are theirs to change - a
+ * character's Capsule Car is theirs to call what they like - and the entry stays as printed.
+ */
+export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+
+  static DEFAULT_OPTIONS = {
+    classes: ["dbu-ttrpg", "gear"],
+    position: { width: 480, height: 460 },
+    window: { resizable: true },
+    actions: {
+      editImage: DBUGearSheet._onEditImage
+    },
+    form: { submitOnChange: true }
+  };
+
+  static PARTS = {
+    body: { template: "systems/dbu-ttrpg/templates/parts/gear-sheet.hbs", scrollable: [""] }
+  };
+
+  /** @override */
+  async _prepareContext(options) {
+    const context = await super._prepareContext(options);
+    const system = this.item.system;
+
+    context.item = this.item;
+    context.system = system;
+    context.fields = system.schema.fields;
+    context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+      system.description, { relativeTo: this.item });
+
+    context.typeLabel = GEAR_TYPES[system.itemType]?.label ?? "";
+    context.tagLabels = (system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag);
+
+    // The file's entry where the file still has one, and the copy's otherwise - the rules
+    // live in traits/, and a copy made last week holds last week's wording.
+    const entry = getTrait(system.gearId)?.text || system.text;
+    context.entry = printedLines(entry).map(line => ({ text: line, gap: !line }));
+
+    return context;
+  }
+
+  /** Handle clicking the picture to pick a new one. */
+  static async _onEditImage(event, target) {
+    if (!this.isEditable) return;
+    const attr = target.dataset.edit;
+    const picker = new foundry.applications.apps.FilePicker.implementation({
+      current: foundry.utils.getProperty(this.document, attr),
+      type: "image",
+      callback: path => this.document.update({ [attr]: path }),
+      top: this.position.top + 40,
+      left: this.position.left + 10
+    });
+    return picker.browse();
+  }
+}

@@ -1,0 +1,29 @@
+<div class="gear-sheet">
+  <header class="talent-header">
+    <img class="profile-img" src="{{item.img}}" data-action="editImage" data-edit="img" height="48" width="48"/>
+    <div class="talent-identity">
+      <input type="text" name="name" value="{{item.name}}" placeholder="Item Name"/>
+      <div class="gear-facts">
+        <span>{{typeLabel}}</span>
+        {{#each tagLabels as |tag|}}<span class="gear-tag">[{{tag}}]</span>{{/each}}
+        {{#if system.craftDC}}<span>Craft DC: {{system.craftDC}}</span>{{/if}}
+      </div>
+    </div>
+  </header>
+
+  {{! The rulebook's entry, as printed. Read, not edited: the name and the description
+      below are the player's, and this is what the Item does whatever it is called. }}
+  {{#if entry.length}}
+  <section class="panel gear-entry">
+    {{#each entry as |line|}}
+    {{#if line.gap}}<br/>{{else}}<p>{{line.text}}</p>{{/if}}
+    {{/each}}
+  </section>
+  {{/if}}
+
+  <section class="panel">
+    <h3 class="panel-title">Description</h3>
+    {{formInput fields.description value=system.description enriched=enrichedDescription
+                toggled=false editable=editable}}
+  </section>
+</div>

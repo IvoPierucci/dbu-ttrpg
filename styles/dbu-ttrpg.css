@@ -54,6 +54,56 @@
   flex: 0 0 auto;
 }
 
+/* --- Gear ------------------------------------------------------------------ */
+
+/* One Item to a row: picture, name, tags, type, and a way to take it off. */
+.dbu-ttrpg .gear-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--dbu-border);
+}
+
+.dbu-ttrpg .gear-row img {
+  flex: 0 0 auto;
+  border: none;
+}
+
+.dbu-ttrpg .gear-name {
+  flex: 1 1 auto;
+  cursor: pointer;
+}
+
+.dbu-ttrpg .gear-tag,
+.dbu-ttrpg .gear-type {
+  font-size: 10px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .gear-remove {
+  flex: 0 0 auto;
+  width: auto;
+  line-height: 1;
+  padding: 0 6px;
+}
+
+.dbu-ttrpg .gear-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .gear-entry p {
+  margin: 0 0 4px;
+}
+
+.dbu-gear-pick {
+  width: 100%;
+}
+
 /* Two rows of four, the second set half a tab across from the first, so they sit
    staggered like bricks rather than stacked in columns. Eight tabs in one row filled the
    width to the edge, and Gear was the eighth.
