@@ -1,0 +1,33 @@
+id: tainted
+name: Tainted
+kind: conditions
+# One stack per clock, so the Square stays Poisonous until the last attacker's clock runs
+# out rather than the first. The cap only has to be out of anybody's reach, as Ignited's does.
+maxStacks: 99
+# Not a Combat Condition: the entry makes a Square Poisoned and never names one.
+combatCondition: no
+# The Environmental Quality this mark puts on the Square while it is held. Named here and
+# not in the code, where no Quality is named.
+quality: poisonous
+source: Core Rule
+description: >
+  Venom soaks the ground under you. Your Square is Poisonous.
+text: >
+  Tainted: the Elemental (Poison) Profile's mark. "Any Squares occupied by Character(s) who
+  take Damage from this Attacking Maneuver become Poisoned (see — Environmental Qualities,
+  Battle Environments) until the start of your next turn."
+
+---
+
+# --- The name is this system's ------------------------------------------------------------
+#
+# Ignited's twin, for poison: the entry makes a Square "Poisoned", which is the Poisonous
+# Environmental Quality - the Quality's file is named for the adjective, the Combat
+# Condition for the participle, and the entry uses the second for both. It lands on whoever
+# took the Damage, as a mark on the attacker's clock, and `qualitiesOf` adds the Quality in
+# the `quality:` header while it is held.
+#
+# Not called Poisoned, which is the Combat Condition's own id: one name for two files would
+# have the lookup return whichever loaded last.
+#
+# No effects of its own. What poisoned ground does is the Poisonous Quality's file.

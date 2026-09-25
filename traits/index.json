@@ -45,6 +45,7 @@
     "conditions/ignited.dbu",
     "conditions/frosted.dbu",
     "conditions/crackling.dbu",
+    "conditions/tainted.dbu",
     "conditions/staggered.dbu",
     "conditions/stress-exhaustion.dbu",
     "conditions/suffocating.dbu",

@@ -793,6 +793,30 @@ export const PROFILES = Object.freeze({
     // Staggering Attack for free, the way Launching grants Knockback: added to the
     // attack's Advantages when it is declared, and never counted towards its TP.
     grantsAdvantage: "staggering-attack"
+  },
+
+  elementalPoison: {
+    label: "Elemental (Poison)",
+    foundations: ["magic"],
+    kiCostPerTier: 8,
+    damageCategory: "direct",
+    text: `
+      Elemental (Poison): Using the powers of poison, you shoot a stream of potent venom
+      at your enemies to weaken them.
+      –Damage Category: Direct
+      –KP Cost: 8(T)
+      –Effect: This Profile has multiple effects:
+      * If you knock an Opponent through a Health Threshold, they gain the Poisoned Combat
+        Condition until the end of your next turn.
+      * Any Squares occupied by Character(s) who take Damage from this Attacking Maneuver
+        become Poisoned (see — Environmental Qualities, Battle Environments) until the
+        start of your next turn. If this Attacking Maneuver has an AoE, then all Squares
+        within the AoE become Poisoned until the start of your next turn instead.`,
+    // Fire's shape again, with Poisoned and the Poisonous Quality. The clock the attacker
+    // keeps on the Poisoned is also what the Treatment Maneuver reads to find who did it.
+    onThreshold: { condition: "poisoned", stacks: 1 },
+    squareMark: { condition: "tainted", stacks: 1 },
+    needs: "the AoE sentence - no attack here gives this Profile an Area."
   }
 });
 
