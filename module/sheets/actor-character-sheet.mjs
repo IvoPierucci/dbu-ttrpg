@@ -457,6 +457,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       template: "systems/dbu-ttrpg/templates/parts/actor-battlefields.hbs",
       scrollable: [""]
     },
+    gear: { template: "systems/dbu-ttrpg/templates/parts/actor-gear.hbs", scrollable: [""] },
     progression: {
       template: "systems/dbu-ttrpg/templates/parts/actor-progression.hbs",
       scrollable: [""]
@@ -556,6 +557,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Beside Traits rather than inside Combat: a Battlefield is something the whole table
     // is standing in, and the Combat tab is this character's own tracking values.
     battlefields: { id: "battlefields", group: "primary", label: "Battlefields" },
+    // Gear, which is the rulebook's Equipment. Here ahead of its rules, as Battlefields
+    // was, so there is somewhere for them to go.
+    gear: { id: "gear", group: "primary", label: "Gear" },
     progression: { id: "progression", group: "primary", label: "Progression" },
     biography: { id: "biography", group: "primary", label: "Biography" }
   };
