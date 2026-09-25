@@ -293,7 +293,17 @@
   color: var(--dbu-accent);
 }
 
-/* The attack Profile picker: one collapsible list per group. */
+/* The attack Profile picker: one collapsible list per group.
+
+   Scrolls inside itself. With every group open it runs past the bottom of the screen -
+   the Magic Profiles took it there - and the ones below the edge could not be reached
+   without folding the others away. The Ki Wager under it stays where it is. */
+.dbu-profile-picker {
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .dbu-profile-group {
   margin-bottom: 4px;
   border: 1px solid rgba(128, 128, 128, 0.35);
@@ -1951,6 +1961,10 @@
    light against a dark ground. */
 
 .application.dbu-dialog {
+  /* Never taller than the screen. A dialog sizes itself to its contents, and one with
+     more in it than fits had its bottom - and its buttons - off the edge. */
+  max-height: 90vh;
+
   /* A dialog is sized to its contents, so one long sentence in it decides how wide the
      window is - Charging Assault's hint runs to about ninety characters and stretched
      the window most of the way across the screen to hold a field three digits wide.
@@ -1992,6 +2006,9 @@
   /* The frame carries the same ceiling; this one holds when the frame is given an
      explicit width instead of being measured. */
   max-width: min(440px, 90vw);
+
+  /* And scrolls when the frame's height ceiling is reached, rather than cutting off. */
+  overflow-y: auto;
 }
 
 .application.dbu-dialog .window-content p,
