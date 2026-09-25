@@ -85,6 +85,19 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         until: new fields.StringField({ required: true, blank: true, initial: "" })
       }),
 
+      /**
+       * Thrown to catch someone - the Net: the Foundations its Strike may be made with, the
+       * mark winning that Strike leaves, and the Condition winning the Might Clash after it.
+       */
+      snare: new fields.SchemaField({
+        foundations: new fields.ArrayField(
+          new fields.StringField({ required: true, blank: false }),
+          { required: true, initial: () => [] }
+        ),
+        mark: new fields.StringField({ required: true, blank: true, initial: "" }),
+        condition: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+
       /** The Conditions using it takes off - the Longevity Supplement's. */
       removes: new fields.ArrayField(
         new fields.StringField({ required: true, blank: false }),

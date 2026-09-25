@@ -280,10 +280,21 @@ async function runVerb(actor, call, context) {
         return;
       }
 
+      // Caught in a Net by the one they are Clashing with: "substitute your Might with this
+      // recorded Scholarship Modifier for any Might Clashes made through ... the Pinned
+      // Combat Condition inflicted through it." The note is on them while it lasts.
+      const snared = actor.getFlag?.("dbu-ttrpg", "snaredBy");
+      const netted = snared && (snared.by === against.uuid)
+        && ((Number(actor.system?.conditions?.[snared.condition]) || 0) > 0);
+
       const { postMightClash } = await import("../chat.mjs");
       return postMightClash(actor, against, {
         maneuverName: "Might Clash",
-        reason: `${actor.name} against ${against.name}`
+        reason: `${actor.name} against ${against.name}`,
+        ...(netted
+          ? { mightFor: { [against.uuid]: snared.might },
+              mightLabel: `${snared.itemName} (Scholarship)` }
+          : {})
       });
     }
 

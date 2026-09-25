@@ -432,6 +432,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       storeGear: DBUCharacterSheet._onStoreGear,
       clashGear: DBUCharacterSheet._onClashGear,
       consumeGear: DBUCharacterSheet._onConsumeGear,
+      snareGear: DBUCharacterSheet._onSnareGear,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -1005,6 +1006,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         scatters: Boolean(item.system.hazard?.dice),
         // An Item thrown to Clash with whoever it catches.
         clashes: Boolean(item.system.clash?.save && item.system.clash?.condition),
+        // An Item thrown to catch someone.
+        snares: Boolean(item.system.snare?.condition),
         // An Item used up to take Conditions off, and whether it has been this Encounter.
         consumable: ((item.system.removes ?? []).length > 0) || Boolean(item.system.heal?.dice),
         usedUp: Boolean(item.system.oncePerEncounter) && usedThisEncounter(this.actor, item),
@@ -2121,6 +2124,39 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
 
     if (item.system.consumed) await item.delete();
+  }
+
+  /**
+   * Throw an Item to catch someone - the Net.
+   *
+   * "Spend 2 Actions to target a Character who is not at Long Range. Make a Clash (Energy
+   * Strike/Magic Strike vs Dodge)." At the one character targeted; the range is the
+   * table's. Energy or Magic, so the thrower has to be able to make one of the two.
+   */
+  static async _onSnareGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const snare = item?.system.snare;
+    if (!snare?.condition) return;
+
+    const caught = game.user.targets.first()?.actor;
+    if (!caught || (caught.uuid === this.actor.uuid)) {
+      ui.notifications.warn(`Target the one the ${item.name} is thrown at first.`);
+      return;
+    }
+
+    const { whyNotThisFoundation } = await import("../maneuvers.mjs");
+    const refused = (snare.foundations ?? []).map(key =>
+      whyNotThisFoundation(this.actor, key, key.charAt(0).toUpperCase() + key.slice(1)));
+    if (refused.length && refused.every(Boolean)) {
+      ui.notifications.warn(refused.join(" "));
+      return;
+    }
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    const { postSnare } = await import("../chat.mjs");
+    return postSnare(this.actor, caught, item);
   }
 
   /** Set off an Item that is out on the Battlefield. */

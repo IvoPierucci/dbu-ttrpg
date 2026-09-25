@@ -359,6 +359,108 @@ async function applyClash(messageId, clash) {
   if (clash.gearClash && clash.result && !clash.gearClash.applied) {
     await settleGearClash(message, clash);
   }
+
+  if (clash.snare && clash.result && !clash.snare.applied) {
+    await settleSnare(message, clash);
+  }
+}
+
+/**
+ * Open the Net's first Clash: the thrower's Strike against the target's Dodge.
+ *
+ * "Make a Clash (Energy Strike/Magic Strike vs Dodge)." The Strike category, with the
+ * Defender held to Dodge. What winning each step leaves is carried whole, with the recorded
+ * Modifier and the thrower's Tier taken now - the Tier is the thrower's, by the table's
+ * ruling, and what it was when they threw is what the entry means.
+ */
+export async function postSnare(thrower, target, item) {
+  const snare = item.system.snare;
+  const tier = Math.max(1, thrower.system.tierOfPower ?? 1);
+  const might = Number.isFinite(item.system.recorded) ? item.system.recorded : 0;
+  const foundations = (snare.foundations ?? [])
+    .map(key => key.charAt(0).toUpperCase() + key.slice(1)).join(" Strike/");
+
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: thrower }),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        [RESPONDABLE_FLAG]: false,
+        [CLASH_FLAG]: {
+          category: "strike",
+          clashLabel: `Clash (${foundations} Strike vs Dodge)`,
+          maneuverName: item.name,
+          reason: `Win and ${target.name}'s Defense Value drops by ${tier}, and a Might Clash `
+            + "follows.",
+          challengerUuid: thrower.uuid,
+          challengerName: thrower.name,
+          defenderUuid: target.uuid,
+          defenderName: target.name,
+          defenderRoll: "dodge",
+          dodgeOnly: true,
+          snare: {
+            stage: "strike", applied: false, itemName: item.name,
+            mark: snare.mark, condition: snare.condition, tier, might
+          },
+          ready: [],
+          result: null
+        }
+      }
+    }
+  });
+}
+
+/**
+ * What a settled Net Clash leaves.
+ *
+ * The Strike: "If you win, reduce their Defense Value by 1(T) until the end of your next
+ * turn and make a Might Clash against that same Character." The Might Clash: "If you win,
+ * that target is Pinned." A tie goes to the Defender, here as everywhere.
+ */
+async function settleSnare(message, clash) {
+  const thrower = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!thrower || !target) return;
+
+  // Marked first, whatever happens below: a failure halfway through must not leave a card
+  // that settles itself again on the next render.
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, snare: { ...clash.snare, applied: true } });
+
+  const snare = clash.snare;
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} slips the ${snare.itemName}.`);
+    return;
+  }
+
+  if (snare.stage === "strike") {
+    // The thrower's Tier in stacks, each a point off their Defense Value, on the thrower's
+    // clock to the end of their next turn.
+    await markUntilNextTurn(thrower, target, snare.mark, snare.tier, "end", snare.itemName);
+    await settledNote(message, `${target.name}'s Defense Value is ${snare.tier} lower until the `
+      + `end of ${thrower.name}'s next turn.`);
+
+    // The recorded Modifier is the thrower's Might in this one.
+    return postMightClash(thrower, target, {
+      maneuverName: snare.itemName,
+      reason: `Win and ${target.name} is ${getTrait(snare.condition)?.name ?? snare.condition}.`,
+      mightFor: { [thrower.uuid]: snare.might },
+      mightLabel: `${snare.itemName} (Scholarship)`,
+      snare: { ...snare, stage: "might", applied: false }
+    });
+  }
+
+  // The Might Clash. Won, the Condition - and a note on them of who threw it and what it
+  // recorded, since "the Pinned Combat Condition inflicted through it" is Clashed against
+  // with the recorded Modifier too, every time they try to get free.
+  const { setCondition } = await import("./conditions.mjs");
+  if (await setCondition(target, snare.condition, 1) === false) return;
+  await requestActorUpdate(target, {
+    [`flags.${SCOPE}.snaredBy`]: {
+      by: thrower.uuid, might: snare.might, condition: snare.condition, itemName: snare.itemName
+    }
+  });
+  await settledNote(message, `${target.name} is ${getTrait(snare.condition)?.name
+    ?? snare.condition}.`);
 }
 
 /**
@@ -4711,7 +4813,15 @@ const CLASH_ROLLS = ({
   might: {
     label: "Might Clash",
     family: "might",
-    of: (actor) => ({ label: "Might", value: actor.system.might }),
+    // Or what stands in for it, where the card names one - the Net's recorded Scholarship
+    // Modifier: "substitute your Might with this recorded Scholarship Modifier for any Might
+    // Clashes made through the effects of this Basic Item".
+    of: (actor, clash, uuid) => {
+      const own = clash?.mightFor?.[uuid];
+      return Number.isFinite(own)
+        ? { label: clash.mightLabel || "Might", value: own }
+        : { label: "Might", value: actor.system.might };
+    },
     // Might is not a Skill, so it does not take a Skill's flat critical die - it takes
     // the character's own, which grows with the Tier of Power.
     criticalDice: (actor) => actor.system.dice.critical.formula,
@@ -4797,13 +4907,15 @@ const CLASH_ROLLS = ({
     }),
 
     prompt: (actor, clash, uuid) => (uuid === clash.defenderUuid)
-      ? "Strike or Dodge"
+      ? (clash.dodgeOnly ? "Dodge" : "Strike or Dodge")
       : "Strike",
 
     // The Defender's question, asked before they are marked ready and before either side
     // has seen a number.
     choose: async (clash, actor) => {
       if (actor.uuid !== clash.defenderUuid) return {};
+      // "Strike vs Dodge": nothing to choose.
+      if (clash.dodgeOnly) return { defenderRoll: "dodge" };
 
       const chosen = await pick(
         `${clash.maneuverName} - ${actor.name}`,

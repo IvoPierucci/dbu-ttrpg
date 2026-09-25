@@ -285,6 +285,13 @@ export function registerConditionHooks() {
       await announceChanges(actor, options.dbuStatesBefore,
         actor.system.states ?? {}, "state");
     }
+
+    // A Condition inflicted through an Item - the Net's Pinned - leaves a note of who and
+    // with what. Gone with the Condition, so the next one is Clashed against as usual.
+    const snared = actor.getFlag("dbu-ttrpg", "snaredBy");
+    if (snared && !((Number(actor.system.conditions?.[snared.condition]) || 0) > 0)) {
+      await actor.unsetFlag("dbu-ttrpg", "snaredBy");
+    }
   });
 }
 

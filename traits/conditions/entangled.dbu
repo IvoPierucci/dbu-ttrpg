@@ -1,0 +1,29 @@
+id: entangled
+name: Entangled
+kind: conditions
+# One stack per Tier of Power of whoever threw the Net, so the cap only has to be out of
+# anybody's reach.
+maxStacks: 99
+# Not a Combat Condition: the entry reduces a Defense Value and never names one.
+combatCondition: no
+source: Core Rule
+description: >
+  Caught in a Net. Your Defense Value is 1 lower per stack.
+text: >
+  Entangled: the Net's mark. "If you win, reduce their Defense Value by 1(T) until the end of
+  your next turn."
+
+---
+
+# --- The name is this system's ------------------------------------------------------------
+#
+# A Defense Value reduction that runs out on somebody else's clock needs somewhere to be held,
+# and this is it - the shape Darkened has.
+#
+# 1(T) is the thrower's Tier of Power, by the table's ruling, not the one caught. A passive
+# here reads the Tier of whoever carries it, so the amount is carried as stacks instead: the
+# thrower's Tier in stacks, one point off per stack, each stack on the thrower's clock to the
+# end of their next turn.
+
+[passive per stack]
+defenseValue -= 1;

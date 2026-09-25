@@ -195,6 +195,15 @@ export function gearItemFrom(definition, actor = null) {
         until: String(definition.clashUntil ?? "").trim().toLowerCase()
       },
 
+      // An Item thrown to catch someone - the Net: the Foundations its Strike may be made
+      // with, the mark winning the Strike leaves, and the Condition winning the Might Clash
+      // after it does.
+      snare: {
+        foundations: listOf(definition.snareFoundations),
+        mark: String(definition.snareMark ?? "").trim().toLowerCase(),
+        condition: String(definition.snareCondition ?? "").trim().toLowerCase()
+      },
+
       // An Item used up to take Conditions off, or to heal - the Longevity Supplement,
       // Medicine.
       removes: listOf(definition.removes),

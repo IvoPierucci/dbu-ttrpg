@@ -1,0 +1,53 @@
+id: net
+name: Net
+kind: gear
+craftDC: Expert
+# "Upon creating this Item, record your Scholarship Modifier."
+records: scholarship
+# "Spend 2 Actions to target a Character who is not at Long Range."
+placeCost: 2
+# "Make a Clash (Energy Strike/Magic Strike vs Dodge). If you win, reduce their Defense Value
+# by 1(T) until the end of your next turn and make a Might Clash against that same Character.
+# If you win, that target is Pinned."
+snareFoundations: energy, magic
+snareMark: entangled
+snareCondition: pinned
+source: Core Rule
+description: >
+  Thrown to catch someone: win a Strike against their Dodge and their Defense Value drops,
+  then win a Might Clash - with your recorded Scholarship as your Might - and they are Pinned.
+text: >
+  Net: A grid of rope created to capture and secure a target.
+  –Craft DC: Expert
+  –Effects: Upon creating this Item, record your Scholarship Modifier, substitute your Might
+  with this recorded Scholarship Modifier for any Might Clashes made through the effects of
+  this Basic Item or the Pinned Combat Condition inflicted through it.
+
+  Spend 2 Actions to target a Character who is not at Long Range. Make a Clash (Energy
+  Strike/Magic Strike vs Dodge). If you win, reduce their Defense Value by 1(T) until the end
+  of your next turn and make a Might Clash against that same Character. If you win, that
+  target is Pinned.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Throw: 2 Actions, at the one character targeted, and a Clash of the thrower's Strike against
+# their Dodge - Dodge only, the entry names no other answer. "Energy Strike/Magic Strike" is
+# which Foundation the throw is made with, and the thrower has to be able to make an Energy
+# or a Magic Attack at all: a Force or a Magic Score of 3.
+#
+# Won, their Defense Value drops by 1(T) - the thrower's Tier, by the table's ruling - until the
+# end of the thrower's next turn: stacks of Entangled, one per Tier, on the thrower's clock.
+# Then the Might Clash, and won, they are Pinned.
+#
+# "Substitute your Might with this recorded Scholarship Modifier for any Might Clashes made
+# through the effects of this Basic Item or the Pinned Combat Condition inflicted through
+# it." So the recorded Modifier is the thrower's Might in the Net's own Might Clash, and in
+# every Might Clash the Pinned character makes to get free - a Pinned inflicted through the
+# Net is remembered on them, with who threw it and what it recorded, until it comes off.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# "Not at Long Range": there are no distances here. Whether it is used up the entry does not
+# say, and it stays on the character.
