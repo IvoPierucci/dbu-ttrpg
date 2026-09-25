@@ -10,8 +10,8 @@ import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable, connectedItem,
-  encounterUseKey, gearItemFrom, gearOfList, heldBy, isStored, setGathered, storable, tierDice,
-  typeOf, usedThisEncounter } from "../gear.mjs";
+  encounterUseKey, gearItemFrom, gearOfList, heldBy, isStored, portionEffects, setGathered,
+  storable, tierDice, typeOf, usedThisEncounter } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -441,6 +441,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       restoreGear: DBUCharacterSheet._onRestoreGear,
       summonGear: DBUCharacterSheet._onSummonGear,
       drawGear: DBUCharacterSheet._onDrawGear,
+      eatPortion: DBUCharacterSheet._onEatPortion,
+      endMark: DBUCharacterSheet._onEndMark,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -736,7 +738,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // is counting it rather than on whoever is carrying it.
     context.marks = marksFor(this.actor).map(mark => ({
       ...mark,
-      note: markClock(this.actor, mark.key)
+      note: markClock(this.actor, mark.key),
+      // A mark with no clock of its own - "for an hour", say - is ended by the player.
+      endable: getTrait(mark.key)?.endedByHand === true
     }));
 
     // "Treat all Battle Weathers as if they were 1 Weather Tier lower." There are no
@@ -1004,6 +1008,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // A full restore, while there is a charge left to do it with.
         restores: Boolean(item.system.restore?.full) && ((item.system.charges ?? 0) > 0),
         feeds: Boolean(item.system.restore?.feedsDefeated),
+        // The portions left, a button each.
+        portions: (item.system.portions ?? []).filter(portion => portion.count > 0)
+          .map(portion => ({ key: portion.key, label: portion.label, count: portion.count })),
         // One of a set: which, of how many, and - on the first of a gathered set - Summon.
         setLabel: item.system.set?.size ? `${item.system.set.number} of ${item.system.set.size}` : "",
         summons: Boolean(item.system.set?.size) && (item.system.set.number === 1)
@@ -1961,6 +1968,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.system.chargesDice = size.dice;
     }
 
+    // "Select up to 1d6 Medibugs from the categories below." Rolled, and shared out.
+    if (data.system.portionsDice) {
+      const roll = await new Roll(data.system.portionsDice).evaluate();
+      await roll.toMessage({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        flavor: definition.name
+      });
+      const counts = await DBUCharacterSheet.#askPortions(definition.name, data.system.portions,
+        roll.total);
+      if (!counts) return;
+      data.system.portions = data.system.portions.map((portion, index) =>
+        ({ ...portion, count: counts[index] ?? 0 }));
+    }
+
     // "When you create this Basic Item, it has 1d6 Poison Drops." Rolled now, and said.
     if (data.system.chargesDice) {
       const roll = await new Roll(data.system.chargesDice).evaluate();
@@ -2008,6 +2029,40 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const size = Math.min(set.max, Math.max(set.min, chosen.size || set.max));
     const number = Math.min(size, Math.max(1, chosen.number || 1));
     return { size, number };
+  }
+
+  /** How many of each kind of portion, up to a total. */
+  static async #askPortions(name, portions, most) {
+    const escape = Handlebars.escapeExpression;
+    const rows = portions.map((portion, index) => `
+      <label class="dbu-wager"><span>${escape(portion.label)}</span>
+        <input type="number" name="portion-${index}" value="0" min="0" max="${most}"/></label>`)
+      .join("");
+
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${name} - up to ${most}` },
+      content: rows,
+      buttons: [
+        {
+          action: "confirm",
+          label: "Confirm",
+          callback: (event, button, dialog) => portions.map((portion, index) => Math.max(0,
+            Math.floor(Number(dialog.element.querySelector(`input[name="portion-${index}"]`)?.value)) || 0))
+        },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!Array.isArray(chosen)) return null;
+
+    // "Up to" the roll: what was asked for past it is taken off the last kinds first.
+    let left = most;
+    return chosen.map(count => {
+      const kept = Math.min(count, left);
+      left -= kept;
+      return kept;
+    });
   }
 
   /** Which size an Item that comes in several is. */
@@ -2434,6 +2489,47 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         + `${item.system.set.size} ${Handlebars.escapeExpression(base)}s and summons the `
         + "Eternal Dragon!</p>"
     });
+  }
+
+  /**
+   * Eat one portion of an Item with several kinds - a Medibug.
+   *
+   * "You can spend 1 Action to consume a Medibug and apply the benefits listed."
+   */
+  static async _onEatPortion(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const portions = item?.system.portions ?? [];
+    const index = portions.findIndex(portion => portion.key === target.dataset.portion);
+    const portion = portions[index];
+    if (!portion || !(portion.count > 0)) return;
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    const { update, removes, gains } = portionEffects(portion, this.actor.system);
+    if (Object.keys(update).length) await this.actor.update(update);
+    const { setCondition } = await import("../conditions.mjs");
+    for (const key of removes) await setCondition(this.actor, key, 0);
+    if (gains) {
+      const { gainCondition } = await import("../effects/moments-runtime.mjs");
+      await gainCondition(this.actor, gains, 1);
+    }
+
+    await item.update({ "system.portions": portions.map((entry, i) =>
+      (i === index) ? { ...entry, count: entry.count - 1 } : entry) });
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(this.actor.name)} eats a `
+        + `${Handlebars.escapeExpression(portion.label)}.</p>`
+    });
+  }
+
+  /** End a mark that has no clock of its own - Beautified, "for an hour". */
+  static async _onEndMark(event, target) {
+    const key = target.dataset.mark;
+    if (getTrait(key)?.endedByHand !== true) return;
+    const { setCondition } = await import("../conditions.mjs");
+    return setCondition(this.actor, key, 0);
   }
 
   /**

@@ -92,6 +92,44 @@ export function conditionsRestored(held, conditions, keeps = []) {
     .map(([key]) => key);
 }
 
+/**
+ * The kinds of portion a file offers, each read off its own headers: `<kind>Label`,
+ * `<kind>Full` for Life and Ki to their maximum, `<kind>Dot` for Damage Over Time off,
+ * `<kind>Removes` for the Conditions taken off, `<kind>Gains` for a mark put on.
+ */
+export function portionsOf(definition) {
+  return listOf(definition?.portions).map(key => ({
+    key,
+    label: String(definition[`${key}Label`] ?? key),
+    count: 0,
+    full: definition[`${key}Full`] === true,
+    dot: definition[`${key}Dot`] === true,
+    removes: listOf(definition[`${key}Removes`]),
+    gains: String(definition[`${key}Gains`] ?? "").trim().toLowerCase()
+  }));
+}
+
+/**
+ * What eating one portion changes about a character, as the writes to make.
+ *
+ * Revive: Life and Ki to their maximum. Achichi: Damage Over Time off, every stack, and its
+ * clocks with it. Zutsu and Achichi: the Conditions named, off. Beaut: a mark, gained.
+ */
+export function portionEffects(portion, system) {
+  const update = {};
+  if (portion.full) {
+    update["system.life.value"] = system.life.max;
+    update["system.ki.value"] = system.ki.max;
+  }
+  if (portion.dot) {
+    update["system.dotStacks"] = 0;
+    update["system.timed"] = (system.timed ?? []).filter(entry => entry.kind !== "dot");
+  }
+  const removes = (portion.removes ?? [])
+    .filter(key => (Number(system.conditions?.[key]) || 0) > 0);
+  return { update, removes, gains: portion.gains || "" };
+}
+
 /** The character's Item that gives them access to this Maneuver, if one does. */
 export function gearGranting(items, maneuverId) {
   return (items ?? []).find(item => (item.type === "gear")
@@ -259,6 +297,11 @@ export function gearItemFrom(definition, actor = null) {
       // A Special Basic Item: "cannot be obtained by Crafting and can only be gained from
       // your ARC".
       special: definition.special === true,
+
+      // Portions of several kinds, each with what eating one does - the Medibugs - and the
+      // dice for how many are shared out among them.
+      portionsDice: String(definition.portionsDice ?? ""),
+      portions: portionsOf(definition),
 
       // A Maneuver holding it gives access to, and what it changes about that Maneuver - the
       // Energy-Suction Device's Power Drain: used without a Grapple, the Ki stored in it,

@@ -43,6 +43,10 @@
         <em>{{mark.name}}</em>
         <span>{{#if mark.stacking}}{{mark.stacks}}{{else}}yes{{/if}}</span>
         {{#if mark.note}}<i class="stat-note">{{mark.note}}</i>{{/if}}
+        {{#if mark.endable}}
+        <button type="button" class="gear-remove" data-action="endMark" data-mark="{{mark.key}}"
+                data-tooltip="End it">&times;</button>
+        {{/if}}
       </div>
       {{/each}}
 

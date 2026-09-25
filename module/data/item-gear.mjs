@@ -72,6 +72,25 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** A Special Basic Item, which only the ARC hands out and nothing crafts. */
       special: new fields.BooleanField({ required: true, initial: false }),
 
+      /** Portions of several kinds, how many of each are left, and what eating one does -
+       *  the Medibugs - with the dice for how many are shared out. */
+      portionsDice: new fields.StringField({ required: true, blank: true, initial: "" }),
+      portions: new fields.ArrayField(
+        new fields.SchemaField({
+          key: new fields.StringField({ required: true, blank: false }),
+          label: new fields.StringField({ required: true, blank: true, initial: "" }),
+          count: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+          full: new fields.BooleanField({ required: true, initial: false }),
+          dot: new fields.BooleanField({ required: true, initial: false }),
+          removes: new fields.ArrayField(
+            new fields.StringField({ required: true, blank: false }),
+            { required: true, initial: () => [] }
+          ),
+          gains: new fields.StringField({ required: true, blank: true, initial: "" })
+        }),
+        { required: true, initial: () => [] }
+      ),
+
       /** A Maneuver holding it gives access to, and what it changes about that Maneuver -
        *  the Energy-Suction Device's Power Drain. */
       grantsManeuver: new fields.StringField({ required: true, blank: true, initial: "" }),

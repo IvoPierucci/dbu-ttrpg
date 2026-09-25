@@ -1,0 +1,21 @@
+id: beautified
+name: Beautified
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the entry raises a Skill and never names one.
+combatCondition: no
+# "For an hour" is story time, and nothing here counts hours: the player ends it.
+endedByHand: true
+source: Core Rule
+description: >
+  A Beaut Bug has you looking your best. Persuasion Checks 2 better, for an hour.
+text: >
+  Beautified: the Beaut Bug's mark. "Increase your Persuasion Skill Checks by 2 for an hour."
+
+---
+
+# To the roll, not the Bonus the sheet shows: "increase your Persuasion Skill Checks", which is
+# what a Check comes to, and `skill.persuasion` is that Slot.
+
+[passive]
+skill.persuasion += 2;

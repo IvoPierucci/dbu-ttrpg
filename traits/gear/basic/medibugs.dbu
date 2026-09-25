@@ -1,0 +1,53 @@
+id: medibugs
+name: Medibugs
+kind: gear
+# A Special Basic Item: only the ARC hands them out, and nothing crafts them.
+special: true
+# "Upon gaining this Basic Item, select up to 1d6 Medibugs from the categories below."
+portionsDice: 1d6
+portions: revive, achichi, zutsu, beaut
+# "You can spend 1 Action to consume a Medibug and apply the benefits listed."
+placeCost: 1
+# "Revive Bug. Regain Life Points and Ki Points up to their maximums."
+reviveLabel: Revive Bug
+reviveFull: true
+# "Achichi Bug. Remove any stacks of Damage Over Time and/or the Broken Combat Condition."
+achichiLabel: Achichi Bug
+achichiDot: true
+achichiRemoves: broken
+# "Zutsu Bug. Remove the Impaired and/or the Impediment Combat Conditions."
+zutsuLabel: Zutsu Bug
+zutsuRemoves: impaired, impediment
+# "Beaut Bug. Increase your Persuasion Skill Checks by 2 for an hour."
+beautLabel: Beaut Bug
+beautGains: beautified
+source: Core Rule
+description: >
+  Up to 1d6 bugs of four kinds, an Action each: Life and Ki full; Damage Over Time and Broken
+  gone; Impaired and Impediment gone; or Persuasion 2 better for an hour.
+text: >
+  Medibugs: These bugs have medicinal properties when consumed. Slimy, but satisfying.
+  –Effects: Upon gaining this Basic Item, select up to 1d6 Medibugs from the categories below.
+  You gain those Medibugs. You can spend 1 Action to consume a Medibug and apply the benefits
+  listed:
+
+  * Revive Bug. Regain Life Points and Ki Points up to their maximums.
+  * Achichi Bug. Remove any stacks of Damage Over Time and/or the Broken Combat Condition.
+  * Zutsu Bug. Remove the Impaired and/or the Impediment Combat Conditions.
+  * Beaut Bug. Increase your Persuasion Skill Checks by 2 for an hour.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Given: 1d6 rolled, and the player shares out up to that many among the four kinds. Each
+# kind with any left is a button on the row, an Action and a bug each.
+#
+# Revive: Life and Ki to their maximum. Achichi: every stack of Damage Over Time and of
+# Broken off. Zutsu: Impaired and Impediment off. Beaut: the Beautified mark, 2 on every
+# Persuasion Check.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# "For an hour" is story time, and nothing here counts hours: Beautified lasts until the
+# player ends it, from the Combat tab where marks are shown.
