@@ -1,0 +1,33 @@
+id: saibamen-capsule
+name: Saibamen Capsule
+kind: gear
+# A Special Basic Item: only the ARC hands it out, and nothing crafts it.
+special: true
+# "When you first gain this Basic Item, roll a 1d8. The Dice Score is the amount of Saibamen
+# you possess." Rolled when it is given, shown on its row, editable on the Item.
+chargesDice: 1d8
+chargesLabel: Saibamen
+source: Core Rule
+description: >
+  1d8 Saibamen Seeds. Planted for an Action, they sprout at the start of the next Combat
+  Round as Saibamen Minions.
+text: >
+  Saibamen Capsule: A container for seeds, these alien plants grow quickly into
+  semi-intelligent creatures capable of following basic instructions.
+  –Effects: When you first gain this Basic Item, roll a 1d8. The Dice Score is the amount of
+  Saibamen you possess. You can spend 1 Action to plant a Saibamen Seed. At the start of the
+  next Combat Round, all Saibamen Seeds planted during this Combat Round will sprout on any
+  Square within 2 Squares of you (you decide) and turn into a number of Saibamen equal to the
+  number of seeds planted.
+
+  Saibamen are Minions made through the Minion Creation Rules and must select Saibamen as their
+  race.
+
+---
+
+# The roll, and nothing else, by the table's ruling: 1d8 Saibamen when it is given, the count
+# on its row and editable on the Item.
+#
+# Planting, the sprouting, and the Saibamen themselves are done by hand: each is a Minion made
+# through the Minion Creation Rules, which is building a character. The player spends the
+# Action and lowers the count; the ARC makes the Saibamen.
