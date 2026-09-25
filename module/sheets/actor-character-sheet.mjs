@@ -10,7 +10,7 @@ import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, encounterUseKey, gearItemFrom, gearOfList,
-  heldBy, isStored, storable, typeOf, usedThisEncounter } from "../gear.mjs";
+  heldBy, isStored, storable, tierDice, typeOf, usedThisEncounter } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -1006,7 +1006,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // An Item thrown to Clash with whoever it catches.
         clashes: Boolean(item.system.clash?.save && item.system.clash?.condition),
         // An Item used up to take Conditions off, and whether it has been this Encounter.
-        consumable: (item.system.removes ?? []).length > 0,
+        consumable: ((item.system.removes ?? []).length > 0) || Boolean(item.system.heal?.dice),
         usedUp: Boolean(item.system.oncePerEncounter) && usedThisEncounter(this.actor, item),
         // A Capsule, and what it holds.
         capsule: Boolean(item.system.capsule),
@@ -2067,7 +2067,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onConsumeGear(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     const removes = item?.system.removes ?? [];
-    if (!removes.length) return;
+    // Medicine: "regain 2d10(bT) Life Points", with the base Tier of whoever takes it.
+    const heal = tierDice(item?.system.heal, this.actor);
+    if (!removes.length && !heal) return;
 
     if (item.system.oncePerEncounter && usedThisEncounter(this.actor, item)) {
       ui.notifications.warn(`${this.actor.name} has already used a ${item.name} this Combat `
@@ -2075,9 +2077,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       return;
     }
 
-    // Not used up for nothing.
+    // Not used up for nothing. Something that heals always might.
     const held = removes.filter(key => (Number(this.actor.system.conditions?.[key]) || 0) > 0);
-    if (!held.length) {
+    if (!held.length && !heal) {
       ui.notifications.info(`${this.actor.name} has nothing for the ${item.name} to take off.`);
       return;
     }
@@ -2087,6 +2089,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const { setCondition } = await import("../conditions.mjs");
     for (const key of held) await setCondition(this.actor, key, 0);
+
+    // Regained, and never past the maximum - which is what regaining is everywhere here.
+    if (heal) {
+      const roll = await new Roll(heal).evaluate();
+      await roll.toMessage({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        flavor: `${item.name} - ${item.system.heal.dice}(${item.system.heal.scale}) Life Points`
+      });
+      const life = this.actor.system.life;
+      await this.actor.update({
+        "system.life.value": Math.min(life.max, life.value + Math.max(0, roll.total))
+      });
+    }
 
     if (item.system.oncePerEncounter) {
       await this.actor.update({
@@ -2099,8 +2114,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
       content: `<p>${Handlebars.escapeExpression(this.actor.name)} ${
-        item.system.consumed ? "consumes" : "uses"} a ${Handlebars.escapeExpression(item.name)}, `
-        + `and is no longer ${Handlebars.escapeExpression(names.join(" or "))}.</p>`
+        item.system.consumed ? "consumes" : "uses"} ${Handlebars.escapeExpression(item.name)}${
+        names.length
+          ? `, and is no longer ${Handlebars.escapeExpression(names.join(" or "))}`
+          : ""}.</p>`
     });
 
     if (item.system.consumed) await item.delete();

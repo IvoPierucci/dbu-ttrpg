@@ -90,6 +90,11 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         new fields.StringField({ required: true, blank: false }),
         { required: true, initial: () => [] }
       ),
+      /** The Life Points using it heals: dice, and the Tier they scale with - Medicine. */
+      heal: new fields.SchemaField({
+        dice: new fields.StringField({ required: true, blank: true, initial: "" }),
+        scale: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
       /** "You can only use this Basic Item once per Combat Encounter." */
       oncePerEncounter: new fields.BooleanField({ required: true, initial: false }),
       /** Used up when it is used. */

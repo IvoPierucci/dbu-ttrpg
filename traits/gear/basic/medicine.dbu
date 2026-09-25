@@ -1,0 +1,33 @@
+id: medicine
+name: Medicine
+kind: gear
+tags: med
+craftDC: Qualified
+# "Spend an Action to consume this Basic Item."
+placeCost: 1
+consumed: true
+# "Regain 2d10(bT) Life Points" - two d10 per base Tier of Power of whoever takes it.
+healDice: 2d10
+healScale: bT
+# "If you were suffering from the Poisoned Combat Condition, remove that Combat Condition."
+removes: poisoned
+source: Core Rule
+description: >
+  Consume it for an Action: regain 2d10(bT) Life Points, and it cures being Poisoned.
+text: >
+  Medicine [Med]: A drug designed to treat your wounds.
+  –Craft DC: Qualified
+  –Effects: Spend an Action to consume this Basic Item and regain 2d10(bT) Life Points. If
+  you were suffering from the Poisoned Combat Condition, remove that Combat Condition.
+
+---
+
+# Consume: 1 Action, the Life Points rolled and regained - never past the maximum, which is
+# what regaining is everywhere here - and Poisoned taken off if it was on them. The Medicine
+# is used up.
+#
+# Always worth taking, since there is always something it might heal, so unlike the Longevity
+# Supplement it is never refused for having nothing to do.
+#
+# [Med]: made with a Medicine Skill Check of the Craft DC, through the Create Maneuver or
+# Magic Materialization. Neither is in this system yet; the tag is carried for when they are.

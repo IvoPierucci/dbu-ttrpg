@@ -195,8 +195,13 @@ export function gearItemFrom(definition, actor = null) {
         until: String(definition.clashUntil ?? "").trim().toLowerCase()
       },
 
-      // An Item used up to take Conditions off - the Longevity Supplement.
+      // An Item used up to take Conditions off, or to heal - the Longevity Supplement,
+      // Medicine.
       removes: listOf(definition.removes),
+      heal: {
+        dice: String(definition.healDice ?? ""),
+        scale: String(definition.healScale ?? "")
+      },
       oncePerEncounter: definition.oncePerEncounter === true,
       consumed: definition.consumed === true,
 
@@ -263,20 +268,28 @@ export function storable(items, capsule) {
 }
 
 /**
- * The dice an Item left on the ground rolls against whoever moves through it.
+ * Dice an Item rolls, scaled by a character's Tier.
  *
  * "1d4(bT)" is a d4 per base Tier of Power - the count multiplies and the die does not,
- * which is how every Tier-scaled roll here reads - and it is the base Tier of whoever moves
- * through that counts: the one suffering it.
+ * which is how every Tier-scaled roll here reads. The character is the one the dice are
+ * about: whoever moves through Caltrops, whoever takes Medicine.
  */
-export function hazardFormula(hazard, victim) {
-  const [count, faces] = String(hazard?.dice ?? "").split("d");
+export function tierDice(spec, actor) {
+  const [count, faces] = String(spec?.dice ?? "").split("d");
   const n = Number(count) || 0;
   if (!n || !faces) return "";
-  const system = victim?.system ?? {};
-  const multiplier = (hazard.scale === "T") ? (system.tierOfPower ?? 1)
-    : (hazard.scale === "bT") ? (system.baseTierOfPower ?? 1)
+  const system = actor?.system ?? {};
+  const multiplier = (spec.scale === "T") ? (system.tierOfPower ?? 1)
+    : (spec.scale === "bT") ? (system.baseTierOfPower ?? 1)
     : 1;
   const total = n * Math.max(1, multiplier);
   return `${total}d${faces}`;
+}
+
+/**
+ * The dice an Item left on the ground rolls against whoever moves through it - theirs, the
+ * one suffering it.
+ */
+export function hazardFormula(hazard, victim) {
+  return tierDice(hazard, victim);
 }
