@@ -1,0 +1,20 @@
+id: armored-gloves
+name: Armored Gloves
+kind: gear
+itemType: accessory
+craftDC: Expert
+source: Core Rule
+description: >
+  Damage Reduction 1(bT) higher while worn.
+text: >
+  Armored Gloves: These gloves contain metal plates that provide wrist and forearm
+  protection.
+  –Craft DC: Expert
+  –Effects: Increase your Damage Reduction by 1(bT).
+
+---
+
+# While worn: "Accessories are Basic Items that can be equipped and apply benefits while
+# equipped." Taken off, it does nothing.
+[passive]
+damageReduction += 1(bT);

@@ -14,6 +14,7 @@ import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
+import { accessoriesInEffect } from "../gear.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -99,6 +100,7 @@ export function programsFor(actor, { report = () => {} } = {}) {
   }
 
   entries.push(...racialPrograms(actor, report));
+  entries.push(...accessoryPrograms(actor, report));
   entries.push(...karmaPrograms(report));
   entries.push(...statePrograms(actor, report));
   entries.push(...conditionPrograms(actor, report));
@@ -149,6 +151,42 @@ function racialPrograms(actor, report) {
     });
   }
 
+  return entries;
+}
+
+/**
+ * The Accessories this character is wearing, one of each.
+ *
+ * "Accessories are Basic Items that can be equipped and apply benefits while equipped."
+ * The effect is the file's script, read through the Item's `gearId` - so a renamed pair of
+ * gloves is still the gloves, and one taken off or put in a Capsule applies nothing.
+ *
+ * At a Talent's Priority: the Priority ladder names no Items, and an Item is held the way a
+ * Talent is. Every Accessory so far only adds, where Priority changes nothing.
+ */
+function accessoryPrograms(actor, report) {
+  const entries = [];
+  for (const item of accessoriesInEffect(Array.from(actor.items ?? []))) {
+    const trait = getTrait(item.system.gearId);
+    if (!trait || (trait.kind !== "gear")) continue;
+
+    const { program, errors } = compile(
+      `gear:${trait.id}`,
+      { script: trait.script },
+      message => report(`${item.name}: ${message}`)
+    );
+    if (errors.length) continue;
+
+    entries.push({
+      program,
+      priority: PRIORITY.talent,
+      sourceId: item.id,
+      sourceUuid: item.uuid ?? null,
+      sourceName: item.name,
+      level: 0,
+      stacks: 1
+    });
+  }
   return entries;
 }
 
