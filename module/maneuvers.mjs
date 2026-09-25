@@ -614,6 +614,28 @@ export const PROFILES = Object.freeze({
     // and this Profile has no Area, so the AoE sentence has nothing to be about.
     needs: "the AoE sentence, and +2(T) Wound with Elemental (Light) - no attack here "
       + "carries two Profiles or gives this one an Area."
+  },
+
+  elementalEarth: {
+    label: "Elemental (Earth)",
+    foundations: ["magic"],
+    kiCostPerTier: 4,
+    damageCategory: "direct",
+    text: `
+      Elemental (Earth): Using the powers of earth, you launch chunks of stone at your
+      opponent that batter their defenses.
+      –Damage Category: Direct
+      –KP Cost: 4(T)
+      –Effect: This Attacking Maneuver gains the effects of the Bludgeoning Weapon
+      Category as if this Attacking Maneuver was made with a Weapon, even if it was
+      Unarmed. Apply the effects of the Staggering Quality as if this Attacking Maneuver
+      was made with a Weapon, even if it was Unarmed.`,
+    // The whole effect is borrowed from the Weapons, and there are none here yet: no
+    // Weapon Categories and no Qualities, so neither what Bludgeoning does nor what
+    // Staggering does has been given. Named where the Profile is chosen rather than
+    // guessed at.
+    needs: "the Bludgeoning Weapon Category and the Staggering Quality - there are no "
+      + "Weapons in this system yet."
   }
 });
 
