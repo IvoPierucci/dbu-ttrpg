@@ -1,14 +1,35 @@
 <div class="tab {{tabs.gear.cssClass}}" data-group="primary" data-tab="gear">
 
-{{! Gear, which is the rulebook's Equipment. A section of the rules that has not been
-    given yet: the tab is here so there is somewhere for it to go, and what fills it is
-    written when the rules arrive rather than guessed at from the name - the way the
-    Battlefields tab began.
+{{! Gear, which is the rulebook's Equipment. "There are four Item Types in DBU: Basic Item,
+    Accessory, Apparel, and Weapon" - drawn as three lists, because "Accessories are also
+    counted as Basic Items for rules and effects" and so share the first.
+
+    Empty until the Items themselves arrive; what each list holds is written then, rather
+    than guessed at from the names.
 
     What is already waiting on it: the Bludgeoning and Slashing Weapon Categories and the
     Staggering Quality, which Elemental (Earth) and Elemental (Wind) borrow. }}
   <section class="panel">
-    <h3 class="panel-title">Gear</h3>
-    <p class="tab-placeholder">Nothing here yet.</p>
+    <details class="condition-group" data-section="gearBasic"
+             {{#if openSections.gearBasic}}open{{/if}}>
+      <summary class="panel-title">Basic Items &amp; Accessories</summary>
+      <p class="tab-placeholder">None yet.</p>
+    </details>
+  </section>
+
+  <section class="panel">
+    <details class="condition-group" data-section="gearApparel"
+             {{#if openSections.gearApparel}}open{{/if}}>
+      <summary class="panel-title">Apparel</summary>
+      <p class="tab-placeholder">None yet.</p>
+    </details>
+  </section>
+
+  <section class="panel">
+    <details class="condition-group" data-section="gearWeapons"
+             {{#if openSections.gearWeapons}}open{{/if}}>
+      <summary class="panel-title">Weapons</summary>
+      <p class="tab-placeholder">None yet.</p>
+    </details>
   </section>
 </div>
