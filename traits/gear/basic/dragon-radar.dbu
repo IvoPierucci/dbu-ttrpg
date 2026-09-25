@@ -1,0 +1,32 @@
+id: dragon-radar
+name: Dragon Radar
+kind: gear
+tags: tech
+craftDC: Master
+source: Core Rule
+description: >
+  Finds Dragon Balls, however far away. Grants the Item Search Adventure Maneuver, for
+  Dragon Balls only.
+text: >
+  Dragon Radar [Tech]: A radar for finding the notorious Dragon Balls.
+  –Craft DC: Master
+  –Effects: A portable device that helps you locate Dragon Balls by scanning for the
+  electromagnetic pulse emitted by them. Notably, the radar gives a visual representation of
+  depth and height, but it doesn’t give actual values for those metrics. Pressing the button
+  on the top causes the view to zoom in and show a more detailed map of the area, helping
+  narrow down the precise location. The radar can locate Dragon Balls at great distances,
+  such as across a continent, planet, or even the universe.
+
+  You gain access to the Item Search Adventure Maneuver, but you can only target a Dragon
+  Ball with its effects.
+
+---
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# "You gain access to the Item Search Adventure Maneuver, but you can only target a Dragon
+# Ball with its effects." The Adventuring Maneuvers are not in this system yet, so there is
+# no Item Search to grant. When they arrive, having this Item is what gives it - limited to
+# Dragon Balls - and this file is where that is said.
+#
+# The rest is how the radar behaves in the story, and is the table's.
