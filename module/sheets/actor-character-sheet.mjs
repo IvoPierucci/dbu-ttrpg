@@ -10,8 +10,8 @@ import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, highEnvironment, qualitiesFromEffects,
-  qualitiesOf } from "../environments.mjs";
+import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
+  qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
 import { canSuffocate, difficultiesMet, heldBreath, isUnbreathable, settleBreath }
   from "../breath.mjs";
 import {
@@ -840,11 +840,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         chosen: trait.id === standingOn
       }));
 
+    // What they are in, which is the pick unless an effect has turned the Square into
+    // something else for a while. The picker keeps showing the pick - that is what they
+    // go back to - and says the other underneath while it lasts.
+    // Not `inNow` or `standingIn`: the Light Level and the Weather have those here.
+    const environmentHere = environmentIdOf(system, getTrait);
     const environmentTrait = traitsOfKind("battlefields")
-      .find(trait => trait.id === standingOn);
+      .find(trait => trait.id === environmentHere);
     context.environmentNow = {
-      id: standingOn,
-      effect: environmentTrait?.description ?? ""
+      id: environmentHere,
+      effect: environmentTrait?.description ?? "",
+      turned: (environmentHere !== standingOn) ? `Now: ${environmentTrait?.name ?? environmentHere}` : ""
     };
     // The Hardness Rank of the ground, offered within the range the Environment's own
     // file allows - "Hardness Rank: 1~5 (decided by the ARC)". An Environment with no

@@ -817,6 +817,32 @@ export const PROFILES = Object.freeze({
     onThreshold: { condition: "poisoned", stacks: 1 },
     squareMark: { condition: "tainted", stacks: 1 },
     needs: "the AoE sentence - no attack here gives this Profile an Area."
+  },
+
+  elementalWater: {
+    label: "Elemental (Water)",
+    foundations: ["magic"],
+    kiCostPerTier: 8,
+    damageCategory: "direct",
+    text: `
+      Elemental (Water): Using the powers of water, you strike with waves of potent water
+      to knock them over.
+      –Damage Category: Direct
+      –KP Cost: 8(T)
+      –Effect: This Profile has multiple effects:
+      * If you knock an Opponent through a Health Threshold, they gain the Prone Combat
+        Condition.
+      * Any Squares occupied by Character(s) who take Damage from this Attacking Maneuver
+        become the Bog Environment (see — Battle Environments) until the start of your
+        next turn. If this Attacking Maneuver has an AoE, then all Squares within the AoE
+        become the Bog Environment until the start of your next turn instead.`,
+    // Prone with no "until": knocked down, and up again the way anybody gets up. So no
+    // clock - which is what `untimed` says.
+    onThreshold: { condition: "prone", stacks: 1, untimed: true },
+    // The Square turned into another Environment rather than given a Quality: the Flooded
+    // mark, whose file says what it `becomes`.
+    squareMark: { condition: "flooded", stacks: 1 },
+    needs: "the AoE sentence - no attack here gives this Profile an Area."
   }
 });
 

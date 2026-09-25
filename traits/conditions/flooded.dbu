@@ -1,0 +1,37 @@
+id: flooded
+name: Flooded
+kind: conditions
+# One stack per clock, so the Square stays Bog until the last attacker's clock runs out
+# rather than the first. The cap only has to be out of anybody's reach, as Ignited's does.
+maxStacks: 99
+# Not a Combat Condition: the entry turns a Square into an Environment and never names one.
+combatCondition: no
+# The Battle Environment this mark turns the Square into while it is held. Read by
+# `environmentIdOf`, which names no Environment.
+becomes: bog-environment
+source: Core Rule
+description: >
+  Water churns the ground to mud under you. You are in the Bog Environment.
+text: >
+  Flooded: the Elemental (Water) Profile's mark. "Any Squares occupied by Character(s) who
+  take Damage from this Attacking Maneuver become the Bog Environment (see — Battle
+  Environments) until the start of your next turn."
+
+---
+
+# --- The name is this system's ------------------------------------------------------------
+#
+# Ignited's shape, turning an Environment rather than adding a Quality. There are no
+# Squares, the Environment is picked on the character, so the Bog lands on whoever took the
+# Damage, as a mark on the attacker's clock.
+#
+# The pick is never written to. `environmentIdOf` answers with what this mark `becomes`
+# while it is held, and with the pick again once it runs out - which is what they were
+# standing on the whole time. The tab keeps the picker on the pick and says "Now: Bog
+# Environment" underneath.
+#
+# Every reader of the Environment asks `environmentIdOf`, so Bog is Bog everywhere: its
+# effects, its Hardness range for a Ground Collision, and the breath - Underwater turned to
+# Bog is somewhere they can breathe, and turning back is entering the water again.
+#
+# No effects of its own. What a bog does is the Bog Environment's file.

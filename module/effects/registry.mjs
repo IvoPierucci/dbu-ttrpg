@@ -12,7 +12,7 @@ import { legacyToProgram } from "./migrate.mjs";
 import { compile as compileScript } from "./parser.mjs";
 import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
-import { STANDARD_ENVIRONMENT, isAirborne, qualitiesOf } from "../environments.mjs";
+import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
 
 /**
@@ -362,7 +362,7 @@ function qualityPrograms(actor, report) {
   // Environment is not reaching them either: `qualitiesOf` is asked with no Environment.
   const standing = isAirborne(actor.system)
     ? null
-    : getTrait(actor.system?.battlefield?.environment ?? "");
+    : getTrait(environmentIdOf(actor.system, getTrait));
   const ids = qualitiesOf(actor.system, standing, getTrait);
   if (!ids.length) return [];
 
@@ -419,7 +419,7 @@ function environmentPrograms(actor, report) {
   // Low Sky is still a Lava Environment, and it is what they land in.
   if (isAirborne(actor.system)) return [];
 
-  const id = String(actor.system?.battlefield?.environment ?? "") || STANDARD_ENVIRONMENT;
+  const id = environmentIdOf(actor.system, getTrait);
 
   const trait = traitsOfKind("battlefields").find(candidate => candidate.id === id);
   if (!trait) {

@@ -18,14 +18,14 @@
  */
 
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
-import { highTraitOf } from "./environments.mjs";
+import { environmentIdOf, highTraitOf } from "./environments.mjs";
 import { setCondition } from "./conditions.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 
 /** The Battle Environment this character is standing in, as a Trait. */
 export function environmentOf(actor) {
-  const id = actor?.system?.battlefield?.environment;
-  return id ? (getTrait(id) ?? null) : null;
+  if (!actor?.system) return null;
+  return getTrait(environmentIdOf(actor.system, getTrait)) ?? null;
 }
 
 /**

@@ -8365,7 +8365,7 @@ async function applyCollisionDamage(message, clash) {
  * clock set on a character already at three would take one of the three they had off
  * early - a stack this attack never gave them.
  *
- * @param {string} edge "start" or "end" of the attacker's next turn
+ * @param {?string} edge "start" or "end" of the attacker's next turn, or null for none
  */
 async function markUntilNextTurn(attacker, target, key, stacks, edge, source) {
   const { gainCondition } = await import("./effects/moments-runtime.mjs");
@@ -8374,6 +8374,9 @@ async function markUntilNextTurn(attacker, target, key, stacks, edge, source) {
 
   const before = Number(target.system.conditions?.[key]) || 0;
   if (await gainCondition(target, key, stacks) === false) return;
+
+  // No edge is no clock: Elemental (Water)'s Prone is gained and not given back.
+  if (!edge) return;
 
   const cap = allConditions().find(condition => condition.key === key)?.maxStacks ?? stacks;
   const gained = Math.max(0, Math.min(cap, before + stacks) - before);
@@ -8541,7 +8544,7 @@ async function applyAttackDamage(message, target, attack) {
     if (riders.squareQuality) await applySquareQuality(target, riders.squareQuality);
     if (riders.onThreshold && knockedThrough) {
       await markUntilNextTurn(attacker, target, riders.onThreshold.condition,
-        riders.onThreshold.stacks, "end", riders.label);
+        riders.onThreshold.stacks, riders.onThreshold.untimed ? null : "end", riders.label);
     }
   }
 

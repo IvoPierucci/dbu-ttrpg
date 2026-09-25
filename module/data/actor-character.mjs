@@ -7,7 +7,8 @@ import { getTrait } from "../effects/traits.mjs";
 import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
-import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, groundHardnessWith, qualitiesOf }
+import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
+  qualitiesOf }
   from "../environments.mjs";
 import {
   categoryFormula,
@@ -1647,7 +1648,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Here rather than later because the collision window and the tab both read it, and
     // one number read in two places is one number.
     {
-      const standing = getTrait(this.battlefield.environment ?? "");
+      const standing = getTrait(environmentIdOf(this, getTrait));
       const qualities = qualitiesOf(this, standing, getTrait).map(id => getTrait(id))
         .filter(Boolean);
       this.battlefield.groundRank = groundHardnessWith(

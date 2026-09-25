@@ -206,6 +206,29 @@ export function groundHardnessWith(rank, qualities, max) {
 export const STANDARD_ENVIRONMENT = "standard-environment";
 
 /**
+ * The id of the Battle Environment this character is in.
+ *
+ * The one the player picked, unless an effect has turned their Square into another for a
+ * while. Elemental (Water): "Any Squares occupied by Character(s) who take Damage from this
+ * Attacking Maneuver become the Bog Environment until the start of your next turn." Held as
+ * a mark whose file says `becomes:`, with the clock on the attacker - so the player's pick
+ * is never written to, and is what they are standing in again when the mark runs out.
+ *
+ * Every reader of the Environment asks here: the effects, the breath, the ground's Hardness
+ * and the sheet. Handed the Trait lookup, as `qualitiesOf` is; without one there are no
+ * headers to read and the answer is the player's pick.
+ */
+export function environmentIdOf(system, getTrait = null) {
+  if (getTrait) {
+    for (const [key, stacks] of Object.entries(system?.conditions ?? {})) {
+      const becomes = (Number(stacks) > 0) ? getTrait(key)?.becomes : null;
+      if (becomes) return String(becomes);
+    }
+  }
+  return String(system?.battlefield?.environment ?? "") || STANDARD_ENVIRONMENT;
+}
+
+/**
  * The rules that hold whichever Environment is in play, in the rulebook's own words.
  *
  * Both are about Squares, which is to say both are the table's: one says an Environment

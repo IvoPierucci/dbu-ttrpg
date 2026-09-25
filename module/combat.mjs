@@ -530,7 +530,11 @@ function witnesses(actor) {
 export function registerBreathHooks() {
   Hooks.on("preUpdateActor", (actor, changes, options) => {
     if (actor.type !== "character") return;
-    if (foundry.utils.getProperty(changes, "system.battlefield.environment") === undefined) {
+    // The pick changing, or a mark that turns the Square into another Environment coming
+    // or going - Elemental (Water) makes Underwater into Bog for a turn, and that is
+    // leaving the water as surely as the player saying so.
+    if ((foundry.utils.getProperty(changes, "system.battlefield.environment") === undefined)
+      && (foundry.utils.getProperty(changes, "system.conditions") === undefined)) {
       return;
     }
     // Where they were standing before, which is the only way to tell entering from
