@@ -38,7 +38,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
       system.description, { relativeTo: this.item });
 
-    context.typeLabel = GEAR_TYPES[system.itemType]?.label ?? "";
+    context.typeLabel = `${system.special ? "Special " : ""}${GEAR_TYPES[system.itemType]?.label ?? ""}`;
+    context.sizeLabel = system.size ?? "";
     context.tagLabels = (system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag);
 
     // What it recorded from its maker, and what sets it off - both theirs to change.

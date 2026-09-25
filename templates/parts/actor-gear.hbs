@@ -19,7 +19,7 @@
         <img src="{{row.img}}" width="24" height="24"/>
         <a class="gear-name" data-action="editItem" data-item-id="{{row.itemId}}">{{row.name}}</a>
         {{#each row.tags as |tag|}}<span class="gear-tag">[{{tag}}]</span>{{/each}}
-        <span class="gear-type">{{row.typeLabel}}</span>
+        <span class="gear-type">{{row.typeLabel}}{{#if row.sizeLabel}} &middot; {{row.sizeLabel}}{{/if}}</span>
         {{#if row.explosive}}
         {{#if row.placed}}
         <span class="gear-type">{{row.triggerLabel}}{{#if row.countdown}} &middot; {{row.countdown}} Rounds{{/if}}</span>
@@ -42,6 +42,15 @@
         {{else}}
         <button type="button" class="gear-act" data-action="storeGear"
                 data-item-id="{{row.itemId}}">Store</button>
+        {{/if}}
+        {{/if}}
+        {{#if row.restores}}
+        <button type="button" class="gear-act" data-action="restoreGear"
+                data-item-id="{{row.itemId}}">Eat</button>
+        {{#if row.feeds}}
+        <button type="button" class="gear-act" data-action="restoreGear" data-feed="1"
+                data-item-id="{{row.itemId}}"
+                data-tooltip="Target the Defeated character beside you first.">Feed</button>
         {{/if}}
         {{/if}}
         {{#if row.lights}}

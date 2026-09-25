@@ -59,6 +59,39 @@ function listOf(raw) {
   return list.map(entry => String(entry).trim().toLowerCase()).filter(Boolean);
 }
 
+/**
+ * The sizes a file offers, each with the dice for its charges, in the order written.
+ *
+ * Written `Small=1d4, Standard=1d6` - a name and the dice for it.
+ */
+export function sizesOf(definition) {
+  const raw = definition?.sizes;
+  const list = Array.isArray(raw) ? raw : String(raw ?? "").split(",");
+  return list.map(entry => String(entry).trim()).filter(entry => entry.includes("="))
+    .map(entry => {
+      const [label, dice] = entry.split("=").map(part => part.trim());
+      return { label, dice };
+    })
+    .filter(size => size.label && /^\d+d\d+$/.test(size.dice));
+}
+
+/**
+ * The Combat Conditions a full restore takes off a character: every one held, but those it
+ * keeps. Marks this system files beside them are not Combat Conditions and are not touched.
+ *
+ * A Senzu Bean: "removes all Combat Conditions (except Pinned or Suffocating)".
+ *
+ * @param {object} held        the character's `system.conditions`
+ * @param {object[]} conditions every Condition definition, as `allConditions()` gives them
+ */
+export function conditionsRestored(held, conditions, keeps = []) {
+  const combat = new Set(conditions.filter(condition => condition.combatCondition)
+    .map(condition => condition.key));
+  return Object.entries(held ?? {})
+    .filter(([key, stacks]) => ((Number(stacks) || 0) > 0) && combat.has(key) && !keeps.includes(key))
+    .map(([key]) => key);
+}
+
 /** The triggers a file offers, in the order written, and only the ones there are. */
 export function triggersOf(definition) {
   return listOf(definition?.triggers).filter(trigger => GEAR_TRIGGERS[trigger]);
@@ -183,6 +216,22 @@ export function gearItemFrom(definition, actor = null) {
         profile: String(definition.detonationProfile ?? ""),
         foundation: String(definition.detonationFoundation ?? ""),
         autoHit: definition.detonationAutoHit === true
+      },
+
+      // A Special Basic Item: "cannot be obtained by Crafting and can only be gained from
+      // your ARC".
+      special: definition.special === true,
+
+      // Sizes it comes in, each with the dice for its charges - the Bag of Senzu Beans'.
+      sizes: sizesOf(definition),
+      size: "",
+
+      // Full Life and Ki, and every Combat Condition off but these - a Senzu Bean - and
+      // whether it may be fed to a Defeated character beside you.
+      restore: {
+        full: definition.restoresFully === true,
+        keeps: listOf(definition.restoreKeeps),
+        feedsDefeated: definition.feedsDefeated === true
       },
 
       // Charges it is made with, rolled when it is given - the Poison Vial's Drops.

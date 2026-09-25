@@ -1,0 +1,50 @@
+id: bag-of-senzu-beans
+name: Bag of Senzu Beans
+kind: gear
+# A Special Basic Item: "cannot be obtained by Crafting and can only be gained from your ARC".
+# No Craft DC, since nothing makes it.
+special: true
+# "Bags of Senzu Beans come in various sizes" - asked when it is given, and rolled.
+sizes: Small=1d4, Standard=1d6, Large=1d10, Extra Large=2d6
+chargesLabel: Senzu Beans
+# "You can spend 1 Action to consume a Senzu Bean or feed it to an adjacent, Defeated
+# Character."
+placeCost: 1
+feedsDefeated: true
+# "Consuming a Senzu Bean removes all Combat Conditions (except Pinned or Suffocating) and you
+# fully regain your Life and Ki Points, up to their maximum."
+restoresFully: true
+restoreKeeps: pinned, suffocating
+source: Core Rule
+description: >
+  A Bean for an Action, eaten or fed to a Defeated friend beside you: every Combat Condition
+  but Pinned and Suffocating gone, and Life and Ki full.
+text: >
+  Bag of Senzu Beans: A bag containing the miraculous Senzu Beans.
+  –Effects: You can spend 1 Action to consume a Senzu Bean or feed it to an adjacent, Defeated
+  Character. Consuming a Senzu Bean removes all Combat Conditions (except Pinned or
+  Suffocating) and you fully regain your Life and Ki Points, up to their maximum.
+
+  Bags of Senzu Beans come in various sizes:
+
+  * Small. Roll a 1d4, that’s how many Senzu Beans are in the bag.
+  * Standard. Roll a 1d6, that’s how many Senzu Beans are in the bag.
+  * Large. Roll a solid 1d10, that’s how many Senzu Beans are in the bag.
+  * Extra Large. Roll a 2d6, that’s how many Senzu Beans are in the bag.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Given: the size is asked and its Beans rolled - the count shown on the row and editable on
+# the Item.
+#
+# Eat: 1 Action and 1 Bean. Every Combat Condition comes off but Pinned and Suffocating - the
+# marks this system keeps under the same folder are not Combat Conditions, and stay - and
+# Life and Ki are set to their maximum.
+#
+# Feed: the same, for the one character targeted, who has to be Defeated and adjacent -
+# measured on the map, and not enforced where nothing can be measured. Full Life is what
+# stands a Defeated character back up: Defeated is having no Life left.
+#
+# An empty bag stays on the character, for the player to take off or the ARC to refill.

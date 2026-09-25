@@ -2414,6 +2414,37 @@ export async function burstGear(thrower, item, caught) {
   });
 }
 
+/**
+ * A full restore - a Senzu Bean - on whoever eats it.
+ *
+ * "Removes all Combat Conditions (except Pinned or Suffocating) and you fully regain your
+ * Life and Ki Points, up to their maximum." Only Combat Conditions: the marks this system
+ * keeps beside them are not, and stay. Full Life is what stands a Defeated character up.
+ */
+export async function restoreFully(giver, who, item) {
+  const { allConditions, setCondition } = await import("./conditions.mjs");
+  const { conditionsRestored } = await import("./gear.mjs");
+  const cleared = conditionsRestored(who.system.conditions, allConditions(),
+    item.system.restore.keeps ?? []);
+  for (const key of cleared) await setCondition(who, key, 0);
+
+  await requestActorUpdate(who, {
+    "system.life.value": who.system.life.max,
+    "system.ki.value": who.system.ki.max
+  });
+
+  const escape = Handlebars.escapeExpression;
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: giver }),
+    content: `<p>${(giver.uuid === who.uuid)
+      ? `${escape(who.name)} eats a Senzu Bean`
+      : `${escape(giver.name)} feeds ${escape(who.name)} a Senzu Bean`} from the `
+      + `${escape(item.name)}: Life and Ki full${cleared.length
+        ? `, and no longer ${escape(listed(cleared.map(key => getTrait(key)?.name ?? key)))}`
+        : ""}.</p>`
+  });
+}
+
 /** Post the card an Item scattered across the ground leaves behind. */
 export async function postGearHazard(actor, item) {
   const hazard = item.system.hazard;

@@ -5,6 +5,7 @@
       <input type="text" name="name" value="{{item.name}}" placeholder="Item Name"/>
       <div class="gear-facts">
         <span>{{typeLabel}}</span>
+        {{#if sizeLabel}}<span>{{sizeLabel}}</span>{{/if}}
         {{#each tagLabels as |tag|}}<span class="gear-tag">[{{tag}}]</span>{{/each}}
         {{#if craftDCNow}}<span>Craft DC: {{craftDCNow}}</span>{{/if}}
       </div>

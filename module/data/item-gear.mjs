@@ -69,6 +69,30 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         autoHit: new fields.BooleanField({ required: true, initial: false })
       }),
 
+      /** A Special Basic Item, which only the ARC hands out and nothing crafts. */
+      special: new fields.BooleanField({ required: true, initial: false }),
+
+      /** The sizes it comes in, "Label=dice", and the one it is. */
+      sizes: new fields.ArrayField(
+        new fields.SchemaField({
+          label: new fields.StringField({ required: true, blank: false }),
+          dice: new fields.StringField({ required: true, blank: false })
+        }),
+        { required: true, initial: () => [] }
+      ),
+      size: new fields.StringField({ required: true, blank: true, initial: "" }),
+
+      /** Full Life and Ki and every Combat Condition off but these - a Senzu Bean - and
+       *  whether it may be fed to a Defeated character beside you. */
+      restore: new fields.SchemaField({
+        full: new fields.BooleanField({ required: true, initial: false }),
+        keeps: new fields.ArrayField(
+          new fields.StringField({ required: true, blank: false }),
+          { required: true, initial: () => [] }
+        ),
+        feedsDefeated: new fields.BooleanField({ required: true, initial: false })
+      }),
+
       /** Charges it is made with: the dice rolled for them, what they are called, and how
        *  many are left - the Poison Vial's 1d6 Poison Drops. */
       chargesDice: new fields.StringField({ required: true, blank: true, initial: "" }),

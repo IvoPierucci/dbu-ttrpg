@@ -438,6 +438,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       scanGear: DBUCharacterSheet._onScanGear,
       burstGear: DBUCharacterSheet._onBurstGear,
       lightGear: DBUCharacterSheet._onLightGear,
+      restoreGear: DBUCharacterSheet._onRestoreGear,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -996,7 +997,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         itemId: item.id,
         name: item.name,
         img: item.img,
-        typeLabel: type.label,
+        typeLabel: item.system.special ? `Special ${type.label}` : type.label,
+        sizeLabel: item.system.size ?? "",
+        // A full restore, while there is a charge left to do it with.
+        restores: Boolean(item.system.restore?.full) && ((item.system.charges ?? 0) > 0),
+        feeds: Boolean(item.system.restore?.feedsDefeated),
         tags: (item.system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag),
         // An Item that goes off: whether it is out, and what can be done with it now.
         explosive: Boolean(item.system.detonation?.profile),
@@ -1853,12 +1858,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // Grouped by Item Type where a list holds more than one - Basic Items and Accessories
     // share theirs.
+    // Special ones apart: "Special Basic Items cannot be obtained by Crafting and can only be
+    // gained from your ARC."
     const groups = Object.entries(GEAR_TYPES)
       .filter(([, type]) => type.list === list)
-      .map(([key, type]) => ({
-        label: type.label,
-        items: offered.filter(definition => typeOf(definition) === key)
-      }))
+      .flatMap(([key, type]) => [
+        { label: type.label,
+          items: offered.filter(entry => (typeOf(entry) === key) && (entry.special !== true)) },
+        { label: `Special ${type.label}`,
+          items: offered.filter(entry => (typeOf(entry) === key) && (entry.special === true)) }
+      ])
       .filter(group => group.items.length);
 
     const escape = Handlebars.escapeExpression;
@@ -1924,6 +1933,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.system.connectedTo = chosen;
     }
 
+    // "Bags of Senzu Beans come in various sizes" - which one, asked now, and its dice are
+    // what the charges are rolled with.
+    if (data.system.sizes.length) {
+      const size = await DBUCharacterSheet.#askSize(definition.name, data.system.sizes);
+      if (!size) return;
+      data.system.size = size.label;
+      data.system.chargesDice = size.dice;
+    }
+
     // "When you create this Basic Item, it has 1d6 Poison Drops." Rolled now, and said.
     if (data.system.chargesDice) {
       const roll = await new Roll(data.system.chargesDice).evaluate();
@@ -1940,6 +1958,34 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.system.trigger = trigger;
     }
     return this.actor.createEmbeddedDocuments("Item", [data]);
+  }
+
+  /** Which size an Item that comes in several is. */
+  static async #askSize(name, sizes) {
+    const escape = Handlebars.escapeExpression;
+    const rows = sizes.map((size, index) => `
+      <label class="dbu-respond-option">
+        <input type="radio" name="size" value="${index}" ${index ? "" : "checked"}/>
+        <span class="dbu-respond-name">${escape(size.label)}</span>
+        <span class="dbu-respond-source">${escape(size.dice)}</span>
+      </label>`).join("");
+
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${name} - Size` },
+      content: rows,
+      buttons: [
+        {
+          action: "confirm",
+          label: "Confirm",
+          callback: (event, button, dialog) =>
+            dialog.element.querySelector('input[name="size"]:checked')?.value ?? null
+        },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    return (chosen === null || chosen === undefined) ? null : (sizes[Number(chosen)] ?? null);
   }
 
   /** Which trigger an Item that goes off is set to. */
@@ -2265,6 +2311,45 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const { detonateGear } = await import("../chat.mjs");
     return detonateGear(this.actor, bomb);
+  }
+
+  /**
+   * A full restore, eaten or fed - a Senzu Bean.
+   *
+   * "You can spend 1 Action to consume a Senzu Bean or feed it to an adjacent, Defeated
+   * Character." Fed, it is the one targeted, who has to be Defeated and beside you - measured
+   * on the map, and not enforced where nothing can be measured.
+   */
+  static async _onRestoreGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system.restore?.full || !((item.system.charges ?? 0) > 0)) return;
+
+    let who = this.actor;
+    if (target.dataset.feed) {
+      who = game.user.targets.first()?.actor;
+      if (!who || (who.uuid === this.actor.uuid)) {
+        ui.notifications.warn(`Target the Defeated character to feed first.`);
+        return;
+      }
+      if (!who.system.defeated) {
+        ui.notifications.warn(`${who.name} is not Defeated.`);
+        return;
+      }
+      const { squaresBetween } = await import("../maneuvers.mjs");
+      const apart = squaresBetween(this.actor.getActiveTokens?.(false, true)?.[0],
+        who.getActiveTokens?.(false, true)?.[0]);
+      if ((apart !== null) && (apart > 0)) {
+        ui.notifications.warn(`${who.name} is not beside ${this.actor.name}.`);
+        return;
+      }
+    }
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    await item.update({ "system.charges": Math.max(0, (item.system.charges ?? 0) - 1) });
+    const { restoreFully } = await import("../chat.mjs");
+    return restoreFully(this.actor, who, item);
   }
 
   /**
