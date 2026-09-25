@@ -304,6 +304,10 @@ export function gearItemFrom(definition, actor = null) {
       assigned: { uuid: "", name: "" },
       teleports: definition.teleports === true,
 
+      // Worn, for an Accessory: "Accessories ... apply benefits while equipped." Given
+      // unworn - putting it on is an Action.
+      equipped: false,
+
       // Portions of several kinds, each with what eating one does - the Medibugs - and the
       // dice for how many are shared out among them.
       portionsDice: String(definition.portionsDice ?? ""),
@@ -529,7 +533,7 @@ export function isStored(items, item) {
 
 /**
  * What a Capsule can take: the character's Basic Items and Accessories, not a Capsule, not
- * one already inside a Capsule.
+ * one already inside a Capsule, and not an Accessory being worn - that is taken off first.
  *
  * "You can store any Basic Item into a Capsule ... You cannot store a living thing or a
  * Capsule within a Capsule."
@@ -539,6 +543,7 @@ export function storable(items, capsule) {
     && (item.type === "gear")
     && (GEAR_TYPES[item.system?.itemType]?.list === "basic")
     && !item.system?.capsule
+    && !item.system?.equipped
     && !isStored(items, item));
 }
 
@@ -567,4 +572,65 @@ export function tierDice(spec, actor) {
  */
 export function hazardFormula(hazard, victim) {
   return tierDice(hazard, victim);
+}
+
+/**
+ * How many Accessories a character can wear at once.
+ *
+ * "Accessories are Basic Items that can be equipped and apply benefits while equipped. You
+ * can only equip up to 2 Accessories at once. You can spend 1 Action to equip or remove an
+ * Accessory."
+ */
+export const ACCESSORIES_WORN = 2;
+
+/** What equipping or removing an Accessory costs, in Actions. */
+export const EQUIP_COST = 1;
+
+/** Whether an Item is an Accessory. */
+export function isAccessory(item) {
+  return (item?.type === "gear") && (item.system?.itemType === "accessory");
+}
+
+/** The Accessories a character is wearing. */
+export function wornAccessories(items) {
+  return (items ?? []).filter(item => isAccessory(item) && item.system?.equipped);
+}
+
+/**
+ * Why an Accessory cannot be put on, or "" when it can.
+ *
+ * "You can only equip up to 2 Accessories at once" and "You cannot wear two of the same
+ * Accessory" - the same being the same file, whatever either has been renamed to. One in a
+ * Capsule is not to hand.
+ */
+export function equipProblem(items, item) {
+  if (!isAccessory(item)) return `${item?.name ?? "That"} is not an Accessory.`;
+  if (item.system.equipped) return "";
+  if (isStored(items, item)) return `${item.name} is inside a Capsule.`;
+  const worn = wornAccessories(items).filter(other => other.id !== item.id);
+  if (worn.some(other => other.system.gearId === item.system.gearId)) {
+    return `Already wearing a ${item.name}.`;
+  }
+  if (worn.length >= ACCESSORIES_WORN) {
+    return `Already wearing ${ACCESSORIES_WORN} Accessories.`;
+  }
+  return "";
+}
+
+/**
+ * The Accessories whose effects apply: the ones worn, one of each.
+ *
+ * "... nor benefit from the same Accessory's effects twice (even if it was Integrated)."
+ * Two of the same cannot be worn, so the one-of-each here is for the other way there could
+ * be two - Integrated, which arrives with the rules that name it. Whatever reads an
+ * Accessory's effects reads them from here.
+ */
+export function accessoriesInEffect(items) {
+  const seen = new Set();
+  return wornAccessories(items).filter(item => {
+    const key = item.system.gearId || item.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

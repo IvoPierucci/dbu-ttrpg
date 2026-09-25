@@ -81,6 +81,9 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       }),
       teleports: new fields.BooleanField({ required: true, initial: false }),
 
+      /** An Accessory being worn. Its effects apply only while it is. */
+      equipped: new fields.BooleanField({ required: true, initial: false }),
+
       /** Portions of several kinds, how many of each are left, and what eating one does -
        *  the Medibugs - with the dice for how many are shared out. */
       portionsDice: new fields.StringField({ required: true, blank: true, initial: "" }),

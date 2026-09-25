@@ -9,9 +9,10 @@ import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
-import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable, connectedItem,
-  encounterUseKey, gearItemFrom, gearOfList, heldBy, isStored, portionEffects, setGathered,
-  storable, tierDice, typeOf, usedThisEncounter } from "../gear.mjs";
+import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable,
+  connectedItem, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
+  isStored, portionEffects, setGathered, storable, tierDice, typeOf, usedThisEncounter }
+  from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -443,6 +444,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       drawGear: DBUCharacterSheet._onDrawGear,
       eatPortion: DBUCharacterSheet._onEatPortion,
       teleportGear: DBUCharacterSheet._onTeleportGear,
+      equipGear: DBUCharacterSheet._onEquipGear,
       endMark: DBUCharacterSheet._onEndMark,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
@@ -1009,6 +1011,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // A full restore, while there is a charge left to do it with.
         restores: Boolean(item.system.restore?.full) && ((item.system.charges ?? 0) > 0),
         feeds: Boolean(item.system.restore?.feedsDefeated),
+        // An Accessory, and whether it is being worn.
+        accessory: isAccessory(item),
+        equipped: isAccessory(item) && Boolean(item.system.equipped),
         // Tied to a Character: who, and Teleport once there is someone.
         assignedName: item.system.assignsCharacter ? (item.system.assigned?.name || "") : "",
         assigns: Boolean(item.system.assignsCharacter),
@@ -2604,6 +2609,30 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         : `${escape(this.actor.name)} brings ${escape(name)} to their side`} with the `
         + `${escape(item.name)}.</p>`
     });
+  }
+
+  /**
+   * Put an Accessory on, or take it off.
+   *
+   * "You can only equip up to 2 Accessories at once. You can spend 1 Action to equip or
+   * remove an Accessory. You cannot wear two of the same Accessory." Refused before the
+   * Action is spent.
+   */
+  static async _onEquipGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!isAccessory(item)) return;
+    const wearing = Boolean(item.system.equipped);
+    if (!wearing) {
+      const problem = equipProblem(this.actor.items.contents, item);
+      if (problem) {
+        ui.notifications.warn(problem);
+        return;
+      }
+    }
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, EQUIP_COST)) return;
+    return item.update({ "system.equipped": !wearing });
   }
 
   /** End a mark that has no clock of its own - Beautified, "for an hour". */
