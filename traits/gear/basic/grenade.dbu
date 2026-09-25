@@ -1,0 +1,35 @@
+id: grenade
+name: Grenade
+kind: gear
+tags: tech
+craftDC: Qualified
+# "When you create this Basic Item, record your Scholarship Modifier." Recorded when it is
+# given, the way the Bomb's is, and editable on the Item.
+records: scholarship
+source: Core Rule
+description: >
+  Thrown with the Throw Maneuver: a Minor Sphere around the target, the recorded
+  Scholarship Modifier as the Damage Attribute, and the Grenade is gone afterwards.
+text: >
+  Grenade [Tech]: A hand-held explosive that you lob at an enemy.
+  –Craft DC: Qualified
+  –Effects: When you create this Basic Item, record your Scholarship Modifier. When using
+  the Throw Maneuver, that Attacking Maneuver has a Minor Sphere AoE (centered on the initial
+  target of this Maneuver) and the Damage Attribute for that Attacking Maneuver is the
+  Scholarship Modifier recorded when this Basic Item was created, but this Basic Item is
+  destroyed after concluding the Maneuver.
+
+---
+
+# --- What is built -----------------------------------------------------------------------------
+#
+# The recorded Scholarship Modifier: taken off the character when they are given it, shown
+# and editable on the Item.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Everything the Grenade does happens inside the Throw Maneuver, and there is no Throw
+# Maneuver in this system yet. When it arrives, throwing a Grenade with it is: a Minor Sphere
+# AoE centred on the one it was thrown at, the recorded Modifier standing in for the Damage
+# Attribute - the Bomb's `damageAttribute`, already carried on an attack - and the Grenade
+# removed from the character once the Maneuver is over.

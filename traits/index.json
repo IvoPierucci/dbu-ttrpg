@@ -127,6 +127,7 @@
     "gear/basic/communicator.dbu",
     "gear/basic/dragon-radar.dbu",
     "gear/basic/flash-bang.dbu",
+    "gear/basic/grenade.dbu",
     "signature/disadvantages/all-or-nothing.dbu",
     "states/determined.dbu",
     "states/entrusted.dbu",
