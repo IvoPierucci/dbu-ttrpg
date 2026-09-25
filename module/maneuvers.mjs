@@ -1080,6 +1080,12 @@ export function whyNotDrain(actor, maneuver) {
   if (!maneuver?.powerDrain) return null;
 
   const { partner, role } = actor?.system?.grapple ?? {};
+
+  // The Energy-Suction Device: "you may use its effects even if you are not in a Grapple".
+  if (!(partner && (role === "grappler"))
+    && (actor?.items ?? []).some(item => (item.type === "gear") && item.system?.drainsAnywhere)) {
+    return null;
+  }
   if (!partner) {
     return `${actor.name} is not in a Grapple, and ${maneuver.name} drains somebody you `
       + "are Grappling.";
@@ -1976,11 +1982,15 @@ export function whyNotSpecial(actor, maneuver) {
   if (!permits(slots, `maneuver.${maneuver.id}`)) {
     return `Something is keeping ${actor.name} from using ${maneuver.name}.`;
   }
-  if (granted(slots, `maneuver.${maneuver.id}`)) return null;
+  if (openedWithoutGear(actor, maneuver)) return null;
+
+  // Or an Item they hold: the Energy-Suction Device - "While you possess this Item, gain
+  // access to the Power Drain Special Maneuver".
+  if ((actor?.items ?? []).some(item => (item.type === "gear")
+    && (item.system?.grantsManeuver === maneuver.id))) return null;
 
   const fromSkill = (actor?.system?.specialManeuvers ?? [])
     .find(entry => entry.maneuver === maneuver.id);
-  if (fromSkill?.open) return null;
 
   // What would open it, where a Skill would. A Maneuver nothing in the library opens is
   // one some effect has to hand over, and the reason says that instead of naming a Skill
@@ -1990,6 +2000,20 @@ export function whyNotSpecial(actor, maneuver) {
       + `${actor.name} has ${fromSkill.ranks}.`
     : `${actor.name} has not been granted access to ${maneuver.name}. A Special Maneuver `
       + "is gained through an effect.";
+}
+
+/**
+ * Whether a character has a Special Maneuver by anything but an Item: an effect granting it,
+ * or the Skill Ranks that open it.
+ *
+ * Asked apart from the Items because one rule turns on it: the Energy-Suction Device stores
+ * a Power Drain's Ki when it is what gives the character Power Drain, and lets them choose
+ * when they had it already.
+ */
+export function openedWithoutGear(actor, maneuver) {
+  if (granted(actor?.system?.effects?.slots, `maneuver.${maneuver.id}`)) return true;
+  return Boolean((actor?.system?.specialManeuvers ?? [])
+    .find(entry => entry.maneuver === maneuver.id)?.open);
 }
 
 /** The four kinds a Maneuver can be. Dodging is not among them: it is not a Maneuver. */

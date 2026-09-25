@@ -47,6 +47,10 @@
         {{#if row.setLabel}}
         <span class="gear-type">{{row.setLabel}}</span>
         {{/if}}
+        {{#if row.draws}}
+        <button type="button" class="gear-act" data-action="drawGear"
+                data-item-id="{{row.itemId}}">Draw</button>
+        {{/if}}
         {{#if row.summons}}
         <button type="button" class="gear-act" data-action="summonGear"
                 data-item-id="{{row.itemId}}"

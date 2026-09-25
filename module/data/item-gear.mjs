@@ -72,6 +72,16 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** A Special Basic Item, which only the ARC hands out and nothing crafts. */
       special: new fields.BooleanField({ required: true, initial: false }),
 
+      /** A Maneuver holding it gives access to, and what it changes about that Maneuver -
+       *  the Energy-Suction Device's Power Drain. */
+      grantsManeuver: new fields.StringField({ required: true, blank: true, initial: "" }),
+      drainsAnywhere: new fields.BooleanField({ required: true, initial: false }),
+      storesDrain: new fields.BooleanField({ required: true, initial: false }),
+      paysAttacks: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }),
+        { required: true, initial: () => [] }
+      ),
+
       /** One of a set - a Dragon Ball: the sizes a set may be, this one's, which ball it
        *  is, and the least Actions gathering them all takes to use. */
       set: new fields.SchemaField({

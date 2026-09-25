@@ -92,6 +92,27 @@ export function conditionsRestored(held, conditions, keeps = []) {
     .map(([key]) => key);
 }
 
+/** The character's Item that gives them access to this Maneuver, if one does. */
+export function gearGranting(items, maneuverId) {
+  return (items ?? []).find(item => (item.type === "gear")
+    && (item.system?.grantsManeuver === maneuverId)) ?? null;
+}
+
+/** The character's Item that stores what a Power Drain takes, if they have one. */
+export function drainStore(items) {
+  return (items ?? []).find(item => (item.type === "gear") && item.system?.storesDrain) ?? null;
+}
+
+/**
+ * Whether an Item's stored Ki may pay for this attack: made with a Foundation it names, with
+ * enough stored for the whole price. All or nothing, by the table's ruling.
+ */
+export function canPayAttack(item, foundation, price) {
+  return Boolean(item) && (price > 0)
+    && (item.system?.paysAttacks ?? []).includes(foundation)
+    && ((Number(item.system?.charges) || 0) >= price);
+}
+
 /**
  * Whether a character holds every ball of this one's set: Items from the same file, in a set
  * of the same size, with every number from 1 to that size among them.
@@ -238,6 +259,14 @@ export function gearItemFrom(definition, actor = null) {
       // A Special Basic Item: "cannot be obtained by Crafting and can only be gained from
       // your ARC".
       special: definition.special === true,
+
+      // A Maneuver holding it gives access to, and what it changes about that Maneuver - the
+      // Energy-Suction Device's Power Drain: used without a Grapple, the Ki stored in it,
+      // and the Foundations whose attacks the stored Ki may pay for.
+      grantsManeuver: String(definition.grantsManeuver ?? "").trim().toLowerCase(),
+      drainsAnywhere: definition.drainsAnywhere === true,
+      storesDrain: definition.storesDrain === true,
+      paysAttacks: listOf(definition.paysAttacks),
 
       // One of a set: how large a set may be, how large this one's is, and which of it this
       // is - a Dragon Ball - and what gathering them all costs to use.

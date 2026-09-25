@@ -1,0 +1,58 @@
+id: energy-suction-device
+name: Energy-Suction Device
+kind: gear
+# A Special Basic Item: only the ARC hands it out, and nothing crafts it.
+special: true
+# "While you possess this Item, gain access to the Power Drain Special Maneuver, but you may
+# use its effects even if you are not in a Grapple. If you do, you must win a Clash (Physical
+# Strike vs Strike/Dodge) against your target before using the effects."
+grantsManeuver: power-drain
+drainsAnywhere: true
+# "You do not regain any Ki Points from the Power Drain Special Maneuver used through this
+# Item, however, but they are instead stored inside the Energy-Suction Device."
+storesDrain: true
+chargesLabel: Stored Ki
+# "You can spend 1 Action to regain any number of Ki Points that are stored in the Energy-
+# Suction Device."
+placeCost: 1
+# "When making an Unarmed Energy or Magic Attacking Maneuver, you may instead spend the Ki
+# Points stored in the Energy-Suction Device."
+paysAttacks: energy, magic
+source: Core Rule
+description: >
+  Power Drain without a Grapple - win a Strike Clash first - with the Ki stored in the
+  Device: drawn out for an Action, or spent on an Energy or Magic attack.
+text: >
+  Energy-Suction Device: An item for gathering and storing energy, the utility of this item
+  cannot be underestimated.
+  –Effects: While you possess this Item, gain access to the Power Drain Special Maneuver, but
+  you may use its effects even if you are not in a Grapple. If you do, you must win a Clash
+  (Physical Strike vs Strike/Dodge) against your target before using the effects of the Power
+  Drain Special Maneuver. You do not regain any Ki Points from the Power Drain Special
+  Maneuver used through this Item, however, but they are instead stored inside the
+  Energy-Suction Device. You can spend 1 Action to regain any number of Ki Points that are
+  stored in the Energy-Suction Device or, when making an Unarmed Energy or Magic Attacking
+  Maneuver, you may instead spend the Ki Points stored in the Energy-Suction Device.
+
+---
+
+# --- Access, and where the Ki goes ----------------------------------------------------------
+#
+# Holding it opens Power Drain, the way enough Skill Ranks would. Used without a Grapple - or
+# held by the one being held - it is aimed at the one targeted, and a Clash of Strike against
+# Strike or Dodge comes first: the Actions are spent on the attempt, and the drain lands only
+# on a win.
+#
+# "Used through this Item", by the table's ruling: when the Device is the only thing that
+# gives the character Power Drain, the Ki always goes into it; when they had Power Drain
+# already, used from a Grapple they choose where the Ki goes, and used without one - which only
+# the Device allows - it goes into the Device.
+#
+# --- The Ki inside ------------------------------------------------------------------------------
+#
+# Draw: 1 Action, and any amount of it back, regained up to the character's maximum - what
+# does not fit stays in the Device.
+#
+# An Energy or Magic Attacking Maneuver may be paid for with it instead, by the table's ruling
+# all or nothing - the whole price from the Device, or none of it - and off the character's
+# Capacity, the Ki not being theirs. Every attack here is Unarmed until Weapons exist.

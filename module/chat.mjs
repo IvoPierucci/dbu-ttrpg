@@ -371,6 +371,65 @@ async function applyClash(messageId, clash) {
   if (clash.snare && clash.result && !clash.snare.applied) {
     await settleSnare(message, clash);
   }
+
+  if (clash.drain && clash.result && !clash.drain.applied) {
+    await settleDrain(message, clash);
+  }
+}
+
+/**
+ * The Clash before a Power Drain made without a Grapple, through the Energy-Suction Device.
+ *
+ * "You must win a Clash (Physical Strike vs Strike/Dodge) against your target before using
+ * the effects of the Power Drain Special Maneuver." The Strike Clash, the target choosing.
+ */
+export async function postDrainClash(actor, target, maneuver, actions, store) {
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: {
+      [SCOPE]: {
+        [RESPONDABLE_FLAG]: false,
+        [CLASH_FLAG]: {
+          category: "strike",
+          clashLabel: "Clash (Physical Strike vs Strike/Dodge)",
+          maneuverName: maneuver.name,
+          reason: `Win and ${maneuver.name} takes from ${target.name}.`,
+          challengerUuid: actor.uuid,
+          challengerName: actor.name,
+          defenderUuid: target.uuid,
+          defenderName: target.name,
+          defenderRoll: "",
+          drain: {
+            applied: false, maneuverId: maneuver.id, actions: actions || 1,
+            storeId: store?.id ?? ""
+          },
+          ready: [],
+          result: null
+        }
+      }
+    }
+  });
+}
+
+/** A won drain Clash drains, into the Device; a lost one takes nothing. */
+async function settleDrain(message, clash) {
+  const actor = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!actor || !target) return;
+
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, drain: { ...clash.drain, applied: true } });
+
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} pulls free before anything is taken.`);
+    return;
+  }
+
+  const maneuver = getManeuver(clash.drain.maneuverId);
+  const store = actor.items.get(clash.drain.storeId) ?? null;
+  if (!maneuver) return;
+  const { drainFrom } = await import("./use-maneuver.mjs");
+  return drainFrom(actor, target, maneuver, clash.drain.actions, store);
 }
 
 /**
@@ -6025,6 +6084,8 @@ async function takeOutOfSequence(message, actor, offer) {
     : crossing
     ? movementKiCost(actor, crossing)
     : maneuverKiCost(maneuver, reflecting ? null : declared, actor);
+  // The Energy-Suction Device's stored Ki may pay for it instead - asked below, before the Ki
+  // is spent.
 
   // A wager paid in Life, where there is a wager to pay: not on a free offer, and not on
   // a Reflect, which pays its own price and nothing of the attack it throws back.
@@ -6035,7 +6096,10 @@ async function takeOutOfSequence(message, actor, offer) {
     return;
   }
 
-  if (price && !await spendManeuverCost(actor, maneuver, price)) return;
+  const { payFromStore } = await import("./use-maneuver.mjs");
+  const fromStore = (paysLife && price) ? await payFromStore(actor, maneuver, declared, price) : false;
+  if (fromStore === null) return;
+  if (price && !fromStore && !await spendManeuverCost(actor, maneuver, price)) return;
   if (paysLife) await spendLifeWager(actor, declared);
 
   // An Out-of-Sequence Maneuver counts as having used another kind - unless the thing

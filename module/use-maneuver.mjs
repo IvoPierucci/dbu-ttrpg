@@ -1230,7 +1230,70 @@ async function analyze(actor, target) {
  *
  * @returns {Promise<boolean>} false if nothing could be drained, so the Maneuver is unused
  */
-async function drainFrom(actor, grappled, maneuver, actionsSpent) {
+/**
+ * Where a Power Drain's Ki goes from a Grapple, with an Energy-Suction Device in hand.
+ *
+ * By the table's ruling: into the Device when the Device is the only thing giving them Power
+ * Drain; their choice when they had it already. Without a Device, to them.
+ *
+ * @returns {Promise<object|false|null>} the Device, `false` for themselves, null if closed
+ */
+async function drainDestination(actor, maneuver, store) {
+  if (!store) return false;
+  const { openedWithoutGear } = await import("./maneuvers.mjs");
+  if (!openedWithoutGear(actor, maneuver)) return store;
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: maneuver.name },
+    content: `<p>Where does the Ki go?</p>`,
+    buttons: [
+      { action: "self", label: actor.name },
+      { action: "store", label: store.name },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (chosen === "store") return store;
+  if (chosen === "self") return false;
+  return null;
+}
+
+/**
+ * Pay for an attack with the Ki an Item stores, where it can and the player says so.
+ *
+ * The Energy-Suction Device: "when making an Unarmed Energy or Magic Attacking Maneuver, you
+ * may instead spend the Ki Points stored in the Energy-Suction Device." All or nothing, and
+ * off the character's Capacity, by the table's ruling.
+ *
+ * @returns {Promise<boolean|null>} true if paid from the Item, false if not, null if closed
+ */
+export async function payFromStore(actor, maneuver, declared, price) {
+  if (!maneuver?.attacking || !declared?.foundation) return false;
+  const { canPayAttack, drainStore } = await import("./gear.mjs");
+  const store = drainStore(actor.items);
+  if (!canPayAttack(store, declared.foundation, price)) return false;
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: maneuver.name },
+    content: `<p>Pay ${price} KP from the ${Handlebars.escapeExpression(store.name)} `
+      + `(${store.system.charges} stored)?</p>`,
+    buttons: [
+      { action: "store", label: store.name },
+      { action: "self", label: "My Ki" },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (chosen === "self") return false;
+  if (chosen !== "store") return null;
+
+  await store.update({ "system.charges": (Number(store.system.charges) || 0) - price });
+  return true;
+}
+
+export async function drainFrom(actor, grappled, maneuver, actionsSpent, into = null) {
   const { reduceKiPoints, reduceLifePoints } = await import("./chat.mjs");
 
   const actions = Math.max(1, actionsSpent || actionCostOf(maneuver, actionsSpent).amount);
@@ -1248,6 +1311,16 @@ async function drainFrom(actor, grappled, maneuver, actionsSpent) {
 
   await reduceLifePoints(grappled, total, { reason });
   const lost = await reduceKiPoints(grappled, total, { reason });
+
+  // Into an Item instead, where it goes there: the Energy-Suction Device - "You do not
+  // regain any Ki Points ... but they are instead stored inside the Energy-Suction Device."
+  if (into) {
+    await into.update({ "system.charges": (Number(into.system.charges) || 0) + lost });
+    await postManeuver(actor, maneuver, {
+      note: `${grappled.name} loses ${total} Life and ${lost} Ki, stored in the ${into.name}.`
+    });
+    return true;
+  }
 
   // "Regain Ki Points equal to the total amount of Ki Points lost by the target", and
   // regaining is bounded by your own maximum like every other regain here.
@@ -1894,6 +1967,27 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   }
 
   if (maneuver.powerDrain) {
+    const { drainStore } = await import("./gear.mjs");
+    const store = drainStore(actor.items);
+    const holding = actor.system.grapple?.partner && (actor.system.grapple?.role === "grappler");
+
+    // The Energy-Suction Device, used without a Grapple: at the one targeted, and a Clash
+    // (Physical Strike vs Strike/Dodge) first. The Actions go on the attempt; the drain lands
+    // on a win, and what it takes goes into the Device.
+    if (!holding) {
+      const aimed = game.user.targets.first()?.actor;
+      if (!aimed || (aimed.uuid === actor.uuid)) {
+        ui.notifications.warn(`Target the one to drain first.`);
+        return false;
+      }
+      await payActions(actor, maneuver, actionsSpent);
+      await recordManeuverUse(actor, maneuver);
+      await recordManeuverType(actor, maneuver.type);
+      const { postDrainClash } = await import("./chat.mjs");
+      await postDrainClash(actor, aimed, maneuver, actionsSpent, store);
+      return true;
+    }
+
     // "Target the Grappled" aims itself: the one being held is the only answer. Known to
     // be there, since the guard above refused a Grapple with nobody in it.
     const grappled = fromUuidSync(actor.system.grapple?.partner ?? "");
@@ -1903,7 +1997,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
       return false;
     }
 
-    if (!await drainFrom(actor, grappled, maneuver, actionsSpent)) return false;
+    // Where the Ki goes, from a Grapple: into the Device when it is what gives them Power
+    // Drain; theirs to choose when they had it already.
+    const into = await drainDestination(actor, maneuver, store);
+    if (into === null) return false;
+
+    if (!await drainFrom(actor, grappled, maneuver, actionsSpent, into || null)) return false;
 
     await payActions(actor, maneuver, actionsSpent);
     await recordManeuverUse(actor, maneuver);
@@ -2191,7 +2290,11 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
 
   if (!await applyModifiers(actor, modifiers)) return false;
 
-  if (!await spendManeuverCost(actor, maneuver, price)) return false;
+  // The Ki an Energy-Suction Device stores may pay for the whole of an Energy or Magic
+  // attack instead, off the character's Capacity.
+  const fromStore = crossing ? false : await payFromStore(actor, maneuver, declared, price);
+  if (fromStore === null) return false;
+  if (!fromStore && !await spendManeuverCost(actor, maneuver, price)) return false;
   if (!crossing) await spendLifeWager(actor, declared);
 
   // Empower hands Ki over before anything is recorded, so backing out of the amount

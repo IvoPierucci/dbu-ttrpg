@@ -440,6 +440,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       lightGear: DBUCharacterSheet._onLightGear,
       restoreGear: DBUCharacterSheet._onRestoreGear,
       summonGear: DBUCharacterSheet._onSummonGear,
+      drawGear: DBUCharacterSheet._onDrawGear,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -1036,7 +1037,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         connectedName: connectedItem(gearItems, item)?.name ?? "",
         canTrigger: canTrigger(connectedItem(gearItems, item)),
         // Charges it was made with, and how many are left.
-        chargesLabel: item.system.chargesDice ? (item.system.chargesLabel || "charges") : "",
+        chargesLabel: (item.system.chargesDice || item.system.storesDrain)
+          ? (item.system.chargesLabel || "charges") : "",
+        // Ki stored in it, to draw back out.
+        draws: Boolean(item.system.storesDrain) && ((item.system.charges ?? 0) > 0),
         charges: item.system.charges ?? 0,
         // An Item used up to take Conditions off, and whether it has been this Encounter.
         consumable: ((item.system.removes ?? []).length > 0) || Boolean(item.system.heal?.dice),
@@ -2429,6 +2433,55 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       content: `<p>${Handlebars.escapeExpression(this.actor.name)} gathers all `
         + `${item.system.set.size} ${Handlebars.escapeExpression(base)}s and summons the `
         + "Eternal Dragon!</p>"
+    });
+  }
+
+  /**
+   * Draw the Ki an Item stores back out - the Energy-Suction Device.
+   *
+   * "You can spend 1 Action to regain any number of Ki Points that are stored in the
+   * Energy-Suction Device." Regained up to the character's maximum; what does not fit stays.
+   */
+  static async _onDrawGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const stored = Number(item?.system.charges) || 0;
+    if (!item?.system.storesDrain || !stored) return;
+
+    const ki = this.actor.system.ki;
+    const room = Math.max(0, ki.max - ki.value);
+    const most = Math.min(stored, room);
+    if (!most) {
+      ui.notifications.info(`${this.actor.name} has no room for more Ki.`);
+      return;
+    }
+
+    const amount = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${item.name} - Draw` },
+      content: `<label class="dbu-wager"><span>Ki Points</span>
+        <input type="number" name="amount" value="${most}" min="1" max="${most}"/></label>`,
+      buttons: [
+        {
+          action: "confirm",
+          label: "Draw",
+          callback: (event, button, dialog) => Math.min(most, Math.max(1, Math.floor(Number(
+            dialog.element.querySelector('input[name="amount"]')?.value)) || most))
+        },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!Number.isFinite(amount) || (amount < 1)) return;
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    await this.actor.update({ "system.ki.value": ki.value + amount });
+    await item.update({ "system.charges": stored - amount });
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(this.actor.name)} draws ${amount} Ki from the `
+        + `${Handlebars.escapeExpression(item.name)}.</p>`
     });
   }
 
