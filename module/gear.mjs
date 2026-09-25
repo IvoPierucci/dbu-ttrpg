@@ -42,10 +42,30 @@ export const GEAR_TAGS = Object.freeze({
 /** Foundry's own bag, until an Item brings a picture of its own. */
 export const GEAR_ICON = "icons/svg/item-bag.svg";
 
-/** Which of the four Item Types a file says it is. A Basic Item unless it says otherwise. */
+/**
+ * The folders under traits/gear/, one per list on the Gear tab, and the Item Types each
+ * may hold - the first being what a file in it is when its header does not say.
+ *
+ * So the folder is what decides the list, and `itemType:` is only needed to tell an
+ * Accessory from a Basic Item.
+ */
+export const GEAR_FOLDERS = Object.freeze({
+  basic: ["basic", "accessory"],
+  apparel: ["apparel"],
+  weapons: ["weapon"]
+});
+
+/**
+ * Which of the four Item Types a file is.
+ *
+ * What its header says, where that is a type its folder holds; the folder's own type
+ * otherwise. A file outside the three folders is whatever its header says, or a Basic
+ * Item.
+ */
 export function typeOf(definition) {
-  const type = String(definition?.itemType ?? "").trim().toLowerCase();
-  return GEAR_TYPES[type] ? type : "basic";
+  const allowed = GEAR_FOLDERS[definition?.owner] ?? Object.keys(GEAR_TYPES);
+  const said = String(definition?.itemType ?? "").trim().toLowerCase();
+  return allowed.includes(said) ? said : allowed[0];
 }
 
 /**
