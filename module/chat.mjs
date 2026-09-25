@@ -8422,9 +8422,10 @@ async function applyAttackDamage(message, target, attack) {
   // Attack's miss, which is not Damage dealt with an Attacking Maneuver for anything that
   // triggers off it.
   //
-  // Elemental (Fire), the same shape: their Square "become[s] Aflame until the start of
-  // your next turn", and "if you knock an Opponent through a Health Threshold, they gain a
-  // stack of the Broken Combat Condition until the end of your next turn".
+  // Elemental (Fire) and (Ice), the same shape: their Square "become[s] Aflame" - or
+  // Frozen - "until the start of your next turn", and "if you knock an Opponent through a
+  // Health Threshold, they gain a stack of the Broken" - or Slowed - "Combat Condition until
+  // the end of your next turn". Which mark and which Condition is the Profile's to say.
   const riders = PROFILES[attack.profile] ?? {};
   const attacker = fromUuidSync(attack.attackerUuid);
   if (attacker && (damage > 0) && !isAbsoluteMiss(own)) {
@@ -8432,12 +8433,12 @@ async function applyAttackDamage(message, target, attack) {
       await markUntilNextTurn(attacker, target, "darkened", riders.darkensLight, "start",
         riders.label);
     }
-    if (riders.setsAflame) {
-      await markUntilNextTurn(attacker, target, "ignited", 1, "start", riders.label);
+    if (riders.squareMark) {
+      await markUntilNextTurn(attacker, target, riders.squareMark, 1, "start", riders.label);
     }
-    if (riders.brokenOnThreshold && knockedThrough) {
-      await markUntilNextTurn(attacker, target, "broken", riders.brokenOnThreshold, "end",
-        riders.label);
+    if (riders.onThreshold && knockedThrough) {
+      await markUntilNextTurn(attacker, target, riders.onThreshold.condition,
+        riders.onThreshold.stacks, "end", riders.label);
     }
   }
 

@@ -1,0 +1,31 @@
+id: frosted
+name: Frosted
+kind: conditions
+# One stack per clock, so the Square stays Frozen until the last attacker's clock runs out
+# rather than the first. The cap only has to be out of anybody's reach, as Ignited's does.
+maxStacks: 99
+# Not a Combat Condition: the entry makes a Square Frozen and never names one.
+combatCondition: no
+# The Environmental Quality this mark puts on the Square while it is held. Named here and
+# not in the code, where no Quality is named.
+quality: frozen
+source: Core Rule
+description: >
+  The ground under you has frozen over. Your Square is Frozen.
+text: >
+  Frosted: the Elemental (Ice) Profile's mark. "Any Squares occupied by Character(s) who
+  take Damage from this Attacking Maneuver become Frozen (see — Environmental Qualities,
+  Battle Environments) until the start of your next turn."
+
+---
+
+# --- The name is this system's ------------------------------------------------------------
+#
+# Ignited's twin: the entry makes a Square Frozen, this system has no Squares, and the
+# Environmental Qualities are on the character. So the ice lands on whoever took the
+# Damage, as a mark on the attacker's clock, and `qualitiesOf` adds the Quality in the
+# `quality:` header while it is held. The player's own ticks are never written to.
+#
+# No effects of its own. What frozen ground does is the Frozen Quality's file - its Ki
+# Point loss at either end of the turn. Its Movement rider is not built there either:
+# there is no Movement here for it to slow.

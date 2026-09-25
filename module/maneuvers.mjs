@@ -657,10 +657,33 @@ export const PROFILES = Object.freeze({
         the AoE become Aflame until the start of your next turn instead.`,
     // A stack of Broken for knocking somebody through a Threshold, until the end of the
     // attacker's next turn.
-    brokenOnThreshold: 1,
+    onThreshold: { condition: "broken", stacks: 1 },
     // Their Square is Aflame until the start of the attacker's next turn: the Ignited mark,
-    // which `qualitiesOf` reads as the Aflame Quality.
-    setsAflame: true,
+    // whose file names the Quality it stands for.
+    squareMark: "ignited",
+    needs: "the AoE sentence - no attack here gives this Profile an Area."
+  },
+
+  elementalIce: {
+    label: "Elemental (Ice)",
+    foundations: ["magic"],
+    kiCostPerTier: 8,
+    damageCategory: "direct",
+    text: `
+      Elemental (Ice): Using the power of ice, you create frigid winds of icy projectiles
+      to assault your opponents and try to freeze them in place!
+      –Damage Category: Direct
+      –KP Cost: 8(T)
+      –Effect: This Profile has multiple effects:
+      * If you knock an Opponent through a Health Threshold, they gain a stack of the
+        Slowed Combat Condition until the end of your next turn.
+      * Any Squares occupied by Character(s) who take Damage from this Attacking Maneuver
+        become Frozen (see — Environmental Qualities, Battle Environments) until the start
+        of your next turn. If this Attacking Maneuver has an AoE, then all Squares within
+        the AoE become Frozen until the start of your next turn instead.`,
+    // Fire's shape exactly, with Slowed for Broken and Frozen for Aflame.
+    onThreshold: { condition: "slowed", stacks: 1 },
+    squareMark: "frosted",
     needs: "the AoE sentence - no attack here gives this Profile an Area."
   }
 });
