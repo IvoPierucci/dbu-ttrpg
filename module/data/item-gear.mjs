@@ -75,6 +75,14 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       chargesLabel: new fields.StringField({ required: true, blank: true, initial: "" }),
       charges: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
 
+      /** The files of the Items it can be connected to - the Remote Control's. */
+      connects: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }),
+        { required: true, initial: () => [] }
+      ),
+      /** The Item it is connected to, by its Item id, or blank. */
+      connectedTo: new fields.StringField({ required: true, blank: true, initial: "" }),
+
       /** Whether it is a Capsule, which holds one Basic Item. */
       capsule: new fields.BooleanField({ required: true, initial: false }),
       /** The Capsule this Item is inside, by its Item id, or blank. */

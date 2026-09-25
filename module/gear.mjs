@@ -43,10 +43,12 @@ export const GEAR_TAGS = Object.freeze({
  * What can set off an Item that goes off - the Bomb's three, as its entry names them.
  *
  * `row` is whether the Item's own row offers to set it off. A Timed one is not set off by
- * hand: its Rounds are counted, and the Round's card offers it when they have passed.
+ * hand: its Rounds are counted, and the Round's card offers it when they have passed. A
+ * Remote Controlled one is set off from the Remote Control connected to it: "You can
+ * trigger this Bomb using a Remote Control Basic Item."
  */
 export const GEAR_TRIGGERS = Object.freeze({
-  remote: { label: "Remote Controlled", row: true },
+  remote: { label: "Remote Controlled", row: false },
   timed: { label: "Timed", row: false },
   proximity: { label: "Proximity", row: true }
 });
@@ -188,6 +190,10 @@ export function gearItemFrom(definition, actor = null) {
       chargesLabel: String(definition.chargesLabel ?? ""),
       charges: 0,
 
+      // What it can be connected to, and what it is - the Remote Control's Item.
+      connects: listOf(definition.connects),
+      connectedTo: "",
+
       // A Capsule: it holds one Basic Item. Which one is on that Item, as `storedIn`.
       capsule: definition.capsule === true,
       storedIn: "",
@@ -243,6 +249,33 @@ export function encounterUseKey(item) {
 /** Whether this character has already used this Item this Combat Encounter. */
 export function usedThisEncounter(actor, item) {
   return (actor?.system?.usedManeuvers ?? []).includes(encounterUseKey(item));
+}
+
+/**
+ * What a Remote Control can be connected to among a character's Items: their own Items made
+ * from one of the files it names.
+ *
+ * "Select an Item (Bomb/Collar/Vehicle/Battle Jacket) you possess for it to be connected to."
+ */
+export function connectable(items, remote) {
+  const kinds = remote.system?.connects ?? [];
+  return (items ?? []).filter(item => (item.id !== remote.id)
+    && kinds.includes(item.system?.gearId));
+}
+
+/** The Item a Remote Control is connected to, if the character still has it. */
+export function connectedItem(items, remote) {
+  const id = remote.system?.connectedTo;
+  return id ? ((items ?? []).find(item => item.id === id) ?? null) : null;
+}
+
+/**
+ * Whether a Remote Control can set off what it is connected to now: a Bomb, placed, set to
+ * be Remote Controlled.
+ */
+export function canTrigger(target) {
+  return Boolean(target?.system?.placed) && (target.system.trigger === "remote")
+    && Boolean(target.system.detonation?.profile);
 }
 
 /**

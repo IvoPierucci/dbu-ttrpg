@@ -1,0 +1,42 @@
+id: remote-control
+name: Remote Control
+kind: gear
+tags: tech
+craftDC: Expert
+# "Select an Item (Bomb/Collar/Vehicle/Battle Jacket) you possess for it to be connected to."
+# Only the Bomb exists here yet; the others join this list when they do.
+connects: bomb
+# "For a Bomb, you can spend 1 Action to trigger that Bomb."
+placeCost: 1
+source: Core Rule
+description: >
+  Connected to one of your Items when you get it: trigger a Bomb, or set off a Collar, for
+  an Action; pilot a Vehicle or Battle Jacket from afar.
+text: >
+  Remote Control [Tech]: A portable device capable of wireless communication with the
+  advanced computational systems of a Battle Jacket, allowing for remote operation.
+  –Craft DC: Expert
+  –Effects: Upon creating this Basic Item, select an Item (Bomb/Collar/Vehicle/Battle
+  Jacket) you possess for it to be connected to. This Remote Control can be used to control
+  that Item, allowing you to spend your Actions as if you are Piloting a Vehicle or Battle
+  Jacket that can be controlled with this Remote Control. For a Bomb, you can spend 1 Action
+  to trigger that Bomb. For a Collar Accessory, you can spend 1 Action to trigger the effects
+  of that Accessory.
+
+  You cannot use this effect if the Vehicle or Battle Jacket has a Pilot.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Connected when it is given: the character picks one of their own Items it can control, and
+# the connection can be changed on the Remote Control afterwards.
+#
+# A Bomb set to Remote Controlled is set off from here and nowhere else: its own row offers
+# no Detonate, and this one offers Trigger, for an Action, once the Bomb is placed.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# The Collar, Vehicles and Battle Jackets are not in this system yet, so there is nothing of
+# theirs to connect to - and piloting from afar, and "you cannot use this effect if the
+# Vehicle or Battle Jacket has a Pilot", wait with them.

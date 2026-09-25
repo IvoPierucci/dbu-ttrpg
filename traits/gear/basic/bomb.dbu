@@ -58,9 +58,8 @@ text: >
 # reaches - the first is the one targeted when it goes off, and the rest are added from the
 # card, as for any Clearing attack.
 #
-# Remote Controlled asks for a Remote Control Basic Item. That Item is not in this system yet,
-# so nothing checks for it: the Detonate button is there, and whether they have the remote is
-# the table's.
+# Remote Controlled is set off from the Remote Control Basic Item connected to it - Trigger, on
+# the Remote Control's row, for an Action - and the Bomb's own row offers no Detonate.
 #
 # Timed is counted: at the start of each Combat Round a placed Bomb on a timer comes one Round
 # closer, and when its Rounds have passed the Round's card offers to set it off.

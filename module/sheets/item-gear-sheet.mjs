@@ -2,7 +2,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines } from "../effects/traits.mjs";
-import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES } from "../gear.mjs";
+import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable } from "../gear.mjs";
 
 /**
  * Sheet for a piece of Gear.
@@ -52,8 +52,16 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     }));
     // What it was made with and has left - editable, since the table may give or take.
     context.chargesLabel = system.chargesDice ? (system.chargesLabel || "Charges") : "";
+    // What it can be connected to among its owner's Items, and which it is.
+    context.connectChoices = (system.connects ?? []).length
+      ? connectable(this.item.actor?.items?.filter(owned => owned.type === "gear") ?? [],
+        this.item).map(item => ({
+        value: item.id, label: item.name, chosen: item.id === system.connectedTo
+      }))
+      : [];
+    context.connects = (system.connects ?? []).length > 0;
     context.hasControls = Boolean(context.recordsLabel || context.triggerChoices.length
-      || context.chargesLabel);
+      || context.chargesLabel || context.connects);
 
     // The file's entry where the file still has one, and the copy's otherwise - the rules
     // live in traits/, and a copy made last week holds last week's wording.

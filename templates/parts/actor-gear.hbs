@@ -44,6 +44,14 @@
                 data-item-id="{{row.itemId}}">Store</button>
         {{/if}}
         {{/if}}
+        {{#if row.remote}}
+        <span class="gear-type">{{#if row.connectedName}}&rarr; {{row.connectedName}}{{else}}not connected{{/if}}</span>
+        {{#if row.canTrigger}}
+        <button type="button" class="gear-act" data-action="remoteGear"
+                data-item-id="{{row.itemId}}"
+                data-tooltip="Target the first one it catches. Add the rest from the card.">Trigger</button>
+        {{/if}}
+        {{/if}}
         {{#if row.chargesLabel}}
         <span class="gear-type">{{row.charges}} {{row.chargesLabel}}</span>
         {{/if}}

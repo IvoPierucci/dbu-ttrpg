@@ -9,8 +9,9 @@ import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
-import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, encounterUseKey, gearItemFrom, gearOfList,
-  heldBy, isStored, storable, tierDice, typeOf, usedThisEncounter } from "../gear.mjs";
+import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable, connectedItem,
+  encounterUseKey, gearItemFrom, gearOfList, heldBy, isStored, storable, tierDice, typeOf,
+  usedThisEncounter } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -433,6 +434,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       clashGear: DBUCharacterSheet._onClashGear,
       consumeGear: DBUCharacterSheet._onConsumeGear,
       snareGear: DBUCharacterSheet._onSnareGear,
+      remoteGear: DBUCharacterSheet._onRemoteGear,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -1008,6 +1010,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         clashes: Boolean(item.system.clash?.save && item.system.clash?.condition),
         // An Item thrown to catch someone.
         snares: Boolean(item.system.snare?.condition),
+        // A Remote Control, what it is connected to, and whether that can be set off now.
+        remote: (item.system.connects ?? []).length > 0,
+        connectedName: connectedItem(gearItems, item)?.name ?? "",
+        canTrigger: canTrigger(connectedItem(gearItems, item)),
         // Charges it was made with, and how many are left.
         chargesLabel: item.system.chargesDice ? (item.system.chargesLabel || "charges") : "",
         charges: item.system.charges ?? 0,
@@ -1875,6 +1881,38 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // changed on the Item afterwards.
     const data = gearItemFrom(definition, this.actor);
 
+    // "Upon creating this Basic Item, select an Item ... you possess for it to be connected
+    // to." Asked now, among the character's own; refused if there is nothing to connect.
+    if (data.system.connects.length) {
+      const offered = connectable(this.actor.items.filter(owned => owned.type === "gear"),
+        { id: "", system: data.system });
+      if (!offered.length) {
+        ui.notifications.warn(`${this.actor.name} has nothing for a ${definition.name} to be `
+          + "connected to.");
+        return;
+      }
+      const escape = Handlebars.escapeExpression;
+      const chosen = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${definition.name} - Connect` },
+        content: `<select name="connect" class="dbu-gear-pick">${offered
+          .map(item => `<option value="${escape(item.id)}">${escape(item.name)}</option>`)
+          .join("")}</select>`,
+        buttons: [
+          {
+            action: "confirm",
+            label: "Connect",
+            callback: (event, button, dialog) =>
+              dialog.element.querySelector('select[name="connect"]')?.value ?? null
+          },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!offered.some(item => item.id === chosen)) return;
+      data.system.connectedTo = chosen;
+    }
+
     // "When you create this Basic Item, it has 1d6 Poison Drops." Rolled now, and said.
     if (data.system.chargesDice) {
       const roll = await new Roll(data.system.chargesDice).evaluate();
@@ -2165,6 +2203,31 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const { postSnare } = await import("../chat.mjs");
     return postSnare(this.actor, caught, item);
+  }
+
+  /**
+   * Set off what a Remote Control is connected to.
+   *
+   * "For a Bomb, you can spend 1 Action to trigger that Bomb." A Bomb set to Remote
+   * Controlled, placed, and still the character's.
+   */
+  static async _onRemoteGear(event, target) {
+    const remote = this.actor.items.get(target.dataset.itemId);
+    const bomb = connectedItem(this.actor.items.filter(owned => owned.type === "gear"), remote);
+    if (!canTrigger(bomb)) return;
+
+    // Asked before the Action is spent: the blast needs someone targeted.
+    if (!game.user.targets.first()?.actor) {
+      ui.notifications.warn(`Target the first one the ${bomb.name} catches. The rest are added `
+        + "from the card.");
+      return;
+    }
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, remote.system.placeCost ?? 0)) return;
+
+    const { detonateGear } = await import("../chat.mjs");
+    return detonateGear(this.actor, bomb);
   }
 
   /** Set off an Item that is out on the Battlefield. */
