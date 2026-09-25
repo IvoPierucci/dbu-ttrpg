@@ -1,0 +1,27 @@
+id: communicator
+name: Communicator
+kind: gear
+tags: tech
+craftDC: Apprentice
+source: Core Rule
+description: >
+  Talk to anyone else with a Communicator, anywhere in the same galaxy.
+text: >
+  Communicator [Tech]: A long-range communications device enabling real-time communication
+  across vast distances.
+  –Craft DC: Apprentice
+  –Effects: With this device, you can communicate with anyone else that has a Communicator
+  as long as they are within the same galaxy!
+
+  Anything that treats itself as a Communicator can contact Communicators or one another in
+  the same way.
+
+---
+
+# Nothing to automate: who is talking to whom, and whether they are in the same galaxy, is
+# said at the table. The Item is on the sheet so the character has it, and so the entry is
+# there to read.
+#
+# "Anything that treats itself as a Communicator" - other Items will say so in their own
+# entries. Nothing here needs to know which: the rule is the same conversation, held the
+# same way, and it is the table's.
