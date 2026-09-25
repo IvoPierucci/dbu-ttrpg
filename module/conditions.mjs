@@ -199,6 +199,18 @@ function heldInPlace(actor, key) {
   if ((key === "suffocating") && actor.system?.battlefield?.drowning) {
     return `${actor.name} cannot stop Suffocating without air to breathe.`;
   }
+  // A mark whose file says it `holds:` this Condition - the Taser's Tased: "They cannot
+  // remove the Prone Combat Condition inflicted by a Taser until then." Named in the file,
+  // so no mark and no Condition is named here.
+  for (const [mark, stacks] of Object.entries(actor.system?.conditions ?? {})) {
+    if (!((Number(stacks) || 0) > 0)) continue;
+    const holding = getTrait(mark);
+    const holds = String(holding?.holds ?? "").split(",").map(entry => entry.trim().toLowerCase());
+    if (holds.includes(key)) {
+      const name = getTrait(key)?.name ?? key;
+      return `${actor.name} cannot remove ${name} while ${holding.name}.`;
+    }
+  }
   return "";
 }
 

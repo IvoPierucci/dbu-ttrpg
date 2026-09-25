@@ -481,18 +481,50 @@ export async function postGearClash(thrower, target, item) {
   const clash = item.system.clash;
   const condition = getTrait(clash.condition)?.name ?? clash.condition;
   const until = (clash.until === "end") ? "the end" : "the start";
+  const leaves = {
+    applied: false,
+    itemName: item.name,
+    condition: clash.condition,
+    until: clash.until,
+    hold: clash.hold ?? ""
+  };
+
+  // The Taser's "Clash (Strike vs Strike/Dodge)": the Strike Clash the Grapple Check and the
+  // Thrust are made with, the Defender choosing which of the two to answer with.
+  if (clash.roll === "strike") {
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: thrower }),
+      content: "",
+      flags: {
+        [SCOPE]: {
+          [RESPONDABLE_FLAG]: false,
+          [CLASH_FLAG]: {
+            category: "strike",
+            clashLabel: "Clash (Strike vs Strike/Dodge)",
+            maneuverName: item.name,
+            reason: `Win and ${target.name} is ${condition} until ${until} of ${thrower.name}'s `
+              + "next turn.",
+            challengerUuid: thrower.uuid,
+            challengerName: thrower.name,
+            defenderUuid: target.uuid,
+            defenderName: target.name,
+            defenderRoll: "",
+            gearClash: leaves,
+            ready: [],
+            result: null
+          }
+        }
+      }
+    });
+  }
+
   return postSaveClash(thrower, target, {
     maneuverName: item.name,
     clashLabel: `Clash (${clash.save.charAt(0).toUpperCase()}${clash.save.slice(1)})`,
     reason: `Win and ${target.name} is ${condition} until ${until} of ${thrower.name}'s `
       + "next turn.",
     saves: [clash.save],
-    gearClash: {
-      applied: false,
-      itemName: item.name,
-      condition: clash.condition,
-      until: clash.until
-    }
+    gearClash: leaves
   });
 }
 
@@ -519,8 +551,14 @@ async function settleGearClash(message, clash) {
     return;
   }
 
-  await markUntilNextTurn(thrower, target, condition, 1, (until === "end") ? "end" : "start",
-    itemName);
+  // The mark that holds it first, on the same clock, so it runs out first: the Condition's
+  // own clock then finds nothing holding it. "They cannot remove the Prone Combat Condition
+  // inflicted by a Taser until then."
+  const edge = (until === "end") ? "end" : "start";
+  if (clash.gearClash.hold) {
+    await markUntilNextTurn(thrower, target, clash.gearClash.hold, 1, edge, itemName);
+  }
+  await markUntilNextTurn(thrower, target, condition, 1, edge, itemName);
   const name = getTrait(condition)?.name ?? condition;
   await settledNote(message, `${target.name} is ${name} until the `
     + `${(until === "end") ? "end" : "start"} of ${thrower.name}'s next turn.`);

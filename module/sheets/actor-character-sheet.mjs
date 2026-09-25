@@ -1009,7 +1009,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // An Item left on the ground for whoever moves through it.
         scatters: Boolean(item.system.hazard?.dice),
         // An Item thrown to Clash with whoever it catches.
-        clashes: Boolean(item.system.clash?.save && item.system.clash?.condition),
+        clashes: Boolean((item.system.clash?.save || item.system.clash?.roll)
+          && item.system.clash?.condition),
         // An Item thrown to catch someone.
         snares: Boolean(item.system.snare?.condition),
         // An Item thrown to burst over an area.
@@ -2102,13 +2103,31 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onClashGear(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
-    if (!item?.system.clash?.save) return;
+    const clash = item?.system.clash;
+    if (!clash?.save && !clash?.roll) return;
 
-    const caught = [...game.user.targets].map(token => token.actor)
+    // A Strike is made at one character - the Taser's "target a Character"; a Saving Throw
+    // Clash at everyone it catches - the Flash Bang's "all Characters".
+    const targeted = [...game.user.targets].map(token => token.actor)
       .filter(actor => actor && (actor.uuid !== this.actor.uuid));
+    const caught = clash.roll ? targeted.slice(0, 1) : targeted;
     if (!caught.length) {
-      ui.notifications.warn(`Target everyone the ${item.name} catches first.`);
+      ui.notifications.warn(clash.roll
+        ? `Target the one the ${item.name} is used on first.`
+        : `Target everyone the ${item.name} catches first.`);
       return;
+    }
+
+    // "Within your Melee Range", measured the way a Physical Attack's is - and further with
+    // the Expert Taser.
+    if (clash.reach === "melee") {
+      const { whyNotWithinMelee } = await import("../maneuvers.mjs");
+      const extra = item.system.upgrade?.chosen ? (item.system.upgrade.reach ?? 0) : 0;
+      const tooFar = whyNotWithinMelee(this.actor, caught[0], `The ${item.name}`, extra);
+      if (tooFar) {
+        ui.notifications.warn(tooFar);
+        return;
+      }
     }
 
     const { spendActions } = await import("../combat.mjs");

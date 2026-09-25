@@ -215,8 +215,21 @@ export function gearItemFrom(definition, actor = null) {
       // the Flash Bang's Clash (Impulsive), and Blinded until the start of your next turn.
       clash: {
         save: String(definition.clashSave ?? "").trim().toLowerCase(),
+        // Or a Strike, answered with a Strike or a Dodge - the Taser's.
+        roll: String(definition.clashRoll ?? "").trim().toLowerCase(),
+        // How far it reaches: "melee" for the user's Melee Range, blank for the table's.
+        reach: String(definition.clashReach ?? "").trim().toLowerCase(),
         condition: String(definition.clashCondition ?? "").trim().toLowerCase(),
-        until: String(definition.clashUntil ?? "").trim().toLowerCase()
+        until: String(definition.clashUntil ?? "").trim().toLowerCase(),
+        // A mark that keeps the Condition from coming off, on the same clock - Tased.
+        hold: String(definition.clashHold ?? "").trim().toLowerCase()
+      },
+
+      // Made at a higher Craft DC for a longer reach - the Expert Taser. Chosen on the Item.
+      upgrade: {
+        craftDC: String(definition.upgradeCraftDC ?? ""),
+        reach: Math.max(0, Number(definition.upgradeReach) || 0),
+        chosen: false
       },
 
       // An Item thrown to catch someone - the Net: the Foundations its Strike may be made

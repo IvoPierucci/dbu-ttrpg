@@ -60,8 +60,16 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       }))
       : [];
     context.connects = (system.connects ?? []).length > 0;
+    // Made at a higher Craft DC for a longer reach - chosen here, how it was made being the
+    // player's and the ARC's.
+    context.upgrade = system.upgrade?.craftDC
+      ? { label: `Craft DC ${system.upgrade.craftDC}: +${system.upgrade.reach} Melee Range` }
+      : null;
+    context.craftDCNow = (system.upgrade?.chosen && system.upgrade.craftDC)
+      ? system.upgrade.craftDC
+      : system.craftDC;
     context.hasControls = Boolean(context.recordsLabel || context.triggerChoices.length
-      || context.chargesLabel || context.connects);
+      || context.chargesLabel || context.connects || context.upgrade);
 
     // The file's entry where the file still has one, and the copy's otherwise - the rules
     // live in traits/, and a copy made last week holds last week's wording.

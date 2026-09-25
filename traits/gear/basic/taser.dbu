@@ -1,0 +1,49 @@
+id: taser
+name: Taser
+kind: gear
+tags: tech
+craftDC: Qualified
+# "You can spend 1 Action while you possess this Item to target a Character within your Melee
+# Range. Make a Clash (Strike vs Strike/Dodge). If you win, that Character is knocked Prone
+# until the start of your next turn. They cannot remove the Prone Combat Condition inflicted
+# by a Taser until then."
+placeCost: 1
+clashRoll: strike
+clashReach: melee
+clashCondition: prone
+clashUntil: start
+clashHold: tased
+# "You can increase the Craft DC to Expert to increase your Melee Range by 3 when using this
+# Basic Item." Chosen on the Item.
+upgradeCraftDC: Expert
+upgradeReach: 3
+source: Core Rule
+description: >
+  An Action at someone in your Melee Range: win a Clash (Strike vs Strike/Dodge) and they are
+  Prone until the start of your next turn, and cannot get up before then.
+text: >
+  Taser [Tech]: A handheld object that can be used to incapacitate an enemy.
+  –Craft DC: Qualified
+  –Effects: You can spend 1 Action while you possess this Item to target a Character within
+  your Melee Range. Make a Clash (Strike vs Strike/Dodge). If you win, that Character is
+  knocked Prone until the start of your next turn. They cannot remove the Prone Combat
+  Condition inflicted by a Taser until then.
+
+  You can increase the Craft DC to Expert to increase your Melee Range by 3 when using this
+  Basic Item.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Use: 1 Action at the one character targeted, who has to be within the user's Melee Range -
+# measured the way a Physical Attack's is, and not enforced where nothing can be measured. The
+# Clash is the Strike Clash the Grapple Check and the Thrust use: the target answers with
+# their Strike or their Dodge.
+#
+# Won, they are Prone until the start of the user's next turn, on the user's clock - and Tased
+# as well, a mark that holds the Prone in place (`holds: prone` in its file): standing up is
+# refused until the mark runs out, which it does just before the Prone does.
+#
+# The Expert Taser is a choice on the Item: ticked, its Craft DC reads Expert and it reaches 3
+# Squares further. How it was made is between the player and the ARC.

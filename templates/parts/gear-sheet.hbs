@@ -6,7 +6,7 @@
       <div class="gear-facts">
         <span>{{typeLabel}}</span>
         {{#each tagLabels as |tag|}}<span class="gear-tag">[{{tag}}]</span>{{/each}}
-        {{#if system.craftDC}}<span>Craft DC: {{system.craftDC}}</span>{{/if}}
+        {{#if craftDCNow}}<span>Craft DC: {{craftDCNow}}</span>{{/if}}
       </div>
     </div>
   </header>
@@ -18,6 +18,12 @@
       <div class="stat">
         <em>{{recordsLabel}}</em>
         <input type="number" name="system.recorded" value="{{system.recorded}}" data-dtype="Number"/>
+      </div>
+      {{/if}}
+      {{#if upgrade}}
+      <div class="stat">
+        <em>{{upgrade.label}}</em>
+        <input type="checkbox" name="system.upgrade.chosen" {{#if system.upgrade.chosen}}checked{{/if}}/>
       </div>
       {{/if}}
       {{#if connects}}

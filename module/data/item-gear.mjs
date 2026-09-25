@@ -108,8 +108,21 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
        */
       clash: new fields.SchemaField({
         save: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** Or "strike": a Strike Clash, answered with a Strike or a Dodge - the Taser. */
+        roll: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** "melee" where the one aimed at has to be within the user's Melee Range. */
+        reach: new fields.StringField({ required: true, blank: true, initial: "" }),
         condition: new fields.StringField({ required: true, blank: true, initial: "" }),
-        until: new fields.StringField({ required: true, blank: true, initial: "" })
+        until: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** A mark that keeps the Condition from being removed, on the same clock. */
+        hold: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+
+      /** Made at a higher Craft DC for a longer reach, and whether it was - the Taser. */
+      upgrade: new fields.SchemaField({
+        craftDC: new fields.StringField({ required: true, blank: true, initial: "" }),
+        reach: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        chosen: new fields.BooleanField({ required: true, initial: false })
       }),
 
       /**

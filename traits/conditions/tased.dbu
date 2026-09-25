@@ -1,0 +1,27 @@
+id: tased
+name: Tased
+kind: conditions
+# One stack per clock, so the hold lasts until the last Taser's clock runs out rather than
+# the first. The cap only has to be out of anybody's reach.
+maxStacks: 99
+# Not a Combat Condition: the entry names Prone, and this is only what keeps it on.
+combatCondition: no
+# The Combat Condition this mark keeps from being removed while it is held. Read by
+# `setCondition`, which names no mark.
+holds: prone
+source: Core Rule
+description: >
+  Still jolted by a Taser. You cannot get up from Prone yet.
+text: >
+  Tased: the Taser's mark. "They cannot remove the Prone Combat Condition inflicted by a
+  Taser until then."
+
+---
+
+# The rule stops a Condition coming off rather than going on - Guard Down in a Grapple is the
+# other one like it - so it is held where removals are refused, and the mark is what says so.
+#
+# Gained before the Prone and on the same clock, so it runs out first: the Prone's own clock
+# then finds nothing holding it, and it comes off when the entry says it does.
+#
+# No effects of its own.

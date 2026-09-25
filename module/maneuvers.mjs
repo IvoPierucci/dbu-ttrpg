@@ -1040,13 +1040,15 @@ export function whyNotInReach(actor, target, { foundation, profile } = {}) {
  *
  * @param {string} what  what it is that only reaches, for the sentence
  */
-export function whyNotWithinMelee(actor, target, what) {
+export function whyNotWithinMelee(actor, target, what, extra = 0) {
   const from = actor?.getActiveTokens?.(false, true)?.[0];
   const to = target?.getActiveTokens?.(false, true)?.[0];
   const squares = squaresBetween(from, to);
   if (squares === null) return null;
 
-  const reach = Math.max(0, actor.system.meleeRange ?? 0);
+  // `extra` is what the thing being used adds to it - the Expert Taser's "increase your
+  // Melee Range by 3 when using this Basic Item".
+  const reach = Math.max(0, (actor.system.meleeRange ?? 0) + (Number(extra) || 0));
   if (squares <= reach) return null;
 
   const range = reach
