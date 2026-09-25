@@ -1,0 +1,37 @@
+id: smoke-bomb
+name: Smoke Bomb
+kind: gear
+craftDC: Apprentice
+# "You may spend 1 Action to throw the Smoke Bomb."
+placeCost: 1
+# "In this AoE, all Squares gain the Obscured Environmental Quality until the end of your
+# next turn." The Smoked mark, on everyone in it, to the end of the thrower's next turn.
+areaMark: smoked
+areaUntil: end
+source: Core Rule
+description: >
+  Thrown for an Action: everyone in the Sphere it bursts in is in Obscured Squares until the
+  end of your next turn.
+text: >
+  Smoke Bomb: A mixture of black powder and chemicals set to ignite upon physical impact, this
+  object creates a thick black cloud of smoke when used.
+  –Craft DC: Apprentice
+  –Effects: You may spend 1 Action to throw the Smoke Bomb at any Square within a Destructive
+  Sphere AoE (centered on you). Create a Destructive Sphere AoE centered on your chosen
+  Square. In this AoE, all Squares gain the Obscured Environmental Quality until the end of
+  your next turn.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Throw: 1 Action, and everyone targeted - the ones the Sphere covers - gains the Smoked mark
+# until the end of the thrower's next turn. While they hold it their Square is Obscured, the
+# way Elemental (Fire)'s Ignited makes one Aflame. The thrower too, if they are in it and
+# target themselves.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Which Square, and who the Sphere covers. There are no Squares here, so a Square with nobody
+# in it has nothing to carry the smoke - it is Obscured at the table, and nothing here needs
+# to know. Whether the Smoke Bomb is used up the entry does not say, and it stays.

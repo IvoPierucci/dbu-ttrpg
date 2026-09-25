@@ -2354,6 +2354,28 @@ async function settleScan(message, scan, hid) {
   return settledNote(message, `${scanned.name} is read.`);
 }
 
+/**
+ * An Item bursting over an area: its mark on everyone in it, on the thrower's clock, and a
+ * line at the table saying so.
+ */
+export async function burstGear(thrower, item, caught) {
+  const mark = item.system.areaMark;
+  const edge = (mark.until === "start") ? "start" : "end";
+  for (const actor of caught) {
+    await markUntilNextTurn(thrower, actor, mark.condition, 1, edge, item.name);
+  }
+
+  const escape = Handlebars.escapeExpression;
+  const names = caught.map(actor => actor.name);
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: thrower }),
+    content: `<p>${escape(thrower.name)} throws the ${escape(item.name)}.${names.length
+      ? ` ${escape(listed(names))} ${names.length === 1 ? "is" : "are"} caught in it until the `
+        + `${edge} of ${escape(thrower.name)}'s next turn.`
+      : ""}</p>`
+  });
+}
+
 /** Post the card an Item scattered across the ground leaves behind. */
 export async function postGearHazard(actor, item) {
   const hazard = item.system.hazard;

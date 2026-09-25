@@ -190,6 +190,13 @@ export function gearItemFrom(definition, actor = null) {
       chargesLabel: String(definition.chargesLabel ?? ""),
       charges: 0,
 
+      // A mark it leaves on everyone in the area it bursts in, and whether it lasts to the
+      // start or the end of the thrower's next turn - the Smoke Bomb's Smoked.
+      areaMark: {
+        condition: String(definition.areaMark ?? "").trim().toLowerCase(),
+        until: String(definition.areaUntil ?? "").trim().toLowerCase()
+      },
+
       // A scan, and the Check that hides from it - the Scout Scope's Qualified Concealment.
       scan: {
         skill: String(definition.scanSkill ?? "").trim().toLowerCase(),

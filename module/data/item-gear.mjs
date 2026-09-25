@@ -75,6 +75,13 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       chargesLabel: new fields.StringField({ required: true, blank: true, initial: "" }),
       charges: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
 
+      /** A mark it leaves on everyone in the area it bursts in, and until which edge of the
+       *  thrower's next turn - the Smoke Bomb's Smoked. */
+      areaMark: new fields.SchemaField({
+        condition: new fields.StringField({ required: true, blank: true, initial: "" }),
+        until: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+
       /** A scan, and the Skill Check at the Difficulty that hides from it - the Scout Scope. */
       scan: new fields.SchemaField({
         skill: new fields.StringField({ required: true, blank: true, initial: "" }),

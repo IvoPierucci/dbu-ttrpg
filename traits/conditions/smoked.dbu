@@ -1,0 +1,25 @@
+id: smoked
+name: Smoked
+kind: conditions
+# One stack per clock, so the Square stays Obscured until the last thrower's clock runs out
+# rather than the first. The cap only has to be out of anybody's reach, as Ignited's does.
+maxStacks: 99
+# Not a Combat Condition: the entry gives Squares a Quality and never names one.
+combatCondition: no
+# The Environmental Quality this mark puts on the Square while it is held. Named here and
+# not in the code, where no Quality is named.
+quality: obscured
+source: Core Rule
+description: >
+  Thick smoke all around you. Your Square is Obscured.
+text: >
+  Smoked: the Smoke Bomb's mark. "In this AoE, all Squares gain the Obscured Environmental
+  Quality until the end of your next turn."
+
+---
+
+# Ignited's shape, for smoke: there are no Squares, so the Quality lands on the characters
+# in the cloud, as a mark on the thrower's clock, and `qualitiesOf` adds the Quality in the
+# `quality:` header while it is held. The player's own ticks are never written to.
+#
+# No effects of its own. What smoke does is the Obscured Quality's file.

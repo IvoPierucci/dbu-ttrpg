@@ -436,6 +436,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       snareGear: DBUCharacterSheet._onSnareGear,
       remoteGear: DBUCharacterSheet._onRemoteGear,
       scanGear: DBUCharacterSheet._onScanGear,
+      burstGear: DBUCharacterSheet._onBurstGear,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -1011,6 +1012,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         clashes: Boolean(item.system.clash?.save && item.system.clash?.condition),
         // An Item thrown to catch someone.
         snares: Boolean(item.system.snare?.condition),
+        // An Item thrown to burst over an area.
+        bursts: Boolean(item.system.areaMark?.condition),
         // An Item that scans someone.
         scans: Boolean(item.system.scan?.skill),
         // A Remote Control, what it is connected to, and whether that can be set off now.
@@ -2231,6 +2234,26 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const { detonateGear } = await import("../chat.mjs");
     return detonateGear(this.actor, bomb);
+  }
+
+  /**
+   * Throw an Item that bursts over an area - the Smoke Bomb.
+   *
+   * "You may spend 1 Action to throw the Smoke Bomb ... In this AoE, all Squares gain the
+   * Obscured Environmental Quality until the end of your next turn." Everyone targeted is in
+   * the area - the thrower too, if they targeted themselves; a Square with nobody in it has
+   * nothing here to carry it.
+   */
+  static async _onBurstGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system.areaMark?.condition) return;
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    const caught = [...game.user.targets].map(token => token.actor).filter(Boolean);
+    const { burstGear } = await import("../chat.mjs");
+    return burstGear(this.actor, item, caught);
   }
 
   /**
