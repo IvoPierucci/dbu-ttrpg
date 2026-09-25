@@ -80,7 +80,7 @@ function slot(data, key) {
  * Undying letting Life Points go negative is one - and are opted into here rather than
  * being the default.
  */
-function withEffects(data, key, base, { min = 0, parts = null, as = "" } = {}) {
+function withEffects(data, key, base, { min = 0, parts = null, as = "", wraps = false } = {}) {
   const value = applySlot(data.effects?.slots, key, base);
   const floored = (min === null) ? value : Math.max(min, value);
 
@@ -88,7 +88,7 @@ function withEffects(data, key, base, { min = 0, parts = null, as = "" } = {}) {
   // values - the Wound Roll is three, one per Foundation - and filed under the Slot they
   // would overwrite one another, leaving the sheet showing the last one's workings
   // against all three numbers.
-  recordWorkings(data, as || key, { base, parts, raw: value, value: floored, min });
+  recordWorkings(data, as || key, { slot: key, base, parts, raw: value, value: floored, min, wraps });
   return floored;
 }
 
@@ -104,12 +104,31 @@ function withEffects(data, key, base, { min = 0, parts = null, as = "" } = {}) {
  * Written into the effects bag, which is rebuilt from scratch on every pass, so this can
  * never persist onto the document: it is a description of one derivation, not data.
  */
-function recordWorkings(data, key, { base, parts, raw, value, min }) {
+function recordWorkings(data, key, { slot: slotKey = key, base, parts, raw, value, min, wraps = false }) {
   if (!data.effects) return;
   data.effects.workings ??= {};
 
-  const slot = data.effects.slots?.[key];
+  // The Slot the value was run through, which is not the key it is filed under when the
+  // caller said `as` - so read by that Slot's own name. It had been read by the filing
+  // key, which found nothing for the three Wound Rolls ("wound.physical" is no Slot) and
+  // the inner Slot's effects for a wrapped one, so neither ever named its own effects.
+  const slot = data.effects.slots?.[slotKey];
   const contributions = Array.isArray(slot?.parts) ? slot.parts : [];
+
+  // One Slot wrapped round another - Morale inside every Saving Throw, Persuasion inside
+  // every Personality Skill. The inner one filed its workings under this same key a moment
+  // ago; they are kept, and this one's effects go after them, so the hover names both.
+  // Replacing them had left an effect on the inner Slot applied and never named.
+  const inner = wraps ? data.effects.workings[key] : null;
+  if (inner) {
+    data.effects.workings[key] = {
+      ...inner,
+      contributions: [...(inner.contributions ?? []), ...contributions],
+      floored: (min !== null) && (raw < min) ? min : inner.floored,
+      value
+    };
+    return;
+  }
 
   data.effects.workings[key] = {
     base,
@@ -1871,11 +1890,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       normal: withEffects(this, "speed.all",
         withEffects(this, "speed.normal",
           2 + Math.floor(atts.agility.mod / 2) + this.size.speedModifier),
-        { as: "speed.normal" }),
+        { as: "speed.normal", wraps: true }),
       boosted: withEffects(this, "speed.all",
         withEffects(this, "speed.boosted",
           atts.agility.mod + 2 + this.size.speedModifier),
-        { as: "speed.boosted" })
+        { as: "speed.boosted", wraps: true })
     };
 
     // Initiative bonus: 1/2 Agility Score.
@@ -2153,12 +2172,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // Gifted Student raises "the Dice Score of your Skill Checks", which is the roll
       // rather than the Skill Bonus - so it rides here and not up in the Bonus, and
       // Blinded halving Perception halves the Bonus without halving this.
-      entry.roll = withEffects(this, `skill.${key}`, entry.bonus + this.giftedStudent.skillCheck, {
-        parts: [
-          { label: "Skill Bonus", value: entry.bonus },
-          { label: "Gifted Student", value: this.giftedStudent.skillCheck }
-        ]
-      });
+      //
+      // Then every Skill that uses the same Attribute Score - "all Skill Checks that use
+      // your Personality Score" - outermost, as `save.all` is round the one Throw.
+      entry.roll = withEffects(this, `skills.${entry.attribute}`,
+        withEffects(this, `skill.${key}`, entry.bonus + this.giftedStudent.skillCheck, {
+          parts: [
+            { label: "Skill Bonus", value: entry.bonus },
+            { label: "Gifted Student", value: this.giftedStudent.skillCheck }
+          ]
+        }),
+        { as: `skill.${key}`, wraps: true });
     }
 
     this.threshold.penalty = Math.max(0,
@@ -2304,7 +2328,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         value: withEffects(this, "save.all",
           withEffects(this, `save.${save}`,
             atts[attribute].score + (racial ? this.perBaseTier(1) : 0)),
-          { as: `save.${save}` }),
+          { as: `save.${save}`, wraps: true }),
         criticalTarget: racial
           ? Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, this.criticalTarget - 1)
           : this.criticalTarget

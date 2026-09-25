@@ -396,6 +396,12 @@ const PATTERNS = [
   // every `skill.<name>.bonus` an effect wrote was dropped as an unknown Slot - Blinded's
   // Perception halving, Sleeping's two, Holding Back's Concealment bonus and Liquid's
   // Stealth among them. None of them had ever applied.
+  // Every Skill governed by one Attribute - "all Skill Checks that use your Personality
+  // Score". By the Attribute rather than a list of Skills, so a Skill added under it is
+  // not quietly missed. On the roll, as `skill.<name>` is, and applied round it.
+  { match: /^skills\.(\w+)$/, phase: PHASES.LATE, kind: N, ops: NUMERIC,
+    valid: (data, [k]) => k in (data.attributes ?? {}),
+    doc: "A bonus to rolls of every Skill that uses that Attribute Score." },
   { match: /^skill\.(\w+)\.bonus$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "The Skill Bonus itself, as the sheet shows it." },

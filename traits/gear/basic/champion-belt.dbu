@@ -1,0 +1,25 @@
+id: champion-belt
+name: Champion Belt
+kind: gear
+itemType: accessory
+craftDC: Master
+source: Core Rule
+description: >
+  Morale Saving Throw 1(bT) higher, and every Personality Skill Check 2 higher, while worn.
+text: >
+  Champion Belt: A belt of leather and gold indicating a win in a tournament of some kind,
+  marking your martial prowess.
+  –Craft DC: Master
+  –Effects: Increase your Morale Saving Throw by 1(bT) and increase all Skill Checks that
+  use your Personality Score by 2.
+
+---
+
+# While worn: "Accessories are Basic Items that can be equipped and apply benefits while
+# equipped." Taken off, it does nothing.
+[passive]
+save.morale += 1(bT);
+# "All Skill Checks that use your Personality Score" - by the Attribute, so every Skill it
+# governs is caught: Bluff, Cooking, Intimidation, Performance and Persuasion today. On the
+# roll, not the Skill Bonus.
+skills.personality += 2;
