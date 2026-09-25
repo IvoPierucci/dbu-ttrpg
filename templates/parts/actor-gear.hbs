@@ -47,6 +47,14 @@
         {{#if row.setLabel}}
         <span class="gear-type">{{row.setLabel}}</span>
         {{/if}}
+        {{#if row.assigns}}
+        <span class="gear-type">{{#if row.assignedName}}&rarr; {{row.assignedName}}{{else}}not assigned{{/if}}</span>
+        {{/if}}
+        {{#if row.teleports}}
+        <button type="button" class="gear-act" data-action="teleportGear"
+                data-item-id="{{row.itemId}}"
+                data-tooltip="Moving the tokens is yours.">Teleport</button>
+        {{/if}}
         {{#each row.portions as |portion|}}
         <button type="button" class="gear-act" data-action="eatPortion"
                 data-item-id="{{../itemId}}" data-portion="{{portion.key}}">{{portion.label}} ({{portion.count}})</button>

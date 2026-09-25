@@ -62,6 +62,14 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       }))
       : [];
     context.connects = (system.connects ?? []).length > 0;
+    // Who it is tied to, among the world's characters - never whoever holds it.
+    context.assigns = Boolean(system.assignsCharacter);
+    context.assignChoices = context.assigns
+      ? game.actors.filter(actor => (actor.type === "character")
+        && (actor.uuid !== this.item.actor?.uuid))
+        .map(actor => ({ value: actor.uuid, label: actor.name,
+          chosen: actor.uuid === system.assigned?.uuid }))
+      : [];
     // Made at a higher Craft DC for a longer reach - chosen here, how it was made being the
     // player's and the ARC's.
     context.upgrade = system.upgrade?.craftDC
@@ -71,7 +79,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       ? system.upgrade.craftDC
       : system.craftDC;
     context.hasControls = Boolean(context.recordsLabel || context.triggerChoices.length
-      || context.chargesLabel || context.connects || context.upgrade);
+      || context.chargesLabel || context.connects || context.upgrade || context.assigns);
 
     // The file's entry where the file still has one, and the copy's otherwise - the rules
     // live in traits/, and a copy made last week holds last week's wording.
@@ -79,6 +87,19 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     context.entry = printedLines(entry).map(line => ({ text: line, gap: !line }));
 
     return context;
+  }
+
+  /**
+   * Keep the assigned Character's name with their uuid, so the row can say who it is even
+   * where the Actor cannot be read.
+   */
+  async _processSubmitData(event, form, submitData, options) {
+    const uuid = foundry.utils.getProperty(submitData, "system.assigned.uuid");
+    if (uuid !== undefined) {
+      foundry.utils.setProperty(submitData, "system.assigned.name",
+        uuid ? (fromUuidSync(uuid)?.name ?? "") : "");
+    }
+    return super._processSubmitData(event, form, submitData, options);
   }
 
   /** Handle clicking the picture to pick a new one. */

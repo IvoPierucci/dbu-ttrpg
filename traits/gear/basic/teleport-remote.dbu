@@ -1,0 +1,35 @@
+id: teleport-remote
+name: Teleport Remote
+kind: gear
+# A Special Basic Item: only the ARC hands it out, and nothing crafts it.
+special: true
+# "Upon gaining this Special Item, a Character is assigned with this."
+assignsCharacter: true
+# "By spending 1 Action, you may either move to a Square of your choice adjacent to that
+# Character, or move that Character to a Square of your choice adjacent to you."
+placeCost: 1
+teleports: true
+source: Core Rule
+description: >
+  Tied to one Character. For an Action, go to them or bring them to you.
+text: >
+  Teleport Remote: Via this magical device, you are able to teleport yourself directly to a
+  specific person, or teleport that person to you.
+  –Effects: Upon gaining this Special Item, a Character is assigned with this. By spending 1
+  Action, you may either move to a Square of your choice adjacent to that Character, or move
+  that Character to a Square of your choice adjacent to you.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Given: the Character it is assigned to is picked among the world's characters, and can be
+# changed on the Item.
+#
+# Teleport: 1 Action, the choice of going to them or bringing them, and a line at the table
+# saying which.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# The move itself. This system moves nobody: which adjacent Square, and moving the tokens
+# there, are the player's.

@@ -298,6 +298,12 @@ export function gearItemFrom(definition, actor = null) {
       // your ARC".
       special: definition.special === true,
 
+      // Tied to a Character picked when it is given, and moving to or from them - the
+      // Teleport Remote.
+      assignsCharacter: definition.assignsCharacter === true,
+      assigned: { uuid: "", name: "" },
+      teleports: definition.teleports === true,
+
       // Portions of several kinds, each with what eating one does - the Medibugs - and the
       // dice for how many are shared out among them.
       portionsDice: String(definition.portionsDice ?? ""),

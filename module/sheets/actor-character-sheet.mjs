@@ -442,6 +442,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       summonGear: DBUCharacterSheet._onSummonGear,
       drawGear: DBUCharacterSheet._onDrawGear,
       eatPortion: DBUCharacterSheet._onEatPortion,
+      teleportGear: DBUCharacterSheet._onTeleportGear,
       endMark: DBUCharacterSheet._onEndMark,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
@@ -1008,6 +1009,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // A full restore, while there is a charge left to do it with.
         restores: Boolean(item.system.restore?.full) && ((item.system.charges ?? 0) > 0),
         feeds: Boolean(item.system.restore?.feedsDefeated),
+        // Tied to a Character: who, and Teleport once there is someone.
+        assignedName: item.system.assignsCharacter ? (item.system.assigned?.name || "") : "",
+        assigns: Boolean(item.system.assignsCharacter),
+        teleports: Boolean(item.system.teleports) && Boolean(item.system.assigned?.uuid),
         // The portions left, a button each.
         portions: (item.system.portions ?? []).filter(portion => portion.count > 0)
           .map(portion => ({ key: portion.key, label: portion.label, count: portion.count })),
@@ -1968,6 +1973,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.system.chargesDice = size.dice;
     }
 
+    // "Upon gaining this Special Item, a Character is assigned with this." Picked now,
+    // among the world's characters, and changeable on the Item.
+    if (data.system.assignsCharacter) {
+      const chosen = await DBUCharacterSheet.#askCharacter(definition.name, this.actor);
+      if (!chosen) return;
+      data.system.assigned = chosen;
+    }
+
     // "Select up to 1d6 Medibugs from the categories below." Rolled, and shared out.
     if (data.system.portionsDice) {
       const roll = await new Roll(data.system.portionsDice).evaluate();
@@ -2029,6 +2042,36 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const size = Math.min(set.max, Math.max(set.min, chosen.size || set.max));
     const number = Math.min(size, Math.max(1, chosen.number || 1));
     return { size, number };
+  }
+
+  /** A character of the world's, for an Item tied to one - never the one holding it. */
+  static async #askCharacter(name, holder) {
+    const escape = Handlebars.escapeExpression;
+    const offered = game.actors.filter(actor => (actor.type === "character")
+      && (actor.uuid !== holder.uuid));
+    if (!offered.length) {
+      ui.notifications.warn(`There is no other character for the ${name} to be tied to.`);
+      return null;
+    }
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${name} - Assign` },
+      content: `<select name="assigned" class="dbu-gear-pick">${offered
+        .map(actor => `<option value="${escape(actor.uuid)}">${escape(actor.name)}</option>`)
+        .join("")}</select>`,
+      buttons: [
+        {
+          action: "confirm",
+          label: "Assign",
+          callback: (event, button, dialog) =>
+            dialog.element.querySelector('select[name="assigned"]')?.value ?? null
+        },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    const actor = offered.find(entry => entry.uuid === chosen);
+    return actor ? { uuid: actor.uuid, name: actor.name } : null;
   }
 
   /** How many of each kind of portion, up to a total. */
@@ -2521,6 +2564,45 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
       content: `<p>${Handlebars.escapeExpression(this.actor.name)} eats a `
         + `${Handlebars.escapeExpression(portion.label)}.</p>`
+    });
+  }
+
+  /**
+   * Go to the Character an Item is tied to, or bring them - the Teleport Remote.
+   *
+   * "By spending 1 Action, you may either move to a Square of your choice adjacent to that
+   * Character, or move that Character to a Square of your choice adjacent to you." Which,
+   * asked; the move itself is the player's, since this system moves nobody.
+   */
+  static async _onTeleportGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const bound = item?.system.assigned;
+    if (!item?.system.teleports || !bound?.uuid) return;
+
+    const name = fromUuidSync(bound.uuid)?.name ?? bound.name;
+    const way = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: item.name },
+      content: "",
+      buttons: [
+        { action: "to", label: `To ${name}` },
+        { action: "bring", label: `Bring ${name}` },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if ((way !== "to") && (way !== "bring")) return;
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    const escape = Handlebars.escapeExpression;
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${(way === "to")
+        ? `${escape(this.actor.name)} teleports beside ${escape(name)}`
+        : `${escape(this.actor.name)} brings ${escape(name)} to their side`} with the `
+        + `${escape(item.name)}.</p>`
     });
   }
 

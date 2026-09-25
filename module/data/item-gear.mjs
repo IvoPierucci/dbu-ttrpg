@@ -72,6 +72,15 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** A Special Basic Item, which only the ARC hands out and nothing crafts. */
       special: new fields.BooleanField({ required: true, initial: false }),
 
+      /** Tied to a Character, and which - the Teleport Remote - and whether it moves
+       *  its holder to them or them to its holder. */
+      assignsCharacter: new fields.BooleanField({ required: true, initial: false }),
+      assigned: new fields.SchemaField({
+        uuid: new fields.StringField({ required: true, blank: true, initial: "" }),
+        name: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+      teleports: new fields.BooleanField({ required: true, initial: false }),
+
       /** Portions of several kinds, how many of each are left, and what eating one does -
        *  the Medibugs - with the dice for how many are shared out. */
       portionsDice: new fields.StringField({ required: true, blank: true, initial: "" }),

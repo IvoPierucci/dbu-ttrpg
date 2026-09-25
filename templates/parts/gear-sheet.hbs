@@ -27,6 +27,17 @@
         <input type="checkbox" name="system.upgrade.chosen" {{#if system.upgrade.chosen}}checked{{/if}}/>
       </div>
       {{/if}}
+      {{#if assigns}}
+      <div class="stat">
+        <em>Assigned to</em>
+        <select name="system.assigned.uuid">
+          <option value="" {{#unless system.assigned.uuid}}selected{{/unless}}>Nobody</option>
+          {{#each assignChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{/if}}
       {{#if connects}}
       <div class="stat">
         <em>Connected to</em>
