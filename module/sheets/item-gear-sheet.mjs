@@ -50,7 +50,10 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       label: GEAR_TRIGGERS[trigger]?.label ?? trigger,
       chosen: trigger === system.trigger
     }));
-    context.hasControls = Boolean(context.recordsLabel || context.triggerChoices.length);
+    // What it was made with and has left - editable, since the table may give or take.
+    context.chargesLabel = system.chargesDice ? (system.chargesLabel || "Charges") : "";
+    context.hasControls = Boolean(context.recordsLabel || context.triggerChoices.length
+      || context.chargesLabel);
 
     // The file's entry where the file still has one, and the copy's otherwise - the rules
     // live in traits/, and a copy made last week holds last week's wording.

@@ -183,6 +183,11 @@ export function gearItemFrom(definition, actor = null) {
         autoHit: definition.detonationAutoHit === true
       },
 
+      // Charges it is made with, rolled when it is given - the Poison Vial's Drops.
+      chargesDice: String(definition.chargesDice ?? ""),
+      chargesLabel: String(definition.chargesLabel ?? ""),
+      charges: 0,
+
       // A Capsule: it holds one Basic Item. Which one is on that Item, as `storedIn`.
       capsule: definition.capsule === true,
       storedIn: "",

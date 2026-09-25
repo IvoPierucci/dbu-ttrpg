@@ -1,0 +1,35 @@
+id: poison-vial
+name: Poison Vial
+kind: gear
+craftDC: Expert
+# "When you create this Basic Item, it has 1d6 Poison Drops." Rolled when it is given, and
+# editable on the Item.
+chargesDice: 1d6
+chargesLabel: Poison Drops
+source: Core Rule
+description: >
+  1d6 Poison Drops. An Action and a Drop poison a Weapon until the Combat Encounter ends.
+text: >
+  Poison Vial: A vial containing a deadly poison to use against your enemies.
+  –Craft DC: Expert
+  –Effects: When you create this Basic Item, it has 1d6 Poison Drops. You may spend 1 Action
+  and 1 Poison Drop to Poison a Weapon. A Poisoned Weapon inflicts the Poisoned Combat
+  Condition to a Character if you knock them through a Health Threshold with an Attacking
+  Maneuver using that Weapon.
+
+  A Weapon stops being Poisoned at the end of the Combat Encounter.
+
+---
+
+# --- What is built -----------------------------------------------------------------------------
+#
+# The Poison Drops: 1d6, rolled when the character is given the Vial, shown on its row and
+# editable on the Item.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Everything the Drops are for is about a Weapon, and there are no Weapons in this system yet -
+# they arrive with Equipment. When they do: an Action and a Drop mark one of the character's
+# Weapons Poisoned until the Combat Encounter ends, and an Attacking Maneuver made with it that
+# knocks someone through a Health Threshold gives them Poisoned - the same moment Elemental
+# (Fire)'s Broken is handed out.

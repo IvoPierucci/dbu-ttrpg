@@ -69,6 +69,12 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         autoHit: new fields.BooleanField({ required: true, initial: false })
       }),
 
+      /** Charges it is made with: the dice rolled for them, what they are called, and how
+       *  many are left - the Poison Vial's 1d6 Poison Drops. */
+      chargesDice: new fields.StringField({ required: true, blank: true, initial: "" }),
+      chargesLabel: new fields.StringField({ required: true, blank: true, initial: "" }),
+      charges: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+
       /** Whether it is a Capsule, which holds one Basic Item. */
       capsule: new fields.BooleanField({ required: true, initial: false }),
       /** The Capsule this Item is inside, by its Item id, or blank. */

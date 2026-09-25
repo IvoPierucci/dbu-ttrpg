@@ -20,6 +20,12 @@
         <input type="number" name="system.recorded" value="{{system.recorded}}" data-dtype="Number"/>
       </div>
       {{/if}}
+      {{#if chargesLabel}}
+      <div class="stat">
+        <em>{{chargesLabel}}</em>
+        <input type="number" name="system.charges" value="{{system.charges}}" min="0" data-dtype="Number"/>
+      </div>
+      {{/if}}
       {{#if triggerChoices.length}}
       <div class="stat">
         <em>Trigger</em>

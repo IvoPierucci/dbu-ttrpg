@@ -1008,6 +1008,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         clashes: Boolean(item.system.clash?.save && item.system.clash?.condition),
         // An Item thrown to catch someone.
         snares: Boolean(item.system.snare?.condition),
+        // Charges it was made with, and how many are left.
+        chargesLabel: item.system.chargesDice ? (item.system.chargesLabel || "charges") : "",
+        charges: item.system.charges ?? 0,
         // An Item used up to take Conditions off, and whether it has been this Encounter.
         consumable: ((item.system.removes ?? []).length > 0) || Boolean(item.system.heal?.dice),
         usedUp: Boolean(item.system.oncePerEncounter) && usedThisEncounter(this.actor, item),
@@ -1871,6 +1874,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // trigger." Recorded off this character, and the trigger asked now - both can be
     // changed on the Item afterwards.
     const data = gearItemFrom(definition, this.actor);
+
+    // "When you create this Basic Item, it has 1d6 Poison Drops." Rolled now, and said.
+    if (data.system.chargesDice) {
+      const roll = await new Roll(data.system.chargesDice).evaluate();
+      await roll.toMessage({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        flavor: `${definition.name} - ${data.system.chargesLabel || "charges"}`
+      });
+      data.system.charges = Math.max(0, roll.total);
+    }
+
     if (data.system.triggers.length > 1) {
       const trigger = await DBUCharacterSheet.#askTrigger(definition.name, data.system.triggers);
       if (!trigger) return;

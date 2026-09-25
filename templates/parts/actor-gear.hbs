@@ -44,6 +44,9 @@
                 data-item-id="{{row.itemId}}">Store</button>
         {{/if}}
         {{/if}}
+        {{#if row.chargesLabel}}
+        <span class="gear-type">{{row.charges}} {{row.chargesLabel}}</span>
+        {{/if}}
         {{#if row.snares}}
         <button type="button" class="gear-act" data-action="snareGear"
                 data-item-id="{{row.itemId}}"
