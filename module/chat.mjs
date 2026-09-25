@@ -8336,6 +8336,36 @@ async function markUntilNextTurn(attacker, target, key, stacks, edge, source) {
   }
 }
 
+/**
+ * Put an Environmental Quality on a character's Square, for good.
+ *
+ * Elemental (Metal): "Any Squares occupied by Character(s) who take Damage from this
+ * Attacking Maneuver become Metallic." No duration, so it goes on the list the player
+ * ticks rather than on a mark with a clock - that list is where a Square's lasting
+ * Qualities live, and the player takes it off when they move on.
+ *
+ * And this is "applied through an effect", which is when Metallic's and Glass's own clause
+ * fires: "If this Environmental Quality is applied through an effect, remove all other
+ * Environmental Qualities on this Feature." Which Qualities carry that is in their files
+ * (`appliedAlone: true`), so none is named here. What goes is every other Quality ticked,
+ * and every mark putting one on the Square for a while.
+ */
+async function applySquareQuality(target, id) {
+  const quality = getTrait(id);
+  if (!quality?.envQuality) return;
+
+  const held = (target.system.battlefield?.qualities ?? []).map(String);
+  const alone = quality.appliedAlone === true;
+  const next = alone ? [id] : [...new Set([...held, id])];
+  await requestActorUpdate(target, { "system.battlefield.qualities": next });
+
+  if (!alone) return;
+  const { setCondition } = await import("./conditions.mjs");
+  for (const [key, stacks] of Object.entries(target.system.conditions ?? {})) {
+    if ((Number(stacks) > 0) && getTrait(key)?.quality) await setCondition(target, key, 0);
+  }
+}
+
 /** Take the damage off one target, once and once only. */
 async function applyAttackDamage(message, target, attack) {
   const own = targetResult(attack, target.uuid);
@@ -8433,6 +8463,7 @@ async function applyAttackDamage(message, target, attack) {
       await markUntilNextTurn(attacker, target, riders.squareMark.condition,
         riders.squareMark.stacks, "start", riders.label);
     }
+    if (riders.squareQuality) await applySquareQuality(target, riders.squareQuality);
     if (riders.onThreshold && knockedThrough) {
       await markUntilNextTurn(attacker, target, riders.onThreshold.condition,
         riders.onThreshold.stacks, "end", riders.label);

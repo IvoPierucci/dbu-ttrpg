@@ -4,6 +4,9 @@ kind: battlefield
 envQuality: true
 hardnessMin: 3
 source: Core Rule
+# "If this Environmental Quality is applied through an effect, remove all other
+# Environmental Qualities on this Feature."
+appliedAlone: true
 description: >
   Metal underfoot. Hardness Rank 3 at the least.
 text: >
@@ -22,8 +25,13 @@ text: >
 # Rank this allows - so the picker on the tab offers Rank 3 upwards while it is ticked, and
 # a Rank already picked below that is pulled up to it.
 #
-# --- What is not built ----------------------------------------------------------------------------
+# --- Applied through an effect ---------------------------------------------------------------------
 #
 # "If this Environmental Quality is applied through an effect, remove all other
-# Environmental Qualities on this Feature." Nothing in this system applies one through an
-# effect, so the clause has nothing to fire on - the same as Glass's.
+# Environmental Qualities on this Feature." `appliedAlone: true`, read when an effect puts
+# it on a Square - Elemental (Metal) is the first. Ticked by the player it is only the ARC
+# saying what the Square is made of, and nothing is removed.
+#
+# What goes: every other Quality the player ticked, and every mark putting one on the Square
+# for a while - Ignited, Frosted, Crackling. What cannot go is a Quality the Environment
+# brings with the ground, which is in the Environment's file and not on the character.

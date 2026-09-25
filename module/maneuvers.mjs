@@ -737,6 +737,33 @@ export const PROFILES = Object.freeze({
     onThreshold: { condition: "impediment", stacks: 1 },
     squareMark: { condition: "crackling", stacks: 1 },
     needs: "the AoE sentence - no attack here gives this Profile an Area."
+  },
+
+  elementalMetal: {
+    label: "Elemental (Metal)",
+    foundations: ["magic"],
+    kiCostPerTier: 8,
+    damageCategory: "lethal",
+    text: `
+      Elemental (Metal): Using the powers of magnetism, you manipulate metal and slam it
+      against your enemies to bypass their guard.
+      –Damage Category: Lethal
+      –KP Cost: 8(T)
+      –Effect: Any Squares occupied by Character(s) who take Damage from this Attacking
+      Maneuver become Metallic (see — Environmental Qualities, Battle Environments). If
+      this Attacking Maneuver has an AoE, then all Squares and Features within the AoE
+      become Metallic and gain the Dangerous Environment Quality or the Sharp Feature
+      Quality respectively. Any Squares or Features that become Metallic through this
+      effect have their Hardness Rank increased to 3 if it was lower.`,
+    // No "until" anywhere in it: the Square is metal from now on. So not a mark with a
+    // clock but the Quality itself, put on the list the player ticks - which is where a
+    // Square's lasting Qualities live, and where the player takes it off on moving away.
+    //
+    // "Their Hardness Rank increased to 3 if it was lower" is Metallic's own floor,
+    // `hardnessMin: 3` in its file, which the ground's Rank already answers to.
+    squareQuality: "metallic",
+    needs: "the AoE sentence (Squares and Features, Dangerous and Sharp) - no attack here "
+      + "gives this Profile an Area."
   }
 });
 
