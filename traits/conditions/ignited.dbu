@@ -1,0 +1,36 @@
+id: ignited
+name: Ignited
+kind: conditions
+# One stack per clock, so the Square stays Aflame until the last attacker's clock runs out
+# rather than the first. The cap only has to be out of anybody's reach: a Square is Aflame
+# or it is not, and every stack past the first changes nothing but how long.
+maxStacks: 99
+# Not a Combat Condition: the entry makes a Square Aflame and never names one.
+combatCondition: no
+# The Environmental Quality this mark puts on the Square while it is held. Named here and
+# not in the code, where no Quality is named.
+quality: aflame
+source: Core Rule
+description: >
+  The ground under you is on fire. Your Square is Aflame.
+text: >
+  Ignited: the Elemental (Fire) Profile's mark. "Any Squares occupied by Character(s) who
+  take Damage from this Attacking Maneuver become Aflame (see — Environmental Qualities,
+  Battle Environments) until the start of your next turn."
+
+---
+
+# --- The name is this system's ------------------------------------------------------------
+#
+# The entry makes a Square Aflame, and this system has no Squares. Environmental Qualities
+# are on the character, ticked on the Battlefields tab, so the fire lands on the character
+# whose Square it was - the one who took the Damage.
+#
+# A mark rather than a tick in that list for the reason Darkened is one: it runs out on the
+# attacker's clock ("until the start of YOUR next turn"), and a tick the effect had added
+# would have to be taken away again past whatever the player ticked in the meantime. So the
+# list stays the player's and `qualitiesOf` adds the Quality in the `quality:` header while
+# this is held.
+#
+# No effects of its own. What burning ground does is the Aflame Quality's file, and this
+# only decides that the file is read.

@@ -147,13 +147,34 @@ export function highEnvironment(rank) {
  * The Environment's own are not tickable: they come with the ground and go when you leave
  * it. Written as one list so that everything downstream asks one question.
  */
-export function qualitiesOf(system, environmentTrait) {
+export function qualitiesOf(system, environmentTrait, getTrait = null) {
   const own = String(environmentTrait?.qualities ?? "")
     .split(",").map(id => id.trim()).filter(Boolean);
   const picked = Array.isArray(system?.battlefield?.qualities)
     ? system.battlefield.qualities.map(String)
     : [];
-  return [...new Set([...own, ...picked])];
+  return [...new Set([...own, ...picked, ...qualitiesFromEffects(system, getTrait)])];
+}
+
+/**
+ * The Qualities an effect has put on this character's Square for a while.
+ *
+ * Elemental (Fire): "Any Squares occupied by Character(s) who take Damage from this
+ * Attacking Maneuver become Aflame until the start of your next turn." Held as the Ignited
+ * mark, whose clock is the attacker's, and read here as the Quality its file names - so
+ * the player's own ticks are never written to and never have to be taken back.
+ *
+ * Any mark with a `quality:` header does this, and the Quality is named in the file rather
+ * than here. Handed the Trait lookup, as `highTraitOf` is; without one there is nothing to
+ * read the headers from, and no Quality comes from an effect.
+ */
+export function qualitiesFromEffects(system, getTrait = null) {
+  if (!getTrait) return [];
+  return Object.entries(system?.conditions ?? {})
+    .filter(([, stacks]) => Number(stacks) > 0)
+    .map(([key]) => getTrait(key)?.quality)
+    .filter(Boolean)
+    .map(String);
 }
 
 /**

@@ -4,13 +4,14 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
 import { reactiveFor } from "../effects/registry.mjs";
-import { resourceCeiling, resourceDefinitions, traitsOfKind } from "../effects/traits.mjs";
+import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
+  from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, highEnvironment, qualitiesOf }
-  from "../environments.mjs";
+import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, highEnvironment, qualitiesFromEffects,
+  qualitiesOf } from "../environments.mjs";
 import { canSuffocate, difficultiesMet, heldBreath, isUnbreathable, settleBreath }
   from "../breath.mjs";
 import {
@@ -880,12 +881,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // and whether that is the player's doing. The Environment's own come with the ground:
     // shown so the player can see what they are standing in, and not tickable, because
     // untickable is what "it comes with the ground" means.
-    const environmentQualities = String(environmentTrait?.qualities ?? "")
-      .split(",").map(id => id.trim()).filter(Boolean);
+    // And the ones an effect has set burning for a while, which are not the player's to
+    // untick either.
+    const environmentQualities = [
+      ...String(environmentTrait?.qualities ?? "").split(",").map(id => id.trim())
+        .filter(Boolean),
+      ...qualitiesFromEffects(system, getTrait)
+    ];
     // Not `held`: `_prepareContext` already has one, for the Combat Conditions this
     // character is carrying. Two `const`s of one name in one function is a SyntaxError,
     // and V8 reported it against a private method four hundred lines away.
-    const squareHas = qualitiesOf(system, environmentTrait);
+    const squareHas = qualitiesOf(system, environmentTrait, getTrait);
 
     context.qualities = traitsOfKind("qualities").map(quality => ({
       id: quality.id,

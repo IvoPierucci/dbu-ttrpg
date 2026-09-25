@@ -41,6 +41,7 @@
     "conditions/slowed.dbu",
     "conditions/soaring.dbu",
     "conditions/darkened.dbu",
+    "conditions/ignited.dbu",
     "conditions/staggered.dbu",
     "conditions/stress-exhaustion.dbu",
     "conditions/suffocating.dbu",

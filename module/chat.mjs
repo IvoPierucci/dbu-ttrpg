@@ -8105,7 +8105,7 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   // What the Qualities of this Square do to a collision with it. Bouncy halves and
   // Dangerous doubles, both "with this Square" - so a Feature standing on a Bouncy Square
   // is not bouncy, and neither of these is asked about anywhere but the Ground Collision.
-  const groundQualities = qualitiesOf(target.system, standing)
+  const groundQualities = qualitiesOf(target.system, standing, getTrait)
     .map(id => getTrait(id))
     .filter(quality => quality?.groundCollision);
 
@@ -8299,26 +8299,39 @@ async function applyCollisionDamage(message, clash) {
 }
 
 /**
- * Lower a character's Light Level by some number of Levels, until the start of the
- * attacker's next turn.
+ * Put stacks of something on the one who took the Damage, for as long as the attacker's
+ * clock says.
  *
- * A stack of Darkened per Level, each with a clock on the attacker: the turn the entry
- * names is theirs. The mark is on the one who took the Damage, and `lightLevelOf` reads
- * it off the Level they set.
+ * The shape every Elemental Profile's rider has so far: "they gain a stack of Broken until
+ * the end of your next turn", "their Light Level is reduced by 1 Level until the start of
+ * your next turn", "their Square becomes Aflame until the start of your next turn". The
+ * mark is theirs and the turn the entry names is the attacker's, so the clock is too.
+ *
+ * One clock per stack actually gained, and no more. Broken caps at three, and a fourth
+ * clock set on a character already at three would take one of the three they had off
+ * early - a stack this attack never gave them.
+ *
+ * @param {string} edge "start" or "end" of the attacker's next turn
  */
-async function darkenLight(attacker, target, levels) {
+async function markUntilNextTurn(attacker, target, key, stacks, edge, source) {
   const { gainCondition } = await import("./effects/moments-runtime.mjs");
   const { lasting, EDGES, KINDS } = await import("./durations.mjs");
+  const { allConditions } = await import("./conditions.mjs");
 
-  await gainCondition(target, "darkened", levels);
-  for (let i = 0; i < levels; i++) {
+  const before = Number(target.system.conditions?.[key]) || 0;
+  if (await gainCondition(target, key, stacks) === false) return;
+
+  const cap = allConditions().find(condition => condition.key === key)?.maxStacks ?? stacks;
+  const gained = Math.max(0, Math.min(cap, before + stacks) - before);
+
+  for (let i = 0; i < gained; i++) {
     await lasting(attacker, {
       kind: KINDS.CONDITION,
-      key: "darkened",
-      edge: EDGES.START,
+      key,
+      edge: (edge === "end") ? EDGES.END : EDGES.START,
       next: true,
       on: target.uuid,
-      source: "Elemental (Dark)"
+      source
     });
   }
 }
@@ -8348,6 +8361,15 @@ async function applyAttackDamage(message, target, attack) {
   // State being the one thing in the rules that grants it.
   const settled = target.system.life.value - damage;
   const floor = target.system.effects?.slots?.["life.allowNegative"] ? settled : Math.max(0, settled);
+
+  // Which Health Threshold this leaves them in, against the one they were in. Read off
+  // the Life Points on both sides of the one write, because the Threshold is derived and
+  // leaves no record of having been crossed.
+  const thresholds = Object.keys(DBUCharacterData.THRESHOLDS);
+  const knockedThrough = thresholds.indexOf(
+    DBUCharacterData.thresholdKey(floor, target.system.life.max))
+    > thresholds.indexOf(DBUCharacterData.thresholdKey(target.system.life.value,
+      target.system.life.max));
 
   // One write, off one reading of the character. Two updates each doing their own
   // read-and-add is how a number that was raised twice ends up raised once: whichever
@@ -8399,10 +8421,24 @@ async function applyAttackDamage(message, target, attack) {
   // next turn." Theirs is the Square, and the clock is the attacker's. Not off an Absolute
   // Attack's miss, which is not Damage dealt with an Attacking Maneuver for anything that
   // triggers off it.
-  const darkens = PROFILES[attack.profile]?.darkensLight ?? 0;
-  if ((damage > 0) && darkens && !isAbsoluteMiss(own)) {
-    const attacker = fromUuidSync(attack.attackerUuid);
-    if (attacker) await darkenLight(attacker, target, darkens);
+  //
+  // Elemental (Fire), the same shape: their Square "become[s] Aflame until the start of
+  // your next turn", and "if you knock an Opponent through a Health Threshold, they gain a
+  // stack of the Broken Combat Condition until the end of your next turn".
+  const riders = PROFILES[attack.profile] ?? {};
+  const attacker = fromUuidSync(attack.attackerUuid);
+  if (attacker && (damage > 0) && !isAbsoluteMiss(own)) {
+    if (riders.darkensLight) {
+      await markUntilNextTurn(attacker, target, "darkened", riders.darkensLight, "start",
+        riders.label);
+    }
+    if (riders.setsAflame) {
+      await markUntilNextTurn(attacker, target, "ignited", 1, "start", riders.label);
+    }
+    if (riders.brokenOnThreshold && knockedThrough) {
+      await markUntilNextTurn(attacker, target, "broken", riders.brokenOnThreshold, "end",
+        riders.label);
+    }
   }
 
   // "If you take Damage from an Attacking Maneuver used through the Exploit Maneuver in

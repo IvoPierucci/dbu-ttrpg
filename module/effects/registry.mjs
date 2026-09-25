@@ -363,7 +363,7 @@ function qualityPrograms(actor, report) {
   const standing = isAirborne(actor.system)
     ? null
     : getTrait(actor.system?.battlefield?.environment ?? "");
-  const ids = qualitiesOf(actor.system, standing);
+  const ids = qualitiesOf(actor.system, standing, getTrait);
   if (!ids.length) return [];
 
   const entries = [];

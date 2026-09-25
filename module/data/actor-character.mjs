@@ -1648,7 +1648,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // one number read in two places is one number.
     {
       const standing = getTrait(this.battlefield.environment ?? "");
-      const qualities = qualitiesOf(this, standing).map(id => getTrait(id)).filter(Boolean);
+      const qualities = qualitiesOf(this, standing, getTrait).map(id => getTrait(id))
+        .filter(Boolean);
       this.battlefield.groundRank = groundHardnessWith(
         this.battlefield.groundHardness, qualities, DBUCharacterData.MAX_HARDNESS_RANK);
     }

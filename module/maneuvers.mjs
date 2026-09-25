@@ -636,6 +636,32 @@ export const PROFILES = Object.freeze({
     // guessed at.
     needs: "the Bludgeoning Weapon Category and the Staggering Quality - there are no "
       + "Weapons in this system yet."
+  },
+
+  elementalFire: {
+    label: "Elemental (Fire)",
+    foundations: ["magic"],
+    kiCostPerTier: 8,
+    damageCategory: "direct",
+    text: `
+      Elemental (Fire): Using the powers of fire, you launch plumes of flames at your
+      opponent that break down their defenses.
+      –Damage Category: Direct
+      –KP Cost: 8(T)
+      –Effect: This Profile has multiple effects:
+      * If you knock an Opponent through a Health Threshold, they gain a stack of the
+        Broken Combat Condition until the end of your next turn.
+      * Any Squares occupied by Character(s) who take Damage from this Attacking Maneuver
+        become Aflame (see — Environmental Qualities, Battle Environments) until the start
+        of your next turn. If this Attacking Maneuver has an AoE, then all Squares within
+        the AoE become Aflame until the start of your next turn instead.`,
+    // A stack of Broken for knocking somebody through a Threshold, until the end of the
+    // attacker's next turn.
+    brokenOnThreshold: 1,
+    // Their Square is Aflame until the start of the attacker's next turn: the Ignited mark,
+    // which `qualitiesOf` reads as the Aflame Quality.
+    setsAflame: true,
+    needs: "the AoE sentence - no attack here gives this Profile an Area."
   }
 });
 
