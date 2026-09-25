@@ -78,8 +78,16 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     context.craftDCNow = (system.upgrade?.chosen && system.upgrade.craftDC)
       ? system.upgrade.craftDC
       : system.craftDC;
+    // Who it was made for, among the world's characters - whoever holds it included.
+    context.declaresIntended = Boolean(system.declaresIntended);
+    context.intendedChoices = context.declaresIntended
+      ? game.actors.filter(actor => actor.type === "character")
+        .map(actor => ({ value: actor.uuid, label: actor.name,
+          chosen: actor.uuid === system.intended?.uuid }))
+      : [];
     context.hasControls = Boolean(context.recordsLabel || context.triggerChoices.length
-      || context.chargesLabel || context.connects || context.upgrade || context.assigns);
+      || context.chargesLabel || context.connects || context.upgrade || context.assigns
+      || context.declaresIntended);
 
     // The file's entry where the file still has one, and the copy's otherwise - the rules
     // live in traits/, and a copy made last week holds last week's wording.
@@ -94,10 +102,12 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
    * where the Actor cannot be read.
    */
   async _processSubmitData(event, form, submitData, options) {
-    const uuid = foundry.utils.getProperty(submitData, "system.assigned.uuid");
-    if (uuid !== undefined) {
-      foundry.utils.setProperty(submitData, "system.assigned.name",
-        uuid ? (fromUuidSync(uuid)?.name ?? "") : "");
+    for (const field of ["assigned", "intended"]) {
+      const uuid = foundry.utils.getProperty(submitData, `system.${field}.uuid`);
+      if (uuid !== undefined) {
+        foundry.utils.setProperty(submitData, `system.${field}.name`,
+          uuid ? (fromUuidSync(uuid)?.name ?? "") : "");
+      }
     }
     return super._processSubmitData(event, form, submitData, options);
   }

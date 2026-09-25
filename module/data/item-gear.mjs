@@ -81,6 +81,13 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       }),
       teleports: new fields.BooleanField({ required: true, initial: false }),
 
+      /** Made for one Character, and which - the Eyeglasses' Intended Character. */
+      declaresIntended: new fields.BooleanField({ required: true, initial: false }),
+      intended: new fields.SchemaField({
+        uuid: new fields.StringField({ required: true, blank: true, initial: "" }),
+        name: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+
       /** An Accessory being worn. Its effects apply only while it is. */
       equipped: new fields.BooleanField({ required: true, initial: false }),
 

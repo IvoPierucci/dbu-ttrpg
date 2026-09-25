@@ -40,6 +40,7 @@ import {
   enterEncounter,
   prepareRoll,
   rollSteadfastCheck,
+  skillNatural,
   whyNotWilling
 } from "../chat.mjs";
 import {
@@ -1011,6 +1012,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // A full restore, while there is a charge left to do it with.
         restores: Boolean(item.system.restore?.full) && ((item.system.charges ?? 0) > 0),
         feeds: Boolean(item.system.restore?.feedsDefeated),
+        // Who it was made for, where it names someone.
+        intendedName: item.system.declaresIntended
+          ? (item.system.intended?.name || "nobody declared") : "",
         // An Accessory, and whether it is being worn.
         accessory: isAccessory(item),
         equipped: isAccessory(item) && Boolean(item.system.equipped),
@@ -1986,6 +1990,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.system.assigned = chosen;
     }
 
+    // "When you gain or create this Accessory, you must declare an Intended Character."
+    // Any character of the world's, the one gaining it first; changeable on the Item.
+    if (data.system.declaresIntended) {
+      const chosen = await DBUCharacterSheet.#askCharacter(definition.name, this.actor,
+        { holderToo: true, title: "Intended Character", confirm: "Declare" });
+      if (!chosen) return;
+      data.system.intended = chosen;
+    }
+
     // "Select up to 1d6 Medibugs from the categories below." Rolled, and shared out.
     if (data.system.portionsDice) {
       const roll = await new Roll(data.system.portionsDice).evaluate();
@@ -2050,24 +2063,27 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** A character of the world's, for an Item tied to one - never the one holding it. */
-  static async #askCharacter(name, holder) {
+  static async #askCharacter(name, holder,
+                             { holderToo = false, title = "Assign", confirm = "Assign" } = {}) {
     const escape = Handlebars.escapeExpression;
-    const offered = game.actors.filter(actor => (actor.type === "character")
+    const others = game.actors.filter(actor => (actor.type === "character")
       && (actor.uuid !== holder.uuid));
+    // The one holding it may be the one it is meant for - the Eyeglasses' own wearer.
+    const offered = holderToo ? [holder, ...others] : others;
     if (!offered.length) {
       ui.notifications.warn(`There is no other character for the ${name} to be tied to.`);
       return null;
     }
     const chosen = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog"],
-      window: { title: `${name} - Assign` },
+      window: { title: `${name} - ${title}` },
       content: `<select name="assigned" class="dbu-gear-pick">${offered
         .map(actor => `<option value="${escape(actor.uuid)}">${escape(actor.name)}</option>`)
         .join("")}</select>`,
       buttons: [
         {
           action: "confirm",
-          label: "Assign",
+          label: confirm,
           callback: (event, button, dialog) =>
             dialog.element.querySelector('select[name="assigned"]')?.value ?? null
         },
@@ -3037,7 +3053,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * which offers the extra die as a button on the message (see chat.mjs).
    */
   async #rollCheck({ parts = [], flavor, criticalDice, skillRoll = false, urgent = false,
-                    criticalTarget = null, difficulty = "" }) {
+                    criticalTarget = null, difficulty = "", naturalAdd = 0 }) {
     // The Difficulty this Check is measured against, where it has one. Resolved once here
     // rather than looked up in each of the three branches below, all of which say whether
     // it was met - a willing failure that totals 0 has still missed a Target Number, and
@@ -3057,8 +3073,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // The Critical Target this roll is measured against, where it has one of its own:
     // a racial Saving Throw crits a point more easily, which is worked out per Saving
     // Throw and had nowhere to be read. Null means the character's own.
-    const { roll, natural, botch, critical } =
-      await evaluateCheck(this.actor, bonus, "", null, { criticalTarget });
+    const { roll, natural, naturalShift, botch, critical } =
+      await evaluateCheck(this.actor, bonus, "", null, { criticalTarget, naturalAdd });
+    // The die counts in the total at its moved value, as a Combat Roll's does: moving the
+    // Natural Result moves the sum it sits in.
+    const rolledTotal = roll.total + naturalShift;
 
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
 
@@ -3068,7 +3087,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const rows = () => {
       const [base, ...extras] = roll.dice ?? [];
       const lines = [baseDieLine(base?.expression ?? DBUCharacterData.BASE_DIE,
-        { rolled: natural, natural })];
+        { rolled: natural - naturalShift, natural })];
       const dice = extraDiceLine(extras, "Extra dice");
       if (dice) lines.push(dice);
       for (const part of parts) if (part.value) lines.push(partLine(part));
@@ -3084,10 +3103,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const rerollable = {
       actorUuid: this.actor.uuid,
       natural,
-      beforeOutcome: roll.total,
+      beforeOutcome: rolledTotal,
       criticalDice,
       botchPenalty,
-      flavor
+      flavor,
+      // So Karmic Chance moves the new die as this one was moved.
+      rules: { naturalAdd }
     };
 
     // A willing failure applies to any roll at all, this one included. It is decided
@@ -3120,7 +3141,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // leaving the reader to subtract it from the card's number.
       // Floored at zero, as every other value is: the penalty cancels what the roll
       // came to rather than pushing it below nothing.
-      const botched = Math.max(0, roll.total - botchPenalty);
+      const botched = Math.max(0, rolledTotal - botchPenalty);
       const lines = [
         ...rows(),
         // A Skill roll loses a flat 2; everything else loses 2(bT).
@@ -3132,7 +3153,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         }),
         // The Base Die's doing, like the Botch above it: a Karmic Chance that replaces
         // the die takes both rows with it.
-        fromOutcome(floorLine(botched - (roll.total - botchPenalty), botched,
+        fromOutcome(floorLine(botched - (rolledTotal - botchPenalty), botched,
           "A Botch takes what it takes, and stops at nothing")),
         difficultyLine(botched, against)
       ].filter(Boolean);
@@ -3154,14 +3175,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Posted as our own card rather than Foundry's, so a Skill Check is read the same
     // way as everything else. The Roll rides along on the message, which is what the
     // Critical Die button reaches for and what lets Foundry animate the dice.
-    const lines = [...rows(), difficultyLine(roll.total, against)].filter(Boolean);
+    const lines = [...rows(), difficultyLine(rolledTotal, against)].filter(Boolean);
     await ChatMessage.create({
       speaker,
       flavor: critical ? `${flavor} — Critical` : flavor,
       rolls: [roll],
       content: checkCard({
         lines,
-        total: roll.total,
+        total: rolledTotal,
         outcome: critical ? "critical" : "",
         owner: this.actor.uuid
       }),
@@ -3172,7 +3193,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           criticalPending: critical,
           criticalDice,
           check: {
-            ...rerollable, total: roll.total, outcome: critical ? "critical" : "", lines,
+            ...rerollable, total: rolledTotal, outcome: critical ? "critical" : "", lines,
             // Carried so the Critical Die's card can judge again: the extra die is exactly
             // the thing that can take a Check over a Target Number it had missed.
             against
@@ -3188,7 +3209,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // The Critical Die is a button on the card rather than part of this total, so what
     // comes back is the Check as it stands - which is what a Difficulty is read against
     // everywhere else too.
-    return roll.total;
+    return rolledTotal;
   }
 
   /**
@@ -3308,7 +3329,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const ready = await prepareRoll(
       this.actor, [], `${name} Check`,
       `Roll <strong>${Handlebars.escapeExpression(name)}</strong>? (${BASE_DIE} ${bonus})`,
-      { difficulties: true }
+      { difficulties: true, sight: Boolean(skill.naturalSight) }
     );
     if (!ready) return;
 
@@ -3324,7 +3345,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       flavor: `${name} Check`,
       criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,
       skillRoll: true,
-      difficulty: ready.difficulty
+      difficulty: ready.difficulty,
+      // The Eyeglasses' move to the Natural Result, and the sight half where it relies on it.
+      naturalAdd: skillNatural(this.actor, target.dataset.skill, Boolean(ready.sight))
     });
   }
 

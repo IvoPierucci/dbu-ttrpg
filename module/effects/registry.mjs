@@ -184,7 +184,10 @@ function accessoryPrograms(actor, report) {
       sourceUuid: item.uuid ?? null,
       sourceName: item.name,
       level: 0,
-      stacks: 1
+      stacks: 1,
+      // Whether the wearer is the Character it was declared for.
+      intended: Boolean(item.system.intended?.uuid)
+        && (item.system.intended.uuid === actor.uuid)
     });
   }
   return entries;

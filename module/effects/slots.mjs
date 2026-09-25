@@ -402,6 +402,17 @@ const PATTERNS = [
   { match: /^skills\.(\w+)$/, phase: PHASES.LATE, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.attributes ?? {}),
     doc: "A bonus to rolls of every Skill that uses that Attribute Score." },
+  // What a Skill's Checks do to their own Natural Result - "increase the Natural Result
+  // of any Perception Skill Check by 1". The die, not the total: it is what a Critical
+  // and a Botch are read off, which a bonus to the roll never reaches.
+  { match: /^skill\.(\w+)\.natural$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
+    doc: "Added to the Natural Result of that Skill's Checks." },
+  // The same, only on a Check "made relying on sight". Whether one is, is the player's to
+  // say when they roll it - asked only while this is not zero.
+  { match: /^skill\.(\w+)\.natural\.sight$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
+    doc: "Added to the Natural Result of that Skill's Checks made relying on sight." },
   { match: /^skill\.(\w+)\.bonus$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "The Skill Bonus itself, as the sheet shows it." },

@@ -1,0 +1,35 @@
+id: eyeglasses
+name: Eyeglasses
+kind: gear
+itemType: accessory
+craftDC: Apprentice
+# "When you gain or create this Accessory, you must declare an Intended Character."
+declaresIntended: true
+source: Core Rule
+description: >
+  Made for one Character. Worn by them, Perception's Natural Result is 1 higher; worn by
+  anyone else, 1 lower on a Perception Check relying on sight.
+text: >
+  Eyeglasses: A piece of eye-wear designed to correct poor vision.
+  –Craft DC: Apprentice
+  –Effects: When you gain or create this Accessory, you must declare an Intended Character.
+  If you’re the Intended Character, increase the Natural Result of any Perception Skill
+  Check by 1 while wearing this Accessory.
+
+  If you’re not the Intended Character, reduce the Natural Result on any Perception Skill
+  check made relying on sight by 1 while wearing this Accessory.
+
+---
+
+# The Intended Character is picked when the Eyeglasses are given, among every character -
+# the one gaining them first - and can be changed on the Item.
+#
+# The Natural Result, not the total: it moves the die a Critical and a Botch are read off.
+# Whether a Check relies on sight is the player's to say: the roll asks, while these are
+# on someone they were not made for.
+[passive]
+if (intendedForYou) {
+  skill.perception.natural += 1;
+} else {
+  skill.perception.natural.sight -= 1;
+}

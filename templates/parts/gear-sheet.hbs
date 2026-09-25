@@ -27,6 +27,17 @@
         <input type="checkbox" name="system.upgrade.chosen" {{#if system.upgrade.chosen}}checked{{/if}}/>
       </div>
       {{/if}}
+      {{#if declaresIntended}}
+      <div class="stat">
+        <em>Intended Character</em>
+        <select name="system.intended.uuid">
+          <option value="" {{#unless system.intended.uuid}}selected{{/unless}}>Nobody</option>
+          {{#each intendedChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{/if}}
       {{#if assigns}}
       <div class="stat">
         <em>Assigned to</em>

@@ -2223,9 +2223,19 @@ function botchRangeFor(actor, combatRoll) {
  * do about it. Callers apply their own policy: a lone check offers the critical die
  * as a button, while a Skill Clash has to settle both sides at once.
  */
+/**
+ * What a Skill's Checks do to their Natural Result: its own move, and the one that only
+ * applies relying on sight where the Check does.
+ */
+export function skillNatural(actor, key, bySight = false) {
+  const skill = actor?.system?.skills?.[key];
+  if (!skill) return 0;
+  return (skill.natural ?? 0) + (bySight ? (skill.naturalSight ?? 0) : 0);
+}
+
 export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null,
                                     { minimumNatural = 0, criticalTarget = null,
-                                      combatRoll = false } = {}) {
+                                      combatRoll = false, naturalAdd = 0 } = {}) {
   // The whole `baseDie` Slot, not only its `set`. Only `set` was ever read, so an
   // effect *adjusting* the Natural Result - which is what Impaired does, and the only
   // way anything reaches the Botch Range that a penalty to the roll cannot - was
@@ -2248,9 +2258,13 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
   // Adjusted the way every other value is, which settles what a `set` and an adjustment
   // do together without a rule of its own: adds land, then a `set` overrides them. An
   // effect that states the Natural Result outright states it.
+  //
+  // `naturalAdd` is the same thing arriving from the sheet rather than from a Moment - a
+  // Skill's own Natural Result, which the Eyeglasses move. Added to the die before a
+  // `set` is read, so a stated Natural Result still states it.
   const adjusted = (typeof baseDie === "object" && baseDie)
-    ? Math.max(0, applySlot({ baseDie }, "baseDie", rolled))
-    : rolled;
+    ? Math.max(0, applySlot({ baseDie }, "baseDie", rolled + naturalAdd))
+    : Math.max(0, rolled + naturalAdd);
 
   // A floor under the Natural Result, which the Clearing Profile puts at 5: "if your
   // Natural Result is less than 5, it becomes 5. This is applied after rolling and
@@ -3252,11 +3266,17 @@ async function rerollBaseDie(actor, side) {
   const again = new Roll(DBUCharacterData.BASE_DIE);
   await again.evaluate();
 
+  // The same rules the first roll was made under. What moved the first die's Natural
+  // Result - a Skill's own, the Eyeglasses' - moves this one too: it is still a Natural
+  // Result of the same Check. The roll's `beforeOutcome` carries the first one's move.
+  const rules = side.rules ?? {};
+  const fresh = Math.max(0, again.total + (rules.naturalAdd ?? 0));
+
   const before = side.natural ?? 0;
   // "You must accept this second roll, unless it is lower than the first. In which
   // case, you may take the first roll." Only asked when it is actually lower, so the
   // ordinary case costs nobody a click.
-  if ((again.total < before) && await keepTheFirstRoll(actor, before, again.total)) {
+  if ((fresh < before) && await keepTheFirstRoll(actor, before, fresh)) {
     // Nothing was replaced, so nothing the first Base Die decided comes off the card.
     // Said out loud because the caller strips those rows by default - which left a total
     // that still carried a Botch beside a column with no Botch in it.
@@ -3264,14 +3284,13 @@ async function rerollBaseDie(actor, side) {
       kept: true,
       total: side.total,
       outcome: side.outcome ?? "",
-      lines: [noteLine(`Karmic Chance rolled ${again.total}, keeping ${before}`)]
+      lines: [noteLine(`Karmic Chance rolled ${fresh}, keeping ${before}`)]
     };
   }
 
-  // The same rules the first roll was made under. A floor under the Natural Result is
-  // one of them, and it applies to the new die exactly as it did to the old.
-  const rules = side.rules ?? {};
-  const natural = Math.max(again.total, rules.minimumNatural ?? 0);
+  // A floor under the Natural Result is one of those rules, and it applies to the new
+  // die exactly as it did to the old.
+  const natural = Math.max(fresh, rules.minimumNatural ?? 0);
 
   let total = (side.beforeOutcome ?? side.total) - before + natural;
   let outcome = "";
@@ -3894,7 +3913,7 @@ export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll 
 export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
                                     combatRoll = false, attackingManeuver = false,
-                                    difficulties = false } = {}) {
+                                    difficulties = false, sight = false } = {}) {
   const rows = effects.map(entry => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
@@ -3963,11 +3982,20 @@ export async function prepareRoll(actor, effects, title, hint = "",
        </label>`
     : "";
 
+  // "Any Perception Skill check made relying on sight" - which only the player knows.
+  // Offered only where something moves such a Check, and ticked, since most do.
+  const sightRow = sight
+    ? `<label class="dbu-respond-option">
+         <input type="checkbox" name="sight" checked/>
+         <span class="dbu-respond-name">Relying on sight</span>
+       </label>`
+    : "";
+
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title },
     content: `<div class="dbu-respond-dialog">
-      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${rows}${difficultyRows}${willing}${karmicGroup}
+      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${rows}${difficultyRows}${sightRow}${willing}${karmicGroup}
     </div>`,
     buttons: [
       {
@@ -3977,7 +4005,8 @@ export async function prepareRoll(actor, effects, title, hint = "",
           triggers: [...dialog.element.querySelectorAll('input[name="trigger"]:checked')].map(input => input.value),
           willing: dialog.element.querySelector('input[name="willing"]')?.checked ?? null,
           karmic: dialog.element.querySelector('input[name="karmic"]:checked')?.value ?? null,
-          difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? ""
+          difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "",
+          sight: dialog.element.querySelector('input[name="sight"]')?.checked ?? false
         })
       },
       { action: "cancel", label: "Cancel" }
@@ -4010,7 +4039,9 @@ export async function prepareRoll(actor, effects, title, hint = "",
   // An object rather than `true` where a Difficulty was offered, so the caller can read
   // what was picked. Truthy either way, which is what every other caller tests - and the
   // one that tests `=== false` still gets what it was looking for from a cancel.
-  return difficulties ? { difficulty: chosen.difficulty || "" } : true;
+  return (difficulties || sight)
+    ? { difficulty: chosen.difficulty || "", sight: Boolean(chosen.sight) }
+    : true;
 }
 
 /**
@@ -4784,7 +4815,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
                                            slot = null, collect = true,
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
-                                           botchUnlessCritical = false } = {}) {
+                                           botchUnlessCritical = false,
+                                           naturalAdd = 0 } = {}) {
   // A single netted number cannot be taken apart again, so what went into it is kept
   // as labelled parts and only summed for the roll itself.
   const parts = (typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers;
@@ -4839,7 +4871,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 
   const evaluated = await evaluateCheck(actor, bonus,
     groups.map(group => group.formula).join(" + "), baseDie,
-    { minimumNatural, criticalTarget, combatRoll: true });
+    { minimumNatural, criticalTarget, combatRoll: true, naturalAdd });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
 
@@ -4982,13 +5014,16 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     // What the dice and the bonuses came to before a Botch or a Critical touched it.
     // Karmic Chance replaces the Base Die and re-reads the result from scratch, so it
     // needs the total without the old die's consequences already baked in.
-    beforeOutcome: roll.total,
+    //
+    // With the Skill's own move to the Natural Result in it, where there was one, because
+    // Karmic Chance moves the new die the same way and takes the old one out whole.
+    beforeOutcome: roll.total + (naturalAdd ? naturalShift : 0),
     // What this particular roll does that the character's own sheet does not say, kept
     // with it because Karmic Chance replaces the Base Die and settles the outcome again
     // from scratch. Read off the sheet alone, that second reading loses whatever the
     // Profile brought - a Cutting attack rerolled into a 9 stopped being a Botch, which
     // is the one thing Cutting says it always is.
-    rules: { minimumNatural, criticalTarget, botchUnlessCritical,
+    rules: { minimumNatural, criticalTarget, botchUnlessCritical, naturalAdd,
              // The range this roll was measured against, so Karmic Chance rolls the
              // replacement under it rather than under whichever one it guesses at.
              botchRange: botchRangeFor(actor, true) },
@@ -5050,6 +5085,13 @@ const CLASH_ROLLS = ({
     ],
 
     criticalDice: () => DBUCharacterData.SKILL_CRITICAL_DIE,
+
+    // What the Skill does to its own Natural Result - and, where the side said the Check
+    // relies on sight, that part too.
+    options: (actor, clash, uuid) => ({
+      naturalAdd: skillNatural(actor, skillPicked(clash, uuid),
+        (clash.sightBy ?? []).includes(uuid))
+    }),
 
     prompt: (actor, clash, uuid) => ((uuid === clash.defenderUuid)
       && ((clash.defenderSkills ?? []).length > 1))
@@ -5834,10 +5876,17 @@ async function clashStage(message, actor) {
   const answer = kind.choose ? await kind.choose(opened, actor) : {};
   if (!answer) return;
 
+  // Whether this side's Check relies on sight, asked only where that changes something -
+  // a Skill whose Natural Result moves when it does.
+  const picked = ((opened.category ?? "skill") === "skill")
+    ? skillPicked({ ...opened, ...answer }, actor.uuid) : "";
+  const sight = Boolean(actor.system.skills?.[picked]?.naturalSight);
+
   // "All rolls involved become Urgent." A re-aimed Transfiguration says so on the card,
   // and Urgent here means what it means everywhere: it cannot be failed on purpose.
-  if (!await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
-    { urgent: Boolean(opened.urgent) })) return;
+  const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
+    { urgent: Boolean(opened.urgent), sight });
+  if (!ready) return;
 
   // Read fresh rather than trusting what the card was drawn with: the other side may
   // have confirmed while this dialog was open, and writing a stale copy back would
@@ -5848,6 +5897,10 @@ async function clashStage(message, actor) {
   return settleClash(message, {
     ...clash,
     ...answer,
+    // A list of who said so, not an object keyed by them: a uuid has dots in it, and a
+    // write would turn it into nested keys.
+    sightBy: (clash.sightBy ?? []).filter(uuid => uuid !== actor.uuid)
+      .concat((sight && ready.sight) ? [actor.uuid] : []),
     ready: [...new Set([...(clash.ready ?? []), actor.uuid])]
   });
 }

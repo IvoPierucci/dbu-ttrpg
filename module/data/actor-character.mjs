@@ -1809,6 +1809,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
               { label: "Size", value: sizeAdjustment }
             ]
           }),
+        // What its Checks do to their Natural Result, always and when relying on sight.
+        // Either may be below zero, so neither is floored.
+        natural: withEffects(this, `skill.${key}.natural`, 0, { min: null }),
+        naturalSight: withEffects(this, `skill.${key}.natural.sight`, 0, { min: null }),
         // What is rolled, filled in after the last phase: `skill.<key>` is a LATE
         // Slot and Skills are settled before it runs. Starts as the Bonus, since
         // that is what it is a modification of.

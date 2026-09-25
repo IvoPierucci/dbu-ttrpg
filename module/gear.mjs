@@ -304,6 +304,11 @@ export function gearItemFrom(definition, actor = null) {
       assigned: { uuid: "", name: "" },
       teleports: definition.teleports === true,
 
+      // Made for one Character, who may be the one holding it - the Eyeglasses'
+      // "Intended Character", declared when it is given.
+      declaresIntended: definition.declaresIntended === true,
+      intended: { uuid: "", name: "" },
+
       // Worn, for an Accessory: "Accessories ... apply benefits while equipped." Given
       // unworn - putting it on is an Action.
       equipped: false,

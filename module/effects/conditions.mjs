@@ -57,6 +57,13 @@ const PREDICATES = {
   /** Do you have a named Combat Condition. */
   hasCondition: (scope, name) => Boolean(scope.data?.conditions?.[String(name).toLowerCase()]),
 
+  /**
+   * Is the Item carrying this effect meant for whoever is wearing it - the Eyeglasses'
+   * "If you're the Intended Character". Declared on the Item; false for anything that
+   * declares nobody.
+   */
+  intendedForYou: scope => Boolean(scope.intended),
+
   /** Is this character a Minion. */
   isMinion: scope => Boolean(scope.data?.minion),
 

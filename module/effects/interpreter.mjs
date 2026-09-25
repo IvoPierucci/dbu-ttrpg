@@ -50,7 +50,8 @@ export function applyPassives(entries, phase, scope) {
       if (b.mode !== "passive") continue;
       if (!levelReached(b, entry)) continue;
 
-      const blockScope = { ...scope, level: entry.level ?? 0, stacks: entry.stacks ?? 1 };
+      const blockScope = { ...scope, level: entry.level ?? 0, stacks: entry.stacks ?? 1,
+        intended: Boolean(entry.intended) };
 
       // A block repeated per stack applies once for each one, so "for each Stack,
       // halve your Max Capacity" needs no exponent written into the amount.
@@ -106,7 +107,8 @@ export function collectReactive(entries, moment, scope, { mode = null } = {}) {
       if ((b.mode === "triggered") && !entry.armed) continue;
       if (!entry.available) continue;
 
-      const blockScope = { ...scope, level: entry.level ?? 0, stacks: entry.stacks ?? 1 };
+      const blockScope = { ...scope, level: entry.level ?? 0, stacks: entry.stacks ?? 1,
+        intended: Boolean(entry.intended) };
       if (b.requires && !evaluate(b.requires, blockScope)) continue;
 
       // Repeated per stack, exactly as a passive is: Slowed taking an Action away for

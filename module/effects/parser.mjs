@@ -461,7 +461,8 @@ const PREDICATE_NAMES = new Set([
 ]);
 
 /** The ones written without brackets, because they take nothing. */
-const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver"]);
+const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
+  "intendedForYou"]);
 
 /**
  * Dice the character already has, named rather than written out.
