@@ -4,7 +4,8 @@ import { permits } from "./effects/interpreter.mjs";
 import { refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
-import { COLLISION_DAMAGE, COLLISION_QUALITIES, HARDNESS_RANKS, hardnessValue } from "./features.mjs";
+import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
+  from "./features.mjs";
 // `environmentOf` lives beside the breath: "what are they standing in" had to be
 // answered there first, and two answers to one question is how they come to disagree.
 import { environmentOf } from "./breath.mjs";
@@ -8366,6 +8367,22 @@ async function applySquareQuality(target, id) {
   }
 }
 
+/**
+ * What a Profile lets the attacker build, said on the card.
+ *
+ * Elemental (Plantlife): "you may create a Feature ... This Feature has a Hardness Rank of
+ * 1 and the Splintering Feature Quality." Where it goes, and whether it is made at all, is
+ * the table's; what it is made of is the entry's, and saying it here saves going back to
+ * the entry to find out.
+ */
+function featureNote(profile) {
+  const made = profile?.createsFeature;
+  if (!made) return "";
+  const quality = FEATURE_QUALITIES.find(entry => entry.key === made.quality);
+  return ` &middot; Feature: Hardness Rank ${made.hardnessRank}${
+    quality ? `, ${Handlebars.escapeExpression(quality.name)}` : ""}`;
+}
+
 /** Take the damage off one target, once and once only. */
 async function applyAttackDamage(message, target, attack) {
   const own = targetResult(attack, target.uuid);
@@ -9380,7 +9397,7 @@ function renderAttack(message, html) {
           ? ` &middot; ${attack.energyCharges} Energy Charge${attack.energyCharges === 1 ? "" : "s"}`
           : ""}${PROFILES[attack.profile]?.area
           ? ` &middot; ${Handlebars.escapeExpression(areaLabel(PROFILES[attack.profile].area))}`
-          : ""}</span>
+          : ""}${featureNote(PROFILES[attack.profile])}</span>
     </div>
     ${result
       ? attackSide("Strike", attack.attackerName, result.strike)

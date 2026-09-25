@@ -764,6 +764,36 @@ export const PROFILES = Object.freeze({
     squareQuality: "metallic",
     needs: "the AoE sentence (Squares and Features, Dangerous and Sharp) - no attack here "
       + "gives this Profile an Area."
+  },
+
+  elementalPlantlife: {
+    label: "Elemental (Plantlife)",
+    foundations: ["magic"],
+    kiCostPerTier: 3,
+    damageCategory: "standard",
+    text: `
+      Elemental (Plantlife): Using the powers of nature, you conjure a series of
+      entangling vines, trees, or other flora.
+      –Damage Category: Standard
+      –KP Cost: 3(T)
+      –Effect: This Profile has multiple effects:
+      * This Attacking Maneuver gains the Staggering Attack Advantage for free (this does
+        not increase the KP Cost, or the TP Cost if it is a Signature Technique).
+      * After using this Attacking Maneuver (regardless of if you hit your target(s) or
+        deal damage), you may create a Feature occupying an unoccupied Square of your
+        choice adjacent to the target(s) of this Attacking Maneuver. This Feature has a
+        Hardness Rank of 1 and the Splintering Feature Quality. If this Attacking Maneuver
+        possessed an AoE, you may instead fill all of the unoccupied Squares within that
+        AoE with Features that possess a Hardness Rank of 1 and the Splintering Feature
+        Quality.`,
+    // A Feature on a Square is the table's, as every Feature is: which Square, and whether
+    // to make it at all ("you may"). What the system can do is say what it is made of, on
+    // the card, so nobody has to go back to the entry to find out.
+    createsFeature: { hardnessRank: 1, quality: "splintering" },
+    // Not `grantsAdvantage`: there is no Staggering Attack Advantage in this system to
+    // grant, and an Advantage id with no file behind it would be carried and read by
+    // nothing.
+    needs: "the Staggering Attack Advantage - it is not in this system yet."
   }
 });
 
@@ -1501,6 +1531,10 @@ function profileTip(profile) {
   if (profile.area) {
     notes.push("Add the others it catches with the button on the card - who the "
       + `${areaLabel(profile.area)} covers is yours and the GM's to agree.`);
+  }
+  if (profile.createsFeature) {
+    notes.push("Place the Feature yourself, if you want it - the card says what it is "
+      + "made of.");
   }
   if (profile.needs) notes.push(`Not automated: ${profile.needs}`);
 
