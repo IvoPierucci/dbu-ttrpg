@@ -195,6 +195,11 @@ export function gearItemFrom(definition, actor = null) {
         until: String(definition.clashUntil ?? "").trim().toLowerCase()
       },
 
+      // An Item used up to take Conditions off - the Longevity Supplement.
+      removes: listOf(definition.removes),
+      oncePerEncounter: definition.oncePerEncounter === true,
+      consumed: definition.consumed === true,
+
       // What an Item left on the ground does to whoever moves through it - Caltrops.
       hazard: {
         dice: String(definition.hazardDice ?? ""),
@@ -203,6 +208,22 @@ export function gearItemFrom(definition, actor = null) {
       }
     }
   };
+}
+
+/**
+ * The entry a once-per-Encounter Item leaves among the character's used effects.
+ *
+ * Kept with the other once-per-Encounter uses, in `usedManeuvers`, which is cleared when an
+ * Encounter begins and when it ends. Keyed by the file rather than the Item, so a second
+ * copy of the same Item is still the same Item used again.
+ */
+export function encounterUseKey(item) {
+  return `encounter:gear.${item.system?.gearId || item.id}`;
+}
+
+/** Whether this character has already used this Item this Combat Encounter. */
+export function usedThisEncounter(actor, item) {
+  return (actor?.system?.usedManeuvers ?? []).includes(encounterUseKey(item));
 }
 
 /**

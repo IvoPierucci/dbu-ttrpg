@@ -1,0 +1,38 @@
+id: longevity-supplement
+name: Longevity Supplement
+kind: gear
+craftDC: Expert
+# "You can spend 1 Action to consume this item."
+placeCost: 1
+# "Stop suffering from the Fatigued or Stress Exhaustion Combat Conditions." Both come off,
+# every stack: "Conditions", plural, and nothing in the entry asks which.
+removes: fatigued, stress-exhaustion
+# "You can only use this Basic Item once per Combat Encounter."
+oncePerEncounter: true
+# Consumed: gone once used.
+consumed: true
+source: Core Rule
+description: >
+  Consume it for an Action to stop being Fatigued or Stress Exhausted. Once per Combat
+  Encounter.
+text: >
+  Longevity Supplement: An aid to health, this item extends your expected lifespan.
+  –Craft DC: Expert
+  –Effects: You can spend 1 Action to consume this item. If you do, stop suffering from the
+  Fatigued or Stress Exhaustion Combat Conditions. You can only use this Basic Item once per
+  Combat Encounter.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Consume: 1 Action, and Fatigued and Stress Exhaustion come off, every stack of each. The
+# Item is used up - "consume this item" - and taken off the character.
+#
+# "Once per Combat Encounter" is counted on the character, with the other once-per-Encounter
+# uses: two Supplements are still one a Combat Encounter, since the limit is on using "this
+# Basic Item" and the second is the same Item. The count clears when an Encounter begins or
+# ends.
+#
+# Not consumed for nothing: with neither Condition on them, the button says so and keeps the
+# Supplement.

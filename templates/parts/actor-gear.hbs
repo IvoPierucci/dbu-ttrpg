@@ -44,6 +44,14 @@
                 data-item-id="{{row.itemId}}">Store</button>
         {{/if}}
         {{/if}}
+        {{#if row.consumable}}
+        {{#if row.usedUp}}
+        <span class="gear-type">Used this Encounter</span>
+        {{else}}
+        <button type="button" class="gear-act" data-action="consumeGear"
+                data-item-id="{{row.itemId}}">Consume</button>
+        {{/if}}
+        {{/if}}
         {{#if row.clashes}}
         <button type="button" class="gear-act" data-action="clashGear"
                 data-item-id="{{row.itemId}}"

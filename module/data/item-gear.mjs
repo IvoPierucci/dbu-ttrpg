@@ -85,6 +85,16 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         until: new fields.StringField({ required: true, blank: true, initial: "" })
       }),
 
+      /** The Conditions using it takes off - the Longevity Supplement's. */
+      removes: new fields.ArrayField(
+        new fields.StringField({ required: true, blank: false }),
+        { required: true, initial: () => [] }
+      ),
+      /** "You can only use this Basic Item once per Combat Encounter." */
+      oncePerEncounter: new fields.BooleanField({ required: true, initial: false }),
+      /** Used up when it is used. */
+      consumed: new fields.BooleanField({ required: true, initial: false }),
+
       /** What it does to whoever moves through it, once it is on the ground - Caltrops. */
       hazard: new fields.SchemaField({
         dice: new fields.StringField({ required: true, blank: true, initial: "" }),

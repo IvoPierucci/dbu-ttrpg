@@ -9,8 +9,8 @@ import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
-import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, gearItemFrom, gearOfList, heldBy, isStored,
-  storable, typeOf } from "../gear.mjs";
+import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, encounterUseKey, gearItemFrom, gearOfList,
+  heldBy, isStored, storable, typeOf, usedThisEncounter } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -431,6 +431,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       scatterGear: DBUCharacterSheet._onScatterGear,
       storeGear: DBUCharacterSheet._onStoreGear,
       clashGear: DBUCharacterSheet._onClashGear,
+      consumeGear: DBUCharacterSheet._onConsumeGear,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
       editItem: DBUCharacterSheet._onEditItem,
@@ -1004,6 +1005,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         scatters: Boolean(item.system.hazard?.dice),
         // An Item thrown to Clash with whoever it catches.
         clashes: Boolean(item.system.clash?.save && item.system.clash?.condition),
+        // An Item used up to take Conditions off, and whether it has been this Encounter.
+        consumable: (item.system.removes ?? []).length > 0,
+        usedUp: Boolean(item.system.oncePerEncounter) && usedThisEncounter(this.actor, item),
         // A Capsule, and what it holds.
         capsule: Boolean(item.system.capsule),
         heldId: held?.id ?? "",
@@ -2051,6 +2055,55 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const { postGearClash } = await import("../chat.mjs");
     for (const actor of caught) await postGearClash(this.actor, actor, item);
+  }
+
+  /**
+   * Use up an Item that takes Conditions off.
+   *
+   * The Longevity Supplement: "You can spend 1 Action to consume this item. If you do, stop
+   * suffering from the Fatigued or Stress Exhaustion Combat Conditions. You can only use
+   * this Basic Item once per Combat Encounter."
+   */
+  static async _onConsumeGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const removes = item?.system.removes ?? [];
+    if (!removes.length) return;
+
+    if (item.system.oncePerEncounter && usedThisEncounter(this.actor, item)) {
+      ui.notifications.warn(`${this.actor.name} has already used a ${item.name} this Combat `
+        + "Encounter.");
+      return;
+    }
+
+    // Not used up for nothing.
+    const held = removes.filter(key => (Number(this.actor.system.conditions?.[key]) || 0) > 0);
+    if (!held.length) {
+      ui.notifications.info(`${this.actor.name} has nothing for the ${item.name} to take off.`);
+      return;
+    }
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+
+    const { setCondition } = await import("../conditions.mjs");
+    for (const key of held) await setCondition(this.actor, key, 0);
+
+    if (item.system.oncePerEncounter) {
+      await this.actor.update({
+        "system.usedManeuvers": [...(this.actor.system.usedManeuvers ?? []), encounterUseKey(item)]
+      });
+    }
+
+    const { getTrait } = await import("../effects/traits.mjs");
+    const names = held.map(key => getTrait(key)?.name ?? key);
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(this.actor.name)} ${
+        item.system.consumed ? "consumes" : "uses"} a ${Handlebars.escapeExpression(item.name)}, `
+        + `and is no longer ${Handlebars.escapeExpression(names.join(" or "))}.</p>`
+    });
+
+    if (item.system.consumed) await item.delete();
   }
 
   /** Set off an Item that is out on the Battlefield. */
