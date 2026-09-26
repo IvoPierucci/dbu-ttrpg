@@ -103,6 +103,12 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
    * where the Actor cannot be read.
    */
   async _processSubmitData(event, form, submitData, options) {
+    // Connected to something else on the Item: the pair goes with it, for a Collar.
+    const connected = foundry.utils.getProperty(submitData, "system.connectedTo");
+    if (connected !== undefined) {
+      foundry.utils.setProperty(submitData, "system.connectedPair",
+        this.item.actor?.items?.get(connected)?.system?.pairId ?? "");
+    }
     for (const field of ["assigned", "intended"]) {
       const uuid = foundry.utils.getProperty(submitData, `system.${field}.uuid`);
       if (uuid !== undefined) {

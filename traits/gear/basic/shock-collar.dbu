@@ -1,0 +1,40 @@
+id: shock-collar
+name: Shock Collar
+kind: gear
+itemType: accessory
+tags: tech
+craftDC: Expert
+# "This Accessory is connected to a Remote Control." Paired when it is given, so the Remote
+# Control finds it on whoever ends up wearing it.
+paired: true
+# "Reduce your Life Points by 1/5 of your Maximum Life Points. If you are knocked through a
+# Health Threshold by this effect, you are knocked Prone."
+shockPart: 5
+shockProne: true
+source: Core Rule
+description: >
+  Set off from its Remote Control: 1/5 of the wearer's Maximum Life Points, and Prone if that
+  knocks them through a Health Threshold.
+text: >
+  Shock Collar [Tech]: This collar is designed to emit an electric shock when the
+  corresponding remote is triggered.
+  –Craft DC: Expert
+  –Effects: This Accessory is connected to a Remote Control. If the Remote Control triggers
+  the effects of a Shock Collar, reduce your Life Points by 1/5 of your Maximum Life Points.
+  If you are knocked through a Health Threshold by this effect, you are knocked Prone.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Given: paired, so a Remote Control connected to it finds it wherever it is worn.
+#
+# A Remote Control's row names it, and whom it is on; Trigger, for the Remote's Action, takes
+# 1/5 of the wearer's Maximum Life Points - a Life Point reduction, past Soak and Damage
+# Reduction, rounded down - and knocks them Prone if that knocked them through a Health
+# Threshold. Only while it is worn.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Getting it onto somebody: the entry does not say how, so it is the table's - drag it to
+# their sheet and they put it on. It keeps its pair wherever it goes.

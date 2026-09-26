@@ -494,6 +494,21 @@ export function gearItemFrom(definition, actor = null) {
       // What it can be connected to, and what it is - the Remote Control's Item.
       connects: listOf(definition.connects),
       connectedTo: "",
+      // The pair of what it is connected to, where that is a Collar: found by this wherever
+      // it is worn, since it is made to end up on somebody else.
+      connectedPair: "",
+
+      // Paired with whatever connects to it, so it can be found on whoever wears it - a
+      // Collar. Set when it is given.
+      paired: definition.paired === true,
+      pairId: "",
+      // What setting it off does to its wearer: a part of their Maximum Life Points - 1/5,
+      // written 5 - and Prone if that knocks them through a Health Threshold. The Shock
+      // Collar.
+      shock: {
+        part: Math.max(0, Number(definition.shockPart) || 0),
+        prone: definition.shockProne === true
+      },
 
       // A Capsule: it holds one Basic Item. Which one is on that Item, as `storedIn`.
       capsule: definition.capsule === true,
@@ -627,12 +642,46 @@ export function connectedItem(items, remote) {
 }
 
 /**
+ * What a Remote Control reaches: a Collar wherever it is worn - on anybody, since putting it
+ * on somebody else is what it is for - and otherwise the connected Item among the holder's own.
+ *
+ * @returns {{item: object, wearer: object|null}|null} the Item, and who it was found on when
+ *          that was looked for among every character
+ */
+export function connectedTarget(remote, items, actors = []) {
+  const pair = remote.system?.connectedPair;
+  if (pair) {
+    const found = [];
+    for (const actor of actors ?? []) {
+      for (const item of Array.from(actor.items ?? [])) {
+        if ((item.type === "gear") && (item.system?.pairId === pair)) found.push({ item, wearer: actor });
+      }
+    }
+    // The one being worn, where there are copies of it about.
+    const worn = found.find(entry => entry.item.system?.equipped) ?? found[0];
+    if (worn) return worn;
+  }
+  const own = connectedItem(items, remote);
+  return own ? { item: own, wearer: null } : null;
+}
+
+/**
  * Whether a Remote Control can set off what it is connected to now: a Bomb, placed, set to
- * be Remote Controlled.
+ * be Remote Controlled - or a Collar, worn.
  */
 export function canTrigger(target) {
+  if (target?.system?.shock?.part) return Boolean(target.system.equipped);
   return Boolean(target?.system?.placed) && (target.system.trigger === "remote")
     && Boolean(target.system.detonation?.profile);
+}
+
+/**
+ * What a Collar's shock takes: "reduce your Life Points by 1/5 of your Maximum Life Points".
+ * Rounded down, as a Life Point reduction is.
+ */
+export function shockAmount(collar, wearer) {
+  const part = Number(collar?.system?.shock?.part) || 0;
+  return part ? Math.floor((Number(wearer?.system?.life?.max) || 0) / part) : 0;
 }
 
 /**

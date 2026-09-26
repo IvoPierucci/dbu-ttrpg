@@ -10,7 +10,7 @@ import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable,
-  connectedItem, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
+  connectedItem, connectedTarget, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
   inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
@@ -1071,8 +1071,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         breaksAt: Number(item.system.scan?.breaksAt) || 0,
         // A Remote Control, what it is connected to, and whether that can be set off now.
         remote: (item.system.connects ?? []).length > 0,
-        connectedName: connectedItem(gearItems, item)?.name ?? "",
-        canTrigger: canTrigger(connectedItem(gearItems, item)),
+        connectedName: DBUCharacterSheet.#connectedName(item, gearItems),
+        canTrigger: canTrigger(connectedTarget(item, gearItems, game.actors?.contents)?.item),
         // Charges it was made with, and how many are left.
         chargesLabel: (item.system.chargesDice || item.system.storesDrain
           || item.system.chargesPerBaseTier)
@@ -1983,6 +1983,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       });
       if (!offered.some(item => item.id === chosen)) return;
       data.system.connectedTo = chosen;
+      // A Collar is found by its pair wherever it ends up, so the pair goes with the id.
+      data.system.connectedPair = offered.find(item => item.id === chosen)?.system.pairId ?? "";
     }
 
     // "Dragon Balls come in sets of 2~7 balls." Which set, and which ball of it - named for
@@ -2071,6 +2073,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.system.trigger = trigger;
     }
 
+    // Paired, so whatever connects to it can find it on whoever ends up wearing it.
+    if (data.system.paired) data.system.pairId = foundry.utils.randomID();
+
     // "When this Accessory is created, you must create a Key Basic Item for this instance
     // of the Accessory." Made together, and paired: that Key opens this one and no other.
     if (data.system.lock?.locks) {
@@ -2110,6 +2115,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const size = Math.min(set.max, Math.max(set.min, chosen.size || set.max));
     const number = Math.min(size, Math.max(1, chosen.number || 1));
     return { size, number };
+  }
+
+  /** What a Remote Control's row says it is connected to - and on whom, for a Collar. */
+  static #connectedName(remote, gearItems) {
+    const reached = connectedTarget(remote, gearItems, game.actors?.contents);
+    if (!reached) return "";
+    const on = reached.wearer && reached.item.system.equipped ? ` on ${reached.wearer.name}` : "";
+    return `${reached.item.name}${on}`;
   }
 
   /** A character of the world's, for an Item tied to one - never the one holding it. */
@@ -2515,8 +2528,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onRemoteGear(event, target) {
     const remote = this.actor.items.get(target.dataset.itemId);
-    const bomb = connectedItem(this.actor.items.filter(owned => owned.type === "gear"), remote);
-    if (!canTrigger(bomb)) return;
+    const reached = connectedTarget(remote, this.actor.items.filter(owned => owned.type === "gear"),
+      game.actors?.contents);
+    if (!canTrigger(reached?.item)) return;
+
+    // "For a Collar Accessory, you can spend 1 Action to trigger the effects of that
+    // Accessory" - on whoever is wearing it.
+    if (reached.item.system.shock?.part) {
+      const { spendActions } = await import("../combat.mjs");
+      if (!await spendActions(this.actor, remote.system.placeCost ?? 0)) return;
+      const { shockCollar } = await import("../chat.mjs");
+      return shockCollar(this.actor, reached.item, reached.wearer ?? this.actor);
+    }
+    const bomb = reached.item;
 
     // Asked before the Action is spent: the blast needs someone targeted.
     if (!game.user.targets.first()?.actor) {

@@ -8682,12 +8682,21 @@ export async function reduceKiPoints(target, amount, { reason = "Ki Point reduct
 
 export async function reduceLifePoints(target, amount, { reason = "Life Point reduction" } = {}) {
   const taken = Math.max(0, Math.floor(amount));
-  if (!taken) return;
+  if (!taken) return { taken: 0, knockedThrough: false };
 
   const settled = target.system.life.value - taken;
   const floor = target.system.effects?.slots?.["life.allowNegative"]
     ? settled
     : Math.max(0, settled);
+
+  // Whether it knocked them through a Health Threshold - read off both sides of the one
+  // write, as the Wound Roll does - for whoever asked for the reduction and cares: the
+  // Shock Collar's Prone.
+  const thresholds = Object.keys(DBUCharacterData.THRESHOLDS);
+  const knockedThrough = thresholds.indexOf(
+    DBUCharacterData.thresholdKey(floor, target.system.life.max))
+    > thresholds.indexOf(DBUCharacterData.thresholdKey(target.system.life.value,
+      target.system.life.max));
 
   await requestActorUpdate(target, { "system.life.value": floor });
 
@@ -8698,6 +8707,22 @@ export async function reduceLifePoints(target, amount, { reason = "Life Point re
       ${Handlebars.escapeExpression(reason)}
       <em>past Soak and Damage Reduction</em></div>`
   });
+  return { taken, knockedThrough };
+}
+
+/**
+ * Set off a Collar on whoever wears it: "reduce your Life Points by 1/5 of your Maximum Life
+ * Points. If you are knocked through a Health Threshold by this effect, you are knocked
+ * Prone."
+ */
+export async function shockCollar(holder, collar, wearer) {
+  const { shockAmount } = await import("./gear.mjs");
+  const { knockedThrough } = await reduceLifePoints(wearer, shockAmount(collar, wearer), {
+    reason: `${collar.name}, set off by ${holder.name}`
+  }) ?? {};
+  if (!(collar.system.shock?.prone && knockedThrough)) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(wearer, "prone", Math.max(1, Number(wearer.system.conditions?.prone) || 0));
 }
 
 /**

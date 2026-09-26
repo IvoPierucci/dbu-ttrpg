@@ -226,6 +226,16 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       ),
       /** The Item it is connected to, by its Item id, or blank. */
       connectedTo: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** The pair of what it is connected to, where that is a Collar. */
+      connectedPair: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** Paired with whatever connects to it, and the pair - a Collar. */
+      paired: new fields.BooleanField({ required: true, initial: false }),
+      pairId: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** What setting it off does to its wearer - the Shock Collar. */
+      shock: new fields.SchemaField({
+        part: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        prone: new fields.BooleanField({ required: true, initial: false })
+      }),
 
       /** Whether it is a Capsule, which holds one Basic Item. */
       capsule: new fields.BooleanField({ required: true, initial: false }),

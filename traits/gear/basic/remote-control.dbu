@@ -4,8 +4,8 @@ kind: gear
 tags: tech
 craftDC: Expert
 # "Select an Item (Bomb/Collar/Vehicle/Battle Jacket) you possess for it to be connected to."
-# Only the Bomb exists here yet; the others join this list when they do.
-connects: bomb
+# The Bomb and the Shock Collar exist here; the others join this list when they do.
+connects: bomb, shock-collar
 # "For a Bomb, you can spend 1 Action to trigger that Bomb."
 placeCost: 1
 source: Core Rule
@@ -35,8 +35,11 @@ text: >
 # A Bomb set to Remote Controlled is set off from here and nowhere else: its own row offers
 # no Detonate, and this one offers Trigger, for an Action, once the Bomb is placed.
 #
+# A Collar is found wherever it is worn, on whoever wears it - it is made to be put on
+# somebody else - and Trigger, for an Action, sets off its effects on them.
+#
 # --- What is not built ---------------------------------------------------------------------------
 #
-# The Collar, Vehicles and Battle Jackets are not in this system yet, so there is nothing of
-# theirs to connect to - and piloting from afar, and "you cannot use this effect if the
-# Vehicle or Battle Jacket has a Pilot", wait with them.
+# Vehicles and Battle Jackets are not in this system yet, so there is nothing of theirs to
+# connect to - and piloting from afar, and "you cannot use this effect if the Vehicle or
+# Battle Jacket has a Pilot", wait with them.
