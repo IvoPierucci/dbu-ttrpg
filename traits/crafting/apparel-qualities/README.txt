@@ -1,2 +1,1 @@
-The Apparel Qualities, one file each. None yet: they arrive with the rest of the Apparel rules.
-See ../README.txt.
+The Apparel Qualities, one file each. See ../README.txt for the headers they take.

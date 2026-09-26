@@ -206,11 +206,13 @@ export function slotsTaken(entry, trait) {
 
 /**
  * Whether a Quality may go on this Category: `categories: armor, combat-clothing`, or on any
- * when it names none.
+ * when it names none - and never on one `categoriesExcept` names, "All (except Weights)".
  */
 export function qualityFits(trait, category) {
+  const which = String(category ?? "").toLowerCase();
   const allowed = listOf(trait?.categories);
-  return !allowed.length || allowed.includes(String(category ?? "").toLowerCase());
+  if (listOf(trait?.categoriesExcept).includes(which)) return false;
+  return !allowed.length || allowed.includes(which);
 }
 
 /**

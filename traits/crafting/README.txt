@@ -22,7 +22,8 @@ Headers only a Quality reads:
   slots:         the Quality Slots it takes - `2`, or a range `1-3` the player picks from when
                  adding it. One when it says nothing.
   categories:    the Categories it may go on, by id - `armor, combat-clothing`. Any, when it
-                 names none. One that does not fit - its Apparel's Category changed after - is
+                 names none.
+  categoriesExcept: the Categories it may not - "All (except Weights)" is `weights`. One that does not fit - its Apparel's Category changed after - is
                  kept, and inactive.
   prerequisites: as printed. "Not applied to the crafter, but the wearer": while the wearer
                  does not meet them, the Quality does nothing. Read when Apparel is worn.

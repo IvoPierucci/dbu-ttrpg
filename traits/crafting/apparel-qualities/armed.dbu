@@ -1,0 +1,29 @@
+id: armed
+name: Armed
+kind: crafting
+# "Apparel Category: All (except Weights)"
+categoriesExcept: weights
+slots: 1
+source: Core Rule
+description: >
+  A built-in weapon: an Integrated Weapon of the Apparel's Craftsmanship Grade, while worn.
+text: >
+  Armed: This outfit has a built-in weapon of some kind.
+  –Apparel Category: All (except Weights)
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: While you wear this piece of Apparel, you possess an Integrated Weapon. When this
+  piece of Apparel is created, create a Weapon with a Craftsmanship Grade equal to that of this
+  piece of Apparel – that Weapon is the Integrated Weapon.
+
+---
+
+# --- What is built -----------------------------------------------------------------------------
+#
+# The Quality: offered on every Category but Weights, taking 1 Quality Slot.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Everything it does is a Weapon, and there are no Weapons in this system yet. When they
+# arrive: adding Armed makes a Weapon at the Apparel's Craftsmanship Grade, tied to it as its
+# Integrated Weapon, and the character has that Weapon only while the Apparel is worn.
