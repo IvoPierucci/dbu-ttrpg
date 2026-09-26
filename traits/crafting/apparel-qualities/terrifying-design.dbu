@@ -1,0 +1,25 @@
+id: terrifying-design
+name: Terrifying Design
+kind: crafting
+categories: armor, combat-clothing, standard-clothing
+slots: 1
+prerequisites: 2+ Skill Ranks in Intimidation
+source: Core Rule
+description: >
+  Intimidation Checks 2 higher. Needs 2+ Ranks in Intimidation in whoever wears it.
+text: >
+  Terrifying Design: Thanks to the sinister design of this outfit, you look even more
+  menacing.
+  –Apparel Category: Armor/Combat Clothing/Standard Clothing
+  –Prerequisites: 2+ Skill Ranks in Intimidation
+  –Quality Slots: 1
+  –Effects: Increase the Dice Score of your Intimidation Skill Checks by 2.
+
+---
+
+# "The Dice Score of your Intimidation Skill Checks": the roll, shown as the Skill's number on
+# the sheet. Only while the wearer has the Ranks: "not applied to the crafter, but the wearer".
+[passive]
+if (intimidation.ranks >= 2) {
+  skill.intimidation += 2;
+}
