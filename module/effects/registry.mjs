@@ -14,8 +14,8 @@ import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { accessoriesInEffect, apparelQualitiesInEffect, qualityInactive, scriptWithChoice }
-  from "../gear.mjs";
+import { accessoriesInEffect, apparelQualitiesInEffect, groundIgnored, qualityInactive,
+  scriptWithChoice } from "../gear.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -438,6 +438,9 @@ function highPrograms(actor, report) {
  * Square have" and two answers to it would be two lists to keep in step.
  */
 function qualityPrograms(actor, report) {
+  // Ignored altogether by what they are wearing - Environmental Protection.
+  if (groundIgnored(Array.from(actor.items ?? []), getTrait).qualities) return [];
+
   // Gathered whether they are on the ground or above it. A Quality belongs to a Square and
   // a High Environment has Squares of its own - Obscured says so outright: "this
   // Environmental Quality can be applied to Squares within High Environments".
@@ -502,6 +505,8 @@ function environmentPrograms(actor, report) {
   // The Environment itself is left alone on the character: what is under somebody in the
   // Low Sky is still a Lava Environment, and it is what they land in.
   if (isAirborne(actor.system)) return [];
+  // Ignored altogether by what they are wearing - Environmental Protection.
+  if (groundIgnored(Array.from(actor.items ?? []), getTrait).environments) return [];
 
   const id = environmentIdOf(actor.system, getTrait);
 

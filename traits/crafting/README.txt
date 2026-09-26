@@ -38,6 +38,9 @@ Headers only a Quality reads:
   excludesQualities: a Quality that, on the same piece, keeps this one from applying at all -
                  Durable's `lightweight`.
   requiresQualities: a Quality it needs on the same piece to apply at all.
+  ignoresEnvironments: true - the wearer ignores the Battle Environment's effects.
+  ignoresEnvironmentalQualities: true - and its Square's Environmental Qualities'. Both read
+                 off the worn Apparel, since they decide which effects are gathered at all.
 
 A Quality held off - by its Category, or by one of those two - is kept on the piece, said to be
 inactive on its row, and adds nothing anywhere.

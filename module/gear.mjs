@@ -189,6 +189,27 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
 }
 
 /**
+ * What worn Apparel has its wearer ignore of the ground under them - Environmental
+ * Protection's "Ignore the effects of Battle Environments, Environmental Qualities": the
+ * Environment's own effects, and its Square's Qualities'.
+ *
+ * Read off the Qualities rather than off an effect, because it decides which effects are
+ * gathered at all: by the time an effect could say so, the Environment's has been run.
+ */
+export function groundIgnored(items, getTrait) {
+  const ignored = { environments: false, qualities: false };
+  for (const { item, entries } of apparelQualitiesInEffect(items)) {
+    for (const entry of entries) {
+      if (qualityInactive(entry, item.system.crafted, getTrait)) continue;
+      const trait = getTrait?.(entry.id);
+      if (trait?.ignoresEnvironments === true) ignored.environments = true;
+      if (trait?.ignoresEnvironmentalQualities === true) ignored.qualities = true;
+    }
+  }
+  return ignored;
+}
+
+/**
  * Why a Quality on a piece does nothing, or "" when it applies.
  *
  * Its Category may not take it; or it asks for another Quality on the same piece, or for

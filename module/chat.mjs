@@ -8918,15 +8918,21 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   // What the Qualities of this Square do to a collision with it. Bouncy halves and
   // Dangerous doubles, both "with this Square" - so a Feature standing on a Bouncy Square
   // is not bouncy, and neither of these is asked about anywhere but the Ground Collision.
-  const groundQualities = qualitiesOf(target.system, standing, getTrait)
+  //
+  // Not for one who ignores the Square's Qualities, nor what the Environment does to whoever
+  // lands on it for one who ignores the Environment - Environmental Protection.
+  const { groundIgnored } = await import("./gear.mjs");
+  const ignoring = groundIgnored(Array.from(target.items ?? []), getTrait);
+  const groundQualities = ignoring.qualities ? [] : qualitiesOf(target.system, standing, getTrait)
     .map(id => getTrait(id))
     .filter(quality => quality?.groundCollision);
+  const knocksDown = !ignoring.environments && Boolean(standing?.collisionCondition);
 
   const groundRow = hasGround
     ? `<option value="ground">The ground &middot; ${
         hardnessValue(groundRank, baseTier)} Damage &middot; ${
         Handlebars.escapeExpression(standing.name)}${
-        standing.collisionCondition ? ", which knocks you down" : ""}</option>`
+        knocksDown ? ", which knocks you down" : ""}</option>`
     : "";
 
   // Not first. Most collisions are with a Feature, and a window that opens on the rarer
@@ -9041,7 +9047,7 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   // A Condition named on the file rather than a script, because a collision is an event
   // and there is no value here for a passive to write. No duration: the entry gives none,
   // so it comes off the way that Condition always comes off.
-  if (hitGround && standing?.collisionCondition) {
+  if (hitGround && knocksDown) {
     const { setCondition } = await import("./conditions.mjs");
     if (await setCondition(target, standing.collisionCondition, 1)) {
       await ChatMessage.create({

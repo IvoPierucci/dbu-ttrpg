@@ -8,7 +8,7 @@ import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
-import { shrunkSize } from "../gear.mjs";
+import { groundIgnored, shrunkSize } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
   qualitiesOf }
   from "../environments.mjs";
@@ -1673,8 +1673,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // one number read in two places is one number.
     {
       const standing = getTrait(environmentIdOf(this, getTrait));
-      const qualities = qualitiesOf(this, standing, getTrait).map(id => getTrait(id))
-        .filter(Boolean);
+      // Glass and Metallic are the Square's Qualities, and a wearer who ignores those -
+      // Environmental Protection - meets the ground as the ARC picked it.
+      const ignoring = groundIgnored(Array.from(this.parent?.items ?? []), getTrait).qualities;
+      const qualities = ignoring ? []
+        : qualitiesOf(this, standing, getTrait).map(id => getTrait(id)).filter(Boolean);
       this.battlefield.groundRank = groundHardnessWith(
         this.battlefield.groundHardness, qualities, DBUCharacterData.MAX_HARDNESS_RANK);
     }

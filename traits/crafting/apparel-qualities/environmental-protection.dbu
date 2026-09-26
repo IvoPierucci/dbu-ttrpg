@@ -1,0 +1,34 @@
+id: environmental-protection
+name: Environmental Protection
+kind: crafting
+categories: standard-clothing
+slots: 2
+# "Ignore the effects of Battle Environments, Environmental Qualities" - read off the worn
+# Apparel, since they decide which effects are gathered at all.
+ignoresEnvironments: true
+ignoresEnvironmentalQualities: true
+source: Core Rule
+description: >
+  The Battle Environment, its Environmental Qualities and Unbreathable Atmosphere do nothing
+  to whoever wears it.
+text: >
+  Environmental Protection: Intended to preserve one’s life for exploration into a hostile
+  environment, this outfit is airtight.
+  –Apparel Category: Standard Clothing
+  –Prerequisites: N/A
+  –Quality Slots: 2
+  –Effects: Ignore the effects of Battle Environments, Environmental Qualities, and
+  Unbreathable Atmosphere.
+
+---
+
+# While worn: none of the Environment's effects are gathered, none of its Square's Qualities'
+# either - Aflame, Obscured, Bouncy and Dangerous on a Ground Collision, Glass and Metallic on
+# the ground's Hardness - and a Soft Environment knocks nobody Prone. Unbreathable is the
+# Space Helmet's same flag: no Survival Check, no Held Breath, no Suffocating from it.
+#
+# The Environment is still there for the table: the tab shows it, and what is standing on
+# the Square is still standing on it. Battle Weather and Light Levels are neither, and are
+# left alone.
+[passive]
+forbid unbreathableEnvironments;
