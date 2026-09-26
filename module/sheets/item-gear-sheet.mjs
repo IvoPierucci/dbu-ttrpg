@@ -3,7 +3,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable, craftedReading,
-  qualityEntries, qualityFits, qualitySlotRange, slotsTaken } from "../gear.mjs";
+  qualityChoices, qualityEntries, qualityFits, qualitySlotRange, slotsTaken } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 
 /**
@@ -147,6 +147,9 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
           name: trait?.name ?? entry.id,
           tip: escape(trait?.description ?? ""),
           slotsLabel: `${taken} Slot${taken === 1 ? "" : "s"}`,
+          // What was chosen for it, by name.
+          choiceLabel: entry.choice
+            ? (DBUCharacterData.SKILLS[entry.choice]?.label ?? entry.choice) : "",
           // Its Category does not take it: kept, and inactive until it does.
           misfit: !qualityFits(trait, crafted.category)
             ? `Not for ${reading.categoryName}: inactive.` : ""
@@ -194,7 +197,24 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       slots = Number(chosen);
       if (!Number.isFinite(slots) || (slots < min) || (slots > max)) return;
     }
-    const qualities = [...qualityEntries(this.item.system.crafted), { id: pick, slots }];
+    // "A Skill of your choice (when creating this piece of Apparel)": asked now, and kept
+    // with the Quality.
+    let choice = "";
+    const offered = qualityChoices(trait, DBUCharacterData.SKILLS);
+    if (offered.length) {
+      choice = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${trait?.name ?? pick} - Skill` },
+        content: "",
+        buttons: [
+          ...offered.map(key => ({ action: key, label: DBUCharacterData.SKILLS[key].label })),
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!offered.includes(choice)) return;
+    }
+    const qualities = [...qualityEntries(this.item.system.crafted), { id: pick, slots, choice }];
     return this.item.update({ "system.crafted.qualities": qualities });
   }
 

@@ -129,7 +129,9 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         // Each Quality, and the Slots it was given where it takes a range - 0 for its least.
         qualities: new fields.ArrayField(new fields.SchemaField({
           id: new fields.StringField({ required: true, blank: false }),
-          slots: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 })
+          slots: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+          // What was chosen for it when it was added - Beautiful Attire's Skill.
+          choice: new fields.StringField({ required: true, blank: true, initial: "" })
         }))
       }),
 

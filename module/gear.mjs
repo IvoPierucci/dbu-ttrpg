@@ -180,9 +180,48 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
  */
 export function qualityEntries(crafted) {
   return (crafted?.qualities ?? []).map(entry => (typeof entry === "string")
-    ? { id: entry, slots: 0 }
-    : { id: String(entry?.id ?? ""), slots: Number(entry?.slots) || 0 })
+    ? { id: entry, slots: 0, choice: "" }
+    : { id: String(entry?.id ?? ""), slots: Number(entry?.slots) || 0,
+        choice: String(entry?.choice ?? "") })
     .filter(entry => entry.id);
+}
+
+/**
+ * What a Quality asks to be chosen when it is added - "a Skill of your choice (when creating
+ * this piece of Apparel)" - as the keys to choose among. `chooses: skill`, narrowed by
+ * `choiceAttribute: personality` to the Skills that use that Score. Empty when it asks nothing.
+ */
+export function qualityChoices(trait, skills) {
+  if (String(trait?.chooses ?? "").trim().toLowerCase() !== "skill") return [];
+  const attribute = String(trait?.choiceAttribute ?? "").trim().toLowerCase();
+  return Object.entries(skills ?? {})
+    .filter(([, skill]) => !attribute || (skill.attribute === attribute))
+    .map(([key]) => key);
+}
+
+/**
+ * A Quality's script with what was chosen for it written in: `skill.$choice += 2;` becomes
+ * `skill.persuasion += 2;`. Nothing is written for a Quality that asks nothing, and a script
+ * still naming `$choice` has had nothing chosen and is not run.
+ */
+export function scriptWithChoice(script, choice) {
+  const text = String(script ?? "");
+  if (!text.includes("$choice")) return text;
+  return choice ? text.replaceAll("$choice", choice) : "";
+}
+
+/**
+ * The worn Apparel whose Qualities apply, each with the Qualities that do: those its Category
+ * takes. "Apparel Qualities may apply to only certain Apparel Categories."
+ *
+ * Worn is `equipped`, as an Accessory is; Layers, and which is on top, come with the rest of
+ * the Apparel rules. The wearer's Prerequisites are asked in each Quality's own script.
+ */
+export function apparelQualitiesInEffect(items) {
+  return (items ?? [])
+    .filter(item => (item.type === "gear") && item.system?.crafted?.kind
+      && item.system?.equipped && !isStored(items, item))
+    .map(item => ({ item, entries: qualityEntries(item.system.crafted) }));
 }
 
 /**

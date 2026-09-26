@@ -14,7 +14,8 @@ import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { accessoriesInEffect } from "../gear.mjs";
+import { accessoriesInEffect, apparelQualitiesInEffect, qualityFits, scriptWithChoice }
+  from "../gear.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -101,6 +102,7 @@ export function programsFor(actor, { report = () => {} } = {}) {
 
   entries.push(...racialPrograms(actor, report));
   entries.push(...accessoryPrograms(actor, report));
+  entries.push(...apparelPrograms(actor, report));
   entries.push(...karmaPrograms(report));
   entries.push(...statePrograms(actor, report));
   entries.push(...conditionPrograms(actor, report));
@@ -164,6 +166,46 @@ function racialPrograms(actor, report) {
  * At a Talent's Priority: the Priority ladder names no Items, and an Item is held the way a
  * Talent is. Every Accessory so far only adds, where Priority changes nothing.
  */
+/**
+ * The Qualities of the Apparel this character is wearing.
+ *
+ * Each Quality's script, with what was chosen for it written in, from every piece worn - a
+ * Quality its Category does not take is left out. What the wearer must meet is the script's
+ * to ask: "If the wearer of a piece of Apparel does not meet a Apparel Quality's Prerequisite,
+ * the Apparel Quality's effects remain inactive while they are wearing it."
+ *
+ * At a Talent's Priority, as the Accessories are.
+ */
+function apparelPrograms(actor, report) {
+  const entries = [];
+  for (const { item, entries: qualities } of apparelQualitiesInEffect(Array.from(actor.items ?? []))) {
+    for (const quality of qualities) {
+      const trait = getTrait(quality.id);
+      if (!trait || !qualityFits(trait, item.system.crafted.category)) continue;
+      const script = scriptWithChoice(trait.script, quality.choice);
+      if (!script.trim()) continue;
+
+      const { program, errors } = compile(
+        `apparel:${trait.id}:${quality.choice}`,
+        { script },
+        message => report(`${item.name}, ${trait.name}: ${message}`)
+      );
+      if (errors.length) continue;
+
+      entries.push({
+        program,
+        priority: PRIORITY.talent,
+        sourceId: `${item.id}:${trait.id}`,
+        sourceUuid: item.uuid ?? null,
+        sourceName: `${trait.name} (${item.name})`,
+        level: 0,
+        stacks: 1
+      });
+    }
+  }
+  return entries;
+}
+
 function accessoryPrograms(actor, report) {
   const entries = [];
   for (const item of accessoriesInEffect(Array.from(actor.items ?? []))) {

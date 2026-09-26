@@ -26,7 +26,13 @@ Headers only a Quality reads:
   categoriesExcept: the Categories it may not - "All (except Weights)" is `weights`. One that does not fit - its Apparel's Category changed after - is
                  kept, and inactive.
   prerequisites: as printed. "Not applied to the crafter, but the wearer": while the wearer
-                 does not meet them, the Quality does nothing. Read when Apparel is worn.
+                 does not meet them, the Quality does nothing - asked in its script with an
+                 `if`, around everything it does.
+  chooses:       `skill`, for a Quality that has one chosen when it is added; with
+                 `choiceAttribute: personality`, only the Skills that use that Score. Its
+                 script names the one chosen as `$choice` - `skill.$choice += 2;`.
+
+A Quality's script runs while the Apparel it is on is worn, and its Category takes it.
 
 "If an effect would apply an Apparel Quality to a piece of Apparel that has all of its Quality
 Slots filled, you may remove any number of Apparel Qualities before applying that additional

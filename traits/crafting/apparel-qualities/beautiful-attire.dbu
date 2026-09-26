@@ -1,0 +1,32 @@
+id: beautiful-attire
+name: Beautiful Attire
+kind: crafting
+slots: 1
+# "A Skill of your choice (when creating this piece of Apparel) ... The Skill must use your
+# Personality Score to be chosen."
+chooses: skill
+choiceAttribute: personality
+prerequisites: Personality Score of 4+
+source: Core Rule
+description: >
+  A Personality Skill chosen when it is made: its Checks 2 higher. Needs a Personality Score of
+  4+ in whoever wears it.
+text: >
+  Beautiful Attire: This outfit is visually appealing, enhancing your performance in social
+  situations.
+  –Apparel Category: All
+  –Prerequisites: Personality Score of 4+
+  –Quality Slots: 1
+  –Effects: Increase your Dice Score on Skill Checks with a Skill of your choice (when creating
+  this piece of Apparel) by 2. The Skill must use your Personality Score to be chosen.
+
+---
+
+# The Skill is asked when the Quality is added, among those that use the Personality Score,
+# and kept with it. "Your Dice Score on Skill Checks": the roll, not the Skill Bonus.
+#
+# Only while the wearer meets the Prerequisite: "not applied to the crafter, but the wearer".
+[passive]
+if (personality.score >= 4) {
+  skill.$choice += 2;
+}
