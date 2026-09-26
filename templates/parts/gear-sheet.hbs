@@ -57,6 +57,10 @@
       <span class="gear-name" data-tooltip="{{quality.tip}}">{{quality.name}}</span>
       {{#if quality.choiceLabel}}<span class="gear-type">{{quality.choiceLabel}}</span>{{/if}}
       <span class="gear-type">{{quality.slotsLabel}}</span>
+      {{#if quality.toggle}}
+      <label class="gear-type"><input type="checkbox" data-action="toggleQuality"
+             data-index="{{quality.index}}" {{#if quality.on}}checked{{/if}}/> {{quality.toggle}}</label>
+      {{/if}}
       {{#if quality.misfit}}<span class="gear-warning">{{quality.misfit}}</span>{{/if}}
       <button type="button" class="gear-remove" data-action="removeQuality"
               data-index="{{quality.index}}" data-tooltip="Remove">&times;</button>

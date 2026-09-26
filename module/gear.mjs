@@ -253,9 +253,9 @@ export function qualityInactive(entry, crafted, getTrait) {
  */
 export function qualityEntries(crafted) {
   return (crafted?.qualities ?? []).map(entry => (typeof entry === "string")
-    ? { id: entry, slots: 0, choice: "" }
+    ? { id: entry, slots: 0, choice: "", on: false }
     : { id: String(entry?.id ?? ""), slots: Number(entry?.slots) || 0,
-        choice: String(entry?.choice ?? "") })
+        choice: String(entry?.choice ?? ""), on: entry?.on === true })
     .filter(entry => entry.id);
 }
 

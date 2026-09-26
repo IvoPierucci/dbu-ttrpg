@@ -23,7 +23,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     actions: {
       editImage: DBUGearSheet._onEditImage,
       addQuality: DBUGearSheet._onAddQuality,
-      removeQuality: DBUGearSheet._onRemoveQuality
+      removeQuality: DBUGearSheet._onRemoveQuality,
+      toggleQuality: DBUGearSheet._onToggleQuality
     },
     form: { submitOnChange: true }
   };
@@ -153,6 +154,9 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
           slotsLabel: `${taken} Slot${taken === 1 ? "" : "s"}`,
           // What was chosen for it, by name.
           choiceLabel: qualityChoiceLabel(trait, entry.choice, DBUCharacterData.SKILLS),
+          // A switch of its own, where its effect waits on something the table keeps.
+          toggle: trait?.toggle ? String(trait.toggle) : "",
+          on: entry.on,
           // Its Category does not take it, or another Quality holds it off: kept, and
           // inactive until that changes.
           misfit: DBUGearSheet.#inactiveNote(qualityInactive(entry, crafted, getTrait),
@@ -228,6 +232,14 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     if (!why) return "";
     if (why === "category") return `Not for ${categoryName}: inactive.`;
     return `This Apparel ${why}: inactive.`;
+  }
+
+  /** Switch a Quality's toggle - Team Outfit's - by where it is in the list. */
+  static async _onToggleQuality(event, target) {
+    const index = Number(target.dataset.index);
+    const qualities = qualityEntries(this.item.system.crafted)
+      .map((entry, at) => (at === index) ? { ...entry, on: !entry.on } : entry);
+    return this.item.update({ "system.crafted.qualities": qualities });
   }
 
   /** Take one Quality off, by where it is in the list. */

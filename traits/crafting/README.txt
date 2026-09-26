@@ -47,6 +47,9 @@ Headers only a Quality reads:
                  Lightweight's and Sleek Design's. Read by the Penalty, as `countsForPenalty`.
   armorDamageReduction: what the Armor Category's Damage Reduction from its Apparel is
                  multiplied by - Sleek Design's 0.5.
+  toggle:        a label for a switch on its row: its script runs only while the player has it
+                 on - Team Outfit's teammates, which the table keeps.
+  noStack:       true - worn on several pieces, it applies from one.
   sizeIsWearers: true - its Apparel's Size Category is always its wearer's, Stretching's. Read
                  through apparelSize().
   spikes:        true - a Physical blow landing on its worn Apparel costs the one who struck its

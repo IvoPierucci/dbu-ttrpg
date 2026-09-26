@@ -131,7 +131,10 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
           id: new fields.StringField({ required: true, blank: false }),
           slots: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
           // What was chosen for it when it was added - Beautiful Attire's Skill.
-          choice: new fields.StringField({ required: true, blank: true, initial: "" })
+          choice: new fields.StringField({ required: true, blank: true, initial: "" }),
+          // Switched on by the player on the Item, for a Quality whose effect waits on
+          // something the table keeps - Team Outfit's teammates.
+          on: new fields.BooleanField({ required: true, initial: false })
         }))
       }),
 

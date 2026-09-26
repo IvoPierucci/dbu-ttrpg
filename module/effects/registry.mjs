@@ -178,11 +178,21 @@ function racialPrograms(actor, report) {
  */
 function apparelPrograms(actor, report) {
   const entries = [];
+  // The Qualities that do not stack with themselves, already gathered from one piece.
+  const once = new Set();
   for (const { item, entries: qualities } of apparelQualitiesInEffect(Array.from(actor.items ?? []))) {
     for (const quality of qualities) {
       const trait = getTrait(quality.id);
       // Not its Category's, or held off by another Quality on the piece - or its absence.
       if (!trait || qualityInactive(quality, item.system.crafted, getTrait)) continue;
+      // A Quality with a toggle on its Item runs only while it is switched on - Team Outfit,
+      // whose teammates are the table's to say.
+      if (trait.toggle && !quality.on) continue;
+      // "This bonus does not stack": from one piece, however many carry it.
+      if (trait.noStack === true) {
+        if (once.has(trait.id)) continue;
+        once.add(trait.id);
+      }
       // What was chosen for it, and its own piece's Apparel Bonus.
       const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {} });
       const script = scriptWithPiece(scriptWithChoice(trait.script, quality.choice), reading);

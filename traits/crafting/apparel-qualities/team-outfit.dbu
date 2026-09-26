@@ -1,0 +1,29 @@
+id: team-outfit
+name: Team Outfit
+kind: crafting
+slots: 2
+# The table's ruling: no Team Name and no looking for who else wears one. A switch on the
+# Item, for the player to turn on when their teammates are in theirs.
+toggle: With my team
+# "(this bonus does not stack)"
+noStack: true
+source: Core Rule
+description: >
+  Stress Bonus 1 higher while your team wears theirs - switched on the Item.
+text: >
+  Team Outfit: Bearing an emblem synonymous with the team you are part of, this outfit shows
+  your team pride!
+  –Apparel Category: All
+  –Prerequisites: N/A
+  –Quality Slots: 2
+  –Effects: When you select this Apparel Quality, choose a Team Name. Each Ally wearing a piece
+  of Apparel with this Apparel Quality and the same Team Name increases their Stress Bonus by 1
+  (this bonus does not stack).
+
+---
+
+# While worn and switched on, the wearer's Stress Bonus 1 higher - from one piece, however many
+# carry it. Who else is on the team, and whether they are wearing theirs, is the table's: the
+# switch is how the player says so.
+[passive]
+stressBonus += 1;
