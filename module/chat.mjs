@@ -2503,6 +2503,7 @@ export async function postScan(scanner, scanned, item) {
           scannedUuid: scanned.uuid,
           itemName: item.name,
           gearId: item.system.gearId,
+          holdingBack: item.system.scan.holdingBack !== false,
           check: difficulty ? `${skill} (${difficulty.label} ${difficulty.tn})` : skill,
           settled: hidden
         }
@@ -2562,7 +2563,8 @@ async function settleScan(message, scan, hid) {
     const prefix = `encounter:gear.${scan.gearId}.hidden.`;
     const kept = (scanned.system.usedManeuvers ?? []).filter(used => !used.startsWith(prefix));
     await requestActorUpdate(scanned, {
-      "system.usedManeuvers": [...kept, hiddenKey(scan.gearId, holdingBackStacks(scanned))]
+      "system.usedManeuvers": [...kept,
+        hiddenKey(scan.gearId, (scan.holdingBack !== false) ? holdingBackStacks(scanned) : 0)]
     });
     return settledNote(message, `${scanned.name} stays hidden.`);
   }

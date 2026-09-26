@@ -113,6 +113,10 @@
                 data-item-id="{{row.itemId}}"
                 data-tooltip="Target everyone in the area first.">Throw</button>
         {{/if}}
+        {{#if row.breaksAt}}
+        <span class="gear-type"
+              data-tooltip="Destroyed when a Character of Tier of Power {{row.breaksAt}}+ uses the Power Up Maneuver within 15 Squares.">Fragile</span>
+        {{/if}}
         {{#if row.scans}}
         <button type="button" class="gear-act" data-action="scanGear"
                 data-item-id="{{row.itemId}}"

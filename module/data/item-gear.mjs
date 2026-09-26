@@ -203,8 +203,17 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** A scan, and the Skill Check at the Difficulty that hides from it - the Scout Scope. */
       scan: new fields.SchemaField({
         skill: new fields.StringField({ required: true, blank: true, initial: "" }),
-        difficulty: new fields.StringField({ required: true, blank: true, initial: "" })
+        difficulty: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** Only during a Combat Encounter - the Scouter. */
+        combatOnly: new fields.BooleanField({ required: true, initial: false }),
+        /** Hiding from it lasts only while the Holding Back stacks do - the Scout Scope. */
+        holdingBack: new fields.BooleanField({ required: true, initial: true }),
+        /** The Tier a Power Up nearby has to be at to destroy it; 0 for nothing does. */
+        breaksAt: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 })
       }),
+      /** The Craft DCs it may be made at, and the Tier that destroys it at each. */
+      craftDCChoices: new fields.ArrayField(new fields.StringField({ blank: false })),
+      breaksAt: new fields.ObjectField({ required: true, initial: () => ({}) }),
 
       /** The mark it gives whoever holds it lit, and whether it is - the Torch. */
       lightMark: new fields.StringField({ required: true, blank: true, initial: "" }),

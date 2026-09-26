@@ -11,8 +11,8 @@ import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } fr
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable,
   connectedItem, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
-  isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered, shrinkChoices,
-  storable, tierDice, typeOf, usedThisEncounter } from "../gear.mjs";
+  inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
+  shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -1065,7 +1065,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // An Item thrown to burst over an area.
         bursts: Boolean(item.system.areaMark?.condition),
         // An Item that scans someone.
-        scans: Boolean(item.system.scan?.skill),
+        // An Accessory's only while it is worn - the Scouter's.
+        scans: Boolean(item.system.scan?.skill) && inEffect(item),
+        // What a Power Up nearby destroys it at, where something does.
+        breaksAt: Number(item.system.scan?.breaksAt) || 0,
         // A Remote Control, what it is connected to, and whether that can be set off now.
         remote: (item.system.connects ?? []).length > 0,
         connectedName: connectedItem(gearItems, item)?.name ?? "",
@@ -2001,6 +2004,26 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.system.chargesDice = size.dice;
     }
 
+    // "Craft DC: Variable (Qualified ~ Grandmaster)" - which, asked now: it is the
+    // Concealment Check it asks for, and what can destroy it.
+    if (data.system.craftDCChoices?.length) {
+      const labels = DBUCharacterData.DIFFICULTIES;
+      const chosen = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${definition.name} - Craft DC` },
+        content: "",
+        buttons: [
+          ...data.system.craftDCChoices.map(key => ({ action: key, label: labels[key]?.label ?? key })),
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!data.system.craftDCChoices.includes(chosen)) return;
+      const made = atCraftDC(data.system, chosen, labels);
+      data.system.craftDC = made.craftDC;
+      data.system.scan = made.scan;
+    }
+
     // "Upon gaining this Special Item, a Character is assigned with this." Picked now,
     // among the world's characters, and changeable on the Item.
     if (data.system.assignsCharacter) {
@@ -2910,6 +2933,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onScanGear(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     if (!item?.system.scan?.skill) return;
+
+    // "During a Combat Encounter, you can spend 1 Action to attempt to scan."
+    if (item.system.scan.combatOnly && !game.combat?.started) {
+      ui.notifications.warn(`The ${item.name} scans during a Combat Encounter.`);
+      return;
+    }
 
     const scanned = game.user.targets.first()?.actor;
     if (!scanned || (scanned.uuid === this.actor.uuid)) {

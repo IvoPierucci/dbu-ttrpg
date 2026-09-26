@@ -53,6 +53,42 @@ export const GEAR_TRIGGERS = Object.freeze({
   proximity: { label: "Proximity", row: true }
 });
 
+/** A header of `key=value` pairs - "qualified=2, expert=3" - as numbers. */
+function pairsOf(raw) {
+  return Object.fromEntries(listOf(raw).map(entry => entry.split("=").map(part => part.trim()))
+    .filter(([key, value]) => key && Number.isFinite(Number(value)))
+    .map(([key, value]) => [key, Number(value)]));
+}
+
+/**
+ * An Item made at one of the Craft DCs its entry allows: the DC, the Concealment it asks
+ * for, and what destroys it. "Characters may attempt a Concealment Skill Check equal to the
+ * Craft DC of this Scouter."
+ */
+export function atCraftDC(system, key, labels) {
+  const label = labels?.[key]?.label ?? key;
+  return {
+    craftDC: label,
+    scan: { ...system.scan, difficulty: key, breaksAt: Number(system.breaksAt?.[key]) || 0 }
+  };
+}
+
+/**
+ * The Items a Power Up at this Tier destroys, among these characters': "it can be destroyed
+ * when a Character of Tier of Power 2+ (Qualified) or 3+ (Expert) uses the Power Up Maneuver
+ * within 15 Squares of you." Who is within 15 Squares is the table's.
+ */
+export function brokenByPowerUp(actors, tier) {
+  const broken = [];
+  for (const actor of actors ?? []) {
+    for (const item of Array.from(actor.items ?? [])) {
+      const at = Number(item.system?.scan?.breaksAt) || 0;
+      if ((item.type === "gear") && at && (tier >= at)) broken.push({ actor, item });
+    }
+  }
+  return broken;
+}
+
 /** A list header, from one value or several. */
 function listOf(raw) {
   const list = Array.isArray(raw) ? raw : String(raw ?? "").split(",");
@@ -434,8 +470,21 @@ export function gearItemFrom(definition, actor = null) {
       // A scan, and the Check that hides from it - the Scout Scope's Qualified Concealment.
       scan: {
         skill: String(definition.scanSkill ?? "").trim().toLowerCase(),
-        difficulty: String(definition.scanDifficulty ?? "").trim().toLowerCase()
+        difficulty: String(definition.scanDifficulty ?? "").trim().toLowerCase(),
+        // "During a Combat Encounter" - the Scouter's scan, where the Scout Scope's is any time.
+        combatOnly: definition.scanCombatOnly === true,
+        // Whether hiding from it lasts only while the Holding Back stacks do - the Scout
+        // Scope's "If their number of Holding Back stacks would decrease below their current
+        // number, they lose this benefit". The Scouter's lasts the Encounter regardless.
+        holdingBack: definition.scanHoldingBack !== false,
+        // The Tier of Power a Power Up has to be made at to destroy it, by its Craft DC -
+        // "Tier of Power 2+ (Qualified) or 3+ (Expert)". Nothing destroys one made higher.
+        breaksAt: 0
       },
+      // Craft DCs it may be made at - "Variable (Qualified ~ Grandmaster)" - asked when it
+      // is given, and what each makes breakable by.
+      craftDCChoices: listOf(definition.craftDCChoices),
+      breaksAt: pairsOf(definition.breaksAt),
 
       // A Light Source while it is lit and held: the mark it gives its holder, and whether
       // it is lit - the Torch.

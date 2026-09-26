@@ -60,7 +60,7 @@ import { actionsLeft, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } fr
 import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
-import { damageAttributeOffers, movementPayment } from "./gear.mjs";
+import { brokenByPowerUp, damageAttributeOffers, movementPayment } from "./gear.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
 import * as soarNames from "./environments.mjs";
@@ -1130,6 +1130,20 @@ function stateNote(maneuver, toggled) {
  *
  * @returns {string} what to print under the Maneuver's name, or "" for most of them
  */
+/**
+ * What a Power Up destroys: every Scouter of a low enough Craft DC in the world, named, for
+ * the table to say which were within 15 Squares. "If the Craft DC of a Scouter is Expert or
+ * lower, it can be destroyed when a Character of Tier of Power 2+ (Qualified) or 3+ (Expert)
+ * uses the Power Up Maneuver within 15 Squares of you."
+ */
+function powerUpBreaks(actor, maneuver) {
+  if (!maneuver.powerUp) return "";
+  const broken = brokenByPowerUp(game.actors?.contents ?? [], actor.system.tierOfPower ?? 1);
+  if (!broken.length) return "";
+  const named = broken.map(entry => `${entry.item.name} (${entry.actor.name})`);
+  return `Destroyed if within 15 Squares: ${named.join(", ")}.`;
+}
+
 function maneuverNote(actor, maneuver) {
   const said = String(maneuver.says ?? "").trim();
   if (!maneuver.moveSkill || !maneuver.movePerRank) return said;
@@ -2519,7 +2533,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
         // and which way one that throws a State went. Blank on everything that does
         // something the system can do for itself and says so by doing it.
         note: [maneuverNote(actor, maneuver), stateNote(maneuver, toggled),
-               soarNote(maneuver, soarTo),
+               soarNote(maneuver, soarTo), powerUpBreaks(actor, maneuver),
                moving.store ? `${moving.fromStore} Ki from the ${moving.store.name}.` : ""]
           .filter(Boolean).join(" "),
         // The character's Ki and the Item's apart, so a Blockade that wins hands each back

@@ -1,0 +1,60 @@
+id: scouter
+name: Scouter
+kind: gear
+itemType: accessory
+tags: tech
+craftDC: Variable (Qualified ~ Grandmaster)
+# Which, asked when it is given: it is the Concealment Check it asks for.
+craftDCChoices: qualified, expert, master, grandmaster
+# "Tier of Power 2+ (Qualified) or 3+ (Expert)" - the Tier a Power Up destroys it at.
+breaksAt: qualified=2, expert=3
+# "During a Combat Encounter, you can spend 1 Action to attempt to scan the strength of
+# another Character. Characters may attempt a Concealment Skill Check equal to the Craft DC."
+placeCost: 1
+scanSkill: concealment
+scanCombatOnly: true
+# Hidden from it for the rest of the Encounter, whatever their Holding Back does.
+scanHoldingBack: false
+source: Core Rule
+description: >
+  An Action in combat to read someone's Tier of Power - and their Power Level, if they are at
+  their base Tier - unless they hide it with a Concealment Check at its Craft DC. Also a
+  Communicator.
+text: >
+  Scouter [Tech]: A more advanced, wearable version of the Scout Scope, this one functions as
+  a Communicator as well.
+  –Craft DC: Variable (Qualified ~ Grandmaster)
+  –Effects: During a Combat Encounter, you can spend 1 Action to attempt to scan the strength
+  of another Character. Characters may attempt a Concealment Skill Check equal to the Craft DC
+  of this Scouter to try and avoid being scanned. If they succeed, nothing happens and they
+  automatically succeed on any further Concealment Skill Checks to avoid being spotted by a
+  Scouter for the remainder of the Combat Encounter. If their current Tier of Power is the
+  same as their base Tier of Power, you also learn of their Power Level.
+
+  If the Craft DC of a Scouter is Expert or lower, it can be destroyed when a Character of
+  Tier of Power 2+ (Qualified) or 3+ (Expert) uses the Power Up Maneuver within 15 Squares of
+  you, or when within several hundred miles while Adventuring.
+
+  While you have this Accessory equipped, you have access to the Scan Adventuring Maneuver.
+  The Scouter also functions as a Communicator.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Given: its Craft DC, Qualified to Grandmaster, which is the Concealment Check it asks for.
+#
+# Scan, while worn and during a Combat Encounter: 1 Action at the one targeted, and the same
+# card the Scout Scope's has. Read tells the scanner their current Tier of Power, and their
+# Power Level when that is their base Tier. Hidden lasts the rest of the Encounter against
+# every Scouter, with no Holding Back clause - the entry has none.
+#
+# Qualified or Expert, its row says Fragile, and every Power Up at Tier 2+ (3+ for Expert)
+# names it on its card: which were within 15 Squares is the table's, and so is throwing
+# it away.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# The Scan Adventuring Maneuver, and being destroyed while Adventuring: there are no
+# Adventuring rules in this system yet. Communicator: said at the table, as the
+# Communicator's own entry is.
