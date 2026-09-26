@@ -43,6 +43,8 @@ Headers only a Quality reads:
   wornOverArmor: true - its Apparel may go on over Armor, the Jacket's. Read by the Layers.
   sparesFirstBreak: true - the first loss of Break Value from full each Combat Encounter does
                  not happen, Joint Protection's. Read by the Break Value.
+  noApparelPenalty: true - its Apparel does not count towards the Apparel Penalty,
+                 Lightweight's. Read by the Penalty.
   excludesQualities: a Quality that, on the same piece, keeps this one from applying at all -
                  Durable's `lightweight`.
   requiresQualities: a Quality it needs on the same piece to apply at all.

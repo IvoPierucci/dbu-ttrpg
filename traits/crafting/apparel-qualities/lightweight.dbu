@@ -1,0 +1,27 @@
+id: lightweight
+name: Lightweight
+kind: crafting
+categoriesExcept: weights
+slots: 1
+# "This piece of Apparel does not have the Durable Apparel Quality" - a Prerequisite about the
+# piece: with Durable on it, Lightweight does not apply at all.
+excludesQualities: durable
+prerequisites: This piece of Apparel does not have the Durable Apparel Quality.
+# "This piece of Apparel does not count towards the Apparel Penalty." Read by the Penalty.
+noApparelPenalty: true
+source: Core Rule
+description: >
+  Does not count towards the Apparel Penalty. Not with Durable on the same piece.
+text: >
+  Lightweight: This article of clothing is especially light.
+  –Apparel Category: All (Except Weights)
+  –Prerequisites: This piece of Apparel does not have the Durable Apparel Quality.
+  –Quality Slots: 1
+  –Effects: This piece of Apparel does not count towards the Apparel Penalty.
+
+---
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# The Apparel Penalty comes with the rest of the Apparel rules. When it does: a worn piece with
+# this on it is not counted towards it, as Standard Clothing is not - `noApparelPenalty`.
