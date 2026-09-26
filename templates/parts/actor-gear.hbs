@@ -32,6 +32,11 @@
                 data-item-id="{{row.itemId}}">{{#if row.equipped}}Unequip{{else}}Equip{{/if}}</button>
         {{/if}}
         {{/if}}
+        {{#if row.shrinks}}
+        {{#if row.shrunkTo}}<span class="gear-type">{{row.shrunkTo}}</span>{{/if}}
+        <button type="button" class="gear-act" data-action="shrinkGear"
+                data-item-id="{{row.itemId}}">{{#if row.shrunkTo}}Return{{else}}Shrink{{/if}}</button>
+        {{/if}}
         {{#if row.lockable}}
         <button type="button" class="gear-act" data-action="lockGear"
                 data-item-id="{{row.itemId}}"

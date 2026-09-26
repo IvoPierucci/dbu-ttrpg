@@ -353,6 +353,14 @@ export function gearItemFrom(definition, actor = null) {
       // A Key: the lock it opens.
       keyFor: "",
 
+      // Shrinks its wearer to a Size Category named outright - the Micro Band's Tiny or
+      // Nano - for so many Actions, and the same to come back. `now` is where they are.
+      shrink: {
+        to: listOf(definition.shrinksTo),
+        cost: Math.max(0, Number(definition.shrinkCost) || 0),
+        now: ""
+      },
+
       // An Attribute that may stand in for the Damage Attribute, and on what - the
       // Hologram Projector's Personality Modifier, on a Signature Technique.
       damageAttribute: {
@@ -683,6 +691,28 @@ export function equipProblem(items, item) {
     return `Already wearing ${ACCESSORIES_WORN} Accessories.`;
   }
   return "";
+}
+
+/**
+ * The Size Category something worn has shrunk its wearer to, or "" - the Micro Band's.
+ *
+ * Only while it is worn: an Accessory "apply benefits while equipped", and one taken off
+ * takes its Size with it.
+ */
+export function shrunkSize(items) {
+  return accessoriesInEffect(items).find(item => item.system?.shrink?.now)
+    ?.system.shrink.now ?? "";
+}
+
+/**
+ * The Size Categories an Item can shrink its wearer to from where they are: "reduce your
+ * Size Category to the Tiny or Nano Size Category" - a reduction, so only the ones smaller
+ * than the Size they were built as.
+ */
+export function shrinkChoices(item, chosen, order) {
+  const from = order.indexOf(chosen);
+  return (item?.system?.shrink?.to ?? [])
+    .filter(key => (order.indexOf(key) >= 0) && ((from < 0) || (order.indexOf(key) < from)));
 }
 
 /**

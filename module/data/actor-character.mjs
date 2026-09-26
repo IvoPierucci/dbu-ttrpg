@@ -8,6 +8,7 @@ import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
+import { shrunkSize } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
   qualitiesOf }
   from "../environments.mjs";
@@ -1707,7 +1708,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // larger than Colossal, and a shift past either leaves you standing at it.
     const sizeKeys = Object.keys(DBUCharacterData.SIZES);
     const chosenSize = this.size;
-    const chosenAt = sizeKeys.indexOf(chosenSize);
+    const builtAt = sizeKeys.indexOf(chosenSize);
+    // Or a Size named outright by something worn - the Micro Band's "reduce your Size
+    // Category to the Tiny or Nano Size Category" - where it is smaller than the one they
+    // were built as. It stands in for that one, and whatever moves them by steps moves
+    // them from it.
+    const shrunkAt = sizeKeys.indexOf(shrunkSize(Array.from(this.parent?.items ?? [])));
+    const chosenAt = ((builtAt >= 0) && (shrunkAt >= 0) && (shrunkAt < builtAt))
+      ? shrunkAt : builtAt;
     const sizeShift = Math.round(applySlot(this.effects?.slots, "size.steps", 0));
     const sizeKey = (chosenAt < 0)
       ? DBUCharacterData.DEFAULT_SIZE

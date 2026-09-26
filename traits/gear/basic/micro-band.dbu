@@ -1,0 +1,30 @@
+id: micro-band
+name: Micro Band
+kind: gear
+itemType: accessory
+tags: tech
+craftDC: Master
+# "At the cost of 1 Action, you may reduce your Size Category to the Tiny or Nano Size
+# Category. You can spend 1 Action to return to your base Size Category."
+shrinksTo: tiny, nano
+shrinkCost: 1
+source: Core Rule
+description: >
+  An Action to shrink to Tiny or Nano, and an Action to come back.
+text: >
+  Micro Band [Tech]: A watch that allows you to shrink.
+  –Craft DC: Master
+  –Effects: At the cost of 1 Action, you may reduce your Size Category to the Tiny or Nano
+  Size Category. You can spend 1 Action to return to your base Size Category.
+
+---
+
+# While worn, its row has Shrink: an Action, and Tiny or Nano - whichever is smaller than the
+# Size they were built as. Return is an Action back to that Size.
+#
+# The Size named stands in for the one they were built as, so everything a Size changes
+# follows it - Melee Range, Speed, Defense Value, Soak Value, the Skills a Size moves. Anything
+# that moves them by steps, Liquid's "reduce your Size Category by 1", moves them from it.
+#
+# Taken off while shrunk, they are back at their own Size: an Accessory "apply benefits while
+# equipped".

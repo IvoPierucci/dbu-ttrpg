@@ -11,8 +11,8 @@ import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } fr
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable,
   connectedItem, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
-  isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered, storable, tierDice,
-  typeOf, usedThisEncounter } from "../gear.mjs";
+  isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered, shrinkChoices,
+  storable, tierDice, typeOf, usedThisEncounter } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -448,6 +448,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       teleportGear: DBUCharacterSheet._onTeleportGear,
       equipGear: DBUCharacterSheet._onEquipGear,
       lockGear: DBUCharacterSheet._onLockGear,
+      shrinkGear: DBUCharacterSheet._onShrinkGear,
       unlockGear: DBUCharacterSheet._onUnlockGear,
       endMark: DBUCharacterSheet._onEndMark,
       throwGear: DBUCharacterSheet._onThrowGear,
@@ -1026,6 +1027,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         lockedOn: lockedOn(item),
         lockable: Boolean(item.system.lock?.locks) && !item.system.equipped,
         unlocks: Boolean(item.system.keyFor),
+        // Shrinks them while worn: to what, where they are now.
+        shrinks: isAccessory(item) && Boolean(item.system.equipped)
+          && ((item.system.shrink?.to ?? []).length > 0),
+        shrunkTo: DBUCharacterData.SIZES[item.system.shrink?.now]?.label ?? "",
         // Tied to a Character: who, and Teleport once there is someone.
         assignedName: item.system.assignsCharacter ? (item.system.assigned?.name || "") : "",
         assigns: Boolean(item.system.assignsCharacter),
@@ -1188,13 +1193,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Only the Character Creation Sizes are offered, plus whatever the character is
     // already set to - an effect may have moved them somewhere not on that list, and
     // rendering it as absent would silently drop it on the next save.
+    //
+    // The Size they chose, not the one they are at: an effect that moves them - Liquid,
+    // the Micro Band - is not a choice, and selecting where it put them would save it as
+    // one the next time the sheet was submitted.
     const { size } = this.actor.system;
+    const built = size.chosen ?? size.key;
     context.sizeOptions = Object.entries(DBUCharacterData.SIZES)
-      .filter(([key, definition]) => definition.selectable || (key === size.key))
+      .filter(([key, definition]) => definition.selectable || (key === built))
       .map(([key, definition]) => ({
         value: key,
         label: definition.label,
-        selected: key === size.key
+        selected: key === built
       }));
 
     context.raceName = raceOptions().find(option => option.value === race)?.label ?? "";
@@ -2670,7 +2680,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const { spendActions } = await import("../combat.mjs");
     if (!await spendActions(this.actor, EQUIP_COST)) return;
-    return item.update({ "system.equipped": !wearing });
+    // Taken off, whatever Size it had them at goes with it - put back on, it starts where
+    // they were built, and shrinking again is its own Action.
+    return item.update({ "system.equipped": !wearing,
+      ...(wearing && item.system.shrink?.now ? { "system.shrink.now": "" } : {}) });
   }
 
   /**
@@ -2717,6 +2730,47 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return postSkillClash(this.actor, onto,
       { name: item.name, clash: { skill, defenderSkills: [lock.against] } },
       { handcuff: { applied: false, itemId: item.id } });
+  }
+
+  /**
+   * Shrink, or come back - the Micro Band.
+   *
+   * "At the cost of 1 Action, you may reduce your Size Category to the Tiny or Nano Size
+   * Category. You can spend 1 Action to return to your base Size Category." Which of the
+   * two, asked where both are smaller than they were built as.
+   */
+  static async _onShrinkGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const shrink = item?.system.shrink;
+    if (!shrink?.to?.length || !item.system.equipped) return;
+
+    const { spendActions } = await import("../combat.mjs");
+    if (shrink.now) {
+      if (!await spendActions(this.actor, shrink.cost)) return;
+      return item.update({ "system.shrink.now": "" });
+    }
+
+    const built = this.actor.system.size?.chosen ?? this.actor.system.size?.key;
+    const offered = shrinkChoices(item, built, Object.keys(DBUCharacterData.SIZES));
+    if (!offered.length) {
+      ui.notifications.warn(`${this.actor.name} is no bigger than the ${item.name} can make them.`);
+      return;
+    }
+    const to = (offered.length === 1) ? offered[0]
+      : await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: item.name },
+        content: "",
+        buttons: [
+          ...offered.map(key => ({ action: key, label: DBUCharacterData.SIZES[key].label })),
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+    if (!offered.includes(to)) return;
+
+    if (!await spendActions(this.actor, shrink.cost)) return;
+    return item.update({ "system.shrink.now": to });
   }
 
   /**

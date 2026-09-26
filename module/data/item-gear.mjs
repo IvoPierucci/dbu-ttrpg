@@ -96,6 +96,13 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** A Key: the lock it opens. */
       keyFor: new fields.StringField({ required: true, blank: true, initial: "" }),
 
+      /** Shrinks its wearer to a Size named outright - the Micro Band - and where they are. */
+      shrink: new fields.SchemaField({
+        to: new fields.ArrayField(new fields.StringField({ blank: false })),
+        cost: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        now: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+
       /** An Attribute that may stand in for the Damage Attribute, and on what attacks -
        *  the Hologram Projector's Personality, on a Signature Technique. */
       damageAttribute: new fields.SchemaField({
