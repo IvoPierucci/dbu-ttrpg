@@ -32,6 +32,9 @@ Headers only a Quality reads:
                  Focal's `strike=Strike Rolls, dodge=Dodge Rolls`.
   narrowsCategory: true - its choice is the one Combat Roll its Category's effects reach, as
                  Focal's is for Weights. Read by the Category, through narrowedRoll().
+  resistsWeather: true - its chosen Battle Weather is felt a Weather Tier lower for each Slot
+                 it takes, and not at all at 0 - Weather Resistant's. Read before any script.
+  chooses:       `weather`, for a type of Battle Weather chosen when it is added.
   chooses:       `skill`, for a Quality that has one chosen when it is added; with
                  `choiceAttribute: personality`, only the Skills that use that Score. Its
                  script names the one chosen as `$choice` - `skill.$choice += 2;`.

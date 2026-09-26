@@ -42,14 +42,14 @@ export function resolveAmount(amount, scope) {
     // multiplied by the Weather Tier." Nothing when the character is standing in no
     // Battle Weather, which is what a Weather's effects coming to nothing means.
     case "perWeatherTier":
-      return (amount.value ?? 0) * (scope.data?.battlefield?.weather?.tier ?? 0);
+      return (amount.value ?? 0) * feltWeatherTier(scope.data);
 
     case "level": {
       const level = scope.level ?? 0;
       if (amount.scale === "T") return level * (scope.data?.tierOfPower ?? 0);
       if (amount.scale === "bT") return level * (scope.data?.baseTierOfPower ?? 0);
       if (amount.scale === "WT") {
-        return level * (scope.data?.battlefield?.weather?.tier ?? 0);
+        return level * feltWeatherTier(scope.data);
       }
       return level;
     }
@@ -145,6 +145,16 @@ export function resolveDice(amount, scope) {
 }
 
 /**
+ * The Weather Tier a character feels: the one set, less what they wear against it. The set
+ * one where nothing has worked it out.
+ */
+function feltWeatherTier(data) {
+  const weather = data?.battlefield?.weather;
+  const felt = Number(weather?.felt);
+  return Number.isFinite(felt) ? felt : (Number(weather?.tier) || 0);
+}
+
+/**
  * Read a value off the character or the Moment's context.
  *
  * Character paths are read from prepared data, so `insight.score` and `life.max` mean
@@ -155,6 +165,10 @@ export function resolveDice(amount, scope) {
 export function resolvePath(p, scope) {
   const parts = String(p).split(".");
   const root = parts[0];
+
+  // The Weather Tier as this character feels it, where something they wear lowers it -
+  // Weather Resistant. Every Weather's script asks it as `battlefield.weather.tier`.
+  if (p === "battlefield.weather.tier") return feltWeatherTier(scope.data);
 
   // How many stacks of the thing carrying this effect the character has. Written plainly
   // as `stacks` because that is how the rulebook says it, and needed by any effect whose

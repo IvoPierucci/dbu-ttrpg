@@ -264,10 +264,12 @@ export function qualityEntries(crafted) {
  * this piece of Apparel)" - as the keys to choose among. `chooses: skill`, narrowed by
  * `choiceAttribute: personality` to the Skills that use that Score. Empty when it asks nothing.
  */
-export function qualityChoices(trait, skills) {
+export function qualityChoices(trait, skills, weathers = {}) {
   // Or a list of its own - Focal's `choices: strike=Strike Rolls, dodge=Dodge Rolls`.
   const own = Object.keys(choiceLabelsOf(trait));
   if (own.length) return own;
+  // Or a type of Battle Weather - Weather Resistant's - among the ones there are.
+  if (String(trait?.chooses ?? "").trim().toLowerCase() === "weather") return Object.keys(weathers);
   if (String(trait?.chooses ?? "").trim().toLowerCase() !== "skill") return [];
   const attribute = String(trait?.choiceAttribute ?? "").trim().toLowerCase();
   return Object.entries(skills ?? {})
@@ -284,9 +286,32 @@ function choiceLabelsOf(trait) {
 }
 
 /** What a choice made for a Quality is called: its own label, or the Skill's name. */
-export function qualityChoiceLabel(trait, choice, skills) {
+export function qualityChoiceLabel(trait, choice, skills, weathers = {}) {
   if (!choice) return "";
-  return choiceLabelsOf(trait)[choice] ?? skills?.[choice]?.label ?? choice;
+  return choiceLabelsOf(trait)[choice] ?? weathers?.[choice]?.label ?? skills?.[choice]?.label
+    ?? choice;
+}
+
+/**
+ * How many Weather Tiers lower a Battle Weather is for whoever wears these - Weather
+ * Resistant's "Treat the Weather Tier as if it was x Weather Tiers lower, where x is equal to
+ * the number of Quality Slots occupied by this Apparel Quality", for the Weather chosen for
+ * it. Only while the wearer has the 2+ Ranks in Survival its Prerequisite asks, told here
+ * because this is read before any script runs.
+ */
+export function weatherResisted(items, weatherId, getTrait, survivalRanks = 0) {
+  if (!weatherId || !((Number(survivalRanks) || 0) >= 2)) return 0;
+  let tiers = 0;
+  for (const { item, entries } of apparelQualitiesInEffect(items)) {
+    for (const entry of entries) {
+      if (qualityInactive(entry, item.system.crafted, getTrait)) continue;
+      const trait = getTrait?.(entry.id);
+      if ((trait?.resistsWeather === true) && (entry.choice === weatherId)) {
+        tiers += slotsTaken(entry, trait);
+      }
+    }
+  }
+  return tiers;
 }
 
 /**

@@ -579,6 +579,9 @@ function weatherPrograms(actor, report) {
 
   const id = String(actor.system?.battlefield?.weather?.id ?? "");
   if (!id) return [];
+  // "If this would treat the Weather Tier as if it was 0 or less, completely ignore the effects
+  // of that Battle Weather" - Weather Resistant.
+  if (Number(actor.system?.battlefield?.weather?.felt) === 0) return [];
 
   const trait = traitsOfKind("battlefields").find(candidate => candidate.id === id);
   if (!trait) {

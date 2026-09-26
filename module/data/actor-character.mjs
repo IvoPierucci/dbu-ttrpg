@@ -8,7 +8,7 @@ import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
-import { groundIgnored, shrunkSize } from "../gear.mjs";
+import { groundIgnored, shrunkSize, weatherResisted } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
   qualitiesOf }
   from "../environments.mjs";
@@ -1650,6 +1650,22 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // never in the stored fields. Those stay as the GM's own manual overrides, and
     // keeping them apart means a stray update can never persist a transient bonus.
     this.effects = { slots: {}, active: [], errors: [], programs: [], workings: {} };
+
+    // The Weather Tier as this character feels it: the one set, less what they are wearing
+    // against that Weather - Weather Resistant's "Treat the Weather Tier as if it was x
+    // Weather Tiers lower". Worked out before the effects are gathered, since a Weather felt
+    // at 0 is one they "completely ignore", and so is not gathered at all. Its (WT) and every
+    // script asking `battlefield.weather.tier` read this; the Tier the player set stays as set.
+    {
+      const weather = this.battlefield?.weather ?? {};
+      const set = weather.id ? (Number(weather.tier) || 0) : 0;
+      const survival = [...(this.racialSkillRanks ?? []), ...(this.progression ?? [])
+        .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
+        .flatMap(entry => entry.skillRanks)].filter(rank => rank === "survival").length;
+      const resisted = weatherResisted(Array.from(this.parent?.items ?? []), weather.id,
+        getTrait, survival);
+      if (this.battlefield?.weather) this.battlefield.weather.felt = Math.max(0, set - resisted);
+    }
     // Built after the bag exists: the report callback writes into it, and calling
     // programsFor inside the assignment would fire that callback before there was
     // anywhere for it to write.

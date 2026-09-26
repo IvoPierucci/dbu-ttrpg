@@ -153,7 +153,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
           tip: escape(trait?.description ?? ""),
           slotsLabel: `${taken} Slot${taken === 1 ? "" : "s"}`,
           // What was chosen for it, by name.
-          choiceLabel: qualityChoiceLabel(trait, entry.choice, DBUCharacterData.SKILLS),
+          choiceLabel: qualityChoiceLabel(trait, entry.choice, DBUCharacterData.SKILLS,
+            DBUGearSheet.#weathers()),
           // A switch of its own, where its effect waits on something the table keeps.
           toggle: trait?.toggle ? String(trait.toggle) : "",
           on: entry.on,
@@ -208,7 +209,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     // "A Skill of your choice (when creating this piece of Apparel)", Focal's Strike or Dodge:
     // asked now, and kept with the Quality.
     let choice = "";
-    const offered = qualityChoices(trait, DBUCharacterData.SKILLS);
+    const offered = qualityChoices(trait, DBUCharacterData.SKILLS, DBUGearSheet.#weathers());
     if (offered.length) {
       choice = await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"],
@@ -216,7 +217,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
         content: "",
         buttons: [
           ...offered.map(key => ({ action: key,
-            label: qualityChoiceLabel(trait, key, DBUCharacterData.SKILLS) })),
+            label: qualityChoiceLabel(trait, key, DBUCharacterData.SKILLS,
+              DBUGearSheet.#weathers()) })),
           { action: "cancel", label: "Cancel" }
         ],
         rejectClose: false
@@ -225,6 +227,12 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     }
     const qualities = [...qualityEntries(this.item.system.crafted), { id: pick, slots, choice }];
     return this.item.update({ "system.crafted.qualities": qualities });
+  }
+
+  /** The Battle Weathers there are, for a Quality that chooses one - Weather Resistant. */
+  static #weathers() {
+    return Object.fromEntries(traitsOfKind("battlefields").filter(trait => trait.weather === true)
+      .map(trait => [trait.id, { label: trait.name }]));
   }
 
   /** Why a Quality on it is inactive, as its row says it. */
