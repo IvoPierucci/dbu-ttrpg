@@ -309,6 +309,16 @@ export function scriptWithChoice(script, choice) {
 }
 
 /**
+ * A Quality's script with its own piece's numbers written in: `$apparelBonus` is that piece's
+ * Apparel Bonus per base Tier, so `ceil($apparelBonus(bT) / 2)` is "1/2 (rounded up) of the
+ * Apparel Bonus" - Parrying Armor's. Per base Tier because a script reads (bT) itself, and the
+ * base Tier is not known yet when the scripts are gathered.
+ */
+export function scriptWithPiece(script, reading) {
+  return String(script ?? "").replaceAll("$apparelBonus", String(Number(reading?.perBaseTier) || 0));
+}
+
+/**
  * The worn Apparel whose Qualities apply, each with the Qualities that do: those its Category
  * takes. "Apparel Qualities may apply to only certain Apparel Categories."
  *

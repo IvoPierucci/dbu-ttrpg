@@ -57,6 +57,9 @@ Headers only a Quality reads:
 A Quality held off - by its Category, or by one of those two - is kept on the piece, said to be
 inactive on its row, and adds nothing anywhere.
 
+A Quality's script may also name its own piece's Apparel Bonus as `$apparelBonus`, per base
+Tier - `parry += ceil($apparelBonus(bT) / 2);` is "1/2 (rounded up) of the Apparel Bonus".
+
 A Quality's script runs while the Apparel it is on is worn, and its Category takes it.
 
 "If an effect would apply an Apparel Quality to a piece of Apparel that has all of its Quality

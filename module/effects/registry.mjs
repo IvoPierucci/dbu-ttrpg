@@ -14,8 +14,8 @@ import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { accessoriesInEffect, apparelQualitiesInEffect, groundIgnored, qualityInactive,
-  scriptWithChoice } from "../gear.mjs";
+import { accessoriesInEffect, apparelQualitiesInEffect, craftedReading, groundIgnored,
+  qualityInactive, scriptWithChoice, scriptWithPiece } from "../gear.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -183,11 +183,13 @@ function apparelPrograms(actor, report) {
       const trait = getTrait(quality.id);
       // Not its Category's, or held off by another Quality on the piece - or its absence.
       if (!trait || qualityInactive(quality, item.system.crafted, getTrait)) continue;
-      const script = scriptWithChoice(trait.script, quality.choice);
+      // What was chosen for it, and its own piece's Apparel Bonus.
+      const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {} });
+      const script = scriptWithPiece(scriptWithChoice(trait.script, quality.choice), reading);
       if (!script.trim()) continue;
 
       const { program, errors } = compile(
-        `apparel:${trait.id}:${quality.choice}`,
+        `apparel:${trait.id}:${quality.choice}:${reading?.perBaseTier ?? 0}`,
         { script },
         message => report(`${item.name}, ${trait.name}: ${message}`)
       );

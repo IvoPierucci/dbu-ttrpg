@@ -1,0 +1,27 @@
+id: parrying-armor
+name: Parrying Armor
+kind: crafting
+categories: armor
+slots: 1
+source: Core Rule
+description: >
+  Parrying without a Weapon, the Strike Roll is higher by half the Apparel Bonus.
+text: >
+  Parrying Armor: This set of armor includes firm bracers used for blocking incoming attacks.
+  –Apparel Category: Armor
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: While you do not have a Weapon equipped, increase your Strike Rolls when using the
+  Parry effect of the Defend Maneuver by 1/2 (rounded up) of the Apparel Bonus.
+
+---
+
+# Half of its own piece's Apparel Bonus, rounded up, on the Strike Roll of a Parry alone - the
+# `parry` Slot, which is read only when Strike is rolled defensively. Dense Armor on the same
+# piece raises the Bonus it halves.
+#
+# Not built yet: "While you do not have a Weapon equipped". There are no Weapons in this system
+# yet, so nobody has one equipped and this always applies. When they arrive, this waits on
+# having none.
+[passive]
+parry += ceil($apparelBonus(bT) / 2);
