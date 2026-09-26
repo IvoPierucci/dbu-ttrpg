@@ -1,0 +1,25 @@
+id: dense-armor
+name: Dense Armor
+kind: crafting
+categories: armor
+slots: 1
+# "Increase your Apparel Bonus by 1(bT)" - this piece's, wherever its Bonus is read.
+apparelBonus: 1
+source: Core Rule
+description: >
+  Apparel Bonus 1(bT) higher, and Combat Rolls 1(bT) lower.
+text: >
+  Dense Armor: Particularly protective armor, this bulky gear restricts your movements.
+  –Apparel Category: Armor
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Increase your Apparel Bonus by 1(bT) but reduce your Combat Rolls by an equal
+  amount.
+
+---
+
+# The Bonus is the Apparel's own: its sheet shows it 1(bT) higher, and whatever reads it - the
+# Armor's Damage Reduction, a Doff Bonus - reads that. The Combat Rolls are the wearer's, while
+# worn: the Strike, the Dodge and the Wound Roll.
+[passive]
+combatRolls -= 1(bT);

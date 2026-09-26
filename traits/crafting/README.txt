@@ -32,6 +32,9 @@ Headers only a Quality reads:
                  `choiceAttribute: personality`, only the Skills that use that Score. Its
                  script names the one chosen as `$choice` - `skill.$choice += 2;`.
 
+  apparelBonus:  what it adds to its Apparel's Apparel Bonus, per base Tier - Dense Armor's 1.
+                 Part of the Bonus wherever it is read, worn or not.
+
 A Quality's script runs while the Apparel it is on is worn, and its Category takes it.
 
 "If an effect would apply an Apparel Quality to a piece of Apparel that has all of its Quality

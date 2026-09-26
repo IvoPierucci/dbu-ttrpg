@@ -154,14 +154,21 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
   const count = entries.length;
   const used = entries.reduce((sum, entry) =>
     sum + slotsTaken(entry, getTrait?.(entry.id)), 0);
+  // What its Qualities add to the Apparel Bonus, per base Tier - Dense Armor's "Increase your
+  // Apparel Bonus by 1(bT)" - from the ones its Category takes.
+  const fromQualities = entries
+    .filter(entry => qualityFits(getTrait?.(entry.id), crafted.category))
+    .reduce((sum, entry) => sum + (Number(getTrait?.(entry.id)?.apparelBonus) || 0), 0);
+  const perBaseTier = band.perBaseTier + fromQualities;
   return {
     kind: crafted.kind,
     categoryName: category?.name ?? crafted.category,
     craftDC,
     craftDCLabel: difficulties?.[craftDC]?.label ?? craftDC,
     gradeLabel: band.label,
-    perBaseTier: band.perBaseTier,
-    bonus: band.perBaseTier * (Number(baseTier) || 1),
+    perBaseTier,
+    fromQualities,
+    bonus: perBaseTier * (Number(baseTier) || 1),
     slots: grade.slots,
     qualities: count,
     used,
