@@ -307,6 +307,24 @@ export function narrowedRoll(item, getTrait) {
 }
 
 /**
+ * The worn pieces whose spikes answer a blow, and what each takes: Spiked's "When you are
+ * struck by an Unarmed Physical Attack ... reduce their Life Points by the Apparel Bonus for
+ * this piece of Armor". Its own piece's Bonus, at the wearer's base Tier.
+ */
+export function spikesOf(items, getTrait, baseTier = 1) {
+  const found = [];
+  for (const { item, entries } of apparelQualitiesInEffect(items)) {
+    const crafted = item.system.crafted;
+    const spiked = entries.some(entry => !qualityInactive(entry, crafted, getTrait)
+      && (getTrait?.(entry.id)?.spikes === true));
+    if (!spiked) continue;
+    const reading = craftedReading(crafted, { getTrait, difficulties: {}, baseTier });
+    found.push({ item, amount: reading?.bonus ?? 0 });
+  }
+  return found;
+}
+
+/**
  * How many Combat Rounds longer a piece's first Doff Bonus of an Encounter lasts - Segmented
  * Weight's "for each Quality Slot this Quality occupies ... by 1 Combat Round". Read by the
  * Doff Bonus, which comes with the rest of the Apparel rules.

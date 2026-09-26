@@ -47,6 +47,8 @@ Headers only a Quality reads:
                  Lightweight's and Sleek Design's. Read by the Penalty, as `countsForPenalty`.
   armorDamageReduction: what the Armor Category's Damage Reduction from its Apparel is
                  multiplied by - Sleek Design's 0.5.
+  spikes:        true - a Physical blow landing on its worn Apparel costs the one who struck its
+                 Apparel Bonus in Life Points, if adjacent - Spiked's. A card asks the Square.
   doffsWithNoEffort: true - its Apparel may be Doffed through the No-Effort Maneuver, Loose's.
                  Read by removing Apparel.
   doffRoundsPerSlot: Combat Rounds its Apparel's first Doff Bonus of an Encounter lasts longer,

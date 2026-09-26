@@ -175,6 +175,8 @@ function applyRequest(request) {
     case "moment": return applyMoment(request.messageId, request.moment);
     case "cure": return applyCure(request.messageId, request.cure);
     case "scan": return applyScan(request.messageId, request.scan);
+    case "spikes": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, SPIKE_FLAG, request.spikes);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
     case "createItem": return fromUuidSync(request.actorUuid)
       ?.createEmbeddedDocuments("Item", [request.data]);
@@ -2475,6 +2477,7 @@ function onRenderChatMessage(message, html) {
   renderCurePoison(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
+  renderGearSpikes(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
 }
@@ -2655,6 +2658,61 @@ export async function postGearHazard(actor, item) {
       }
     }
   });
+}
+
+/**
+ * A blow landing on spikes: a card per spiked piece the one struck is wearing, saying what it
+ * would take from the one who struck.
+ */
+async function postGearSpikes(wearer, attacker) {
+  const { spikesOf } = await import("./gear.mjs");
+  for (const { item, amount } of spikesOf(Array.from(wearer.items ?? []), getTrait,
+    wearer.system.baseTierOfPower ?? 1)) {
+    if (!(amount > 0)) continue;
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: wearer }),
+      content: `<p>${Handlebars.escapeExpression(attacker.name)} strikes `
+        + `${Handlebars.escapeExpression(wearer.name)}'s ${Handlebars.escapeExpression(item.name)}.</p>`,
+      flags: {
+        [SCOPE]: {
+          [RESPONDABLE_FLAG]: false,
+          [SPIKE_FLAG]: {
+            wearerUuid: wearer.uuid,
+            attackerUuid: attacker.uuid,
+            attackerName: attacker.name,
+            itemName: item.name,
+            amount,
+            applied: false
+          }
+        }
+      }
+    });
+  }
+}
+
+/**
+ * The spikes' button: the one who struck loses the Life Points, if they were on an adjacent
+ * Square - which only the table knows. Drawn for the GM and for whoever plays the one struck,
+ * and gone once pressed.
+ */
+function renderGearSpikes(message, html) {
+  const spikes = message.getFlag(SCOPE, SPIKE_FLAG);
+  if (!spikes || spikes.applied) return;
+  const wearer = fromUuidSync(spikes.wearerUuid);
+  if (!game.user.isGM && !wearer?.isOwner) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = `Adjacent: ${spikes.attackerName} loses ${spikes.amount} Life Points`;
+  button.dataset.tooltip = "Only if they struck from a Square next to you.";
+  button.addEventListener("click", async () => {
+    const attacker = fromUuidSync(spikes.attackerUuid);
+    if (!attacker) return;
+    requestEdit(message, { type: "spikes", spikes: { ...spikes, applied: true } });
+    await reduceLifePoints(attacker, spikes.amount, { reason: spikes.itemName });
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
 }
 
 /**
@@ -4848,6 +4906,9 @@ const HAZARD_FLAG = "gearHazard";
 
 /** A scan by an Item - the Scout Scope - waiting for the one scanned to answer it. */
 const SCAN_FLAG = "gearScan";
+
+/** A worn piece's spikes answering a blow - Spiked. */
+const SPIKE_FLAG = "gearSpikes";
 
 /**
  * Whatever the character's effects contribute at one Moment.
@@ -9311,6 +9372,14 @@ async function applyAttackDamage(message, target, attack) {
       await markUntilNextTurn(attacker, target, riders.onThreshold.condition,
         riders.onThreshold.stacks, riders.onThreshold.untimed ? null : "end", riders.label);
     }
+  }
+
+  // Spiked: "When you are struck by an Unarmed Physical Attack from an Opponent on an
+  // adjacent Square to you." Struck is hit, whatever it dealt; Physical is its Foundation; and
+  // with no Weapons in this system yet, every Physical Attack is Unarmed. The adjacent Square
+  // is the table's, so the card asks it.
+  if (attacker && own.hit && !isAbsoluteMiss(own) && (attack.foundation === "physical")) {
+    await postGearSpikes(target, attacker);
   }
 
   // "If you take Damage from an Attacking Maneuver used through the Exploit Maneuver in

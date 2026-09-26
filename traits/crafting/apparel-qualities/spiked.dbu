@@ -1,0 +1,38 @@
+id: spiked
+name: Spiked
+kind: crafting
+categories: armor
+slots: 1
+# "When you are struck by an Unarmed Physical Attack from an Opponent on an adjacent Square to
+# you, reduce their Life Points by the Apparel Bonus for this piece of Armor."
+spikes: true
+source: Core Rule
+description: >
+  Struck by an Unarmed Physical Attack from beside you, they lose the Apparel Bonus in Life
+  Points.
+text: >
+  Spiked: This armor is covered in sharpened spikes to retaliate against anyone who tries to
+  strike you.
+  –Apparel Category: Armor
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: When you are struck by an Unarmed Physical Attack from an Opponent on an adjacent
+  Square to you, reduce their Life Points by the Apparel Bonus for this piece of Armor.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# A Physical Attack that hits whoever is wearing it - dealing Damage or not - posts a card: the
+# one who struck, and this piece's Apparel Bonus at the wearer's base Tier. Its button, for the
+# GM and whoever plays the wearer, takes that many Life Points off the one who struck: a Life
+# Point reduction, past Soak and Damage Reduction. Dense Armor on the piece raises what it takes.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# The adjacent Square, and that they are an Opponent: the button is pressed only when they were.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# "Unarmed": there are no Weapons in this system yet, so every Physical Attack is Unarmed. When
+# they arrive, one made with a Weapon posts no card.
