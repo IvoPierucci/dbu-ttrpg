@@ -298,6 +298,21 @@ export function narrowedRoll(item, getTrait) {
 }
 
 /**
+ * How many Combat Rounds longer a piece's first Doff Bonus of an Encounter lasts - Segmented
+ * Weight's "for each Quality Slot this Quality occupies ... by 1 Combat Round". Read by the
+ * Doff Bonus, which comes with the rest of the Apparel rules.
+ */
+export function doffRounds(item, getTrait) {
+  const crafted = item?.system?.crafted;
+  return qualityEntries(crafted)
+    .filter(entry => !qualityInactive(entry, crafted, getTrait))
+    .reduce((sum, entry) => {
+      const trait = getTrait?.(entry.id);
+      return sum + (Number(trait?.doffRoundsPerSlot) || 0) * slotsTaken(entry, trait);
+    }, 0);
+}
+
+/**
  * A Quality's script with what was chosen for it written in: `skill.$choice += 2;` becomes
  * `skill.persuasion += 2;`. Nothing is written for a Quality that asks nothing, and a script
  * still naming `$choice` has had nothing chosen and is not run.

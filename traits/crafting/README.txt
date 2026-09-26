@@ -47,6 +47,8 @@ Headers only a Quality reads:
                  Lightweight's. Read by the Penalty.
   doffsWithNoEffort: true - its Apparel may be Doffed through the No-Effort Maneuver, Loose's.
                  Read by removing Apparel.
+  doffRoundsPerSlot: Combat Rounds its Apparel's first Doff Bonus of an Encounter lasts longer,
+                 for each Slot it takes - Segmented Weight's 1. Read through doffRounds().
   excludesQualities: a Quality that, on the same piece, keeps this one from applying at all -
                  Durable's `lightweight`.
   requiresQualities: a Quality it needs on the same piece to apply at all.
