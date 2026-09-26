@@ -45,6 +45,8 @@ Headers only a Quality reads:
                  not happen, Joint Protection's. Read by the Break Value.
   noApparelPenalty: true - its Apparel does not count towards the Apparel Penalty,
                  Lightweight's. Read by the Penalty.
+  doffsWithNoEffort: true - its Apparel may be Doffed through the No-Effort Maneuver, Loose's.
+                 Read by removing Apparel.
   excludesQualities: a Quality that, on the same piece, keeps this one from applying at all -
                  Durable's `lightweight`.
   requiresQualities: a Quality it needs on the same piece to apply at all.
