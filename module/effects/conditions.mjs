@@ -64,6 +64,15 @@ const PREDICATES = {
    */
   intendedForYou: scope => Boolean(scope.intended),
 
+  /**
+   * Is this character wearing an Item made from a named file - "while wearing Standard
+   * Clothing". By the file's id, so a renamed one still counts; worn being the same
+   * `equipped` an Accessory is put on with, and one in a Capsule never being worn.
+   */
+  wearing: (scope, id) => Array.from(scope.data?.parent?.items ?? []).some(item =>
+    (item.type === "gear") && (item.system?.gearId === String(id).trim().toLowerCase())
+    && Boolean(item.system?.equipped)),
+
   /** Is this character a Minion. */
   isMinion: scope => Boolean(scope.data?.minion),
 

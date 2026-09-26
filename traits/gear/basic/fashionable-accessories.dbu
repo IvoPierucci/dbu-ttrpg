@@ -1,0 +1,28 @@
+id: fashionable-accessories
+name: Fashionable Accessories
+kind: gear
+itemType: accessory
+craftDC: Qualified
+source: Core Rule
+description: >
+  Morale Saving Throw 1(bT) higher, while Standard Clothing is worn with it.
+text: >
+  Fashionable Accessories: This collection of pins, jewelry, sashes, and other assorted
+  wearable items is the perfect accent to your everyday wear, making you feel like a million
+  zeni.
+  –Craft DC: Qualified
+  –Effects: Increase your Morale Saving Throws by 1(bT) while wearing Standard Clothing in
+  addition to this Accessory.
+
+---
+
+# "While wearing Standard Clothing": an Item of the character's made from the
+# standard-clothing file, and worn.
+#
+# Not built yet: Standard Clothing is Apparel, which has not arrived. Until it does there is
+# nothing to wear, and this adds nothing. When it does, `wearing` reads the same `equipped`
+# an Accessory is put on with - if Apparel is worn some other way, that is where to change it.
+[passive]
+if (wearing("standard-clothing")) {
+  save.morale += 1(bT);
+}

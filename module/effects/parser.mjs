@@ -457,7 +457,8 @@ class Parser {
 
 /** Questions the engine answers, as opposed to arithmetic it works out. */
 const PREDICATE_NAMES = new Set([
-  "benefiting", "hasResource", "inState", "hasCondition", "targets", "aoeHits", "attacking"
+  "benefiting", "hasResource", "inState", "hasCondition", "targets", "aoeHits", "attacking",
+  "wearing"
 ]);
 
 /** The ones written without brackets, because they take nothing. */
