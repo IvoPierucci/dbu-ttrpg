@@ -148,7 +148,12 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
     : order[Math.min(order.length - 1, Math.max(0, from + shift))];
 
   const band = kind.bonus[grade.grade];
-  const count = (crafted.qualities ?? []).length;
+  // Slots used, not Qualities counted: "The Quality Slots for an Apparel Quality will explain
+  // how many Quality Slots it takes up."
+  const entries = qualityEntries(crafted);
+  const count = entries.length;
+  const used = entries.reduce((sum, entry) =>
+    sum + slotsTaken(entry, getTrait?.(entry.id)), 0);
   return {
     kind: crafted.kind,
     categoryName: category?.name ?? crafted.category,
@@ -159,8 +164,53 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
     bonus: band.perBaseTier * (Number(baseTier) || 1),
     slots: grade.slots,
     qualities: count,
-    over: Math.max(0, count - grade.slots)
+    used,
+    over: Math.max(0, used - grade.slots),
+    // The ones its Category does not take: "Apparel Qualities may apply to only certain
+    // Apparel Categories." Kept, and inactive.
+    misfits: entries.filter(entry => !qualityFits(getTrait?.(entry.id), crafted.category))
+      .map(entry => entry.id)
   };
+}
+
+/**
+ * A built Item's Qualities as entries of `{id, slots}` - a Quality and how many Slots it was
+ * given, where it takes a range. An entry written before Qualities had Slots of their own
+ * was only its id.
+ */
+export function qualityEntries(crafted) {
+  return (crafted?.qualities ?? []).map(entry => (typeof entry === "string")
+    ? { id: entry, slots: 0 }
+    : { id: String(entry?.id ?? ""), slots: Number(entry?.slots) || 0 })
+    .filter(entry => entry.id);
+}
+
+/**
+ * How many Quality Slots a Quality takes: `slots: 2`, or a range - `slots: 1-3` - "you may
+ * select how many Quality Slots a Apparel Quality takes up". One when it does not say.
+ */
+export function qualitySlotRange(trait) {
+  const said = String(trait?.slots ?? "").trim();
+  const [low, high] = said.split(/\s*[-~]\s*/).map(part => Number(part));
+  const min = Number.isFinite(low) && (low > 0) ? low : 1;
+  const max = Number.isFinite(high) && (high >= min) ? high : min;
+  return { min, max, ranged: max > min };
+}
+
+/** The Slots one Quality entry takes: what was chosen, held to its range. */
+export function slotsTaken(entry, trait) {
+  const { min, max } = qualitySlotRange(trait);
+  const chosen = Number(entry?.slots) || 0;
+  return chosen ? Math.min(max, Math.max(min, chosen)) : min;
+}
+
+/**
+ * Whether a Quality may go on this Category: `categories: armor, combat-clothing`, or on any
+ * when it names none.
+ */
+export function qualityFits(trait, category) {
+  const allowed = listOf(trait?.categories);
+  return !allowed.length || allowed.includes(String(category ?? "").toLowerCase());
 }
 
 /**

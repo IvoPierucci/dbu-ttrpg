@@ -2,8 +2,8 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
-import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable, craftedReading }
-  from "../gear.mjs";
+import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable, craftedReading,
+  qualityEntries, qualityFits, qualitySlotRange, slotsTaken } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 
 /**
@@ -139,34 +139,69 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       sizeChoices: Object.entries(DBUCharacterData.SIZES).map(([key, size]) => ({
         value: key, label: size.label, chosen: key === crafted.size
       })),
-      qualities: (crafted.qualities ?? []).map((id, index) => ({
-        index,
-        name: getTrait(id)?.name ?? id,
-        tip: escape(getTrait(id)?.description ?? "")
-      })),
-      qualityChoices: traitsOfKind("crafting", kind.qualities).map(trait => ({
-        value: trait.id, label: trait.name
-      })),
+      qualities: qualityEntries(crafted).map((entry, index) => {
+        const trait = getTrait(entry.id);
+        const taken = slotsTaken(entry, trait);
+        return {
+          index,
+          name: trait?.name ?? entry.id,
+          tip: escape(trait?.description ?? ""),
+          slotsLabel: `${taken} Slot${taken === 1 ? "" : "s"}`,
+          // Its Category does not take it: kept, and inactive until it does.
+          misfit: !qualityFits(trait, crafted.category)
+            ? `Not for ${reading.categoryName}: inactive.` : ""
+        };
+      }),
+      // Only the ones this Category takes are offered.
+      qualityChoices: traitsOfKind("crafting", kind.qualities)
+        .filter(trait => qualityFits(trait, crafted.category))
+        .map(trait => {
+          const { min, max, ranged } = qualitySlotRange(trait);
+          return { value: trait.id, label: `${trait.name} (${ranged ? `${min}-${max}` : min})` };
+        }),
       // Over is said, not refused: it works as it is.
       overNote: reading.over
-        ? `${reading.qualities} Qualities, and Craftsmanship Grade ${crafted.grade} gives `
-          + `${reading.slots} Quality Slot${reading.slots === 1 ? "" : "s"}. It still works.`
+        ? `${reading.used} Quality Slots used, and Craftsmanship Grade ${crafted.grade} gives `
+          + `${reading.slots}. It still works.`
         : ""
     };
   }
 
-  /** Add the Quality picked beside the button. Any number: over the Slots is only said. */
+  /**
+   * Add the Quality picked beside the button. Any number: over the Slots is only said.
+   *
+   * One that takes a range asks how many: "If there is a range, then you may select how many
+   * Quality Slots a Apparel Quality takes up."
+   */
   static async _onAddQuality(event, target) {
     const pick = this.element.querySelector("select[data-quality-pick]")?.value;
     if (!pick) return;
-    const qualities = [...(this.item.system.crafted?.qualities ?? []), pick];
+    const trait = getTrait(pick);
+    const { min, max, ranged } = qualitySlotRange(trait);
+    let slots = min;
+    if (ranged) {
+      const chosen = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${trait?.name ?? pick} - Quality Slots` },
+        content: "",
+        buttons: [
+          ...Array.from({ length: max - min + 1 }, (_, at) => ({
+            action: String(min + at), label: String(min + at) })),
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      slots = Number(chosen);
+      if (!Number.isFinite(slots) || (slots < min) || (slots > max)) return;
+    }
+    const qualities = [...qualityEntries(this.item.system.crafted), { id: pick, slots }];
     return this.item.update({ "system.crafted.qualities": qualities });
   }
 
   /** Take one Quality off, by where it is in the list. */
   static async _onRemoveQuality(event, target) {
     const index = Number(target.dataset.index);
-    const qualities = (this.item.system.crafted?.qualities ?? []).filter((id, at) => at !== index);
+    const qualities = qualityEntries(this.item.system.crafted).filter((entry, at) => at !== index);
     return this.item.update({ "system.crafted.qualities": qualities });
   }
 

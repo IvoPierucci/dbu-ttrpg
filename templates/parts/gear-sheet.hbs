@@ -53,6 +53,8 @@
     {{#each crafted.qualities as |quality|}}
     <div class="gear-row">
       <span class="gear-name" data-tooltip="{{quality.tip}}">{{quality.name}}</span>
+      <span class="gear-type">{{quality.slotsLabel}}</span>
+      {{#if quality.misfit}}<span class="gear-warning">{{quality.misfit}}</span>{{/if}}
       <button type="button" class="gear-remove" data-action="removeQuality"
               data-index="{{quality.index}}" data-tooltip="Remove">&times;</button>
     </div>
@@ -69,7 +71,7 @@
       </select>
       <button type="button" class="dbu-clash-button" data-action="addQuality">Add Quality</button>
       {{else}}
-      <p class="tab-placeholder">No Qualities to add yet.</p>
+      <p class="tab-placeholder">No Qualities to add for this Category yet.</p>
       {{/if}}
     </div>
   </section>

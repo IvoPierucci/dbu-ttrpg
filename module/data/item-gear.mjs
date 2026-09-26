@@ -11,6 +11,19 @@ import { GEAR_TYPES } from "../gear.mjs";
  */
 export default class DBUGearData extends foundry.abstract.TypeDataModel {
 
+  /**
+   * A built Item's Qualities were ids before each carried its Slots; read as the entry each
+   * would have been, taking its least.
+   */
+  static migrateData(source) {
+    const qualities = source?.crafted?.qualities;
+    if (Array.isArray(qualities) && qualities.some(entry => typeof entry === "string")) {
+      source.crafted.qualities = qualities.map(entry =>
+        (typeof entry === "string") ? { id: entry, slots: 0 } : entry);
+    }
+    return super.migrateData(source);
+  }
+
   static defineSchema() {
     return {
       /**
@@ -113,7 +126,11 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         category: new fields.StringField({ required: true, blank: true, initial: "" }),
         grade: new fields.NumberField({ required: true, integer: true, min: 1, max: 5, initial: 1 }),
         size: new fields.StringField({ required: true, blank: true, initial: "" }),
-        qualities: new fields.ArrayField(new fields.StringField({ blank: false }))
+        // Each Quality, and the Slots it was given where it takes a range - 0 for its least.
+        qualities: new fields.ArrayField(new fields.SchemaField({
+          id: new fields.StringField({ required: true, blank: false }),
+          slots: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 })
+        }))
       }),
 
       /** Shrinks its wearer to a Size named outright - the Micro Band - and where they are. */
