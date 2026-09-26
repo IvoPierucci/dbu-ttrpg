@@ -1,0 +1,72 @@
+id: ki-sealing-handcuff
+name: Ki-Sealing Handcuff
+kind: gear
+itemType: accessory
+tags: tech
+craftDC: Grandmaster
+# "You may spend 3 Actions to place this Accessory on a Defeated Opponent or a Character with
+# the Oblivious Combat Condition ... you must make a Skill Check (Stealth/Thievery vs
+# Perception)." "If you possess the correct Key, you may remove this Accessory by spending
+# 1 Action."
+locks: true
+lockCost: 3
+unlockCost: 1
+lockSkills: stealth, thievery
+lockAgainst: perception
+# The stack of Fatigued it holds on its wearer, and the mark that holds it.
+sealCondition: fatigued
+sealMark: ki-sealed
+source: Core Rule
+description: >
+  Locked on a Defeated or Oblivious character for 3 Actions. Fatigued, and sealed off from
+  Transformations, Signature Techniques, Unique Abilities, Ki Wagers and every Profile but
+  Simple (Physical), until its Key opens it.
+text: >
+  Ki-Sealing Handcuff [Tech]: These handcuffs are designed for super-powered fighters,
+  allowing them to be restrained even by weaker foes.
+  –Craft DC: Grandmaster
+  –Effects: When this Accessory is created, you must create a Key Basic Item for this
+  instance of the Accessory. You may spend 3 Actions to place this Accessory on a Defeated
+  Opponent or a Character with the Oblivious Combat Condition, even if they are already
+  wearing an Accessory. In the case of the latter, you must make a Skill Check
+  (Stealth/Thievery vs Perception) to put the Ki-Sealing Handcuff on them.
+
+  While wearing this Accessory, you suffer from a stack of the Fatigued Combat Condition (that
+  cannot be removed while you’re wearing this Accessory) and you cannot use any
+  Transformation Maneuvers, Signature Techniques, Unique Abilities, Ki Wagers, or any Profile
+  aside from Simple (Physical).
+
+  While wearing this Accessory, you cannot remove this Accessory and you cannot target this
+  Accessory with a Called Shot.
+
+  If you possess the correct Key, you may remove this Accessory by spending 1 Action.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Given: with its Key, a Basic Item made with it that opens this one and no other.
+#
+# Lock on: the target, and 3 Actions. Defeated, it goes straight on. Otherwise the player
+# says they are Oblivious by choosing Stealth or Thievery, and a Clash against their
+# Perception decides it; the Actions are spent either way. On, it is theirs, worn past the
+# two Accessories anyone may wear, with a stack of Fatigued held by the Ki-Sealed mark.
+#
+# While worn: it cannot be unequipped or thrown away, and the forbids below apply.
+#
+# Unlock, from the Key's row: the one wearing it targeted, or nobody for yourself, and
+# 1 Action. It comes off them with the Fatigued it held, and back to whoever held the Key.
+#
+# --- What is not built -------------------------------------------------------------------------
+#
+# Oblivious: no such Combat Condition here yet, so it is the player's word.
+# Called Shot: nothing here aims a Called Shot at an Accessory, so there is nothing to refuse.
+# Transformation Maneuvers and Unique Abilities: forbidden below, and read by whatever opens
+# them when they arrive.
+[passive]
+forbid transformations;
+forbid signatureTechniques;
+forbid uniqueAbilities;
+forbid kiWagers;
+forbid nonPhysicalAttacks;
+forbid profiles.nonSimple;

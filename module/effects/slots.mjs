@@ -217,6 +217,13 @@ const TABLE = [
     doc: "Using a Unique Ability." },
   { key: "nonPhysicalAttacks", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Attacking Maneuvers of any Attack Type other than Physical." },
+  // "You cannot use ... Ki Wagers, or any Profile aside from Simple (Physical)" - the
+  // Ki-Sealing Handcuff's. The Physical half is `nonPhysicalAttacks`; these are the rest.
+  { key: "kiWagers", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Ki Wagering on an Attacking Maneuver at all, in Ki or in Life. Forbidding it "
+       + "takes the most you may wager to nothing." },
+  { key: "profiles.nonSimple", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Every Profile but Simple. Forbidding it leaves Simple the only one offered." },
   { key: "attacksOnOthers", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Attacking anyone but the target you were given. Compelled forbids this. Said "
        + "to the table, not enforced: who you were told to attack is not tracked, which "

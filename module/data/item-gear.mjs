@@ -81,6 +81,21 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       }),
       teleports: new fields.BooleanField({ required: true, initial: false }),
 
+      /** Put on somebody and locked there - the Ki-Sealing Handcuff - and the Key's pair. */
+      lock: new fields.SchemaField({
+        locks: new fields.BooleanField({ required: true, initial: false }),
+        cost: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        unlockCost: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        skills: new fields.ArrayField(new fields.StringField({ blank: false })),
+        against: new fields.StringField({ required: true, blank: true, initial: "" }),
+        condition: new fields.StringField({ required: true, blank: true, initial: "" }),
+        mark: new fields.StringField({ required: true, blank: true, initial: "" }),
+        id: new fields.StringField({ required: true, blank: true, initial: "" }),
+        gave: new fields.BooleanField({ required: true, initial: false })
+      }),
+      /** A Key: the lock it opens. */
+      keyFor: new fields.StringField({ required: true, blank: true, initial: "" }),
+
       /** An Attribute that may stand in for the Damage Attribute, and on what attacks -
        *  the Hologram Projector's Personality, on a Signature Technique. */
       damageAttribute: new fields.SchemaField({

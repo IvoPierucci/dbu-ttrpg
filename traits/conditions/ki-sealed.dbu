@@ -1,0 +1,24 @@
+id: ki-sealed
+name: Ki-Sealed
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the entry names Fatigued, and this is only what keeps it on.
+combatCondition: no
+# "A stack of the Fatigued Combat Condition (that cannot be removed while you're wearing this
+# Accessory)." One stack held: any more above it come off as they would.
+holds: fatigued
+holdsStacks: 1
+source: Core Rule
+description: >
+  A Ki-Sealing Handcuff is locked on you. A stack of Fatigued cannot come off.
+text: >
+  Ki-Sealed: the Ki-Sealing Handcuff's mark. "While wearing this Accessory, you suffer from a
+  stack of the Fatigued Combat Condition (that cannot be removed while you're wearing this
+  Accessory)."
+
+---
+
+# Put on with the handcuff and taken off with it, never by hand: the Key is the only way out.
+#
+# No effects of its own. What the handcuff forbids is in its own file, and applies while it
+# is worn.

@@ -334,6 +334,25 @@ export function gearItemFrom(definition, actor = null) {
       assigned: { uuid: "", name: "" },
       teleports: definition.teleports === true,
 
+      // Put on somebody else and locked there - the Ki-Sealing Handcuff: what putting it on
+      // costs, what taking it off with the Key costs, the Skills that sneak it onto someone
+      // who has not noticed and the one they notice with, the Condition it holds on them
+      // and the mark that holds it. `id` pairs it with its Key, and is set when it is given.
+      lock: {
+        locks: definition.locks === true,
+        cost: Math.max(0, Number(definition.lockCost) || 0),
+        unlockCost: Math.max(0, Number(definition.unlockCost) || 0),
+        skills: listOf(definition.lockSkills),
+        against: String(definition.lockAgainst ?? "").trim().toLowerCase(),
+        condition: String(definition.sealCondition ?? "").trim().toLowerCase(),
+        mark: String(definition.sealMark ?? "").trim().toLowerCase(),
+        id: "",
+        // Whether putting it on gave its wearer a stack, or found them at the most already.
+        gave: false
+      },
+      // A Key: the lock it opens.
+      keyFor: "",
+
       // An Attribute that may stand in for the Damage Attribute, and on what - the
       // Hologram Projector's Personality Modifier, on a Signature Technique.
       damageAttribute: {
@@ -664,6 +683,64 @@ export function equipProblem(items, item) {
     return `Already wearing ${ACCESSORIES_WORN} Accessories.`;
   }
   return "";
+}
+
+/**
+ * Whether an Item is locked on whoever wears it - a Ki-Sealing Handcuff put on: "While
+ * wearing this Accessory, you cannot remove this Accessory."
+ */
+export function lockedOn(item) {
+  return Boolean(item?.system?.lock?.locks && item.system.equipped);
+}
+
+/**
+ * The Item locked on this character that a Key opens - "the correct Key": the one made
+ * with that instance, and no other.
+ */
+export function lockedBy(items, key) {
+  const fits = key?.system?.keyFor;
+  if (!fits) return null;
+  return (items ?? []).find(item => lockedOn(item) && (item.system.lock.id === fits)) ?? null;
+}
+
+/**
+ * A Key for a locking Item, made with it: "When this Accessory is created, you must create
+ * a Key Basic Item for this instance of the Accessory."
+ */
+export function keyItemFor(lockName, lockId) {
+  return {
+    name: `Key (${lockName})`,
+    type: "gear",
+    img: GEAR_ICON,
+    system: { gearId: "", itemType: "basic", keyFor: lockId,
+      description: `<p>Opens the ${lockName} it was made with.</p>` }
+  };
+}
+
+/**
+ * A character's Conditions with a lock's hold put on or taken off: a stack of its
+ * Condition and the mark that holds it, together, in one write.
+ *
+ * On, the stack is added to whatever they had, up to the most there can be. Off, that
+ * stack comes off with the mark - "while you're wearing this Accessory" is as long as it
+ * lasts.
+ */
+export function sealedConditions(conditions, lock, on, maxStacks = Infinity) {
+  const next = { ...(conditions ?? {}) };
+  const had = Number(next[lock.condition]) || 0;
+  if (on) {
+    if (lock.condition) next[lock.condition] = Math.min(maxStacks, had + 1);
+    if (lock.mark) next[lock.mark] = 1;
+    return next;
+  }
+  if (lock.mark) delete next[lock.mark];
+  // Only the stack it gave: one they already had at the most there can be was theirs, and
+  // stays theirs when it comes off.
+  if (lock.condition && (lock.gave !== false)) {
+    if (had > 1) next[lock.condition] = had - 1;
+    else delete next[lock.condition];
+  }
+  return next;
 }
 
 /**

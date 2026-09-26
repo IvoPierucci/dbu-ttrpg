@@ -24,9 +24,23 @@
         <span class="gear-type">for {{row.intendedName}}</span>
         {{/if}}
         {{#if row.accessory}}
+        {{#if row.lockedOn}}
+        <span class="gear-type">Locked on</span>
+        {{else}}
         {{#if row.equipped}}<span class="gear-type">Equipped</span>{{/if}}
         <button type="button" class="gear-act" data-action="equipGear"
                 data-item-id="{{row.itemId}}">{{#if row.equipped}}Unequip{{else}}Equip{{/if}}</button>
+        {{/if}}
+        {{/if}}
+        {{#if row.lockable}}
+        <button type="button" class="gear-act" data-action="lockGear"
+                data-item-id="{{row.itemId}}"
+                data-tooltip="Target them first.">Lock on</button>
+        {{/if}}
+        {{#if row.unlocks}}
+        <button type="button" class="gear-act" data-action="unlockGear"
+                data-item-id="{{row.itemId}}"
+                data-tooltip="Target the one wearing it, or nobody for yourself.">Unlock</button>
         {{/if}}
         {{#if row.explosive}}
         {{#if row.placed}}

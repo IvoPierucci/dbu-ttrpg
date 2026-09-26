@@ -188,7 +188,7 @@ export async function toggleState(actor, key) {
  *
  * @returns {string} the reason it cannot be removed, or "" when nothing holds it
  */
-function heldInPlace(actor, key) {
+function heldInPlace(actor, key, wanted = 0) {
   if ((key === "guard-down") && actor.system?.grapple?.partner) {
     return `${actor.name} cannot remove Guard Down while in a Grapple.`;
   }
@@ -206,7 +206,11 @@ function heldInPlace(actor, key) {
     if (!((Number(stacks) || 0) > 0)) continue;
     const holding = getTrait(mark);
     const holds = String(holding?.holds ?? "").split(",").map(entry => entry.trim().toLowerCase());
-    if (holds.includes(key)) {
+    // Down to so many stacks, where the mark says - "a stack of the Fatigued Combat
+    // Condition (that cannot be removed while you're wearing this Accessory)" holds one,
+    // and any more above it come off as they would.
+    const floor = Number(holding?.holdsStacks) || 0;
+    if (holds.includes(key) && !(floor && (wanted >= floor))) {
       const name = getTrait(key)?.name ?? key;
       return `${actor.name} cannot remove ${name} while ${holding.name}.`;
     }
@@ -231,7 +235,7 @@ export async function setCondition(actor, key, stacks) {
   // Grapple" - which is not the same as being immune to it, and is the first rule here
   // that stops a Condition being taken off rather than put on.
   if (wanted < current) {
-    const held = heldInPlace(actor, key);
+    const held = heldInPlace(actor, key, wanted);
     if (held) {
       ui.notifications?.warn(held);
       return false;

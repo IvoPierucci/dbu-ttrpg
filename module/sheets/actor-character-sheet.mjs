@@ -11,8 +11,8 @@ import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } fr
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable,
   connectedItem, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
-  isStored, portionEffects, setGathered, storable, tierDice, typeOf, usedThisEncounter }
-  from "../gear.mjs";
+  isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered, storable, tierDice,
+  typeOf, usedThisEncounter } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
   qualitiesFromEffects, qualitiesOf } from "../environments.mjs";
@@ -447,6 +447,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       eatPortion: DBUCharacterSheet._onEatPortion,
       teleportGear: DBUCharacterSheet._onTeleportGear,
       equipGear: DBUCharacterSheet._onEquipGear,
+      lockGear: DBUCharacterSheet._onLockGear,
+      unlockGear: DBUCharacterSheet._onUnlockGear,
       endMark: DBUCharacterSheet._onEndMark,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
@@ -1019,6 +1021,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // An Accessory, and whether it is being worn.
         accessory: isAccessory(item),
         equipped: isAccessory(item) && Boolean(item.system.equipped),
+        // Locked on them, and so not theirs to take off; or not yet, and theirs to put on
+        // somebody. A Key, to unlock one.
+        lockedOn: lockedOn(item),
+        lockable: Boolean(item.system.lock?.locks) && !item.system.equipped,
+        unlocks: Boolean(item.system.keyFor),
         // Tied to a Character: who, and Teleport once there is someone.
         assignedName: item.system.assignsCharacter ? (item.system.assigned?.name || "") : "",
         assigns: Boolean(item.system.assignsCharacter),
@@ -2030,6 +2037,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       if (!trigger) return;
       data.system.trigger = trigger;
     }
+
+    // "When this Accessory is created, you must create a Key Basic Item for this instance
+    // of the Accessory." Made together, and paired: that Key opens this one and no other.
+    if (data.system.lock?.locks) {
+      data.system.lock.id = foundry.utils.randomID();
+      return this.actor.createEmbeddedDocuments("Item",
+        [data, keyItemFor(definition.name, data.system.lock.id)]);
+    }
     return this.actor.createEmbeddedDocuments("Item", [data]);
   }
 
@@ -2640,6 +2655,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const item = this.actor.items.get(target.dataset.itemId);
     if (!isAccessory(item)) return;
     const wearing = Boolean(item.system.equipped);
+    // "While wearing this Accessory, you cannot remove this Accessory." Only its Key does.
+    if (lockedOn(item)) {
+      ui.notifications.warn(`${this.actor.name} cannot take the ${item.name} off. Its Key can.`);
+      return;
+    }
     if (!wearing) {
       const problem = equipProblem(this.actor.items.contents, item);
       if (problem) {
@@ -2651,6 +2671,75 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { spendActions } = await import("../combat.mjs");
     if (!await spendActions(this.actor, EQUIP_COST)) return;
     return item.update({ "system.equipped": !wearing });
+  }
+
+  /**
+   * Put a locking Item on somebody - the Ki-Sealing Handcuff.
+   *
+   * "You may spend 3 Actions to place this Accessory on a Defeated Opponent or a Character
+   * with the Oblivious Combat Condition ... In the case of the latter, you must make a
+   * Skill Check (Stealth/Thievery vs Perception)." Defeated is read off them; Oblivious is
+   * no Condition here yet, so it is the player's word, and choosing the Skill says it.
+   */
+  static async _onLockGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const lock = item?.system.lock;
+    if (!lock?.locks || item.system.equipped) return;
+
+    const onto = game.user.targets.first()?.actor;
+    if (!onto || (onto.uuid === this.actor.uuid)) {
+      ui.notifications.warn(`Target the one to put the ${item.name} on first.`);
+      return;
+    }
+
+    // Not Defeated: Oblivious, and a Clash - with which Skill, asked before any Action goes.
+    let skill = "";
+    if (!onto.system.defeated) {
+      const skills = this.actor.system.skills ?? {};
+      skill = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${item.name} - ${onto.name}` },
+        content: `<p>${Handlebars.escapeExpression(onto.name)} is not Defeated. Oblivious?</p>`,
+        buttons: [
+          ...lock.skills.map(key => ({ action: key, label: skills[key]?.label ?? key })),
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!lock.skills.includes(skill)) return;
+    }
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, lock.cost)) return;
+
+    const { lockOn, postSkillClash } = await import("../chat.mjs");
+    if (!skill) return lockOn(this.actor, item, onto);
+    return postSkillClash(this.actor, onto,
+      { name: item.name, clash: { skill, defenderSkills: [lock.against] } },
+      { handcuff: { applied: false, itemId: item.id } });
+  }
+
+  /**
+   * Unlock what a Key opens: "If you possess the correct Key, you may remove this Accessory
+   * by spending 1 Action." Off whoever is targeted, or off themselves when nobody is.
+   */
+  static async _onUnlockGear(event, target) {
+    const key = this.actor.items.get(target.dataset.itemId);
+    if (!key?.system.keyFor) return;
+
+    const wearer = game.user.targets.first()?.actor ?? this.actor;
+    const item = lockedBy(Array.from(wearer.items ?? []), key);
+    if (!item) {
+      ui.notifications.warn(`${wearer.name} is not wearing what this Key opens. Target the one `
+        + "who is first.");
+      return;
+    }
+
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.lock.unlockCost ?? 0)) return;
+
+    const { unlockFrom } = await import("../chat.mjs");
+    return unlockFrom(this.actor, wearer, item);
   }
 
   /** End a mark that has no clock of its own - Beautified, "for an hour". */
@@ -2834,6 +2923,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** Remove an owned Item from this character. */
   static async _onDeleteItem(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
+    // Locked on them: not theirs to throw away either.
+    if (lockedOn(item)) {
+      ui.notifications.warn(`${this.actor.name} cannot take the ${item.name} off. Its Key can.`);
+      return;
+    }
     // A lit Torch taken off the character is not held any more, and goes out with it.
     if (item?.system?.lit) await DBUCharacterSheet.#putOut(this.actor, item);
     return item?.delete();

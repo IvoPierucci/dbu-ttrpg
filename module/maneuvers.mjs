@@ -1838,7 +1838,8 @@ function profileOption(profile, maneuver, actor, state, limits = {}) {
   const refused = forbidden
     ? `${profile.label} has an Area of Effect, and this Attacking Maneuver cannot.`
     : whyNotThisProfile(actor, maneuver, profile.id);
-  const note = forbidden ? "Area of Effect" : PROFILE_SPENT_LABEL;
+  const note = forbidden ? "Area of Effect"
+    : onlySimple(actor, profile.id) ? "Simple only" : PROFILE_SPENT_LABEL;
   const selected = state.first && !refused;
   if (selected) state.onFirst();
 
@@ -2084,6 +2085,8 @@ export function whyNotAnotherInstant(actor) {
  */
 export function maxKiWager(actor, advantages = []) {
   const { capacity, ki } = actor.system;
+  // "You cannot use ... Ki Wagers" - the Ki-Sealing Handcuff.
+  if (!permits(actor.system.effects?.slots, "kiWagers")) return 0;
 
   // Full Wager: "the amount of Ki Points you can Ki Wager is only limited by your
   // remaining Capacity." So the half-Capacity limit is lifted and the other two stay -
@@ -2106,6 +2109,7 @@ export function maxKiWager(actor, advantages = []) {
  */
 export function maxLifeWager(actor, advantages = []) {
   const { capacity, life } = actor.system;
+  if (!permits(actor.system.effects?.slots, "kiWagers")) return 0;
   const half = advantages.includes("full-wager")
     ? Number.POSITIVE_INFINITY
     : Math.floor(capacity.max / 2);
@@ -2406,6 +2410,10 @@ export const PROFILE_SPENT_LABEL = "used this round";
  */
 export function whyNotThisProfile(actor, maneuver, profileId) {
   if (!actor || !profileId) return "";
+  // Whatever the Maneuver: "you cannot use ... any Profile aside from Simple (Physical)".
+  if (onlySimple(actor, profileId)) {
+    return `${actor.name} cannot use any Profile but Simple right now.`;
+  }
   if (maneuver?.id !== BASIC_ATTACK) return "";
   if (UNLIMITED_THROUGH_BASIC_ATTACK.has(profileId)) return "";
 
@@ -2415,6 +2423,12 @@ export function whyNotThisProfile(actor, maneuver, profileId) {
   const label = PROFILES[profileId]?.label ?? profileId;
   return `${actor.name} has already used the ${label} Profile through a Basic Attack `
     + "this Combat Round.";
+}
+
+/** Whether this Profile is closed to them because only Simple is left open. */
+export function onlySimple(actor, profileId) {
+  return (profileId !== "simple")
+    && !permits(actor?.system?.effects?.slots, "profiles.nonSimple");
 }
 
 /**

@@ -176,6 +176,9 @@ function applyRequest(request) {
     case "cure": return applyCure(request.messageId, request.cure);
     case "scan": return applyScan(request.messageId, request.scan);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
+    case "createItem": return fromUuidSync(request.actorUuid)
+      ?.createEmbeddedDocuments("Item", [request.data]);
+    case "deleteItem": return fromUuidSync(request.actorUuid)?.items.get(request.itemId)?.delete();
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
     case "karmic": return applyKarmicRecord(request.messageId, request.actorId, request.key);
@@ -256,6 +259,73 @@ export function requestActorUpdate(actor, changes) {
   if (actor.isOwner) return actor.update(changes);
   if (!game.users.activeGM) return;
   game.socket.emit(CHANNEL, { type: "actor", actorUuid: actor.uuid, changes });
+}
+
+/** Give a character an Item, whoever owns them - the handcuff put on somebody else. */
+export function requestCreateItem(actor, data) {
+  if (actor.isOwner) return actor.createEmbeddedDocuments("Item", [data]);
+  if (!game.users.activeGM) return;
+  game.socket.emit(CHANNEL, { type: "createItem", actorUuid: actor.uuid, data });
+}
+
+/** Take an Item off a character, whoever owns them - the handcuff unlocked. */
+export function requestDeleteItem(actor, itemId) {
+  if (actor.isOwner) return actor.items.get(itemId)?.delete();
+  if (!game.users.activeGM) return;
+  game.socket.emit(CHANNEL, { type: "deleteItem", actorUuid: actor.uuid, itemId });
+}
+
+/**
+ * Put a locking Item on somebody: taken from whoever put it on, worn and locked on them,
+ * and the Condition it holds on them with the mark that holds it.
+ *
+ * "Even if they are already wearing an Accessory" - so it is put on past the two worn,
+ * never refused for it.
+ */
+export async function lockOn(placer, item, target) {
+  const { sealedConditions } = await import("./gear.mjs");
+  const { replaceObject } = await import("./conditions.mjs");
+  const lock = item.system.lock;
+
+  const most = Number(getTrait(lock.condition)?.maxStacks ?? Infinity);
+  const had = Number(target.system.conditions?.[lock.condition]) || 0;
+
+  const data = item.toObject();
+  delete data._id;
+  data.system.equipped = true;
+  // Remembered, so taking it off takes back only a stack it gave.
+  data.system.lock.gave = had < most;
+  await requestCreateItem(target, data);
+  await item.delete();
+
+  await requestActorUpdate(target, { "system.conditions":
+    replaceObject(sealedConditions(target.system.conditions, lock, true, most)) });
+
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: placer }),
+    content: `<p>${Handlebars.escapeExpression(placer.name)} locks the `
+      + `${Handlebars.escapeExpression(item.name)} on ${Handlebars.escapeExpression(target.name)}.</p>`
+  });
+}
+
+/** Unlock it with its Key: off the wearer and back to whoever held the Key, and the hold with it. */
+export async function unlockFrom(holder, wearer, item) {
+  const { sealedConditions } = await import("./gear.mjs");
+  const { replaceObject } = await import("./conditions.mjs");
+
+  const data = item.toObject();
+  delete data._id;
+  data.system.equipped = false;
+  await requestActorUpdate(wearer, { "system.conditions":
+    replaceObject(sealedConditions(wearer.system.conditions, item.system.lock, false)) });
+  await requestDeleteItem(wearer, item.id);
+  await holder.createEmbeddedDocuments("Item", [data]);
+
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: holder }),
+    content: `<p>${Handlebars.escapeExpression(holder.name)} unlocks the `
+      + `${Handlebars.escapeExpression(item.name)} from ${Handlebars.escapeExpression(wearer.name)}.</p>`
+  });
 }
 
 /**
@@ -375,6 +445,37 @@ async function applyClash(messageId, clash) {
   if (clash.drain && clash.result && !clash.drain.applied) {
     await settleDrain(message, clash);
   }
+
+  if (clash.handcuff && clash.result && !clash.handcuff.applied) {
+    await settleHandcuff(message, clash);
+  }
+}
+
+/**
+ * A handcuff snuck onto someone who had not noticed: "you must make a Skill Check
+ * (Stealth/Thievery vs Perception) to put the Ki-Sealing Handcuff on them." Won, it is on;
+ * lost, it is still the one who tried's, and the Actions are spent either way.
+ */
+async function settleHandcuff(message, clash) {
+  const placer = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!placer || !target) return;
+
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, handcuff: { ...clash.handcuff, applied: true }
+  });
+
+  const item = placer.items.get(clash.handcuff.itemId);
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} notices, and the ${item?.name ?? "handcuff"} `
+      + "stays off.");
+    return;
+  }
+  if (!item) {
+    await settledNote(message, `${placer.name} no longer has it to put on.`);
+    return;
+  }
+  await lockOn(placer, item, target);
 }
 
 /**
