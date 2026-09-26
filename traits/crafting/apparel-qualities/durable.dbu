@@ -1,0 +1,24 @@
+id: durable
+name: Durable
+kind: crafting
+slots: 1
+# "This piece of Apparel does not have the Lightweight Apparel Quality" - a Prerequisite about
+# the piece, not the wearer: with Lightweight on it, Durable does not apply at all.
+excludesQualities: lightweight
+prerequisites: This piece of Apparel does not have the Lightweight Apparel Quality
+# "Increase the maximum Break Value for this piece of Apparel by 3."
+breakValue: 3
+source: Core Rule
+description: >
+  Maximum Break Value 3 higher. Not with Lightweight on the same piece.
+text: >
+  Durable: This particular piece of apparel is extremely hard to damage.
+  –Apparel Category: All
+  –Prerequisites: This piece of Apparel does not have the Lightweight Apparel Quality
+  –Quality Slots: 1
+  –Effects: Increase the maximum Break Value for this piece of Apparel by 3.
+
+---
+
+# The piece's own: its sheet shows the most its Break Value can be, 6 with this. Losing Break
+# Value and repairing it come with the rest of the Apparel rules, and read that most.

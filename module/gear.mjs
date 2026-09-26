@@ -114,6 +114,8 @@ export const CRAFTED = Object.freeze({
       4: { craftDC: "master", grade: "standard", slots: 3 },
       5: { craftDC: "grandmaster", grade: "high", slots: 4 }
     }),
+    // "All pieces of Apparel by default have a Break Value of 3."
+    breakValue: 3,
     // "Low: Apparel Bonus of 1(bT). Standard: 2(bT). High: 3(bT)."
     bonus: Object.freeze({
       low: { label: "Low", perBaseTier: 1 },
@@ -154,11 +156,12 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
   const count = entries.length;
   const used = entries.reduce((sum, entry) =>
     sum + slotsTaken(entry, getTrait?.(entry.id)), 0);
-  // What its Qualities add to the Apparel Bonus, per base Tier - Dense Armor's "Increase your
-  // Apparel Bonus by 1(bT)" - from the ones its Category takes.
-  const fromQualities = entries
-    .filter(entry => qualityFits(getTrait?.(entry.id), crafted.category))
-    .reduce((sum, entry) => sum + (Number(getTrait?.(entry.id)?.apparelBonus) || 0), 0);
+  // What its active Qualities add to it: to the Apparel Bonus, per base Tier - Dense Armor's
+  // "Increase your Apparel Bonus by 1(bT)" - and to the most its Break Value can be, Durable's 3.
+  const active = entries.filter(entry => !qualityInactive(entry, crafted, getTrait));
+  const added = key => active
+    .reduce((sum, entry) => sum + (Number(getTrait?.(entry.id)?.[key]) || 0), 0);
+  const fromQualities = added("apparelBonus");
   const perBaseTier = band.perBaseTier + fromQualities;
   return {
     kind: crafted.kind,
@@ -173,11 +176,39 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
     qualities: count,
     used,
     over: Math.max(0, used - grade.slots),
+    // The most its Break Value can be: 3, and what its Qualities add.
+    breakValue: (Number(kind.breakValue) || 0) + added("breakValue"),
     // The ones its Category does not take: "Apparel Qualities may apply to only certain
     // Apparel Categories." Kept, and inactive.
     misfits: entries.filter(entry => !qualityFits(getTrait?.(entry.id), crafted.category))
+      .map(entry => entry.id),
+    // Every one that is inactive, for either reason, by id.
+    inactive: entries.filter(entry => qualityInactive(entry, crafted, getTrait))
       .map(entry => entry.id)
   };
+}
+
+/**
+ * Why a Quality on a piece does nothing, or "" when it applies.
+ *
+ * Its Category may not take it; or it asks for another Quality on the same piece, or for
+ * one not to be there - "Prerequisites that require another Apparel Quality or lack thereof,
+ * which require that Apparel Quality (or the lack of it) for them to be applied at all."
+ * `excludesQualities: lightweight`, `requiresQualities: armed`. The wearer's own
+ * Prerequisites are another matter, asked in the Quality's script.
+ */
+export function qualityInactive(entry, crafted, getTrait) {
+  const trait = getTrait?.(entry.id);
+  if (!qualityFits(trait, crafted?.category)) {
+    return "category";
+  }
+  const present = new Set(qualityEntries(crafted).map(other => other.id));
+  const named = id => getTrait?.(id)?.name ?? id;
+  const clash = listOf(trait?.excludesQualities).find(id => present.has(id));
+  if (clash) return `has ${named(clash)}`;
+  const missing = listOf(trait?.requiresQualities).find(id => !present.has(id));
+  if (missing) return `needs ${named(missing)}`;
+  return "";
 }
 
 /**

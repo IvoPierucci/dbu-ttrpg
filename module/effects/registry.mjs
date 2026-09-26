@@ -14,7 +14,7 @@ import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { accessoriesInEffect, apparelQualitiesInEffect, qualityFits, scriptWithChoice }
+import { accessoriesInEffect, apparelQualitiesInEffect, qualityInactive, scriptWithChoice }
   from "../gear.mjs";
 
 /**
@@ -181,7 +181,8 @@ function apparelPrograms(actor, report) {
   for (const { item, entries: qualities } of apparelQualitiesInEffect(Array.from(actor.items ?? []))) {
     for (const quality of qualities) {
       const trait = getTrait(quality.id);
-      if (!trait || !qualityFits(trait, item.system.crafted.category)) continue;
+      // Not its Category's, or held off by another Quality on the piece - or its absence.
+      if (!trait || qualityInactive(quality, item.system.crafted, getTrait)) continue;
       const script = scriptWithChoice(trait.script, quality.choice);
       if (!script.trim()) continue;
 

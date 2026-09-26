@@ -3,7 +3,8 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable, craftedReading,
-  qualityChoices, qualityEntries, qualityFits, qualitySlotRange, slotsTaken } from "../gear.mjs";
+  qualityChoices, qualityEntries, qualityFits, qualityInactive, qualitySlotRange, slotsTaken }
+  from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 
 /**
@@ -150,9 +151,10 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
           // What was chosen for it, by name.
           choiceLabel: entry.choice
             ? (DBUCharacterData.SKILLS[entry.choice]?.label ?? entry.choice) : "",
-          // Its Category does not take it: kept, and inactive until it does.
-          misfit: !qualityFits(trait, crafted.category)
-            ? `Not for ${reading.categoryName}: inactive.` : ""
+          // Its Category does not take it, or another Quality holds it off: kept, and
+          // inactive until that changes.
+          misfit: DBUGearSheet.#inactiveNote(qualityInactive(entry, crafted, getTrait),
+            reading.categoryName)
         };
       }),
       // Only the ones this Category takes are offered.
@@ -216,6 +218,13 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     }
     const qualities = [...qualityEntries(this.item.system.crafted), { id: pick, slots, choice }];
     return this.item.update({ "system.crafted.qualities": qualities });
+  }
+
+  /** Why a Quality on it is inactive, as its row says it. */
+  static #inactiveNote(why, categoryName) {
+    if (!why) return "";
+    if (why === "category") return `Not for ${categoryName}: inactive.`;
+    return `This Apparel ${why}: inactive.`;
   }
 
   /** Take one Quality off, by where it is in the list. */

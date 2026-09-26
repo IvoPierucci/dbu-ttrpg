@@ -34,6 +34,13 @@ Headers only a Quality reads:
 
   apparelBonus:  what it adds to its Apparel's Apparel Bonus, per base Tier - Dense Armor's 1.
                  Part of the Bonus wherever it is read, worn or not.
+  breakValue:    what it adds to the most its Apparel's Break Value can be - Durable's 3.
+  excludesQualities: a Quality that, on the same piece, keeps this one from applying at all -
+                 Durable's `lightweight`.
+  requiresQualities: a Quality it needs on the same piece to apply at all.
+
+A Quality held off - by its Category, or by one of those two - is kept on the piece, said to be
+inactive on its row, and adds nothing anywhere.
 
 A Quality's script runs while the Apparel it is on is worn, and its Category takes it.
 
