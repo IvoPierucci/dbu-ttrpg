@@ -1,0 +1,26 @@
+id: combat-ready
+name: Combat Ready
+kind: crafting
+# A Special Apparel Quality: "typically gained through your ARC granting you unique pieces of
+# Apparel".
+special: true
+categoriesExcept: weights
+slots: 1
+source: Core Rule
+description: >
+  Strike and Dodge Rolls higher by half the Apparel Bonus.
+text: >
+  Combat Ready: This set of clothing gives you such wonderful freedom of movement, it’s like
+  you’re wearing nothing at all.
+  –Apparel Category: All (Except Weights)
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Increase your Strike and Dodge Rolls by 1/2 (rounded up) of your Apparel Bonus.
+
+---
+
+# Half of its own piece's Apparel Bonus, rounded up, on both - while worn. Dense Armor on the
+# same piece raises the Bonus it halves.
+[passive]
+strike += ceil($apparelBonus(bT) / 2);
+dodge += ceil($apparelBonus(bT) / 2);
