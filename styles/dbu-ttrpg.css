@@ -112,6 +112,23 @@
   width: 100%;
 }
 
+/* The Add Item list's group headings - Basic Item, Special Basic Item, Accessory - in the
+   chat's own colours: black behind, its yellow on top. The browser's default greyed them
+   out against the dark list until they could not be read. The Items under them keep the
+   list's ordinary colours, since an option inherits its group's otherwise. */
+.dbu-gear-pick optgroup {
+  background: #000000;
+  color: var(--dbu-chat-accent, #dfe288);
+  font-weight: bold;
+  font-style: normal;
+}
+
+.dbu-gear-pick optgroup option {
+  background: var(--dbu-panel, #1e1e1e);
+  color: var(--dbu-text, #e8e8e8);
+  font-weight: normal;
+}
+
 /* Two rows of four, the second set half a tab across from the first, so they sit
    staggered like bricks rather than stacked in columns. Eight tabs in one row filled the
    width to the edge, and Gear was the eighth.
