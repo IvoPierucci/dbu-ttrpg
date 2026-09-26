@@ -1,0 +1,24 @@
+id: eyepatch
+name: Eyepatch
+kind: gear
+itemType: accessory
+craftDC: Apprentice
+source: Core Rule
+description: >
+  Perception's Natural Result 1 lower relying on sight; Intimidation's 1 higher.
+text: >
+  Eyepatch: Created with the intention of hiding a damaged eye, these are often worn by
+  fierce warriors or cutthroats; either way, they indicate that the wearer is quite
+  dangerous.
+  –Craft DC: Apprentice
+  –Effects: Decrease the Natural Result of any Perception checks made that rely on sight by
+  1, but in return increase the Natural Result of any Intimidation checks by 1.
+
+---
+
+# The Natural Result, not the total: it moves the die a Critical and a Botch are read off.
+# Whether a Perception Check relies on sight is the player's to say: the roll asks, while
+# this is worn.
+[passive]
+skill.perception.natural.sight -= 1;
+skill.intimidation.natural += 1;
