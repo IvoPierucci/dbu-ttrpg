@@ -1,0 +1,44 @@
+id: sheath-holster
+name: Sheath/Holster
+kind: gear
+itemType: accessory
+craftDC: Qualified
+source: Core Rule
+description: >
+  Holds a Weapon. Drawn the first time in an Encounter, the next Strike with it that Round is
+  2(T) higher; sheathed at an Encounter's end, it regains 1/4 of its Life Points.
+text: >
+  Sheath/Holster: You can store a Weapon in this Accessory for ease of travel.
+  –Craft DC: Qualified
+  –Effects: When you sheathe a Weapon, you may store it within this Accessory. When you
+  unsheathe your Weapon from this Accessory for the first time in a Combat Encounter, increase
+  your next Strike Roll made for an Armed Attack with that Weapon during this Combat Round by
+  2(T).
+
+  At the end of each Combat Encounter, if you sheathe your Weapon into this Accessory, that
+  Weapon regains 1/4 of its Life Points. This effect does not apply if the Weapon is destroyed.
+
+  If this Item is stolen or lost while a Weapon is sheathed inside of it, the Weapon remains in
+  the Item and is stolen/lost as well.
+
+---
+
+# --- What is built -----------------------------------------------------------------------------
+#
+# The Accessory itself: given, worn and taken off like any other.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Everything it does is about a Weapon, and there are no Weapons in this system yet - they
+# arrive with Equipment. When they do:
+#
+# Sheathe: a Weapon of the character's stored in it, one at a time - shown on its row the way a
+# Capsule shows what it holds, and moving with it: "the Weapon remains in the Item and is
+# stolen/lost as well."
+#
+# Unsheathe: the first time in a Combat Encounter, the next Strike Roll of an Armed Attack with
+# that Weapon this Combat Round is 2(T) higher - a mark with the Round's clock, spent by that
+# Strike. Once an Encounter, kept with the other once-per-Encounter uses.
+#
+# The Encounter's end: a Weapon sheathed then, and not destroyed, regains 1/4 of its Life
+# Points.
