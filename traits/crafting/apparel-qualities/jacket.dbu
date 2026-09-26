@@ -1,0 +1,24 @@
+id: jacket
+name: Jacket
+kind: crafting
+categories: standard-clothing
+slots: 1
+# "This piece of Apparel can be worn over Armor" - the one exception to Armor's "you cannot
+# equip any piece of Apparel while wearing Armor". Read by the Layers.
+wornOverArmor: true
+source: Core Rule
+description: >
+  Soak Value 1(bT) higher, and it can go on over Armor.
+text: >
+  Jacket: A piece of clothing designed to protect another piece of clothing underneath.
+  –Apparel Category: Standard Clothing
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Increase your Soak Value by 1(bT). This piece of Apparel can be worn over Armor.
+
+---
+
+# The Soak Value is the wearer's, while worn. Going on over Armor is the Layers' to allow: they
+# come with the rest of the Apparel rules, and read `wornOverArmor`.
+[passive]
+soakValue += 1(bT);

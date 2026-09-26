@@ -12,4 +12,5 @@ text: >
 
 # Not built yet: what it does waits on Layers, which come with the rest of the Apparel rules.
 # "Each one with their own benefits that you gain while wearing that piece of Apparel as the
-# Top Layer."
+# Top Layer." When they are: nothing goes on over Armor but a piece whose Quality says
+# `wornOverArmor` - the Jacket.
