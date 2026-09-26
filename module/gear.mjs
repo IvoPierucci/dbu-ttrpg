@@ -307,6 +307,20 @@ export function narrowedRoll(item, getTrait) {
 }
 
 /**
+ * The Size Category a piece is: the one it was made for - "Each piece of Apparel is created
+ * with a specific Size Category in mind" - or, where Stretching says so, "the current Size
+ * Category of this piece of Apparel's wearer". Read by the Size rules, which come with the rest
+ * of the Apparel rules.
+ */
+export function apparelSize(item, wearer, getTrait) {
+  const crafted = item?.system?.crafted;
+  const stretches = qualityEntries(crafted).some(entry =>
+    !qualityInactive(entry, crafted, getTrait) && (getTrait?.(entry.id)?.sizeIsWearers === true));
+  if (stretches && wearer?.system?.size?.key) return wearer.system.size.key;
+  return crafted?.size ?? "";
+}
+
+/**
  * The worn pieces whose spikes answer a blow, and what each takes: Spiked's "When you are
  * struck by an Unarmed Physical Attack ... reduce their Life Points by the Apparel Bonus for
  * this piece of Armor". Its own piece's Bonus, at the wearer's base Tier.

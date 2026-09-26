@@ -1,0 +1,24 @@
+id: stretching
+name: Stretching
+kind: crafting
+slots: 1
+# "This piece of Apparel's Size Category is the current Size Category of this piece of
+# Apparel's wearer." Read through apparelSize().
+sizeIsWearers: true
+source: Core Rule
+description: >
+  Its Size Category is always its wearer's.
+text: >
+  Stretching: It expands to almost ANY size.
+  –Apparel Category: All
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: This piece of Apparel’s Size Category is the current Size Category of this piece of
+  Apparel’s wearer.
+
+---
+
+# Its sheet says its Size follows whoever wears it. The Size rules - worn only at its Size, and
+# destroyed when its wearer grows 2+ Size Categories past it - come with the rest of the Apparel
+# rules, and read its Size through apparelSize() in module/gear.mjs: the wearer's own, always,
+# so neither ever bites.

@@ -126,6 +126,9 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     return {
       label: kind.label,
       reading,
+      // Stretching: its Size is its wearer's, whatever it was made at.
+      stretches: qualityEntries(crafted).some(entry => !qualityInactive(entry, crafted, getTrait)
+        && (getTrait(entry.id)?.sizeIsWearers === true)),
       // The Bonus as the rule writes it, and what it comes to for whoever holds it.
       bonusLabel: `${reading.perBaseTier}(bT)${(baseTier !== null) ? ` = ${reading.bonus}` : ""}`,
       categoryChoices: traitsOfKind("crafting", kind.categories).map(trait => ({

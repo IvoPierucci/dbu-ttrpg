@@ -33,7 +33,7 @@
         </select>
       </div>
       <div class="stat">
-        <em>Size</em>
+        <em>Size{{#if crafted.stretches}} <span class="gear-warning" data-tooltip="Stretching: its Size Category is always its wearer's.">(its wearer's)</span>{{/if}}</em>
         <select name="system.crafted.size">
           {{#each crafted.sizeChoices as |choice|}}
           <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
