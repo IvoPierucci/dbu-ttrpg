@@ -1,0 +1,20 @@
+id: sash
+name: Sash
+kind: gear
+itemType: accessory
+craftDC: Qualified
+source: Core Rule
+description: >
+  Impulsive Saving Throw 1(bT) higher while worn.
+text: >
+  Sash: A flowing piece of fabric, typically worn hanging free from the waist or around one
+  shoulder.
+  –Craft DC: Qualified
+  –Effects: Increase your Impulsive Saving Throws by 1(bT).
+
+---
+
+# While worn: "Accessories are Basic Items that can be equipped and apply benefits while
+# equipped." Taken off, it does nothing.
+[passive]
+save.impulsive += 1(bT);
