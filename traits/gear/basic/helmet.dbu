@@ -1,0 +1,22 @@
+id: helmet
+name: Helmet
+kind: gear
+itemType: accessory
+craftDC: Expert
+source: Core Rule
+description: >
+  Damage Reduction 1(bT) higher, and Bluff Checks 2 higher, while worn.
+text: >
+  Helmet: Protective headgear that reduces the risk of injury.
+  –Craft DC: Expert
+  –Effects: Increase your Damage Reduction by 1(bT). Additionally, increase your Bluff Skill
+  Checks by 2.
+
+---
+
+# While worn: "Accessories are Basic Items that can be equipped and apply benefits while
+# equipped." Taken off, it does nothing.
+[passive]
+damageReduction += 1(bT);
+# "Your Bluff Skill Checks": the roll, not the Skill Bonus the sheet shows.
+skill.bluff += 2;
