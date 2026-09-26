@@ -1,0 +1,21 @@
+id: space-helmet
+name: Space Helmet
+kind: gear
+itemType: accessory
+tags: tech
+craftDC: Expert
+source: Core Rule
+description: >
+  Unbreathable Environments are not, while worn.
+text: >
+  Space Helmet [Tech]: An airtight helmet that offers you breathable air.
+  –Craft DC: Expert
+  –Effects: While you are wearing this Accessory, ignore Unbreathable Environments.
+
+---
+
+# Ignored, not survived: no Survival Check, no Held Breath, no Suffocating from them - on
+# the ground or in Local and Deep Space. Put on in the middle of one, it is leaving it; taken
+# off, it is walking back in, and the Check is offered again.
+[passive]
+forbid unbreathableEnvironments;

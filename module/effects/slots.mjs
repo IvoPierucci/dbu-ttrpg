@@ -367,6 +367,13 @@ const TABLE = [
   { key: "save.all", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Every Saving Throw. Applied after the one named for a single Throw." },
 
+  // "While you are wearing this Accessory, ignore Unbreathable Environments" - the Space
+  // Helmet. Not the same as being Unnatural: that stops the Suffocating, and this stops the
+  // Environment being Unbreathable for you at all - no Check, no Held Breath to lose.
+  { key: "unbreathableEnvironments", phase: PHASES.CORE, kind: F,
+    ops: ["allow", "forbid", "set"],
+    doc: "Whether an Unbreathable Environment is Unbreathable for you. Forbidding it ignores "
+       + "them: no Survival Check, no Held Breath, no Suffocating from them." },
   { key: "unnatural", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     // "A Character that is Unnatural cannot gain the Suffocating or Poisoned Combat
     // Conditions." Which is two immunities the system already has, so this fans out to

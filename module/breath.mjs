@@ -20,6 +20,7 @@
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { environmentIdOf, highTraitOf } from "./environments.mjs";
 import { setCondition } from "./conditions.mjs";
+import { permits } from "./effects/interpreter.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 
 /** The Battle Environment this character is standing in, as a Trait. */
@@ -36,6 +37,8 @@ export function environmentOf(actor) {
  * So the High Environment is asked first, and the ground only when they are on it.
  */
 export function isUnbreathable(actor) {
+  // Ignored altogether by something they have - the Space Helmet worn.
+  if (!permits(actor?.system?.effects?.slots, "unbreathableEnvironments")) return false;
   const rank = Number(actor?.system?.battlefield?.highEnvironment) || 0;
   if (rank) {
     const sky = highTraitOf(actor.system, { all: () => traitsOfKind("high") });

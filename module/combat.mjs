@@ -562,6 +562,43 @@ export function registerBreathHooks() {
   });
 }
 
+/**
+ * Putting on or taking off what lets them breathe - the Space Helmet - is entering or leaving
+ * the Unbreathable Environment as surely as walking in or out of it. So an Item worn, taken
+ * off, given already worn, or thrown away while worn is asked the same question the move is.
+ */
+export function registerWornBreathHooks() {
+  const worn = (item, equipped) => (item?.type === "gear")
+    && (item.parent?.type === "character") && Boolean(equipped);
+
+  Hooks.on("preUpdateItem", (item, changes, options) => {
+    const equipped = foundry.utils.getProperty(changes, "system.equipped");
+    if ((equipped === undefined) || !worn(item, true)) return;
+    options.dbuWasUnbreathable = isUnbreathable(item.parent);
+  });
+  Hooks.on("preCreateItem", (item, data, options) => {
+    if (!worn(item, foundry.utils.getProperty(data, "system.equipped"))) return;
+    options.dbuWasUnbreathable = isUnbreathable(item.parent);
+  });
+  Hooks.on("preDeleteItem", (item, options) => {
+    if (!worn(item, item.system?.equipped)) return;
+    options.dbuWasUnbreathable = isUnbreathable(item.parent);
+  });
+
+  const settle = async (item, options) => {
+    if (options.dbuWasUnbreathable === undefined) return;
+    const actor = item.parent;
+    if (!actor?.isOwner) return;
+    const now = isUnbreathable(actor);
+    if (options.dbuWasUnbreathable === now) return;
+    if (now) await enteredUnbreathable(actor);
+    else await leftUnbreathable(actor);
+  };
+  Hooks.on("updateItem", (item, changes, options) => settle(item, options));
+  Hooks.on("createItem", (item, options) => settle(item, options));
+  Hooks.on("deleteItem", (item, options) => settle(item, options));
+}
+
 export function registerDefeatHooks() {
   Hooks.on("preUpdateActor", (actor, changes, options) => {
     if (actor.type !== "character") return;
