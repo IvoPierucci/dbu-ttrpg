@@ -69,11 +69,16 @@
     <p class="tab-placeholder">None.</p>
     {{/each}}
     {{#if crafted.overNote}}<p class="gear-warning">{{crafted.overNote}}</p>{{/if}}
+    {{#if crafted.specialNote}}<p class="gear-warning">{{crafted.specialNote}}</p>{{/if}}
     <div class="gear-add-quality">
       {{#if crafted.qualityChoices.length}}
-      <select data-quality-pick>
-        {{#each crafted.qualityChoices as |choice|}}
-        <option value="{{choice.value}}">{{choice.label}}</option>
+      <select data-quality-pick class="dbu-gear-pick">
+        {{#each crafted.qualityGroups as |group|}}
+        <optgroup label="{{group.label}}">
+          {{#each group.choices as |choice|}}
+          <option value="{{choice.value}}">{{choice.label}}</option>
+          {{/each}}
+        </optgroup>
         {{/each}}
       </select>
       <button type="button" class="dbu-clash-button" data-action="addQuality">Add Quality</button>

@@ -55,6 +55,9 @@ Headers only a Quality reads:
   toggle:        a label for a switch on its row: its script runs only while the player has it
                  on - Team Outfit's teammates, which the table keeps.
   noStack:       true - worn on several pieces, it applies from one.
+  special:       true - a Special Apparel Quality: offered apart in Add Quality, "typically
+                 gained through your ARC granting you unique pieces of Apparel". More than one
+                 on a piece is said on its sheet, never refused.
   sizeIsWearers: true - its Apparel's Size Category is always its wearer's, Stretching's. Read
                  through apparelSize().
   spikes:        true - a Physical blow landing on its worn Apparel costs the one who struck its

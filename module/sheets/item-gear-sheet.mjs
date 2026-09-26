@@ -169,8 +169,17 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
         .filter(trait => qualityFits(trait, crafted.category))
         .map(trait => {
           const { min, max, ranged } = qualitySlotRange(trait);
-          return { value: trait.id, label: `${trait.name} (${ranged ? `${min}-${max}` : min})` };
+          return { value: trait.id, label: `${trait.name} (${ranged ? `${min}-${max}` : min})`,
+            special: trait.special === true };
         }),
+      // "Special Apparel Qualities ... cannot typically be gained through Crafting Apparel" -
+      // offered apart, as the Special Basic Items are.
+      qualityGroups: DBUGearSheet.#qualityGroups(kind, crafted),
+      // More than one Special on a piece: said, since the rule only asks the ARC to be wary.
+      specialNote: (reading.specials > 1)
+        ? `${reading.specials} Special Apparel Qualities on one piece. The ARC should be wary `
+          + "of more than one."
+        : "",
       // Over is said, not refused: it works as it is.
       overNote: reading.over
         ? `${reading.used} Quality Slots used, and Craftsmanship Grade ${crafted.grade} gives `
@@ -227,6 +236,22 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     }
     const qualities = [...qualityEntries(this.item.system.crafted), { id: pick, slots, choice }];
     return this.item.update({ "system.crafted.qualities": qualities });
+  }
+
+  /** The Qualities its Category takes, ordinary and Special apart, as the picker's groups. */
+  static #qualityGroups(kind, crafted) {
+    const offered = traitsOfKind("crafting", kind.qualities)
+      .filter(trait => qualityFits(trait, crafted.category))
+      .map(trait => {
+        const { min, max, ranged } = qualitySlotRange(trait);
+        return { value: trait.id, label: `${trait.name} (${ranged ? `${min}-${max}` : min})`,
+          special: trait.special === true };
+      });
+    const label = CRAFTED[crafted.kind]?.label ?? "";
+    return [
+      { label: `${label} Quality`, choices: offered.filter(choice => !choice.special) },
+      { label: `Special ${label} Quality`, choices: offered.filter(choice => choice.special) }
+    ].filter(group => group.choices.length);
   }
 
   /** The Battle Weathers there are, for a Quality that chooses one - Weather Resistant. */

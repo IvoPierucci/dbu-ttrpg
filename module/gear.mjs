@@ -196,6 +196,9 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
     // Apparel Categories." Kept, and inactive.
     misfits: entries.filter(entry => !qualityFits(getTrait?.(entry.id), crafted.category))
       .map(entry => entry.id),
+    // How many of its Qualities are Special - "your ARC should be wary of giving any piece of
+    // Apparel more than one Special Apparel Quality". Said past one, never refused.
+    specials: entries.filter(entry => getTrait?.(entry.id)?.special === true).length,
     // Every one that is inactive, for either reason, by id.
     inactive: entries.filter(entry => qualityInactive(entry, crafted, getTrait))
       .map(entry => entry.id)
