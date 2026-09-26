@@ -1,0 +1,23 @@
+id: flowing-fashion
+name: Flowing Fashion
+kind: gear
+itemType: accessory
+craftDC: Expert
+source: Core Rule
+description: >
+  Performance Checks 2 higher, and Combat Rolls 1(bT) higher while Hyped.
+text: >
+  Flowing Fashion: You wear a scarf or cape, making you look like a true hero!
+  –Craft DC: Expert
+  –Effects: Increase the Dice Score for any Skill Checks with your Performance Skill by 2.
+  Increase your Combat Rolls by 1(bT) while Hyped.
+
+---
+
+# "The Dice Score for any Skill Checks": the roll, not the Skill Bonus the sheet shows.
+[passive]
+skill.performance += 2;
+# While Hyped, on top of what Hyped itself gives. The Strike, the Dodge and the Wound Roll.
+if (hasCondition("hyped")) {
+  combatRolls += 1(bT);
+}
