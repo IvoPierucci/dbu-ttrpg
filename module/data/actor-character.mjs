@@ -7,6 +7,7 @@ import { getTrait } from "../effects/traits.mjs";
 import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
+import { SENSES } from "../senses.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
   qualitiesOf }
   from "../environments.mjs";
@@ -435,6 +436,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * which is empty at that point - so every `save.<name>` an effect wrote was thrown away
    * as an unknown Slot.
    */
+  /** The senses a Check can rely on. See senses.mjs. */
+  static SENSES = SENSES;
+
   static SAVING_THROWS = Object.freeze({
     impulsive: "agility",
     corporeal: "tenacity",
@@ -1809,10 +1813,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
               { label: "Size", value: sizeAdjustment }
             ]
           }),
-        // What its Checks do to their Natural Result, always and when relying on sight.
-        // Either may be below zero, so neither is floored.
+        // What its Checks do to their Natural Result: always, and per sense relied on.
+        // Any may be below zero, so none is floored.
         natural: withEffects(this, `skill.${key}.natural`, 0, { min: null }),
-        naturalSight: withEffects(this, `skill.${key}.natural.sight`, 0, { min: null }),
+        naturalBy: Object.fromEntries(Object.keys(DBUCharacterData.SENSES).map(sense =>
+          [sense, withEffects(this, `skill.${key}.natural.${sense}`, 0, { min: null })])),
         // What is rolled, filled in after the last phase: `skill.<key>` is a LATE
         // Slot and Skills are settled before it runs. Starts as the Bonus, since
         // that is what it is a modification of.

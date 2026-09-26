@@ -1,0 +1,26 @@
+id: galactic-receiver
+name: Galactic Receiver
+kind: gear
+itemType: accessory
+tags: tech
+craftDC: Qualified
+source: Core Rule
+description: >
+  Perception's Natural Result 2 higher relying on hearing. Also a Communicator.
+text: >
+  Galactic Receiver [Tech]: A specialized Communicator worn on the ear, this device serves as
+  an aid to hearing as well.
+  –Craft DC: Qualified
+  –Effects: When you roll a Perception Skill Check related to your hearing, increase the
+  Natural Result by 2. This Accessory also serves as a Communicator.
+
+---
+
+# The Natural Result, not the total: it moves the die a Critical and a Botch are read off.
+# Whether a Perception Check is related to hearing is the player's to say: the roll asks,
+# while this is worn.
+#
+# "Also serves as a Communicator": nothing to automate, as for the Communicator itself -
+# who talks to whom is said at the table.
+[passive]
+skill.perception.natural.hearing += 2;

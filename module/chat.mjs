@@ -2224,13 +2224,20 @@ function botchRangeFor(actor, combatRoll) {
  * as a button, while a Skill Clash has to settle both sides at once.
  */
 /**
- * What a Skill's Checks do to their Natural Result: its own move, and the one that only
- * applies relying on sight where the Check does.
+ * What a Skill's Checks do to their Natural Result: its own move, and those that only
+ * apply relying on a sense, for each sense the Check relies on.
  */
-export function skillNatural(actor, key, bySight = false) {
+export function skillNatural(actor, key, senses = []) {
   const skill = actor?.system?.skills?.[key];
   if (!skill) return 0;
-  return (skill.natural ?? 0) + (bySight ? (skill.naturalSight ?? 0) : 0);
+  return (skill.natural ?? 0)
+    + senses.reduce((sum, sense) => sum + (skill.naturalBy?.[sense] ?? 0), 0);
+}
+
+/** The senses worth asking about for a Skill: the ones something moves its die for. */
+export function sensesAsked(actor, key) {
+  const by = actor?.system?.skills?.[key]?.naturalBy ?? {};
+  return Object.keys(DBUCharacterData.SENSES).filter(sense => by[sense]);
 }
 
 export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null,
@@ -3913,7 +3920,7 @@ export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll 
 export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
                                     combatRoll = false, attackingManeuver = false,
-                                    difficulties = false, sight = false } = {}) {
+                                    difficulties = false, senses = [] } = {}) {
   const rows = effects.map(entry => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
@@ -3982,20 +3989,20 @@ export async function prepareRoll(actor, effects, title, hint = "",
        </label>`
     : "";
 
-  // "Any Perception Skill check made relying on sight" - which only the player knows.
-  // Offered only where something moves such a Check, and ticked, since most do.
-  const sightRow = sight
-    ? `<label class="dbu-respond-option">
-         <input type="checkbox" name="sight" checked/>
-         <span class="dbu-respond-name">Relying on sight</span>
-       </label>`
-    : "";
+  // "Any Perception Skill check made relying on sight", "related to your hearing" - which
+  // only the player knows. One box per sense something moves this Check for.
+  const senseRows = senses.map(sense => `
+    <label class="dbu-respond-option">
+      <input type="checkbox" name="sense" value="${sense}"
+             ${DBUCharacterData.SENSES[sense]?.checked ? "checked" : ""}/>
+      <span class="dbu-respond-name">${DBUCharacterData.SENSES[sense]?.label ?? sense}</span>
+    </label>`).join("");
 
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title },
     content: `<div class="dbu-respond-dialog">
-      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${rows}${difficultyRows}${sightRow}${willing}${karmicGroup}
+      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${rows}${difficultyRows}${senseRows}${willing}${karmicGroup}
     </div>`,
     buttons: [
       {
@@ -4006,7 +4013,8 @@ export async function prepareRoll(actor, effects, title, hint = "",
           willing: dialog.element.querySelector('input[name="willing"]')?.checked ?? null,
           karmic: dialog.element.querySelector('input[name="karmic"]:checked')?.value ?? null,
           difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "",
-          sight: dialog.element.querySelector('input[name="sight"]')?.checked ?? false
+          senses: [...dialog.element.querySelectorAll('input[name="sense"]:checked')]
+            .map(input => input.value)
         })
       },
       { action: "cancel", label: "Cancel" }
@@ -4039,8 +4047,8 @@ export async function prepareRoll(actor, effects, title, hint = "",
   // An object rather than `true` where a Difficulty was offered, so the caller can read
   // what was picked. Truthy either way, which is what every other caller tests - and the
   // one that tests `=== false` still gets what it was looking for from a cancel.
-  return (difficulties || sight)
-    ? { difficulty: chosen.difficulty || "", sight: Boolean(chosen.sight) }
+  return (difficulties || senses.length)
+    ? { difficulty: chosen.difficulty || "", senses: chosen.senses ?? [] }
     : true;
 }
 
@@ -5086,11 +5094,12 @@ const CLASH_ROLLS = ({
 
     criticalDice: () => DBUCharacterData.SKILL_CRITICAL_DIE,
 
-    // What the Skill does to its own Natural Result - and, where the side said the Check
-    // relies on sight, that part too.
+    // What the Skill does to its own Natural Result - and, for each sense the side said
+    // the Check relies on, that part too.
     options: (actor, clash, uuid) => ({
       naturalAdd: skillNatural(actor, skillPicked(clash, uuid),
-        (clash.sightBy ?? []).includes(uuid))
+        Object.entries(clash.sensesBy ?? {})
+          .filter(([, who]) => (who ?? []).includes(uuid)).map(([sense]) => sense))
     }),
 
     prompt: (actor, clash, uuid) => ((uuid === clash.defenderUuid)
@@ -5876,16 +5885,16 @@ async function clashStage(message, actor) {
   const answer = kind.choose ? await kind.choose(opened, actor) : {};
   if (!answer) return;
 
-  // Whether this side's Check relies on sight, asked only where that changes something -
+  // Which senses this side's Check relies on, asked only where that changes something -
   // a Skill whose Natural Result moves when it does.
   const picked = ((opened.category ?? "skill") === "skill")
     ? skillPicked({ ...opened, ...answer }, actor.uuid) : "";
-  const sight = Boolean(actor.system.skills?.[picked]?.naturalSight);
+  const senses = picked ? sensesAsked(actor, picked) : [];
 
   // "All rolls involved become Urgent." A re-aimed Transfiguration says so on the card,
   // and Urgent here means what it means everywhere: it cannot be failed on purpose.
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
-    { urgent: Boolean(opened.urgent), sight });
+    { urgent: Boolean(opened.urgent), senses });
   if (!ready) return;
 
   // Read fresh rather than trusting what the card was drawn with: the other side may
@@ -5897,10 +5906,11 @@ async function clashStage(message, actor) {
   return settleClash(message, {
     ...clash,
     ...answer,
-    // A list of who said so, not an object keyed by them: a uuid has dots in it, and a
-    // write would turn it into nested keys.
-    sightBy: (clash.sightBy ?? []).filter(uuid => uuid !== actor.uuid)
-      .concat((sight && ready.sight) ? [actor.uuid] : []),
+    // Per sense, a list of who said so - not an object keyed by them: a uuid has dots in
+    // it, and a write would turn it into nested keys.
+    sensesBy: Object.fromEntries(Object.keys(DBUCharacterData.SENSES).map(sense => [sense,
+      (clash.sensesBy?.[sense] ?? []).filter(uuid => uuid !== actor.uuid)
+        .concat((ready.senses ?? []).includes(sense) ? [actor.uuid] : [])])),
     ready: [...new Set([...(clash.ready ?? []), actor.uuid])]
   });
 }

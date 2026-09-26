@@ -12,6 +12,8 @@
  */
 
 /** When a Slot is resolved, relative to the character's derived data pass. */
+import { SENSES } from "../senses.mjs";
+
 export const PHASES = Object.freeze({
   /** Before the Tiers are known. Amounts may use (bT) but never (T). */
   TIER: "tier",
@@ -408,11 +410,14 @@ const PATTERNS = [
   { match: /^skill\.(\w+)\.natural$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "Added to the Natural Result of that Skill's Checks." },
-  // The same, only on a Check "made relying on sight". Whether one is, is the player's to
-  // say when they roll it - asked only while this is not zero.
-  { match: /^skill\.(\w+)\.natural\.sight$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
-    valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
-    doc: "Added to the Natural Result of that Skill's Checks made relying on sight." },
+  // The same, only on a Check relying on one sense - "made relying on sight", "related to
+  // your hearing". Whether one is, is the player's to say when they roll it - asked only
+  // while this is not zero. The senses are those in senses.mjs.
+  { match: /^skill\.(\w+)\.natural\.(\w+)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    valid: (data, [k, sense]) => (k in (data.skills ?? data.constructor?.SKILLS ?? {}))
+      && (sense in SENSES),
+    doc: "Added to the Natural Result of that Skill's Checks made relying on that sense: "
+       + "sight or hearing." },
   { match: /^skill\.(\w+)\.bonus$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "The Skill Bonus itself, as the sheet shows it." },

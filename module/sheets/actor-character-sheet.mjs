@@ -40,6 +40,7 @@ import {
   enterEncounter,
   prepareRoll,
   rollSteadfastCheck,
+  sensesAsked,
   skillNatural,
   whyNotWilling
 } from "../chat.mjs";
@@ -3329,7 +3330,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const ready = await prepareRoll(
       this.actor, [], `${name} Check`,
       `Roll <strong>${Handlebars.escapeExpression(name)}</strong>? (${BASE_DIE} ${bonus})`,
-      { difficulties: true, sight: Boolean(skill.naturalSight) }
+      { difficulties: true, senses: sensesAsked(this.actor, target.dataset.skill) }
     );
     if (!ready) return;
 
@@ -3346,8 +3347,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,
       skillRoll: true,
       difficulty: ready.difficulty,
-      // The Eyeglasses' move to the Natural Result, and the sight half where it relies on it.
-      naturalAdd: skillNatural(this.actor, target.dataset.skill, Boolean(ready.sight))
+      // What moves the Natural Result: the Skill's own, and each sense the Check relies on.
+      naturalAdd: skillNatural(this.actor, target.dataset.skill, ready.senses ?? [])
     });
   }
 
