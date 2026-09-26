@@ -47,6 +47,8 @@ Headers only a Quality reads:
                  Lightweight's and Sleek Design's. Read by the Penalty, as `countsForPenalty`.
   armorDamageReduction: what the Armor Category's Damage Reduction from its Apparel is
                  multiplied by - Sleek Design's 0.5.
+  waivesWeightsWhileHoldingBack: true - the Weights take nothing off the Combat Rolls while its
+                 wearer Holds Back, Training Support's. Read through weightsPenaltyWaived().
   toggle:        a label for a switch on its row: its script runs only while the player has it
                  on - Team Outfit's teammates, which the table keeps.
   noStack:       true - worn on several pieces, it applies from one.

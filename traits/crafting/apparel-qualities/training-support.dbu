@@ -1,0 +1,30 @@
+id: training-support
+name: Training Support
+kind: crafting
+categories: weights
+slots: 2
+prerequisites: 2+ Skill Ranks in the Concealment Skill
+# "If you possess any stacks of Holding Back while wearing this Apparel, you may ignore the
+# reduction to your Combat Rolls from the effects of the Weight Apparel Category." Read by the
+# Weights, through weightsPenaltyWaived().
+waivesWeightsWhileHoldingBack: true
+source: Core Rule
+description: >
+  While Holding Back, the Weights take nothing off your Combat Rolls. Needs 2+ Ranks in
+  Concealment in whoever wears it.
+text: >
+  Training Support: This outfit is heavy, but doesn’t restrict your movement.
+  –Apparel Category: Weights
+  –Prerequisites: 2+ Skill Ranks in the Concealment Skill
+  –Quality Slots: 2
+  –Effects: If you possess any stacks of Holding Back while wearing this Apparel, you may ignore
+  the reduction to your Combat Rolls from the effects of the Weight Apparel Category.
+
+---
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# The Weights Category's reduction comes with the rest of the Apparel rules. It asks
+# weightsPenaltyWaived() in module/gear.mjs whether to leave it off: this Quality on the piece,
+# a wearer with 2+ Ranks in Concealment, and any stacks of Holding Back. "You may" is taken as
+# always - nobody chooses a penalty.

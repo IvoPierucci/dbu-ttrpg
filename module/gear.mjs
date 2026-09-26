@@ -307,6 +307,22 @@ export function narrowedRoll(item, getTrait) {
 }
 
 /**
+ * Whether the Weights Category's reduction to the Combat Rolls is left off this piece for its
+ * wearer - Training Support's "If you possess any stacks of Holding Back while wearing this
+ * Apparel, you may ignore the reduction". Its wearer's own Prerequisite, 2+ Ranks in
+ * Concealment, asked here as its script would. Read by the Weights, which come with the rest
+ * of the Apparel rules.
+ */
+export function weightsPenaltyWaived(item, wearer, getTrait) {
+  const crafted = item?.system?.crafted;
+  const waives = qualityEntries(crafted).some(entry => !qualityInactive(entry, crafted, getTrait)
+    && (getTrait?.(entry.id)?.waivesWeightsWhileHoldingBack === true));
+  if (!waives) return false;
+  const ranks = Number(wearer?.system?.skills?.concealment?.ranks) || 0;
+  return (ranks >= 2) && (holdingBackStacks(wearer) > 0);
+}
+
+/**
  * The Size Category a piece is: the one it was made for - "Each piece of Apparel is created
  * with a specific Size Category in mind" - or, where Stretching says so, "the current Size
  * Category of this piece of Apparel's wearer". Read by the Size rules, which come with the rest
