@@ -1,0 +1,19 @@
+id: mask
+name: Mask
+kind: gear
+itemType: accessory
+craftDC: Qualified
+source: Core Rule
+description: >
+  Bluff Checks 2 higher while worn.
+text: >
+  Mask: A false face that can be worn over your real face to protect your identity.
+  –Craft DC: Qualified
+  –Effects: Increase your Bluff Skill Checks by 2.
+
+---
+
+# While worn: "Accessories are Basic Items that can be equipped and apply benefits while
+# equipped." "Your Bluff Skill Checks": the roll, not the Skill Bonus the sheet shows.
+[passive]
+skill.bluff += 2;
