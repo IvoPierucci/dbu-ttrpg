@@ -1,0 +1,25 @@
+id: mystical
+name: Mystical
+kind: crafting
+categories: combat-clothing, standard-clothing
+slots: 1
+prerequisites: 2+ Skill Ranks in Clairvoyance and Use Magic
+source: Core Rule
+description: >
+  Use Magic and Clairvoyance Checks 1 higher. Needs 2+ Ranks in both in whoever wears it.
+text: >
+  Mystical: This item of clothing is great for magically focused characters.
+  –Apparel Category: Combat Clothing/Standard Clothing
+  –Prerequisites: 2+ Skill Ranks in Clairvoyance and Use Magic
+  –Quality Slots: 1
+  –Effects: Increase the Dice Score of your Use Magic and Clairvoyance Skill Checks by 1.
+
+---
+
+# "The Dice Score of your ... Skill Checks": the roll, not the Skill Bonus. Only while the
+# wearer has the Ranks in both: "not applied to the crafter, but the wearer".
+[passive]
+if (clairvoyance.ranks >= 2 && useMagic.ranks >= 2) {
+  skill.useMagic += 1;
+  skill.clairvoyance += 1;
+}
