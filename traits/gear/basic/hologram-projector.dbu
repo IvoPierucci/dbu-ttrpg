@@ -1,0 +1,25 @@
+id: hologram-projector
+name: Hologram Projector
+kind: gear
+itemType: accessory
+tags: tech
+craftDC: Expert
+# "When using the Signature Technique Maneuver, you may use your Personality Modifier for
+# the Damage Attribute of that Attacking Maneuver." Offered while it is worn, as the attack
+# is declared; the Foundation's own is the other choice.
+damageAttribute: personality
+damageAttributeWhen: signature
+source: Core Rule
+description: >
+  On a Signature Technique, Personality may be the Damage Attribute.
+text: >
+  Hologram Projector [Tech]: Large, comic book letters appear when you strike your opponent!
+  –Craft DC: Expert
+  –Effects: When using the Signature Technique Maneuver, you may use your Personality
+  Modifier for the Damage Attribute of that Attacking Maneuver.
+
+---
+
+# The Personality Modifier stands where the Foundation's Attribute would in the Wound Roll,
+# and everything else the character adds to it stays. A Profile that applies the Damage
+# Attribute again - Powered - applies Personality again.

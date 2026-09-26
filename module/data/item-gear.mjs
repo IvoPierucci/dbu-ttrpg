@@ -81,6 +81,13 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       }),
       teleports: new fields.BooleanField({ required: true, initial: false }),
 
+      /** An Attribute that may stand in for the Damage Attribute, and on what attacks -
+       *  the Hologram Projector's Personality, on a Signature Technique. */
+      damageAttribute: new fields.SchemaField({
+        attribute: new fields.StringField({ required: true, blank: true, initial: "" }),
+        when: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+
       /** Made for one Character, and which - the Eyeglasses' Intended Character. */
       declaresIntended: new fields.BooleanField({ required: true, initial: false }),
       intended: new fields.SchemaField({

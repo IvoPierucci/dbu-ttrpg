@@ -6363,8 +6363,8 @@ export async function postAttack(actor, target, maneuver,
           // is a Ki Wager either way - and only the card's note says the difference.
           wagerFromLife: Boolean(wagerFromLife && kiWager),
           // What stands in for the Damage Attribute, where something other than the
-          // attacker's own does - a Bomb's recorded Scholarship Modifier. Null for every
-          // attack a character makes with their own.
+          // attacker's own does - a Bomb's recorded Scholarship Modifier, the Hologram
+          // Projector's Personality. Null for every attack made with the Foundation's own.
           damageAttribute,
           // "A Bomb's Strike Roll for this Attacking Maneuver will automatically succeed."
           // Carried on the attack, since it is the attack's and not the character's.
@@ -7802,10 +7802,16 @@ function profileWoundParts(attacker, attack) {
   const profile = PROFILES[attack.profile];
   const parts = [];
 
+  // Whichever Attribute the attack is made with: one standing in for the Foundation's -
+  // the Hologram Projector's Personality, a Bomb's recorded Scholarship - is the Damage
+  // Attribute, and it is what is applied again.
   if (profile?.extraDamageAttribute) {
     const foundation = DBUCharacterData.FOUNDATIONS[attack.foundation];
-    const modifier = attacker.system.attributes?.[foundation?.attribute]?.mod ?? 0;
-    if (modifier) parts.push({ label: `${profile.label} (${foundation.label})`, value: modifier });
+    const own = attack.damageAttribute;
+    const modifier = own ? (Number(own.value) || 0)
+      : (attacker.system.attributes?.[foundation?.attribute]?.mod ?? 0);
+    const said = own ? own.label : foundation.label;
+    if (modifier) parts.push({ label: `${profile.label} (${said})`, value: modifier });
   }
 
   // Mega Flare: "for every Energy Charge applied to this Attacking Maneuver, increase

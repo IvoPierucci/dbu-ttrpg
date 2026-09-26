@@ -304,6 +304,13 @@ export function gearItemFrom(definition, actor = null) {
       assigned: { uuid: "", name: "" },
       teleports: definition.teleports === true,
 
+      // An Attribute that may stand in for the Damage Attribute, and on what - the
+      // Hologram Projector's Personality Modifier, on a Signature Technique.
+      damageAttribute: {
+        attribute: String(definition.damageAttribute ?? "").trim().toLowerCase(),
+        when: String(definition.damageAttributeWhen ?? "").trim().toLowerCase()
+      },
+
       // Made for one Character, who may be the one holding it - the Eyeglasses'
       // "Intended Character", declared when it is given.
       declaresIntended: definition.declaresIntended === true,
@@ -620,6 +627,26 @@ export function equipProblem(items, item) {
     return `Already wearing ${ACCESSORIES_WORN} Accessories.`;
   }
   return "";
+}
+
+/**
+ * What may stand in for the Damage Attribute of this attack: the worn Accessories that
+ * offer an Attribute for it, one per Attribute.
+ *
+ * "When using the Signature Technique Maneuver, you may use your Personality Modifier for
+ * the Damage Attribute of that Attacking Maneuver." `when: signature` is that - an attack
+ * made through the Signature Technique Maneuver, which marks what it makes `signature`.
+ */
+export function damageAttributeOffers(items, maneuver) {
+  const offers = [];
+  for (const item of accessoriesInEffect(items)) {
+    const { attribute, when } = item.system.damageAttribute ?? {};
+    if (!attribute) continue;
+    if ((when === "signature") && !maneuver?.signature) continue;
+    if (offers.some(offer => offer.attribute === attribute)) continue;
+    offers.push({ attribute, source: item.name });
+  }
+  return offers;
 }
 
 /**

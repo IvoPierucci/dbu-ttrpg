@@ -60,6 +60,7 @@ import { actionsLeft, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } fr
 import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
+import { damageAttributeOffers } from "./gear.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
 import * as soarNames from "./environments.mjs";
@@ -467,6 +468,43 @@ async function askDropPower(actor) {
 
   if (!chosen || (chosen === "cancel")) return null;
   return chosen === "drop";
+}
+
+/**
+ * Which Damage Attribute an attack is made with: the Foundation's own, or one something
+ * worn offers in its place.
+ *
+ * @returns {Promise<?object|false>} `{label, value}` for the Wound Roll to use, false for
+ *                                    the Foundation's own, null if backed out of
+ */
+async function askDamageAttribute(actor, foundationKey, offers) {
+  const attributes = actor.system.attributes ?? {};
+  const named = key => `${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+  const own = DBUCharacterData.FOUNDATIONS[foundationKey]?.attribute;
+  const signed = value => (value >= 0 ? `+${value}` : String(value));
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: "Damage Attribute" },
+    content: "",
+    buttons: [
+      ...(own ? [{ action: "own",
+        label: `${named(own)} ${signed(attributes[own]?.mod ?? 0)}` }] : []),
+      ...offers.map(offer => ({
+        action: offer.attribute,
+        label: `${named(offer.attribute)} ${signed(attributes[offer.attribute]?.mod ?? 0)}`
+      })),
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+
+  if (!chosen || (chosen === "cancel")) return null;
+  if (chosen === "own") return false;
+  const offer = offers.find(entry => entry.attribute === chosen);
+  if (!offer) return null;
+  return { label: `${named(offer.attribute)} Modifier`,
+    value: attributes[offer.attribute]?.mod ?? 0 };
 }
 
 /**
@@ -2091,6 +2129,15 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
 
     declared = await declareAttack(locked, DBUCharacterData.FOUNDATIONS, actor);
     if (!declared) return false;
+
+    // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
+    // with the declaration, and only where something worn offers one for this attack.
+    const offers = damageAttributeOffers(Array.from(actor.items ?? []), maneuver);
+    if (offers.length) {
+      const chosen = await askDamageAttribute(actor, declared.foundation, offers);
+      if (chosen === null) return false;
+      if (chosen) declared = { ...declared, damageAttribute: chosen };
+    }
   }
 
     // A Physical Attack only reaches your Melee Range. Checked once the Profile and
