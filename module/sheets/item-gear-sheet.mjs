@@ -52,7 +52,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       chosen: trigger === system.trigger
     }));
     // What it was made with and has left - editable, since the table may give or take.
-    context.chargesLabel = (system.chargesDice || system.storesDrain)
+    context.chargesLabel = (system.chargesDice || system.storesDrain
+      || system.chargesPerBaseTier)
       ? (system.chargesLabel || "Charges") : "";
     // What it can be connected to among its owner's Items, and which it is.
     context.connectChoices = (system.connects ?? []).length

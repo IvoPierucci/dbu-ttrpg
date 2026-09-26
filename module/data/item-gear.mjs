@@ -162,6 +162,13 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
        *  many are left - the Poison Vial's 1d6 Poison Drops. */
       chargesDice: new fields.StringField({ required: true, blank: true, initial: "" }),
       chargesLabel: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** Charges made at so many per base Tier of its maker - the Jetpack's 30(bT) Ki - and
+       *  the most it holds. */
+      chargesPerBaseTier: new fields.NumberField({ required: true, integer: true, min: 0,
+        initial: 0 }),
+      chargesMax: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+      /** Its charges pay for the Movement Maneuver's Ki instead of the character's. */
+      paysMovement: new fields.BooleanField({ required: true, initial: false }),
       charges: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
 
       /** A mark it leaves on everyone in the area it bursts in, and until which edge of the

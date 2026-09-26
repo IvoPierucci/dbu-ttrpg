@@ -60,7 +60,7 @@ import { actionsLeft, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } fr
 import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
-import { damageAttributeOffers } from "./gear.mjs";
+import { damageAttributeOffers, movementPayment } from "./gear.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
 import * as soarNames from "./environments.mjs";
@@ -2341,7 +2341,17 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // attack instead, off the character's Capacity.
   const fromStore = crossing ? false : await payFromStore(actor, maneuver, declared, price);
   if (fromStore === null) return false;
-  if (!fromStore && !await spendManeuverCost(actor, maneuver, price)) return false;
+
+  // A Movement's Ki taken from a worn Jetpack as far as it goes, and the rest from the
+  // character - whose part alone counts against their Capacity. The character's part is
+  // paid first, since that is the half that can be refused.
+  const moving = crossing ? movementPayment(Array.from(actor.items ?? []), price)
+    : { store: null, fromStore: 0, fromSelf: price };
+  if (!fromStore && !await spendManeuverCost(actor, maneuver, moving.fromSelf)) return false;
+  if (moving.store) {
+    await moving.store.update({
+      "system.charges": (Number(moving.store.system.charges) || 0) - moving.fromStore });
+  }
   if (!crossing) await spendLifeWager(actor, declared);
 
   // Empower hands Ki over before anything is recorded, so backing out of the amount
@@ -2509,12 +2519,16 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
         // and which way one that throws a State went. Blank on everything that does
         // something the system can do for itself and says so by doing it.
         note: [maneuverNote(actor, maneuver), stateNote(maneuver, toggled),
-               soarNote(maneuver, soarTo)]
+               soarNote(maneuver, soarTo),
+               moving.store ? `${moving.fromStore} Ki from the ${moving.store.name}.` : ""]
           .filter(Boolean).join(" "),
+        // The character's Ki and the Item's apart, so a Blockade that wins hands each back
+        // to where it came from.
         spent: {
           actions: actionCostOf(maneuver, actionsSpent).amount,
           kind: actionCostOf(maneuver, actionsSpent).kind,
-          ki: price
+          ki: moving.fromSelf,
+          store: moving.store ? { itemId: moving.store.id, ki: moving.fromStore } : null
         }
       });
 

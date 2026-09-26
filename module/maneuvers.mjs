@@ -1985,9 +1985,11 @@ export function whyNotSpecial(actor, maneuver) {
   if (openedWithoutGear(actor, maneuver)) return null;
 
   // Or an Item they hold: the Energy-Suction Device - "While you possess this Item, gain
-  // access to the Power Drain Special Maneuver".
+  // access to the Power Drain Special Maneuver". An Accessory only while it is worn: the
+  // Jetpack's Soar.
   if ((actor?.items ?? []).some(item => (item.type === "gear")
-    && (item.system?.grantsManeuver === maneuver.id))) return null;
+    && (item.system?.grantsManeuver === maneuver.id)
+    && ((item.system?.itemType !== "accessory") || item.system?.equipped))) return null;
 
   const fromSkill = (actor?.system?.specialManeuvers ?? [])
     .find(entry => entry.maneuver === maneuver.id);

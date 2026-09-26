@@ -1751,6 +1751,13 @@ async function settleBlockade(message, clash) {
   if (spent.ki > 0) {
     await refundManeuverCost(mover, { name: "Movement", kiCost: spent.ki });
   }
+  // And what an Item paid, back into it - never past what it was made with.
+  const store = spent.store?.ki > 0 ? mover.items?.get(spent.store.itemId) : null;
+  if (store) {
+    const held = (Number(store.system.charges) || 0) + spent.store.ki;
+    const most = Number(store.system.chargesMax) || 0;
+    await store.update({ "system.charges": most ? Math.min(most, held) : held });
+  }
 
   // "Cannot use the Movement Maneuver for the remainder of their Turn." Held as a
   // Resource with a clock of their own turn's end, and read by a passive in the Movement
@@ -1762,7 +1769,8 @@ async function settleBlockade(message, clash) {
 
   const givenBack = [
     spent.actions > 0 ? `${spent.actions} Action${spent.actions === 1 ? "" : "s"}` : "",
-    spent.ki > 0 ? `${spent.ki} Ki Points` : ""
+    spent.ki > 0 ? `${spent.ki} Ki Points` : "",
+    store ? `${spent.store.ki} Ki to the ${store.name}` : ""
   ].filter(Boolean).join(" and ");
 
   await settledNote(message,
@@ -3531,7 +3539,9 @@ export async function postManeuver(actor, maneuver,
                 spent: {
                   actions: spent?.actions ?? maneuver.actionCost ?? 0,
                   kind: spent?.kind ?? "standard",
-                  ki: spent?.ki ?? 0
+                  ki: spent?.ki ?? 0,
+                  // What an Item paid instead - a Jetpack's Ki - and which Item.
+                  store: spent?.store ?? null
                 },
                 stopped: false
               }

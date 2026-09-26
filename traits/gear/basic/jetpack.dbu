@@ -1,0 +1,43 @@
+id: jetpack
+name: Jetpack
+kind: gear
+itemType: accessory
+tags: tech
+craftDC: Qualified
+# "A Jetpack has a Ki Point Pool of 30(bT), based on the creator's Tier of Power at the time
+# of creation." Worked out off the character it is given to, when it is given; editable on
+# the Item, where a Jetpack made by somebody else can be set to theirs.
+chargesPerBaseTier: 30
+chargesLabel: Ki
+# "When you would spend Ki Points through the Movement Maneuver, remove them from the
+# Jetpack instead."
+paysMovement: true
+# "You gain access to the Soar Maneuver."
+grantsManeuver: soar
+source: Core Rule
+description: >
+  30(bT) Ki that pays for Movement instead of yours, and the Soar Maneuver, while worn.
+text: >
+  Jetpack [Tech]: This is a wearable device that allows flight to characters who cannot
+  otherwise fly.
+  –Craft DC: Qualified
+  –Effects: A Jetpack has a Ki Point Pool of 30(bT), based on the creator’s Tier of Power at
+  the time of creation. When you would spend Ki Points through the Movement Maneuver, remove
+  them from the Jetpack instead. You gain access to the Soar Maneuver.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Given: its pool, 30 per base Tier of Power of the character it is given to.
+#
+# While worn, a Movement's Ki - Boosted Speed, Rapid Movement - comes out of the pool. What
+# the pool cannot cover the character pays, by the table's ruling, and only that part counts
+# against their Capacity: the Jetpack's Ki never does. A Blockade that wins hands each part
+# back to where it came from, the pool never past what it was made with.
+#
+# Soar is opened while it is worn, the way a Skill would open it.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Refilling it: the entry says nothing of it, so the count is edited on the Item.

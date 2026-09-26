@@ -130,10 +130,40 @@ export function portionEffects(portion, system) {
   return { update, removes, gains: portion.gains || "" };
 }
 
+/**
+ * Whether an Item is giving its holder what it gives right now: a Basic Item by being
+ * held, an Accessory only while it is worn - "apply benefits while equipped".
+ */
+export function inEffect(item) {
+  if (item?.type !== "gear") return false;
+  return (item.system?.itemType !== "accessory") || Boolean(item.system?.equipped);
+}
+
 /** The character's Item that gives them access to this Maneuver, if one does. */
 export function gearGranting(items, maneuverId) {
-  return (items ?? []).find(item => (item.type === "gear")
+  return (items ?? []).find(item => inEffect(item)
     && (item.system?.grantsManeuver === maneuverId)) ?? null;
+}
+
+/** A pool made at so many per base Tier of Power of whoever makes it. */
+function chargesAtCreation(definition, actor) {
+  const per = Math.max(0, Number(definition?.chargesPerBaseTier) || 0);
+  return per * (actor?.system?.baseTierOfPower ?? 1);
+}
+
+/**
+ * Who pays a Movement's Ki, and how much each: the Item worn that pays for Movement first,
+ * as far as its charges go, and the character the rest.
+ *
+ * "When you would spend Ki Points through the Movement Maneuver, remove them from the
+ * Jetpack instead." What it cannot cover, the character pays - by the table's ruling -
+ * and only that part counts against their Capacity.
+ */
+export function movementPayment(items, price) {
+  const store = (items ?? []).find(item => inEffect(item) && item.system?.paysMovement)
+    ?? null;
+  const fromStore = store ? Math.min(Math.max(0, Number(store.system.charges) || 0), price) : 0;
+  return { store: fromStore > 0 ? store : null, fromStore, fromSelf: price - fromStore };
 }
 
 /** The character's Item that stores what a Power Drain takes, if they have one. */
@@ -358,7 +388,14 @@ export function gearItemFrom(definition, actor = null) {
       // Charges it is made with, rolled when it is given - the Poison Vial's Drops.
       chargesDice: String(definition.chargesDice ?? ""),
       chargesLabel: String(definition.chargesLabel ?? ""),
-      charges: 0,
+      // Or so many per base Tier of Power of whoever makes it, "at the time of creation" -
+      // the Jetpack's 30(bT) Ki. Worked out off the character it is given to, and kept as
+      // the most it holds.
+      chargesPerBaseTier: Math.max(0, Number(definition.chargesPerBaseTier) || 0),
+      charges: chargesAtCreation(definition, actor),
+      chargesMax: chargesAtCreation(definition, actor),
+      // What its charges pay for instead of the character's Ki - the Jetpack's Movement.
+      paysMovement: definition.paysMovement === true,
 
       // A mark it leaves on everyone in the area it bursts in, and whether it lasts to the
       // start or the end of the thrower's next turn - the Smoke Bomb's Smoked.

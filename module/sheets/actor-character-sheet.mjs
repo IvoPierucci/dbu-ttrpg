@@ -1059,7 +1059,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         connectedName: connectedItem(gearItems, item)?.name ?? "",
         canTrigger: canTrigger(connectedItem(gearItems, item)),
         // Charges it was made with, and how many are left.
-        chargesLabel: (item.system.chargesDice || item.system.storesDrain)
+        chargesLabel: (item.system.chargesDice || item.system.storesDrain
+          || item.system.chargesPerBaseTier)
           ? (item.system.chargesLabel || "charges") : "",
         // Ki stored in it, to draw back out.
         draws: Boolean(item.system.storesDrain) && ((item.system.charges ?? 0) > 0),
