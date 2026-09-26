@@ -3,8 +3,8 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable, craftedReading,
-  qualityChoices, qualityEntries, qualityFits, qualityInactive, qualitySlotRange, slotsTaken }
-  from "../gear.mjs";
+  qualityChoiceLabel, qualityChoices, qualityEntries, qualityFits, qualityInactive,
+  qualitySlotRange, slotsTaken } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 
 /**
@@ -149,8 +149,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
           tip: escape(trait?.description ?? ""),
           slotsLabel: `${taken} Slot${taken === 1 ? "" : "s"}`,
           // What was chosen for it, by name.
-          choiceLabel: entry.choice
-            ? (DBUCharacterData.SKILLS[entry.choice]?.label ?? entry.choice) : "",
+          choiceLabel: qualityChoiceLabel(trait, entry.choice, DBUCharacterData.SKILLS),
           // Its Category does not take it, or another Quality holds it off: kept, and
           // inactive until that changes.
           misfit: DBUGearSheet.#inactiveNote(qualityInactive(entry, crafted, getTrait),
@@ -199,17 +198,18 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       slots = Number(chosen);
       if (!Number.isFinite(slots) || (slots < min) || (slots > max)) return;
     }
-    // "A Skill of your choice (when creating this piece of Apparel)": asked now, and kept
-    // with the Quality.
+    // "A Skill of your choice (when creating this piece of Apparel)", Focal's Strike or Dodge:
+    // asked now, and kept with the Quality.
     let choice = "";
     const offered = qualityChoices(trait, DBUCharacterData.SKILLS);
     if (offered.length) {
       choice = await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"],
-        window: { title: `${trait?.name ?? pick} - Skill` },
+        window: { title: trait?.name ?? pick },
         content: "",
         buttons: [
-          ...offered.map(key => ({ action: key, label: DBUCharacterData.SKILLS[key].label })),
+          ...offered.map(key => ({ action: key,
+            label: qualityChoiceLabel(trait, key, DBUCharacterData.SKILLS) })),
           { action: "cancel", label: "Cancel" }
         ],
         rejectClose: false

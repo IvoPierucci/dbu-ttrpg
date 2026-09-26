@@ -1,0 +1,33 @@
+id: focal
+name: Focal
+kind: crafting
+categories: weights
+slots: 1
+# "Upon creating this piece of Apparel, select either your Strike or Dodge Rolls."
+choices: strike=Strike Rolls, dodge=Dodge Rolls
+# The chosen one is all the Weights Category reaches - its penalty, and its Doff Bonus.
+narrowsCategory: true
+source: Core Rule
+description: >
+  Strike or Dodge, chosen when it is made: the only Combat Roll the Weights lower, and the only
+  one its Doff Bonus raises.
+text: >
+  Focal: Designed to improve a single aspect of combat, these weights aren’t as heavy, but are
+  placed on specific areas of the body.
+  –Apparel Category: Weights
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Upon creating this piece of Apparel, select either your Strike or Dodge Rolls. The
+  chosen Combat Roll is the only Combat Roll reduced by the effects of the Weight Apparel
+  Category, but only that Combat Roll benefits from this piece of Apparel’s Doff Bonus.
+
+---
+
+# --- What is built -----------------------------------------------------------------------------
+#
+# The choice: Strike or Dodge, asked when it is added and shown on its row.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# What it changes is the Weights Category's own effects and the Doff Bonus, and both come with
+# the rest of the Apparel rules. They read the choice through narrowedRoll() in module/gear.mjs.

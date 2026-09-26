@@ -251,11 +251,45 @@ export function qualityEntries(crafted) {
  * `choiceAttribute: personality` to the Skills that use that Score. Empty when it asks nothing.
  */
 export function qualityChoices(trait, skills) {
+  // Or a list of its own - Focal's `choices: strike=Strike Rolls, dodge=Dodge Rolls`.
+  const own = Object.keys(choiceLabelsOf(trait));
+  if (own.length) return own;
   if (String(trait?.chooses ?? "").trim().toLowerCase() !== "skill") return [];
   const attribute = String(trait?.choiceAttribute ?? "").trim().toLowerCase();
   return Object.entries(skills ?? {})
     .filter(([, skill]) => !attribute || (skill.attribute === attribute))
     .map(([key]) => key);
+}
+
+/** A Quality's own list of choices, `key=Label` each, as `{key: label}`. */
+function choiceLabelsOf(trait) {
+  return Object.fromEntries(String(trait?.choices ?? "").split(",")
+    .map(entry => entry.split("=").map(part => part.trim()))
+    .filter(([key]) => key)
+    .map(([key, label]) => [key.toLowerCase(), label || key]));
+}
+
+/** What a choice made for a Quality is called: its own label, or the Skill's name. */
+export function qualityChoiceLabel(trait, choice, skills) {
+  if (!choice) return "";
+  return choiceLabelsOf(trait)[choice] ?? skills?.[choice]?.label ?? choice;
+}
+
+/**
+ * The Combat Roll a worn Apparel's Quality narrows it to - Focal's "The chosen Combat Roll is
+ * the only Combat Roll reduced by the effects of the Weight Apparel Category, but only that
+ * Combat Roll benefits from this piece of Apparel's Doff Bonus." `narrowsCategory: true` on
+ * the Quality, its choice the Roll. "" when nothing narrows it: every Combat Roll.
+ *
+ * Read by the Weights Category and the Doff Bonus, which come with the rest of the Apparel
+ * rules.
+ */
+export function narrowedRoll(item, getTrait) {
+  for (const entry of qualityEntries(item?.system?.crafted)) {
+    if (qualityInactive(entry, item.system.crafted, getTrait)) continue;
+    if (getTrait?.(entry.id)?.narrowsCategory === true && entry.choice) return entry.choice;
+  }
+  return "";
 }
 
 /**

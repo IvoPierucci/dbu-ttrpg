@@ -12,4 +12,5 @@ text: >
 ---
 
 # Not built yet: what it does waits on Layers and the Doff Bonus, which come with the rest of
-# the Apparel rules.
+# the Apparel rules. When it is: a piece with Focal on it reaches only the Combat Roll Focal
+# chose - reduced, and its Doff Bonus - read through narrowedRoll() in module/gear.mjs.

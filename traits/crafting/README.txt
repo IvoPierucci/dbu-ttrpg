@@ -28,6 +28,10 @@ Headers only a Quality reads:
   prerequisites: as printed. "Not applied to the crafter, but the wearer": while the wearer
                  does not meet them, the Quality does nothing - asked in its script with an
                  `if`, around everything it does.
+  choices:       a list of its own to choose from when it is added, `key=Label` each -
+                 Focal's `strike=Strike Rolls, dodge=Dodge Rolls`.
+  narrowsCategory: true - its choice is the one Combat Roll its Category's effects reach, as
+                 Focal's is for Weights. Read by the Category, through narrowedRoll().
   chooses:       `skill`, for a Quality that has one chosen when it is added; with
                  `choiceAttribute: personality`, only the Skills that use that Score. Its
                  script names the one chosen as `$choice` - `skill.$choice += 2;`.
