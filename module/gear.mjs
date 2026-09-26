@@ -176,6 +176,15 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
     qualities: count,
     used,
     over: Math.max(0, used - grade.slots),
+    // What the Armor Category's Damage Reduction is multiplied by - Sleek Design's "Halve the
+    // Damage Reduction gained from this Armor" - 1 where nothing says so.
+    armorDamageReduction: active.reduce((factor, entry) => {
+      const said = getTrait?.(entry.id)?.armorDamageReduction;
+      return (said === undefined || said === "") ? factor : factor * Number(said);
+    }, 1),
+    // Whether it counts towards the Apparel Penalty - Lightweight's and Sleek Design's "does
+    // not count"; its Category's own say, Standard Clothing's, is the Penalty's to read.
+    countsForPenalty: !active.some(entry => getTrait?.(entry.id)?.noApparelPenalty === true),
     // The most its Break Value can be: 3, and what its Qualities add.
     breakValue: (Number(kind.breakValue) || 0) + added("breakValue"),
     // A Hardness Value one of its Qualities sets outright - Hefty Plating's "is set to 4" -

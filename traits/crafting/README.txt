@@ -44,7 +44,9 @@ Headers only a Quality reads:
   sparesFirstBreak: true - the first loss of Break Value from full each Combat Encounter does
                  not happen, Joint Protection's. Read by the Break Value.
   noApparelPenalty: true - its Apparel does not count towards the Apparel Penalty,
-                 Lightweight's. Read by the Penalty.
+                 Lightweight's and Sleek Design's. Read by the Penalty, as `countsForPenalty`.
+  armorDamageReduction: what the Armor Category's Damage Reduction from its Apparel is
+                 multiplied by - Sleek Design's 0.5.
   doffsWithNoEffort: true - its Apparel may be Doffed through the No-Effort Maneuver, Loose's.
                  Read by removing Apparel.
   doffRoundsPerSlot: Combat Rounds its Apparel's first Doff Bonus of an Encounter lasts longer,
