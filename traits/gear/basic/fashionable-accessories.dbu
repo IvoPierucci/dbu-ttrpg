@@ -16,12 +16,12 @@ text: >
 
 ---
 
-# "While wearing Standard Clothing": an Item of the character's made from the
-# standard-clothing file, and worn.
+# "While wearing Standard Clothing": Standard Clothing is an Apparel Category, so any piece of
+# Apparel built as it, and worn.
 #
-# Not built yet: Standard Clothing is Apparel, which has not arrived. Until it does there is
-# nothing to wear, and this adds nothing. When it does, `wearing` reads the same `equipped`
-# an Accessory is put on with - if Apparel is worn some other way, that is where to change it.
+# Not built yet: wearing Apparel - its Layers come with the rest of the Apparel rules. Until
+# then no Apparel is worn, and this adds nothing. `wearing` reads the same `equipped` an
+# Accessory is put on with - if Apparel is worn some other way, that is where to change it.
 [passive]
 if (wearing("standard-clothing")) {
   save.morale += 1(bT);

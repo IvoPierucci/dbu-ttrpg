@@ -1,8 +1,10 @@
 const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
-import { getTrait, printedLines } from "../effects/traits.mjs";
-import { GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable } from "../gear.mjs";
+import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
+import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable, craftedReading }
+  from "../gear.mjs";
+import DBUCharacterData from "../data/actor-character.mjs";
 
 /**
  * Sheet for a piece of Gear.
@@ -18,7 +20,9 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     position: { width: 480, height: 460 },
     window: { resizable: true },
     actions: {
-      editImage: DBUGearSheet._onEditImage
+      editImage: DBUGearSheet._onEditImage,
+      addQuality: DBUGearSheet._onAddQuality,
+      removeQuality: DBUGearSheet._onRemoveQuality
     },
     form: { submitOnChange: true }
   };
@@ -90,12 +94,80 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       || context.chargesLabel || context.connects || context.upgrade || context.assigns
       || context.declaresIntended);
 
+    // Built rather than picked: its Category, Grade and Size to change, what those come
+    // to, and its Qualities to add and take off.
+    context.crafted = this.#craftedContext(system);
+    if (context.crafted) context.craftDCNow = context.crafted.reading.craftDCLabel;
+
     // The file's entry where the file still has one, and the copy's otherwise - the rules
-    // live in traits/, and a copy made last week holds last week's wording.
-    const entry = getTrait(system.gearId)?.text || system.text;
+    // live in traits/, and a copy made last week holds last week's wording. A built Item's
+    // entry is its Category's.
+    const entry = getTrait(system.gearId)?.text
+      || (context.crafted ? getTrait(system.crafted.category)?.text : "")
+      || system.text;
     context.entry = printedLines(entry).map(line => ({ text: line, gap: !line }));
 
     return context;
+  }
+
+  /** What a built Item's section needs: the choices, what they come to, its Qualities. */
+  #craftedContext(system) {
+    const crafted = system.crafted;
+    const kind = CRAFTED[crafted?.kind];
+    if (!kind) return null;
+
+    const baseTier = this.item.actor?.system?.baseTierOfPower ?? null;
+    const reading = craftedReading(crafted, { getTrait,
+      difficulties: DBUCharacterData.DIFFICULTIES, baseTier: baseTier ?? 1 });
+    const escape = Handlebars.escapeExpression;
+    const difficulty = key => DBUCharacterData.DIFFICULTIES[key]?.label ?? key;
+
+    return {
+      label: kind.label,
+      reading,
+      // The Bonus as the rule writes it, and what it comes to for whoever holds it.
+      bonusLabel: `${reading.perBaseTier}(bT)${(baseTier !== null) ? ` = ${reading.bonus}` : ""}`,
+      categoryChoices: traitsOfKind("crafting", kind.categories).map(trait => ({
+        value: trait.id, label: trait.name, chosen: trait.id === crafted.category
+      })),
+      gradeChoices: Object.entries(kind.grades).map(([grade, row]) => ({
+        value: Number(grade),
+        label: `${grade} - ${difficulty(row.craftDC)}, ${kind.bonus[row.grade].label}, `
+          + `${row.slots} Slot${row.slots === 1 ? "" : "s"}`,
+        chosen: Number(grade) === Number(crafted.grade)
+      })),
+      sizeChoices: Object.entries(DBUCharacterData.SIZES).map(([key, size]) => ({
+        value: key, label: size.label, chosen: key === crafted.size
+      })),
+      qualities: (crafted.qualities ?? []).map((id, index) => ({
+        index,
+        name: getTrait(id)?.name ?? id,
+        tip: escape(getTrait(id)?.description ?? "")
+      })),
+      qualityChoices: traitsOfKind("crafting", kind.qualities).map(trait => ({
+        value: trait.id, label: trait.name
+      })),
+      // Over is said, not refused: it works as it is.
+      overNote: reading.over
+        ? `${reading.qualities} Qualities, and Craftsmanship Grade ${crafted.grade} gives `
+          + `${reading.slots} Quality Slot${reading.slots === 1 ? "" : "s"}. It still works.`
+        : ""
+    };
+  }
+
+  /** Add the Quality picked beside the button. Any number: over the Slots is only said. */
+  static async _onAddQuality(event, target) {
+    const pick = this.element.querySelector("select[data-quality-pick]")?.value;
+    if (!pick) return;
+    const qualities = [...(this.item.system.crafted?.qualities ?? []), pick];
+    return this.item.update({ "system.crafted.qualities": qualities });
+  }
+
+  /** Take one Quality off, by where it is in the list. */
+  static async _onRemoveQuality(event, target) {
+    const index = Number(target.dataset.index);
+    const qualities = (this.item.system.crafted?.qualities ?? []).filter((id, at) => at !== index);
+    return this.item.update({ "system.crafted.qualities": qualities });
   }
 
   /**

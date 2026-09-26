@@ -105,6 +105,17 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         spent: new fields.BooleanField({ required: true, initial: false })
       }),
 
+      /** Built rather than picked from a list - an Apparel: which kind, its Category, its
+       *  Craftsmanship Grade, the Size it was made for, and its Qualities by id. Any number
+       *  of Qualities: over its Slots is said, not refused. */
+      crafted: new fields.SchemaField({
+        kind: new fields.StringField({ required: true, blank: true, initial: "" }),
+        category: new fields.StringField({ required: true, blank: true, initial: "" }),
+        grade: new fields.NumberField({ required: true, integer: true, min: 1, max: 5, initial: 1 }),
+        size: new fields.StringField({ required: true, blank: true, initial: "" }),
+        qualities: new fields.ArrayField(new fields.StringField({ blank: false }))
+      }),
+
       /** Shrinks its wearer to a Size named outright - the Micro Band - and where they are. */
       shrink: new fields.SchemaField({
         to: new fields.ArrayField(new fields.StringField({ blank: false })),

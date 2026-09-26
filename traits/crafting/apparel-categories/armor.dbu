@@ -1,0 +1,15 @@
+id: armor
+name: Armor
+kind: crafting
+source: Core Rule
+description: >
+  Damage Reduction equal to the Apparel Bonus. Always the Top Layer, with nothing put on over it.
+text: >
+  Armor. Gain Damage Reduction equal to the Apparel Bonus. Armor must be the Top Layer of your
+  Apparel and you cannot equip any piece of Apparel while wearing Armor.
+
+---
+
+# Not built yet: what it does waits on Layers, which come with the rest of the Apparel rules.
+# "Each one with their own benefits that you gain while wearing that piece of Apparel as the
+# Top Layer."

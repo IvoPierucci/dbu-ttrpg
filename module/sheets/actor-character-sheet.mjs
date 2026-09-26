@@ -12,6 +12,7 @@ import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable,
   connectedItem, connectedTarget, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
   inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
+  craftedItemFrom, craftedReading,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -447,6 +448,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       eatPortion: DBUCharacterSheet._onEatPortion,
       teleportGear: DBUCharacterSheet._onTeleportGear,
       equipGear: DBUCharacterSheet._onEquipGear,
+      addApparel: DBUCharacterSheet._onAddApparel,
       lockGear: DBUCharacterSheet._onLockGear,
       shrinkGear: DBUCharacterSheet._onShrinkGear,
       unlockGear: DBUCharacterSheet._onUnlockGear,
@@ -1011,7 +1013,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         itemId: item.id,
         name: item.name,
         img: item.img,
-        typeLabel: item.system.special ? `Special ${type.label}` : type.label,
+        typeLabel: DBUCharacterSheet.#gearTypeLabel(item, type),
+        // Built with more Qualities than its Slots: said on the row, and it works as it is.
+        overSlots: DBUCharacterSheet.#overSlots(item),
         sizeLabel: item.system.size ?? "",
         // A full restore, while there is a charge left to do it with.
         restores: Boolean(item.system.restore?.full) && ((item.system.charges ?? 0) > 0),
@@ -2115,6 +2119,35 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const size = Math.min(set.max, Math.max(set.min, chosen.size || set.max));
     const number = Math.min(size, Math.max(1, chosen.number || 1));
     return { size, number };
+  }
+
+  /** What a row says an Item is: its Type, or for a built one its Category and Grade. */
+  static #gearTypeLabel(item, type) {
+    const crafted = item.system.crafted;
+    if (crafted?.kind) {
+      const name = getTrait(crafted.category)?.name ?? crafted.category;
+      return `${name} · Grade ${crafted.grade}`;
+    }
+    return item.system.special ? `Special ${type.label}` : type.label;
+  }
+
+  /** How many Qualities past its Slots a built Item is, or 0. */
+  static #overSlots(item) {
+    if (!item.system.crafted?.kind) return 0;
+    return craftedReading(item.system.crafted,
+      { getTrait, difficulties: DBUCharacterData.DIFFICULTIES })?.over ?? 0;
+  }
+
+  /**
+   * Add a piece of Apparel: "Choose a Craftsmanship Grade ... a Size Category ... an Apparel
+   * Category ... Apparel Qualities." It starts as Standard Clothing, Grade 1, at the Size the
+   * character was built as, with nothing on it - and all of that is changed on the Item.
+   */
+  static async _onAddApparel(event, target) {
+    const data = craftedItemFrom("apparel", this.actor, getTrait);
+    if (!data) return;
+    const [made] = await this.actor.createEmbeddedDocuments("Item", [data]);
+    return made?.sheet?.render(true);
   }
 
   /** What a Remote Control's row says it is connected to - and on whom, for a Collar. */

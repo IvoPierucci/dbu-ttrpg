@@ -123,6 +123,23 @@
   font-style: normal;
 }
 
+/* A built Item with more Qualities than its Slots: said, in the accent, and nothing more. */
+.dbu-ttrpg .gear-warning {
+  color: var(--dbu-accent);
+  font-size: 12px;
+}
+
+.dbu-ttrpg .gear-add-quality {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.dbu-ttrpg .gear-add-quality select {
+  flex: 1;
+}
+
 .dbu-gear-pick optgroup option {
   background: var(--dbu-panel, #1e1e1e);
   color: var(--dbu-text, #e8e8e8);

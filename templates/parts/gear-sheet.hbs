@@ -12,6 +12,69 @@
     </div>
   </header>
 
+  {{#if crafted}}
+  <section class="panel">
+    <h3 class="panel-title">{{crafted.label}}</h3>
+    <div class="stat-grid">
+      <div class="stat">
+        <em>Category</em>
+        <select name="system.crafted.category">
+          {{#each crafted.categoryChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat">
+        <em>Craftsmanship Grade</em>
+        <select name="system.crafted.grade" data-dtype="Number">
+          {{#each crafted.gradeChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat">
+        <em>Size</em>
+        <select name="system.crafted.size">
+          {{#each crafted.sizeChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+    <div class="gear-facts">
+      <span>Apparel Grade: {{crafted.reading.gradeLabel}}</span>
+      <span>Apparel Bonus: {{crafted.bonusLabel}}</span>
+      <span>Quality Slots: {{crafted.reading.slots}}</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">Qualities</h3>
+    {{#each crafted.qualities as |quality|}}
+    <div class="gear-row">
+      <span class="gear-name" data-tooltip="{{quality.tip}}">{{quality.name}}</span>
+      <button type="button" class="gear-remove" data-action="removeQuality"
+              data-index="{{quality.index}}" data-tooltip="Remove">&times;</button>
+    </div>
+    {{else}}
+    <p class="tab-placeholder">None.</p>
+    {{/each}}
+    {{#if crafted.overNote}}<p class="gear-warning">{{crafted.overNote}}</p>{{/if}}
+    <div class="gear-add-quality">
+      {{#if crafted.qualityChoices.length}}
+      <select data-quality-pick>
+        {{#each crafted.qualityChoices as |choice|}}
+        <option value="{{choice.value}}">{{choice.label}}</option>
+        {{/each}}
+      </select>
+      <button type="button" class="dbu-clash-button" data-action="addQuality">Add Quality</button>
+      {{else}}
+      <p class="tab-placeholder">No Qualities to add yet.</p>
+      {{/if}}
+    </div>
+  </section>
+  {{/if}}
+
   {{#if hasControls}}
   <section class="panel">
     <div class="stat-grid">

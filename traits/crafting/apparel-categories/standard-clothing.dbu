@@ -1,0 +1,16 @@
+id: standard-clothing
+name: Standard Clothing
+kind: crafting
+# "Reduces the Craft DC by 1 Difficulty Category."
+craftDCShift: -1
+source: Core Rule
+description: >
+  No Apparel Penalty, and a Craft DC one Difficulty lower.
+text: >
+  Standard Clothing. Standard Clothing does not inflict Apparel Penalties and reduces the Craft
+  DC by 1 Difficulty Category.
+
+---
+
+# The Craft DC is built: the sheet shows it one Difficulty lower than the Craftsmanship Grade
+# gives. The Apparel Penalty waits on Layers, which come with the rest of the Apparel rules.

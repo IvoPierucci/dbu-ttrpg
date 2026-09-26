@@ -89,6 +89,106 @@ export function brokenByPowerUp(actors, tier) {
   return broken;
 }
 
+/**
+ * Items built rather than picked from a list, and what building one is made of.
+ *
+ * "Apparel have a Craft DC depending on their Craftsmanship Grade. The Craftsmanship of a
+ * piece of Apparel decides how many Quality Slots they have and the Apparel Grade of that
+ * piece of Apparel." And "Apparel comes in three grades, each with their own Apparel Bonus."
+ *
+ * `categories` and `qualities` are the subfolders of traits/crafting/ the pieces are read
+ * from. Weapons join this table the same way.
+ */
+export const CRAFTED = Object.freeze({
+  apparel: {
+    label: "Apparel",
+    categories: "apparel-categories",
+    qualities: "apparel-qualities",
+    // "Choose a Craftsmanship Grade ... Choose an Apparel Category" - what Add Apparel starts
+    // at, for the player to change on the Item.
+    defaultCategory: "standard-clothing",
+    grades: Object.freeze({
+      1: { craftDC: "apprentice", grade: "low", slots: 0 },
+      2: { craftDC: "qualified", grade: "low", slots: 1 },
+      3: { craftDC: "expert", grade: "standard", slots: 2 },
+      4: { craftDC: "master", grade: "standard", slots: 3 },
+      5: { craftDC: "grandmaster", grade: "high", slots: 4 }
+    }),
+    // "Low: Apparel Bonus of 1(bT). Standard: 2(bT). High: 3(bT)."
+    bonus: Object.freeze({
+      low: { label: "Low", perBaseTier: 1 },
+      standard: { label: "Standard", perBaseTier: 2 },
+      high: { label: "High", perBaseTier: 3 }
+    })
+  }
+});
+
+/**
+ * What a built Item comes to: its Category, Craft DC, Grade, Bonus and Quality Slots, and how
+ * far past its Slots its Qualities go.
+ *
+ * Over is said, never refused: an Item with more Qualities than its Slots works as it is,
+ * and the sheet says it is over.
+ *
+ * @param {object} crafted  the Item's `system.crafted`
+ * @param {{getTrait: function, difficulties: object, baseTier: number}} with
+ */
+export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }) {
+  const kind = CRAFTED[crafted?.kind];
+  if (!kind) return null;
+  const grade = kind.grades[crafted.grade] ?? kind.grades[1];
+  const category = getTrait?.(crafted.category) ?? null;
+
+  // The Craft DC the Grade gives, moved by the Category - Standard Clothing's one lower -
+  // and held to the ends of the list.
+  const order = Object.keys(difficulties ?? {});
+  const from = order.indexOf(grade.craftDC);
+  const shift = Number(category?.craftDCShift) || 0;
+  const craftDC = (from < 0) ? grade.craftDC
+    : order[Math.min(order.length - 1, Math.max(0, from + shift))];
+
+  const band = kind.bonus[grade.grade];
+  const count = (crafted.qualities ?? []).length;
+  return {
+    kind: crafted.kind,
+    categoryName: category?.name ?? crafted.category,
+    craftDC,
+    craftDCLabel: difficulties?.[craftDC]?.label ?? craftDC,
+    gradeLabel: band.label,
+    perBaseTier: band.perBaseTier,
+    bonus: band.perBaseTier * (Number(baseTier) || 1),
+    slots: grade.slots,
+    qualities: count,
+    over: Math.max(0, count - grade.slots)
+  };
+}
+
+/**
+ * A new built Item, at what building one starts at: "Add Apparel" - Standard Clothing,
+ * Craftsmanship Grade 1, the Size the character was built as, and no Qualities.
+ */
+export function craftedItemFrom(kindKey, actor, getTrait) {
+  const kind = CRAFTED[kindKey];
+  if (!kind) return null;
+  const size = actor?.system?.size;
+  return {
+    name: getTrait?.(kind.defaultCategory)?.name ?? kind.label,
+    type: "gear",
+    img: GEAR_ICON,
+    system: {
+      gearId: "",
+      itemType: kindKey,
+      crafted: {
+        kind: kindKey,
+        category: kind.defaultCategory,
+        grade: 1,
+        size: size?.chosen ?? size?.key ?? "medium",
+        qualities: []
+      }
+    }
+  };
+}
+
 /** A list header, from one value or several. */
 function listOf(raw) {
   const list = Array.isArray(raw) ? raw : String(raw ?? "").split(",");

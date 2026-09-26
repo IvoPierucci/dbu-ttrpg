@@ -173,7 +173,25 @@
     <details class="condition-group" data-section="gearApparel"
              {{#if openSections.gearApparel}}open{{/if}}>
       <summary class="panel-title">Apparel</summary>
+
+      {{#each gear.apparel as |row|}}
+      <div class="gear-row" data-item-id="{{row.itemId}}" draggable="true">
+        <img src="{{row.img}}" width="24" height="24"/>
+        <a class="gear-name" data-action="editItem" data-item-id="{{row.itemId}}">{{row.name}}</a>
+        <span class="gear-type">{{row.typeLabel}}</span>
+        {{#if row.overSlots}}
+        <span class="gear-warning" data-tooltip="More Qualities than its Quality Slots. It still works.">+{{row.overSlots}} over</span>
+        {{/if}}
+        <button type="button" class="gear-remove" data-action="deleteItem"
+                data-item-id="{{row.itemId}}" data-tooltip="Remove">&times;</button>
+      </div>
+      {{else}}
       <p class="tab-placeholder">None yet.</p>
+      {{/each}}
+
+      <button type="button" class="dbu-clash-button" data-action="addApparel">
+        Add Apparel
+      </button>
     </details>
   </section>
 

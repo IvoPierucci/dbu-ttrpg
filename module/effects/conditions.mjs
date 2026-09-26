@@ -69,9 +69,14 @@ const PREDICATES = {
    * Clothing". By the file's id, so a renamed one still counts; worn being the same
    * `equipped` an Accessory is put on with, and one in a Capsule never being worn.
    */
-  wearing: (scope, id) => Array.from(scope.data?.parent?.items ?? []).some(item =>
-    (item.type === "gear") && (item.system?.gearId === String(id).trim().toLowerCase())
-    && Boolean(item.system?.equipped)),
+  wearing: (scope, id) => {
+    const wanted = String(id).trim().toLowerCase();
+    // An Item made from that file, or one built as that Category - "Standard Clothing" is an
+    // Apparel Category, and any Apparel of it counts.
+    return Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "gear")
+      && ((item.system?.gearId === wanted) || (item.system?.crafted?.category === wanted))
+      && Boolean(item.system?.equipped));
+  },
 
   /** Is this character a Minion. */
   isMinion: scope => Boolean(scope.data?.minion),

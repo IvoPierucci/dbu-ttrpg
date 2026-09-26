@@ -1,0 +1,13 @@
+id: combat-clothing
+name: Combat Clothing
+kind: crafting
+source: Core Rule
+description: >
+  Defense Value higher by half the Apparel Bonus, while the Top Layer.
+text: >
+  Combat Clothing. While this is the Top Layer of Apparel, increase your Defense Value by 1/2
+  (rounded up) of the Apparel Bonus.
+
+---
+
+# Not built yet: what it does waits on Layers, which come with the rest of the Apparel rules.

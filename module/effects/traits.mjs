@@ -44,6 +44,10 @@ export const KINDS = Object.freeze({
   // they gain one. Nothing is gathered from these as effects yet - a file here is read by
   // the Add Item window and by the Item's own sheet.
   gear: { label: "Gear", priority: PRIORITY.base },
+  // The pieces an Item is built from rather than picked from a list - an Apparel's Category
+  // and Qualities, and a Weapon's when they arrive. The subfolder says which: `crafting/
+  // apparel-categories/armor.dbu`. Read by the Item's own sheet.
+  crafting: { label: "Crafting Option", priority: PRIORITY.base },
   // A Karmic Effect is bought with a Karma Point rather than granted by anything, so
   // it sits at base Priority - nothing else is competing with it for a Slot.
   karma: { label: "Karmic Effect", priority: PRIORITY.base },

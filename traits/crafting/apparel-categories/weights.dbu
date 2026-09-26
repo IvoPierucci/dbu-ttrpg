@@ -1,0 +1,15 @@
+id: weights
+name: Weights
+kind: crafting
+source: Core Rule
+description: >
+  Combat Rolls lower by the Apparel Bonus. Taken off after the 3rd Combat Round, a bigger Doff
+  Bonus.
+text: >
+  Weights. Reduce your Combat Rolls by the Apparel Bonus. When you remove this piece of Apparel
+  after the 3rd Combat Round of a Combat Encounter, increase the Doff Bonus by 1/2 (rounded up).
+
+---
+
+# Not built yet: what it does waits on Layers and the Doff Bonus, which come with the rest of
+# the Apparel rules.
