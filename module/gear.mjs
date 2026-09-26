@@ -389,6 +389,16 @@ export function gearItemFrom(definition, actor = null) {
       // A Key: the lock it opens.
       keyFor: "",
 
+      // A State it lets its wearer enter on entering another, once for this Item, and until
+      // which edge of their turn - the Bloodstained Accessory's Determined on entering
+      // Raging, "until the end of your turn".
+      entersOn: {
+        from: String(definition.entersOnFrom ?? "").trim().toLowerCase(),
+        state: String(definition.entersOnState ?? "").trim().toLowerCase(),
+        edge: String(definition.entersOnUntil ?? "").trim().toLowerCase(),
+        spent: false
+      },
+
       // Shrinks its wearer to a Size Category named outright - the Micro Band's Tiny or
       // Nano - for so many Actions, and the same to come back. `now` is where they are.
       shrink: {
@@ -789,6 +799,18 @@ export function equipProblem(items, item) {
     return `Already wearing ${ACCESSORIES_WORN} Accessories.`;
   }
   return "";
+}
+
+/**
+ * The worn Items that offer a State on entering another, and have not yet: "If you enter the
+ * Raging State, you may enter the Determined State until the end of your turn. This effect
+ * can only be used once for this Accessory."
+ */
+export function statesOffered(items, entered) {
+  return accessoriesInEffect(items).filter(item => {
+    const on = item.system?.entersOn;
+    return on?.state && (on.from === entered) && !on.spent;
+  });
 }
 
 /**

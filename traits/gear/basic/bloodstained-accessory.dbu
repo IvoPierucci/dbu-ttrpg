@@ -1,0 +1,49 @@
+id: bloodstained-accessory
+name: Bloodstained Accessory
+kind: gear
+itemType: accessory
+# A Special Accessory: it follows the rules for Special Basic Items - no Craft DC, and the
+# ARC hands it out.
+special: true
+# "If you enter the Raging State, you may enter the Determined State until the end of your
+# turn. This effect can only be used once for this Accessory."
+entersOnFrom: raging
+entersOnState: determined
+entersOnUntil: end
+source: Core Rule
+description: >
+  Steadfast Checks 1 higher, Morale 1(bT) higher, Wound Rolls 1(T) higher while Raging - and
+  once, Determined until the end of your turn on entering Raging.
+text: >
+  Bloodstained Accessory: A piece of cloth or keepsake stained with the blood of a fallen
+  comrade used to remind you what you’re fighting for.
+  –Effects: This Accessory has multiple effects that apply while it is equipped:
+
+  * Increase the Dice Score of your Steadfast Checks by 1.
+  * Increase your Morale Saves by 1(bT).
+  * While in the Raging State, increase your Wound Rolls by 1(T).
+  * If you enter the Raging State, you may enter the Determined State until the end of your
+    turn. This effect can only be used once for this Accessory.
+
+  When an Ally dies, you may take an Accessory they possess or tear off a piece of their
+  Apparel by spending 2 Actions beside them. If you do, that Accessory or piece of Apparel
+  becomes a Bloodstained Accessory.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# While worn, the three below. And on entering Raging, whoever entered it is asked whether to
+# enter Determined until the end of their turn; taken, it is used up for this Accessory - its
+# own clock ends it at the end of the turn, so Determined's usual skipped turn never comes.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Making one: the Ally's death, the 2 Actions beside them, and which Accessory or Apparel it
+# was. It is given through Add Item, and can be renamed for what it was - "Bloodstained Scarf".
+[passive]
+steadfast.dice += 1;
+save.morale += 1(bT);
+if (inState("raging")) {
+  wound += 1(T);
+}

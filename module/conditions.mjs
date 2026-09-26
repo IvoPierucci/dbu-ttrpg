@@ -274,6 +274,40 @@ export async function toggleCondition(actor, key) {
  * Slowed stacks you gained)", so a stack change fires it for the difference and a
  * Condition already held does not fire it again from nothing.
  */
+/**
+ * Offer what entering a State lets them enter too, and take it if they say yes.
+ *
+ * The Bloodstained Accessory: "If you enter the Raging State, you may enter the Determined
+ * State until the end of your turn. This effect can only be used once for this Accessory."
+ * A choice, so it is asked - of whoever made the change, on their own client - and used up
+ * only when taken.
+ */
+export async function offerStatesOnEntering(actor, entered) {
+  const { statesOffered } = await import("./gear.mjs");
+  for (const item of statesOffered(Array.from(actor.items ?? []), entered)) {
+    const on = item.system.entersOn;
+    const name = getTrait(on.state)?.name ?? on.state;
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: item.name },
+      content: `<p>Enter ${Handlebars.escapeExpression(name)} until the ${on.edge || "end"} of `
+        + "your turn? Once for this Accessory.</p>",
+      buttons: [
+        { action: "take", label: `Enter ${name}` },
+        { action: "leave", label: "Not now" }
+      ],
+      rejectClose: false
+    });
+    if (chosen !== "take") continue;
+
+    await setState(actor, on.state, 1);
+    const { EDGES, KINDS, lasting } = await import("./durations.mjs");
+    await lasting(actor, { kind: KINDS.STATE, key: on.state,
+      edge: (on.edge === "start") ? EDGES.START : EDGES.END, source: item.name });
+    await item.update({ "system.entersOn.spent": true });
+  }
+}
+
 export function registerConditionHooks() {
   Hooks.on("preUpdateActor", (actor, changes, options) => {
     if (actor.type !== "character") return;
@@ -301,6 +335,24 @@ export function registerConditionHooks() {
       await announceChanges(actor, options.dbuStatesBefore,
         actor.system.states ?? {}, "state");
     }
+  });
+
+  // Asked of whoever entered the State, where they play the character: the GM's client
+  // above announces, and this is a question only the player can answer.
+  Hooks.on("updateActor", async (actor, changes, options, userId) => {
+    if ((actor.type !== "character") || !options.dbuStatesBefore) return;
+    if ((userId !== game.user.id) || !actor.isOwner) return;
+    const now = actor.system.states ?? {};
+    for (const key of Object.keys(now)) {
+      if (!((Number(options.dbuStatesBefore[key]) || 0) > 0) && ((Number(now[key]) || 0) > 0)) {
+        await offerStatesOnEntering(actor, key);
+      }
+    }
+  });
+
+  Hooks.on("updateActor", async (actor, changes, options) => {
+    if (actor.type !== "character") return;
+    if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
 
     // A Condition inflicted through an Item - the Net's Pinned - leaves a note of who and
     // with what. Gone with the Condition, so the next one is Clashed against as usual.

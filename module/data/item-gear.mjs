@@ -96,6 +96,15 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** A Key: the lock it opens. */
       keyFor: new fields.StringField({ required: true, blank: true, initial: "" }),
 
+      /** A State offered on entering another, until an edge of the turn, once - the
+       *  Bloodstained Accessory - and whether that once is spent. */
+      entersOn: new fields.SchemaField({
+        from: new fields.StringField({ required: true, blank: true, initial: "" }),
+        state: new fields.StringField({ required: true, blank: true, initial: "" }),
+        edge: new fields.StringField({ required: true, blank: true, initial: "" }),
+        spent: new fields.BooleanField({ required: true, initial: false })
+      }),
+
       /** Shrinks its wearer to a Size named outright - the Micro Band - and where they are. */
       shrink: new fields.SchemaField({
         to: new fields.ArrayField(new fields.StringField({ blank: false })),
