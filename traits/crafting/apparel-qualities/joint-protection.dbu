@@ -1,0 +1,26 @@
+id: joint-protection
+name: Joint Protection
+kind: crafting
+categories: armor
+slots: 1
+# "The first time in a Combat Encounter that your Break Value would be lowered while being at
+# its maximum Break Value, your Break Value is not lowered." Read by the Break Value.
+sparesFirstBreak: true
+source: Core Rule
+description: >
+  Once a Combat Encounter, the first loss of Break Value from full does not happen.
+text: >
+  Joint Protection: This armor covers your joints, reducing the chances of them being injured.
+  –Apparel Category: Armor
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: The first time in a Combat Encounter that your Break Value would be lowered while
+  being at its maximum Break Value, your Break Value is not lowered.
+
+---
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Losing Break Value comes with the rest of the Apparel rules. When it does: a piece with this
+# on it, at its maximum Break Value, loses nothing the first time in a Combat Encounter it would,
+# and that once is kept with the other once-per-Encounter uses.

@@ -41,6 +41,8 @@ Headers only a Quality reads:
   breakValue:    what it adds to the most its Apparel's Break Value can be - Durable's 3.
   hardnessValue: a Hardness Value it sets its Apparel's to outright - Hefty Plating's 4.
   wornOverArmor: true - its Apparel may go on over Armor, the Jacket's. Read by the Layers.
+  sparesFirstBreak: true - the first loss of Break Value from full each Combat Encounter does
+                 not happen, Joint Protection's. Read by the Break Value.
   excludesQualities: a Quality that, on the same piece, keeps this one from applying at all -
                  Durable's `lightweight`.
   requiresQualities: a Quality it needs on the same piece to apply at all.
