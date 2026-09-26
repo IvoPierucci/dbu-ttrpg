@@ -39,6 +39,7 @@ Headers only a Quality reads:
   apparelBonus:  what it adds to its Apparel's Apparel Bonus, per base Tier - Dense Armor's 1.
                  Part of the Bonus wherever it is read, worn or not.
   breakValue:    what it adds to the most its Apparel's Break Value can be - Durable's 3.
+  hardnessValue: a Hardness Value it sets its Apparel's to outright - Hefty Plating's 4.
   excludesQualities: a Quality that, on the same piece, keeps this one from applying at all -
                  Durable's `lightweight`.
   requiresQualities: a Quality it needs on the same piece to apply at all.

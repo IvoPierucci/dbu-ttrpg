@@ -178,6 +178,11 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
     over: Math.max(0, used - grade.slots),
     // The most its Break Value can be: 3, and what its Qualities add.
     breakValue: (Number(kind.breakValue) || 0) + added("breakValue"),
+    // A Hardness Value one of its Qualities sets outright - Hefty Plating's "is set to 4" -
+    // or null where none does. The highest, should two ever say so.
+    hardnessValue: active.map(entry => getTrait?.(entry.id)?.hardnessValue)
+      .filter(value => Number.isFinite(Number(value)) && (value !== ""))
+      .reduce((most, value) => Math.max(most ?? 0, Number(value)), null),
     // The ones its Category does not take: "Apparel Qualities may apply to only certain
     // Apparel Categories." Kept, and inactive.
     misfits: entries.filter(entry => !qualityFits(getTrait?.(entry.id), crafted.category))
