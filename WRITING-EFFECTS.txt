@@ -815,7 +815,8 @@ piece does. Its Category and Qualities write their part into it when they are ch
     [passive]
     strike += 1;
 
-Everything runs while the piece is worn. Inside a piece's Effects, `$apparelBonus` is its own
+Everything runs while the piece is worn - its Category's part only while it is the Top Layer,
+or the highest Layer worn when the Top is empty. Inside a piece's Effects, `$apparelBonus` is its own
 Apparel Bonus per base Tier - Combat Ready's `strike += ceil($apparelBonus(bT) / 2);`.
 
 What the piece is, rather than what it does to its wearer, is a `piece.` Slot:

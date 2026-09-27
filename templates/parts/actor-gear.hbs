@@ -186,6 +186,9 @@
         {{/if}}
         {{! Worn: the one button, off the Layer it is on. Not: a button for each Layer, closed
             while another piece is on it. }}
+        {{#if row.actsAsTop}}
+        <span class="gear-type" data-tooltip="Nothing is on the Top Layer: this acts as it, and its Category applies.">as Top</span>
+        {{/if}}
         {{#if row.worn}}
         <button type="button" class="gear-act" data-action="layerGear"
                 data-item-id="{{row.itemId}}">Unequip{{#if row.layerLabel}} {{row.layerLabel}}{{/if}}</button>

@@ -12,7 +12,7 @@ import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable,
   connectedItem, connectedTarget, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
   inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
-  craftedItemFrom, craftedReading, APPAREL_LAYERS, onLayer,
+  craftedItemFrom, craftedReading, APPAREL_LAYERS, onLayer, topLayerPiece,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -2782,6 +2782,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       apparel: true,
       layer,
       layerLabel: APPAREL_LAYERS[layer]?.label ?? "",
+      // Worn under an empty Top Layer and highest of what is worn: it acts as the Top, and its
+      // Category is the one that applies.
+      actsAsTop: Boolean(layer) && (layer !== "top") && (topLayerPiece(items) === item),
       // Worn with no Layer said - worn before there were Layers: taken off all the same.
       worn: Boolean(item.system.equipped),
       layers: Object.entries(APPAREL_LAYERS).map(([key, { label }]) => {

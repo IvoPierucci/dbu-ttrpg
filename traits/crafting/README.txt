@@ -84,7 +84,10 @@ A Quality's script may also name its own piece's Apparel Bonus as `$apparelBonus
 Tier - `parry += ceil($apparelBonus(bT) / 2);` is "1/2 (rounded up) of the Apparel Bonus".
 
 A piece's Effects run while it is worn: its `piece.` lines say what the piece is, and the rest
-what it does to its wearer.
+what it does to its wearer. Its Category's part runs only while it is the Top Layer - or, with
+nothing on the Top Layer, the highest Layer worn: "benefits that you gain while wearing that
+piece of Apparel as the Top Layer". Its Qualities' parts, and lines of its owner's own, run on
+any Layer.
 
 "If an effect would apply an Apparel Quality to a piece of Apparel that has all of its Quality
 Slots filled, you may remove any number of Apparel Qualities before applying that additional

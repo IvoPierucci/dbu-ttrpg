@@ -139,7 +139,8 @@ export const CRAFTED = Object.freeze({
  * @param {object} crafted  the Item's `system.crafted`
  * @param {{getTrait: function, difficulties: object, baseTier: number}} with
  */
-export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, data = null }) {
+export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, data = null,
+  category: withCategory = true }) {
   const kind = CRAFTED[crafted?.kind];
   if (!kind) return null;
   const grade = kind.grades[crafted.grade] ?? kind.grades[1];
@@ -163,7 +164,8 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, 
   // What the piece is, as its own Effects say - never its Qualities' files: what they wrote
   // there when they were added, and whatever its owner has written since. Dense Armor's
   // `piece.apparelBonus += 1;`, Durable's `piece.breakValue += 3;`.
-  const piece = pieceSlots(crafted, { getTrait, data, perBaseTier: band.perBaseTier });
+  const piece = pieceSlots(crafted, { getTrait, data, perBaseTier: band.perBaseTier,
+    category: withCategory });
   const fromQualities = applySlot(piece, "piece.apparelBonus", 0);
   const perBaseTier = band.perBaseTier + fromQualities;
   const flag = key => piece[key] === true;
@@ -228,8 +230,9 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, 
  */
 export function groundIgnored(items, getTrait) {
   const ignored = { environments: false, qualities: false };
+  const top = topLayerPiece(items);
   for (const { item } of apparelQualitiesInEffect(items)) {
-    const piece = pieceSlots(item.system.crafted, { getTrait });
+    const piece = pieceSlots(item.system.crafted, { getTrait, category: item === top });
     if (piece["piece.ignoresEnvironments"] === true) ignored.environments = true;
     if (piece["piece.ignoresEnvironmentalQualities"] === true) ignored.qualities = true;
   }
@@ -316,8 +319,9 @@ export function qualityChoiceLabel(trait, choice, skills, weathers = {}) {
 export function weatherResisted(items, weatherId, getTrait, data = null) {
   if (!weatherId) return 0;
   let tiers = 0;
+  const top = topLayerPiece(items);
   for (const { item } of apparelQualitiesInEffect(items)) {
-    tiers += applySlot(pieceSlots(item.system.crafted, { getTrait, data }),
+    tiers += applySlot(pieceSlots(item.system.crafted, { getTrait, data, category: item === top }),
       `piece.resistsWeather.${weatherId}`, 0);
   }
   return tiers;
@@ -371,8 +375,10 @@ export function apparelSize(item, wearer, getTrait) {
  */
 export function spikesOf(items, getTrait, baseTier = 1) {
   const found = [];
+  const top = topLayerPiece(items);
   for (const { item } of apparelQualitiesInEffect(items)) {
-    const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier });
+    const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier,
+      category: item === top });
     if (!reading?.spikes) continue;
     found.push({ item, amount: reading.bonus ?? 0 });
   }
@@ -599,6 +605,23 @@ export const APPAREL_LAYERS = Object.freeze({
 });
 
 /**
+ * The worn piece of Apparel that is the Top Layer: the one on the Top Layer, or - with nothing
+ * there - the Middle, or the Bottom. Its Category is the only one that applies: "each one with
+ * their own benefits that you gain while wearing that piece of Apparel as the Top Layer", and
+ * by the table's ruling the highest Layer worn acts as the Top. A piece worn before there were
+ * Layers is under all three. Null when nothing is worn.
+ */
+export function topLayerPiece(items) {
+  const order = Object.keys(APPAREL_LAYERS);
+  const rank = item => {
+    const at = order.indexOf(item.system?.layer ?? "");
+    return (at < 0) ? order.length : at;
+  };
+  return apparelQualitiesInEffect(items).map(({ item }) => item)
+    .sort((a, b) => rank(a) - rank(b))[0] ?? null;
+}
+
+/**
  * The piece of Apparel on one Layer among these Items, other than `except`, or null - what
  * keeps a second piece off it.
  */
@@ -623,12 +646,15 @@ const pieceCache = new Map();
  * What a built Item's Effects say about the piece itself - its `piece.*` Slots, resolved.
  *
  * `data` is its wearer's, for a Prerequisite asked in an `if` - Weather Resistant's Survival -
- * and nobody's where there is no wearer, which leaves such a line unmet.
+ * and nobody's where there is no wearer, which leaves such a line unmet. `category: false`
+ * leaves its Category's part out, for a piece worn under the Top Layer.
  */
-export function pieceSlots(crafted, { getTrait, data = null, perBaseTier = null } = {}) {
+export function pieceSlots(crafted, { getTrait, data = null, perBaseTier = null,
+  category = true } = {}) {
   if (!CRAFTED[crafted?.kind]) return {};
   const band = CRAFTED[crafted.kind].bonus[CRAFTED[crafted.kind].grades[crafted.grade]?.grade];
-  const script = scriptWithPiece(effectsOf(crafted, getTrait),
+  const written = effectsOf(crafted, getTrait);
+  const script = scriptWithPiece(category ? written : withoutCategory(written),
     { perBaseTier: perBaseTier ?? band?.perBaseTier ?? 0 });
   if (!script.trim()) return {};
   let program = pieceCache.get(script);
@@ -640,6 +666,12 @@ export function pieceSlots(crafted, { getTrait, data = null, perBaseTier = null 
   if (!program) return {};
   return applyPassives([{ program, priority: PRIORITY.talent, sourceName: "", level: 0, stacks: 1 }],
     PHASES.PIECE, { data: data ?? {}, errors: [] }).slots;
+}
+
+/** A piece's Effects without its Category's part: what it does worn under the Top Layer. */
+export function withoutCategory(script) {
+  return effectParts(script).filter(part => part.type !== "category")
+    .map(part => (part.key ? partText(part) : part.text)).join("\n\n");
 }
 
 /** A multiplier Slot as written - `*= 1/2` - rather than rounded to a whole number. */

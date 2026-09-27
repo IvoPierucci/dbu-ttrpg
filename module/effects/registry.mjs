@@ -15,7 +15,7 @@ import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { accessoriesInEffect, apparelQualitiesInEffect, craftedReading, effectParts,
-  effectsOf, groundIgnored, scriptWithPiece } from "../gear.mjs";
+  effectsOf, groundIgnored, scriptWithPiece, topLayerPiece } from "../gear.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -180,13 +180,18 @@ function apparelPrograms(actor, report) {
   const entries = [];
   // The parts that do not stack with themselves, already gathered from one piece.
   const once = new Set();
+  // Its Category only from the Top Layer - or whichever Layer worn is highest.
+  const top = topLayerPiece(Array.from(actor.items ?? []));
   for (const { item } of apparelQualitiesInEffect(Array.from(actor.items ?? []))) {
     // The piece's own Effects, and nothing else: what its Category and Qualities wrote there,
     // and whatever has been written since. A part at a time, so each keeps its own name in the
     // workings - and one marked `nostack`, Team Outfit's "this bonus does not stack", is
     // gathered from one piece however many carry it.
-    const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {} });
+    const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {},
+      category: item === top });
     for (const part of effectParts(effectsOf(item.system.crafted, getTrait))) {
+      // "Benefits that you gain while wearing that piece of Apparel as the Top Layer."
+      if ((part.type === "category") && (item !== top)) continue;
       if (part.flags?.includes("nostack")) {
         if (once.has(part.id)) continue;
         once.add(part.id);
