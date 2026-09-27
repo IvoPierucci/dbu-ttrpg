@@ -436,6 +436,16 @@ export function apparelQualitiesInEffect(items) {
 }
 
 /**
+ * Whether a name begins with what has been typed so far, character by character - the Add
+ * Quality search. Case, apostrophes and the like aside, so "leaders" finds Leader's Insignia.
+ */
+export function namePrefixMatches(name, typed) {
+  const plain = text => String(text ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, "")
+    .replace(/\s+/g, " ").trimStart();
+  return plain(name).startsWith(plain(typed));
+}
+
+/**
  * How many Quality Slots a Quality takes: `slots: 2`, or a range - `slots: 1-3` - "you may
  * select how many Quality Slots a Apparel Quality takes up". One when it does not say.
  */

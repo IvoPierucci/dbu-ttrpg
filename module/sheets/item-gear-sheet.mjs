@@ -3,7 +3,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable, craftedReading,
-  qualityChoiceLabel, qualityChoices, qualityEntries, qualityFits, qualityInactive,
+  namePrefixMatches, qualityChoiceLabel, qualityChoices, qualityEntries, qualityFits, qualityInactive,
   qualitySlotRange, slotsTaken } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 
@@ -73,6 +73,103 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     const { tab, group } = target.dataset;
     this.tabGroups[group] = tab;
     this.changeTab(tab, group, { event, navElement: target, force: true });
+  }
+
+  /** @override */
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    this.#wireQualitySearch();
+  }
+
+  /**
+   * The Add Quality search: typed into, and the list under it keeps only the Qualities whose
+   * name starts with what has been typed so far. Arrows move, Enter picks, and Enter again
+   * adds; a click picks.
+   */
+  #wireQualitySearch() {
+    const input = this.element.querySelector("[data-quality-search]");
+    const list = this.element.querySelector("[data-quality-list]");
+    if (!input || !list) return;
+    const options = [...list.querySelectorAll("[data-quality-option]")];
+    const groups = [...list.querySelectorAll("[data-quality-group]")];
+    const none = list.querySelector("[data-quality-none]");
+    const shown = () => options.filter(option => !option.hidden);
+    const lit = () => options.find(option => option.classList.contains("active"));
+    const light = option => {
+      for (const each of options) each.classList.toggle("active", each === option);
+      option?.scrollIntoView({ block: "nearest" });
+    };
+    const filter = () => {
+      for (const option of options) {
+        option.hidden = !namePrefixMatches(option.dataset.name, input.value);
+      }
+      for (const group of groups) {
+        group.hidden = !options.some(option => !option.hidden
+          && (option.dataset.group === group.dataset.qualityGroup));
+      }
+      if (none) none.hidden = shown().length > 0;
+      light(shown()[0]);
+    };
+    const open = () => {
+      list.hidden = false;
+      filter();
+      list.scrollIntoView({ block: "nearest" });
+    };
+    const pick = option => {
+      input.value = option.dataset.name;
+      input.dataset.picked = option.dataset.qualityOption;
+      list.hidden = true;
+    };
+
+    input.addEventListener("focus", open);
+    input.addEventListener("click", () => list.hidden && open());
+    input.addEventListener("input", () => {
+      delete input.dataset.picked;
+      open();
+    });
+    // Not a field of the Item: typing in it is no change to save.
+    input.addEventListener("change", event => event.stopPropagation());
+    input.addEventListener("blur", () => { list.hidden = true; });
+    input.addEventListener("keydown", event => {
+      const visible = shown();
+      const at = visible.indexOf(lit());
+      if ((event.key === "ArrowDown") || (event.key === "ArrowUp")) {
+        event.preventDefault();
+        if (list.hidden) return open();
+        const step = (event.key === "ArrowDown") ? 1 : -1;
+        light(visible[Math.min(Math.max(at + step, 0), visible.length - 1)]);
+      } else if (event.key === "Enter") {
+        // Never the form's own Enter.
+        event.preventDefault();
+        if (!list.hidden && lit()) pick(lit());
+        else if (input.dataset.picked) DBUGearSheet._onAddQuality.call(this, event, input);
+      } else if ((event.key === "Escape") && !list.hidden) {
+        // Closes the list, not the sheet.
+        event.preventDefault();
+        event.stopPropagation();
+        list.hidden = true;
+      }
+    });
+    // Picked before the field loses focus, so the list is still there to be clicked.
+    list.addEventListener("mousedown", event => {
+      event.preventDefault();
+      const option = event.target.closest("[data-quality-option]");
+      if (option) pick(option);
+    });
+  }
+
+  /**
+   * Which Quality the search means: the one picked, or the first whose name starts with
+   * what was typed - the one the list shows first.
+   */
+  #pickedQuality() {
+    const input = this.element.querySelector("[data-quality-search]");
+    if (!input) return "";
+    if (input.dataset.picked) return input.dataset.picked;
+    if (!input.value.trim()) return "";
+    return [...this.element.querySelectorAll("[data-quality-option]")]
+      .find(option => namePrefixMatches(option.dataset.name, input.value))
+      ?.dataset.qualityOption ?? "";
   }
 
   /** @override */
@@ -241,8 +338,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
    * Quality Slots a Apparel Quality takes up."
    */
   static async _onAddQuality(event, target) {
-    const pick = this.element.querySelector("select[data-quality-pick]")?.value;
-    if (!pick) return;
+    const pick = this.#pickedQuality();
+    if (!pick) return this.element.querySelector("[data-quality-search]")?.focus();
     const trait = getTrait(pick);
     const { min, max, ranged } = qualitySlotRange(trait);
     let slots = min;
@@ -290,7 +387,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       .filter(trait => qualityFits(trait, crafted.category))
       .map(trait => {
         const { min, max, ranged } = qualitySlotRange(trait);
-        return { value: trait.id, label: `${trait.name} (${ranged ? `${min}-${max}` : min})`,
+        return { value: trait.id, name: trait.name,
+          label: `${trait.name} (${ranged ? `${min}-${max}` : min})`,
           special: trait.special === true };
       });
     const label = CRAFTED[crafted.kind]?.label ?? "";

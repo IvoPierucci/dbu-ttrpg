@@ -20,16 +20,22 @@
     {{#if crafted.specialNote}}<p class="gear-warning">{{crafted.specialNote}}</p>{{/if}}
     <div class="gear-add-quality">
       {{#if crafted.qualityChoices.length}}
-      <select data-quality-pick class="dbu-gear-pick">
+      {{! A search, not a field of the Item: no name, so nothing typed is saved. }}
+      <div class="gear-quality-search-row">
+        <input type="text" class="gear-quality-search" data-quality-search autocomplete="off"
+               placeholder="Type a Quality"/>
+        <button type="button" class="dbu-clash-button" data-action="addQuality">Add</button>
+      </div>
+      <ol class="gear-quality-list" data-quality-list hidden>
         {{#each crafted.qualityGroups as |group|}}
-        <optgroup label="{{group.label}}">
-          {{#each group.choices as |choice|}}
-          <option value="{{choice.value}}">{{choice.label}}</option>
-          {{/each}}
-        </optgroup>
+        <li class="gear-quality-group" data-quality-group="{{group.label}}">{{group.label}}</li>
+        {{#each group.choices as |choice|}}
+        <li class="gear-quality-option" data-quality-option="{{choice.value}}"
+            data-name="{{choice.name}}" data-group="{{group.label}}">{{choice.label}}</li>
         {{/each}}
-      </select>
-      <button type="button" class="dbu-clash-button" data-action="addQuality">Add Quality</button>
+        {{/each}}
+        <li class="gear-quality-none" data-quality-none hidden>None starts with that.</li>
+      </ol>
       {{else}}
       <p class="tab-placeholder">No Qualities to add for this Category yet.</p>
       {{/if}}

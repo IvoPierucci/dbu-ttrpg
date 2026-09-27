@@ -146,14 +146,69 @@
 }
 
 .dbu-ttrpg .gear-add-quality {
-  display: flex;
-  gap: 6px;
-  align-items: center;
   margin-top: 6px;
 }
 
-.dbu-ttrpg .gear-add-quality select {
-  flex: 1;
+/* The search takes the row; Add only what its word needs. */
+.dbu-ttrpg .gear-quality-search-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.dbu-ttrpg .gear-quality-search {
+  flex: 1 1 auto;
+}
+
+.dbu-ttrpg .gear-quality-search-row .dbu-clash-button {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0 16px;
+}
+
+/* What the search finds, under it: the groups as the Add Item list's headings are - black
+   behind, the chat's yellow on top - and the Qualities in the list's ordinary colours. */
+.dbu-ttrpg .gear-quality-list {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--dbu-border);
+  border-radius: 4px;
+  background: var(--dbu-panel, #1e1e1e);
+}
+
+.dbu-ttrpg .gear-quality-list[hidden],
+.dbu-ttrpg .gear-quality-list li[hidden] {
+  display: none;
+}
+
+.dbu-ttrpg .gear-quality-group {
+  padding: 2px 6px;
+  background: #000000;
+  color: var(--dbu-chat-accent, #dfe288);
+  font-weight: bold;
+}
+
+.dbu-ttrpg .gear-quality-option,
+.dbu-ttrpg .gear-quality-none {
+  padding: 2px 14px;
+  color: var(--dbu-text, #e8e8e8);
+}
+
+.dbu-ttrpg .gear-quality-option {
+  cursor: pointer;
+}
+
+.dbu-ttrpg .gear-quality-none {
+  font-style: italic;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .gear-quality-option:hover,
+.dbu-ttrpg .gear-quality-option.active {
+  background: rgba(223, 226, 136, 0.18);
 }
 
 .dbu-gear-pick optgroup option {
