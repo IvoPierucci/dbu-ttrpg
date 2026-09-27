@@ -16,7 +16,7 @@
     {{else}}
     <p class="tab-placeholder">None.</p>
     {{/each}}
-    {{#if crafted.overNote}}<p class="gear-warning">{{crafted.overNote}}</p>{{/if}}
+    {{#if crafted.overNote}}<p class="gear-insufficient" data-tooltip="{{crafted.overNote}}">Insufficient Quality Slots</p>{{/if}}
     {{#if crafted.specialNote}}<p class="gear-warning">{{crafted.specialNote}}</p>{{/if}}
     <div class="gear-add-quality">
       {{#if crafted.qualityChoices.length}}

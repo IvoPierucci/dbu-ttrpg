@@ -323,7 +323,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
         ? `${reading.specials} Special Apparel Qualities on one piece. The ARC should be wary `
           + "of more than one."
         : "",
-      // Over is said, not refused: it works as it is.
+      // Over is said, not refused: it works as it is. "Insufficient Quality Slots" on the tab,
+      // and this under the pointer.
       overNote: reading.over
         ? `${reading.used} Quality Slots used, and Craftsmanship Grade ${crafted.grade} gives `
           + `${reading.slots}. It still works.`

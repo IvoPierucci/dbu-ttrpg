@@ -145,6 +145,13 @@
   font-size: 12px;
 }
 
+/* On the Qualities tab: "Insufficient Quality Slots", in the chat's yellow, bold. */
+.dbu-ttrpg .gear-insufficient {
+  margin: 4px 0;
+  color: var(--dbu-chat-accent, #dfe288);
+  font-weight: bold;
+}
+
 .dbu-ttrpg .gear-add-quality {
   margin-top: 6px;
 }
