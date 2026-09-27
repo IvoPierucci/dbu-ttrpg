@@ -1615,7 +1615,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // A racial Saving Throw "crits one point more easily". The data model has worked
       // that out for every Saving Throw since they were built, and nothing had ever read
       // it - so the racial half of the rule did nothing at all.
-      criticalTarget: save.criticalTarget
+      criticalTarget: save.criticalTarget,
+      // What moves the die of every Saving Throw - Legacy's 2.
+      naturalAdd: Number(this.actor.system.saveNatural) || 0
     });
   }
 

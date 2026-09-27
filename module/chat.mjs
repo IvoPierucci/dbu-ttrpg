@@ -5449,6 +5449,8 @@ const CLASH_ROLLS = ({
 
     options: (actor, clash, uuid) => ({
       criticalTarget: actor.system.savingThrows[savePicked(clash, uuid)]?.criticalTarget ?? null,
+      // Legacy's "increase the Natural Result for all ... Saving Throws".
+      naturalAdd: Number(actor.system.saveNatural) || 0,
       // Which Slot an effect that raises this roll writes to, so "increase your Corporeal
       // Saving Throws by 1(T)" reaches the side that answered with Corporeal.
       slot: `save.${savePicked(clash, uuid)}`
@@ -9822,7 +9824,7 @@ export async function rollSteadfastCheck(actor) {
   // written into this function, so `steadfast.target` sat in the Slot table with nothing
   // reading it - and Hot Weather's "reduce the Dice Score of your Steadfast Checks by
   // 1(WT)" had nowhere at all to land.
-  const { die, bonus, target } = actor.system.steadfast;
+  const { die, bonus, target, natural = 0 } = actor.system.steadfast;
 
   const automatic = pending.slice(0, -1);
   const rolled = pending[pending.length - 1];
@@ -9830,7 +9832,12 @@ export async function rollSteadfastCheck(actor) {
 
   // The bonus is part of the formula rather than added afterwards, so that the card shows
   // the whole sum - a Check that failed by one is a thing somebody will want to see.
-  const roll = new Roll(bonus ? `${die} + ${bonus}` : die);
+  //
+  // What moves the die itself - Legacy's "increase the Natural Result for all Steadfast
+  // Checks" - is its own term, named, so the card says where it came from.
+  const terms = [die, natural ? `${natural}[Natural Result]` : "", bonus ? String(bonus) : ""]
+    .filter(Boolean);
+  const roll = new Roll(terms.join(" + "));
   await roll.evaluate();
   const passed = roll.total >= target;
   updates[`system.thresholdChecks.${rolled}`] = passed ? "pass" : "fail";

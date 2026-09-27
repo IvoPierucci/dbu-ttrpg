@@ -2144,6 +2144,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.steadfast = {
       die: DBUCharacterData.STEADFAST_DIE,
       bonus: slot(this, "steadfast.dice"),
+      // What moves the die itself - Legacy's 2.
+      natural: slot(this, "steadfast.natural"),
       target: Math.max(1,
         DBUCharacterData.STEADFAST_TARGET + slot(this, "steadfast.target"))
     };
@@ -2349,6 +2351,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // unlike a (T) bonus - and crits one point more easily.
     const racialSaves = racialSavingThrows(this.race);
 
+    // What moves the die of every Saving Throw - Legacy's 2. Rolled with it wherever one is.
+    this.saveNatural = slot(this, "saves.natural");
     this.savingThrows = Object.fromEntries(
       Object.entries(DBUCharacterData.SAVING_THROWS).map(([save, attribute]) => {
       const racial = racialSaves.includes(save);
