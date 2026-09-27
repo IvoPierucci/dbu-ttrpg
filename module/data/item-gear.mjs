@@ -170,6 +170,10 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       /** An Accessory being worn. Its effects apply only while it is. */
       equipped: new fields.BooleanField({ required: true, initial: false }),
 
+      /** The Layer a piece of Apparel is worn on - top, middle or bottom - while it is. */
+      layer: new fields.StringField({ required: true, blank: true, initial: "",
+        choices: ["", "top", "middle", "bottom"] }),
+
       /** Portions of several kinds, how many of each are left, and what eating one does -
        *  the Medibugs - with the dice for how many are shared out. */
       portionsDice: new fields.StringField({ required: true, blank: true, initial: "" }),

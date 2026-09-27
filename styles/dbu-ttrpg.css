@@ -72,7 +72,14 @@
 
 .dbu-ttrpg .gear-name {
   flex: 1 1 auto;
-  cursor: pointer;
+}
+
+/* The pencil that opens an Item, beside the cross that removes it. */
+.dbu-ttrpg .gear-control {
+  flex: 0 0 auto;
+  width: auto;
+  line-height: 1;
+  padding: 0 6px;
 }
 
 .dbu-ttrpg .gear-tag,

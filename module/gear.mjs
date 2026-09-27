@@ -588,6 +588,26 @@ export function qualityName(entry, trait) {
 }
 
 /**
+ * The Apparel Layers, top down: "Apparels have layers, allowing you to wear up to three pieces
+ * of Apparel at once. The Top Layer, Middle Layer, and Bottom Layer in descending order." One
+ * piece to a Layer.
+ */
+export const APPAREL_LAYERS = Object.freeze({
+  top: { label: "Top" },
+  middle: { label: "Middle" },
+  bottom: { label: "Bottom" }
+});
+
+/**
+ * The piece of Apparel on one Layer among these Items, other than `except`, or null - what
+ * keeps a second piece off it.
+ */
+export function onLayer(items, layer, except = null) {
+  return (items ?? []).find(item => (item.type === "gear") && item.system?.crafted?.kind
+    && item.system?.equipped && (item.system?.layer === layer) && (item.id !== except?.id)) ?? null;
+}
+
+/**
  * A built Item's Effects: what is written on it, or - for one written before Items had
  * Effects of their own - what its Category and Qualities would write.
  */

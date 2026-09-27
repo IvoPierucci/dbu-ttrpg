@@ -12,7 +12,7 @@ import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable,
   connectedItem, connectedTarget, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
   inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
-  craftedItemFrom, craftedReading,
+  craftedItemFrom, craftedReading, APPAREL_LAYERS, onLayer,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -448,6 +448,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       eatPortion: DBUCharacterSheet._onEatPortion,
       teleportGear: DBUCharacterSheet._onTeleportGear,
       equipGear: DBUCharacterSheet._onEquipGear,
+      layerGear: DBUCharacterSheet._onLayerGear,
       addApparel: DBUCharacterSheet._onAddApparel,
       lockGear: DBUCharacterSheet._onLockGear,
       shrinkGear: DBUCharacterSheet._onShrinkGear,
@@ -1090,11 +1091,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // A Capsule, and what it holds.
         capsule: Boolean(item.system.capsule),
         heldId: held?.id ?? "",
-        heldName: held?.name ?? ""
+        heldName: held?.name ?? "",
+        // A piece of Apparel: the Layer it is worn on, or the three it could go on - each
+        // closed while another piece is on it, and saying which.
+        ...(item.system.crafted?.kind ? DBUCharacterSheet.#layerRow(gearItems, item) : {})
       });
     }
+    // Worn Apparel first, top down, then the rest - each list by name otherwise.
+    const worn = row => ["top", "middle", "bottom"].indexOf(row.layer ?? "");
     for (const list of Object.values(context.gear)) {
-      list.sort((a, b) => a.name.localeCompare(b.name));
+      list.sort((a, b) => ((worn(a) < 0) - (worn(b) < 0)) || (worn(a) - worn(b))
+        || a.name.localeCompare(b.name));
     }
 
     context.collisionDamage = COLLISION_DAMAGE;
@@ -2766,6 +2773,43 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // they were built, and shrinking again is its own Action.
     return item.update({ "system.equipped": !wearing,
       ...(wearing && item.system.shrink?.now ? { "system.shrink.now": "" } : {}) });
+  }
+
+  /** A piece of Apparel's row: the Layer it is on, or the ones it could go on. */
+  static #layerRow(items, item) {
+    const layer = item.system.equipped ? (item.system.layer ?? "") : "";
+    return {
+      apparel: true,
+      layer,
+      layerLabel: APPAREL_LAYERS[layer]?.label ?? "",
+      // Worn with no Layer said - worn before there were Layers: taken off all the same.
+      worn: Boolean(item.system.equipped),
+      layers: Object.entries(APPAREL_LAYERS).map(([key, { label }]) => {
+        const taken = onLayer(items, key, item);
+        return { key, label, takenBy: taken?.name ?? "" };
+      })
+    };
+  }
+
+  /**
+   * Put a piece of Apparel on a Layer, or take it off the one it is on. One piece to a
+   * Layer: a Layer another piece is on is closed until that one comes off.
+   */
+  static async _onLayerGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system.crafted?.kind) return;
+    const layer = target.dataset.layer ?? "";
+    if (item.system.equipped) {
+      return item.update({ "system.equipped": false, "system.layer": "" });
+    }
+    if (!APPAREL_LAYERS[layer]) return;
+    const taken = onLayer(this.actor.items.contents, layer, item);
+    if (taken) {
+      ui.notifications.warn(`${this.actor.name} is wearing ${taken.name} on the `
+        + `${APPAREL_LAYERS[layer].label} Layer.`);
+      return;
+    }
+    return item.update({ "system.equipped": true, "system.layer": layer });
   }
 
   /**

@@ -17,7 +17,7 @@
       {{#each gear.basic as |row|}}
       <div class="gear-row" data-item-id="{{row.itemId}}" draggable="true">
         <img src="{{row.img}}" width="24" height="24"/>
-        <a class="gear-name" data-action="editItem" data-item-id="{{row.itemId}}">{{row.name}}</a>
+        <span class="gear-name">{{row.name}}</span>
         {{#each row.tags as |tag|}}<span class="gear-tag">[{{tag}}]</span>{{/each}}
         <span class="gear-type">{{row.typeLabel}}{{#if row.sizeLabel}} &middot; {{row.sizeLabel}}{{/if}}</span>
         {{#if row.intendedName}}
@@ -156,6 +156,8 @@
                 data-item-id="{{row.itemId}}"
                 data-tooltip="Where they land is the table's. Whoever moves through them presses the card.">Scatter</button>
         {{/if}}
+        <button type="button" class="gear-control" data-action="editItem"
+                data-item-id="{{row.itemId}}" data-tooltip="Edit">&#9998;</button>
         <button type="button" class="gear-remove" data-action="deleteItem"
                 data-item-id="{{row.itemId}}" data-tooltip="Remove">&times;</button>
       </div>
@@ -177,11 +179,24 @@
       {{#each gear.apparel as |row|}}
       <div class="gear-row" data-item-id="{{row.itemId}}" draggable="true">
         <img src="{{row.img}}" width="24" height="24"/>
-        <a class="gear-name" data-action="editItem" data-item-id="{{row.itemId}}">{{row.name}}</a>
+        <span class="gear-name">{{row.name}}</span>
         <span class="gear-type">{{row.typeLabel}}</span>
         {{#if row.overSlots}}
         <span class="gear-warning" data-tooltip="More Qualities than its Quality Slots. It still works.">+{{row.overSlots}} over</span>
         {{/if}}
+        {{! Worn: the one button, off the Layer it is on. Not: a button for each Layer, closed
+            while another piece is on it. }}
+        {{#if row.worn}}
+        <button type="button" class="gear-act" data-action="layerGear"
+                data-item-id="{{row.itemId}}">Unequip{{#if row.layerLabel}} {{row.layerLabel}}{{/if}}</button>
+        {{else}}
+        {{#each row.layers as |layer|}}
+        <button type="button" class="gear-act" data-action="layerGear" data-item-id="{{../itemId}}"
+                data-layer="{{layer.key}}" {{#if layer.takenBy}}disabled data-tooltip="{{layer.takenBy}} is on it"{{/if}}>Equip {{layer.label}}</button>
+        {{/each}}
+        {{/if}}
+        <button type="button" class="gear-control" data-action="editItem"
+                data-item-id="{{row.itemId}}" data-tooltip="Edit">&#9998;</button>
         <button type="button" class="gear-remove" data-action="deleteItem"
                 data-item-id="{{row.itemId}}" data-tooltip="Remove">&times;</button>
       </div>
