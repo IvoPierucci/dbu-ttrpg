@@ -61,7 +61,7 @@ import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
-  throwables } from "./gear.mjs";
+  throwables, weaponAttack, weaponsFor } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
@@ -2200,6 +2200,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // What the Throw Maneuver throws: "whatever you are holding". Asked before the attack is
   // declared, since the Grenade changes what the attack is.
   let thrown = null;
+  // The Weapon the attack is made with, where it is made with one.
+  let weaponItem = null;
   if (maneuver.throws) {
     thrown = await askThrown(actor, maneuver);
     if (!thrown) return false;
@@ -2229,6 +2231,17 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
         ...(thrown.damageAttribute ? { damageAttribute: thrown.damageAttribute } : {}) };
     }
 
+    // "When making an Attacking Maneuver, you must choose which Weapon (if any) you are using
+    // for that Attacking Maneuver" - among the ones in hand this Attack Type may be made with.
+    // Not for a Throw: what is thrown is not what the attack is made with. Nor for one tagged
+    // `unarmed` - the Tail Attack's "Unarmed Attacking Maneuver".
+    if (!thrown && !(maneuver.tags ?? []).includes("unarmed")) {
+      const chosen = await askWeapon(actor, declared);
+      if (chosen === null) return false;
+      weaponItem = chosen || null;
+      if (weaponItem) declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, []) };
+    }
+
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
     // with the declaration, and only where something worn offers one for this attack.
     const offers = damageAttributeOffers(Array.from(actor.items ?? []), maneuver);
@@ -2244,7 +2257,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     // before anything is paid - the declaration can still be taken back here.
     // Not a thrown one: "any number of Squares ... despite its different range".
     const outOfReach = targetActor && !maneuver.throws
-      && whyNotInReach(actor, targetActor, declared ?? {});
+      && whyNotInReach(actor, targetActor, declared ?? {}, declared?.weapon?.meleeRange ?? 0);
     if (outOfReach) {
       ui.notifications.warn(outOfReach);
       return false;
@@ -2411,6 +2424,18 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // was applied to is declared.
   const modifiers = await askModifiers(actor, maneuver);
   if (!modifiers) return false;
+
+  // What the Weapon does, again with what was applied to the attack - Precision's "any Called
+  // Shot made using this Weapon".
+  if (weaponItem) {
+    declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, modifiers) };
+    // Its Area, however many Magnitudes larger the Weapon makes it.
+    const area = declared.area ?? PROFILES[declared.profile]?.area ?? null;
+    if (area && declared.weapon.magnitude) {
+      declared = { ...declared, area: { ...area,
+        magnitudeSteps: (Number(area.magnitudeSteps) || 0) + declared.weapon.magnitude } };
+    }
+  }
 
   // One Maneuver held at a time: the character has one place to keep it, and a second
   // holding would quietly throw the first away.
@@ -2642,6 +2667,44 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   if (thrown?.destroyed && card) await actor.items.get(thrown.itemId)?.delete();
 
   return true;
+}
+
+/**
+ * Which Weapon an Attacking Maneuver is made with: "you must choose which Weapon (if any)". Asked
+ * only where one in hand may make it - a Physical Weapon a Physical Attack, and so on.
+ *
+ * @returns {Promise<?(object|false)>} the Weapon, false for none - Unarmed - or null when the
+ *   whole thing was put away
+ */
+async function askWeapon(actor, declared) {
+  const offered = weaponsFor(actor.items.contents, declared?.foundation);
+  if (!offered.length) return false;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: "Weapon" },
+    content: "",
+    buttons: [
+      { action: "unarmed", label: "Unarmed" },
+      ...offered.map(item => ({ action: item.id, label: item.name })),
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (chosen === "cancel")) return null;
+  if (chosen === "unarmed") return false;
+  return offered.find(item => item.id === chosen) ?? null;
+}
+
+/** What an attack made with this Weapon carries - see weaponAttack() in gear.mjs. */
+function armedWith(actor, item, declared, modifiers) {
+  return weaponAttack(item, actor, {
+    profile: declared.profile,
+    calledShot: (modifiers ?? []).some(entry => entry.modifier?.id === "called-shot"),
+    area: declared.area ?? PROFILES[declared.profile]?.area ?? null,
+    kiWager: declared.kiWager ?? 0,
+    sizes: Object.keys(DBUCharacterData.SIZES),
+    getTrait
+  });
 }
 
 /**

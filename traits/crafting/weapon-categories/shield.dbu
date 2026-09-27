@@ -1,0 +1,21 @@
+id: shield
+name: Shield
+kind: crafting
+weaponType: physical
+source: Core Rule
+description: >
+  More Life Points for each Power Level - 1, 2 or 3 by its Size. Wielded, the Block Special
+  Maneuver.
+text: >
+  Shield: This Weapon is intended for defense, rather than offense.
+  –Effects: Increase the Life Points of this Weapon by x for each of your Power Levels. X is 1
+  for Small Weapons, 2 for Standard Weapons, and 3 for Large Weapons. Additionally, while you are
+  wielding this Weapon, you gain access to the Block Special Maneuver.
+
+---
+
+# "X is 1 for Small Weapons, 2 for Standard Weapons, and 3 for Large Weapons" - Large being Big,
+# the Size the rules call it everywhere else. `$sizeRank` is that 1, 2 or 3.
+[passive]
+weapon.lifePerLevel += $sizeRank;
+weapon.block = true;

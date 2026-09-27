@@ -149,10 +149,8 @@ text: >
 # --- "Unarmed" ----------------------------------------------------------------------------
 #
 # Carried as a tag, because a tag is what these rules match on - "any Maneuver tagged
-# signature" is how Transfigured refuses one. Nothing reads `unarmed` yet: there are no
-# weapons in this system, so there is nothing for the word to be the opposite of. It is
-# recorded because the entry says it, and the day something asks for an Unarmed Attacking
-# Maneuver the answer is already on the Maneuver.
+# signature" is how Transfigured refuses one. Read when an attack is declared: a Maneuver
+# tagged `unarmed` is not asked which Weapon it is made with - it is made with none.
 #
 # --- What is not built --------------------------------------------------------------------
 #

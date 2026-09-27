@@ -126,8 +126,62 @@ export const CRAFTED = Object.freeze({
       standard: { label: "Standard", perBaseTier: 2 },
       high: { label: "High", perBaseTier: 3 }
     })
+  },
+  weapon: {
+    label: "Weapon",
+    categories: "weapon-categories",
+    qualities: "weapon-qualities",
+    // "1) Choose a Craftsmanship Grade ... 2) Choose a Weapon Type. 3) Choose a Weapon Size.
+    // 4) Choose a Weapon Category." What Add Weapon starts at, for the player to change.
+    defaultCategory: "bludgeoning",
+    defaultType: "physical",
+    defaultSize: "standard",
+    // "Weapons have a Craft DC depending on their Craftsmanship Grade ... The Craftsmanship of
+    // a Weapon decides how many Quality Slots they have." No Grade band: a Weapon has no Bonus.
+    grades: Object.freeze({
+      1: { craftDC: "apprentice", slots: 0 },
+      2: { craftDC: "qualified", slots: 1 },
+      3: { craftDC: "expert", slots: 2 },
+      4: { craftDC: "master", slots: 3 },
+      5: { craftDC: "grandmaster", slots: 4 }
+    }),
+    // "Each Weapon starts with 32 Life Points and gains 8 Life Points each Power Level" - 40
+    // at Power Level 1, by the table's ruling. "Weapons have Damage Reduction of 6(bT)."
+    lifeBase: 32,
+    lifePerLevel: 8,
+    damageReductionPerBaseTier: 6,
+    // "Weapons have a Hardness Value of 2 by default ... solely for the sake of throwing."
+    hardnessValue: 2
   }
 });
+
+/**
+ * "When you create a Weapon, you must select an Attack Type (Physical/Energy/Magic)." Which
+ * Attacking Maneuvers it can be used for - "fundamentally melee Weapons that can only be used
+ * for Physical Attacks" - and which Categories it may be: the Foundation's key, each.
+ */
+export const WEAPON_TYPES = Object.freeze({
+  physical: { label: "Physical" },
+  energy: { label: "Energy" },
+  magic: { label: "Magic" }
+});
+
+/**
+ * "Weapons come in three Sizes": what each does to "All Attacking Maneuvers made with this
+ * Weapon", in (T) - and its place in the three, which the Shield counts by: "X is 1 for Small
+ * Weapons, 2 for Standard Weapons, and 3 for Large Weapons".
+ */
+export const WEAPON_SIZES = Object.freeze({
+  small: { label: "Small", strike: 1, wound: -2, rank: 1 },
+  standard: { label: "Standard", strike: 0, wound: 0, rank: 2 },
+  big: { label: "Big", strike: -1, wound: 2, rank: 3 }
+});
+
+/** "While wielding any type of Weapon, reduce your Strike Rolls by 2(T)" - with it, by the table's ruling. */
+export const WEAPON_PENALTY_PER_TIER = 2;
+
+/** "You can only wield two Weapons at any one time." */
+export const WEAPONS_WIELDED = 2;
 
 /**
  * What a built Item comes to: its Category, Craft DC, Grade, Bonus and Quality Slots, and how
@@ -154,13 +208,16 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, 
   const craftDC = (from < 0) ? grade.craftDC
     : order[Math.min(order.length - 1, Math.max(0, from + shift))];
 
-  const band = kind.bonus[grade.grade];
+  // A Weapon has no Grade band and no Bonus: nothing, for whatever reads one.
+  const band = kind.bonus?.[grade.grade] ?? { label: "", perBaseTier: 0 };
   // Slots used, not Qualities counted: "The Quality Slots for an Apparel Quality will explain
   // how many Quality Slots it takes up."
   const entries = qualityEntries(crafted);
   const count = entries.length;
   const used = entries.reduce((sum, entry) =>
     sum + slotsTaken(entry, getTrait?.(entry.id)), 0);
+  const weapon = (crafted.kind === "weapon")
+    ? weaponReading(crafted, { getTrait, data, baseTier }) : {};
   // What the piece is, as its own Effects say - never its Qualities' files: what they wrote
   // there when they were added, and whatever its owner has written since. Dense Armor's
   // `piece.apparelBonus += 1;`, Durable's `piece.breakValue += 3;`.
@@ -214,9 +271,11 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, 
     // Everything its Effects said about the piece, by Slot, for whoever reads one of its own.
     piece,
     // The ones its Category does not take: "Apparel Qualities may apply to only certain
-    // Apparel Categories." Kept, and inactive.
-    misfits: entries.filter(entry => !qualityFits(getTrait?.(entry.id), crafted.category))
+    // Apparel Categories" - or, a Weapon's, its Type. Kept, and inactive.
+    misfits: entries.filter(entry => !qualityFitsPiece(getTrait?.(entry.id), crafted))
       .map(entry => entry.id),
+    // A Weapon's: its Type, Size, Life Points and the rest - see weaponReading().
+    ...weapon,
     // How many of its Qualities are Special - "your ARC should be wary of giving any piece of
     // Apparel more than one Special Apparel Quality". Said past one, never refused.
     specials: entries.filter(entry => getTrait?.(entry.id)?.special === true).length,
@@ -256,8 +315,8 @@ export function groundIgnored(items, getTrait) {
  */
 export function qualityInactive(entry, crafted, getTrait) {
   const trait = getTrait?.(entry.id);
-  if (!qualityFits(trait, crafted?.category)) {
-    return "category";
+  if (!qualityFitsPiece(trait, crafted)) {
+    return (crafted?.kind === "weapon") ? "type" : "category";
   }
   const present = new Set(qualityEntries(crafted).map(other => other.id));
   const named = id => getTrait?.(id)?.name ?? id;
@@ -423,7 +482,7 @@ export function scriptWithPiece(script, reading, tokens = {}) {
   // The rest of what a piece's Effects may name about the piece, longest first so none is read
   // as the start of another - and each at its default where nobody said: nothing narrowed,
   // nothing waived, nothing multiplied.
-  const all = { ...PIECE_TOKENS, ...tokens };
+  const all = { ...PIECE_TOKENS, ...WEAPON_TOKENS, ...tokens };
   for (const name of Object.keys(all).sort((a, b) => b.length - a.length)) {
     text = text.replaceAll(`$${name}`, String(Number(all[name]) || 0));
   }
@@ -562,6 +621,20 @@ function partBody(trait, entry = null) {
   return trimBlank(code);
 }
 
+/**
+ * What a Category writes: its own code, and the code of each Quality it possesses - "This Weapon
+ * also possesses the Staggering Weapon Quality (this Weapon Quality does not count towards your
+ * Quality Slots)", `possesses: staggering`. Inside the Category's part, so it comes and goes
+ * with the Category and takes no Slot, and each under a line naming it.
+ */
+function categoryBody(category, getTrait) {
+  const own = partBody(category);
+  const possessed = listOf(category?.possesses).map(id => getTrait?.(id)).filter(Boolean)
+    .map(trait => [`# ${trait.name}, possessed with the Category`, partBody(trait, { slots: 0 })]
+      .filter(Boolean).join("\n"));
+  return trimBlank([own, ...possessed].filter(Boolean).join("\n\n"));
+}
+
 /** A switched-off part's lines kept as comments, or a switched-on part's given back. */
 function switched(body, on) {
   const lines = String(body ?? "").split("\n");
@@ -599,9 +672,9 @@ export function composeEffects(crafted, previous, { getTrait } = {}) {
   // What should be there, in order: the Category, then the Qualities that apply.
   const wanted = [];
   const category = getTrait?.(crafted.category);
-  if (category) {
+  if (category && categoryFitsPiece(category, crafted)) {
     wanted.push({ type: "category", id: category.id, key: `category:${category.id}`,
-      flags: [], name: category.name, fresh: () => partBody(category) });
+      flags: [], name: category.name, fresh: () => categoryBody(category, getTrait) });
   }
   const counted = {};
   for (const entry of qualityEntries(crafted)) {
@@ -701,7 +774,9 @@ export function thrownAs(item, thrower, getTrait) {
  * Apparel on a Layer and an Accessory worn are not in hand - and none in a Capsule.
  */
 export function throwables(items) {
-  return (items ?? []).filter(item => (item.type === "gear") && !item.system?.equipped
+  // A Weapon wielded is in hand: that one most of all.
+  return (items ?? []).filter(item => (item.type === "gear")
+    && (!item.system?.equipped || (item.system?.crafted?.kind === "weapon"))
     && !isStored(items, item));
 }
 
@@ -977,13 +1052,21 @@ const pieceCache = new Map();
  * and nobody's where there is no wearer, which leaves such a line unmet. `category: false`
  * leaves its Category's part out, for a piece worn under the Top Layer.
  */
-export function pieceSlots(crafted, { getTrait, data = null, perBaseTier = null,
-  category = true } = {}) {
+export function pieceSlots(crafted, options = {}) {
+  return craftedSlots(crafted, PHASES.PIECE, options);
+}
+
+/**
+ * A built Item's Effects resolved at one phase - the piece's own Slots, or a Weapon's for an
+ * attack - with its tokens written in: `tokens` over the defaults.
+ */
+function craftedSlots(crafted, phase, { getTrait, data = null, perBaseTier = null,
+  category = true, tokens = {} } = {}) {
   if (!CRAFTED[crafted?.kind]) return {};
-  const band = CRAFTED[crafted.kind].bonus[CRAFTED[crafted.kind].grades[crafted.grade]?.grade];
+  const band = CRAFTED[crafted.kind].bonus?.[CRAFTED[crafted.kind].grades[crafted.grade]?.grade];
   const written = effectsOf(crafted, getTrait);
   const script = scriptWithPiece(category ? written : withoutCategory(written),
-    { perBaseTier: perBaseTier ?? band?.perBaseTier ?? 0 });
+    { perBaseTier: perBaseTier ?? band?.perBaseTier ?? 0 }, tokens);
   if (!script.trim()) return {};
   let program = pieceCache.get(script);
   if (program === undefined) {
@@ -993,7 +1076,7 @@ export function pieceSlots(crafted, { getTrait, data = null, perBaseTier = null,
   }
   if (!program) return {};
   return applyPassives([{ program, priority: PRIORITY.talent, sourceName: "", level: 0, stacks: 1 }],
-    PHASES.PIECE, { data: data ?? {}, errors: [] }).slots;
+    phase, { data: data ?? {}, errors: [] }).slots;
 }
 
 /** A piece's Effects without its Category's part: what it does worn under the Top Layer. */
@@ -1018,9 +1101,183 @@ function factorOf(contribution) {
  */
 export function apparelQualitiesInEffect(items) {
   return (items ?? [])
-    .filter(item => (item.type === "gear") && item.system?.crafted?.kind
+    .filter(item => (item.type === "gear") && (item.system?.crafted?.kind === "apparel")
       && item.system?.equipped && !isStored(items, item))
     .map(item => ({ item, entries: qualityEntries(item.system.crafted) }));
+}
+
+// --- Weapons ------------------------------------------------------------------------------------
+//
+// A Weapon is built as a piece of Apparel is, and its own Effects are what it does. What it does
+// to "Attacking Maneuvers made with this Weapon" is written against `weapon.*` Slots and read off
+// it when an attack is declared with it (weaponAttack); what it does while merely wielded is
+// written against the character's own Slots, and run by the registry for as long as it is.
+
+/**
+ * What a Weapon's Effects may name about the attack being made with it, at what each is when
+ * nothing says - which is also what its sheet checks them at:
+ *
+ *   $simple         1 for an attack of the Simple Profile - Efficient
+ *   $calledShot     1 for a Called Shot - Precision
+ *   $aoe            1 for an attack with an Area of Effect
+ *   $lineAoe        1 where that Area is a Line - Extending's exception
+ *   $halfWager      1 where the Ki Wager is 1/2 of the Max Capacity or more - High Power
+ *   $belowEnormous  how many Size Categories its wielder is smaller than Enormous - Giant Weapon
+ *   $sizeRank       1, 2 or 3 for a Small, Standard or Big Weapon - the Shield's x
+ */
+export const WEAPON_TOKENS = Object.freeze({
+  simple: 0,
+  calledShot: 0,
+  aoe: 0,
+  lineAoe: 0,
+  halfWager: 0,
+  belowEnormous: 0,
+  sizeRank: 2
+});
+
+/** A Weapon's `weapon.*` Slots, resolved for its wielder and the attack its tokens describe. */
+export function weaponSlots(crafted, { getTrait, data = null, tokens = {} } = {}) {
+  if (crafted?.kind !== "weapon") return {};
+  return craftedSlots(crafted, PHASES.WEAPON, { getTrait, data,
+    tokens: { sizeRank: WEAPON_SIZES[crafted.weaponSize]?.rank ?? WEAPON_TOKENS.sizeRank, ...tokens } });
+}
+
+/**
+ * What a Weapon is, beside what every built Item is: its Type and Size, its Life Points -
+ * "starts with 32 Life Points and gains 8 Life Points each Power Level", and what its Effects
+ * add for each - its Damage Reduction of 6(bT), and its Hardness Value, thrown.
+ *
+ * Broken is `destroyed` - the same thing, by the table's ruling: "If the Weapon's Life Points
+ * are reduced to 0, it is broken and cannot be used for any Attacking Maneuvers."
+ */
+function weaponReading(crafted, { getTrait, data = null, baseTier = 1 }) {
+  const kind = CRAFTED.weapon;
+  const slots = weaponSlots(crafted, { getTrait, data });
+  const level = Math.max(1, Number(data?.powerLevel) || 1);
+  const lifeMax = kind.lifeBase + (level * applySlot(slots, "weapon.lifePerLevel", kind.lifePerLevel));
+  const lost = Number(crafted.lifeLost) || 0;
+  const type = String(crafted.weaponType ?? "");
+  const size = String(crafted.weaponSize ?? "");
+  return {
+    weaponType: type,
+    weaponTypeLabel: WEAPON_TYPES[type]?.label ?? type,
+    weaponSize: size,
+    weaponSizeLabel: WEAPON_SIZES[size]?.label ?? size,
+    lifeMax,
+    lifeLeft: crafted.destroyed ? 0 : Math.max(0, lifeMax - lost),
+    damageReduction: kind.damageReductionPerBaseTier * (Number(baseTier) || 1),
+    hardnessValue: slots["weapon.hardnessValue"]
+      ? applySlot(slots, "weapon.hardnessValue", kind.hardnessValue) : kind.hardnessValue,
+    blocks: slots["weapon.block"] === true,
+    weapon: slots
+  };
+}
+
+/**
+ * The Weapons a character is wielding: `equipped`, whole, and not put away in anything. "As if
+ * not there" once broken, by the table's ruling - not wielded, and nothing of it applies.
+ */
+export function wieldedWeapons(items) {
+  return (items ?? []).filter(item => (item.type === "gear")
+    && (item.system?.crafted?.kind === "weapon") && item.system?.equipped
+    && !item.system?.crafted?.destroyed && !isStored(items, item));
+}
+
+/**
+ * Why a Weapon cannot be taken in hand, or "": broken, or both hands full - "You can only wield
+ * two Weapons at any one time."
+ */
+export function wieldProblem(items, item) {
+  if (item?.system?.crafted?.destroyed) return "Broken: repair it first.";
+  const held = wieldedWeapons(items).filter(other => other !== item);
+  if (held.length >= WEAPONS_WIELDED) return `Already wielding ${WEAPONS_WIELDED} Weapons.`;
+  return "";
+}
+
+/**
+ * The Weapons an Attacking Maneuver of this Foundation may be made with: "Physical Weapons ...
+ * can only be used for Physical Attacks", and so on. Chosen at declaration: "When making an
+ * Attacking Maneuver, you must choose which Weapon (if any) you are using".
+ */
+export function weaponsFor(items, foundation) {
+  return wieldedWeapons(items).filter(item => item.system.crafted.weaponType === foundation);
+}
+
+/** Whether the character is rid of the Weapon Penalty: "gain the Weapon Specialist Talent". */
+export function weaponSpecialist(actor) {
+  const named = entry => String(entry ?? "").trim().toLowerCase() === "weapon specialist";
+  return Array.from(actor?.items ?? []).some(item => (item.type === "talent") && named(item.name))
+    || (actor?.system?.effects?.programs ?? []).some(entry => named(entry.sourceName));
+}
+
+/** A fraction written against a Slot - `weapon.damageReductionIgnored = 1/2;` - unrounded. */
+function fractionOf(slots, key) {
+  const c = slots?.[key];
+  if (!c || (typeof c !== "object")) return 0;
+  const base = ((c.set !== null) && (c.set !== undefined)) ? c.set : (c.add ?? 0);
+  return base * (c.multiply ?? 1);
+}
+
+/**
+ * What an attack made with this Weapon carries, worked out when it is declared: the rows its
+ * Size, the Weapon Penalty and its Effects add to the Strike and the Wound, and what else they
+ * say about the attack. On the attack rather than looked up later, as a Profile's Damage
+ * Category is: the Weapon may be changed, put away or broken before the Wound Roll.
+ *
+ * @param {object} context  the attack: `profile`, `calledShot`, `area`, `kiWager`, and `sizes`,
+ *                          the Size Categories in order, smallest first
+ */
+export function weaponAttack(item, attacker, { profile = "", calledShot = false, area = null,
+  kiWager = 0, sizes = [], getTrait } = {}) {
+  const crafted = item?.system?.crafted;
+  if (crafted?.kind !== "weapon") return null;
+  const data = attacker?.system ?? {};
+  const tier = Number(data.tierOfPower) || 1;
+  const size = WEAPON_SIZES[crafted.weaponSize] ?? WEAPON_SIZES.standard;
+  const enormous = sizes.indexOf("enormous");
+  const at = sizes.indexOf(data.size?.key ?? "");
+  const tokens = {
+    simple: (profile === "simple") ? 1 : 0,
+    calledShot: calledShot ? 1 : 0,
+    aoe: area ? 1 : 0,
+    lineAoe: (area?.shape === "line") ? 1 : 0,
+    halfWager: ((Number(kiWager) || 0) >= Math.floor((data.capacity?.max ?? 0) / 2))
+      && ((Number(kiWager) || 0) > 0) ? 1 : 0,
+    belowEnormous: ((enormous >= 0) && (at >= 0)) ? Math.max(0, enormous - at) : 0
+  };
+  const slots = weaponSlots(crafted, { getTrait, data, tokens });
+  const perTier = (label, amount) => (amount
+    ? [{ label, written: `${amount > 0 ? "+" : ""}${amount}(T)`, value: amount * tier }] : []);
+  const own = (key) => {
+    const value = applySlot(slots, key, 0);
+    return value ? [{ label: item.name, value }] : [];
+  };
+  return {
+    itemId: item.id,
+    name: item.name,
+    category: crafted.category,
+    categoryName: getTrait?.(crafted.category)?.name ?? crafted.category,
+    weaponType: crafted.weaponType,
+    weaponSize: crafted.weaponSize,
+    // "Small: ... Strike Rolls increased by 1(T) and their Wound Rolls decreased by 2(T)."
+    // And the Weapon Penalty, on the Strike of an attack made with a Weapon, unless the
+    // Weapon Specialist Talent has taken it away.
+    strike: [
+      ...perTier(`${size.label} Weapon`, size.strike),
+      ...(weaponSpecialist(attacker) ? [] : perTier("Weapon Penalty", -WEAPON_PENALTY_PER_TIER)),
+      ...own("weapon.strike")
+    ],
+    wound: [...perTier(`${size.label} Weapon`, size.wound), ...own("weapon.wound")],
+    strikeNatural: applySlot(slots, "weapon.strikeNatural", 0),
+    kiCost: applySlot(slots, "weapon.kiCost", 0),
+    energyCharges: applySlot(slots, "weapon.energyCharges", 0),
+    damageCategory: applySlot(slots, "weapon.damageCategory", 0),
+    meleeRange: applySlot(slots, "weapon.meleeRange", 0),
+    magnitude: area ? applySlot(slots, "weapon.magnitude", 0) : 0,
+    damageReductionIgnored: fractionOf(slots, "weapon.damageReductionIgnored"),
+    soakIgnored: fractionOf(slots, "weapon.soakIgnored"),
+    diminishingAtDeclaration: slots["weapon.diminishingAtDeclaration"] === true
+  };
 }
 
 /**
@@ -1099,6 +1356,27 @@ export function qualityFits(trait, category) {
 }
 
 /**
+ * Whether a Quality may go on this piece: an Apparel Quality by its Category, a Weapon Quality
+ * by its Type - "Weapon Qualities may apply to only certain Weapon Types", `types: physical,
+ * energy`, on any Type when it names none ("Weapon Type: All").
+ */
+export function qualityFitsPiece(trait, crafted) {
+  if (crafted?.kind !== "weapon") return qualityFits(trait, crafted?.category);
+  const allowed = listOf(trait?.types);
+  return !allowed.length || allowed.includes(String(crafted.weaponType ?? "").toLowerCase());
+}
+
+/**
+ * Whether a Category may be this piece's: a Weapon Category by its Type - "The Weapon Categories
+ * available are decided based on the Weapon Type chosen", `weaponType: physical`. Any Apparel
+ * Category on any piece of Apparel.
+ */
+export function categoryFitsPiece(trait, crafted) {
+  if (crafted?.kind !== "weapon") return true;
+  return String(trait?.weaponType ?? "").toLowerCase() === String(crafted.weaponType ?? "").toLowerCase();
+}
+
+/**
  * A new built Item, at what building one starts at: "Add Apparel" - Standard Clothing,
  * Craftsmanship Grade 1, the Size the character was built as, and no Qualities.
  */
@@ -1106,6 +1384,22 @@ export function craftedItemFrom(kindKey, actor, getTrait) {
   const kind = CRAFTED[kindKey];
   if (!kind) return null;
   const size = actor?.system?.size;
+  // "Add Weapon": Grade 1, Physical, Standard, Bludgeoning - whole, and not in hand.
+  if (kindKey === "weapon") {
+    const crafted = { kind: kindKey, category: kind.defaultCategory, grade: 1,
+      weaponType: kind.defaultType, weaponSize: kind.defaultSize, qualities: [] };
+    return {
+      name: getTrait?.(kind.defaultCategory)?.name ?? kind.label,
+      type: "gear",
+      img: GEAR_ICON,
+      system: {
+        gearId: "",
+        itemType: kindKey,
+        crafted: { ...crafted, size: "", effects: composeEffects(crafted, "", { getTrait }),
+          lifeLost: 0, breakLost: 0, destroyed: false }
+      }
+    };
+  }
   return {
     name: getTrait?.(kind.defaultCategory)?.name ?? kind.label,
     type: "gear",

@@ -1,0 +1,22 @@
+id: high-power
+name: High Power
+kind: crafting
+weaponType: energy
+source: Core Rule
+description: >
+  An Energy Charge on an attack with it wagering half the Max Capacity or more. Its Area of
+  Effect a Magnitude larger.
+text: >
+  High Power: This Weapon funnels energy into massive blasts of pure destruction.
+  –Effects: Apply an Energy Charge to any Attacking Maneuver made using this Weapon with a Ki
+  Wager equal to or exceeding 1/2 of your Max Capacity. Additionally, increase the Magnitude of
+  any Attacking Maneuver that possesses an AoE used by this Weapon by 1 Magnitude.
+
+---
+
+# `$halfWager` is 1 where the Ki Wager is half the Max Capacity or more. The Charge is one more
+# on the attack, held to the most an attack may carry with the rest; the Magnitude only reaches
+# an attack that has an Area.
+[passive]
+weapon.energyCharges += $halfWager;
+weapon.magnitude += 1;

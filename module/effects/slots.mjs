@@ -34,7 +34,15 @@ export const PHASES = Object.freeze({
    * its Break Value, its Hardness, what it lets its wearer ignore. Worked out on the piece,
    * from its Effects alone, and never folded into anyone's numbers.
    */
-  PIECE: "piece"
+  PIECE: "piece",
+  /**
+   * Not the character's either: what a Weapon's own script says about an attack made with it -
+   * "All Attacking Maneuvers made with this Weapon ..." - worked out on the Weapon, for that
+   * attack, when it is declared, and never folded into anyone's numbers. What a Weapon does
+   * while it is merely wielded - the Magic Staff's Use Magic, Warding's Damage Reduction - is
+   * written against the character's own Slots, as any worn Item's is.
+   */
+  WEAPON: "weapon"
 });
 
 /** What kind of value a Slot holds, which decides how contributions combine. */
@@ -450,7 +458,45 @@ const TABLE = [
     doc: "Its wearer ignores the Battle Environment's effects - Environmental Protection." },
   { key: "piece.ignoresEnvironmentalQualities", phase: PHASES.PIECE, kind: F,
     ops: ["allow", "forbid", "set"],
-    doc: "Its wearer ignores their Square's Environmental Qualities - Environmental Protection." }
+    doc: "Its wearer ignores their Square's Environmental Qualities - Environmental Protection." },
+
+  // --- A Weapon, and an attack made with it -----------------------------------------------------
+  //
+  // Written in a Weapon's own Effects, and read off that Weapon when an attack is declared with
+  // it: "Attacking Maneuvers made with this Weapon ...". `weapon.wound += 2(T);`.
+  { key: "weapon.strike", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Added to the Strike Roll of an attack made with it." },
+  { key: "weapon.wound", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Added to the Wound Roll of an attack made with it." },
+  { key: "weapon.strikeNatural", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Added to the Natural Result of the Strike Roll of an attack made with it - Targeting "
+       + "System." },
+  { key: "weapon.kiCost", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Added to the Ki Point Cost of an attack made with it - Efficient's -2(T)." },
+  { key: "weapon.energyCharges", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Energy Charges an attack made with it gains - High Power's." },
+  { key: "weapon.damageCategory", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Steps the Damage Category of an attack made with it - Dimension Blade's." },
+  { key: "weapon.meleeRange", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Added to the Melee Range for an attack made with it - Extending's 3." },
+  { key: "weapon.magnitude", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Magnitudes added to the Area of Effect of an attack made with it - High Power's." },
+  { key: "weapon.damageReductionIgnored", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "The part of the target's Damage Reduction an attack made with it ignores - "
+       + "Bludgeoning's 1/2. Read as written, the fraction being the point." },
+  { key: "weapon.soakIgnored", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "The part of the target's Soak Value, before any reductions, an attack made with it "
+       + "ignores - Piercing's 1/4, rounded up." },
+  { key: "weapon.diminishingAtDeclaration", phase: PHASES.WEAPON, kind: F,
+    ops: ["allow", "forbid", "set"],
+    doc: "Its Diminishing Defense is applied at Attack Declaration - Slashing." },
+  { key: "weapon.lifePerLevel", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Life Points the Weapon gains for each of its wielder's Power Levels, beyond the 8 "
+       + "every Weapon does - the Shield's x, Durable's 2." },
+  { key: "weapon.hardnessValue", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Its Hardness Value, thrown, where it is not the 2 every Weapon has - Super Heavy's 4." },
+  { key: "weapon.block", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Wielding it gives access to the Block Special Maneuver - the Shield." }
 ];
 
 /**
@@ -465,6 +511,11 @@ const PATTERNS = [
     ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "The only Combat Roll this piece's Category reaches, and its Doff Bonus - Focal." },
+  // The Ki Point Cost of the Attacking Maneuvers of one Attack Type - the Magic Staff's "reduce
+  // the Ki Point Cost of your Magic Attacks ... by 2(T)".
+  { match: /^attack\.kiCost\.(physical|energy|magic)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    valid: () => true,
+    doc: "Ki Point Cost of every Attacking Maneuver of that Attack Type." },
   // A Battle Weather, by its id, felt this many Weather Tiers lower - Weather Resistant.
   { match: /^piece\.resistsWeather\.([\w-]+)$/, phase: PHASES.PIECE, kind: N, ops: NUMERIC,
     valid: () => true,

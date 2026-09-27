@@ -1,0 +1,24 @@
+id: bludgeoning
+name: Bludgeoning
+kind: crafting
+weaponType: physical
+possesses: staggering
+source: Core Rule
+description: >
+  Attacks with it ignore half the target's Damage Reduction. It has Staggering, outside its
+  Quality Slots.
+text: >
+  Bludgeoning: This Weapon is a blunt, dull object used for bashing enemies.
+  –Effects: Attacking Maneuvers made with this Weapon ignore 1/2 of your target’s Damage
+  Reduction. This Weapon also possesses the Staggering Weapon Quality (this Weapon Quality does
+  not count towards your Quality Slots).
+
+---
+
+# "Ignore 1/2 of your target's Damage Reduction" - a part of it, read as written; what is left
+# of it is rounded down as any fraction is.
+[passive]
+weapon.damageReductionIgnored = 1/2;
+
+# Staggering comes with it: `possesses: staggering` writes Staggering's code into this part,
+# where it takes no Quality Slot and goes when the Category does.

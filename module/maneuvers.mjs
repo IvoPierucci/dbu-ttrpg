@@ -1022,10 +1022,11 @@ export function longRangePenalty(actor, target) {
  *
  * @returns {null|string} null if it may be made, otherwise why it may not
  */
-export function whyNotInReach(actor, target, { foundation, profile } = {}) {
+export function whyNotInReach(actor, target, { foundation, profile } = {}, extra = 0) {
   if (!FOUNDATION_RULES[foundation]?.meleeOnly) return null;
   if (PROFILES[profile]?.ignoresMeleeRule) return null;
-  return whyNotWithinMelee(actor, target, "A Physical Attack");
+  // `extra` is what the Weapon it is made with adds for it - Extending's 3.
+  return whyNotWithinMelee(actor, target, "A Physical Attack", extra);
 }
 
 /**
@@ -1482,8 +1483,12 @@ export function areaMagnitude(area) {
  */
 export function areaLabel(area) {
   if (!area) return "";
+  // Magnitudes more than it has, said rather than worked out, since nothing here measures an
+  // Area - a High Power Weapon's "increase the Magnitude ... by 1 Magnitude".
+  const more = Number(area.magnitudeSteps) || 0;
   const name = `${areaMagnitude(area)} ${area.shape}`
-    .replace(/(^|\s)\w/g, c => c.toUpperCase());
+    .replace(/(^|\s)\w/g, c => c.toUpperCase())
+    + (more ? ` +${more} Magnitude${(more === 1) ? "" : "s"}` : "");
   if (area.centredOnTarget) return `${name} (centred on the target)`;
   return area.centredOnSelf ? `${name} (centred on you)` : name;
 }
@@ -2540,6 +2545,10 @@ export function maneuverKiCost(maneuver, declared, actor) {
 
   if (actor && maneuver.attacking) {
     cost = applySlot(slots, "attack.kiCost", cost);
+    // And whatever applies to attacks of its Attack Type alone - the Magic Staff's, wielded.
+    if (declared?.foundation) cost = applySlot(slots, `attack.kiCost.${declared.foundation}`, cost);
+    // And the Weapon it is made with - Efficient's "have their Ki Point Cost reduced by 2(T)".
+    cost += Number(declared?.weapon?.kiCost) || 0;
 
     // Minimum Ki Point Cost, applied last: the price is whatever everything did to it,
     // but never less than half what the Profile lists. Last because it is a floor under

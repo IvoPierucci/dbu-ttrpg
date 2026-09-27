@@ -16,7 +16,7 @@ import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
-  topLayerPiece } from "../gear.mjs";
+  topLayerPiece, wieldedWeapons } from "../gear.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -104,6 +104,7 @@ export function programsFor(actor, { report = () => {} } = {}) {
   entries.push(...racialPrograms(actor, report));
   entries.push(...accessoryPrograms(actor, report));
   entries.push(...apparelPrograms(actor, report));
+  entries.push(...weaponPrograms(actor, report));
   entries.push(...karmaPrograms(report));
   entries.push(...statePrograms(actor, report));
   entries.push(...conditionPrograms(actor, report));
@@ -230,6 +231,44 @@ function apparelPrograms(actor, report) {
     if (!errors.length) {
       entries.push({ program, priority: PRIORITY.base, sourceId: "apparel-penalty",
         sourceUuid: null, sourceName: "Apparel Penalty", level: 0, stacks: 1 });
+    }
+  }
+  return entries;
+}
+
+/**
+ * What the Weapons this character is wielding do while they are: each one's own Effects, a part
+ * at a time - the Magic Staff's "While wielding this Weapon", Warding's Damage Reduction. What
+ * they do to an attack made with them is written against `weapon.*` Slots, which nothing here
+ * reaches: that is read off the Weapon when the attack is declared.
+ *
+ * One Quality on both Weapons in hand is gained once, as one on two pieces of Apparel is.
+ */
+function weaponPrograms(actor, report) {
+  const entries = [];
+  const held = wieldedWeapons(Array.from(actor.items ?? [])).map(item => ({
+    item,
+    reading: craftedReading(item.system.crafted, { getTrait, difficulties: {} }),
+    parts: effectParts(effectsOf(item.system.crafted, getTrait))
+  }));
+  const kept = doubleDipped(held);
+  for (const { item, reading, parts } of held) {
+    for (const part of parts) {
+      if ((part.type === "quality") && (kept.get(dipKey(part)) !== part)) continue;
+      const script = scriptWithPiece(part.key ? part.body : part.text, reading);
+      if (!script.trim()) continue;
+      const { program, errors } = compile(`weapon:${item.id}:${part.key ?? "own"}`, { script },
+        message => report(`${item.name}${part.name ? `, ${part.name}` : ""}: ${message}`));
+      if (errors.length) continue;
+      entries.push({
+        program,
+        priority: PRIORITY.talent,
+        sourceId: `${item.id}:${part.key ?? "own"}`,
+        sourceUuid: item.uuid ?? null,
+        sourceName: part.name ? `${part.name} (${item.name})` : item.name,
+        level: 0,
+        stacks: 1
+      });
     }
   }
   return entries;

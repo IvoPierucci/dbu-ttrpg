@@ -1,8 +1,42 @@
 <div class="tab {{tabs.crafted.cssClass}}" data-group="primary" data-tab="crafted">
-  {{! What the piece is: its Category, Craftsmanship Grade and Size, what those come to,
-      and its Category's entry. }}
+  {{! What the piece is: its Category, Craftsmanship Grade and Size - a Weapon's Type too, in
+      the order the rules build one - what those come to, and its Category's entry. }}
   <section class="panel">
     <div class="stat-grid gear-stacked">
+      {{#if crafted.weapon}}
+      <div class="stat">
+        <em>Craftsmanship Grade</em>
+        <select name="system.crafted.grade" data-dtype="Number">
+          {{#each crafted.gradeChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat">
+        <em>Weapon Type</em>
+        <select name="system.crafted.weaponType">
+          {{#each crafted.typeChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat">
+        <em>Weapon Size</em>
+        <select name="system.crafted.weaponSize">
+          {{#each crafted.weaponSizeChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}} title="{{choice.tip}}">{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat">
+        <em>Weapon Category</em>
+        <select name="system.crafted.category">
+          {{#each crafted.categoryChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{else}}
       <div class="stat">
         <em>Category</em>
         <select name="system.crafted.category">
@@ -27,13 +61,21 @@
           {{/each}}
         </select>
       </div>
+      {{/if}}
     </div>
     <div class="gear-facts">
+      {{#if crafted.weapon}}
+      <span>Quality Slots: {{crafted.reading.used}}/{{crafted.reading.slots}}</span>
+      <span data-tooltip="32, and 8 for each Power Level - and whatever its Effects add.">Life Points: {{#if crafted.reading.destroyed}}broken{{else}}{{crafted.reading.lifeLeft}}/{{crafted.reading.lifeMax}}{{/if}}</span>
+      <span data-tooltip="6(bT).">Damage Reduction: {{crafted.reading.damageReduction}}</span>
+      <span data-tooltip="Only for throwing it.">Hardness Value: {{crafted.reading.hardnessValue}}</span>
+      {{else}}
       <span>Apparel Grade: {{crafted.reading.gradeLabel}}</span>
       <span>Apparel Bonus: {{crafted.bonusLabel}}</span>
       <span>Quality Slots: {{crafted.reading.used}}/{{crafted.reading.slots}}</span>
       <span>Break Value: {{#if crafted.reading.destroyed}}destroyed{{else}}{{crafted.reading.breakLeft}}/{{crafted.reading.breakValue}}{{/if}}</span>
       {{#if crafted.reading.hardnessValue}}<span>Hardness Value: {{crafted.reading.hardnessValue}}</span>{{/if}}
+      {{/if}}
     </div>
   </section>
 

@@ -6497,7 +6497,7 @@ export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, wagerFromLife = false,
                                    charges = 0, damageAttribute = null, autoHit = false,
                                    advantages = [], squaresCharged = 0, thrown = null,
-                                   area = null },
+                                   area = null, weapon = null },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -6598,7 +6598,8 @@ export async function postAttack(actor, target, maneuver,
           damageCategoryShift: (reflecting
             ? (reflecting.damageCategoryShift ?? 0)
             : profileCategoryShift(profile, charges))
-            + modifierCategoryShift(modifiers),
+            + modifierCategoryShift(modifiers)
+            + (Number(weapon?.damageCategory) || 0),
           kiWager,
           // Paid in Life Points rather than Ki. Added to the Wound Roll all the same - it
           // is a Ki Wager either way - and only the card's note says the difference.
@@ -6610,6 +6611,9 @@ export async function postAttack(actor, target, maneuver,
           // What the Throw Maneuver threw, and what it comes to on a hit. Null on every
           // attack that throws nothing.
           thrown,
+          // The Weapon it was made with, and what that Weapon does to it - worked out when it
+          // was declared. Null for an Unarmed Attack.
+          weapon,
           // An Area the attack brings for itself, over its Profile's - the Grenade's Minor
           // Sphere. Null for every attack whose Area, if any, is its Profile's.
           area,
@@ -6630,7 +6634,8 @@ export async function postAttack(actor, target, maneuver,
           energyCharges: reflecting
             ? (reflecting.energyCharges ?? 0)
             : Math.min(
-                charges + (PROFILES[profile].grantsEnergyCharge ?? 0),
+                charges + (PROFILES[profile].grantsEnergyCharge ?? 0)
+                  + (Number(weapon?.energyCharges) || 0),
                 maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES)
               ) + (PROFILES[profile].grantsUncappedEnergyCharge ?? 0),
           // Whose Technique it was, which is what decides the size of an Energy Charge's
@@ -7393,6 +7398,7 @@ async function resolveAttack(message, attack) {
     { label: "Strike", value: attacker.system.combat.strike },
     ...profileStrikeParts(attacker, attack),
     ...modifierStrikeParts(attacker, attack),
+    ...(attack.weapon?.strike ?? []),
     ...musclePenalty(attacker),
     // Left off entirely rather than shown at nothing: a row saying Diminishing Offense
     // took nothing off is a row a reader has to work out the meaning of, and the rule is
@@ -7407,7 +7413,9 @@ async function resolveAttack(message, attack) {
     // Critical a Botch. Both belong to the Profile rather than to the character, so they
     // travel with the roll instead of being written to a Slot.
     minimumNatural: PROFILES[attack.profile]?.minimumNatural ?? 0,
-    botchUnlessCritical: Boolean(PROFILES[attack.profile]?.botchUnlessCritical)
+    botchUnlessCritical: Boolean(PROFILES[attack.profile]?.botchUnlessCritical),
+    // The Weapon's own - Targeting System's "Increase the Natural Result of any Strike Roll".
+    naturalAdd: Number(attack.weapon?.strikeNatural) || 0
   });
 
   // From here it branches. What each of them did about that Strike is theirs alone, and
@@ -8306,6 +8314,7 @@ async function rollAttackWound(message, attack) {
     ...advantageWoundParts(attacker, attack),
     ...superStackWoundParts(attacker, attack),
     ...modifierWoundParts(attacker, attack),
+    ...(attack.weapon?.wound ?? []),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...thresholdPenalty(attacker)
   ], {
@@ -8408,7 +8417,9 @@ async function rollAttackWound(message, attack) {
     // adjusts what survives that.
     const base = target.system.soakValue + soakBonus;
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
-    const soak = Math.max(0, defence.soak(counted) - ignored);
+    // Piercing: "ignore 1/4 (rounded up) of your target's Soak Value (before any reductions)".
+    const pierceSoak = Math.ceil(Math.max(0, base) * (Number(attack.weapon?.soakIgnored) || 0));
+    const soak = Math.max(0, defence.soak(counted) - ignored - pierceSoak);
 
     // One Wound Roll serves everyone the attack reached, and this bonus is against one of
     // them - so it is added where what the roll comes to is already worked out per person,
@@ -8426,9 +8437,11 @@ async function rollAttackWound(message, attack) {
     // down like every other halving - ignoring half of what is already gone would be
     // worth more than ignoring half of what is there.
     const afterPierce = Math.max(0, (target.system.damageReduction ?? 0) - pierced);
-    const halved = PROFILES[attack.profile]?.ignoresHalfDamageReduction
+    // Bludgeoning's "ignore 1/2 of your target's Damage Reduction" is another such fraction,
+    // and another thing than Concentrated's: both, and each takes its own part.
+    const halved = (PROFILES[attack.profile]?.ignoresHalfDamageReduction
       ? Math.floor(afterPierce / 2)
-      : 0;
+      : 0) + Math.floor(afterPierce * (Number(attack.weapon?.damageReductionIgnored) || 0));
     const reduction = Math.max(0, afterPierce - halved);
 
     const negated = counterWound && (counterWound.total > wound.total);
@@ -8508,6 +8521,12 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
 
   parts.push(...musclePenalty(actor));
   parts.push({ label: "Dim. Defense", value: -actor.system.diminishing.defense.penalty });
+  // Slashing: "Apply any Diminishing Defense from Attacking Maneuvers made with this Weapon at
+  // Attack Declaration" - what this Dodge will earn, already weighing on it.
+  if (attack?.weapon?.diminishingAtDeclaration) {
+    parts.push({ label: `Dim. Defense (${attack.weapon.categoryName})`,
+      value: -actor.system.diminishing.defense.perAttack });
+  }
   parts.push(...thresholdPenalty(actor));
   parts.push(...rapidMovementDodge(actor, attack));
   // Your Dodge against somebody you Analyzed. The attacker is named on the attack, which
@@ -10472,6 +10491,8 @@ function renderAttack(message, html) {
           ? ` &middot; ${Handlebars.escapeExpression(areaLabel(attackArea(attack)))}`
           : ""}${attack.thrown
           ? ` &middot; ${Handlebars.escapeExpression(attack.thrown.name)} thrown`
+          : ""}${attack.weapon
+          ? ` &middot; with ${Handlebars.escapeExpression(attack.weapon.name)}`
           : ""}${featureNote(PROFILES[attack.profile])}</span>
     </div>
     ${result

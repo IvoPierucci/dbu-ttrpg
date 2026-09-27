@@ -13,7 +13,7 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   connectedItem, connectedTarget, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
   inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
   craftedItemFrom, craftedReading, APPAREL_LAYERS, APPAREL_EQUIP_COST, equipPlan, onLayer, pieceSlots,
-  grantDoffBonus, topLayerPiece, unequipCost,
+  grantDoffBonus, topLayerPiece, unequipCost, wieldProblem, WEAPON_SIZES, WEAPON_TYPES,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -452,8 +452,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       teleportGear: DBUCharacterSheet._onTeleportGear,
       equipGear: DBUCharacterSheet._onEquipGear,
       layerGear: DBUCharacterSheet._onLayerGear,
+      wieldGear: DBUCharacterSheet._onWieldGear,
       repairGear: DBUCharacterSheet._onRepairGear,
       addApparel: DBUCharacterSheet._onAddApparel,
+      addWeapon: DBUCharacterSheet._onAddWeapon,
       lockGear: DBUCharacterSheet._onLockGear,
       shrinkGear: DBUCharacterSheet._onShrinkGear,
       unlockGear: DBUCharacterSheet._onUnlockGear,
@@ -1105,11 +1107,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         heldName: held?.name ?? "",
         // A piece of Apparel: the Layer it is worn on, or the three it could go on - each
         // closed while another piece is on it, and saying which.
-        ...(item.system.crafted?.kind ? this.#layerRow(gearItems, item) : {})
+        ...((item.system.crafted?.kind === "apparel") ? this.#layerRow(gearItems, item) : {}),
+        // A Weapon: in hand or not, and what is left of it.
+        ...((item.system.crafted?.kind === "weapon") ? this.#weaponRow(gearItems, item) : {})
       });
     }
-    // Worn Apparel first, top down, then the rest - each list by name otherwise.
-    const worn = row => ["top", "middle", "bottom"].indexOf(row.layer ?? "");
+    // Worn Apparel first, top down, and Weapons in hand first, then the rest - each list by
+    // name otherwise.
+    const worn = row => (row.wielded ? 0 : ["top", "middle", "bottom"].indexOf(row.layer ?? ""));
     for (const list of Object.values(context.gear)) {
       list.sort((a, b) => ((worn(a) < 0) - (worn(b) < 0)) || (worn(a) - worn(b))
         || a.name.localeCompare(b.name));
@@ -2146,6 +2151,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** What a row says an Item is: its Type, or for a built one its Category and Grade. */
   static #gearTypeLabel(item, type) {
     const crafted = item.system.crafted;
+    if (crafted?.kind === "weapon") {
+      const name = getTrait(crafted.category)?.name ?? crafted.category;
+      return [WEAPON_SIZES[crafted.weaponSize]?.label, WEAPON_TYPES[crafted.weaponType]?.label, name]
+        .filter(Boolean).join(" ") + ` · Grade ${crafted.grade}`;
+    }
     if (crafted?.kind) {
       const name = getTrait(crafted.category)?.name ?? crafted.category;
       return `${name} · Grade ${crafted.grade}`;
@@ -2178,6 +2188,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onRepairGear(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
+    // A Weapon: "To repair a Weapon, use the Full Repair Adventuring Maneuver." There are no
+    // Adventuring Maneuvers here, so this is what making it does - broken or not, whole again.
+    if (item?.system.crafted?.kind === "weapon") {
+      if (game.combat?.started) {
+        ui.notifications.warn("Weapons are not repaired in a Combat Encounter.");
+        return;
+      }
+      await item.update({ "system.crafted.lifeLost": 0, "system.crafted.destroyed": false });
+      return ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: `<p>${Handlebars.escapeExpression(this.actor.name)} repairs `
+          + `${Handlebars.escapeExpression(item.name)}: its Life Points are whole again.</p>`
+      });
+    }
     if (!item?.system.crafted?.kind || item.system.crafted.destroyed) return;
     if (game.combat?.started) {
       ui.notifications.warn("Apparel is not repaired in a Combat Encounter.");
@@ -2204,6 +2228,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onAddApparel(event, target) {
     const data = craftedItemFrom("apparel", this.actor, getTrait);
+    if (!data) return;
+    const [made] = await this.actor.createEmbeddedDocuments("Item", [data]);
+    return made?.sheet?.render(true);
+  }
+
+  /**
+   * Add a Weapon: "1) Choose a Craftsmanship Grade ... 2) Choose a Weapon Type. 3) Choose a
+   * Weapon Size. 4) Choose a Weapon Category. 5) Choose Weapon Qualities." It starts at Grade 1,
+   * a Standard Physical Bludgeoning Weapon with nothing on it, and all of that is changed on
+   * the Item.
+   */
+  static async _onAddWeapon(event, target) {
+    const data = craftedItemFrom("weapon", this.actor, getTrait);
     if (!data) return;
     const [made] = await this.actor.createEmbeddedDocuments("Item", [data]);
     return made?.sheet?.render(true);
@@ -2852,6 +2889,66 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       offCost: (inCombat && item.system.equipped)
         ? `${unequipCost(items, item)} Action${unequipCost(items, item) === 1 ? "" : "s"}` : ""
     };
+  }
+
+  /**
+   * A Weapon's row: wielded or not, what is left of its Life Points, and - lowered, out of a
+   * Combat Encounter - a way to repair it.
+   */
+  #weaponRow(items, item) {
+    const inCombat = Boolean(game.combat?.started);
+    const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {},
+      data: this.actor.system, baseTier: this.actor.system.baseTierOfPower ?? 1 });
+    const lost = Number(item.system.crafted?.lifeLost) || 0;
+    const wielded = Boolean(item.system.equipped) && !item.system.crafted?.destroyed;
+    const problem = wielded ? "" : wieldProblem(items, item);
+    return {
+      weapon: true,
+      wielded,
+      wieldBlocked: problem,
+      wieldCost: inCombat ? "No Effort Maneuver" : "",
+      breakLabel: item.system.crafted?.destroyed ? "Broken"
+        : lost ? `Life Points ${reading?.lifeLeft}/${reading?.lifeMax}` : "",
+      repairable: (Boolean(lost) || Boolean(item.system.crafted?.destroyed)) && !inCombat
+    };
+  }
+
+  /**
+   * Draw a Weapon, or put it away: "Un/Sheathing a Weapon. Put away or draw a weapon." Through
+   * the No Effort Maneuver in a Combat Encounter - on their turn, once a Round - and for nothing
+   * out of one. At most two in hand: "You can only wield two Weapons at any one time."
+   */
+  static async _onWieldGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (item?.system.crafted?.kind !== "weapon") return;
+    const drawing = !item.system.equipped;
+    if (drawing) {
+      const problem = wieldProblem(this.actor.items.contents, item);
+      if (problem) {
+        ui.notifications.warn(problem);
+        return;
+      }
+    }
+    if (game.combat?.started) {
+      const noEffort = getManeuver("no-effort");
+      if (!noEffort) return;
+      if (!isTheirTurn(this.actor)) {
+        ui.notifications.warn(`${this.actor.name} can only draw or put away a Weapon during their turn.`);
+        return;
+      }
+      if (maneuverUsesLeft(this.actor, noEffort) <= 0) {
+        ui.notifications.warn(`${this.actor.name} has used the ${noEffort.name} Maneuver this Round.`);
+        return;
+      }
+      await recordManeuverUse(this.actor, noEffort);
+      await ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: `<p>${Handlebars.escapeExpression(this.actor.name)} `
+          + `${drawing ? "draws" : "puts away"} ${Handlebars.escapeExpression(item.name)}: `
+          + `${Handlebars.escapeExpression(noEffort.name)} Maneuver.</p>`
+      });
+    }
+    return item.update({ "system.equipped": drawing });
   }
 
   /**

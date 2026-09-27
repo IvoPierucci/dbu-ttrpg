@@ -1,0 +1,25 @@
+id: magic-staff
+name: Magic Staff
+kind: crafting
+weaponType: magic
+source: Core Rule
+description: >
+  Wielded: Magic Attacks cost 2(T) Ki less, and Use Magic Skill Checks are 2 higher.
+text: >
+  Magic Staff: This Weapon is a mystical staff which empowers magical attacks.
+  –Effects: While wielding this Weapon, reduce the Ki Point Cost of your Magic Attacks and your
+  Magical Unique Abilities by 2(T). Additionally, while wielding this Weapon, increase the Dice
+  Score of your Use Magic Skill Checks by 2.
+
+---
+
+# "While wielding this Weapon": the character's own Slots, run for as long as it is wielded -
+# every Magic Attack, whether or not it is made with this Weapon.
+[passive]
+attack.kiCost.magic -= 2(T);
+skill.useMagic += 2;
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# "And your Magical Unique Abilities": nothing marks a Unique Ability as Magical in this system,
+# so their Ki Point Cost is the table's to lower.

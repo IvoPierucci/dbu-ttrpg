@@ -1,0 +1,21 @@
+id: efficient
+name: Efficient
+kind: crafting
+weaponType: energy
+source: Core Rule
+description: >
+  Attacks with it cost 2(T) Ki less, and with the Simple Profile they are 2(T) higher on the
+  Wound Roll.
+text: >
+  Efficient: This Weapon is easy to use, allowing for the user to expend less energy.
+  –Effects: Attacking Maneuvers made using this Weapon have their Ki Point Cost reduced by 2(T).
+  Additionally, increase the Wound Rolls of Attacking Maneuvers made with the Simple Profile by
+  2(T).
+
+---
+
+# The Minimum Ki Point Cost still holds under it, as under every reduction. `$simple` is 1 for
+# an attack of the Simple Profile.
+[passive]
+weapon.kiCost -= 2(T);
+weapon.wound += 2(T) * $simple;

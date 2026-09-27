@@ -1,0 +1,19 @@
+id: elemental-tool
+name: Elemental Tool
+kind: crafting
+weaponType: magic
+source: Core Rule
+description: >
+  An Elemental Profile chosen when it is made: wielded, that Element is a Favored Element.
+text: >
+  Elemental Tool: This Weapon possesses the mystical means to influence the natural world, and
+  may not look like a Weapon at all.
+  –Effects: Upon creating this Weapon, select a Profile with ‘Elemental’ in the name. While
+  wielding this Weapon, that Element becomes a Favored Element.
+
+---
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# A Favored Element is not in this system, and neither is what one does. When it is: the
+# Elemental Profile chosen when the Weapon is made, and that Element Favored while it is wielded.

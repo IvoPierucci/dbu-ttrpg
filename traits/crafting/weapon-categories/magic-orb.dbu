@@ -1,0 +1,19 @@
+id: magic-orb
+name: Magic Orb
+kind: crafting
+weaponType: magic
+possesses: spiritual-weapon
+source: Core Rule
+description: >
+  It has Spiritual Weapon, outside its Quality Slots. Attacks with it 2(T) higher on the Wound
+  Roll.
+text: >
+  Magic Orb: This Weapon allows you to see your enemies from far away.
+  –Effects: This Weapon possesses the Spiritual Weapon Quality (this Weapon Quality does not
+  count towards your Quality Slots). Additionally, increase the Wound Rolls of Attacking
+  Maneuvers with this Weapon by 2(T).
+
+---
+
+[passive]
+weapon.wound += 2(T);

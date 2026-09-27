@@ -4,11 +4,7 @@
     Accessory, Apparel, and Weapon" - drawn as three lists, because "Accessories are also
     counted as Basic Items for rules and effects" and so share the first.
 
-    Empty until the Items themselves arrive; what each list holds is written then, rather
-    than guessed at from the names.
-
-    What is already waiting on it: the Bludgeoning and Slashing Weapon Categories and the
-    Staggering Quality, which Elemental (Earth) and Elemental (Wind) borrow. }}
+    Apparel and Weapons are built on their own sheets rather than picked from a list. }}
   <section class="panel">
     <details class="condition-group" data-section="gearBasic"
              {{#if openSections.gearBasic}}open{{/if}}>
@@ -222,7 +218,35 @@
     <details class="condition-group" data-section="gearWeapons"
              {{#if openSections.gearWeapons}}open{{/if}}>
       <summary class="panel-title">Weapons</summary>
+
+      {{#each gear.weapon as |row|}}
+      <div class="gear-row" data-item-id="{{row.itemId}}" draggable="true">
+        <img src="{{row.img}}" width="24" height="24"/>
+        <span class="gear-name">{{row.name}}</span>
+        <span class="gear-type">{{row.typeLabel}}</span>
+        {{#if row.overSlots}}
+        <span class="gear-warning" data-tooltip="More Qualities than its Quality Slots. It still works.">+{{row.overSlots}} over</span>
+        {{/if}}
+        {{#if row.breakLabel}}<span class="gear-type">{{row.breakLabel}}</span>{{/if}}
+        {{#if row.repairable}}
+        <button type="button" class="gear-act" data-action="repairGear" data-item-id="{{row.itemId}}"
+                data-tooltip="The Full Repair Adventuring Maneuver, out of a Combat Encounter.">Repair</button>
+        {{/if}}
+        {{#if row.wielded}}<span class="gear-type">Wielded</span>{{/if}}
+        <button type="button" class="gear-act" data-action="wieldGear" data-item-id="{{row.itemId}}"
+                {{#if row.wieldBlocked}}disabled data-tooltip="{{row.wieldBlocked}}"{{else}}{{#if row.wieldCost}}data-tooltip="{{row.wieldCost}}"{{/if}}{{/if}}>{{#if row.wielded}}Sheathe{{else}}Wield{{/if}}</button>
+        <button type="button" class="gear-control" data-action="editItem"
+                data-item-id="{{row.itemId}}" data-tooltip="Edit">&#9998;</button>
+        <button type="button" class="gear-remove" data-action="deleteItem"
+                data-item-id="{{row.itemId}}" data-tooltip="Remove">&times;</button>
+      </div>
+      {{else}}
       <p class="tab-placeholder">None yet.</p>
+      {{/each}}
+
+      <button type="button" class="dbu-clash-button" data-action="addWeapon">
+        Add Weapon
+      </button>
     </details>
   </section>
 </div>

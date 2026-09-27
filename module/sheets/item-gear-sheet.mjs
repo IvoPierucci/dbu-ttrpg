@@ -3,10 +3,11 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { compile } from "../effects/parser.mjs";
-import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, composeEffects, connectable,
-  craftedReading, effectsOf, namePrefixMatches, qualityChoiceLabel, qualityChoices,
-  qualityEntries, qualityFits, qualityInactive, qualityName, qualitySlotRange, qualitySummary,
-  pieceTokens, scriptWithPiece, slotsTaken } from "../gear.mjs";
+import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, WEAPON_SIZES, WEAPON_TYPES,
+  categoryFitsPiece, composeEffects, connectable, craftedReading, effectsOf, namePrefixMatches,
+  qualityChoiceLabel, qualityChoices, qualityEntries, qualityFitsPiece, qualityInactive,
+  qualityName, qualitySlotRange, qualitySummary, pieceTokens, scriptWithPiece,
+  slotsTaken } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 
 /**
@@ -327,13 +328,25 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
 
     const baseTier = this.item.actor?.system?.baseTierOfPower ?? null;
     const reading = craftedReading(crafted, { getTrait,
-      difficulties: DBUCharacterData.DIFFICULTIES, baseTier: baseTier ?? 1 });
+      difficulties: DBUCharacterData.DIFFICULTIES, baseTier: baseTier ?? 1,
+      data: this.item.actor?.system ?? null });
+    const weapon = crafted.kind === "weapon";
     const escape = Handlebars.escapeExpression;
     const difficulty = key => DBUCharacterData.DIFFICULTIES[key]?.label ?? key;
 
     return {
       label: kind.label,
       reading,
+      // A Weapon: its Type and Size to choose, and what it is - its Life Points and the rest.
+      weapon,
+      typeChoices: Object.entries(WEAPON_TYPES).map(([key, type]) => ({
+        value: key, label: type.label, chosen: key === crafted.weaponType
+      })),
+      weaponSizeChoices: Object.entries(WEAPON_SIZES).map(([key, size]) => ({
+        value: key, label: size.label, chosen: key === crafted.weaponSize,
+        tip: size.strike ? `Strike ${size.strike > 0 ? "+" : ""}${size.strike}(T), Wound `
+          + `${size.wound > 0 ? "+" : ""}${size.wound}(T) on attacks made with it.` : ""
+      })),
       // Stretching: its Size is its wearer's, whatever it was made at - as its Effects say.
       stretches: reading.sizeIsWearers,
       // Its own pseudo-code, and whether it compiles - against its owner, where it has one, so
@@ -345,13 +358,16 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
         this.item.actor?.system ?? null).errors ?? [],
       // The Bonus as the rule writes it, and what it comes to for whoever holds it.
       bonusLabel: `${reading.perBaseTier}(bT)${(baseTier !== null) ? ` = ${reading.bonus}` : ""}`,
-      categoryChoices: traitsOfKind("crafting", kind.categories).map(trait => ({
-        value: trait.id, label: trait.name, chosen: trait.id === crafted.category
-      })),
+      // A Weapon's by its Type: "The Weapon Categories available are decided based on the
+      // Weapon Type chosen."
+      categoryChoices: traitsOfKind("crafting", kind.categories)
+        .filter(trait => categoryFitsPiece(trait, crafted)).map(trait => ({
+          value: trait.id, label: trait.name, chosen: trait.id === crafted.category
+        })),
       gradeChoices: Object.entries(kind.grades).map(([grade, row]) => ({
         value: Number(grade),
-        label: `${grade} - ${difficulty(row.craftDC)}, ${kind.bonus[row.grade].label}, `
-          + `${row.slots} Slot${row.slots === 1 ? "" : "s"}`,
+        label: [`${grade} - ${difficulty(row.craftDC)}`, kind.bonus?.[row.grade]?.label,
+          `${row.slots} Slot${row.slots === 1 ? "" : "s"}`].filter(Boolean).join(", "),
         chosen: Number(grade) === Number(crafted.grade)
       })),
       sizeChoices: Object.entries(DBUCharacterData.SIZES).map(([key, size]) => ({
@@ -376,7 +392,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
           // Its Category does not take it, or another Quality holds it off: kept, and
           // inactive until that changes.
           misfit: DBUGearSheet.#inactiveNote(qualityInactive(entry, crafted, getTrait),
-            reading.categoryName)
+            weapon ? reading.weaponTypeLabel : reading.categoryName, kind.label)
         };
       }),
       // What its Qualities do, a block to each, a tagged line to each effect with its
@@ -396,7 +412,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       }).filter(block => block.lines.length),
       // Only the ones this Category takes are offered.
       qualityChoices: traitsOfKind("crafting", kind.qualities)
-        .filter(trait => qualityFits(trait, crafted.category))
+        .filter(trait => qualityFitsPiece(trait, crafted))
         .map(trait => {
           const { min, max, ranged } = qualitySlotRange(trait);
           return { value: trait.id, label: `${trait.name} (${ranged ? `${min}-${max}` : min})`,
@@ -407,8 +423,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       qualityGroups: DBUGearSheet.#qualityGroups(kind, crafted),
       // More than one Special on a piece: said, since the rule only asks the ARC to be wary.
       specialNote: (reading.specials > 1)
-        ? `${reading.specials} Special Apparel Qualities on one piece. The ARC should be wary `
-          + "of more than one."
+        ? `${reading.specials} Special ${kind.label} Qualities on one piece. The ARC should be `
+          + "wary of more than one."
         : "",
       // Over is said, not refused: it works as it is. "Insufficient Quality Slots" on the tab,
       // and this under the pointer.
@@ -472,7 +488,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
   /** The Qualities its Category takes, ordinary and Special apart, as the picker's groups. */
   static #qualityGroups(kind, crafted) {
     const offered = traitsOfKind("crafting", kind.qualities)
-      .filter(trait => qualityFits(trait, crafted.category))
+      .filter(trait => qualityFitsPiece(trait, crafted))
       .map(trait => {
         const { min, max, ranged } = qualitySlotRange(trait);
         return { value: trait.id, name: trait.name,
@@ -493,10 +509,10 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
   }
 
   /** Why a Quality on it is inactive, as its row says it. */
-  static #inactiveNote(why, categoryName) {
+  static #inactiveNote(why, categoryName, kindLabel = "Apparel") {
     if (!why) return "";
-    if (why === "category") return `Not for ${categoryName}: inactive.`;
-    return `This Apparel ${why}: inactive.`;
+    if ((why === "category") || (why === "type")) return `Not for ${categoryName}: inactive.`;
+    return `This ${kindLabel} ${why}: inactive.`;
   }
 
   /** Switch a Quality's toggle - Team Outfit's - by where it is in the list. */
@@ -536,11 +552,25 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     // out the parts of the Qualities it does not take - into what the Effects say as sent,
     // which is what is on the page.
     const crafted = this.item.system.crafted;
-    const category = foundry.utils.getProperty(submitData, "system.crafted.category");
-    if (this.#built && (category !== undefined) && (category !== crafted.category)) {
+    let category = foundry.utils.getProperty(submitData, "system.crafted.category");
+    // A Weapon given another Type: its Category goes with it, to the first of the new Type's
+    // where the one it had is not one of them.
+    const weaponType = foundry.utils.getProperty(submitData, "system.crafted.weaponType");
+    const retyped = this.#built && (weaponType !== undefined) && (weaponType !== crafted.weaponType);
+    if (retyped) {
+      const now = { ...crafted, weaponType };
+      if (!categoryFitsPiece(getTrait(category ?? crafted.category), now)) {
+        category = traitsOfKind("crafting", CRAFTED[crafted.kind].categories)
+          .find(trait => categoryFitsPiece(trait, now))?.id ?? "";
+        foundry.utils.setProperty(submitData, "system.crafted.category", category);
+      }
+    }
+    if (this.#built && (retyped || ((category !== undefined) && (category !== crafted.category)))) {
       const sent = foundry.utils.getProperty(submitData, "system.crafted.effects");
       foundry.utils.setProperty(submitData, "system.crafted.effects",
-        composeEffects({ ...crafted, category }, sent ?? effectsOf(crafted, getTrait), { getTrait }));
+        composeEffects({ ...crafted, category: category ?? crafted.category,
+          weaponType: weaponType ?? crafted.weaponType },
+        sent ?? effectsOf(crafted, getTrait), { getTrait }));
     }
     return super._processSubmitData(event, form, submitData, options);
   }

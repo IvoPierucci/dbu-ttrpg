@@ -1,0 +1,22 @@
+id: piercing
+name: Piercing
+kind: crafting
+weaponType: physical
+possesses: lasting-wounds
+source: Core Rule
+description: >
+  Attacks with it ignore a quarter (rounded up) of the target's Soak Value. It has Lasting
+  Wounds, outside its Quality Slots.
+text: >
+  Piercing: Intended for penetrating a target’s vital points and damaging organs, this Weapon is
+  sharp and lethal.
+  –Effects: Attacking Maneuvers made with this Weapon ignore 1/4 (rounded up) of your target’s
+  Soak Value (before any reductions). This Weapon also possesses the Lasting Wounds Weapon
+  Quality (this Weapon Quality does not count towards your Quality Slots).
+
+---
+
+# "1/4 (rounded up) of your target's Soak Value (before any reductions)" - a part of it, rounded
+# up where it is read, since the rule says so.
+[passive]
+weapon.soakIgnored = 1/4;

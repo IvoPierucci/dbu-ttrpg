@@ -1,5 +1,5 @@
 Crafting - the pieces an Item is built from, where an Item is built rather than picked from a
-list: Apparel now, and Weapons the same way when they arrive.
+list: Apparel, and Weapons.
 
 One folder per kind of piece:
 
@@ -7,6 +7,8 @@ One folder per kind of piece:
   apparel-qualities/    the Apparel Qualities. An Apparel has as many as its Craftsmanship
                         Grade gives Quality Slots - more is allowed, and the Item's sheet
                         says it is over.
+  weapon-categories/    the Weapon Categories, three or four to each Weapon Type.
+  weapon-qualities/     the Weapon Qualities, Special ones among them.
 
 A file here is a Trait like any other: `id`, `name`, `description` (the hover), `text` (the
 rulebook's wording), and a script after `---` once its effects are built. Every file has to be
@@ -96,3 +98,28 @@ Apparel Quality." - Qualities are taken off on the Item's own sheet, whenever.
 
 The Craftsmanship Grades themselves - Craft DC, Apparel Grade, Quality Slots, Apparel Bonus -
 are one table, in module/gear.mjs as CRAFTED.
+
+--- Weapons ---------------------------------------------------------------------------------------
+
+A Weapon is built the same way, with a Weapon Type (Physical/Energy/Magic) and a Weapon Size
+(Small/Standard/Big) beside its Grade and Category. Its Size's rolls and the Weapon Penalty are
+the system's; everything else it does is its own Effects.
+
+What it does to "Attacking Maneuvers made with this Weapon" is written against `weapon.` Slots -
+`weapon.wound += 2(T);`, `weapon.kiCost -= 2(T);` - and read off it when an attack is declared
+with it. What it does while merely wielded - the Magic Staff's "While wielding this Weapon" - is
+written against the character's own Slots, and runs for as long as it is in hand. Its whole
+part runs whichever Weapon it is, Category included: there are no Layers.
+
+Tokens a Weapon's Effects may name, written in for the attack being made: `$simple`,
+`$calledShot`, `$aoe`, `$lineAoe`, `$halfWager` (1 or 0 each), `$belowEnormous` (Size Categories
+its wielder is under Enormous) and `$sizeRank` (1, 2, 3 for Small, Standard, Big). See
+WEAPON_TOKENS in module/gear.mjs.
+
+Headers only a Weapon's pieces read:
+
+  weaponType:    a Category's Weapon Type - the Categories offered are the Type's.
+  possesses:     a Category's Qualities it comes with, outside the Quality Slots - Bludgeoning's
+                 `staggering`. Their code is written into the Category's own part.
+  types:         the Weapon Types a Quality may go on - `physical, energy`. Any, when it names
+                 none ("Weapon Type: All").

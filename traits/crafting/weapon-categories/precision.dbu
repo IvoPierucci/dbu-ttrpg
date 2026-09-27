@@ -1,0 +1,21 @@
+id: precision
+name: Precision
+kind: crafting
+weaponType: energy
+possesses: far-sight
+source: Core Rule
+description: >
+  A Called Shot with it 1(T) higher on the Strike Roll and 2(T) on the Wound Roll. It has Far
+  Sight, outside its Quality Slots.
+text: >
+  Precision: This Weapon has precision accuracy intended for lethal damage dealt from far away.
+  –Effects: Increase the Strike and Wound Rolls for any Called Shot made using this Weapon by
+  1(T) and 2(T) respectively. This Weapon also possesses the Far Sight Weapon Quality (this
+  Weapon Quality does not count towards your Quality Slots).
+
+---
+
+# `$calledShot` is 1 for an attack the Called Shot Maneuver was applied to.
+[passive]
+weapon.strike += 1(T) * $calledShot;
+weapon.wound += 2(T) * $calledShot;

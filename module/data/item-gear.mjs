@@ -147,8 +147,16 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         // Break Value lost, off the most it can be - so a Quality raising the most (Durable)
         // raises what is left with it. Broken at 0 left; repaired back to none lost.
         breakLost: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
-        // Destroyed outright - grown out of by 2+ Size Categories. Not repaired.
-        destroyed: new fields.BooleanField({ required: true, initial: false })
+        // Destroyed outright - grown out of by 2+ Size Categories. Not repaired. A Weapon's:
+        // broken, its Life Points brought to 0 - the same thing, by the table's ruling - and
+        // repaired.
+        destroyed: new fields.BooleanField({ required: true, initial: false }),
+        // A Weapon's Attack Type - "Physical/Energy/Magic" - and its Weapon Size.
+        weaponType: new fields.StringField({ required: true, blank: true, initial: "" }),
+        weaponSize: new fields.StringField({ required: true, blank: true, initial: "" }),
+        // A Weapon's Life Points lost, off the most it can have - which moves with its
+        // wielder's Power Level, so what is left moves with it.
+        lifeLost: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 })
       }),
 
       /** Shrinks its wearer to a Size named outright - the Micro Band - and where they are. */
@@ -172,7 +180,8 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         name: new fields.StringField({ required: true, blank: true, initial: "" })
       }),
 
-      /** An Accessory being worn. Its effects apply only while it is. */
+      /** An Accessory or a piece of Apparel being worn, or a Weapon being wielded. Its effects
+       *  apply only while it is. */
       equipped: new fields.BooleanField({ required: true, initial: false }),
 
       /** The Layer a piece of Apparel is worn on - top, middle or bottom - while it is. */

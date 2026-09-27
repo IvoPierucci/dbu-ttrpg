@@ -1,0 +1,20 @@
+id: slashing
+name: Slashing
+kind: crafting
+weaponType: physical
+source: Core Rule
+description: >
+  Its Diminishing Defense applied at Attack Declaration. Attacks with it 2(T) higher on the
+  Wound Roll.
+text: >
+  Slashing: A sharp blade on this Weapon is meant for cutting open enemy flesh and leaving large
+  wounds.
+  –Effects: Apply any Diminishing Defense from Attacking Maneuvers made with this Weapon at
+  Attack Declaration. Additionally, increase the Wound Rolls of Attacking Maneuvers with this
+  Weapon by 2(T).
+
+---
+
+[passive]
+weapon.diminishingAtDeclaration = true;
+weapon.wound += 2(T);
