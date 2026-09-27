@@ -51,7 +51,7 @@ export function applyPassives(entries, phase, scope) {
       if (!levelReached(b, entry)) continue;
 
       const blockScope = { ...scope, level: entry.level ?? 0, stacks: entry.stacks ?? 1,
-        intended: Boolean(entry.intended) };
+        intended: Boolean(entry.intended), phase };
 
       // A block repeated per stack applies once for each one, so "for each Stack,
       // halve your Max Capacity" needs no exponent written into the amount.
@@ -167,6 +167,10 @@ function run(statements, scope) {
       }
 
       case "if":
+        // Not asked in a phase where neither branch could land anything: the answer would
+        // change nothing, and asking it may read something not worked out yet - a Skill's
+        // Ranks, before the Skills are - which is an error for no reason at all.
+        if (!reachesPhase([...(s.then ?? []), ...(s.else ?? [])], scope)) break;
         run(evaluate(s.condition, scope) ? s.then : s.else, scope);
         break;
 
@@ -214,6 +218,23 @@ function verbArgument(verb, index, amount, scope) {
   const names = VERBS[verb]?.names ?? [];
   if (names.includes(index) && (amount?.type === "path")) return amount.path;
   return resolveAmount(amount, scope);
+}
+
+/**
+ * Whether any of these statements could land something in the phase being run. Always, at a
+ * Moment or where no phase is said; and for anything that is not a plain Slot - a verb, or a
+ * name the system does not know, which has an error of its own to report.
+ */
+function reachesPhase(statements, scope) {
+  if (!scope.phase || (scope.phase === PHASES.REACTIVE)) return true;
+  return statements.some(s => {
+    if (s.type === "if") return reachesPhase([...(s.then ?? []), ...(s.else ?? [])], scope);
+    if ((s.type !== "assign") && (s.type !== "forbid")) return true;
+    const slot = getSlot(s.type === "assign" ? s.slot : s.what, scope.data);
+    if (!slot?.phase) return true;
+    const targets = slot.fanOut?.length ? slot.fanOut.map(key => getSlot(key, scope.data)) : [slot];
+    return targets.some(target => !target?.phase || (target.phase === scope.phase));
+  });
 }
 
 function gather(contributions, slot, op, value, kind, entry, b, phase, scope) {

@@ -350,7 +350,10 @@ export function narrowedRoll(item, getTrait) {
  * of the Apparel rules.
  */
 export function weightsPenaltyWaived(item, wearer, getTrait) {
-  const piece = pieceSlots(item?.system?.crafted, { getTrait, data: wearer?.system ?? null });
+  // The Ranks as counted before the Skills are worked out, where they have been: this is asked
+  // while the effects are gathered, which is before.
+  const piece = pieceSlots(item?.system?.crafted, { getTrait,
+    data: wearer?.system?.early ?? wearer?.system ?? null });
   if (piece["piece.waivesWeightsWhileHoldingBack"] !== true) return false;
   return holdingBackStacks(wearer) > 0;
 }
@@ -411,8 +414,61 @@ export function scriptWithChoice(script, choice) {
  * Apparel Bonus" - Parrying Armor's. Per base Tier because a script reads (bT) itself, and the
  * base Tier is not known yet when the scripts are gathered.
  */
-export function scriptWithPiece(script, reading) {
-  return String(script ?? "").replaceAll("$apparelBonus", String(Number(reading?.perBaseTier) || 0));
+export function scriptWithPiece(script, reading, tokens = {}) {
+  let text = String(script ?? "").replaceAll("$apparelBonus", String(Number(reading?.perBaseTier) || 0));
+  // The rest of what a piece's Effects may name about the piece, longest first so none is read
+  // as the start of another - and each at its default where nobody said: nothing narrowed,
+  // nothing waived, nothing multiplied.
+  const all = { ...PIECE_TOKENS, ...tokens };
+  for (const name of Object.keys(all).sort((a, b) => b.length - a.length)) {
+    text = text.replaceAll(`$${name}`, String(Number(all[name]) || 0));
+  }
+  return text;
+}
+
+/**
+ * What a piece's Effects may name about the piece, beside `$apparelBonus`, at what each is when
+ * nothing says otherwise. Read by its Category's part:
+ *
+ *   $armorFactor     what its Qualities multiply the Armor's Damage Reduction by - Sleek Design's 1/2
+ *   $reachesStrike   1 when its Category reaches Strike Rolls - all three, unless a Quality narrows
+ *   $reachesDodge    it to one: Focal's chosen Roll
+ *   $reachesWound
+ *   $waived          1 while its Weights take nothing off - Training Support, Holding Back
+ */
+export const PIECE_TOKENS = Object.freeze({
+  armorFactor: 1,
+  reachesStrike: 1,
+  reachesDodge: 1,
+  reachesWound: 1,
+  waived: 0
+});
+
+/** What a worn piece's tokens come to, for the one wearing it. */
+export function pieceTokens(item, wearer, reading, getTrait) {
+  const narrowed = narrowedRoll(item, getTrait);
+  const reaches = roll => ((!narrowed || (narrowed === roll)) ? 1 : 0);
+  return {
+    armorFactor: reading?.armorDamageReduction ?? 1,
+    reachesStrike: reaches("strike"),
+    reachesDodge: reaches("dodge"),
+    reachesWound: reaches("wound"),
+    waived: (wearer && weightsPenaltyWaived(item, wearer, getTrait)) ? 1 : 0
+  };
+}
+
+/**
+ * The Apparel Penalty: "For each piece of Apparel you are wearing after the first, reduce your
+ * Combat Rolls by 1/2 of your base Tier of Power (rounded up)." Counted over the pieces that
+ * count towards it - one that does not, Lightweight's or Standard Clothing's on top, is not
+ * there at all for it, by the table's ruling - and the first of those is free.
+ */
+export function apparelPenaltyPieces(items, getTrait) {
+  const top = topLayerPiece(items);
+  const counted = apparelQualitiesInEffect(items).filter(({ item }) =>
+    craftedReading(item.system.crafted, { getTrait, difficulties: {}, category: item === top })
+      ?.countsForPenalty !== false);
+  return Math.max(0, counted.length - 1);
 }
 
 // --- A built Item's own Effects ----------------------------------------------------------------

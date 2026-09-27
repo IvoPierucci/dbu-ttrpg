@@ -11,6 +11,16 @@ text: >
 
 ---
 
-# Not built yet: what it does waits on Layers and the Doff Bonus, which come with the rest of
-# the Apparel rules. When it is: a piece with Focal on it reaches only the Combat Roll Focal
-# chose - reduced, and its Doff Bonus - read through narrowedRoll() in module/gear.mjs.
+# "Reduce your Combat Rolls by the Apparel Bonus" - while this piece is the Top Layer. Each
+# Combat Roll is reached unless a Quality narrows it to one: Focal's chosen Roll is
+# `$reachesStrike` or `$reachesDodge` at 1 and the rest at 0. `$waived` is 1 while the
+# reduction is ignored - Training Support, while its wearer Holds Back.
+[passive]
+if ($waived == 0) {
+  strike -= $apparelBonus(bT) * $reachesStrike;
+  dodge -= $apparelBonus(bT) * $reachesDodge;
+  wound -= $apparelBonus(bT) * $reachesWound;
+}
+
+# "When you remove this piece of Apparel after the 3rd Combat Round of a Combat Encounter,
+# increase the Doff Bonus by 1/2 (rounded up)" - kept by the Doff Bonus, when it is taken off.

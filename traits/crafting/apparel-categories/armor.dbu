@@ -10,7 +10,12 @@ text: >
 
 ---
 
-# Not built yet: what it does waits on Layers, which come with the rest of the Apparel rules.
-# "Each one with their own benefits that you gain while wearing that piece of Apparel as the
-# Top Layer." When they are: nothing goes on over Armor but a piece whose Quality says
-# `wornOverArmor` - the Jacket.
+# "Gain Damage Reduction equal to the Apparel Bonus" - while this piece is the Top Layer, which
+# is the only piece whose Category part runs. `$armorFactor` is what its Qualities multiply the
+# Damage Reduction by: Sleek Design's "Halve the Damage Reduction gained from this Armor".
+[passive]
+damageReduction += $apparelBonus(bT) * $armorFactor;
+
+# "Armor must be the Top Layer of your Apparel and you cannot equip any piece of Apparel while
+# wearing Armor" - kept by putting Apparel on, not here: Armor goes on the Top Layer alone, and
+# while it is worn nothing else goes on but a piece that may be worn over Armor, the Jacket.

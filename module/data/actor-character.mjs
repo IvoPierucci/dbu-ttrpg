@@ -1669,6 +1669,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       skills: Object.fromEntries(Object.keys(DBUCharacterData.SKILLS).map(key =>
         [key, { ranks: ranks.filter(rank => rank === key).length }]))
     };
+    // Kept for what reads a Rank before the Skills are worked out: a worn piece's own Effects,
+    // asked while the effects are being gathered - Training Support's Concealment.
+    this.early = early;
     const resisted = weatherResisted(Array.from(this.parent?.items ?? []), weather.id,
       getTrait, early);
     if (this.battlefield?.weather) this.battlefield.weather.felt = Math.max(0, set - resisted);

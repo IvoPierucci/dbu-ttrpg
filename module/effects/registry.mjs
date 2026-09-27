@@ -14,8 +14,9 @@ import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { accessoriesInEffect, apparelQualitiesInEffect, craftedReading, effectParts,
-  effectsOf, groundIgnored, scriptWithPiece, topLayerPiece } from "../gear.mjs";
+import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, craftedReading,
+  effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
+  topLayerPiece } from "../gear.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -189,6 +190,9 @@ function apparelPrograms(actor, report) {
     // gathered from one piece however many carry it.
     const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {},
       category: item === top });
+    // What its Effects may name about it: the Armor's multiplier, the Rolls its Weights
+    // reach, and whether they are waived right now.
+    const tokens = pieceTokens(item, actor, reading, getTrait);
     for (const part of effectParts(effectsOf(item.system.crafted, getTrait))) {
       // "Benefits that you gain while wearing that piece of Apparel as the Top Layer."
       if ((part.type === "category") && (item !== top)) continue;
@@ -196,7 +200,7 @@ function apparelPrograms(actor, report) {
         if (once.has(part.id)) continue;
         once.add(part.id);
       }
-      const script = scriptWithPiece(part.key ? part.body : part.text, reading);
+      const script = scriptWithPiece(part.key ? part.body : part.text, reading, tokens);
       if (!script.trim()) continue;
 
       const name = part.name || item.name;
@@ -216,6 +220,17 @@ function apparelPrograms(actor, report) {
         level: 0,
         stacks: 1
       });
+    }
+  }
+
+  // The Apparel Penalty, one entry for all of it, so the workings name it.
+  const penalized = apparelPenaltyPieces(Array.from(actor.items ?? []), getTrait);
+  if (penalized > 0) {
+    const { program, errors } = compile("apparel-penalty",
+      { script: `[passive]\ncombatRolls -= ${penalized} * ceil(1(bT) / 2);` }, report);
+    if (!errors.length) {
+      entries.push({ program, priority: PRIORITY.base, sourceId: "apparel-penalty",
+        sourceUuid: null, sourceName: "Apparel Penalty", level: 0, stacks: 1 });
     }
   }
   return entries;

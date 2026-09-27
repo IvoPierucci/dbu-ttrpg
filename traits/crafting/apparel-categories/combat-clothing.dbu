@@ -10,4 +10,7 @@ text: >
 
 ---
 
-# Not built yet: what it does waits on Layers, which come with the rest of the Apparel rules.
+# "While this is the Top Layer of Apparel, increase your Defense Value by 1/2 (rounded up) of
+# the Apparel Bonus."
+[passive]
+defenseValue += ceil($apparelBonus(bT) / 2);

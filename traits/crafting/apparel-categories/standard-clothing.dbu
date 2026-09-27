@@ -12,8 +12,8 @@ text: >
 
 ---
 
-# The Craft DC is built: the sheet shows it one Difficulty lower than the Craftsmanship Grade
-# gives. The Apparel Penalty waits on Layers, which come with the rest of the Apparel rules.
-
+# "Standard Clothing does not inflict Apparel Penalties" - while it is the Top Layer, by the
+# table's ruling, as every Category's benefit is. "And reduces the Craft DC by 1 Difficulty
+# Category" is how it is made rather than what it does: `craftDCShift` in the header.
 [passive]
 piece.countsForPenalty = false;

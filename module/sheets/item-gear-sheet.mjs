@@ -6,7 +6,7 @@ import { compile } from "../effects/parser.mjs";
 import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, composeEffects, connectable,
   craftedReading, effectsOf, namePrefixMatches, qualityChoiceLabel, qualityChoices,
   qualityEntries, qualityFits, qualityInactive, qualityName, qualitySlotRange, qualitySummary,
-  scriptWithPiece, slotsTaken } from "../gear.mjs";
+  pieceTokens, scriptWithPiece, slotsTaken } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 
 /**
@@ -340,7 +340,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       // a Skill it names is one they have.
       effectsText: effectsOf(crafted, getTrait),
       // `$apparelBonus` read as this piece's own, as it is when the piece is worn.
-      effectErrors: compile(scriptWithPiece(effectsOf(crafted, getTrait), reading),
+      effectErrors: compile(scriptWithPiece(effectsOf(crafted, getTrait), reading,
+        pieceTokens(this.item, this.item.actor, reading, getTrait)),
         this.item.actor?.system ?? null).errors ?? [],
       // The Bonus as the rule writes it, and what it comes to for whoever holds it.
       bonusLabel: `${reading.perBaseTier}(bT)${(baseTier !== null) ? ` = ${reading.bonus}` : ""}`,
