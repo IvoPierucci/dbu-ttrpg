@@ -13,6 +13,10 @@ import DBUCharacterData from "../data/actor-character.mjs";
  * One page: the name and picture, what kind of Item it is, the rulebook's entry, and the
  * player's own description. The name and the description are theirs to change - a
  * character's Capsule Car is theirs to call what they like - and the entry stays as printed.
+ *
+ * A built Item - a piece of Apparel - has more to it than a page holds, so it is three tabs
+ * under the same header: its Description, what it is (Category, Grade, Size), and its
+ * Qualities.
  */
 export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
@@ -21,6 +25,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     position: { width: 480, height: 460 },
     window: { resizable: true },
     actions: {
+      dbuChangeTab: DBUGearSheet._onChangeTab,
       editImage: DBUGearSheet._onEditImage,
       addQuality: DBUGearSheet._onAddQuality,
       removeQuality: DBUGearSheet._onRemoveQuality,
@@ -30,8 +35,45 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
   };
 
   static PARTS = {
+    header: { template: "systems/dbu-ttrpg/templates/parts/gear-header.hbs" },
+    tabs: { template: "systems/dbu-ttrpg/templates/parts/sheet-tabs.hbs" },
+    description: { template: "systems/dbu-ttrpg/templates/parts/gear-description.hbs",
+      scrollable: [""] },
+    crafted: { template: "systems/dbu-ttrpg/templates/parts/gear-crafted.hbs", scrollable: [""] },
+    qualities: { template: "systems/dbu-ttrpg/templates/parts/gear-qualities.hbs",
+      scrollable: [""] },
     body: { template: "systems/dbu-ttrpg/templates/parts/gear-sheet.hbs", scrollable: [""] }
   };
+
+  /** The built Item's tabs. Opened on what it is, which is what gets changed most. */
+  static TABS = {
+    description: { id: "description", group: "primary", label: "Description" },
+    crafted: { id: "crafted", group: "primary", label: "" },
+    qualities: { id: "qualities", group: "primary", label: "Qualities" }
+  };
+
+  tabGroups = { primary: "crafted" };
+
+  /** Whether this Item is built rather than picked, which is what decides its tabs. */
+  get #built() {
+    return Boolean(CRAFTED[this.item.system.crafted?.kind]);
+  }
+
+  /** A built Item gets its tabs; any other keeps its one page. */
+  _configureRenderParts(options) {
+    const parts = super._configureRenderParts(options);
+    const keep = this.#built
+      ? ["header", "tabs", "description", "crafted", "qualities"]
+      : ["header", "body"];
+    for (const key of Object.keys(parts)) if (!keep.includes(key)) delete parts[key];
+    return parts;
+  }
+
+  static _onChangeTab(event, target) {
+    const { tab, group } = target.dataset;
+    this.tabGroups[group] = tab;
+    this.changeTab(tab, group, { event, navElement: target, force: true });
+  }
 
   /** @override */
   async _prepareContext(options) {
@@ -100,6 +142,10 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     // to, and its Qualities to add and take off.
     context.crafted = this.#craftedContext(system);
     if (context.crafted) context.craftDCNow = context.crafted.reading.craftDCLabel;
+    // The middle tab is named for what was built - "Apparel", and "Weapon" when there are.
+    context.tabs = Object.fromEntries(Object.entries(this.constructor.TABS).map(([key, tab]) =>
+      [key, { ...tab, label: tab.label || (context.crafted?.label ?? ""),
+        cssClass: this.tabGroups[tab.group] === key ? "active" : "" }]));
 
     // The file's entry where the file still has one, and the copy's otherwise - the rules
     // live in traits/, and a copy made last week holds last week's wording. A built Item's

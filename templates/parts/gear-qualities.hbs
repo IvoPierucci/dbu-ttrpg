@@ -1,0 +1,38 @@
+<div class="tab {{tabs.qualities.cssClass}}" data-group="primary" data-tab="qualities">
+  <section class="panel">
+    {{#each crafted.qualities as |quality|}}
+    <div class="gear-row">
+      <span class="gear-name" data-tooltip="{{quality.tip}}">{{quality.name}}</span>
+      {{#if quality.choiceLabel}}<span class="gear-type">{{quality.choiceLabel}}</span>{{/if}}
+      <span class="gear-type">{{quality.slotsLabel}}</span>
+      {{#if quality.toggle}}
+      <label class="gear-type"><input type="checkbox" data-action="toggleQuality"
+             data-index="{{quality.index}}" {{#if quality.on}}checked{{/if}}/> {{quality.toggle}}</label>
+      {{/if}}
+      {{#if quality.misfit}}<span class="gear-warning">{{quality.misfit}}</span>{{/if}}
+      <button type="button" class="gear-remove" data-action="removeQuality"
+              data-index="{{quality.index}}" data-tooltip="Remove">&times;</button>
+    </div>
+    {{else}}
+    <p class="tab-placeholder">None.</p>
+    {{/each}}
+    {{#if crafted.overNote}}<p class="gear-warning">{{crafted.overNote}}</p>{{/if}}
+    {{#if crafted.specialNote}}<p class="gear-warning">{{crafted.specialNote}}</p>{{/if}}
+    <div class="gear-add-quality">
+      {{#if crafted.qualityChoices.length}}
+      <select data-quality-pick class="dbu-gear-pick">
+        {{#each crafted.qualityGroups as |group|}}
+        <optgroup label="{{group.label}}">
+          {{#each group.choices as |choice|}}
+          <option value="{{choice.value}}">{{choice.label}}</option>
+          {{/each}}
+        </optgroup>
+        {{/each}}
+      </select>
+      <button type="button" class="dbu-clash-button" data-action="addQuality">Add Quality</button>
+      {{else}}
+      <p class="tab-placeholder">No Qualities to add for this Category yet.</p>
+      {{/if}}
+    </div>
+  </section>
+</div>

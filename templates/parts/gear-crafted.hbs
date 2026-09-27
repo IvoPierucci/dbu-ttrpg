@@ -1,0 +1,47 @@
+<div class="tab {{tabs.crafted.cssClass}}" data-group="primary" data-tab="crafted">
+  {{! What the piece is: its Category, Craftsmanship Grade and Size, what those come to,
+      and its Category's entry. }}
+  <section class="panel">
+    <div class="stat-grid">
+      <div class="stat">
+        <em>Category</em>
+        <select name="system.crafted.category">
+          {{#each crafted.categoryChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat">
+        <em>Craftsmanship Grade</em>
+        <select name="system.crafted.grade" data-dtype="Number">
+          {{#each crafted.gradeChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat">
+        <em>Size{{#if crafted.stretches}} <span class="gear-warning" data-tooltip="Stretching: its Size Category is always its wearer's.">(its wearer's)</span>{{/if}}</em>
+        <select name="system.crafted.size">
+          {{#each crafted.sizeChoices as |choice|}}
+          <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+    <div class="gear-facts">
+      <span>Apparel Grade: {{crafted.reading.gradeLabel}}</span>
+      <span>Apparel Bonus: {{crafted.bonusLabel}}</span>
+      <span>Quality Slots: {{crafted.reading.used}}/{{crafted.reading.slots}}</span>
+      <span>Break Value: {{crafted.reading.breakValue}}</span>
+      {{#if crafted.reading.hardnessValue}}<span>Hardness Value: {{crafted.reading.hardnessValue}}</span>{{/if}}
+    </div>
+  </section>
+
+  {{#if entry.length}}
+  <section class="panel gear-entry">
+    {{#each entry as |line|}}
+    {{#if line.gap}}<br/>{{else}}<p>{{line.text}}</p>{{/if}}
+    {{/each}}
+  </section>
+  {{/if}}
+</div>

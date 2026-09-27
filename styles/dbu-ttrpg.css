@@ -108,6 +108,22 @@
   margin: 0 0 4px;
 }
 
+/* The header stays put; a plain Item's page, or a built one's tab, scrolls under it. */
+.dbu-ttrpg.gear .gear-header {
+  flex: 0 0 auto;
+}
+
+.dbu-ttrpg.gear .gear-sheet {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* A built Item's Description has its tab to itself. */
+.dbu-ttrpg.gear [data-tab="description"] prose-mirror {
+  min-height: 250px;
+}
+
 .dbu-gear-pick {
   width: 100%;
 }

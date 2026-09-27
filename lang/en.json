@@ -5,5 +5,9 @@
   "DBU.Attributes.scholarship": "Scholarship",
   "DBU.Attributes.insight": "Insight",
   "DBU.Attributes.magic": "Magic",
-  "DBU.Attributes.personality": "Personality"
+  "DBU.Attributes.personality": "Personality",
+  "TYPES.Actor.character": "Character",
+  "TYPES.Item.talent": "Talent",
+  "TYPES.Item.maneuver": "Maneuver",
+  "TYPES.Item.gear": "Item"
 }
