@@ -185,6 +185,9 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
     // Whether it counts towards the Apparel Penalty - Lightweight's and Sleek Design's "does
     // not count"; its Category's own say, Standard Clothing's, is the Penalty's to read.
     countsForPenalty: !active.some(entry => getTrait?.(entry.id)?.noApparelPenalty === true),
+    // Whether its Break Value can be reduced at all - Unbreakable's "cannot have its Break
+    // Value reduced". Read by the Break Value, which comes with the rest of the Apparel rules.
+    unbreakable: active.some(entry => getTrait?.(entry.id)?.unbreakable === true),
     // The most its Break Value can be: 3, and what its Qualities add.
     breakValue: (Number(kind.breakValue) || 0) + added("breakValue"),
     // A Hardness Value one of its Qualities sets outright - Hefty Plating's "is set to 4" -

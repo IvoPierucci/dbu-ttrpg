@@ -1,0 +1,29 @@
+id: unbreakable
+name: Unbreakable
+kind: crafting
+# A Special Apparel Quality: "typically gained through your ARC granting you unique pieces of
+# Apparel".
+special: true
+slots: 1
+# "Prerequisites: Durable Apparel Quality" - a Prerequisite about the piece: without Durable on
+# it, Unbreakable does not apply at all.
+requiresQualities: durable
+prerequisites: Durable Apparel Quality
+# "This piece of Apparel cannot have its Break Value reduced." Read by the Break Value.
+unbreakable: true
+source: Core Rule
+description: >
+  Its Break Value is never reduced. Needs Durable on the same piece.
+text: >
+  Unbreakable: This outfit is somehow indestructible.
+  –Apparel Category: All
+  –Prerequisites: Durable Apparel Quality
+  –Quality Slots: 1
+  –Effects: This piece of Apparel cannot have its Break Value reduced.
+
+---
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Losing Break Value comes with the rest of the Apparel rules. When it does: a piece whose
+# reading says `unbreakable` loses none, from anything - a Health Threshold, a Called Shot.

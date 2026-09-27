@@ -44,6 +44,8 @@ Headers only a Quality reads:
   breakValue:    what it adds to the most its Apparel's Break Value can be - Durable's 3.
   hardnessValue: a Hardness Value it sets its Apparel's to outright - Hefty Plating's 4.
   wornOverArmor: true - its Apparel may go on over Armor, the Jacket's. Read by the Layers.
+  unbreakable:   true - its Apparel's Break Value is never reduced, Unbreakable's. Read by the
+                 Break Value, as `unbreakable` on its reading.
   sparesFirstBreak: true - the first loss of Break Value from full each Combat Encounter does
                  not happen, Joint Protection's. Read by the Break Value.
   noApparelPenalty: true - its Apparel does not count towards the Apparel Penalty,
