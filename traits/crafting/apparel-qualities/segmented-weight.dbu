@@ -11,10 +11,11 @@ source: Core Rule
 description: >
   1 or 2 Quality Slots: the first Doff Bonus each Combat Encounter lasts a Combat Round longer
   for each.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: Doffed for the first time in a Combat Encounter: its Doff Bonus lasts 1 Combat Round
-  longer for each Quality Slot this takes.
+  [Automatic, 1/Encounter]: Doffed: its Doff Bonus lasts 1 Combat Round longer for each Quality
+  Slot this takes.
 text: >
   Segmented Weight: You can remove these weights in increments, or all at once.
   –Apparel Category: Weights

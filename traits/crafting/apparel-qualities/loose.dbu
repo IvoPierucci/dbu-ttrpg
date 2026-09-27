@@ -8,9 +8,10 @@ doffsWithNoEffort: true
 source: Core Rule
 description: >
   Taken off - and its Doff Bonus had - through the No-Effort Maneuver.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: Can be Doffed through the No-Effort Maneuver.
+  [Passive]: Can be Doffed through the No-Effort Maneuver.
 text: >
   Loose: This item of clothing comes off quite easily.
   –Apparel Category: Combat Clothing/Standard Clothing

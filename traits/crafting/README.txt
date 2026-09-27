@@ -58,8 +58,10 @@ Headers only a Quality reads:
                  on - Team Outfit's teammates, which the table keeps.
   noStack:       true - worn on several pieces, it applies from one.
   summary:       what it does, a folded block with a blank line between effects, each opening
-                 `passive:` (while worn) or `triggered:` (when something happens) - shown as its
-                 Effects on its Item's Qualities tab. Its `prerequisites` are added after them.
+                 with its tag as the rulebook writes one - `[Passive]:` while worn,
+                 `[Automatic, 1/Encounter]:` for one that happens without asking, `[Triggered]:`
+                 for one its wearer may use. Shown as its Effects on its Item's Qualities tab,
+                 with its `prerequisites` first.
   special:       true - a Special Apparel Quality: offered apart in Add Quality, "typically
                  gained through your ARC granting you unique pieces of Apparel". More than one
                  on a piece is said on its sheet, never refused.

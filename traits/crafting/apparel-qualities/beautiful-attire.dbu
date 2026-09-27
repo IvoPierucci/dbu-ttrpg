@@ -11,9 +11,10 @@ source: Core Rule
 description: >
   A Personality Skill chosen when it is made: its Checks 2 higher. Needs a Personality Score of
   4+ in whoever wears it.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: Skill Checks with the chosen Personality Skill: Dice Score 2 higher.
+  [Passive]: Skill Checks with the chosen Personality Skill: Dice Score 2 higher.
 text: >
   Beautiful Attire: This outfit is visually appealing, enhancing your performance in social
   situations.

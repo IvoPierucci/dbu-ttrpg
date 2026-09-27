@@ -7,9 +7,10 @@ slots: 1
 source: Core Rule
 description: >
   A built-in weapon: an Integrated Weapon of the Apparel's Craftsmanship Grade, while worn.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: While worn, you possess an Integrated Weapon of this piece's Craftsmanship Grade.
+  [Passive]: While worn, you possess an Integrated Weapon of this piece's Craftsmanship Grade.
 text: >
   Armed: This outfit has a built-in weapon of some kind.
   –Apparel Category: All (except Weights)

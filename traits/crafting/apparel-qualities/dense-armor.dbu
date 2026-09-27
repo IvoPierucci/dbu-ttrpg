@@ -8,9 +8,10 @@ apparelBonus: 1
 source: Core Rule
 description: >
   Apparel Bonus 1(bT) higher, and Combat Rolls 1(bT) lower.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: Apparel Bonus 1(bT) higher, and Combat Rolls 1(bT) lower.
+  [Passive]: Apparel Bonus 1(bT) higher, and Combat Rolls 1(bT) lower.
 text: >
   Dense Armor: Particularly protective armor, this bulky gear restricts your movements.
   –Apparel Category: Armor

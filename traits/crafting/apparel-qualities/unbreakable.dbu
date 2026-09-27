@@ -14,9 +14,10 @@ unbreakable: true
 source: Core Rule
 description: >
   Its Break Value is never reduced. Needs Durable on the same piece.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: Its Break Value is never reduced.
+  [Passive]: Its Break Value is never reduced.
 text: >
   Unbreakable: This outfit is somehow indestructible.
   –Apparel Category: All

@@ -12,9 +12,10 @@ noApparelPenalty: true
 source: Core Rule
 description: >
   Does not count towards the Apparel Penalty. Not with Durable on the same piece.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: Does not count towards the Apparel Penalty.
+  [Passive]: Does not count towards the Apparel Penalty.
 text: >
   Lightweight: This article of clothing is especially light.
   –Apparel Category: All (Except Weights)

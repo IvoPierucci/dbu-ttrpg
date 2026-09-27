@@ -7,9 +7,10 @@ prerequisites: 2+ Skill Ranks in Intimidation
 source: Core Rule
 description: >
   Intimidation Checks 2 higher. Needs 2+ Ranks in Intimidation in whoever wears it.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: Intimidation Skill Checks: Dice Score 2 higher.
+  [Passive]: Intimidation Skill Checks: Dice Score 2 higher.
 text: >
   Terrifying Design: Thanks to the sinister design of this outfit, you look even more
   menacing.

@@ -11,9 +11,10 @@ source: Core Rule
 description: >
   Strike or Dodge, chosen when it is made: the only Combat Roll the Weights lower, and the only
   one its Doff Bonus raises.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: The chosen Combat Roll is the only one the Weights lower, and the only one this
+  [Passive]: The chosen Combat Roll is the only one the Weights lower, and the only one this
   piece's Doff Bonus raises.
 text: >
   Focal: Designed to improve a single aspect of combat, these weights aren’t as heavy, but are

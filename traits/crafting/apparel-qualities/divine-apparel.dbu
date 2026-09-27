@@ -10,9 +10,10 @@ apparelBonus: 1
 source: Core Rule
 description: >
   Apparel Bonus 1(bT) higher.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: Apparel Bonus 1(bT) higher.
+  [Passive]: Apparel Bonus 1(bT) higher.
 text: >
   Divine Apparel: This article of clothing is empowered by a divine entity.
   –Apparel Category: All

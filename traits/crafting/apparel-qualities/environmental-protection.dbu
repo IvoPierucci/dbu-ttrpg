@@ -11,9 +11,10 @@ source: Core Rule
 description: >
   The Battle Environment, its Environmental Qualities and Unbreathable Atmosphere do nothing
   to whoever wears it.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: Battle Environments, Environmental Qualities and Unbreathable Atmosphere have no
+  [Passive]: Battle Environments, Environmental Qualities and Unbreathable Atmosphere have no
   effect on you.
 text: >
   Environmental Protection: Intended to preserve one’s life for exploration into a hostile

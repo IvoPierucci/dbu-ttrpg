@@ -436,31 +436,36 @@ export function apparelQualitiesInEffect(items) {
 }
 
 /**
- * What a line of a Quality's Effects is: on for as long as it is worn, set off by something
- * happening, or what its wearer or its piece must meet for it to apply.
+ * What a line of a Quality's Effects is, by the first word of its tag as the rulebook writes
+ * one: on for as long as it is worn, happening without asking, one its wearer may use when it
+ * comes - and what the wearer or the piece must meet for any of it to apply.
  */
 export const EFFECT_TYPES = {
+  prerequisite: { label: "Prerequisite" },
   passive: { label: "Passive" },
-  triggered: { label: "Triggered" },
-  prerequisite: { label: "Prerequisite" }
+  automatic: { label: "Automatic" },
+  triggered: { label: "Triggered" }
 };
 
 /**
- * What a Quality does, a line to an effect, for the Effects on its Item's sheet: its `summary`,
- * each line opening `passive:` or `triggered:`, then its Prerequisites as printed.
+ * What a Quality does, a line to an effect, for the Effects on its Item's sheet: its
+ * Prerequisites as printed first, then its `summary` - each line opening with its tag, as the
+ * rulebook's own do: `[Passive]: ...`, `[Automatic, 1/Encounter]: ...`. The badge says the tag;
+ * its first word is the type, and a tag whose first word is none of them is not shown.
  *
- * @returns {{type: string, text: string}[]}
+ * @returns {{type: string, label: string, text: string}[]}
  */
 export function qualitySummary(trait) {
-  const lines = String(trait?.summary ?? "").split("\n").map(line => line.trim()).filter(Boolean)
-    .map(line => {
-      const [, type, text] = line.match(/^(\w+):\s*(.+)$/) ?? [];
-      return (EFFECT_TYPES[type] && (type !== "prerequisite")) ? { type, text } : null;
-    })
-    .filter(Boolean);
+  const lines = [];
   const prerequisites = [].concat(trait?.prerequisites ?? []).join(", ").trim();
   if (prerequisites && !/^n\/?a$/i.test(prerequisites)) {
-    lines.push({ type: "prerequisite", text: prerequisites });
+    lines.push({ type: "prerequisite", label: EFFECT_TYPES.prerequisite.label, text: prerequisites });
+  }
+  for (const line of String(trait?.summary ?? "").split("\n").map(each => each.trim())) {
+    const [, tag, text] = line.match(/^\[([^\]]+)\]:\s*(.+)$/) ?? [];
+    const type = String(tag ?? "").split(/[\s,/]/)[0].toLowerCase();
+    if (!tag || !EFFECT_TYPES[type] || (type === "prerequisite")) continue;
+    lines.push({ type, label: tag.trim(), text });
   }
   return lines;
 }

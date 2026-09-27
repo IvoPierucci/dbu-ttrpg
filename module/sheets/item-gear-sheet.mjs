@@ -2,7 +2,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
-import { CRAFTED, EFFECT_TYPES, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable,
+import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable,
   craftedReading, namePrefixMatches, qualityChoiceLabel, qualitySummary, qualityChoices, qualityEntries, qualityFits, qualityInactive,
   qualitySlotRange, slotsTaken } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
@@ -312,8 +312,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
             reading.categoryName)
         };
       }),
-      // What its Qualities do, a block to each, typed a line at a time: the Effects between
-      // the search and the list. One held off, or switched off, is shown faded and says so.
+      // What its Qualities do, a block to each, a tagged line to each effect with its
+      // Prerequisites first: the Effects between the search and the list. One held off, or switched off, is shown faded and says so.
       effects: qualityEntries(crafted).map(entry => {
         const trait = getTrait(entry.id);
         const inactive = qualityInactive(entry, crafted, getTrait);
@@ -324,7 +324,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
             DBUGearSheet.#weathers()),
           off: Boolean(inactive) || switchedOff,
           offNote: inactive ? "Inactive" : (switchedOff ? "Switched off" : ""),
-          lines: qualitySummary(trait).map(line => ({ ...line, label: EFFECT_TYPES[line.type].label }))
+          lines: qualitySummary(trait)
         };
       }).filter(block => block.lines.length),
       // Only the ones this Category takes are offered.

@@ -146,7 +146,8 @@
 }
 
 /* The Qualities tab's Effects: what every Quality on the piece does, a block to each and a
-   typed line to each effect - Passive in green, Triggered in the accent, Prerequisite in red. */
+   tagged line to each effect - Passive in green, Automatic in blue, Triggered in the accent,
+   Prerequisite in red. */
 .dbu-ttrpg .gear-effects {
   margin: 0 0 8px;
   padding: 6px 8px;
@@ -210,6 +211,12 @@
   border-color: var(--dbu-ready, #2f9e55);
   background: color-mix(in srgb, var(--dbu-ready, #2f9e55) 25%, transparent);
   color: #a8e6b8;
+}
+
+.dbu-ttrpg .gear-effect-badge.automatic {
+  border-color: var(--dbu-ki, #2e86de);
+  background: color-mix(in srgb, var(--dbu-ki, #2e86de) 25%, transparent);
+  color: #a9d0f5;
 }
 
 .dbu-ttrpg .gear-effect-badge.triggered {

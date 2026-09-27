@@ -8,9 +8,10 @@ slots: 1
 source: Core Rule
 description: >
   Stress Bonus 2 higher.
-# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
+# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
 summary: >
-  passive: Stress Bonus 2 higher.
+  [Passive]: Stress Bonus 2 higher.
 text: >
   Resolute Belief: These clothes contribute to your morale, allowing you to draw on memories of
   the cause you fight for.
