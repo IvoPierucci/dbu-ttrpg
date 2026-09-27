@@ -9,6 +9,9 @@ slots: 1
 source: Core Rule
 description: >
   Strike and Dodge Rolls higher by half the Apparel Bonus.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  passive: Strike and Dodge Rolls higher by half the Apparel Bonus, rounded up.
 text: >
   Combat Ready: This set of clothing gives you such wonderful freedom of movement, it’s like
   you’re wearing nothing at all.

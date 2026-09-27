@@ -9,6 +9,9 @@ slots: 1
 source: Core Rule
 description: >
   The Natural Result of every Steadfast Check and Saving Throw 2 higher.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  passive: Natural Result of every Steadfast Check and Saving Throw 2 higher.
 text: >
   Legacy: Passed down from parent to child or master to student, this outfit helps you remember
   those who have placed their hopes and faith in you.

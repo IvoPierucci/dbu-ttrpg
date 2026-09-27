@@ -9,6 +9,11 @@ wornOverArmor: true
 source: Core Rule
 description: >
   Soak Value 1(bT) higher, and it can go on over Armor.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  passive: Soak Value 1(bT) higher.
+
+  passive: Can be worn over Armor.
 text: >
   Jacket: A piece of clothing designed to protect another piece of clothing underneath.
   –Apparel Category: Standard Clothing

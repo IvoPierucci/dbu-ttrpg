@@ -57,6 +57,9 @@ Headers only a Quality reads:
   toggle:        a label for a switch on its row: its script runs only while the player has it
                  on - Team Outfit's teammates, which the table keeps.
   noStack:       true - worn on several pieces, it applies from one.
+  summary:       what it does, a folded block with a blank line between effects, each opening
+                 `passive:` (while worn) or `triggered:` (when something happens) - shown as its
+                 Effects on its Item's Qualities tab. Its `prerequisites` are added after them.
   special:       true - a Special Apparel Quality: offered apart in Add Quality, "typically
                  gained through your ARC granting you unique pieces of Apparel". More than one
                  on a piece is said on its sheet, never refused.

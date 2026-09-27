@@ -11,6 +11,9 @@ breakValue: 3
 source: Core Rule
 description: >
   Maximum Break Value 3 higher. Not with Lightweight on the same piece.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  passive: Maximum Break Value 3 higher.
 text: >
   Durable: This particular piece of apparel is extremely hard to damage.
   –Apparel Category: All

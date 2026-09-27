@@ -10,6 +10,12 @@ source: Core Rule
 description: >
   Hardness Value 4. Thrown and hitting, a Might Clash that knocks them Prone. Needs a Force
   Score of 6+.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  passive: Hardness Value 4.
+
+  triggered: Hitting an Opponent with it through the Throw Maneuver: a Might Clash against them,
+  and winning knocks them Prone.
 text: >
   Hefty Plating: The sturdy weights in this outfit can be weaponized.
   –Apparel Category: Weights

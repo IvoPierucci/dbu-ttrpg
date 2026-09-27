@@ -8,6 +8,9 @@ sizeIsWearers: true
 source: Core Rule
 description: >
   Its Size Category is always its wearer's.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  passive: Its Size Category is always its wearer's.
 text: >
   Stretching: It expands to almost ANY size.
   –Apparel Category: All

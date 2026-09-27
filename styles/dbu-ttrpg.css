@@ -145,6 +145,89 @@
   font-size: 12px;
 }
 
+/* The Qualities tab's Effects: what every Quality on the piece does, a block to each and a
+   typed line to each effect - Passive in green, Triggered in the accent, Prerequisite in red. */
+.dbu-ttrpg .gear-effects {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--dbu-border);
+  border-radius: 6px;
+  background: var(--dbu-panel-raised, #272727);
+}
+
+.dbu-ttrpg .gear-effects-title {
+  margin: 0 0 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--dbu-border);
+  color: var(--dbu-accent);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dbu-ttrpg .gear-effect + .gear-effect {
+  margin-top: 8px;
+}
+
+.dbu-ttrpg .gear-effect.off {
+  opacity: 0.5;
+}
+
+.dbu-ttrpg .gear-effect-name {
+  margin-bottom: 3px;
+  font-weight: bold;
+  color: var(--dbu-chat-accent, #dfe288);
+}
+
+.dbu-ttrpg .gear-effect-off {
+  font-weight: normal;
+  font-style: italic;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .gear-effect-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+/* One width for all three, so every line's text starts in the same place. */
+.dbu-ttrpg .gear-effect-badge {
+  flex: 0 0 auto;
+  min-width: 84px;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 0 8px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1.6;
+}
+
+.dbu-ttrpg .gear-effect-badge.passive {
+  border-color: var(--dbu-ready, #2f9e55);
+  background: color-mix(in srgb, var(--dbu-ready, #2f9e55) 25%, transparent);
+  color: #a8e6b8;
+}
+
+.dbu-ttrpg .gear-effect-badge.triggered {
+  border-color: var(--dbu-accent, #f5a623);
+  background: color-mix(in srgb, var(--dbu-accent, #f5a623) 25%, transparent);
+  color: #ffd48a;
+}
+
+.dbu-ttrpg .gear-effect-badge.prerequisite {
+  border-color: var(--dbu-pending, #d1544a);
+  background: color-mix(in srgb, var(--dbu-pending, #d1544a) 25%, transparent);
+  color: #f2aaa4;
+}
+
+.dbu-ttrpg .gear-effect-text {
+  flex: 1 1 auto;
+}
+
 /* On the Qualities tab: "Insufficient Quality Slots", in the chat's yellow, bold. */
 .dbu-ttrpg .gear-insufficient {
   margin: 4px 0;

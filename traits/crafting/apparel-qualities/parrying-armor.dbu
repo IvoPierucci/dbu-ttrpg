@@ -6,6 +6,10 @@ slots: 1
 source: Core Rule
 description: >
   Parrying without a Weapon, the Strike Roll is higher by half the Apparel Bonus.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  passive: Parrying with no Weapon equipped: the Strike Roll higher by half the Apparel Bonus,
+  rounded up.
 text: >
   Parrying Armor: This set of armor includes firm bracers used for blocking incoming attacks.
   –Apparel Category: Armor

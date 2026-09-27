@@ -9,6 +9,10 @@ sparesFirstBreak: true
 source: Core Rule
 description: >
   Once a Combat Encounter, the first loss of Break Value from full does not happen.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  triggered: The first time in a Combat Encounter its Break Value would be lowered while at its
+  maximum, it is not lowered.
 text: >
   Joint Protection: This armor covers your joints, reducing the chances of them being injured.
   –Apparel Category: Armor

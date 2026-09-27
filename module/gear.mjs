@@ -436,6 +436,36 @@ export function apparelQualitiesInEffect(items) {
 }
 
 /**
+ * What a line of a Quality's Effects is: on for as long as it is worn, set off by something
+ * happening, or what its wearer or its piece must meet for it to apply.
+ */
+export const EFFECT_TYPES = {
+  passive: { label: "Passive" },
+  triggered: { label: "Triggered" },
+  prerequisite: { label: "Prerequisite" }
+};
+
+/**
+ * What a Quality does, a line to an effect, for the Effects on its Item's sheet: its `summary`,
+ * each line opening `passive:` or `triggered:`, then its Prerequisites as printed.
+ *
+ * @returns {{type: string, text: string}[]}
+ */
+export function qualitySummary(trait) {
+  const lines = String(trait?.summary ?? "").split("\n").map(line => line.trim()).filter(Boolean)
+    .map(line => {
+      const [, type, text] = line.match(/^(\w+):\s*(.+)$/) ?? [];
+      return (EFFECT_TYPES[type] && (type !== "prerequisite")) ? { type, text } : null;
+    })
+    .filter(Boolean);
+  const prerequisites = [].concat(trait?.prerequisites ?? []).join(", ").trim();
+  if (prerequisites && !/^n\/?a$/i.test(prerequisites)) {
+    lines.push({ type: "prerequisite", text: prerequisites });
+  }
+  return lines;
+}
+
+/**
  * Whether a name begins with what has been typed so far, character by character - the Add
  * Quality search. Case, apostrophes and the like aside, so "leaders" finds Leader's Insignia.
  */

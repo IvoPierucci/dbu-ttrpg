@@ -10,6 +10,10 @@ source: Core Rule
 description: >
   Struck by an Unarmed Physical Attack from beside you, they lose the Apparel Bonus in Life
   Points.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  triggered: Struck by an Unarmed Physical Attack from an Opponent on an adjacent Square: they
+  lose Life Points equal to this piece's Apparel Bonus.
 text: >
   Spiked: This armor is covered in sharpened spikes to retaliate against anyone who tries to
   strike you.

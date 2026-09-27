@@ -23,6 +23,23 @@
       <p class="tab-placeholder">No Qualities to add for this Category yet.</p>
       {{/if}}
     </div>
+    {{! What its Qualities do, all in one place: a block to each, a typed line to each effect. }}
+    {{#if crafted.effects.length}}
+    <div class="gear-effects">
+      <h4 class="gear-effects-title">Effects</h4>
+      {{#each crafted.effects as |block|}}
+      <div class="gear-effect{{#if block.off}} off{{/if}}">
+        <div class="gear-effect-name">{{block.name}}{{#if block.choiceLabel}} &middot; {{block.choiceLabel}}{{/if}}{{#if block.offNote}} <span class="gear-effect-off">({{block.offNote}})</span>{{/if}}</div>
+        {{#each block.lines as |line|}}
+        <div class="gear-effect-line">
+          <span class="gear-effect-badge {{line.type}}">{{line.label}}</span>
+          <span class="gear-effect-text">{{line.text}}</span>
+        </div>
+        {{/each}}
+      </div>
+      {{/each}}
+    </div>
+    {{/if}}
     {{#each crafted.qualities as |quality|}}
     <div class="gear-row">
       <span class="gear-name" data-tooltip="{{quality.tip}}">{{quality.name}}</span>

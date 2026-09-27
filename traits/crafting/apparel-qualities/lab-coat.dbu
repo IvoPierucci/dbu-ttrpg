@@ -12,6 +12,9 @@ source: Core Rule
 description: >
   A Scholarship Skill chosen when it is made: its Checks 2 higher. Needs a Scholarship Score of
   4+ in whoever wears it.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  passive: Skill Checks with the chosen Scholarship Skill: Dice Score 2 higher.
 text: >
   Lab Coat: This type of clothing is intended to protect you from chemical spills and other
   scientific mishaps.

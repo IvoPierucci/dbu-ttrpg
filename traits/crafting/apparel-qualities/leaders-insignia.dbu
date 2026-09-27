@@ -7,6 +7,12 @@ prerequisites: Personality Score of 6+
 source: Core Rule
 description: >
   Your Minions' Combat Rolls 1(bT) higher; with Team Outfit, your team's Wound Rolls too.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  passive: Your Minions' Combat Rolls 1(bT) higher.
+
+  passive: With Team Outfit on this piece: the Wound Rolls of Allies with the same team name
+  1(bT) higher (does not stack).
 text: >
   Leader’s Insignia: A symbol of your authority, those who follow you respect and recognize you
   as their leader.

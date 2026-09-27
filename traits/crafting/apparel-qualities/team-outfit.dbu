@@ -10,6 +10,9 @@ noStack: true
 source: Core Rule
 description: >
   Stress Bonus 1 higher while your team wears theirs - switched on the Item.
+# What it does, for the Effects on its Item's sheet: one line to an effect, typed.
+summary: >
+  passive: Stress Bonus 1 higher while your team wears theirs (does not stack).
 text: >
   Team Outfit: Bearing an emblem synonymous with the team you are part of, this outfit shows
   your team pride!
