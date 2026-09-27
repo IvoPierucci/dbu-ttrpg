@@ -32,7 +32,7 @@
       <span>Apparel Grade: {{crafted.reading.gradeLabel}}</span>
       <span>Apparel Bonus: {{crafted.bonusLabel}}</span>
       <span>Quality Slots: {{crafted.reading.used}}/{{crafted.reading.slots}}</span>
-      <span>Break Value: {{crafted.reading.breakValue}}</span>
+      <span>Break Value: {{#if crafted.reading.destroyed}}destroyed{{else}}{{crafted.reading.breakLeft}}/{{crafted.reading.breakValue}}{{/if}}</span>
       {{#if crafted.reading.hardnessValue}}<span>Hardness Value: {{crafted.reading.hardnessValue}}</span>{{/if}}
     </div>
   </section>

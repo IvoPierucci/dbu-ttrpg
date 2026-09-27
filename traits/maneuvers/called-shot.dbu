@@ -9,6 +9,10 @@ baseForbids: area
 damageCategoryShift: 1
 strikePerTier: -2
 asks: State the area you targeted
+# "An Opponent can target a piece of Apparel with the Called Shot Maneuver, reducing its Break
+# Value by 1 if they successfully hit (you still take 1/2 of the Damage you normally would from
+# this Attacking Maneuver)." Asked beside the area, as one it may be.
+targetsApparel: true
 source: Core Rule
 description: >
   Aim for something in particular. One Damage Category harder, 2(T) off the Strike

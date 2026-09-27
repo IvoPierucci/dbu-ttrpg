@@ -143,7 +143,12 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         // piece made before Items had Effects of their own - read as what its Category and
         // Qualities would write, and written down the first time its sheet is opened.
         effects: new fields.StringField({ required: false, nullable: true, blank: true,
-          initial: null })
+          initial: null }),
+        // Break Value lost, off the most it can be - so a Quality raising the most (Durable)
+        // raises what is left with it. Broken at 0 left; repaired back to none lost.
+        breakLost: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        // Destroyed outright - grown out of by 2+ Size Categories. Not repaired.
+        destroyed: new fields.BooleanField({ required: true, initial: false })
       }),
 
       /** Shrinks its wearer to a Size named outright - the Micro Band - and where they are. */

@@ -2664,6 +2664,17 @@ export async function postGearHazard(actor, item) {
   });
 }
 
+/** Lower the Break Value of what they wear on top, and say what it came to. */
+async function sayApparelBreak(target) {
+  const { breakApparel } = await import("./gear.mjs");
+  const said = await breakApparel(target, getTrait);
+  if (!said) return;
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(said)}</div>`
+  });
+}
+
 /**
  * What the Throw Maneuver's thrown thing does to the one it hit: Collision Damage - "reduce
  * your Life Points by the Hardness Value of the Feature you Collided with", at the base Tier
@@ -8835,6 +8846,8 @@ export async function reduceLifePoints(target, amount, { reason = "Life Point re
       ${Handlebars.escapeExpression(reason)}
       <em>past Soak and Damage Reduction</em></div>`
   });
+  // "Apparel loses 1 Break Value if you are knocked through a Health Threshold."
+  if (knockedThrough) await sayApparelBreak(target);
   return { taken, knockedThrough };
 }
 
@@ -9336,7 +9349,11 @@ function featureNote(profile) {
 async function applyAttackDamage(message, target, attack) {
   const own = targetResult(attack, target.uuid);
   if (!own || own.applied) return;
-  const { damage } = own;
+  // A Called Shot at a piece of Apparel that hit: "you still take 1/2 of the Damage you
+  // normally would from this Attacking Maneuver" - and the piece loses 1 Break Value, below.
+  const atApparel = own.hit && !isAbsoluteMiss(own)
+    && (attack.modifiers ?? []).some(modifier => modifier.atApparel);
+  const damage = atApparel ? Math.floor(own.damage / 2) : own.damage;
 
   // Sweeping: "if you deal Damage with this Attacking Maneuver, double the amount of
   // Diminishing Defense stacks a target would receive from it." Settled here because
@@ -9379,6 +9396,11 @@ async function applyAttackDamage(message, target, attack) {
       }
       : {})
   });
+
+  // "Apparel loses 1 Break Value if you are knocked through a Health Threshold" - and a
+  // Called Shot at it that hit takes 1 off it besides. The Top Layer's, both.
+  if (knockedThrough) await sayApparelBreak(target);
+  if (atApparel) await sayApparelBreak(target);
 
   // "If you successfully Damage an Opponent" - which is answered here and nowhere
   // earlier. The Clash arrives as its own card, because it is a Clash: two characters,

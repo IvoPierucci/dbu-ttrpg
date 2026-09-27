@@ -186,6 +186,11 @@
         {{/if}}
         {{! Worn: the one button, off the Layer it is on. Not: a button for each Layer, closed
             while another piece is on it. }}
+        {{#if row.breakLabel}}<span class="gear-type">{{row.breakLabel}}</span>{{/if}}
+        {{#if row.repairable}}
+        <button type="button" class="gear-act" data-action="repairGear" data-item-id="{{row.itemId}}"
+                data-tooltip="After a Qualified Apparel Craft Skill Check, out of a Combat Encounter, with an hour to spend on it.">Repair</button>
+        {{/if}}
         {{#if row.actsAsTop}}
         <span class="gear-type" data-tooltip="Nothing is on the Top Layer: this acts as it, and its Category applies.">as Top</span>
         {{/if}}

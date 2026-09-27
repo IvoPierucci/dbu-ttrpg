@@ -452,6 +452,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       teleportGear: DBUCharacterSheet._onTeleportGear,
       equipGear: DBUCharacterSheet._onEquipGear,
       layerGear: DBUCharacterSheet._onLayerGear,
+      repairGear: DBUCharacterSheet._onRepairGear,
       addApparel: DBUCharacterSheet._onAddApparel,
       lockGear: DBUCharacterSheet._onLockGear,
       shrinkGear: DBUCharacterSheet._onShrinkGear,
@@ -2150,6 +2151,43 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** How many Qualities past its Slots a built Item is, or 0. */
+  /**
+   * A piece of Apparel's Break Value on its row: what is left of it, and - lowered, out of a
+   * Combat Encounter, and not destroyed - a way to repair it.
+   */
+  static #breakRow(item, inCombat) {
+    const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {} });
+    const lost = Number(item.system.crafted?.breakLost) || 0;
+    return {
+      breakLabel: reading?.destroyed ? "Destroyed"
+        : (reading?.breakLeft === 0) ? "Broken"
+        : lost ? `Break Value ${reading.breakLeft}/${reading.breakValue}` : "",
+      repairable: Boolean(lost) && !reading?.destroyed && !inCombat
+    };
+  }
+
+  /**
+   * Repair a piece of Apparel: "can be repaired via a Qualified Apparel Craft Skill Check,
+   * while you are not in a Combat Encounter and have at least an hour of time to spend on
+   * repairing the piece of Apparel. Repairing a piece of Apparel allows you to restore the
+   * Break Value to maximum, even if the Break Value was reduced to 0." The Check and the hour
+   * are the table's; this is what making it does.
+   */
+  static async _onRepairGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system.crafted?.kind || item.system.crafted.destroyed) return;
+    if (game.combat?.started) {
+      ui.notifications.warn("Apparel is not repaired in a Combat Encounter.");
+      return;
+    }
+    await item.update({ "system.crafted.breakLost": 0 });
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(this.actor.name)} repairs `
+        + `${Handlebars.escapeExpression(item.name)}: its Break Value is whole again.</p>`
+    });
+  }
+
   static #overSlots(item) {
     if (!item.system.crafted?.kind) return 0;
     return craftedReading(item.system.crafted,
@@ -2805,6 +2843,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         return { key, label, blocked: problem,
           cost: inCombat ? `${APPAREL_EQUIP_COST} Actions` : "" };
       }),
+      // What is left of its Break Value, and whether it is broken or gone.
+      ...DBUCharacterSheet.#breakRow(item, inCombat),
       // Taking it off: 1 Action, and 1 for each Layer worn above it.
       offCost: (inCombat && item.system.equipped)
         ? `${unequipCost(items, item)} Action${unequipCost(items, item) === 1 ? "" : "s"}` : ""

@@ -756,7 +756,8 @@ async function askModifiers(actor, base) {
     if (!entry.modifier.asks) continue;
     const said = await askModifierNote(entry.modifier);
     if (said === null) return null;
-    entry.note = said;
+    entry.note = said.note;
+    entry.atApparel = said.atApparel;
   }
 
   return taken;
@@ -782,7 +783,9 @@ export function appliedModifiers(entries) {
     damageCategoryShift: entry.modifier.damageCategoryShift ?? 0,
     strikePerTier: entry.modifier.strikePerTier ?? 0,
     woundPerTier: entry.modifier.woundPerTier ?? 0,
-    note: entry.note ?? ""
+    note: entry.note ?? "",
+    // A Called Shot at a piece of Apparel: its Break Value on a hit, and half the Damage.
+    atApparel: Boolean(entry.atApparel)
   }));
 }
 
@@ -794,7 +797,10 @@ export function appliedModifiers(entries) {
  * five examples are examples rather than options. What is typed goes on the attack's card
  * for the ARC and the table to rule on.
  *
- * @returns {Promise<?string>} what was said, or null if the whole thing was dropped
+ * Where it may be aimed at a piece of Apparel - the Called Shot - that is asked beside it.
+ *
+ * @returns {Promise<?{note: string, atApparel: boolean}>} what was said, or null if the whole
+ *   thing was dropped
  */
 async function askModifierNote(modifier) {
   const said = await foundry.applications.api.DialogV2.wait({
@@ -805,20 +811,26 @@ async function askModifierNote(modifier) {
         <span>${Handlebars.escapeExpression(modifier.asks)}</span>
         <input type="text" name="note" value=""/>
         <em>Written on the card in your own words. What it comes to is the ARC's.</em>
-      </label>`,
+      </label>${modifier.targetsApparel ? `
+      <label class="dbu-wager" data-tooltip="On a hit, its Break Value is 1 lower - the Top Layer's - and they take half the Damage.">
+        <input type="checkbox" name="apparel"/>
+        <span>A piece of Apparel</span>
+      </label>` : ""}`,
     buttons: [
       {
         action: "confirm",
         label: "Confirm",
-        callback: (event, button, dialog) =>
-          String(dialog.element.querySelector('input[name="note"]').value ?? "").trim()
+        callback: (event, button, dialog) => ({
+          note: String(dialog.element.querySelector('input[name="note"]').value ?? "").trim(),
+          atApparel: Boolean(dialog.element.querySelector('input[name="apparel"]')?.checked)
+        })
       },
       { action: "cancel", label: "Cancel" }
     ],
     rejectClose: false
   });
 
-  return (typeof said === "string") ? said : null;
+  return (said && (typeof said === "object")) ? said : null;
 }
 
 /**
@@ -1581,6 +1593,7 @@ export function definitionOf(item) {
     strikePerTier: item.system.strikePerTier ?? 0,
     woundPerTier: item.system.woundPerTier ?? 0,
     asks: item.system.asks ?? "",
+    targetsApparel: item.system.targetsApparel,
     delays: item.system.delays,
     special: item.system.special,
     analysis: item.system.analysis,
@@ -2934,6 +2947,7 @@ export function maneuverItemFrom(definition) {
       strikePerTier: definition.strikePerTier ?? 0,
       woundPerTier: definition.woundPerTier ?? 0,
       asks: definition.asks ?? "",
+      targetsApparel: Boolean(definition.targetsApparel),
       delays: Boolean(definition.delays),
       special: Boolean(definition.special),
       analysis: Boolean(definition.analysis),

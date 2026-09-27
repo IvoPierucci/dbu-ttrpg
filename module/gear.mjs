@@ -202,6 +202,12 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, 
     spikes: flag("piece.spikes"),
     // The most its Break Value can be: 3, and what its Effects add.
     breakValue: applySlot(piece, "piece.breakValue", Number(kind.breakValue) || 0),
+    // What is left of it, and whether that is nothing: "An item only breaks when its Break
+    // Value reaches 0." A destroyed piece has none left, whatever it lost.
+    breakLeft: crafted.destroyed ? 0
+      : Math.max(0, applySlot(piece, "piece.breakValue", Number(kind.breakValue) || 0)
+        - (Number(crafted.breakLost) || 0)),
+    destroyed: Boolean(crafted.destroyed),
     // A Hardness Value its Effects set outright - Hefty Plating's "is set to 4" - or null
     // where they say nothing about it.
     hardnessValue: piece["piece.hardnessValue"] ? applySlot(piece, "piece.hardnessValue", 0) : null,
@@ -765,7 +771,7 @@ export async function grantDoffBonus(actor, item, getTrait) {
 
   const { setCondition } = await import("./conditions.mjs");
   const { lasting, clockOff, EDGES, KINDS } = await import("./durations.mjs");
-  await actor.update({
+  await writeActor(actor, {
     "system.usedManeuvers": [...used, doffKey(item)],
     "system.doffBonus": { amount: bonus.amount, strike: bonus.strike, dodge: bonus.dodge,
       wound: bonus.wound, source: item.name }
@@ -779,6 +785,54 @@ export async function grantDoffBonus(actor, item, getTrait) {
     : bonus.strike ? "Strike Rolls" : "Dodge Rolls";
   return `Doff Bonus: ${rolls} +${bonus.amount} until the end of their next turn`
     + `${bonus.rounds ? `, and ${bonus.rounds} Combat Round${bonus.rounds === 1 ? "" : "s"} more` : ""}.`;
+}
+
+/** Write to a character this client may not own, relayed through the GM where it does not. */
+async function writeActor(actor, changes) {
+  if (actor.isOwner === false) {
+    const { requestActorUpdate } = await import("./chat.mjs");
+    return requestActorUpdate(actor, changes);
+  }
+  return actor.update(changes);
+}
+
+/**
+ * Lower the Break Value of what a character wears, by 1: "Apparel loses 1 Break Value if you are
+ * knocked through a Health Threshold", and a Called Shot at it. "If your Break Value would be
+ * lowered by any rule or effect, it only applies to the Top Layer" - the Top, or whichever Layer
+ * worn is highest. Not a piece that cannot have it reduced (Unbreakable); not, the first time in
+ * a Combat Encounter it would be lowered from its most, one with Joint Protection.
+ *
+ * Brought to 0 it breaks - "that piece of Apparel no longer fully functions" - and is taken off,
+ * by the table's ruling that a broken piece is as good as not there. Weights broken count "as if
+ * you removed them for the Doff Bonus".
+ *
+ * @returns {Promise<string>} what the table is told, or "" when nothing is worn.
+ */
+export async function breakApparel(actor, getTrait) {
+  const top = topLayerPiece(Array.from(actor?.items ?? []));
+  if (!top) return "";
+  const reading = craftedReading(top.system.crafted, { getTrait, difficulties: {} });
+  if (reading.unbreakable) return `${top.name} cannot have its Break Value reduced.`;
+
+  const lost = Number(top.system.crafted.breakLost) || 0;
+  const used = actor.system.usedManeuvers ?? [];
+  const spareKey = `encounter:spare.${top.id}`;
+  if (game.combat?.started && reading.sparesFirstBreak && (lost === 0) && !used.includes(spareKey)) {
+    await writeActor(actor, { "system.usedManeuvers": [...used, spareKey] });
+    return `${top.name} keeps its Break Value: Joint Protection.`;
+  }
+
+  const left = Math.max(0, reading.breakLeft - 1);
+  await writeActor(actor, { items: [{ _id: top.id, "system.crafted.breakLost": lost + 1,
+    ...(left ? {} : { "system.equipped": false, "system.layer": "" }) }] });
+  if (left) return `${top.name} loses 1 Break Value: ${left}/${reading.breakValue}.`;
+  let said = `${top.name} breaks, and is taken off.`;
+  if (top.system.crafted.category === "weights") {
+    const doff = await grantDoffBonus(actor, top, getTrait);
+    if (doff) said += ` ${doff}`;
+  }
+  return said;
 }
 
 /** What it costs to put a piece of Apparel on during a Combat Encounter: "2 Actions". */
@@ -804,6 +858,10 @@ export function equipPlan(items, item, layer, { inCombat = false, wearer = null,
   const crafted = item?.system?.crafted;
   if (!crafted?.kind || !APPAREL_LAYERS[layer]) return refuse("That is not a Layer.");
   if (item.system?.equipped) return refuse(`${item.name} is already worn.`);
+  // Broken is as good as not there, by the table's ruling - until it is repaired.
+  if (crafted.destroyed) return refuse("Destroyed.");
+  const left = craftedReading(crafted, { getTrait, difficulties: {} })?.breakLeft;
+  if (left === 0) return refuse("Broken: repair it first.");
 
   // Made for one Size - or its wearer's, stretching.
   const size = wearer?.system?.size?.key;
@@ -1033,7 +1091,10 @@ export function craftedItemFrom(kindKey, actor, getTrait) {
         qualities: [],
         // Written from its Category the moment it is made, and its own from then on.
         effects: composeEffects({ kind: kindKey, category: kind.defaultCategory, qualities: [] },
-          "", { getTrait })
+          "", { getTrait }),
+        // Whole.
+        breakLost: 0,
+        destroyed: false
       }
     }
   };

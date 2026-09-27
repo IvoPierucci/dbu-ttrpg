@@ -360,6 +360,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * the system to act on.
        */
       asks: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** Whether what it targets may be a piece of Apparel - the Called Shot. */
+      targetsApparel: new fields.BooleanField({ required: true, initial: false }),
       /**
        * Holds the Base Maneuver back instead of letting it happen.
        *

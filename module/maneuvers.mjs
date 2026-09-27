@@ -2683,6 +2683,7 @@ export async function loadManeuvers() {
     strikePerTier: trait.strikePerTier ?? 0,
     woundPerTier: trait.woundPerTier ?? 0,
     asks: trait.asks ?? "",
+    targetsApparel: Boolean(trait.targetsApparel),
     delays: Boolean(trait.delays),
     special: Boolean(trait.special),
     analysis: Boolean(trait.analysis),
