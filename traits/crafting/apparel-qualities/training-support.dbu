@@ -23,12 +23,9 @@ text: >
 
 ---
 
-# --- What is not built ---------------------------------------------------------------------------
-#
-# The Weights Category's reduction comes with the rest of the Apparel rules. It asks
-# weightsPenaltyWaived() in module/gear.mjs whether to leave it off: this Quality on the piece,
-# a wearer with 2+ Ranks in Concealment, and any stacks of Holding Back. "You may" is taken as
-# always - nobody chooses a penalty.
+# The Weights Category's part leaves its reduction off while `$waived` is 1: this Quality on the
+# piece, a wearer with 2+ Ranks in Concealment, and any stacks of Holding Back. "You may" is taken
+# as always - nobody chooses a penalty.
 
 [passive]
 if (concealment.ranks >= 2) {

@@ -19,11 +19,9 @@ text: >
 
 ---
 
-# --- What is not built ---------------------------------------------------------------------------
-#
-# Removing Apparel and its Doff Bonus come with the rest of the Apparel rules, and the
-# No-Effort Maneuver is not in this system yet. When both are: a piece with this on it may be
-# taken off through the No-Effort Maneuver rather than for its Actions - `doffsWithNoEffort`.
+# Taken off in a Combat Encounter: the No-Effort Maneuver instead of its Actions, on its
+# wearer's turn and while they have its use this Round - asked where both are open. Its Doff
+# Bonus as any piece's.
 
 [passive]
 piece.doffsWithNoEffort = true;

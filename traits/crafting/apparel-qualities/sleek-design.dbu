@@ -23,11 +23,8 @@ text: >
 
 ---
 
-# --- What is not built ---------------------------------------------------------------------------
-#
-# The Armor's Damage Reduction and the Apparel Penalty come with the rest of the Apparel rules.
-# The Damage Reduction reads its multiplier - a half, here - from its piece's reading
-# (`armorDamageReduction`), and the Penalty leaves this piece out, as it does Lightweight's.
+# The Armor Category's part multiplies its Damage Reduction by `$armorFactor` - a half, here - and
+# the Apparel Penalty leaves this piece out, as it does Lightweight's.
 
 [passive]
 piece.armorDamageReduction *= 1/2;

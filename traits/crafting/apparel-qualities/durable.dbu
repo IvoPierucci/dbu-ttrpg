@@ -22,8 +22,8 @@ text: >
 
 ---
 
-# The piece's own: its sheet shows the most its Break Value can be, 6 with this. Losing Break
-# Value and repairing it come with the rest of the Apparel rules, and read that most.
+# The piece's own: the most its Break Value can be, 6 with this - what is lost comes off it,
+# and a repair brings it back to it.
 
 [passive]
 piece.breakValue += 3;

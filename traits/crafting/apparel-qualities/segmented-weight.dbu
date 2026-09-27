@@ -29,11 +29,8 @@ text: >
 #
 # Its Slots: 1 or 2, asked when it is added and shown on its row.
 #
-# --- What is not built ---------------------------------------------------------------------------
-#
-# The Doff Bonus comes with the rest of the Apparel rules. It reads how many Combat Rounds longer
-# the first one of an Encounter lasts through doffRounds() in module/gear.mjs - a Round for each
-# Slot this takes.
+# Its Doff Bonus lasts a Combat Round longer for each Slot this takes - always the first time it
+# is doffed in an Encounter, since a piece gives its Doff Bonus once an Encounter.
 
 [passive]
 piece.doffRounds += $slots;

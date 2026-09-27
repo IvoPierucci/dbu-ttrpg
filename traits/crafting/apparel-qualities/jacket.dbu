@@ -21,8 +21,8 @@ text: >
 
 ---
 
-# The Soak Value is the wearer's, while worn. Going on over Armor is the Layers' to allow: they
-# come with the rest of the Apparel rules, and read `wornOverArmor`.
+# The Soak Value is the wearer's, while worn. Going on over Armor: while Armor is worn nothing
+# goes on but this, and it goes on top of the Armor - equipPlan() in module/gear.mjs.
 [passive]
 soakValue += 1(bT);
 piece.wornOverArmor = true;

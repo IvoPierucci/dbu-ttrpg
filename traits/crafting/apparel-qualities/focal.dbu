@@ -31,10 +31,8 @@ text: >
 #
 # The choice: Strike or Dodge, asked when it is added and shown on its row.
 #
-# --- What is not built ---------------------------------------------------------------------------
-#
-# What it changes is the Weights Category's own effects and the Doff Bonus, and both come with
-# the rest of the Apparel rules. They read the choice through narrowedRoll() in module/gear.mjs.
+# The Weights Category's part reaches only the chosen Roll (`$reachesStrike`/`$reachesDodge`), and
+# its Doff Bonus lands on that Roll alone - both through narrowedRoll() in module/gear.mjs.
 
 [passive]
 piece.narrows.$choice = true;

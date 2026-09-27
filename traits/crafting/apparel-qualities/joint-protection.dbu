@@ -21,11 +21,8 @@ text: >
 
 ---
 
-# --- What is not built ---------------------------------------------------------------------------
-#
-# Losing Break Value comes with the rest of the Apparel rules. When it does: a piece with this
-# on it, at its maximum Break Value, loses nothing the first time in a Combat Encounter it would,
-# and that once is kept with the other once-per-Encounter uses.
+# At its maximum Break Value, the first time in a Combat Encounter it would lose some, it loses
+# none - kept with the other once-per-Encounter uses. See breakApparel() in module/gear.mjs.
 
 [passive]
 piece.sparesFirstBreak = true;

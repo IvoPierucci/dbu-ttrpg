@@ -190,7 +190,7 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, 
     // Lightweight, Sleek Design and Standard Clothing write.
     countsForPenalty: piece["piece.countsForPenalty"] !== false,
     // Whether its Break Value can be reduced at all - Unbreakable's "cannot have its Break
-    // Value reduced". Read by the Break Value, which comes with the rest of the Apparel rules.
+    // Value reduced". Read by breakApparel().
     unbreakable: flag("piece.unbreakable"),
     // The rest of what it says about itself, for the rules that come with Layers and the
     // Break Value: Joint Protection's, the Jacket's, Loose's, Segmented Weight's, Stretching's.
@@ -339,8 +339,7 @@ export function weatherResisted(items, weatherId, getTrait, data = null) {
  * Combat Roll benefits from this piece of Apparel's Doff Bonus." `narrowsCategory: true` on
  * the Quality, its choice the Roll. "" when nothing narrows it: every Combat Roll.
  *
- * Read by the Weights Category and the Doff Bonus, which come with the rest of the Apparel
- * rules.
+ * Read by the Weights Category's part, through its tokens, and by the Doff Bonus.
  */
 export function narrowedRoll(item, getTrait) {
   const piece = pieceSlots(item?.system?.crafted, { getTrait });
@@ -352,8 +351,8 @@ export function narrowedRoll(item, getTrait) {
  * Whether the Weights Category's reduction to the Combat Rolls is left off this piece for its
  * wearer - Training Support's "If you possess any stacks of Holding Back while wearing this
  * Apparel, you may ignore the reduction". Its wearer's own Prerequisite, 2+ Ranks in
- * Concealment, asked here as its script would. Read by the Weights, which come with the rest
- * of the Apparel rules.
+ * Concealment, asked in its script - with the Ranks counted early, since this is asked while
+ * the effects are gathered. Read by the Weights Category's part, as `$waived`.
  */
 export function weightsPenaltyWaived(item, wearer, getTrait) {
   // The Ranks as counted before the Skills are worked out, where they have been: this is asked
@@ -367,8 +366,7 @@ export function weightsPenaltyWaived(item, wearer, getTrait) {
 /**
  * The Size Category a piece is: the one it was made for - "Each piece of Apparel is created
  * with a specific Size Category in mind" - or, where Stretching says so, "the current Size
- * Category of this piece of Apparel's wearer". Read by the Size rules, which come with the rest
- * of the Apparel rules.
+ * Category of this piece of Apparel's wearer". Read by equipPlan() and outgrown().
  */
 export function apparelSize(item, wearer, getTrait) {
   const crafted = item?.system?.crafted;
@@ -397,7 +395,7 @@ export function spikesOf(items, getTrait, baseTier = 1) {
 /**
  * How many Combat Rounds longer a piece's first Doff Bonus of an Encounter lasts - Segmented
  * Weight's "for each Quality Slot this Quality occupies ... by 1 Combat Round". Read by the
- * Doff Bonus, which comes with the rest of the Apparel rules.
+ * Doff Bonus.
  */
 export function doffRounds(item, getTrait) {
   return applySlot(pieceSlots(item?.system?.crafted, { getTrait }), "piece.doffRounds", 0);
@@ -1015,8 +1013,8 @@ function factorOf(contribution) {
  * The worn Apparel whose Qualities apply, each with the Qualities that do: those its Category
  * takes. "Apparel Qualities may apply to only certain Apparel Categories."
  *
- * Worn is `equipped`, as an Accessory is; Layers, and which is on top, come with the rest of
- * the Apparel rules. The wearer's Prerequisites are asked in each Quality's own script.
+ * Worn is `equipped`, as an Accessory is - on a Layer, `layer`; a broken piece is taken off. The
+ * wearer's Prerequisites are asked in each Quality's own script.
  */
 export function apparelQualitiesInEffect(items) {
   return (items ?? [])

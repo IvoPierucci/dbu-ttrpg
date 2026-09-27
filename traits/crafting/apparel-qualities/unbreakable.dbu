@@ -25,10 +25,7 @@ text: >
 
 ---
 
-# --- What is not built ---------------------------------------------------------------------------
-#
-# Losing Break Value comes with the rest of the Apparel rules. When it does: a piece whose
-# reading says `unbreakable` loses none, from anything - a Health Threshold, a Called Shot.
+# Loses no Break Value, from anything - a Health Threshold, a Called Shot.
 
 [passive]
 piece.unbreakable = true;

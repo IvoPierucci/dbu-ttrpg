@@ -21,9 +21,8 @@ text: >
 ---
 
 # Its sheet says its Size follows whoever wears it. The Size rules - worn only at its Size, and
-# destroyed when its wearer grows 2+ Size Categories past it - come with the rest of the Apparel
-# rules, and read its Size through apparelSize() in module/gear.mjs: the wearer's own, always,
-# so neither ever bites.
+# destroyed when its wearer grows 2+ Size Categories past it - read its Size through apparelSize()
+# in module/gear.mjs: the wearer's own, always, so neither ever bites.
 
 [passive]
 piece.sizeIsWearers = true;
