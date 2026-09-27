@@ -152,8 +152,11 @@
   font-weight: bold;
 }
 
+/* On top of the Qualities tab; its list opens over the Qualities already added rather than
+   pushing them down. */
 .dbu-ttrpg .gear-add-quality {
-  margin-top: 6px;
+  position: relative;
+  margin-bottom: 6px;
 }
 
 /* The search takes the row; Add only what its word needs. */
@@ -176,6 +179,11 @@
 /* What the search finds, under it: the groups as the Add Item list's headings are - black
    behind, the chat's yellow on top - and the Qualities in the list's ordinary colours. */
 .dbu-ttrpg .gear-quality-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
   list-style: none;
   margin: 2px 0 0;
   padding: 0;

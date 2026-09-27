@@ -97,7 +97,13 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     const lit = () => options.find(option => option.classList.contains("active"));
     const light = option => {
       for (const each of options) each.classList.toggle("active", each === option);
-      option?.scrollIntoView({ block: "nearest" });
+      if (!option) return;
+      // Within the list only: scrollIntoView would scroll the tab under it too, and the
+      // search off the top.
+      const top = option.offsetTop;
+      const bottom = top + option.offsetHeight;
+      if (top < list.scrollTop) list.scrollTop = top;
+      else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
     };
     const filter = () => {
       for (const option of options) {
@@ -113,7 +119,6 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     const open = () => {
       list.hidden = false;
       filter();
-      list.scrollIntoView({ block: "nearest" });
     };
     const pick = option => {
       input.value = option.dataset.name;
