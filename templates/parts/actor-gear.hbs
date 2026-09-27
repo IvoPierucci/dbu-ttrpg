@@ -191,11 +191,11 @@
         {{/if}}
         {{#if row.worn}}
         <button type="button" class="gear-act" data-action="layerGear"
-                data-item-id="{{row.itemId}}">Unequip{{#if row.layerLabel}} {{row.layerLabel}}{{/if}}</button>
+                data-item-id="{{row.itemId}}" {{#if row.offCost}}data-tooltip="{{row.offCost}}"{{/if}}>Unequip{{#if row.layerLabel}} {{row.layerLabel}}{{/if}}</button>
         {{else}}
         {{#each row.layers as |layer|}}
         <button type="button" class="gear-act" data-action="layerGear" data-item-id="{{../itemId}}"
-                data-layer="{{layer.key}}" {{#if layer.takenBy}}disabled data-tooltip="{{layer.takenBy}} is on it"{{/if}}>Equip {{layer.label}}</button>
+                data-layer="{{layer.key}}" {{#if layer.blocked}}disabled data-tooltip="{{layer.blocked}}"{{else}}{{#if layer.cost}}data-tooltip="{{layer.cost}}"{{/if}}{{/if}}>Equip {{layer.label}}</button>
         {{/each}}
         {{/if}}
         <button type="button" class="gear-control" data-action="editItem"

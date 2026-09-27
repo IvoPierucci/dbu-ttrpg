@@ -12,7 +12,8 @@ import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable,
   connectedItem, connectedTarget, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
   inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
-  craftedItemFrom, craftedReading, APPAREL_LAYERS, onLayer, topLayerPiece,
+  craftedItemFrom, craftedReading, APPAREL_LAYERS, APPAREL_EQUIP_COST, equipPlan, onLayer, pieceSlots,
+  topLayerPiece, unequipCost,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -48,9 +49,11 @@ import {
 import {
   MANEUVER_TYPES,
   PROFILES,
+  getManeuver,
   maneuverEntry,
   maneuverKiCost,
   maneuverUsesLeft,
+  recordManeuverUse,
   usageLimitLabel
 } from "../maneuvers.mjs";
 import {
@@ -1101,7 +1104,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         heldName: held?.name ?? "",
         // A piece of Apparel: the Layer it is worn on, or the three it could go on - each
         // closed while another piece is on it, and saying which.
-        ...(item.system.crafted?.kind ? DBUCharacterSheet.#layerRow(gearItems, item) : {})
+        ...(item.system.crafted?.kind ? this.#layerRow(gearItems, item) : {})
       });
     }
     // Worn Apparel first, top down, then the rest - each list by name otherwise.
@@ -2782,8 +2785,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** A piece of Apparel's row: the Layer it is on, or the ones it could go on. */
-  static #layerRow(items, item) {
+  #layerRow(items, item) {
     const layer = item.system.equipped ? (item.system.layer ?? "") : "";
+    const inCombat = Boolean(game.combat?.started);
     return {
       apparel: true,
       layer,
@@ -2793,10 +2797,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       actsAsTop: Boolean(layer) && (layer !== "top") && (topLayerPiece(items) === item),
       // Worn with no Layer said - worn before there were Layers: taken off all the same.
       worn: Boolean(item.system.equipped),
+      // Each Layer it could go on, closed with the reason where it cannot - taken, the wrong
+      // Size, Armor's, or the Top alone in a Combat Encounter - and what it costs there.
       layers: Object.entries(APPAREL_LAYERS).map(([key, { label }]) => {
-        const taken = onLayer(items, key, item);
-        return { key, label, takenBy: taken?.name ?? "" };
-      })
+        const { problem } = equipPlan(items, item, key,
+          { inCombat, wearer: this.actor, getTrait });
+        return { key, label, blocked: problem,
+          cost: inCombat ? `${APPAREL_EQUIP_COST} Actions` : "" };
+      }),
+      // Taking it off: 1 Action, and 1 for each Layer worn above it.
+      offCost: (inCombat && item.system.equipped)
+        ? `${unequipCost(items, item)} Action${unequipCost(items, item) === 1 ? "" : "s"}` : ""
     };
   }
 
@@ -2807,18 +2818,69 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onLayerGear(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     if (!item?.system.crafted?.kind) return;
-    const layer = target.dataset.layer ?? "";
+    const items = this.actor.items.contents;
+    const inCombat = Boolean(game.combat?.started);
+    const { spendActions } = await import("../combat.mjs");
+
+    // Off: 1 Action and 1 for each Layer above it, in a Combat Encounter - or, for a piece
+    // that may be Doffed through it, the No-Effort Maneuver instead.
     if (item.system.equipped) {
+      if (inCombat) {
+        const paid = await DBUCharacterSheet.#payToDoff(this.actor, item, unequipCost(items, item));
+        if (!paid) return;
+      }
       return item.update({ "system.equipped": false, "system.layer": "" });
     }
-    if (!APPAREL_LAYERS[layer]) return;
-    const taken = onLayer(this.actor.items.contents, layer, item);
-    if (taken) {
-      ui.notifications.warn(`${this.actor.name} is wearing ${taken.name} on the `
-        + `${APPAREL_LAYERS[layer].label} Layer.`);
+
+    // On: where it goes, and every piece it moves down, or why it cannot.
+    const layer = target.dataset.layer ?? "";
+    const { moves, problem } = equipPlan(items, item, layer,
+      { inCombat, wearer: this.actor, getTrait });
+    if (problem) {
+      ui.notifications.warn(problem);
       return;
     }
-    return item.update({ "system.equipped": true, "system.layer": layer });
+    if (inCombat && !await spendActions(this.actor, APPAREL_EQUIP_COST)) return;
+    return this.actor.updateEmbeddedDocuments("Item", moves.map(({ id, layer: to }) =>
+      ({ _id: id, "system.equipped": true, "system.layer": to })));
+  }
+
+  /**
+   * Pay for taking a piece off in a Combat Encounter: its Actions, or - Loose's "You can Doff
+   * this piece of Apparel through the No-Effort Maneuver" - a use of that, on their turn, while
+   * they have one left this Round. Which, where both are open, is asked.
+   */
+  static async #payToDoff(actor, item, actions) {
+    const { spendActions, isTheirTurn } = await import("../combat.mjs");
+    const loose = pieceSlots(item.system.crafted, { getTrait })["piece.doffsWithNoEffort"] === true;
+    const noEffort = getManeuver("no-effort");
+    const offered = loose && noEffort && isTheirTurn(actor)
+      && (maneuverUsesLeft(actor, noEffort) > 0);
+    let how = "actions";
+    if (offered) {
+      how = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `Take off ${item.name}` },
+        content: "",
+        buttons: [
+          { action: "actions", label: `${actions} Action${actions === 1 ? "" : "s"}` },
+          { action: "no-effort", label: noEffort.name },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+    }
+    if (how === "no-effort") {
+      await recordManeuverUse(actor, noEffort);
+      await ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor }),
+        content: `<p>${Handlebars.escapeExpression(actor.name)} slips out of `
+          + `${Handlebars.escapeExpression(item.name)} with a ${Handlebars.escapeExpression(noEffort.name)}.</p>`
+      });
+      return true;
+    }
+    if (how !== "actions") return false;
+    return spendActions(actor, actions);
   }
 
   /**

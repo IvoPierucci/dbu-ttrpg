@@ -718,6 +718,86 @@ export function topLayerPiece(items) {
     .sort((a, b) => rank(a) - rank(b))[0] ?? null;
 }
 
+/** What it costs to put a piece of Apparel on during a Combat Encounter: "2 Actions". */
+export const APPAREL_EQUIP_COST = 2;
+
+/**
+ * Where putting this piece on this Layer leaves every piece worn, or why it cannot go.
+ *
+ * - "Each piece of Apparel is created with a specific Size Category in mind. They can only be
+ *   equipped by Characters of that Size Category" - its wearer's, where Stretching says so.
+ * - "During a Combat Encounter, putting on a piece of Apparel ... you must equip it on the Top
+ *   Layer (move each other piece of Apparel down a Layer)" - as far down as it has to, and not
+ *   at all with no Layer left under the Bottom.
+ * - "Armor must be the Top Layer of your Apparel and you cannot equip any piece of Apparel while
+ *   wearing Armor" - but a piece that may be worn over it, the Jacket, which goes on top of it.
+ * - Outside one, the Layer is the player's, and one taken is closed - but Armor, which goes on
+ *   top whatever is there.
+ *
+ * @returns {{moves: Array<{id: string, layer: string}>, problem: string}}
+ */
+export function equipPlan(items, item, layer, { inCombat = false, wearer = null, getTrait } = {}) {
+  const refuse = problem => ({ moves: [], problem });
+  const crafted = item?.system?.crafted;
+  if (!crafted?.kind || !APPAREL_LAYERS[layer]) return refuse("That is not a Layer.");
+  if (item.system?.equipped) return refuse(`${item.name} is already worn.`);
+
+  // Made for one Size - or its wearer's, stretching.
+  const size = wearer?.system?.size?.key;
+  const made = apparelSize(item, wearer, getTrait);
+  if (size && made && (made !== size)) {
+    return refuse(`Made for a ${sizeLabel(made)} Character.`);
+  }
+
+  const worn = apparelQualitiesInEffect(items).map(({ item: piece }) => piece)
+    .filter(piece => piece.id !== item.id);
+  const isArmor = piece => piece.system?.crafted?.category === "armor";
+  const overArmor = pieceSlots(crafted, { getTrait })["piece.wornOverArmor"] === true;
+  const armorWorn = worn.find(isArmor);
+
+  if (inCombat && (layer !== "top")) return refuse("In a Combat Encounter it goes on the Top Layer.");
+  if (isArmor(item) && (layer !== "top")) return refuse("Armor must be the Top Layer.");
+  if (armorWorn && !overArmor) return refuse(`Nothing goes on while wearing ${armorWorn.name}.`);
+  if (armorWorn && overArmor && (layer !== "top")) return refuse("It goes on over the Armor.");
+
+  const order = Object.keys(APPAREL_LAYERS);
+  const on = key => worn.find(piece => piece.system?.layer === key) ?? null;
+  const moves = [{ id: item.id, layer }];
+  if (!on(layer)) return { moves, problem: "" };
+
+  // Taken: pushed down only where the rules put it on top regardless.
+  const pushes = (layer === "top") && (inCombat || isArmor(item) || (armorWorn && overArmor));
+  if (!pushes) return refuse(`${on(layer).name} is on it.`);
+  for (let at = order.indexOf(layer); on(order[at]); at++) {
+    const below = order[at + 1];
+    if (!below) return refuse("No Layer is left under the Bottom.");
+    moves.push({ id: on(order[at]).id, layer: below });
+  }
+  return { moves, problem: "" };
+}
+
+/**
+ * What taking this piece off costs in a Combat Encounter: "1 Action. If you would attempt to
+ * remove a piece of Apparel that is not your current Top Layer of Apparel, increase the number
+ * of Actions required to remove that piece of Apparel by 1 for each higher layer of Apparel."
+ * Each higher Layer with a piece on it.
+ */
+export function unequipCost(items, item) {
+  const order = Object.keys(APPAREL_LAYERS);
+  const rank = piece => {
+    const at = order.indexOf(piece.system?.layer ?? "");
+    return (at < 0) ? order.length : at;
+  };
+  const above = apparelQualitiesInEffect(items).map(({ item: piece }) => piece)
+    .filter(piece => (piece.id !== item.id) && (rank(piece) < rank(item))).length;
+  return 1 + above;
+}
+
+/** A Size's name, for the sentence. */
+function sizeLabel(key) {
+  return String(key).charAt(0).toUpperCase() + String(key).slice(1);
+}
+
 /**
  * The piece of Apparel on one Layer among these Items, other than `except`, or null - what
  * keeps a second piece off it.
