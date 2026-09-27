@@ -451,6 +451,10 @@ async function applyClash(messageId, clash) {
   if (clash.handcuff && clash.result && !clash.handcuff.applied) {
     await settleHandcuff(message, clash);
   }
+
+  if (clash.thrownProne && clash.result && !clash.thrownProne.applied) {
+    await settleThrownProne(message, clash);
+  }
 }
 
 /**
@@ -2658,6 +2662,55 @@ export async function postGearHazard(actor, item) {
       }
     }
   });
+}
+
+/**
+ * What the Throw Maneuver's thrown thing does to the one it hit: Collision Damage - "reduce
+ * your Life Points by the Hardness Value of the Feature you Collided with", at the base Tier
+ * of the one hit, as any Collision is - or the Hardness Value its own Effects set outright.
+ * Then where it lands, and the Might Clash a piece that opens one opens.
+ */
+async function landThrown(attack, thrower, target) {
+  const thrown = attack.thrown;
+  const value = Number.isFinite(Number(thrown.value)) && (thrown.value !== null)
+    ? Number(thrown.value)
+    : hardnessValue(thrown.rank, target.system.baseTierOfPower ?? 1);
+  const escape = Handlebars.escapeExpression;
+  await reduceLifePoints(target, value, { reason: `${thrown.name} (Collision Damage)` });
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: thrower }),
+    content: `<div class="dbu-settled-note">The ${escape(thrown.name)} hits ${escape(target.name)}: `
+      + `Collision Damage ${value}${(thrown.value === null) ? ` (Hardness Rank ${thrown.rank})` : ""}. `
+      + `It lands on a Square beside them, ${escape(thrower.name)}'s choice.</div>`
+  });
+  if (thrown.mightClash) {
+    await postMightClash(thrower, target, {
+      maneuverName: attack.maneuverName,
+      clashLabel: thrown.name,
+      reason: `Win and ${target.name} is knocked Prone.`,
+      thrownProne: { applied: false, itemName: thrown.name }
+    });
+  }
+}
+
+/**
+ * A thrown piece's Might Clash, settled: "If you win, they are knocked Prone." A tie goes to
+ * the Defender, here as everywhere.
+ */
+async function settleThrownProne(message, clash) {
+  const thrower = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!thrower || !target) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, {
+    ...clash, thrownProne: { ...clash.thrownProne, applied: true }
+  });
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} stays on their feet.`);
+    return;
+  }
+  const { setCondition } = await import("./conditions.mjs");
+  if (await setCondition(target, "prone", 1) === false) return;
+  await settledNote(message, `${target.name} is knocked Prone.`);
 }
 
 /**
@@ -6432,7 +6485,8 @@ async function takeOutOfSequence(message, actor, offer) {
 export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, wagerFromLife = false,
                                    charges = 0, damageAttribute = null, autoHit = false,
-                                   advantages = [], squaresCharged = 0 },
+                                   advantages = [], squaresCharged = 0, thrown = null,
+                                   area = null },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -6542,6 +6596,12 @@ export async function postAttack(actor, target, maneuver,
           // attacker's own does - a Bomb's recorded Scholarship Modifier, the Hologram
           // Projector's Personality. Null for every attack made with the Foundation's own.
           damageAttribute,
+          // What the Throw Maneuver threw, and what it comes to on a hit. Null on every
+          // attack that throws nothing.
+          thrown,
+          // An Area the attack brings for itself, over its Profile's - the Grenade's Minor
+          // Sphere. Null for every attack whose Area, if any, is its Profile's.
+          area,
           // "A Bomb's Strike Roll for this Attacking Maneuver will automatically succeed."
           // Carried on the attack, since it is the attack's and not the character's.
           autoHit: Boolean(autoHit),
@@ -7552,11 +7612,16 @@ function targetResult(attack, uuid) {
  * *how* it was avoided and is asked where each of those is settled - a Parry that won,
  * or a Deflect that took its Might Clash.
  */
+/** An attack's Area: one it brings for itself - the Grenade's - or its Profile's. */
+function attackArea(attack) {
+  return attack?.area ?? PROFILES[attack?.profile]?.area ?? null;
+}
+
 function whyNotReflect(attack) {
   if (!["energy", "magic"].includes(attack.foundation)) {
     return "only an Energy or Magic Attack can be thrown back";
   }
-  if (PROFILES[attack.profile]?.area) {
+  if (attackArea(attack)) {
     return "an Attacking Maneuver with an Area of Effect cannot be thrown back";
   }
   return null;
@@ -7871,7 +7936,7 @@ async function addAreaTargets(message, attack, attacker) {
       <span class="dbu-respond-source">${actor.system.life.value}/${actor.system.life.max} LP</span>
     </label>`).join("");
 
-  const area = PROFILES[attack.profile]?.area;
+  const area = attackArea(attack);
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${attack.maneuverName} - Add targets` },
@@ -9384,6 +9449,13 @@ async function applyAttackDamage(message, target, attack) {
     await postGearSpikes(target, attacker);
   }
 
+  // The Throw Maneuver: "If you hit another Character, apply Collision Damage as if your
+  // thrown Item was a Feature" - the one it was thrown at, not everyone a Sphere catches.
+  if (attacker && attack.thrown && own.hit && !isAbsoluteMiss(own)
+    && (target.uuid === attack.targetUuid)) {
+    await landThrown(attack, attacker, target);
+  }
+
   // "If you take Damage from an Attacking Maneuver used through the Exploit Maneuver in
   // response to this Maneuver." Answered here, which is the first moment the Damage is
   // known - and only here, since an attack that hits for nothing is not Damage taken.
@@ -10374,8 +10446,10 @@ function renderAttack(message, html) {
             : ""}${
           attack.kiWager ? ` &middot; ${attack.kiWager} ${attack.wagerFromLife ? "LP" : "KP"} wagered` : ""}${attack.energyCharges
           ? ` &middot; ${attack.energyCharges} Energy Charge${attack.energyCharges === 1 ? "" : "s"}`
-          : ""}${PROFILES[attack.profile]?.area
-          ? ` &middot; ${Handlebars.escapeExpression(areaLabel(PROFILES[attack.profile].area))}`
+          : ""}${attackArea(attack)
+          ? ` &middot; ${Handlebars.escapeExpression(areaLabel(attackArea(attack)))}`
+          : ""}${attack.thrown
+          ? ` &middot; ${Handlebars.escapeExpression(attack.thrown.name)} thrown`
           : ""}${featureNote(PROFILES[attack.profile])}</span>
     </div>
     ${result
@@ -10408,13 +10482,13 @@ function renderAttack(message, html) {
   // the roll instead meant the first target to answer could settle the whole thing
   // while the attacker was still working out who else was caught.
   const committed = (attack.ready ?? []).includes(attack.attackerUuid);
-  if (PROFILES[attack.profile]?.area && thrower?.isOwner && !result && !committed) {
+  if (attackArea(attack) && thrower?.isOwner && !result && !committed) {
     const add = document.createElement("button");
     add.type = "button";
     add.className = "dbu-clash-button";
     add.textContent = "Add targets";
     add.dataset.tooltip = `Whoever else the `
-      + `${areaLabel(PROFILES[attack.profile].area)} caught. They answer the same `
+      + `${areaLabel(attackArea(attack))} caught. They answer the same `
       + `Strike Roll, so add them before you apply your effects.`;
     add.addEventListener("click", () => addAreaTargets(message, attack, thrower));
     container.append(add);

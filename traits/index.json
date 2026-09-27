@@ -81,6 +81,7 @@
     "maneuvers/empower.dbu",
     "maneuvers/energy-cancel.dbu",
     "maneuvers/no-effort.dbu",
+    "maneuvers/throw.dbu",
     "maneuvers/energy-charge.dbu",
     "maneuvers/exploit.dbu",
     "maneuvers/feint.dbu",

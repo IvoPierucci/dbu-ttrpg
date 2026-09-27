@@ -60,7 +60,9 @@ import { actionsLeft, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } fr
 import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
-import { brokenByPowerUp, damageAttributeOffers, movementPayment } from "./gear.mjs";
+import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
+  throwables } from "./gear.mjs";
+import { getTrait } from "./effects/traits.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
 import * as soarNames from "./environments.mjs";
@@ -1614,6 +1616,7 @@ export function definitionOf(item) {
     charge: item.system.charge,
     cancelCharge: item.system.cancelCharge,
     noEffort: item.system.noEffort,
+    throws: item.system.throws,
     efforts: item.system.efforts ?? [],
     profile: item.system.profile,
     tags: item.system.tags ?? [],
@@ -2181,6 +2184,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // What a Movement was declared as: which Speed bounds it, and whether Rapid Movement
   // was paid for. Both settled before anything is spent, for the same reason.
   let crossing = null;
+  // What the Throw Maneuver throws: "whatever you are holding". Asked before the attack is
+  // declared, since the Grenade changes what the attack is.
+  let thrown = null;
+  if (maneuver.throws) {
+    thrown = await askThrown(actor, maneuver);
+    if (!thrown) return false;
+  }
   // Opened for an Attacking Maneuver even when it names no Profile: the Ki Wager
   // belongs to the attack rather than to the Profile, and Compelled sets a floor under
   // it that has to be asked for somewhere.
@@ -2193,8 +2203,18 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
       ? { ...maneuver, profile: charging.profile }
       : maneuver;
 
-    declared = await declareAttack(locked, DBUCharacterData.FOUNDATIONS, actor);
+    // "You cannot Ki Wager more than 1/4 (rounded up) of your Ki Points on an Attacking
+    // Maneuver made through the Throw Maneuver" - the Ki Points they have, not their Capacity.
+    declared = await declareAttack(locked, DBUCharacterData.FOUNDATIONS, actor,
+      maneuver.throws ? { wagerCap: Math.ceil((actor.system.ki?.value ?? 0) / 4) } : {});
     if (!declared) return false;
+    // What is thrown travels with the attack, and what it brings of its own - the Grenade's
+    // Sphere and recorded Damage Attribute - stands in for what the Simple Profile has.
+    if (thrown) {
+      declared = { ...declared, thrown,
+        ...(thrown.area ? { area: thrown.area } : {}),
+        ...(thrown.damageAttribute ? { damageAttribute: thrown.damageAttribute } : {}) };
+    }
 
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
     // with the declaration, and only where something worn offers one for this attack.
@@ -2209,7 +2229,9 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     // A Physical Attack only reaches your Melee Range. Checked once the Profile and
     // Foundation are settled, since that is what decides whether the rule applies, and
     // before anything is paid - the declaration can still be taken back here.
-    const outOfReach = targetActor && whyNotInReach(actor, targetActor, declared ?? {});
+    // Not a thrown one: "any number of Squares ... despite its different range".
+    const outOfReach = targetActor && !maneuver.throws
+      && whyNotInReach(actor, targetActor, declared ?? {});
     if (outOfReach) {
       ui.notifications.warn(outOfReach);
       return false;
@@ -2603,7 +2625,59 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // under it.
   await recordManeuverType(actor, maneuver.type, { messageId: card?.id });
 
+  // The Grenade: "destroyed after concluding the Maneuver" - thrown, and gone.
+  if (thrown?.destroyed && card) await actor.items.get(thrown.itemId)?.delete();
+
   return true;
+}
+
+/**
+ * What the Throw Maneuver throws: an Item the character is not wearing, or a Feature and its
+ * Hardness Rank - "If it was already a Feature, use the Hardness Rank of that Feature."
+ *
+ * @returns {Promise<?object>} what `thrownAs` makes of it, or null when put away.
+ */
+async function askThrown(actor, maneuver) {
+  const { HARDNESS_RANKS } = await import("./features.mjs");
+  const escape = Handlebars.escapeExpression;
+  const items = throwables(actor.items.contents);
+  const options = items.map((item, index) => `
+      <label class="dbu-technique">
+        <input type="radio" name="thrown" value="${item.id}" ${index ? "" : "checked"}/>
+        <span class="dbu-technique-name">${escape(item.name)}</span>
+      </label>`).join("");
+  // "Features cannot have a Hardness value of 0."
+  const ranks = HARDNESS_RANKS.filter(hardness => hardness.rank > 0).map(hardness =>
+    `<option value="${hardness.rank}">Hardness Rank ${hardness.rank} - ${escape(hardness.material)}</option>`)
+    .join("");
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: maneuver.name },
+    content: `<div class="dbu-technique-picker">${options}
+      <label class="dbu-technique">
+        <input type="radio" name="thrown" value="feature" ${items.length ? "" : "checked"}/>
+        <span class="dbu-technique-name">A Feature</span>
+        <select name="rank">${ranks}</select>
+      </label></div>`,
+    buttons: [
+      {
+        action: "confirm",
+        label: "Throw",
+        callback: (event, button, dialog) => ({
+          pick: dialog.element.querySelector('input[name="thrown"]:checked')?.value ?? "",
+          rank: Number(dialog.element.querySelector('select[name="rank"]')?.value) || 1
+        })
+      },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen?.pick) return null;
+  if (chosen.pick === "feature") {
+    return { itemId: "", name: "Feature", rank: chosen.rank, value: null, mightClash: false };
+  }
+  const item = actor.items.get(chosen.pick);
+  return item ? thrownAs(item, actor, getTrait) : null;
 }
 
 /**
@@ -2879,6 +2953,7 @@ export function maneuverItemFrom(definition) {
       charge: Boolean(definition.charge),
       cancelCharge: Boolean(definition.cancelCharge),
       noEffort: Boolean(definition.noEffort),
+      throws: Boolean(definition.throws),
       efforts: [].concat(definition.efforts ?? []),
       profile: definition.profile ?? "",
       clashSkill: definition.clash?.skill ?? definition.clashSkill ?? "",

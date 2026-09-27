@@ -434,6 +434,10 @@ const TABLE = [
   { key: "piece.spikes", phase: PHASES.PIECE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "A Physical blow landing on this piece costs the one who struck its Apparel Bonus in "
        + "Life Points, if adjacent - Spiked." },
+  { key: "piece.thrownMightClash", phase: PHASES.PIECE, kind: F,
+    ops: ["allow", "forbid", "set"],
+    doc: "Hitting a Character with this piece through the Throw Maneuver opens a Might Clash, "
+       + "won to knock them Prone - Hefty Plating." },
   { key: "piece.waivesWeightsWhileHoldingBack", phase: PHASES.PIECE, kind: F,
     ops: ["allow", "forbid", "set"],
     doc: "The Weights take nothing off its wearer's Combat Rolls while they Hold Back - "

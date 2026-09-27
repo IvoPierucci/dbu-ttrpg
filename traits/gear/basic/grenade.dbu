@@ -26,10 +26,7 @@ text: >
 # The recorded Scholarship Modifier: taken off the character when they are given it, shown
 # and editable on the Item.
 #
-# --- What is not built ---------------------------------------------------------------------------
-#
-# Everything the Grenade does happens inside the Throw Maneuver, and there is no Throw
-# Maneuver in this system yet. When it arrives, throwing a Grenade with it is: a Minor Sphere
-# AoE centred on the one it was thrown at, the recorded Modifier standing in for the Damage
-# Attribute - the Bomb's `damageAttribute`, already carried on an attack - and the Grenade
-# removed from the character once the Maneuver is over.
+# Thrown with the Throw Maneuver: the attack has a Minor Sphere AoE centred on the one it was
+# thrown at - the others it catches added from the card, as for any Area - the recorded
+# Modifier stands in for the Damage Attribute, as a Bomb's does, and the Grenade is taken off
+# the character once the attack is made. See thrownAs() in module/gear.mjs.

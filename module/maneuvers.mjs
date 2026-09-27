@@ -1484,6 +1484,7 @@ export function areaLabel(area) {
   if (!area) return "";
   const name = `${areaMagnitude(area)} ${area.shape}`
     .replace(/(^|\s)\w/g, c => c.toUpperCase());
+  if (area.centredOnTarget) return `${name} (centred on the target)`;
   return area.centredOnSelf ? `${name} (centred on you)` : name;
 }
 
@@ -2741,6 +2742,7 @@ export async function loadManeuvers() {
     charge: Boolean(trait.charge),
     cancelCharge: Boolean(trait.cancelCharge),
     noEffort: Boolean(trait.noEffort),
+    throws: Boolean(trait.throws),
     // Joined back, since `coerce` splits a header on commas and every entry here is one.
     efforts: [].concat(trait.efforts ?? []).map(String).filter(Boolean),
     usageLimit: parseLimit(trait.usageLimit),

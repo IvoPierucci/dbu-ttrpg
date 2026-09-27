@@ -28,13 +28,14 @@ text: >
 
 # --- What is built -----------------------------------------------------------------------------
 #
-# The Hardness Value: its sheet shows 4.
-#
-# --- What is not built ---------------------------------------------------------------------------
-#
-# The Throw Maneuver is not in this system yet. When it is: a hit with this piece through it
-# opens a Might Clash against the one hit, and winning knocks them Prone - only while the one
-# throwing it meets the Force Score of 6+, the Prerequisite being the wearer's.
+# The Hardness Value: its sheet shows 4, and thrown with the Throw Maneuver it is the Collision
+# Damage. A hit with it thrown opens a Might Clash against the one hit, and winning knocks them
+# Prone - while the one throwing it meets the Force Score of 6+, the Prerequisite being theirs.
 
 [passive]
 piece.hardnessValue = 4;
+# "If you hit an Opponent with this piece of Apparel through the Throw Maneuver, make a Might
+# Clash against them. If you win, they are knocked Prone." Its Prerequisite is the thrower's.
+if (force.score >= 6) {
+  piece.thrownMightClash = true;
+}

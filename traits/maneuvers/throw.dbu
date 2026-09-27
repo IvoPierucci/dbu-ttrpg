@@ -1,0 +1,71 @@
+id: throw
+name: Throw
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: true
+requiresTarget: true
+# "This is considered an Attacking Maneuver of the Simple Profile, despite its different range."
+profile: simple
+usageLimit: 1/round
+# What is thrown is asked when it is used: an Item of the character's, or a Feature.
+throws: true
+source: Core Rule
+description: >
+  Throw something you hold: a Simple Profile attack at any range, and on a hit, Collision
+  Damage as if it were a Feature. A Ki Wager of at most 1/4 of your Ki Points.
+text: >
+  Throw Maneuver [1/Round]: Throw an object you have on your person or in your hands.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: You may throw whatever you are holding (such as a Basic Item, Feature, or even a
+  Weapon) any number of Squares in a straight line. This is considered an Attacking Maneuver of
+  the Simple Profile, despite its different range. If you hit another Character, apply
+  Collision Damage as if your thrown Item was a Feature. If it was already a Feature, use the
+  Hardness Rank of that Feature. If it was a Weapon, the Hardness Rank is 2. If it was a Basic
+  Item, the Hardness Rank is 1.
+
+  If you throw a Weapon, you do not apply any effects from its Qualities or its Weapon Category
+  unless it possesses the Throwing Weapon Quality.
+
+  Anything thrown at an Opponent through this Maneuver lands on a Square adjacent to them (your
+  choice) if it hit, or it continues past that Opponent and lands on a Square of your ARC’s
+  choosing (typically this will be at a Square that is as far as you could have possibly thrown
+  it based on your Might, unless it’s stopped by a Feature first).
+
+  You cannot Ki Wager more than 1/4 (rounded up) of your Ki Points on an Attacking Maneuver
+  made through the Throw Maneuver.
+
+---
+
+# --- What is built -----------------------------------------------------------------------------
+#
+# What is thrown is asked first: an Item the character has and is not wearing - Apparel on a
+# Layer and Accessories worn are not in hand, and one in a Capsule is not on them - or a Feature,
+# with its Hardness Rank. Then the attack, declared as any is, with the Simple Profile: the
+# Strike against their defence, and the Wound. Not held to the Melee Range: "despite its
+# different range". Its Ki Wager is capped at 1/4 of the Ki Points they have, rounded up.
+#
+# On a hit - the one it was thrown at, not whoever else an Area catches - Collision Damage: a
+# Life Point reduction by the Hardness Value, Rank 1 for a Basic Item, 2 for a Weapon, the
+# Feature's own, worked out at the base Tier of the one hit, as a Collision is. A piece whose
+# Effects set its Hardness Value outright - Hefty Plating's 4 - uses that. Apparel is none of
+# the three the entry names, and is read as a Basic Item, Rank 1, unless it sets its own.
+#
+# What an Item does thrown is its own: the Grenade gives the attack a Minor Sphere around the
+# one it was thrown at and its recorded Scholarship Modifier as the Damage Attribute, and is
+# gone once thrown; a piece whose Effects say `piece.thrownMightClash` - Hefty Plating - opens a
+# Might Clash on a hit, won to knock them Prone.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Where it lands. The card says it lands beside the one it hit, on the thrower's choice of
+# Square; missed, the ARC's. The Item stays on the character's sheet: whether it is picked up,
+# and by whom, is the table's.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Weapons: there are none in this system yet. When they arrive, a thrown Weapon is Rank 2 and
+# brings none of its Qualities or its Weapon Category unless it has the Throwing Quality.

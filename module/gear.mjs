@@ -605,6 +605,47 @@ export const APPAREL_LAYERS = Object.freeze({
 });
 
 /**
+ * What an Item comes to thrown with the Throw Maneuver: "If it was a Weapon, the Hardness Rank
+ * is 2. If it was a Basic Item, the Hardness Rank is 1." Apparel is neither and is read as a
+ * Basic Item - unless its own Effects set its Hardness Value outright, Hefty Plating's 4, which
+ * is then the Collision Damage whatever the Rank. What else an Item does thrown is its own: a
+ * piece saying `piece.thrownMightClash` opens a Might Clash on a hit (the thrower's the `if`
+ * reads - Hefty Plating's Force 6+), and the Grenade brings a Minor Sphere and its recorded
+ * Scholarship Modifier, and is gone once thrown.
+ */
+export function thrownAs(item, thrower, getTrait) {
+  const system = item?.system ?? {};
+  const thrown = { itemId: item?.id ?? "", name: item?.name ?? "", rank: 1, value: null,
+    mightClash: false };
+  if (system.itemType === "weapon") thrown.rank = 2;
+  if (system.crafted?.kind) {
+    const piece = pieceSlots(system.crafted, { getTrait, data: thrower?.system ?? null });
+    if (piece["piece.hardnessValue"]) thrown.value = applySlot(piece, "piece.hardnessValue", 0);
+    thrown.mightClash = piece["piece.thrownMightClash"] === true;
+  }
+  // "That Attacking Maneuver has a Minor Sphere AoE (centered on the initial target of this
+  // Maneuver) and the Damage Attribute for that Attacking Maneuver is the Scholarship
+  // Modifier recorded ... but this Basic Item is destroyed after concluding the Maneuver."
+  if (system.gearId === "grenade") {
+    thrown.destroyed = true;
+    thrown.area = { shape: "sphere", magnitude: "minor", centredOnTarget: true };
+    thrown.damageAttribute = system.records
+      ? { label: `${item.name}, ${system.records}`, value: system.recorded ?? 0 }
+      : null;
+  }
+  return thrown;
+}
+
+/**
+ * What a character has to throw: "whatever you are holding". An Item they are not wearing -
+ * Apparel on a Layer and an Accessory worn are not in hand - and none in a Capsule.
+ */
+export function throwables(items) {
+  return (items ?? []).filter(item => (item.type === "gear") && !item.system?.equipped
+    && !isStored(items, item));
+}
+
+/**
  * The worn piece of Apparel that is the Top Layer: the one on the Top Layer, or - with nothing
  * there - the Middle, or the Bottom. Its Category is the only one that applies: "each one with
  * their own benefits that you gain while wearing that piece of Apparel as the Top Layer", and
