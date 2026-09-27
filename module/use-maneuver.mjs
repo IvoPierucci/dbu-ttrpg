@@ -1024,6 +1024,36 @@ function magicTrickNote(actor, maneuver, trick, target) {
  *
  * @returns {Promise<string>} "impair", "shove", "move", or "" if the question was dropped
  */
+/**
+ * Which of the No Effort Maneuver's effects this use is.
+ *
+ * Its file lists them, `key=Label` each. Cancel Energy Charge is offered only while there is
+ * a charge to cancel - "you lose all gathered Energy Charges" is nothing to lose otherwise.
+ *
+ * @returns {Promise<?{key: string, label: string}>}
+ */
+export function effortsOf(maneuver, charging = false) {
+  return (maneuver?.efforts ?? []).map(entry => {
+    const [key, ...label] = String(entry).split("=");
+    return { key: key.trim(), label: (label.join("=") || key).trim() };
+  }).filter(effort => effort.key && ((effort.key !== "cancel-charge") || charging));
+}
+
+async function askEffort(actor, maneuver) {
+  const offered = effortsOf(maneuver, Boolean(actor.system.charging?.maneuverId));
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: maneuver.name },
+    content: "",
+    buttons: [
+      ...offered.map(effort => ({ action: effort.key, label: effort.label })),
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  return offered.find(effort => effort.key === chosen) ?? null;
+}
+
 async function askMagicTrick(actor, maneuver, target) {
   const ranks = actor.system.skills?.[maneuver.moveSkill]?.ranks ?? 0;
   const squares = (maneuver.movePerRank ?? 1) * ranks;
@@ -1583,6 +1613,8 @@ export function definitionOf(item) {
     surge: item.system.surge,
     charge: item.system.charge,
     cancelCharge: item.system.cancelCharge,
+    noEffort: item.system.noEffort,
+    efforts: item.system.efforts ?? [],
     profile: item.system.profile,
     tags: item.system.tags ?? [],
     source: item.system.source,
@@ -1996,6 +2028,26 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     await cancelCharge(actor);
     await recordManeuverType(actor, maneuver.type,
       { messageId: (await postManeuver(actor, maneuver))?.id });
+    return true;
+  }
+
+  // "This Maneuver covers a lot of different effects which can only be used during your
+  // turn." Which one, asked first; only Cancel Energy Charge is something this system can do
+  // for itself, and the card says the rest.
+  if (maneuver.noEffort) {
+    if (game.combat?.started && !isTheirTurn(actor)) {
+      ui.notifications.warn(`${actor.name} can only use the ${maneuver.name} Maneuver during `
+        + "their turn.");
+      return false;
+    }
+    const effort = await askEffort(actor, maneuver);
+    if (!effort) return false;
+
+    await payActions(actor, maneuver);
+    await recordManeuverUse(actor, maneuver);
+    if (effort.key === "cancel-charge") await cancelCharge(actor);
+    await recordManeuverType(actor, maneuver.type,
+      { messageId: (await postManeuver(actor, maneuver, { note: `${effort.label}.` }))?.id });
     return true;
   }
 
@@ -2826,6 +2878,8 @@ export function maneuverItemFrom(definition) {
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),
       cancelCharge: Boolean(definition.cancelCharge),
+      noEffort: Boolean(definition.noEffort),
+      efforts: [].concat(definition.efforts ?? []),
       profile: definition.profile ?? "",
       clashSkill: definition.clash?.skill ?? definition.clashSkill ?? "",
       tags: [].concat(definition.tags ?? []),

@@ -2740,6 +2740,9 @@ export async function loadManeuvers() {
     surge: Boolean(trait.surge),
     charge: Boolean(trait.charge),
     cancelCharge: Boolean(trait.cancelCharge),
+    noEffort: Boolean(trait.noEffort),
+    // Joined back, since `coerce` splits a header on commas and every entry here is one.
+    efforts: [].concat(trait.efforts ?? []).map(String).filter(Boolean),
     usageLimit: parseLimit(trait.usageLimit),
     // Both halves of the Clash. The second was written into the Item and not into this,
     // so the library's own copy of a Maneuver disagreed with the copy a character holds -

@@ -522,6 +522,9 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       charge: new fields.BooleanField({ required: true, initial: false }),
       /** Throws away a charge being held, and the hold that came with it. */
       cancelCharge: new fields.BooleanField({ required: true, initial: false }),
+      /** The No Effort Maneuver: one of several small things, picked when it is used. */
+      noEffort: new fields.BooleanField({ required: true, initial: false }),
+      efforts: new fields.ArrayField(new fields.StringField({ blank: false })),
 
       /** "any" lets the user pick one when the Maneuver is declared. */
       profile: new fields.StringField({ required: true, blank: true, initial: "" }),

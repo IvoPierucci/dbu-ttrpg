@@ -1,0 +1,51 @@
+id: no-effort
+name: No Effort
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+noEffort: true
+# The effects it covers, `key=Label` each - asked which when it is used.
+efforts: dynamic=Dynamic, sheathe=Un/Sheathing a Weapon, replace=Replace a Weapon, drop=Drop/Pickup, cancel-charge=Cancel Energy Charge, integrated=Activate/Deactivate Integrated Items
+source: Core Rule
+description: >
+  Something that takes almost no time, once a Round on your turn: drawing or putting away a
+  Weapon, dropping or picking something up, cancelling an Energy Charge, and the like.
+text: >
+  No Effort Maneuver [1/Round]: Anything incredibly easy to do, taking almost no time.
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –KP Cost: N/A
+  –Effect: This Maneuver covers a lot of different effects which can only be used during your
+  turn, which are listed below:
+
+  * Dynamic. Anything that’s not covered here, your ARC may declare requires a No Effort
+    Maneuver, such as attempting to talk to an Opponent for a length of time that exceeds
+    typical combat banter but does not quite reach the level of a Combat Recovery.
+  * Un/Sheathing a Weapon. Put away or draw a weapon.
+  * Replace a Weapon. Replacing a Weapon you are holding with another Weapon you possess.
+  * Drop/Pickup. Dropping or picking up an object.
+  * Cancel Energy Charge. Stop suffering from the effects of the Energy Charge Maneuver, but
+    you lose all gathered Energy Charges from your chosen Attacking Maneuver.
+  * Activate/Deactivate Integrated Items. You may make an Active Integrated Item you possess
+    become Inactive, and then choose one of your Inactive Integrated Items to become Active.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Used: which effect, asked first - once a Round, during your turn, an Instant as any other.
+# Cancel Energy Charge is done: the charge and its declaration go, as the Energy Cancel
+# Maneuver's do, and it is offered only while there is one. The rest are said on the card.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Dynamic - what the ARC declared - and Drop/Pickup: there are no objects here to drop.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Weapons and Integrated Items are not in this system yet. When Weapons arrive, Un/Sheathing
+# and Replace reach them - the Sheath/Holster's first draw among them - and so does Loose's
+# Doff, which is done through this Maneuver.
