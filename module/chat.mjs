@@ -33,6 +33,7 @@ import {
   getManeuver,
   interveneOptionCost,
   longRangePenalty,
+  atLongRange,
   maneuverKiCost,
   lifeWagerProblem,
   spendLifeWager,
@@ -7469,7 +7470,14 @@ async function resolveAttack(message, attack) {
     //
     // Floored at nothing like every other roll: a Strike reduced past zero is a Strike
     // of zero, not one an opponent has to beat from below.
-    const longRange = longRangePenalty(attacker, target);
+    //
+    // A Weapon may change it: Far Sight ignores it, and Long Range Weapon adds 1(T) against
+    // the same Opponents it is taken off. From a Weapon held by the mind the attack may start
+    // anywhere around its wielder, so how far it came is the table's and nothing is taken.
+    const weapon = attack.weapon ?? {};
+    const longRange = weapon.telekinetic ? 0
+      : ((weapon.ignoresLongRange ? 0 : longRangePenalty(attacker, target))
+        - (atLongRange(attacker, target) ? (Number(weapon.longRangeStrike) || 0) : 0));
 
     // "Increase your Combat Rolls against Analyzed Opponents." Added here for the same
     // reason the Long Range penalty is taken here: one Strike Roll reaches several people
@@ -8923,6 +8931,28 @@ async function openKnockback(attack, attacker, target, { extra = 0, from = "" } 
 }
 
 /**
+ * A Lasting Wounds Weapon's stack of DOT, on one Opponent it Damaged, until the start of the
+ * attacker's next turn - their clock, since the turn is theirs.
+ */
+async function leaveLastingWound(attack, attacker, target) {
+  await requestActorUpdate(target, { "system.dotStacks": (target.system.dotStacks ?? 0) + 1 });
+  await lasting(attacker, {
+    kind: KINDS.DOT,
+    key: "dot",
+    edge: EDGES.START,
+    next: true,
+    on: target.uuid,
+    source: `${attack.weapon.name} - Lasting Wounds`
+  });
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: attacker }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(attack.weapon.name)}: `
+      + `${Handlebars.escapeExpression(target.name)} takes a stack of DOT until the start of `
+      + `${Handlebars.escapeExpression(attacker.name)}'s next turn.</div>`
+  });
+}
+
+/**
  * Open Staggering Attack's Might Clash, off one Opponent it Damaged.
  *
  * Named for the Advantage, as Knockback's is: this card is about the stagger, and which
@@ -9456,6 +9486,24 @@ async function applyAttackDamage(message, target, attack) {
     // Maneuver, make a Might Clash against your Opponent." The same moment Knockback's is
     // opened, for the same reason, and one each.
     if (attacker && staggers(attack)) await openStagger(attack, attacker, target);
+
+    // Lasting Wounds: "If you deal Damage with an Attacking Maneuver that uses this Weapon,
+    // inflict one stack of DOT on an Opponent until the start of your next turn."
+    if (attacker && attack.weapon?.lastingWounds) await leaveLastingWound(attack, attacker, target);
+  }
+
+  // Staggering: "If an Attacking Maneuver with this Weapon knocks an Opponent through a Health
+  // Threshold, make a Might Clash against them. If you win, they are knocked Prone."
+  if (attack.weapon?.staggering && knockedThrough && !isAbsoluteMiss(own)) {
+    const striker = fromUuidSync(attack.attackerUuid);
+    if (striker) {
+      await postMightClash(striker, target, {
+        maneuverName: attack.maneuverName,
+        clashLabel: `${attack.weapon.name}, Staggering`,
+        reason: `Win and ${target.name} is knocked Prone.`,
+        thrownProne: { applied: false, itemName: attack.weapon.name }
+      });
+    }
   }
 
   // Elemental (Dark): "Any Squares occupied by Character(s) who take Damage from this

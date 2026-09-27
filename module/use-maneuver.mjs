@@ -2240,6 +2240,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
       if (chosen === null) return false;
       weaponItem = chosen || null;
       if (weaponItem) declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, []) };
+      // High-Tech: "Your Damage Attribute for any Attacking Maneuver made with this Weapon is
+      // Scholarship" - what stands in for the Foundation's, as a Bomb's recorded one does.
+      if (declared.weapon?.scholarshipDamage) {
+        declared = { ...declared, damageAttribute: { label: "Scholarship Modifier",
+          value: actor.system.attributes?.scholarship?.mod ?? 0 } };
+      }
     }
 
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
@@ -2256,7 +2262,10 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     // Foundation are settled, since that is what decides whether the rule applies, and
     // before anything is paid - the declaration can still be taken back here.
     // Not a thrown one: "any number of Squares ... despite its different range".
-    const outOfReach = targetActor && !maneuver.throws
+    // Not with a Weapon whose reach is the whole Battlefield - Elongation - or one held by the
+    // mind, whose attack may come from anywhere around its wielder: which Square, the table's.
+    const unbounded = declared?.weapon?.wholeBattlefield || declared?.weapon?.telekinetic;
+    const outOfReach = targetActor && !maneuver.throws && !unbounded
       && whyNotInReach(actor, targetActor, declared ?? {}, declared?.weapon?.meleeRange ?? 0);
     if (outOfReach) {
       ui.notifications.warn(outOfReach);

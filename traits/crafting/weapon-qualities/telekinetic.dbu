@@ -1,0 +1,36 @@
+id: telekinetic
+name: Telekinetic
+kind: crafting
+slots: 1
+prerequisites: The wielder has the Telekinesis Unique Ability.
+source: Core Rule
+description: >
+  Held by the mind: not one of the two Weapons wielded, and attacks with it come from anywhere
+  in a Large Sphere around you. Needs Telekinesis.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Wielding this Weapon does not count towards your maximum number of Weapons you’re
+  able to wield. Also, when making an Attacking Maneuver with this Weapon, it can originate from
+  any square within a Large Sphere AoE (centered on you) as if you were on that square.
+text: >
+  Telekinetic: You can control this Weapon with your mind.
+  –Weapon Type: All
+  –Prerequisites: The wielder has the Telekinesis Unique Ability.
+  –Quality Slots: 1
+  –Effects: Wielding this Weapon does not count towards your maximum number of Weapons you’re
+  able to wield. Also, when making an Attacking Maneuver with this Weapon, it can originate from
+  any square within a Large Sphere AoE (centered on you) as if you were on that square.
+
+---
+
+# Only in the mind of one with the Telekinesis Unique Ability - a Maneuver of theirs by that
+# name, asked where it is read (heldByMind() in module/gear.mjs). Which Square in the Sphere the
+# attack comes from is the table's: its Melee Range and its Long Range are not measured.
+[passive]
+weapon.telekinetic = true;
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# The Telekinesis Unique Ability is not in this system. Until it is, nobody has it, and this does
+# nothing - a Maneuver the player names Telekinesis is what it looks for.

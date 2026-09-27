@@ -1,0 +1,25 @@
+id: targeting-system
+name: Targeting System
+kind: crafting
+slots: 1~2
+source: Core Rule
+description: >
+  The Natural Result of the Strike Roll of attacks with it 1 higher for each Slot it takes.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Increase the Natural Result of any Strike Roll made as part of an Attacking
+  Maneuver with this Weapon by the amount of Quality Slots it occupies.
+text: >
+  Targeting System: This Weapon has a built-in device to improve your accuracy.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1~2
+  –Effects: Increase the Natural Result of any Strike Roll made as part of an Attacking Maneuver
+  with this Weapon by the amount of Quality Slots it occupies.
+
+---
+
+# The die, not the total, as Legacy's is: what a Critical and a Botch are read off moves with it.
+[passive]
+weapon.strikeNatural += $slots;

@@ -496,7 +496,24 @@ const TABLE = [
   { key: "weapon.hardnessValue", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
     doc: "Its Hardness Value, thrown, where it is not the 2 every Weapon has - Super Heavy's 4." },
   { key: "weapon.block", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
-    doc: "Wielding it gives access to the Block Special Maneuver - the Shield." }
+    doc: "Wielding it gives access to the Block Special Maneuver - the Shield." },
+  { key: "weapon.staggering", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "An attack made with it that knocks an Opponent through a Health Threshold opens a Might "
+       + "Clash that knocks them Prone - Staggering." },
+  { key: "weapon.lastingWounds", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "An attack made with it that deals Damage leaves a stack of DOT until the start of the "
+       + "attacker's next turn - Lasting Wounds." },
+  { key: "weapon.ignoresLongRange", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "An attack made with it takes no Long Range penalty - Far Sight." },
+  { key: "weapon.longRangeStrike", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Added to its Strike against each Opponent 9+ Squares away - Long Range Weapon." },
+  { key: "weapon.wholeBattlefield", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "The whole Battlefield is the Melee Range for an attack made with it - Elongation." },
+  { key: "weapon.scholarshipDamage", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "The Damage Attribute of an attack made with it is Scholarship - High-Tech." },
+  { key: "weapon.telekinetic", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Held by the mind: not counted among the two Weapons wielded, and an attack made with it "
+       + "may come from anywhere in a Large Sphere around its wielder - Telekinetic." }
 ];
 
 /**

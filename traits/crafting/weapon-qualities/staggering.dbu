@@ -1,0 +1,25 @@
+id: staggering
+name: Staggering
+kind: crafting
+slots: 1
+source: Core Rule
+description: >
+  Knocking an Opponent through a Health Threshold with it, a Might Clash: win, and they are
+  Prone.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Automatic]: If an Attacking Maneuver with this Weapon knocks an Opponent through a Health
+  Threshold, make a Might Clash against them. If you win, they are knocked Prone.
+text: >
+  Staggering: This Weapon strikes a heavy blow.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: If an Attacking Maneuver with this Weapon knocks an Opponent through a Health
+  Threshold, make a Might Clash against them. If you win, they are knocked Prone.
+
+---
+
+[passive]
+weapon.staggering = true;

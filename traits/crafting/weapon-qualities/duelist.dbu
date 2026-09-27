@@ -1,0 +1,26 @@
+id: duelist
+name: Duelist
+kind: crafting
+types: physical
+slots: 1
+source: Core Rule
+description: >
+  Wielded: the Parry of the Defend Maneuver 1(T) higher.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Increase your Strike Rolls when using the Parry effect of the Defend Maneuver by
+  1(T).
+text: >
+  Duelist: This Weapon is equally effective at offense and defense.
+  –Weapon Type: Physical
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Increase your Strike Rolls when using the Parry effect of the Defend Maneuver by
+  1(T).
+
+---
+
+# While it is wielded - and once, however many Duelist Weapons are.
+[passive]
+parry += 1(T);

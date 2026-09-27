@@ -1,0 +1,24 @@
+id: far-sight
+name: Far Sight
+kind: crafting
+types: energy, magic
+slots: 1
+source: Core Rule
+description: >
+  No Long Range penalty for Armed Attacks with it.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Ignore the penalties for Long Range for Armed Attacks made using this Weapon.
+text: >
+  Far Sight: Be it a high-tech scope or a mystical crystal ball, this Weapon has a way to keep
+  the wielder’s attacks on target.
+  –Weapon Type: Energy/Magic
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Ignore the penalties for Long Range for Armed Attacks made using this Weapon.
+
+---
+
+[passive]
+weapon.ignoresLongRange = true;

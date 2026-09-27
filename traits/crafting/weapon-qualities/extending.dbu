@@ -1,0 +1,37 @@
+id: extending
+name: Extending
+kind: crafting
+types: physical
+slots: 1
+# Elongation "replaces the effects of the Extension Weapon Quality": with it on the Weapon,
+# this one does nothing, and is kept.
+excludesQualities: elongation
+source: Core Rule
+description: >
+  Melee Range 3 longer for attacks with it; with an Area, a Magnitude larger instead - not a
+  Line.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Increase your Melee Range by 3 for the duration of any Attacking Maneuvers made
+  with this Weapon. If the Attacking Maneuver has an AoE, instead increase the Magnitude by 1,
+  except for the Line AoE.
+text: >
+  Extending: This Weapon can grow in length, allowing you to attack at a distance.
+  –Weapon Type: Physical
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Increase your Melee Range by 3 for the duration of any Attacking Maneuvers made with
+  this Weapon. If the Attacking Maneuver has an AoE, instead increase the Magnitude by 1, except
+  for the Line AoE.
+
+---
+
+# "Instead": with an Area, the Magnitude and not the reach - and a Line gets neither.
+[passive]
+if ($aoe == 0) {
+  weapon.meleeRange += 3;
+}
+if ($aoe == 1 && $lineAoe == 0) {
+  weapon.magnitude += 1;
+}

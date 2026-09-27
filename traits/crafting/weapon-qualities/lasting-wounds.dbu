@@ -1,0 +1,26 @@
+id: lasting-wounds
+name: Lasting Wounds
+kind: crafting
+slots: 1
+source: Core Rule
+description: >
+  Damage dealt with it leaves a stack of DOT until the start of your next turn.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Automatic]: If you deal Damage with an Attacking Maneuver that uses this Weapon, inflict one
+  stack of DOT on an Opponent until the start of your next turn.
+text: >
+  Lasting Wounds: This Weapon leaves wounds that are hard for the body to heal, resulting in
+  damage that remains for a longer period.
+  –Weapon Type: Any
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: If you deal Damage with an Attacking Maneuver that uses this Weapon, inflict one
+  stack of DOT on an Opponent until the start of your next turn.
+
+---
+
+# On each Opponent it deals Damage to, on your clock.
+[passive]
+weapon.lastingWounds = true;

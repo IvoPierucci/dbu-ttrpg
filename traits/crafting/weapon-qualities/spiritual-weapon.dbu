@@ -1,0 +1,25 @@
+id: spiritual-weapon
+name: Spiritual Weapon
+kind: crafting
+slots: 1
+prerequisites: 2+ Skill Ranks in Clairvoyance or Use Magic
+source: Core Rule
+description: >
+  Also a Crystal Ball. Needs 2+ Ranks in Clairvoyance or Use Magic.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: This Weapon is also treated as a Crystal Ball (see — Basic Items).
+text: >
+  Spiritual Weapon: This Weapon enables using magic to remotely view your enemies.
+  –Weapon Type: Any
+  –Prerequisites: 2+ Skill Ranks in Clairvoyance or Use Magic
+  –Quality Slots: 1
+  –Effects: This Weapon is also treated as a Crystal Ball (see — Basic Items).
+
+---
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# The Crystal Ball is not in this system yet - put off by the table. When it is, this Weapon is
+# one too, while its wielder has 2+ Skill Ranks in Clairvoyance or Use Magic.

@@ -1,0 +1,26 @@
+id: high-tech
+name: High-Tech
+kind: crafting
+slots: 1
+source: Core Rule
+description: >
+  Scholarship is the Damage Attribute of attacks with it.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Your Damage Attribute for any Attacking Maneuver made with this Weapon is
+  Scholarship.
+text: >
+  High-Tech: You substitute your lack of raw power with your genius.
+  –Weapon Type: Any
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Your Damage Attribute for any Attacking Maneuver made with this Weapon is
+  Scholarship.
+
+---
+
+# Its wielder's Scholarship Modifier stands in for the Foundation's, as a Bomb's recorded one
+# does - anything that applies the Damage Attribute again applies this.
+[passive]
+weapon.scholarshipDamage = true;

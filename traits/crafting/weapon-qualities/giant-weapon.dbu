@@ -1,0 +1,28 @@
+id: giant-weapon
+name: Giant Weapon
+kind: crafting
+slots: 2
+source: Core Rule
+description: >
+  Attacks with it 3(T) higher on the Wound Roll, and 1(T) lower on the Strike Roll for each Size
+  Category its wielder is under Enormous.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Increase your Wound Rolls with this Weapon by 3(T). Reduce your Strike Rolls with
+  this Weapon by 1(T) for every Size Category you are smaller than Enormous.
+text: >
+  Giant Weapon: This Weapon is massively over-sized, making it unwieldy for most users.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 2
+  –Effects: Increase your Wound Rolls with this Weapon by 3(T). Reduce your Strike Rolls with
+  this Weapon by 1(T) for every Size Category you are smaller than Enormous.
+
+---
+
+# `$belowEnormous` is how many Size Categories its wielder is under Enormous right now - Medium
+# is 2 - and nothing for Enormous and larger.
+[passive]
+weapon.wound += 3(T);
+weapon.strike -= 1(T) * $belowEnormous;

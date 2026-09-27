@@ -1,0 +1,35 @@
+id: elongation
+name: Elongation
+kind: crafting
+types: physical
+slots: 1
+# "Extension Weapon Quality" is Extending, the one Quality of that name.
+requiresQualities: extending
+special: true
+prerequisites: Extension Weapon Quality
+source: Core Rule
+description: >
+  Special. The whole Battlefield is the Melee Range for attacks with it; an Area 2 Magnitudes
+  larger. Replaces Extending.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: When making an Attacking Maneuver with this Weapon, the entire Battlefield is your
+  Melee Range. If an Attacking Maneuver made with this Weapon has an AoE, increase the Magnitude
+  for that AoE by 2. This effect replaces the effects of the Extension Weapon Quality.
+text: >
+  Elongation: This Weapon is capable of extending to unfathomable distances.
+  –Weapon Type: Physical
+  –Prerequisites: Extension Weapon Quality
+  –Quality Slots: 1
+  –Effects: When making an Attacking Maneuver with this Weapon, the entire Battlefield is your
+  Melee Range. If an Attacking Maneuver made with this Weapon has an AoE, increase the Magnitude
+  for that AoE by 2. This effect replaces the effects of the Extension Weapon Quality.
+
+---
+
+# Extending's part is not written while this is on the Weapon: "This effect replaces the
+# effects of the Extension Weapon Quality." Unlike Extending's, the Line is not left out.
+[passive]
+weapon.wholeBattlefield = true;
+weapon.magnitude += 2;

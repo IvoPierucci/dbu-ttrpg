@@ -2901,7 +2901,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data: this.actor.system, baseTier: this.actor.system.baseTierOfPower ?? 1 });
     const lost = Number(item.system.crafted?.lifeLost) || 0;
     const wielded = Boolean(item.system.equipped) && !item.system.crafted?.destroyed;
-    const problem = wielded ? "" : wieldProblem(items, item);
+    const problem = wielded ? "" : wieldProblem(items, item, getTrait);
     return {
       weapon: true,
       wielded,
@@ -2923,7 +2923,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (item?.system.crafted?.kind !== "weapon") return;
     const drawing = !item.system.equipped;
     if (drawing) {
-      const problem = wieldProblem(this.actor.items.contents, item);
+      const problem = wieldProblem(this.actor.items.contents, item, getTrait);
       if (problem) {
         ui.notifications.warn(problem);
         return;

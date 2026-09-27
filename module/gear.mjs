@@ -635,12 +635,26 @@ function categoryBody(category, getTrait) {
   return trimBlank([own, ...possessed].filter(Boolean).join("\n\n"));
 }
 
-/** A switched-off part's lines kept as comments, or a switched-on part's given back. */
+/**
+ * A switched-off part's lines kept as comments, or a switched-on part's given back.
+ *
+ * Or, where some of its lines end `# until switched on`, those lines alone, the other way
+ * round: kept while the switch is off, and commented out once it is on - Super Heavy's Strike
+ * Rolls, until its wielder is accustomed to the weight.
+ */
 function switched(body, on) {
   const lines = String(body ?? "").split("\n");
-  if (on) return lines.map(line => line.startsWith(OFF) ? line.slice(OFF.length) : line).join("\n");
+  const plain = line => line.startsWith(OFF) ? line.slice(OFF.length) : line;
+  if (lines.some(line => line.includes(UNTIL_ON))) {
+    return lines.map(line => (!line.includes(UNTIL_ON) ? line
+      : (on ? `${OFF}${plain(line)}` : plain(line)))).join("\n");
+  }
+  if (on) return lines.map(plain).join("\n");
   return lines.map(line => (!line.trim() || line.startsWith(OFF)) ? line : `${OFF}${line}`).join("\n");
 }
+
+/** The end of a line a Quality's switch turns off, rather than on. */
+const UNTIL_ON = "# until switched on";
 
 /** A part as it is written. */
 function partText(part) {
@@ -1187,11 +1201,29 @@ export function wieldedWeapons(items) {
  * Why a Weapon cannot be taken in hand, or "": broken, or both hands full - "You can only wield
  * two Weapons at any one time."
  */
-export function wieldProblem(items, item) {
+export function wieldProblem(items, item, getTrait = null) {
   if (item?.system?.crafted?.destroyed) return "Broken: repair it first.";
-  const held = wieldedWeapons(items).filter(other => other !== item);
+  // Telekinetic: "Wielding this Weapon does not count towards your maximum number of Weapons".
+  if (heldByMind(items, item, getTrait)) return "";
+  const held = wieldedWeapons(items).filter(other => (other !== item)
+    && !heldByMind(items, other, getTrait));
   if (held.length >= WEAPONS_WIELDED) return `Already wielding ${WEAPONS_WIELDED} Weapons.`;
   return "";
+}
+
+/**
+ * Whether a Weapon is held by the mind - Telekinetic - by one who can: "The wielder has the
+ * Telekinesis Unique Ability", a Maneuver of theirs by that name.
+ */
+export function heldByMind(items, item, getTrait = null) {
+  if (weaponSlots(item?.system?.crafted, { getTrait })["weapon.telekinetic"] !== true) return false;
+  return telekinetic(items);
+}
+
+/** Whether these are the Items of one with the Telekinesis Unique Ability. */
+export function telekinetic(items) {
+  return (items ?? []).some(item => (item.type === "maneuver")
+    && (String(item.name ?? "").trim().toLowerCase() === "telekinesis"));
 }
 
 /**
@@ -1246,6 +1278,7 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
     belowEnormous: ((enormous >= 0) && (at >= 0)) ? Math.max(0, enormous - at) : 0
   };
   const slots = weaponSlots(crafted, { getTrait, data, tokens });
+  const byMind = (slots["weapon.telekinetic"] === true) && telekinetic(Array.from(attacker?.items ?? []));
   const perTier = (label, amount) => (amount
     ? [{ label, written: `${amount > 0 ? "+" : ""}${amount}(T)`, value: amount * tier }] : []);
   const own = (key) => {
@@ -1276,7 +1309,20 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
     magnitude: area ? applySlot(slots, "weapon.magnitude", 0) : 0,
     damageReductionIgnored: fractionOf(slots, "weapon.damageReductionIgnored"),
     soakIgnored: fractionOf(slots, "weapon.soakIgnored"),
-    diminishingAtDeclaration: slots["weapon.diminishingAtDeclaration"] === true
+    diminishingAtDeclaration: slots["weapon.diminishingAtDeclaration"] === true,
+    // Staggering's Might Clash, and Lasting Wounds' stack of DOT.
+    staggering: slots["weapon.staggering"] === true,
+    lastingWounds: slots["weapon.lastingWounds"] === true,
+    // Far Sight's, and Long Range Weapon's 1(T) against each Opponent 9+ Squares away.
+    ignoresLongRange: slots["weapon.ignoresLongRange"] === true,
+    longRangeStrike: applySlot(slots, "weapon.longRangeStrike", 0),
+    // Elongation: "the entire Battlefield is your Melee Range".
+    wholeBattlefield: slots["weapon.wholeBattlefield"] === true,
+    // High-Tech: "Your Damage Attribute ... is Scholarship."
+    scholarshipDamage: slots["weapon.scholarshipDamage"] === true,
+    // Telekinetic, in the mind of one with Telekinesis: from anywhere in a Large Sphere around
+    // them - which Square is the table's, and so is how far it is from there.
+    telekinetic: byMind
   };
 }
 

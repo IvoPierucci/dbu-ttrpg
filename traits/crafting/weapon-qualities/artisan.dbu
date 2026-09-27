@@ -1,0 +1,24 @@
+id: artisan
+name: Artisan
+kind: crafting
+slots: 1~2
+source: Core Rule
+description: >
+  Attacks with it 1(T) higher on the Wound Roll for each Slot it takes.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: For each Quality Slot taken up by the Artisan Quality, increase your Wound Rolls
+  made with this Weapon by 1(T).
+text: >
+  Artisan: Crafted by a master craftsman, this Weapon is a superior example of its kind.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1~2
+  –Effects: For each Quality Slot taken up by the Artisan Quality, increase your Wound Rolls
+  made with this Weapon by 1(T).
+
+---
+
+[passive]
+weapon.wound += 1(T) * $slots;

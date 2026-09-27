@@ -1,0 +1,27 @@
+id: weapon-durable
+name: Durable
+kind: crafting
+types: physical
+slots: 1~2
+# Its own id: Durable is also an Apparel Quality's name, and ids are one to a file.
+source: Core Rule
+description: >
+  2 more Life Points for each Power Level; 4 with 2 Slots.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Increase this Weapon’s Life Points by 2 for each of your Power Levels. If this
+  takes up 2 Quality Slots, double the amount of Life Points gained from this Weapon Quality.
+text: >
+  Durable: Sturdy and unyielding, this Weapon is harder to break than most.
+  –Weapon Type: Physical
+  –Prerequisites: N/A
+  –Quality Slots: 1~2
+  –Effects: Increase this Weapon’s Life Points by 2 for each of your Power Levels. If this takes
+  up 2 Quality Slots, double the amount of Life Points gained from this Weapon Quality.
+
+---
+
+# 2 for each Power Level, doubled with 2 Slots: 2 for each Slot.
+[passive]
+weapon.lifePerLevel += 2 * $slots;

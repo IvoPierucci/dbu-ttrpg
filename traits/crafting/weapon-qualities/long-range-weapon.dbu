@@ -1,0 +1,27 @@
+id: long-range-weapon
+name: Long Range Weapon
+kind: crafting
+types: energy, magic
+slots: 1
+source: Core Rule
+description: >
+  Attacks with it 1(T) higher on the Strike Roll against Opponents 9+ Squares away.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Increase your Strike Rolls by 1(T) against Opponents that are 9+ Squares away from
+  you.
+text: >
+  Long Range Weapon: This Weapon is exceedingly accurate, lessening the penalties of attacking
+  distant targets.
+  –Weapon Type: Energy/Magic
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Increase your Strike Rolls by 1(T) against Opponents that are 9+ Squares away from
+  you.
+
+---
+
+# Against each Opponent 9+ Squares away, measured as Long Range is - where there are Squares.
+[passive]
+weapon.longRangeStrike += 1(T);

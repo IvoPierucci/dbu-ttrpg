@@ -1,0 +1,41 @@
+id: super-heavy
+name: Super Heavy
+kind: crafting
+types: physical
+slots: 1
+# "Your ARC decides when this occurs": a switch on the Item, for when they have.
+toggle: Accustomed
+special: true
+source: Core Rule
+description: >
+  Special. Attacks with it 2(bT) lower on the Strike Roll - until accustomed - and 5(bT) higher
+  on the Wound Roll. Hardness Value 4.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Reduce your Strike Rolls with this Weapon by 2(bT), but increase your Wound Rolls
+  by 5(bT). The Hardness Value for this Weapon is 4.
+
+  [Passive]: While using this Weapon over time, you can become accustomed to the intense weight.
+  Your ARC decides when this occurs, but when it does, remove the reduction to your Strike Rolls
+  while using this Weapon.
+text: >
+  Super Heavy: This Weapon is weighted poorly, but the weight helps build your strength.
+  –Weapon Type: Physical
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Reduce your Strike Rolls with this Weapon by 2(bT), but increase your Wound Rolls by
+  5(bT). The Hardness Value for this Weapon is 4.
+
+  While using this Weapon over time, you can become accustomed to the intense weight. Your ARC
+  decides when this occurs, but when it does, remove the reduction to your Strike Rolls while
+  using this Weapon.
+
+---
+
+# The Strike's line alone goes once the switch is on: "remove the reduction to your Strike Rolls".
+# The Wound Rolls are read as the Strike's are, with this Weapon.
+[passive]
+weapon.strike -= 2(bT); # until switched on
+weapon.wound += 5(bT);
+weapon.hardnessValue = 4;
