@@ -768,6 +768,16 @@
   width: 100%;
 }
 
+/* A built Item's Category, Grade and Size: one under the other, each as wide as the tab,
+   so the Grade's long label is read whole. */
+.dbu-ttrpg .stat-grid.gear-stacked {
+  grid-template-columns: 1fr;
+}
+
+.dbu-ttrpg .stat-grid.gear-stacked select {
+  width: 100%;
+}
+
 .dbu-ttrpg .stat .stat-after {
   font-size: 10px;
   color: var(--dbu-text-dim);
