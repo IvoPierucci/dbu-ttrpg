@@ -12,6 +12,29 @@ A file here is a Trait like any other: `id`, `name`, `description` (the hover), 
 rulebook's wording), and a script after `---` once its effects are built. Every file has to be
 listed in traits/index.json.
 
+A built Item does not run these files. It has Effects of its own - `system.crafted.effects`,
+its Effects tab - and its Category and each of its Qualities write their script into it when
+they are chosen, between markers:
+
+  #@ quality durable | Durable
+  [passive]
+  piece.breakValue += 3;
+  #@ end
+
+From then on the piece does what its Effects say and nothing else: change a part, or write
+lines of your own outside every part, and that is what it does. Taking a Quality off takes its
+part out; changing the Category writes the new one's part and takes out the parts of the
+Qualities it does not take. "Rewrite" on the tab writes every part again from its file.
+
+Written into a part: `$choice` becomes what was chosen for the Quality when it was added, and
+`$slots` the Quality Slots it was given. `$apparelBonus` stays, and is the piece's own Apparel
+Bonus per base Tier wherever it is read. A Quality with `noStack: true` has its part marked
+`nostack`; one with a `toggle` has its lines kept as `#off` comments while switched off.
+
+What a piece is, rather than what it does to its wearer, is written as a `piece.` Slot -
+`piece.breakValue`, `piece.hardnessValue`, `piece.countsForPenalty = false;` and the rest,
+listed in WRITING-EFFECTS.txt.
+
 Headers only a Category reads:
 
   craftDCShift:  Difficulty Categories added to the Craft DC its Craftsmanship Grade gives -
@@ -30,33 +53,14 @@ Headers only a Quality reads:
                  `if`, around everything it does.
   choices:       a list of its own to choose from when it is added, `key=Label` each -
                  Focal's `strike=Strike Rolls, dodge=Dodge Rolls`.
-  narrowsCategory: true - its choice is the one Combat Roll its Category's effects reach, as
-                 Focal's is for Weights. Read by the Category, through narrowedRoll().
-  resistsWeather: true - its chosen Battle Weather is felt a Weather Tier lower for each Slot
-                 it takes, and not at all at 0 - Weather Resistant's. Read before any script.
   chooses:       `weather`, for a type of Battle Weather chosen when it is added.
   chooses:       `skill`, for a Quality that has one chosen when it is added; with
                  `choiceAttribute: personality`, only the Skills that use that Score. Its
                  script names the one chosen as `$choice` - `skill.$choice += 2;`.
-
-  apparelBonus:  what it adds to its Apparel's Apparel Bonus, per base Tier - Dense Armor's 1.
-                 Part of the Bonus wherever it is read, worn or not.
-  breakValue:    what it adds to the most its Apparel's Break Value can be - Durable's 3.
-  hardnessValue: a Hardness Value it sets its Apparel's to outright - Hefty Plating's 4.
-  wornOverArmor: true - its Apparel may go on over Armor, the Jacket's. Read by the Layers.
-  unbreakable:   true - its Apparel's Break Value is never reduced, Unbreakable's. Read by the
-                 Break Value, as `unbreakable` on its reading.
-  sparesFirstBreak: true - the first loss of Break Value from full each Combat Encounter does
-                 not happen, Joint Protection's. Read by the Break Value.
-  noApparelPenalty: true - its Apparel does not count towards the Apparel Penalty,
-                 Lightweight's and Sleek Design's. Read by the Penalty, as `countsForPenalty`.
-  armorDamageReduction: what the Armor Category's Damage Reduction from its Apparel is
-                 multiplied by - Sleek Design's 0.5.
-  waivesWeightsWhileHoldingBack: true - the Weights take nothing off the Combat Rolls while its
-                 wearer Holds Back, Training Support's. Read through weightsPenaltyWaived().
-  toggle:        a label for a switch on its row: its script runs only while the player has it
-                 on - Team Outfit's teammates, which the table keeps.
-  noStack:       true - worn on several pieces, it applies from one.
+  toggle:        a label for a switch on its row: its part's lines are kept as `#off` comments
+                 while the player has it off - Team Outfit's teammates, which the table keeps.
+  noStack:       true - its part is marked `nostack`: worn on several pieces, it applies from
+                 one.
   summary:       what it does: its Effects line as printed, word for word, cut into one line to
                  an effect with a blank line between, each opening with its tag as the rulebook
                  writes one - `[Passive]:` while worn,
@@ -66,28 +70,18 @@ Headers only a Quality reads:
   special:       true - a Special Apparel Quality: offered apart in Add Quality, "typically
                  gained through your ARC granting you unique pieces of Apparel". More than one
                  on a piece is said on its sheet, never refused.
-  sizeIsWearers: true - its Apparel's Size Category is always its wearer's, Stretching's. Read
-                 through apparelSize().
-  spikes:        true - a Physical blow landing on its worn Apparel costs the one who struck its
-                 Apparel Bonus in Life Points, if adjacent - Spiked's. A card asks the Square.
-  doffsWithNoEffort: true - its Apparel may be Doffed through the No-Effort Maneuver, Loose's.
-                 Read by removing Apparel.
-  doffRoundsPerSlot: Combat Rounds its Apparel's first Doff Bonus of an Encounter lasts longer,
-                 for each Slot it takes - Segmented Weight's 1. Read through doffRounds().
   excludesQualities: a Quality that, on the same piece, keeps this one from applying at all -
                  Durable's `lightweight`.
   requiresQualities: a Quality it needs on the same piece to apply at all.
-  ignoresEnvironments: true - the wearer ignores the Battle Environment's effects.
-  ignoresEnvironmentalQualities: true - and its Square's Environmental Qualities'. Both read
-                 off the worn Apparel, since they decide which effects are gathered at all.
 
-A Quality held off - by its Category, or by one of those two - is kept on the piece, said to be
-inactive on its row, and adds nothing anywhere.
+A Quality held off - by its Category, or by one of those two - is kept on the piece and said to
+be inactive on its row, and its part is not written into the piece's Effects.
 
 A Quality's script may also name its own piece's Apparel Bonus as `$apparelBonus`, per base
 Tier - `parry += ceil($apparelBonus(bT) / 2);` is "1/2 (rounded up) of the Apparel Bonus".
 
-A Quality's script runs while the Apparel it is on is worn, and its Category takes it.
+A piece's Effects run while it is worn: its `piece.` lines say what the piece is, and the rest
+what it does to its wearer.
 
 "If an effect would apply an Apparel Quality to a piece of Apparel that has all of its Quality
 Slots filled, you may remove any number of Apparel Qualities before applying that additional

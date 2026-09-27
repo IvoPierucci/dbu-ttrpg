@@ -3,8 +3,6 @@ name: Loose
 kind: crafting
 categories: combat-clothing, standard-clothing
 slots: 1
-# "You can Doff this piece of Apparel through the No-Effort Maneuver." Read by removing Apparel.
-doffsWithNoEffort: true
 source: Core Rule
 description: >
   Taken off - and its Doff Bonus had - through the No-Effort Maneuver.
@@ -26,3 +24,6 @@ text: >
 # Removing Apparel and its Doff Bonus come with the rest of the Apparel rules, and the
 # No-Effort Maneuver is not in this system yet. When both are: a piece with this on it may be
 # taken off through the No-Effort Maneuver rather than for its Actions - `doffsWithNoEffort`.
+
+[passive]
+piece.doffsWithNoEffort = true;

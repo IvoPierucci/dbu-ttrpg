@@ -14,3 +14,6 @@ text: >
 
 # The Craft DC is built: the sheet shows it one Difficulty lower than the Craftsmanship Grade
 # gives. The Apparel Penalty waits on Layers, which come with the rest of the Apparel rules.
+
+[passive]
+piece.countsForPenalty = false;

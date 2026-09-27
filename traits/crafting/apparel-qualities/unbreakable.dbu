@@ -9,8 +9,6 @@ slots: 1
 # it, Unbreakable does not apply at all.
 requiresQualities: durable
 prerequisites: Durable Apparel Quality
-# "This piece of Apparel cannot have its Break Value reduced." Read by the Break Value.
-unbreakable: true
 source: Core Rule
 description: >
   Its Break Value is never reduced. Needs Durable on the same piece.
@@ -31,3 +29,6 @@ text: >
 #
 # Losing Break Value comes with the rest of the Apparel rules. When it does: a piece whose
 # reading says `unbreakable` loses none, from anything - a Health Threshold, a Called Shot.
+
+[passive]
+piece.unbreakable = true;

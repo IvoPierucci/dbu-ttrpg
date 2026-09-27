@@ -4,9 +4,6 @@ kind: crafting
 categories: weights
 # "Quality Slots: 1~2" - which, asked when it is added.
 slots: 1~2
-# "For each Quality Slot this Quality occupies, increase the duration of the Doff Bonus for
-# doffing this piece of Apparel for the first time in a Combat Encounter by 1 Combat Round."
-doffRoundsPerSlot: 1
 source: Core Rule
 description: >
   1 or 2 Quality Slots: the first Doff Bonus each Combat Encounter lasts a Combat Round longer
@@ -37,3 +34,6 @@ text: >
 # The Doff Bonus comes with the rest of the Apparel rules. It reads how many Combat Rounds longer
 # the first one of an Encounter lasts through doffRounds() in module/gear.mjs - a Round for each
 # Slot this takes.
+
+[passive]
+piece.doffRounds += $slots;

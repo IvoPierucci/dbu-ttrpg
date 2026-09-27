@@ -14,8 +14,8 @@ import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { accessoriesInEffect, apparelQualitiesInEffect, craftedReading, groundIgnored,
-  qualityInactive, scriptWithChoice, scriptWithPiece } from "../gear.mjs";
+import { accessoriesInEffect, apparelQualitiesInEffect, craftedReading, effectParts,
+  effectsOf, groundIgnored, scriptWithPiece } from "../gear.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -178,39 +178,36 @@ function racialPrograms(actor, report) {
  */
 function apparelPrograms(actor, report) {
   const entries = [];
-  // The Qualities that do not stack with themselves, already gathered from one piece.
+  // The parts that do not stack with themselves, already gathered from one piece.
   const once = new Set();
-  for (const { item, entries: qualities } of apparelQualitiesInEffect(Array.from(actor.items ?? []))) {
-    for (const quality of qualities) {
-      const trait = getTrait(quality.id);
-      // Not its Category's, or held off by another Quality on the piece - or its absence.
-      if (!trait || qualityInactive(quality, item.system.crafted, getTrait)) continue;
-      // A Quality with a toggle on its Item runs only while it is switched on - Team Outfit,
-      // whose teammates are the table's to say.
-      if (trait.toggle && !quality.on) continue;
-      // "This bonus does not stack": from one piece, however many carry it.
-      if (trait.noStack === true) {
-        if (once.has(trait.id)) continue;
-        once.add(trait.id);
+  for (const { item } of apparelQualitiesInEffect(Array.from(actor.items ?? []))) {
+    // The piece's own Effects, and nothing else: what its Category and Qualities wrote there,
+    // and whatever has been written since. A part at a time, so each keeps its own name in the
+    // workings - and one marked `nostack`, Team Outfit's "this bonus does not stack", is
+    // gathered from one piece however many carry it.
+    const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {} });
+    for (const part of effectParts(effectsOf(item.system.crafted, getTrait))) {
+      if (part.flags?.includes("nostack")) {
+        if (once.has(part.id)) continue;
+        once.add(part.id);
       }
-      // What was chosen for it, and its own piece's Apparel Bonus.
-      const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {} });
-      const script = scriptWithPiece(scriptWithChoice(trait.script, quality.choice), reading);
+      const script = scriptWithPiece(part.key ? part.body : part.text, reading);
       if (!script.trim()) continue;
 
+      const name = part.name || item.name;
       const { program, errors } = compile(
-        `apparel:${trait.id}:${quality.choice}:${reading?.perBaseTier ?? 0}`,
+        `apparel:${item.id}:${part.key ?? "own"}`,
         { script },
-        message => report(`${item.name}, ${trait.name}: ${message}`)
+        message => report(`${item.name}${part.name ? `, ${part.name}` : ""}: ${message}`)
       );
       if (errors.length) continue;
 
       entries.push({
         program,
         priority: PRIORITY.talent,
-        sourceId: `${item.id}:${trait.id}`,
+        sourceId: `${item.id}:${part.key ?? "own"}`,
         sourceUuid: item.uuid ?? null,
-        sourceName: `${trait.name} (${item.name})`,
+        sourceName: part.name ? `${name} (${item.name})` : item.name,
         level: 0,
         stacks: 1
       });

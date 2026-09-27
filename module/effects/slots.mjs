@@ -22,7 +22,13 @@ export const PHASES = Object.freeze({
   /** After Might, Wound and the Thresholds are settled. */
   LATE: "late",
   /** Not derived at all: collected at a Moment during an exchange. */
-  REACTIVE: "reactive"
+  REACTIVE: "reactive",
+  /**
+   * Not the character's at all: what a built Item's own script says about the piece itself -
+   * its Break Value, its Hardness, what it lets its wearer ignore. Worked out on the piece,
+   * from its Effects alone, and never folded into anyone's numbers.
+   */
+  PIECE: "piece"
 });
 
 /** What kind of value a Slot holds, which decides how contributions combine. */
@@ -393,7 +399,51 @@ const TABLE = [
     doc: "Added to the Natural Result of every Saving Throw you roll." },
   { key: "steadfast.dice", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "What is added to the Dice Score of your Steadfast Checks. Hot Weather takes "
-       + "1(WT) off it." }
+       + "1(WT) off it." },
+
+  // --- The piece itself ----------------------------------------------------------------------
+  //
+  // Written in a built Item's own Effects - a piece of Apparel's - and read off that piece:
+  // what it is, rather than what it does to whoever wears it. `piece.breakValue += 3;`.
+  { key: "piece.apparelBonus", phase: PHASES.PIECE, kind: N, ops: NUMERIC,
+    doc: "Added to this piece's Apparel Bonus, per base Tier - Dense Armor's 1." },
+  { key: "piece.breakValue", phase: PHASES.PIECE, kind: N, ops: NUMERIC,
+    doc: "Added to the most this piece's Break Value can be - Durable's 3." },
+  { key: "piece.hardnessValue", phase: PHASES.PIECE, kind: N, ops: NUMERIC,
+    doc: "This piece's Hardness Value, set outright - Hefty Plating's `= 4`." },
+  { key: "piece.armorDamageReduction", phase: PHASES.PIECE, kind: N, ops: NUMERIC,
+    doc: "What the Armor Category's Damage Reduction from this piece is multiplied by - "
+       + "Sleek Design's `*= 1/2`." },
+  { key: "piece.countsForPenalty", phase: PHASES.PIECE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Whether this piece counts towards the Apparel Penalty. `= false` for Lightweight, "
+       + "Sleek Design and Standard Clothing." },
+  { key: "piece.unbreakable", phase: PHASES.PIECE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "This piece's Break Value is never reduced - Unbreakable." },
+  { key: "piece.sparesFirstBreak", phase: PHASES.PIECE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "The first loss of Break Value from full each Combat Encounter does not happen - "
+       + "Joint Protection." },
+  { key: "piece.wornOverArmor", phase: PHASES.PIECE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "This piece may go on over Armor - the Jacket." },
+  { key: "piece.doffsWithNoEffort", phase: PHASES.PIECE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "This piece may be Doffed through the No-Effort Maneuver - Loose." },
+  { key: "piece.doffRounds", phase: PHASES.PIECE, kind: N, ops: NUMERIC,
+    doc: "Combat Rounds this piece's first Doff Bonus of an Encounter lasts longer - "
+       + "Segmented Weight's 1 for each of its Quality Slots." },
+  { key: "piece.sizeIsWearers", phase: PHASES.PIECE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "This piece's Size Category is always its wearer's - Stretching." },
+  { key: "piece.spikes", phase: PHASES.PIECE, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "A Physical blow landing on this piece costs the one who struck its Apparel Bonus in "
+       + "Life Points, if adjacent - Spiked." },
+  { key: "piece.waivesWeightsWhileHoldingBack", phase: PHASES.PIECE, kind: F,
+    ops: ["allow", "forbid", "set"],
+    doc: "The Weights take nothing off its wearer's Combat Rolls while they Hold Back - "
+       + "Training Support." },
+  { key: "piece.ignoresEnvironments", phase: PHASES.PIECE, kind: F,
+    ops: ["allow", "forbid", "set"],
+    doc: "Its wearer ignores the Battle Environment's effects - Environmental Protection." },
+  { key: "piece.ignoresEnvironmentalQualities", phase: PHASES.PIECE, kind: F,
+    ops: ["allow", "forbid", "set"],
+    doc: "Its wearer ignores their Square's Environmental Qualities - Environmental Protection." }
 ];
 
 /**
@@ -403,6 +453,15 @@ const TABLE = [
  * list, so a Skill added to the data model needs no change here.
  */
 const PATTERNS = [
+  // The Combat Roll a piece narrows its Category's effects to - Focal's choice.
+  { match: /^piece\.narrows\.(strike|dodge|wound)$/, phase: PHASES.PIECE, kind: F,
+    ops: ["allow", "forbid", "set"],
+    valid: () => true,
+    doc: "The only Combat Roll this piece's Category reaches, and its Doff Bonus - Focal." },
+  // A Battle Weather, by its id, felt this many Weather Tiers lower - Weather Resistant.
+  { match: /^piece\.resistsWeather\.([\w-]+)$/, phase: PHASES.PIECE, kind: N, ops: NUMERIC,
+    valid: () => true,
+    doc: "How many Weather Tiers lower its wearer feels one Battle Weather, by its id." },
   { match: /^(\w+)\.score$/, phase: PHASES.TIER, kind: N, ops: ["add"],
     valid: (data, [k]) => k in (data.attributes ?? {}),
     doc: "An Attribute Score." },

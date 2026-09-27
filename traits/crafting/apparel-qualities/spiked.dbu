@@ -3,9 +3,6 @@ name: Spiked
 kind: crafting
 categories: armor
 slots: 1
-# "When you are struck by an Unarmed Physical Attack from an Opponent on an adjacent Square to
-# you, reduce their Life Points by the Apparel Bonus for this piece of Armor."
-spikes: true
 source: Core Rule
 description: >
   Struck by an Unarmed Physical Attack from beside you, they lose the Apparel Bonus in Life
@@ -41,3 +38,6 @@ text: >
 #
 # "Unarmed": there are no Weapons in this system yet, so every Physical Attack is Unarmed. When
 # they arrive, one made with a Weapon posts no card.
+
+[passive]
+piece.spikes = true;

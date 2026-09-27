@@ -3,8 +3,6 @@ name: Dense Armor
 kind: crafting
 categories: armor
 slots: 1
-# "Increase your Apparel Bonus by 1(bT)" - this piece's, wherever its Bonus is read.
-apparelBonus: 1
 source: Core Rule
 description: >
   Apparel Bonus 1(bT) higher, and Combat Rolls 1(bT) lower.
@@ -28,3 +26,4 @@ text: >
 # worn: the Strike, the Dodge and the Wound Roll.
 [passive]
 combatRolls -= 1(bT);
+piece.apparelBonus += 1;

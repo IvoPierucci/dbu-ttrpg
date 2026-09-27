@@ -135,7 +135,13 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
           // Switched on by the player on the Item, for a Quality whose effect waits on
           // something the table keeps - Team Outfit's teammates.
           on: new fields.BooleanField({ required: true, initial: false })
-        }))
+        })),
+        // Its own pseudo-code, which is what the piece does: its Category and Qualities write
+        // their parts into it when chosen, and its owner may write anything else. Null for a
+        // piece made before Items had Effects of their own - read as what its Category and
+        // Qualities would write, and written down the first time its sheet is opened.
+        effects: new fields.StringField({ required: false, nullable: true, blank: true,
+          initial: null })
       }),
 
       /** Shrinks its wearer to a Size named outright - the Micro Band - and where they are. */

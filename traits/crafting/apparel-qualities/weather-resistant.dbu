@@ -6,9 +6,6 @@ slots: 1~3
 # "When you gain this Quality, choose any type of Battle Weather."
 chooses: weather
 prerequisites: 2+ Skill Ranks in the Survival Skill
-# "Treat the Weather Tier as if it was x Weather Tiers lower, where x is equal to the number of
-# Quality Slots occupied by this Apparel Quality." Read before any script runs.
-resistsWeather: true
 source: Core Rule
 description: >
   One Battle Weather, chosen when it is made, felt a Weather Tier lower for each Slot it takes -
@@ -37,3 +34,8 @@ text: >
 # Survival, standing in that Weather: every (WT) and every "Tier 2+" of it reads the Tier lower,
 # and at 0 none of it is gathered. The Tier on the Battlefields tab stays the one set - it is the
 # Weather's, not theirs.
+
+[passive]
+if (survival.ranks >= 2) {
+  piece.resistsWeather.$choice += $slots;
+}

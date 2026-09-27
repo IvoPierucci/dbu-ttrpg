@@ -3,10 +3,6 @@ name: Environmental Protection
 kind: crafting
 categories: standard-clothing
 slots: 2
-# "Ignore the effects of Battle Environments, Environmental Qualities" - read off the worn
-# Apparel, since they decide which effects are gathered at all.
-ignoresEnvironments: true
-ignoresEnvironmentalQualities: true
 source: Core Rule
 description: >
   The Battle Environment, its Environmental Qualities and Unbreathable Atmosphere do nothing
@@ -37,3 +33,5 @@ text: >
 # left alone.
 [passive]
 forbid unbreathableEnvironments;
+piece.ignoresEnvironments = true;
+piece.ignoresEnvironmentalQualities = true;

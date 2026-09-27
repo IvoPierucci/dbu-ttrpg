@@ -2,9 +2,11 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
-import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, connectable,
-  craftedReading, namePrefixMatches, qualityChoiceLabel, qualitySummary, qualityChoices, qualityEntries, qualityFits, qualityInactive,
-  qualitySlotRange, slotsTaken } from "../gear.mjs";
+import { compile } from "../effects/parser.mjs";
+import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, composeEffects, connectable,
+  craftedReading, effectsOf, namePrefixMatches, qualityChoiceLabel, qualityChoices,
+  qualityEntries, qualityFits, qualityInactive, qualitySlotRange, qualitySummary,
+  scriptWithPiece, slotsTaken } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 
 /**
@@ -14,9 +16,10 @@ import DBUCharacterData from "../data/actor-character.mjs";
  * player's own description. The name and the description are theirs to change - a
  * character's Capsule Car is theirs to call what they like - and the entry stays as printed.
  *
- * A built Item - a piece of Apparel - has more to it than a page holds, so it is three tabs
- * under the same header: its Description, what it is (Category, Grade, Size), and its
- * Qualities.
+ * A built Item - a piece of Apparel - has more to it than a page holds, so it is four tabs
+ * under the same header: its Description, what it is (Category, Grade, Size), its Qualities,
+ * and its Effects - the pseudo-code its Category and Qualities write into, which is what the
+ * piece does.
  */
 export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
@@ -27,6 +30,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     actions: {
       dbuChangeTab: DBUGearSheet._onChangeTab,
       editImage: DBUGearSheet._onEditImage,
+      rewriteEffects: DBUGearSheet._onRewriteEffects,
       addQuality: DBUGearSheet._onAddQuality,
       removeQuality: DBUGearSheet._onRemoveQuality,
       toggleQuality: DBUGearSheet._onToggleQuality
@@ -42,6 +46,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     crafted: { template: "systems/dbu-ttrpg/templates/parts/gear-crafted.hbs", scrollable: [""] },
     qualities: { template: "systems/dbu-ttrpg/templates/parts/gear-qualities.hbs",
       scrollable: [""] },
+    effects: { template: "systems/dbu-ttrpg/templates/parts/gear-effects.hbs", scrollable: [""] },
     body: { template: "systems/dbu-ttrpg/templates/parts/gear-sheet.hbs", scrollable: [""] }
   };
 
@@ -49,7 +54,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
   static TABS = {
     description: { id: "description", group: "primary", label: "Description" },
     crafted: { id: "crafted", group: "primary", label: "" },
-    qualities: { id: "qualities", group: "primary", label: "Qualities" }
+    qualities: { id: "qualities", group: "primary", label: "Qualities" },
+    effects: { id: "effects", group: "primary", label: "Effects" }
   };
 
   tabGroups = { primary: "crafted" };
@@ -63,7 +69,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
   _configureRenderParts(options) {
     const parts = super._configureRenderParts(options);
     const keep = this.#built
-      ? ["header", "tabs", "description", "crafted", "qualities"]
+      ? ["header", "tabs", "description", "crafted", "qualities", "effects"]
       : ["header", "body"];
     for (const key of Object.keys(parts)) if (!keep.includes(key)) delete parts[key];
     return parts;
@@ -79,6 +85,44 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
   async _onRender(context, options) {
     await super._onRender(context, options);
     this.#wireQualitySearch();
+    // A piece made before Items had Effects of their own: what its Category and Qualities
+    // would write, written down now, so it is there to read and to change.
+    const crafted = this.item.system.crafted;
+    if (this.#built && (typeof crafted?.effects !== "string") && this.isEditable) {
+      await this.item.update({ "system.crafted.effects": effectsOf(crafted, getTrait) });
+    }
+  }
+
+  /**
+   * An update that changes the Qualities, with the Effects they write: a new one's part
+   * written in, a removed one's taken out, a switched one's lines commented or given back.
+   * Everything else in the Effects stays as it was written.
+   */
+  #withQualities(qualities) {
+    const crafted = this.item.system.crafted;
+    return {
+      "system.crafted.qualities": qualities,
+      "system.crafted.effects": composeEffects({ ...crafted, qualities },
+        effectsOf(crafted, getTrait), { getTrait })
+    };
+  }
+
+  /**
+   * Write every part afresh from its Category's and Qualities' files - what was changed inside
+   * a part is lost, which is asked first; what was written outside every part is kept.
+   */
+  static async _onRewriteEffects(event, target) {
+    const crafted = this.item.system.crafted;
+    const sure = await foundry.applications.api.DialogV2.confirm({
+      classes: ["dbu-dialog"],
+      window: { title: "Rewrite Effects" },
+      content: "<p>Every Category and Quality part is written again from its file. What you "
+        + "changed inside them is lost; your own lines outside them are kept.</p>",
+      rejectClose: false
+    });
+    if (!sure) return;
+    return this.item.update({ "system.crafted.effects":
+      composeEffects(crafted, effectsOf(crafted, getTrait), { getTrait, rewrite: true }) });
   }
 
   /**
@@ -275,9 +319,14 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     return {
       label: kind.label,
       reading,
-      // Stretching: its Size is its wearer's, whatever it was made at.
-      stretches: qualityEntries(crafted).some(entry => !qualityInactive(entry, crafted, getTrait)
-        && (getTrait(entry.id)?.sizeIsWearers === true)),
+      // Stretching: its Size is its wearer's, whatever it was made at - as its Effects say.
+      stretches: reading.sizeIsWearers,
+      // Its own pseudo-code, and whether it compiles - against its owner, where it has one, so
+      // a Skill it names is one they have.
+      effectsText: effectsOf(crafted, getTrait),
+      // `$apparelBonus` read as this piece's own, as it is when the piece is worn.
+      effectErrors: compile(scriptWithPiece(effectsOf(crafted, getTrait), reading),
+        this.item.actor?.system ?? null).errors ?? [],
       // The Bonus as the rule writes it, and what it comes to for whoever holds it.
       bonusLabel: `${reading.perBaseTier}(bT)${(baseTier !== null) ? ` = ${reading.bonus}` : ""}`,
       categoryChoices: traitsOfKind("crafting", kind.categories).map(trait => ({
@@ -399,7 +448,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       if (!offered.includes(choice)) return;
     }
     const qualities = [...qualityEntries(this.item.system.crafted), { id: pick, slots, choice }];
-    return this.item.update({ "system.crafted.qualities": qualities });
+    return this.item.update(this.#withQualities(qualities));
   }
 
   /** The Qualities its Category takes, ordinary and Special apart, as the picker's groups. */
@@ -437,14 +486,14 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     const index = Number(target.dataset.index);
     const qualities = qualityEntries(this.item.system.crafted)
       .map((entry, at) => (at === index) ? { ...entry, on: !entry.on } : entry);
-    return this.item.update({ "system.crafted.qualities": qualities });
+    return this.item.update(this.#withQualities(qualities));
   }
 
   /** Take one Quality off, by where it is in the list. */
   static async _onRemoveQuality(event, target) {
     const index = Number(target.dataset.index);
     const qualities = qualityEntries(this.item.system.crafted).filter((entry, at) => at !== index);
-    return this.item.update({ "system.crafted.qualities": qualities });
+    return this.item.update(this.#withQualities(qualities));
   }
 
   /**
@@ -464,6 +513,16 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
         foundry.utils.setProperty(submitData, `system.${field}.name`,
           uuid ? (fromUuidSync(uuid)?.name ?? "") : "");
       }
+    }
+    // A new Category writes its part into the Effects in place of the old one's, and takes
+    // out the parts of the Qualities it does not take - into what the Effects say as sent,
+    // which is what is on the page.
+    const crafted = this.item.system.crafted;
+    const category = foundry.utils.getProperty(submitData, "system.crafted.category");
+    if (this.#built && (category !== undefined) && (category !== crafted.category)) {
+      const sent = foundry.utils.getProperty(submitData, "system.crafted.effects");
+      foundry.utils.setProperty(submitData, "system.crafted.effects",
+        composeEffects({ ...crafted, category }, sent ?? effectsOf(crafted, getTrait), { getTrait }));
     }
     return super._processSubmitData(event, form, submitData, options);
   }

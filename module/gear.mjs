@@ -13,6 +13,10 @@
  * keeps count of it.
  */
 
+import { compile as compileScript } from "./effects/parser.mjs";
+import { applyPassives, applySlot, PRIORITY } from "./effects/interpreter.mjs";
+import { PHASES } from "./effects/slots.mjs";
+
 /**
  * The four Item Types, and which list on the Gear tab each is drawn in.
  *
@@ -135,7 +139,7 @@ export const CRAFTED = Object.freeze({
  * @param {object} crafted  the Item's `system.crafted`
  * @param {{getTrait: function, difficulties: object, baseTier: number}} with
  */
-export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }) {
+export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, data = null }) {
   const kind = CRAFTED[crafted?.kind];
   if (!kind) return null;
   const grade = kind.grades[crafted.grade] ?? kind.grades[1];
@@ -156,13 +160,13 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
   const count = entries.length;
   const used = entries.reduce((sum, entry) =>
     sum + slotsTaken(entry, getTrait?.(entry.id)), 0);
-  // What its active Qualities add to it: to the Apparel Bonus, per base Tier - Dense Armor's
-  // "Increase your Apparel Bonus by 1(bT)" - and to the most its Break Value can be, Durable's 3.
-  const active = entries.filter(entry => !qualityInactive(entry, crafted, getTrait));
-  const added = key => active
-    .reduce((sum, entry) => sum + (Number(getTrait?.(entry.id)?.[key]) || 0), 0);
-  const fromQualities = added("apparelBonus");
+  // What the piece is, as its own Effects say - never its Qualities' files: what they wrote
+  // there when they were added, and whatever its owner has written since. Dense Armor's
+  // `piece.apparelBonus += 1;`, Durable's `piece.breakValue += 3;`.
+  const piece = pieceSlots(crafted, { getTrait, data, perBaseTier: band.perBaseTier });
+  const fromQualities = applySlot(piece, "piece.apparelBonus", 0);
   const perBaseTier = band.perBaseTier + fromQualities;
+  const flag = key => piece[key] === true;
   return {
     kind: crafted.kind,
     categoryName: category?.name ?? crafted.category,
@@ -177,24 +181,30 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
     used,
     over: Math.max(0, used - grade.slots),
     // What the Armor Category's Damage Reduction is multiplied by - Sleek Design's "Halve the
-    // Damage Reduction gained from this Armor" - 1 where nothing says so.
-    armorDamageReduction: active.reduce((factor, entry) => {
-      const said = getTrait?.(entry.id)?.armorDamageReduction;
-      return (said === undefined || said === "") ? factor : factor * Number(said);
-    }, 1),
-    // Whether it counts towards the Apparel Penalty - Lightweight's and Sleek Design's "does
-    // not count"; its Category's own say, Standard Clothing's, is the Penalty's to read.
-    countsForPenalty: !active.some(entry => getTrait?.(entry.id)?.noApparelPenalty === true),
+    // Damage Reduction gained from this Armor", `piece.armorDamageReduction *= 1/2;` - 1 where
+    // nothing says so. Read as written: the halving is the point, not a whole number.
+    armorDamageReduction: factorOf(piece["piece.armorDamageReduction"]),
+    // Whether it counts towards the Apparel Penalty - `piece.countsForPenalty = false;`, which
+    // Lightweight, Sleek Design and Standard Clothing write.
+    countsForPenalty: piece["piece.countsForPenalty"] !== false,
     // Whether its Break Value can be reduced at all - Unbreakable's "cannot have its Break
     // Value reduced". Read by the Break Value, which comes with the rest of the Apparel rules.
-    unbreakable: active.some(entry => getTrait?.(entry.id)?.unbreakable === true),
-    // The most its Break Value can be: 3, and what its Qualities add.
-    breakValue: (Number(kind.breakValue) || 0) + added("breakValue"),
-    // A Hardness Value one of its Qualities sets outright - Hefty Plating's "is set to 4" -
-    // or null where none does. The highest, should two ever say so.
-    hardnessValue: active.map(entry => getTrait?.(entry.id)?.hardnessValue)
-      .filter(value => Number.isFinite(Number(value)) && (value !== ""))
-      .reduce((most, value) => Math.max(most ?? 0, Number(value)), null),
+    unbreakable: flag("piece.unbreakable"),
+    // The rest of what it says about itself, for the rules that come with Layers and the
+    // Break Value: Joint Protection's, the Jacket's, Loose's, Segmented Weight's, Stretching's.
+    sparesFirstBreak: flag("piece.sparesFirstBreak"),
+    wornOverArmor: flag("piece.wornOverArmor"),
+    doffsWithNoEffort: flag("piece.doffsWithNoEffort"),
+    doffRounds: applySlot(piece, "piece.doffRounds", 0),
+    sizeIsWearers: flag("piece.sizeIsWearers"),
+    spikes: flag("piece.spikes"),
+    // The most its Break Value can be: 3, and what its Effects add.
+    breakValue: applySlot(piece, "piece.breakValue", Number(kind.breakValue) || 0),
+    // A Hardness Value its Effects set outright - Hefty Plating's "is set to 4" - or null
+    // where they say nothing about it.
+    hardnessValue: piece["piece.hardnessValue"] ? applySlot(piece, "piece.hardnessValue", 0) : null,
+    // Everything its Effects said about the piece, by Slot, for whoever reads one of its own.
+    piece,
     // The ones its Category does not take: "Apparel Qualities may apply to only certain
     // Apparel Categories." Kept, and inactive.
     misfits: entries.filter(entry => !qualityFits(getTrait?.(entry.id), crafted.category))
@@ -218,13 +228,10 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1 }
  */
 export function groundIgnored(items, getTrait) {
   const ignored = { environments: false, qualities: false };
-  for (const { item, entries } of apparelQualitiesInEffect(items)) {
-    for (const entry of entries) {
-      if (qualityInactive(entry, item.system.crafted, getTrait)) continue;
-      const trait = getTrait?.(entry.id);
-      if (trait?.ignoresEnvironments === true) ignored.environments = true;
-      if (trait?.ignoresEnvironmentalQualities === true) ignored.qualities = true;
-    }
+  for (const { item } of apparelQualitiesInEffect(items)) {
+    const piece = pieceSlots(item.system.crafted, { getTrait });
+    if (piece["piece.ignoresEnvironments"] === true) ignored.environments = true;
+    if (piece["piece.ignoresEnvironmentalQualities"] === true) ignored.qualities = true;
   }
   return ignored;
 }
@@ -305,17 +312,12 @@ export function qualityChoiceLabel(trait, choice, skills, weathers = {}) {
  * it. Only while the wearer has the 2+ Ranks in Survival its Prerequisite asks, told here
  * because this is read before any script runs.
  */
-export function weatherResisted(items, weatherId, getTrait, survivalRanks = 0) {
-  if (!weatherId || !((Number(survivalRanks) || 0) >= 2)) return 0;
+export function weatherResisted(items, weatherId, getTrait, data = null) {
+  if (!weatherId) return 0;
   let tiers = 0;
-  for (const { item, entries } of apparelQualitiesInEffect(items)) {
-    for (const entry of entries) {
-      if (qualityInactive(entry, item.system.crafted, getTrait)) continue;
-      const trait = getTrait?.(entry.id);
-      if ((trait?.resistsWeather === true) && (entry.choice === weatherId)) {
-        tiers += slotsTaken(entry, trait);
-      }
-    }
+  for (const { item } of apparelQualitiesInEffect(items)) {
+    tiers += applySlot(pieceSlots(item.system.crafted, { getTrait, data }),
+      `piece.resistsWeather.${weatherId}`, 0);
   }
   return tiers;
 }
@@ -330,11 +332,9 @@ export function weatherResisted(items, weatherId, getTrait, survivalRanks = 0) {
  * rules.
  */
 export function narrowedRoll(item, getTrait) {
-  for (const entry of qualityEntries(item?.system?.crafted)) {
-    if (qualityInactive(entry, item.system.crafted, getTrait)) continue;
-    if (getTrait?.(entry.id)?.narrowsCategory === true && entry.choice) return entry.choice;
-  }
-  return "";
+  const piece = pieceSlots(item?.system?.crafted, { getTrait });
+  const found = Object.keys(piece).find(key => key.startsWith("piece.narrows.") && (piece[key] === true));
+  return found ? found.slice("piece.narrows.".length) : "";
 }
 
 /**
@@ -345,12 +345,9 @@ export function narrowedRoll(item, getTrait) {
  * of the Apparel rules.
  */
 export function weightsPenaltyWaived(item, wearer, getTrait) {
-  const crafted = item?.system?.crafted;
-  const waives = qualityEntries(crafted).some(entry => !qualityInactive(entry, crafted, getTrait)
-    && (getTrait?.(entry.id)?.waivesWeightsWhileHoldingBack === true));
-  if (!waives) return false;
-  const ranks = Number(wearer?.system?.skills?.concealment?.ranks) || 0;
-  return (ranks >= 2) && (holdingBackStacks(wearer) > 0);
+  const piece = pieceSlots(item?.system?.crafted, { getTrait, data: wearer?.system ?? null });
+  if (piece["piece.waivesWeightsWhileHoldingBack"] !== true) return false;
+  return holdingBackStacks(wearer) > 0;
 }
 
 /**
@@ -361,8 +358,7 @@ export function weightsPenaltyWaived(item, wearer, getTrait) {
  */
 export function apparelSize(item, wearer, getTrait) {
   const crafted = item?.system?.crafted;
-  const stretches = qualityEntries(crafted).some(entry =>
-    !qualityInactive(entry, crafted, getTrait) && (getTrait?.(entry.id)?.sizeIsWearers === true));
+  const stretches = pieceSlots(crafted, { getTrait })["piece.sizeIsWearers"] === true;
   if (stretches && wearer?.system?.size?.key) return wearer.system.size.key;
   return crafted?.size ?? "";
 }
@@ -374,13 +370,10 @@ export function apparelSize(item, wearer, getTrait) {
  */
 export function spikesOf(items, getTrait, baseTier = 1) {
   const found = [];
-  for (const { item, entries } of apparelQualitiesInEffect(items)) {
-    const crafted = item.system.crafted;
-    const spiked = entries.some(entry => !qualityInactive(entry, crafted, getTrait)
-      && (getTrait?.(entry.id)?.spikes === true));
-    if (!spiked) continue;
-    const reading = craftedReading(crafted, { getTrait, difficulties: {}, baseTier });
-    found.push({ item, amount: reading?.bonus ?? 0 });
+  for (const { item } of apparelQualitiesInEffect(items)) {
+    const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier });
+    if (!reading?.spikes) continue;
+    found.push({ item, amount: reading.bonus ?? 0 });
   }
   return found;
 }
@@ -391,13 +384,7 @@ export function spikesOf(items, getTrait, baseTier = 1) {
  * Doff Bonus, which comes with the rest of the Apparel rules.
  */
 export function doffRounds(item, getTrait) {
-  const crafted = item?.system?.crafted;
-  return qualityEntries(crafted)
-    .filter(entry => !qualityInactive(entry, crafted, getTrait))
-    .reduce((sum, entry) => {
-      const trait = getTrait?.(entry.id);
-      return sum + (Number(trait?.doffRoundsPerSlot) || 0) * slotsTaken(entry, trait);
-    }, 0);
+  return applySlot(pieceSlots(item?.system?.crafted, { getTrait }), "piece.doffRounds", 0);
 }
 
 /**
@@ -419,6 +406,217 @@ export function scriptWithChoice(script, choice) {
  */
 export function scriptWithPiece(script, reading) {
   return String(script ?? "").replaceAll("$apparelBonus", String(Number(reading?.perBaseTier) || 0));
+}
+
+// --- A built Item's own Effects ----------------------------------------------------------------
+//
+// A built Item's pseudo-code is its own: `system.crafted.effects`. Its Category and each of its
+// Qualities write their part into it when they are chosen - between markers, so the part can be
+// found again to take out - and from then on the Item answers to what is written there and
+// nothing else. Nothing reads a Quality's file to know what a piece does. Whatever its owner
+// writes, in a part or outside every part, is as much the piece's as what was written for them:
+// that is what makes homebrew possible.
+//
+//   #@ category standard-clothing | Standard Clothing
+//   [passive]
+//   piece.countsForPenalty = false;
+//   #@ end
+//
+// A marker is a comment to the language, so the whole text compiles as it stands.
+
+/** A part's opening marker: `#@ quality combat-ready nostack | Combat Ready`. */
+const PART_OPEN = /^#@\s+(category|quality)\s+(\S+)((?:\s+[a-z]+)*)\s*(?:\|\s*(.*?))?\s*$/;
+const PART_CLOSE = /^#@\s+end\s*$/;
+/** How a switched-off Quality's lines are kept: still there, and read as comments. */
+const OFF = "#off ";
+
+/**
+ * A built Item's Effects, as parts and the text between them.
+ *
+ * @returns {Array<{text: string} | {type: string, id: string, key: string, flags: string[],
+ *   name: string, body: string}>}
+ */
+export function effectParts(script) {
+  const out = [];
+  let text = [];
+  let open = null;
+  const seen = {};
+  const flushText = () => {
+    const joined = trimBlank(text.join("\n"));
+    if (joined) out.push({ text: joined });
+    text = [];
+  };
+  for (const line of String(script ?? "").replace(/\r\n?/g, "\n").split("\n")) {
+    const opens = line.trim().match(PART_OPEN);
+    if (!open && opens) {
+      flushText();
+      const [, type, id, flags, name] = opens;
+      const base = `${type}:${id}`;
+      seen[base] = (seen[base] ?? 0) + 1;
+      open = { type, id, key: (seen[base] > 1) ? `${base}:${seen[base]}` : base,
+        flags: flags.trim().split(/\s+/).filter(Boolean), name: name ?? "", lines: [] };
+      continue;
+    }
+    if (open && PART_CLOSE.test(line.trim())) {
+      out.push({ type: open.type, id: open.id, key: open.key, flags: open.flags, name: open.name,
+        body: trimBlank(open.lines.join("\n")) });
+      open = null;
+      continue;
+    }
+    (open ? open.lines : text).push(line);
+  }
+  // A part never closed runs to the end, rather than being lost.
+  if (open) {
+    out.push({ type: open.type, id: open.id, key: open.key, flags: open.flags, name: open.name,
+      body: trimBlank(open.lines.join("\n")) });
+  }
+  else flushText();
+  return out;
+}
+
+/** Leading and trailing blank lines off, and never more than one blank line in a row. */
+function trimBlank(text) {
+  return String(text ?? "").replace(/\n{3,}/g, "\n\n").replace(/^\s*\n/, "").replace(/\s+$/, "");
+}
+
+/**
+ * What a Category or Quality writes into a piece: its script's code, with its own notes left in
+ * its file, and what was chosen for it written in - `skill.$choice` as `skill.persuasion`, and
+ * `$slots` as the Quality Slots it was given. A script naming `$choice` with nothing chosen
+ * writes nothing.
+ */
+function partBody(trait, entry = null) {
+  let code = String(trait?.script ?? "").replace(/\r\n?/g, "\n").split("\n")
+    .filter(line => !/^\s*(#|\/\/)/.test(line)).join("\n");
+  if (entry) {
+    code = scriptWithChoice(code, entry.choice);
+    code = code.replaceAll("$slots", String(slotsTaken(entry, trait)));
+  }
+  return trimBlank(code);
+}
+
+/** A switched-off part's lines kept as comments, or a switched-on part's given back. */
+function switched(body, on) {
+  const lines = String(body ?? "").split("\n");
+  if (on) return lines.map(line => line.startsWith(OFF) ? line.slice(OFF.length) : line).join("\n");
+  return lines.map(line => (!line.trim() || line.startsWith(OFF)) ? line : `${OFF}${line}`).join("\n");
+}
+
+/** A part as it is written. */
+function partText(part) {
+  const flags = part.flags.length ? ` ${part.flags.join(" ")}` : "";
+  const name = part.name ? ` | ${part.name}` : "";
+  return [`#@ ${part.type} ${part.id}${flags}${name}`, part.body, "#@ end"]
+    .filter(line => line !== "").join("\n");
+}
+
+/**
+ * Write a built Item's Category and Qualities into its Effects.
+ *
+ * Its Category's part and a part for each Quality that applies - one its Category takes, and
+ * whose other Qualities do not hold it off. A part already there keeps what is written in it,
+ * whoever wrote it; a part no longer wanted is taken out; a new one is written from its file.
+ * Text outside every part is its owner's and is left where it is. A Quality with a switch -
+ * Team Outfit - has its lines kept as comments while switched off.
+ *
+ * @param {object} crafted   the Item's `system.crafted`, as it is to be
+ * @param {?string} previous what its Effects say now; null or "" for none
+ * @param {{getTrait: function, rewrite?: boolean}} with  `rewrite` writes every part afresh
+ */
+export function composeEffects(crafted, previous, { getTrait, rewrite = false } = {}) {
+  const kind = CRAFTED[crafted?.kind];
+  if (!kind) return String(previous ?? "");
+  const existing = effectParts(previous);
+  const had = new Map(existing.filter(part => part.key).map(part => [part.key, part]));
+
+  // What should be there, in order: the Category, then the Qualities that apply.
+  const wanted = [];
+  const category = getTrait?.(crafted.category);
+  if (category) {
+    wanted.push({ type: "category", id: category.id, key: `category:${category.id}`,
+      flags: [], name: category.name, fresh: () => partBody(category) });
+  }
+  const counted = {};
+  for (const entry of qualityEntries(crafted)) {
+    const trait = getTrait?.(entry.id);
+    if (!trait || qualityInactive(entry, crafted, getTrait)) continue;
+    const base = `quality:${trait.id}`;
+    counted[base] = (counted[base] ?? 0) + 1;
+    wanted.push({ type: "quality", id: trait.id,
+      key: (counted[base] > 1) ? `${base}:${counted[base]}` : base,
+      flags: (trait.noStack === true) ? ["nostack"] : [],
+      name: trait.name, toggle: Boolean(trait.toggle), on: entry.on,
+      fresh: () => partBody(trait, entry) });
+  }
+  const wantedKeys = new Set(wanted.map(part => part.key));
+
+  const written = part => {
+    const kept = had.get(part.key);
+    let body = (kept && !rewrite) ? kept.body : part.fresh();
+    if (part.toggle) body = switched(body, part.on);
+    return { type: part.type, id: part.id, key: part.key, flags: part.flags, name: part.name, body };
+  };
+
+  // What is there, kept in its place where it is still wanted; the owner's own text always.
+  const out = [];
+  for (const part of existing) {
+    if (!part.key) out.push(part);
+    else if (wantedKeys.has(part.key)) out.push(written(wanted.find(want => want.key === part.key)));
+  }
+  // What is new: a Category at the top, the Qualities after the last part there is.
+  for (const part of wanted) {
+    if (had.has(part.key)) continue;
+    if (part.type === "category") {
+      out.unshift(written(part));
+      continue;
+    }
+    let last = -1;
+    out.forEach((each, index) => { if (each.key) last = index; });
+    out.splice((last >= 0) ? last + 1 : out.length, 0, written(part));
+  }
+  return out.map(part => (part.key ? partText(part) : part.text)).join("\n\n");
+}
+
+/**
+ * A built Item's Effects: what is written on it, or - for one written before Items had
+ * Effects of their own - what its Category and Qualities would write.
+ */
+export function effectsOf(crafted, getTrait) {
+  if (typeof crafted?.effects === "string") return crafted.effects;
+  return composeEffects(crafted, "", { getTrait });
+}
+
+/** Compiled Effects, by their text: a piece is read far more often than it is changed. */
+const pieceCache = new Map();
+
+/**
+ * What a built Item's Effects say about the piece itself - its `piece.*` Slots, resolved.
+ *
+ * `data` is its wearer's, for a Prerequisite asked in an `if` - Weather Resistant's Survival -
+ * and nobody's where there is no wearer, which leaves such a line unmet.
+ */
+export function pieceSlots(crafted, { getTrait, data = null, perBaseTier = null } = {}) {
+  if (!CRAFTED[crafted?.kind]) return {};
+  const band = CRAFTED[crafted.kind].bonus[CRAFTED[crafted.kind].grades[crafted.grade]?.grade];
+  const script = scriptWithPiece(effectsOf(crafted, getTrait),
+    { perBaseTier: perBaseTier ?? band?.perBaseTier ?? 0 });
+  if (!script.trim()) return {};
+  let program = pieceCache.get(script);
+  if (program === undefined) {
+    const built = compileScript(script);
+    program = built.errors?.length ? null : built.program;
+    pieceCache.set(script, program);
+  }
+  if (!program) return {};
+  return applyPassives([{ program, priority: PRIORITY.talent, sourceName: "", level: 0, stacks: 1 }],
+    PHASES.PIECE, { data: data ?? {}, errors: [] }).slots;
+}
+
+/** A multiplier Slot as written - `*= 1/2` - rather than rounded to a whole number. */
+function factorOf(contribution) {
+  if (!contribution || (typeof contribution !== "object")) return 1;
+  const base = (contribution.set !== null && contribution.set !== undefined) ? contribution.set : 1;
+  return base * (contribution.multiply ?? 1);
 }
 
 /**
@@ -530,7 +728,10 @@ export function craftedItemFrom(kindKey, actor, getTrait) {
         category: kind.defaultCategory,
         grade: 1,
         size: size?.chosen ?? size?.key ?? "medium",
-        qualities: []
+        qualities: [],
+        // Written from its Category the moment it is made, and its own from then on.
+        effects: composeEffects({ kind: kindKey, category: kind.defaultCategory, qualities: [] },
+          "", { getTrait })
       }
     }
   };

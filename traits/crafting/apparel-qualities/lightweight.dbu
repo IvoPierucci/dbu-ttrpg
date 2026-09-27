@@ -7,8 +7,6 @@ slots: 1
 # piece: with Durable on it, Lightweight does not apply at all.
 excludesQualities: durable
 prerequisites: This piece of Apparel does not have the Durable Apparel Quality.
-# "This piece of Apparel does not count towards the Apparel Penalty." Read by the Penalty.
-noApparelPenalty: true
 source: Core Rule
 description: >
   Does not count towards the Apparel Penalty. Not with Durable on the same piece.
@@ -29,3 +27,6 @@ text: >
 #
 # The Apparel Penalty comes with the rest of the Apparel rules. When it does: a worn piece with
 # this on it is not counted towards it, as Standard Clothing is not - `noApparelPenalty`.
+
+[passive]
+piece.countsForPenalty = false;

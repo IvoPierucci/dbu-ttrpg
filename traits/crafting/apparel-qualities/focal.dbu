@@ -5,8 +5,6 @@ categories: weights
 slots: 1
 # "Upon creating this piece of Apparel, select either your Strike or Dodge Rolls."
 choices: strike=Strike Rolls, dodge=Dodge Rolls
-# The chosen one is all the Weights Category reaches - its penalty, and its Doff Bonus.
-narrowsCategory: true
 source: Core Rule
 description: >
   Strike or Dodge, chosen when it is made: the only Combat Roll the Weights lower, and the only
@@ -37,3 +35,6 @@ text: >
 #
 # What it changes is the Weights Category's own effects and the Doff Bonus, and both come with
 # the rest of the Apparel rules. They read the choice through narrowedRoll() in module/gear.mjs.
+
+[passive]
+piece.narrows.$choice = true;

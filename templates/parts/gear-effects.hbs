@@ -1,0 +1,22 @@
+<div class="tab {{tabs.effects.cssClass}}" data-group="primary" data-tab="effects">
+  {{! The piece's own pseudo-code, which is what it does. Its Category and Qualities write their
+      parts between the #@ markers; anything may be changed, and anything added. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Effects
+      <button type="button" class="gear-effects-rewrite" data-action="rewriteEffects"
+              data-tooltip="Write every Category and Quality part again from its file. Your own lines outside them are kept.">Rewrite</button>
+    </h3>
+    <textarea class="effect-script gear-effects-script" name="system.crafted.effects" rows="18"
+              spellcheck="false" data-tooltip="What this piece does. See WRITING-EFFECTS.txt">{{crafted.effectsText}}</textarea>
+    {{#if crafted.effectErrors.length}}
+    <ul class="effect-errors">
+      {{#each crafted.effectErrors as |problem|}}
+      <li>{{#if problem.line}}<b>Line {{problem.line}}</b> — {{/if}}{{problem.message}}</li>
+      {{/each}}
+    </ul>
+    {{else}}
+    <p class="effect-ok">Compiles.</p>
+    {{/if}}
+  </section>
+</div>

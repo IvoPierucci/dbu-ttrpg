@@ -3,9 +3,6 @@ name: Jacket
 kind: crafting
 categories: standard-clothing
 slots: 1
-# "This piece of Apparel can be worn over Armor" - the one exception to Armor's "you cannot
-# equip any piece of Apparel while wearing Armor". Read by the Layers.
-wornOverArmor: true
 source: Core Rule
 description: >
   Soak Value 1(bT) higher, and it can go on over Armor.
@@ -28,3 +25,4 @@ text: >
 # come with the rest of the Apparel rules, and read `wornOverArmor`.
 [passive]
 soakValue += 1(bT);
+piece.wornOverArmor = true;

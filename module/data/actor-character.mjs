@@ -1659,11 +1659,18 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     {
       const weather = this.battlefield?.weather ?? {};
       const set = weather.id ? (Number(weather.tier) || 0) : 0;
-      const survival = [...(this.racialSkillRanks ?? []), ...(this.progression ?? [])
+      // Asked by the piece's own Effects - Weather Resistant's `if (survival.ranks >= 2)` -
+      // before the Skills are worked out, so their Ranks are counted here for it to read.
+      const ranks = [...(this.racialSkillRanks ?? []), ...(this.progression ?? [])
         .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
-        .flatMap(entry => entry.skillRanks)].filter(rank => rank === "survival").length;
+        .flatMap(entry => entry.skillRanks)];
+      const early = {
+        attributes: this.attributes,
+        skills: Object.fromEntries(Object.keys(DBUCharacterData.SKILLS).map(key =>
+          [key, { ranks: ranks.filter(rank => rank === key).length }]))
+      };
       const resisted = weatherResisted(Array.from(this.parent?.items ?? []), weather.id,
-        getTrait, survival);
+        getTrait, early);
       if (this.battlefield?.weather) this.battlefield.weather.felt = Math.max(0, set - resisted);
     }
     // Built after the bag exists: the report callback writes into it, and calling

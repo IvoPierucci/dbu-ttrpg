@@ -235,6 +235,26 @@
   flex: 1 1 auto;
 }
 
+/* A built Item's Effects: its pseudo-code, taking the tab. */
+.dbu-ttrpg .gear-effects-script {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 260px;
+  resize: vertical;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+}
+
+.dbu-ttrpg .gear-effects-rewrite {
+  flex: 0 0 auto;
+  width: auto;
+  line-height: 1.4;
+  padding: 0 8px;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 /* On the Qualities tab: "Insufficient Quality Slots", in the chat's yellow, bold. */
 .dbu-ttrpg .gear-insufficient {
   margin: 4px 0;

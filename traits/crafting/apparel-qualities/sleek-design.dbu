@@ -3,11 +3,6 @@ name: Sleek Design
 kind: crafting
 categories: armor
 slots: 1
-# "Halve the Damage Reduction gained from this Armor." Read by the Armor Category's Damage
-# Reduction, as a multiplier on it.
-armorDamageReduction: 0.5
-# "This Armor does not count towards your Apparel Penalty." Read by the Penalty.
-noApparelPenalty: true
 source: Core Rule
 description: >
   Half the Damage Reduction from this Armor, and out of the Apparel Penalty.
@@ -33,3 +28,7 @@ text: >
 # The Armor's Damage Reduction and the Apparel Penalty come with the rest of the Apparel rules.
 # The Damage Reduction reads its multiplier - a half, here - from its piece's reading
 # (`armorDamageReduction`), and the Penalty leaves this piece out, as it does Lightweight's.
+
+[passive]
+piece.armorDamageReduction *= 1/2;
+piece.countsForPenalty = false;

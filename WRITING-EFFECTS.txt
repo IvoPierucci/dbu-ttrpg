@@ -798,6 +798,51 @@ not - the list is closed, so naming is exact and stays exact if a fifth is ever
 added.
 
 
+12b. A PIECE OF APPAREL'S OWN EFFECTS
+-------------------------------------
+
+A built Item - a piece of Apparel - has an Effects tab, and what is written there is what the
+piece does. Its Category and Qualities write their part into it when they are chosen, between
+`#@` markers, and nothing else is read: to change what a piece does, change its Effects.
+
+    #@ quality jacket | Jacket
+    [passive]
+    soakValue += 1(bT);
+    piece.wornOverArmor = true;
+    #@ end
+
+    # a line of your own, outside every part
+    [passive]
+    strike += 1;
+
+Everything runs while the piece is worn. Inside a piece's Effects, `$apparelBonus` is its own
+Apparel Bonus per base Tier - Combat Ready's `strike += ceil($apparelBonus(bT) / 2);`.
+
+What the piece is, rather than what it does to its wearer, is a `piece.` Slot:
+
+  piece.apparelBonus         added to its Apparel Bonus, per base Tier
+  piece.breakValue           added to the most its Break Value can be
+  piece.hardnessValue        its Hardness Value, set outright
+  piece.armorDamageReduction the Armor's Damage Reduction from it, multiplied - *= 1/2
+  piece.countsForPenalty     = false: it does not count towards the Apparel Penalty
+  piece.unbreakable          = true: its Break Value is never reduced
+  piece.sparesFirstBreak     = true: its first loss of Break Value from full each Encounter
+                             does not happen
+  piece.wornOverArmor        = true: it may go on over Armor
+  piece.doffsWithNoEffort    = true: it may be Doffed with the No-Effort Maneuver
+  piece.doffRounds           Combat Rounds its first Doff Bonus of an Encounter lasts longer
+  piece.sizeIsWearers        = true: its Size Category is its wearer's
+  piece.spikes               = true: a Physical blow on it costs the one who struck its Apparel
+                             Bonus in Life Points
+  piece.waivesWeightsWhileHoldingBack  = true: the Weights take nothing off while Holding Back
+  piece.ignoresEnvironments / piece.ignoresEnvironmentalQualities  = true: its wearer ignores them
+  piece.narrows.strike (or dodge)      = true: the only Combat Roll its Category reaches
+  piece.resistsWeather.<weather id>    Weather Tiers lower its wearer feels that Weather
+
+An `if` around a `piece.` line reads the wearer - Weather Resistant's
+`if (survival.ranks >= 2) { piece.resistsWeather.cold-weather += 2; }`.
+
+
 13. WHEN SOMETHING IS WRONG
 ---------------------------
 

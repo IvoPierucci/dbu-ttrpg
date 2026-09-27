@@ -5,8 +5,6 @@ kind: crafting
 # Apparel".
 special: true
 slots: 1
-# "Increase your Apparel Bonus by 1(bT)" - this piece's, wherever its Bonus is read.
-apparelBonus: 1
 source: Core Rule
 description: >
   Apparel Bonus 1(bT) higher.
@@ -25,3 +23,6 @@ text: >
 
 # The piece's own Bonus, shown on its sheet 1(bT) higher - and read so by everything that reads
 # it: the Armor's Damage Reduction, a Doff Bonus, Parrying Armor, Combat Ready, Spiked.
+
+[passive]
+piece.apparelBonus += 1;

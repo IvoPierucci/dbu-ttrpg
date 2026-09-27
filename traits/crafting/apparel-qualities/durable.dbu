@@ -6,8 +6,6 @@ slots: 1
 # the piece, not the wearer: with Lightweight on it, Durable does not apply at all.
 excludesQualities: lightweight
 prerequisites: This piece of Apparel does not have the Lightweight Apparel Quality
-# "Increase the maximum Break Value for this piece of Apparel by 3."
-breakValue: 3
 source: Core Rule
 description: >
   Maximum Break Value 3 higher. Not with Lightweight on the same piece.
@@ -26,3 +24,6 @@ text: >
 
 # The piece's own: its sheet shows the most its Break Value can be, 6 with this. Losing Break
 # Value and repairing it come with the rest of the Apparel rules, and read that most.
+
+[passive]
+piece.breakValue += 3;
