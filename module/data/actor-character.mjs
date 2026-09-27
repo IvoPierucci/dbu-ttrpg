@@ -501,6 +501,18 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   /** The most Karma Points a character can hold. */
   static KARMA_MAX = 4;
 
+  /**
+   * "Alignment can be seen as a sliding scale that can be numerically rated." Each by its
+   * number, Pure Good 2 down to Pure Evil -2; the text is the rulebook's own line for it.
+   */
+  static ALIGNMENTS = Object.freeze({
+    2: { label: "Pure Good", text: "There is no evil in your heart." },
+    1: { label: "Good", text: "While you are on the side of good, there are hints of evil within you." },
+    0: { label: "Neutral", text: "You live a life unsubscribed to an overarching ‘good’ or ‘evil’ agenda." },
+    [-1]: { label: "Evil", text: "While you are on the side of evil, there are hints of good within you." },
+    [-2]: { label: "Pure Evil", text: "There is no good in your heart." }
+  });
+
   /** The most Energy Charges one Attacking Maneuver can carry. */
   static MAX_ENERGY_CHARGES = 7;
 
@@ -1514,6 +1526,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // The id of a subrace, for races that define any. Blank otherwise.
     schema.subrace = new fields.StringField({ required: true, blank: true, initial: "" });
+    // Alignment, by its number: Pure Good 2 ... Pure Evil -2. Neutral until chosen.
+    schema.alignment = new fields.NumberField({ required: true, integer: true, initial: 0, min: -2, max: 2 });
     schema.biography = new fields.HTMLField({ required: true, blank: true, initial: "" });
 
     // --- Character Progression ---

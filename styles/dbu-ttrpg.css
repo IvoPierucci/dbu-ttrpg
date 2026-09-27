@@ -2663,7 +2663,8 @@
   margin-bottom: 10px;
 }
 
-.dbu-ttrpg .karma {
+.dbu-ttrpg .karma,
+.dbu-ttrpg .alignment {
   display: flex;
   align-items: center;
   gap: 6px;

@@ -1161,6 +1161,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .join(", ");
 
     context.karmaMax = DBUCharacterData.KARMA_MAX;
+    context.alignments = [2, 1, 0, -1, -2].map(value => ({ value, ...DBUCharacterData.ALIGNMENTS[value],
+      chosen: (this.document.system.alignment ?? 0) === value }));
+    context.alignmentNow = DBUCharacterData.ALIGNMENTS[this.document.system.alignment ?? 0];
     context.racialTraits = this.#racialTraitChoices();
 
     // What is being charged, if anything. Named rather than shown as an id, since the

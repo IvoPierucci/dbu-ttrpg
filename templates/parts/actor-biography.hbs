@@ -14,6 +14,15 @@
               data-tooltip="Regain one">+</button>
     </div>
 
+    <div class="alignment" data-tooltip="{{alignmentNow.text}}">
+      <span class="karma-label">Alignment</span>
+      <select name="system.alignment" data-dtype="Number">
+        {{#each alignments as |alignment|}}
+        <option value="{{alignment.value}}" {{#if alignment.chosen}}selected{{/if}}>{{alignment.label}} ({{alignment.value}})</option>
+        {{/each}}
+      </select>
+    </div>
+
     {{! A Minion is a lesser opponent: fewer Actions are demanded of them by Compelled,
         and several rules read this rather than the character's numbers. }}
     <label class="bio-toggle"
