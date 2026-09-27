@@ -60,8 +60,9 @@ Headers only a Quality reads:
                  script names the one chosen as `$choice` - `skill.$choice += 2;`.
   toggle:        a label for a switch on its row: its part's lines are kept as `#off` comments
                  while the player has it off - Team Outfit's teammates, which the table keeps.
-  noStack:       true - its part is marked `nostack`: worn on several pieces, it applies from
-                 one.
+  noStack:       true - its part is marked `nostack`, the rulebook saying so of it. Worn on
+                 several pieces, every Quality applies from one anyway - Double Dip, see
+                 doubleDipped() in module/effects/registry.mjs.
   summary:       what it does: its Effects line as printed, word for word, cut into one line to
                  an effect with a blank line between, each opening with its tag as the rulebook
                  writes one - `[Passive]:` while worn,

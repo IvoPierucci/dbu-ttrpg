@@ -179,27 +179,26 @@ function racialPrograms(actor, report) {
  */
 function apparelPrograms(actor, report) {
   const entries = [];
-  // The parts that do not stack with themselves, already gathered from one piece.
-  const once = new Set();
   // Its Category only from the Top Layer - or whichever Layer worn is highest.
   const top = topLayerPiece(Array.from(actor.items ?? []));
-  for (const { item } of apparelQualitiesInEffect(Array.from(actor.items ?? []))) {
+  const worn = apparelQualitiesInEffect(Array.from(actor.items ?? [])).map(({ item }) => {
     // The piece's own Effects, and nothing else: what its Category and Qualities wrote there,
     // and whatever has been written since. A part at a time, so each keeps its own name in the
-    // workings - and one marked `nostack`, Team Outfit's "this bonus does not stack", is
-    // gathered from one piece however many carry it.
+    // workings.
     const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {},
       category: item === top });
     // What its Effects may name about it: the Armor's multiplier, the Rolls its Weights
     // reach, and whether they are waived right now.
     const tokens = pieceTokens(item, actor, reading, getTrait);
-    for (const part of effectParts(effectsOf(item.system.crafted, getTrait))) {
+    const parts = effectParts(effectsOf(item.system.crafted, getTrait))
       // "Benefits that you gain while wearing that piece of Apparel as the Top Layer."
-      if ((part.type === "category") && (item !== top)) continue;
-      if (part.flags?.includes("nostack")) {
-        if (once.has(part.id)) continue;
-        once.add(part.id);
-      }
+      .filter(part => (part.type !== "category") || (item === top));
+    return { item, reading, tokens, parts };
+  });
+  const kept = doubleDipped(worn);
+  for (const { item, reading, tokens, parts } of worn) {
+    for (const part of parts) {
+      if ((part.type === "quality") && (kept.get(dipKey(part)) !== part)) continue;
       const script = scriptWithPiece(part.key ? part.body : part.text, reading, tokens);
       if (!script.trim()) continue;
 
@@ -234,6 +233,45 @@ function apparelPrograms(actor, report) {
     }
   }
   return entries;
+}
+
+/**
+ * Double Dip: "You cannot gain any specific instance of a Trait, Talent, Quality, Advantage or
+ * Disadvantage more than once, unless specifically specified otherwise." One Quality worn on
+ * several pieces is gained once - from the piece that gives it the most Quality Slots, and the
+ * first of those worn where they tie. What was chosen for it does not make another instance: a
+ * Talent with a choice is "a single Talent" all the same.
+ *
+ * Only what the wearer gains: what a Quality makes of its piece - its Break Value, its Hardness,
+ * its Size - is read off that piece alone, by pieceSlots(), and is never counted here.
+ *
+ * A Dynamic Quality is a Quality made at the table, each one its own: one per name.
+ *
+ * @returns {Map<string, object>}  the one part kept for each Quality, by dipKey()
+ */
+export function doubleDipped(worn) {
+  const best = new Map();
+  for (const { item, parts } of worn) {
+    for (const part of parts) {
+      if (part.type !== "quality") continue;
+      const slots = partSlots(item, part);
+      const key = dipKey(part);
+      if (!best.has(key) || (slots > best.get(key).slots)) best.set(key, { part, slots });
+    }
+  }
+  return new Map(Array.from(best, ([key, { part }]) => [key, part]));
+}
+
+/** What makes two Quality parts the same Quality. */
+export function dipKey(part) {
+  return (part.id === "dynamic-quality") ? `${part.id}|${part.name}` : part.id;
+}
+
+/** The Quality Slots the entry behind a part takes: the nth part of an id is its nth entry. */
+function partSlots(item, part) {
+  const nth = Number(String(part.key).split(":")[2] ?? 1);
+  const entry = (item.system?.crafted?.qualities ?? []).filter(q => q.id === part.id)[nth - 1];
+  return Number(entry?.slots ?? 1) || 1;
 }
 
 function accessoryPrograms(actor, report) {
