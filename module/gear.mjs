@@ -835,6 +835,38 @@ export async function breakApparel(actor, getTrait) {
   return said;
 }
 
+/**
+ * The worn pieces their wearer has grown out of: "If, while wearing a piece of Apparel, your Size
+ * Category would increase to be 2+ Size Categories larger than the Size Category for that piece
+ * of Apparel, that piece of Apparel is destroyed." A stretching piece is always its wearer's
+ * Size, so never. `sizes` is the Size Categories in order, smallest first.
+ */
+export function outgrown(items, wearer, sizes, getTrait) {
+  const now = sizes.indexOf(wearer?.system?.size?.key ?? "");
+  if (now < 0) return [];
+  return apparelQualitiesInEffect(items).map(({ item }) => item).filter(item => {
+    const made = sizes.indexOf(apparelSize(item, wearer, getTrait));
+    return (made >= 0) && ((now - made) >= 2);
+  });
+}
+
+/**
+ * Destroy what a character has grown out of: taken off, and marked destroyed - kept on the sheet,
+ * by the table's ruling, for the player to take off it if they like. Said at the table.
+ */
+export async function destroyOutgrown(actor, sizes, getTrait) {
+  const gone = outgrown(Array.from(actor?.items ?? []), actor, sizes, getTrait);
+  if (!gone.length) return [];
+  await actor.updateEmbeddedDocuments("Item", gone.map(item => ({ _id: item.id,
+    "system.crafted.destroyed": true, "system.equipped": false, "system.layer": "" })));
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(actor.name)} grows out of `
+      + `${gone.map(item => Handlebars.escapeExpression(item.name)).join(" and ")}: destroyed.</p>`
+  });
+  return gone;
+}
+
 /** What it costs to put a piece of Apparel on during a Combat Encounter: "2 Actions". */
 export const APPAREL_EQUIP_COST = 2;
 

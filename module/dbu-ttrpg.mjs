@@ -12,7 +12,7 @@ import { forget, forgetAll } from "./effects/registry.mjs";
 import { coreManeuverItems, registerHotbarDrop, registerMacroApi } from "./use-maneuver.mjs";
 import { loadRaces, racialAttributeIncrease, racialLifeModifier } from "./races.mjs";
 import { loadManeuvers } from "./maneuvers.mjs";
-import { loadTraits } from "./effects/traits.mjs";
+import { getTrait, loadTraits } from "./effects/traits.mjs";
 import { registerCombatHooks, registerBreathHooks, registerDefeatHooks, registerWornBreathHooks }
   from "./combat.mjs";
 import { registerConditionHooks } from "./conditions.mjs";
@@ -104,6 +104,22 @@ Hooks.once("ready", registerManeuverSocket);
 // Compiled effects are cached by the content they came from, so a stale entry cannot
 // happen - an edit produces a different key. These only bound how much is kept.
 Hooks.on("updateItem", item => forget(item.uuid));
+
+// Apparel grown out of: "If, while wearing a piece of Apparel, your Size Category would increase
+// to be 2+ Size Categories larger than the Size Category for that piece of Apparel, that piece of
+// Apparel is destroyed." A Size moves with the character and with what they carry - a State, a
+// Micro Band - so asked after either changes, by the client that changed it, once.
+{
+  const outgrowing = async (actor, userId) => {
+    if ((userId !== game.user.id) || (actor?.type !== "character")) return;
+    const { destroyOutgrown } = await import("./gear.mjs");
+    await destroyOutgrown(actor, Object.keys(DBUCharacterData.SIZES), getTrait);
+  };
+  Hooks.on("updateActor", (actor, changes, options, userId) => outgrowing(actor, userId));
+  Hooks.on("updateItem", (item, changes, options, userId) => outgrowing(item.parent, userId));
+  Hooks.on("createItem", (item, options, userId) => outgrowing(item.parent, userId));
+  Hooks.on("deleteItem", (item, options, userId) => outgrowing(item.parent, userId));
+}
 Hooks.on("deleteItem", item => forget(item.uuid));
 
 Hooks.once("setup", async () => {
