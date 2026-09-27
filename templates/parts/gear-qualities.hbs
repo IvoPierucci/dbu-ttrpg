@@ -42,7 +42,12 @@
     {{/if}}
     {{#each crafted.qualities as |quality|}}
     <div class="gear-row">
+      {{#if quality.renameable}}
+      <input type="text" class="gear-name gear-quality-rename" data-quality-rename
+             data-index="{{quality.index}}" value="{{quality.name}}" data-tooltip="{{quality.tip}}"/>
+      {{else}}
       <span class="gear-name" data-tooltip="{{quality.tip}}">{{quality.name}}</span>
+      {{/if}}
       {{#if quality.choiceLabel}}<span class="gear-type">{{quality.choiceLabel}}</span>{{/if}}
       <span class="gear-type">{{quality.slotsLabel}}</span>
       {{#if quality.toggle}}

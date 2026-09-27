@@ -24,7 +24,8 @@ they are chosen, between markers:
 From then on the piece does what its Effects say and nothing else: change a part, or write
 lines of your own outside every part, and that is what it does. Taking a Quality off takes its
 part out; changing the Category writes the new one's part and takes out the parts of the
-Qualities it does not take. "Rewrite" on the tab writes every part again from its file.
+Qualities it does not take. "Re-sync" on the tab replaces all of it - parts and your own
+lines alike - with what the Category and Qualities write.
 
 Written into a part: `$choice` becomes what was chosen for the Quality when it was added, and
 `$slots` the Quality Slots it was given. `$apparelBonus` stays, and is the piece's own Apparel
@@ -67,6 +68,8 @@ Headers only a Quality reads:
                  `[Automatic, 1/Encounter]:` for one that happens without asking, `[Triggered]:`
                  for one its wearer may use. Shown as its Effects on its Item's Qualities tab,
                  with its `prerequisites` first.
+  renameable:    true - named by its owner on the piece, which is the name its row, its part
+                 in the Effects and the workings go by - Dynamic, a Quality of the player's own.
   special:       true - a Special Apparel Quality: offered apart in Add Quality, "typically
                  gained through your ARC granting you unique pieces of Apparel". More than one
                  on a piece is said on its sheet, never refused.

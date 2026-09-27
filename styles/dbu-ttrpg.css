@@ -245,7 +245,7 @@
   font-size: 12px;
 }
 
-.dbu-ttrpg .gear-effects-rewrite {
+.dbu-ttrpg .gear-effects-resync {
   flex: 0 0 auto;
   width: auto;
   line-height: 1.4;
@@ -253,6 +253,14 @@
   font-size: 11px;
   text-transform: none;
   letter-spacing: normal;
+}
+
+/* A Quality its owner names - Dynamic - named on its own row. */
+.dbu-ttrpg .gear-quality-rename {
+  min-width: 0;
+  box-sizing: border-box;
+  height: 20px;
+  padding: 0 4px;
 }
 
 /* On the Qualities tab: "Insufficient Quality Slots", in the chat's yellow, bold. */

@@ -5,7 +5,7 @@ import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { compile } from "../effects/parser.mjs";
 import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, composeEffects, connectable,
   craftedReading, effectsOf, namePrefixMatches, qualityChoiceLabel, qualityChoices,
-  qualityEntries, qualityFits, qualityInactive, qualitySlotRange, qualitySummary,
+  qualityEntries, qualityFits, qualityInactive, qualityName, qualitySlotRange, qualitySummary,
   scriptWithPiece, slotsTaken } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 
@@ -30,7 +30,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     actions: {
       dbuChangeTab: DBUGearSheet._onChangeTab,
       editImage: DBUGearSheet._onEditImage,
-      rewriteEffects: DBUGearSheet._onRewriteEffects,
+      resyncEffects: DBUGearSheet._onResyncEffects,
       addQuality: DBUGearSheet._onAddQuality,
       removeQuality: DBUGearSheet._onRemoveQuality,
       toggleQuality: DBUGearSheet._onToggleQuality
@@ -85,6 +85,14 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
   async _onRender(context, options) {
     await super._onRender(context, options);
     this.#wireQualitySearch();
+    // A Quality renamed on its row - Dynamic: the name, and its part's in the Effects. Not a
+    // field of the form, so the form has nothing to save from it.
+    for (const input of this.element.querySelectorAll("[data-quality-rename]")) {
+      input.addEventListener("change", event => {
+        event.stopPropagation();
+        this.#renameQuality(Number(input.dataset.index), input.value);
+      });
+    }
     // A piece made before Items had Effects of their own: what its Category and Qualities
     // would write, written down now, so it is there to read and to change.
     const crafted = this.item.system.crafted;
@@ -108,21 +116,28 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
   }
 
   /**
-   * Write every part afresh from its Category's and Qualities' files - what was changed inside
-   * a part is lost, which is asked first; what was written outside every part is kept.
+   * Re-sync: every word of the Effects replaced by what its Category and Qualities write -
+   * whatever was changed or added, in a part or outside every part, is lost, which is asked
+   * first.
    */
-  static async _onRewriteEffects(event, target) {
+  static async _onResyncEffects(event, target) {
     const crafted = this.item.system.crafted;
     const sure = await foundry.applications.api.DialogV2.confirm({
       classes: ["dbu-dialog"],
-      window: { title: "Rewrite Effects" },
-      content: "<p>Every Category and Quality part is written again from its file. What you "
-        + "changed inside them is lost; your own lines outside them are kept.</p>",
+      window: { title: "Re-sync Effects" },
+      content: "<p>All of this piece's Effects are replaced by what its Category and Qualities "
+        + "write. Anything you changed or added is lost.</p>",
       rejectClose: false
     });
     if (!sure) return;
-    return this.item.update({ "system.crafted.effects":
-      composeEffects(crafted, effectsOf(crafted, getTrait), { getTrait, rewrite: true }) });
+    return this.item.update({ "system.crafted.effects": composeEffects(crafted, "", { getTrait }) });
+  }
+
+  /** Name a Quality that takes one - Dynamic - by where it is in the list. */
+  async #renameQuality(index, name) {
+    const qualities = qualityEntries(this.item.system.crafted)
+      .map((entry, at) => (at === index) ? { ...entry, name: String(name ?? "").trim() } : entry);
+    return this.item.update(this.#withQualities(qualities));
   }
 
   /**
@@ -346,7 +361,9 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
         const taken = slotsTaken(entry, trait);
         return {
           index,
-          name: trait?.name ?? entry.id,
+          name: qualityName(entry, trait),
+          // One its owner names - Dynamic: its row is where.
+          renameable: trait?.renameable === true,
           tip: escape(trait?.description ?? ""),
           slotsLabel: `${taken} Slot${taken === 1 ? "" : "s"}`,
           // What was chosen for it, by name.
@@ -368,7 +385,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
         const inactive = qualityInactive(entry, crafted, getTrait);
         const switchedOff = Boolean(trait?.toggle) && !entry.on;
         return {
-          name: trait?.name ?? entry.id,
+          name: qualityName(entry, trait),
           choiceLabel: qualityChoiceLabel(trait, entry.choice, DBUCharacterData.SKILLS,
             DBUGearSheet.#weathers()),
           off: Boolean(inactive) || switchedOff,

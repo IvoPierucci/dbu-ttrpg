@@ -1,0 +1,14 @@
+id: dynamic-quality
+name: Dynamic
+kind: crafting
+# Not one of the rulebook's: room for a Quality of the player's own. Named on the piece, and
+# what it does written in the piece's Effects, in its part.
+renameable: true
+slots: 1~3
+source: Homebrew
+description: >
+  A Quality of your own: name it on its row, and write what it does in the piece's Effects.
+
+---
+
+# Writes nothing: its part in the piece's Effects is left empty, for whoever made it to fill.

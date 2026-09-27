@@ -266,9 +266,10 @@ export function qualityInactive(entry, crafted, getTrait) {
  */
 export function qualityEntries(crafted) {
   return (crafted?.qualities ?? []).map(entry => (typeof entry === "string")
-    ? { id: entry, slots: 0, choice: "", on: false }
+    ? { id: entry, slots: 0, choice: "", on: false, name: "" }
     : { id: String(entry?.id ?? ""), slots: Number(entry?.slots) || 0,
-        choice: String(entry?.choice ?? ""), on: entry?.on === true })
+        choice: String(entry?.choice ?? ""), on: entry?.on === true,
+        name: String(entry?.name ?? "") })
     .filter(entry => entry.id);
 }
 
@@ -521,9 +522,9 @@ function partText(part) {
  *
  * @param {object} crafted   the Item's `system.crafted`, as it is to be
  * @param {?string} previous what its Effects say now; null or "" for none
- * @param {{getTrait: function, rewrite?: boolean}} with  `rewrite` writes every part afresh
+ * @param {{getTrait: function}} with
  */
-export function composeEffects(crafted, previous, { getTrait, rewrite = false } = {}) {
+export function composeEffects(crafted, previous, { getTrait } = {}) {
   const kind = CRAFTED[crafted?.kind];
   if (!kind) return String(previous ?? "");
   const existing = effectParts(previous);
@@ -545,14 +546,14 @@ export function composeEffects(crafted, previous, { getTrait, rewrite = false } 
     wanted.push({ type: "quality", id: trait.id,
       key: (counted[base] > 1) ? `${base}:${counted[base]}` : base,
       flags: (trait.noStack === true) ? ["nostack"] : [],
-      name: trait.name, toggle: Boolean(trait.toggle), on: entry.on,
+      name: qualityName(entry, trait), toggle: Boolean(trait.toggle), on: entry.on,
       fresh: () => partBody(trait, entry) });
   }
   const wantedKeys = new Set(wanted.map(part => part.key));
 
   const written = part => {
     const kept = had.get(part.key);
-    let body = (kept && !rewrite) ? kept.body : part.fresh();
+    let body = kept ? kept.body : part.fresh();
     if (part.toggle) body = switched(body, part.on);
     return { type: part.type, id: part.id, key: part.key, flags: part.flags, name: part.name, body };
   };
@@ -575,6 +576,15 @@ export function composeEffects(crafted, previous, { getTrait, rewrite = false } 
     out.splice((last >= 0) ? last + 1 : out.length, 0, written(part));
   }
   return out.map(part => (part.key ? partText(part) : part.text)).join("\n\n");
+}
+
+/**
+ * What a Quality is called on this piece: the name its owner gave it, where it takes one -
+ * Dynamic, `renameable: true` - and its own otherwise.
+ */
+export function qualityName(entry, trait) {
+  return ((trait?.renameable === true) && String(entry?.name ?? "").trim())
+    || trait?.name || entry?.id || "";
 }
 
 /**
