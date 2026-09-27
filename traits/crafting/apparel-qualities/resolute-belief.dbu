@@ -1,0 +1,23 @@
+id: resolute-belief
+name: Resolute Belief
+kind: crafting
+# A Special Apparel Quality: "typically gained through your ARC granting you unique pieces of
+# Apparel".
+special: true
+slots: 1
+source: Core Rule
+description: >
+  Stress Bonus 2 higher.
+text: >
+  Resolute Belief: These clothes contribute to your morale, allowing you to draw on memories of
+  the cause you fight for.
+  –Apparel Category: All
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Increase your Stress Bonus by 2.
+
+---
+
+# The wearer's Stress Bonus, while worn - beside Team Outfit's, which is its own.
+[passive]
+stressBonus += 2;
