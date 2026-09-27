@@ -110,6 +110,9 @@
           <option value="{{tier.tier}}" {{#if tier.chosen}}selected{{/if}}>{{tier.name}} ({{tier.tier}})</option>
           {{/each}}
         </select>
+        {{#if weatherNow.feltNote}}
+        <small class="stat-after" data-tooltip="Lowered for you - Brace, or Apparel resisting it. At 0 its effects are ignored.">{{weatherNow.feltNote}}</small>
+        {{/if}}
       </div>
       <div class="stat" data-tooltip="What the light where you are standing is doing to you. Too bright and too dark cost the same: the table is symmetrical about Normal.">
         <em>Light Level</em>

@@ -42,13 +42,12 @@ expires(braced, start-of-next-turn);
 # Brace on your turn and it lifts when your next turn begins; nothing about it can be made
 # to last two turns by using it out of sequence.
 #
-# --- What is not built, and why ---------------------------------------------------------
+# --- What Braced does ---------------------------------------------------------------------
 #
-# Battle Weathers. This system has none - no Weather list, no Weather Tiers, nothing that
-# reads one - so the reduction is said rather than applied: `weather.tiers` carries what
-# you are entitled to, the sheet says what it comes to, and the table takes it off whatever
-# Weather is in play. When Battle Weathers land there is one number to read and one place
-# to read it from.
+# Lowers the Weather Tier the character feels, by 1 - or 2 at 4+ Ranks in Survival - and at 0
+# the Weather's effects are ignored. See the Braced mark's own file.
+#
+# --- What is not built, and why ---------------------------------------------------------
 #
 # "Minions: Free." There are no Minions in this system, which the Arrogant Declaration,
 # Analysis and Hype files all say about their own Minion lines. Carried as printed.

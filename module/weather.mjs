@@ -15,9 +15,8 @@
  * reaches, which Squares it covers, whether the ARC put it over the whole Battlefield -
  * is the table's, as every area in these rules is.
  *
- * `weather.tiers` already exists in the Slot table, written by the Brace Maneuver and
- * said on the Combat tab rather than applied, because there has been nothing to apply it
- * to. It is the number this subsystem will read first.
+ * `weather.tiers` - the Brace Maneuver's - is taken off the Weather Tier a character feels,
+ * with what their Apparel resists, before the Weather's effects are gathered.
  */
 
 /**

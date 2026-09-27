@@ -754,10 +754,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       endable: getTrait(mark.key)?.endedByHand === true
     }));
 
-    // "Treat all Battle Weathers as if they were 1 Weather Tier lower." There are no
-    // Battle Weathers in this system, so what this does is say the number: the table takes
-    // it off whatever Weather is in play, and a Tier reduced to 0 is a Weather that does
-    // nothing to you.
+    // "Treat all Battle Weathers as if they were 1 Weather Tier lower." Taken off the Tier
+    // they feel, and a Tier reduced to 0 is a Weather whose effects they ignore - said here
+    // too, beside the other things they are in the middle of.
     //
     // Read off the Slot rather than off the Brace Maneuver, so anything else that lowers a
     // Weather Tier lands in the same row without this having to hear about it.
@@ -983,6 +982,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // The Tiers, each marked if it is the one set, for the picker.
     const tierNow = Number(system.battlefield?.weather?.tier) || 1;
+    const felt = Number(system.battlefield?.weather?.felt);
+    const feltNow = Number.isFinite(felt) ? Math.min(felt, tierNow) : tierNow;
     context.weatherTiers = WEATHER_TIERS.map(tier => ({
       ...tier,
       chosen: tier.tier === tierNow
@@ -998,7 +999,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.weatherNow = {
       id: standingIn,
       effect: weatherTrait?.description ?? "",
-      effects: weatherEffectsUpTo(weatherTrait?.text, tierNow)
+      // The Tier they feel - lowered by Brace and Weather Resistant - is the one whose effects
+      // are happening to them; at 0, none are.
+      effects: weatherEffectsUpTo(weatherTrait?.text, feltNow),
+      // Said beside the Tier set, when what they feel is lower.
+      feltNote: (standingIn && (feltNow < tierNow))
+        ? (feltNow ? `Felt at Tier ${feltNow}` : "Ignored")
+        : ""
     };
 
     // The Gear the character has, by the list each is drawn in. The name is the Item's,
@@ -1137,8 +1144,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           one: weatherTiers === 1,
           note: `Battle Weathers count ${weatherTiers} Tier`
             + `${weatherTiers === 1 ? "" : "s"} lower for you. A Tier reduced to 0 is a `
-            + "Battle Weather that does nothing to you. Said here rather than applied: "
-            + "this system has no Battle Weathers to take it off."
+            + "Battle Weather whose effects you ignore."
         }
       : null;
 

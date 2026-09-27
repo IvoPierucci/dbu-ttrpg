@@ -1656,29 +1656,46 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Weather Tiers lower". Worked out before the effects are gathered, since a Weather felt
     // at 0 is one they "completely ignore", and so is not gathered at all. Its (WT) and every
     // script asking `battlefield.weather.tier` read this; the Tier the player set stays as set.
-    {
-      const weather = this.battlefield?.weather ?? {};
-      const set = weather.id ? (Number(weather.tier) || 0) : 0;
-      // Asked by the piece's own Effects - Weather Resistant's `if (survival.ranks >= 2)` -
-      // before the Skills are worked out, so their Ranks are counted here for it to read.
-      const ranks = [...(this.racialSkillRanks ?? []), ...(this.progression ?? [])
-        .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
-        .flatMap(entry => entry.skillRanks)];
-      const early = {
-        attributes: this.attributes,
-        skills: Object.fromEntries(Object.keys(DBUCharacterData.SKILLS).map(key =>
-          [key, { ranks: ranks.filter(rank => rank === key).length }]))
-      };
-      const resisted = weatherResisted(Array.from(this.parent?.items ?? []), weather.id,
-        getTrait, early);
-      if (this.battlefield?.weather) this.battlefield.weather.felt = Math.max(0, set - resisted);
-    }
+    const weather = this.battlefield?.weather ?? {};
+    const set = weather.id ? (Number(weather.tier) || 0) : 0;
+    // Asked by the piece's own Effects - Weather Resistant's `if (survival.ranks >= 2)` - and
+    // by Brace's `if (survival.ranks >= 4)`, before the Skills are worked out, so their Ranks
+    // are counted here for them to read.
+    const ranks = [...(this.racialSkillRanks ?? []), ...(this.progression ?? [])
+      .filter(entry => (entry.lvl <= this.powerLevel) && (entry.choice === "Skill Improvement"))
+      .flatMap(entry => entry.skillRanks)];
+    const early = {
+      attributes: this.attributes,
+      skills: Object.fromEntries(Object.keys(DBUCharacterData.SKILLS).map(key =>
+        [key, { ranks: ranks.filter(rank => rank === key).length }]))
+    };
+    const resisted = weatherResisted(Array.from(this.parent?.items ?? []), weather.id,
+      getTrait, early);
+    if (this.battlefield?.weather) this.battlefield.weather.felt = Math.max(0, set - resisted);
     // Built after the bag exists: the report callback writes into it, and calling
     // programsFor inside the assignment would fire that callback before there was
     // anywhere for it to write.
     this.effects.programs = programsFor(this.parent ?? {}, {
       report: message => this.effects.errors.push(message)
     });
+
+    // The Brace Maneuver: "Until the start of your next turn, treat all Battle Weathers as if
+    // they were 1 Weather Tier lower. If this would reduce the Weather Tier to 0, ignore the
+    // effects of that Battle Weather." What lowers it is read off the character's own effects
+    // in a phase of its own, ahead of the rest, and taken off the Tier they feel; brought to
+    // 0, the Weather's own effects are taken out of what was gathered. The Weather's (WT) and
+    // its "Tier 2+" read the Tier felt, whenever they are worked out after this.
+    if (this.battlefield?.weather && weather.id) {
+      const own = `battlefield:${weather.id}`;
+      const { slots } = applyPassives(this.effects.programs.filter(entry => entry.sourceId !== own),
+        "weather", { data: early, errors: this.effects.errors });
+      Object.assign(this.effects.slots, slots);
+      const lowered = applySlot(slots, "weather.tiers", 0);
+      this.battlefield.weather.felt = Math.max(0, set - resisted - lowered);
+      if (this.battlefield.weather.felt === 0) {
+        this.effects.programs = this.effects.programs.filter(entry => entry.sourceId !== own);
+      }
+    }
 
     // The earliest phase: conditions may read Scores, but amounts may only use (bT),
     // which follows from Power Level alone. (T) is not settled yet.

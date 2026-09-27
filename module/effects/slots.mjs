@@ -24,6 +24,12 @@ export const PHASES = Object.freeze({
   /** Not derived at all: collected at a Moment during an exchange. */
   REACTIVE: "reactive",
   /**
+   * Before anything else: what lowers the Weather Tier a character feels - the Brace
+   * Maneuver's. Worked out ahead of the rest because a Weather felt at 0 is one whose effects
+   * are not gathered at all. Conditions may read Scores and Skill Ranks; nothing derived.
+   */
+  WEATHER: "weather",
+  /**
    * Not the character's at all: what a built Item's own script says about the piece itself -
    * its Break Value, its Hardness, what it lets its wearer ignore. Worked out on the piece,
    * from its Effects alone, and never folded into anyone's numbers.
@@ -234,15 +240,12 @@ const TABLE = [
     doc: "Attacking anyone but the target you were given. Compelled forbids this. Said "
        + "to the table, not enforced: who you were told to attack is not tracked, which "
        + "is a thing the table chose to keep." },
-  // Said to the table as well, and for a third reason: there are no Battle Weathers in
-  // this system yet, so there is nothing for it to be taken off. It is written, the sheet
-  // says what it comes to, and the table applies it to whatever Weather is in play - and
-  // when Weathers arrive there is one number to read and one place to read it from.
-  { key: "weather.tiers", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+  // Taken off the Weather Tier the character feels, before the Weather's effects are
+  // gathered - so a Tier brought to 0 is a Weather whose effects are not gathered at all.
+  { key: "weather.tiers", phase: PHASES.WEATHER, kind: N, ops: NUMERIC,
     doc: "How many Weather Tiers lower every Battle Weather counts for you. The Brace "
        + "Maneuver writes 1, or 2 at 4+ Ranks in Survival. A Tier reduced to 0 is a "
-       + "Weather that does nothing. Said to the table, not applied: this system has no "
-       + "Battle Weathers to apply it to." },
+       + "Weather whose effects you ignore." },
   { key: "defeat", phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Being registered as Defeated at all. The Undying State forbids it, which is "
        + "what lets Life Points go negative without the fight ending." },

@@ -47,18 +47,10 @@ if (survival.ranks >= 4) {
   weather.tiers += 1;
 }
 
-# --- What is not built, and why ----------------------------------------------------------
+# --- How it is applied -------------------------------------------------------------------
 #
-# Battle Weathers. There are none in this system: no Weather list, no Weather Tiers,
-# nothing that reads one. So the reduction is a number said out loud rather than applied -
-# it is written to `weather.tiers`, the sheet says what it comes to, and the table takes
-# it off whatever Weather is in play.
-#
-# That is the same shape `movement` and `attacksOnOthers` already have in the Slot table:
-# written, said, and not enforced, because enforcing them would mean this system deciding
-# something the table decides. The difference is only the reason - those two are a choice,
-# and this one is a subsystem that has not arrived.
-#
-# "If this would reduce the Weather Tier to 0, ignore the effects of that Battle Weather"
-# needs no code for the same reason: a Tier of 0 is a Weather doing nothing, and there is
-# no Weather here to do nothing.
+# `weather.tiers` is worked out ahead of everything else, in a phase of its own, and taken
+# off the Weather Tier the character feels: every (WT) of the Weather, and every "Tier 2+",
+# reads the Tier felt. "If this would reduce the Weather Tier to 0, ignore the effects of
+# that Battle Weather": brought to 0, the Weather's effects are not gathered at all. Weather
+# Resistant lowers the same Tier, and the two add up.
