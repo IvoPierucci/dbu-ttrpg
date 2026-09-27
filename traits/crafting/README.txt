@@ -57,8 +57,9 @@ Headers only a Quality reads:
   toggle:        a label for a switch on its row: its script runs only while the player has it
                  on - Team Outfit's teammates, which the table keeps.
   noStack:       true - worn on several pieces, it applies from one.
-  summary:       what it does, a folded block with a blank line between effects, each opening
-                 with its tag as the rulebook writes one - `[Passive]:` while worn,
+  summary:       what it does: its Effects line as printed, word for word, cut into one line to
+                 an effect with a blank line between, each opening with its tag as the rulebook
+                 writes one - `[Passive]:` while worn,
                  `[Automatic, 1/Encounter]:` for one that happens without asking, `[Triggered]:`
                  for one its wearer may use. Shown as its Effects on its Item's Qualities tab,
                  with its `prerequisites` first.

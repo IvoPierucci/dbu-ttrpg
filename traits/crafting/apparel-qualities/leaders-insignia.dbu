@@ -7,13 +7,14 @@ prerequisites: Personality Score of 6+
 source: Core Rule
 description: >
   Your Minions' Combat Rolls 1(bT) higher; with Team Outfit, your team's Wound Rolls too.
-# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
-# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
 summary: >
-  [Passive]: Your Minions' Combat Rolls 1(bT) higher.
+  [Passive]: Increase the Combat Rolls of your Minions by 1(bT).
 
-  [Passive]: With Team Outfit on this piece: the Wound Rolls of Allies with the same team name
-  1(bT) higher (does not stack).
+  [Passive]: If this piece of Apparel has the Team Outfit Quality, increase the Wound Roll of
+  all Allies with the same team name by 1(bT) – this bonus does not stack if multiple Characters
+  possess this Quality.
 text: >
   Leader’s Insignia: A symbol of your authority, those who follow you respect and recognize you
   as their leader.

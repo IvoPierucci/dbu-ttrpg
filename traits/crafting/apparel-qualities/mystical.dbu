@@ -7,10 +7,10 @@ prerequisites: 2+ Skill Ranks in Clairvoyance and Use Magic
 source: Core Rule
 description: >
   Use Magic and Clairvoyance Checks 1 higher. Needs 2+ Ranks in both in whoever wears it.
-# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
-# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
 summary: >
-  [Passive]: Use Magic and Clairvoyance Skill Checks: Dice Score 1 higher.
+  [Passive]: Increase the Dice Score of your Use Magic and Clairvoyance Skill Checks by 1.
 text: >
   Mystical: This item of clothing is great for magically focused characters.
   –Apparel Category: Combat Clothing/Standard Clothing

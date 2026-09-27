@@ -11,11 +11,12 @@ source: Core Rule
 description: >
   Strike or Dodge, chosen when it is made: the only Combat Roll the Weights lower, and the only
   one its Doff Bonus raises.
-# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
-# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
 summary: >
-  [Passive]: The chosen Combat Roll is the only one the Weights lower, and the only one this
-  piece's Doff Bonus raises.
+  [Passive]: Upon creating this piece of Apparel, select either your Strike or Dodge Rolls. The
+  chosen Combat Roll is the only Combat Roll reduced by the effects of the Weight Apparel
+  Category, but only that Combat Roll benefits from this piece of Apparel’s Doff Bonus.
 text: >
   Focal: Designed to improve a single aspect of combat, these weights aren’t as heavy, but are
   placed on specific areas of the body.

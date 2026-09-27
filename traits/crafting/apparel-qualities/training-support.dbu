@@ -12,11 +12,11 @@ source: Core Rule
 description: >
   While Holding Back, the Weights take nothing off your Combat Rolls. Needs 2+ Ranks in
   Concealment in whoever wears it.
-# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
-# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
 summary: >
-  [Passive]: While you have any stacks of Holding Back, the Weights do not lower your Combat
-  Rolls.
+  [Passive]: If you possess any stacks of Holding Back while wearing this Apparel, you may
+  ignore the reduction to your Combat Rolls from the effects of the Weight Apparel Category.
 text: >
   Training Support: This outfit is heavy, but doesn’t restrict your movement.
   –Apparel Category: Weights

@@ -13,11 +13,13 @@ source: Core Rule
 description: >
   One Battle Weather, chosen when it is made, felt a Weather Tier lower for each Slot it takes -
   and not at all at 0. Needs 2+ Ranks in Survival in whoever wears it.
-# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
-# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
 summary: >
-  [Passive]: The chosen Battle Weather felt 1 Weather Tier lower for each Quality Slot this
-  takes; at 0 or less, ignored entirely.
+  [Passive]: When you gain this Quality, choose any type of Battle Weather. Treat the Weather
+  Tier as if it was x Weather Tiers lower, where x is equal to the number of Quality Slots
+  occupied by this Apparel Quality. If this would treat the Weather Tier as if it was 0 or less,
+  completely ignore the effects of that Battle Weather.
 text: >
   Weather Resistant: Built to withstand extreme weather, this clothing protects you from one
   specific weather type.

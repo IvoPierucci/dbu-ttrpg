@@ -12,10 +12,11 @@ source: Core Rule
 description: >
   A Scholarship Skill chosen when it is made: its Checks 2 higher. Needs a Scholarship Score of
   4+ in whoever wears it.
-# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
-# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
 summary: >
-  [Passive]: Skill Checks with the chosen Scholarship Skill: Dice Score 2 higher.
+  [Passive]: Increase your Dice Score on Skill Checks with a Skill of your choice (when creating
+  this piece of Apparel) by 2. The Skill must use your Scholarship Score to be chosen.
 text: >
   Lab Coat: This type of clothing is intended to protect you from chemical spills and other
   scientific mishaps.

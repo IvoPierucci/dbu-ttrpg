@@ -11,12 +11,12 @@ noApparelPenalty: true
 source: Core Rule
 description: >
   Half the Damage Reduction from this Armor, and out of the Apparel Penalty.
-# What it does, for the Effects on its Item's sheet: one line to an effect, each opening with
-# its tag as the rulebook writes one - [Passive], [Automatic, 1/Encounter].
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
 summary: >
-  [Passive]: Half the Damage Reduction gained from this Armor.
+  [Passive]: Halve the Damage Reduction gained from this Armor.
 
-  [Passive]: Does not count towards the Apparel Penalty.
+  [Passive]: This Armor does not count towards your Apparel Penalty.
 text: >
   Sleek Design: Light and flexible, this armor allows for a freer range of motion, but provides
   less protection.
