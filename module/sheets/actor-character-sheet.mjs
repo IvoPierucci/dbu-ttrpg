@@ -13,7 +13,7 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   connectedItem, connectedTarget, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
   inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
   craftedItemFrom, craftedReading, APPAREL_LAYERS, APPAREL_EQUIP_COST, equipPlan, onLayer, pieceSlots,
-  topLayerPiece, unequipCost,
+  grantDoffBonus, topLayerPiece, unequipCost,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -2829,7 +2829,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         const paid = await DBUCharacterSheet.#payToDoff(this.actor, item, unequipCost(items, item));
         if (!paid) return;
       }
-      return item.update({ "system.equipped": false, "system.layer": "" });
+      await item.update({ "system.equipped": false, "system.layer": "" });
+      // "When you remove a piece of Apparel, you may gain a Doff Bonus."
+      const said = await grantDoffBonus(this.actor, item, getTrait);
+      if (said) {
+        await ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+          content: `<p>${Handlebars.escapeExpression(this.actor.name)} takes off `
+            + `${Handlebars.escapeExpression(item.name)}. ${Handlebars.escapeExpression(said)}</p>`
+        });
+      }
+      return;
     }
 
     // On: where it goes, and every piece it moves down, or why it cannot.

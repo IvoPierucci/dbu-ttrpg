@@ -1406,6 +1406,18 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       { required: true, initial: [] }
     );
 
+    // --- The Doff Bonus ---
+    // What the last piece of Apparel taken off gives each Combat Roll, while its mark is on
+    // them - the mark is the clock, and this is the amount. The largest held, since "Doff
+    // Bonuses do not stack".
+    schema.doffBonus = new fields.SchemaField({
+      amount: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+      strike: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+      dodge: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+      wound: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+      source: new fields.StringField({ required: true, blank: true, initial: "" })
+    });
+
     // --- Maneuver uses ---
     // One entry per use of a Maneuver that is limited per Encounter, so a Maneuver
     // allowed more than once can be counted rather than merely flagged.

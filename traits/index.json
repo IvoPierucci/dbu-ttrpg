@@ -23,6 +23,7 @@
     "conditions/analyzed.dbu",
     "conditions/blinded.dbu",
     "conditions/braced.dbu",
+    "conditions/doff-bonus.dbu",
     "conditions/broken.dbu",
     "conditions/compelled.dbu",
     "conditions/drained.dbu",

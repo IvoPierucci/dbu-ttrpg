@@ -89,14 +89,16 @@ export function edgesToWait(edge, { next = false, theirTurn = false } = {}) {
  * out must not take away another's.
  */
 export async function lasting(actor, { kind, key, edge, next = false, source = "",
-                                       on = "", until = "" }) {
+                                       on = "", until = "", extra = 0 }) {
   if (!actor || !kind || !key) return false;
 
   const entry = {
     kind,
     key,
     edge,
-    edges: edgesToWait(edge, { next, theirTurn: isTheirTurnNow(actor) }),
+    // `extra` edges past the ones the wording counts - "increase the duration ... by 1 Combat
+    // Round" for each, Segmented Weight's.
+    edges: edgesToWait(edge, { next, theirTurn: isTheirTurnNow(actor) }) + Math.max(0, Number(extra) || 0),
     source,
     // A second way for this clock to run out, beside the edge it is counting: "until the
     // end of your turn or until they are hit by an Attacking Maneuver (whichever comes

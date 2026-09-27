@@ -718,6 +718,69 @@ export function topLayerPiece(items) {
     .sort((a, b) => rank(a) - rank(b))[0] ?? null;
 }
 
+/**
+ * The Doff Bonus a piece gives, taken off: "a boost to your Combat Rolls equal to the Apparel
+ * Bonus for that piece of Apparel". Its Apparel Bonus at the wearer's base Tier; for Weights
+ * taken off "after the 3rd Combat Round of a Combat Encounter", half as much again, rounded up;
+ * on each Combat Roll, or on the one Focal chose alone - "only that Combat Roll benefits from
+ * this piece of Apparel's Doff Bonus". And the Combat Rounds Segmented Weight adds to how long.
+ */
+export function doffBonusFor(item, wearer, { round = 0, getTrait } = {}) {
+  const reading = craftedReading(item?.system?.crafted, { getTrait, difficulties: {},
+    baseTier: wearer?.system?.baseTierOfPower ?? 1 });
+  let amount = reading?.bonus ?? 0;
+  if ((item.system.crafted.category === "weights") && (Number(round) > 3)) {
+    amount += Math.ceil(amount / 2);
+  }
+  const narrowed = narrowedRoll(item, getTrait);
+  const on = roll => ((!narrowed || (narrowed === roll)) ? amount : 0);
+  return { amount, strike: on("strike"), dodge: on("dodge"), wound: on("wound"),
+    rounds: doffRounds(item, getTrait) };
+}
+
+/** A piece's once-an-Encounter Doff Bonus, among the uses the Encounter clears. */
+export function doffKey(item) {
+  return `encounter:doff.${item.id}`;
+}
+
+/**
+ * Give the Doff Bonus for a piece just taken off, where it is owed: in a Combat Encounter, the
+ * first time this piece is taken off in it, and larger than one already held - "only apply the
+ * largest Doff Bonus". The amount goes on the character, and the mark with its clock.
+ *
+ * @returns {Promise<string>} what the table is told, or "" for nothing given.
+ */
+export async function grantDoffBonus(actor, item, getTrait) {
+  if (!game.combat?.started || !item?.system?.crafted?.kind) return "";
+  const used = actor.system.usedManeuvers ?? [];
+  if (used.includes(doffKey(item))) {
+    return `${item.name} has given its Doff Bonus this Combat Encounter.`;
+  }
+  const bonus = doffBonusFor(item, actor, { round: game.combat.round ?? 0, getTrait });
+  if (!(bonus.amount > 0)) return "";
+  const held = (Number(actor.system.conditions?.["doff-bonus"]) || 0) > 0;
+  if (held && (bonus.amount <= (Number(actor.system.doffBonus?.amount) || 0))) {
+    return `${item.name}'s Doff Bonus is not larger than the one held: not gained.`;
+  }
+
+  const { setCondition } = await import("./conditions.mjs");
+  const { lasting, clockOff, EDGES, KINDS } = await import("./durations.mjs");
+  await actor.update({
+    "system.usedManeuvers": [...used, doffKey(item)],
+    "system.doffBonus": { amount: bonus.amount, strike: bonus.strike, dodge: bonus.dodge,
+      wound: bonus.wound, source: item.name }
+  });
+  // A larger one takes the place of the one held, clock and all.
+  if (held) await clockOff(actor, KINDS.CONDITION, ["doff-bonus"]);
+  await setCondition(actor, "doff-bonus", 1);
+  await lasting(actor, { kind: KINDS.CONDITION, key: "doff-bonus", edge: EDGES.END, next: true,
+    source: `Doff Bonus (${item.name})`, extra: bonus.rounds });
+  const rolls = (bonus.strike && bonus.dodge) ? "Combat Rolls"
+    : bonus.strike ? "Strike Rolls" : "Dodge Rolls";
+  return `Doff Bonus: ${rolls} +${bonus.amount} until the end of their next turn`
+    + `${bonus.rounds ? `, and ${bonus.rounds} Combat Round${bonus.rounds === 1 ? "" : "s"} more` : ""}.`;
+}
+
 /** What it costs to put a piece of Apparel on during a Combat Encounter: "2 Actions". */
 export const APPAREL_EQUIP_COST = 2;
 

@@ -1,0 +1,39 @@
+id: doff-bonus
+name: Doff Bonus
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the rules call it a Doff Bonus and nothing more. A mark, for a bonus
+# that has to be held somewhere with a clock on it.
+combatCondition: no
+source: Core Rule
+description: >
+  Taken off a piece of Apparel: Combat Rolls higher by its Apparel Bonus until the end of your
+  next turn.
+text: >
+  Doff Bonus: When you remove a piece of Apparel, you may gain a Doff Bonus. A Doff Bonus is a
+  boost to your Combat Rolls equal to the Apparel Bonus for that piece of Apparel and lasts until
+  the end of your next turn.
+
+  You can only gain a Doff Bonus from each piece of Apparel once per Combat Encounter, and Doff
+  Bonuses do not stack. If you would gain a Doff Bonus from multiple pieces of Apparel, only
+  apply the largest Doff Bonus.
+
+---
+
+# --- How much, and on what ---------------------------------------------------------------------
+#
+# Worked out when the piece comes off and kept on the character, `doffBonus`: the piece's Apparel
+# Bonus at their base Tier - half as much again, rounded up, for Weights taken off after the 3rd
+# Combat Round - on each Combat Roll, or on the one Focal chose alone. See doffBonusFor() in
+# module/gear.mjs.
+#
+# --- How long ----------------------------------------------------------------------------------
+#
+# To the end of their next turn, and a Combat Round longer for each Quality Slot of Segmented
+# Weight on the piece - it is always the first time that piece is doffed this Encounter, since
+# nothing gives a Doff Bonus twice. A larger one taking its place brings its own clock.
+
+[passive]
+strike += doffBonus.strike;
+dodge += doffBonus.dodge;
+wound += doffBonus.wound;
