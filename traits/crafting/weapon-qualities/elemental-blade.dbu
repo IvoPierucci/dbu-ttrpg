@@ -1,0 +1,35 @@
+id: elemental-blade
+name: Elemental Blade
+kind: crafting
+types: physical, energy
+slots: 2
+special: true
+source: Core Rule
+description: >
+  Special. An Elemental Profile chosen when it is made, added to attacks with it through the
+  Multi-Profile Super Profile.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Upon creating this Weapon, select a Profile with ‘Elemental’ in the name. Apply the
+  Multi-Profile Super Profile to any Attacking Maneuvers you use, with the Profile selected for
+  the Multi-Profile Super Profile being the Elemental Profile you selected. If it meets the
+  Prerequisites, also apply the Compressed Element Disadvantage to those Attacking Maneuvers.
+text: >
+  Elemental Blade: This Weapon is charged with elemental energy.
+  –Weapon Type: Physical/Energy
+  –Prerequisites: N/A
+  –Quality Slots: 2
+  –Effects: Upon creating this Weapon, select a Profile with ‘Elemental’ in the name. Apply the
+  Multi-Profile Super Profile to any Attacking Maneuvers you use, with the Profile selected for
+  the Multi-Profile Super Profile being the Elemental Profile you selected. If it meets the
+  Prerequisites, also apply the Compressed Element Disadvantage to those Attacking Maneuvers.
+
+---
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Everything it does. An attack carries one Profile in this system, and neither the Multi-Profile
+# Super Profile nor the Compressed Element Disadvantage is in it. When they are, by the table's
+# rulings: only attacks made with this Weapon; the Elemental Profile chosen when it is made; and,
+# where the attack already has a Super Profile, the player chooses which.

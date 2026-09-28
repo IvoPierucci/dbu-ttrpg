@@ -6354,9 +6354,17 @@ async function takeOutOfSequence(message, actor, offer) {
     });
     if (!declared) return;
 
+    // The Weapon it is made with, asked as it is in sequence.
+    const { armOutOfSequence } = await import("./use-maneuver.mjs");
+    declared = await armOutOfSequence(actor, maneuver, declared, target, granted?.modifiers ?? []);
+    if (!declared) return;
+
     // The same rule on the way in out of sequence: a Physical Attack only reaches your
-    // Melee Range, and an Out-of-Sequence Maneuver is no exception to it.
-    const outOfReach = target && whyNotInReach(actor, target, declared);
+    // Melee Range, and an Out-of-Sequence Maneuver is no exception to it - the Weapon's reach
+    // with it, where it has one.
+    const unbounded = declared.weapon?.wholeBattlefield || declared.weapon?.telekinetic;
+    const outOfReach = target && !unbounded
+      && whyNotInReach(actor, target, declared, declared.weapon?.meleeRange ?? 0);
     if (outOfReach) {
       ui.notifications.warn(outOfReach);
       return;
@@ -6545,6 +6553,18 @@ export async function postAttack(actor, target, maneuver,
       ? { "system.absoluteAttacksThisRound": actor.system.absoluteAttacksThisRound + 1 }
       : {})
   });
+
+  // Dimension Blade: "Each Attacking Maneuver made with this Weapon reduces the Life Points of
+  // this Weapon by 1/10 of its Maximum Life Points." Made, so paid as it is made - in sequence or
+  // out of it - and an attack that breaks it is still made. Not a thrown one, which pays on a hit.
+  if (weapon?.selfDamage && weapon.itemId && !weapon.thrown && !reflecting) {
+    const item = actor.items?.get(weapon.itemId);
+    const said = item ? await damageWeapon(actor, item, weapon.selfDamage, getTrait) : "";
+    if (said) {
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+        content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(said)} Dimension Blade.</div>` });
+    }
+  }
 
   // Handed back for the reason postManeuver hands its card back: which card a Maneuver
   // was played on is part of the Instant rule.
@@ -7332,7 +7352,7 @@ function attackIsReady(attack) {
  * The defence is only written down here - it is rolled once the attacker has confirmed
  * too, so that neither side is committed to dice while the other is still deciding.
  */
-function chooseDefence(message, target, defence, wager = 0, foundation = "energy") {
+function chooseDefence(message, target, defence, wager = 0, foundation = "energy", parryWith = []) {
   // Read fresh rather than trusting what the dialog was opened with: the other side
   // may have confirmed since, and writing a stale copy back would erase it.
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
@@ -7343,7 +7363,7 @@ function chooseDefence(message, target, defence, wager = 0, foundation = "energy
 
   return settleAttack(message, {
     ...attack,
-    defences: [...others, { uuid: target.uuid, defence, wager, foundation }],
+    defences: [...others, { uuid: target.uuid, defence, wager, foundation, parryWith }],
     ready: [...new Set([...(attack.ready ?? []), target.uuid])]
   });
 }
@@ -8776,7 +8796,9 @@ const DEFENCES = {
       ...musclePenalty(actor),
       ...chargePenalty(actor, attack),
       ...thresholdPenalty(actor),
-      ...openedAgainst(actor)
+      ...openedAgainst(actor),
+      // With a Weapon: its Size and the Weapon Penalty, chosen when the Parry was.
+      ...(defenceFor(attack, actor.uuid)?.parryWith ?? [])
     ], { ...options, slot: "strike" }),
     soak: (soak) => soak,
     wound: (total) => total
@@ -9003,6 +9025,28 @@ async function leaveLastingWound(attack, attacker, target) {
       + `${Handlebars.escapeExpression(target.name)} takes a stack of DOT until the start of `
       + `${Handlebars.escapeExpression(attacker.name)}'s next turn.</div>`
   });
+}
+
+/**
+ * Which Weapon a Parry is made with, as the rows it brings to the Strike: its Size's and the
+ * Weapon Penalty - nothing an attack made with it would take besides, since a Parry is not one.
+ *
+ * @returns {Promise<?object[]>} the rows, none for a bare hand, or null when put away
+ */
+async function askParryWeapon(actor) {
+  const held = wieldedWeapons(Array.from(actor?.items ?? []));
+  if (!held.length) return [];
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Parry with" }, content: "",
+    buttons: [{ action: "unarmed", label: "Unarmed" }, ...held.map(item => ({ action: item.id, label: item.name })),
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!chosen || (chosen === "cancel")) return null;
+  const item = held.find(each => each.id === chosen);
+  if (!item) return [];
+  const armed = weaponAttack(item, actor, { getTrait });
+  return (armed?.strike ?? []).filter(part => part.label !== item.name);
 }
 
 /**
@@ -10378,10 +10422,15 @@ async function defendAgainst(message, target, attack) {
   const answered = atMoment(target, "defending", { attack: true, attacker: true });
   const free = answered.slots?.["defend.free"] === true;
 
+  // A Parry made with a Weapon in hand counts as made with it, by the table's ruling: its Size and
+  // the Weapon Penalty on the Strike. Which one, asked where there is one.
+  const parryWith = (chosen.defence === "parry") ? await askParryWeapon(target) : [];
+  if (parryWith === null) return;
+
   if (!free && !await spendActions(target, 1, "counter")) return;
   if (free) spendChosen(target, answered);
 
-  return chooseDefence(message, target, chosen.defence, chosen.kiWager, chosen.foundation);
+  return chooseDefence(message, target, chosen.defence, chosen.kiWager, chosen.foundation, parryWith);
 }
 
 /**

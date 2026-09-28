@@ -61,9 +61,9 @@ import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
-  throwables, weaponAttack, weaponsFor, wieldedWeapons, damageWeapon, MULTI_STORAGE_THROWS,
+  throwables, weaponAttack, weaponsFor, wieldedWeapons, MULTI_STORAGE_THROWS,
   throwsAllowed, throwsCopies, thrownWeaponAttack, weaponForms, activeForm,
-  drawnBonuses } from "./gear.mjs";
+  drawnBonuses, borrowedCategory, withBorrowed } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
@@ -2507,6 +2507,38 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
           energyCharges: (declared.weapon.energyCharges ?? 0) + burstActions } };
       }
     }
+  }
+
+  // A Profile that borrows a Weapon Category - Elemental (Earth)'s Bludgeoning, (Wind)'s Slashing -
+  // as though made with a Weapon. With a Weapon of a Category of its own as well: "you must choose
+  // which Weapon Category's effects are applied at Attack Declaration".
+  const lends = declared && PROFILES[declared.profile]?.borrowsCategory;
+  if (lends) {
+    const context = { profile: declared.profile, kiWager: declared.kiWager ?? 0, target: targetActor,
+      area: declared.area ?? PROFILES[declared.profile]?.area ?? null,
+      sizes: Object.keys(DBUCharacterData.SIZES), getTrait, source: PROFILES[declared.profile].label };
+    const lent = borrowedCategory(lends, actor, context);
+    let takeLent = true;
+    if (weaponItem && declared.weapon?.category && (declared.weapon.category !== lends)) {
+      const which = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: "Weapon Category" }, content: "",
+        buttons: [{ action: "weapon", label: declared.weapon.categoryName },
+          { action: "lent", label: lent?.categoryName ?? lends }, { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      });
+      if (!["weapon", "lent"].includes(which)) return false;
+      takeLent = (which === "lent");
+    }
+    if (takeLent) {
+      // The Weapon's own Category put aside for the one borrowed; its Qualities stay.
+      const own = weaponItem ? armedWith(actor, weaponItem, declared, modifiers, targetActor,
+        { ...(weaponForm ?? activeForm(weaponItem.system.crafted)), category: "" }) : null;
+      declared = { ...declared, weapon: withBorrowed(own && { ...own,
+        energyCharges: (own.energyCharges ?? 0) + burstActions }, lent) };
+    }
+  }
+
+  if (declared?.weapon) {
     // Its Area, however many Magnitudes larger the Weapon makes it.
     const area = declared.area ?? PROFILES[declared.profile]?.area ?? null;
     if (area && declared.weapon.magnitude) {
@@ -2777,16 +2809,6 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     }, { concealed: { applied: false, attack: maneuver.name } });
   }
 
-  // Dimension Blade: "Each Attacking Maneuver made with this Weapon reduces the Life Points of
-  // this Weapon by 1/10 of its Maximum Life Points." Made, so paid once the card is out - and
-  // an attack that breaks it is still made.
-  if (card && weaponItem && declared?.weapon?.selfDamage) {
-    const said = await damageWeapon(actor, weaponItem, declared.weapon.selfDamage, getTrait);
-    if (said) {
-      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
-        content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(said)} Dimension Blade.</div>` });
-    }
-  }
 
   return true;
 }
@@ -2849,6 +2871,30 @@ async function askBurstFire(actor, maneuver, actionsSpent, name) {
 function throwsThisRound(actor, maneuver) {
   return (actor.system.usedManeuvers ?? []).filter(entry =>
     (entry === maneuver.id) || (entry === `round:${maneuver.id}`)).length;
+}
+
+/**
+ * The Weapon an Attacking Maneuver played out of sequence is made with - the same question an
+ * attack in sequence asks, and the same answers: not for one tagged `unarmed`, nor a Signature
+ * Technique without Weapon Assisted. What High-Tech makes of the Damage Attribute comes with it.
+ *
+ * @returns {Promise<?object>} the declaration with its Weapon, as it was when made Unarmed, or null
+ *   when it was put away
+ */
+export async function armOutOfSequence(actor, maneuver, declared, target = null, modifiers = []) {
+  const unassisted = (maneuver.tags ?? []).includes("signature")
+    && !(declared.advantages ?? []).includes("weapon-assisted");
+  if ((maneuver.tags ?? []).includes("unarmed") || unassisted) return declared;
+  const chosen = await askWeapon(actor, declared);
+  if (chosen === null) return null;
+  if (!chosen?.item) return declared;
+  const weapon = weaponAttack(chosen.item, actor, { profile: declared.profile, target, form: chosen.form,
+    calledShot: (modifiers ?? []).some(entry => entry.id === "called-shot"),
+    area: declared.area ?? PROFILES[declared.profile]?.area ?? null, kiWager: declared.kiWager ?? 0,
+    sizes: Object.keys(DBUCharacterData.SIZES), getTrait });
+  return { ...declared, weapon,
+    ...(weapon?.scholarshipDamage ? { damageAttribute: { label: "Scholarship Modifier",
+      value: actor.system.attributes?.scholarship?.mod ?? 0 } } : {}) };
 }
 
 /** What an attack made with this Weapon carries - see weaponAttack() in gear.mjs. */

@@ -630,12 +630,9 @@ export const PROFILES = Object.freeze({
       Category as if this Attacking Maneuver was made with a Weapon, even if it was
       Unarmed. Apply the effects of the Staggering Quality as if this Attacking Maneuver
       was made with a Weapon, even if it was Unarmed.`,
-    // The whole effect is borrowed from the Weapons, and there are none here yet: no
-    // Weapon Categories and no Qualities, so neither what Bludgeoning does nor what
-    // Staggering does has been given. Named where the Profile is chosen rather than
-    // guessed at.
-    needs: "the Bludgeoning Weapon Category and the Staggering Quality - there are no "
-      + "Weapons in this system yet."
+    // Borrowed from the Weapons: Bludgeoning's effects, as though made with one - and the
+    // Staggering Quality, which Bludgeoning possesses anyway and is gained once.
+    borrowsCategory: "bludgeoning"
   },
 
   elementalFire: {
@@ -857,9 +854,9 @@ export const PROFILES = Object.freeze({
       –KP Cost: 4(T)
       –Effect: This Attacking Maneuver gains the effects of the Slashing Weapon Category
       as if this Attacking Manuever was made with a Weapon, even if it is Unarmed.`,
-    // Earth's shape: the whole effect is borrowed from the Weapons, which arrive with
-    // Equipment. "Manuever" is the entry's own spelling, kept as printed.
-    needs: "the Slashing Weapon Category - there are no Weapons in this system yet."
+    // Earth's shape: the whole effect is borrowed from the Weapons. "Manuever" is the
+    // entry's own spelling, kept as printed.
+    borrowsCategory: "slashing"
   }
 });
 

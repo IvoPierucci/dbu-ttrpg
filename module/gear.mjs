@@ -1558,6 +1558,45 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
 }
 
 /**
+ * A Weapon Category's effects on an attack made with no Weapon of it - Elemental (Earth)'s "gains
+ * the effects of the Bludgeoning Weapon Category as if this Attacking Maneuver was made with a
+ * Weapon, even if it was Unarmed". What the Category writes, and nothing a Weapon brings with it:
+ * no Size, no Weapon Penalty.
+ */
+export function borrowedCategory(categoryId, attacker, { source = "", getTrait, ...context } = {}) {
+  const category = getTrait?.(categoryId);
+  if (!category) return null;
+  const crafted = { kind: "weapon", category: category.id, weaponType: category.weaponType,
+    weaponSize: "standard", grade: 1, qualities: [] };
+  crafted.effects = composeEffects(crafted, "", { getTrait });
+  const name = source ? `${category.name} (${source})` : category.name;
+  const lent = weaponAttack({ id: "", name, system: { crafted } }, attacker, { getTrait, ...context });
+  if (!lent) return null;
+  return { ...lent, itemId: "", borrowed: true, selfDamage: 0,
+    strike: lent.strike.filter(part => part.label === name),
+    wound: lent.wound.filter(part => part.label === name) };
+}
+
+/**
+ * Two things' effects on one attack - a Weapon's own, and a Category it borrows in place of its own
+ * ("No Attacking Maneuver can benefit from more than one Weapon Category at a time") - as one: the
+ * rows of both, numbers summed, whatever either says it does.
+ */
+export function withBorrowed(armed, lent) {
+  if (!armed) return lent;
+  if (!lent) return armed;
+  const merged = { ...armed };
+  for (const [key, value] of Object.entries(lent)) {
+    if (["itemId", "name", "weaponType", "weaponSize", "borrowed"].includes(key)) continue;
+    if (Array.isArray(value)) merged[key] = [...(armed[key] ?? []), ...value];
+    else if (typeof value === "number") merged[key] = (Number(armed[key]) || 0) + value;
+    else if (typeof value === "boolean") merged[key] = Boolean(armed[key]) || value;
+    else if ((key === "category") || (key === "categoryName")) merged[key] = value;
+  }
+  return merged;
+}
+
+/**
  * What a line of a Quality's Effects is, by the first word of its tag as the rulebook writes
  * one: on for as long as it is worn, happening without asking, one its wearer may use when it
  * comes - and what the wearer or the piece must meet for any of it to apply.
