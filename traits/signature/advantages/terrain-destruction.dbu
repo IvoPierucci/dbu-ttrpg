@@ -1,0 +1,22 @@
+id: terrain-destruction
+name: Terrain Destruction
+kind: signature
+side: advantages
+tpCost: 3
+tpCostPerRank: 3, 5, 7
+ranks: 3
+requirement: The Signature Technique possesses an AoE.
+requires: aoe
+summary: +1 Magnitude per rank.
+description: >
+  Your area of effect blasts cover a larger area.
+text: >
+  Terrain Destruction: Your area of effect blasts cover a larger area.
+  –TP Cost: 3 (First Rank), 5 (Second Rank), 7 (Third Rank)
+  –Requirement: The Signature Technique possesses an AoE.
+  –Effect: Increase the AoE’s Magnitude by 1 for each rank of this Advantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

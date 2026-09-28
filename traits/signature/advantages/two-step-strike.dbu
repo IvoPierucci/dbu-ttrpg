@@ -1,0 +1,20 @@
+id: two-step-strike
+name: Two-Step Strike
+kind: signature
+side: advantages
+tpCost: 8
+requirement: Energy Attack, Magic Attack, Soaring Profile, or a Physical Attack with the Charging Assault Advantage; does not possess the Concentration Disadvantage.
+requires: foundation:energy|foundation:magic|profile:soaring|foundation:physical+has:charging-assault, !has:concentration
+summary: Before declaring, Push Back (Thrust) an adjacent target out of sequence - it spends Thrust's 1/Round.
+description: >
+  You fling your opponent away from you before using that distance to land a decisive blow.
+text: >
+  Two-Step Strike: You fling your opponent away from you before using that distance to land a decisive blow.
+  –TP Cost: 8
+  –Requirement: Energy Attack, Magic Attack, Soaring Profile, or a Physical Attack with the Charging Assault Advantage; does not possess the Concentration Disadvantage.
+  –Effect: If you would use this Attacking Maneuver with an Opponent within your Melee Range, before Attack Declaration, you may target that Opponent with the Push Back option of the Thrust Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

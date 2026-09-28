@@ -1,0 +1,22 @@
+id: alotta-lotta-attacks
+name: Alotta Lotta Attacks
+kind: signature
+side: advantages
+tpCost: 3
+tpCostPerRank: 3, 5, 7
+ranks: 3
+requirement: Combination Profile.
+requires: profile:combination
+summary: Combination rolls one more Strike per rank.
+description: >
+  You throw out even more attacks when using the Combination Profile.
+text: >
+  Alotta Lotta Attacks: You throw out even more attacks when using the Combination Profile.
+  –TP Cost: 3 (First Rank), 5 (Second Rank), 7 (Third Rank)
+  –Requirement: Combination Profile.
+  –Effect: After you hit an Opponent, roll your Strike Roll an additional time for each rank of this Advantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

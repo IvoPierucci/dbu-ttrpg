@@ -1,0 +1,19 @@
+id: minion-destroyer
+name: Minion Destroyer
+kind: signature
+side: advantages
+tpCost: 11
+requirement: N/A
+summary: A Minion it Damages takes the Damage Attribute more.
+description: >
+  You can create a lethal attack, strongly damaging those who are weaker than you.
+text: >
+  Minion Destroyer: You can create a lethal attack, strongly damaging those who are weaker than you.
+  –TP Cost: 11
+  –Requirement: N/A
+  –Effect: If a Minion takes Damage from this Attacking Maneuver, increase the amount of Damage taken by the Damage Attribute.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

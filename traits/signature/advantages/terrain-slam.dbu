@@ -1,0 +1,20 @@
+id: terrain-slam
+name: Terrain Slam
+kind: signature
+side: advantages
+tpCost: 7
+requirement: 1+ ranks of the Powerbomb Advantage
+requires: has:powerbomb
+summary: After the attack, a Might Clash against each target: win, slam them into an adjacent Square or Feature.
+description: >
+  Your attack slams an enemy into the scenery, causing massive damage.
+text: >
+  Terrain Slam: Your attack slams an enemy into the scenery, causing massive damage.
+  –TP Cost: 7
+  –Requirement: 1+ ranks of the Powerbomb Advantage
+  –Effect: After concluding this Attacking Maneuver, make a Might Clash against the target(s) of this Attacking Maneuver. If you win this Clash against an Opponent, choose an unoccupied Square or a Feature adjacent to that Opponent. That Opponent collides with your chosen Square/Feature.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

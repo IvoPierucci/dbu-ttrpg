@@ -1,0 +1,20 @@
+id: hurricane-assault
+name: Hurricane Assault
+kind: signature
+side: advantages
+tpCost: 4
+requirement: Sweeping Profile.
+requires: profile:sweeping
+summary: The AoE's Magnitude becomes Standard before anything else.
+description: >
+  The range of your sweeping attack extends beyond your physical body.
+text: >
+  Hurricane Assault: The range of your sweeping attack extends beyond your physical body.
+  –TP Cost: 4
+  –Requirement: Sweeping Profile.
+  –Effect: This Attacking Maneuver’s Magnitude becomes Standard (before any other effects apply).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

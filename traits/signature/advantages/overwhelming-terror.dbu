@@ -1,0 +1,20 @@
+id: overwhelming-terror
+name: Overwhelming Terror
+kind: signature
+side: advantages
+tpCost: 12
+requirement: Access to the Terrify Maneuver.
+requires: maneuver:terrify
+summary: +1 Energy Charge if every target is Shaken.
+description: >
+  When an enemy trembles in fear before you, they can’t defend against this technique.
+text: >
+  Overwhelming Terror: When an enemy trembles in fear before you, they can’t defend against this technique.
+  –TP Cost: 12
+  –Requirement: Access to the Terrify Maneuver.
+  –Effect: Apply an Energy Charge to this Attacking Maneuver if all of the targets for this Attacking Maneuver are suffering from the Shaken Combat Condition.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

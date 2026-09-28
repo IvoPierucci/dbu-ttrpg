@@ -1,0 +1,20 @@
+id: fake-out
+name: Fake Out
+kind: signature
+side: advantages
+tpCost: 10
+requirement: 2+ Skill Ranks in Bluff, Super Signature.
+requires: level:super, skill:bluff>=2
+summary: Bluff vs Intuition per target: losers may only Guard or Dodge; a Dodger opens a follow-up. Once per Round.
+description: >
+  This Signature Technique looks a lot more impressive than it is, forcing the Opponent’s hand in defending against it.
+text: >
+  Fake Out: This Signature Technique looks a lot more impressive than it is, forcing the Opponent’s hand in defending against it.
+  –TP Cost: 10
+  –Requirement: 2+ Skill Ranks in Bluff, Super Signature.
+  –Effect: Upon Attack Declaration, make a Clash (Bluff vs Intuition) against the target(s) of this Attacking Maneuver. If you win, the losing target(s) must either use the Guard option of the Defend Maneuver or make a typical Dodge Roll against this Attacking Maneuver – they cannot use any other Counter Maneuver (except the Afterimage Technique). If a target chose to Dodge this Attacking Maneuver, then after completing this Attacking Maneuver, you may use the Basic Attack Maneuver or Signature Technique Maneuver against that target as an Out-of-Sequence Maneuver. You can only target a single Character that attempts to dodge this Attacking Maneuver with this effect and you cannot use a Signature Technique with the Fake Out Advantage if you’ve already used one during this Combat Round.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

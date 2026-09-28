@@ -1,0 +1,22 @@
+id: encompassing-attack
+name: Encompassing Attack
+kind: signature
+side: advantages
+tpCost: 11
+tpCostPerRank: 11, 5
+ranks: 2
+requirement: This Attacking Maneuver possesses an AoE.
+requires: aoe
+summary: Defend costs +2(bT) per rank against it; at rank 2 no Parry and no Unique Ability Counter but Barrier.
+description: >
+  This attack is nearly impossible to stop.
+text: >
+  Encompassing Attack: This attack is nearly impossible to stop.
+  –TP Cost: 11 (First Rank), 5 (Second Rank)
+  –Requirement: This Attacking Maneuver possesses an AoE.
+  –Effect: For each rank of this Advantage, increase the Ki Point Cost of the Defend Maneuver used in response to this Attacking Maneuver by 2(bT). If you have 2 ranks of this Advantage applied to an Attacking Maneuver, no target of this Attacking Maneuver can use the Parry option of the Defend Maneuver or any Unique Ability that is a Counter Maneuver (except Barrier) in response to it.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

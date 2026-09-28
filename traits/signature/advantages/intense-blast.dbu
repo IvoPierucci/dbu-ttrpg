@@ -1,0 +1,20 @@
+id: intense-blast
+name: Intense Blast
+kind: signature
+side: advantages
+tpCost: 15
+requirement: This Attacking Maneuver possesses an AoE.
+requires: aoe
+summary: An Absolute Attack.
+description: >
+  Your area of effect blasts are deadly enough that they clip even those that avoid it.
+text: >
+  Intense Blast: Your area of effect blasts are deadly enough that they clip even those that avoid it.
+  –TP Cost: 15
+  –Requirement: This Attacking Maneuver possesses an AoE.
+  –Effect: This Signature Technique is an Absolute Attack (see — Attacking).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

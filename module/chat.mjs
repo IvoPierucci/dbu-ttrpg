@@ -7226,10 +7226,15 @@ function energyChargeDice(attacker, attack) {
   const charges = attack.energyCharges ?? 0;
   if (charges <= 0) return "";
 
-  const die = DBUCharacterData.energyChargeDie(attack.signature);
-  const [, faces] = die.split("d");
-  const count = charges * Math.max(1, attacker.system.tierOfPower ?? 1);
-  return `${count}d${faces}`;
+  // One charge's dice, which past a d10 is more than one die - "1d10+1d4" - and each of them
+  // is multiplied alike. `chargeCategories` is what the attack's features add on top of
+  // Charged Up: Maximum Charge, Super Beam.
+  const die = DBUCharacterData.energyChargeDie(attack.signature, attack.chargeCategories ?? 0);
+  const times = charges * Math.max(1, attacker.system.tierOfPower ?? 1);
+  return die.split("+").map(part => {
+    const [count, faces] = part.split("d");
+    return `${(Number(count) || 1) * times}d${faces}`;
+  }).join(" + ");
 }
 
 /** The steps the Modifier Maneuvers on an attack put on its Damage Category. */

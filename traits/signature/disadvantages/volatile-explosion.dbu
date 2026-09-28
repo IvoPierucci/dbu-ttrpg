@@ -1,0 +1,20 @@
+id: volatile-explosion
+name: Volatile Explosion
+kind: signature
+side: disadvantages
+tpCost: -8
+requirement: Sphere AoE (see — Area of Effect).
+requires: aoe:sphere
+summary: If you are inside the Sphere you are a target too, hit automatically.
+description: >
+  Your technique knows no friend or foe – only destruction.
+text: >
+  Volatile Explosion: Your technique knows no friend or foe – only destruction.
+  –TP Cost: -8
+  –Requirement: Sphere AoE (see — Area of Effect).
+  –Effect: If you are within the AoE of this Signature Technique, you are also considered a target for this Attacking Maneuver. This Attacking Maneuver automatically hits you and you cannot use a Counter Maneuver in response to it.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

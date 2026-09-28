@@ -1,0 +1,20 @@
+id: final-chance
+name: Final Chance
+kind: signature
+side: advantages
+tpCost: 4
+requirement: Ultimate Signature Technique.
+requires: level:ultimate
+summary: At Injured or worse: Life Points to 0 for that much more Ki Wager; Defeated only after the attack.
+description: >
+  Pour all your pride and life into this attack.
+text: >
+  Final Chance: Pour all your pride and life into this attack.
+  –TP Cost: 4
+  –Requirement: Ultimate Signature Technique.
+  –Effect: When you use this technique, if you are below the Injured Health Threshold, you may reduce your Life Points to 0 at Attack Declaration to increase the Ki Wager by an equal amount. You are not Defeated until after this Attacking Maneuver would be completed.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

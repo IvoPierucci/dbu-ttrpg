@@ -1,0 +1,22 @@
+id: peppering-blows
+name: Peppering Blows
+kind: signature
+side: advantages
+tpCost: 6
+tpCostPerRank: 6, 8, 10
+ranks: 3
+requirement: Combination Profile.
+requires: profile:combination
+summary: Counts as another attack per rank for Diminishing Defense.
+description: >
+  Your constant flurry of attacks makes it harder for your opponent to dodge your attacks.
+text: >
+  Peppering Blows: Your constant flurry of attacks makes it harder for your opponent to dodge your attacks.
+  –TP Cost: 6 (First Rank), 8 (Second Rank), 10 (Third Rank)
+  –Requirement: Combination Profile.
+  –Effect: For each rank of this Advantage, this Attacking Maneuver is considered another Attacking Maneuver for the sake of applying Diminishing Defense stacks.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

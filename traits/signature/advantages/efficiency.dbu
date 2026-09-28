@@ -1,0 +1,22 @@
+id: efficiency
+name: Efficiency
+kind: signature
+side: advantages
+tpCost: 8
+tpCostPerRank: 8, 7
+ranks: 2
+requirement: This Signature Technique does not have the Inefficiency Disadvantage.
+requires: !has:inefficiency
+summary: KP -4(T) per rank, never below the Profile's.
+description: >
+  This Signature Technique is surprisingly efficient with ki expenditure for its effects.
+text: >
+  Efficiency: This Signature Technique is surprisingly efficient with ki expenditure for its effects.
+  –TP Cost: 8 (First Rank), 7 (Second Rank)
+  –Requirement: This Signature Technique does not have the Inefficiency Disadvantage.
+  –Effect: Reduce the total KP Cost of this Attacking Maneuver by 4(T) for each rank.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

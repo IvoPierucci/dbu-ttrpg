@@ -1,0 +1,22 @@
+id: dead-link
+name: Dead-Link
+kind: signature
+side: disadvantages
+tpCost: -6
+requirement: This Signature Technique does not have the Twin-Link Advantage for your chosen Combat Roll.
+requires: !same-roll:twin-linked
+choose: roll
+choices: strike, wound
+summary: The chosen roll is made twice; the lower counts.
+description: >
+  The technique has a less consistent and weaker Strike or Wound value.
+text: >
+  Dead-Link: The technique has a less consistent and weaker Strike or Wound value.
+  –TP Cost: -6
+  –Requirement: This Signature Technique does not have the Twin-Link Advantage for your chosen Combat Roll.
+  –Effect: Choose Strike or Wound. When making the selected Combat Roll, roll it a second time and use the lower Dice Score of the two rolls.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

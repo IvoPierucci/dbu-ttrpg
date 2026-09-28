@@ -1,0 +1,20 @@
+id: back-flip
+name: Back Flip
+kind: signature
+side: advantages
+tpCost: 2
+requirement: Hit and Run Advantage, Energy Attack, Magic Attack, Soaring Profile, or a Physical Attack with the Charging Assault Advantage, the Attacking Maneuver does not possess an AoE (except the Line AoE).
+requires: has:hit-and-run, foundation:energy|foundation:magic|profile:soaring|foundation:physical+has:charging-assault, !aoe|aoe:line
+summary: Hit and Run's movement happens after declaration, before the rolls; with Charging Assault, KP -1(T).
+description: >
+  You can move while attacking at range with this technique.
+text: >
+  Back Flip: You can move while attacking at range with this technique.
+  –TP Cost: 2
+  –Requirement: Hit and Run Advantage, Energy Attack, Magic Attack, Soaring Profile, or a Physical Attack with the Charging Assault Advantage, the Attacking Maneuver does not possess an AoE (except the Line AoE).
+  –Effect: Apply the effects of Hit and Run before using the Signature Technique but after Attack Declaration, instead of the usual timing. If this Attacking Maneuver has the Charging Assault Advantage, this effect is applied before Charging Assault and the KP Cost of this Maneuver is reduced by 1(T).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

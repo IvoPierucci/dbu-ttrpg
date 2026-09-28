@@ -1,0 +1,22 @@
+id: limited-line
+name: Limited Line
+kind: signature
+side: disadvantages
+tpCost: -4
+tpCostPerRank: -4, -2
+ranks: 2
+requirement: Line AoE.
+requires: aoe:line
+summary: The Line ends 8 Squares away (rank 2: 4).
+description: >
+  This attack can only travel a certain distance.
+text: >
+  Limited Line: This attack can only travel a certain distance.
+  –TP Cost: -4 (First Rank), -2 (Second Rank)
+  –Requirement: Line AoE.
+  –Effect: Instead of covering all Squares in a straight line to the end of the Battlefield, your Line AoE ends 8 Squares from you. If you have 2 Ranks in this Disadvantage, the Line AoE only covers 4 Squares in a direct line.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

@@ -1,0 +1,20 @@
+id: transformation-boost
+name: Transformation Boost
+kind: signature
+side: advantages
+tpCost: 6
+requirement: Ultimate Signature Technique.
+requires: level:ultimate
+summary: +1 Energy Charge in a Form or Transcended Enhancement (asked).
+description: >
+  The power of your transformation is multiplied with this attack.
+text: >
+  Transformation Boost: The power of your transformation is multiplied with this attack.
+  –TP Cost: 6
+  –Requirement: Ultimate Signature Technique.
+  –Effect: At Attack Declaration, if you are in a Form or Transcended Enhancement, apply an Energy Charge to this Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

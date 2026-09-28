@@ -1,0 +1,20 @@
+id: armor-piercing
+name: Armor-Piercing
+kind: signature
+side: advantages
+tpCost: 8
+requirement: Pinpoint Profile.
+requires: profile:pinpoint
+summary: Ignore Damage Reduction equal to 1/2 your Insight Modifier.
+description: >
+  Your insight into your opponents’ defenses allow you to bypass them more effectively.
+text: >
+  Armor-Piercing: Your insight into your opponents’ defenses allow you to bypass them more effectively.
+  –TP Cost: 8
+  –Requirement: Pinpoint Profile.
+  –Effect: Ignore the target’s Damage Reduction equal to 1/2 of your Insight Modifier.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

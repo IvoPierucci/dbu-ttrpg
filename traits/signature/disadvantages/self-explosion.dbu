@@ -1,0 +1,20 @@
+id: self-explosion
+name: Self-Explosion
+kind: signature
+side: disadvantages
+tpCost: -6
+requirement: Sphere AoE, this Attacking Maneuver does not have the Distant Explosion Disadvantage.
+requires: aoe:sphere, !has:distant-explosion
+summary: The Sphere is centred on you.
+description: >
+  Your explosion attack originates from you.
+text: >
+  Self-Explosion: Your explosion attack originates from you.
+  –TP Cost: -6
+  –Requirement: Sphere AoE, this Attacking Maneuver does not have the Distant Explosion Disadvantage.
+  –Effect: You must select a Square you occupy to be the Target Square for the AoE of this Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

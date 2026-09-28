@@ -1,0 +1,20 @@
+id: recoil
+name: Recoil
+kind: signature
+side: disadvantages
+tpCost: -2
+requirement: Hit and Run Advantage.
+requires: has:hit-and-run
+summary: Hit and Run must go your full Normal Speed straight away from the target, and can collide.
+description: >
+  Using this technique sends you bouncing off of your target.
+text: >
+  Recoil: Using this technique sends you bouncing off of your target.
+  –TP Cost: -2
+  –Requirement: Hit and Run Advantage.
+  –Effect: When you use the effects of Hit and Run through this Signature Technique, you must move your full Normal Speed in a straight line in the opposite direction of the Opponent targeted by this Attacking Maneuver (if there are multiple, your ARC decides which Opponent). This movement can cause Collision if you would enter an occupied Square.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

@@ -1,0 +1,21 @@
+id: delayed
+name: Delayed
+kind: signature
+side: advantages
+tpCost: 8
+requirement: This cannot be applied to any Attacking Maneuver except through those that were used through the Signature Technique Maneuver (even if they are treated as Signature Techniques otherwise).
+summary: On a hit, the Wound is recorded and Imminent applied; an Instant later detonates it.
+description: >
+  This Signature Technique’s damage comes later than one would expect, at the whim of the user.
+text: >
+  Delayed: This Signature Technique’s damage comes later than one would expect, at the whim of the user.
+  –TP Cost: 8
+  –Requirement: This cannot be applied to any Attacking Maneuver except through those that were used through the Signature Technique Maneuver (even if they are treated as Signature Techniques otherwise).
+  –Effect: If you hit an Opponent with this Attacking Maneuver, roll Wound as normal but instead of your Opponent taking any Damage, keep a record of the Dice Score of your Wound Roll and apply a stack of Imminent to the target(s) for the remainder of the Combat Encounter. While they possess this stack of Imminent, you cannot use this Signature Technique.
+
+  As an Instant Maneuver, you may remove this stack of Imminent from all targets who possess it to apply the Dice Score of the Wound Roll against their Soak Value and calculate/apply Damage as usual.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

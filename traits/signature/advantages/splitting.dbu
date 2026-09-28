@@ -1,0 +1,22 @@
+id: splitting
+name: Splitting
+kind: signature
+side: advantages
+tpCost: 4
+tpCostPerRank: 4, 6
+ranks: 2
+requirement: Energy or Magic Foundation that does not have an Area of Effect.
+requires: foundation:energy|foundation:magic, !aoe
+summary: Up to 2 (rank 1) or 4 (rank 2) targets; Wound -1(T) per target after the first.
+description: >
+  Your attack splits into several projectiles that let it strike more than one enemy.
+text: >
+  Splitting: Your attack splits into several projectiles that let it strike more than one enemy.
+  –TP Cost: 4 (First Rank), 6 (Second Rank)
+  –Requirement: Energy or Magic Foundation that does not have an Area of Effect.
+  –Effect: At Attack Declaration, when using this Signature Technique, select up to 2 Opponents (First Rank) or up to 4 Opponents (Second Rank). They are the targets for this Attacking Maneuver. For each Opponent you chose after the first, reduce your Wound Roll by 1(T).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

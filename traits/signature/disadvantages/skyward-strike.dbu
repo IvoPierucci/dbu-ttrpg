@@ -1,0 +1,20 @@
+id: skyward-strike
+name: Skyward Strike
+kind: signature
+side: disadvantages
+tpCost: -8
+requirement: This Signature Technique does not possess an AoE and is of the Energy Foundation, Magic Foundation, or Physical Foundation with the Charging Assault Advantage.
+requires: !aoe, foundation:energy|foundation:magic|foundation:physical+has:charging-assault
+summary: Only against a higher target, or from the ground.
+description: >
+  This technique requires you to attack your opponent from far below them.
+text: >
+  Skyward Strike: This technique requires you to attack your opponent from far below them.
+  –TP Cost: -8
+  –Requirement: This Signature Technique does not possess an AoE and is of the Energy Foundation, Magic Foundation, or Physical Foundation with the Charging Assault Advantage.
+  –Effect: You cannot use this Signature Technique unless your target is in a High Environment of a higher rank than you or while you are not in a High Environment. You may ignore this effect if you are both in the Deep Space Environment.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

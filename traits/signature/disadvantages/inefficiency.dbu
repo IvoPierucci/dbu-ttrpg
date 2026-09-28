@@ -1,0 +1,22 @@
+id: inefficiency
+name: Inefficiency
+kind: signature
+side: disadvantages
+tpCost: -6
+tpCostPerRank: -6, -7
+ranks: 2
+requirement: This Signature Technique does not have the Efficiency Advantage.
+requires: !has:efficiency
+summary: KP +4(T) per rank.
+description: >
+  Your technique is more wasteful with Ki and costs more for less bang.
+text: >
+  Inefficiency: Your technique is more wasteful with Ki and costs more for less bang.
+  –TP Cost: -6 (First Rank), -7 (Second Rank)
+  –Requirement: This Signature Technique does not have the Efficiency Advantage.
+  –Effect: Increase the total KP Cost of this Attacking Maneuver by 4(T) for each rank.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

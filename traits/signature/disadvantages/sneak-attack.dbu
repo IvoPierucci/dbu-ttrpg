@@ -1,0 +1,19 @@
+id: sneak-attack
+name: Sneak Attack
+kind: signature
+side: disadvantages
+tpCost: -4
+requirement: N/A
+summary: Only while Hidden, against Oblivious targets (asked).
+description: >
+  This technique only works when you catch your enemy unawares.
+text: >
+  Sneak Attack: This technique only works when you catch your enemy unawares.
+  –TP Cost: -4
+  –Requirement: N/A
+  –Effect: You can only use this Signature Technique when Hidden, and all of your target(s) for this Attacking Maneuver must be your Oblivious Characters.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

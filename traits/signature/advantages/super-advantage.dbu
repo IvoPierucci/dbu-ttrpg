@@ -1,0 +1,22 @@
+id: super-advantage
+name: Super Advantage
+kind: signature
+side: advantages
+tpCost: 11
+requirement: Ultimate Signature Technique.
+requires: level:ultimate
+choose: feature
+choices: long-shot, power-shot, accurate
+summary: Doubles the chosen Advantage's bonus.
+description: >
+  Double the power of one Advantage.
+text: >
+  Super Advantage: Double the power of one Advantage.
+  –TP Cost: 11
+  –Requirement: Ultimate Signature Technique.
+  –Effect: Double the bonus gained from one of the following Advantages (chosen upon gaining this Advantage): Long Shot, Power Shot (up to 3 Ranks), or Accurate.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

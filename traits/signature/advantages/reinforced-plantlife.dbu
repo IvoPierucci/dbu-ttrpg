@@ -1,0 +1,22 @@
+id: reinforced-plantlife
+name: Reinforced Plantlife
+kind: signature
+side: advantages
+tpCost: 3
+tpCostPerRank: 3, 4, 5
+ranks: 3
+requirement: Elemental (Plantlife) Profile.
+requires: profile:elementalPlantlife
+summary: The Plantlife Feature's Hardness Rank +1 per rank.
+description: >
+  Your conjured plant matter is tougher and thicker.
+text: >
+  Reinforced Plantlife: Your conjured plant matter is tougher and thicker.
+  –TP Cost: 3 (First Rank), 4 (Second Rank), 5 (Third Rank)
+  –Requirement: Elemental (Plantlife) Profile.
+  –Effect: Increase the Hardness Rank of the Features created through this Attacking Maneuver’s use of the Elemental (Plantlife) Profile by the number of ranks in this Advantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

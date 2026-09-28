@@ -1,0 +1,22 @@
+id: short-range
+name: Short Range
+kind: signature
+side: disadvantages
+tpCost: -2
+tpCostPerRank: -2, -2
+ranks: 2
+requirement: Energy or Magic Foundation, this Attacking Maneuver does not have an Area of Effect.
+requires: foundation:energy|foundation:magic, !aoe
+summary: Rank 1: Strike and Wound -2(bT) outside Melee Range. Rank 2: Melee Range only.
+description: >
+  This technique is best used right in your opponent’s face.
+text: >
+  Short Range: This technique is best used right in your opponent’s face.
+  –TP Cost: -2 (First Rank), -2 (Second Rank)
+  –Requirement: Energy or Magic Foundation, this Attacking Maneuver does not have an Area of Effect.
+  –Effect: If this Attacking Maneuver possesses 1 Rank of this Disadvantage, reduce your Strike and Wound Rolls for this Signature Technique by 2(bT) against Opponents outside of your Melee Range. If this Attacking Maneuver possesses 2 Ranks of this Disadvantage, you can only target Characters in your Melee Range with this Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

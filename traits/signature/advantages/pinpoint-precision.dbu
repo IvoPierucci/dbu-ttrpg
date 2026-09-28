@@ -1,0 +1,20 @@
+id: pinpoint-precision
+name: Pinpoint Precision
+kind: signature
+side: advantages
+tpCost: 6
+requirement: This Signature Technique possesses an AoE of Standard or Minor Magnitude, this Attacking Maneuver does not possess the Concentrated Strike Advantage.
+requires: aoe, magnitude<=standard, !has:concentrated-strike
+summary: Called Shot allowed against a single target; a hit with it applies 1 Broken until the start of your next turn.
+description: >
+  Your uncanny accuracy allows you to hit a single target precisely where you want, to terrifying results.
+text: >
+  Pinpoint Precision: Your uncanny accuracy allows you to hit a single target precisely where you want, to terrifying results.
+  –TP Cost: 6
+  –Requirement: This Signature Technique possesses an AoE of Standard or Minor Magnitude, this Attacking Maneuver does not possess the Concentrated Strike Advantage.
+  –Effect: If this Attacking Maneuver targets only a single Opponent, you can use the Called Shot Maneuver on this Attacking Maneuver. If you hit an Opponent with a Called Shot, apply a rank of the Broken Combat Condition until the start of your next turn.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

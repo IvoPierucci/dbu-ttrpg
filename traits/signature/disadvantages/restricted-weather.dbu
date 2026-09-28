@@ -1,0 +1,20 @@
+id: restricted-weather
+name: Restricted – Weather
+kind: signature
+side: disadvantages
+tpCost: -4
+requirement: N/A
+choose: weather
+summary: Only in the chosen Battle Weather.
+description: >
+  This technique can only be used while in a certain Battle Weather.
+text: >
+  Restricted – Weather: This technique can only be used while in a certain Battle Weather.
+  –TP Cost: -4
+  –Requirement: N/A
+  –Effect: Choose a Battle Weather. You cannot use this Signature Technique unless you are in the chosen Battle Weather.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

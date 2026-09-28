@@ -1,0 +1,22 @@
+id: shoot-and-pray
+name: Shoot and Pray
+kind: signature
+side: disadvantages
+tpCost: -3
+tpCostPerRank: -3, -4
+ranks: 2
+requirement: Combination Profile.
+requires: profile:combination
+summary: Counts as another attack per rank for Diminishing Offense.
+description: >
+  You loose so many attacks with such imprecision that you quickly tire yourself out.
+text: >
+  Shoot and Pray: You loose so many attacks with such imprecision that you quickly tire yourself out.
+  –TP Cost: -3 (First Rank), -4 (Second Rank)
+  –Requirement: Combination Profile.
+  –Effect: This Attacking Maneuver counts as an additional number of Attacking Maneuvers equal to its number of ranks for the effects of Diminishing Offense.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

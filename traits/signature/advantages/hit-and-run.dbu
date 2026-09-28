@@ -1,0 +1,19 @@
+id: hit-and-run
+name: Hit and Run
+kind: signature
+side: advantages
+tpCost: 8
+requirement: N/A
+summary: After the attack, move up to Normal Speed in a straight line; leaving Melee Range provokes Exploit.
+description: >
+  This technique allows you to attack and then flee.
+text: >
+  Hit and Run: This technique allows you to attack and then flee.
+  –TP Cost: 8
+  –Requirement: N/A
+  –Effect: After using this Signature Technique, the user may move any number of Squares up to their Normal Speed in a straight line (you can move through the Square of the Opponent targeted by this Attacking Maneuver for this movement without causing collision). This movement triggers the Exploit Maneuver if you leave the Melee Range of an Opponent.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

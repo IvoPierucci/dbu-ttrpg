@@ -1,0 +1,22 @@
+id: penetration
+name: Penetration
+kind: signature
+side: advantages
+tpCost: 12
+tpCostPerRank: 12, 6, 6
+ranks: 3
+requirement: This Attacking Maneuver does not have an Area of Effect (Sphere/Cone) or the Low Penetration Disadvantage.
+requires: !aoe:sphere, !aoe:cone, !has:low-penetration
+summary: A hit applies Broken stacks equal to the ranks, before the Damage.
+description: >
+  Your technique weakens the target’s bodily defenses temporarily.
+text: >
+  Penetration: Your technique weakens the target’s bodily defenses temporarily.
+  –TP Cost: 12 (First Rank), 6 (Second Rank), 6 (Third Rank)
+  –Requirement: This Attacking Maneuver does not have an Area of Effect (Sphere/Cone) or the Low Penetration Disadvantage.
+  –Effect: When you hit an Opponent with this Attacking Maneuver, apply a number of stacks of the Broken Combat Condition equal to the ranks of this Advantage until the start of your next turn.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

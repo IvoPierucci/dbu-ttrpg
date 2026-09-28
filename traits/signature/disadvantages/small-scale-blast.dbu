@@ -1,0 +1,20 @@
+id: small-scale-blast
+name: Small Scale Blast
+kind: signature
+side: disadvantages
+tpCost: -4
+requirement: Sphere AoE, this Signature Technique has no ranks of Terrain Destruction.
+requires: aoe:sphere, !has:terrain-destruction
+summary: The Sphere's Magnitude becomes Minor.
+description: >
+  This attack has less destructive force than normal.
+text: >
+  Small Scale Blast: This attack has less destructive force than normal.
+  –TP Cost: -4
+  –Requirement: Sphere AoE, this Signature Technique has no ranks of Terrain Destruction.
+  –Effect: The Magnitude from your Sphere AoE becomes Minor.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

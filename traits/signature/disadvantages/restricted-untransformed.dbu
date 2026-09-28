@@ -1,0 +1,20 @@
+id: restricted-untransformed
+name: Restricted – Untransformed
+kind: signature
+side: disadvantages
+tpCost: -6
+requirement: You possess a Form, this Attacking Maneuver does not possess the Restricted – Transformation Disadvantage.
+requires: !has:restricted-transformation
+summary: Only in your Normal State - not enforced until Transformations exist.
+description: >
+  This technique can only be used while not in a Transformation.
+text: >
+  Restricted – Untransformed: This technique can only be used while not in a Transformation.
+  –TP Cost: -6
+  –Requirement: You possess a Form, this Attacking Maneuver does not possess the Restricted – Transformation Disadvantage.
+  –Effect: You cannot use this Signature Technique unless you are in your Normal State (see — Transformation Rules).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

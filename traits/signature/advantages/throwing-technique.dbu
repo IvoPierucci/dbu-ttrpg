@@ -1,0 +1,20 @@
+id: throwing-technique
+name: Throwing Technique
+kind: signature
+side: advantages
+tpCost: 5
+requirement: Simple or Combination Profile of the Physical Foundation.
+requires: foundation:physical, profile:simple|profile:combination
+summary: Usable through Throw with a Throwing Weapon (Barrage too for Combination).
+description: >
+  This technique allows you to lob an object at your foes.
+text: >
+  Throwing Technique: This technique allows you to lob an object at your foes.
+  –TP Cost: 5
+  –Requirement: Simple or Combination Profile of the Physical Foundation.
+  –Effect: When you use the Throw Maneuver, you may use this Signature Technique instead (you still follow the typical range rules for the Throw Maneuver). This also treats the Throw Maneuver as the Signature Technique Maneuver for any effects and uses any [x/Round] limitations of the Signature Technique Maneuver – if you cannot use the Signature Technique Maneuver, then you cannot use a Signature Technique through the Throw Maneuver either. You may only use this Signature Technique through the effects of the Throw Maneuver while wielding a Weapon with the Throwing Weapon Quality, and if this Signature Technique is of the Combination Profile, only while wielding a Weapon with the Barrage Weapon Weapon Quality.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

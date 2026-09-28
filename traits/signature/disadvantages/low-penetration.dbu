@@ -1,0 +1,22 @@
+id: low-penetration
+name: Low Penetration
+kind: signature
+side: disadvantages
+tpCost: -2
+tpCostPerRank: -2, -3, -4
+ranks: 3
+requirement: This Signature Technique does not have the Power Shot or Penetration Advantage.
+requires: !has:power-shot, !has:penetration
+summary: Wound -1(T) per rank.
+description: >
+  The technique has weak power for its effort.
+text: >
+  Low Penetration: The technique has weak power for its effort.
+  –TP Cost: -2 (First Rank), -3 (Second Rank), -4 (Third Rank)
+  –Requirement: This Signature Technique does not have the Power Shot or Penetration Advantage.
+  –Effect: Reduce your Wound Rolls for this Signature Technique by 1(T) for each rank of this Disadvantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

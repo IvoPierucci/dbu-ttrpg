@@ -1,0 +1,23 @@
+id: restricted-transformation
+name: Restricted – Transformation
+kind: signature
+side: disadvantages
+tpCost: -2
+tpCostPerRank: -2, -4
+ranks: 2
+requirement: This Attacking Maneuver does not possess the Restricted – Untransformed Disadvantage.
+requires: !has:restricted-untransformed
+choose: text
+summary: Only in the chosen Transformation - not enforced until Transformations exist.
+description: >
+  This technique can only be used in certain transformations.
+text: >
+  Restricted – Transformation: This technique can only be used in certain transformations.
+  –TP Cost: -2 (First Rank), -4 (Second Rank)
+  –Requirement: This Attacking Maneuver does not possess the Restricted – Untransformed Disadvantage.
+  –Effect: Choose a type of Transformation (Enhancement or Form). You can only use this Signature Technique while in that category of Transformation. If you have two ranks, instead choose a single Transformation (Enhancement or Form) or a Transformation Line. You can only use it while in that specific Transformation or Transformation Line.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

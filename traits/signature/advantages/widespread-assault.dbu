@@ -1,0 +1,22 @@
+id: widespread-assault
+name: Widespread Assault
+kind: signature
+side: advantages
+tpCost: 8
+requirement: Attacking Maneuver does not possess an AoE.
+requires: !profile-aoe
+choose: shape
+choices: sphere, line, cone
+summary: Gains the chosen AoE at Standard; a Sphere may be centred on any Square.
+description: >
+  Your attack has such destructive force that it covers a large area.
+text: >
+  Widespread Assault: Your attack has such destructive force that it covers a large area.
+  –TP Cost: 8
+  –Requirement: Attacking Maneuver does not possess an AoE.
+  –Effect: Select an Area of Effect (see — Area of Effect). This Attacking Maneuver gains the selected AoE at the Standard Magnitude. If you choose the Sphere AoE, the Target Square for this AoE may be any Square, rather than just a Square that you occupy.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

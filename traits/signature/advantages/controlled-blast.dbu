@@ -1,0 +1,20 @@
+id: controlled-blast
+name: Controlled Blast
+kind: signature
+side: advantages
+tpCost: 5
+requirement: Cone AoE.
+requires: aoe:cone
+summary: The Target Square may be any Square not at Long Range, pointing any direction - the map's.
+description: >
+  You can create blast effects from almost anywhere on the battlefield.
+text: >
+  Controlled Blast: You can create blast effects from almost anywhere on the battlefield.
+  –TP Cost: 5
+  –Requirement: Cone AoE.
+  –Effect: Instead of yourself being the Target Square, this Attacking Maneuver’s Target Square is any Square you select on the Battlefield that is not at Long Range, pointing in any direction you wish.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

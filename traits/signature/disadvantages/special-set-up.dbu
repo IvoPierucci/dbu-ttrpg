@@ -1,0 +1,21 @@
+id: special-set-up
+name: Special Set Up
+kind: signature
+side: disadvantages
+tpCost: -4
+requirement: This Signature Technique does not possess the Mandatory Charge Disadvantage or the Lead Up Disadvantage.
+requires: !has:mandatory-charge, !has:lead-up
+choose: maneuver
+summary: Your last Maneuver this Round must be the chosen Special Maneuver.
+description: >
+  In order to use this technique, you must perform another action first.
+text: >
+  Special Set Up: In order to use this technique, you must perform another action first.
+  –TP Cost: -4
+  –Requirement: This Signature Technique does not possess the Mandatory Charge Disadvantage or the Lead Up Disadvantage.
+  –Effect: Select a Special Maneuver you have access to that has an Action Cost of 1 Standard Action. You can’t use this Signature Technique if you didn’t use your selected Special Maneuver as your last Maneuver this Combat Round.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

@@ -1,0 +1,20 @@
+id: perfect-strike
+name: Perfect Strike
+kind: signature
+side: advantages
+tpCost: 8
+requirement: Simple Profile, Ultimate Signature Technique.
+requires: profile:simple, level:ultimate
+summary: Capacity only loses half its Ki Point Cost.
+description: >
+  Your attack doesn’t waste a single drop of energy.
+text: >
+  Perfect Strike: Your attack doesn’t waste a single drop of energy.
+  –TP Cost: 8
+  –Requirement: Simple Profile, Ultimate Signature Technique.
+  –Effect: Halve the reduction to your Capacity Rate from any Ki Points spent on this Signature Technique’s Ki Point Cost (you must still pay the full Ki Point Cost).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

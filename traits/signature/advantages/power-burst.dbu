@@ -1,0 +1,22 @@
+id: power-burst
+name: Power Burst
+kind: signature
+side: advantages
+tpCost: 6
+tpCostPerRank: 6, 5, 4
+ranks: 3
+requirement: Ultimate Signature Technique.
+requires: level:ultimate
+summary: +1 Super Stack per rank for this attack (max 3), no Muscle Penalty on its Strike.
+description: >
+  Max out your muscles to push out every drop of power!
+text: >
+  Power Burst: Max out your muscles to push out every drop of power!
+  –TP Cost: 6 (First Rank), 5 (Second Rank), 4 (Third Rank)
+  –Requirement: Ultimate Signature Technique.
+  –Effect: For each rank of this Advantage, gain 1 Super Stack for the duration of this Attacking Maneuver, ignoring the penalties to your Strike Roll from the Muscle Penalty.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

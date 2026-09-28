@@ -1,0 +1,20 @@
+id: concentration
+name: Concentration
+kind: signature
+side: disadvantages
+tpCost: -4
+requirement: Energy Foundation, Magic Foundation, Soaring Profile, or Physical Foundation with the Widespread Assault or Charging Assault Advantage.
+requires: foundation:energy|foundation:magic|profile:soaring|foundation:physical+has:widespread-assault|foundation:physical+has:charging-assault
+summary: Not usable within an Opponent's Melee Range.
+description: >
+  You can’t use this technique while an enemy is close due to reasons relating to concentration or freedom of movement.
+text: >
+  Concentration: You can’t use this technique while an enemy is close due to reasons relating to concentration or freedom of movement.
+  –TP Cost: -4
+  –Requirement: Energy Foundation, Magic Foundation, Soaring Profile, or Physical Foundation with the Widespread Assault or Charging Assault Advantage.
+  –Effect: You cannot use this Signature Technique through the Signature Technique Maneuver if you are within an Opponent’s Melee Range. You may still use the Energy Charge Maneuver for this Signature Technique within an Opponent’s Melee Range.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

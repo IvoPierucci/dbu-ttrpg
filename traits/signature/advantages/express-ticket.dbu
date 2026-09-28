@@ -1,0 +1,20 @@
+id: express-ticket
+name: Express Ticket
+kind: signature
+side: advantages
+tpCost: 6
+requirement: Charging Assault Advantage.
+requires: has:charging-assault
+summary: On a hit, a Might Clash: win, carry them along; a full run with no collision takes 1/2 Might Life Points.
+description: >
+  Don’t stop your charge, and instead take your victim along for a ride to squash.
+text: >
+  Express Ticket: Don’t stop your charge, and instead take your victim along for a ride to squash.
+  –TP Cost: 6
+  –Requirement: Charging Assault Advantage.
+  –Effect: When you hit an Opponent with this Signature Technique, make a Might Clash against them. If you win, move any number of Squares up to your Boosted Speed in one direction. The target also moves the same number of Squares in that direction. If you move your full Boosted Speed without the Opponent colliding with Battle Terrain or another Character, reduce their Life Points by 1/2 of your Might.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

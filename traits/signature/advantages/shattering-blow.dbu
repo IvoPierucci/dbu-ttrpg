@@ -1,0 +1,22 @@
+id: shattering-blow
+name: Shattering Blow
+kind: signature
+side: advantages
+tpCost: 4
+tpCostPerRank: 4, 6, 6, 8
+ranks: 4
+requirement: Crushing Profile.
+requires: profile:crushing
+summary: Damage +1/4 of the target's Soak Value per rank.
+description: >
+  Deal a portion of your opponents Soak as damage to them.
+text: >
+  Shattering Blow: Deal a portion of your opponents Soak as damage to them.
+  –TP Cost: 4 (First Rank), 6 (Second Rank), 6 (Third Rank), 8 (Fourth Rank)
+  –Requirement: Crushing Profile.
+  –Effect: If you inflict Damage with this Attacking Maneuver, increase the amount of Damage inflicted by 1/4 of the target’s Soak Value for each rank of this Advantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

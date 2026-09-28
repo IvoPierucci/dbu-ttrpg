@@ -1,0 +1,21 @@
+id: backlash
+name: Backlash
+kind: signature
+side: disadvantages
+tpCost: -2
+tpCostPerRank: -2, -3, -3, -3, -3
+ranks: 5
+requirement: N/A
+summary: After the attack, lose 2(bT) Life Points per rank.
+description: >
+  Your technique drains away your very life essence to use.
+text: >
+  Backlash: Your technique drains away your very life essence to use.
+  –TP Cost: -2 (First Rank), -3 (Second Rank), -3 (Third Rank), -3 (Fourth Rank), -3 (Fifth Rank)
+  –Requirement: N/A
+  –Effect: Reduce your Life Points by 2(bT) for each rank of this Advantage after concluding this Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

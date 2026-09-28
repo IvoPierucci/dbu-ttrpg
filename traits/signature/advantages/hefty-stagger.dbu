@@ -1,0 +1,22 @@
+id: hefty-stagger
+name: Hefty Stagger
+kind: signature
+side: advantages
+tpCost: 4
+tpCostPerRank: 4, 6
+ranks: 2
+requirement: Staggering Attack Advantage.
+requires: has:staggering-attack|profile:elementalPlantlife
+summary: Staggering Attack's Might Clash +1(T) per rank.
+description: >
+  This technique is exceptionally good at disrupting an opponent’s balance.
+text: >
+  Hefty Stagger: This technique is exceptionally good at disrupting an opponent’s balance.
+  –TP Cost: 4 (First Rank), 6 (Second Rank)
+  –Requirement: Staggering Attack Advantage.
+  –Effect: Increase the Dice Score for the Might Clash initiated through the effects of Staggering Attack by 1(T) for each rank of this Advantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

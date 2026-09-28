@@ -1,0 +1,20 @@
+id: hostile-chase
+name: Hostile Chase
+kind: signature
+side: disadvantages
+tpCost: -7
+requirement: 2+ ranks of the Homing Advantage, Energy or Magic Foundation
+requires: ranks:homing>=2, foundation:energy|foundation:magic
+summary: A Botch on a Strike, or a Critical Dodge against it, and it hits you (Urgent Wound).
+description: >
+  Your attacks that do not hit their marks run the risk of hitting you.
+text: >
+  Hostile Chase: Your attacks that do not hit their marks run the risk of hitting you.
+  –TP Cost: -7
+  –Requirement: 2+ ranks of the Homing Advantage, Energy or Magic Foundation
+  –Effect: If you score a Botch Result on any Strike Roll made for this Attacking Maneuver, or your Opponent scored a Critical Result on their Dodge Roll against this Attacking Maneuver, you are hit by this Attacking Maneuver. Roll Wound as an Urgent Roll and apply Damage as you would normally.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

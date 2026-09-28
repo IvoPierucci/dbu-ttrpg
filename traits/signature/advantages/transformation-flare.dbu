@@ -1,0 +1,20 @@
+id: transformation-flare
+name: Transformation Flare
+kind: signature
+side: advantages
+tpCost: 4
+requirement: Restricted – Untransformed Disadvantage.
+requires: has:restricted-untransformed
+summary: On a hit, you may Transform out of sequence until the attack ends.
+description: >
+  You can transform in the midst of using this technique when your power is otherwise insufficient.
+text: >
+  Transformation Flare: You can transform in the midst of using this technique when your power is otherwise insufficient.
+  –TP Cost: 4
+  –Requirement: Restricted – Untransformed Disadvantage.
+  –Effect: If this Signature Technique hits an Opponent or if an Opponent initiates a Duel Maneuver against this Attacking Maneuver, you may use the Transformation Maneuver as an Out-of-Sequence Maneuver before you roll the Wound Roll or any rolls involved in that Duel Maneuver. You leave any Transformation you entered through this effect after concluding the Attacking Maneuver or Duel Maneuver and Damage has been calculated. Entering a Transformation in this way ignores the effects of the Restricted – Untransformed Disadvantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

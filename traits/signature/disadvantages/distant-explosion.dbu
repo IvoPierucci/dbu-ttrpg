@@ -1,0 +1,20 @@
+id: distant-explosion
+name: Distant Explosion
+kind: signature
+side: disadvantages
+tpCost: -3
+requirement: Sphere AoE, this Attacking Maneuver does not have the Self-Explosion Disadvantage
+requires: aoe:sphere, !has:self-explosion
+summary: The Sphere is centred on an Opponent's Square.
+description: >
+  This technique requires that you launch it at an enemy.
+text: >
+  Distant Explosion: This technique requires that you launch it at an enemy.
+  –TP Cost: -3
+  –Requirement: Sphere AoE, this Attacking Maneuver does not have the Self-Explosion Disadvantage
+  –Effect: You must select a Square occupied by an Opponent to be the Target Square for the AoE of this Attacking Maneuver (that Opponent is also a target for this Attacking Maneuver).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

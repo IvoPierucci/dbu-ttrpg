@@ -1,0 +1,20 @@
+id: personal-bomb
+name: Personal Bomb
+kind: signature
+side: advantages
+tpCost: 12
+requirement: Delayed, Sphere AoE.
+requires: has:delayed, aoe:sphere
+summary: A single target; detonating it blasts the Sphere around them with a new Strike and the recorded Wound.
+description: >
+  You can create a delayed explosion of raw power that catches your enemies unaware.
+text: >
+  Personal Bomb: You can create a delayed explosion of raw power that catches your enemies unaware.
+  –TP Cost: 12
+  –Requirement: Delayed, Sphere AoE.
+  –Effect: If this Attacking Maneuver would target multiple Characters, you can instead select a single target. When you remove this Signature Technique’s only stack of Imminent, apply this Signature Technique’s AoE (centered on the target the stack of Imminent was on). All Characters (other than the initial target) within that AoE act as if they were targeted by this Signature Technique – make a new Strike Roll against those Characters as if this Signature Technique was an Attacking Maneuver that did not possess the Delayed Advantage. All targets of this Signature Technique receive the initially rolled Wound Roll as usual.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

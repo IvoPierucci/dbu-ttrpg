@@ -68,6 +68,7 @@ import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   buddyAttribute, targetableBuddy } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 import { emptiesCapacity } from "./signature.mjs";
+import { choicesOf, isBuilt, isUltimate, signatureOf, techniqueKiPerTier } from "./technique.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
 import * as soarNames from "./environments.mjs";
@@ -1683,7 +1684,35 @@ export function definitionOf(item) {
           // defender makes.
           defenderSkills: [...(item.system.clashDefenderSkills ?? [])]
         }
-      : null
+      : null,
+    // A Technique built on its sheet: what its build makes of it.
+    ...(isBuilt(item) ? techniqueDefinition(item) : {})
+  };
+}
+
+/**
+ * What a built Technique is, over and above an ordinary Maneuver Item: its Profile and the
+ * Foundation that Profile is used with, what it adds to the Profile's price, and whether it is
+ * an Ultimate - which also makes it once per Combat Encounter, "this refers to each Signature
+ * Technique individually".
+ */
+export function techniqueDefinition(item) {
+  const sig = signatureOf(item);
+  const ultimate = isUltimate(sig.level);
+  return {
+    attacking: true,
+    profile: sig.profile,
+    profileFoundation: sig.foundation ? { [sig.profile]: sig.foundation } : {},
+    kiCost: 0,
+    kiCostPerBaseTier: 0,
+    kiCostPerTier: techniqueKiPerTier(sig),
+    level: sig.level,
+    ultimate,
+    superProfile: sig.superProfile,
+    secondProfile: (sig.superProfile === "multi-profile") ? sig.secondProfile : "",
+    featureChoices: choicesOf(sig),
+    fromTransformation: sig.fromTransformation,
+    ...(ultimate ? { usageLimit: { amount: 1, per: "encounter" } } : {})
   };
 }
 

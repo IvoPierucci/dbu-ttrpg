@@ -1,0 +1,20 @@
+id: sky-assault
+name: Sky Assault
+kind: signature
+side: advantages
+tpCost: 3
+requirement: Energy or Magic Foundation.
+requires: foundation:energy|foundation:magic
+summary: No Long Range penalty that comes from the target being higher.
+description: >
+  Your attack is exceptionally accurate when aimed upwards.
+text: >
+  Sky Assault: Your attack is exceptionally accurate when aimed upwards.
+  –TP Cost: 3
+  –Requirement: Energy or Magic Foundation.
+  –Effect: Ignore any penalties from Long Range due to an Opponent being on a higher High Environment.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

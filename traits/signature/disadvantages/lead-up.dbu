@@ -1,0 +1,21 @@
+id: lead-up
+name: Lead Up
+kind: signature
+side: disadvantages
+tpCost: -6
+requirement: This Signature Technique does not possess the Mandatory Charge Disadvantage.
+requires: !has:mandatory-charge
+choose: profile
+summary: Your last Maneuver must have hit a target with the chosen Profile.
+description: >
+  This technique is part of a combination and must be used as part of a certain order of attacks.
+text: >
+  Lead Up: This technique is part of a combination and must be used as part of a certain order of attacks.
+  –TP Cost: -6
+  –Requirement: This Signature Technique does not possess the Mandatory Charge Disadvantage.
+  –Effect: Select a Profile. To use this Signature Technique, you must hit an Opponent with an Attacking Maneuver of your selected Profile as your last Maneuver before you use this Signature Technique. The Opponent hit by that last Attacking Maneuver must also be a target for this Signature Technique.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

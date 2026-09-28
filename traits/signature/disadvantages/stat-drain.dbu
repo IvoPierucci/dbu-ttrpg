@@ -1,0 +1,21 @@
+id: stat-drain
+name: Stat Drain
+kind: signature
+side: disadvantages
+tpCost: -7
+tpCostPerRank: -7, -7, -7
+ranks: 3
+requirement: N/A
+summary: After the attack, Combat Rolls and Soak -1(bT) per rank until the end of your next turn.
+description: >
+  The technique weakens or drains your power after use.
+text: >
+  Stat Drain: The technique weakens or drains your power after use.
+  –TP Cost: -7 (First Rank), -7 (Second Rank), -7 (Third Rank)
+  –Requirement: N/A
+  –Effect: For each rank of this Disadvantage, after using this Signature Technique, reduce your Combat Rolls and Soak Value by 1(bT) until the end of your next turn.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

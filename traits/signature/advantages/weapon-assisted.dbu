@@ -1,0 +1,19 @@
+id: weapon-assisted
+name: Weapon Assisted
+kind: signature
+side: advantages
+tpCost: 2
+requirement: N/A
+summary: May be made with a wielded Weapon of its Foundation, as an Armed Attack.
+description: >
+  You are able to use a weapon to perform this attack.
+text: >
+  Weapon Assisted: You are able to use a weapon to perform this attack.
+  –TP Cost: 2
+  –Requirement: N/A
+  –Effect: This attack can be used while wielding a Weapon and benefits from its Size, Category, and Qualities – making it an Armed Attack if it does. Physical Weapons apply only to Physical Profiles, Energy Weapons for Energy Profiles, and Magic Weapons for Magic Profiles.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

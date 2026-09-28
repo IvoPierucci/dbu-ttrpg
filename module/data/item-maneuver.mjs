@@ -544,6 +544,44 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         new fields.StringField({ required: true, blank: false }), { required: true, initial: [] }
       ),
 
+      /**
+       * What a Signature Technique was built out of, on its Sig Creation and Adv & Disadv tabs.
+       *
+       * Blank on every other Maneuver, and on a Technique made before the builder existed -
+       * which goes on reading its `advantages` as it always did. Once a Technique has
+       * features here, `advantages` is derived from them (one entry per rank), so every reader
+       * of that list keeps working unchanged.
+       */
+      signature: new fields.SchemaField({
+        level: new fields.StringField({ required: true, blank: false, initial: "super" }),
+        foundation: new fields.StringField({ required: true, blank: true, initial: "" }),
+        profile: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** Multi-Profile's other Profile, chosen when the Technique is built. */
+        secondProfile: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** A Dramatic Finisher's Super Profile. */
+        superProfile: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** Gained from a Transformation Trait: left out of the Ultimate-to-Super count. */
+        fromTransformation: new fields.BooleanField({ required: true, initial: false }),
+        features: new fields.ArrayField(new fields.SchemaField({
+          id: new fields.StringField({ required: true, blank: false }),
+          ranks: new fields.NumberField({ required: true, integer: true, initial: 1, min: 1 }),
+          /** Widespread's shape, Trick Attack's Skill, Condition's Condition, and so on. */
+          choice: new fields.StringField({ required: true, blank: true, initial: "" })
+        }), { required: true, initial: [] }),
+        /** Its pseudo-code, as on an Apparel's Effects tab: what each feature writes, and more. */
+        effects: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /**
+         * Delayed: "keep a record of the Dice Score of your Wound Roll". Which attack it was, who
+         * carries its Imminent, and the Round it was made in (for Short Delay).
+         */
+        delayed: new fields.SchemaField({
+          wound: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+          messageId: new fields.StringField({ required: true, blank: true, initial: "" }),
+          round: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+          targets: new fields.ArrayField(new fields.StringField({ blank: false }), { required: true, initial: [] })
+        })
+      }),
+
       /** How often it may be used, as "1/round" or "2/encounter". Blank means freely. */
       usageLimit: new fields.StringField({ required: true, blank: true, initial: "" }),
 
@@ -551,6 +589,18 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       script: new fields.StringField({ required: true, blank: true, initial: "" }),
       text: new fields.StringField({ required: true, blank: true, initial: "" })
     };
+  }
+
+  /**
+   * A built Technique's `advantages` are what its features say: one id per rank. Derived
+   * rather than stored twice, so the two can never disagree.
+   */
+  prepareDerivedData() {
+    super.prepareDerivedData?.();
+    const features = this.signature?.features ?? [];
+    if (!features.length) return;
+    this.advantages = features.flatMap(entry =>
+      Array(Math.max(1, Number(entry.ranks) || 1)).fill(entry.id));
   }
 
   /** The usage limit, split into the shape the rest of the system reads. */

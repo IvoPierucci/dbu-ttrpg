@@ -1,0 +1,20 @@
+id: high-speed-dash
+name: High-Speed Dash
+kind: signature
+side: advantages
+tpCost: 2
+requirement: Hit and Run Advantage.
+requires: has:hit-and-run
+summary: Hit and Run moves at Boosted Speed and provokes no Exploit.
+description: >
+  You use your full speed to strike your enemy while avoiding being hit yourself.
+text: >
+  High-Speed Dash: You use your full speed to strike your enemy while avoiding being hit yourself.
+  –TP Cost: 2
+  –Requirement: Hit and Run Advantage.
+  –Effect: The movement through the effects of the Hit and Run Advantage uses your Boosted Speed and does not trigger the Exploit Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

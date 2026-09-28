@@ -861,6 +861,175 @@ export const PROFILES = Object.freeze({
 });
 
 /**
+ * The Super Profiles: "an additional Profile that is applied in addition to your usual
+ * Profiles". One at most on an Attacking Maneuver, its own Ki Point Cost added to the Profile's
+ * (and to the Minimum), and not applied at all when its Prerequisite is not met.
+ *
+ * `prerequisite` is written in the Requirement language technique.mjs reads (see
+ * `requirementHolds`); `prerequisiteText` is the entry's own words for the card. The flags
+ * after them are read where the attack is rolled, the way a Profile's own are.
+ */
+export const SUPER_PROFILES = Object.freeze({
+  "all-out": {
+    label: "All Out",
+    kiCostPerTier: 2,
+    prerequisite: "threshold:injured",
+    prerequisiteText: "Your Life Points are below the Injured Health Threshold.",
+    wagersAll: true, emptiesCapacity: true, failsSteadfast: true,
+    text: `
+      All Out: Every drop of your power poured into a single attack!
+      –KP Cost: 2(T)
+      –Prerequisite: Your Life Points are below the Injured Health Threshold.
+      –Effect: This Profile has multiple effects:
+
+      * You must Ki Wager all of your Ki Points on this Attacking Maneuver. This Ki Wager ignores your Capacity, but the amount of Ki Points spent cannot exceed your Max Capacity.
+      * After using this Attacking Maneuver, set your Capacity to 0 and change any successes on Steadfast Checks for the Health Thresholds that you are below to failures (meaning that you suffer from the Health Threshold Penalties as if you failed those Steadfast Checks).`
+  },
+  "cataclysmic-attack": {
+    label: "Cataclysmic Attack",
+    kiCostPerTier: 4,
+    prerequisite: "aoe",
+    prerequisiteText: "This Attacking Maneuver has an AoE.",
+    wholeBattlefield: true,
+    text: `
+      Cataclysmic Attack: Your attack possesses enough destructive force to reach the horizons.
+      –KP Cost: 4(T)
+      –Prerequisite: This Attacking Maneuver has an AoE.
+      –Effect: The AoE for this Attacking Maneuver covers the entire Battlefield.`
+  },
+  "complete-annihilation": {
+    label: "Complete Annihilation",
+    kiCostPerTier: 2,
+    prerequisite: "charges>=3",
+    prerequisiteText: "This Attacking Maneuver possesses 3+ Energy Charges.",
+    extraDamageAttribute: true, undyingHalf: true, silencesDefeat: true,
+    text: `
+      Complete Annihilation: Thanks to the deadly energy infused into this attack, almost nobody can survive it.
+      –KP Cost: 2(T)
+      –Prerequisite: This Attacking Maneuver possesses 3+ Energy Charges.
+      –Effect: This Profile has multiple effects:
+
+      * Apply your Damage Attribute an additional time.
+      * If a target of this Attacking Maneuver is in the Undying State, increase the amount of Damage they receive by 1/2.
+      * If an Opponent is Defeated by this Attacking Maneuver, they cannot activate any effects with the Triggered/Defeated Keyword.`
+  },
+  "genki": {
+    label: "Genki",
+    kiCostPerTier: 0,
+    // The Energy Gathering Unique Ability does not exist here yet, so its Prerequisite cannot
+    // be read; it does not block until it can be.
+    prerequisite: "",
+    prerequisiteText: "You possess the Energy Gathering Unique Ability.",
+    genki: true,
+    text: `
+      Genki: By combining the power of nature and your Allies, you create the strongest technique.
+      –KP Cost: N/A
+      –Prerequisite: You possess the Energy Gathering Unique Ability.
+      –Effect: When making this Attacking Maneuver, lose all stacks of Lifeforce. For each stack of Lifeforce lost through this effect, increase your Wound Roll by 2(bT).
+
+      While you have declared an Attacking Maneuver with this Super Profile for the effects of Energy Charge, if an Ally would give you Ki Points through the Empower Maneuver, instead of gaining those Ki points, you gain an additional Ki Wager that does not count towards your Capacity equal to 1/2 of those Ki Points.`
+  },
+  "giga-flare": {
+    label: "Giga Flare",
+    kiCostPerTier: 0,
+    prerequisite: "profile:megaFlare",
+    prerequisiteText: "This Attacking Maneuver possesses the Mega Flare Profile.",
+    gigaFlare: { maxActions: 2, chargesPerAction: 2, kiPerTierPerAction: 2 },
+    text: `
+      Giga Flare: Forcing even more energy into your attack, you unleash a force of pure destruction.
+      –KP Cost: 2(T) per Action spent through its effects
+      –Prerequisite: This Attacking Maneuver possesses the Mega Flare Profile.
+      –Effect: Spend up to 2 Actions. For each Action spent, this Attacking Maneuver gains 2 Energy Charges.`
+  },
+  "karmic": {
+    label: "Karmic",
+    kiCostPerTier: 2,
+    prerequisite: "alignment",
+    prerequisiteText: "Z-Soul Alignment is not Neutral",
+    karmic: true,
+    text: `
+      Karmic: This attack deals far more damage to enemies whose moral code opposes your own.
+      –KP Cost: 2(T)
+      –Prerequisite: Z-Soul Alignment is not Neutral
+      –Effect: Increase the Damage Category by 1 Category against Characters who have an opposing Z-Soul. If that Opponent’s Z-Soul Alignment is ‘Pure’, apply this bonus twice.`
+  },
+  "multi-profile": {
+    label: "Multi-Profile",
+    kiCostPerTier: 0,
+    prerequisite: "",
+    prerequisiteText: "N/A.",
+    multiProfile: true,
+    text: `
+      Multi-Profile: By combining two separate types of attacks, you create something new.
+      –KP Cost: Varies
+      –Prerequisite: N/A.
+      –Effect: Select a different Profile you have access to when applying this Super Profile. Apply that Profile to this Attacking Maneuver, but do not apply its Ki Point Cost. That Attacking Maneuver is also considered to be of that Profile. The Ki Point Cost of this Super Profile varies depending on the Ki Point Cost of the selected Profile:
+
+      * =< 4(T). The Ki point Cost of Multi-Profile is 1(T).
+      * 5(T) ~ 7(T). The Ki point Cost of Multi-Profile is 2(T).
+      * >= 8(T). The Ki point Cost of Multi-Profile is 3(T).`
+  },
+  "super-beam": {
+    label: "Super Beam",
+    kiCostPerTier: 2,
+    prerequisite: "profile:beam",
+    prerequisiteText: "This Attacking Maneuver possesses the Beam Profile.",
+    superBeam: true, chargeCategories: 1,
+    text: `
+      Super Beam: This attack is the most powerful beam of energy you can muster.
+      –KP Cost: 2(T)
+      –Prerequisite: This Attacking Maneuver possesses the Beam Profile.
+      –Effect: This Super Profile has multiple effects:
+
+      * This Attacking Maneuver gains a Line AoE.
+      * Increase the Line AoE by 1 Magnitude for every 2 Energy Charges applied to this Attacking Maneuver.
+      * Increase the Dice Category of the Extra Dice gained from your Energy Charges by 1 Dice Category.`
+  },
+  "super-combination": {
+    label: "Super Combination",
+    kiCostPerTier: 2,
+    prerequisite: "profile:combination",
+    prerequisiteText: "This Attacking Maneuver possesses the Combination Profile.",
+    superCombination: true,
+    text: `
+      Super Combination: A true all-out barrage, with this attack, you pummel your enemy until they stop moving.
+      –KP Cost: 2(T)
+      –Prerequisite: This Attacking Maneuver possesses the Combination Profile.
+      –Effect: You may spend any number of additional Actions when using this Signature Technique. For each Action spent:
+
+      * Apply a rank of the Alotta Lotta Attacks and Peppering Blows Advantages (this may allow you to exceed the maximum).
+      * Apply an Energy Charge to this Attacking Maneuver.`
+  },
+  "super-launch": {
+    label: "Super Launch",
+    kiCostPerTier: 2,
+    prerequisite: "profile:launching",
+    prerequisiteText: "This Attacking Maneuver possesses the Launching Profile.",
+    superLaunch: true,
+    text: `
+      Super Launch: This attack is so potent, it knocks away any opponent regardless of their strength.
+      –KP Cost: 2(T)
+      –Prerequisite: This Attacking Maneuver possesses the Launching Profile.
+      –Effect: This Super Profile has multiple effects:
+
+      * You automatically succeed the Might Clash for the effects of the Knockback Advantage.
+      * Upon moving a Character through the effects of the Knockback Advantage, reduce their Life Points by the amount of Squares they would move through its effects (even if they do not move that number of Squares).`
+  },
+  "weather-maximizer": {
+    label: "Weather Maximizer",
+    kiCostPerTier: 4,
+    prerequisite: "has:weather-calling",
+    prerequisiteText: "This Attacking Maneuver possesses the Weather Calling Advantage.",
+    weatherTier: 3,
+    text: `
+      Weather Maximizer: By unleashing your full power, you create catastrophic environmental changes.
+      –KP Cost: 4(T)
+      –Prerequisite: This Attacking Maneuver possesses the Weather Calling Advantage.
+      –Effect: The Battle Weather created by the Weather Calling Advantage is Cataclysmic.`
+  }
+});
+
+/**
  * What a Foundation demands of an attack made with it, beyond the Damage Attribute.
  *
  * Each Foundation has rules of its own. Physical is the one written so far: "Physical
@@ -964,13 +1133,32 @@ export function squaresBetween(a, b) {
  * which is exactly the sort of thing that gets a range band off by one and is why this
  * is written down rather than done at each call site.
  *
+ * Height counts too: "For every difference in rank of High Environment, for which normal
+ * Battle Environments are considered to be Rank 0, treat the Opponent as if they are 8
+ * additional Squares away from you." The ranks are on both sheets.
+ *
  * @returns {number|null} null when it cannot be measured - no token, or two scenes.
  */
 export function squaresAway(actor, target) {
+  const flat = flatSquaresAway(actor, target);
+  return (flat === null) ? null : flat + (heightRanksBetween(actor, target) * SQUARES_PER_HEIGHT_RANK);
+}
+
+/** "8 additional Squares away" for each rank of High Environment between you. */
+export const SQUARES_PER_HEIGHT_RANK = 8;
+
+/** The distance on the map alone, before any height is added. */
+export function flatSquaresAway(actor, target) {
   const from = actor?.getActiveTokens?.(false, true)?.[0];
   const to = target?.getActiveTokens?.(false, true)?.[0];
   const between = squaresBetween(from, to);
   return (between === null) ? null : between + 1;
+}
+
+/** How many ranks of High Environment lie between two characters. */
+export function heightRanksBetween(actor, target) {
+  const rank = who => Math.max(0, Number(who?.system?.battlefield?.highEnvironment) || 0);
+  return Math.abs(rank(actor) - rank(target));
 }
 
 /**
@@ -1464,9 +1652,33 @@ async function pick(title, question, buttons) {
  */
 export const DEFAULT_AREA_MAGNITUDE = "standard";
 
-/** What Magnitude this Area actually has, stated or defaulted. */
+/** What Magnitude this Area states, or the default where it states none. */
 export function areaMagnitude(area) {
   return area?.magnitude ?? DEFAULT_AREA_MAGNITUDE;
+}
+
+/**
+ * The Magnitudes in order: "Minor (0) - Sphere only, Standard (1), Large (2), Huge (3),
+ * Destructive (4)". Increasing a Magnitude is a step along this list, and it ends at
+ * Destructive.
+ */
+export const MAGNITUDES = Object.freeze(["minor", "standard", "large", "huge", "destructive"]);
+
+/**
+ * Where an Area ends up on that list once everything that adds Magnitudes has: its stated
+ * (or default) Magnitude, plus `magnitudeSteps`, held to the ends of the list.
+ */
+export function magnitudeIndex(area) {
+  if (!area) return -1;
+  const stated = MAGNITUDES.indexOf(areaMagnitude(area));
+  const base = (stated < 0) ? MAGNITUDES.indexOf(DEFAULT_AREA_MAGNITUDE) : stated;
+  const steps = Number(area.magnitudeSteps) || 0;
+  return Math.max(0, Math.min(MAGNITUDES.length - 1, base + steps));
+}
+
+/** The Magnitude an Area actually has, by name, after every step is taken. */
+export function finalMagnitude(area) {
+  return area ? MAGNITUDES[magnitudeIndex(area)] : "";
 }
 
 /**
@@ -1480,13 +1692,16 @@ export function areaMagnitude(area) {
  */
 export function areaLabel(area) {
   if (!area) return "";
-  // Magnitudes more than it has, said rather than worked out, since nothing here measures an
-  // Area - a High Power Weapon's "increase the Magnitude ... by 1 Magnitude".
-  const more = Number(area.magnitudeSteps) || 0;
-  const name = `${areaMagnitude(area)} ${area.shape}`
-    .replace(/(^|\s)\w/g, c => c.toUpperCase())
-    + (more ? ` +${more} Magnitude${(more === 1) ? "" : "s"}` : "");
-  if (area.centredOnTarget) return `${name} (centred on the target)`;
+  // The Magnitude it ends up at, by name - a High Power Weapon's "increase the Magnitude ...
+  // by 1 Magnitude" turns a Standard Line into a Large one. Nothing here measures an Area,
+  // so the name is what a reader checks their ruling against.
+  let name = `${finalMagnitude(area)} ${area.shape}`.replace(/(^|\s)\w/g, c => c.toUpperCase());
+  // Limited Line: "your Line AoE ends 8 Squares from you".
+  if (area.lengthSquares) name += ` (${area.lengthSquares} Squares)`;
+  // Cataclysmic Attack: "covers the entire Battlefield". The reach, not the Magnitude.
+  if (area.wholeBattlefield) name += " - entire Battlefield";
+  if (area.centredOnTarget) return `${name} (centred on ${area.centreName || "the target"})`;
+  if (area.anySquare) return `${name} (any Square)`;
   return area.centredOnSelf ? `${name} (centred on you)` : name;
 }
 

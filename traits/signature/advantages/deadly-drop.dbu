@@ -1,0 +1,20 @@
+id: deadly-drop
+name: Deadly Drop
+kind: signature
+side: advantages
+tpCost: 8
+requirement: Physical Attack, Grappling Disadvantage, Restricted – High Environment.
+requires: foundation:physical, has:grappling, chose:restricted-environment=high
+summary: Grappling up high: drop to the ground, Might Clash, Ground Collision +1/2 Might x rank.
+description: >
+  You use gravity to slam an Opponent into the ground for massive damage.
+text: >
+  Deadly Drop: You use gravity to slam an Opponent into the ground for massive damage.
+  –TP Cost: 8
+  –Requirement: Physical Attack, Grappling Disadvantage, Restricted – High Environment.
+  –Effect: If this Attacking Maneuver hits an Opponent while you are the Grappler in a Grapple in a High Environment (except Deep Space), you (and any characters you are Grappling) may leave all High Environments and return to the Battle Environment on the Square you are occupying. Then, make a Might Clash against the target of this Attacking Maneuver. If you win, they Collide with the Square underneath them (see — Ground Collision). Increase the Collision Damage they suffer by 1/2 of your Might multiplied by the rank of the High Environment you were in when you applied this effect.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

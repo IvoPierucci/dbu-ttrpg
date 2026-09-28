@@ -1,0 +1,20 @@
+id: compressed-element
+name: Compressed Element
+kind: signature
+side: disadvantages
+tpCost: -4
+requirement: Elemental (Fire/Ice/Lightning/Poison/Water/Dark/Light/Plantlife).
+requires: profile:elementalFire|profile:elementalIce|profile:elementalLightning|profile:elementalPoison|profile:elementalWater|profile:elementalDark|profile:elementalLight|profile:elementalPlantlife
+summary: The Elemental Profile's second effect is not applied.
+description: >
+  This technique is unable to affect the battlefield.
+text: >
+  Compressed Element: This technique is unable to affect the battlefield.
+  –TP Cost: -4
+  –Requirement: Elemental (Fire/Ice/Lightning/Poison/Water/Dark/Light/Plantlife).
+  –Effect: Ignore the second listed effect of the Elemental Profile(s) applied to this Signature Technique.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

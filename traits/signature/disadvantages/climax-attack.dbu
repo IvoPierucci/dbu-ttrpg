@@ -1,0 +1,21 @@
+id: climax-attack
+name: Climax Attack
+kind: signature
+side: disadvantages
+tpCost: -2
+tpCostPerRank: -2, -3, -4
+ranks: 3
+requirement: N/A
+summary: Only at Bruised or worse (rank 2: Injured, rank 3: Critical).
+description: >
+  Your technique is something used as a last resort or when your blood is pumping high enough.
+text: >
+  Climax Attack: Your technique is something used as a last resort or when your blood is pumping high enough.
+  –TP Cost: -2 (First Rank), -3 (Second Rank), -4 (Third Rank)
+  –Requirement: N/A
+  –Effect: You can only use this Signature Technique while below the Bruised Threshold (First Rank), the Injured Threshold (Second Rank), or the Critical Threshold (Third Rank).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

@@ -1,0 +1,20 @@
+id: vehicle-attack
+name: Vehicle Attack
+kind: signature
+side: disadvantages
+tpCost: -4
+requirement: Blitz Profile OR Restricted – Weapon Disadvantage.
+requires: profile:blitz|has:restricted-weapon
+summary: Only while Piloting a Vehicle - not enforced until Vehicles exist.
+description: >
+  This technique requires the use of your vehicle to ram into your enemies.
+text: >
+  Vehicle Attack: This technique requires the use of your vehicle to ram into your enemies.
+  –TP Cost: -4
+  –Requirement: Blitz Profile OR Restricted – Weapon Disadvantage.
+  –Effect: You cannot use this Signature Technique unless you are Piloting a Vehicle.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

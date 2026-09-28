@@ -1,0 +1,20 @@
+id: sudden-blast
+name: Sudden Blast
+kind: signature
+side: advantages
+tpCost: 4
+requirement: Clearing Profile.
+requires: profile:clearing
+summary: Cannot be Reflected.
+description: >
+  This explosive technique is impossible to reflect.
+text: >
+  Sudden Blast: This explosive technique is impossible to reflect.
+  –TP Cost: 4
+  –Requirement: Clearing Profile.
+  –Effect: A Character cannot use the Reflect Maneuver as a Modifier Maneuver through the effects of the Parry option of the Defend Maneuver or the Deflect/Distant Deflect options of the Intervene Maneuver in response to this Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

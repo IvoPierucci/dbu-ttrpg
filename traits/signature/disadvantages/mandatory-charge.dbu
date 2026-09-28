@@ -1,0 +1,21 @@
+id: mandatory-charge
+name: Mandatory Charge
+kind: signature
+side: disadvantages
+tpCost: -4
+tpCostPerRank: -4, -8, -10
+ranks: 3
+requirement: N/A
+summary: Needs 2 uses of Energy Charge per rank first.
+description: >
+  The technique requires a certain accumulation of energy before it can be used.
+text: >
+  Mandatory Charge: The technique requires a certain accumulation of energy before it can be used.
+  –TP Cost: -4 (First Rank), -8 (Second Rank), -10 (Third Rank)
+  –Requirement: N/A
+  –Effect: You must use the Energy Charge Maneuver on this Technique two times for each rank of this Disadvantage before it can be used.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

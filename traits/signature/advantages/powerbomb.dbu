@@ -1,0 +1,22 @@
+id: powerbomb
+name: Powerbomb
+kind: signature
+side: advantages
+tpCost: 11
+tpCostPerRank: 11, 4
+ranks: 2
+requirement: Physical Attack, Grappling Disadvantage.
+requires: foundation:physical, has:grappling
+summary: Grappling the target: end the Grapple after for +1/2 Might Wound per rank; no Grapple until your next turn.
+description: >
+  By releasing your grabbed opponent at the right time, you can add momentum to your attack to deal even greater damage.
+text: >
+  Powerbomb: By releasing your grabbed opponent at the right time, you can add momentum to your attack to deal even greater damage.
+  –TP Cost: 11 (First Rank), 4 (Second Rank)
+  –Requirement: Physical Attack, Grappling Disadvantage.
+  –Effect: When using this Attacking Maneuver while in a Grapple that you are the Grappler of against a target that is the Grappled in that same Grapple, you can choose to end the Grapple after completing this Attacking Maneuver. If you do, you cannot use the Grapple Maneuver until the start of your next turn, but this Attacking Maneuver has its Wound Roll increased by 1/2 of your Might for each Rank of this Advantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

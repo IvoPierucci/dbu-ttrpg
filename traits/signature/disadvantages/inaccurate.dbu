@@ -1,0 +1,22 @@
+id: inaccurate
+name: Inaccurate
+kind: signature
+side: disadvantages
+tpCost: -4
+tpCostPerRank: -4, -5, -6
+ranks: 3
+requirement: This Signature Technique does not have the Accurate Advantage.
+requires: !has:accurate
+summary: Strike -1(T) per rank.
+description: >
+  The technique is clumsy, hard to aim, or gives the opponent more time to react.
+text: >
+  Inaccurate: The technique is clumsy, hard to aim, or gives the opponent more time to react.
+  –TP Cost: -4 (First Rank), -5 (Second Rank), -6 (Third Rank)
+  –Requirement: This Signature Technique does not have the Accurate Advantage.
+  –Effect: Decrease your Strike Rolls for this Signature Technique by 1(T) for each rank of this Disadvantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

@@ -1,0 +1,20 @@
+id: consolidated-strike
+name: Consolidated Strike
+kind: signature
+side: disadvantages
+tpCost: -4
+requirement: Attacking Maneuver does not possess an AoE.
+requires: !aoe
+summary: Must be made with Called Shot.
+description: >
+  This technique relies heavily upon exploiting a vital area on the target.
+text: >
+  Consolidated Strike: This technique relies heavily upon exploiting a vital area on the target.
+  –TP Cost: -4
+  –Requirement: Attacking Maneuver does not possess an AoE.
+  –Effect: To use this Signature Technique, you must apply the Called Shot Modifier Maneuver to this Attacking Maneuver. If you cannot apply the Called Shot Modifier Maneuver to this Attacking Maneuver for any reason (such as through lacking the Actions to pay the Action Cost), then you cannot use this Signature Technique. If this would occur after declaring it, then the use of the Signature Technique Maneuver fails and you regain the Action Cost and Ki Point Cost of the Signature Technique Maneuver (if it was declared through the Energy Charge Maneuver, you lose all accumulated Energy Charges).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

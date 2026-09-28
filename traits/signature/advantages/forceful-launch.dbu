@@ -1,0 +1,22 @@
+id: forceful-launch
+name: Forceful Launch
+kind: signature
+side: advantages
+tpCost: 4
+tpCostPerRank: 4, 6, 8
+ranks: 3
+requirement: Launching Profile.
+requires: profile:launching
+summary: Knockback's distance and Might Clash +1(T) per rank.
+description: >
+  You put even more power into your attacks to knock enemies further away from you.
+text: >
+  Forceful Launch: You put even more power into your attacks to knock enemies further away from you.
+  –TP Cost: 4 (First Rank), 6 (Second Rank), 8 (Third Rank)
+  –Requirement: Launching Profile.
+  –Effect: Increase the amount of Squares an Opponent is moved through the effects of Knockback and your Dice Score for Knockback’s Might Clash by 1(T) for each rank of this Advantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

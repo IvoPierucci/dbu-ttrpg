@@ -1,0 +1,20 @@
+id: rebound
+name: Rebound
+kind: signature
+side: advantages
+tpCost: 2
+requirement: Homing Advantage.
+requires: has:homing
+summary: A Homing re-roll may aim at another target.
+description: >
+  You have precision control over how your energy moves around the battlefield.
+text: >
+  Rebound: You have precision control over how your energy moves around the battlefield.
+  –TP Cost: 2
+  –Requirement: Homing Advantage.
+  –Effect: When you roll your Strike Roll again through the effects of the Homing Advantage, you can select a different target for this Attacking Maneuver to target instead of targeting the Opponent you missed. Only the Opponent who was initially targeted by this Attacking Maneuver receives Diminishing Defense after this Attacking Maneuver is completed.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

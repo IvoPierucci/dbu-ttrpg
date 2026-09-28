@@ -1,0 +1,20 @@
+id: ascended-signature
+name: Ascended Signature
+kind: signature
+side: advantages
+tpCost: 8
+requirement: Super Signature Technique.
+requires: level:super
+summary: May be used as an Ultimate once; then not again this Encounter.
+description: >
+  Turn the power up to a new level! A Super becomes an Ultimate!
+text: >
+  Ascended Signature: Turn the power up to a new level! A Super becomes an Ultimate!
+  –TP Cost: 8
+  –Requirement: Super Signature Technique.
+  –Effect: At Attack Declaration, this Signature Technique can become an Ultimate Signature Technique. If it does, you cannot use this Signature Technique for the remainder of the Combat Encounter. This Signature Technique still cannot gain Advantages that require an Ultimate Signature Technique.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

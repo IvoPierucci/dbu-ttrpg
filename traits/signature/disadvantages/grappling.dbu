@@ -1,0 +1,19 @@
+id: grappling
+name: Grappling
+kind: signature
+side: disadvantages
+tpCost: -5
+requirement: N/A
+summary: Only while you are the Grappler of a target.
+description: >
+  The technique requires you to be holding the target.
+text: >
+  Grappling: The technique requires you to be holding the target.
+  –TP Cost: -5
+  –Requirement: N/A
+  –Effect: You can only use this Attacking Maneuver if you are currently Grappling at least one of the target(s) of this Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

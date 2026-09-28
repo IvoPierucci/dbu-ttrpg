@@ -1,0 +1,20 @@
+id: last-legs
+name: Last Legs
+kind: signature
+side: advantages
+tpCost: 6
+requirement: Ultimate Signature Technique.
+requires: level:ultimate
+summary: No Threshold penalties; Strike and Wound +1(T) per Threshold below.
+description: >
+  Ignore your Threshold penalties and gain power for each Threshold you’re below.
+text: >
+  Last Legs: Ignore your Threshold penalties and gain power for each Threshold you’re below.
+  –TP Cost: 6
+  –Requirement: Ultimate Signature Technique.
+  –Effect: Ignore all Health Threshold penalties during this Attacking Maneuver. Increase your Strike and Wounds Rolls by 1(T) for each Health Threshold you’re below.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

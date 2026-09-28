@@ -1,0 +1,21 @@
+id: exhaustive
+name: Exhaustive
+kind: signature
+side: disadvantages
+tpCost: -6
+tpCostPerRank: -6, -10
+ranks: 2
+requirement: N/A
+summary: After the attack, Fatigued stacks equal to the ranks until the end of your next turn.
+description: >
+  Your technique leaves you exhausted.
+text: >
+  Exhaustive: Your technique leaves you exhausted.
+  –TP Cost: -6 (First Rank), -10 (Second Rank)
+  –Requirement: N/A
+  –Effect: After using this Signature Technique, gain a number of Stacks for the Fatigued Combat Condition equal to the number of ranks spent on this Disadvantage until the end of your next turn. If you use this Signature Technique during this effect, refresh the duration of this effect.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

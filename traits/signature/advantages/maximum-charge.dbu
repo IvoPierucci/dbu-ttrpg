@@ -1,0 +1,20 @@
+id: maximum-charge
+name: Maximum Charge
+kind: signature
+side: advantages
+tpCost: 6
+requirement: Ultimate Signature Technique.
+requires: level:ultimate
+summary: Energy Charge dice +1 Dice Category.
+description: >
+  Your Energy Charges are even stronger when used on this technique.
+text: >
+  Maximum Charge: Your Energy Charges are even stronger when used on this technique.
+  –TP Cost: 6
+  –Requirement: Ultimate Signature Technique.
+  –Effect: Increase the Dice Category of the Extra Dice gained from any Energy Charges by 1 Category.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

@@ -1,0 +1,24 @@
+id: homing
+name: Homing
+kind: signature
+side: advantages
+tpCost: 6
+tpCostPerRank: 6, 8, 10
+ranks: 3
+requirement: This Attacking Maneuver does not have an Area of Effect.
+requires: !aoe
+summary: A miss may re-roll the Strike once per rank against the same defence, +1(T) per miss.
+description: >
+  Your attack is able to be controlled in some way to allow it to try again.
+text: >
+  Homing: Your attack is able to be controlled in some way to allow it to try again.
+  –TP Cost: 6 (First Rank), 8 (Second Rank), 10 (Third Rank)
+  –Requirement: This Attacking Maneuver does not have an Area of Effect.
+  –Effect: When you miss an Opponent with this Signature Technique, you may roll your Strike Roll an additional time equal to the ranks of this Advantage. For each time you’ve missed, increase your Strike Roll by 1(T). Attacks from the Homing Advantage are still considered one Attacking Maneuver and therefore do not inflict further Diminishing Defense upon an Opponent.
+
+  If you have 2+ Ranks in Homing, if an Opponent that was targeted by this Attacking Maneuver moves outside of this Attacking Maneuver’s range, if they are still within the Battlefield, you may still target them with this Attacking Maneuver but if you miss, you cannot apply the effects of Homing on that Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

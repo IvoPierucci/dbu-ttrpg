@@ -1,0 +1,20 @@
+id: low-stakes-attack
+name: Low Stakes Attack
+kind: signature
+side: advantages
+tpCost: 5
+requirement: Fake Out Advantage.
+requires: has:fake-out
+summary: Does not count towards the Signature Technique Maneuver's uses.
+description: >
+  You never really intended this to be a big attack anyways.
+text: >
+  Low Stakes Attack: You never really intended this to be a big attack anyways.
+  –TP Cost: 5
+  –Requirement: Fake Out Advantage.
+  –Effect: This Signature Technique does not count towards your uses of the Signature Technique Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

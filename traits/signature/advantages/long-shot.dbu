@@ -1,0 +1,21 @@
+id: long-shot
+name: Long Shot
+kind: signature
+side: advantages
+tpCost: 3
+tpCostPerRank: 3, 4
+ranks: 2
+requirement: N/A
+summary: Strike and Wound +1(T) per rank against targets 9+ Squares away.
+description: >
+  This technique is stronger when used at a far distance.
+text: >
+  Long Shot: This technique is stronger when used at a far distance.
+  –TP Cost: 3 (First Rank), 4 (Second Rank)
+  –Requirement: N/A
+  –Effect: Increase your Strike Roll and Wound Rolls for this Signature Technique by 1(T) for each rank of this Advantage when targeting Opponents who are 9+ Squares away from you.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

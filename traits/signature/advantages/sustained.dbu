@@ -1,0 +1,21 @@
+id: sustained
+name: Sustained
+kind: signature
+side: advantages
+tpCost: 6
+tpCostPerRank: 6, 6, 6, 6, 6
+ranks: 5
+requirement: N/A
+summary: Damage leaves a DOT stack per rank for 3 Combat Rounds; Damage again resets the clock.
+description: >
+  Your attack continues to deal Damage after it’s been used.
+text: >
+  Sustained: Your attack continues to deal Damage after it’s been used.
+  –TP Cost: 6 (First Rank), 6 (Second Rank), 6 (Third Rank), 6 (Fourth Rank), 6 (Fifth Rank)
+  –Requirement: N/A
+  –Effect: If you deal Damage with this Signature Technique, your Opponent gains a Stack of DOT for each Rank of this Advantage. This effect lasts for 3 Combat Rounds. If the Opponent is dealt Damage by an Attacking Maneuver with this Advantage while suffering from this effect, reset the amount of Combat Rounds until this effect ends.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

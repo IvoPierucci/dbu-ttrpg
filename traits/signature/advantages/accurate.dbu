@@ -1,0 +1,22 @@
+id: accurate
+name: Accurate
+kind: signature
+side: advantages
+tpCost: 3
+tpCostPerRank: 3, 5, 7
+ranks: 3
+requirement: This Signature Technique does not have the Inaccurate Disadvantage.
+requires: !has:inaccurate
+summary: Strike +1(T) per rank.
+description: >
+  A technique that hones one’s focus on the target when in use.
+text: >
+  Accurate: A technique that hones one’s focus on the target when in use.
+  –TP Cost: 3 (First Rank), 5 (Second Rank), 7 (Third Rank)
+  –Requirement: This Signature Technique does not have the Inaccurate Disadvantage.
+  –Effect: Increase your Strike Rolls for this Signature Technique by 1(T) for each rank of this Advantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

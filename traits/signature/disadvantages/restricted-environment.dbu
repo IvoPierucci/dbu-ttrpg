@@ -1,0 +1,20 @@
+id: restricted-environment
+name: Restricted – Environment
+kind: signature
+side: disadvantages
+tpCost: -6
+requirement: N/A
+choose: environment
+summary: Only in the chosen Battle Environment (High: any High Environment).
+description: >
+  This technique can only be used while in a certain Environment.
+text: >
+  Restricted – Environment: This technique can only be used while in a certain Environment.
+  –TP Cost: -6
+  –Requirement: N/A
+  –Effect: Choose a Battle Environment other than Standard, if you select High then you select every High Environment. You cannot use this Signature Technique unless you are in the chosen Battle Environment.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

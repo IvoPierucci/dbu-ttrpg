@@ -1,0 +1,20 @@
+id: weather-calling
+name: Weather Calling
+kind: signature
+side: advantages
+tpCost: 10
+requirement: Elemental Profile that is a Connected Profile to a Battle Weather (see — Battle Weather)
+requires: elemental-weather
+summary: On a hit, the Connected Battle Weather in a Sphere on them: Natural for a Super, Unnatural for an Ultimate - set by hand.
+description: >
+  Change the Battle Weather through your magic.
+text: >
+  Weather Calling: Change the Battle Weather through your magic.
+  –TP Cost: 10
+  –Requirement: Elemental Profile that is a Connected Profile to a Battle Weather (see — Battle Weather)
+  –Effect: When you hit an Opponent with this Signature Technique, apply the Battle Weather in a Sphere AoE (centered on that Opponent) whose Connected Profile is your Elemental Profile for this Signature Technique. The Tier is Natural if this is a Super Signature and Unnatural if this Attacking Maneuver is an Ultimate Signature.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

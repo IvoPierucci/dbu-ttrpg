@@ -1,0 +1,20 @@
+id: restricted-stance
+name: Restricted – Stance
+kind: signature
+side: disadvantages
+tpCost: -3
+requirement: Martial Skill Awakening
+choose: text
+summary: Only in the chosen Stance - not enforced until Martial Skill exists.
+description: >
+  This technique can only be used while in a certain Stance.
+text: >
+  Restricted – Stance: This technique can only be used while in a certain Stance.
+  –TP Cost: -3
+  –Requirement: Martial Skill Awakening
+  –Effect: Choose a Stance (see — Martial Skill). You can only use this Signature Technique while in your chosen Stance.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

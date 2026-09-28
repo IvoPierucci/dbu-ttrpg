@@ -4,6 +4,7 @@ kind: signature
 side: advantages
 tpCost: 10
 requirement: N/A
+summary: Move up to Boosted Speed first; each Square past the third adds 1 Wound (max 2(T)).
 description: >
   Your attack lets you rush forward and turn your momentum into power.
 text: >

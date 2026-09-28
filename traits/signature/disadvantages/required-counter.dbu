@@ -1,0 +1,20 @@
+id: required-counter
+name: Required Counter
+kind: signature
+side: disadvantages
+tpCost: -5
+requirement: Counter Advantage.
+requires: has:counter
+summary: Only through Counter.
+description: >
+  This technique is only usable when your opponent is in the midst of attacking.
+text: >
+  Required Counter: This technique is only usable when your opponent is in the midst of attacking.
+  –TP Cost: -5
+  –Requirement: Counter Advantage.
+  –Effect: You cannot use this Signature Technique Maneuver except through the effects of the Counter Advantage.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

@@ -6,6 +6,8 @@ tpCost: 4
 tpCostPerRank: 4, 6, 8
 ranks: 3
 requirement: This Signature Technique does not have the Low Penetration Disadvantage.
+requires: !has:low-penetration
+summary: Wound +2(T) per rank.
 description: >
   Your Signature Technique hits harder, by a rank at a time: 2(T) on its Wound Roll
   for each rank bought. The ranks are what a Parry or a Deflect has to answer.

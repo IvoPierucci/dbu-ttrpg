@@ -1,0 +1,20 @@
+id: brutal-blitz
+name: Brutal Blitz
+kind: signature
+side: advantages
+tpCost: 5
+requirement: Blitz Profile.
+requires: profile:blitz
+summary: Charging Assault for your full Boosted Speed: Agility may be the Damage Attribute.
+description: >
+  When you rush headlong into battle, you can turn your momentum into power.
+text: >
+  Brutal Blitz: When you rush headlong into battle, you can turn your momentum into power.
+  –TP Cost: 5
+  –Requirement: Blitz Profile.
+  –Effect: If you move a number of Squares equal to your Boosted Speed through the effects of Charging Assault, you may use your Agility as the Damage Attribute for that Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

@@ -1,0 +1,19 @@
+id: united-attack
+name: United Attack
+kind: signature
+side: disadvantages
+tpCost: -10
+requirement: N/A
+summary: Needs an Ally with the same Technique to join through United Attack.
+description: >
+  This technique requires more than one person to execute.
+text: >
+  United Attack: This technique requires more than one person to execute.
+  –TP Cost: -10
+  –Requirement: N/A
+  –Effect: To use this Signature Technique, you must have an Ally in your Combat Encounter who also possesses this Signature Technique. When using the Signature Technique Maneuver to use this Signature Technique, you must first ask consent from one of your Allies who possesses this Signature Technique. If they consent, they must in turn use the United Attack Maneuver on this Signature Technique. Failure to gain consent or the inability of the requested Ally to use the United Attack Maneuver results in the Signature Technique Maneuver failing – regain your Action and Ki Points spent on this Signature Technique Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

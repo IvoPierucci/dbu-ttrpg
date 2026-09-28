@@ -1,0 +1,23 @@
+id: restricted-weapon
+name: Restricted – Weapon
+kind: signature
+side: disadvantages
+tpCost: -2
+tpCostPerRank: -2, -4
+ranks: 2
+requirement: Weapon Assisted Advantage.
+requires: has:weapon-assisted
+choose: weapon
+summary: Only with a Weapon of the chosen Category (rank 2: that one Weapon).
+description: >
+  This technique can only be used with certain weapons.
+text: >
+  Restricted – Weapon: This technique can only be used with certain weapons.
+  –TP Cost: -2 (First Rank), -4 (Second Rank)
+  –Requirement: Weapon Assisted Advantage.
+  –Effect: Choose a Weapon Category from those that use the same Foundation as this Signature Technique. You can only use this Signature Technique with a Weapon of that Weapon Category. If you have two ranks, instead choose a single Weapon. You can only use it with that specific Weapon.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

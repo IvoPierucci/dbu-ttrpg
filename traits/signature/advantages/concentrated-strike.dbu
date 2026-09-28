@@ -1,0 +1,20 @@
+id: concentrated-strike
+name: Concentrated Strike
+kind: signature
+side: advantages
+tpCost: 8
+requirement: This Attacking Maneuver possesses an AoE, this Attacking Maneuver does not possess the Pinpoint Precision Advantage.
+requires: aoe, !has:pinpoint-precision
+summary: +1 Energy Charge if it targets a single Character.
+description: >
+  You channel all of the destructive force of this attack into a single point.
+text: >
+  Concentrated Strike: You channel all of the destructive force of this attack into a single point.
+  –TP Cost: 8
+  –Requirement: This Attacking Maneuver possesses an AoE, this Attacking Maneuver does not possess the Pinpoint Precision Advantage.
+  –Effect: If you only target a single Character with this Attacking Maneuver’s AoE, apply an Energy Charge to this Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

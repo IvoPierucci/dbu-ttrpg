@@ -1,0 +1,22 @@
+id: twin-linked
+name: Twin-Linked
+kind: signature
+side: advantages
+tpCost: 10
+requirement: This Signature Technique does not have the Dead-Link Disadvantage for your chosen Combat Roll.
+requires: !same-roll:dead-link
+choose: roll
+choices: strike, wound
+summary: The chosen roll is made twice; the higher counts.
+description: >
+  The technique has a more consistent and stronger Strike or Wound value.
+text: >
+  Twin-Linked: The technique has a more consistent and stronger Strike or Wound value.
+  –TP Cost: 10
+  –Requirement: This Signature Technique does not have the Dead-Link Disadvantage for your chosen Combat Roll.
+  –Effect: Choose Strike or Wound. When making the selected Combat Roll for this Attacking Maneuver, roll it a second time and use the highest Dice Score of the two rolls. If you select Strike, this effect is not applied to the additional Strike Rolls made with the Combination Profile.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

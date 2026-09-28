@@ -1,0 +1,19 @@
+id: instant-assault
+name: Instant Assault
+kind: signature
+side: advantages
+tpCost: 10
+requirement: N/A
+summary: No Instant Maneuver can answer it.
+description: >
+  Your attack hits out of nowhere, leaving enemies no time to prepare.
+text: >
+  Instant Assault: Your attack hits out of nowhere, leaving enemies no time to prepare.
+  –TP Cost: 10
+  –Requirement: N/A
+  –Effect: No Instant Maneuvers can be triggered in response to this Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

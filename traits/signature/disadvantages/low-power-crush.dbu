@@ -1,0 +1,20 @@
+id: low-power-crush
+name: Low-Power Crush
+kind: signature
+side: disadvantages
+tpCost: -10
+requirement: Crushing Profile
+requires: profile:crushing
+summary: The Damage Attribute is halved.
+description: >
+  This technique is blunted in exchange for dealing pure damage.
+text: >
+  Low-Power Crush: This technique is blunted in exchange for dealing pure damage.
+  –TP Cost: -10
+  –Requirement: Crushing Profile
+  –Effect: Halve your Damage Attribute for this Attacking Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

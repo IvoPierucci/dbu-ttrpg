@@ -1,0 +1,22 @@
+id: trick-attack
+name: Trick Attack
+kind: signature
+side: advantages
+tpCost: 4
+requirement: 2+ Skill Ranks in Bluff or Acrobatics.
+requires: skill:bluff>=2|skill:acrobatics>=2, choice-skill>=2
+choose: skill
+choices: bluff, acrobatics
+summary: Chosen Skill vs Intuition/Perception per target: Strike +2(bT) against each one beaten.
+description: >
+  You confuse or distract your opponent, bypassing their defenses in the process.
+text: >
+  Trick Attack: You confuse or distract your opponent, bypassing their defenses in the process.
+  –TP Cost: 4
+  –Requirement: 2+ Skill Ranks in Bluff or Acrobatics.
+  –Effect: Select a Skill – Bluff or Acrobatics. When you target an Opponent with this Attacking Maneuver, make a Clash (Your selected Skill vs Intuition/Perception). If you win, this Attacking Maneuver has its Strike Roll increased by 2(bT).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

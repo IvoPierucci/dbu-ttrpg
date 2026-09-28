@@ -523,9 +523,23 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * carrying a `signature` tag - the concept has no home of its own in the system yet,
    * and a tag is the hook that will not have to move when it does.
    */
-  static energyChargeDie(signature) {
-    return signature ? "1d8" : "1d6";
+  static energyChargeDie(signature, extraCategories = 0) {
+    return categoryFormula(DBUCharacterData.energyChargeCategory(signature, extraCategories));
   }
+
+  /**
+   * The Dice Category of one Energy Charge's die: a d6 (Category 2), and "Charged Up. All
+   * levels of Signature Technique increase the Dice Category of Energy Charges by 1". Other
+   * increases - Maximum Charge, Super Beam - come in as `extraCategories`. Energy Charges
+   * are exempt from the limit on Dice Category increases, so nothing caps this.
+   */
+  static energyChargeCategory(signature, extraCategories = 0) {
+    return DBUCharacterData.ENERGY_CHARGE_CATEGORY + (signature ? 1 : 0)
+      + Math.max(0, Number(extraCategories) || 0);
+  }
+
+  /** A d6: the Category an Energy Charge's die starts at. */
+  static ENERGY_CHARGE_CATEGORY = 2;
 
   /** Column headings for the Attributes in the progression table. */
   static ATTRIBUTE_ABBREVIATIONS = Object.freeze({

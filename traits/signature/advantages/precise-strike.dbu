@@ -1,0 +1,20 @@
+id: precise-strike
+name: Precise Strike
+kind: signature
+side: advantages
+tpCost: 4
+requirement: Launching Profile.
+requires: profile:launching
+summary: A Critical Strike moves Knockback's target half as far again.
+description: >
+  The shock wave your attack makes is explosively stronger.
+text: >
+  Precise Strike: The shock wave your attack makes is explosively stronger.
+  –TP Cost: 4
+  –Requirement: Launching Profile.
+  –Effect: If you score a Critical Result on the Strike Roll for this Attacking Maneuver, increase the amount of Squares your Opponent moves from Knockback by 1/2.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

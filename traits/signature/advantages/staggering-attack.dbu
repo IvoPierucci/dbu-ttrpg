@@ -4,6 +4,7 @@ kind: signature
 side: advantages
 tpCost: 6
 requirement: N/A
+summary: Damage them: a Might Clash; win, they are Staggered until the end of their turn.
 description: >
   Your attack disrupts your opponent's balance, making it difficult for them to move.
 text: >

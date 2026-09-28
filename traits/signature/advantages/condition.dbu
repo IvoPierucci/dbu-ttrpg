@@ -1,0 +1,29 @@
+id: condition
+name: Condition
+kind: signature
+side: advantages
+tpCost: 14
+requirement: Cannot be applied to the ‘Elemental (Fire/Ice/Water/Lightning/Poison)’ Profiles.
+requires: !profile:elementalFire, !profile:elementalIce, !profile:elementalWater, !profile:elementalLightning, !profile:elementalPoison
+choose: condition
+choices: guard-down, drained, shaken, poisoned
+summary: Damage applies the chosen Condition; already suffering it, Wound +3(T) instead.
+description: >
+  This attack is meant to cripple an opponent temporarily.
+text: >
+  Condition: This attack is meant to cripple an opponent temporarily.
+  –TP Cost: 14
+  –Requirement: Cannot be applied to the ‘Elemental (Fire/Ice/Water/Lightning/Poison)’ Profiles.
+  –Effect: If this Attacking Maneuver deals Damage to an Opponent, apply one of the Combat Conditions below for the duration listed (chosen when gaining this Advantage):
+
+  * Guard Down: Until the start of your next turn.
+  * Drained: Until the start of your next turn.
+  * Shaken: Until the end of the target’s next turn.
+  * Poisoned: Until the end of the target’s next turn.
+
+  If an Opponent is already suffering from your selected Combat Condition, instead increase the Wound Roll for this Attacking Maneuver against them by 3(T).
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

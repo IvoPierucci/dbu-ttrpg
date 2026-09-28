@@ -1,0 +1,19 @@
+id: counter
+name: Counter
+kind: signature
+side: advantages
+tpCost: 7
+requirement: N/A
+summary: Usable through Cross Counter instead of the Basic Attack, without halving the Defense Value.
+description: >
+  Your technique works best when used as a response to an opponent’s attack.
+text: >
+  Counter: Your technique works best when used as a response to an opponent’s attack.
+  –TP Cost: 7
+  –Requirement: N/A
+  –Effect: When you use the Cross Counter option of the Defend Maneuver, you may use the Signature Technique Maneuver to use this Signature Technique instead of the Basic Attack Maneuver. If you do, your Defense Value is not halved for this use of the Cross Counter option of the Defend Maneuver.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.

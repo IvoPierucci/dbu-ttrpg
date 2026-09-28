@@ -1,0 +1,19 @@
+id: time-skipped
+name: Time-Skipped
+kind: signature
+side: disadvantages
+tpCost: -4
+requirement: Time to Make the Donuts Advancement
+summary: Only through Time-Skip - not enforced until it exists.
+description: >
+  This technique is designed to be used outside of time.
+text: >
+  Time-Skipped: This technique is designed to be used outside of time.
+  –TP Cost: -4
+  –Requirement: Time to Make the Donuts Advancement
+  –Effect: This Attacking Maneuver can only be used through the effects of the Time-Skip Unique Ability.
+
+---
+
+# No script: what this does is read where the Technique is built or the attack is rolled
+# (module/technique.mjs, module/signature.mjs). See the plan's feature table.
