@@ -35,19 +35,17 @@ text: >
 #
 # --- What the ranks cost ----------------------------------------------------------
 #
-# "4 (First Rank), 6 (Second Rank), 8 (Third Rank)", kept here as written. Whether
-# the third rank costs 8 or costs 4+6+8 is not something the entry settles, and
-# nothing in this system spends Technique Points yet - so the three numbers are
-# carried as they are printed and the sum is the table's until there is something
-# here to spend against.
+# "4 (First Rank), 6 (Second Rank), 8 (Third Rank)". Settled by the Ranks rule: "to buy
+# another rank of an Advantage, you must pay the TP Cost listed" - each rank is paid for
+# on its own, so the three ranks together are 4 + 6 + 8 = 18 TP.
 #
 # --- The Requirement, which cannot be checked -------------------------------------
 #
-# "This Signature Technique does not have the Low Penetration Disadvantage." There is
-# no Low Penetration Disadvantage in this system - the Disadvantages folder holds one
-# file, All or Nothing - so there is nothing to check this against. The requirement
-# is carried as written and shown wherever a feature's requirement is shown, which is
-# what can honestly be done until that file exists.
+# "This Signature Technique does not have the Low Penetration Disadvantage." A
+# requirement is on the Technique being built, not on using it, so it is answered when
+# Power Shot is added. There is no Low Penetration Disadvantage in this system yet, so
+# there is nothing to check this against; the requirement is carried as written until
+# that file exists.
 #
 # --- Where the ranks are answered --------------------------------------------------
 #

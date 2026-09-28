@@ -67,6 +67,7 @@ import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   drawnBonuses, borrowedCategory, withBorrowed, buddyOnlyTechniques, activeBuddy, buddyHeader,
   buddyAttribute, targetableBuddy } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
+import { emptiesCapacity } from "./signature.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
 import * as soarNames from "./environments.mjs";
@@ -2813,6 +2814,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // of the rule: an Out-of-Sequence Maneuver this one offers is not a way out from
   // under it.
   await recordManeuverType(actor, maneuver.type, { messageId: card?.id });
+
+  // All or Nothing: once the Technique is used, whatever Capacity the round had left is gone.
+  if (card && declared && emptiesCapacity(declared.advantages)
+      && actor.system.capacity.remaining > 0) {
+    await actor.update({ "system.capacity.spent": actor.system.capacity.max });
+  }
 
   // The Grenade: "destroyed after concluding the Maneuver" - thrown, and gone.
   if (thrown?.destroyed && card) await actor.items.get(thrown.itemId)?.delete();

@@ -111,6 +111,33 @@ export function featureRanks(advantages, id) {
   return (advantages ?? []).filter(entry => entry === id).length;
 }
 
+/**
+ * A Maneuver's own features plus one an effect hands the attack.
+ *
+ * "If you would gain a rank in an Advantage/Disadvantage through an effect when you don't
+ * have that Advantage/Disadvantage, that Attacking Maneuver gains that Advantage/Disadvantage
+ * for the duration specified." So a grant is added when the attack lacks it and is not a
+ * second copy when it already has it - Blitz on a Technique that bought Charging Assault is
+ * still one Charging Assault.
+ *
+ * The Maneuver's own list is kept exactly as it is: a ranked feature is in it once per rank,
+ * and folding it through a Set - as this used to - turned three ranks of Power Shot into one.
+ */
+export function withGranted(own = [], grant = null) {
+  const list = [...(own ?? [])];
+  if (grant && !list.includes(grant)) list.push(grant);
+  return list;
+}
+
+/**
+ * All or Nothing: "If, after using this Signature Technique, your Capacity is not 0 - set
+ * your Capacity to 0." Capacity is what is left of the round's allowance, so emptying it is
+ * spending the rest of it.
+ */
+export function emptiesCapacity(advantages = []) {
+  return (advantages ?? []).includes("all-or-nothing");
+}
+
 /** "2(T) for each rank of this Advantage." */
 export const POWER_SHOT_PER_RANK = 2;
 

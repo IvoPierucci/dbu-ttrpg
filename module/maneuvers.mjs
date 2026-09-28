@@ -1,6 +1,6 @@
 import { applySlot, granted, permits } from "./effects/interpreter.mjs";
 import { printedLines, traitsOfKind } from "./effects/traits.mjs";
-import { featureAsks } from "./signature.mjs";
+import { featureAsks, withGranted } from "./signature.mjs";
 
 /**
  * Maneuvers: anything that spends an Action.
@@ -1732,10 +1732,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   // was built with, plus whatever the Profile hands out. Blitz grants Charging Assault
   // for free, and a Technique that bought the same Advantage for 10 TP arrives here
   // with it already in the list - so the two routes meet and neither is special.
-  const advantages = [...new Set([
-    ...(maneuver.advantages ?? []),
-    ...(PROFILES[profile]?.grantsAdvantage ? [PROFILES[profile].grantsAdvantage] : [])
-  ])];
+  const advantages = withGranted(maneuver.advantages, PROFILES[profile]?.grantsAdvantage);
 
   const answers = await askFeatures(maneuver, actor, advantages);
   if (!answers) return null;
