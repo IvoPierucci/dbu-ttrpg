@@ -856,7 +856,7 @@ with it - read off it when the attack is declared, and never folded into the cha
   weapon.kiCost, weapon.energyCharges, weapon.damageCategory, weapon.magnitude,
   weapon.meleeRange, weapon.longRangeStrike
   weapon.damageReductionIgnored = 1/2;   weapon.soakIgnored = 1/4;   weapon.selfDamage = 1/10;
-  weapon.lifePerLevel, weapon.hardnessValue
+  weapon.lifePerLevel, weapon.hardnessRank
   flags: weapon.block, .staggering, .lastingWounds, .ignoresLongRange, .wholeBattlefield,
          .scholarshipDamage, .telekinetic, .breaker, .unbreakable, .regenerates, .throwing,
          .barrage, .copies, .burstFire, .concealed, .quickDraw, .remoteAll, .remote.<file>,

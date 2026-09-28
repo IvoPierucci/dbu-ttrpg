@@ -9,7 +9,7 @@ special: true
 source: Core Rule
 description: >
   Special. Attacks with it 2(bT) lower on the Strike Roll - until accustomed - and 5(bT) higher
-  on the Wound Roll. Hardness Value 4.
+  on the Wound Roll. Hardness Rank 4.
 # What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
 # word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
 summary: >
@@ -34,8 +34,9 @@ text: >
 ---
 
 # The Strike's line alone goes once the switch is on: "remove the reduction to your Strike Rolls".
-# The Wound Rolls are read as the Strike's are, with this Weapon.
+# The Wound Rolls are read as the Strike's are, with this Weapon. "The Hardness Value for this
+# Weapon is 4" is its Hardness Rank, by the table's ruling - the Value is the Rank's.
 [passive]
 weapon.strike -= 2(bT); # until switched on
 weapon.wound += 5(bT);
-weapon.hardnessValue = 4;
+weapon.hardnessRank = 4;

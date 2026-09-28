@@ -499,8 +499,9 @@ const TABLE = [
   { key: "weapon.lifePerLevel", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
     doc: "Life Points the Weapon gains for each of its wielder's Power Levels, beyond the 8 "
        + "every Weapon does - the Shield's x, Durable's 2." },
-  { key: "weapon.hardnessValue", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
-    doc: "Its Hardness Value, thrown, where it is not the 2 every Weapon has - Super Heavy's 4." },
+  { key: "weapon.hardnessRank", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Its Hardness Rank, thrown, where it is not the 2 every Weapon has - Super Heavy's 4. Its "
+       + "Hardness Value is the Rank's, at the base Tier of the one it hits." },
   { key: "weapon.block", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Wielding it gives access to the Block Special Maneuver - the Shield." },
   { key: "weapon.staggering", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],

@@ -150,8 +150,10 @@ export const CRAFTED = Object.freeze({
     lifeBase: 32,
     lifePerLevel: 8,
     damageReductionPerBaseTier: 6,
-    // "Weapons have a Hardness Value of 2 by default ... solely for the sake of throwing."
-    hardnessValue: 2
+    // "Weapons have a Hardness Value of 2 by default ... solely for the sake of throwing" - and the
+    // Throw Maneuver's "If it was a Weapon, the Hardness Rank is 2". A Rank, by the table's ruling:
+    // the Value is worked out from it, as any Feature's is.
+    hardnessRank: 2
   }
 });
 
@@ -801,12 +803,12 @@ export function thrownAs(item, thrower, getTrait) {
   const thrown = { itemId: item?.id ?? "", name: item?.name ?? "", rank: 1, value: null,
     mightClash: false };
   if (system.itemType === "weapon") thrown.rank = 2;
-  // A Weapon: its own Hardness Value where its Effects set one - Super Heavy's 4 - and what it
+  // A Weapon: its own Hardness Rank where its Effects set one - Super Heavy's 4 - and what it
   // does thrown: Throwing Weapon's Category and Qualities on a hit, Barrage's Combination
   // Profile, Boomerang's return, Multi-Storage's copies.
   if (system.crafted?.kind === "weapon") {
     const slots = weaponSlots(system.crafted, { getTrait, data: thrower?.system ?? null });
-    if (slots["weapon.hardnessValue"]) thrown.value = applySlot(slots, "weapon.hardnessValue", 0);
+    thrown.rank = applySlot(slots, "weapon.hardnessRank", CRAFTED.weapon.hardnessRank);
     thrown.wielded = Boolean(system.equipped);
     thrown.throwing = slots["weapon.throwing"] === true;
     thrown.barrage = slots["weapon.barrage"] === true;
@@ -1312,7 +1314,7 @@ export function weaponSlots(crafted, { getTrait, data = null, tokens = {}, form 
 /**
  * What a Weapon is, beside what every built Item is: its Type and Size, its Life Points -
  * "starts with 32 Life Points and gains 8 Life Points each Power Level", and what its Effects
- * add for each - its Damage Reduction of 6(bT), and its Hardness Value, thrown.
+ * add for each - its Damage Reduction of 6(bT), and its Hardness Rank, thrown.
  *
  * Broken is `destroyed` - the same thing, by the table's ruling: "If the Weapon's Life Points
  * are reduced to 0, it is broken and cannot be used for any Attacking Maneuvers."
@@ -1333,8 +1335,7 @@ function weaponReading(crafted, { getTrait, data = null, baseTier = 1 }) {
     lifeMax,
     lifeLeft: crafted.destroyed ? 0 : Math.max(0, lifeMax - lost),
     damageReduction: kind.damageReductionPerBaseTier * (Number(baseTier) || 1),
-    hardnessValue: slots["weapon.hardnessValue"]
-      ? applySlot(slots, "weapon.hardnessValue", kind.hardnessValue) : kind.hardnessValue,
+    hardnessRank: applySlot(slots, "weapon.hardnessRank", kind.hardnessRank),
     blocks: slots["weapon.block"] === true,
     // Unbreakable: "cannot be destroyed by any means"; Regenerating: whole at every Encounter's end.
     unbreakable: slots["weapon.unbreakable"] === true,

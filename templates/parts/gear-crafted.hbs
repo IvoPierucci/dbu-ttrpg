@@ -68,7 +68,7 @@
       <span>Quality Slots: {{crafted.reading.used}}/{{crafted.reading.slots}}</span>
       <span data-tooltip="32, and 8 for each Power Level - and whatever its Effects add.">Life Points: {{#if crafted.reading.destroyed}}broken{{else}}{{crafted.reading.lifeLeft}}/{{crafted.reading.lifeMax}}{{/if}}</span>
       <span data-tooltip="6(bT).">Damage Reduction: {{crafted.reading.damageReduction}}</span>
-      <span data-tooltip="Only for throwing it.">Hardness Value: {{crafted.reading.hardnessValue}}</span>
+      <span data-tooltip="Only for throwing it. Its Hardness Value is the Rank's, at the base Tier of the one it hits.">Hardness Rank: {{crafted.reading.hardnessRank}}</span>
       {{else}}
       <span>Apparel Grade: {{crafted.reading.gradeLabel}}</span>
       <span>Apparel Bonus: {{crafted.bonusLabel}}</span>
