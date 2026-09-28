@@ -845,6 +845,34 @@ An `if` around a `piece.` line reads the wearer - Weather Resistant's
 `if (survival.ranks >= 2) { piece.resistsWeather.cold-weather += 2; }`.
 
 
+12e. A WEAPON'S OWN EFFECTS
+---------------------------
+
+A Weapon's Effects work the same way, with `weapon.` Slots for what it does to an attack made
+with it - read off it when the attack is declared, and never folded into the character:
+
+  weapon.strike, weapon.wound       rows on the Strike and the Wound, in (T) or (bT)
+  weapon.strikeNatural              added to the Strike's Natural Result - Targeting System
+  weapon.kiCost, weapon.energyCharges, weapon.damageCategory, weapon.magnitude,
+  weapon.meleeRange, weapon.longRangeStrike
+  weapon.damageReductionIgnored = 1/2;   weapon.soakIgnored = 1/4;   weapon.selfDamage = 1/10;
+  weapon.lifePerLevel, weapon.hardnessValue
+  flags: weapon.block, .staggering, .lastingWounds, .ignoresLongRange, .wholeBattlefield,
+         .scholarshipDamage, .telekinetic, .breaker, .unbreakable, .regenerates, .throwing,
+         .barrage, .copies, .burstFire, .concealed, .quickDraw, .remoteAll, .remote.<file>,
+         .karmicEdge.good / .evil, .diminishingAtDeclaration
+  weapon.returns, weapon.snacks     Boomerang's and Shishkebab's Slots
+
+Lines against the character's own Slots run while it is wielded - the Magic Staff's
+`attack.kiCost.magic -= 2(T);`, Warding's `clash.defending += 1(T);`.
+
+Tokens written in for the attack: `$simple`, `$calledShot`, `$aoe`, `$lineAoe`, `$halfWager`,
+`$belowEnormous`, `$sizeRank`. A Quality's switch turns off only the lines ending
+`# until switched on`, where any do - Super Heavy's Strike.
+
+And a question any script may ask: `wieldingWeapon` - Parrying Armor's `if (!wieldingWeapon)`.
+
+
 13. WHEN SOMETHING IS WRONG
 ---------------------------
 
