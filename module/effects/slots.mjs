@@ -180,6 +180,12 @@ const TABLE = [
   { key: "clash.succeed", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
     doc: "Turns a Clash you lost into one you won, whatever the totals said. Karmic "
        + "Save is the one thing in the rules that does this." },
+  // Warding Weapon: "increase your Dice Score in any Clash initiated by an Opponent by 1(T)" -
+  // their attack's Strike against your Dodge or Parry, and every Clash they open, whatever it
+  // rolls. Never one you opened.
+  { key: "clash.defending", phase: PHASES.LATE, kind: N, ops: NUMERIC,
+    doc: "Added to your Dice Score in any Clash an Opponent opened - their attack against your "
+       + "Dodge or Parry included." },
   { key: "defend.free", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
     doc: "The Defend Maneuver costs no Counter Action for this attack." },
 
@@ -511,6 +517,16 @@ const TABLE = [
     doc: "The whole Battlefield is the Melee Range for an attack made with it - Elongation." },
   { key: "weapon.scholarshipDamage", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
     doc: "The Damage Attribute of an attack made with it is Scholarship - High-Tech." },
+  { key: "weapon.breaker", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Apparel hit with it loses twice the Break Value, and a Weapon hit with it takes 1/4 "
+       + "(rounded up) more Damage - Breaker." },
+  { key: "weapon.unbreakable", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Nothing reduces its Life Points, and it is never broken - Unbreakable." },
+  { key: "weapon.regenerates", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Whole again at the end of every Combat Encounter, broken or not - Regenerating." },
+  { key: "weapon.selfDamage", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "The part of its own maximum Life Points each attack made with it costs it - Dimension "
+       + "Blade's 1/10. Read as written, the fraction being the point." },
   { key: "weapon.telekinetic", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Held by the mind: not counted among the two Weapons wielded, and an attack made with it "
        + "may come from anywhere in a Large Sphere around its wielder - Telekinetic." }
@@ -528,6 +544,12 @@ const PATTERNS = [
     ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "The only Combat Roll this piece's Category reaches, and its Doff Bonus - Focal." },
+  // Karmic Edge: "Apply an Energy Charge to all Attacking Maneuvers using this Weapon against
+  // Opponents whose Alignment matches the chosen Alignments" - Good/Pure Good or Evil/Pure Evil.
+  { match: /^weapon\.karmicEdge\.(good|evil)$/, phase: PHASES.WEAPON, kind: F,
+    ops: ["allow", "forbid", "set"],
+    valid: () => true,
+    doc: "An attack made with it gains an Energy Charge against a Good or Evil Opponent." },
   // The Ki Point Cost of the Attacking Maneuvers of one Attack Type - the Magic Staff's "reduce
   // the Ki Point Cost of your Magic Attacks ... by 2(T)".
   { match: /^attack\.kiCost\.(physical|energy|magic)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,

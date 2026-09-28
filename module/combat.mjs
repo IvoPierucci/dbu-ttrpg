@@ -475,9 +475,28 @@ export function registerCombatHooks() {
       // Every clock stops here, not only the ones counting the Encounter: a turn edge
       // that never arrives is a duration that never ends, and there are no more turns.
       await encounterEnded(actor);
+      await regenerateWeapons(actor);
     }
 
     await announceEncounterEnd(rounds);
+  });
+}
+
+/**
+ * Regenerating: "At the end of each Combat Encounter, this Weapon's Life Points are completely
+ * recovered. If it was destroyed during the Combat Encounter, it is completely repaired."
+ */
+async function regenerateWeapons(actor) {
+  const { regenerating } = await import("./gear.mjs");
+  const { getTrait } = await import("./effects/traits.mjs");
+  const whole = regenerating(Array.from(actor.items ?? []), getTrait);
+  if (!whole.length) return;
+  await actor.updateEmbeddedDocuments("Item", whole.map(item => ({ _id: item.id,
+    "system.crafted.lifeLost": 0, "system.crafted.destroyed": false })));
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${whole.map(item => Handlebars.escapeExpression(item.name))
+      .join(" and ")} ${(whole.length === 1) ? "is" : "are"} whole again: Regenerating.</div>`
   });
 }
 

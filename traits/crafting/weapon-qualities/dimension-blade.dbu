@@ -1,0 +1,37 @@
+id: dimension-blade
+name: Dimension Blade
+kind: crafting
+types: physical
+slots: 1
+# With Unbreakable on the Weapon it does nothing - neither the cost nor the Damage Category -
+# by the table's ruling.
+excludesQualities: weapon-unbreakable
+special: true
+source: Core Rule
+description: >
+  Special. Attacks with it a Damage Category higher; each costs it a tenth of its Life Points.
+  Nothing, with Unbreakable.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Increase the Damage Category of all Attacking Maneuvers made with this Weapon by 1
+  Category.
+
+  [Automatic]: Each Attacking Maneuver made with this Weapon reduces the Life Points of this
+  Weapon by 1/10 of its Maximum Life Points.
+text: >
+  Dimension Blade: This Weapon can cut through the very fabric of reality.
+  –Weapon Type: Physical
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: Increase the Damage Category of all Attacking Maneuvers made with this Weapon by 1
+  Category. Each Attacking Maneuver made with this Weapon reduces the Life Points of this Weapon
+  by 1/10 of its Maximum Life Points.
+
+---
+
+# The tenth is rounded down, as any fraction is. Paid once the attack is made; one that leaves it at
+# nothing still happens, and it breaks after.
+[passive]
+weapon.damageCategory += 1;
+weapon.selfDamage = 1/10;

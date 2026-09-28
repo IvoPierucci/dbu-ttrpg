@@ -1,0 +1,29 @@
+id: breaker
+name: Breaker
+kind: crafting
+slots: 1
+source: Core Rule
+description: >
+  Apparel hit with it loses twice the Break Value; a Weapon hit with it takes a quarter (rounded
+  up) more Damage.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: If you hit a piece of Apparel with this Weapon, double the loss of Break Value. If
+  you hit a Weapon instead, increase the Damage dealt to that Weapon by 1/4 (rounded up).
+text: >
+  Breaker: This Weapon is designed to deal extra damage to inanimate objects.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: If you hit a piece of Apparel with this Weapon, double the loss of Break Value. If
+  you hit a Weapon instead, increase the Damage dealt to that Weapon by 1/4 (rounded up).
+
+---
+
+# The Break Value it takes off the Top Layer is 2 where it would be 1 - off a Called Shot at the
+# Apparel, and off a Health Threshold, by the table's ruling. A Weapon it hits - a Called Shot at
+# one, or a Shield Blocking it - takes 1/4 of the blow more, before that Weapon's own Damage
+# Reduction.
+[passive]
+weapon.breaker = true;

@@ -1,0 +1,32 @@
+id: karmic-edge
+name: Karmic Edge
+kind: crafting
+slots: 1
+choices: good=Good/Pure Good, evil=Evil/Pure Evil
+special: true
+source: Core Rule
+description: >
+  Special. An Alignment chosen when it is made: an Energy Charge on attacks with it against
+  Opponents of it.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: When this Weapon is created, select either Good/Pure Good or Evil/Pure Evil. Apply
+  an Energy Charge to all Attacking Maneuvers using this Weapon against Opponents whose
+  Alignment matches the chosen Alignments.
+text: >
+  Karmic Edge: This Weapon is dedicated to destroying targets of a particular alignment.
+  –Weapon Type: Any
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: When this Weapon is created, select either Good/Pure Good or Evil/Pure Evil. Apply
+  an Energy Charge to all Attacking Maneuvers using this Weapon against Opponents whose
+  Alignment matches the chosen Alignments.
+
+---
+
+# Good/Pure Good is an Alignment of 1 or 2 on the Biography tab, Evil/Pure Evil -1 or -2. Read off
+# the one the attack is declared at: an Area that catches others as well carries the Charge for
+# all of them, and whether it should is the table's.
+[passive]
+weapon.karmicEdge.$choice = true;

@@ -1,8 +1,9 @@
 import DBUCharacterData from "./data/actor-character.mjs";
 import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
-import { refundActions, spendActions, strikeLightning, weatherToRoll }
+import { actionsLeft, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
+import { craftedReading, damageWeapon, weaponAttack, weaponHit, wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
   from "./features.mjs";
@@ -2666,9 +2667,9 @@ export async function postGearHazard(actor, item) {
 }
 
 /** Lower the Break Value of what they wear on top, and say what it came to. */
-async function sayApparelBreak(target) {
+async function sayApparelBreak(target, amount = 1) {
   const { breakApparel } = await import("./gear.mjs");
-  const said = await breakApparel(target, getTrait);
+  const said = await breakApparel(target, getTrait, { amount });
   if (!said) return;
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
@@ -6183,7 +6184,9 @@ async function resolveSkillClash(message, clash) {
   // of Power Extra Dice, the penalties one carries, and a Slot for effects to reach.
   const side = (actor, uuid) => rollSide(
     actor,
-    [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : [])],
+    [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
+      // Warding Weapon's, on the side the Clash was opened against.
+      ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : [])],
     {
       criticalDice: kind.criticalDice(actor),
       ...(kind.options ? kind.options(actor, clash, uuid) : {})
@@ -8435,6 +8438,19 @@ async function rollAttackWound(message, attack) {
     const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0);
     const effectiveWound = defence.wound(wound.total + analysis);
 
+    // A blow that lands on one of their Weapons rather than on them - a Called Shot at it, or a
+    // Block that turned it onto their Shield. The Weapon takes it, less its own Damage
+    // Reduction; they take nothing, by the table's ruling, since nothing says they do.
+    const struck = struckWeapon(attack, uuid, own);
+    if (struck) {
+      const item = target.items?.get(struck.itemId);
+      const landed = item ? weaponHit(item, target, effectiveWound,
+        { getTrait, breaker: Boolean(attack.weapon?.breaker) }) : null;
+      settledTargets.push({ ...own, counterWound: null, effectiveWound, soak: 0, reduction: 0,
+        damage: 0, weaponHit: landed ?? { itemId: struck.itemId, name: struck.name, damage: 0 } });
+      continue;
+    }
+
     // Damage Reduction comes off the same Wound Roll, and off it whole. The Damage
     // Category has already had its say on the Soak above and gets no say here, and the
     // defence's own multiplier is applied to `counted` rather than to this - which is
@@ -8537,6 +8553,7 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   }
   parts.push(...thresholdPenalty(actor));
   parts.push(...rapidMovementDodge(actor, attack));
+  parts.push(...openedAgainst(actor));
   // Your Dodge against somebody you Analyzed. The attacker is named on the attack, which
   // is what makes this answerable from the defender's side.
   parts.push(...analysisBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
@@ -8745,7 +8762,8 @@ const DEFENCES = {
       { label: "Parry", value: actor.system.combat.parry ?? 0 },
       ...musclePenalty(actor),
       ...chargePenalty(actor, attack),
-      ...thresholdPenalty(actor)
+      ...thresholdPenalty(actor),
+      ...openedAgainst(actor)
     ], { ...options, slot: "strike" }),
     soak: (soak) => soak,
     wound: (total) => total
@@ -8950,6 +8968,114 @@ async function leaveLastingWound(attack, attacker, target) {
       + `${Handlebars.escapeExpression(target.name)} takes a stack of DOT until the start of `
       + `${Handlebars.escapeExpression(attacker.name)}'s next turn.</div>`
   });
+}
+
+/**
+ * Warding Weapon's "+1(T)" - `clash.defending` - on a roll made in a Clash an Opponent opened:
+ * their attack's Strike against a Dodge or a Parry, and any Clash they open against you.
+ */
+function openedAgainst(actor) {
+  const value = applySlot(actor?.system?.effects?.slots, "clash.defending", 0);
+  return value ? [{ label: "Opened against you", value }] : [];
+}
+
+/**
+ * Which of this target's Weapons the blow lands on instead of them, or null: the one a Called
+ * Shot was aimed at, or the Shield a won Block turned it onto.
+ */
+function struckWeapon(attack, uuid, own) {
+  if (own?.block?.won) return { itemId: own.block.itemId, name: own.block.name };
+  const aimed = (attack.modifiers ?? []).find(entry => entry.atWeapon?.ownerUuid === uuid)?.atWeapon;
+  return aimed ? { itemId: aimed.itemId, name: aimed.name } : null;
+}
+
+/**
+ * The ones this attack hit who could Block it, among the characters this client plays: a Shield
+ * in hand, a Counter Action free, and none spent answering this attack already - "one Counter
+ * Action answers one Maneuver", so a Dodge, which costs none, is the only answer it follows.
+ */
+function possibleBlockers(attack) {
+  const found = [];
+  for (const { uuid, own } of targetResults(attack)) {
+    if (!own?.hit || own.block || isAbsoluteMiss(own) || ((own.defense ?? "dodge") !== "dodge")) continue;
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner) continue;
+    const shields = wieldedWeapons(Array.from(target.items ?? [])).filter(item =>
+      craftedReading(item.system.crafted, { getTrait, difficulties: {} })?.blocks);
+    if (!shields.length) continue;
+    if (game.combat?.started && (actionsLeft(target, "counter") < 1)) continue;
+    found.push({ target, shields });
+  }
+  return found;
+}
+
+/**
+ * The Block Maneuver: "Make a Strike Roll with your Shield-Category Weapon against the Dice Score
+ * Strike Roll rolled for that Attacking Maneuver. If you win, the Weapon used for this Maneuver is
+ * hit instead of you." A Strike made with the Shield - its Size and the Weapon Penalty with it -
+ * and a tie is the Defender's, here as everywhere.
+ */
+async function blockStage(message, attack, target, shields) {
+  let shield = shields[0];
+  if (shields.length > 1) {
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: "Block" }, content: "",
+      buttons: [...shields.map(item => ({ action: item.id, label: item.name })),
+        { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    shield = shields.find(item => item.id === chosen);
+    if (!shield) return;
+  }
+  if (!await spendActions(target, 1, "counter")) return;
+  await recordManeuverType(target, "counter");
+
+  const withIt = weaponAttack(shield, target, { getTrait, sizes: Object.keys(DBUCharacterData.SIZES) });
+  const roll = await rollSide(target, [
+    { label: "Strike", value: target.system.combat.strike },
+    ...(withIt?.strike ?? []),
+    ...musclePenalty(target),
+    ...thresholdPenalty(target)
+  ], {
+    extraDice: target.system.dice.extra.formula,
+    criticalDice: target.system.dice.critical.formula,
+    combatRoll: true,
+    slot: "strike",
+    naturalAdd: Number(withIt?.strikeNatural) || 0
+  });
+  const against = attack.result?.strike?.total ?? 0;
+  const won = roll.total >= against;
+  const block = { itemId: shield.id, name: shield.name, total: roll.total, won };
+
+  requestEdit(message, {
+    type: "attack",
+    attack: { ...attack, result: { ...attack.result,
+      targets: replaceTarget(attack, target.uuid, { block }) } }
+  });
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(target.name)} Blocks with `
+      + `${Handlebars.escapeExpression(shield.name)}: Strike ${roll.total} against ${against} - `
+      + `${won ? "the Shield is hit instead." : "the attack gets through."}</div>`
+  });
+}
+
+/** Apply what a Weapon took in its holder's place. */
+async function applyWeaponHit(message, target, attack) {
+  const own = targetResult(attack, target.uuid);
+  if (!own?.weaponHit || own.applied) return;
+  requestEdit(message, {
+    type: "attack",
+    attack: { ...attack, result: { ...attack.result,
+      targets: replaceTarget(attack, target.uuid, { applied: true }) } }
+  });
+  const item = target.items?.get(own.weaponHit.itemId);
+  const said = item ? await damageWeapon(target, item, own.weaponHit.damage, getTrait)
+    : `${own.weaponHit.name} is no longer there.`;
+  if (said) {
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(said)}</div>` });
+  }
 }
 
 /**
@@ -9448,8 +9574,11 @@ async function applyAttackDamage(message, target, attack) {
 
   // "Apparel loses 1 Break Value if you are knocked through a Health Threshold" - and a
   // Called Shot at it that hit takes 1 off it besides. The Top Layer's, both.
-  if (knockedThrough) await sayApparelBreak(target);
-  if (atApparel) await sayApparelBreak(target);
+  // Breaker: "If you hit a piece of Apparel with this Weapon, double the loss of Break Value" -
+  // both ways it loses some, by the table's ruling.
+  const breaks = attack.weapon?.breaker ? 2 : 1;
+  if (knockedThrough) await sayApparelBreak(target, breaks);
+  if (atApparel) await sayApparelBreak(target, breaks);
 
   // "If you successfully Damage an Opponent" - which is answered here and nowhere
   // earlier. The Clash arrives as its own card, because it is a Clash: two characters,
@@ -10680,6 +10809,21 @@ function renderAttack(message, html) {
   //
   // The window the rule opens is exactly this: the Ally has been hit, and the Wound Roll
   // has not been made. Combination's extra Strikes happen inside it, not before it.
+  // The Block Maneuver: "When you are hit by an Attacking Maneuver, you may use this Counter
+  // Maneuver." Hit, and the Wound Roll not yet made - the same window Intervene answers.
+  if (!result.wound) {
+    for (const { target, shields } of possibleBlockers(attack)) {
+      const block = document.createElement("button");
+      block.type = "button";
+      block.className = "dbu-clash-button";
+      block.textContent = `${target.name}: Block`;
+      block.dataset.tooltip = "1 Counter Action. A Strike Roll with your Shield against this "
+        + "attack's Strike: win and the Shield is hit instead of you.";
+      block.addEventListener("click", () => blockStage(message, attack, target, shields));
+      container.append(block);
+    }
+  }
+
   if (!result.wound && !deflection(attack)) {
     const usable = possibleInterveners(attack)
       .filter(who => shieldableTargets(attack, who).length);
@@ -10778,6 +10922,19 @@ function renderAttack(message, html) {
       note.className = "dbu-settled-note";
       note.textContent = `${target.name}: ${entry.own.damage} damage applied`;
       container.append(note);
+      continue;
+    }
+
+    // A Weapon took it in their place: what it takes, applied to the Weapon.
+    if (entry.own.weaponHit) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = `Apply ${entry.own.weaponHit.damage} to ${entry.own.weaponHit.name}`;
+      button.dataset.tooltip = "The Wound Roll, less the Weapon's own Damage Reduction. "
+        + `${target.name} takes nothing.`;
+      button.addEventListener("click", () => applyWeaponHit(message, target, attack));
+      container.append(button);
       continue;
     }
 

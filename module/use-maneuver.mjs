@@ -61,7 +61,7 @@ import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
-  throwables, weaponAttack, weaponsFor } from "./gear.mjs";
+  throwables, weaponAttack, weaponsFor, wieldedWeapons, damageWeapon } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
@@ -705,7 +705,7 @@ export function modifiersFor(actor, base) {
  *
  * @returns {Promise<?object[]>} the chosen entries, or null if the Maneuver was dropped
  */
-async function askModifiers(actor, base) {
+async function askModifiers(actor, base, target = null) {
   const offered = modifiersFor(actor, base);
   if (!offered.length) return [];
 
@@ -754,10 +754,11 @@ async function askModifiers(actor, base) {
   // read rather than for the system to act on, so an empty one is an answer too.
   for (const entry of taken) {
     if (!entry.modifier.asks) continue;
-    const said = await askModifierNote(entry.modifier);
+    const said = await askModifierNote(entry.modifier, target);
     if (said === null) return null;
     entry.note = said.note;
     entry.atApparel = said.atApparel;
+    entry.atWeapon = said.atWeapon;
   }
 
   return taken;
@@ -785,7 +786,9 @@ export function appliedModifiers(entries) {
     woundPerTier: entry.modifier.woundPerTier ?? 0,
     note: entry.note ?? "",
     // A Called Shot at a piece of Apparel: its Break Value on a hit, and half the Damage.
-    atApparel: Boolean(entry.atApparel)
+    atApparel: Boolean(entry.atApparel),
+    // Or at one of the target's Weapons: its Life Points on a hit, and nothing to them.
+    atWeapon: entry.atWeapon ?? null
   }));
 }
 
@@ -802,28 +805,44 @@ export function appliedModifiers(entries) {
  * @returns {Promise<?{note: string, atApparel: boolean}>} what was said, or null if the whole
  *   thing was dropped
  */
-async function askModifierNote(modifier) {
+async function askModifierNote(modifier, target = null) {
+  const escape = Handlebars.escapeExpression;
+  // "An Opponent can use a Called Shot to target a Weapon with an Attacking Maneuver, reducing
+  // its Life Points if it hits" - one of the target's, in hand.
+  const weapons = (modifier.targetsApparel && target) ? wieldedWeapons(target.items.contents) : [];
+  const aim = (value, label, tip) => `
+      <label class="dbu-wager" data-tooltip="${escape(tip)}">
+        <input type="radio" name="aim" value="${escape(value)}" ${value ? "" : "checked"}/>
+        <span>${escape(label)}</span>
+      </label>`;
   const said = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: modifier.name },
     content: `
       <label class="dbu-wager">
-        <span>${Handlebars.escapeExpression(modifier.asks)}</span>
+        <span>${escape(modifier.asks)}</span>
         <input type="text" name="note" value=""/>
         <em>Written on the card in your own words. What it comes to is the ARC's.</em>
-      </label>${modifier.targetsApparel ? `
-      <label class="dbu-wager" data-tooltip="On a hit, its Break Value is 1 lower - the Top Layer's - and they take half the Damage.">
-        <input type="checkbox" name="apparel"/>
-        <span>A piece of Apparel</span>
-      </label>` : ""}`,
+      </label>${modifier.targetsApparel ? [
+        aim("", "Them", "The Damage is theirs, as any attack's."),
+        aim("apparel", "A piece of Apparel",
+          "On a hit, its Break Value is 1 lower - the Top Layer's - and they take half the Damage."),
+        ...weapons.map(item => aim(`weapon:${item.id}`, item.name,
+          "On a hit, the Weapon takes the blow, less its Damage Reduction - and they take nothing."))
+      ].join("") : ""}`,
     buttons: [
       {
         action: "confirm",
         label: "Confirm",
-        callback: (event, button, dialog) => ({
-          note: String(dialog.element.querySelector('input[name="note"]').value ?? "").trim(),
-          atApparel: Boolean(dialog.element.querySelector('input[name="apparel"]')?.checked)
-        })
+        callback: (event, button, dialog) => {
+          const chosen = String(dialog.element.querySelector('input[name="aim"]:checked')?.value ?? "");
+          const item = chosen.startsWith("weapon:") ? weapons.find(each => `weapon:${each.id}` === chosen) : null;
+          return {
+            note: String(dialog.element.querySelector('input[name="note"]').value ?? "").trim(),
+            atApparel: chosen === "apparel",
+            atWeapon: item ? { itemId: item.id, name: item.name, ownerUuid: target.uuid } : null
+          };
+        }
       },
       { action: "cancel", label: "Cancel" }
     ],
@@ -2239,7 +2258,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
       const chosen = await askWeapon(actor, declared);
       if (chosen === null) return false;
       weaponItem = chosen || null;
-      if (weaponItem) declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, []) };
+      if (weaponItem) declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, [], targetActor) };
       // High-Tech: "Your Damage Attribute for any Attacking Maneuver made with this Weapon is
       // Scholarship" - what stands in for the Foundation's, as a Bomb's recorded one does.
       if (declared.weapon?.scholarshipDamage) {
@@ -2431,13 +2450,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // last of the questions that can still be walked away from, and paid first of the
   // things that are paid - so whatever a Modifier does is in place before the Maneuver it
   // was applied to is declared.
-  const modifiers = await askModifiers(actor, maneuver);
+  const modifiers = await askModifiers(actor, maneuver, targetActor);
   if (!modifiers) return false;
 
   // What the Weapon does, again with what was applied to the attack - Precision's "any Called
   // Shot made using this Weapon".
   if (weaponItem) {
-    declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, modifiers) };
+    declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, modifiers, targetActor) };
     // Its Area, however many Magnitudes larger the Weapon makes it.
     const area = declared.area ?? PROFILES[declared.profile]?.area ?? null;
     if (area && declared.weapon.magnitude) {
@@ -2675,6 +2694,17 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // The Grenade: "destroyed after concluding the Maneuver" - thrown, and gone.
   if (thrown?.destroyed && card) await actor.items.get(thrown.itemId)?.delete();
 
+  // Dimension Blade: "Each Attacking Maneuver made with this Weapon reduces the Life Points of
+  // this Weapon by 1/10 of its Maximum Life Points." Made, so paid once the card is out - and
+  // an attack that breaks it is still made.
+  if (card && weaponItem && declared?.weapon?.selfDamage) {
+    const said = await damageWeapon(actor, weaponItem, declared.weapon.selfDamage, getTrait);
+    if (said) {
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+        content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(said)} Dimension Blade.</div>` });
+    }
+  }
+
   return true;
 }
 
@@ -2705,8 +2735,9 @@ async function askWeapon(actor, declared) {
 }
 
 /** What an attack made with this Weapon carries - see weaponAttack() in gear.mjs. */
-function armedWith(actor, item, declared, modifiers) {
+function armedWith(actor, item, declared, modifiers, target = null) {
   return weaponAttack(item, actor, {
+    target,
     profile: declared.profile,
     calledShot: (modifiers ?? []).some(entry => entry.modifier?.id === "called-shot"),
     area: declared.area ?? PROFILES[declared.profile]?.area ?? null,

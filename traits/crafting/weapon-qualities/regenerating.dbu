@@ -1,0 +1,26 @@
+id: regenerating
+name: Regenerating
+kind: crafting
+slots: 1
+special: true
+source: Core Rule
+description: >
+  Special. Whole again at the end of every Combat Encounter, broken or not.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Automatic]: At the end of each Combat Encounter, this Weapon’s Life Points are completely
+  recovered. If it was destroyed during the Combat Encounter, it is completely repaired.
+text: >
+  Regenerating: This Weapon is somehow able to recover.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: At the end of each Combat Encounter, this Weapon’s Life Points are completely
+  recovered. If it was destroyed during the Combat Encounter, it is completely repaired.
+
+---
+
+# Broken and destroyed are one thing for a Weapon, by the table's ruling.
+[passive]
+weapon.regenerates = true;

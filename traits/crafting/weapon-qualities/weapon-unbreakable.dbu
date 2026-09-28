@@ -1,0 +1,29 @@
+id: weapon-unbreakable
+name: Unbreakable
+kind: crafting
+slots: 1
+# Its own id: Unbreakable is also an Apparel Quality's name, and ids are one to a file.
+special: true
+source: Core Rule
+description: >
+  Special. Nothing reduces its Life Points, and it is never destroyed.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: This Weapon cannot be destroyed by any means. You cannot use effects that would
+  reduce the Life Points of this Weapon.
+text: >
+  Unbreakable: This Weapon is somehow indestructible.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: This Weapon cannot be destroyed by any means. You cannot use effects that would
+  reduce the Life Points of this Weapon.
+
+---
+
+# A Called Shot at it, or a Block with it, takes nothing off it. "You cannot use effects that would
+# reduce the Life Points of this Weapon": Dimension Blade on the same Weapon does nothing at all,
+# by the table's ruling - it is held off, on its own file.
+[passive]
+weapon.unbreakable = true;

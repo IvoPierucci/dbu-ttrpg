@@ -896,7 +896,7 @@ async function writeActor(actor, changes) {
  *
  * @returns {Promise<string>} what the table is told, or "" when nothing is worn.
  */
-export async function breakApparel(actor, getTrait) {
+export async function breakApparel(actor, getTrait, { amount = 1 } = {}) {
   const top = topLayerPiece(Array.from(actor?.items ?? []));
   if (!top) return "";
   const reading = craftedReading(top.system.crafted, { getTrait, difficulties: {} });
@@ -910,10 +910,12 @@ export async function breakApparel(actor, getTrait) {
     return `${top.name} keeps its Break Value: Joint Protection.`;
   }
 
-  const left = Math.max(0, reading.breakLeft - 1);
-  await writeActor(actor, { items: [{ _id: top.id, "system.crafted.breakLost": lost + 1,
+  // Breaker's "double the loss of Break Value": 2, never more than there is.
+  const loss = Math.min(Math.max(1, Number(amount) || 1), reading.breakLeft);
+  const left = Math.max(0, reading.breakLeft - loss);
+  await writeActor(actor, { items: [{ _id: top.id, "system.crafted.breakLost": lost + loss,
     ...(left ? {} : { "system.equipped": false, "system.layer": "" }) }] });
-  if (left) return `${top.name} loses 1 Break Value: ${left}/${reading.breakValue}.`;
+  if (left) return `${top.name} loses ${loss} Break Value: ${left}/${reading.breakValue}.`;
   let said = `${top.name} breaks, and is taken off.`;
   if (top.system.crafted.category === "weights") {
     const doff = await grantDoffBonus(actor, top, getTrait);
@@ -1183,8 +1185,65 @@ function weaponReading(crafted, { getTrait, data = null, baseTier = 1 }) {
     hardnessValue: slots["weapon.hardnessValue"]
       ? applySlot(slots, "weapon.hardnessValue", kind.hardnessValue) : kind.hardnessValue,
     blocks: slots["weapon.block"] === true,
+    // Unbreakable: "cannot be destroyed by any means"; Regenerating: whole at every Encounter's end.
+    unbreakable: slots["weapon.unbreakable"] === true,
+    regenerates: slots["weapon.regenerates"] === true,
     weapon: slots
   };
+}
+
+/**
+ * What a blow that lands on a Weapon does to it - a Called Shot at it, or a Block with it: the
+ * Wound Roll, less the Weapon's own Damage Reduction of 6(bT) at its owner's base Tier. Breaker
+ * adds "1/4 (rounded up)" to it first, the part of the blow it adds to. Unbreakable takes
+ * nothing: "You cannot use effects that would reduce the Life Points of this Weapon."
+ */
+export function weaponHit(item, owner, wound, { getTrait, breaker = false } = {}) {
+  const reading = craftedReading(item?.system?.crafted, { getTrait, difficulties: {},
+    data: owner?.system ?? null, baseTier: owner?.system?.baseTierOfPower ?? 1 });
+  if (!reading) return null;
+  const blow = Math.max(0, Number(wound) || 0);
+  const more = breaker ? Math.ceil(blow / 4) : 0;
+  return {
+    itemId: item.id,
+    name: item.name,
+    unbreakable: reading.unbreakable,
+    damage: reading.unbreakable ? 0 : Math.max(0, blow + more - reading.damageReduction)
+  };
+}
+
+/**
+ * Take Life Points off a Weapon. "If the Weapon's Life Points are reduced to 0, it is broken and
+ * cannot be used for any Attacking Maneuvers" - and broken is as if it were not there, by the
+ * table's ruling: out of hand until it is repaired. Unbreakable loses none.
+ *
+ * @returns {Promise<string>} what happened, for the table
+ */
+export async function damageWeapon(owner, item, damage, getTrait) {
+  const reading = craftedReading(item?.system?.crafted, { getTrait, difficulties: {},
+    data: owner?.system ?? null, baseTier: owner?.system?.baseTierOfPower ?? 1 });
+  if (!reading || reading.destroyed) return "";
+  if (reading.unbreakable) return `${item.name} is Unbreakable: it loses nothing.`;
+  const taken = Math.max(0, Number(damage) || 0);
+  if (!taken) return `${item.name} takes no Damage.`;
+  const lost = (Number(item.system.crafted.lifeLost) || 0) + taken;
+  const left = Math.max(0, reading.lifeMax - lost);
+  await writeActor(owner, { items: [{ _id: item.id, "system.crafted.lifeLost": lost,
+    ...(left ? {} : { "system.crafted.destroyed": true, "system.equipped": false }) }] });
+  return left ? `${item.name} loses ${taken} Life Points: ${left}/${reading.lifeMax}.`
+    : `${item.name} loses ${taken} Life Points and breaks.`;
+}
+
+/**
+ * The Weapons made whole at the end of a Combat Encounter - Regenerating's "this Weapon's Life
+ * Points are completely recovered. If it was destroyed during the Combat Encounter, it is
+ * completely repaired."
+ */
+export function regenerating(items, getTrait) {
+  return (items ?? []).filter(item => (item.type === "gear")
+    && (item.system?.crafted?.kind === "weapon")
+    && ((Number(item.system.crafted.lifeLost) || 0) || item.system.crafted.destroyed)
+    && (weaponSlots(item.system.crafted, { getTrait })["weapon.regenerates"] === true));
 }
 
 /**
@@ -1242,6 +1301,17 @@ export function weaponSpecialist(actor) {
     || (actor?.system?.effects?.programs ?? []).some(entry => named(entry.sourceName));
 }
 
+/**
+ * Karmic Edge's Energy Charge, against an Opponent of the Alignment chosen for it: "Good/Pure
+ * Good" is 1 and up, "Evil/Pure Evil" -1 and down. Against the one the attack was declared at.
+ */
+function karmicCharge(slots, target) {
+  const alignment = Number(target?.system?.alignment) || 0;
+  if ((slots["weapon.karmicEdge.good"] === true) && (alignment >= 1)) return 1;
+  if ((slots["weapon.karmicEdge.evil"] === true) && (alignment <= -1)) return 1;
+  return 0;
+}
+
 /** A fraction written against a Slot - `weapon.damageReductionIgnored = 1/2;` - unrounded. */
 function fractionOf(slots, key) {
   const c = slots?.[key];
@@ -1260,7 +1330,7 @@ function fractionOf(slots, key) {
  *                          the Size Categories in order, smallest first
  */
 export function weaponAttack(item, attacker, { profile = "", calledShot = false, area = null,
-  kiWager = 0, sizes = [], getTrait } = {}) {
+  kiWager = 0, sizes = [], target = null, getTrait } = {}) {
   const crafted = item?.system?.crafted;
   if (crafted?.kind !== "weapon") return null;
   const data = attacker?.system ?? {};
@@ -1303,7 +1373,7 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
     wound: [...perTier(`${size.label} Weapon`, size.wound), ...own("weapon.wound")],
     strikeNatural: applySlot(slots, "weapon.strikeNatural", 0),
     kiCost: applySlot(slots, "weapon.kiCost", 0),
-    energyCharges: applySlot(slots, "weapon.energyCharges", 0),
+    energyCharges: applySlot(slots, "weapon.energyCharges", 0) + karmicCharge(slots, target),
     damageCategory: applySlot(slots, "weapon.damageCategory", 0),
     meleeRange: applySlot(slots, "weapon.meleeRange", 0),
     magnitude: area ? applySlot(slots, "weapon.magnitude", 0) : 0,
@@ -1322,7 +1392,12 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
     scholarshipDamage: slots["weapon.scholarshipDamage"] === true,
     // Telekinetic, in the mind of one with Telekinesis: from anywhere in a Large Sphere around
     // them - which Square is the table's, and so is how far it is from there.
-    telekinetic: byMind
+    telekinetic: byMind,
+    // Breaker, on what it hits of the target's; and Dimension Blade's cost to itself - "reduces
+    // the Life Points of this Weapon by 1/10 of its Maximum Life Points", rounded down.
+    breaker: slots["weapon.breaker"] === true,
+    selfDamage: Math.floor(fractionOf(slots, "weapon.selfDamage")
+      * (craftedReading(crafted, { getTrait, difficulties: {}, data })?.lifeMax ?? 0))
   };
 }
 

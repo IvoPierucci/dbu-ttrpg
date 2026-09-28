@@ -1,0 +1,30 @@
+id: warding-weapon
+name: Warding Weapon
+kind: crafting
+slots: 1
+special: true
+source: Core Rule
+description: >
+  Special. Wielded: Damage Reduction 2(bT) higher, and 1(T) on your Dice Score in any Clash an
+  Opponent opens.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: While wielding this Weapon, increase your Damage Reduction by 2(bT) and increase
+  your Dice Score in any Clash initiated by an Opponent by 1(T).
+text: >
+  Warding Weapon: This Weapon protects you from harm.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: While wielding this Weapon, increase your Damage Reduction by 2(bT) and increase
+  your Dice Score in any Clash initiated by an Opponent by 1(T).
+
+---
+
+# "Any Clash initiated by an Opponent", by the table's ruling: every roll set against one they
+# opened - their attack's Strike against your Dodge or Parry, a Might Clash, a Saving Throw, a
+# Skill Clash. Never one you opened. Once, however many of these are in hand.
+[passive]
+damageReduction += 2(bT);
+clash.defending += 1(T);
