@@ -1,0 +1,28 @@
+id: burst-fire
+name: Burst Fire
+kind: crafting
+types: energy, magic
+slots: 1
+source: Core Rule
+description: >
+  An attack with it may spend any number of Actions: an Energy Charge for each.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Triggered]: When making an Attacking Maneuver using this Weapon, you may spend any number of
+  Actions, this Attacking Maneuver gains an Energy Charge for each Action spent.
+text: >
+  Burst Fire: This Weapon can gather massive amounts of energy and release them all at once.
+  –Weapon Type: Energy/Magic
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: When making an Attacking Maneuver using this Weapon, you may spend any number of
+  Actions, this Attacking Maneuver gains an Energy Charge for each Action spent.
+
+---
+
+# How many, asked when the attack is declared - as many as the turn has left. Energy Charges like
+# any other: they stack with the Energy Charge Maneuver's and the rest, to the most an attack
+# carries.
+[passive]
+weapon.burstFire = true;

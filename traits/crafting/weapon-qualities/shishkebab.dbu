@@ -1,0 +1,29 @@
+id: shishkebab
+name: Shishkebab
+kind: crafting
+slots: 1~3
+prerequisites: This Weapon was created through a Gear Kit or Crafting.
+source: Core Rule
+description: >
+  Wielded: a Snack for an Action, once a Combat Encounter for each Slot.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Triggered]: While this Weapon is equipped, you may spend 1 Action to gain a Snack Basic Item.
+  You can use this effect a number of times per Combat Encounter equal to the number of Quality
+  Slots this Weapon Quality is occupying.
+text: >
+  Shishkebab: This Weapon also serves as a convenient way to carry a hearty snack.
+  –Weapon Type: All
+  –Prerequisites: This Weapon was created through a Gear Kit or Crafting.
+  –Quality Slots: 1~3
+  –Effects: While this Weapon is equipped, you may spend 1 Action to gain a Snack Basic Item.
+  You can use this effect a number of times per Combat Encounter equal to the number of Quality
+  Slots this Weapon Quality is occupying.
+
+---
+
+# From the Weapon's row while it is in hand. How the Weapon came to be - Gear Kit, Crafting - is
+# not kept here, so its Prerequisite is the table's.
+[passive]
+weapon.snacks += $slots;

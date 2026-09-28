@@ -538,6 +538,17 @@ const TABLE = [
        + "Boomerang's Slots." },
   { key: "weapon.copies", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Thrown, a copy goes and it stays in hand - three Throws a Combat Round - Multi-Storage." },
+  { key: "weapon.burstFire", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "An attack made with it may spend any number of Actions, an Energy Charge for each - Burst "
+       + "Fire." },
+  { key: "weapon.concealed", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "The first Armed Attack with it each Combat Round opens a Clash (Stealth vs Perception) "
+       + "for Guard Down - Concealed." },
+  { key: "weapon.snacks", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "How many Snacks it gives, an Action each, a Combat Encounter - Shishkebab's Slots." },
+  { key: "weapon.remoteAll", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "A Remote Control for every Item of the type it is attuned to, not one - Controller "
+       + "Weapon at 2 Slots." },
   { key: "weapon.telekinetic", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Held by the mind: not counted among the two Weapons wielded, and an attack made with it "
        + "may come from anywhere in a Large Sphere around its wielder - Telekinetic." }
@@ -555,6 +566,12 @@ const PATTERNS = [
     ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "The only Combat Roll this piece's Category reaches, and its Doff Bonus - Focal." },
+  // Controller Weapon: "this Weapon can be treated as the Remote Control Basic Item. Select what
+  // this Remote Control is attuned to" - by the file the Items it reaches are made from.
+  { match: /^weapon\.remote\.([\w-]+)$/, phase: PHASES.WEAPON, kind: F,
+    ops: ["allow", "forbid", "set"],
+    valid: () => true,
+    doc: "A Remote Control for the Items made from that file - `weapon.remote.bomb`." },
   // Karmic Edge: "Apply an Energy Charge to all Attacking Maneuvers using this Weapon against
   // Opponents whose Alignment matches the chosen Alignments" - Good/Pure Good or Evil/Pure Evil.
   { match: /^weapon\.karmicEdge\.(good|evil)$/, phase: PHASES.WEAPON, kind: F,

@@ -1,0 +1,30 @@
+id: concealed
+name: Concealed
+kind: crafting
+slots: 1
+source: Core Rule
+description: >
+  The first Armed Attack with it each Round, a Clash (Stealth vs Perception): win, and they are
+  Guard Down against it.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Automatic, 1/Round]: The first Armed Attack you make with this Weapon each Combat Round, make
+  a Clash (Stealth vs Perception) against the target(s) of that Attacking Maneuver. If you win,
+  they have the Guard Down Combat Condition against this Attacking Maneuver.
+text: >
+  Concealed: This Weapon is sleek, designed to be kept out of sight until the moment you strike!
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: The first Armed Attack you make with this Weapon each Combat Round, make a Clash
+  (Stealth vs Perception) against the target(s) of that Attacking Maneuver. If you win, they
+  have the Guard Down Combat Condition against this Attacking Maneuver.
+
+---
+
+# Opened beside the attack, against the one it is aimed at, to be settled before it is answered.
+# Guard Down lasts to the end of the attacker's turn - as near as a Condition's clock comes to
+# "this Attacking Maneuver"; the card says which.
+[passive]
+weapon.concealed = true;

@@ -2228,6 +2228,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // The Weapon the attack is made with, where it is made with one, and as what.
   let weaponItem = null;
   let weaponForm = null;
+  // Burst Fire's Actions, paid with the Maneuver's own.
+  let burstActions = 0;
   if (maneuver.throws) {
     thrown = await askThrown(actor, maneuver);
     if (!thrown) return false;
@@ -2494,6 +2496,16 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // Shot made using this Weapon".
   if (weaponItem) {
     declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, modifiers, targetActor, weaponForm) };
+    // Burst Fire: "you may spend any number of Actions, this Attacking Maneuver gains an Energy
+    // Charge for each Action spent" - asked now, spent with the rest below.
+    if (declared.weapon.burstFire) {
+      burstActions = await askBurstFire(actor, maneuver, actionsSpent, declared.weapon.name);
+      if (burstActions === null) return false;
+      if (burstActions) {
+        declared = { ...declared, weapon: { ...declared.weapon,
+          energyCharges: (declared.weapon.energyCharges ?? 0) + burstActions } };
+      }
+    }
     // Its Area, however many Magnitudes larger the Weapon makes it.
     const area = declared.area ?? PROFILES[declared.profile]?.area ?? null;
     if (area && declared.weapon.magnitude) {
@@ -2550,6 +2562,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   if (maneuver.empower && !await transferKi(actor, targetActor, actionsSpent)) return false;
 
   await payActions(actor, maneuver, actionsSpent);
+  if (burstActions) await spendActions(actor, burstActions);
   await recordManeuverUse(actor, maneuver);
 
   // "Delay its use but pay the Action Cost and KP Cost immediately." Everything that
@@ -2740,6 +2753,22 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     if (!back) await actor.items.get(thrown.itemId)?.update({ "system.equipped": false });
   }
 
+  // Concealed: "The first Armed Attack you make with this Weapon each Combat Round, make a Clash
+  // (Stealth vs Perception) against the target(s) of that Attacking Maneuver. If you win, they have
+  // the Guard Down Combat Condition against this Attacking Maneuver." Opened beside the attack,
+  // to be settled before it is answered - against the one it was aimed at.
+  const concealedKey = `round:concealed.${weaponItem?.id ?? ""}`;
+  if (card && targetActor && declared?.weapon?.concealed
+    && !(actor.system.usedManeuvers ?? []).includes(concealedKey)) {
+    if (game.combat?.started) {
+      await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), concealedKey] });
+    }
+    await postSkillClash(actor, targetActor, {
+      name: `${declared.weapon.name} (Concealed)`, type: "instant",
+      clash: { skill: "stealth", defenderSkills: ["perception"] }
+    }, { concealed: { applied: false, attack: maneuver.name } });
+  }
+
   // Dimension Blade: "Each Attacking Maneuver made with this Weapon reduces the Life Points of
   // this Weapon by 1/10 of its Maximum Life Points." Made, so paid once the card is out - and
   // an attack that breaks it is still made.
@@ -2784,6 +2813,28 @@ async function askWeapon(actor, declared) {
   if (!chosen || (chosen === "cancel")) return null;
   if (chosen === "unarmed") return false;
   return offered.find(entry => entry.key === chosen) ?? null;
+}
+
+/**
+ * Burst Fire's Actions: any number, as many as are left after the Maneuver's own in a Combat
+ * Encounter, and up to the most Energy Charges an attack carries out of one.
+ *
+ * @returns {Promise<?number>} how many, or null when the whole thing was put away
+ */
+async function askBurstFire(actor, maneuver, actionsSpent, name) {
+  const most = game.combat?.started
+    ? Math.max(0, actionsLeft(actor) - actionCostOf(maneuver, actionsSpent).amount)
+    : DBUCharacterData.MAX_ENERGY_CHARGES;
+  if (!most) return 0;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${name} - Burst Fire` },
+    content: "<p>Actions to spend, an Energy Charge for each.</p>",
+    buttons: [...Array.from({ length: most + 1 }, (_, at) => ({ action: String(at), label: String(at) })),
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  const actions = Number(chosen);
+  return (Number.isInteger(actions) && (actions >= 0) && (actions <= most)) ? actions : null;
 }
 
 /** How many times the Throw Maneuver has been used this Combat Round. */

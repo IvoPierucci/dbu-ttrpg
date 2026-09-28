@@ -454,6 +454,9 @@ async function applyClash(messageId, clash) {
     await settleHandcuff(message, clash);
   }
 
+  if (clash.concealed && clash.result && !clash.concealed.applied) {
+    await settleConcealed(message, clash);
+  }
   if (clash.thrownProne && clash.result && !clash.thrownProne.applied) {
     await settleThrownProne(message, clash);
   }
@@ -8956,6 +8959,28 @@ async function openKnockback(attack, attacker, target, { extra = 0, from = "" } 
       doubledBy: PROFILES[attack.profile]?.label ?? ""
     }
   });
+}
+
+/**
+ * A Concealed Weapon's Clash, settled: "If you win, they have the Guard Down Combat Condition
+ * against this Attacking Maneuver." On them until the end of the attacker's turn, which is as
+ * near as a Condition's clock comes to "this Attacking Maneuver" - the card says which one, and
+ * taking it off sooner is the table's. A tie goes to the Defender, here as everywhere.
+ */
+async function settleConcealed(message, clash) {
+  const attacker = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!attacker || !target) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, concealed: { ...clash.concealed, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} sees it coming.`);
+    return;
+  }
+  const { setCondition } = await import("./conditions.mjs");
+  if (await setCondition(target, "guard-down", 1) === false) return;
+  await lasting(attacker, { kind: KINDS.CONDITION, key: "guard-down", edge: EDGES.END, on: target.uuid,
+    source: clash.maneuverName });
+  await settledNote(message, `${target.name} is Guard Down against ${clash.concealed.attack}.`);
 }
 
 /**

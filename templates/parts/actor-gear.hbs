@@ -241,6 +241,21 @@
         <button type="button" class="gear-act" data-action="resizeGear" data-item-id="{{../itemId}}"
                 data-value="{{size.value}}" data-tooltip="Variable: the No Effort Maneuver, in a Combat Encounter.">{{size.label}}</button>
         {{/each}}
+        {{#if row.remote}}
+        <span class="gear-type">{{#if row.connectedName}}&rarr; {{row.connectedName}}{{else}}not attuned{{/if}}</span>
+        {{#if row.attunes}}
+        <button type="button" class="gear-act" data-action="attuneGear" data-item-id="{{row.itemId}}"
+                data-tooltip="Controller Weapon: which of your Items it sets off.">Attune</button>
+        {{/if}}
+        {{#if row.canTrigger}}
+        <button type="button" class="gear-act" data-action="remoteGear" data-item-id="{{row.itemId}}"
+                data-tooltip="1 Action. Target the first one it catches.">Trigger</button>
+        {{/if}}
+        {{/if}}
+        {{#if row.snacks}}
+        <button type="button" class="gear-act" data-action="snackGear" data-item-id="{{row.itemId}}"
+                data-tooltip="1 Action. {{row.snacks}} left this Encounter.">Snack</button>
+        {{/if}}
         {{#if row.wielded}}<span class="gear-type">Wielded</span>{{/if}}
         <button type="button" class="gear-act" data-action="wieldGear" data-item-id="{{row.itemId}}"
                 {{#if row.wieldBlocked}}disabled data-tooltip="{{row.wieldBlocked}}"{{else}}{{#if row.wieldCost}}data-tooltip="{{row.wieldCost}}"{{/if}}{{/if}}>{{#if row.wielded}}Sheathe{{else}}Wield{{/if}}</button>

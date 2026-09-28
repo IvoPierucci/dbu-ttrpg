@@ -1,0 +1,41 @@
+id: controller-weapon
+name: Controller Weapon
+kind: crafting
+slots: 1~2
+# The Items a Remote Control reaches that are in this system: a Bomb, a Collar.
+choices: bomb=Bomb, shock-collar=Collar
+source: Core Rule
+description: >
+  A Remote Control too, attuned to one Item of a type - every Item of it, with 2 Slots.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Upon applying this Weapon Quality, this Weapon can be treated as the Remote Control
+  Basic Item. Select what this Remote Control is attuned to upon applying the Weapon Quality. If
+  this Weapon Quality takes up 2 Quality Slots, this Remote Control can be used for all Items of
+  that type (Vehicles/Battle Jackets still require the appropriate Quality/Trait to be used with
+  a Remote Control).
+text: >
+  Controller Weapon: This Weapon functions as a Remote Control for something else.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1~2
+  –Effects: Upon applying this Weapon Quality, this Weapon can be treated as the Remote Control
+  Basic Item. Select what this Remote Control is attuned to upon applying the Weapon Quality. If
+  this Weapon Quality takes up 2 Quality Slots, this Remote Control can be used for all Items of
+  that type (Vehicles/Battle Jackets still require the appropriate Quality/Trait to be used with
+  a Remote Control).
+
+---
+
+# The type chosen when it is added; with 1 Slot, the one Item of it is chosen on the Weapon's row.
+# Trigger, for an Action, as the Remote Control's.
+[passive]
+weapon.remote.$choice = true;
+if ($slots >= 2) {
+  weapon.remoteAll = true;
+}
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Vehicles and Battle Jackets are not in this system, and neither is piloting one from afar.

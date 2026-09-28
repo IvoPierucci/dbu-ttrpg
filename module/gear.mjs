@@ -1546,6 +1546,9 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
     // Telekinetic, in the mind of one with Telekinesis: from anywhere in a Large Sphere around
     // them - which Square is the table's, and so is how far it is from there.
     telekinetic: byMind,
+    // Burst Fire's Actions for Energy Charges, asked at declaration; Concealed's Clash.
+    burstFire: slots["weapon.burstFire"] === true,
+    concealed: slots["weapon.concealed"] === true,
     // Breaker, on what it hits of the target's; and Dimension Blade's cost to itself - "reduces
     // the Life Points of this Weapon by 1/10 of its Maximum Life Points", rounded down.
     breaker: slots["weapon.breaker"] === true,
@@ -2248,10 +2251,44 @@ export function scanReading(actor) {
  *
  * "Select an Item (Bomb/Collar/Vehicle/Battle Jacket) you possess for it to be connected to."
  */
-export function connectable(items, remote) {
-  const kinds = remote.system?.connects ?? [];
+export function connectable(items, remote, getTrait = null) {
+  const kinds = remoteKinds(remote, getTrait);
   return (items ?? []).filter(item => (item.id !== remote.id)
     && kinds.includes(item.system?.gearId));
+}
+
+/**
+ * What a Remote Control reaches, by the files those Items are made from: its own `connects`, or -
+ * a Controller Weapon, "treated as the Remote Control Basic Item" - what its Effects attune it to.
+ */
+export function remoteKinds(item, getTrait = null) {
+  const own = item?.system?.connects ?? [];
+  if (own.length || (item?.system?.crafted?.kind !== "weapon")) return own;
+  const slots = weaponSlots(item.system.crafted, { getTrait });
+  return Object.keys(slots).filter(key => key.startsWith("weapon.remote.") && (slots[key] === true))
+    .map(key => key.slice("weapon.remote.".length));
+}
+
+/** Whether a Controller Weapon reaches every Item of its type: "all Items of that type". */
+export function remotesAll(item, getTrait = null) {
+  return weaponSlots(item?.system?.crafted, { getTrait })["weapon.remoteAll"] === true;
+}
+
+/** What setting something off from it costs: the Remote Control's own, and an Action for a Weapon. */
+export function remoteCost(item) {
+  return Number(item?.system?.placeCost) || ((item?.system?.crafted?.kind === "weapon") ? 1 : 0);
+}
+
+/** How many Snacks a Shishkebab still gives this Combat Encounter, and its key for each. */
+export function snacksLeft(actor, item, getTrait = null) {
+  const most = applySlot(weaponSlots(item?.system?.crafted, { getTrait }), "weapon.snacks", 0);
+  if (!most) return 0;
+  if (!game?.combat?.started) return most;
+  const used = (actor?.system?.usedManeuvers ?? []).filter(entry => entry === snackKey(item)).length;
+  return Math.max(0, most - used);
+}
+export function snackKey(item) {
+  return `encounter:snack.${item?.id ?? ""}`;
 }
 
 /** The Item a Remote Control is connected to, if the character still has it. */

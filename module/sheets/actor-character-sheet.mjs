@@ -15,6 +15,7 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   craftedItemFrom, craftedReading, APPAREL_LAYERS, APPAREL_EQUIP_COST, equipPlan, onLayer, pieceSlots,
   grantDoffBonus, topLayerPiece, unequipCost, wieldProblem, WEAPON_SIZES, WEAPON_TYPES,
   MULTI_STORAGE_THROWS, throwsCopies, activeForm, flexibleCategories, variableSizes,
+  remoteKinds, remotesAll, remoteCost, snacksLeft, snackKey,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -454,6 +455,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       equipGear: DBUCharacterSheet._onEquipGear,
       layerGear: DBUCharacterSheet._onLayerGear,
       wieldGear: DBUCharacterSheet._onWieldGear,
+      attuneGear: DBUCharacterSheet._onAttuneGear,
+      snackGear: DBUCharacterSheet._onSnackGear,
       flexGear: DBUCharacterSheet._onFlexGear,
       resizeGear: DBUCharacterSheet._onResizeGear,
       repairGear: DBUCharacterSheet._onRepairGear,
@@ -1091,9 +1094,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // What a Power Up nearby destroys it at, where something does.
         breaksAt: Number(item.system.scan?.breaksAt) || 0,
         // A Remote Control, what it is connected to, and whether that can be set off now.
-        remote: (item.system.connects ?? []).length > 0,
-        connectedName: DBUCharacterSheet.#connectedName(item, gearItems),
-        canTrigger: canTrigger(connectedTarget(item, gearItems, game.actors?.contents)?.item),
+        remote: remoteKinds(item, getTrait).length > 0,
+        connectedName: remotesAll(item, getTrait)
+          ? `every ${remoteKinds(item, getTrait).map(kind => getTrait(kind)?.name ?? kind).join(", ")}`
+          : DBUCharacterSheet.#connectedName(item, gearItems),
+        // A Controller Weapon attuned to one Item, not yet told which.
+        attunes: (item.system.crafted?.kind === "weapon") && remoteKinds(item, getTrait).length > 0
+          && !remotesAll(item, getTrait),
+        canTrigger: remotesAll(item, getTrait)
+          ? connectable(gearItems, item, getTrait).some(each => canTrigger(each))
+          : canTrigger(connectedTarget(item, gearItems, game.actors?.contents)?.item),
         // Charges it was made with, and how many are left.
         chargesLabel: (item.system.chargesDice || item.system.storesDrain
           || item.system.chargesPerBaseTier)
@@ -2660,15 +2670,31 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onRemoteGear(event, target) {
     const remote = this.actor.items.get(target.dataset.itemId);
-    const reached = connectedTarget(remote, this.actor.items.filter(owned => owned.type === "gear"),
-      game.actors?.contents);
+    const gearOwned = this.actor.items.filter(owned => owned.type === "gear");
+    let reached = connectedTarget(remote, gearOwned, game.actors?.contents);
+    // A Controller Weapon at 2 Slots: "this Remote Control can be used for all Items of that
+    // type" - which one, asked.
+    if (remotesAll(remote, getTrait)) {
+      const ready = connectable(gearOwned, remote, getTrait).filter(each => canTrigger(each));
+      let picked = ready[0];
+      if (ready.length > 1) {
+        const chosen = await foundry.applications.api.DialogV2.wait({
+          classes: ["dbu-dialog"], window: { title: `${remote.name} - Trigger` }, content: "",
+          buttons: [...ready.map(each => ({ action: each.id, label: each.name })),
+            { action: "cancel", label: "Cancel" }],
+          rejectClose: false
+        });
+        picked = ready.find(each => each.id === chosen);
+      }
+      reached = picked ? { item: picked, wearer: null } : null;
+    }
     if (!canTrigger(reached?.item)) return;
 
     // "For a Collar Accessory, you can spend 1 Action to trigger the effects of that
     // Accessory" - on whoever is wearing it.
     if (reached.item.system.shock?.part) {
       const { spendActions } = await import("../combat.mjs");
-      if (!await spendActions(this.actor, remote.system.placeCost ?? 0)) return;
+      if (!await spendActions(this.actor, remoteCost(remote))) return;
       const { shockCollar } = await import("../chat.mjs");
       return shockCollar(this.actor, reached.item, reached.wearer ?? this.actor);
     }
@@ -2682,7 +2708,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
 
     const { spendActions } = await import("../combat.mjs");
-    if (!await spendActions(this.actor, remote.system.placeCost ?? 0)) return;
+    if (!await spendActions(this.actor, remoteCost(remote))) return;
 
     const { detonateGear } = await import("../chat.mjs");
     return detonateGear(this.actor, bomb);
@@ -2920,6 +2946,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return {
       weapon: true,
       wielded,
+      // Shishkebab: "While this Weapon is equipped, you may spend 1 Action to gain a Snack".
+      snacks: wielded ? snacksLeft(this.actor, item, getTrait) : 0,
       // Flexible: the Categories it may be for this turn; Variable: the Sizes it may be wielded at.
       flexes: flexibleCategories(item, getTrait).filter(id => id !== now.category)
         .map(id => ({ value: id, label: getTrait(id)?.name ?? id })),
@@ -2932,6 +2960,53 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         : lost ? `Life Points ${reading?.lifeLeft}/${reading?.lifeMax}` : "",
       repairable: (Boolean(lost) || Boolean(item.system.crafted?.destroyed)) && !inCombat
     };
+  }
+
+  /**
+   * A Controller Weapon attuned to one Item: "Select what this Remote Control is attuned to upon
+   * applying the Weapon Quality" - one of the character's own it can reach.
+   */
+  static async _onAttuneGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
+    const offered = connectable(this.actor.items.filter(owned => owned.type === "gear"), item, getTrait);
+    if (!offered.length) {
+      ui.notifications.warn(`${this.actor.name} has nothing for ${item.name} to be attuned to.`);
+      return;
+    }
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${item.name} - Attune` }, content: "",
+      buttons: [...offered.map(each => ({ action: each.id, label: each.name })),
+        { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    const to = offered.find(each => each.id === chosen);
+    if (!to) return;
+    return item.update({ "system.connectedTo": to.id, "system.connectedPair": to.system.pairId ?? "" });
+  }
+
+  /**
+   * Shishkebab: "While this Weapon is equipped, you may spend 1 Action to gain a Snack Basic Item.
+   * You can use this effect a number of times per Combat Encounter equal to the number of Quality
+   * Slots this Weapon Quality is occupying." Its Prerequisite - made through a Gear Kit or
+   * Crafting - is the table's.
+   */
+  static async _onSnackGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system.equipped || (snacksLeft(this.actor, item, getTrait) <= 0)) return;
+    const snack = getTrait("snack");
+    if (!snack) return;
+    if (!await spendActions(this.actor, 1)) return;
+    if (game.combat?.started) {
+      await this.actor.update({ "system.usedManeuvers": [...(this.actor.system.usedManeuvers ?? []),
+        snackKey(item)] });
+    }
+    await this.actor.createEmbeddedDocuments("Item", [gearItemFrom(snack, this.actor)]);
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(this.actor.name)} takes a Snack off `
+        + `${Handlebars.escapeExpression(item.name)}.</p>`
+    });
   }
 
   /**
