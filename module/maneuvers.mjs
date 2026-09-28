@@ -609,11 +609,9 @@ export const PROFILES = Object.freeze({
     // A Level off the Light of everybody it Damages, until the attacker's next turn
     // starts: a stack of Darkened, whose file says which way it moves the Level.
     squareMark: { condition: "darkened", stacks: 1 },
-    // Both of these need an attack to have something no attack here can have yet. An
-    // attack carries one Profile, so none has Elemental (Light) applied beside this one;
-    // and this Profile has no Area, so the AoE sentence has nothing to be about.
-    needs: "the AoE sentence, and +2(T) Wound with Elemental (Light) - no attack here "
-      + "carries two Profiles or gives this one an Area."
+    // "+2(T) Wound with Elemental (Light)" is read where a Multi-Profile Technique carries both
+    // (technique-attack.mjs). The AoE sentence waits for an attack that gives this one an Area.
+    needs: "the AoE sentence - no attack here gives this Profile an Area."
   },
 
   elementalEarth: {
@@ -710,8 +708,7 @@ export const PROFILES = Object.freeze({
     grantsAdvantage: "full-wager",
     // Dark's mirror: a stack of Brightened, a Level up.
     squareMark: { condition: "brightened", stacks: 1 },
-    needs: "the AoE sentence, and +1(T) Strike with Elemental (Dark) - no attack here "
-      + "carries two Profiles or gives this one an Area."
+    needs: "the AoE sentence - no attack here gives this Profile an Area."
   },
 
   elementalLightning: {
@@ -1970,7 +1967,10 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   // was built with, plus whatever the Profile hands out. Blitz grants Charging Assault
   // for free, and a Technique that bought the same Advantage for 10 TP arrives here
   // with it already in the list - so the two routes meet and neither is special.
-  const advantages = withGranted(maneuver.advantages, PROFILES[profile]?.grantsAdvantage);
+  // Multi-Profile's second Profile hands out its own the same way: the attack "is considered to be
+  // of that Profile".
+  const advantages = withGranted(withGranted(maneuver.advantages, PROFILES[profile]?.grantsAdvantage),
+    PROFILES[maneuver.secondProfile ?? ""]?.grantsAdvantage);
 
   const answers = await askFeatures(maneuver, actor, advantages);
   if (!answers) return null;
@@ -2491,7 +2491,9 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   // wherever a Profile on offer allows it, and honoured only if that is the one chosen.
   // The ceiling is the same rule against a different pool.
   const offered = fixed ? [fixed] : groups.flatMap(group => group.profiles);
-  const lifeWager = offered.some(profile => profile.wagerFromLife);
+  // A Multi-Profile Technique's second Profile counts too - Elemental (Dark) on either side.
+  const second = PROFILES[maneuver.secondProfile ?? ""] ?? null;
+  const lifeWager = offered.some(profile => profile.wagerFromLife) || Boolean(second?.wagerFromLife);
   const capped = amount => Math.min(amount,
     Number.isFinite(limits.wagerCap) ? limits.wagerCap : Number.POSITIVE_INFINITY);
   const lifeMax = lifeWager ? capped(maxLifeWager(actor, features)) : 0;
@@ -2499,11 +2501,9 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   // And what the Profile picked grants. Elemental (Light) "gains the Full Wager Advantage
   // for free", and it is picked in this same dialog - so the ceiling is settled once the
   // choice is known, against the Technique's Advantages and the Profile's together.
-  const withProfile = id => (PROFILES[id]?.grantsAdvantage
-    ? [...features, PROFILES[id].grantsAdvantage]
-    : features);
+  const withProfile = id => [...features, PROFILES[id]?.grantsAdvantage, second?.grantsAdvantage].filter(Boolean);
   const fullOffered = !features.includes("full-wager")
-    && offered.some(profile => profile.grantsAdvantage === "full-wager");
+    && [...offered, second].some(profile => profile?.grantsAdvantage === "full-wager");
   const fullMax = fullOffered ? capped(maxKiWager(actor, [...features, "full-wager"])) : 0;
   const fullLifeMax = (fullOffered && lifeWager)
     ? capped(maxLifeWager(actor, [...features, "full-wager"]))
@@ -2541,7 +2541,7 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
           // the browser, not a guarantee, and a typed number gets through it.
           // Paid in Life only if asked for and the Profile chosen allows it - the box is
           // drawn for the whole list, and ticking it under another Profile means nothing.
-          const wagerFromLife = Boolean(PROFILES[profile]?.wagerFromLife
+          const wagerFromLife = Boolean((PROFILES[profile]?.wagerFromLife || second?.wagerFromLife)
             && dialog.element.querySelector('input[name="wagerFromLife"]')?.checked);
           const own = withProfile(profile);
           const ceiling = capped(wagerFromLife ? maxLifeWager(actor, own) : maxKiWager(actor, own));

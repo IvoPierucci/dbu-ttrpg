@@ -166,7 +166,16 @@ export function techniqueStrikeParts(attacker, attack) {
   if (tech.features.includes("last-legs") && tech.thresholdsBelow) {
     parts.push({ label: "Last Legs", written: `+${tech.thresholdsBelow}(T)`, value: tech.thresholdsBelow * tier });
   }
+  // Elemental (Light): "If this Attacking Maneuver has the Elemental (Dark) Profile applied to it,
+  // increase the Strike Roll by 1(T)."
+  if (darkAndLight(attack)) parts.push({ label: "Elemental (Light) with (Dark)", written: "+1(T)", value: tier });
   return parts;
+}
+
+/** Whether both Elemental (Dark) and Elemental (Light) are on this attack - Multi-Profile's pair. */
+export function darkAndLight(attack) {
+  const profiles = [attack?.profile, attack?.technique?.secondProfile];
+  return profiles.includes("elementalDark") && profiles.includes("elementalLight");
 }
 
 /**
@@ -228,6 +237,9 @@ export function techniqueWoundParts(attacker, attack) {
     const count = ranks("powerbomb");
     if (half) parts.push({ label: `Powerbomb ${count}`, value: half * count });
   }
+  // Elemental (Dark): "If this Attacking Maneuver has the Elemental (Light) Profile applied to it,
+  // increase the Wound Rolls by 2(T)."
+  if (darkAndLight(attack)) parts.push({ label: "Elemental (Dark) with (Light)", written: "+2(T)", value: 2 * tier });
   // Power Shot doubled by Super Advantage: the existing Power Shot row counts once more.
   if (tech.features.includes("super-advantage") && (tech.choices["super-advantage"] === "power-shot")) {
     const shot = Math.min(ranks("power-shot"), 3);
