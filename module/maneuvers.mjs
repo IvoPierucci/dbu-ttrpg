@@ -2257,7 +2257,7 @@ const MANEUVER_KINDS = new Set(["standard", "instant", "counter", "outOfSequence
  * @param {object} [options]
  * @param {string} [options.messageId]  the card this Maneuver was played on or from
  */
-export async function recordManeuverType(actor, type, { messageId = "" } = {}) {
+export async function recordManeuverType(actor, type, { messageId = "", maneuverId = "", profile = "" } = {}) {
   // Fails closed, like every other judgement in this system: an unrecognised kind
   // leaves the hold exactly as it was rather than lifting it. The four kinds are the
   // four kinds, and anything else reaching here is a mistake that must not be a way
@@ -2268,20 +2268,29 @@ export async function recordManeuverType(actor, type, { messageId = "" } = {}) {
     return;
   }
 
+  // Every Maneuver used is the last one now - Lead Up's and Special Set Up's chains. Any
+  // Maneuver in between breaks them, so one that names nothing still overwrites it.
+  const combat = globalThis.game?.combat;
+  const last = { maneuverId: maneuverId ?? "", messageId: messageId ?? "", profile: profile ?? "",
+    round: combat?.started ? (combat.round ?? 0) : 0, hit: [] };
+  const lastUpdate = actor.system?.lastManeuver ? { "system.lastManeuver": last } : {};
+
   const held = actor.system.instantPlayed ?? { held: false, messageId: "" };
 
   // Triggered by the Instant that is holding you, so it does not count as getting out
   // from under it.
   if ((type === "outOfSequence") && held.held && messageId && (messageId === held.messageId)) {
-    return;
+    return Object.keys(lastUpdate).length ? actor.update(lastUpdate) : undefined;
   }
 
   const now = (type === "instant")
     ? { held: true, messageId: messageId ?? "" }
     : { held: false, messageId: "" };
 
-  if ((now.held === held.held) && (now.messageId === held.messageId)) return;
-  return actor.update({ "system.instantPlayed": now });
+  if ((now.held === held.held) && (now.messageId === held.messageId)) {
+    return Object.keys(lastUpdate).length ? actor.update(lastUpdate) : undefined;
+  }
+  return actor.update({ "system.instantPlayed": now, ...lastUpdate });
 }
 
 /**

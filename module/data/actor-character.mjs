@@ -1457,6 +1457,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       { required: true, initial: [] }
     );
 
+    // --- The last Maneuver used ---
+    // Lead Up's "you must hit an Opponent with an Attacking Maneuver of your selected Profile as
+    // your last Maneuver", and Special Set Up's "your selected Special Maneuver as your last
+    // Maneuver this Combat Round". Every Maneuver used overwrites it; an attack fills in whom
+    // it hit once it is settled.
+    schema.lastManeuver = new fields.SchemaField({
+      maneuverId: new fields.StringField({ required: true, blank: true, initial: "" }),
+      messageId: new fields.StringField({ required: true, blank: true, initial: "" }),
+      profile: new fields.StringField({ required: true, blank: true, initial: "" }),
+      round: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      hit: new fields.ArrayField(new fields.StringField({ blank: false }), { required: true, initial: [] })
+    });
+
     // --- Debug switches ---
     // Effects whose own system does not exist yet, driven by hand so the rules that
     // depend on them can be exercised. Ki Multiplier belongs to a Form entered through

@@ -1,0 +1,51 @@
+<div class="tab {{tabs.techniques.cssClass}}" data-group="primary" data-tab="techniques">
+  <section class="panel">
+    <h3 class="panel-title">
+      Signature Techniques
+      <button type="button" class="edit-toggle" data-action="newTechnique"
+              data-tooltip="A blank Super Technique, opened on its Sig Creation tab">New Signature Technique</button>
+    </h3>
+
+    <div class="technique-summary">
+      <span data-tooltip="What the Techniques cost in TP, against the TP Progression has given (Unique Abilities are not priced yet)">
+        TP <b>{{techniques.spent}}</b> / {{techniques.available}}</span>
+      <span data-tooltip="Ultimates possessed, against one plus one per Super beyond the first (Transformation Techniques not counted)">
+        Ultimates <b>{{techniques.ultimates}}</b> / {{techniques.ultimateCap}}</span>
+      <span data-tooltip="Ultimates used this Combat Encounter">
+        Used this Encounter <b>{{techniques.usedThisEncounter}}</b> / {{techniques.encounterCap}}</span>
+    </div>
+    {{#each techniques.warnings as |warning|}}<p class="gear-warning">{{warning}}</p>{{/each}}
+
+    <ul class="maneuver-list technique-list">
+      {{#each techniques.rows as |row|}}
+      <li class="maneuver technique-row{{#if row.refused}} maneuver-exhausted{{/if}}" data-item-id="{{row.itemId}}" draggable="true">
+        <div class="maneuver-head">
+          {{#if row.buddyOnly}}
+          <span class="maneuver-name maneuver-triggered" data-tooltip="Used only through its Warrior Buddy">{{row.name}}</span>
+          {{else}}
+          <button type="button" class="maneuver-name rollable" data-action="useManeuver" data-item-id="{{row.itemId}}"
+                  {{#if row.refused}}data-tooltip="{{row.refused}}"{{/if}}>{{row.name}}</button>
+          {{/if}}
+          <span class="maneuver-uses">{{row.level}}{{#if row.fromTransformation}} &middot; Transformation{{/if}}</span>
+          <span class="maneuver-source">{{row.profile}}</span>
+          <span class="maneuver-cost">{{row.tp}} TP</span>
+          <span class="maneuver-cost" {{#if row.kpTip}}data-tooltip="{{row.kpTip}}"{{/if}}>{{row.kp}} KP</span>
+          <button type="button" class="maneuver-control" data-action="editItem" data-item-id="{{row.itemId}}"
+                  data-tooltip="Build or change this Technique">&#9998;</button>
+        </div>
+        {{#if row.features}}<div class="technique-features-line">{{row.features}}</div>{{/if}}
+        {{#if row.charged}}<div class="dbu-profile-note">{{row.charged}}</div>{{/if}}
+        {{#if row.delayed}}
+        <div class="dbu-profile-note">
+          Imminent is waiting.
+          <button type="button" class="dbu-clash-button" data-action="detonateTechnique" data-item-id="{{row.itemId}}"
+                  data-tooltip="An Instant Maneuver: every Imminent from it goes off">Detonate</button>
+        </div>
+        {{/if}}
+      </li>
+      {{else}}
+      <li class="tab-placeholder">None yet.</li>
+      {{/each}}
+    </ul>
+  </section>
+</div>

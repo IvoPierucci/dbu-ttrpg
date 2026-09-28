@@ -73,6 +73,20 @@ import {
   useBuddyAttack,
   useOwnedManeuver
 } from "../use-maneuver.mjs";
+import { buddyOnlyTechniques } from "../gear.mjs";
+import { SUPER_PROFILES } from "../maneuvers.mjs";
+import {
+  LEVELS as LEVELS_OF_TECHNIQUES,
+  ULTIMATES_PER_ENCOUNTER as ULTIMATES_PER_ENCOUNTER_CAP,
+  featureDef as featureDefOf,
+  isBuilt as isBuiltTechnique,
+  isUltimate as isUltimateLevel,
+  profileKiPerTier as profileKiPerTierOf,
+  signatureOf as signatureOfTechnique,
+  techniqueKiPerTier as techniqueKiPerTierOf,
+  techniqueTP as techniqueTPOf
+} from "../technique.mjs";
+import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-use.mjs";
 import {
   exclusiveAttributeGroups,
   raceOptions,
@@ -429,6 +443,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
+      newTechnique: DBUCharacterSheet._onNewTechnique,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
       resetEncounter: DBUCharacterSheet._onResetEncounter,
       enterEncounter: DBUCharacterSheet._onEnterEncounter,
@@ -506,6 +521,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       template: "systems/dbu-ttrpg/templates/parts/actor-maneuvers.hbs",
       scrollable: [""]
     },
+    techniques: { template: "systems/dbu-ttrpg/templates/parts/actor-techniques.hbs", scrollable: [""] },
     traits: { template: "systems/dbu-ttrpg/templates/parts/actor-traits.hbs", scrollable: [""] },
     battlefields: {
       template: "systems/dbu-ttrpg/templates/parts/actor-battlefields.hbs",
@@ -603,6 +619,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // a published entry is most of a page on its own, and it was the part of that tab a
     // player scrolled past everything else to reach.
     maneuvers: { id: "maneuvers", group: "primary", label: "Maneuvers" },
+    // The Techniques this character built, on a tab of their own beside the Maneuvers they are
+    // thrown through - with what they cost in Technique Points.
+    techniques: { id: "techniques", group: "primary", label: "Signature Techniques" },
     traits: { id: "traits", group: "primary", label: "Traits" },
     // A section of the rules that has not been given yet. The tab is here so there is
     // somewhere for it to go; what fills it is written when the rules arrive rather than
@@ -1245,6 +1264,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
     context.skillGroups = this._prepareSkillGroups(context.workings);
     context.maneuverGroups = this._prepareManeuverGroups();
+    context.techniques = this._prepareTechniques();
     context.racialSkillRanks = this._prepareRacialSkillRanks();
     context.racialAttributeChoices = this._prepareRacialAttributeChoices();
     const { race, subrace } = this.actor.system;
@@ -1445,6 +1465,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // in one.
         maneuvers: this.#ownedManeuvers()
           .filter(maneuver => maneuver.type === group.key)
+          // Signature Techniques have a tab of their own.
+          .filter(maneuver => !(maneuver.signature && !maneuver.signatureTechnique))
           // A Maneuver nothing has opened yet is not listed. The Item is still theirs -
           // renamed, edited, whatever they have done to it - and it comes back the moment
           // whatever opens it is true again.
@@ -1498,6 +1520,91 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           }))
       }))
       .filter(group => group.maneuvers.length > 0);
+  }
+
+  /**
+   * The Signature Techniques tab: every Technique with its level, Profile, TP and KP, and what
+   * the character has spent on them against what they have.
+   *
+   * "You can only possess 1 Ultimate Signature Technique. To possess more ... you must possess an
+   * equal amount of Super Signature Techniques ... This does not count any Signature Techniques
+   * gained from Transformation Traits." And "each Character can only possess 1 Dramatic
+   * Finisher." Both are warned about, never refused - the builder's rule for everything over.
+   */
+  _prepareTechniques() {
+    const actor = this.actor;
+    const tier = actor.system.tierOfPower ?? 1;
+    const buddyOnly = new Set(buddyOnlyTechniques(actor.items.contents, getTrait));
+    const items = actor.items.filter(item => (item.type === "maneuver")
+      && (item.system.tags ?? []).includes("signature") && !item.system.signatureTechnique)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const rows = items.map(item => {
+      const sig = signatureOfTechnique(item);
+      const built = isBuiltTechnique(item);
+      const definition = definitionOf(item);
+      const perTier = built ? (profileKiPerTierOf(sig.profile) + techniqueKiPerTierOf(sig)) : 0;
+      const charging = actor.system.charging ?? {};
+      const mandatory = (definition.advantages ?? []).filter(id => id === "mandatory-charge").length;
+      const delayed = item.system.signature?.delayed;
+      return {
+        itemId: item.id,
+        name: item.name,
+        img: item.img,
+        built,
+        level: LEVELS_OF_TECHNIQUES[sig.level]?.label ?? "Super",
+        profile: [PROFILES[sig.profile]?.label, SUPER_PROFILES[sig.superProfile]?.label].filter(Boolean).join(" + ")
+          || (built ? "" : "Not built yet"),
+        tp: built ? techniqueTPOf(sig) : "-",
+        kp: built ? `${perTier * tier}` : `${maneuverKiCost(definition, null, actor)}`,
+        kpTip: built ? `${perTier}(T)` : "",
+        buddyOnly: buddyOnly.has(item.id),
+        refused: buddyOnly.has(item.id) ? "" : whyNotTechnique(actor, definition),
+        charged: mandatory ? `Charged ${(charging.maneuverId === item.id) ? (Number(charging.charges) || 0) : 0} / ${2 * mandatory}` : "",
+        delayed: Boolean(delayed?.messageId),
+        fromTransformation: sig.fromTransformation,
+        features: sig.features.map(entry => {
+          const def = featureDefOf(entry.id);
+          return `${def?.name ?? entry.id}${(entry.ranks > 1) ? ` ${entry.ranks}` : ""}`;
+        }).join(", ")
+      };
+    });
+
+    const built = items.filter(isBuiltTechnique).map(signatureOfTechnique);
+    const counted = built.filter(sig => !sig.fromTransformation);
+    const ultimates = counted.filter(sig => isUltimateLevel(sig.level)).length;
+    const supers = counted.filter(sig => !isUltimateLevel(sig.level)).length;
+    const dramatic = built.filter(sig => sig.level === "dramatic").length;
+    const spent = built.reduce((sum, sig) => sum + techniqueTPOf(sig), 0);
+    const available = Number(actor.system.techniquePoints) || 0;
+    const warnings = [
+      (spent > available) ? `${spent} TP spent on Techniques, and ${available} TP to spend.` : "",
+      (ultimates > Math.max(1, supers)) ? `${ultimates} Ultimates for ${supers} Supers: one Ultimate more needs one Super more.` : "",
+      (dramatic > 1) ? `${dramatic} Dramatic Finishers: a character may possess one.` : ""
+    ].filter(Boolean);
+    return {
+      rows,
+      spent,
+      available,
+      ultimates,
+      ultimateCap: Math.max(1, supers),
+      usedThisEncounter: ultimatesUsedBy(actor),
+      encounterCap: ULTIMATES_PER_ENCOUNTER_CAP,
+      warnings
+    };
+  }
+
+  /** New Signature Technique: a blank Super, opened on its Sig Creation tab. */
+  static async _onNewTechnique() {
+    if (!this.isEditable) return;
+    const [item] = await this.actor.createEmbeddedDocuments("Item", [{
+      name: "New Signature Technique",
+      type: "maneuver",
+      img: "icons/magic/lightning/bolt-strike-blue.webp",
+      system: { type: "standard", attacking: true, requiresTarget: true, tags: ["signature"],
+        signature: { level: "super" } }
+    }]);
+    item?.sheet?.render(true);
   }
 
   /**

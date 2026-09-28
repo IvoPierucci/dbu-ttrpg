@@ -68,7 +68,10 @@ import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   buddyAttribute, targetableBuddy } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 import { emptiesCapacity } from "./signature.mjs";
-import { choicesOf, isBuilt, isUltimate, signatureOf, techniqueKiPerTier } from "./technique.mjs";
+import { ULTIMATES_PER_ENCOUNTER, choicesOf, isBuilt, isUltimate, signatureOf, techniqueKiPerTier }
+  from "./technique.mjs";
+import { techniqueUseEntries, ultimatesUsed, whyNotTechnique, whyNotTechniqueAgainst }
+  from "./technique-use.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
 import * as soarNames from "./environments.mjs";
@@ -567,6 +570,48 @@ export function signatureTechniquesOf(actor) {
 }
 
 /**
+ * The two Disadvantages that are the table's word, asked as the Technique is used.
+ *
+ * Concentration: "You cannot use this Signature Technique through the Signature Technique
+ * Maneuver if you are within an Opponent's Melee Range." Who has the user in their Melee Range is
+ * measured; who is an Opponent is not something this system assumes, so it asks about them.
+ *
+ * Sneak Attack: "You can only use this Signature Technique when Hidden, and all of your target(s)
+ * ... must be your Oblivious Characters." Neither exists here yet, so it is the player's word.
+ */
+async function techniqueTableQuestions(actor, technique) {
+  const has = id => (technique.advantages ?? []).includes(id);
+  const ask = async (title, content) => foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title }, content, rejectClose: false });
+  if (has("concentration")) {
+    const near = [...new Map((canvas?.tokens?.placeables ?? [])
+      .map(token => token.actor)
+      .filter(other => other && (other.uuid !== actor.uuid) && (other.type === "character")
+        && (squaresAway(other, actor) !== null) && !whyNotWithinMelee(other, actor, ""))
+      .map(other => [other.uuid, other])).values()];
+    if (near.length) {
+      const names = near.map(other => Handlebars.escapeExpression(other.name)).join(", ");
+      const opponent = await ask(`${technique.name} - Concentration`,
+        `<p>${names} ${(near.length === 1) ? "has" : "have"} ${Handlebars.escapeExpression(actor.name)} `
+        + "in Melee Range. Is any of them an Opponent? If so, this Technique cannot be used.</p>");
+      if (opponent) {
+        ui.notifications.warn(`${technique.name}: Concentration - an Opponent is too close.`);
+        return false;
+      }
+    }
+  }
+  if (has("sneak-attack")) {
+    const hidden = await ask(`${technique.name} - Sneak Attack`,
+      `<p>Is ${Handlebars.escapeExpression(actor.name)} Hidden, and are all the targets Oblivious to them?</p>`);
+    if (!hidden) {
+      ui.notifications.warn(`${technique.name}: Sneak Attack - only while Hidden, against Oblivious targets.`);
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Which Signature Technique is being thrown.
  *
  * Asked before anything is paid, like every other question this Maneuver could still be
@@ -582,8 +627,7 @@ async function pickSignatureTechnique(actor, maneuver) {
 
   if (!techniques.length) {
     ui.notifications.warn(
-      `${actor.name} has no Signature Techniques. Build one as a Maneuver and mark it a `
-      + "Signature Technique on its Rules tab.");
+      `${actor.name} has no Signature Techniques. Build one on the Signature Techniques tab.`);
     return null;
   }
 
@@ -593,7 +637,10 @@ async function pickSignatureTechnique(actor, maneuver) {
     const cost = maneuverKiCost(technique, null, actor);
     // Its own limit, if it was given one. The door's [1/Round] is a limit across all of
     // them; this is a limit on this one, and the two are different statements.
-    const spent = maneuverUsesLeft(actor, technique) <= 0;
+    // Refused for a reason of its own - an Ultimate spent this Encounter, a Restricted one out of
+    // its place - is shown and cannot be picked, with the reason beside it.
+    const refused = whyNotTechnique(actor, technique);
+    const spent = (maneuverUsesLeft(actor, technique) <= 0) || Boolean(refused);
     const first = !spent && !checked;
     if (first) checked = true;
     // The Profile's own cost is not in that number - it is added once the Profile is
@@ -605,7 +652,7 @@ async function pickSignatureTechnique(actor, maneuver) {
     const note = [
       cost ? `${cost} KP` : "",
       profile,
-      spent ? `no uses left this ${technique.usageLimit?.per ?? "encounter"}` : ""
+      refused || (spent ? `no uses left this ${technique.usageLimit?.per ?? "encounter"}` : "")
     ].filter(Boolean).join(" \u00b7 ");
 
     return `<label class="dbu-technique${spent ? " dbu-technique-spent" : ""}">
@@ -2043,8 +2090,11 @@ async function revertTransfiguration(actor, target, maneuver) {
   });
 }
 
-export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
+export async function useManeuver(actor, maneuver, { atFeature = false, techniqueId = "", via = "" } = {}) {
   if (!actor || !maneuver) return false;
+  // Whether this use is an Ultimate that began as a Super - Ascended Signature. Set when the
+  // Technique is picked.
+  let ascended = false;
 
   // "Applied onto other Maneuvers you are doing", so there is no using one on its own.
   // The sheet does not offer it either, and this is the same refusal said where the rule
@@ -2071,7 +2121,10 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // held to its own count once it is chosen.
   const copiesLeft = maneuver.throws && throwsCopies(actor.items.contents, getTrait)
     && (throwsThisRound(actor, maneuver) < MULTI_STORAGE_THROWS);
-  if ((maneuverUsesLeft(actor, maneuver) <= 0) && !copiesLeft) {
+  // The Signature Technique Maneuver's own [1/Round] is judged once the Technique is picked: Low
+  // Stakes Attack "does not count towards your uses of the Signature Technique Maneuver".
+  const doorSpent = maneuver.signatureTechnique && (maneuverUsesLeft(actor, maneuver) <= 0);
+  if ((maneuverUsesLeft(actor, maneuver) <= 0) && !copiesLeft && !maneuver.signatureTechnique) {
     ui.notifications.warn(`${actor.name} has no uses of ${maneuver.name} left.`);
     return false;
   }
@@ -2093,9 +2146,39 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // anything is paid: the door is what costs an Action and what may be used once a
   // Combat Round, and the Technique is what the attack then is.
   if (maneuver.signatureTechnique) {
-    const technique = await pickSignatureTechnique(actor, maneuver);
+    const technique = techniqueId
+      ? signatureTechniquesOf(actor).find(entry => entry.itemId === techniqueId) ?? null
+      : await pickSignatureTechnique(actor, maneuver);
     if (!technique) return false;
+    const lowStakes = (technique.advantages ?? []).includes("low-stakes-attack");
+    if (doorSpent && !lowStakes) {
+      ui.notifications.warn(`${actor.name} has no uses of ${maneuver.name} left.`);
+      return false;
+    }
+    const refused = whyNotTechnique(actor, technique, { via });
+    if (refused) {
+      ui.notifications.warn(refused);
+      return false;
+    }
+    // Ascended Signature: "At Attack Declaration, this Signature Technique can become an Ultimate
+    // Signature Technique" - offered while one of the three Ultimates is left.
+    if ((technique.advantages ?? []).includes("ascended-signature") && !technique.ultimate
+      && (ultimatesUsed(actor) < ULTIMATES_PER_ENCOUNTER)) {
+      const ascend = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: `${technique.name} - Ascended Signature` },
+        content: "<p>Use it as an Ultimate Signature Technique? It cannot be used again this Combat Encounter.</p>",
+        buttons: [{ action: "ascend", label: "Ascend" }, { action: "super", label: "As a Super" },
+          { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      });
+      if (!["ascend", "super"].includes(ascend)) return false;
+      ascended = (ascend === "ascend");
+    }
     maneuver = throughSignatureTechnique(maneuver, technique);
+    if (ascended) maneuver = { ...maneuver, ultimate: true, ascended: true };
+    // Low Stakes: the door's use is neither needed nor spent.
+    if (lowStakes) maneuver = { ...maneuver, usageLimit: null };
+    if (via) maneuver = { ...maneuver, via };
   }
 
   // A Surge is what the Maneuver does, and it can be declined once opened - so nothing
@@ -2233,6 +2316,22 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
       ui.notifications.warn(`${maneuver.name} cannot target its own user.`);
       return false;
     }
+  }
+
+  // A Signature Technique's Disadvantages about whom it is aimed at, and the two that are the
+  // table's word - asked now, while nothing is paid.
+  if (maneuver.signature && !maneuver.signatureTechnique && targetActor) {
+    const aimedAt = [...new Set([targetActor, ...Array.from(game.user.targets ?? []).map(token => token.actor)]
+      .filter(Boolean))];
+    for (const target of aimedAt) {
+      const reach = whyNotWithinMelee(actor, target, maneuver.name);
+      const refused = whyNotTechniqueAgainst(actor, maneuver, target, { reach });
+      if (refused) {
+        ui.notifications.warn(refused);
+        return false;
+      }
+    }
+    if (!await techniqueTableQuestions(actor, maneuver)) return false;
   }
 
   // "When you first gain access to this Special Maneuver, you may select one of these
@@ -2651,6 +2750,14 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   await payActions(actor, maneuver, actionsSpent);
   if (burstActions) await spendActions(actor, burstActions);
   await recordManeuverUse(actor, maneuver);
+  // A Signature Technique's own bookkeeping: the Ultimate count, an Ascended one's Encounter, the
+  // Round's Fake Out.
+  if (maneuver.signature && !maneuver.signatureTechnique) {
+    const entries = techniqueUseEntries(maneuver, { ascended: Boolean(maneuver.ascended) });
+    if (entries.length) {
+      await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), ...entries] });
+    }
+  }
 
   // What drawing a Weapon, or putting one away, left for this Maneuver - Quick Draw's and the
   // Sheath/Holster's - taken now, whether this is an attack or not: Quick Draw's Strike is only
@@ -2842,7 +2949,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // Recorded once the card exists, since which card an Instant was played on is part
   // of the rule: an Out-of-Sequence Maneuver this one offers is not a way out from
   // under it.
-  await recordManeuverType(actor, maneuver.type, { messageId: card?.id });
+  await recordManeuverType(actor, maneuver.type, { messageId: card?.id,
+    maneuverId: maneuver.through?.id ?? maneuver.id, profile: declared?.profile ?? "" });
 
   // All or Nothing: once the Technique is used, whatever Capacity the round had left is gone.
   if (card && declared && emptiesCapacity(declared.advantages)
@@ -3198,7 +3306,28 @@ export async function useOwnedManeuver(actor, itemId, { atFeature = false } = {}
     ui.notifications.warn("That Maneuver is not on this character any more.");
     return false;
   }
+  // A Signature Technique is used through the Signature Technique Maneuver, which is what costs
+  // the Action and carries the [1/Round] - with this one already picked.
+  if ((item.system.tags ?? []).includes("signature") && !item.system.signatureTechnique) {
+    return useTechnique(actor, item.id, { atFeature });
+  }
   return useManeuver(actor, definitionOf(item), { atFeature });
+}
+
+/**
+ * Use one Signature Technique, through the character's Signature Technique Maneuver.
+ *
+ * @param {{via?: string}} options  how it is reached: "counter", "exploit", "throw", or "" for the
+ *   Maneuver itself - what Required Counter and the like read.
+ */
+export async function useTechnique(actor, itemId, { atFeature = false, via = "" } = {}) {
+  const door = actor?.items?.find(item => (item.type === "maneuver") && item.system.signatureTechnique);
+  if (!door) {
+    ui.notifications.warn(`${actor?.name ?? "This character"} has no Signature Technique Maneuver. `
+      + "Add the core Maneuvers on the Maneuvers tab.");
+    return false;
+  }
+  return useManeuver(actor, definitionOf(door), { atFeature, techniqueId: itemId, via });
 }
 
 /**
