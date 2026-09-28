@@ -68,8 +68,9 @@ import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   buddyAttribute, targetableBuddy } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 import { emptiesCapacity } from "./signature.mjs";
-import { ULTIMATES_PER_ENCOUNTER, choicesOf, isBuilt, isUltimate, signatureOf, techniqueKiPerTier }
-  from "./technique.mjs";
+import { ULTIMATES_PER_ENCOUNTER, buildArea, choicesOf, isBuilt, isUltimate, signatureOf,
+  techniqueKiPerTier } from "./technique.mjs";
+import { MAGNITUDES, magnitudeIndex } from "./maneuvers.mjs";
 import { techniqueUseEntries, ultimatesUsed, whyNotTechnique, whyNotTechniqueAgainst }
   from "./technique-use.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
@@ -488,6 +489,104 @@ async function askDropPower(actor) {
  * @returns {Promise<?object|false>} `{label, value}` for the Wound Roll to use, false for
  *                                    the Foundation's own, null if backed out of
  */
+/**
+ * What a Signature Technique asks at Attack Declaration, all in one dialog where it can be: the
+ * answers its features need that are the table's or the player's to give.
+ *
+ *   Transformation Boost  "if you are in a Form or Transcended Enhancement" - there are no
+ *                         Transformations here yet, so it is asked
+ *   Giga Flare            "Spend up to 2 Actions", 2(T) Ki and 2 Energy Charges each
+ *   Super Combination     "any number of additional Actions", a rank of Alotta Lotta Attacks and
+ *                         Peppering Blows and an Energy Charge each
+ *   Powerbomb             whether to end the Grapple after, for its Wound
+ *   Splitting             the other Opponents it is aimed at: those targeted, up to its limit
+ *   two Areas             Multi-Profile with two AoEs: "the player picks"
+ *
+ * @returns {Promise<?object>} the answers to add to the declaration, or null if cancelled
+ */
+async function askTechniqueDeclaration(actor, technique, declared, target) {
+  const has = id => (declared.advantages ?? []).includes(id);
+  const ranks = id => (declared.advantages ?? []).filter(entry => entry === id).length;
+  const answers = {};
+  const fields = [];
+  const tier = actor.system.tierOfPower ?? 1;
+  const left = actionsLeft(actor, "standard");
+
+  if (has("transformation-boost") && technique.ultimate) {
+    fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="transformed"/>
+      <span class="dbu-respond-name">In a Form or Transcended Enhancement</span>
+      <span class="dbu-respond-source">Transformation Boost: +1 Energy Charge</span></label>`);
+  }
+  const superProfile = technique.superProfile ?? "";
+  if (superProfile === "giga-flare") {
+    const most = Math.min(2, left - (technique.actionCost ?? 1));
+    fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Giga Flare: extra Actions</span>
+      <input type="number" name="gigaFlare" value="0" min="0" max="${Math.max(0, most)}"/>
+      <span class="dbu-respond-source">each 2(T) KP and 2 Energy Charges</span></label>`);
+  }
+  if (superProfile === "super-combination") {
+    const most = Math.max(0, left - (technique.actionCost ?? 1));
+    fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Super Combination: extra Actions</span>
+      <input type="number" name="superCombination" value="0" min="0" max="${most}"/>
+      <span class="dbu-respond-source">each a rank of Alotta Lotta Attacks and Peppering Blows, and an Energy Charge</span></label>`);
+  }
+  const grapple = actor.system.grapple ?? {};
+  if (has("powerbomb") && target && (grapple.role === "grappler") && (grapple.partner === target.uuid)) {
+    fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="powerbomb"/>
+      <span class="dbu-respond-name">Powerbomb: end the Grapple after this attack</span>
+      <span class="dbu-respond-source">+1/2 Might Wound per rank; no Grapple until your next turn</span></label>`);
+  }
+  const areaProfiles = [declared.profile, technique.secondProfile].filter(id => PROFILES[id]?.area);
+  if (areaProfiles.length > 1) {
+    fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Area of Effect</span>
+      <select name="areaFrom">${areaProfiles.map(id =>
+        `<option value="${id}">${Handlebars.escapeExpression(PROFILES[id].label)}</option>`).join("")}</select></label>`);
+  }
+
+  // Splitting: "select up to 2 Opponents (First Rank) or up to 4 Opponents (Second Rank)" - the
+  // tokens targeted. Who is an Opponent is the player's to say by targeting them.
+  if (has("splitting") && target) {
+    const most = (ranks("splitting") >= 2) ? 4 : 2;
+    const others = [...new Set(Array.from(game.user.targets ?? []).map(token => token.actor)
+      .filter(other => other && (other.uuid !== target.uuid) && (other.uuid !== actor.uuid)))];
+    if ((others.length + 1) > most) {
+      ui.notifications.warn(`${technique.name}: Splitting reaches up to ${most} Opponents; ${others.length + 1} are targeted.`);
+      return null;
+    }
+    answers.extraTargets = others.map(other => ({ uuid: other.uuid, name: other.name }));
+  }
+
+  if (fields.length) {
+    const got = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: technique.name },
+      content: `<div class="dbu-respond-options">${fields.join("")}</div>`,
+      buttons: [
+        { action: "confirm", label: "Declare", callback: (event, button, dialog) => {
+          const form = dialog.element;
+          const num = name => Math.max(0, Number(form.querySelector(`[name="${name}"]`)?.value) || 0);
+          const box = name => Boolean(form.querySelector(`[name="${name}"]`)?.checked);
+          return { transformed: box("transformed"), gigaFlare: Math.min(2, num("gigaFlare")),
+            superCombination: num("superCombination"), powerbomb: box("powerbomb"),
+            areaFrom: form.querySelector('[name="areaFrom"]')?.value ?? "" };
+        } },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!got || (got === "cancel")) return null;
+    Object.assign(answers, got);
+  }
+
+  const extraActions = (answers.gigaFlare ?? 0) + (answers.superCombination ?? 0);
+  if (extraActions) {
+    answers.extraActions = extraActions;
+    // Giga Flare's own price: "2(T) per Action spent through its effects".
+    if (answers.gigaFlare) answers.kiSurcharge = 2 * answers.gigaFlare * tier;
+  }
+  return answers;
+}
+
 async function askDamageAttribute(actor, foundationKey, offers) {
   const attributes = actor.system.attributes ?? {};
   const named = key => `${key.charAt(0).toUpperCase()}${key.slice(1)}`;
@@ -2462,7 +2561,21 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
 
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
     // with the declaration, and only where something worn offers one for this attack.
-    const offers = damageAttributeOffers(Array.from(actor.items ?? []), maneuver);
+    // What a Signature Technique asks at Attack Declaration: the table's answers its features need.
+    if (maneuver.signature && !maneuver.signatureTechnique) {
+      const asked = await askTechniqueDeclaration(actor, maneuver, declared, targetActor);
+      if (!asked) return false;
+      declared = { ...declared, ...asked };
+    }
+
+    const offers = [
+      ...damageAttributeOffers(Array.from(actor.items ?? []), maneuver),
+      // Brutal Blitz: "If you move a number of Squares equal to your Boosted Speed through the
+      // effects of Charging Assault, you may use your Agility as the Damage Attribute."
+      ...(((declared.advantages ?? []).includes("brutal-blitz")
+        && ((Number(declared.squaresCharged) || 0) >= (Number(actor.system.speed?.boosted) || Infinity)))
+        ? [{ attribute: "agility", source: "Brutal Blitz" }] : [])
+    ];
     if (offers.length) {
       const chosen = await askDamageAttribute(actor, declared.foundation, offers);
       if (chosen === null) return false;
@@ -2643,6 +2756,19 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // last of the questions that can still be walked away from, and paid first of the
   // things that are paid - so whatever a Modifier does is in place before the Maneuver it
   // was applied to is declared.
+  // A Technique's Area is what its features build, and Pinpoint Precision opens the Called Shot to
+  // it against one target - both decide what the Modifiers below may be.
+  if (maneuver.signature && !maneuver.signatureTechnique && declared) {
+    const built = buildArea({ profiles: [declared.profile, maneuver.secondProfile].filter(Boolean),
+      features: declared.advantages ?? [], choices: maneuver.featureChoices ?? {},
+      weaponSteps: Number(declared.weapon?.magnitude) || 0, superProfile: maneuver.superProfile ?? "" }).area;
+    const aimed = 1 + (declared.extraTargets?.length ?? 0);
+    const pinpoint = (declared.advantages ?? []).includes("pinpoint-precision")
+      && !(declared.advantages ?? []).includes("concentrated-strike")
+      && built && (magnitudeIndex(built) <= MAGNITUDES.indexOf("standard")) && (aimed === 1);
+    maneuver = { ...maneuver, area: built, pinpointCalledShot: Boolean(pinpoint) };
+  }
+
   const modifiers = await askModifiers(actor, maneuver, targetActor);
   if (!modifiers) return false;
 
@@ -2736,6 +2862,11 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // paid first, since that is the half that can be refused.
   const moving = crossing ? movementPayment(Array.from(actor.items ?? []), price)
     : { store: null, fromStore: 0, fromSelf: price };
+  // Perfect Strike: the full Ki Cost is paid, and Capacity takes half of it - the wager as usual.
+  const perfect = !crossing && maneuver.ultimate && ["simple"].includes(declared?.profile)
+    && (declared?.advantages ?? []).includes("perfect-strike");
+  const wagered = declared?.wagerFromLife ? 0 : (Number(declared?.kiWager) || 0);
+  if (perfect) maneuver = { ...maneuver, capacityCost: moving.fromSelf - Math.ceil((moving.fromSelf - wagered) / 2) };
   if (!fromStore && !await spendManeuverCost(actor, maneuver, moving.fromSelf)) return false;
   if (moving.store) {
     await moving.store.update({
@@ -2749,6 +2880,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
 
   await payActions(actor, maneuver, actionsSpent);
   if (burstActions) await spendActions(actor, burstActions);
+  // Giga Flare's and Super Combination's own Actions, asked at declaration.
+  if (declared?.extraActions) await spendActions(actor, declared.extraActions);
   await recordManeuverUse(actor, maneuver);
   // A Signature Technique's own bookkeeping: the Ultimate count, an Ascended one's Encounter, the
   // Round's Fake Out.

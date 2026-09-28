@@ -1572,10 +1572,15 @@ export const ACTION_TYPES = Object.freeze(["standard", "counter"]);
  * @returns {Promise<boolean>} Whether the Maneuver may proceed.
  */
 export async function spendManeuverCost(actor, maneuver, costOverride = null) {
+  const capacityCost = Number.isFinite(maneuver?.capacityCost) ? maneuver.capacityCost : null;
   const cost = costOverride ?? maneuver.kiCost ?? 0;
   if (cost <= 0) return true;
 
   const { ki, capacity } = actor.system;
+  // What comes out of Capacity, where that is less than the Ki paid: Perfect Strike's "Halve the
+  // reduction to your Capacity Rate from any Ki Points spent on this Signature Technique's Ki Point
+  // Cost (you must still pay the full Ki Point Cost)".
+  const fromCapacity = (capacityCost === null) ? cost : Math.max(0, capacityCost);
 
   if (ki.value < cost) {
     ui.notifications.warn(`${actor.name} needs ${cost} Ki Points for ${maneuver.name} and has ${ki.value}.`);
@@ -1584,16 +1589,16 @@ export async function spendManeuverCost(actor, maneuver, costOverride = null) {
 
   // Capacity caps what may be spent within one Combat Round, on top of what the
   // pool holds.
-  if (cost > capacity.remaining) {
+  if (fromCapacity > capacity.remaining) {
     ui.notifications.warn(
-      `${actor.name} has ${capacity.remaining} Capacity left this round and ${maneuver.name} costs ${cost}.`
+      `${actor.name} has ${capacity.remaining} Capacity left this round and ${maneuver.name} costs ${fromCapacity}.`
     );
     return false;
   }
 
   await actor.update({
     "system.ki.value": ki.value - cost,
-    "system.capacity.spent": capacity.spent + cost
+    "system.capacity.spent": capacity.spent + fromCapacity
   });
   return true;
 }
@@ -2162,7 +2167,11 @@ export function whyNotModify(modifier, base) {
   // narrowing of the first: Called Shot's Base Maneuver is "any Attacking Maneuver" and
   // its Effect says "that does not have an Area of Effect".
   const forbidden = [].concat(modifier.baseForbids ?? []).map(entry => String(entry).trim());
-  if (forbidden.includes("area") && PROFILES[base.profile]?.area) {
+  // A Signature Technique's Area is the one its features built, which may not be its Profile's.
+  // Pinpoint Precision: "If this Attacking Maneuver targets only a single Opponent, you can use the
+  // Called Shot Maneuver on this Attacking Maneuver."
+  const area = ("area" in base) ? base.area : PROFILES[base.profile]?.area;
+  if (forbidden.includes("area") && area && !base.pinpointCalledShot) {
     return `${modifier.name} cannot be applied to an Attacking Maneuver with an Area of Effect.`;
   }
 
@@ -2767,6 +2776,14 @@ export function maneuverKiCost(maneuver, declared, actor) {
     if (declared?.foundation) cost = applySlot(slots, `attack.kiCost.${declared.foundation}`, cost);
     // And the Weapon it is made with - Efficient's "have their Ki Point Cost reduced by 2(T)".
     cost += Number(declared?.weapon?.kiCost) || 0;
+    // Giga Flare: "2(T) per Action spent through its effects", asked at declaration.
+    cost += Number(declared?.kiSurcharge) || 0;
+    // Back Flip: "If this Attacking Maneuver has the Charging Assault Advantage ... the KP Cost of
+    // this Maneuver is reduced by 1(T)" - a discount on the use, which may go under the Profile.
+    const features = declared?.advantages ?? maneuver.advantages ?? [];
+    if (features.includes("back-flip") && features.includes("charging-assault")) {
+      cost -= (actor.system?.tierOfPower ?? 1);
+    }
 
     // Minimum Ki Point Cost, applied last: the price is whatever everything did to it,
     // but never less than half what the Profile lists. Last because it is a floor under

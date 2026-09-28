@@ -14,6 +14,9 @@ import { environmentOf } from "./breath.mjs";
 import { highTraitOf, isAirborne, qualitiesOf } from "./environments.mjs";
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { allKarmicEffects, karmicOptionsFor, spendKarma } from "./karma.mjs";
+import { armorPiercing, damageAttributeOf, karmicSteps, linkedPick, skyAssaultWaives,
+  techniqueAttack, techniqueDamageParts, techniqueStrikeAgainst, techniqueStrikeParts,
+  techniqueWoundAgainst, techniqueWoundParts } from "./technique-attack.mjs";
 import { advantageWoundParts, featureRanks, pushes, staggers, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
 import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, floorLine,
@@ -36,6 +39,7 @@ import {
   interveneOptionCost,
   longRangePenalty,
   atLongRange,
+  whyNotWithinMelee,
   maneuverKiCost,
   lifeWagerProblem,
   spendLifeWager,
@@ -5088,7 +5092,20 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
-                                           naturalAdd = 0 } = {}) {
+                                           naturalAdd = 0, linked = "" } = {}) {
+  // Twin-Linked keeps the higher of two, Dead-Link the lower. The second is made without offering
+  // the triggered effects again - they answered the first - and the one set aside is named.
+  if (linked) {
+    const again = { extraDice, criticalDice, combatRoll, slot, attackingManeuver, minimumNatural,
+      criticalTarget, botchUnlessCritical, naturalAdd };
+    const clone = () => ((typeof modifiers === "number") ? modifiers : modifiers.map(part => ({ ...part })));
+    const first = await rollSide(actor, clone(), { ...again, collect });
+    const second = await rollSide(actor, clone(), { ...again, collect: false });
+    const { kept, dropped } = linkedPick(first, second, linked);
+    kept.linked = { mode: linked, dropped: dropped?.total ?? null,
+      label: (linked === "high") ? "Twin-Linked" : "Dead-Link" };
+    return kept;
+  }
   // A single netted number cannot be taken apart again, so what went into it is kept
   // as labelled parts and only summed for the roll itself.
   const parts = (typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers;
@@ -6533,7 +6550,9 @@ export async function postAttack(actor, target, maneuver,
                                  { profile, foundation, kiWager = 0, wagerFromLife = false,
                                    charges = 0, damageAttribute = null, autoHit = false,
                                    advantages = [], squaresCharged = 0, thrown = null,
-                                   area = null, weapon = null },
+                                   area = null, weapon = null, transformed = false, gigaFlare = 0,
+                                   superCombination = 0, powerbomb = false, areaFrom = "",
+                                   extraTargets = [] },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -6548,13 +6567,26 @@ export async function postAttack(actor, target, maneuver,
   // one Attacking Maneuver, and they all answer the same card.
   // An Absolute Attack is counted as it is made, not as it misses: doing one is making
   // one. In the same write as the rest, off one reading of the character.
-  const absolute = Boolean(maneuver.absolute && maneuver.attacking);
+  // A Signature Technique's features on this attack: which hold, its Area, the Charges they
+  // bring, the flags the rolls read. A reflected attack keeps the one it was thrown with.
+  const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
+  const technique = reflecting
+    ? (reflecting.technique ?? null)
+    : ((maneuver.signature && !maneuver.signatureTechnique)
+      ? techniqueAttack(actor, maneuver, { profile, foundation, advantages, weapon, thrown, charges,
+          squaresCharged, transformed, gigaFlare, superCombination, powerbomb, areaFrom },
+        { targets: everyone, shaken: everyone.filter(who => (Number(who?.system?.conditions?.shaken) || 0) > 0) })
+      : null);
+
+  const absolute = Boolean((maneuver.absolute || technique?.absolute) && maneuver.attacking);
 
   // "Do not count towards the penalty from Diminishing Offense." The count is what the
   // penalty is worked out from, so an attack outside it does not raise the count - and the
   // attack after this one is no worse off for this one having happened. The other half of
   // the same sentence is on the Strike Roll, further down.
-  const counts = maneuver.outsideDiminishing ? 0 : 1;
+  // Shoot and Pray: "counts as an additional number of Attacking Maneuvers equal to its number of
+  // ranks for the effects of Diminishing Offense".
+  const counts = maneuver.outsideDiminishing ? 0 : (technique?.attacksCounted ?? 1);
 
   await actor.update({
     "system.attacksThisRound": actor.system.attacksThisRound + counts,
@@ -6607,7 +6639,10 @@ export async function postAttack(actor, target, maneuver,
           absolute,
           // Everyone this attack reaches, answering one Strike Roll. An area adds to
           // this list; it does not start a second attack.
-          targets: [{ uuid: target.uuid, name: target.name }],
+          targets: [{ uuid: target.uuid, name: target.name },
+            ...extraTargets.filter(entry => entry.uuid !== target.uuid)],
+          // A Signature Technique's features on this attack, worked out as it was declared.
+          technique,
           // What the Signature Technique side brought, and whatever it asked for at
           // declaration. Carried on the attack rather than looked up later: an
           // Advantage applies to the attack it was declared on, and the Technique it
@@ -6625,7 +6660,7 @@ export async function postAttack(actor, target, maneuver,
           profileLabel: PROFILES[profile].label,
           // Carried on the attack rather than looked up later: a Profile's Damage
           // Category is part of what was declared.
-          damageCategory: PROFILES[profile].damageCategory,
+          damageCategory: profileFor({ profile, technique }).damageCategory,
           // Steps applied by the attacker's own effects, summed with the defender's
           // before anything is clamped. Mega Flare is the first thing to write here:
           // "if the number of Energy Charges applied is 7+, increase the Damage
@@ -6663,8 +6698,9 @@ export async function postAttack(actor, target, maneuver,
           // was declared. Null for an Unarmed Attack.
           weapon,
           // An Area the attack brings for itself, over its Profile's - the Grenade's Minor
-          // Sphere. Null for every attack whose Area, if any, is its Profile's.
-          area,
+          // Sphere. Null for every attack whose Area, if any, is its Profile's. A Technique's is
+          // the one its features built.
+          area: technique ? technique.area : area,
           // "A Bomb's Strike Roll for this Attacking Maneuver will automatically succeed."
           // Carried on the attack, since it is the attack's and not the character's.
           autoHit: Boolean(autoHit),
@@ -6683,9 +6719,17 @@ export async function postAttack(actor, target, maneuver,
             ? (reflecting.energyCharges ?? 0)
             : Math.min(
                 charges + (PROFILES[profile].grantsEnergyCharge ?? 0)
-                  + (Number(weapon?.energyCharges) || 0),
+                  + (Number(weapon?.energyCharges) || 0)
+                  // What the Technique's features bring: Concentrated Strike, the Ultimate's
+                  // Thresholds, Giga Flare... held to the maximum with the rest.
+                  + (technique?.bonusCharges ?? []).reduce((sum, entry) => sum + entry.amount, 0),
                 maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES)
+                  // "Ultimate Signature Techniques can possess an additional Energy Charge beyond
+                  // the Character's usual limit."
+                  + (technique?.chargeCeilingBonus ?? 0)
               ) + (PROFILES[profile].grantsUncappedEnergyCharge ?? 0),
+          // Dice Categories the Technique's features add to each Charge: Maximum Charge, Super Beam.
+          chargeCategories: reflecting ? (reflecting.chargeCategories ?? 0) : (technique?.chargeCategories ?? 0),
           // Whose Technique it was, which is what decides the size of an Energy Charge's
           // die - and it is their attack being thrown back, not the reflector's.
           signature: reflecting
@@ -7237,6 +7281,66 @@ function energyChargeDice(attacker, attack) {
   }).join(" + ");
 }
 
+/**
+ * The Profile an attack is made with, as its readers want it - and with Multi-Profile, both of
+ * them: "Apply that Profile to this Attacking Maneuver ... That Attacking Maneuver is also
+ * considered to be of that Profile." The main one's own values stand where both have one; what
+ * only the other has is added; and the Damage Category is the highest of the two.
+ */
+function profileFor(attack) {
+  const main = PROFILES[attack?.profile];
+  const second = PROFILES[attack?.technique?.secondProfile];
+  if (!main || !second) return main;
+  const order = Object.keys(DAMAGE_CATEGORIES);
+  const higher = (order.indexOf(second.damageCategory) > order.indexOf(main.damageCategory))
+    ? second.damageCategory : main.damageCategory;
+  return { ...second, ...main, damageCategory: higher, label: `${main.label} + ${second.label}` };
+}
+
+/**
+ * What a Technique does the moment it hits somebody, before any Damage is worked out - so it is
+ * already on them when their Soak is read.
+ *
+ *   Penetration          "apply a number of stacks of the Broken Combat Condition equal to the
+ *                        ranks of this Advantage until the start of your next turn" - at the hit,
+ *                        so this attack's own Soak is already reduced (the user's ruling)
+ *   Pinpoint Precision   "If you hit an Opponent with a Called Shot, apply a rank of the Broken
+ *                        Combat Condition until the start of your next turn"
+ *
+ * Not on an Absolute miss, which does not count as a hit.
+ */
+async function techniqueOnHit(attacker, attack, target) {
+  const tech = attack.technique;
+  if (!tech) return [];
+  const said = [];
+  let broken = featureRanks(tech.features, "penetration");
+  const calledShot = (attack.modifiers ?? []).some(entry => entry.id === "called-shot"
+    || entry.modifier?.id === "called-shot");
+  if (tech.features.includes("pinpoint-precision") && calledShot) broken += 1;
+  if (broken) {
+    const { setCondition } = await import("./conditions.mjs");
+    const now = Number(target.system.conditions?.broken) || 0;
+    const stacks = Math.min(3, now + broken);
+    if (await setCondition(target, "broken", stacks) !== false) {
+      await lasting(attacker, { kind: KINDS.CONDITION, key: "broken", edge: EDGES.START, next: true,
+        on: target.uuid, source: attack.maneuverName });
+      said.push(`${target.name} is Broken ${stacks} until the start of ${attacker.name}'s next turn.`);
+    }
+  }
+  return said;
+}
+
+/**
+ * Condition: "If an Opponent is already suffering from your selected Combat Condition" - read on
+ * the target as the Wound is settled, before this attack puts it there.
+ */
+function conditionAlreadyOn(attack, target) {
+  const tech = attack.technique;
+  if (!tech?.features?.includes("condition")) return false;
+  const chosen = tech.choices?.condition ?? "";
+  return Boolean(chosen) && ((Number(target?.system?.conditions?.[chosen]) || 0) > 0);
+}
+
 /** The steps the Modifier Maneuvers on an attack put on its Damage Category. */
 function modifierCategoryShift(modifiers) {
   return (modifiers ?? []).reduce((sum, entry) => sum + (entry.damageCategoryShift ?? 0), 0);
@@ -7343,7 +7447,7 @@ function followUpRows(attack) {
   const settled = attack.result?.followUps;
   if (!settled?.rolls?.length) return "";
 
-  const profile = PROFILES[attack.profile];
+  const profile = profileFor(attack);
   const against = (settled.beatable === null)
     ? "no roll to beat"
     : `against their ${settled.beatable}`;
@@ -7433,7 +7537,7 @@ async function settleAttack(message, attack) {
  * Empty when nothing applies, so the breakdown does not carry a zero.
  */
 function profileStrikeParts(attacker, attack) {
-  const profile = PROFILES[attack.profile];
+  const profile = profileFor(attack);
   if (!profile?.halfHasteOnStrike) return [];
 
   const haste = attacker.system.haste ?? 0;
@@ -7473,23 +7577,28 @@ async function resolveAttack(message, attack) {
     ...profileStrikeParts(attacker, attack),
     ...modifierStrikeParts(attacker, attack),
     ...(attack.weapon?.strike ?? []),
-    ...musclePenalty(attacker),
+    ...techniqueStrikeParts(attacker, attack),
+    // Power Burst: "ignoring the penalties to your Strike Roll from the Muscle Penalty".
+    ...(attack.technique?.noMusclePenalty ? [] : musclePenalty(attacker)),
     // Left off entirely rather than shown at nothing: a row saying Diminishing Offense
     // took nothing off is a row a reader has to work out the meaning of, and the rule is
     // that it does not apply rather than that it applies and comes to zero.
     ...(attack.outsideDiminishing
       ? []
       : [{ label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty }]),
-    ...thresholdPenalty(attacker)
+    // Last Legs: "Ignore all Health Threshold penalties during this Attacking Maneuver."
+    ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))
   ], {
     ...attackerOptions, slot: "strike", attackingManeuver: true,
     // Clearing puts a floor under the Natural Result; Cutting makes anything short of a
     // Critical a Botch. Both belong to the Profile rather than to the character, so they
     // travel with the roll instead of being written to a Slot.
-    minimumNatural: PROFILES[attack.profile]?.minimumNatural ?? 0,
-    botchUnlessCritical: Boolean(PROFILES[attack.profile]?.botchUnlessCritical),
+    minimumNatural: profileFor(attack)?.minimumNatural ?? 0,
+    botchUnlessCritical: Boolean(profileFor(attack)?.botchUnlessCritical),
     // The Weapon's own - Targeting System's "Increase the Natural Result of any Strike Roll".
-    naturalAdd: Number(attack.weapon?.strikeNatural) || 0
+    naturalAdd: Number(attack.weapon?.strikeNatural) || 0,
+    // Twin-Linked or Dead-Link on the Strike: made twice, one kept.
+    linked: attack.technique?.linked?.strike ?? ""
   });
 
   // From here it branches. What each of them did about that Strike is theirs alone, and
@@ -7529,7 +7638,7 @@ async function resolveAttack(message, attack) {
     // against it, so it is rolled even though it cannot stop the blow that is coming.
     // Without this the defender met three more Strikes with nothing at all, and every
     // one of them landed for free.
-    const stillCounts = Boolean(PROFILES[attack.profile]?.followUps);
+    const stillCounts = Boolean(profileFor(attack)?.followUps);
     const answer = (forced && !stillCounts)
       ? null
       : await defence.answer(target, options, attack);
@@ -7548,9 +7657,14 @@ async function resolveAttack(message, attack) {
     // the same Opponents it is taken off. From a Weapon held by the mind the attack may start
     // anywhere around its wielder, so how far it came is the table's and nothing is taken.
     const weapon = attack.weapon ?? {};
+    const skyWaived = skyAssaultWaives(attacker, attack, target);
     const longRange = weapon.telekinetic ? 0
-      : ((weapon.ignoresLongRange ? 0 : longRangePenalty(attacker, target))
-        - (atLongRange(attacker, target) ? (Number(weapon.longRangeStrike) || 0) : 0));
+      : ((weapon.ignoresLongRange || skyWaived ? 0 : longRangePenalty(attacker, target))
+        - (atLongRange(attacker, target) ? (Number(weapon.longRangeStrike) || 0) : 0)
+        // Long Shot, Short Range and a Trick Attack's won Clash: against this one alone.
+        - techniqueStrikeAgainst(attacker, attack, { longRange: atLongRange(attacker, target),
+            outsideMelee: Boolean(whyNotWithinMelee(attacker, target, "")),
+            tricked: (attack.tricked ?? []).includes(uuid) }));
 
     // "Increase your Combat Rolls against Analyzed Opponents." Added here for the same
     // reason the Long Range penalty is taken here: one Strike Roll reaches several people
@@ -7582,6 +7696,12 @@ async function resolveAttack(message, attack) {
 
     if (incoming) spendChosen(target, incoming);
 
+    // A Technique's effects at the hit itself - Penetration's and Pinpoint Precision's Broken.
+    if (hit) {
+      const onHit = await techniqueOnHit(attacker, attack, target);
+      if (onHit.length) await settledNote(message, onHit.join(" "));
+    }
+
     // Every step for and against the Damage Category is summed before anything is
     // clamped, so an attack pushed well past Lethal is still above one merely at it.
     // Per target, because the defence is part of it: a Guard drops the Category for
@@ -7590,12 +7710,15 @@ async function resolveAttack(message, attack) {
     // by 1 Category." Summed with the rest rather than applied on its own, so a Guard
     // pulling the Category down still meets it in the middle.
     const criticalStep = (strike.outcome === "critical")
-      ? (PROFILES[attack.profile]?.categoryUpOnCriticalStrike ?? 0)
+      ? (profileFor(attack)?.categoryUpOnCriticalStrike ?? 0)
       : 0;
 
     const shift = (attack.damageCategoryShift ?? 0)
       + criticalStep
       + (defence.damageCategoryShift ?? 0)
+      // Karmic: "Increase the Damage Category by 1 Category against Characters who have an opposing
+      // Z-Soul. If that Opponent's Z-Soul Alignment is 'Pure', apply this bonus twice."
+      + karmicSteps(attacker, attack, target)
       + (incoming?.slots?.["incoming.damage.category.shift"]?.add ?? 0);
 
     // Gained after the Attacking Maneuver, so it never touches the roll just made. The
@@ -7615,9 +7738,12 @@ async function resolveAttack(message, attack) {
       // Sweeping doubles what a target takes, but only "if you deal Damage with this
       // Attacking Maneuver" - which is not known yet. So the multiplier travels with
       // the attack and the stacks are settled once the Damage is.
+      // Peppering Blows: "this Attacking Maneuver is considered another Attacking Maneuver for the
+      // sake of applying Diminishing Defense stacks", once per rank.
       await requestActorUpdate(target, {
         "system.diminishingDefense":
-          target.system.diminishingDefense + target.system.diminishing.defense.perAttack
+          target.system.diminishingDefense + (target.system.diminishing.defense.perAttack
+            * (attack.technique?.diminishingDefenseTimes ?? 1))
       });
     }
 
@@ -8132,27 +8258,33 @@ function woundRoller(attack) {
 function woundBase(attacker, attack) {
   const wound = attacker.system.combat.wound[attack.foundation] ?? 0;
   const own = attack.damageAttribute;
-  if (!own) return { label: "Wound", value: wound };
-
   const attribute = DBUCharacterData.FOUNDATIONS[attack.foundation]?.attribute;
   const theirs = attacker.system.attributes?.[attribute]?.mod ?? 0;
+  // Low-Power Crush: "Halve your Damage Attribute for this Attacking Maneuver" - whichever stands.
+  if (attack.technique?.halfDamageAttribute) {
+    const whole = own ? (Number(own.value) || 0) : theirs;
+    const named = own ? own.label : `${attribute?.charAt(0).toUpperCase() ?? ""}${attribute?.slice(1) ?? ""}`;
+    return { label: `Wound (1/2 ${named})`, value: wound - theirs + Math.floor(whole / 2) };
+  }
+  if (!own) return { label: "Wound", value: wound };
   return { label: `Wound (${own.label})`, value: wound - theirs + (Number(own.value) || 0) };
 }
 
 function profileWoundParts(attacker, attack) {
-  const profile = PROFILES[attack.profile];
+  const profile = profileFor(attack);
   const parts = [];
 
   // Whichever Attribute the attack is made with: one standing in for the Foundation's -
   // the Hologram Projector's Personality, a Bomb's recorded Scholarship - is the Damage
   // Attribute, and it is what is applied again.
-  if (profile?.extraDamageAttribute) {
+  if (profile?.extraDamageAttribute || attack.technique?.extraDamageAttribute) {
     const foundation = DBUCharacterData.FOUNDATIONS[attack.foundation];
     const own = attack.damageAttribute;
     const modifier = own ? (Number(own.value) || 0)
       : (attacker.system.attributes?.[foundation?.attribute]?.mod ?? 0);
     const said = own ? own.label : foundation.label;
-    if (modifier) parts.push({ label: `${profile.label} (${said})`, value: modifier });
+    const source = profile?.extraDamageAttribute ? profile.label : "Complete Annihilation";
+    if (modifier) parts.push({ label: `${source} (${said})`, value: modifier });
   }
 
   // Mega Flare: "for every Energy Charge applied to this Attacking Maneuver, increase
@@ -8192,7 +8324,7 @@ function profileWoundParts(attacker, attack) {
  * what is there.
  */
 function profileSoakIgnored(attacker, attack) {
-  const profile = PROFILES[attack.profile];
+  const profile = profileFor(attack);
   if (!profile?.ignoresSoakByInsight) return 0;
 
   const insight = attacker.system.attributes?.insight?.mod ?? 0;
@@ -8230,7 +8362,7 @@ function profileSoakIgnored(attacker, attack) {
  * where nobody saw them.
  */
 function awaitsFollowUps(attack) {
-  return Boolean(PROFILES[attack.profile]?.followUps)
+  return Boolean(profileFor(attack)?.followUps)
     && anyoneHit(attack)
     && !attack.result?.wound
     && !attack.result?.followUps;
@@ -8280,7 +8412,7 @@ function isAbsoluteMiss(own) {
  * these are three repetitions of one roll, not three more exchanges.
  */
 async function rollFollowUpStrikes(message, attack, attacker) {
-  const profile = PROFILES[attack.profile];
+  const profile = profileFor(attack);
   const plan = profile?.followUps;
   if (!plan) return;
 
@@ -8305,15 +8437,24 @@ async function rollFollowUpStrikes(message, attack, attacker) {
   const longRange = line?.longRange ?? 0;
 
   const rolls = [];
-  for (let i = 0; i < plan.rolls; i++) {
-    rolls.push(await rollSide(attacker, [{ label: "Strike", value: attack.result.strike.bonus ?? 0 }], {
-      extraDice: attacker.system.dice.extra.formula,
-      criticalDice: attacker.system.dice.critical.formula,
-      combatRoll: true,
-      slot: null,
-      collect: false,
-      attackingManeuver: true
-    }));
+  // Alotta Lotta Attacks and Super Combination: "roll your Strike Roll an additional time for each
+  // rank".
+  const howMany = plan.rolls + (Number(attack.technique?.followUpRolls) || 0);
+  // Dead-Link on the Strike reaches these too - the text excludes nothing, unlike Twin-Linked,
+  // which "is not applied to the additional Strike Rolls made with the Combination Profile".
+  const deadLink = attack.technique?.linked?.strike === "low";
+  const options = {
+    extraDice: attacker.system.dice.extra.formula,
+    criticalDice: attacker.system.dice.critical.formula,
+    combatRoll: true,
+    slot: null,
+    collect: false,
+    attackingManeuver: true
+  };
+  for (let i = 0; i < howMany; i++) {
+    const parts = () => [{ label: "Strike", value: attack.result.strike.bonus ?? 0 }];
+    const first = await rollSide(attacker, parts(), options);
+    rolls.push(deadLink ? linkedPick(first, await rollSide(attacker, parts(), options), "low").kept : first);
   }
 
   const beat = (beatable === null)
@@ -8342,14 +8483,14 @@ async function rollFollowUpStrikes(message, attack, attacker) {
 
 /** What Combination's follow-up Strikes added, once they have been made. */
 function combinationFollowUps(attacker, attack) {
-  const profile = PROFILES[attack.profile];
+  const profile = profileFor(attack);
   const settled = attack.result?.followUps;
   if (!profile?.followUps || !settled?.bonus) return [];
 
   // The label carries what happened, since the Wound Roll's own line is where anyone
   // will look for it: how many of the three landed, and what they had to beat.
   return [{
-    label: `${profile.label} (${settled.beat} of ${profile.followUps.rolls}`
+    label: `${profile.label} (${settled.beat} of ${settled.rolls?.length ?? profile.followUps.rolls}`
       + `${settled.beatable === null ? "" : ` beat ${settled.beatable}`})`,
     written: `+${settled.perTier}(T)`,
     value: settled.bonus
@@ -8393,11 +8534,12 @@ async function rollAttackWound(message, attack) {
     woundBase(attacker, attack),
     ...profileWoundParts(attacker, attack),
     ...advantageWoundParts(attacker, attack),
+    ...techniqueWoundParts(attacker, attack),
     ...superStackWoundParts(attacker, attack),
     ...modifierWoundParts(attacker, attack),
     ...(attack.weapon?.wound ?? []),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
-    ...thresholdPenalty(attacker)
+    ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))
   ], {
     // Kept apart rather than joined: the dice an Energy Charge is worth and the ones
     // the Tier of Power grants are two different rules, and the card says which is
@@ -8414,7 +8556,9 @@ async function rollAttackWound(message, attack) {
     // Cutting: "on the Wound Roll, the Critical Target is 5 (ignoring the usual limit)."
     // The usual limit is the floor a character's own Critical Target is held to when it
     // is derived, so a stated one goes in as written rather than through it.
-    criticalTarget: PROFILES[attack.profile]?.woundCriticalTarget ?? null
+    criticalTarget: profileFor(attack)?.woundCriticalTarget ?? null,
+    // Twin-Linked or Dead-Link on the Wound: made twice, one kept.
+    linked: attack.technique?.linked?.wound ?? ""
   });
 
   // What an attack can get past of somebody's Damage Reduction, for this attack only.
@@ -8422,7 +8566,10 @@ async function rollAttackWound(message, attack) {
   // knows about it - the same piercing reaches everyone the attack reached.
   const pierce = atMoment(attacker, "before-wound", { attack: 1, damageCategory: 1 });
   spendChosen(attacker, pierce);
-  const pierced = pierce.slots?.["damageReduction.pierced"]?.add ?? 0;
+  const pierced = (pierce.slots?.["damageReduction.pierced"]?.add ?? 0)
+    // Armor-Piercing: "Ignore the target's Damage Reduction equal to 1/2 of your Insight Modifier"
+    // - Pinpoint's doubled one, where its Critical doubled it.
+    + armorPiercing(attacker, attack, { insightDoubled: attack.result?.strike?.outcome === "critical" });
 
   // Ignored after the Category and the defence have both had their say, and never more
   // than is left: ignoring Soak that is not there would be worth more than ignoring
@@ -8505,7 +8652,10 @@ async function rollAttackWound(message, attack) {
     // One Wound Roll serves everyone the attack reached, and this bonus is against one of
     // them - so it is added where what the roll comes to is already worked out per person,
     // which is the same place a Guard halves it.
-    const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0);
+    const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
+      + techniqueWoundAgainst(attacker, attack, { longRange: atLongRange(attacker, target),
+          outsideMelee: Boolean(whyNotWithinMelee(attacker, target, "")),
+          alreadyConditioned: conditionAlreadyOn(attack, target) });
     const effectiveWound = defence.wound(wound.total + analysis);
 
     // A blow that lands on one of their Weapons rather than on them - a Called Shot at it, or a
@@ -8544,7 +8694,7 @@ async function rollAttackWound(message, attack) {
     const afterPierce = Math.max(0, (target.system.damageReduction ?? 0) - pierced);
     // Bludgeoning's "ignore 1/2 of your target's Damage Reduction" is another such fraction,
     // and another thing than Concentrated's: both, and each takes its own part.
-    const halved = (PROFILES[attack.profile]?.ignoresHalfDamageReduction
+    const halved = (profileFor(attack)?.ignoresHalfDamageReduction
       ? Math.floor(afterPierce / 2)
       : 0) + Math.floor(afterPierce * (Number(attack.weapon?.damageReductionIgnored) || 0));
     const reduction = Math.max(0, afterPierce - halved);
@@ -8566,13 +8716,18 @@ async function rollAttackWound(message, attack) {
       : null;
     if (beforeWound) spendChosen(target, beforeWound);
 
-    const damage = damageTaken(raw,
+    const taken = damageTaken(raw,
       { "incoming.damage": own.incomingDamage },
       beforeWound?.slots);
+    // What the Technique adds once there is Damage: Minion Destroyer, Shattering Blow, Complete
+    // Annihilation against the Undying.
+    const extra = techniqueDamageParts(attacker, attack, target, taken);
+    const damage = taken + extra.reduce((sum, part) => sum + part.value, 0);
 
     await maybeShakeAttacker(attacker, attack, defence, damage);
 
-    settledTargets.push({ ...own, counterWound, effectiveWound, soak, reduction, damage });
+    settledTargets.push({ ...own, counterWound, effectiveWound, soak, reduction, damage,
+      ...(extra.length ? { techniqueExtra: extra } : {}) });
   }
 
   // What the Wound Roll came to for each person who took one in somebody else's place.
@@ -8942,12 +9097,17 @@ function musclePenalty(actor) {
  * made by the same character gets the Muscle Penalty and none of this.
  */
 function superStackWoundParts(attacker, attack) {
-  const { stacks = 0, massivePower = 0 } = attacker.system.superStack ?? {};
+  const { stacks: own = 0, massivePower: ownPower = 0, massivePerStack = 0 } = attacker.system.superStack ?? {};
   const reaches = DBUCharacterData.MASSIVE_POWER_FOUNDATIONS.includes(attack.foundation);
+  // Power Burst: "gain 1 Super Stack for the duration of this Attacking Maneuver" per rank - never
+  // past three.
+  const burst = Number(attack.technique?.superStacks) || 0;
+  const stacks = Math.min(DBUCharacterData.MAX_SUPER_STACKS, own + burst);
+  const massivePower = burst ? (massivePerStack * stacks) : ownPower;
   if (!massivePower || !reaches) return [];
 
   return [{
-    label: "Super Stacks",
+    label: burst ? "Super Stacks (Power Burst)" : "Super Stacks",
     written: (stacks === 1) ? "+1/4 Force" : `+${stacks} × 1/4 Force`,
     value: massivePower
   }];
@@ -9168,8 +9328,8 @@ async function openKnockback(attack, attacker, target, { extra = 0, from = "" } 
     collision: {
       // Launching doubles what the movement costs, and says so itself - an Advantage
       // does not know which Profile handed it out.
-      doubles: Boolean(PROFILES[attack.profile]?.doublesCollisionDamage),
-      doubledBy: PROFILES[attack.profile]?.label ?? ""
+      doubles: Boolean(profileFor(attack)?.doublesCollisionDamage),
+      doubledBy: profileFor(attack)?.label ?? ""
     }
   });
 }
@@ -9838,7 +9998,7 @@ async function applyAttackDamage(message, target, attack) {
   // written "if you deal Damage with this Attacking Maneuver", so it is one of them.
   const doubled = (damage > 0)
     && !isAbsoluteMiss(own)
-    && PROFILES[attack.profile]?.doublesDiminishingDefense
+    && profileFor(attack)?.doublesDiminishingDefense
     && DEFENCES[own.defense]?.gainsDiminishingDefense
     && !own.forced;
 
@@ -9955,7 +10115,7 @@ async function applyAttackDamage(message, target, attack) {
   // Frozen - "until the start of your next turn", and "if you knock an Opponent through a
   // Health Threshold, they gain a stack of the Broken" - or Slowed - "Combat Condition until
   // the end of your next turn". Which mark and which Condition is the Profile's to say.
-  const riders = PROFILES[attack.profile] ?? {};
+  const riders = profileFor(attack) ?? {};
   const attacker = fromUuidSync(attack.attackerUuid);
   if (attacker && (damage > 0) && !isAbsoluteMiss(own)) {
     if (riders.squareMark) {
@@ -10818,8 +10978,8 @@ function attackOutcome(attack) {
   }
 
   if (awaitsFollowUps(attack)) {
-    const plan = PROFILES[attack.profile].followUps;
-    return `Hit - awaiting ${plan.rolls} more Strikes`;
+    const plan = profileFor(attack).followUps;
+    return `Hit - awaiting ${plan.rolls + (Number(attack.technique?.followUpRolls) || 0)} more Strikes`;
   }
   if (!attack.result.wound && attackTargets(attack).some(t => targetResult(attack, t.uuid)?.hit)) {
     return "Hit - awaiting the Wound Roll";
@@ -10985,7 +11145,7 @@ function renderAttack(message, html) {
           ? ` &middot; ${Handlebars.escapeExpression(attack.thrown.name)} thrown`
           : ""}${attack.weapon
           ? ` &middot; with ${Handlebars.escapeExpression(attack.weapon.name)}`
-          : ""}${featureNote(PROFILES[attack.profile])}</span>
+          : ""}${featureNote(profileFor(attack))}</span>
     </div>
     ${result
       ? attackSide("Strike", attack.attackerName, result.strike)
@@ -11160,11 +11320,11 @@ function renderAttack(message, html) {
     const attacker = fromUuidSync(attack.attackerUuid);
     if (!attacker?.isOwner) return;
 
-    const plan = PROFILES[attack.profile].followUps;
+    const plan = profileFor(attack).followUps;
     const more = document.createElement("button");
     more.type = "button";
     more.className = "dbu-clash-button";
-    more.textContent = `Roll ${plan.rolls} additional Strikes`;
+    more.textContent = `Roll ${plan.rolls + (Number(attack.technique?.followUpRolls) || 0)} additional Strikes`;
     more.dataset.tooltip = "Each one that beats the defence they already made adds "
       + `${plan.woundPerHitPerTier}(T) to the Wound Roll.`;
     more.addEventListener("click", () => rollFollowUpStrikes(message, attack, attacker));
