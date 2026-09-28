@@ -1,0 +1,27 @@
+id: mentor-buddy
+name: Mentor Buddy
+kind: gear
+itemType: buddy
+buddyEffect: passive
+source: Core Rule
+description: >
+  Active: Combat Rolls 1(bT) higher. Adventuring: Insight Modifier 1(bT) higher, and every
+  Insight Skill 1 higher.
+text: >
+  Mentor Buddy: This wise teacher insists that you continue to improve.
+  –Buddy Effect Type: Passive
+  –Effects: Increase your Combat Rolls by 1(bT).
+  –Adventure Effect: While Adventuring, increase your Insight Modifier by 1(bT) and the Skill
+  Bonus of all of your Skills that use your Insight Score by 1.
+
+---
+
+# `skill.$insightSkill` is written once for every Skill that uses Insight.
+[passive]
+if ($active == 1) {
+  combatRolls += 1(bT);
+}
+if (adventuring) {
+  insight.mod += 1(bT);
+  skill.$insightSkill += 1;
+}

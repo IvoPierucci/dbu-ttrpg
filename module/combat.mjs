@@ -502,6 +502,23 @@ export function registerCombatHooks() {
 async function regenerateWeapons(actor) {
   const { regenerating, sheathMending } = await import("./gear.mjs");
   const { getTrait } = await import("./effects/traits.mjs");
+  // A Buddy kept from being called for the Encounter - saved with a Karma Point, or dismissed by
+  // an Annoyed Zen-O - may be called again.
+  const locked = Array.from(actor.items ?? []).filter(item => item.system?.buddy?.locked);
+  if (locked.length) {
+    await actor.updateEmbeddedDocuments("Item", locked.map(item => ({ _id: item.id, "system.buddy.locked": false })));
+  }
+  // The Guiding Spirit "will decide if they will continue to assist you as a Buddy at the end of
+  // each Combat Encounter" - theirs to decide, and said.
+  for (const item of Array.from(actor.items ?? []).filter(each => (each.system?.itemType === "buddy")
+    && each.system?.buddy?.spiritUuid && !each.system?.buddy?.destroyed)) {
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.system.buddy.spiritName || "The Spirit")} `
+        + `decides whether to go on helping ${Handlebars.escapeExpression(actor.name)} as their `
+        + `${Handlebars.escapeExpression(item.name)}. If not, it is taken off the sheet.</div>`
+    });
+  }
   // A Poison Vial's Drop: "A Weapon stops being Poisoned at the end of the Combat Encounter."
   const poisoned = Array.from(actor.items ?? []).filter(item => item.system?.crafted?.poisoned);
   if (poisoned.length) {

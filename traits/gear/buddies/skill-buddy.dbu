@@ -1,0 +1,27 @@
+id: skill-buddy
+name: Skill Buddy
+kind: gear
+itemType: buddy
+buddyEffect: passive
+chooses: skill
+source: Core Rule
+description: >
+  A Skill chosen when it is given: a quarter of the Buddy Attribute (rounded up) on it, Active
+  and Adventuring alike.
+text: >
+  Skill Buddy: This aide assists you with your tasks on a particular topic.
+  –Buddy Effect Type: Passive
+  –Effects: Select a Skill upon gaining this Buddy. While your Buddy is present, increase the
+  Skill Bonus for that Skill by 1/4 (rounded up) of your Buddy Attribute.
+  –Adventure Effect: Increase the Skill Bonus of your selected Skill by 1/4 (rounded up) of your
+  Buddy Attribute.
+
+---
+
+[passive]
+if ($active == 1) {
+  skill.$skill += ceil($buddyAttribute / 4);
+}
+if (adventuring) {
+  skill.$skill += ceil($buddyAttribute / 4);
+}

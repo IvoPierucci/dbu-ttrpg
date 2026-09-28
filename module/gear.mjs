@@ -27,7 +27,9 @@ export const GEAR_TYPES = Object.freeze({
   basic: { label: "Basic Item", list: "basic" },
   accessory: { label: "Accessory", list: "basic" },
   apparel: { label: "Apparel", list: "apparel" },
-  weapon: { label: "Weapon", list: "weapon" }
+  weapon: { label: "Weapon", list: "weapon" },
+  // "A Buddy is a small companion that assists you in certain ways both in and out of combat."
+  buddy: { label: "Buddy", list: "buddy" }
 });
 
 /**
@@ -1944,7 +1946,8 @@ export const GEAR_ICON = "icons/svg/item-bag.svg";
 export const GEAR_FOLDERS = Object.freeze({
   basic: ["basic", "accessory"],
   apparel: ["apparel"],
-  weapons: ["weapon"]
+  weapons: ["weapon"],
+  buddies: ["buddy"]
 });
 
 /**
@@ -2411,6 +2414,133 @@ export function sheathMending(actor, getTrait = null) {
       const most = craftedReading(item.system.crafted, { getTrait, difficulties: {}, data: actor.system })?.lifeMax ?? 0;
       return { item, lifeLost: Math.max(0, (Number(item.system.crafted.lifeLost) || 0) - Math.floor(most / 4)) };
     });
+}
+
+// --- Buddies -------------------------------------------------------------------------------------
+//
+// A Buddy is an Item given from a file in traits/gear/buddies/. One is Active at a time, called
+// and dismissed as an Instant Maneuver on its owner's turn. Its file's script is what it does:
+// its Buddy Effect's lines under `if ($active == 1)`, its Adventure Effect's under
+// `if (adventuring)`. A Greater Buddy is its Original Buddy and more: both files' scripts run.
+
+/** "A Buddy Attribute is equal to the Attribute Score Limit at your base Tier of Power." */
+export function buddyAttribute(baseTier) {
+  return 8 + ((Math.max(1, Number(baseTier) || 1) - 1) * 3);
+}
+
+/** The Buddies a character has, destroyed ones among them. */
+export function buddiesOf(items) {
+  return (items ?? []).filter(item => (item.type === "gear") && (item.system?.itemType === "buddy"));
+}
+
+/** The one Active: "You can only have one Buddy active at any one time." */
+export function activeBuddy(items) {
+  return buddiesOf(items).find(item => item.system.buddy?.active && !item.system.buddy?.destroyed) ?? null;
+}
+
+/**
+ * The files a Buddy is, its Original Buddy's first: a Greater Buddy "possess[es] an elevated
+ * version of the capabilities of a normal Buddy" - all of its Original's, by the table's ruling,
+ * and its own. `original: ride-buddy`, or `any` and the one chosen when it was gained.
+ */
+export function buddyLine(item, getTrait) {
+  const own = getTrait?.(item?.system?.gearId);
+  if (!own) return [];
+  const said = String(own.original ?? "").trim().toLowerCase();
+  const originalId = (said === "any") ? String(item.system?.buddy?.original ?? "") : said;
+  const original = originalId ? getTrait?.(originalId) : null;
+  return [original, own].filter(Boolean);
+}
+
+/** One header, read off the Buddy's own file first and its Original's after. */
+export function buddyHeader(item, getTrait, key) {
+  for (const trait of buddyLine(item, getTrait).reverse()) {
+    if ((trait?.[key] !== undefined) && (trait[key] !== null) && (trait[key] !== "")) return trait[key];
+  }
+  return undefined;
+}
+
+/**
+ * A Buddy's scripts as they run for its owner: its Original's and its own, with what they name
+ * written in - `$active` (1 while it is Active), `$buddyAttribute`, `$skill` (a Skill Buddy's),
+ * `$flyin` / `$dodgin` (a Ride Buddy's choice), `$shiftedRide` (a Shifting Buddy that became a
+ * Ride Buddy this Combat Round). A line naming `skill.$insightSkill` is written once for every
+ * Skill that uses Insight. A Spirit's Skill Ranks and base Tier are written out as lines of their
+ * own. A destroyed Buddy runs nothing.
+ *
+ * @param {object} context  `baseTier`, `round` (the Combat Round, 0 out of one), `skills` (the
+ *                          Skill table), `spirit` (the Spirit's Actor, where there is one)
+ */
+export function buddyScript(item, getTrait, { baseTier = 1, round = 0, skills = {}, spirit = null } = {}) {
+  const buddy = item?.system?.buddy ?? {};
+  if (buddy.destroyed) return "";
+  const shiftedRide = (buddy.shiftedTo === "ride") && round && (buddy.shiftRound === round);
+  const tokens = {
+    active: (buddy.active && !buddy.locked) ? 1 : 0,
+    buddyAttribute: buddyAttribute(baseTier),
+    flyin: (buddy.ride === "flyin") ? 1 : 0,
+    dodgin: (buddy.ride === "dodgin") ? 1 : 0,
+    shiftedRide: shiftedRide ? 1 : 0
+  };
+  const insight = Object.entries(skills).filter(([, skill]) => skill.attribute === "insight").map(([key]) => key);
+  let script = buddyLine(item, getTrait).map(trait => String(trait.script ?? "")).join("\n\n");
+  script = script.split("\n").flatMap(line => line.includes("skill.$insightSkill")
+    ? insight.map(key => line.replace("skill.$insightSkill", `skill.${key}`)) : [line]).join("\n");
+  if (script.includes("$skill")) script = buddy.skill ? script.replaceAll("$skill", buddy.skill) : "";
+  for (const name of Object.keys(tokens).sort((a, b) => b.length - a.length)) {
+    script = script.replaceAll(`$${name}`, String(tokens[name]));
+  }
+  // The Guiding Spirit's: "increase your Skill Bonus for your Skills by the number of Skill Ranks
+  // your Spirit has in each of those Skills and increase your Combat Rolls by 1(bT) - using the
+  // base Tier of Power of your Spirit" - and, Adventuring, the Skill Ranks alone.
+  if (buddyHeader(item, getTrait, "spirit") === true && spirit) {
+    const ranks = Object.entries(spirit.system?.skills ?? {})
+      .map(([key, skill]) => [key, Number(skill?.ranks) || 0]).filter(([, value]) => value > 0)
+      .map(([key, value]) => `  skill.${key} += ${value};`);
+    const spiritTier = Math.max(1, Number(spirit.system?.baseTierOfPower) || 1);
+    script += `\n\n[passive]\nif (${tokens.active} == 1) {\n  combatRolls += ${spiritTier};\n`
+      + `${ranks.join("\n")}\n}\n`
+      + (ranks.length ? `if (adventuring) {\n${ranks.join("\n")}\n}\n` : "");
+  }
+  return script;
+}
+
+/**
+ * What was chosen for a Buddy, said: its Original Buddy, its Profile, Skill, Flyin' or Dodgin',
+ * Technique, Spirit - for its row.
+ */
+export function buddyChoiceLabel(item, getTrait, { profiles = {}, skills = {}, techniqueName = "" } = {}) {
+  const buddy = item?.system?.buddy ?? {};
+  return [
+    buddy.original ? (getTrait?.(buddy.original)?.name ?? buddy.original) : "",
+    buddy.profile ? (profiles[buddy.profile]?.label ?? buddy.profile) : "",
+    buddy.skill ? (skills[buddy.skill]?.label ?? buddy.skill) : "",
+    { flyin: "Flyin'", dodgin: "Dodgin'" }[buddy.ride] ?? "",
+    techniqueName,
+    buddy.spiritName ? `Spirit: ${buddy.spiritName}` : ""
+  ].filter(Boolean).join(" · ");
+}
+
+/**
+ * The Signature Techniques that are a Buddy's and nobody else's - a Warrior Buddy's, "usable only
+ * through the Buddy" by the table's ruling - by their Maneuver Item's id.
+ */
+export function buddyOnlyTechniques(items, getTrait) {
+  return buddiesOf(items).filter(item => buddyHeader(item, getTrait, "chooses") === "profileOrTechnique")
+    .map(item => item.system.buddy?.technique).filter(Boolean);
+}
+
+/**
+ * Why a Buddy cannot be called now, or "": destroyed, kept from it for the Encounter, or another
+ * one Active - "You can only have one Buddy active at any one time" - which is dismissed first.
+ */
+export function callProblem(items, item) {
+  const buddy = item?.system?.buddy ?? {};
+  if (buddy.destroyed) return "Destroyed.";
+  if (buddy.locked) return "It cannot be called again this Combat Encounter.";
+  const other = activeBuddy(items);
+  if (other && (other !== item)) return `${other.name} is Active: dismiss it first.`;
+  return "";
 }
 
 /** How many Snacks a Shishkebab still gives this Combat Encounter, and its key for each. */

@@ -279,4 +279,37 @@
       </button>
     </details>
   </section>
+
+  <section class="panel">
+    <details class="condition-group" data-section="gearBuddies"
+             {{#if openSections.gearBuddies}}open{{/if}}>
+      <summary class="panel-title">Buddies</summary>
+
+      {{#each gear.buddy as |row|}}
+      <div class="gear-row" data-item-id="{{row.itemId}}" draggable="true">
+        <img src="{{row.img}}" width="24" height="24"/>
+        <span class="gear-name" data-tooltip="{{row.tip}}">{{row.name}}</span>
+        {{#if row.buddyKind}}<span class="gear-tag">[{{row.buddyKind}}]</span>{{/if}}
+        {{#if row.choiceLabel}}<span class="gear-type">{{row.choiceLabel}}</span>{{/if}}
+        {{#if row.destroyed}}<span class="gear-type">Destroyed</span>{{/if}}
+        {{#if row.locked}}<span class="gear-type" data-tooltip="Until the Combat Encounter ends.">Locked</span>{{/if}}
+        {{#if row.active}}<span class="gear-type">Active</span>{{/if}}
+        {{#unless row.destroyed}}
+        <button type="button" class="gear-act" data-action="callBuddy" data-item-id="{{row.itemId}}"
+                {{#if row.callBlocked}}disabled data-tooltip="{{row.callBlocked}}"{{else}}data-tooltip="An Instant Maneuver, at the start of your turn."{{/if}}>{{#if row.active}}Dismiss{{else}}Call{{/if}}</button>
+        {{/unless}}
+        <button type="button" class="gear-control" data-action="editItem"
+                data-item-id="{{row.itemId}}" data-tooltip="Edit">&#9998;</button>
+        <button type="button" class="gear-remove" data-action="deleteItem"
+                data-item-id="{{row.itemId}}" data-tooltip="Remove">&times;</button>
+      </div>
+      {{else}}
+      <p class="tab-placeholder">None yet.</p>
+      {{/each}}
+
+      <button type="button" class="dbu-clash-button" data-action="addGear" data-list="buddy">
+        Add Buddy
+      </button>
+    </details>
+  </section>
 </div>

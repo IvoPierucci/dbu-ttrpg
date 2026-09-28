@@ -16,7 +16,8 @@ import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
-  topLayerPiece, wieldedWeapons, formScript, activeForm } from "../gear.mjs";
+  topLayerPiece, wieldedWeapons, formScript, activeForm, buddiesOf, buddyScript,
+  buddyHeader } from "../gear.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -71,7 +72,7 @@ function compile(uuid, { script, rows }, report) {
  * The Priority comes from the kind of source, exactly as the rulebook's ladder orders
  * them - which is also what the folder a Trait lives in will say once Traits are files.
  */
-export function programsFor(actor, { report = () => {} } = {}) {
+export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {} } = {}) {
   const entries = [];
 
   for (const item of actor.items ?? []) {
@@ -105,6 +106,7 @@ export function programsFor(actor, { report = () => {} } = {}) {
   entries.push(...accessoryPrograms(actor, report));
   entries.push(...apparelPrograms(actor, report));
   entries.push(...weaponPrograms(actor, report));
+  entries.push(...buddyPrograms(actor, report, { baseTier, skills }));
   entries.push(...karmaPrograms(report));
   entries.push(...statePrograms(actor, report));
   entries.push(...conditionPrograms(actor, report));
@@ -272,6 +274,36 @@ function weaponPrograms(actor, report) {
         stacks: 1
       });
     }
+  }
+  return entries;
+}
+
+/**
+ * What a character's Buddies do: each one's scripts - its Original Buddy's and its own - with what
+ * they name written in. Its Buddy Effect's lines run while it is Active, its Adventure Effect's
+ * while its owner is Adventuring; a destroyed one runs nothing. See buddyScript() in gear.mjs.
+ */
+function buddyPrograms(actor, report, { baseTier = 1, skills = {} } = {}) {
+  const entries = [];
+  const round = globalThis.game?.combat?.started ? (globalThis.game.combat.round ?? 0) : 0;
+  for (const item of buddiesOf(Array.from(actor.items ?? []))) {
+    const spiritUuid = item.system?.buddy?.spiritUuid;
+    const spirit = (spiritUuid && (buddyHeader(item, getTrait, "spirit") === true))
+      ? (globalThis.fromUuidSync?.(spiritUuid) ?? null) : null;
+    const script = buddyScript(item, getTrait, { baseTier, round, skills, spirit });
+    if (!/^\s*\[/m.test(script)) continue;
+    const { program, errors } = compile(`buddy:${item.id}`, { script },
+      message => report(`${item.name}: ${message}`));
+    if (errors.length) continue;
+    entries.push({
+      program,
+      priority: PRIORITY.talent,
+      sourceId: item.id,
+      sourceUuid: item.uuid ?? null,
+      sourceName: item.name,
+      level: 0,
+      stacks: 1
+    });
   }
   return entries;
 }

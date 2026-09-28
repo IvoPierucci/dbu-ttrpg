@@ -1,0 +1,24 @@
+id: team-buddy
+name: Team Buddy
+kind: gear
+itemType: buddy
+special: true
+buddyKind: greater
+original: any
+source: Core Rule
+description: >
+  Greater, of any ordinary Buddy: given to an Ally at the start of their turn for the Combat
+  Encounter.
+text: >
+  Team Buddy: This amazing buddy helps not only you, but all of your friends, too.
+  –Special Buddy Type: Greater
+  –Original Buddy: Any (chosen by the ARC ~ cannot be a Special Buddy)
+  –Effects: At the start of an Allies’ turn, you may give this Buddy to that Ally for the
+  duration of this Combat Encounter. This Buddy remains Active for that Ally.
+
+---
+
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Giving it, by the table's ruling: whoever has it adds it to their own sheet, and what happens to
+# it after is between them.

@@ -1,0 +1,58 @@
+id: ride-buddy
+name: Ride Buddy
+kind: gear
+itemType: buddy
+buddyEffect: activated
+maneuverType: standard
+actionCost: 1
+buddyAction: ride
+chooses: ride
+rideSize: large
+source: Core Rule
+description: >
+  Active, for an Action: move as many Squares as your Buddy Attribute; 2(bT) against an Exploit
+  it provokes. Flyin' (the Soar Maneuver) or Dodgin' (Dodge 1(bT)).
+text: >
+  Ride Buddy: You always have someone to give you a lift with this guy around.
+  –Buddy Effect Type: Active
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Effects: If your Size Category is Large or lower, move a number of Squares in any direction
+  equal to your Buddy Attribute. If you are targeted by an Attacking Maneuver through the
+  Exploit Maneuver due to this movement, increase your Combat Rolls by 2(bT) for the duration of
+  that Attacking Maneuver.
+
+  Upon gaining this Buddy, choose one of these effects:
+
+  * Flyin’ Buddy. You gain access to the Soar Maneuver. If you already had access to the Soar
+  Maneuver, then increase your Dodge Rolls by 2(bT) when this Buddy is targeted by a Called
+  Shot.
+
+  * Dodgin’ Buddy. Increase your Dodge Rolls by 1(bT).
+
+  –Adventure Effect: When Travelling, if your Size Category is Large or lower, you may treat
+  your Ride Buddy as a Vehicle.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Use, on its row, once a Combat Round while it is Active and its owner is Large or smaller: a
+# card saying how many Squares they move - its Buddy Attribute - which the table moves them. It
+# is a movement to Exploit: if an Exploit it provokes aims an attack at them, their Combat Rolls
+# are 2(bT) higher against it.
+#
+# Flyin' or Dodgin' is chosen when it is given, and does its part while it is Active. Flyin' with
+# the Soar Maneuver already open: 2(bT) on the Dodge against a Called Shot at this Buddy.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Its Adventure Effect: Travelling, and Vehicles, are not in this system.
+
+[passive]
+if ($active == 1 && $flyin == 1) {
+  allow maneuver.soar;
+}
+if ($active == 1 && $dodgin == 1) {
+  dodge += 1(bT);
+}

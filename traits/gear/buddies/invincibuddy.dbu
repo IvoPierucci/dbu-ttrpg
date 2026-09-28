@@ -1,0 +1,20 @@
+id: invincibuddy
+name: Invincibuddy
+kind: gear
+itemType: buddy
+special: true
+buddyKind: greater
+original: any
+calledShotImmune: true
+source: Core Rule
+description: >
+  Greater, of any ordinary Buddy the ARC chooses: never a Called Shot's target.
+text: >
+  Invincibuddy: This little guy is totally indestructible.
+  –Special Buddy Type: Greater
+  –Original Buddy: Any (chosen by the ARC ~ cannot be a Special Buddy)
+  –Effects: This Buddy cannot be targeted by Called Shots.
+
+---
+
+# Its Original Buddy is chosen when it is given, among the ones that are not Special.

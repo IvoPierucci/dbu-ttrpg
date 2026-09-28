@@ -1,0 +1,33 @@
+id: guiding-spirit
+name: Guiding Spirit
+kind: gear
+itemType: buddy
+special: true
+buddyKind: unique
+buddyEffect: passive
+spirit: true
+calledShotImmune: true
+source: Core Rule
+description: >
+  Unique. A Spirit - any character: their Skill Ranks on your Skills, Active and Adventuring;
+  Combat Rolls 1(bT) at their base Tier. Never a Called Shot's target.
+text: >
+  Guiding Spirit: This person has contacted you from beyond the veil to aid you in your hour of
+  greatest need.
+  –Special Buddy Type: Unique
+  –Buddy Effect Type: Passive
+  –Effects: This Buddy is a Character who has passed on, but is giving advice and support while
+  deceased through some means – that Character is known as the ‘Spirit’. While this Buddy is
+  Active, increase your Skill Bonus for your Skills by the number of Skill Ranks your Spirit has
+  in each of those Skills and increase your Combat Rolls by 1(bT) – using the base Tier of Power
+  of your Spirit. This Buddy cannot be targeted by a Called Shot, but will decide if they will
+  continue to assist you as a Buddy at the end of each Combat Encounter. If they decide not to,
+  you lose access to this Buddy.
+  –Adventure Effect: Increase your Skill Bonus for your Skills by the number of Skill Ranks your
+  Spirit has in each of those Skills.
+
+---
+
+# The Spirit is chosen when it is given, among the characters of the world, and read as they are
+# now. The lines for their Skills are written from them where it runs. Whether they stay after a
+# Combat Encounter is theirs - said then, and the Buddy is taken off by hand if they leave.

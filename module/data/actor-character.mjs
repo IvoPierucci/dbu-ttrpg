@@ -1710,7 +1710,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // programsFor inside the assignment would fire that callback before there was
     // anywhere for it to write.
     this.effects.programs = programsFor(this.parent ?? {}, {
-      report: message => this.effects.errors.push(message)
+      report: message => this.effects.errors.push(message),
+      // For a Buddy's Buddy Attribute, and the Skills its script names by the Score they use.
+      baseTier: DBUCharacterData.tierOfPowerFor(this.powerLevel),
+      skills: DBUCharacterData.SKILLS
     });
 
     // The Brace Maneuver: "Until the start of your next turn, treat all Battle Weathers as if

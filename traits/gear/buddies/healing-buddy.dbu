@@ -1,0 +1,30 @@
+id: healing-buddy
+name: Healing Buddy
+kind: gear
+itemType: buddy
+buddyEffect: activated
+maneuverType: standard
+actionCost: 1
+buddyAction: heal
+source: Core Rule
+description: >
+  Active, for an Action: you or an adjacent Ally regain 2d10(bT) Life Points.
+text: >
+  Healing Buddy: This useful assistant heals your wounds.
+  –Buddy Effect Type: Active
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Effects: Target yourself or an adjacent Ally. That target regains 2d10(bT) Life Points.
+  –Adventure Effect: Increase the amount of Life Points you gain through the Recovery Adventure
+  Maneuver by 1/2 of your Buddy Attribute.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Use, on its row, once a Combat Round while it is Active: the one targeted - or the owner, with
+# nobody targeted - regains 2d10 for each base Tier. Adjacent is the table's.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Its Adventure Effect: the Recovery Adventuring Maneuver is not in this system.

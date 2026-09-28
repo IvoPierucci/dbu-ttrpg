@@ -63,7 +63,7 @@ import { fireMoment } from "./effects/moments-runtime.mjs";
 import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   throwables, weaponAttack, weaponsFor, wieldedWeapons, MULTI_STORAGE_THROWS,
   throwsAllowed, throwsCopies, thrownWeaponAttack, weaponForms, activeForm,
-  drawnBonuses, borrowedCategory, withBorrowed } from "./gear.mjs";
+  drawnBonuses, borrowedCategory, withBorrowed, buddyOnlyTechniques } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
@@ -552,10 +552,12 @@ async function dropPowerStack(actor) {
  * the only door to one - so the door is kept out of its own list.
  */
 export function signatureTechniquesOf(actor) {
+  // Not a Warrior Buddy's: that one is thrown through the Buddy alone.
+  const buddys = new Set(buddyOnlyTechniques(actor.items.contents ?? Array.from(actor.items), getTrait));
   return actor.items
     .filter(item => (item.type === "maneuver")
       && (item.system.tags ?? []).includes("signature")
-      && !item.system.signatureTechnique)
+      && !item.system.signatureTechnique && !buddys.has(item.id))
     .map(definitionOf)
     .sort((a, b) => a.name.localeCompare(b.name));
 }

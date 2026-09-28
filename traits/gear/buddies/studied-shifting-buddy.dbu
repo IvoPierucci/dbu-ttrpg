@@ -1,0 +1,21 @@
+id: studied-shifting-buddy
+name: Studied Shifting Buddy
+kind: gear
+itemType: buddy
+special: true
+buddyKind: greater
+original: shifting-buddy
+shiftLimit: 0
+source: Core Rule
+description: >
+  Greater Shifting Buddy: as often as you like, Round after Round.
+text: >
+  Studied Shifting Buddy: This mystical companion can shapeshift for you without restraint.
+  –Special Buddy Type: Greater
+  –Original Buddy: Shifting Buddy
+  –Effects: This Buddy can use their Buddy Effect any number of times per Combat Encounter and
+  can use their Buddy Effect even if they used it during the last Combat Round.
+
+---
+
+# The Shifting Buddy's, without its three a Combat Encounter or its Round between.

@@ -1,0 +1,29 @@
+id: oracle-fish
+name: Oracle Fish
+kind: gear
+itemType: buddy
+special: true
+buddyKind: unique
+buddyEffect: passive
+source: Core Rule
+description: >
+  Unique. Active: the Precognition Unique Ability. Adventuring: its stories, for an hour and an
+  Ingredient.
+text: >
+  Oracle Fish: This prophetic assistant tells you about the future.
+  –Special Buddy Type: Unique
+  –Buddy Effect Type: Passive
+  –Effects: You gain access to the Precognition Unique Ability.
+  –Adventure Effect: By spending 1 Hour and an Ingredient of Uncommon or higher rarity (see —
+  Cooking), you may listen to the stories of the Oracle Fish. Your ARC will tell you a story
+  that hints at future events or points towards areas that may be of interest to you and your
+  allies. More information and more detail will be given the more rare the Ingredient is that
+  you spend on the Oracle Fish. The ARC may have the Oracle Fish be unable to tell you anything
+  at the moment, but you won’t lose any Ingredients in that case.
+
+---
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# The Precognition Unique Ability, and Ingredients and Cooking, are not in this system. Its
+# stories are the ARC's.

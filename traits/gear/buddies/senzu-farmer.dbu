@@ -1,0 +1,26 @@
+id: senzu-farmer
+name: Senzu Farmer
+kind: gear
+itemType: buddy
+special: true
+buddyKind: greater
+original: any
+grows: true
+source: Core Rule
+description: >
+  Greater, of any ordinary Buddy: Adventuring, 1~4 Months for a Bag of Senzu Beans, a size
+  larger for each Month after the first.
+text: >
+  Senzu Farmer: This special helper grows mystical Senzu Beans while you’re busy doing other
+  things.
+  –Special Buddy Type: Greater
+  –Original Buddy: Any (chosen by the ARC ~ cannot be a Special Buddy)
+  –Effects: While Adventuring, this Buddy may spend 1~4 Months growing Senzu Beans. Gain a Small
+  Bag of Senzu Beans, but increase the size of the Senzu Beans bag by 1 for every month spent
+  after the first.
+
+---
+
+# Grow Senzu, on its row while Adventuring: how many Months, and a Bag of Senzu Beans of that
+# size - Small, Standard, Large, Extra Large - its Beans rolled as any Bag's are. The Months are
+# the table's to pass.

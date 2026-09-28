@@ -1,0 +1,23 @@
+id: warrior-buddy
+name: Warrior Buddy
+kind: gear
+itemType: buddy
+special: true
+buddyKind: greater
+original: assault-buddy
+chooses: profileOrTechnique
+source: Core Rule
+description: >
+  Greater Assault Buddy: a Signature Technique of 25 TP instead of a Profile.
+text: >
+  Warrior Buddy: This particular helper is especially suited to combat.
+  –Special Buddy Type: Greater
+  –Original Buddy: Assault Buddy
+  –Effects: Instead of a Profile, you may create a Signature Technique with a TP Cost of 25. Use
+  that Signature Technique instead for the effects of the Buddy.
+
+---
+
+# The Technique is built with the usual builder and chosen when it is given - or a Profile, as
+# the Assault Buddy's: "you may". Its 25 TP is the table's; nothing here sums a Technique's TP. It
+# is the Buddy's, usable only through it, by the table's ruling.

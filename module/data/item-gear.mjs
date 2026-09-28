@@ -197,6 +197,31 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         name: new fields.StringField({ required: true, blank: true, initial: "" })
       }),
 
+      /**
+       * A Buddy: whether it is Active, destroyed (kept, like a destroyed piece of Apparel), or
+       * kept from being called until the Encounter ends - saved with a Karma Point, or dismissed
+       * by an Annoyed Zen-O. And what was chosen for it when it was gained: its Original Buddy,
+       * where it is a Greater one that says "Any"; an Assault Buddy's Profile and Foundation; a
+       * Skill Buddy's Skill; a Ride Buddy's Flyin' or Dodgin'; a Signature Technique; a Spirit.
+       * And what a Shifting Buddy became, and in which Combat Round.
+       */
+      buddy: new fields.SchemaField({
+        active: new fields.BooleanField({ required: true, initial: false }),
+        destroyed: new fields.BooleanField({ required: true, initial: false }),
+        locked: new fields.BooleanField({ required: true, initial: false }),
+        original: new fields.StringField({ required: true, blank: true, initial: "" }),
+        profile: new fields.StringField({ required: true, blank: true, initial: "" }),
+        foundation: new fields.StringField({ required: true, blank: true, initial: "" }),
+        skill: new fields.StringField({ required: true, blank: true, initial: "" }),
+        ride: new fields.StringField({ required: true, blank: true, initial: "" }),
+        technique: new fields.StringField({ required: true, blank: true, initial: "" }),
+        spiritUuid: new fields.StringField({ required: true, blank: true, initial: "" }),
+        spiritName: new fields.StringField({ required: true, blank: true, initial: "" }),
+        shiftedTo: new fields.StringField({ required: true, blank: true, initial: "" }),
+        shiftRound: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        shiftProfile: new fields.StringField({ required: true, blank: true, initial: "" })
+      }),
+
       /** An Accessory or a piece of Apparel being worn, or a Weapon being wielded. Its effects
        *  apply only while it is. */
       equipped: new fields.BooleanField({ required: true, initial: false }),

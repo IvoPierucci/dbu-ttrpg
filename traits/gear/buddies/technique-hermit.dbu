@@ -1,0 +1,26 @@
+id: technique-hermit
+name: Technique Hermit
+kind: gear
+itemType: buddy
+special: true
+buddyKind: greater
+original: mentor-buddy
+chooses: technique
+hermit: true
+source: Core Rule
+description: >
+  Greater Mentor Buddy: with the Signature Technique chosen, the Mentor's Combat Rolls doubled
+  for that attack.
+text: >
+  Technique Hermit: This specialized mentor teaches you the hidden secrets of their special
+  technique.
+  –Special Buddy Type: Greater
+  –Original Buddy: Mentor Buddy
+  –Effects: Select a Signature Technique you have access to upon gaining this Buddy. If you use
+  that Signature Technique, double the benefits from Mentor Buddy for the duration of that
+  Attacking Maneuver.
+
+---
+
+# The Technique is chosen when it is given, among the character's own. Used while this is Active,
+# its attack is 1(bT) higher on the Strike and the Wound again - a row of its own.

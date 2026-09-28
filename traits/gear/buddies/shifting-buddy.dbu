@@ -1,0 +1,62 @@
+id: shifting-buddy
+name: Shifting Buddy
+kind: gear
+itemType: buddy
+# As a Ride Buddy it has Flyin' or Dodgin' too, by the table's ruling - chosen when it is given.
+buddyEffect: activated
+maneuverType: instant
+actionCost: 0
+buddyAction: shift
+chooses: ride
+rideSize: large
+shiftLimit: 3
+source: Core Rule
+description: >
+  Active, as an Instant: a Weapon, a Ride Buddy or an Assault Buddy until the end of the Round.
+  Three times an Encounter, never two Rounds running.
+text: >
+  Shifting Buddy: This handy little friend changes shape to suit your needs.
+  –Buddy Effect Type: Active
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –Effects: Your Buddy shapeshifts, turning into one of the following things until the end of
+  the Combat Round:
+
+  * Weapon. Create a Weapon with a Craftsmanship Grade equal to 1/2 (rounded up) of your base
+  Tier of Power that you may immediately equip. Your Buddy isn’t automatically destroyed if hit
+  as a Weapon, but this Weapon’s Life Points are equal to your Buddy Attribute and if it is
+  destroyed, then your Buddy is destroyed.
+
+  * Ride Buddy. Your Buddy can use the Buddy Effect of a Ride Buddy.
+
+  * Assault Buddy. Your Buddy can use the Buddy Effect of an Assault Buddy.
+
+  Your Shifting Buddy can only use their Buddy Effect 3 times per Combat Encounter and cannot
+  use their Buddy Effect if they used it during the last Combat Round.
+  –Adventure Effect: Your Buddy may use the Morph Adventuring Maneuver in your place.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Use, on its row, while it is Active: what it becomes, until the end of the Combat Round.
+#
+# - A Weapon: a Weapon made on the spot at Craftsmanship Grade 1/2 of the base Tier (rounded up),
+#   built on its own sheet at that Grade's Slots, and wielded if a hand is free. Its Life Points
+#   are the Buddy Attribute; if it breaks the Buddy is Destroyed. Gone at the end of the Round.
+# - A Ride Buddy: the Ride Buddy's Buddy Effect on its row this Round, with Flyin' or Dodgin'.
+# - An Assault Buddy: the Assault Buddy's, a Profile chosen at each use.
+#
+# Three times a Combat Encounter, and not in a Round right after one it was used in.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Its Adventure Effect: the Morph Adventuring Maneuver is not in this system.
+
+[passive]
+if ($shiftedRide == 1 && $flyin == 1) {
+  allow maneuver.soar;
+}
+if ($shiftedRide == 1 && $dodgin == 1) {
+  dodge += 1(bT);
+}

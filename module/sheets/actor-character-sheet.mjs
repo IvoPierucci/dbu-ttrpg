@@ -16,6 +16,7 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   grantDoffBonus, topLayerPiece, unequipCost, wieldProblem, WEAPON_SIZES, WEAPON_TYPES,
   MULTI_STORAGE_THROWS, throwsCopies, activeForm, flexibleCategories, variableSizes,
   remoteKinds, remotesAll, remoteCost, snacksLeft, snackKey, drawChanges, emptySheath,
+  buddyLine, buddyHeader, buddyChoiceLabel, callProblem, activeBuddy,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -55,6 +56,7 @@ import {
   maneuverEntry,
   maneuverKiCost,
   maneuverUsesLeft,
+  recordManeuverType,
   recordManeuverUse,
   usageLimitLabel
 } from "../maneuvers.mjs";
@@ -463,6 +465,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       repairGear: DBUCharacterSheet._onRepairGear,
       addApparel: DBUCharacterSheet._onAddApparel,
       addWeapon: DBUCharacterSheet._onAddWeapon,
+      callBuddy: DBUCharacterSheet._onCallBuddy,
       lockGear: DBUCharacterSheet._onLockGear,
       shrinkGear: DBUCharacterSheet._onShrinkGear,
       unlockGear: DBUCharacterSheet._onUnlockGear,
@@ -1023,7 +1026,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // The Gear the character has, by the list each is drawn in. The name is the Item's,
     // so a renamed one shows as renamed.
-    context.gear = { basic: [], apparel: [], weapon: [] };
+    context.gear = { basic: [], apparel: [], weapon: [], buddy: [] };
     const gearItems = this.actor.items.filter(owned => owned.type === "gear");
     for (const item of gearItems) {
       // Inside a Capsule, it is shown on the Capsule's row rather than its own.
@@ -1128,12 +1131,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // closed while another piece is on it, and saying which.
         ...((item.system.crafted?.kind === "apparel") ? this.#layerRow(gearItems, item) : {}),
         // A Weapon: in hand or not, and what is left of it.
-        ...((item.system.crafted?.kind === "weapon") ? this.#weaponRow(gearItems, item) : {})
+        ...((item.system.crafted?.kind === "weapon") ? this.#weaponRow(gearItems, item) : {}),
+        // A Buddy: Active or not, what was chosen for it, and why it cannot be called.
+        ...((item.system.itemType === "buddy") ? this.#buddyRow(gearItems, item) : {})
       });
     }
     // Worn Apparel first, top down, and Weapons in hand first, then the rest - each list by
     // name otherwise.
-    const worn = row => (row.wielded ? 0 : ["top", "middle", "bottom"].indexOf(row.layer ?? ""));
+    const worn = row => ((row.wielded || row.active) ? 0 : ["top", "middle", "bottom"].indexOf(row.layer ?? ""));
     for (const list of Object.values(context.gear)) {
       list.sort((a, b) => ((worn(a) < 0) - (worn(b) < 0)) || (worn(a) - worn(b))
         || a.name.localeCompare(b.name));
@@ -1967,8 +1972,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .flatMap(([key, type]) => [
         { label: type.label,
           items: offered.filter(entry => (typeOf(entry) === key) && (entry.special !== true)) },
-        { label: `Special ${type.label}`,
-          items: offered.filter(entry => (typeOf(entry) === key) && (entry.special === true)) }
+        // "Special Buddies come in two categories: Greater Buddies or Unique Buddies."
+        ...((key === "buddy")
+          ? ["greater", "unique"].map(kind => ({
+              label: `Special ${type.label} - ${kind === "greater" ? "Greater" : "Unique"}`,
+              items: offered.filter(entry => (typeOf(entry) === key) && (entry.special === true)
+                && (String(entry.buddyKind ?? "").toLowerCase() === kind)) }))
+          : [{ label: `Special ${type.label}`,
+              items: offered.filter(entry => (typeOf(entry) === key) && (entry.special === true)) }])
       ])
       .filter(group => group.items.length);
 
@@ -2117,6 +2128,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.system.charges = Math.max(0, roll.total);
     }
 
+    // A Buddy: what it asks for when it is gained - its Original Buddy, a Profile, a Skill,
+    // Flyin' or Dodgin', a Signature Technique, a Spirit.
+    if (data.system.itemType === "buddy") {
+      const buddy = await DBUCharacterSheet.#askBuddyChoices(definition, this.actor);
+      if (!buddy) return;
+      data.system.buddy = { ...data.system.buddy, ...buddy };
+    }
+
     if (data.system.triggers.length > 1) {
       const trigger = await DBUCharacterSheet.#askTrigger(definition.name, data.system.triggers);
       if (!trigger) return;
@@ -2250,6 +2269,149 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!data) return;
     const [made] = await this.actor.createEmbeddedDocuments("Item", [data]);
     return made?.sheet?.render(true);
+  }
+
+  /**
+   * What a Buddy asks when it is gained. A Greater one of "Any (chosen by the ARC ~ cannot be a
+   * Special Buddy)" asks which first; then whatever it, or its Original, asks for itself.
+   *
+   * @returns {Promise<?object>} the answers, or null when put away
+   */
+  static async #askBuddyChoices(definition, actor) {
+    const escape = Handlebars.escapeExpression;
+    const pick = async (title, options) => {
+      if (!options.length) return "";
+      const chosen = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: `${definition.name} - ${title}` },
+        content: `<select name="pick" class="dbu-gear-pick">${options.map(([value, label]) =>
+          `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select>`,
+        buttons: [{ action: "confirm", label: "Choose", callback: (event, button, dialog) =>
+          dialog.element.querySelector('select[name="pick"]')?.value ?? null },
+          { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      });
+      return options.some(([value]) => value === chosen) ? chosen : null;
+    };
+    const answers = {};
+    let original = String(definition.original ?? "").trim().toLowerCase();
+    if (original === "any") {
+      const ordinary = traitsOfKind("gear").filter(trait => (typeOf(trait) === "buddy") && (trait.special !== true))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      original = await pick("Original Buddy", ordinary.map(trait => [trait.id, trait.name]));
+      if (!original) return null;
+      answers.original = original;
+    }
+    const line = [getTrait(original), definition].filter(Boolean);
+    const chooses = [...line].reverse().map(trait => trait.chooses).find(Boolean) ?? "";
+    const profiles = Object.entries(PROFILES).map(([id, profile]) => [id, profile.label]);
+    const techniques = actor.items.filter(item => (item.type === "maneuver")
+      && (item.system.tags ?? []).includes("signature") && !item.system.signatureTechnique)
+      .map(item => [item.id, item.name]);
+    const profileAndFoundation = async () => {
+      const profile = await pick("Profile", profiles);
+      if (!profile) return false;
+      answers.profile = profile;
+      const foundations = PROFILES[profile]?.foundations ?? [];
+      if (foundations.length > 1) {
+        const foundation = await pick("Foundation", foundations.map(key =>
+          [key, DBUCharacterData.FOUNDATIONS[key]?.label ?? key]));
+        if (!foundation) return false;
+        answers.foundation = foundation;
+      } else answers.foundation = foundations[0] ?? "";
+      return true;
+    };
+    if (chooses === "profile") {
+      if (!await profileAndFoundation()) return null;
+    }
+    if (chooses === "profileOrTechnique") {
+      const which = techniques.length ? await pick("Signature Technique or Profile",
+        [["technique", "A Signature Technique"], ["profile", "A Profile"]]) : "profile";
+      if (!which) return null;
+      if (which === "technique") {
+        answers.technique = await pick("Signature Technique", techniques);
+        if (!answers.technique) return null;
+      } else if (!await profileAndFoundation()) return null;
+    }
+    if (chooses === "technique") {
+      if (!techniques.length) {
+        ui.notifications.warn(`${actor.name} has no Signature Technique for the ${definition.name}.`);
+        return null;
+      }
+      answers.technique = await pick("Signature Technique", techniques);
+      if (!answers.technique) return null;
+    }
+    if (chooses === "skill") {
+      answers.skill = await pick("Skill", Object.entries(DBUCharacterData.SKILLS).map(([key, skill]) =>
+        [key, skill.label]));
+      if (!answers.skill) return null;
+    }
+    if (chooses === "ride") {
+      answers.ride = await pick("Flyin' or Dodgin'", [["flyin", "Flyin' Buddy"], ["dodgin", "Dodgin' Buddy"]]);
+      if (!answers.ride) return null;
+    }
+    if (line.some(trait => trait.spirit === true)) {
+      const spirit = await DBUCharacterSheet.#askCharacter(definition.name, actor,
+        { title: "Spirit", confirm: "Choose" });
+      if (!spirit) return null;
+      answers.spiritUuid = spirit.uuid;
+      answers.spiritName = spirit.name;
+    }
+    return answers;
+  }
+
+  /** A Buddy's row. */
+  #buddyRow(items, item) {
+    const buddy = item.system.buddy ?? {};
+    const technique = buddy.technique ? this.actor.items.get(buddy.technique) : null;
+    return {
+      buddy: true,
+      active: Boolean(buddy.active) && !buddy.destroyed,
+      destroyed: Boolean(buddy.destroyed),
+      locked: Boolean(buddy.locked),
+      callBlocked: buddy.active ? "" : callProblem(items, item),
+      buddyKind: { greater: "Greater", unique: "Unique" }[String(buddyHeader(item, getTrait, "buddyKind") ?? "")] ?? "",
+      choiceLabel: buddyChoiceLabel(item, getTrait, { profiles: PROFILES, skills: DBUCharacterData.SKILLS,
+        techniqueName: technique?.name ?? "" }),
+      tip: buddyLine(item, getTrait).map(trait => trait.description ?? "").filter(Boolean).join(" ")
+    };
+  }
+
+  /**
+   * Call a Buddy, or dismiss the one Active: "You can call a Buddy at the start of your turn as an
+   * Instant Maneuver ... An Active Buddy can be dismissed at the start of your turn as an Instant
+   * Maneuver." In a Combat Encounter: on their turn - its start is the table's - and as the Instant
+   * it is, held to the Instant rules. Out of one, freely: "You do not need to call or dismiss
+   * Buddies while Adventuring".
+   */
+  static async _onCallBuddy(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (item?.system.itemType !== "buddy") return;
+    const calling = !item.system.buddy?.active;
+    if (calling) {
+      const problem = callProblem(this.actor.items.contents, item);
+      if (problem) {
+        ui.notifications.warn(problem);
+        return;
+      }
+    }
+    if (game.combat?.started) {
+      if (!isTheirTurn(this.actor)) {
+        ui.notifications.warn(`${this.actor.name} can only ${calling ? "call" : "dismiss"} a Buddy at the start of their turn.`);
+        return;
+      }
+      const blocked = whyNotAnotherInstant(this.actor);
+      if (blocked) {
+        ui.notifications.warn(`${this.actor.name}: ${blocked}`);
+        return;
+      }
+      await recordManeuverType(this.actor, "instant");
+    }
+    await item.update({ "system.buddy.active": calling });
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(this.actor.name)} ${calling ? "calls" : "dismisses"} `
+        + `${Handlebars.escapeExpression(item.name)}.</p>`
+    });
   }
 
   /**

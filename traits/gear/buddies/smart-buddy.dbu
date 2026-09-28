@@ -1,0 +1,34 @@
+id: smart-buddy
+name: Smart Buddy
+kind: gear
+itemType: buddy
+buddyEffect: passive
+analysis: true
+source: Core Rule
+description: >
+  Active: the Analysis Special Maneuver, with the Buddy Attribute in place of Scholarship where
+  that is more. Adventuring: Knowledge a quarter of the Buddy Attribute higher.
+text: >
+  Smart Buddy: This researcher toils away tirelessly to help you.
+  –Buddy Effect Type: Passive
+  –Effects: Gain access to the Analysis Special Maneuver, and you may use your Buddy Attribute
+  instead of Scholarship for its effects.
+  –Adventure Effect: You gain access to the Research Adventuring Maneuver and increase your
+  Knowledge Skill by 1/4 (rounded up) of your Buddy Attribute.
+
+---
+
+# "You may use your Buddy Attribute instead of Scholarship for its effects": whichever gives more,
+# since nobody chooses less - analysisBonus() in module/chat.mjs.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# The Research Adventuring Maneuver is not in this system.
+
+[passive]
+if ($active == 1) {
+  allow maneuver.analysis;
+}
+if (adventuring) {
+  skill.knowledge += ceil($buddyAttribute / 4);
+}

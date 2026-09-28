@@ -1,0 +1,41 @@
+id: support-buddy
+name: Support Buddy
+kind: gear
+itemType: buddy
+buddyEffect: passive
+remote: true
+source: Core Rule
+description: >
+  Active: a Communicator, and a Remote Control for every Item of yours one links with. Defeated,
+  it may move you half its Buddy Attribute a Round.
+text: >
+  Support Buddy: This comrade focuses their efforts on operating devices for you so that you
+  don’t have to.
+  –Buddy Effect Type: Passive
+  –Effects: Your Buddy is able to interact with machines. Apply the following effects:
+
+  * Your Buddy may function as a Communicator.
+
+  * Your Buddy may function as a Remote Control for any Items/Vehicles/Battle Jackets you
+  possess that may link with a Remote Control (it is considered to already be connected to
+  them).
+
+  * If you are Defeated, at the start of each Combat Round, your Buddy may move you any number
+  of Squares up to 1/2 of your Buddy Attribute.
+
+  –Adventure Effect: Your Buddy functions as a Communicator.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Active, its row offers Trigger for any Bomb or Collar of the owner's a Remote Control could set
+# off, already connected to all of them. A Communicator is the table's, as the Item is.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# Moving its Defeated owner at the start of each Combat Round - the Squares are the table's.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# Vehicles and Battle Jackets are not in this system.

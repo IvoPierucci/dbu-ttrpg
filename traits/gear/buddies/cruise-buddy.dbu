@@ -1,0 +1,35 @@
+id: cruise-buddy
+name: Cruise Buddy
+kind: gear
+itemType: buddy
+special: true
+buddyKind: greater
+original: ride-buddy
+rideBonus: 6
+rideSize: gigantic
+rideArea: Destructive Sphere
+source: Core Rule
+description: >
+  Greater Ride Buddy: 6 Squares more, up to Gigantic, and Allies in its Destructive Sphere move
+  with you.
+text: >
+  Cruise Buddy: This gigantic mount allows you and your team to move freely around the
+  battlefield.
+  –Special Buddy Type: Greater
+  –Original Buddy: Ride Buddy
+  –Effects: This Buddy has a Destructive Sphere AoE (centered on you). When you move with this
+  Buddy’s effect, you may also move any number of Allies who are inside of that AoE the same
+  number of Squares in the same direction (this does not cause Collision). They may apply the
+  same benefits, as if this was their Buddy, if they are targeted by an Attacking Maneuver
+  through the Exploit Maneuver.
+
+  This Buddy may also move you (and Allies) through its effects if your/their Size Category is
+  Gigantic or lower (rather than Large or lower).
+
+  Additionally, increase the number of Squares you can move through the Buddy Effect of this
+  Buddy by 6.
+
+---
+
+# Everything the Ride Buddy does, and this. The Allies it carries are the table's to move, and each
+# has the 2(bT) against an Exploit this movement provokes - marked on its card.

@@ -1,0 +1,59 @@
+id: zen-o
+name: Zen-O
+kind: gear
+itemType: buddy
+special: true
+buddyKind: unique
+buddyEffect: activated
+maneuverType: standard
+actionCost: 1
+buddyAction: zeno
+calledShotImmune: true
+source: Core Rule
+description: >
+  Unique. For an Action: a Grandmaster Persuasion Check, and someone is erased. Each Round's
+  end, his Temperament.
+text: >
+  Zen-O: This powerful guy is nearly omnipotent in his power, but his childish antics are just
+  as powerful in scope.
+  –Special Buddy Type: Unique
+  –Buddy Effect Type: Active
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Effects: Target a Character. Make a Persuasion Skill Check with a DC of Grandmaster. If you
+  succeed, erase that target from existence. If you fail, you are erased from existence. This
+  Buddy cannot be targeted by a Called Shot. At the end of each Combat Round, your ARC makes a
+  Temperament Check, deciding on the temperament of Zen-O depending on what happened during this
+  Combat Round:
+
+  * Angry. Erases the universe and all Characters in it from existence.
+
+  * Bored. Erase every Character in the Battlefield from existence.
+
+  * Annoyed. Flip a coin. If you get heads, a random Character amongst you and your Allies are
+  erased from existence. If you get tails, a random Character amongst your Opponents is erased
+  from existence. Then, Zen-O is dismissed and cannot be called for the remainder of the Combat
+  Encounter.
+
+  * Mildly Interested. Nothing happens.
+
+  * Entertained. Increase the Combat Rolls of you and all of your Allies by 1(bT) for the
+  duration of the next Combat Round.
+
+  –Adventure Effect: You must appease the whims of Zen-O and stop them from being bored. If you
+  fail to do so, you may be erased, or at the very least they may start a Combat Encounter with
+  a Temperament of Annoyed.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Use, on its row: Persuasion against Grandmaster, the one targeted erased on a success and the
+# user on a failure - said on the card; erasing is the table's. At the end of each Combat Round he
+# is Active, a card for the ARC's Temperament Check: Annoyed flips the coin, then dismisses him
+# for the Encounter; Entertained raises the Combat Rolls of whoever the ARC marks for the next
+# Round. Angry and Bored are the table's.
+#
+# --- What the table keeps ----------------------------------------------------------------------
+#
+# His Adventure Effect.

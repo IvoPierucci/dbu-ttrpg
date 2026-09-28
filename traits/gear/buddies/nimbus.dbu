@@ -1,0 +1,27 @@
+id: nimbus
+name: Nimbus
+kind: gear
+itemType: buddy
+special: true
+buddyKind: greater
+original: ride-buddy
+rideBonus: 6
+needsAlignment: 2
+source: Core Rule
+description: >
+  Greater Ride Buddy, for the Pure Good only: 6 Squares more, and the Nimbus Pro Enhancement.
+text: >
+  Nimbus: This mystical flying cloud decides who it allows to ride it.
+  –Special Buddy Type: Greater
+  –Original Buddy: Ride Buddy
+  –Effects: You can only use the Buddy Effect of this Buddy if you are Pure Good. Increase the
+  number of Squares you can move through the Buddy Effect of this Buddy by 6. Additionally,
+  while this Buddy is Active, you have access to the Nimbus Pro Enhancement.
+
+---
+
+# Its Buddy Effect only with a Pure Good Alignment, on the Biography tab.
+#
+# --- What is not built ---------------------------------------------------------------------------
+#
+# The Nimbus Pro Enhancement is not in this system.

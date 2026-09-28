@@ -1,0 +1,28 @@
+id: companion-buddy
+name: Companion Buddy
+kind: gear
+itemType: buddy
+buddyEffect: passive
+source: Core Rule
+description: >
+  Active: Morale and Cognitive Saves 1(bT) higher, Persuasion 2 higher. Adventuring: Persuasion
+  2 higher - both, when both.
+text: >
+  Companion Buddy: Cute and adorable, this fellow raises your spirits.
+  –Buddy Effect Type: Passive
+  –Effects: Increase your Morale and Cognitive Saves by 1(bT). Additionally, increase the Skill
+  Bonus for your Persuasion Skill by 2.
+  –Adventure Effect: Increase the Skill Bonus for your Persuasion Skill by 2.
+
+---
+
+# Both at once, called while Adventuring: 4 on Persuasion, by the table's ruling.
+[passive]
+if ($active == 1) {
+  save.morale += 1(bT);
+  save.cognitive += 1(bT);
+  skill.persuasion += 2;
+}
+if (adventuring) {
+  skill.persuasion += 2;
+}

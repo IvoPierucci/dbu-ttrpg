@@ -1,0 +1,39 @@
+id: assault-buddy
+name: Assault Buddy
+kind: gear
+itemType: buddy
+buddyEffect: activated
+maneuverType: standard
+actionCost: 1
+buddyAction: assault
+chooses: profile
+source: Core Rule
+description: >
+  Active, for an Action: an attack of the Profile assigned to it, its Damage Attribute your
+  Buddy Attribute. Adventuring: Force and Magic Modifiers 1(bT) higher.
+text: >
+  Assault Buddy: This little helper is able to assist you in battle.
+  –Buddy Effect Type: Active
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Effects: Upon gaining this Buddy, assign a Profile to this Buddy. When you use this Buddy
+  Effect, make an Attacking Maneuver of the assigned Profile. The Damage Attribute for this
+  Attacking Maneuver is your Buddy Attribute.
+  –Adventure Effect: This Buddy increases your Force and Magic Modifiers by 1(bT) while
+  Adventuring.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Its Profile - any, with its Foundation - is chosen when it is given. Use, on its row, once a
+# Combat Round while it is Active: an attack of that Profile for an Action, declared as any is.
+# It is the owner's attack: their Strike, their Ki for its cost, and it counts towards
+# Diminishing Offense. Its Damage Attribute is the Buddy Attribute - 8 at base Tier 1, and 3 more
+# for each base Tier after.
+
+[passive]
+if (adventuring) {
+  force.mod += 1(bT);
+  magic.mod += 1(bT);
+}
