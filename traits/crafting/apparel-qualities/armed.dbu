@@ -30,6 +30,7 @@ text: >
 #
 # --- What is not built ---------------------------------------------------------------------------
 #
-# Everything it does is a Weapon, and there are no Weapons in this system yet. When they
-# arrive: adding Armed makes a Weapon at the Apparel's Craftsmanship Grade, tied to it as its
-# Integrated Weapon, and the character has that Weapon only while the Apparel is worn.
+# Everything it does is an Integrated Weapon, and Integrated Items are not in this system yet.
+# When they are: adding Armed makes a Weapon at the Apparel's Craftsmanship Grade, tied to it as
+# its Integrated Weapon, and the character has that Weapon only while the Apparel is worn - its
+# attacks Armed or Unarmed, chosen at declaration.

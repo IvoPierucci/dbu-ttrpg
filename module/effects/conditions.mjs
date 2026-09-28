@@ -65,6 +65,14 @@ const PREDICATES = {
   intendedForYou: scope => Boolean(scope.intended),
 
   /**
+   * Is this character wielding a Weapon - Parrying Armor's "While you do not have a Weapon
+   * equipped". Wielded is `equipped`; a broken one is as if it were not there.
+   */
+  wieldingWeapon: scope => Array.from(scope.data?.parent?.items ?? []).some(item =>
+    (item.type === "gear") && (item.system?.crafted?.kind === "weapon") && item.system?.equipped
+    && !item.system?.crafted?.destroyed),
+
+  /**
    * Is this character wearing an Item made from a named file - "while wearing Standard
    * Clothing". By the file's id, so a renamed one still counts; worn being the same
    * `equipped` an Accessory is put on with, and one in a Capsule never being worn.

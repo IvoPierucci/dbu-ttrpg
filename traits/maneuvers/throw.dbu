@@ -65,7 +65,8 @@ text: >
 # Square; missed, the ARC's. The Item stays on the character's sheet: whether it is picked up,
 # and by whom, is the table's.
 #
-# --- What is not built ---------------------------------------------------------------------------
-#
-# Weapons: there are none in this system yet. When they arrive, a thrown Weapon is Rank 2 and
-# brings none of its Qualities or its Weapon Category unless it has the Throwing Quality.
+# A Weapon: Rank 2 - or the Hardness Value its Effects set, Super Heavy's 4 - and none of its
+# Qualities or its Category unless it is a Throwing Weapon, whose come in only once it hits.
+# Thrown from the hand it is out of hand after, but for a Boomerang taken back into it and a
+# Multi-Storage Weapon's copy. A Barrage Weapon asks for the Simple or the Combination Profile.
+# A Multi-Storage Weapon to throw makes this Maneuver three a Combat Round, in all.

@@ -765,6 +765,19 @@ export function thrownAs(item, thrower, getTrait) {
   const thrown = { itemId: item?.id ?? "", name: item?.name ?? "", rank: 1, value: null,
     mightClash: false };
   if (system.itemType === "weapon") thrown.rank = 2;
+  // A Weapon: its own Hardness Value where its Effects set one - Super Heavy's 4 - and what it
+  // does thrown: Throwing Weapon's Category and Qualities on a hit, Barrage's Combination
+  // Profile, Boomerang's return, Multi-Storage's copies.
+  if (system.crafted?.kind === "weapon") {
+    const slots = weaponSlots(system.crafted, { getTrait, data: thrower?.system ?? null });
+    if (slots["weapon.hardnessValue"]) thrown.value = applySlot(slots, "weapon.hardnessValue", 0);
+    thrown.wielded = Boolean(system.equipped);
+    thrown.throwing = slots["weapon.throwing"] === true;
+    thrown.barrage = slots["weapon.barrage"] === true;
+    thrown.returns = applySlot(slots, "weapon.returns", 0);
+    thrown.copies = slots["weapon.copies"] === true;
+    return thrown;
+  }
   if (system.crafted?.kind) {
     const piece = pieceSlots(system.crafted, { getTrait, data: thrower?.system ?? null });
     if (piece["piece.hardnessValue"]) thrown.value = applySlot(piece, "piece.hardnessValue", 0);
@@ -781,6 +794,38 @@ export function thrownAs(item, thrower, getTrait) {
       : null;
   }
   return thrown;
+}
+
+/**
+ * How many times a Combat Round the Throw Maneuver may be used to throw this: once, "the usual
+ * 1/Round limitation", or three times for a Multi-Storage Weapon - three Throws in all, by the
+ * table's ruling, whatever else was thrown among them.
+ */
+export function throwsAllowed(thrown) {
+  return thrown?.copies ? MULTI_STORAGE_THROWS : 1;
+}
+
+/** "You may use the Throw Maneuver to throw this Weapon up to 3 times per Combat Round." */
+export const MULTI_STORAGE_THROWS = 3;
+
+/** Whether any of these is a Multi-Storage Weapon to throw. */
+export function throwsCopies(items, getTrait) {
+  return throwables(items).some(item => (item.system?.crafted?.kind === "weapon")
+    && (weaponSlots(item.system.crafted, { getTrait })["weapon.copies"] === true));
+}
+
+/**
+ * What an attack made by throwing a Throwing Weapon carries: "If this Weapon hits an Opponent
+ * with the use of the Throw Maneuver, apply the effects of its Weapon Category and any
+ * qualifying Weapon Qualities." Only if it hits, by the table's ruling: nothing of it on the
+ * Strike - no Size, no Weapon Penalty, nothing its Effects add there - and the Size nowhere.
+ * What comes after the hit is its own: the Wound, what it ignores, Staggering and the rest.
+ */
+export function thrownWeaponAttack(armed) {
+  if (!armed) return null;
+  const size = `${WEAPON_SIZES[armed.weaponSize]?.label ?? ""} Weapon`;
+  return { ...armed, thrown: true, strike: [], strikeNatural: 0, kiCost: 0, energyCharges: 0,
+    meleeRange: 0, wound: (armed.wound ?? []).filter(part => part.label !== size) };
 }
 
 /**

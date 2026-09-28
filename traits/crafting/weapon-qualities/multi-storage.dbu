@@ -1,0 +1,34 @@
+id: multi-storage
+name: Multi-Storage
+kind: crafting
+types: physical
+slots: 1
+requiresQualities: throwing-weapon
+excludesQualities: boomerang
+prerequisites: Throwing Weapon, this Weapon does not have the Boomerang Weapon Quality
+source: Core Rule
+description: >
+  Thrown, a copy goes and it stays in hand - three Throws a Combat Round.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: If you use the Throw Maneuver for this Weapon, instead of throwing this Weapon, use
+  a copy of this Weapon instead. That copy of this Weapon ceases to exist after you complete the
+  Throw Maneuver. You may use the Throw Maneuver to throw this Weapon up to 3 times per Combat
+  Round, instead of the usual 1/Round limitation for the Throw Maneuver.
+text: >
+  Multi-Storage: You possess a near infinite number of copies of this Weapon.
+  –Weapon Type: Physical
+  –Prerequisites: Throwing Weapon, this Weapon does not have the Boomerang Weapon Quality
+  –Quality Slots: 1
+  –Effects: If you use the Throw Maneuver for this Weapon, instead of throwing this Weapon, use
+  a copy of this Weapon instead. That copy of this Weapon ceases to exist after you complete the
+  Throw Maneuver. You may use the Throw Maneuver to throw this Weapon up to 3 times per Combat
+  Round, instead of the usual 1/Round limitation for the Throw Maneuver.
+
+---
+
+# Three Throws a Combat Round in all, by the table's ruling - an ordinary one among them - and the
+# Weapon stays in hand.
+[passive]
+weapon.copies = true;

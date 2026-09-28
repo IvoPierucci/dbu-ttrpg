@@ -34,10 +34,7 @@ text: >
 #
 # The adjacent Square, and that they are an Opponent: the button is pressed only when they were.
 #
-# --- What is not built ---------------------------------------------------------------------------
-#
-# "Unarmed": there are no Weapons in this system yet, so every Physical Attack is Unarmed. When
-# they arrive, one made with a Weapon posts no card.
+# "Unarmed": an attack made with a Weapon posts no card.
 
 [passive]
 piece.spikes = true;

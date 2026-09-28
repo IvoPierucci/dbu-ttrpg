@@ -61,7 +61,8 @@ import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
-  throwables, weaponAttack, weaponsFor, wieldedWeapons, damageWeapon } from "./gear.mjs";
+  throwables, weaponAttack, weaponsFor, wieldedWeapons, damageWeapon, MULTI_STORAGE_THROWS,
+  throwsAllowed, throwsCopies, thrownWeaponAttack } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
@@ -2021,7 +2022,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     }
   }
 
-  if (maneuverUsesLeft(actor, maneuver) <= 0) {
+  // The Throw's once a Round is three with a Multi-Storage Weapon to throw - three in all, by the
+  // table's ruling - so a spent Throw is refused here only when there is none; what is thrown is
+  // held to its own count once it is chosen.
+  const copiesLeft = maneuver.throws && throwsCopies(actor.items.contents, getTrait)
+    && (throwsThisRound(actor, maneuver) < MULTI_STORAGE_THROWS);
+  if ((maneuverUsesLeft(actor, maneuver) <= 0) && !copiesLeft) {
     ui.notifications.warn(`${actor.name} has no uses of ${maneuver.name} left.`);
     return false;
   }
@@ -2224,6 +2230,23 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   if (maneuver.throws) {
     thrown = await askThrown(actor, maneuver);
     if (!thrown) return false;
+    if (throwsThisRound(actor, maneuver) >= throwsAllowed(thrown)) {
+      ui.notifications.warn(`${actor.name} has thrown ${throwsAllowed(thrown)} time`
+        + `${(throwsAllowed(thrown) === 1) ? "" : "s"} this Round already.`);
+      return false;
+    }
+    // Barrage Weapon: "you may use the Combination Profile (Physical) instead of the Simple
+    // Profile." Asked here, and the Maneuver then names the one chosen.
+    if (thrown.barrage) {
+      const profile = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: `${thrown.name} - Profile` }, content: "",
+        buttons: [{ action: "simple", label: "Simple" }, { action: "combination", label: "Combination" },
+          { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      });
+      if (!["simple", "combination"].includes(profile)) return false;
+      maneuver = { ...maneuver, profile };
+    }
   }
   // Opened for an Attacking Maneuver even when it names no Profile: the Ki Wager
   // belongs to the attack rather than to the Profile, and Compelled sets a floor under
@@ -2248,13 +2271,23 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
       declared = { ...declared, thrown,
         ...(thrown.area ? { area: thrown.area } : {}),
         ...(thrown.damageAttribute ? { damageAttribute: thrown.damageAttribute } : {}) };
+      // A Throwing Weapon brings its Category and Qualities - only to what happens once it hits.
+      const item = thrown.throwing ? actor.items.get(thrown.itemId) : null;
+      if (item) {
+        declared = { ...declared,
+          weapon: thrownWeaponAttack(armedWith(actor, item, declared, [], targetActor)) };
+      }
     }
 
     // "When making an Attacking Maneuver, you must choose which Weapon (if any) you are using
     // for that Attacking Maneuver" - among the ones in hand this Attack Type may be made with.
     // Not for a Throw: what is thrown is not what the attack is made with. Nor for one tagged
-    // `unarmed` - the Tail Attack's "Unarmed Attacking Maneuver".
-    if (!thrown && !(maneuver.tags ?? []).includes("unarmed")) {
+    // `unarmed` - the Tail Attack's "Unarmed Attacking Maneuver". Nor for a Signature Technique
+    // without the Weapon Assisted Advantage: "You cannot use a Signature Technique with an
+    // Armed Attack unless it has the 'Weapon Assisted' Advantage."
+    const unassisted = (maneuver.tags ?? []).includes("signature")
+      && !(declared.advantages ?? []).includes("weapon-assisted");
+    if (!thrown && !(maneuver.tags ?? []).includes("unarmed") && !unassisted) {
       const chosen = await askWeapon(actor, declared);
       if (chosen === null) return false;
       weaponItem = chosen || null;
@@ -2694,6 +2727,15 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // The Grenade: "destroyed after concluding the Maneuver" - thrown, and gone.
   if (thrown?.destroyed && card) await actor.items.get(thrown.itemId)?.delete();
 
+  // A Weapon in hand, thrown, is out of hand - unless a copy went, Multi-Storage's, or it comes
+  // back, Boomerang's "you may equip it again immediately, ignoring the distance".
+  if (card && thrown?.wielded && !thrown.copies) {
+    const back = thrown.returns ? await foundry.applications.api.DialogV2.confirm({
+      window: { title: thrown.name }, content: `<p>Take ${Handlebars.escapeExpression(thrown.name)} `
+        + "in hand again?</p>", rejectClose: false }) : false;
+    if (!back) await actor.items.get(thrown.itemId)?.update({ "system.equipped": false });
+  }
+
   // Dimension Blade: "Each Attacking Maneuver made with this Weapon reduces the Life Points of
   // this Weapon by 1/10 of its Maximum Life Points." Made, so paid once the card is out - and
   // an attack that breaks it is still made.
@@ -2732,6 +2774,12 @@ async function askWeapon(actor, declared) {
   if (!chosen || (chosen === "cancel")) return null;
   if (chosen === "unarmed") return false;
   return offered.find(item => item.id === chosen) ?? null;
+}
+
+/** How many times the Throw Maneuver has been used this Combat Round. */
+function throwsThisRound(actor, maneuver) {
+  return (actor.system.usedManeuvers ?? []).filter(entry =>
+    (entry === maneuver.id) || (entry === `round:${maneuver.id}`)).length;
 }
 
 /** What an attack made with this Weapon carries - see weaponAttack() in gear.mjs. */

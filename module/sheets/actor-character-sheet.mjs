@@ -14,6 +14,7 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
   craftedItemFrom, craftedReading, APPAREL_LAYERS, APPAREL_EQUIP_COST, equipPlan, onLayer, pieceSlots,
   grantDoffBonus, topLayerPiece, unequipCost, wieldProblem, WEAPON_SIZES, WEAPON_TYPES,
+  MULTI_STORAGE_THROWS, throwsCopies,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -1434,7 +1435,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // Two different ways to be unable to play it, and the row says which:
             // out of uses is a limit of the Maneuver, out of Actions is a limit of
             // the round. Seen before clicking rather than after.
-            exhausted: maneuverUsesLeft(this.actor, maneuver) <= 0,
+            exhausted: (maneuverUsesLeft(this.actor, maneuver) <= 0) && !this.#copiesToThrow(maneuver),
             unaffordable: this.#shortOfActions(maneuver),
             // What opens under the row: this character's description, then the
             // published entry. Rendered already open if it was left open, so the list
@@ -1445,7 +1446,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // rather than instead of it: replacing the text answered "why is this
             // greyed out" at the cost of answering "what does it do".
             notes: [
-              maneuverUsesLeft(this.actor, maneuver) <= 0
+              ((maneuverUsesLeft(this.actor, maneuver) <= 0) && !this.#copiesToThrow(maneuver))
                 ? `No uses of this left this ${maneuver.usageLimit?.per ?? "encounter"}.`
                 : "",
               this.#shortOfActions(maneuver) ? "No Actions left this round for this." : "",
@@ -2889,6 +2890,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       offCost: (inCombat && item.system.equipped)
         ? `${unequipCost(items, item)} Action${unequipCost(items, item) === 1 ? "" : "s"}` : ""
     };
+  }
+
+  /**
+   * Whether the Throw Maneuver, spent, still has a Multi-Storage Weapon's Throws left: three a
+   * Combat Round in all.
+   */
+  #copiesToThrow(maneuver) {
+    if (!maneuver.throws || !throwsCopies(this.actor.items.contents, getTrait)) return false;
+    const thrown = (this.actor.system.usedManeuvers ?? []).filter(entry =>
+      (entry === maneuver.id) || (entry === `round:${maneuver.id}`)).length;
+    return thrown < MULTI_STORAGE_THROWS;
   }
 
   /**

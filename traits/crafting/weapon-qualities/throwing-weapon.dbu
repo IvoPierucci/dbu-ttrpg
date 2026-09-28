@@ -1,0 +1,30 @@
+id: throwing-weapon
+name: Throwing Weapon
+kind: crafting
+types: physical
+slots: 1
+source: Core Rule
+description: >
+  Thrown and hitting, its Category and Qualities apply.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: If this Weapon hits an Opponent with the use of the Throw Maneuver, apply the
+  effects of its Weapon Category and any qualifying Weapon Qualities.
+text: >
+  Throwing Weapon: This Weapon is perfectly balanced for throwing, allowing it to fly further
+  and straighter.
+  –Weapon Type: Physical
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: If this Weapon hits an Opponent with the use of the Throw Maneuver, apply the
+  effects of its Weapon Category and any qualifying Weapon Qualities.
+
+---
+
+# "If this Weapon hits", by the table's ruling: nothing of it on the Strike - not its Size, not the
+# Weapon Penalty, not what its Effects add there - and its Size nowhere. Once it hits, the rest:
+# its Wound, what it ignores of the target's, Staggering, Lasting Wounds, Breaker, Dimension
+# Blade's cost.
+[passive]
+weapon.throwing = true;

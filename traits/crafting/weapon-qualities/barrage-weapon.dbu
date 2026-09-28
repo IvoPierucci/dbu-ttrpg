@@ -1,0 +1,28 @@
+id: barrage-weapon
+name: Barrage Weapon
+kind: crafting
+types: physical
+slots: 1
+requiresQualities: throwing-weapon
+prerequisites: Throwing Weapon
+source: Core Rule
+description: >
+  Thrown, the Combination Profile (Physical) may be used instead of the Simple.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: When using the Throw Maneuver to throw this Weapon, you may use the Combination
+  Profile (Physical) instead of the Simple Profile.
+text: >
+  Barrage Weapon: This Weapon can be thrown multiple times in rapid succession.
+  –Weapon Type: Physical
+  –Prerequisites: Throwing Weapon
+  –Quality Slots: 1
+  –Effects: When using the Throw Maneuver to throw this Weapon, you may use the Combination
+  Profile (Physical) instead of the Simple Profile.
+
+---
+
+# Which of the two is asked when it is thrown.
+[passive]
+weapon.barrage = true;

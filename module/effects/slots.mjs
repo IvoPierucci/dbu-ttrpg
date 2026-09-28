@@ -527,6 +527,17 @@ const TABLE = [
   { key: "weapon.selfDamage", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
     doc: "The part of its own maximum Life Points each attack made with it costs it - Dimension "
        + "Blade's 1/10. Read as written, the fraction being the point." },
+  { key: "weapon.throwing", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Thrown with the Throw Maneuver and hitting, its Category and Qualities apply - Throwing "
+       + "Weapon." },
+  { key: "weapon.barrage", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Thrown, the Combination Profile (Physical) may be used instead of the Simple - Barrage "
+       + "Weapon." },
+  { key: "weapon.returns", phase: PHASES.WEAPON, kind: N, ops: NUMERIC,
+    doc: "Thrown, it may be taken in hand again at once; at 2, with the Homing Advantage - "
+       + "Boomerang's Slots." },
+  { key: "weapon.copies", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Thrown, a copy goes and it stays in hand - three Throws a Combat Round - Multi-Storage." },
   { key: "weapon.telekinetic", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Held by the mind: not counted among the two Weapons wielded, and an attack made with it "
        + "may come from anywhere in a Large Sphere around its wielder - Telekinetic." }

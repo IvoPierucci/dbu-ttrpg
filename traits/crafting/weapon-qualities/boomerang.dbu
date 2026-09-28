@@ -1,0 +1,43 @@
+id: boomerang
+name: Boomerang
+kind: crafting
+types: physical
+slots: 1~2
+requiresQualities: throwing-weapon
+excludesQualities: multi-storage
+prerequisites: Throwing Weapon Weapon Quality, you do not have the Multi-Storage Weapon Quality.
+source: Core Rule
+description: >
+  Thrown, it may be taken in hand again at once. With 2 Slots, the Homing Advantage on the
+  throw.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: If you throw this Weapon through the Throw Maneuver, you may equip it again
+  immediately, ignoring the distance between you and the Weapon.
+
+  [Passive]: If this Weapon Quality takes up 2 Slots, apply the Homing Advantage to any
+  Attacking Maneuver made with this Weapon through the Throw Maneuver.
+text: >
+  Boomerang: This Weapon returns to your hand after you throw it.
+  –Weapon Type: Physical
+  –Prerequisites: Throwing Weapon Weapon Quality, you do not have the Multi-Storage Weapon
+  Quality.
+  –Quality Slots: 1~2
+  –Effects: If you throw this Weapon through the Throw Maneuver, you may equip it again
+  immediately, ignoring the distance between you and the Weapon.
+
+  If this Weapon Quality takes up 2 Slots, apply the Homing Advantage to any Attacking Maneuver
+  made with this Weapon through the Throw Maneuver.
+
+---
+
+# Thrown from the hand, it is asked whether it comes back into it; otherwise it is out of hand, as
+# any thrown Weapon is.
+[passive]
+weapon.returns += $slots;
+
+# --- What is not built ---------------------------------------------------------------------------
+#
+# The Homing Advantage is not in this system. With 2 Slots the throw has it, and what it does is
+# the table's until it is.

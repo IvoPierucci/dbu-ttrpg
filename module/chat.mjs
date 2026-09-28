@@ -2685,6 +2685,16 @@ async function sayApparelBreak(target, amount = 1) {
  */
 async function landThrown(attack, thrower, target) {
   const thrown = attack.thrown;
+  // A Dimension Blade thrown as a Throwing Weapon pays for it only if it hits, by the table's
+  // ruling - its effects are the hit's.
+  if (attack.weapon?.selfDamage) {
+    const item = thrower.items?.get(attack.weapon.itemId);
+    const said = item ? await damageWeapon(thrower, item, attack.weapon.selfDamage, getTrait) : "";
+    if (said) {
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: thrower }),
+        content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(said)} Dimension Blade.</div>` });
+    }
+  }
   const value = Number.isFinite(Number(thrown.value)) && (thrown.value !== null)
     ? Number(thrown.value)
     : hardnessValue(thrown.rank, target.system.baseTierOfPower ?? 1);
@@ -9661,9 +9671,9 @@ async function applyAttackDamage(message, target, attack) {
 
   // Spiked: "When you are struck by an Unarmed Physical Attack from an Opponent on an
   // adjacent Square to you." Struck is hit, whatever it dealt; Physical is its Foundation; and
-  // with no Weapons in this system yet, every Physical Attack is Unarmed. The adjacent Square
-  // is the table's, so the card asks it.
-  if (attacker && own.hit && !isAbsoluteMiss(own) && (attack.foundation === "physical")) {
+  // Unarmed is made with no Weapon. The adjacent Square is the table's, so the card asks it.
+  if (attacker && own.hit && !isAbsoluteMiss(own) && (attack.foundation === "physical")
+    && !attack.weapon) {
     await postGearSpikes(target, attacker);
   }
 
