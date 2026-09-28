@@ -161,6 +161,8 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         // Size a Variable one is being wielded at - blank for its own.
         activeCategory: new fields.StringField({ required: true, blank: true, initial: "" }),
         activeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
+        // A Weapon Poisoned with a Poison Vial's Drop, until the Combat Encounter ends.
+        poisoned: new fields.BooleanField({ required: true, initial: false }),
         // A Weapon put away in a Sheath/Holster the character has, by that Accessory's id.
         sheathedIn: new fields.StringField({ required: true, blank: true, initial: "" }),
         // What drawing it or putting it away left for the next attack: Quick Draw's Strike on

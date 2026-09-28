@@ -129,6 +129,10 @@
         {{#if row.chargesLabel}}
         <span class="gear-type">{{row.charges}} {{row.chargesLabel}}</span>
         {{/if}}
+        {{#if row.poisons}}
+        <button type="button" class="gear-act" data-action="poisonGear"
+                data-item-id="{{row.itemId}}" data-tooltip="1 Action and a Drop: one of your Weapons, until the Encounter ends.">Poison</button>
+        {{/if}}
         {{#if row.snares}}
         <button type="button" class="gear-act" data-action="snareGear"
                 data-item-id="{{row.itemId}}"
@@ -257,6 +261,7 @@
                 data-tooltip="1 Action. {{row.snacks}} left this Encounter.">Snack</button>
         {{/if}}
         {{#if row.sheathedName}}<span class="gear-type">in {{row.sheathedName}}</span>{{/if}}
+        {{#if row.poisoned}}<span class="gear-type">Poisoned</span>{{/if}}
         {{#if row.wielded}}<span class="gear-type">Wielded</span>{{/if}}
         <button type="button" class="gear-act" data-action="wieldGear" data-item-id="{{row.itemId}}"
                 {{#if row.wieldBlocked}}disabled data-tooltip="{{row.wieldBlocked}}"{{else}}{{#if row.wieldCost}}data-tooltip="{{row.wieldCost}}"{{/if}}{{/if}}>{{#if row.wielded}}Sheathe{{else}}Wield{{/if}}</button>

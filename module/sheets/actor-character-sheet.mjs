@@ -457,6 +457,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       wieldGear: DBUCharacterSheet._onWieldGear,
       attuneGear: DBUCharacterSheet._onAttuneGear,
       snackGear: DBUCharacterSheet._onSnackGear,
+      poisonGear: DBUCharacterSheet._onPoisonGear,
       flexGear: DBUCharacterSheet._onFlexGear,
       resizeGear: DBUCharacterSheet._onResizeGear,
       repairGear: DBUCharacterSheet._onRepairGear,
@@ -1108,6 +1109,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         chargesLabel: (item.system.chargesDice || item.system.storesDrain
           || item.system.chargesPerBaseTier)
           ? (item.system.chargesLabel || "charges") : "",
+        // A Poison Vial with a Drop left, and a Weapon to put it on.
+        poisons: (item.system.gearId === "poison-vial") && ((item.system.charges ?? 0) > 0)
+          && gearItems.some(other => other.system?.crafted?.kind === "weapon"),
+        // A Weapon a Drop is on.
+        poisoned: Boolean(item.system.crafted?.poisoned),
         // Ki stored in it, to draw back out.
         draws: Boolean(item.system.storesDrain) && ((item.system.charges ?? 0) > 0),
         charges: item.system.charges ?? 0,
@@ -2985,6 +2991,36 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const to = offered.find(each => each.id === chosen);
     if (!to) return;
     return item.update({ "system.connectedTo": to.id, "system.connectedPair": to.system.pairId ?? "" });
+  }
+
+  /**
+   * A Poison Vial: "You may spend 1 Action and 1 Poison Drop to Poison a Weapon" - one of the
+   * character's, until the Combat Encounter ends.
+   */
+  static async _onPoisonGear(event, target) {
+    const vial = this.actor.items.get(target.dataset.itemId);
+    if (!((vial?.system.charges ?? 0) > 0)) return;
+    const weapons = this.actor.items.filter(item => item.system?.crafted?.kind === "weapon"
+      && !item.system.crafted.poisoned);
+    if (!weapons.length) {
+      ui.notifications.warn(`${this.actor.name} has no Weapon to Poison.`);
+      return;
+    }
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${vial.name} - Poison` }, content: "",
+      buttons: [...weapons.map(item => ({ action: item.id, label: item.name })), { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    const weapon = weapons.find(item => item.id === chosen);
+    if (!weapon) return;
+    if (!await spendActions(this.actor, 1)) return;
+    await vial.update({ "system.charges": vial.system.charges - 1 });
+    await weapon.update({ "system.crafted.poisoned": true });
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(this.actor.name)} Poisons `
+        + `${Handlebars.escapeExpression(weapon.name)} until the Combat Encounter ends.</p>`
+    });
   }
 
   /**

@@ -9700,6 +9700,19 @@ async function applyAttackDamage(message, target, attack) {
     if (attacker && attack.weapon?.lastingWounds) await leaveLastingWound(attack, attacker, target);
   }
 
+  // A Poisoned Weapon: "inflicts the Poisoned Combat Condition to a Character if you knock them
+  // through a Health Threshold with an Attacking Maneuver using that Weapon" - no clock: it lasts
+  // as Poisoned does.
+  if (attack.weapon?.poisoned && knockedThrough && !isAbsoluteMiss(own)) {
+    const striker = fromUuidSync(attack.attackerUuid);
+    if (striker) {
+      await markUntilNextTurn(striker, target, "poisoned", 1, null, `${attack.weapon.name} (Poisoned)`);
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: striker }),
+        content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(attack.weapon.name)} is `
+          + `Poisoned: ${Handlebars.escapeExpression(target.name)} is Poisoned.</div>` });
+    }
+  }
+
   // Staggering: "If an Attacking Maneuver with this Weapon knocks an Opponent through a Health
   // Threshold, make a Might Clash against them. If you win, they are knocked Prone."
   if (attack.weapon?.staggering && knockedThrough && !isAbsoluteMiss(own)) {

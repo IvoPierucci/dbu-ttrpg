@@ -1546,6 +1546,10 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
     // Telekinetic, in the mind of one with Telekinesis: from anywhere in a Large Sphere around
     // them - which Square is the table's, and so is how far it is from there.
     telekinetic: byMind,
+    // A Poison Vial's Drop on it: "A Poisoned Weapon inflicts the Poisoned Combat Condition to a
+    // Character if you knock them through a Health Threshold with an Attacking Maneuver using that
+    // Weapon."
+    poisoned: Boolean(crafted.poisoned),
     // Burst Fire's Actions for Energy Charges, asked at declaration; Concealed's Clash.
     burstFire: slots["weapon.burstFire"] === true,
     concealed: slots["weapon.concealed"] === true,

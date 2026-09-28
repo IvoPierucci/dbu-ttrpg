@@ -496,6 +496,12 @@ export function registerCombatHooks() {
 async function regenerateWeapons(actor) {
   const { regenerating, sheathMending } = await import("./gear.mjs");
   const { getTrait } = await import("./effects/traits.mjs");
+  // A Poison Vial's Drop: "A Weapon stops being Poisoned at the end of the Combat Encounter."
+  const poisoned = Array.from(actor.items ?? []).filter(item => item.system?.crafted?.poisoned);
+  if (poisoned.length) {
+    await actor.updateEmbeddedDocuments("Item", poisoned.map(item =>
+      ({ _id: item.id, "system.crafted.poisoned": false })));
+  }
   // The Sheath/Holster first: a quarter back to what is put away in one, which Regenerating then
   // makes whole where it can.
   const mended = sheathMending(actor, getTrait);
