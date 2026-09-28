@@ -76,6 +76,7 @@ import { techniqueUseEntries, ultimatesUsed, whyNotTechnique, whyNotTechniqueAga
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
 import * as soarNames from "./environments.mjs";
+import { askUnitedPartner } from "./united-attack.mjs";
 
 /**
  * What a Maneuver costs from the Action economy, and out of which pool.
@@ -1765,6 +1766,7 @@ export function definitionOf(item) {
     requiresTarget: item.system.requiresTarget,
     defend: item.system.defend,
     intervene: item.system.intervene,
+    united: item.system.united,
     exploit: item.system.exploit,
     empower: item.system.empower,
     grapple: item.system.grapple,
@@ -2229,6 +2231,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ui.notifications.warn(
       `${maneuver.name} is a Modifier Maneuver. It is applied to another Maneuver as you `
       + "use that one, not played on its own.");
+    return false;
+  }
+
+  // United Attack joins somebody else's attack, so it is played from that attack's card.
+  if (maneuver.united) {
+    ui.notifications.warn(`${maneuver.name} is played from an Ally's attack card, with its United Attack button.`);
     return false;
   }
 
@@ -2855,6 +2863,14 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ui.notifications.warn(`${maneuver.name}: Consolidated Strike - it must be made with Called Shot.`);
     return false;
   }
+  // United Attack (the Disadvantage): "you must first ask consent from one of your Allies who possesses
+  // this Signature Technique." Whom is asked now, before anything is paid; they answer on the card.
+  if (declared && maneuver.signature && !maneuver.signatureTechnique
+    && (maneuver.advantages ?? []).includes("united-attack")) {
+    const partner = await askUnitedPartner(actor, maneuver);
+    if (!partner) return false;
+    declared = { ...declared, unitedWith: partner };
+  }
 
   // What the Weapon does, again with what was applied to the attack - Precision's "any Called
   // Shot made using this Weapon".
@@ -3079,6 +3095,17 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // A Launch aims itself: the Character being thrown is the one already being held, and
   // asking for a target would be asking a question with one answer. Known to be there,
   // since a Grapple with nobody in it was refused above.
+  // What the United Attack Disadvantage gives back if the Ally asked does not join: "regain your Action
+  // and Ki Points spent on this Signature Technique Maneuver".
+  if (declared?.unitedWith) {
+    declared = { ...declared, unitedWith: { ...declared.unitedWith, paid: {
+      ki: fromStore ? 0 : moving.fromSelf,
+      capacity: fromStore ? 0 : (Number.isFinite(maneuver.capacityCost) ? maneuver.capacityCost : moving.fromSelf),
+      actions: outOfSequence ? 0 : actionCostOf(maneuver, actionsSpent).amount,
+      kind: actionCostOf(maneuver, actionsSpent).kind,
+      extraActions: (Number(declared.extraActions) || 0) + (Number(burstActions) || 0)
+    } } };
+  }
   const card = (maneuver.launch || maneuver.pin)
     ? await postGrappleCheck(actor, fromUuidSync(actor.system.grapple.partner), {
         maneuverName: maneuver.name,
@@ -3675,6 +3702,7 @@ export function maneuverItemFrom(definition) {
       requiresTarget: Boolean(definition.requiresTarget),
       defend: Boolean(definition.defend),
       intervene: Boolean(definition.intervene),
+      united: Boolean(definition.united),
       exploit: Boolean(definition.exploit),
       empower: Boolean(definition.empower),
       grapple: Boolean(definition.grapple),

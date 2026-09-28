@@ -73,6 +73,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       defend: new fields.BooleanField({ required: true, initial: false }),
       /** Steps in for somebody else. Played from an attack aimed at an Ally. */
       intervene: new fields.BooleanField({ required: true, initial: false }),
+      /** Joins an Ally's attack: the United Attack Maneuver, played from that attack's card. */
+      united: new fields.BooleanField({ required: true, initial: false }),
       /** Punishes an opening: taking it hands over an Out-of-Sequence Basic Attack. */
       exploit: new fields.BooleanField({ required: true, initial: false }),
       /** Hands Ki Points to the character it is aimed at. */

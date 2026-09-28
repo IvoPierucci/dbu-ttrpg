@@ -1,0 +1,40 @@
+id: united-attack-maneuver
+name: United Attack
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+united: true
+usageLimit: 1/round
+source: Core Rule
+description: >
+  Join an Ally's attack from an adjacent Square. 1 Action and the Ki of the same Profile (or of
+  your Signature Technique): +1/2 of your Force or Magic Modifier to their Wound Roll, up to 1(bT)
+  ranks of your Technique's Advantages, and a Ki Wager of up to 1/4 of your Max Capacity.
+text: >
+  United Attack Maneuver [1/Round]: A team attack with all you’ve got.
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –KP Cost: Varies (equal to the cost of the Profile or Signature Technique used)
+  –Effect: When an Ally uses an Attacking Maneuver or Duel Maneuver while you are on an adjacent Square, you may spend 1 Action and the Ki Points as if making the same Profile of Attacking Maneuver as your Ally. Apply the following effects to their Attacking Maneuver or Duel Maneuver:
+
+  Additional Power. Increase their Wound Roll by 1/2 of your relevant Attribute Modifier (Force for if they made a Physical or Energy Attack and Magic for if they made a Magic Attack) or 1/4 if they are engaging in a Duel Maneuver.
+  Advantages. If you are using a Signature Technique, you may apply up to 1(bT) ranks of Advantages you possess on your Signature Technique to their Attacking Maneuver.
+  Wager. You can Ki Wager up to 1/4 of your Max Capacity on this Attacking Maneuver or up to 1/10th of your Max Capacity on each roll if they are engaging in a Duel Maneuver.
+  If your Ally would lose the Duel Maneuver when you used the United Attack Maneuver to join, you are also considered a target for the Attacking Maneuver.
+
+---
+
+# No script: it changes somebody else's attack, and a script only changes the character carrying
+# it. `united: true` hands it to the code (united-attack.mjs), which offers it as a button on any
+# attack card still open - before the attacker applies their effects.
+#
+# Built: the 1/Round, the Instant rule (and Instant Assault), 1 Action, the Ki of the same Profile at
+# the joiner's Tier or their Technique's (a use of the Signature Technique Maneuver), adjacency when
+# there is a scene to measure it on, +1/2 Force or Magic Modifier to the Wound Roll, up to 1(bT)
+# ranks of the Technique's Advantages (read on the final attack), a Ki Wager of up to 1/4 of Max
+# Capacity added outside the attacker's own limit, and a count toward the joiner's Diminishing
+# Offense.
+#
+# Not built: the Duel parts, which wait for the Duel Maneuver. Whether the one joining is an Ally is
+# the table's.

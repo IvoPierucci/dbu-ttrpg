@@ -1,3 +1,5 @@
+import { unitedPending, unitedWoundParts, withJoiner } from "./united-attack.mjs";
+import { featureDef } from "./technique.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
@@ -6682,7 +6684,7 @@ export async function postAttack(actor, target, maneuver,
                                    advantages = [], squaresCharged = 0, thrown = null,
                                    area = null, weapon = null, transformed = false, gigaFlare = 0,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
-                                   extraTargets = [], freeWager = 0 },
+                                   extraTargets = [], freeWager = 0, unitedWith = null },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -6779,6 +6781,11 @@ export async function postAttack(actor, target, maneuver,
           ...(selfCaught ? { autoHitUuids: [actor.uuid] } : {}),
           // A Signature Technique's features on this attack, worked out as it was declared.
           technique,
+          // The United Attack Disadvantage: the Ally asked to join, and what the attacker paid, which
+          // comes back if they do not. Null on every other attack.
+          unitedWith: reflecting ? null : (unitedWith ?? null),
+          // Whoever joined with the United Attack Maneuver, and what each brought.
+          united: [],
           // What the Signature Technique side brought, and whatever it asked for at
           // declaration. Carried on the attack rather than looked up later: an
           // Advantage applies to the attack it was declared on, and the Technique it
@@ -9181,6 +9188,8 @@ async function rollAttackWound(message, attack) {
     ...profileWoundParts(attacker, attack),
     ...advantageWoundParts(attacker, attack),
     ...techniqueWoundParts(attacker, attack),
+    // United Attack: "Increase their Wound Roll by 1/2 of your relevant Attribute Modifier".
+    ...unitedWoundParts(attack),
     ...superStackWoundParts(attacker, attack),
     ...modifierWoundParts(attacker, attack),
     ...(attack.weapon?.wound ?? []),
@@ -10672,6 +10681,97 @@ async function applySquareQuality(target, id) {
  * the table's; what it is made of is the entry's, and saying it here saves going back to
  * the entry to find out.
  */
+/** Who joined this attack with the United Attack Maneuver, and whom the Technique is waiting on. */
+function unitedRows(attack) {
+  const escape = Handlebars.escapeExpression;
+  const rows = (attack.united ?? []).map(entry => `<div class="dbu-respond-hint">United Attack: ${escape(entry.name)}${
+    entry.techniqueName ? ` (${escape(entry.techniqueName)})` : ""} &middot; Wound +${entry.wound}${
+    entry.wager ? ` &middot; ${entry.wager} KP wagered` : ""}${
+    entry.advantages.length ? ` &middot; ${escape([...new Set(entry.advantages)].map(id =>
+      `${featureDef(id)?.name ?? id}${(entry.advantages.filter(other => other === id).length > 1)
+        ? ` ${entry.advantages.filter(other => other === id).length}` : ""}`).join(", "))}` : ""}</div>`);
+  if (unitedPending(attack)) {
+    rows.push(`<div class="dbu-respond-hint">Waiting for ${escape(attack.unitedWith.name)} to join (United Attack).</div>`);
+  }
+  return rows.join("");
+}
+
+/** The United Attack buttons on an open attack: join, for this user's characters; refuse, for the one asked. */
+function unitedButtons(message, attack, container) {
+  const pending = unitedPending(attack);
+  const asked = pending ? fromUuidSync(attack.unitedWith.uuid) : null;
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const button = (label, tooltip, onClick) => {
+    const element = document.createElement("button");
+    element.type = "button";
+    element.className = "dbu-clash-button";
+    element.textContent = label;
+    element.dataset.tooltip = tooltip;
+    element.addEventListener("click", onClick);
+    container.append(element);
+  };
+  // Whoever the user plays, other than the attacker - whether they are an Ally is the table's.
+  const mine = (globalThis.canvas?.tokens?.placeables ?? []).map(token => token.actor)
+    .concat(game.user?.character ? [game.user.character] : [])
+    .filter((actor, index, all) => actor?.isOwner && (actor.type === "character")
+      && (actor.uuid !== attack.attackerUuid) && (all.findIndex(other => other?.uuid === actor.uuid) === index)
+      && !(attack.united ?? []).some(entry => entry.uuid === actor.uuid));
+  if (!mine.length && !(asked?.isOwner)) {
+    if (pending && attacker?.isOwner) {
+      button("Not joining", `${attack.unitedWith.name} cannot or will not join: the Technique fails and you `
+        + "regain its Action and Ki.", () => failUnited(message, attack));
+    }
+    return;
+  }
+  const joiners = asked?.isOwner && !mine.some(actor => actor.uuid === asked.uuid) ? [asked, ...mine] : mine;
+  for (const joiner of joiners) {
+    button(joiners.length > 1 ? `United Attack: ${joiner.name}` : "United Attack",
+      "Instant, 1/Round: 1 Action and the Ki of the same Profile (or your Signature Technique's). Adds 1/2 of "
+      + "your Force or Magic Modifier to their Wound, up to 1(bT) ranks of your Technique's Advantages, and a "
+      + "Ki Wager of up to 1/4 of your Max Capacity.",
+      () => uniteOnCard(message, attack, joiner));
+  }
+  if (pending && (asked?.isOwner || attacker?.isOwner)) {
+    button("Refuse", `${attack.unitedWith.name} does not join: ${attack.maneuverName} fails, and `
+      + `${attack.attackerName} regains its Action and Ki.`, () => failUnited(message, attack));
+  }
+}
+
+/** One of the user's characters joins, and the card is written with them in it. */
+async function uniteOnCard(message, attack, joiner) {
+  const { joinUnitedAttack } = await import("./united-attack.mjs");
+  const { signatureTechniquesOf } = await import("./use-maneuver.mjs");
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const entry = await joinUnitedAttack(attack, joiner, { attacker, techniques: signatureTechniquesOf(joiner) });
+  if (!entry) return;
+  await recordManeuverType(joiner, "instant", { messageId: message.id });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: joiner }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${joiner.name} joins `
+      + `${attack.attackerName}'s ${attack.maneuverName} with United Attack${entry.techniqueName
+        ? ` (${entry.techniqueName})` : ""}: ${entry.cost} Ki${entry.wager ? `, ${entry.wager} wagered` : ""}.`)}</div>` });
+  return requestEdit(message, { type: "attack", attack: withJoiner(attack, entry, attacker) });
+}
+
+/**
+ * The United Attack Disadvantage, failed: "Failure to gain consent or the inability of the requested
+ * Ally to use the United Attack Maneuver results in the Signature Technique Maneuver failing - regain
+ * your Action and Ki Points spent on this Signature Technique Maneuver."
+ */
+async function failUnited(message, attack) {
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const paid = attack.unitedWith?.paid ?? {};
+  if (attacker) {
+    const kind = paid.kind || "standard";
+    const actions = (Number(paid.actions) || 0) + (Number(paid.extraActions) || 0);
+    await requestActorUpdate(attacker, {
+      "system.ki.value": Math.min(attacker.system.ki.max, attacker.system.ki.value + (Number(paid.ki) || 0)),
+      "system.capacity.spent": Math.max(0, attacker.system.capacity.spent - (Number(paid.capacity) || 0)),
+      ...(actions ? { [`system.actionsSpent.${kind}`]: Math.max(0, (attacker.system.actionsSpent?.[kind] ?? 0) - actions) } : {})
+    });
+  }
+  return requestEdit(message, { type: "attack", attack: { ...attack, unitedFailed: true } });
+}
+
 function featureNote(profile, attack = null) {
   const made = profile?.createsFeature;
   if (!made) return "";
@@ -11890,6 +11990,7 @@ function renderAttack(message, html) {
     ${result
       ? attackSide("Strike", attack.attackerName, result.strike)
       : attackerRow(attack)}
+    ${unitedRows(attack)}
     ${attackTargets(attack).map(target => targetRow(attack, target)).join("")}
     ${followUpRows(attack)}
     ${result?.wound
@@ -11897,8 +11998,12 @@ function renderAttack(message, html) {
       : ""}
     ${flareRows(attack)}
     ${absorbRow(attack)}
-    <div class="dbu-clash-result">${result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
+    <div class="dbu-clash-result">${attack.unitedFailed
+      ? `United Attack: ${Handlebars.escapeExpression(attack.unitedWith?.name ?? "")} did not join - `
+        + `${Handlebars.escapeExpression(attack.maneuverName)} fails, and its Action and Ki are regained.`
+      : result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
+  if (attack.unitedFailed) return;
 
   // An attack with an area reaches more than the one it was aimed at, and who it
   // reaches is the table's to agree. Offered for as long as the attacker owns the
@@ -11930,10 +12035,15 @@ function renderAttack(message, html) {
     container.append(add);
   }
 
+  // United Attack: an Instant, played while the attack is still open - before the attacker commits.
+  if (!result && !committed && !attack.reflectedFrom) unitedButtons(message, attack, container);
+
   // The attacker prepares their Strike before anything is rolled. The button doubles
   // as their confirmation, since the exchange waits on everyone having finished.
   if (!result) {
     const attacker = fromUuidSync(attack.attackerUuid);
+    // The United Attack Disadvantage: nothing is rolled until the Ally asked has joined or refused.
+    if (attacker?.isOwner && unitedPending(attack)) return;
     if (attacker?.isOwner && !(attack.ready ?? []).includes(attack.attackerUuid)) {
       const ready = document.createElement("button");
       ready.type = "button";
