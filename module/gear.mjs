@@ -346,10 +346,24 @@ export function qualityEntries(crafted) {
  * this piece of Apparel)" - as the keys to choose among. `chooses: skill`, narrowed by
  * `choiceAttribute: personality` to the Skills that use that Score. Empty when it asks nothing.
  */
-export function qualityChoices(trait, skills, weathers = {}) {
+export function qualityChoices(trait, skills, weathers = {}, { crafted = null, categories = [] } = {}) {
   // Or a list of its own - Focal's `choices: strike=Strike Rolls, dodge=Dodge Rolls`.
   const own = Object.keys(choiceLabelsOf(trait));
   if (own.length) return own;
+  // A Weapon's: Flexible's "a different Weapon Category of the same Foundation", Transforming's
+  // "a Weapon Category of a different Weapon Type", Variable's "an additional Weapon Size".
+  const chooses = String(trait?.chooses ?? "").trim();
+  if (chooses === "sameTypeCategory") {
+    return categories.filter(each => (each.weaponType === crafted?.weaponType)
+      && (each.id !== crafted?.category)).map(each => each.id);
+  }
+  if (chooses === "otherTypeCategory") {
+    return categories.filter(each => each.weaponType && (each.weaponType !== crafted?.weaponType))
+      .map(each => each.id);
+  }
+  if (chooses === "weaponSize") {
+    return Object.keys(WEAPON_SIZES).filter(key => key !== crafted?.weaponSize);
+  }
   // Or a type of Battle Weather - Weather Resistant's - among the ones there are.
   if (String(trait?.chooses ?? "").trim().toLowerCase() === "weather") return Object.keys(weathers);
   if (String(trait?.chooses ?? "").trim().toLowerCase() !== "skill") return [];
@@ -368,10 +382,20 @@ function choiceLabelsOf(trait) {
 }
 
 /** What a choice made for a Quality is called: its own label, or the Skill's name. */
-export function qualityChoiceLabel(trait, choice, skills, weathers = {}) {
+export function qualityChoiceLabel(trait, choice, skills, weathers = {}, getTrait = null) {
   if (!choice) return "";
+  // Several, for one that chooses one for each Slot - Flexible's Categories, Variable's Sizes.
+  if (String(choice).includes(",")) {
+    return String(choice).split(",").map(each => qualityChoiceLabel(trait, each.trim(), skills,
+      weathers, getTrait)).filter(Boolean).join(", ");
+  }
   return choiceLabelsOf(trait)[choice] ?? weathers?.[choice]?.label ?? skills?.[choice]?.label
-    ?? choice;
+    ?? WEAPON_SIZES[choice]?.label ?? getTrait?.(choice)?.name ?? choice;
+}
+
+/** What was chosen for a Quality, one for each Slot: `slashing,piercing`. */
+export function choicesOf(entry) {
+  return String(entry?.choice ?? "").split(",").map(each => each.trim()).filter(Boolean);
 }
 
 /**
@@ -690,6 +714,18 @@ export function composeEffects(crafted, previous, { getTrait } = {}) {
     wanted.push({ type: "category", id: category.id, key: `category:${category.id}`,
       flags: [], name: category.name, fresh: () => categoryBody(category, getTrait) });
   }
+  // The other Categories a Weapon may be used as - Flexible's, Transforming's - each written as
+  // a Category part of its own, marked `alternate`: only the one in use runs.
+  for (const entry of qualityEntries(crafted)) {
+    const trait = getTrait?.(entry.id);
+    if ((trait?.alternates !== true) || qualityInactive(entry, crafted, getTrait)) continue;
+    for (const id of choicesOf(entry)) {
+      const other = getTrait?.(id);
+      if (!other || wanted.some(part => part.key === `category:${other.id}`)) continue;
+      wanted.push({ type: "category", id: other.id, key: `category:${other.id}`,
+        flags: ["alternate"], name: other.name, fresh: () => categoryBody(other, getTrait) });
+    }
+  }
   const counted = {};
   for (const entry of qualityEntries(crafted)) {
     const trait = getTrait?.(entry.id);
@@ -720,7 +756,7 @@ export function composeEffects(crafted, previous, { getTrait } = {}) {
   // What is new: a Category at the top, the Qualities after the last part there is.
   for (const part of wanted) {
     if (had.has(part.key)) continue;
-    if (part.type === "category") {
+    if ((part.type === "category") && !part.flags.includes("alternate")) {
       out.unshift(written(part));
       continue;
     }
@@ -1122,10 +1158,12 @@ export function pieceSlots(crafted, options = {}) {
  * attack - with its tokens written in: `tokens` over the defaults.
  */
 function craftedSlots(crafted, phase, { getTrait, data = null, perBaseTier = null,
-  category = true, tokens = {} } = {}) {
+  category = true, tokens = {}, form = null } = {}) {
   if (!CRAFTED[crafted?.kind]) return {};
   const band = CRAFTED[crafted.kind].bonus?.[CRAFTED[crafted.kind].grades[crafted.grade]?.grade];
-  const written = effectsOf(crafted, getTrait);
+  const written = (crafted.kind === "weapon")
+    ? formScript(effectsOf(crafted, getTrait), form ?? activeForm(crafted), getTrait)
+    : effectsOf(crafted, getTrait);
   const script = scriptWithPiece(category ? written : withoutCategory(written),
     { perBaseTier: perBaseTier ?? band?.perBaseTier ?? 0 }, tokens);
   if (!script.trim()) return {};
@@ -1138,6 +1176,73 @@ function craftedSlots(crafted, phase, { getTrait, data = null, perBaseTier = nul
   if (!program) return {};
   return applyPassives([{ program, priority: PRIORITY.talent, sourceName: "", level: 0, stacks: 1 }],
     phase, { data: data ?? {}, errors: [] }).slots;
+}
+
+/**
+ * A Weapon's Effects as one of its forms: the Category part in use and no other, and - used as
+ * another Weapon Type, Transforming's - "only benefits from other Weapon Qualities that are
+ * applicable to that Weapon Type". Its owner's own lines always.
+ */
+export function formScript(script, form, getTrait) {
+  return effectParts(script).filter(part => {
+    if (part.type === "category") return part.id === form?.category;
+    if ((part.type === "quality") && form?.weaponType) {
+      return qualityFitsPiece(getTrait?.(part.id), { kind: "weapon", weaponType: form.weaponType });
+    }
+    return true;
+  }).map(part => (part.key ? partText(part) : part.text)).join("\n\n");
+}
+
+/**
+ * What a Weapon is being used as right now: its own Category, or the one Flexible switched it to
+ * until the end of its wielder's turn; its own Type; its own Size, or the one Variable changed it
+ * to.
+ */
+export function activeForm(crafted) {
+  return {
+    category: crafted?.activeCategory || crafted?.category || "",
+    weaponType: crafted?.weaponType ?? "",
+    size: crafted?.activeSize || crafted?.weaponSize || ""
+  };
+}
+
+/**
+ * Every form a Weapon may make an attack as, the one it is in first: Transforming's "You may use
+ * this Weapon as if it was a Weapon of that Weapon Category and Weapon Type ... it has the same
+ * Weapon Size". Each `{category, weaponType, size}`.
+ */
+export function weaponForms(item, getTrait) {
+  const crafted = item?.system?.crafted;
+  if (crafted?.kind !== "weapon") return [];
+  const now = activeForm(crafted);
+  const forms = [now];
+  for (const entry of qualityEntries(crafted)) {
+    const trait = getTrait?.(entry.id);
+    if ((trait?.chooses !== "otherTypeCategory") || qualityInactive(entry, crafted, getTrait)) continue;
+    for (const id of choicesOf(entry)) {
+      const other = getTrait?.(id);
+      if (other?.weaponType) forms.push({ category: other.id, weaponType: other.weaponType, size: now.size });
+    }
+  }
+  return forms;
+}
+
+/**
+ * The Categories a Flexible Weapon may be switched to for a turn - its own and the ones chosen -
+ * and the Sizes a Variable one may be wielded at: its own and the ones chosen.
+ */
+export function flexibleCategories(item, getTrait) {
+  return alternativesOf(item, getTrait, "sameTypeCategory", item?.system?.crafted?.category);
+}
+export function variableSizes(item, getTrait) {
+  return alternativesOf(item, getTrait, "weaponSize", item?.system?.crafted?.weaponSize);
+}
+function alternativesOf(item, getTrait, chooses, own) {
+  const crafted = item?.system?.crafted;
+  if (crafted?.kind !== "weapon") return [];
+  const found = qualityEntries(crafted).filter(entry => (getTrait?.(entry.id)?.chooses === chooses)
+    && !qualityInactive(entry, crafted, getTrait)).flatMap(choicesOf);
+  return found.length ? [own, ...found.filter(each => each !== own)] : [];
 }
 
 /** A piece's Effects without its Category's part: what it does worn under the Top Layer. */
@@ -1197,10 +1302,11 @@ export const WEAPON_TOKENS = Object.freeze({
 });
 
 /** A Weapon's `weapon.*` Slots, resolved for its wielder and the attack its tokens describe. */
-export function weaponSlots(crafted, { getTrait, data = null, tokens = {} } = {}) {
+export function weaponSlots(crafted, { getTrait, data = null, tokens = {}, form = null } = {}) {
   if (crafted?.kind !== "weapon") return {};
-  return craftedSlots(crafted, PHASES.WEAPON, { getTrait, data,
-    tokens: { sizeRank: WEAPON_SIZES[crafted.weaponSize]?.rank ?? WEAPON_TOKENS.sizeRank, ...tokens } });
+  const as = form ?? activeForm(crafted);
+  return craftedSlots(crafted, PHASES.WEAPON, { getTrait, data, form: as,
+    tokens: { sizeRank: WEAPON_SIZES[as.size]?.rank ?? WEAPON_TOKENS.sizeRank, ...tokens } });
 }
 
 /**
@@ -1218,7 +1324,7 @@ function weaponReading(crafted, { getTrait, data = null, baseTier = 1 }) {
   const lifeMax = kind.lifeBase + (level * applySlot(slots, "weapon.lifePerLevel", kind.lifePerLevel));
   const lost = Number(crafted.lifeLost) || 0;
   const type = String(crafted.weaponType ?? "");
-  const size = String(crafted.weaponSize ?? "");
+  const size = String(activeForm(crafted).size ?? "");
   return {
     weaponType: type,
     weaponTypeLabel: WEAPON_TYPES[type]?.label ?? type,
@@ -1335,8 +1441,9 @@ export function telekinetic(items) {
  * can only be used for Physical Attacks", and so on. Chosen at declaration: "When making an
  * Attacking Maneuver, you must choose which Weapon (if any) you are using".
  */
-export function weaponsFor(items, foundation) {
-  return wieldedWeapons(items).filter(item => item.system.crafted.weaponType === foundation);
+export function weaponsFor(items, foundation, getTrait = null) {
+  return wieldedWeapons(items).filter(item => weaponForms(item, getTrait)
+    .some(form => form.weaponType === foundation));
 }
 
 /** Whether the character is rid of the Weapon Penalty: "gain the Weapon Specialist Talent". */
@@ -1375,12 +1482,13 @@ function fractionOf(slots, key) {
  *                          the Size Categories in order, smallest first
  */
 export function weaponAttack(item, attacker, { profile = "", calledShot = false, area = null,
-  kiWager = 0, sizes = [], target = null, getTrait } = {}) {
+  kiWager = 0, sizes = [], target = null, form = null, getTrait } = {}) {
   const crafted = item?.system?.crafted;
   if (crafted?.kind !== "weapon") return null;
   const data = attacker?.system ?? {};
   const tier = Number(data.tierOfPower) || 1;
-  const size = WEAPON_SIZES[crafted.weaponSize] ?? WEAPON_SIZES.standard;
+  const as = form ?? activeForm(crafted);
+  const size = WEAPON_SIZES[as.size] ?? WEAPON_SIZES.standard;
   const enormous = sizes.indexOf("enormous");
   const at = sizes.indexOf(data.size?.key ?? "");
   const tokens = {
@@ -1392,7 +1500,7 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
       && ((Number(kiWager) || 0) > 0) ? 1 : 0,
     belowEnormous: ((enormous >= 0) && (at >= 0)) ? Math.max(0, enormous - at) : 0
   };
-  const slots = weaponSlots(crafted, { getTrait, data, tokens });
+  const slots = weaponSlots(crafted, { getTrait, data, tokens, form: as });
   const byMind = (slots["weapon.telekinetic"] === true) && telekinetic(Array.from(attacker?.items ?? []));
   const perTier = (label, amount) => (amount
     ? [{ label, written: `${amount > 0 ? "+" : ""}${amount}(T)`, value: amount * tier }] : []);
@@ -1403,10 +1511,10 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
   return {
     itemId: item.id,
     name: item.name,
-    category: crafted.category,
-    categoryName: getTrait?.(crafted.category)?.name ?? crafted.category,
-    weaponType: crafted.weaponType,
-    weaponSize: crafted.weaponSize,
+    category: as.category,
+    categoryName: getTrait?.(as.category)?.name ?? as.category,
+    weaponType: as.weaponType,
+    weaponSize: as.size,
     // "Small: ... Strike Rolls increased by 1(T) and their Wound Rolls decreased by 2(T)."
     // And the Weapon Penalty, on the Strike of an attack made with a Weapon, unless the
     // Weapon Specialist Talent has taken it away.

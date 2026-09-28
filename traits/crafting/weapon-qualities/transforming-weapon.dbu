@@ -1,0 +1,33 @@
+id: transforming-weapon
+name: Transforming Weapon
+kind: crafting
+slots: 1~2
+# A Category of another Type for each Slot - two may share a Type, by the table's ruling.
+chooses: otherTypeCategory
+choosesPerSlot: true
+alternates: true
+source: Core Rule
+description: >
+  Categories of other Types, one for each Slot: an attack of that Type may be made with it as
+  one.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: For each Quality Slot this Weapon Quality takes up, select a Weapon Category of a
+  different Weapon Type. You may use this Weapon as if it was a Weapon of that Weapon Category
+  and Weapon Type. If you do, it has the same Weapon Size as this Weapon, but only benefits from
+  other Weapon Qualities that are applicable to that Weapon Type.
+text: >
+  Transforming Weapon: This Weapon can be wielded as if it were another.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1~2
+  –Effects: For each Quality Slot this Weapon Quality takes up, select a Weapon Category of a
+  different Weapon Type. You may use this Weapon as if it was a Weapon of that Weapon Category
+  and Weapon Type. If you do, it has the same Weapon Size as this Weapon, but only benefits from
+  other Weapon Qualities that are applicable to that Weapon Type.
+
+---
+
+# Chosen attack by attack: an Attacking Maneuver of that Type offers it "as" that Category, with
+# its Size, and only the Qualities that Type takes run.

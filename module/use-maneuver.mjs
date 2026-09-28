@@ -62,7 +62,7 @@ import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   throwables, weaponAttack, weaponsFor, wieldedWeapons, damageWeapon, MULTI_STORAGE_THROWS,
-  throwsAllowed, throwsCopies, thrownWeaponAttack } from "./gear.mjs";
+  throwsAllowed, throwsCopies, thrownWeaponAttack, weaponForms, activeForm } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
@@ -2225,8 +2225,9 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // What the Throw Maneuver throws: "whatever you are holding". Asked before the attack is
   // declared, since the Grenade changes what the attack is.
   let thrown = null;
-  // The Weapon the attack is made with, where it is made with one.
+  // The Weapon the attack is made with, where it is made with one, and as what.
   let weaponItem = null;
+  let weaponForm = null;
   if (maneuver.throws) {
     thrown = await askThrown(actor, maneuver);
     if (!thrown) return false;
@@ -2290,8 +2291,11 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     if (!thrown && !(maneuver.tags ?? []).includes("unarmed") && !unassisted) {
       const chosen = await askWeapon(actor, declared);
       if (chosen === null) return false;
-      weaponItem = chosen || null;
-      if (weaponItem) declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, [], targetActor) };
+      weaponItem = chosen?.item ?? null;
+      weaponForm = chosen?.form ?? null;
+      if (weaponItem) {
+        declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, [], targetActor, weaponForm) };
+      }
       // High-Tech: "Your Damage Attribute for any Attacking Maneuver made with this Weapon is
       // Scholarship" - what stands in for the Foundation's, as a Bomb's recorded one does.
       if (declared.weapon?.scholarshipDamage) {
@@ -2489,7 +2493,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   // What the Weapon does, again with what was applied to the attack - Precision's "any Called
   // Shot made using this Weapon".
   if (weaponItem) {
-    declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, modifiers, targetActor) };
+    declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, modifiers, targetActor, weaponForm) };
     // Its Area, however many Magnitudes larger the Weapon makes it.
     const area = declared.area ?? PROFILES[declared.profile]?.area ?? null;
     if (area && declared.weapon.magnitude) {
@@ -2758,7 +2762,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
  *   whole thing was put away
  */
 async function askWeapon(actor, declared) {
-  const offered = weaponsFor(actor.items.contents, declared?.foundation);
+  // Each Weapon in hand, in each form this Attack Type may be made with: as it is, and - a
+  // Transforming Weapon - as the Category of another Type it may be used as.
+  const offered = weaponsFor(actor.items.contents, declared?.foundation, getTrait)
+    .flatMap(item => weaponForms(item, getTrait).filter(form => form.weaponType === declared?.foundation)
+      .map((form, at) => ({ key: `${item.id}:${at}`, item, form,
+        label: (form.category === activeForm(item.system.crafted).category) ? item.name
+          : `${item.name} (as ${getTrait(form.category)?.name ?? form.category})` })));
   if (!offered.length) return false;
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
@@ -2766,14 +2776,14 @@ async function askWeapon(actor, declared) {
     content: "",
     buttons: [
       { action: "unarmed", label: "Unarmed" },
-      ...offered.map(item => ({ action: item.id, label: item.name })),
+      ...offered.map(entry => ({ action: entry.key, label: entry.label })),
       { action: "cancel", label: "Cancel" }
     ],
     rejectClose: false
   });
   if (!chosen || (chosen === "cancel")) return null;
   if (chosen === "unarmed") return false;
-  return offered.find(item => item.id === chosen) ?? null;
+  return offered.find(entry => entry.key === chosen) ?? null;
 }
 
 /** How many times the Throw Maneuver has been used this Combat Round. */
@@ -2783,9 +2793,10 @@ function throwsThisRound(actor, maneuver) {
 }
 
 /** What an attack made with this Weapon carries - see weaponAttack() in gear.mjs. */
-function armedWith(actor, item, declared, modifiers, target = null) {
+function armedWith(actor, item, declared, modifiers, target = null, form = null) {
   return weaponAttack(item, actor, {
     target,
+    form,
     profile: declared.profile,
     calledShot: (modifiers ?? []).some(entry => entry.modifier?.id === "called-shot"),
     area: declared.area ?? PROFILES[declared.profile]?.area ?? null,

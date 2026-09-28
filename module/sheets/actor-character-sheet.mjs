@@ -14,7 +14,7 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
   craftedItemFrom, craftedReading, APPAREL_LAYERS, APPAREL_EQUIP_COST, equipPlan, onLayer, pieceSlots,
   grantDoffBonus, topLayerPiece, unequipCost, wieldProblem, WEAPON_SIZES, WEAPON_TYPES,
-  MULTI_STORAGE_THROWS, throwsCopies,
+  MULTI_STORAGE_THROWS, throwsCopies, activeForm, flexibleCategories, variableSizes,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -454,6 +454,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       equipGear: DBUCharacterSheet._onEquipGear,
       layerGear: DBUCharacterSheet._onLayerGear,
       wieldGear: DBUCharacterSheet._onWieldGear,
+      flexGear: DBUCharacterSheet._onFlexGear,
+      resizeGear: DBUCharacterSheet._onResizeGear,
       repairGear: DBUCharacterSheet._onRepairGear,
       addApparel: DBUCharacterSheet._onAddApparel,
       addWeapon: DBUCharacterSheet._onAddWeapon,
@@ -2154,7 +2156,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const crafted = item.system.crafted;
     if (crafted?.kind === "weapon") {
       const name = getTrait(crafted.category)?.name ?? crafted.category;
-      return [WEAPON_SIZES[crafted.weaponSize]?.label, WEAPON_TYPES[crafted.weaponType]?.label, name]
+      return [WEAPON_SIZES[activeForm(crafted).size]?.label, WEAPON_TYPES[crafted.weaponType]?.label, name]
         .filter(Boolean).join(" ") + ` · Grade ${crafted.grade}`;
     }
     if (crafted?.kind) {
@@ -2914,15 +2916,66 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const lost = Number(item.system.crafted?.lifeLost) || 0;
     const wielded = Boolean(item.system.equipped) && !item.system.crafted?.destroyed;
     const problem = wielded ? "" : wieldProblem(items, item, getTrait);
+    const now = activeForm(item.system.crafted);
     return {
       weapon: true,
       wielded,
+      // Flexible: the Categories it may be for this turn; Variable: the Sizes it may be wielded at.
+      flexes: flexibleCategories(item, getTrait).filter(id => id !== now.category)
+        .map(id => ({ value: id, label: getTrait(id)?.name ?? id })),
+      flexedTo: item.system.crafted?.activeCategory ? (getTrait(now.category)?.name ?? now.category) : "",
+      resizes: variableSizes(item, getTrait).filter(key => key !== now.size)
+        .map(key => ({ value: key, label: WEAPON_SIZES[key]?.label ?? key })),
       wieldBlocked: problem,
       wieldCost: inCombat ? "No Effort Maneuver" : "",
       breakLabel: item.system.crafted?.destroyed ? "Broken"
         : lost ? `Life Points ${reading?.lifeLeft}/${reading?.lifeMax}` : "",
       repairable: (Boolean(lost) || Boolean(item.system.crafted?.destroyed)) && !inCombat
     };
+  }
+
+  /**
+   * Flexible: "At the start of your turn, you may change this Weapon's Weapon Category to any
+   * other Weapon Category selected from this Weapon Quality until the end of your turn." On their
+   * turn, in a Combat Encounter - the start of it is the table's to hold them to - and back to its
+   * own when the turn ends. Out of one, whenever.
+   */
+  static async _onFlexGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const to = target.dataset.value ?? "";
+    if (!item || !flexibleCategories(item, getTrait).includes(to)) return;
+    if (game.combat?.started) {
+      if (!isTheirTurn(this.actor)) {
+        ui.notifications.warn(`${this.actor.name} can only change it at the start of their turn.`);
+        return;
+      }
+    }
+    return item.update({ "system.crafted.activeCategory": (to === item.system.crafted.category) ? "" : to });
+  }
+
+  /**
+   * Variable: "During your turn, you can use the No Effort Maneuver to change this Weapon's Weapon
+   * Size to another Weapon Size selected upon gaining this Quality or back to its original." It
+   * stays at it until changed again. Out of a Combat Encounter, for nothing.
+   */
+  static async _onResizeGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const to = target.dataset.value ?? "";
+    if (!item || !variableSizes(item, getTrait).includes(to)) return;
+    if (game.combat?.started) {
+      const noEffort = getManeuver("no-effort");
+      if (!noEffort) return;
+      if (!isTheirTurn(this.actor)) {
+        ui.notifications.warn(`${this.actor.name} can only change it during their turn.`);
+        return;
+      }
+      if (maneuverUsesLeft(this.actor, noEffort) <= 0) {
+        ui.notifications.warn(`${this.actor.name} has used the ${noEffort.name} Maneuver this Round.`);
+        return;
+      }
+      await recordManeuverUse(this.actor, noEffort);
+    }
+    return item.update({ "system.crafted.activeSize": (to === item.system.crafted.weaponSize) ? "" : to });
   }
 
   /**

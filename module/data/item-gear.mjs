@@ -156,7 +156,11 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         weaponSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         // A Weapon's Life Points lost, off the most it can have - which moves with its
         // wielder's Power Level, so what is left moves with it.
-        lifeLost: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 })
+        lifeLost: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        // The Category a Flexible Weapon is using until the end of its wielder's turn, and the
+        // Size a Variable one is being wielded at - blank for its own.
+        activeCategory: new fields.StringField({ required: true, blank: true, initial: "" }),
+        activeSize: new fields.StringField({ required: true, blank: true, initial: "" })
       }),
 
       /** Shrinks its wearer to a Size named outright - the Micro Band - and where they are. */

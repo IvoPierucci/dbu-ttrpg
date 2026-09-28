@@ -441,6 +441,13 @@ export function registerCombatHooks() {
       if (leaving.system.grapple?.escapeActions) {
         await leaving.update({ "system.grapple.escapeActions": 0 });
       }
+
+      // Flexible: "change this Weapon's Weapon Category ... until the end of your turn".
+      const switched = leaving.items.filter(item => item.system?.crafted?.activeCategory);
+      if (switched.length) {
+        await leaving.updateEmbeddedDocuments("Item", switched.map(item =>
+          ({ _id: item.id, "system.crafted.activeCategory": "" })));
+      }
     }
 
     const arriving = combat.combatant?.actor;

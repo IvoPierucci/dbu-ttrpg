@@ -385,7 +385,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
           slotsLabel: `${taken} Slot${taken === 1 ? "" : "s"}`,
           // What was chosen for it, by name.
           choiceLabel: qualityChoiceLabel(trait, entry.choice, DBUCharacterData.SKILLS,
-            DBUGearSheet.#weathers()),
+            DBUGearSheet.#weathers(), getTrait),
           // A switch of its own, where its effect waits on something the table keeps.
           toggle: trait?.toggle ? String(trait.toggle) : "",
           on: entry.on,
@@ -404,7 +404,7 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
         return {
           name: qualityName(entry, trait),
           choiceLabel: qualityChoiceLabel(trait, entry.choice, DBUCharacterData.SKILLS,
-            DBUGearSheet.#weathers()),
+            DBUGearSheet.#weathers(), getTrait),
           off: Boolean(inactive) || switchedOff,
           offNote: inactive ? "Inactive" : (switchedOff ? "Switched off" : ""),
           lines: qualitySummary(trait)
@@ -465,21 +465,33 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     // "A Skill of your choice (when creating this piece of Apparel)", Focal's Strike or Dodge:
     // asked now, and kept with the Quality.
     let choice = "";
-    const offered = qualityChoices(trait, DBUCharacterData.SKILLS, DBUGearSheet.#weathers());
+    const crafted = this.item.system.crafted;
+    const offered = qualityChoices(trait, DBUCharacterData.SKILLS, DBUGearSheet.#weathers(),
+      { crafted, categories: traitsOfKind("crafting", CRAFTED[crafted.kind]?.categories ?? "") });
     if (offered.length) {
-      choice = await foundry.applications.api.DialogV2.wait({
-        classes: ["dbu-dialog"],
-        window: { title: trait?.name ?? pick },
-        content: "",
-        buttons: [
-          ...offered.map(key => ({ action: key,
-            label: qualityChoiceLabel(trait, key, DBUCharacterData.SKILLS,
-              DBUGearSheet.#weathers()) })),
-          { action: "cancel", label: "Cancel" }
-        ],
-        rejectClose: false
-      });
-      if (!offered.includes(choice)) return;
+      // One for each Slot, where it chooses that many - "For each Quality Slot this Weapon Quality
+      // takes up, select a different Weapon Category" - each different from the last.
+      const times = (trait?.choosesPerSlot === true) ? slots : 1;
+      const picked = [];
+      for (let at = 0; at < times; at++) {
+        const left = offered.filter(key => !picked.includes(key));
+        if (!left.length) break;
+        const one = await foundry.applications.api.DialogV2.wait({
+          classes: ["dbu-dialog"],
+          window: { title: (times > 1) ? `${trait?.name ?? pick} (${at + 1}/${times})` : (trait?.name ?? pick) },
+          content: "",
+          buttons: [
+            ...left.map(key => ({ action: key,
+              label: qualityChoiceLabel(trait, key, DBUCharacterData.SKILLS,
+                DBUGearSheet.#weathers(), getTrait) })),
+            { action: "cancel", label: "Cancel" }
+          ],
+          rejectClose: false
+        });
+        if (!left.includes(one)) return;
+        picked.push(one);
+      }
+      choice = picked.join(",");
     }
     const qualities = [...qualityEntries(this.item.system.crafted), { id: pick, slots, choice }];
     return this.item.update(this.#withQualities(qualities));

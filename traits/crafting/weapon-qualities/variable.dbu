@@ -1,0 +1,34 @@
+id: variable
+name: Variable
+kind: crafting
+slots: 1~2
+# Another Weapon Size for each Slot, chosen when it is added.
+chooses: weaponSize
+choosesPerSlot: true
+source: Core Rule
+description: >
+  Other Sizes, one for each Slot: changed to during your turn with the No Effort Maneuver.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: Select an additional Weapon Size upon applying this Weapon Quality for each Quality
+  Slot it takes up.
+
+  [Triggered]: During your turn, you can use the No Effort Maneuver to change this Weapon’s
+  Weapon Size to another Weapon Size selected upon gaining this Quality or back to its original
+  Weapon Size.
+text: >
+  Variable: This Weapon’s size is larger than most, but smaller than some, allowing it to be
+  wielded as if it were of either size.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1~2
+  –Effects: Select an additional Weapon Size upon applying this Weapon Quality for each Quality
+  Slot it takes up. During your turn, you can use the No Effort Maneuver to change this Weapon’s
+  Weapon Size to another Weapon Size selected upon gaining this Quality or back to its original
+  Weapon Size.
+
+---
+
+# Changed from the Weapon's row, and kept until it is changed again. Its Size is what its attacks
+# roll with, and - a Shield's - what its Life Points count by.

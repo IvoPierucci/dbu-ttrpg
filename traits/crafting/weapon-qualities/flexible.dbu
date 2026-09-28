@@ -1,0 +1,37 @@
+id: flexible
+name: Flexible
+kind: crafting
+slots: 1~2
+# A Category of its Type for each Slot, chosen when it is added; each is written into the
+# Weapon's Effects as a Category part of its own, and only the one in use runs.
+chooses: sameTypeCategory
+choosesPerSlot: true
+alternates: true
+source: Core Rule
+description: >
+  Other Categories of its Type, one for each Slot: switched to at the start of your turn, until
+  its end.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: For each Quality Slot this Weapon Quality takes up, select a different Weapon
+  Category of the same Foundation for this Weapon.
+
+  [Triggered]: At the start of your turn, you may change this Weapon’s Weapon Category to any
+  other Weapon Category selected from this Weapon Quality until the end of your turn.
+text: >
+  Flexible: This Weapon can be used in multiple ways, such as being fit for both stabbing and
+  slashing.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1~2
+  –Effects: For each Quality Slot this Weapon Quality takes up, select a different Weapon
+  Category of the same Foundation for this Weapon. At the start of your turn, you may change
+  this Weapon’s Weapon Category to any other Weapon Category selected from this Weapon Quality
+  until the end of your turn.
+
+---
+
+# Switched from the Weapon's row, on its wielder's turn in a Combat Encounter - the start of it is
+# the table's to hold them to - and back to its own when the turn ends. A Category's own Quality
+# comes and goes with it: switched to Bludgeoning, it has Staggering for the turn.

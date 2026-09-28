@@ -232,6 +232,15 @@
         <button type="button" class="gear-act" data-action="repairGear" data-item-id="{{row.itemId}}"
                 data-tooltip="The Full Repair Adventuring Maneuver, out of a Combat Encounter.">Repair</button>
         {{/if}}
+        {{#if row.flexedTo}}<span class="gear-type" data-tooltip="Flexible: until the end of this turn.">as {{row.flexedTo}}</span>{{/if}}
+        {{#each row.flexes as |flex|}}
+        <button type="button" class="gear-act" data-action="flexGear" data-item-id="{{../itemId}}"
+                data-value="{{flex.value}}" data-tooltip="Flexible: this Category until the end of your turn.">{{flex.label}}</button>
+        {{/each}}
+        {{#each row.resizes as |size|}}
+        <button type="button" class="gear-act" data-action="resizeGear" data-item-id="{{../itemId}}"
+                data-value="{{size.value}}" data-tooltip="Variable: the No Effort Maneuver, in a Combat Encounter.">{{size.label}}</button>
+        {{/each}}
         {{#if row.wielded}}<span class="gear-type">Wielded</span>{{/if}}
         <button type="button" class="gear-act" data-action="wieldGear" data-item-id="{{row.itemId}}"
                 {{#if row.wieldBlocked}}disabled data-tooltip="{{row.wieldBlocked}}"{{else}}{{#if row.wieldCost}}data-tooltip="{{row.wieldCost}}"{{/if}}{{/if}}>{{#if row.wielded}}Sheathe{{else}}Wield{{/if}}</button>

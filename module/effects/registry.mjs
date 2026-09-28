@@ -16,7 +16,7 @@ import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
-  topLayerPiece, wieldedWeapons } from "../gear.mjs";
+  topLayerPiece, wieldedWeapons, formScript, activeForm } from "../gear.mjs";
 
 /**
  * Compiled programs, keyed by the source and a hash of what it contained.
@@ -249,7 +249,9 @@ function weaponPrograms(actor, report) {
   const held = wieldedWeapons(Array.from(actor.items ?? [])).map(item => ({
     item,
     reading: craftedReading(item.system.crafted, { getTrait, difficulties: {} }),
-    parts: effectParts(effectsOf(item.system.crafted, getTrait))
+    // As it is being used: the Category in use and no other - Flexible's.
+    parts: effectParts(formScript(effectsOf(item.system.crafted, getTrait),
+      activeForm(item.system.crafted), getTrait))
   }));
   const kept = doubleDipped(held);
   for (const { item, reading, parts } of held) {
