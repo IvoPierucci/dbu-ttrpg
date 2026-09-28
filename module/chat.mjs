@@ -462,9 +462,37 @@ async function applyClash(messageId, clash) {
   if (clash.concealed && clash.result && !clash.concealed.applied) {
     await settleConcealed(message, clash);
   }
+  if (clash.techniqueClash && clash.result && !clash.techniqueClash.applied) {
+    await settleTechniqueClash(message, clash);
+  }
   if (clash.thrownProne && clash.result && !clash.thrownProne.applied) {
     await settleThrownProne(message, clash);
   }
+}
+
+/**
+ * Fake Out's and Trick Attack's Clash, settled onto the attack it was opened for.
+ *
+ *   Fake Out      "If you win, the losing target(s) must either use the Guard option ... or make a
+ *                 typical Dodge Roll" - written on the attack as one of its losers
+ *   Trick Attack  "If you win, this Attacking Maneuver has its Strike Roll increased by 2(bT)" -
+ *                 against that one, written on the attack
+ */
+async function settleTechniqueClash(message, clash) {
+  const tc = clash.techniqueClash;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, techniqueClash: { ...tc, applied: true } });
+  const won = whoWonClash(clash.result) === "challenger";
+  const attackMessage = game.messages?.get(tc.attackMessageId);
+  const attack = attackMessage?.getFlag(SCOPE, ATTACK_FLAG);
+  if (won && attack && !attack.result) {
+    const key = (tc.kind === "fake-out") ? "fakeOutLosers" : "tricked";
+    requestEdit(attackMessage, { type: "attack", attack: { ...attack,
+      [key]: [...new Set([...(attack[key] ?? []), clash.defenderUuid])] } });
+  }
+  await settledNote(message, won
+    ? ((tc.kind === "fake-out") ? `${clash.defenderName} falls for it: only Guard or a Dodge.`
+      : `${clash.defenderName} is tricked: Strike +2(bT) against them.`)
+    : `${clash.defenderName} is not fooled.`);
 }
 
 /**
@@ -4477,6 +4505,24 @@ async function respondDialog(message, respondable) {
         reason = "you are not charging anything";
       }
 
+      // A Signature Technique's say over what may answer it. Encompassing Attack at two ranks: "no
+      // ... Unique Ability that is a Counter Maneuver (except Barrier)". Fake Out, lost: "they cannot
+      // use any other Counter Maneuver (except the Afterimage Technique)" - the Defend Maneuver's
+      // Guard is still theirs.
+      const technique = attack?.technique;
+      if (!blocked && technique) {
+        const encompassed = technique.features.filter(id => id === "encompassing-attack").length >= 2;
+        if (encompassed && (maneuver.tags ?? []).includes("uniqueAbility") && (maneuver.name !== "Barrier")) {
+          blocked = true;
+          reason = "Encompassing Attack: no Unique Ability Counter but Barrier";
+        }
+        if ((attack.fakeOutLosers ?? []).includes(actor.uuid) && !maneuver.defend
+          && (maneuver.name !== "Afterimage Technique")) {
+          blocked = true;
+          reason = "Fake Out: only Guard or a Dodge";
+        }
+      }
+
       const note = maneuver.cancelCharge
         ? `${maneuver.source} - you still Dodge`
         : maneuver.blockade
@@ -4505,7 +4551,11 @@ async function respondDialog(message, respondable) {
       : answered.has(actor.uuid)
       ? `<p class="dbu-respond-note">Already answered - cancel it on the card to play another.</p>`
       : nothing("instant") + instantManeuvers().map(maneuver =>
-          option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, false, "")
+          // Instant Assault: "No Instant Maneuvers can be triggered in response to this Attacking
+          // Maneuver."
+          attack?.technique?.features?.includes("instant-assault")
+            ? option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, true, "Instant Assault")
+            : option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, false, "")
         ).join("");
 
     const triggers = relevantTriggers(actor, message, "response");
@@ -5092,7 +5142,14 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
-                                           naturalAdd = 0, linked = "" } = {}) {
+                                           naturalAdd = 0, linked = "", fixedTotal = null } = {}) {
+  // A roll already made: Delayed's "keep a record of the Dice Score of your Wound Roll", applied
+  // later "against their Soak Value" as it was.
+  if (Number.isFinite(fixedTotal)) {
+    return { actorUuid: actor.uuid, actorName: actor.name, natural: null, total: fixedTotal,
+      outcome: "normal", lines: [noteLine(`The recorded Wound Roll: ${fixedTotal}`)],
+      breakdown: `Recorded Wound Roll: ${fixedTotal}` };
+  }
   // Twin-Linked keeps the higher of two, Dead-Link the lower. The second is made without offering
   // the triggered effects again - they answered the first - and the one set aside is named.
   if (linked) {
@@ -5431,8 +5488,10 @@ const CLASH_ROLLS = ({
     parts: (actor, clash, uuid) => [
       ...transfigurationPenalty(actor, clash, uuid),
       ...(((uuid === clash.challengerUuid) && clash.mightBonus)
-        ? [{ label: "Knockback in space", value: clash.mightBonus }]
-        : [])
+        ? [{ label: clash.mightBonusLabel || "Knockback in space", value: clash.mightBonus }]
+        : []),
+      // A Signature Technique's own rows on the challenger's side: Hefty Stagger, Forceful Launch.
+      ...((uuid === clash.challengerUuid) ? (clash.challengerRows ?? []) : [])
     ]
   },
 
@@ -5805,7 +5864,7 @@ export async function postGrappleCheck(grappler, grappled, {
  * Nothing is decided here beyond who is rolling. "If you win, choose one of the effects
  * below" is a choice made after the roll, and the card is what offers it.
  */
-export async function postThrust(actor, target, maneuver) {
+export async function postThrust(actor, target, maneuver, { pushOnly = false } = {}) {
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: "",
@@ -5826,10 +5885,11 @@ export async function postThrust(actor, target, maneuver) {
           defenderRoll: "",
           // Push Back doubles the Collision Damage, and that is armed when Push Back is
           // chosen rather than now: choosing the other effect must not leave a collision
-          // button on a card where nobody was moved.
+          // button on a card where nobody was moved. Two-Step Strike's is "target that Opponent
+          // with the Push Back option of the Thrust Maneuver" - Push Back alone.
           collision: null,
           collisionApplied: false,
-          thrust: { stage: "strike", applied: false, chosen: "" },
+          thrust: { stage: "strike", applied: false, chosen: "", ...(pushOnly ? { pushOnly: true } : {}) },
           ready: [],
           result: null
         }
@@ -5984,6 +6044,7 @@ function renderSkillClash(message, html) {
         ["prone", "Knock Prone", "A second Clash of Impulsive or Corporeal. Win and they "
           + "are Prone; lose and they are Guard Down until the end of your turn."]
       ]) {
+        if (clash.thrust?.pushOnly && (choice !== "push")) continue;
         const button = document.createElement("button");
         button.type = "button";
         button.className = "dbu-clash-button";
@@ -6066,6 +6127,23 @@ function renderSkillClash(message, html) {
       container.append(broken);
     }
 
+    // Express Ticket: "If you move your full Boosted Speed without the Opponent colliding with Battle
+    // Terrain or another Character, reduce their Life Points by 1/2 of your Might."
+    if (clash.express && wonIt && !clash.express.applied && challenger?.isOwner) {
+      const run = document.createElement("button");
+      run.type = "button";
+      run.className = "dbu-clash-button";
+      run.textContent = `Full run: -${clash.express.amount} Life Points`;
+      run.dataset.tooltip = "Pressed if you moved your full Boosted Speed and they hit nothing on the way. "
+        + "A Life Point reduction, past Soak and Damage Reduction.";
+      run.addEventListener("click", async () => {
+        const target = fromUuidSync(clash.defenderUuid);
+        if (target) await reduceLifePoints(target, clash.express.amount, { reason: "Express Ticket" });
+        requestEdit(message, { type: "clash", clash: { ...clash, express: { ...clash.express, applied: true } } });
+      });
+      container.append(run);
+    }
+
     if (clash.collision && wonIt && !clash.collisionApplied && challenger?.isOwner) {
       const collision = document.createElement("button");
       collision.type = "button";
@@ -6132,7 +6210,9 @@ function clashResult({ challenger, defender }) {
   // Karmic Save says you succeed, whatever the numbers said, so it settles the Clash
   // before the totals are compared at all. Both sides having it is not a thing the
   // rules allow - it can only be used by whoever lost - so one check each is enough.
-  if (challenger.succeeded) return `${Handlebars.escapeExpression(challenger.actorName)} wins (Karmic Save)`;
+  if (challenger.succeeded) {
+    return `${Handlebars.escapeExpression(challenger.actorName)} wins (${challenger.automatic || "Karmic Save"})`;
+  }
   if (defender.succeeded) return `${Handlebars.escapeExpression(defender.actorName)} wins (Karmic Save)`;
 
   const tied = challenger.total === defender.total;
@@ -6301,12 +6381,46 @@ function renderOutOfSequence(message, html) {
 }
 
 /**
+ * A Signature Technique offered out of sequence: Counter's strike back, Exploiting Technique's.
+ * Only a Technique with the Advantage that opened it may be picked; it goes through the Signature
+ * Technique Maneuver, whose 1/Round and Ultimate limits still count (the user's ruling), without
+ * its Action.
+ */
+async function takeTechniqueOffer(message, actor, offer) {
+  const feature = offer.technique?.feature ?? "";
+  const techniques = actor.items.filter(item => (item.type === "maneuver")
+    && (item.system.advantages ?? []).includes(feature));
+  if (!techniques.length) {
+    ui.notifications.warn(`${actor.name} has no Signature Technique with ${feature}.`);
+    return;
+  }
+  let chosen = techniques[0];
+  if (techniques.length > 1) {
+    const id = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: offer.maneuverName }, content: "",
+      buttons: [...techniques.map(item => ({ action: item.id, label: item.name })),
+        { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    chosen = techniques.find(item => item.id === id);
+    if (!chosen) return;
+  }
+  const { useTechnique } = await import("./use-maneuver.mjs");
+  const used = await useTechnique(actor, chosen.id, { via: offer.technique.via ?? "",
+    outOfSequence: true, targetUuid: offer.targetUuid ?? "" });
+  if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+}
+
+/**
  * Play the offered Maneuver out of sequence, and close the trigger.
  *
  * This never touches `lastManeuverWasInstant`: an Out-of-Sequence Maneuver played off
  * the back of an Instant does not count as a Maneuver in its place.
  */
 async function takeOutOfSequence(message, actor, offer) {
+  // A Signature Technique handed over - Counter's, Exploiting Technique's: which of the Techniques
+  // with that Advantage, then the Technique itself through its door, out of sequence.
+  if (offer.technique) return takeTechniqueOffer(message, actor, offer);
   const maneuver = getManeuver(offer.maneuverId);
   if (!maneuver) return;
 
@@ -6327,6 +6441,22 @@ async function takeOutOfSequence(message, actor, offer) {
     if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
     // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
     await recordManeuverType(actor, "counter");
+
+    // Exploiting Technique: "When you use the Exploit Maneuver, instead of the Basic Attack Maneuver,
+    // you may use the Signature Technique Maneuver to use this Signature Technique."
+    const exploiting = actor.items.some(item => (item.type === "maneuver")
+      && (item.system.advantages ?? []).includes("exploiting-technique"));
+    if (exploiting) {
+      const which = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: "Exploit" }, content: "",
+        buttons: [{ action: "basic", label: "Basic Attack" }, { action: "signature", label: "Signature Technique" }],
+        rejectClose: false
+      });
+      if (which === "signature") {
+        return takeTechniqueOffer(message, actor, { ...offer, maneuverName: "Signature Technique (Exploit)",
+          technique: { via: "exploit", feature: "exploiting-technique" } });
+      }
+    }
 
     return takeOutOfSequence(message, actor, {
       ...offer,
@@ -6552,7 +6682,7 @@ export async function postAttack(actor, target, maneuver,
                                    advantages = [], squaresCharged = 0, thrown = null,
                                    area = null, weapon = null, transformed = false, gigaFlare = 0,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
-                                   extraTargets = [] },
+                                   extraTargets = [], freeWager = 0 },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -6579,6 +6709,10 @@ export async function postAttack(actor, target, maneuver,
       : null);
 
   const absolute = Boolean((maneuver.absolute || technique?.absolute) && maneuver.attacking);
+  // Distant Explosion: "select a Square occupied by an Opponent to be the Target Square" - theirs.
+  if (technique?.area?.centredOnTarget) technique.area.centreName = target.name;
+  // Volatile Explosion with its Sphere on the user: they are inside it, so they are a target, hit.
+  const selfCaught = Boolean(technique?.features?.includes("volatile-explosion") && technique?.area?.centredOnSelf);
 
   // "Do not count towards the penalty from Diminishing Offense." The count is what the
   // penalty is worked out from, so an attack outside it does not raise the count - and the
@@ -6640,7 +6774,9 @@ export async function postAttack(actor, target, maneuver,
           // Everyone this attack reaches, answering one Strike Roll. An area adds to
           // this list; it does not start a second attack.
           targets: [{ uuid: target.uuid, name: target.name },
-            ...extraTargets.filter(entry => entry.uuid !== target.uuid)],
+            ...extraTargets.filter(entry => entry.uuid !== target.uuid),
+            ...(selfCaught ? [{ uuid: actor.uuid, name: actor.name }] : [])],
+          ...(selfCaught ? { autoHitUuids: [actor.uuid] } : {}),
           // A Signature Technique's features on this attack, worked out as it was declared.
           technique,
           // What the Signature Technique side brought, and whatever it asked for at
@@ -6683,7 +6819,8 @@ export async function postAttack(actor, target, maneuver,
             : profileCategoryShift(profile, charges))
             + modifierCategoryShift(modifiers)
             + (Number(weapon?.damageCategory) || 0),
-          kiWager,
+          // Genki's is added here: gathered from Empower, and neither paid again nor counted.
+          kiWager: kiWager + (Number(freeWager) || 0),
           // Paid in Life Points rather than Ki. Added to the Wound Roll all the same - it
           // is a Ki Wager either way - and only the card's note says the difference.
           wagerFromLife: Boolean(wagerFromLife && kiWager),
@@ -7318,16 +7455,376 @@ async function techniqueOnHit(attacker, attack, target) {
     || entry.modifier?.id === "called-shot");
   if (tech.features.includes("pinpoint-precision") && calledShot) broken += 1;
   if (broken) {
-    const { setCondition } = await import("./conditions.mjs");
-    const now = Number(target.system.conditions?.broken) || 0;
-    const stacks = Math.min(3, now + broken);
-    if (await setCondition(target, "broken", stacks) !== false) {
-      await lasting(attacker, { kind: KINDS.CONDITION, key: "broken", edge: EDGES.START, next: true,
-        on: target.uuid, source: attack.maneuverName });
-      said.push(`${target.name} is Broken ${stacks} until the start of ${attacker.name}'s next turn.`);
-    }
+    await markUntilNextTurn(attacker, target, "broken", broken, "start", attack.maneuverName);
+    said.push(`${target.name} gains ${broken} Broken until the start of ${attacker.name}'s next turn.`);
   }
   return said;
+}
+
+/**
+ * What a Signature Technique does once its Damage has been taken off one target.
+ *
+ *   Lead Up's record     who the last Maneuver hit, for the next one's chain
+ *   Condition            its chosen Condition, for its listed time, on Damage
+ *   Sustained            a stack of DOT per rank for 3 Combat Rounds; the clock reset if running
+ *   Express Ticket       a Might Clash on a hit; win and carry them along
+ *   Terrain Slam         a Might Clash against each target, hit or miss
+ *   Deadly Drop          offered on a hit while Grappling up high
+ *   Weather Calling      said: the Weather, its Tier, where - set by hand
+ *   Transformation Flare said: Transform out of sequence now
+ *   Hit and Run          said, with its Exploit button unless High-Speed Dash
+ */
+async function techniqueAfterDamage(message, attack, attacker, target, { damage, own, knockedThrough }) {
+  const tech = attack.technique;
+  const has = id => tech.features.includes(id);
+  const ranks = id => featureRanks(tech.features, id);
+  const landed = own.hit && !isAbsoluteMiss(own);
+  const said = [];
+
+  if (landed && (attacker.system.lastManeuver?.messageId === message.id)) {
+    await requestActorUpdate(attacker, { "system.lastManeuver.hit":
+      [...new Set([...(attacker.system.lastManeuver.hit ?? []), target.uuid])] });
+  }
+
+  if ((damage > 0) && landed && has("condition")) {
+    const key = tech.choices?.condition ?? "";
+    if (key && !((Number(target.system.conditions?.[key]) || 0) > 0)) {
+      if (["guard-down", "drained"].includes(key)) {
+        await markUntilNextTurn(attacker, target, key, 1, "start", `${attack.maneuverName} - Condition`);
+      } else {
+        const { gainCondition } = await import("./effects/moments-runtime.mjs");
+        if (await gainCondition(target, key, 1) !== false) {
+          await lasting(target, { kind: KINDS.CONDITION, key, edge: EDGES.END, next: true,
+            source: `${attack.maneuverName} - Condition` });
+        }
+      }
+      said.push(`${target.name}: ${getTrait(key)?.name ?? key}.`);
+    }
+  }
+
+  if ((damage > 0) && landed && ranks("sustained")) {
+    const running = (target.system.timed ?? []).filter(entry => (entry.kind === KINDS.DOT)
+      && String(entry.source ?? "").startsWith("Sustained"));
+    if (running.length) {
+      // "reset the amount of Combat Rounds until this effect ends" - and no stacks added.
+      await requestActorUpdate(target, { "system.timed": (target.system.timed ?? []).map(entry =>
+        running.includes(entry) ? { ...entry, edges: 3 } : entry) });
+      said.push(`Sustained: ${target.name}'s DOT runs 3 more Combat Rounds.`);
+    } else {
+      const count = ranks("sustained");
+      await requestActorUpdate(target, { "system.dotStacks": (target.system.dotStacks ?? 0) + count });
+      for (let i = 0; i < count; i++) {
+        await lasting(target, { kind: KINDS.DOT, key: "dot", edge: EDGES.ROUND, extra: 2,
+          source: `Sustained (${attack.maneuverName})` });
+      }
+      said.push(`Sustained: ${count} stack${count === 1 ? "" : "s"} of DOT on ${target.name} for 3 Combat Rounds.`);
+    }
+  }
+
+  if (landed && has("express-ticket")) {
+    await postMightClash(attacker, target, {
+      maneuverName: "Express Ticket",
+      reason: `${attack.maneuverName} · win, move up to your Boosted Speed and take ${target.name} with you.`,
+      collision: { doubles: false },
+      express: { applied: false, amount: Math.floor((Number(attacker.system.might) || 0) / 2) }
+    });
+  }
+
+  if (has("terrain-slam")) {
+    await postMightClash(attacker, target, {
+      maneuverName: "Terrain Slam",
+      reason: `${attack.maneuverName} · win, choose an unoccupied Square or a Feature adjacent to `
+        + `${target.name}: they collide with it.`,
+      collision: { doubles: false }
+    });
+  }
+
+  const grapple = attacker.system.grapple ?? {};
+  const up = Math.max(0, Number(attacker.system.battlefield?.highEnvironment) || 0);
+  if (landed && has("deadly-drop") && (grapple.role === "grappler") && up && (up < 4)) {
+    said.push(`Deadly Drop is open: bring ${target.name} down from the High Environment.`);
+    await postDeadlyDrop(attack, attacker, target, up);
+  }
+
+  if (landed && tech.weather && (target.uuid === attack.targetUuid)) {
+    said.push(`Weather Calling: ${tech.weather.name} (${tech.weather.tier}) in a Sphere centred on `
+      + `${target.name} - set it on Battlefields.`);
+  }
+  if (landed && has("transformation-flare") && (target.uuid === attack.targetUuid)) {
+    said.push("Transformation Flare: you may Transform out of sequence now, and leave it once this attack's Damage is done.");
+  }
+  if (said.length) await settledNote(message, said.join(" "));
+}
+
+/**
+ * Deadly Drop, offered: "you (and any characters you are Grappling) may leave all High Environments
+ * and return to the Battle Environment on the Square you are occupying. Then, make a Might Clash."
+ * Both are brought down (the user's ruling: the ground has to be there to hit), and a win opens the
+ * Ground Collision with "1/2 of your Might multiplied by the rank of the High Environment you were in".
+ */
+async function postDeadlyDrop(attack, attacker, target, rank) {
+  await requestActorUpdate(attacker, { "system.battlefield.highEnvironment": 0 });
+  await requestActorUpdate(target, { "system.battlefield.highEnvironment": 0 });
+  const extra = Math.floor((Number(attacker.system.might) || 0) / 2) * rank;
+  return postMightClash(attacker, target, {
+    maneuverName: "Deadly Drop",
+    reason: `${attack.maneuverName} · both of you drop to the ground; win and ${target.name} collides `
+      + `with the Square underneath them, +${extra}.`,
+    collision: { doubles: false, extra, extraLabel: "Deadly Drop", groundFirst: true }
+  });
+}
+
+/**
+ * Delayed, on a hit: the Wound's Dice Score recorded on the Technique, and an Imminent mark on the
+ * target instead of any Damage. Imminent is not a Combat Condition: a flag of its own.
+ */
+async function holdDelayed(message, attack, target) {
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const item = attacker?.items?.get(attack.technique?.itemId ?? "");
+  const wound = attack.result?.wound?.total ?? 0;
+  if (item) {
+    const record = item.system.signature?.delayed ?? {};
+    const combat = game.combat;
+    await item.update({ "system.signature.delayed": {
+      wound,
+      messageId: message.id,
+      round: record.messageId ? record.round : (combat?.started ? (combat.round ?? 0) : 0),
+      targets: [...new Set([...(record.targets ?? []), target.uuid])]
+    } });
+  }
+  const marks = target.getFlag?.(SCOPE, "imminent") ?? [];
+  await requestActorUpdate(target, { [`flags.${SCOPE}.imminent`]: [...marks,
+    { attackerUuid: attack.attackerUuid, attackerName: attack.attackerName,
+      itemId: attack.technique?.itemId ?? "", name: attack.maneuverName }] });
+  requestEdit(message, { type: "attack", attack: { ...attack, result: { ...attack.result,
+    targets: replaceTarget(attack, target.uuid, { applied: true, delayed: true }) } } });
+  await settledNote(message, `${target.name} takes no Damage yet: Imminent (${wound}).`);
+}
+
+/**
+ * Delayed, detonated: "As an Instant Maneuver, you may remove this stack of Imminent from all targets
+ * who possess it to apply the Dice Score of the Wound Roll against their Soak Value and calculate/
+ * apply Damage as usual." A card of its own that has already hit them, carrying the recorded Wound;
+ * their Soak is read now, as it is at the moment of detonation (the user's ruling).
+ *
+ * Personal Bomb, with its one stack: the Sphere centred on that target goes off too - the others it
+ * catches face a new Strike Roll, and whoever is hit takes the recorded Wound. No Ki, no Action, no
+ * Diminishing Offense for it (the Instant is the whole cost).
+ *
+ * `auto` is Short Delay's detonation at the end of the Round, which is no Instant of the user's.
+ */
+export async function detonateTechnique(actor, itemId, { auto = false } = {}) {
+  const item = actor?.items?.get(itemId);
+  const record = item?.system?.signature?.delayed;
+  if (!record?.messageId) {
+    if (!auto) ui.notifications.warn(`${item?.name ?? "That Technique"} has no Imminent waiting.`);
+    return false;
+  }
+  if (!auto) {
+    const blocked = whyNotAnotherInstant(actor);
+    if (blocked) {
+      ui.notifications.warn(`${actor.name}: ${blocked}`);
+      return false;
+    }
+  }
+  const source = game.messages?.get(record.messageId);
+  const attack = source?.getFlag(SCOPE, ATTACK_FLAG) ?? null;
+  const targets = (record.targets ?? []).map(uuid => fromUuidSync(uuid)).filter(Boolean);
+
+  // The record and the marks go, whatever is found.
+  await item.update({ "system.signature.delayed": { wound: 0, messageId: "", round: 0, targets: [] } });
+  for (const target of targets) {
+    const marks = (target.getFlag?.(SCOPE, "imminent") ?? []).filter(mark => mark.itemId !== itemId);
+    await requestActorUpdate(target, { [`flags.${SCOPE}.imminent`]: marks });
+  }
+  if (!auto) await recordManeuverType(actor, "instant");
+  if (!attack || !targets.length) {
+    ui.notifications.warn(`${item.name}: the attack it came from is gone; nothing to detonate.`);
+    return false;
+  }
+
+  const category = resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0);
+  const detonated = {
+    ...attack,
+    detonation: true,
+    maneuverName: `${attack.maneuverName} (${auto ? "Short Delay" : "Detonated"})`,
+    targets: targets.map(target => ({ uuid: target.uuid, name: target.name })),
+    fixedWound: record.wound,
+    ready: [], defences: [], interventions: [],
+    result: {
+      strike: attack.result?.strike ?? null,
+      targets: targets.map(target => ({ uuid: target.uuid, defense: "dodge", defenseLabel: "Imminent",
+        answer: null, hit: true, automatic: true, forced: "Imminent", longRange: 0, analysis: 0,
+        against: 0, damageCategory: category, incomingDamage: null, counterWound: null, applied: false })),
+      wound: null
+    }
+  };
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [ATTACK_FLAG]: detonated } } });
+
+  // Personal Bomb's blast, around its one target.
+  const bomb = attack.technique?.features?.includes("personal-bomb") && (targets.length === 1)
+    && (attack.area?.shape === "sphere");
+  if (bomb) await personalBomb(actor, attack, targets[0], record.wound);
+  return true;
+}
+
+/** Personal Bomb: who the Sphere catches, and a new Strike against them with the recorded Wound. */
+async function personalBomb(actor, attack, centre, wound) {
+  const already = new Set([actor.uuid, centre.uuid]);
+  const unique = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
+    .filter(other => other && (other.type === "character") && !already.has(other.uuid))
+    .map(other => [other.uuid, other])).values()];
+  if (!unique.length) return;
+  const rows = unique.map(other => `<label class="dbu-respond-option">
+      <input type="checkbox" name="caught" value="${other.uuid}"/>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(other.name)}</span></label>`).join("");
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${attack.maneuverName} - Personal Bomb` },
+    content: `<p class="dbu-respond-hint">Who else does the ${Handlebars.escapeExpression(areaLabel(attack.area))}
+      centred on ${Handlebars.escapeExpression(centre.name)} catch? They face a new Strike Roll, and take the
+      recorded Wound if hit.</p>${rows}`,
+    buttons: [{ action: "confirm", label: "Blast", callback: (event, button, dialog) =>
+      [...dialog.element.querySelectorAll('input[name="caught"]:checked')].map(input => input.value) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!Array.isArray(chosen) || !chosen.length) return;
+  const caught = chosen.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [ATTACK_FLAG]: {
+      ...attack,
+      detonation: true,
+      maneuverName: `${attack.maneuverName} (Personal Bomb)`,
+      targets: caught.map(other => ({ uuid: other.uuid, name: other.name })),
+      targetUuid: caught[0].uuid,
+      targetName: caught[0].name,
+      fixedWound: wound,
+      ready: [], defences: [], interventions: [], result: null
+    } } } });
+}
+
+/**
+ * Short Delay: "If you haven't used an Instant Maneuver to remove this Signature Technique's stack of
+ * Imminent after 2 Combat Rounds have passed, you must remove the stack of Imminent and apply the
+ * Wound Roll at the end of that Combat Round." Made in Round 1, it goes off at the end of Round 3 -
+ * which, from here, is the start of Round 4.
+ */
+export async function shortDelays(actor, round) {
+  for (const item of actor.items?.filter(entry => entry.type === "maneuver") ?? []) {
+    const record = item.system?.signature?.delayed;
+    if (!record?.messageId) continue;
+    if (!(item.system.advantages ?? []).includes("short-delay")) continue;
+    if (round >= (Number(record.round) || 0) + 3) await detonateTechnique(actor, item.id, { auto: true });
+  }
+}
+
+/** The Delayed records and Imminent marks an Encounter leaves behind: gone with it. */
+export async function clearDelayed(actor) {
+  for (const item of actor.items?.filter(entry => entry.type === "maneuver") ?? []) {
+    const record = item.system?.signature?.delayed;
+    if (!record?.messageId) continue;
+    await item.update({ "system.signature.delayed": { wound: 0, messageId: "", round: 0, targets: [] } });
+  }
+  if ((actor.getFlag?.(SCOPE, "imminent") ?? []).length) await actor.unsetFlag(SCOPE, "imminent");
+}
+
+/**
+ * What a Signature Technique does to its user once its card is done: Backlash, Exhaustive, Stat
+ * Drain, Powerbomb's release, All Out. Called by the use flow, after the card.
+ */
+export async function techniqueAfterCard(actor, attack) {
+  const tech = attack?.technique;
+  if (!actor || !tech) return;
+  const ranks = id => featureRanks(tech.features, id);
+  const baseTier = Math.max(1, actor.system.baseTierOfPower ?? 1);
+  const said = [];
+
+  // Backlash: "Reduce your Life Points by 2(bT) for each rank of this Advantage after concluding".
+  if (ranks("backlash")) {
+    const amount = 2 * baseTier * ranks("backlash");
+    await reduceLifePoints(actor, amount, { reason: `${attack.maneuverName}, Backlash` });
+  }
+
+  // Exhaustive: Fatigued stacks equal to the ranks until the end of your next turn; refreshed if
+  // it is still running (Double Dip: one Exhaustive, whichever Technique).
+  if (ranks("exhaustive")) {
+    const running = (actor.system.timed ?? []).filter(entry => (entry.kind === KINDS.CONDITION)
+      && (entry.key === "fatigued") && String(entry.source ?? "").startsWith("Exhaustive"));
+    if (running.length) {
+      const { edgesToWait } = await import("./durations.mjs");
+      const edges = edgesToWait(EDGES.END, { next: true, theirTurn: true });
+      await actor.update({ "system.timed": (actor.system.timed ?? []).map(entry =>
+        running.includes(entry) ? { ...entry, edges } : entry) });
+      said.push("Exhaustive: refreshed until the end of your next turn.");
+    } else {
+      const { gainCondition } = await import("./effects/moments-runtime.mjs");
+      const count = ranks("exhaustive");
+      if (await gainCondition(actor, "fatigued", count) !== false) {
+        for (let i = 0; i < count; i++) {
+          await lasting(actor, { kind: KINDS.CONDITION, key: "fatigued", edge: EDGES.END, next: true,
+            source: "Exhaustive" });
+        }
+      }
+      said.push(`Exhaustive: Fatigued ${count} until the end of your next turn.`);
+    }
+  }
+
+  // Stat Drain: Combat Rolls and Soak -1(bT) per rank until the end of your next turn. Double Dip:
+  // one Stat Drain on a character - the most ranks kept, the clock refreshed.
+  if (ranks("stat-drain")) {
+    const now = Math.max(Number(actor.system.statDrain) || 0, ranks("stat-drain"));
+    const kept = (actor.system.timed ?? []).filter(entry => entry.kind !== KINDS.DRAIN);
+    await actor.update({ "system.statDrain": now, "system.timed": kept });
+    await lasting(actor, { kind: KINDS.DRAIN, key: "stat-drain", edge: EDGES.END, next: true, source: "Stat Drain" });
+    said.push(`Stat Drain: Combat Rolls and Soak -${now}(bT) until the end of your next turn.`);
+  }
+
+  // Hit and Run: "After using this Signature Technique, the user may move any number of Squares up to
+  // their Normal Speed in a straight line ... This movement triggers the Exploit Maneuver if you leave
+  // the Melee Range of an Opponent." High-Speed Dash: Boosted Speed, and no Exploit. Recoil: the full
+  // Normal Speed straight away from the target, and it can collide. Back Flip moves it before the rolls.
+  if (tech.features.includes("hit-and-run")) {
+    const dash = tech.features.includes("high-speed-dash");
+    const recoil = tech.features.includes("recoil");
+    const flip = tech.features.includes("back-flip");
+    const speed = dash ? "Boosted Speed" : "Normal Speed";
+    const note = recoil
+      ? `Hit and Run (Recoil): you must move your full ${speed} in a straight line away from `
+        + `${attack.targetName} (the ARC picks if there were several); this can cause Collision - use the `
+        + "Collision button on your Battlefields tab if you hit something."
+      : `Hit and Run: you may move up to your ${speed} in a straight line, through ${attack.targetName}'s `
+        + "Square without colliding.";
+    const timing = flip ? " Back Flip: this movement came after the declaration, before the rolls." : "";
+    await postManeuver(actor, { id: "hit-and-run", name: `${attack.maneuverName} - Hit and Run`, type: "standard",
+      exploitable: dash ? "" : "any Opponent whose Melee Range you left", tags: [] },
+      { note: note + timing, asOutOfSequence: true });
+  }
+
+  // Powerbomb, when it was chosen: the Grapple ends, and no Grapple until the start of your next turn.
+  if (tech.powerbomb) {
+    const partner = fromUuidSync(actor.system.grapple?.partner ?? "");
+    if (partner) await endGrapple(actor, partner);
+    await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), "turn:powerbomb"] });
+    said.push("Powerbomb: the Grapple ends; no Grapple Maneuver until the start of your next turn.");
+  }
+
+  // All Out: "set your Capacity to 0 and change any successes on Steadfast Checks for the Health
+  // Thresholds that you are below to failures".
+  if (tech.superProfile === "all-out") {
+    const checks = { ...(actor.system.thresholdChecks ?? {}) };
+    const order = Object.keys(DBUCharacterData.THRESHOLDS);
+    const at = order.indexOf(actor.system.threshold?.key ?? "healthy");
+    for (const key of order.slice(1, at + 1)) checks[key] = "fail";
+    await actor.update({ "system.capacity.spent": actor.system.capacity.max, "system.thresholdChecks": checks });
+    said.push("All Out: Capacity to 0, and every Steadfast Check for the Thresholds reached is a failure.");
+  }
+
+  if (said.length) {
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(said.join(" "))}</div>` });
+  }
 }
 
 /**
@@ -7587,7 +8084,9 @@ async function resolveAttack(message, attack) {
       ? []
       : [{ label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty }]),
     // Last Legs: "Ignore all Health Threshold penalties during this Attacking Maneuver."
-    ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))
+    ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker)),
+    // Rebound's retry at another target: Homing's "+1(T) for each time you've missed".
+    ...(attack.homing?.bonus ? [{ label: `Homing (${attack.homing.misses} missed)`, value: attack.homing.bonus }] : [])
   ], {
     ...attackerOptions, slot: "strike", attackingManeuver: true,
     // Clearing puts a floor under the Natural Result; Cutting makes anything short of a
@@ -7624,6 +8123,8 @@ async function resolveAttack(message, attack) {
     // character winning a Dodge and being hit anyway reads as the rule not working.
     const forced = attack.autoHit
       ? `${attack.maneuverName} hits automatically`
+      : (attack.autoHitUuids ?? []).includes(uuid)
+      ? "Volatile Explosion: hit automatically"
       : attacker.system.effects?.slots?.["attack.autoHit"] === true
       ? `${attacker.name} hits automatically`
       : target.system.effects?.slots?.["incoming.autoHit"] === true
@@ -7734,7 +8235,10 @@ async function resolveAttack(message, attack) {
     // stacks come from defending against attack after attack, and whether being hit
     // automatically still counts as defending is a reading, not something the text
     // settles.
-    if (defence.gainsDiminishingDefense && answer) {
+    // Homing's: "Attacks from the Homing Advantage are still considered one Attacking Maneuver and
+    // therefore do not inflict further Diminishing Defense upon an Opponent" - and Rebound's "Only the
+    // Opponent who was initially targeted ... receives Diminishing Defense".
+    if (defence.gainsDiminishingDefense && answer && !attack.homing) {
       // Sweeping doubles what a target takes, but only "if you deal Damage with this
       // Attacking Maneuver" - which is not known yet. So the multiplier travels with
       // the attack and the stacks are settled once the Damage is.
@@ -7779,10 +8283,19 @@ async function resolveAttack(message, attack) {
     });
   }
 
+  // Hostile Chase: "If you score a Botch Result on any Strike Roll made for this Attacking Maneuver, or
+  // your Opponent scored a Critical Result on their Dodge Roll against this Attacking Maneuver, you
+  // are hit by this Attacking Maneuver." Once per attack, however often it is triggered.
+  const chased = attack.technique?.features?.includes("hostile-chase") && !attack.hostileChased
+    && ((strike.outcome === "botch") || branches.some(entry => (entry.defense === "dodge")
+      && (entry.answer?.outcome === "critical")));
+
   requestEdit(message, {
     type: "attack",
-    attack: { ...attack, result: { strike, targets: branches, wound: null } }
+    attack: { ...attack, ...(chased ? { hostileChased: true } : {}),
+      result: { strike, targets: branches, wound: null } }
   });
+  if (chased) await postHostileChase(attack, attacker);
 
   // Cross Counter strikes back the moment the clash is settled. It is offered rather
   // than fired so the defender still chooses when to take it, like any other
@@ -7790,18 +8303,28 @@ async function resolveAttack(message, attack) {
   // one attack reaching four people can be struck back at by all four.
   for (const { uuid, name } of targets) {
     const own = branches.find(entry => entry.uuid === uuid);
-    if (!DEFENCES[own?.defense]?.counterAttacks) continue;
+    const counters = DEFENCES[own?.defense]?.counterAttacks;
+    if (!counters) continue;
     requestEdit(message, {
       type: "offer",
-      offer: {
-        actorUuid: uuid,
-        actorName: name,
-        maneuverId: "basic-attack",
-        maneuverName: "Basic Attack",
-        targetUuid: attack.attackerUuid,
-        reason: "Cross Counter"
-      }
+      offer: (counters === "signature")
+        ? { actorUuid: uuid, actorName: name, maneuverId: "signature-technique",
+            maneuverName: "Signature Technique (Counter)", targetUuid: attack.attackerUuid,
+            reason: "Cross Counter", technique: { via: "counter", feature: "counter" } }
+        : { actorUuid: uuid, actorName: name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+            targetUuid: attack.attackerUuid, reason: "Cross Counter" }
     });
+  }
+
+  // Fake Out: "If a target chose to Dodge this Attacking Maneuver, then after completing this
+  // Attacking Maneuver, you may use the Basic Attack Maneuver or Signature Technique Maneuver against
+  // that target as an Out-of-Sequence Maneuver" - one of them.
+  const dodger = targets.find(({ uuid }) => (attack.fakeOutLosers ?? []).includes(uuid)
+    && ((branches.find(entry => entry.uuid === uuid)?.defense ?? "dodge") === "dodge"));
+  if (dodger && attack.technique?.features?.includes("fake-out")) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: attack.attackerUuid,
+      actorName: attack.attackerName, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+      targetUuid: dodger.uuid, reason: `Fake Out - ${dodger.name} dodged` } });
   }
 
   // "If you avoid an Attacking Maneuver due to using the Parry option of the Defend
@@ -7861,6 +8384,9 @@ function whyNotReflect(attack) {
  * Charges - and the card it came from goes on being edited after this.
  */
 function offerReflect(message, attack, actor, reason) {
+  // Sudden Blast: "A Character cannot use the Reflect Maneuver as a Modifier Maneuver through the
+  // effects of the Parry option ... or the Deflect/Distant Deflect options ... in response to this".
+  if (attack?.technique?.features?.includes("sudden-blast")) return;
   if (!actor || whyNotReflect(attack)) return;
   if (!actor.items?.some(item => (item.type === "maneuver") && item.system.reflect)) return;
 
@@ -8137,7 +8663,10 @@ function awaitingWhom(attack) {
  * Action and the attack itself are counted once for the same reason.
  */
 async function addAreaTargets(message, attack, attacker) {
-  const already = new Set([attack.attackerUuid, ...attackTargets(attack).map(t => t.uuid)]);
+  // Volatile Explosion: "If you are within the AoE of this Signature Technique, you are also
+  // considered a target" - whether they are is the table's, so they are offered as one.
+  const volatile = attack.technique?.features?.includes("volatile-explosion");
+  const already = new Set([...(volatile ? [] : [attack.attackerUuid]), ...attackTargets(attack).map(t => t.uuid)]);
 
   // Everyone on the scene with a character sheet, minus the attacker and whoever is
   // already in this exchange. Tokens rather than the Actors directory, since an
@@ -8158,7 +8687,8 @@ async function addAreaTargets(message, attack, attacker) {
   const rows = unique.map(actor => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="caught" value="${actor.uuid}"/>
-      <span class="dbu-respond-name">${Handlebars.escapeExpression(actor.name)}</span>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression((actor.uuid === attack.attackerUuid)
+        ? `Yourself (${actor.name})` : actor.name)}</span>
       <span class="dbu-respond-source">${actor.system.life.value}/${actor.system.life.max} LP</span>
     </label>`).join("");
 
@@ -8195,9 +8725,31 @@ async function addAreaTargets(message, attack, attacker) {
 
   if (!added.length) return;
 
+  // A Technique's Charges that were for a single target, or for everyone Shaken: Concentrated Strike
+  // and Overwhelming Terror give theirs back when the attack reaches further (said, not silent).
+  let energyCharges = attack.energyCharges ?? 0;
+  const bonuses = [...(attack.technique?.bonusCharges ?? [])];
+  const lose = label => {
+    const at = bonuses.findIndex(entry => entry.label === label);
+    if (at < 0) return;
+    energyCharges = Math.max(0, energyCharges - bonuses[at].amount);
+    bonuses.splice(at, 1);
+    ui.notifications.info(`${attack.maneuverName}: ${label} no longer applies - its Energy Charge is taken off.`);
+  };
+  lose("Concentrated Strike");
+  if (added.some(entry => !((Number(fromUuidSync(entry.uuid)?.system?.conditions?.shaken) || 0) > 0))) {
+    lose("Overwhelming Terror");
+  }
+  const technique = attack.technique ? { ...attack.technique, bonusCharges: bonuses,
+    targetsCount: attackTargets(attack).length + added.length } : attack.technique;
+
   return requestEdit(message, {
     type: "attack",
-    attack: { ...attack, targets: [...attackTargets(attack), ...added] }
+    attack: { ...attack, energyCharges, technique, targets: [...attackTargets(attack), ...added],
+      // The user, caught by their own Volatile Explosion: hit, with no Counter and no Dodge.
+      ...(added.some(entry => entry.uuid === attack.attackerUuid)
+        ? { autoHitUuids: [...(attack.autoHitUuids ?? []), attack.attackerUuid] } : {})
+    }
   });
 }
 
@@ -8481,6 +9033,100 @@ async function rollFollowUpStrikes(message, attack, attacker) {
   });
 }
 
+/**
+ * One Homing retry against a target the Strike missed: "For each time you've missed, increase your
+ * Strike Roll by 1(T)", measured against the Dice Score of the defence they already made (the user's
+ * ruling), with no new Diminishing Defense. Twin-Linked and Dead-Link on the Strike reach it too.
+ *
+ * Rebound: "you can select a different target ... instead of targeting the Opponent you missed" -
+ * who defends as usual against it (ruled), on a card of its own.
+ */
+async function homingRetry(message, attack, uuid) {
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const own = targetResult(attack, uuid);
+  if (!attacker || !own || own.hit) return;
+  const tier = Math.max(1, attacker.system.tierOfPower ?? 1);
+  const misses = (Number(own.homingTries) || 0) + 1;
+
+  if (attack.technique?.features?.includes("rebound")) {
+    const where = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${attack.maneuverName} - Homing` }, content: "",
+      buttons: [{ action: "same", label: "The same target" }, { action: "other", label: "Another target (Rebound)" },
+        { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    if (!where || (where === "cancel")) return;
+    if (where === "other") {
+      const others = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
+        .filter(who => who && (who.type === "character") && (who.uuid !== attacker.uuid)
+          && !attackTargets(attack).some(entry => entry.uuid === who.uuid))
+        .map(who => [who.uuid, who])).values()];
+      const pick = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: "Rebound" }, content: "",
+        buttons: [...others.map(who => ({ action: who.uuid, label: who.name })), { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      });
+      const next = others.find(who => who.uuid === pick);
+      if (!next) return;
+      requestEdit(message, { type: "attack", attack: { ...attack, result: { ...attack.result,
+        targets: replaceTarget(attack, uuid, { homingTries: misses, homingDone: true }) } } });
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: attacker }), content: "",
+        flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [ATTACK_FLAG]: {
+          ...attack,
+          maneuverName: `${attack.maneuverName} (Rebound)`,
+          targets: [{ uuid: next.uuid, name: next.name }],
+          targetUuid: next.uuid, targetName: next.name,
+          homing: { misses, bonus: misses * tier },
+          ready: [], defences: [], interventions: [], result: null
+        } } } });
+      return;
+    }
+  }
+
+  const roll = await rollSide(attacker, [
+    { label: "Strike", value: attack.result?.strike?.bonus ?? 0 },
+    { label: `Homing (${misses} missed)`, written: `+${misses}(T)`, value: misses * tier }
+  ], {
+    extraDice: attacker.system.dice.extra.formula,
+    criticalDice: attacker.system.dice.critical.formula,
+    combatRoll: true, collect: false, attackingManeuver: true,
+    linked: attack.technique?.linked?.strike ?? ""
+  });
+  const against = Math.max(0, roll.total - (Number(own.longRange) || 0));
+  const hit = against > (own.answer?.total ?? 0);
+  // A Botch on any Strike Roll of it sets Hostile Chase off, once.
+  const chased = (roll.outcome === "botch") && attack.technique?.features?.includes("hostile-chase")
+    && !attack.hostileChased;
+  requestEdit(message, { type: "attack", attack: { ...attack, ...(chased ? { hostileChased: true } : {}),
+    result: { ...attack.result, targets: replaceTarget(attack, uuid, { homingTries: misses,
+      ...(hit ? { hit: true, against } : {}) }) } } });
+  await settledNote(message, `Homing: Strike ${roll.total} against ${own.answer?.total ?? 0} - `
+    + `${hit ? "it finds them." : "missed again."}`);
+  if (chased) await postHostileChase(attack, attacker);
+}
+
+/**
+ * Hostile Chase: the attacker is hit by their own attack. "Roll Wound as an Urgent Roll and apply
+ * Damage as you would normally." A card of its own, already hit, whose Wound Roll is theirs.
+ */
+async function postHostileChase(attack, attacker) {
+  const category = resolveDamageCategory(attack.damageCategory, attack.damageCategoryShift ?? 0);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: attacker }), content: "",
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [ATTACK_FLAG]: {
+      ...attack,
+      hostileChased: true,
+      maneuverName: `${attack.maneuverName} (Hostile Chase)`,
+      targets: [{ uuid: attacker.uuid, name: attacker.name }],
+      targetUuid: attacker.uuid, targetName: attacker.name,
+      urgentWound: true,
+      ready: [], defences: [], interventions: [],
+      result: { strike: attack.result?.strike ?? null, wound: null,
+        targets: [{ uuid: attacker.uuid, defense: "dodge", defenseLabel: "Hostile Chase", answer: null,
+          hit: true, automatic: true, forced: "Hostile Chase", longRange: 0, analysis: 0, against: 0,
+          damageCategory: category, incomingDamage: null, counterWound: null, applied: false }] }
+    } } } });
+}
+
 /** What Combination's follow-up Strikes added, once they have been made. */
 function combinationFollowUps(attacker, attack) {
   const profile = profileFor(attack);
@@ -8558,7 +9204,9 @@ async function rollAttackWound(message, attack) {
     // is derived, so a stated one goes in as written rather than through it.
     criticalTarget: profileFor(attack)?.woundCriticalTarget ?? null,
     // Twin-Linked or Dead-Link on the Wound: made twice, one kept.
-    linked: attack.technique?.linked?.wound ?? ""
+    linked: attack.technique?.linked?.wound ?? "",
+    // Delayed's and Personal Bomb's: the Wound Roll made when it hit, not a new one.
+    fixedTotal: Number.isFinite(attack.fixedWound) ? attack.fixedWound : null
   });
 
   // What an attack can get past of somebody's Damage Reduction, for this attack only.
@@ -9177,6 +9825,15 @@ const DEFENCES = {
     wound: (total) => total
   },
 
+  // Counter's: the whole Defense Value, and a Signature Technique to strike back with.
+  crossCounterSignature: {
+    label: "Cross Counter (Signature Technique)",
+    counterAttacks: "signature",
+    answer: (actor, options, attack) =>
+      rollSide(actor, dodgeBonus(actor, { halved: false, attack }), { ...options, slot: "dodge" }),
+    soak: (soak) => soak,
+    wound: (total) => total
+  },
   crossCounter: {
     label: "Cross Counter",
     counterAttacks: true,
@@ -9316,21 +9973,54 @@ async function openKnockback(attack, attacker, target, { extra = 0, from = "" } 
   // card so both read it rather than each working it out.
   const might = attacker.system.might + extra;
 
+  // A Signature Technique's: Forceful Launch - "Increase the amount of Squares an Opponent is moved
+  // through the effects of Knockback and your Dice Score for Knockback's Might Clash by 1(T) for
+  // each rank" - Precise Strike on a Critical Strike, and Super Launch.
+  const collision = {
+    // Launching doubles what the movement costs, and says so itself - an Advantage
+    // does not know which Profile handed it out.
+    doubles: Boolean(profileFor(attack)?.doublesCollisionDamage),
+    doubledBy: profileFor(attack)?.label ?? ""
+  };
+  const tech = attack.technique;
+  const tier = Math.max(1, attacker.system.tierOfPower ?? 1);
+  const forceful = tech ? featureRanks(tech.features, "forceful-launch") * tier : 0;
+  let squares = might + forceful;
+  const notes = [];
+  if (forceful) notes.push(`Forceful Launch +${forceful}`);
+  // Precise Strike: "increase the amount of Squares your Opponent moves from Knockback by 1/2."
+  if (tech?.features?.includes("precise-strike") && (attack.result?.strike?.outcome === "critical")) {
+    squares = Math.floor(squares * 1.5);
+    notes.push("Precise Strike: Critical");
+  }
+  if (tech?.superProfile === "super-launch") {
+    // "You automatically succeed the Might Clash ... reduce their Life Points by the amount of Squares
+    // they would move through its effects (even if they do not move that number of Squares)."
+    await reduceLifePoints(target, squares, { reason: `${attack.maneuverName}, Super Launch` });
+    return postMightClash(attacker, target, {
+      maneuverName: "Knockback",
+      reason: `${attack.maneuverName} · Super Launch: won, and ${target.name} is moved up to ${squares} `
+        + "Squares in a straight line away from you.",
+      collision,
+      result: {
+        challenger: { actorUuid: attacker.uuid, actorName: attacker.name, total: 0, succeeded: true,
+          automatic: "Super Launch", lines: [], breakdown: "" },
+        defender: { actorUuid: target.uuid, actorName: target.name, total: 0, lines: [], breakdown: "" }
+      }
+    });
+  }
+
   return postMightClash(attacker, target, {
     // Named for the Advantage, not for the Maneuver: this card is about the Knockback,
     // and which attack caused it belongs in the line below rather than in the title.
     maneuverName: "Knockback",
     mightBonus: extra,
+    challengerRows: forceful ? [{ label: "Forceful Launch", value: forceful }] : [],
     reason: `${attack.maneuverName} · win and move ${target.name} up to `
-      + `${might} Squares in a straight line away from you.${
+      + `${squares} Squares in a straight line away from you.${notes.length ? ` (${notes.join(", ")})` : ""}${
         extra ? ` ${from} adds ${extra} to your Might for this.`
         : from ? ` ${from} gave this attack its Knockback.` : ""}`,
-    collision: {
-      // Launching doubles what the movement costs, and says so itself - an Advantage
-      // does not know which Profile handed it out.
-      doubles: Boolean(profileFor(attack)?.doublesCollisionDamage),
-      doubledBy: profileFor(attack)?.label ?? ""
-    }
+    collision
   });
 }
 
@@ -9542,8 +10232,13 @@ async function applyWeaponHit(message, target, attack) {
  * attack caused it belongs in the line below the title.
  */
 async function openStagger(attack, attacker, target) {
+  // Hefty Stagger: "Increase the Dice Score for the Might Clash initiated through the effects of
+  // Staggering Attack by 1(T) for each rank of this Advantage."
+  const hefty = attack.technique ? featureRanks(attack.technique.features, "hefty-stagger") : 0;
+  const bonus = hefty * Math.max(1, attacker.system.tierOfPower ?? 1);
   return postMightClash(attacker, target, {
     maneuverName: "Staggering Attack",
+    challengerRows: bonus ? [{ label: `Hefty Stagger ${hefty}`, value: bonus }] : [],
     reason: `${attack.maneuverName} · win and ${target.name} is Staggered until the end of `
       + "their turn.",
     stagger: { applied: false }
@@ -9653,7 +10348,8 @@ async function applyFeatureQualities(target, qualities, source) {
  */
 async function askCollisionDamage(target, { title = "Collision Damage", doubled = false,
                                             doubledBy = "", halved = false,
-                                            halvedBy = "" } = {}) {
+                                            halvedBy = "", extra = 0, extraLabel = "",
+                                            groundFirst = false } = {}) {
   const baseTier = Math.max(1, target.system.baseTierOfPower ?? 1);
 
   // Each Rank with its Value already worked out for this character. "6(bT)" is not an
@@ -9702,7 +10398,7 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   const knocksDown = !ignoring.environments && Boolean(standing?.collisionCondition);
 
   const groundRow = hasGround
-    ? `<option value="ground">The ground &middot; ${
+    ? `<option value="ground"${groundFirst ? " selected" : ""}>The ground &middot; ${
         hardnessValue(groundRank, baseTier)} Damage &middot; ${
         Handlebars.escapeExpression(standing.name)}${
         knocksDown ? ", which knocks you down" : ""}</option>`
@@ -9799,6 +10495,9 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   const doublings = (doubled ? 1 : 0)
     + fromGround.filter(quality => quality.groundCollision === "doubles").length;
   const amount = Math.floor(value * (2 ** doublings) * (0.5 ** halvings));
+  // What an effect adds on top of what the Feature is worth - Deadly Drop's "Increase the Collision
+  // Damage they suffer by 1/2 of your Might multiplied by the rank of the High Environment".
+  const total = amount + Math.max(0, Number(extra) || 0);
   const changed = [
     doubled ? `doubled by ${doubledBy}` : "",
     halved ? `halved by ${halvedBy}` : "",
@@ -9809,9 +10508,10 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   ].filter(Boolean).join(", ");
   const reason = `Collision Damage, ${
     hitGround ? `the ground - Hardness Rank ${rank}` : `Hardness Rank ${rank}`}`
-    + (changed ? `, ${changed}` : "");
+    + (changed ? `, ${changed}` : "")
+    + (extra ? `, +${extra} ${extraLabel}` : "");
 
-  await reduceLifePoints(target, amount, { reason });
+  await reduceLifePoints(target, total, { reason });
 
   // What this Environment does to whoever lands on it. "If a Character collides with a
   // Square of this Battle Environment, they are knocked Prone" - a Square of it, which is
@@ -9881,7 +10581,10 @@ async function applyCollisionDamage(message, clash) {
     doubled: Boolean(clash.collision?.doubles),
     doubledBy: clash.collision?.doubledBy ?? "",
     halved: Boolean(clash.collision?.halves),
-    halvedBy: clash.collision?.halvedBy ?? ""
+    halvedBy: clash.collision?.halvedBy ?? "",
+    extra: Number(clash.collision?.extra) || 0,
+    extraLabel: clash.collision?.extraLabel ?? "",
+    groundFirst: Boolean(clash.collision?.groundFirst)
   });
   if (!settled) return;
 
@@ -9969,11 +10672,17 @@ async function applySquareQuality(target, id) {
  * the table's; what it is made of is the entry's, and saying it here saves going back to
  * the entry to find out.
  */
-function featureNote(profile) {
+function featureNote(profile, attack = null) {
   const made = profile?.createsFeature;
   if (!made) return "";
+  // Compressed Element: the Profile's second listed effect - Plantlife's Feature - is not applied.
+  const features = attack?.technique?.features ?? [];
+  if (features.includes("compressed-element")) return " &middot; Compressed Element: no Feature";
+  // Reinforced Plantlife: "Increase the Hardness Rank of the Features created ... by the number of
+  // ranks in this Advantage."
+  const reinforced = features.filter(id => id === "reinforced-plantlife").length;
   const quality = FEATURE_QUALITIES.find(entry => entry.key === made.quality);
-  return ` &middot; Feature: Hardness Rank ${made.hardnessRank}${
+  return ` &middot; Feature: Hardness Rank ${made.hardnessRank + reinforced}${
     quality ? `, ${Handlebars.escapeExpression(quality.name)}` : ""}`;
 }
 
@@ -9981,6 +10690,11 @@ function featureNote(profile) {
 async function applyAttackDamage(message, target, attack) {
   const own = targetResult(attack, target.uuid);
   if (!own || own.applied) return;
+  // Delayed: "instead of your Opponent taking any Damage, keep a record of the Dice Score of your
+  // Wound Roll and apply a stack of Imminent to the target(s)".
+  if (attack.technique?.features?.includes("delayed") && !attack.detonation && own.hit && !isAbsoluteMiss(own)) {
+    return holdDelayed(message, attack, target);
+  }
   // A Called Shot at a piece of Apparel that hit: "you still take 1/2 of the Damage you
   // normally would from this Attacking Maneuver" - and the piece loses 1 Break Value, below.
   const atApparel = own.hit && !isAbsoluteMiss(own)
@@ -10027,7 +10741,8 @@ async function applyAttackDamage(message, target, attack) {
           target.system.diminishingDefense + target.system.diminishing.defense.perAttack
       }
       : {})
-  });
+  }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
+    ? { dbuSilenced: true } : {});
 
   // "Apparel loses 1 Break Value if you are knocked through a Health Threshold" - and a
   // Called Shot at it that hit takes 1 off it besides. The Top Layer's, both.
@@ -10117,8 +10832,10 @@ async function applyAttackDamage(message, target, attack) {
   // the end of your next turn". Which mark and which Condition is the Profile's to say.
   const riders = profileFor(attack) ?? {};
   const attacker = fromUuidSync(attack.attackerUuid);
+  // Compressed Element: "Ignore the second listed effect of the Elemental Profile(s)" - the Square's.
+  const compressed = attack.technique?.features?.includes("compressed-element");
   if (attacker && (damage > 0) && !isAbsoluteMiss(own)) {
-    if (riders.squareMark) {
+    if (riders.squareMark && !compressed) {
       await markUntilNextTurn(attacker, target, riders.squareMark.condition,
         riders.squareMark.stacks, "start", riders.label);
     }
@@ -10148,6 +10865,17 @@ async function applyAttackDamage(message, target, attack) {
   // response to this Maneuver." Answered here, which is the first moment the Damage is
   // known - and only here, since an attack that hits for nothing is not Damage taken.
   if (damage > 0) await interruptDelayed(target, attack);
+
+  // What a Signature Technique does once its Damage is taken.
+  if (attacker && attack.technique) {
+    await techniqueAfterDamage(message, attack, attacker, target, { damage, own, knockedThrough });
+    // Final Chance's held Defeat, once the last of its targets has taken what it did.
+    const rest = (attack.result?.targets ?? []).filter(entry => (entry.uuid !== target.uuid) && !entry.applied);
+    if (!rest.length && (attacker.getFlag?.(SCOPE, "finalChance") === message.id)) {
+      const { releaseFinalChance } = await import("./combat.mjs");
+      await releaseFinalChance(attacker);
+    }
+  }
 
   requestEdit(message, {
     type: "attack",
@@ -10713,16 +11441,28 @@ async function defendAgainst(message, target, attack) {
   //
   // An empty list is every attack that nobody narrowed, which is all of them but one.
   const allowed = attack.defencesAllowed ?? [];
+  const hasCounterTechnique = Array.from(target.items ?? []).some(item => (item.type === "maneuver")
+    && (item.system.advantages ?? []).includes("counter"));
+  const encompassed = (attack.technique?.features ?? []).filter(id => id === "encompassing-attack").length >= 2;
+  const fakedOut = (attack.fakeOutLosers ?? []).includes(target.uuid);
   const offered = allowed.length
     ? Object.entries(DEFEND_OPTIONS).filter(([key]) => allowed.includes(key))
     : Object.entries(DEFEND_OPTIONS);
+  const open = offered
+    // Counter's option, only to one who has a Technique with it.
+    .filter(([, option]) => !option.needsCounterTechnique || hasCounterTechnique)
+    // Encompassing Attack 2: "no target of this Attacking Maneuver can use the Parry option".
+    .filter(([key]) => !(encompassed && (key === "parry")))
+    // Fake Out, lost: "must either use the Guard option of the Defend Maneuver or make a typical
+    // Dodge Roll".
+    .filter(([key]) => !fakedOut || (key === "guard"));
 
-  if (!offered.length) {
+  if (!open.length) {
     ui.notifications.warn("No option of the Defend Maneuver can answer this attack.");
     return;
   }
 
-  const options = offered.map(([key, option], index) => {
+  const options = open.map(([key, option], index) => {
     const cost = defendOptionCost(key, target, attack);
     // Power Flare makes a Wound Roll of its own, so it is the one option that can
     // carry a wager. The field sits with it rather than under the whole dialog.
@@ -11145,7 +11885,7 @@ function renderAttack(message, html) {
           ? ` &middot; ${Handlebars.escapeExpression(attack.thrown.name)} thrown`
           : ""}${attack.weapon
           ? ` &middot; with ${Handlebars.escapeExpression(attack.weapon.name)}`
-          : ""}${featureNote(profileFor(attack))}</span>
+          : ""}${featureNote(profileFor(attack), attack)}</span>
     </div>
     ${result
       ? attackSide("Strike", attack.attackerName, result.strike)
@@ -11177,7 +11917,8 @@ function renderAttack(message, html) {
   // the roll instead meant the first target to answer could settle the whole thing
   // while the attacker was still working out who else was caught.
   const committed = (attack.ready ?? []).includes(attack.attackerUuid);
-  if (attackArea(attack) && thrower?.isOwner && !result && !committed) {
+  const bombHeld = attack.technique?.features?.includes("personal-bomb") && !attack.detonation;
+  if (attackArea(attack) && thrower?.isOwner && !result && !committed && !bombHeld) {
     const add = document.createElement("button");
     add.type = "button";
     add.className = "dbu-clash-button";
@@ -11313,6 +12054,27 @@ function renderAttack(message, html) {
         + "Maneuver - a character made before it existed gets it from Add core maneuvers.";
       step.addEventListener("click", () => openIntervene(message, attack));
       container.append(step);
+    }
+  }
+
+  // Homing: "When you miss an Opponent with this Signature Technique, you may roll your Strike Roll an
+  // additional time equal to the ranks of this Advantage."
+  const homingRanks = featureRanks(attack.technique?.features ?? [], "homing");
+  if (homingRanks && !result.wound) {
+    const attacker = fromUuidSync(attack.attackerUuid);
+    for (const branch of result.targets ?? []) {
+      if (branch.hit || !branch.answer || branch.homingDone || !attacker?.isOwner) continue;
+      const tries = Number(branch.homingTries) || 0;
+      if (tries >= homingRanks) continue;
+      const name = attackTargets(attack).find(entry => entry.uuid === branch.uuid)?.name ?? "them";
+      const again = document.createElement("button");
+      again.type = "button";
+      again.className = "dbu-clash-button";
+      again.textContent = `Homing at ${name} (${homingRanks - tries} left)`;
+      again.dataset.tooltip = `Roll the Strike again, +${tries + 1}(T), against the defence they made.`
+        + (attack.technique.features.includes("rebound") ? " Rebound: or aim it at somebody else." : "");
+      again.addEventListener("click", () => homingRetry(message, attack, branch.uuid));
+      container.append(again);
     }
   }
 

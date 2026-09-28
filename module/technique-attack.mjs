@@ -87,11 +87,15 @@ export function techniqueAttack(actor, maneuver, declared, { targets = [], shake
     || requirementHolds(superEntry.prerequisite, { ...ctx, charges: charged, area: provisional }));
 
   const { area, notes } = areaFor(charged);
+  // Controlled Blast: "this Attacking Maneuver's Target Square is any Square you select on the
+  // Battlefield that is not at Long Range, pointing in any direction you wish."
+  if (area && active.includes("controlled-blast")) area.anySquare = true;
   const lead = [];
   if (off.length) lead.push(`${off.map(entry => entry.name).join(", ")}: Requirement not met`);
   if (superEntry && !superHolds) lead.push(`${superEntry.label}: Prerequisite not met`);
 
   return {
+    itemId: maneuver.itemId ?? "",
     level: maneuver.level ?? "super",
     ultimate,
     ascended: Boolean(maneuver.ascended),

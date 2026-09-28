@@ -327,6 +327,19 @@ async function transferKi(actor, ally, actionsSpent) {
 
   // Theirs is written through the relay: the Ally is very often somebody else's.
   const { requestActorUpdate } = await import("./chat.mjs");
+  // Genki: "While you have declared an Attacking Maneuver with this Super Profile for the effects of
+  // Energy Charge, if an Ally would give you Ki Points through the Empower Maneuver, instead of gaining
+  // those Ki points, you gain an additional Ki Wager that does not count towards your Capacity equal
+  // to 1/2 of those Ki Points."
+  const charged = ally.items?.get(ally.system.charging?.maneuverId ?? "");
+  if (charged?.system?.signature?.superProfile === "genki") {
+    const bonus = Math.floor(sent / 2);
+    await requestActorUpdate(ally, { "system.charging.bonusWager": (Number(ally.system.charging.bonusWager) || 0) + bonus });
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+      content: `<div class="dbu-settled-note">Genki: ${Handlebars.escapeExpression(ally.name)} takes no Ki - `
+        + `+${bonus} Ki Wager on ${Handlebars.escapeExpression(charged.name)} instead.</div>` });
+    return true;
+  }
   await requestActorUpdate(ally, {
     "system.ki.value": Math.min(ally.system.ki.max, ally.system.ki.value + sent)
   });
@@ -512,6 +525,16 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   const tier = actor.system.tierOfPower ?? 1;
   const left = actionsLeft(actor, "standard");
 
+  // Final Chance: "if you are below the Injured Health Threshold, you may reduce your Life Points to
+  // 0 at Attack Declaration to increase the Ki Wager by an equal amount" - outside every limit on the
+  // wager, and no Capacity spent on it (the user's rulings).
+  const life = Number(actor.system.life?.value) || 0;
+  if (has("final-chance") && technique.ultimate && ["injured", "critical"].includes(actor.system.threshold?.key)
+    && (life > 0)) {
+    fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="finalChance"/>
+      <span class="dbu-respond-name">Final Chance: Life Points to 0, +${life} Ki Wager</span>
+      <span class="dbu-respond-source">not Defeated until this attack is done</span></label>`);
+  }
   if (has("transformation-boost") && technique.ultimate) {
     fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="transformed"/>
       <span class="dbu-respond-name">In a Form or Transcended Enhancement</span>
@@ -566,7 +589,8 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           const form = dialog.element;
           const num = name => Math.max(0, Number(form.querySelector(`[name="${name}"]`)?.value) || 0);
           const box = name => Boolean(form.querySelector(`[name="${name}"]`)?.checked);
-          return { transformed: box("transformed"), gigaFlare: Math.min(2, num("gigaFlare")),
+          return { transformed: box("transformed"), finalChance: box("finalChance"),
+            gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
             areaFrom: form.querySelector('[name="areaFrom"]')?.value ?? "" };
         } },
@@ -578,6 +602,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     Object.assign(answers, got);
   }
 
+  if (answers.finalChance) answers.finalChanceLife = life;
   const extraActions = (answers.gigaFlare ?? 0) + (answers.superCombination ?? 0);
   if (extraActions) {
     answers.extraActions = extraActions;
@@ -2189,7 +2214,9 @@ async function revertTransfiguration(actor, target, maneuver) {
   });
 }
 
-export async function useManeuver(actor, maneuver, { atFeature = false, techniqueId = "", via = "" } = {}) {
+export async function useManeuver(actor, maneuver, { atFeature = false, techniqueId = "", via = "",
+                                                    outOfSequence = false, targetUuid = "",
+                                                    presetThrown = null } = {}) {
   if (!actor || !maneuver) return false;
   // Whether this use is an Ultimate that began as a Super - Ascended Signature. Set when the
   // Technique is picked.
@@ -2232,7 +2259,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
 
   // Checked here and spent further down, so that a Maneuver abandoned at the target or
   // Profile prompt costs nothing - the same way its Ki Point Cost is handled.
-  if (!canAffordActions(actor, maneuver)) return false;
+  // Out of sequence - a Technique through Counter or Exploit - its Action Cost is waived.
+  if (!outOfSequence && !canAffordActions(actor, maneuver)) return false;
 
   // "Action Cost: Variable (2~3 Actions)" - so the player says how many, before anything
   // is paid and while the whole thing can still be dropped. One for a Maneuver that costs
@@ -2278,6 +2306,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     // Low Stakes: the door's use is neither needed nor spent.
     if (lowStakes) maneuver = { ...maneuver, usageLimit: null };
     if (via) maneuver = { ...maneuver, via };
+    if (presetThrown) maneuver = { ...maneuver, throws: true };
   }
 
   // A Surge is what the Maneuver does, and it can be declined once opened - so nothing
@@ -2406,7 +2435,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // for having no target steps aside. Everything else about the Maneuver still applies:
   // the cost, the Profile, the limit, the Instant rule.
   if (maneuver.requiresTarget && !atFeature) {
-    targetActor = game.user.targets.first()?.actor ?? null;
+    targetActor = (targetUuid ? fromUuidSync(targetUuid) : null) ?? game.user.targets.first()?.actor ?? null;
     if (!targetActor) {
       ui.notifications.warn(`${maneuver.name} needs a target. Target a token first.`);
       return false;
@@ -2431,6 +2460,29 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       }
     }
     if (!await techniqueTableQuestions(actor, maneuver)) return false;
+
+    // Two-Step Strike: "If you would use this Attacking Maneuver with an Opponent within your Melee
+    // Range, before Attack Declaration, you may target that Opponent with the Push Back option of the
+    // Thrust Maneuver as an Out-of-Sequence Maneuver." It spends the Thrust's 1/Round (the user's
+    // ruling), and whether they are in Melee Range is the table's.
+    if ((maneuver.advantages ?? []).includes("two-step-strike")) {
+      const thrustItem = actor.items.find(item => (item.type === "maneuver") && item.system.thrust);
+      const thrust = thrustItem ? definitionOf(thrustItem) : null;
+      if (thrust && (maneuverUsesLeft(actor, thrust) > 0)) {
+        const push = await foundry.applications.api.DialogV2.confirm({
+          classes: ["dbu-dialog"], window: { title: `${maneuver.name} - Two-Step Strike` },
+          content: `<p>Push ${Handlebars.escapeExpression(targetActor.name)} Back first, with the Thrust Maneuver out of `
+            + "sequence? It uses the Thrust's once a Round.</p>",
+          rejectClose: false
+        });
+        if (push) {
+          await recordManeuverUse(actor, thrust);
+          await recordManeuverType(actor, "outOfSequence");
+          await postThrust(actor, targetActor, { ...thrust, name: `${thrust.name} (Two-Step Strike)` },
+            { pushOnly: true });
+        }
+      }
+    }
   }
 
   // "When you first gain access to this Special Maneuver, you may select one of these
@@ -2473,8 +2525,27 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // Burst Fire's Actions, paid with the Maneuver's own.
   let burstActions = 0;
   if (maneuver.throws) {
-    thrown = await askThrown(actor, maneuver);
+    thrown = presetThrown ?? await askThrown(actor, maneuver);
     if (!thrown) return false;
+    // Throwing Technique: "When you use the Throw Maneuver, you may use this Signature Technique
+    // instead" - with a Throwing Weapon, and a Barrage one for a Combination Technique. The Signature
+    // Technique Maneuver's limits are the ones that count.
+    if (!presetThrown && thrown.throwing) {
+      const techniques = actor.items.filter(item => (item.type === "maneuver")
+        && (item.system.advantages ?? []).includes("throwing-technique")
+        && ((item.system.signature?.profile !== "combination") || thrown.barrage));
+      if (techniques.length) {
+        const pick = await foundry.applications.api.DialogV2.wait({
+          classes: ["dbu-dialog"], window: { title: `${thrown.name} - Throwing Technique` }, content: "",
+          buttons: [{ action: "throw", label: "An ordinary Throw" },
+            ...techniques.map(item => ({ action: item.id, label: `As ${item.name}` })),
+            { action: "cancel", label: "Cancel" }],
+          rejectClose: false
+        });
+        if (!pick || (pick === "cancel")) return false;
+        if (pick !== "throw") return useTechnique(actor, pick, { via: "throw", presetThrown: thrown });
+      }
+    }
     if (throwsThisRound(actor, maneuver) >= throwsAllowed(thrown)) {
       ui.notifications.warn(`${actor.name} has thrown ${throwsAllowed(thrown)} time`
         + `${(throwsAllowed(thrown) === 1) ? "" : "s"} this Round already.`);
@@ -2561,6 +2632,11 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
 
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
     // with the declaration, and only where something worn offers one for this attack.
+    // Genki's wager, gathered while charging: on the attack, outside the price and the Capacity.
+    const genki = ((charging?.maneuverId === maneuver.itemId) && (maneuver.superProfile === "genki"))
+      ? (Number(charging.bonusWager) || 0) : 0;
+    if (genki) declared = { ...declared, freeWager: genki };
+
     // What a Signature Technique asks at Attack Declaration: the table's answers its features need.
     if (maneuver.signature && !maneuver.signatureTechnique) {
       const asked = await askTechniqueDeclaration(actor, maneuver, declared, targetActor);
@@ -2771,6 +2847,14 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
 
   const modifiers = await askModifiers(actor, maneuver, targetActor);
   if (!modifiers) return false;
+  // Consolidated Strike: "To use this Signature Technique, you must apply the Called Shot Modifier
+  // Maneuver to this Attacking Maneuver. If you cannot ... then you cannot use this Signature
+  // Technique." Nothing has been paid yet, so refusing here costs nothing.
+  if ((maneuver.advantages ?? []).includes("consolidated-strike")
+    && !modifiers.some(entry => (entry.modifier?.id ?? entry.id) === "called-shot")) {
+    ui.notifications.warn(`${maneuver.name}: Consolidated Strike - it must be made with Called Shot.`);
+    return false;
+  }
 
   // What the Weapon does, again with what was applied to the attack - Precision's "any Called
   // Shot made using this Weapon".
@@ -2836,6 +2920,19 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     return false;
   }
 
+  // All Out: "You must Ki Wager all of your Ki Points on this Attacking Maneuver. This Ki Wager ignores
+  // your Capacity, but the amount of Ki Points spent cannot exceed your Max Capacity." What is left
+  // once the Technique's own cost is paid, held to the Max Capacity, and only the cost is taken off
+  // what Capacity is left. Its Prerequisite - Injured or worse - is the Super Profile's own.
+  if (declared && (maneuver.superProfile === "all-out")
+    && ["injured", "critical"].includes(actor.system.threshold?.key)) {
+    const cost = maneuverKiCost(maneuver, { ...declared, kiWager: 0 }, actor);
+    const wager = Math.max(0, Math.min((Number(actor.system.ki?.value) || 0) - cost,
+      (Number(actor.system.capacity?.max) || 0) - cost));
+    declared = { ...declared, kiWager: wager, wagerFromLife: false };
+    maneuver = { ...maneuver, capacityCost: cost };
+  }
+
   // A Movement's price is what was chosen rather than what the file lists: "N/A", until
   // you decide to go faster. Everything else pays what its Profile and its effects say.
   const price = crossing
@@ -2873,12 +2970,17 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       "system.charges": (Number(moving.store.system.charges) || 0) - moving.fromStore });
   }
   if (!crossing) await spendLifeWager(actor, declared);
+  if (declared?.finalChanceLife) {
+    await actor.update({ "system.life.value": 0 }, { dbuDefeatHeld: true });
+    await actor.setFlag("dbu-ttrpg", "finalChance", "pending");
+    declared = { ...declared, kiWager: (Number(declared.kiWager) || 0) + declared.finalChanceLife };
+  }
 
   // Empower hands Ki over before anything is recorded, so backing out of the amount
   // leaves the Maneuver unused rather than spent on nothing.
   if (maneuver.empower && !await transferKi(actor, targetActor, actionsSpent)) return false;
 
-  await payActions(actor, maneuver, actionsSpent);
+  if (!outOfSequence) await payActions(actor, maneuver, actionsSpent);
   if (burstActions) await spendActions(actor, burstActions);
   // Giga Flare's and Super Combination's own Actions, asked at declaration.
   if (declared?.extraActions) await spendActions(actor, declared.extraActions);
@@ -3054,7 +3156,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postFeatureAttack(actor, maneuver, declared, charges)
     : declared
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges },
-        { modifiers: [...appliedModifiers(modifiers), ...drawn.rows] })
+        { modifiers: [...appliedModifiers(modifiers), ...drawn.rows], asOutOfSequence: outOfSequence })
     // A Movement card carries whether Rapid Movement was paid for, because the Dodge
     // bonus it buys is against "an Exploit Maneuver provoked by this instance" - and this
     // card is that instance. It carries what was paid for the same reason: a Blockade
@@ -3082,8 +3184,20 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // Recorded once the card exists, since which card an Instant was played on is part
   // of the rule: an Out-of-Sequence Maneuver this one offers is not a way out from
   // under it.
-  await recordManeuverType(actor, maneuver.type, { messageId: card?.id,
+  await recordManeuverType(actor, outOfSequence ? "outOfSequence" : maneuver.type, { messageId: card?.id,
     maneuverId: maneuver.through?.id ?? maneuver.id, profile: declared?.profile ?? "" });
+
+  // Final Chance's held Defeat belongs to this card now.
+  if (card && (actor.getFlag?.("dbu-ttrpg", "finalChance") === "pending")) {
+    await actor.setFlag("dbu-ttrpg", "finalChance", card.id);
+  }
+
+  // What the Technique does to its user once the card is done: Backlash, Exhaustive, Stat Drain,
+  // Powerbomb, All Out.
+  if (card && declared && maneuver.signature && !maneuver.signatureTechnique) {
+    const { techniqueAfterCard } = await import("./chat.mjs");
+    await techniqueAfterCard(actor, card.getFlag?.("dbu-ttrpg", "attack") ?? null);
+  }
 
   // All or Nothing: once the Technique is used, whatever Capacity the round had left is gone.
   if (card && declared && emptiesCapacity(declared.advantages)
@@ -3101,6 +3215,27 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       window: { title: thrown.name }, content: `<p>Take ${Handlebars.escapeExpression(thrown.name)} `
         + "in hand again?</p>", rejectClose: false }) : false;
     if (!back) await actor.items.get(thrown.itemId)?.update({ "system.equipped": false });
+  }
+
+  // Fake Out and Trick Attack: a Clash against each target as the attack is declared, settled onto
+  // the attack before it is answered.
+  if (card && declared && maneuver.signature && !maneuver.signatureTechnique) {
+    const features = card.getFlag?.("dbu-ttrpg", "attack")?.technique?.features ?? [];
+    const aimed = (card.getFlag?.("dbu-ttrpg", "attack")?.targets ?? []).map(entry => fromUuidSync(entry.uuid))
+      .filter(Boolean);
+    const trickSkill = maneuver.featureChoices?.["trick-attack"] || "bluff";
+    for (const target of aimed) {
+      if (features.includes("fake-out")) {
+        await postSkillClash(actor, target, { name: `${maneuver.name} (Fake Out)`, type: "instant",
+          clash: { skill: "bluff", defenderSkills: ["intuition"] } },
+          { techniqueClash: { kind: "fake-out", attackMessageId: card.id, applied: false } });
+      }
+      if (features.includes("trick-attack")) {
+        await postSkillClash(actor, target, { name: `${maneuver.name} (Trick Attack)`, type: "instant",
+          clash: { skill: trickSkill, defenderSkills: ["intuition", "perception"] } },
+          { techniqueClash: { kind: "trick-attack", attackMessageId: card.id, applied: false } });
+      }
+    }
   }
 
   // Concealed: "The first Armed Attack you make with this Weapon each Combat Round, make a Clash
@@ -3453,14 +3588,16 @@ export async function useOwnedManeuver(actor, itemId, { atFeature = false } = {}
  * @param {{via?: string}} options  how it is reached: "counter", "exploit", "throw", or "" for the
  *   Maneuver itself - what Required Counter and the like read.
  */
-export async function useTechnique(actor, itemId, { atFeature = false, via = "" } = {}) {
+export async function useTechnique(actor, itemId, { atFeature = false, via = "", outOfSequence = false,
+                                                  targetUuid = "", presetThrown = null } = {}) {
   const door = actor?.items?.find(item => (item.type === "maneuver") && item.system.signatureTechnique);
   if (!door) {
     ui.notifications.warn(`${actor?.name ?? "This character"} has no Signature Technique Maneuver. `
       + "Add the core Maneuvers on the Maneuvers tab.");
     return false;
   }
-  return useManeuver(actor, definitionOf(door), { atFeature, techniqueId: itemId, via });
+  return useManeuver(actor, definitionOf(door), { atFeature, techniqueId: itemId, via, outOfSequence,
+    targetUuid, presetThrown });
 }
 
 /**

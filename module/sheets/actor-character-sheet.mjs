@@ -41,6 +41,7 @@ import { baseDieLine, breakdownTable, extraDiceLine, partLine, noteLine, floorLi
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
   checkCard,
+  detonateTechnique,
   difficultyLine,
   postRide,
   requestActorUpdate,
@@ -444,6 +445,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
       newTechnique: DBUCharacterSheet._onNewTechnique,
+      detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
       resetEncounter: DBUCharacterSheet._onResetEncounter,
       enterEncounter: DBUCharacterSheet._onEnterEncounter,
@@ -1265,6 +1267,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.skillGroups = this._prepareSkillGroups(context.workings);
     context.maneuverGroups = this._prepareManeuverGroups();
     context.techniques = this._prepareTechniques();
+    // Delayed's Imminent on this character: a mark, not a Combat Condition.
+    context.imminent = this.actor.getFlag("dbu-ttrpg", "imminent") ?? [];
     context.racialSkillRanks = this._prepareRacialSkillRanks();
     context.racialAttributeChoices = this._prepareRacialAttributeChoices();
     const { race, subrace } = this.actor.system;
@@ -1592,6 +1596,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       encounterCap: ULTIMATES_PER_ENCOUNTER_CAP,
       warnings
     };
+  }
+
+  /** Detonate a Delayed Technique's Imminent: an Instant Maneuver. */
+  static async _onDetonateTechnique(event, target) {
+    return detonateTechnique(this.actor, target.dataset.itemId);
   }
 
   /** New Signature Technique: a blank Super, opened on its Sig Creation tab. */

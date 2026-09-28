@@ -107,6 +107,7 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
   entries.push(...apparelPrograms(actor, report));
   entries.push(...weaponPrograms(actor, report));
   entries.push(...buddyPrograms(actor, report, { baseTier, skills }));
+  entries.push(...drainPrograms(actor, report));
   entries.push(...karmaPrograms(report));
   entries.push(...statePrograms(actor, report));
   entries.push(...conditionPrograms(actor, report));
@@ -283,6 +284,22 @@ function weaponPrograms(actor, report) {
  * they name written in. Its Buddy Effect's lines run while it is Active, its Adventure Effect's
  * while its owner is Adventuring; a destroyed one runs nothing. See buddyScript() in gear.mjs.
  */
+/**
+ * Stat Drain, while it runs: "reduce your Combat Rolls and Soak Value by 1(bT) until the end of
+ * your next turn" for each rank. A Disadvantage's lingering effect, not a Combat Condition - held
+ * as a number on the character (`statDrain`) with a clock of its own.
+ */
+function drainPrograms(actor, report) {
+  const ranks = Math.max(0, Number(actor.system?.statDrain) || 0);
+  if (!ranks) return [];
+  const script = `[passive]\ncombatRolls -= ${ranks}(bT);\nsoakValue.external -= ${ranks}(bT);`;
+  const { program, errors } = compile("signature:stat-drain", { script },
+    message => report(`Stat Drain: ${message}`));
+  if (errors.length) return [];
+  return [{ program, priority: PRIORITY.talent, sourceId: "stat-drain", sourceUuid: null,
+    sourceName: "Stat Drain", level: 0, stacks: 1 }];
+}
+
 function buddyPrograms(actor, report, { baseTier = 1, skills = {} } = {}) {
   const entries = [];
   const round = globalThis.game?.combat?.started ? (globalThis.game.combat.round ?? 0) : 0;

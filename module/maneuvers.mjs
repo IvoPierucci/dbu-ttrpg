@@ -1333,6 +1333,11 @@ export function whyNotLaunch(actor, maneuver) {
  */
 export function whyNotAnotherGrapple(actor, maneuver) {
   if (!maneuver?.grapple) return null;
+  // Powerbomb: "you cannot use the Grapple Maneuver until the start of your next turn".
+  if ((actor?.system?.usedManeuvers ?? []).includes("turn:powerbomb")) {
+    return `${actor.name} ended a Grapple with a Powerbomb, and cannot Grapple again until the start `
+      + "of their next turn.";
+  }
   if (!actor?.system?.grapple?.partner) return null;
   return `${actor.name} is already in a Grapple, and cannot use the Grapple Maneuver `
     + "while in one.";
@@ -1421,6 +1426,17 @@ export const DEFEND_OPTIONS = Object.freeze({
     label: "Cross Counter",
     kiCost: 0,
     summary: "Clash with your Defense Value halved, then strike back with a Basic Attack out of sequence."
+  },
+  // Counter (a Signature Technique Advantage): "you may use the Signature Technique Maneuver to use
+  // this Signature Technique instead of the Basic Attack Maneuver. If you do, your Defense Value is
+  // not halved." Chosen before the Dodge, since it decides the halving. Offered only to one who has
+  // such a Technique.
+  crossCounterSignature: {
+    label: "Cross Counter (Signature Technique)",
+    kiCost: 0,
+    needsCounterTechnique: true,
+    summary: "Clash with your whole Defense Value, then strike back with a Signature Technique that has "
+      + "Counter, out of sequence. It is a use of the Signature Technique Maneuver."
   },
   guard: {
     label: "Guard",
@@ -1556,8 +1572,10 @@ export function defendOptionCost(option, actor, attack = null) {
   // silently did nothing before.
   // The surcharge rides on top of whatever the option costs after any discount: an
   // effect that cheapens Guard cheapens Guard, not the Charges on the attack.
+  const encompassing = (attack?.technique?.features ?? []).filter(id => id === "encompassing-attack").length;
   return Math.max(0,
-    applySlot(actor.system.effects?.slots, `defend.${option}.kiCost`, base) + surcharge);
+    applySlot(actor.system.effects?.slots, `defend.${option}.kiCost`, base) + surcharge
+    + (2 * encompassing * (actor.system.baseTierOfPower ?? 1)));
 }
 
 /** Action types a Maneuver can spend. Instant and Out-of-Sequence spend none. */

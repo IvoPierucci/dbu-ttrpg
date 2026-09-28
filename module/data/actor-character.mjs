@@ -1337,6 +1337,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       /** The Attacking Maneuver that was declared, by its id. Empty when not charging. */
       maneuverId: new fields.StringField({ required: true, blank: true, initial: "" }),
       /**
+       * Genki: Ki an Ally Empowered this charge with, turned into "an additional Ki Wager that does
+       * not count towards your Capacity equal to 1/2 of those Ki Points".
+       */
+      bonusWager: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      /**
        * The Profile it was declared with. Settled at the moment of declaring, and the
        * attack has to be made with it - that is what makes it a declaration rather than
        * a note to come back to.
@@ -1456,6 +1461,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       new fields.StringField({ required: true, blank: false }),
       { required: true, initial: [] }
     );
+
+    // --- Stat Drain ---
+    // The ranks of Stat Drain running on this character, taken off their Combat Rolls and Soak
+    // Value per base Tier; a clock of its own takes it back to nothing.
+    schema.statDrain = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 
     // --- The last Maneuver used ---
     // Lead Up's "you must hit an Opponent with an Attacking Maneuver of your selected Profile as

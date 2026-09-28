@@ -88,6 +88,10 @@ async function startRound(combat) {
     const { updates } = tickCountdowns(actor.items.filter(item => item.type === "gear"));
     if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
 
+    // Short Delay: a Delayed Technique left two Rounds goes off by itself.
+    const { shortDelays } = await import("./chat.mjs");
+    await shortDelays(actor, combat.round ?? 0);
+
     // A Shifting Buddy's Weapon lasts "until the end of the Combat Round".
     const shifted = actor.items.filter(item => item.system?.crafted?.fromBuddy).map(item => item.id);
     if (shifted.length) await actor.deleteEmbeddedDocuments("Item", shifted);
@@ -127,7 +131,8 @@ async function startRound(combat) {
 export const NOT_CHARGING = Object.freeze({
   "system.charging.maneuverId": "",
   "system.charging.profile": "",
-  "system.charging.charges": 0
+  "system.charging.charges": 0,
+  "system.charging.bonusWager": 0
 });
 
 /**
@@ -274,6 +279,12 @@ async function beginTurn(actor) {
   // On a skipped turn as much as any other: a skipped turn is still your turn, which is
   // the whole reason both of its edges arrive.
   await burnDot(actor);
+
+  // What lasts until the start of this character's next turn and is counted by use: Powerbomb's.
+  const used = actor.system.usedManeuvers ?? [];
+  if (used.some(entry => entry.startsWith("turn:"))) {
+    await actor.update({ "system.usedManeuvers": used.filter(entry => !entry.startsWith("turn:")) });
+  }
 
   // "If that trigger occurs before the start of your next turn." The start of this turn is
   // where that ends, so anything still held is let go here - after the Moment and after
@@ -440,6 +451,9 @@ export function registerCombatHooks() {
     if (leaving?.type === "character") {
       await fireMoment(leaving, "end-of-turn");
 
+      // Final Chance's held Defeat, at the end of the turn at the latest.
+      await releaseFinalChance(leaving);
+
       // After the Moment, not before it. "Until the end of your turn" lasts for the whole
       // of your turn, and the end of your turn is part of your turn - so whatever answers
       // that Moment still has it, and it goes once the answering is done.
@@ -504,6 +518,9 @@ export function registerCombatHooks() {
       // that never arrives is a duration that never ends, and there are no more turns.
       await encounterEnded(actor);
       await regenerateWeapons(actor);
+      // Delayed's records and Imminent marks, which only lasted for the Encounter.
+      const { clearDelayed } = await import("./chat.mjs");
+      await clearDelayed(actor);
     }
 
     await announceEncounterEnd(rounds);
@@ -710,9 +727,25 @@ export function registerDefeatHooks() {
       return;
     }
 
+    // Final Chance: "You are not Defeated until after this Attacking Maneuver would be completed."
+    // Held back here and begun when it is.
+    if (options.dbuDefeatHeld) return;
+
+    return beginDefeat(actor, { silenced: Boolean(options.dbuSilenced) });
+  });
+}
+
+/**
+ * A character at nothing, being Defeated: what may still catch them, and the announcement.
+ *
+ * `silenced` is Complete Annihilation's: "If an Opponent is Defeated by this Attacking Maneuver,
+ * they cannot activate any effects with the Triggered/Defeated Keyword" - so nothing is offered.
+ */
+export async function beginDefeat(actor, { silenced = false } = {}) {
+  {
     // Something may still catch them. Whatever answers this writes Life Points, and
     // the character is re-derived before the second Moment is even considered.
-    await fireMoment(actor, "defeated", { damage: 0 });
+    if (!silenced) await fireMoment(actor, "defeated", { damage: 0 });
     if (!actor.system.defeated) {
       // The rescue counts against the one allowed per Encounter.
       await actor.update({ "system.defeatsEscaped": (actor.system.defeatsEscaped ?? 0) + 1 });
@@ -724,7 +757,7 @@ export function registerDefeatHooks() {
     // settled here and announced as settled - a card saying "incoming defeat" that
     // nobody can answer is a step the table has to click past for no reason.
     const who = witnesses(actor);
-    const pending = await anybodyAnswers("defeated", who);
+    const pending = silenced ? false : await anybodyAnswers("defeated", who);
 
     if (!pending) {
       await fireMoment(actor, "defeat-resolved");
@@ -738,9 +771,19 @@ export function registerDefeatHooks() {
       pending,
       detail: pending
         ? "Not settled yet - something here can still answer it."
-        : ""
+        : (silenced ? "Complete Annihilation: no Triggered/Defeated effect can answer it." : "")
     });
-  });
+  }
+}
+
+/**
+ * Final Chance's held Defeat, once its attack is done - or at the end of the user's turn at the
+ * latest. Nothing if they were brought back above nothing in the meantime.
+ */
+export async function releaseFinalChance(actor) {
+  if (!actor?.getFlag?.("dbu-ttrpg", "finalChance")) return;
+  await actor.unsetFlag("dbu-ttrpg", "finalChance");
+  if (actor.system.defeated) await beginDefeat(actor);
 }
 
 /**

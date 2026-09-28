@@ -2,6 +2,15 @@
 
   {{! These values are kept by hand during play, so they are locked until asked for:
       a stray click should not quietly change what a character has left. }}
+  {{#if imminent.length}}
+  {{! Delayed's mark: not a Combat Condition, so it is not among them. }}
+  <section class="panel">
+    {{#each imminent as |mark|}}
+    <p class="dbu-profile-note">Imminent &mdash; {{mark.name}} by {{mark.attackerName}}</p>
+    {{/each}}
+  </section>
+  {{/if}}
+
   <section class="panel">
     <h3 class="panel-title">
       Turn State

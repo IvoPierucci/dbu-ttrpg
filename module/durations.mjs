@@ -57,7 +57,9 @@ export const KINDS = Object.freeze({
    * how long a stack lasts to whatever handed it out: "over a period of time decided by
    * the effect". Sharp is the first effect to decide.
    */
-  DOT: "dot"
+  DOT: "dot",
+  /** Stat Drain: a Signature Disadvantage's lingering penalty, not a Condition. */
+  DRAIN: "drain"
 });
 
 /**
@@ -390,6 +392,8 @@ async function takeOff(owner, entry) {
     const left = Math.max(0, (actor.system.dotStacks ?? 0) - 1);
     return actor.update({ "system.dotStacks": left });
   }
+
+  if (entry.kind === KINDS.DRAIN) return actor.update({ "system.statDrain": 0 });
 
   console.warn(`DBU TTRPG | Nothing knows how to take off a "${entry.kind}".`);
   return false;
