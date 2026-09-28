@@ -351,6 +351,50 @@
   background: rgba(223, 226, 136, 0.18);
 }
 
+/* A Signature Technique feature whose Requirement is not met yet: still listed, dimmed. */
+.dbu-ttrpg .gear-quality-option.blocked {
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .technique-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+
+.dbu-ttrpg .technique-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dbu-ttrpg .technique-reading {
+  display: flex;
+  gap: 24px;
+}
+
+.dbu-ttrpg .technique-ranks {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dbu-ttrpg .gear-rank {
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  padding: 0;
+}
+
+.dbu-ttrpg .technique-feature.off .gear-name {
+  text-decoration: line-through;
+  color: var(--dbu-text-dim);
+}
+
+.dbu-ttrpg .technique-total {
+  text-align: right;
+}
+
 .dbu-gear-pick optgroup option {
   background: var(--dbu-panel, #1e1e1e);
   color: var(--dbu-text, #e8e8e8);

@@ -1,4 +1,6 @@
 <div class="tab {{tabs.rules.cssClass}}" data-group="primary" data-tab="rules">
+  {{! A Signature Technique is built on its own tabs instead; its fields would be here twice. }}
+  {{#unless isTechnique}}
   <section class="panel">
     <h3 class="panel-title">Costs</h3>
     <div class="stat-grid">
@@ -99,4 +101,5 @@
       </div>
     </div>
   </section>
+  {{/unless}}
 </div>

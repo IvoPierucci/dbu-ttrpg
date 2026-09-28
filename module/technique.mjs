@@ -437,6 +437,90 @@ export function superProfileProblem(superId, sig, options = {}) {
     ? "" : `Prerequisite: ${entry.prerequisiteText}`;
 }
 
+// --- Effects ------------------------------------------------------------------------------------
+
+/** A feature part's opening line: `#@ advantage power-shot | Power Shot (2 ranks)`. */
+const PART_OPEN = /^#@\s+(advantage|disadvantage)\s+(\S+)\s*(?:\|\s*(.*?))?\s*$/;
+const PART_CLOSE = /^#@\s+end\s*$/;
+
+/** A Technique's Effects, as its features' parts and the text between them. */
+export function techniqueEffectParts(script) {
+  const out = [];
+  let text = [];
+  let open = null;
+  const flush = () => {
+    const joined = text.join("\n").replace(/^\s*\n/, "").replace(/\s+$/, "");
+    if (joined) out.push({ text: joined });
+    text = [];
+  };
+  for (const line of String(script ?? "").replace(/\r\n?/g, "\n").split("\n")) {
+    const opens = line.trim().match(PART_OPEN);
+    if (!open && opens) {
+      flush();
+      open = { type: opens[1], id: opens[2], name: opens[3] ?? "", lines: [] };
+      continue;
+    }
+    if (open && PART_CLOSE.test(line.trim())) {
+      out.push({ type: open.type, id: open.id, name: open.name,
+        body: open.lines.join("\n").replace(/^\s*\n/, "").replace(/\s+$/, "") });
+      open = null;
+      continue;
+    }
+    (open ? open.lines : text).push(line);
+  }
+  if (open) out.push({ type: open.type, id: open.id, name: open.name, body: open.lines.join("\n").trim() });
+  else flush();
+  return out;
+}
+
+/** What a feature writes into the Technique's Effects: what it does, and its own code if any. */
+function featureBody(def) {
+  const code = String(def?.script ?? "").replace(/\r\n?/g, "\n").split("\n")
+    .filter(line => !/^\s*(#|\/\/)/.test(line)).join("\n").trim();
+  return [`# ${def?.summary ?? def?.name ?? ""} - built in`, code].filter(Boolean).join("\n");
+}
+
+/** A feature's name as its part names it: "Power Shot (2 ranks)". */
+function featurePartName(def, entry) {
+  const ranks = (maxRanks(def) > 1) ? ` (${entry.ranks} rank${(entry.ranks === 1) ? "" : "s"})` : "";
+  const choice = entry.choice ? ` - ${choiceLabel(def, entry.choice)}` : "";
+  return `${def?.name ?? entry.id}${ranks}${choice}`;
+}
+
+/**
+ * Write a Technique's features into its Effects, as an Apparel's Qualities are written into its
+ * own: a part per feature, the parts already there keep what is written in them, a removed
+ * feature's part is taken out, a new one's is written from its file, and the text outside every
+ * part is its owner's and stays. `previous` of "" rebuilds everything - Re-sync.
+ */
+export function composeTechniqueEffects(sig, previous = "") {
+  const existing = techniqueEffectParts(previous);
+  const had = new Map(existing.filter(part => part.id).map(part => [part.id, part]));
+  const wanted = (sig.features ?? []).map(entry => ({ entry, def: featureDef(entry.id) }))
+    .filter(({ def }) => def);
+  const wantedIds = new Set(wanted.map(({ def }) => def.id));
+  const partOf = ({ entry, def }) => ({
+    type: (def.owner === "disadvantages") ? "disadvantage" : "advantage",
+    id: def.id,
+    name: featurePartName(def, entry),
+    body: had.get(def.id)?.body ?? featureBody(def)
+  });
+  const out = [];
+  for (const part of existing) {
+    if (!part.id) out.push(part);
+    else if (wantedIds.has(part.id)) out.push(partOf(wanted.find(({ def }) => def.id === part.id)));
+  }
+  for (const want of wanted) {
+    if (had.has(want.def.id)) continue;
+    let last = -1;
+    out.forEach((each, index) => { if (each.id) last = index; });
+    out.splice((last >= 0) ? last + 1 : out.length, 0, partOf(want));
+  }
+  return out.map(part => (part.id
+    ? [`#@ ${part.type} ${part.id} | ${part.name}`, part.body, "#@ end"].filter(Boolean).join("\n")
+    : part.text)).join("\n\n");
+}
+
 /** The trait a choice names, for a label: a Condition, a State, a Weather. */
 export function choiceLabel(def, choice) {
   if (!choice) return "";

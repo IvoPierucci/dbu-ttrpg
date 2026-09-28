@@ -1,0 +1,80 @@
+<div class="tab {{tabs.creation.cssClass}}" data-group="primary" data-tab="creation">
+  {{#if technique}}
+  <section class="panel">
+    <h3 class="panel-title">Sig Creation</h3>
+    <div class="technique-grid">
+      <label data-tooltip="Super, Ultimate (+4 TP, once per Combat Encounter) or Dramatic Finisher (an Ultimate with a Super Profile)">
+        <em>Level</em>
+        <select name="system.signature.level">
+          {{#each technique.levels as |level|}}
+          <option value="{{level.value}}" {{#if level.chosen}}selected{{/if}}>{{level.label}}</option>
+          {{/each}}
+        </select>
+      </label>
+      <label>
+        <em>Foundation</em>
+        <select name="system.signature.foundation">
+          <option value="">-</option>
+          {{#each technique.foundations as |foundation|}}
+          <option value="{{foundation.value}}" {{#if foundation.chosen}}selected{{/if}}>{{foundation.label}}</option>
+          {{/each}}
+        </select>
+      </label>
+      <label>
+        <em>Profile</em>
+        <select name="system.signature.profile">
+          <option value="">-</option>
+          {{#each technique.profiles as |profile|}}
+          <option value="{{profile.value}}" {{#if profile.chosen}}selected{{/if}}>{{profile.label}}</option>
+          {{/each}}
+        </select>
+      </label>
+      {{#if technique.dramatic}}
+      <label data-tooltip="A Dramatic Finisher's Super Profile. One per character; not at Character Creation.">
+        <em>Super Profile</em>
+        <select name="system.signature.superProfile">
+          <option value="">-</option>
+          {{#each technique.superProfiles as |entry|}}
+          <option value="{{entry.value}}" {{#if entry.chosen}}selected{{/if}}>{{entry.label}}</option>
+          {{/each}}
+        </select>
+      </label>
+      {{/if}}
+      {{#if technique.secondProfiles.length}}
+      <label data-tooltip="Multi-Profile: the other Profile applied to it, without its Ki Point Cost">
+        <em>Second Profile</em>
+        <select name="system.signature.secondProfile">
+          <option value="">-</option>
+          {{#each technique.secondProfiles as |profile|}}
+          <option value="{{profile.value}}" {{#if profile.chosen}}selected{{/if}}>{{profile.label}}</option>
+          {{/each}}
+        </select>
+      </label>
+      {{/if}}
+      <label data-tooltip="Gained from a Transformation Trait: not counted when Ultimates are matched against Supers">
+        <em>From a Transformation</em>
+        <input type="checkbox" name="system.signature.fromTransformation" {{#if technique.fromTransformation}}checked{{/if}}/>
+      </label>
+      <label data-tooltip="Untick to make this an ordinary Maneuver again">
+        <em>Signature Technique</em>
+        <input type="checkbox" data-action="toggleSignature" checked {{#unless editable}}disabled{{/unless}}/>
+      </label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">Cost</h3>
+    {{#if technique.reading.unbuilt}}
+    <p class="tab-placeholder">Choose a Foundation and a Profile.</p>
+    {{/if}}
+    <div class="technique-reading">
+      <div data-tooltip="8, plus its Advantages, less its Disadvantages, never under 8; +4 for an Ultimate">
+        TP: <b>{{technique.reading.tp}}</b> / {{technique.reading.cap}}</div>
+      <div data-tooltip="Profile {{technique.reading.profileKi}}(T) + Technique {{technique.reading.techniqueKi}}(T) (1/5 of its TP, rounded up){{#if technique.reading.superKi}} + Super Profile {{technique.reading.superKi}}(T){{/if}}">
+        KP: <b>{{technique.reading.totalPerTier}}(T)</b> = {{technique.reading.total}} at Tier {{technique.reading.tier}}</div>
+    </div>
+    {{#if technique.reading.over}}<p class="gear-warning">{{technique.reading.over}}</p>{{/if}}
+    {{#if technique.reading.superProblem}}<p class="gear-warning">{{technique.reading.superProblem}}</p>{{/if}}
+  </section>
+  {{/if}}
+</div>

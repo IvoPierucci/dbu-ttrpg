@@ -1,4 +1,6 @@
 <div class="tab {{tabs.effect.cssClass}}" data-group="primary" data-tab="effect">
+  {{! A Signature Technique is built on its own tabs instead; its fields would be here twice. }}
+  {{#unless isTechnique}}
   <section class="panel">
     <h3 class="panel-title">
       Effect
@@ -23,4 +25,5 @@
     <p class="effect-ok">Compiles.</p>
     {{/if}}
   </section>
+  {{/unless}}
 </div>

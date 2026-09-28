@@ -568,8 +568,6 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
           /** Widespread's shape, Trick Attack's Skill, Condition's Condition, and so on. */
           choice: new fields.StringField({ required: true, blank: true, initial: "" })
         }), { required: true, initial: [] }),
-        /** Its pseudo-code, as on an Apparel's Effects tab: what each feature writes, and more. */
-        effects: new fields.StringField({ required: true, blank: true, initial: "" }),
         /**
          * Delayed: "keep a record of the Dice Score of your Wound Roll". Which attack it was, who
          * carries its Imminent, and the Round it was made in (for Short Delay).

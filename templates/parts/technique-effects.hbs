@@ -1,0 +1,24 @@
+<div class="tab {{tabs.techniqueEffects.cssClass}}" data-group="primary" data-tab="techniqueEffects">
+  {{! Its own pseudo-code: each Advantage and Disadvantage writes its part between the #@ markers,
+      saying what it does; anything may be changed, and anything added below runs as its script. }}
+  {{#if technique}}
+  <section class="panel">
+    <h3 class="panel-title">
+      Effects
+      <button type="button" class="gear-effects-resync" data-action="resyncTechnique"
+              data-tooltip="Replace all of it with what the Advantages and Disadvantages write. Anything changed or added is lost.">Re-sync</button>
+    </h3>
+    <textarea class="effect-script gear-effects-script" name="system.script" rows="18"
+              spellcheck="false" data-tooltip="What this Technique does. See WRITING-EFFECTS.txt">{{technique.script}}</textarea>
+    {{#if technique.errors.length}}
+    <ul class="effect-errors">
+      {{#each technique.errors as |problem|}}
+      <li>{{#if problem.line}}<b>Line {{problem.line}}</b> — {{/if}}{{problem.message}}</li>
+      {{/each}}
+    </ul>
+    {{else}}
+    <p class="effect-ok">Compiles.</p>
+    {{/if}}
+  </section>
+  {{/if}}
+</div>

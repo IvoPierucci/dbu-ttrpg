@@ -1,0 +1,51 @@
+<div class="tab {{tabs.features.cssClass}}" data-group="primary" data-tab="features">
+  {{#if technique}}
+  <section class="panel">
+    {{! The search stays on top; what is added goes under it. }}
+    <div class="gear-add-quality">
+      <div class="gear-quality-search-row">
+        <input type="text" class="gear-quality-search" data-feature-search autocomplete="off"
+               placeholder="Type an Advantage or Disadvantage"/>
+        <button type="button" class="dbu-clash-button" data-action="addFeature">Add</button>
+      </div>
+      <ol class="gear-quality-list" data-feature-list hidden>
+        {{#each technique.groups as |group|}}
+        <li class="gear-quality-group" data-feature-group="{{group.label}}">{{group.label}}</li>
+        {{#each group.choices as |choice|}}
+        <li class="gear-quality-option{{#if choice.blocked}} blocked{{/if}}" data-feature-option="{{choice.value}}"
+            data-name="{{choice.name}}" data-group="{{group.label}}"
+            {{#if choice.blocked}}data-tooltip="{{choice.blocked}}"{{/if}}>{{choice.label}}</li>
+        {{/each}}
+        {{/each}}
+        <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
+      </ol>
+    </div>
+    {{#each technique.rows as |row|}}
+    <div class="gear-row technique-feature{{#if row.problem}} off{{/if}}">
+      <span class="gear-name" data-tooltip="{{row.tip}}">{{row.name}}</span>
+      <span class="gear-type">{{row.side}}</span>
+      {{#if row.ranked}}
+      <span class="gear-type technique-ranks">
+        <button type="button" class="gear-rank" data-action="rankFeature" data-index="{{row.index}}" data-step="-1"
+                {{#unless row.canDown}}disabled{{/unless}}>&minus;</button>
+        {{row.ranks}}
+        <button type="button" class="gear-rank" data-action="rankFeature" data-index="{{row.index}}" data-step="1"
+                {{#unless row.canUp}}disabled{{/unless}}>+</button>
+      </span>
+      {{/if}}
+      {{#if row.choose}}
+      <button type="button" class="gear-type gear-choice" data-action="chooseFeature" data-index="{{row.index}}"
+              data-tooltip="Change">{{row.choiceLabel}}</button>
+      {{/if}}
+      <span class="gear-type">{{row.tp}} TP</span>
+      {{#if row.problem}}<span class="gear-warning" data-tooltip="{{row.problem}}">Requirement not met</span>{{/if}}
+      <button type="button" class="gear-remove" data-action="removeFeature"
+              data-index="{{row.index}}" data-tooltip="Remove">&times;</button>
+    </div>
+    {{else}}
+    <p class="tab-placeholder">None.</p>
+    {{/each}}
+    <p class="technique-total">TP: <b>{{technique.reading.tp}}</b> / {{technique.reading.cap}}</p>
+  </section>
+  {{/if}}
+</div>
