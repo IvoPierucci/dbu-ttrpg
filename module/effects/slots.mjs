@@ -538,6 +538,9 @@ const TABLE = [
        + "Boomerang's Slots." },
   { key: "weapon.copies", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
     doc: "Thrown, a copy goes and it stays in hand - three Throws a Combat Round - Multi-Storage." },
+  { key: "weapon.quickDraw", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
+    doc: "Drawn, 1(T) on the next Attacking Maneuver's Strike if it is the next Maneuver; put away, "
+       + "2(T) on the next attack with it's Wound - Quick Draw." },
   { key: "weapon.burstFire", phase: PHASES.WEAPON, kind: F, ops: ["allow", "forbid", "set"],
     doc: "An attack made with it may spend any number of Actions, an Energy Charge for each - Burst "
        + "Fire." },

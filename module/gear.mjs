@@ -2279,6 +2279,96 @@ export function remoteCost(item) {
   return Number(item?.system?.placeCost) || ((item?.system?.crafted?.kind === "weapon") ? 1 : 0);
 }
 
+/** Whether a Weapon has Quick Draw. */
+export function quickDraws(item, getTrait = null) {
+  return weaponSlots(item?.system?.crafted, { getTrait })["weapon.quickDraw"] === true;
+}
+
+/** The Sheath/Holster a character wears with nothing in it, to put a Weapon away in. */
+export function emptySheath(items) {
+  return (items ?? []).find(item => (item.system?.gearId === "sheath-holster") && item.system?.equipped
+    && !(items ?? []).some(other => other.system?.crafted?.sheathedIn === item.id)) ?? null;
+}
+
+/**
+ * What drawing a Weapon, or putting it away, leaves - the changes to it. Drawn: Quick Draw's "if
+ * your next Maneuver is an Attacking Maneuver, increase the Strike Roll ... by 1(T)", and - out of
+ * a Sheath/Holster, the first time this Combat Encounter - "increase your next Strike Roll made
+ * for an Armed Attack with that Weapon during this Combat Round by 2(T)". Put away: Quick Draw's
+ * "increase the Wound Roll of the next Attacking Maneuver you would make with this Weapon by
+ * 2(T)", and into the Sheath/Holster if one is offered.
+ */
+export function drawChanges(actor, item, drawing, { getTrait = null, sheath = null, round = 0 } = {}) {
+  const crafted = item?.system?.crafted ?? {};
+  const quick = quickDraws(item, getTrait);
+  if (drawing) {
+    const fromSheath = Boolean(crafted.sheathedIn);
+    const firstKey = `encounter:sheath.${item.id}`;
+    // "For the first time in a Combat Encounter" - so only in one.
+    const first = fromSheath && (round > 0) && !(actor?.system?.usedManeuvers ?? []).includes(firstKey);
+    return {
+      item: { "system.equipped": true, "system.crafted.sheathedIn": "",
+        "system.crafted.drawn.quick": quick, "system.crafted.drawn.sheath": first,
+        "system.crafted.drawn.round": first ? round : 0 },
+      firstKey: first ? firstKey : ""
+    };
+  }
+  return {
+    item: { "system.equipped": false, "system.crafted.sheathedIn": sheath?.id ?? "",
+      "system.crafted.drawn.quick": false, "system.crafted.drawn.sheath": false,
+      ...(quick ? { "system.crafted.drawn.sheathedWound": true } : {}) },
+    firstKey: ""
+  };
+}
+
+/**
+ * What the next Maneuver takes of what drawing and putting away left, as rows shaped like the
+ * Modifier Maneuvers' - `{id, name, strikePerTier, woundPerTier}` - and the changes spending them.
+ * Any Maneuver spends Quick Draw's Strike, on an attack or not; the others wait for an attack with
+ * that Weapon, the Sheath/Holster's within the Round it was drawn.
+ */
+export function drawnBonuses(items, { attacking = false, weaponId = "", round = 0 } = {}) {
+  const rows = [];
+  const spent = [];
+  for (const item of items ?? []) {
+    const drawn = item.system?.crafted?.drawn;
+    if (!drawn || (item.system.crafted.kind !== "weapon")) continue;
+    const changes = {};
+    if (drawn.quick) {
+      if (attacking) rows.push({ id: "quick-draw", name: `Quick Draw (${item.name})`, strikePerTier: 1, woundPerTier: 0 });
+      changes["system.crafted.drawn.quick"] = false;
+    }
+    if (attacking && (item.id === weaponId)) {
+      if (drawn.sheath && (drawn.round === round)) {
+        rows.push({ id: "sheath-holster", name: "Sheath/Holster", strikePerTier: 2, woundPerTier: 0 });
+        changes["system.crafted.drawn.sheath"] = false;
+      }
+      if (drawn.sheathedWound) {
+        rows.push({ id: "quick-draw", name: `Quick Draw (${item.name})`, strikePerTier: 0, woundPerTier: 2 });
+        changes["system.crafted.drawn.sheathedWound"] = false;
+      }
+    }
+    if (Object.keys(changes).length) spent.push({ _id: item.id, ...changes });
+  }
+  return { rows: rows.map(row => ({ damageCategoryShift: 0, note: "", atApparel: false, atWeapon: null, ...row })), spent };
+}
+
+/**
+ * The Sheath/Holster at a Combat Encounter's end: "if you sheathe your Weapon into this Accessory,
+ * that Weapon regains 1/4 of its Life Points. This effect does not apply if the Weapon is
+ * destroyed." A quarter of its most, rounded down.
+ */
+export function sheathMending(actor, getTrait = null) {
+  const items = Array.from(actor?.items ?? []);
+  return items.filter(item => (item.system?.crafted?.kind === "weapon") && item.system.crafted.sheathedIn
+    && !item.system.crafted.destroyed && ((Number(item.system.crafted.lifeLost) || 0) > 0)
+    && items.some(other => other.id === item.system.crafted.sheathedIn))
+    .map(item => {
+      const most = craftedReading(item.system.crafted, { getTrait, difficulties: {}, data: actor.system })?.lifeMax ?? 0;
+      return { item, lifeLost: Math.max(0, (Number(item.system.crafted.lifeLost) || 0) - Math.floor(most / 4)) };
+    });
+}
+
 /** How many Snacks a Shishkebab still gives this Combat Encounter, and its key for each. */
 export function snacksLeft(actor, item, getTrait = null) {
   const most = applySlot(weaponSlots(item?.system?.crafted, { getTrait }), "weapon.snacks", 0);

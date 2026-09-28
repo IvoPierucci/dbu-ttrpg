@@ -23,22 +23,17 @@ text: >
 
 ---
 
-# --- What is built -----------------------------------------------------------------------------
+# --- What the system does ---------------------------------------------------------------------
 #
-# The Accessory itself: given, worn and taken off like any other.
+# Worn, it takes one Weapon: putting a Weapon away (Sheathe, on its row) asks whether it goes in
+# here, and its row says it is. Drawn out of it the first time in a Combat Encounter, the next
+# Strike Roll of an Armed Attack with that Weapon this Combat Round is 2(T) higher - a row on
+# that attack, once an Encounter.
 #
-# --- What is not built ---------------------------------------------------------------------------
+# At a Combat Encounter's end a Weapon in it, not broken, regains a quarter of its Life Points,
+# rounded down.
 #
-# Everything it does is about a Weapon, and there are no Weapons in this system yet - they
-# arrive with Equipment. When they do:
+# --- What the table keeps ----------------------------------------------------------------------
 #
-# Sheathe: a Weapon of the character's stored in it, one at a time - shown on its row the way a
-# Capsule shows what it holds, and moving with it: "the Weapon remains in the Item and is
-# stolen/lost as well."
-#
-# Unsheathe: the first time in a Combat Encounter, the next Strike Roll of an Armed Attack with
-# that Weapon this Combat Round is 2(T) higher - a mark with the Round's clock, spent by that
-# Strike. Once an Encounter, kept with the other once-per-Encounter uses.
-#
-# The Encounter's end: a Weapon sheathed then, and not destroyed, regains 1/4 of its Life
-# Points.
+# Stolen or lost with the Weapon in it: "the Weapon remains in the Item and is stolen/lost as
+# well." Whoever ends up with them is the table's to move them to.

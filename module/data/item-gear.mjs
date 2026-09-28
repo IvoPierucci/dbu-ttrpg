@@ -160,7 +160,18 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         // The Category a Flexible Weapon is using until the end of its wielder's turn, and the
         // Size a Variable one is being wielded at - blank for its own.
         activeCategory: new fields.StringField({ required: true, blank: true, initial: "" }),
-        activeSize: new fields.StringField({ required: true, blank: true, initial: "" })
+        activeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
+        // A Weapon put away in a Sheath/Holster the character has, by that Accessory's id.
+        sheathedIn: new fields.StringField({ required: true, blank: true, initial: "" }),
+        // What drawing it or putting it away left for the next attack: Quick Draw's Strike on
+        // the next Attacking Maneuver, the Sheath/Holster's on the next Armed Attack with it this
+        // Combat Round (and which Round), Quick Draw's Wound on the next attack with it.
+        drawn: new fields.SchemaField({
+          quick: new fields.BooleanField({ required: true, initial: false }),
+          sheath: new fields.BooleanField({ required: true, initial: false }),
+          round: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+          sheathedWound: new fields.BooleanField({ required: true, initial: false })
+        })
       }),
 
       /** Shrinks its wearer to a Size named outright - the Micro Band - and where they are. */

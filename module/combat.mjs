@@ -494,8 +494,21 @@ export function registerCombatHooks() {
  * recovered. If it was destroyed during the Combat Encounter, it is completely repaired."
  */
 async function regenerateWeapons(actor) {
-  const { regenerating } = await import("./gear.mjs");
+  const { regenerating, sheathMending } = await import("./gear.mjs");
   const { getTrait } = await import("./effects/traits.mjs");
+  // The Sheath/Holster first: a quarter back to what is put away in one, which Regenerating then
+  // makes whole where it can.
+  const mended = sheathMending(actor, getTrait);
+  if (mended.length) {
+    await actor.updateEmbeddedDocuments("Item", mended.map(({ item, lifeLost }) =>
+      ({ _id: item.id, "system.crafted.lifeLost": lifeLost })));
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      content: `<div class="dbu-settled-note">${mended.map(({ item }) => Handlebars.escapeExpression(item.name))
+        .join(" and ")} regain${(mended.length === 1) ? "s" : ""} a quarter of their Life Points in their `
+        + "Sheath/Holster.</div>"
+    });
+  }
   const whole = regenerating(Array.from(actor.items ?? []), getTrait);
   if (!whole.length) return;
   await actor.updateEmbeddedDocuments("Item", whole.map(item => ({ _id: item.id,

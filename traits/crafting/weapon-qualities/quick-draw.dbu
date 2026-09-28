@@ -1,0 +1,32 @@
+id: quick-draw
+name: Quick Draw
+kind: crafting
+slots: 1
+source: Core Rule
+description: >
+  Drawn: 1(T) on the Strike if your next Maneuver is an attack. Put away: 2(T) on the Wound of
+  the next attack with it.
+# What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
+# word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
+summary: >
+  [Passive]: When you Unsheathe this Weapon, if your next Maneuver is an Attacking Maneuver,
+  increase the Strike Roll of that Attacking Maneuver by 1(T). If you would Sheathe this Weapon,
+  increase the Wound Roll of the next Attacking Maneuver you would make with this Weapon by
+  2(T).
+text: >
+  Quick Draw: This Weapon is easy to ready, allowing you to attack with greater ease.
+  –Weapon Type: All
+  –Prerequisites: N/A
+  –Quality Slots: 1
+  –Effects: When you Unsheathe this Weapon, if your next Maneuver is an Attacking Maneuver,
+  increase the Strike Roll of that Attacking Maneuver by 1(T). If you would Sheathe this Weapon,
+  increase the Wound Roll of the next Attacking Maneuver you would make with this Weapon by
+  2(T).
+
+---
+
+# Unsheathing is Wield, Sheathing is Sheathe, on the Weapon's row. Drawn, the next Maneuver takes
+# the Strike's 1(T) if it is an attack - any other spends it. Put away, the Wound's 2(T) waits for
+# the next attack made with it, whenever that is.
+[passive]
+weapon.quickDraw = true;

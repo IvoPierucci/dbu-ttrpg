@@ -62,7 +62,8 @@ import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   throwables, weaponAttack, weaponsFor, wieldedWeapons, damageWeapon, MULTI_STORAGE_THROWS,
-  throwsAllowed, throwsCopies, thrownWeaponAttack, weaponForms, activeForm } from "./gear.mjs";
+  throwsAllowed, throwsCopies, thrownWeaponAttack, weaponForms, activeForm,
+  drawnBonuses } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
@@ -2565,6 +2566,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   if (burstActions) await spendActions(actor, burstActions);
   await recordManeuverUse(actor, maneuver);
 
+  // What drawing a Weapon, or putting one away, left for this Maneuver - Quick Draw's and the
+  // Sheath/Holster's - taken now, whether this is an attack or not: Quick Draw's Strike is only
+  // for "your next Maneuver".
+  const drawn = drawnBonuses(actor.items.contents, { attacking: Boolean(declared),
+    weaponId: weaponItem?.id ?? "", round: game.combat?.started ? (game.combat.round ?? 0) : 0 });
+  if (drawn.spent.length) await actor.updateEmbeddedDocuments("Item", drawn.spent);
+
   // "Delay its use but pay the Action Cost and KP Cost immediately." Everything that
   // costs has been paid by here and nothing below it has happened yet, which is exactly
   // where a held Maneuver stops: no script, no Profile spent, no card of its own.
@@ -2711,7 +2719,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     ? await postFeatureAttack(actor, maneuver, declared, charges)
     : declared
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges },
-        { modifiers: appliedModifiers(modifiers) })
+        { modifiers: [...appliedModifiers(modifiers), ...drawn.rows] })
     // A Movement card carries whether Rapid Movement was paid for, because the Dodge
     // bonus it buys is against "an Exploit Maneuver provoked by this instance" - and this
     // card is that instance. It carries what was paid for the same reason: a Blockade

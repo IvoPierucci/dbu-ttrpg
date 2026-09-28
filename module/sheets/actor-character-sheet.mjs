@@ -15,7 +15,7 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   craftedItemFrom, craftedReading, APPAREL_LAYERS, APPAREL_EQUIP_COST, equipPlan, onLayer, pieceSlots,
   grantDoffBonus, topLayerPiece, unequipCost, wieldProblem, WEAPON_SIZES, WEAPON_TYPES,
   MULTI_STORAGE_THROWS, throwsCopies, activeForm, flexibleCategories, variableSizes,
-  remoteKinds, remotesAll, remoteCost, snacksLeft, snackKey,
+  remoteKinds, remotesAll, remoteCost, snacksLeft, snackKey, drawChanges, emptySheath,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -2946,6 +2946,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return {
       weapon: true,
       wielded,
+      // In a Sheath/Holster, which.
+      sheathedName: items.find(other => other.id === item.system.crafted?.sheathedIn)?.name ?? "",
       // Shishkebab: "While this Weapon is equipped, you may spend 1 Action to gain a Snack".
       snacks: wielded ? snacksLeft(this.actor, item, getTrait) : 0,
       // Flexible: the Categories it may be for this turn; Variable: the Sizes it may be wielded at.
@@ -3088,7 +3090,21 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           + `${Handlebars.escapeExpression(noEffort.name)} Maneuver.</p>`
       });
     }
-    return item.update({ "system.equipped": drawing });
+    // Put away: "When you sheathe a Weapon, you may store it within this Accessory" - a
+    // Sheath/Holster worn with nothing in it, if they like.
+    let sheath = null;
+    if (!drawing) {
+      const empty = emptySheath(this.actor.items.contents);
+      if (empty && await foundry.applications.api.DialogV2.confirm({
+        window: { title: item.name }, rejectClose: false,
+        content: `<p>Put it in ${Handlebars.escapeExpression(empty.name)}?</p>` })) sheath = empty;
+    }
+    const { item: changes, firstKey } = drawChanges(this.actor, item, drawing,
+      { getTrait, sheath, round: game.combat?.started ? (game.combat.round ?? 0) : 0 });
+    if (firstKey) {
+      await this.actor.update({ "system.usedManeuvers": [...(this.actor.system.usedManeuvers ?? []), firstKey] });
+    }
+    return item.update(changes);
   }
 
   /**
