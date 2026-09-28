@@ -3,8 +3,8 @@ import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { actionsLeft, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
-import { activeBuddy, buddyAttribute, buddyHeader, craftedReading, damageWeapon, weaponAttack, weaponHit,
-  wieldedWeapons } from "./gear.mjs";
+import { activeBuddy, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
+  weaponHit, wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
   from "./features.mjs";
@@ -8506,6 +8506,17 @@ async function rollAttackWound(message, attack) {
     // A blow that lands on one of their Weapons rather than on them - a Called Shot at it, or a
     // Block that turned it onto their Shield. The Weapon takes it, less its own Damage
     // Reduction; they take nothing, by the table's ruling, since nothing says they do.
+    // A Called Shot at their Active Buddy that hit: "it is destroyed, but the target Character
+    // receives no Damage from that Called Shot" - unless "the Character uses the Guard or Direct
+    // Hit options of the Defend Maneuver ... the Character has moved in front of their Buddy to
+    // take the attack", and takes it as any.
+    const atBuddy = (attack.modifiers ?? []).find(entry => entry.atBuddy?.ownerUuid === uuid)?.atBuddy;
+    if (atBuddy && !["guard", "directHit"].includes(own.defense)) {
+      settledTargets.push({ ...own, counterWound: null, effectiveWound, soak: 0, reduction: 0, damage: 0,
+        buddyHit: { itemId: atBuddy.itemId, name: atBuddy.name } });
+      continue;
+    }
+
     const struck = struckWeapon(attack, uuid, own);
     if (struck) {
       const item = target.items?.get(struck.itemId);
@@ -8619,6 +8630,7 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...thresholdPenalty(actor));
   parts.push(...rapidMovementDodge(actor, attack));
   parts.push(...rideExploitBonus(actor, attack));
+  parts.push(...flyinDodge(actor, attack));
   parts.push(...openedAgainst(actor));
   // Your Dodge against somebody you Analyzed. The attacker is named on the attack, which
   // is what makes this answerable from the defender's side.
@@ -8762,6 +8774,19 @@ function thresholdPenalty(actor) {
   return penalty
     ? [{ label: "Thresholds", written: `-${failures}(bT)`, value: -penalty }]
     : [];
+}
+
+/**
+ * Flyin' Buddy's "If you already had access to the Soar Maneuver, then increase your Dodge Rolls by
+ * 2(bT) when this Buddy is targeted by a Called Shot."
+ */
+function flyinDodge(actor, attack) {
+  const aimed = (attack?.modifiers ?? []).find(entry => entry.atBuddy?.ownerUuid === actor.uuid)?.atBuddy;
+  if (!aimed) return [];
+  const buddy = actor.items?.get(aimed.itemId);
+  if ((buddy?.system?.buddy?.ride !== "flyin") || !soarElsewhere(actor, buddy)) return [];
+  const baseTier = Math.max(1, actor.system.baseTierOfPower ?? 1);
+  return [{ label: "Flyin' Buddy", written: "+2(bT)", value: 2 * baseTier }];
 }
 
 /**
@@ -9298,6 +9323,33 @@ async function blockStage(message, attack, target, shields) {
       + `${Handlebars.escapeExpression(shield.name)}: Strike ${roll.total} against ${against} - `
       + `${won ? "the Shield is hit instead." : "the attack gets through."}</div>`
   });
+}
+
+/**
+ * A Buddy a Called Shot hit: destroyed - kept on the sheet as Destroyed - or, "You can stop a Buddy
+ * from being destroyed by spending 1 Karma Point, but that Buddy is unable to be made Active again
+ * for the remainder of the Combat Encounter": dismissed and locked, by the table's ruling.
+ */
+async function settleBuddyHit(message, target, attack, saved) {
+  const own = targetResult(attack, target.uuid);
+  if (!own?.buddyHit || own.applied) return;
+  const buddy = target.items?.get(own.buddyHit.itemId);
+  if (saved) {
+    if (!await spendKarma(target, { name: `Save ${own.buddyHit.name}`, cost: 1 })) return;
+  }
+  requestEdit(message, {
+    type: "attack",
+    attack: { ...attack, result: { ...attack.result,
+      targets: replaceTarget(attack, target.uuid, { applied: true }) } }
+  });
+  if (buddy) {
+    await buddy.update(saved ? { "system.buddy.active": false, "system.buddy.locked": true }
+      : { "system.buddy.active": false, "system.buddy.destroyed": true });
+  }
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(own.buddyHit.name)} `
+      + `${saved ? "is saved with a Karma Point: dismissed, and not called again this Combat Encounter."
+        : "is destroyed."}</div>` });
 }
 
 /** Apply what a Weapon took in its holder's place. */
@@ -11180,6 +11232,27 @@ function renderAttack(message, html) {
       note.className = "dbu-settled-note";
       note.textContent = `${target.name}: ${entry.own.damage} damage applied`;
       container.append(note);
+      continue;
+    }
+
+    // Their Buddy was hit: destroyed - or, for a Karma Point, saved and kept from being called
+    // again this Combat Encounter.
+    if (entry.own.buddyHit) {
+      const destroy = document.createElement("button");
+      destroy.type = "button";
+      destroy.className = "dbu-clash-button";
+      destroy.textContent = `${entry.own.buddyHit.name} is destroyed`;
+      destroy.addEventListener("click", () => settleBuddyHit(message, target, attack, false));
+      container.append(destroy);
+      if ((target.system.karma ?? 0) > 0) {
+        const save = document.createElement("button");
+        save.type = "button";
+        save.className = "dbu-clash-button dbu-karma-button";
+        save.textContent = `Save ${entry.own.buddyHit.name}: 1 Karma Point`;
+        save.dataset.tooltip = "It is dismissed, and cannot be called again this Combat Encounter.";
+        save.addEventListener("click", () => settleBuddyHit(message, target, attack, true));
+        container.append(save);
+      }
       continue;
     }
 

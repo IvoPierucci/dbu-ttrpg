@@ -65,7 +65,7 @@ import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   throwables, weaponAttack, weaponsFor, wieldedWeapons, MULTI_STORAGE_THROWS,
   throwsAllowed, throwsCopies, thrownWeaponAttack, weaponForms, activeForm,
   drawnBonuses, borrowedCategory, withBorrowed, buddyOnlyTechniques, activeBuddy, buddyHeader,
-  buddyAttribute } from "./gear.mjs";
+  buddyAttribute, targetableBuddy } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
@@ -765,6 +765,7 @@ async function askModifiers(actor, base, target = null) {
     entry.note = said.note;
     entry.atApparel = said.atApparel;
     entry.atWeapon = said.atWeapon;
+    entry.atBuddy = said.atBuddy;
   }
 
   return taken;
@@ -794,7 +795,9 @@ export function appliedModifiers(entries) {
     // A Called Shot at a piece of Apparel: its Break Value on a hit, and half the Damage.
     atApparel: Boolean(entry.atApparel),
     // Or at one of the target's Weapons: its Life Points on a hit, and nothing to them.
-    atWeapon: entry.atWeapon ?? null
+    atWeapon: entry.atWeapon ?? null,
+    // Or at their Active Buddy: destroyed on a hit, and nothing to them.
+    atBuddy: entry.atBuddy ?? null
   }));
 }
 
@@ -816,6 +819,8 @@ async function askModifierNote(modifier, target = null) {
   // "An Opponent can use a Called Shot to target a Weapon with an Attacking Maneuver, reducing
   // its Life Points if it hits" - one of the target's, in hand.
   const weapons = (modifier.targetsApparel && target) ? wieldedWeapons(target.items.contents) : [];
+  // "Make a Called Shot against a Character with an Active Buddy, claiming the Buddy as the target."
+  const buddy = (modifier.targetsApparel && target) ? targetableBuddy(target.items.contents, getTrait) : null;
   const aim = (value, label, tip) => `
       <label class="dbu-wager" data-tooltip="${escape(tip)}">
         <input type="radio" name="aim" value="${escape(value)}" ${value ? "" : "checked"}/>
@@ -834,7 +839,9 @@ async function askModifierNote(modifier, target = null) {
         aim("apparel", "A piece of Apparel",
           "On a hit, its Break Value is 1 lower - the Top Layer's - and they take half the Damage."),
         ...weapons.map(item => aim(`weapon:${item.id}`, item.name,
-          "On a hit, the Weapon takes the blow, less its Damage Reduction - and they take nothing."))
+          "On a hit, the Weapon takes the blow, less its Damage Reduction - and they take nothing.")),
+        ...(buddy ? [aim("buddy", `Their ${buddy.name}`,
+          "On a hit, the Buddy is destroyed - and they take nothing. Not if they Guard or take a Direct Hit.")] : [])
       ].join("") : ""}`,
     buttons: [
       {
@@ -846,7 +853,9 @@ async function askModifierNote(modifier, target = null) {
           return {
             note: String(dialog.element.querySelector('input[name="note"]').value ?? "").trim(),
             atApparel: chosen === "apparel",
-            atWeapon: item ? { itemId: item.id, name: item.name, ownerUuid: target.uuid } : null
+            atWeapon: item ? { itemId: item.id, name: item.name, ownerUuid: target.uuid } : null,
+            atBuddy: ((chosen === "buddy") && buddy)
+              ? { itemId: buddy.id, name: buddy.name, ownerUuid: target.uuid } : null
           };
         }
       },

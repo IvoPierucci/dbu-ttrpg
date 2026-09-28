@@ -2609,6 +2609,30 @@ export function buddyOnlyTechniques(items, getTrait) {
 }
 
 /**
+ * The Buddy a Called Shot may claim as its target on this character: their Active one - "Make a
+ * Called Shot against a Character with an Active Buddy, claiming the Buddy as the target" - unless
+ * it "cannot be targeted by a Called Shot" (the Guiding Spirit, the Invincibuddy, Zen-O).
+ */
+export function targetableBuddy(items, getTrait) {
+  const buddy = activeBuddy(items);
+  if (!buddy || (buddyHeader(buddy, getTrait, "calledShotImmune") === true)) return null;
+  return buddy;
+}
+
+/**
+ * Flyin' Buddy's "If you already had access to the Soar Maneuver, then increase your Dodge Rolls
+ * by 2(bT) when this Buddy is targeted by a Called Shot" - already, by anything but this Buddy:
+ * the Skill Ranks that open it, or an Item that gives it - the Jetpack.
+ */
+export function soarElsewhere(actor, buddy) {
+  const bySkill = (actor?.system?.specialManeuvers ?? []).some(entry => (entry.maneuver === "soar") && entry.open);
+  const byItem = Array.from(actor?.items ?? []).some(item => (item !== buddy) && (item.type === "gear")
+    && (item.system?.grantsManeuver === "soar")
+    && ((item.system?.itemType !== "accessory") || item.system?.equipped));
+  return bySkill || byItem;
+}
+
+/**
  * Why a Buddy cannot be called now, or "": destroyed, kept from it for the Encounter, or another
  * one Active - "You can only have one Buddy active at any one time" - which is dismissed first.
  */
