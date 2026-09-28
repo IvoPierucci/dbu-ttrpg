@@ -68,6 +68,8 @@ const PREDICATES = {
    * Is this character wielding a Weapon - Parrying Armor's "While you do not have a Weapon
    * equipped". Wielded is `equipped`; a broken one is as if it were not there.
    */
+  adventuring: scope => Boolean(scope.data?.adventuring),
+
   wieldingWeapon: scope => Array.from(scope.data?.parent?.items ?? []).some(item =>
     (item.type === "gear") && (item.system?.crafted?.kind === "weapon") && item.system?.equipped
     && !item.system?.crafted?.destroyed),

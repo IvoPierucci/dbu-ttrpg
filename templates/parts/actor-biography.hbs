@@ -23,6 +23,12 @@
       </select>
     </div>
 
+    <label class="bio-toggle"
+           data-tooltip="Out of a Combat Encounter. Off when one starts, on again when it ends. A Buddy's Adventure Effect applies while it is on.">
+      <input type="checkbox" name="system.adventuring" {{#if system.adventuring}}checked{{/if}}/>
+      Adventuring
+    </label>
+
     {{! A Minion is a lesser opponent: fewer Actions are demanded of them by Compelled,
         and several rules read this rather than the character's numbers. }}
     <label class="bio-toggle"

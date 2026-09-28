@@ -387,6 +387,10 @@ async function burnDot(actor) {
 export function registerCombatHooks() {
   Hooks.on("combatStart", async combat => {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
+    // No longer Adventuring, whoever is in it.
+    for (const actor of combatants(combat)) {
+      if (actor.system?.adventuring) await actor.update({ "system.adventuring": false });
+    }
     await startEncounter(combat);
     await startRound(combat);
     // Through the same door as every other turn: a Defeated character standing first in
@@ -473,6 +477,8 @@ export function registerCombatHooks() {
         "system.defeatsEscaped": 0,
         // The next Encounter is a different one, and begins for them again.
         "system.enteredEncounter": false,
+        // And they are Adventuring again.
+        "system.adventuring": true,
         // A charge that was never thrown does not follow you out of the Encounter,
         // and neither does a hold: a Grapple is a hold in a fight, and the fight is over.
         ...NOT_CHARGING,

@@ -1358,6 +1358,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Whether this character is a Minion, which a few rules ask about.
     schema.minion = new fields.BooleanField({ required: true, initial: false });
 
+    // Whether this character is Adventuring - what a Buddy's Adventure Effect waits on. A switch
+    // on the Biography tab, by the table's ruling: off when a Combat Encounter starts, on again
+    // when it ends.
+    schema.adventuring = new fields.BooleanField({ required: true, initial: true });
+
     // How many times this character has been brought back from Defeat this Encounter.
     // The rules allow one; kept here because it is a limit of the rule rather than of
     // any one effect.

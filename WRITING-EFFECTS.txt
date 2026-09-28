@@ -386,6 +386,7 @@ And these read something rather than doing it:
   defending             are you Defending against an attack
   attackingManeuver     is this roll part of an Attacking Maneuver you are making
   wieldingWeapon        are you wielding a Weapon
+  adventuring           are you Adventuring - the Biography tab's switch
   targets(X)            does this Maneuver include X as a target
   aoeHits(X)            does this attack's area cover X
   attacking(X)          is this Maneuver an attack aimed at X
