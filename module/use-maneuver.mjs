@@ -12,6 +12,7 @@ import {
   MANEUVER_TYPES,
   PROFILES,
   allManeuvers,
+  getManeuver,
   declareAttack,
   tailProfiles,
   TAIL_VARIANTS,
@@ -63,7 +64,8 @@ import { fireMoment } from "./effects/moments-runtime.mjs";
 import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   throwables, weaponAttack, weaponsFor, wieldedWeapons, MULTI_STORAGE_THROWS,
   throwsAllowed, throwsCopies, thrownWeaponAttack, weaponForms, activeForm,
-  drawnBonuses, borrowedCategory, withBorrowed, buddyOnlyTechniques } from "./gear.mjs";
+  drawnBonuses, borrowedCategory, withBorrowed, buddyOnlyTechniques, activeBuddy, buddyHeader,
+  buddyAttribute } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
@@ -2268,7 +2270,11 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
 
     // "You cannot Ki Wager more than 1/4 (rounded up) of your Ki Points on an Attacking
     // Maneuver made through the Throw Maneuver" - the Ki Points they have, not their Capacity.
-    declared = await declareAttack(locked, DBUCharacterData.FOUNDATIONS, actor,
+    // A Buddy's attack is made with the Foundation assigned with its Profile, where it was.
+    const foundationsOffered = maneuver.buddyAttack?.foundation
+      ? { [maneuver.buddyAttack.foundation]: DBUCharacterData.FOUNDATIONS[maneuver.buddyAttack.foundation] }
+      : DBUCharacterData.FOUNDATIONS;
+    declared = await declareAttack(locked, foundationsOffered, actor,
       maneuver.throws ? { wagerCap: Math.ceil((actor.system.ki?.value ?? 0) / 4) } : {});
     if (!declared) return false;
     // What is thrown travels with the attack, and what it brings of its own - the Grenade's
@@ -2285,6 +2291,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
       }
     }
 
+    // An Assault Buddy's: "The Damage Attribute for this Attacking Maneuver is your Buddy
+    // Attribute." It is the Buddy's attack, and no Weapon of the owner's is asked for.
+    if (maneuver.buddyAttack) {
+      declared = { ...declared, damageAttribute: { label: maneuver.buddyAttack.label,
+        value: maneuver.buddyAttack.value } };
+    }
+
     // "When making an Attacking Maneuver, you must choose which Weapon (if any) you are using
     // for that Attacking Maneuver" - among the ones in hand this Attack Type may be made with.
     // Not for a Throw: what is thrown is not what the attack is made with. Nor for one tagged
@@ -2293,7 +2306,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
     // Armed Attack unless it has the 'Weapon Assisted' Advantage."
     const unassisted = (maneuver.tags ?? []).includes("signature")
       && !(declared.advantages ?? []).includes("weapon-assisted");
-    if (!thrown && !(maneuver.tags ?? []).includes("unarmed") && !unassisted) {
+    if (!thrown && !(maneuver.tags ?? []).includes("unarmed") && !unassisted && !maneuver.buddyAttack) {
       const chosen = await askWeapon(actor, declared);
       if (chosen === null) return false;
       weaponItem = chosen?.item ?? null;
@@ -2606,6 +2619,15 @@ export async function useManeuver(actor, maneuver, { atFeature = false } = {}) {
   const drawn = drawnBonuses(actor.items.contents, { attacking: Boolean(declared),
     weaponId: weaponItem?.id ?? "", round: game.combat?.started ? (game.combat.round ?? 0) : 0 });
   if (drawn.spent.length) await actor.updateEmbeddedDocuments("Item", drawn.spent);
+  // A Technique Hermit, Active, with the Signature Technique chosen for it: "double the benefits
+  // from Mentor Buddy for the duration of that Attacking Maneuver" - its Combat Rolls' 1(bT) again.
+  const hermit = activeBuddy(actor.items.contents);
+  if (declared && hermit && (buddyHeader(hermit, getTrait, "hermit") === true)
+    && hermit.system.buddy?.technique && (hermit.system.buddy.technique === maneuver.itemId)) {
+    drawn.rows.push({ id: "technique-hermit", name: hermit.name, strikePerTier: 0, woundPerTier: 0,
+      strikePerBaseTier: 1, woundPerBaseTier: 1, damageCategoryShift: 0, note: "", atApparel: false,
+      atWeapon: null });
+  }
 
   // "Delay its use but pay the Action Cost and KP Cost immediately." Everything that
   // costs has been paid by here and nothing below it has happened yet, which is exactly
@@ -2873,6 +2895,36 @@ async function askBurstFire(actor, maneuver, actionsSpent, name) {
 function throwsThisRound(actor, maneuver) {
   return (actor.system.usedManeuvers ?? []).filter(entry =>
     (entry === maneuver.id) || (entry === `round:${maneuver.id}`)).length;
+}
+
+/**
+ * A Buddy's attack: the Assault Buddy's "make an Attacking Maneuver of the assigned Profile" - or a
+ * Warrior Buddy's Signature Technique in its place - for the Buddy Effect's Action, its Damage
+ * Attribute the Buddy Attribute. The owner's attack in every other way, by the table's ruling:
+ * their Strike, their Ki, and it counts towards Diminishing Offense.
+ *
+ * @returns {Promise<boolean>} whether it was made
+ */
+export async function useBuddyAttack(actor, buddy, { profile = "", foundation = "", techniqueId = "" } = {}) {
+  const value = buddyAttribute(actor.system.baseTierOfPower ?? 1);
+  const technique = techniqueId ? actor.items.get(techniqueId) : null;
+  const base = technique ? definitionOf(technique) : getManeuver("basic-attack");
+  if (!base) return false;
+  const maneuver = {
+    ...base,
+    name: `${buddy.name}: ${base.name}`,
+    type: "standard",
+    actionCost: 1,
+    actionCostMax: 0,
+    actionCostOpen: false,
+    usageLimit: null,
+    requiresTarget: true,
+    signatureTechnique: false,
+    ...(technique ? { signature: true, tags: [...new Set([...(base.tags ?? []), "signature"])] } : {}),
+    ...(profile ? { profile } : {}),
+    buddyAttack: { itemId: buddy.id, label: `Buddy Attribute (${buddy.name})`, value, foundation }
+  };
+  return useManeuver(actor, maneuver);
 }
 
 /**

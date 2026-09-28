@@ -3,7 +3,8 @@ import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { actionsLeft, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
-import { craftedReading, damageWeapon, weaponAttack, weaponHit, wieldedWeapons } from "./gear.mjs";
+import { activeBuddy, buddyAttribute, buddyHeader, craftedReading, damageWeapon, weaponAttack, weaponHit,
+  wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
   from "./features.mjs";
@@ -2487,6 +2488,7 @@ function onRenderChatMessage(message, html) {
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
+  renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
 }
@@ -3728,7 +3730,7 @@ function beingMovedOn(message, actor) {
 export async function postManeuver(actor, maneuver,
                                    { asOutOfSequence = false, foundation = null,
                                      rapidMovement = false, spent = null, note = "",
-                                     curePoison = null } = {}) {
+                                     curePoison = null, ride = null } = {}) {
   const type = MANEUVER_TYPES[maneuver.type];
   const label = asOutOfSequence ? MANEUVER_TYPES.outOfSequence.label : type.label;
   const cost = (type.action && !asOutOfSequence)
@@ -3754,6 +3756,9 @@ export async function postManeuver(actor, maneuver,
         // Set before the offers are written, so an Exploit provoked by this Movement can
         // be answered by a card that already knows what was paid for.
         ...(rapidMovement ? { [RAPID_FLAG]: { actorUuid: actor.uuid } } : {}),
+        // A Ride Buddy's movement, and who it carried: each has 2(bT) against an Exploit it
+        // provokes.
+        ...(ride ? { [RIDE_FLAG]: ride } : {}),
         // A poison this Maneuver went after without a Clash, waiting on a roll made off
         // the sheet. The card carries who it is on, because by the time the Check is made
         // the only thing that still knows is the card.
@@ -4954,6 +4959,12 @@ const MOMENT_FLAG = "moment";
  * with Rapid Movement on one of them is exactly the case that tells the two apart.
  */
 const RAPID_FLAG = "rapidMovement";
+
+/** A Ride Buddy's movement: who it carried. */
+const RIDE_FLAG = "rideBuddy";
+
+/** Zen-O's Temperament Check at a Combat Round's end, waiting on the ARC. */
+const TEMPERAMENT_FLAG = "zenTemperament";
 
 /**
  * A Movement Maneuver, on its own card: who moved, and what it cost them.
@@ -7236,14 +7247,25 @@ function modifierCategoryShift(modifiers) {
  */
 function modifierStrikeParts(attacker, attack) {
   const tier = attacker.system.tierOfPower ?? 1;
+  const baseTier = attacker.system.baseTierOfPower ?? 1;
 
-  return (attack.modifiers ?? [])
-    .filter(entry => entry.strikePerTier)
-    .map(entry => ({
-      label: entry.name,
-      written: `${entry.strikePerTier > 0 ? "+" : ""}${entry.strikePerTier}(T)`,
-      value: entry.strikePerTier * tier
-    }));
+  return [
+    ...(attack.modifiers ?? [])
+      .filter(entry => entry.strikePerTier)
+      .map(entry => ({
+        label: entry.name,
+        written: `${entry.strikePerTier > 0 ? "+" : ""}${entry.strikePerTier}(T)`,
+        value: entry.strikePerTier * tier
+      })),
+    // And one written in (bT) - a Technique Hermit's.
+    ...(attack.modifiers ?? [])
+      .filter(entry => entry.strikePerBaseTier)
+      .map(entry => ({
+        label: entry.name,
+        written: `${entry.strikePerBaseTier > 0 ? "+" : ""}${entry.strikePerBaseTier}(bT)`,
+        value: entry.strikePerBaseTier * baseTier
+      }))
+  ];
 }
 
 /**
@@ -7256,14 +7278,24 @@ function modifierStrikeParts(attacker, attack) {
  */
 function modifierWoundParts(attacker, attack) {
   const tier = attacker.system.tierOfPower ?? 1;
+  const baseTier = attacker.system.baseTierOfPower ?? 1;
 
-  return (attack.modifiers ?? [])
-    .filter(entry => entry.woundPerTier)
-    .map(entry => ({
-      label: entry.name,
-      written: `${entry.woundPerTier > 0 ? "+" : ""}${entry.woundPerTier}(T)`,
-      value: entry.woundPerTier * tier
-    }));
+  return [
+    ...(attack.modifiers ?? [])
+      .filter(entry => entry.woundPerTier)
+      .map(entry => ({
+        label: entry.name,
+        written: `${entry.woundPerTier > 0 ? "+" : ""}${entry.woundPerTier}(T)`,
+        value: entry.woundPerTier * tier
+      })),
+    ...(attack.modifiers ?? [])
+      .filter(entry => entry.woundPerBaseTier)
+      .map(entry => ({
+        label: entry.name,
+        written: `${entry.woundPerBaseTier > 0 ? "+" : ""}${entry.woundPerBaseTier}(bT)`,
+        value: entry.woundPerBaseTier * baseTier
+      }))
+  ];
 }
 
 /**
@@ -8586,6 +8618,7 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   }
   parts.push(...thresholdPenalty(actor));
   parts.push(...rapidMovementDodge(actor, attack));
+  parts.push(...rideExploitBonus(actor, attack));
   parts.push(...openedAgainst(actor));
   // Your Dodge against somebody you Analyzed. The attacker is named on the attack, which
   // is what makes this answerable from the defender's side.
@@ -8705,7 +8738,12 @@ function analysisBonus(actor, target) {
 
   const tier = Math.max(1, actor.system.tierOfPower ?? 1);
   const scholarship = actor.system.attributes?.scholarship?.mod ?? 0;
-  const quarter = Math.ceil(scholarship / 4);
+  // A Smart Buddy, Active: "you may use your Buddy Attribute instead of Scholarship for its
+  // effects" - whichever gives more, since nobody chooses less.
+  const smart = activeBuddy(Array.from(actor.items ?? []));
+  const own = (smart && (buddyHeader(smart, getTrait, "analysis") === true))
+    ? buddyAttribute(actor.system.baseTierOfPower ?? 1) : -Infinity;
+  const quarter = Math.ceil(Math.max(scholarship, own) / 4);
   const total = tier + quarter;
   if (total <= 0) return [];
 
@@ -8724,6 +8762,128 @@ function thresholdPenalty(actor) {
   return penalty
     ? [{ label: "Thresholds", written: `-${failures}(bT)`, value: -penalty }]
     : [];
+}
+
+/**
+ * A Ride Buddy's "If you are targeted by an Attacking Maneuver through the Exploit Maneuver due
+ * to this movement, increase your Combat Rolls by 2(bT) for the duration of that Attacking
+ * Maneuver" - for whoever it carried, a Cruise Buddy's Allies among them.
+ */
+function rideExploitBonus(actor, attack) {
+  const provoked = attack?.provokedBy;
+  if (!provoked?.messageId) return [];
+  const ride = game.messages?.get(provoked.messageId)?.getFlag(SCOPE, RIDE_FLAG);
+  if (!(ride?.movers ?? []).includes(actor.uuid)) return [];
+  const baseTier = Math.max(1, actor.system.baseTierOfPower ?? 1);
+  return [{ label: "Ride Buddy", written: "+2(bT)", value: 2 * baseTier }];
+}
+
+/**
+ * A Ride Buddy's Buddy Effect: "move a number of Squares in any direction equal to your Buddy
+ * Attribute" - a Movement's card the table moves them by, which may be Exploited. A Cruise Buddy
+ * carries the Allies marked in its Destructive Sphere with them, "(this does not cause
+ * Collision)", and each has the same 2(bT).
+ */
+export async function postRide(actor, buddy, { squares = 0, area = "", movers = [] } = {}) {
+  const movement = getManeuver("movement");
+  if (!movement) return null;
+  const others = movers.filter(uuid => uuid !== actor.uuid);
+  const names = others.map(uuid => fromUuidSync(uuid)?.name).filter(Boolean);
+  const note = `${buddy.name} carries ${actor.name} up to ${squares} Squares in any direction`
+    + (area ? `, and the Allies in its ${area} with them without Collision${names.length
+      ? ` - ${names.join(", ")}` : ""}` : "") + ".";
+  return postManeuver(actor, { ...movement, name: buddy.name, actionCost: 1, kiCost: 0 },
+    { note, ride: { movers: [actor.uuid, ...others] } });
+}
+
+/**
+ * Zen-O's Temperament Check, at the end of a Combat Round he was Active in: "your ARC makes a
+ * Temperament Check, deciding on the temperament of Zen-O depending on what happened during this
+ * Combat Round." A card for the ARC to choose on.
+ */
+export async function postTemperament(actor, buddy) {
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-maneuver"><div class="dbu-maneuver-name">${Handlebars.escapeExpression(buddy.name)}: `
+      + "Temperament Check</div><div class=\"dbu-maneuver-note\">For the ARC, on what happened this Combat Round.</div></div>",
+    flags: { [SCOPE]: { [TEMPERAMENT_FLAG]: { actorUuid: actor.uuid, buddyId: buddy.id, chosen: "" } } }
+  });
+}
+
+/** What each Temperament is, as the card offers it. */
+const TEMPERAMENTS = Object.freeze({
+  angry: { label: "Angry", says: "Zen-O erases the universe and all Characters in it from existence." },
+  bored: { label: "Bored", says: "Zen-O erases every Character in the Battlefield from existence." },
+  annoyed: { label: "Annoyed", says: "" },
+  mildlyInterested: { label: "Mildly Interested", says: "Nothing happens." },
+  entertained: { label: "Entertained", says: "" }
+});
+
+function renderTemperament(message, html) {
+  const check = message.getFlag(SCOPE, TEMPERAMENT_FLAG);
+  if (!check || check.chosen || !game.user.isGM) return;
+  const container = html.querySelector(".message-content") ?? html;
+  for (const [key, temperament] of Object.entries(TEMPERAMENTS)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = temperament.label;
+    button.addEventListener("click", () => settleTemperament(message, key));
+    container.append(button);
+  }
+}
+
+/**
+ * The ARC's Temperament, carried out as far as this system can: Annoyed flips the coin and says
+ * whose side loses someone, then dismisses Zen-O for the Encounter; Entertained raises the Combat
+ * Rolls of whoever the ARC marks - nobody assumed an Ally - for the next Combat Round. Erasing is
+ * the table's.
+ */
+async function settleTemperament(message, key) {
+  const check = message.getFlag(SCOPE, TEMPERAMENT_FLAG);
+  if (!check || check.chosen) return;
+  const owner = fromUuidSync(check.actorUuid);
+  const buddy = owner?.items?.get(check.buddyId);
+  const temperament = TEMPERAMENTS[key];
+  if (!owner || !temperament) return;
+  let said = temperament.says;
+
+  if (key === "entertained") {
+    const everyone = (game.combat?.combatants?.contents ?? []).map(entry => entry.actor)
+      .filter((actor, at, all) => actor && (all.indexOf(actor) === at));
+    const escape = Handlebars.escapeExpression;
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: "Entertained" },
+      content: `<p>Whose Combat Rolls are 1(bT) higher next Combat Round: ${escape(owner.name)} and their Allies.</p>`
+        + everyone.map(actor => `<label class="dbu-wager"><input type="checkbox" name="who" value="${escape(actor.uuid)}" `
+          + `${(actor.uuid === owner.uuid) ? "checked" : ""}/><span>${escape(actor.name)}</span></label>`).join(""),
+      buttons: [{ action: "confirm", label: "Confirm", callback: (event, button, dialog) =>
+        [...dialog.element.querySelectorAll('input[name="who"]:checked')].map(input => input.value) },
+        { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    if (!Array.isArray(chosen)) return;
+    const { setCondition } = await import("./conditions.mjs");
+    for (const uuid of chosen) {
+      const actor = fromUuidSync(uuid);
+      if (!actor) continue;
+      await setCondition(actor, "entertained", 1);
+      await lasting(actor, { kind: KINDS.CONDITION, key: "entertained", edge: EDGES.ROUND, source: "Zen-O" });
+    }
+    said = `Entertained: ${chosen.map(uuid => fromUuidSync(uuid)?.name).filter(Boolean).join(", ") || "nobody"} `
+      + "1(bT) higher on their Combat Rolls this Combat Round.";
+  }
+
+  if (key === "annoyed") {
+    const coin = await new Roll("1d2").evaluate();
+    said = `Annoyed. The coin comes up ${(coin.total === 1) ? "heads: a random Character among "
+      + `${owner.name} and their Allies` : "tails: a random Character among their Opponents"} is erased `
+      + "from existence. Zen-O is dismissed, and cannot be called again this Combat Encounter.";
+    if (buddy) await buddy.update({ "system.buddy.active": false, "system.buddy.locked": true });
+  }
+
+  await message.setFlag(SCOPE, TEMPERAMENT_FLAG, { ...check, chosen: key });
+  await settledNote(message, said || temperament.label);
 }
 
 /**
@@ -8797,6 +8957,7 @@ const DEFENCES = {
       ...chargePenalty(actor, attack),
       ...thresholdPenalty(actor),
       ...openedAgainst(actor),
+      ...rideExploitBonus(actor, attack),
       // With a Weapon: its Size and the Weapon Penalty, chosen when the Parry was.
       ...(defenceFor(attack, actor.uuid)?.parryWith ?? [])
     ], { ...options, slot: "strike" }),

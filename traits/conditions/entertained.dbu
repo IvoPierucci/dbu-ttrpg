@@ -1,0 +1,20 @@
+id: entertained
+name: Entertained
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what an Entertained Zen-O gives, held somewhere with a clock on it.
+combatCondition: no
+source: Core Rule
+description: >
+  Zen-O was Entertained: Combat Rolls 1(bT) higher for this Combat Round.
+text: >
+  Entertained. Increase the Combat Rolls of you and all of your Allies by 1(bT) for the duration
+  of the next Combat Round.
+
+---
+
+# Given at the end of the Combat Round Zen-O was Entertained in, to whoever the ARC marks - the
+# owner and their Allies, nobody assumed - and gone when that next Round ends.
+
+[passive]
+combatRolls += 1(bT);

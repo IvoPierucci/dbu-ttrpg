@@ -161,6 +161,10 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         // Size a Variable one is being wielded at - blank for its own.
         activeCategory: new fields.StringField({ required: true, blank: true, initial: "" }),
         activeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
+        // A Weapon a Shifting Buddy became: its Life Points fixed at the Buddy Attribute, and the
+        // Buddy it is, by its Item id - destroyed with it, and gone at the end of the Round.
+        lifeFixed: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
+        fromBuddy: new fields.StringField({ required: true, blank: true, initial: "" }),
         // A Weapon Poisoned with a Poison Vial's Drop, until the Combat Encounter ends.
         poisoned: new fields.BooleanField({ required: true, initial: false }),
         // A Weapon put away in a Sheath/Holster the character has, by that Accessory's id.

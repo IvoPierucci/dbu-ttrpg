@@ -87,6 +87,21 @@ async function startRound(combat) {
     const { tickCountdowns } = await import("./gear.mjs");
     const { updates } = tickCountdowns(actor.items.filter(item => item.type === "gear"));
     if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+
+    // A Shifting Buddy's Weapon lasts "until the end of the Combat Round".
+    const shifted = actor.items.filter(item => item.system?.crafted?.fromBuddy).map(item => item.id);
+    if (shifted.length) await actor.deleteEmbeddedDocuments("Item", shifted);
+
+    // Zen-O, Active through the Round that just ended: the ARC's Temperament Check.
+    if ((combat.round ?? 0) > 1) {
+      const { activeBuddy, buddyHeader } = await import("./gear.mjs");
+      const { getTrait } = await import("./effects/traits.mjs");
+      const zen = activeBuddy(actor.items.contents);
+      if (zen && (buddyHeader(zen, getTrait, "buddyAction") === "zeno")) {
+        const { postTemperament } = await import("./chat.mjs");
+        await postTemperament(actor, zen);
+      }
+    }
   }
 
   await announce("start-of-round", {

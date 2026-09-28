@@ -294,6 +294,21 @@
         {{#if row.destroyed}}<span class="gear-type">Destroyed</span>{{/if}}
         {{#if row.locked}}<span class="gear-type" data-tooltip="Until the Combat Encounter ends.">Locked</span>{{/if}}
         {{#if row.active}}<span class="gear-type">Active</span>{{/if}}
+        {{#each row.actions as |action|}}
+        <button type="button" class="gear-act" data-action="useBuddy" data-item-id="{{../itemId}}"
+                data-key="{{action.key}}" data-form="{{action.form}}"
+                {{#if action.used}}disabled data-tooltip="Used this Combat Round."{{else}}data-tooltip="{{action.tip}}"{{/if}}>{{action.label}}</button>
+        {{/each}}
+        {{#if row.remote}}
+        {{#if row.canTrigger}}
+        <button type="button" class="gear-act" data-action="remoteGear" data-item-id="{{row.itemId}}"
+                data-tooltip="A Remote Control for every Bomb and Collar of yours. 1 Action.">Trigger</button>
+        {{/if}}
+        {{/if}}
+        {{#if row.grows}}
+        <button type="button" class="gear-act" data-action="growSenzu" data-item-id="{{row.itemId}}"
+                data-tooltip="While Adventuring: 1~4 Months for a Bag of Senzu Beans.">Grow Senzu</button>
+        {{/if}}
         {{#unless row.destroyed}}
         <button type="button" class="gear-act" data-action="callBuddy" data-item-id="{{row.itemId}}"
                 {{#if row.callBlocked}}disabled data-tooltip="{{row.callBlocked}}"{{else}}data-tooltip="An Instant Maneuver, at the start of your turn."{{/if}}>{{#if row.active}}Dismiss{{else}}Call{{/if}}</button>

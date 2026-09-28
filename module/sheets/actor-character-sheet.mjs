@@ -16,7 +16,8 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   grantDoffBonus, topLayerPiece, unequipCost, wieldProblem, WEAPON_SIZES, WEAPON_TYPES,
   MULTI_STORAGE_THROWS, throwsCopies, activeForm, flexibleCategories, variableSizes,
   remoteKinds, remotesAll, remoteCost, snacksLeft, snackKey, drawChanges, emptySheath,
-  buddyLine, buddyHeader, buddyChoiceLabel, callProblem, activeBuddy,
+  buddyLine, buddyHeader, buddyChoiceLabel, callProblem, activeBuddy, buddyActions, buddyUseKey,
+  shiftProblem, rideSquares, rideFits, buddyAttribute,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
 import { HIGH_ENVIRONMENTS, STANDARD_ENVIRONMENT, environmentIdOf, highEnvironment,
@@ -41,6 +42,8 @@ import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
   checkCard,
   difficultyLine,
+  postRide,
+  requestActorUpdate,
   evaluateCheck,
   enterEncounter,
   prepareRoll,
@@ -67,6 +70,7 @@ import {
   escapeGrapple,
   importCoreManeuvers,
   releaseGrapple,
+  useBuddyAttack,
   useOwnedManeuver
 } from "../use-maneuver.mjs";
 import {
@@ -466,6 +470,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       addApparel: DBUCharacterSheet._onAddApparel,
       addWeapon: DBUCharacterSheet._onAddWeapon,
       callBuddy: DBUCharacterSheet._onCallBuddy,
+      useBuddy: DBUCharacterSheet._onUseBuddy,
+      growSenzu: DBUCharacterSheet._onGrowSenzu,
       lockGear: DBUCharacterSheet._onLockGear,
       shrinkGear: DBUCharacterSheet._onShrinkGear,
       unlockGear: DBUCharacterSheet._onUnlockGear,
@@ -2369,11 +2375,202 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       destroyed: Boolean(buddy.destroyed),
       locked: Boolean(buddy.locked),
       callBlocked: buddy.active ? "" : callProblem(items, item),
+      // Its Activated Buddy Effect - and a Shifting Buddy's form's - once a Combat Round.
+      actions: buddyActions(item, getTrait, game.combat?.started ? (game.combat.round ?? 0) : 0)
+        .map(action => ({ ...action, used: Boolean(game.combat?.started)
+          && (this.actor.system.usedManeuvers ?? []).includes(buddyUseKey(item, action.form)),
+          tip: `${action.maneuverType === "instant" ? "An Instant Maneuver" : "A Standard Maneuver"}`
+            + `${action.actionCost ? `, ${action.actionCost} Action` : ""}. Once a Combat Round.` })),
+      // A Senzu Farmer, while Adventuring.
+      grows: (buddyHeader(item, getTrait, "grows") === true) && Boolean(this.actor.system.adventuring)
+        && !buddy.destroyed,
       buddyKind: { greater: "Greater", unique: "Unique" }[String(buddyHeader(item, getTrait, "buddyKind") ?? "")] ?? "",
       choiceLabel: buddyChoiceLabel(item, getTrait, { profiles: PROFILES, skills: DBUCharacterData.SKILLS,
         techniqueName: technique?.name ?? "" }),
       tip: buddyLine(item, getTrait).map(trait => trait.description ?? "").filter(Boolean).join(" ")
     };
+  }
+
+  /**
+   * Use a Buddy's Activated Buddy Effect: "An Activated Buddy Effect can only be used once per
+   * Combat Round and will possess a Maneuver Type and Action Cost." On the owner's turn in a
+   * Combat Encounter, and paid there; out of one, freely.
+   */
+  static async _onUseBuddy(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (item?.system.itemType !== "buddy") return;
+    const actor = this.actor;
+    const inCombat = Boolean(game.combat?.started);
+    const round = inCombat ? (game.combat.round ?? 0) : 0;
+    const form = target.dataset.form === "true";
+    const action = buddyActions(item, getTrait, round).find(each => (each.key === target.dataset.key)
+      && (each.form === form));
+    if (!action) return;
+    const useKey = buddyUseKey(item, action.form);
+    if (inCombat) {
+      if (!isTheirTurn(actor)) {
+        ui.notifications.warn(`${actor.name} can only use ${item.name} on their turn.`);
+        return;
+      }
+      if ((actor.system.usedManeuvers ?? []).includes(useKey)) {
+        ui.notifications.warn(`${item.name} has been used this Combat Round.`);
+        return;
+      }
+    }
+    const baseTier = actor.system.baseTierOfPower ?? 1;
+    const escape = Handlebars.escapeExpression;
+    const say = text => ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+      content: `<div class="dbu-settled-note">${escape(text)}</div>` });
+    // A Standard one's Action, paid on the way in; an Instant's, the Instant rule.
+    const pay = async () => {
+      if (!inCombat) return true;
+      if (action.maneuverType === "instant") {
+        const blocked = whyNotAnotherInstant(actor);
+        if (blocked) {
+          ui.notifications.warn(`${actor.name}: ${blocked}`);
+          return false;
+        }
+        await recordManeuverType(actor, "instant");
+        return true;
+      }
+      if (!await spendActions(actor, action.actionCost)) return false;
+      await recordManeuverType(actor, action.maneuverType);
+      return true;
+    };
+    const pickProfile = async () => {
+      const chosen = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: `${item.name} - Profile` },
+        content: `<select name="pick" class="dbu-gear-pick">${Object.entries(PROFILES).map(([id, profile]) =>
+          `<option value="${escape(id)}">${escape(profile.label)}</option>`).join("")}</select>`,
+        buttons: [{ action: "confirm", label: "Choose", callback: (e, b, dialog) =>
+          dialog.element.querySelector('select[name="pick"]')?.value ?? null }, { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      });
+      return PROFILES[chosen] ? chosen : null;
+    };
+
+    let done = false;
+    if (action.key === "assault") {
+      // Its own Profile, or a Warrior Buddy's Technique; a Shifting Buddy's, chosen now.
+      const buddy = item.system.buddy ?? {};
+      const profile = action.form ? await pickProfile() : buddy.profile;
+      if (action.form && !profile) return;
+      done = await useBuddyAttack(actor, item, { profile: profile ?? "", foundation: action.form ? "" : buddy.foundation,
+        techniqueId: action.form ? "" : buddy.technique });
+    }
+    if (action.key === "heal") {
+      // "Target yourself or an adjacent Ally. That target regains 2d10(bT) Life Points."
+      const who = game.user.targets.first()?.actor ?? actor;
+      if (!await pay()) return;
+      const roll = await new Roll(`${2 * baseTier}d10`).evaluate();
+      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `${item.name}: ${who.name}` });
+      const life = who.system.life;
+      const changes = { "system.life.value": Math.min(life.max, life.value + roll.total) };
+      if (who.isOwner) await who.update(changes);
+      else await requestActorUpdate(who, changes);
+      await say(`${who.name} regains ${Math.min(roll.total, life.max - life.value)} Life Points.`);
+      done = true;
+    }
+    if (action.key === "ride") {
+      // Nimbus: "You can only use the Buddy Effect of this Buddy if you are Pure Good."
+      const needs = buddyHeader(item, getTrait, "needsAlignment");
+      if ((needs !== undefined) && (Number(actor.system.alignment ?? 0) !== Number(needs))) {
+        ui.notifications.warn(`${item.name} only carries the Pure Good.`);
+        return;
+      }
+      const sizes = Object.keys(DBUCharacterData.SIZES);
+      if (!rideFits(item, getTrait, actor.system.size?.key, sizes)) {
+        ui.notifications.warn(`${actor.name} is too big for ${item.name} to carry.`);
+        return;
+      }
+      if (!await pay()) return;
+      const area = String(buddyHeader(item, getTrait, "rideArea") ?? "");
+      const movers = area ? Array.from(game.user.targets).map(token => token.actor?.uuid).filter(Boolean) : [];
+      await postRide(actor, item, { squares: rideSquares(item, getTrait, baseTier), area, movers });
+      done = true;
+    }
+    if (action.key === "shift") {
+      const problem = shiftProblem(actor, item, getTrait, round);
+      if (problem) {
+        ui.notifications.warn(problem);
+        return;
+      }
+      const into = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: `${item.name} - Shift` }, content: "",
+        buttons: [{ action: "weapon", label: "Weapon" }, { action: "ride", label: "Ride Buddy" },
+          { action: "assault", label: "Assault Buddy" }, { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      });
+      if (!["weapon", "ride", "assault"].includes(into)) return;
+      if (!await pay()) return;
+      await item.update({ "system.buddy.shiftedTo": into, "system.buddy.shiftRound": round });
+      if (inCombat) {
+        await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), `encounter:shift.${item.id}`] });
+      }
+      if (into === "weapon") {
+        // "Create a Weapon with a Craftsmanship Grade equal to 1/2 (rounded up) of your base Tier of
+        // Power that you may immediately equip ... this Weapon's Life Points are equal to your
+        // Buddy Attribute." Built on its sheet, and gone at the end of the Combat Round.
+        const data = craftedItemFrom("weapon", actor, getTrait);
+        data.name = `${item.name} (Weapon)`;
+        data.system.crafted.grade = Math.min(5, Math.max(1, Math.ceil(baseTier / 2)));
+        data.system.crafted.lifeFixed = buddyAttribute(baseTier);
+        data.system.crafted.fromBuddy = item.id;
+        data.system.equipped = !wieldProblem(actor.items.contents, { system: { crafted: {} } }, getTrait);
+        const [made] = await actor.createEmbeddedDocuments("Item", [data]);
+        made?.sheet?.render(true);
+      }
+      await say(`${item.name} shifts into ${{ weapon: "a Weapon", ride: "a Ride Buddy", assault: "an Assault Buddy" }[into]} `
+        + "until the end of the Combat Round.");
+      done = true;
+    }
+    if (action.key === "zeno") {
+      // "Target a Character. Make a Persuasion Skill Check with a DC of Grandmaster."
+      const who = game.user.targets.first()?.actor;
+      if (!who) {
+        ui.notifications.warn("Target a Character first.");
+        return;
+      }
+      if (!await pay()) return;
+      await say(`${item.name}: ${actor.name} makes a Persuasion Skill Check against Grandmaster. Success, and `
+        + `${who.name} is erased from existence; failure, and ${actor.name} is.`);
+      await DBUCharacterSheet._onSkillRoll.call(this, event, { dataset: { skill: "persuasion" } });
+      done = true;
+    }
+    if (done && inCombat) {
+      await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), useKey] });
+    }
+  }
+
+  /**
+   * A Senzu Farmer: "While Adventuring, this Buddy may spend 1~4 Months growing Senzu Beans. Gain a
+   * Small Bag of Senzu Beans, but increase the size of the Senzu Beans bag by 1 for every month
+   * spent after the first." The Months are the table's to pass.
+   */
+  static async _onGrowSenzu(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const bag = getTrait("bag-of-senzu-beans");
+    if (!item || !bag || !this.actor.system.adventuring) return;
+    const months = Number(await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${item.name} - Months` }, content: "",
+      buttons: [1, 2, 3, 4].map(n => ({ action: String(n), label: String(n) }))
+        .concat([{ action: "cancel", label: "Cancel" }]),
+      rejectClose: false
+    }));
+    if (!(months >= 1 && months <= 4)) return;
+    const data = gearItemFrom(bag, this.actor);
+    const size = data.system.sizes[Math.min(data.system.sizes.length - 1, months - 1)];
+    if (size) {
+      data.system.size = size.label;
+      data.system.chargesDice = size.dice;
+      const roll = await new Roll(size.dice).evaluate();
+      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${bag.name} (${size.label})` });
+      data.system.charges = Math.max(0, roll.total);
+    }
+    await this.actor.createEmbeddedDocuments("Item", [data]);
+    return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(item.name)} grows a ${Handlebars.escapeExpression(size?.label ?? "")} `
+        + `${Handlebars.escapeExpression(bag.name)} over ${months} Month${months === 1 ? "" : "s"}.</p>` });
   }
 
   /**

@@ -1325,7 +1325,9 @@ function weaponReading(crafted, { getTrait, data = null, baseTier = 1 }) {
   const kind = CRAFTED.weapon;
   const slots = weaponSlots(crafted, { getTrait, data });
   const level = Math.max(1, Number(data?.powerLevel) || 1);
-  const lifeMax = kind.lifeBase + (level * applySlot(slots, "weapon.lifePerLevel", kind.lifePerLevel));
+  // A Shifting Buddy's: "this Weapon's Life Points are equal to your Buddy Attribute".
+  const lifeMax = (Number(crafted.lifeFixed) > 0) ? Number(crafted.lifeFixed)
+    : kind.lifeBase + (level * applySlot(slots, "weapon.lifePerLevel", kind.lifePerLevel));
   const lost = Number(crafted.lifeLost) || 0;
   const type = String(crafted.weaponType ?? "");
   const size = String(activeForm(crafted).size ?? "");
@@ -1382,10 +1384,14 @@ export async function damageWeapon(owner, item, damage, getTrait) {
   if (!taken) return `${item.name} takes no Damage.`;
   const lost = (Number(item.system.crafted.lifeLost) || 0) + taken;
   const left = Math.max(0, reading.lifeMax - lost);
+  // A Shifting Buddy's Weapon, broken: "if it is destroyed, then your Buddy is destroyed".
+  const buddy = (!left && item.system.crafted.fromBuddy)
+    ? Array.from(owner?.items ?? []).find(each => each.id === item.system.crafted.fromBuddy) : null;
   await writeActor(owner, { items: [{ _id: item.id, "system.crafted.lifeLost": lost,
-    ...(left ? {} : { "system.crafted.destroyed": true, "system.equipped": false }) }] });
+    ...(left ? {} : { "system.crafted.destroyed": true, "system.equipped": false }) },
+    ...(buddy ? [{ _id: buddy.id, "system.buddy.destroyed": true, "system.buddy.active": false }] : [])] });
   return left ? `${item.name} loses ${taken} Life Points: ${left}/${reading.lifeMax}.`
-    : `${item.name} loses ${taken} Life Points and breaks.`;
+    : `${item.name} loses ${taken} Life Points and breaks.${buddy ? ` ${buddy.name} is Destroyed.` : ""}`;
 }
 
 /**
@@ -2309,6 +2315,12 @@ export function connectable(items, remote, getTrait = null) {
  * a Controller Weapon, "treated as the Remote Control Basic Item" - what its Effects attune it to.
  */
 export function remoteKinds(item, getTrait = null) {
+  // A Support Buddy, Active: "a Remote Control for any Items/Vehicles/Battle Jackets you possess
+  // that may link with a Remote Control" - the ones in this system.
+  if (item?.system?.itemType === "buddy") {
+    return (item.system.buddy?.active && !item.system.buddy?.destroyed
+      && (buddyHeader(item, getTrait, "remote") === true)) ? REMOTE_LINKS : [];
+  }
   const own = item?.system?.connects ?? [];
   if (own.length || (item?.system?.crafted?.kind !== "weapon")) return own;
   const slots = weaponSlots(item.system.crafted, { getTrait });
@@ -2318,12 +2330,17 @@ export function remoteKinds(item, getTrait = null) {
 
 /** Whether a Controller Weapon reaches every Item of its type: "all Items of that type". */
 export function remotesAll(item, getTrait = null) {
+  if (item?.system?.itemType === "buddy") return remoteKinds(item, getTrait).length > 0;
   return weaponSlots(item?.system?.crafted, { getTrait })["weapon.remoteAll"] === true;
 }
 
+/** What links with a Remote Control in this system: a Bomb, a Collar. */
+export const REMOTE_LINKS = Object.freeze(["bomb", "shock-collar"]);
+
 /** What setting something off from it costs: the Remote Control's own, and an Action for a Weapon. */
 export function remoteCost(item) {
-  return Number(item?.system?.placeCost) || ((item?.system?.crafted?.kind === "weapon") ? 1 : 0);
+  return Number(item?.system?.placeCost)
+    || (((item?.system?.crafted?.kind === "weapon") || (item?.system?.itemType === "buddy")) ? 1 : 0);
 }
 
 /** Whether a Weapon has Quick Draw. */
@@ -2503,6 +2520,67 @@ export function buddyScript(item, getTrait, { baseTier = 1, round = 0, skills = 
       + (ranks.length ? `if (adventuring) {\n${ranks.join("\n")}\n}\n` : "");
   }
   return script;
+}
+
+/**
+ * What a Buddy's row offers to use, with what each costs: its Activated Buddy Effect - once a
+ * Combat Round - and, for a Shifting Buddy that became a Ride or Assault Buddy this Round, that
+ * one's as well. `key` is what it does: assault, heal, ride, shift, zeno.
+ */
+export function buddyActions(item, getTrait, round = 0) {
+  const buddy = item?.system?.buddy ?? {};
+  if (!buddy.active || buddy.destroyed || buddy.locked) return [];
+  const actions = [];
+  const own = String(buddyHeader(item, getTrait, "buddyAction") ?? "");
+  const kind = key => ({
+    assault: { label: "Attack", maneuverType: "standard", actionCost: 1 },
+    heal: { label: "Heal", maneuverType: "standard", actionCost: 1 },
+    ride: { label: "Ride", maneuverType: "standard", actionCost: 1 },
+    shift: { label: "Shift", maneuverType: "instant", actionCost: 0 },
+    zeno: { label: "Erase", maneuverType: "standard", actionCost: 1 }
+  })[key];
+  if (kind(own)) {
+    actions.push({ key: own, form: false, ...kind(own),
+      maneuverType: String(buddyHeader(item, getTrait, "maneuverType") ?? kind(own).maneuverType),
+      actionCost: Number(buddyHeader(item, getTrait, "actionCost") ?? kind(own).actionCost) });
+  }
+  // "Your Buddy can use the Buddy Effect of a Ride Buddy" - or an Assault Buddy's - this Round.
+  if ((own === "shift") && round && (buddy.shiftRound === round) && kind(buddy.shiftedTo)
+    && (buddy.shiftedTo !== "weapon")) {
+    actions.push({ key: buddy.shiftedTo, form: true, ...kind(buddy.shiftedTo) });
+  }
+  return actions;
+}
+
+/** The key a use of a Buddy's Effect is recorded under, for "once per Combat Round". */
+export function buddyUseKey(item, form = false) {
+  return `round:${form ? "buddyform" : "buddy"}.${item?.id ?? ""}`;
+}
+
+/**
+ * Why a Shifting Buddy cannot shift now, or "": "can only use their Buddy Effect 3 times per Combat
+ * Encounter and cannot use their Buddy Effect if they used it during the last Combat Round" - a
+ * Studied Shifting Buddy, `shiftLimit: 0`, neither.
+ */
+export function shiftProblem(actor, item, getTrait, round = 0) {
+  const limit = Number(buddyHeader(item, getTrait, "shiftLimit") ?? 3);
+  if (!limit || !round) return "";
+  const used = (actor?.system?.usedManeuvers ?? []).filter(entry => entry === `encounter:shift.${item.id}`).length;
+  if (used >= limit) return `Shifted ${limit} times this Combat Encounter already.`;
+  if (item.system.buddy?.shiftRound === (round - 1)) return "It shifted last Combat Round.";
+  return "";
+}
+
+/** How far a Ride Buddy - or a Greater one of it - carries its owner: its Buddy Attribute, and more. */
+export function rideSquares(item, getTrait, baseTier = 1) {
+  return buddyAttribute(baseTier) + (Number(buddyHeader(item, getTrait, "rideBonus")) || 0);
+}
+
+/** Whether its owner is small enough to ride it: "Large or lower", a Cruise Buddy's "Gigantic". */
+export function rideFits(item, getTrait, sizeKey, sizes = []) {
+  const most = String(buddyHeader(item, getTrait, "rideSize") ?? "large");
+  const at = sizes.indexOf(sizeKey);
+  return (at < 0) || (at <= sizes.indexOf(most));
 }
 
 /**
