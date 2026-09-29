@@ -698,7 +698,12 @@ export async function postGearClash(thrower, target, item) {
     itemName: item.name,
     condition: clash.condition,
     until: clash.until,
-    hold: clash.hold ?? ""
+    hold: clash.hold ?? "",
+    // The Taser's two steps, and the Recorded Ingenuity they read - carried, so the card does not
+    // need the Item.
+    damage: clash.damage ?? "",
+    second: clash.second ?? "",
+    recorded: Number(item.system.recorded) || 0
   };
 
   // The Taser's "Clash (Strike vs Strike/Dodge)": the Strike Clash the Grapple Check and the
@@ -714,8 +719,11 @@ export async function postGearClash(thrower, target, item) {
             category: "strike",
             clashLabel: "Clash (Strike vs Strike/Dodge)",
             maneuverName: item.name,
-            reason: `Win and ${target.name} is ${condition} until ${until} of ${thrower.name}'s `
-              + "next turn.",
+            reason: clash.second
+              ? `Win and ${target.name} loses ${Number(item.system.recorded) || 0} Life Points (the Recorded `
+                + `Ingenuity), then a Clash (Recorded Ingenuity vs ${clash.second.charAt(0).toUpperCase()}`
+                + `${clash.second.slice(1)}) for ${condition}.`
+              : `Win and ${target.name} is ${condition} until ${until} of ${thrower.name}'s next turn.`,
             challengerUuid: thrower.uuid,
             challengerName: thrower.name,
             defenderUuid: target.uuid,
@@ -760,6 +768,29 @@ async function settleGearClash(message, clash) {
   const { condition, until, itemName } = clash.gearClash;
   if (whoWonClash(clash.result) !== "challenger") {
     await settledNote(message, `${target.name} shrugs off the ${itemName}.`);
+    return;
+  }
+
+  // The Taser's first step: "that Character has their Life Points reduced by the Recorded Ingenuity
+  // and then you make a Clash (Recorded Ingenuity vs Corporeal) against that character."
+  if (clash.gearClash.second && !clash.gearClash.secondStep) {
+    const recorded = Math.max(0, Number(clash.gearClash.recorded) || 0);
+    if (clash.gearClash.damage && recorded) {
+      await reduceLifePoints(target, recorded, { reason: `${itemName}, Recorded Ingenuity` });
+    }
+    const save = clash.gearClash.second;
+    const saveName = `${save.charAt(0).toUpperCase()}${save.slice(1)}`;
+    const name = getTrait(condition)?.name ?? condition;
+    await postSaveClash(thrower, target, {
+      maneuverName: itemName,
+      clashLabel: `Clash (Recorded Ingenuity vs ${saveName})`,
+      reason: `Win and ${target.name} is ${name} until the ${(until === "end") ? "end" : "start"} of `
+        + `${thrower.name}'s next turn.`,
+      saves: [save],
+      // The challenger rolls the Recorded Ingenuity rather than a Saving Throw of their own.
+      valueFor: { [thrower.uuid]: { label: "Recorded Ingenuity", value: recorded } },
+      gearClash: { ...clash.gearClash, applied: false, secondStep: true }
+    });
     return;
   }
 
@@ -5681,6 +5712,9 @@ const CLASH_ROLLS = ({
     family: "save",
 
     of: (actor, clash, uuid) => {
+      // A value one side rolls in place of a Saving Throw - the Taser's Recorded Ingenuity.
+      const own = clash?.valueFor?.[uuid];
+      if (own) return { label: own.label, value: Number(own.value) || 0 };
       const key = savePicked(clash, uuid);
       const save = actor.system.savingThrows[key];
       return { label: save?.label ?? key, value: save?.value ?? 0 };

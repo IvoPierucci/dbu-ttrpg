@@ -2245,7 +2245,12 @@ export function gearItemFrom(definition, actor = null) {
         condition: String(definition.clashCondition ?? "").trim().toLowerCase(),
         until: String(definition.clashUntil ?? "").trim().toLowerCase(),
         // A mark that keeps the Condition from coming off, on the same clock - Tased.
-        hold: String(definition.clashHold ?? "").trim().toLowerCase()
+        hold: String(definition.clashHold ?? "").trim().toLowerCase(),
+        // The Taser's two steps: the first Clash won takes the Recorded Ingenuity off their Life
+        // Points ("recorded"), and a second Clash - the Recorded Ingenuity against this Saving
+        // Throw - is the one that leaves the Condition.
+        damage: String(definition.clashDamage ?? "").trim().toLowerCase(),
+        second: String(definition.clashSecond ?? "").trim().toLowerCase()
       },
 
       // Made at a higher Craft DC for a longer reach - the Expert Taser. Chosen on the Item.

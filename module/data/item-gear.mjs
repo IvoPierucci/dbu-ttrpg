@@ -373,7 +373,11 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         condition: new fields.StringField({ required: true, blank: true, initial: "" }),
         until: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** A mark that keeps the Condition from being removed, on the same clock. */
-        hold: new fields.StringField({ required: true, blank: true, initial: "" })
+        hold: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** "recorded": the first Clash won takes the Recorded Ingenuity off their Life Points. */
+        damage: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** A second Clash, the Recorded Ingenuity against this Saving Throw, for the Condition. */
+        second: new fields.StringField({ required: true, blank: true, initial: "" })
       }),
 
       /** Made at a higher Craft DC for a longer reach, and whether it was - the Taser. */
