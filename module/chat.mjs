@@ -2557,6 +2557,7 @@ function onRenderChatMessage(message, html) {
   renderAfterTheFact(message, html);
   renderCurePoison(message, html);
   renderRepair(message, html);
+  renderGamble(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
@@ -2987,6 +2988,74 @@ async function repairGear(message, repair) {
   await item.update({ "system.crafted.breakLost": lost, "system.crafted.destroyed": false });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${item.name}: ${REPAIR_BREAK_VALUE} Break Value back.`)}</div>` });
+}
+
+/**
+ * Consumed, and the Saving Throw it asks for: "make a Corporeal check against a DC of 10
+ * (increased by double your base Tier of Power)". Rolled from the sheet, where the Base Die, the
+ * critical and the Karmic Effects live; the card states the DC and settles either way.
+ */
+export async function postGamble(actor, item) {
+  const { gambleDC } = await import("./gear.mjs");
+  const gamble = item.system.gamble;
+  const dc = gambleDC(gamble, actor.system.baseTierOfPower);
+  const save = actor.system.savingThrows?.[gamble.save]?.label
+    ?? `${gamble.save.charAt(0).toUpperCase()}${gamble.save.slice(1)}`;
+  const escape = Handlebars.escapeExpression;
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${escape(actor.name)} consumes ${escape(item.name)}: a ${escape(save)} Check against DC `
+      + `${dc}, matched or exceeded. Roll it from the sheet.</p>`,
+    flags: { [SCOPE]: { [GAMBLE_FLAG]: {
+      actorUuid: actor.uuid, itemName: item.name, save, dc, note: item.system.consumeNote ?? "", applied: false
+    } } }
+  });
+}
+
+function renderGamble(message, html) {
+  const gamble = message.getFlag(SCOPE, GAMBLE_FLAG);
+  if (!gamble || gamble.applied) return;
+  const drinker = fromUuidSync(gamble.actorUuid);
+  if (!game.user.isGM && !drinker?.isOwner) return;
+  const at = html.querySelector(".message-content") ?? html;
+  const made = document.createElement("button");
+  made.type = "button";
+  made.className = "dbu-clash-button";
+  made.textContent = "Made it";
+  made.dataset.tooltip = "Life and Ki Points to their maximums.";
+  made.addEventListener("click", () => settleGamble(message, gamble, true));
+  const failed = document.createElement("button");
+  failed.type = "button";
+  failed.className = "dbu-clash-button";
+  failed.textContent = "Failed it";
+  failed.dataset.tooltip = "Life Points to their minimum: Defeated. Dies at once outside a Combat Encounter, "
+    + "or at its end if still Defeated.";
+  failed.addEventListener("click", () => settleGamble(message, gamble, false));
+  at.append(made, failed);
+}
+
+/**
+ * "If you succeed, you gain a stack of the Unlocked Potential Awakening as a Level 1 Temporary
+ * Awakening and have your Life and Ki Points set to their respective maximums. If you fail, your
+ * Life Points are set to their minimum value and you are Defeated. If outside of a Combat Encounter,
+ * you die immediately, but if not, then you will die if you remain Defeated at the end of that Combat
+ * Encounter." There is no record of being dead apart from being Defeated, so the card says it.
+ */
+async function settleGamble(message, gamble, made) {
+  const actor = fromUuidSync(gamble.actorUuid);
+  if (!actor) return;
+  await message.setFlag(SCOPE, GAMBLE_FLAG, { ...gamble, applied: true });
+  if (made) {
+    await actor.update({ "system.life.value": actor.system.life.max, "system.ki.value": actor.system.ki.max });
+    return settledNote(message, `${actor.name} makes it: Life and Ki Points to their maximums`
+      + `${gamble.note ? `, and ${actor.name} ${gamble.note}` : ""}.`);
+  }
+  await reduceLifePoints(actor, Math.max(0, Number(actor.system.life.value) || 0),
+    { reason: `${gamble.itemName}, failed` });
+  const fighting = Boolean(game.combat?.combatants?.some(entry => entry.actor?.uuid === actor.uuid));
+  return settledNote(message, fighting
+    ? `${actor.name} fails: Defeated, and dies if still Defeated at the end of this Combat Encounter.`
+    : `${actor.name} fails: Defeated, and dies - outside a Combat Encounter, at once.`);
 }
 
 function renderCurePoison(message, html) {
@@ -5151,6 +5220,8 @@ const MOVEMENT_FLAG = "movement";
  */
 const CURE_FLAG = "curePoison";
 const REPAIR_FLAG = "repair";
+/** An Item's Saving Throw on being consumed, waiting on the sheet's roll - Ultra Divine Water. */
+const GAMBLE_FLAG = "gamble";
 
 /**
  * An Item left on the ground for whoever moves through it - Caltrops. The card is posted

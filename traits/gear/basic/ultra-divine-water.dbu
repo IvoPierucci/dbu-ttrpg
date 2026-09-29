@@ -1,0 +1,45 @@
+id: ultra-divine-water
+name: Ultra Divine Water
+kind: gear
+tags: food
+# "You can spend 1 Action to consume this Basic Item."
+placeCost: 1
+# Its Details. Consumable: "destroyed once it is used".
+details: food, consumable
+# "Make a Corporeal check against a DC of 10 (increased by double your base Tier of Power)."
+gambleSave: corporeal
+gambleDC: 10
+gamblePerTier: 2
+# Made: "have your Life and Ki Points set to their respective maximums". The Awakening is not
+# here yet: the card says it.
+consumeNote: gains a stack of the Unlocked Potential Awakening as a Level 1 Temporary Awakening
+source: Core Rule
+description: >
+  Drink it for an Action and make a Corporeal Check against DC 10 plus double your base Tier of
+  Power: made, Life and Ki full and a Temporary Awakening; failed, Defeated - and dying.
+text: >
+  Ultra Divine Water:
+  –Details: Food, Consumable
+  –Effects: You can spend 1 Action to consume this Basic Item. If you do, make a Corporeal check
+  against a DC of 10 (increased by double your base Tier of Power – so, at ToP1, the DC would be
+  12, 14 at ToP2, etc). If you succeed, you gain a stack of the Unlocked Potential Awakening as a
+  Level 1 Temporary Awakening and have your Life and Ki Points set to their respective maximums.
+  If you fail, your Life Points are set to their minimum value and you are Defeated. If outside of
+  a Combat Encounter, you die immediately, but if not, then you will die if you remain Defeated at
+  the end of that Combat Encounter.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Consume: 1 Action, and it is used up. A card states the DC - 10 plus twice the drinker's base
+# Tier of Power - and the Corporeal Saving Throw is rolled from the sheet. The card has two
+# buttons. Made: Life and Ki to their maximums, and the card says the Awakening. Failed: Life to
+# nothing (Defeated), and the card says the death - at once outside a Combat Encounter, or at its
+# end if still Defeated.
+#
+# --- What is not built -------------------------------------------------------------------------
+#
+# The Unlocked Potential Awakening, and Temporary Awakenings: Transformations are not in this
+# system yet. And there is no record of being dead apart from being Defeated: the dying is the
+# table's.

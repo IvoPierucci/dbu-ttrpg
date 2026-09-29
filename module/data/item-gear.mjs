@@ -420,6 +420,12 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       consumed: new fields.BooleanField({ required: true, initial: false }),
       /** What consuming it does that the system cannot, said on the card. */
       consumeNote: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** A Saving Throw on consuming it, against its DC plus so much per base Tier - Ultra Divine Water. */
+      gamble: new fields.SchemaField({
+        save: new fields.StringField({ required: true, blank: true, initial: "" }),
+        dc: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        perTier: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      }),
       /** Its Details, as its entry lists them: "technology", "consumable", "device"... */
       details: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { initial: [] }),
 

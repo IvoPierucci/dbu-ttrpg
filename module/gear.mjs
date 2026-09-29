@@ -1760,6 +1760,14 @@ export function craftedItemFrom(kindKey, actor, getTrait) {
  * Whether an Item is destroyed once it is used: Consumable in its Details, read off its own file too,
  * so one given before its entry said so is used up the same way.
  */
+/**
+ * The DC of an Item's Saving Throw for whoever consumes it: "a DC of 10 (increased by double your
+ * base Tier of Power - so, at ToP1, the DC would be 12, 14 at ToP2, etc)".
+ */
+export function gambleDC(gamble, baseTier) {
+  return (Number(gamble?.dc) || 0) + (Number(gamble?.perTier) || 0) * Math.max(1, Number(baseTier) || 1);
+}
+
 export function isConsumable(item, getTrait = null) {
   if (item?.system?.consumed) return true;
   const definition = getTrait?.(item?.system?.gearId ?? "");
@@ -2275,6 +2283,13 @@ export function gearItemFrom(definition, actor = null) {
       // What consuming it does that the system cannot, said on the card - the Performance
       // Enhancer's Doping Enhancement.
       consumeNote: String(definition.consumeNote ?? "").trim(),
+      // A Saving Throw made on consuming it, against a DC of its own plus so much per base Tier of
+      // Power - the Ultra Divine Water's Corporeal check.
+      gamble: {
+        save: String(definition.gambleSave ?? "").trim().toLowerCase(),
+        dc: Number(definition.gambleDC) || 0,
+        perTier: Number(definition.gamblePerTier) || 0
+      },
       heal: {
         dice: String(definition.healDice ?? ""),
         scale: String(definition.healScale ?? ""),

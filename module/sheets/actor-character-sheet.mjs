@@ -1175,7 +1175,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         charges: item.system.charges ?? 0,
         // An Item used up to take Conditions off, and whether it has been this Encounter.
         consumable: ((item.system.removes ?? []).length > 0) || Boolean(item.system.heal?.dice)
-          || Boolean(item.system.heal?.full) || Boolean(item.system.consumeNote),
+          || Boolean(item.system.heal?.full) || Boolean(item.system.consumeNote)
+          || Boolean(item.system.gamble?.save),
         usedUp: Boolean(item.system.oncePerEncounter) && usedThisEncounter(this.actor, item),
         // A Capsule, and what it holds.
         capsule: Boolean(item.system.capsule),
@@ -3182,11 +3183,24 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const heal = tierDice(item?.system.heal, this.actor);
     const note = item?.system.consumeNote ?? "";
     const full = Boolean(item?.system.heal?.full);
-    if (!removes.length && !heal && !note && !full) return;
+
+    const gamble = Boolean(item?.system.gamble?.save);
+    if (!removes.length && !heal && !note && !full && !gamble) return;
 
     if (item.system.oncePerEncounter && usedThisEncounter(this.actor, item)) {
       ui.notifications.warn(`${this.actor.name} has already used a ${item.name} this Combat `
         + "Encounter.");
+      return;
+    }
+
+    // A Saving Throw first, and what comes of it on the card - the Ultra Divine Water.
+    if (gamble) {
+      const { spendActions } = await import("../combat.mjs");
+      if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+      const { postGamble } = await import("../chat.mjs");
+      await postGamble(this.actor, item);
+      const { getTrait } = await import("../effects/traits.mjs");
+      if (isConsumable(item, getTrait)) await item.delete();
       return;
     }
 
