@@ -9,7 +9,7 @@ import { permits } from "./effects/interpreter.mjs";
 import { actionsLeft, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
 import { activeBuddy, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
-  weaponHit, wieldedWeapons } from "./gear.mjs";
+  recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
   from "./features.mjs";
@@ -12013,7 +12013,7 @@ export async function detonateGear(actor, item) {
     kiWager: 0,
     advantages: [],
     damageAttribute: item.system.records
-      ? { label: `${item.name}, ${item.system.records}`, value: item.system.recorded ?? 0 }
+      ? { label: `${item.name}, ${recordedLabel(item.system.records)}`, value: item.system.recorded ?? 0 }
       : null,
     autoHit: detonation.autoHit
   }, { asOutOfSequence: true });

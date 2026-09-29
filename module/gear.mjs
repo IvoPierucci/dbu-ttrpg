@@ -830,7 +830,7 @@ export function thrownAs(item, thrower, getTrait) {
     thrown.destroyed = true;
     thrown.area = { shape: "sphere", magnitude: "minor", centredOnTarget: true };
     thrown.damageAttribute = system.records
-      ? { label: `${item.name}, ${system.records}`, value: system.recorded ?? 0 }
+      ? { label: `${item.name}, ${recordedLabel(system.records)}`, value: system.recorded ?? 0 }
       : null;
   }
   return thrown;
@@ -1908,13 +1908,22 @@ export function triggersOf(definition) {
 /**
  * The modifier an Item records from whoever makes it, or null if it records none.
  *
- * The Bomb: "When you create this Basic Item, record your Scholarship Modifier."
+ * An Attribute's Modifier by its name, or Ingenuity - the Bomb's "Recorded Ingenuity", "equal to
+ * your Scholarship Modifier at the time of creating/modifying an Item".
  */
 export function recordedFrom(definition, actor) {
   const attribute = String(definition?.records ?? "").trim().toLowerCase();
   if (!attribute) return null;
-  const modifier = actor?.system?.attributes?.[attribute]?.mod;
+  const modifier = (attribute === "ingenuity")
+    ? actor?.system?.ingenuity
+    : actor?.system?.attributes?.[attribute]?.mod;
   return Number.isFinite(Number(modifier)) ? Number(modifier) : 0;
+}
+
+/** What a recorded value is called on the card: "Recorded Ingenuity", "Recorded Scholarship". */
+export function recordedLabel(records) {
+  const key = String(records ?? "").trim();
+  return key ? `Recorded ${key.charAt(0).toUpperCase()}${key.slice(1)}` : "";
 }
 
 /**

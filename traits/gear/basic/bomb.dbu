@@ -3,10 +3,11 @@ name: Bomb
 kind: gear
 tags: tech
 craftDC: Qualified
-# "When you create this Basic Item, record your Scholarship Modifier." Recorded when it is
-# given, which is when it is made as far as this system can tell - and editable on the Item,
-# since the one who made it is not always the one holding it.
-records: scholarship
+# "Using the Recorded Ingenuity as its Damage Attribute" - Ingenuity, "equal to your Scholarship
+# Modifier at the time of creating/modifying an Item". Recorded when it is given, which is when it
+# is made as far as this system can tell - and editable on the Item, since the one who made it is
+# not always the one holding it.
+records: ingenuity
 # "Then, select a trigger" - asked when it is given, and changeable on the Item.
 triggers: remote, timed, proximity
 # "By spending 1 Action while adjacent to your chosen position to place the bomb."
@@ -23,8 +24,7 @@ description: >
 text: >
   Bomb [Tech]: An explosive device that you place in a specific location.
   –Craft DC: Qualified
-  –Effects: When you create this Basic Item, record your Scholarship Modifier. Then, select
-  a trigger:
+  –Effects: When you create this Basic Item, select a trigger:
 
   * Remote Controlled. You can trigger this Bomb using a Remote Control Basic Item.
   * Timed. When you place this Bomb, you can select any number of Combat Rounds. This Bomb
@@ -37,9 +37,9 @@ text: >
   spending 1 Action while adjacent to your chosen position to place the bomb.
 
   Once a Bomb is triggered, it uses the Basic Attack Maneuver of the Clearing (Energy)
-  Profile as an Out-of-Sequence Maneuver, using the recorded Scholarship Modifier as its
-  Damage Attribute for this Attacking Maneuver. A Bomb’s Strike Roll for this Attacking
-  Maneuver will automatically succeed.
+  Profile as an Out-of-Sequence Maneuver, using the Recorded Ingenuity as its Damage Attribute
+  for this Attacking Maneuver. A Bomb’s Strike Roll for this Attacking Maneuver will
+  automatically succeed.
 
 ---
 
@@ -47,7 +47,7 @@ text: >
 #
 # The one who placed it, by the table's ruling: their Tier of Power, their Talents and their
 # bonuses all apply, and it counts as one of their attacks this Round. Only the Damage
-# Attribute is the Bomb's - the recorded Scholarship Modifier in place of their Force - and
+# Attribute is the Bomb's - the Recorded Ingenuity in place of their Force - and
 # the Strike lands whatever the defence rolls. No Ki is paid for it: nothing in the entry
 # charges for the Clearing Profile, and the Bomb is what makes the attack.
 #
