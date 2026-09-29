@@ -3,7 +3,7 @@ name: Leader’s Insignia
 kind: crafting
 categoriesExcept: weights
 slots: 1
-prerequisites: Personality Score of 6+
+prerequisites: Personality or Scholarship Score of 6+
 source: Core Rule
 description: >
   Your Minions' Combat Rolls 1(bT) higher; with Team Outfit, your team's Wound Rolls too.
@@ -19,7 +19,7 @@ text: >
   Leader’s Insignia: A symbol of your authority, those who follow you respect and recognize you
   as their leader.
   –Apparel Category: All (Except Weights)
-  –Prerequisites: Personality Score of 6+
+  –Prerequisites: Personality or Scholarship Score of 6+
   –Quality Slots: 1
   –Effects: Increase the Combat Rolls of your Minions by 1(bT). If this piece of Apparel has the
   Team Outfit Quality, increase the Wound Roll of all Allies with the same team name by 1(bT) –
