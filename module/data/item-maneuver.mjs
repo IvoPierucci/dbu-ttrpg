@@ -77,6 +77,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       united: new fields.BooleanField({ required: true, initial: false }),
       /** Answers a heavy attack with a Duel: the Duel Maneuver, played from that attack's Respond. */
       duel: new fields.BooleanField({ required: true, initial: false }),
+      /** Tries to get out of a Duel aimed at one's attack: played from that attack's card. */
+      duelEscape: new fields.BooleanField({ required: true, initial: false }),
       /** Punishes an opening: taking it hands over an Out-of-Sequence Basic Attack. */
       exploit: new fields.BooleanField({ required: true, initial: false }),
       /** Hands Ki Points to the character it is aimed at. */

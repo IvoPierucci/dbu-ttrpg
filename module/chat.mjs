@@ -1,5 +1,5 @@
 import { unitedPending, unitedWoundParts, withJoiner } from "./united-attack.mjs";
-import { duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
+import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
   duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
   woundResourceStacks, woundResources } from "./duel.mjs";
 import { featureDef } from "./technique.mjs";
@@ -472,6 +472,9 @@ async function applyClash(messageId, clash) {
   }
   if (clash.thrownProne && clash.result && !clash.thrownProne.applied) {
     await settleThrownProne(message, clash);
+  }
+  if (clash.duelEscape && clash.result && !clash.duelEscape.applied) {
+    await settleDuelEscape(message, clash);
   }
 }
 
@@ -6777,6 +6780,10 @@ export async function postAttack(actor, target, maneuver,
           // every attack anybody simply chose to make.
           provokedBy,
           actionCost: maneuver.actionCost ?? 1,
+          // Whether it spent its Action Cost at all, and how much Diminishing Offense it counted -
+          // what a Duel Escape gives back.
+          outOfSequence: Boolean(asOutOfSequence),
+          attacksCounted: counts,
           tags: maneuver.tags ?? [],
           // "Do not suffer from... the penalty from Diminishing Offense." Carried on the
           // attack rather than looked up at the Strike Roll: whether this attack was
@@ -10727,7 +10734,16 @@ function duelRows(attack) {
       (${staked("attacker")} wagered) vs ${escape(duel.initiatorName)} ${clash.defender} (${staked("defender")} wagered)
       &middot; ${escape(winner)}${clash.redone ? ", wagers back and redone" : ""}</div>`);
   });
-  if (duelRunning(attack)) {
+  if (duel.escape === "pending") {
+    rows.push(`<div class="dbu-respond-hint">${escape(attack.attackerName)} faces the Duel or tries to escape it.</div>`);
+  }
+  else if (duel.escape === "clash") {
+    rows.push(`<div class="dbu-respond-hint">Duel Escape: the Impulsive Clash is under way.</div>`);
+  }
+  else if (duel.escape === "failed") {
+    rows.push(`<div class="dbu-respond-hint">${escape(attack.attackerName)} could not escape the Duel.</div>`);
+  }
+  if (duelRunning(attack) && !duelEscapeOpen(duel)) {
     const owed = duelWaitingOn(attack);
     rows.push(`<div class="dbu-respond-hint">Next Duel Clash: waiting for ${names(owed)}'s wager${
       owed.length > 1 ? "s" : ""}.</div>`);
@@ -10737,6 +10753,26 @@ function duelRows(attack) {
 
 /** A Wager button for each of this user's characters in the Duel who has not given one. */
 function duelButtons(message, attack, container) {
+  // First the attacker's answer: face it, or the Duel Escape Maneuver.
+  if (attack.duel.escape === "pending") {
+    const attacker = fromUuidSync(attack.attackerUuid);
+    if (!attacker?.isOwner) return;
+    const add = (label, tooltip, onClick) => {
+      const element = document.createElement("button");
+      element.type = "button";
+      element.className = "dbu-clash-button";
+      element.textContent = label;
+      element.dataset.tooltip = tooltip;
+      element.addEventListener("click", onClick);
+      container.append(element);
+    };
+    add("Duel Escape", "1 Counter: an Impulsive Clash against the one who began the Duel. Win and there is no Duel, "
+      + "but your attack is nullified: you regain its Action Cost, and lose its Ki and its wager.",
+      () => escapeDuel(message, attacker));
+    add("Face the Duel", "Go on to the Duel Clashes.", () => answerDuelEscape(message, "declined"));
+    return;
+  }
+  if (duelEscapeOpen(attack.duel)) return;
   const given = new Set((attack.duel.wagers ?? []).map(entry => entry.uuid));
   for (const entry of duelParticipants(attack)) {
     if (given.has(entry.uuid)) continue;
@@ -10825,6 +10861,8 @@ async function enterDuel(message, actor) {
   };
   await giveBack(attacker, own_, Boolean(attack.wagerFromLife));
   for (const entry of attack.united ?? []) await giveBack(fromUuidSync(entry.uuid), Number(entry.wager) || 0);
+  const returned = [{ uuid: attack.attackerUuid, amount: own_, life: Boolean(attack.wagerFromLife) },
+    ...(attack.united ?? []).map(entry => ({ uuid: entry.uuid, amount: Number(entry.wager) || 0, life: false }))];
 
   const duel = {
     initiatorUuid: actor.uuid,
@@ -10837,7 +10875,11 @@ async function enterDuel(message, actor) {
     wagers: [],
     wins: { attacker: 0, defender: 0 },
     total: 0,
-    outcome: null
+    outcome: null,
+    returned,
+    // Duel Escape: the attacker answers first - "pending", "clash" while the Impulsive Clash is out,
+    // then "declined", "failed" or "escaped".
+    escape: "pending"
   };
   await settledNote(message, `${actor.name} answers ${attack.maneuverName} with a Duel (${
     initiating.kind === "power" ? "Power Duel" : initiating.name}).${
@@ -10965,6 +11007,78 @@ async function uniteDuelSide(message, attack, joiner) {
   return requestEdit(message, { type: "attack", attack: { ...fresh, duel: next } });
 }
 
+/** The attacker's answer to a Duel, written on its card. */
+function answerDuelEscape(message, escape) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.duel || attack.duel.outcome) return;
+  return requestEdit(message, { type: "attack", attack: { ...attack, duel: { ...attack.duel, escape } } });
+}
+
+/**
+ * The Duel Escape Maneuver: "Make an Impulsive Clash against that Opponent." 1 Counter Action, and
+ * the Clash is a card of its own; its settle writes the answer back here.
+ */
+async function escapeDuel(message, attacker) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.duel || (attack.duel.escape !== "pending")) return;
+  const initiator = fromUuidSync(attack.duel.initiatorUuid);
+  if (!initiator) return;
+  if (!await spendActions(attacker, 1, "counter")) return;
+  await recordManeuverType(attacker, "counter");
+  await answerDuelEscape(message, "clash");
+  return postSaveClash(attacker, initiator, {
+    maneuverName: "Duel Escape",
+    reason: `${attacker.name} tries to escape ${initiator.name}'s Duel. Win and there is no Duel, but `
+      + `${attack.maneuverName} is nullified.`,
+    saves: ["impulsive"],
+    duelEscape: { attackMessageId: message.id, applied: false }
+  });
+}
+
+/**
+ * The Duel Escape, settled. Won: "you successfully avoid engaging in the Duel Maneuver but your
+ * Attacking Maneuver is nullified and you regain the Action Cost spent (you still lose the Ki Point
+ * Cost of your Maneuver)". Its wager, which the Duel had given back, is taken again, and it comes off
+ * the Diminishing Offense (the user's rulings). Lost: the Duel goes on. A tie is the defender's.
+ */
+async function settleDuelEscape(message, clash) {
+  const record = clash.duelEscape;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, duelEscape: { ...record, applied: true } });
+  const attackMessage = game.messages?.get(record.attackMessageId);
+  const attack = attackMessage?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.duel || attack.duel.outcome) return;
+  const won = whoWonClash(clash.result) === "challenger";
+  if (!won) {
+    await settledNote(message, `${clash.challengerName} cannot get away: the Duel goes on.`);
+    return requestEdit(attackMessage, { type: "attack", attack: { ...attack, duel: { ...attack.duel, escape: "failed" } } });
+  }
+
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const undo = duelEscapeUndo(attack);
+  if (attacker) {
+    await requestActorUpdate(attacker, {
+      ...(undo.actions ? {
+        "system.actionsSpent.standard": Math.max(0, (attacker.system.actionsSpent?.standard ?? 0) - undo.actions),
+        "system.attackActionsThisTurn": Math.max(0, (Number(attacker.system.attackActionsThisTurn) || 0) - undo.actions)
+      } : {}),
+      "system.attacksThisRound": Math.max(0, (Number(attacker.system.attacksThisRound) || 0) - undo.attacksCounted)
+    });
+  }
+  for (const entry of undo.wagers) {
+    const who = fromUuidSync(entry.uuid);
+    if (!who) continue;
+    await requestActorUpdate(who, entry.life
+      ? { "system.life.value": Math.max(0, who.system.life.value - entry.amount),
+          "system.capacity.spent": who.system.capacity.spent + entry.amount }
+      : { "system.ki.value": Math.max(0, who.system.ki.value - entry.amount),
+          "system.capacity.spent": who.system.capacity.spent + entry.amount });
+  }
+  await settledNote(message, `${clash.challengerName} escapes the Duel. ${attack.maneuverName} is nullified: `
+    + `its Action Cost comes back, its Ki and its wager do not.`);
+  return requestEdit(attackMessage, { type: "attack", attack: { ...attack,
+    duel: { ...attack.duel, escape: "escaped", outcome: "escaped" } } });
+}
+
 /**
  * One character's wager for the next Duel Clash. "The opposing Characters should not know of the
  * amount the other Character is Ki Wagering until each Duel Clash begins" - the card says only that it
@@ -10972,7 +11086,7 @@ async function uniteDuelSide(message, attack, joiner) {
  */
 async function submitDuelWager(message, actor) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
-  if (!duelRunning(attack)) return;
+  if (!duelRunning(attack) || duelEscapeOpen(attack.duel)) return;
   if ((attack.duel.wagers ?? []).some(entry => entry.uuid === actor.uuid)) return;
   const side = duelSideOf(attack, actor.uuid);
   if (!side) return;
@@ -12477,6 +12591,8 @@ function renderAttack(message, html) {
     <div class="dbu-clash-result">${endedByDuel(attack)
       ? Handlebars.escapeExpression((attack.duel.outcome === "tie")
         ? `The Duel ended in a tie: everyone in it loses ${duelTieLoss(attack.duel)} Life Points, and the attack is over.`
+        : (attack.duel.outcome === "escaped")
+        ? `${attack.attackerName} escaped the Duel: the attack is nullified.`
         : `${attack.duel.initiatorName} won the Duel: the attack is over.`)
       : attack.unitedFailed
       ? `United Attack: ${Handlebars.escapeExpression(attack.unitedWith?.name ?? "")} did not join - `

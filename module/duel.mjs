@@ -18,6 +18,9 @@ import { compile } from "./effects/parser.mjs";
 /** The Maneuver's own id, as its file names it. */
 export const DUEL_MANEUVER = "duel";
 
+/** The Duel Escape Maneuver's id. */
+export const DUEL_ESCAPE_MANEUVER = "duel-escape";
+
 /** "Whoever wins at least 2 Duel Clashes wins the Duel Maneuver" - of 3. */
 export const DUEL_WINS_NEEDED = 2;
 
@@ -43,6 +46,29 @@ export function duelRunning(attack) {
  */
 export function endedByDuel(attack) {
   return Boolean(attack?.duel?.outcome && (attack.duel.outcome !== "attacker"));
+}
+
+/**
+ * The attacker has not yet said whether they escape. "When an Opponent attempts to initiate a Duel
+ * Maneuver with you as the target, you may attempt to escape" - then, and only then (the user's
+ * ruling), so nothing is wagered until they have answered, or while their Impulsive Clash is out.
+ */
+export function duelEscapeOpen(duel) {
+  return ["pending", "clash"].includes(duel?.escape);
+}
+
+/**
+ * What a successful Duel Escape undoes and takes, for the attacker and those who put a wager on
+ * their attack: "your Attacking Maneuver is nullified and you regain the Action Cost spent (you still
+ * lose the Ki Point Cost of your Maneuver)". The user's rulings: the wager the Duel had given back is
+ * lost again, and the nullified attack comes off their Diminishing Offense.
+ */
+export function duelEscapeUndo(attack) {
+  return {
+    actions: attack?.outOfSequence ? 0 : Math.max(0, Number(attack?.actionCost) || 0),
+    attacksCounted: Math.max(0, Number(attack?.attacksCounted ?? 1) || 0),
+    wagers: (attack?.duel?.returned ?? []).filter(entry => (Number(entry.amount) || 0) > 0)
+  };
 }
 
 /** Whether the first Duel Clash has been rolled or wagered on: nobody joins after that. */

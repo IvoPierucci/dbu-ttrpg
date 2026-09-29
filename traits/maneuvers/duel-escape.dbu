@@ -1,0 +1,27 @@
+id: duel-escape
+name: Duel Escape
+type: counter
+actionCost: 1
+kiCost: 0
+attacking: false
+duelEscape: true
+source: Core Rule
+description: >
+  Answer a Duel begun against your attack with an Impulsive Clash. Win and there is no Duel, but your
+  attack is nullified: its Action Cost comes back, its Ki does not.
+text: >
+  Duel Escape Maneuver: That’s not a match you’ll win. Better to dip.
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter
+  –KP Cost: N/A
+  –Effect: When an Opponent attempts to initiate a Duel Maneuver with you as the target, you may attempt to escape through the Duel Escape Maneuver. Make an Impulsive Clash against that Opponent. If you win, you successfully avoid engaging in the Duel Maneuver but your Attacking Maneuver is nullified and you regain the Action Cost spent (you still lose the Ki Point Cost of your Maneuver).
+
+---
+
+# No script: it runs on the attack's card. When a Duel is begun against an attack, its attacker is
+# asked first - Face the Duel, or Duel Escape (1 Counter, an Impulsive Clash against the initiator).
+# Only then (the user's ruling): nothing is wagered until they have answered.
+#
+# The user's rulings on a won escape: the wager the Duel had given back is lost again (the attacker's
+# and any United Attack joiner's), the initiator keeps nothing of what they paid, and the nullified
+# attack comes off the attacker's Diminishing Offense. The initiator's own count stays.
