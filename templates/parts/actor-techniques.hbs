@@ -34,6 +34,8 @@
           <span class="maneuver-cost" {{#if row.kpTip}}data-tooltip="{{row.kpTip}}"{{/if}}>{{row.kp}} KP</span>
           <button type="button" class="maneuver-control" data-action="editItem" data-item-id="{{row.itemId}}"
                   data-tooltip="Build or change this Technique">&#9998;</button>
+          <button type="button" class="maneuver-control" data-action="deleteTechnique" data-item-id="{{row.itemId}}"
+                  data-tooltip="Delete this Technique">&#10005;</button>
         </div>
         <div class="maneuver-body">
           {{#if row.advantages.length}}

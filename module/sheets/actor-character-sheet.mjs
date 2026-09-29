@@ -467,6 +467,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useManeuver: DBUCharacterSheet._onUseManeuver,
       newTechnique: DBUCharacterSheet._onNewTechnique,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
+      deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
       resetEncounter: DBUCharacterSheet._onResetEncounter,
       enterEncounter: DBUCharacterSheet._onEnterEncounter,
@@ -1616,6 +1617,27 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       encounterCap: ULTIMATES_PER_ENCOUNTER_CAP,
       warnings
     };
+  }
+
+  /**
+   * Delete a Signature Technique. Asked first - a build is a lot to lose to a stray click - and a
+   * charge being held for it is let go of with it, since there is nothing left to throw.
+   */
+  static async _onDeleteTechnique(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
+    const sure = await foundry.applications.api.DialogV2.confirm({
+      window: { title: `Delete ${item.name}` },
+      content: `<p>Delete ${Handlebars.escapeExpression(item.name)}? Its build is lost.</p>`,
+      modal: true,
+      rejectClose: false
+    });
+    if (!sure) return;
+    if (this.actor.system.charging?.maneuverId === item.id) {
+      const { cancelCharge } = await import("../use-maneuver.mjs");
+      await cancelCharge(this.actor);
+    }
+    return item.delete();
   }
 
   /** Detonate a Delayed Technique's Imminent: an Instant Maneuver. */
