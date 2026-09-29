@@ -1909,7 +1909,7 @@ export async function karmicAssault(actor, maneuver, declared) {
   const unchanged = { maneuver, declared };
   if (!declared || !maneuver.signature || maneuver.signatureTechnique) return unchanged;
   if (!(maneuver.ultimate || maneuver.ascended) || maneuver.superProfile) return unchanged;
-  const { allKarmicEffects, spendKarma } = await import("./karma.mjs");
+  const { allKarmicEffects } = await import("./karma.mjs");
   const effect = allKarmicEffects().find(entry => entry.key === "karmic-assault");
   if (!effect || ((Number(actor.system.karma) || 0) < (effect.cost ?? 0))) return unchanged;
 
@@ -1938,20 +1938,35 @@ export async function karmicAssault(actor, maneuver, declared) {
   if (!answer || (answer === "cancel")) return null;
   if (!answer.id || !SUPER_PROFILES[answer.id]) return unchanged;
 
-  if (!await spendKarma(actor, effect)) return unchanged;
+  // Paid once the attack is made, not now (the user's ruling): an attack put away after this costs
+  // no Karma. `payKarmicAssault` settles it when the card exists.
   const second = (answer.id === "multi-profile") ? answer.second : (maneuver.secondProfile ?? "");
   const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
   const ki = superProfileKiPerTier(answer.id, second) * tier;
-  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<div class="dbu-settled-note">${escape(`${actor.name} spends ${effect.cost} Karma: Karmic Assault puts `
-      + `${SUPER_PROFILES[answer.id].label}${(answer.id === "multi-profile") ? ` (${PROFILES[second]?.label ?? second})` : ""} `
-      + `on ${maneuver.name} (+${ki} KP).`)}</div>` });
   const next = { ...maneuver, superProfile: answer.id, secondProfile: second };
   const out = { ...declared, superProfileKi: (Number(declared.superProfileKi) || 0) + ki, karmicAssault: answer.id,
     // "Considered to be of that Profile": Multi-Profile's second hands out what it hands out.
     advantages: (answer.id === "multi-profile")
       ? withGranted(declared.advantages ?? [], PROFILES[second]?.grantsAdvantage) : (declared.advantages ?? []) };
   return { maneuver: next, declared: (answer.id === "multi-profile") ? await wagerAgain(actor, next, declared, out, second) : out };
+}
+
+/**
+ * Karmic Assault, paid: its Karma spent once the attack has been made - "if it completed, the Karma
+ * Points are spent; if not, not" (the user's ruling). Said on the chat as it is paid.
+ */
+export async function payKarmicAssault(actor, maneuver, declared) {
+  if (!declared?.karmicAssault) return false;
+  const { allKarmicEffects, spendKarma } = await import("./karma.mjs");
+  const effect = allKarmicEffects().find(entry => entry.key === "karmic-assault");
+  if (!effect || !await spendKarma(actor, effect)) return false;
+  const label = SUPER_PROFILES[declared.karmicAssault]?.label ?? declared.karmicAssault;
+  const second = (declared.karmicAssault === "multi-profile") ? (PROFILES[maneuver.secondProfile]?.label ?? "") : "";
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${actor.name} spends ${effect.cost} Karma: `
+      + `Karmic Assault puts ${label}${second ? ` (${second})` : ""} on ${maneuver.name}`
+      + ` (+${Number(declared.superProfileKi) || 0} KP).`)}</div>` });
+  return true;
 }
 
 /**
@@ -3437,6 +3452,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   if (card && (actor.getFlag?.("dbu-ttrpg", "finalChance") === "pending")) {
     await actor.setFlag("dbu-ttrpg", "finalChance", card.id);
   }
+  // Karmic Assault's Karma: the attack has been made, so now it is paid.
+  if (card) await payKarmicAssault(actor, maneuver, declared);
 
   // What the Technique does to its user once the card is done: Backlash, Exhaustive, Stat Drain,
   // Powerbomb, All Out.

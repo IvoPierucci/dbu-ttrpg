@@ -17,4 +17,5 @@ text: >
 #
 # The user's rulings: an Ascended Super counts as an Ultimate for it; not on an attack that already
 # has a Super Profile (a Dramatic Finisher's, an Elemental Blade's); the Super Profile's KP is paid;
-# its Prerequisites are read on the final attack as any Super Profile's are.
+# its Prerequisites are read on the final attack as any Super Profile's are; the Karma is spent only
+# once the attack has been made - put away before that, nothing is spent.
