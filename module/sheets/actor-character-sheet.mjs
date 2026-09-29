@@ -90,7 +90,7 @@ import {
   techniqueTPCharged as techniqueTPChargedOf
 } from "../technique.mjs";
 import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-use.mjs";
-import { isConsumable } from "../gear.mjs";
+import { gearKitIngenuity, isConsumable } from "../gear.mjs";
 import {
   exclusiveAttributeGroups,
   raceOptions,
@@ -2198,10 +2198,33 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const definition = offered.find(entry => entry.id === chosen);
     if (!definition) return;
 
-    // "When you create this Basic Item, record your Scholarship Modifier. Then, select a
-    // trigger." Recorded off this character, and the trigger asked now - both can be
-    // changed on the Item afterwards.
+    // What it records off this character, and the trigger asked now - both can be changed on the
+    // Item afterwards.
     const data = gearItemFrom(definition, this.actor);
+
+    // A Device: "records the creator's Ingenuity at its time of creation or, if it is gained from a
+    // Gear Kit, it records a value equal to the Score Limit for your starting Tier of Power." Which
+    // of the two is asked, and the starting Tier with it (the user's ruling).
+    if (data.system.records === "ingenuity") {
+      const kit = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${definition.name} - Recorded Ingenuity` },
+        content: `<p class="dbu-respond-hint">Made by ${escape(this.actor.name)}, it records their Ingenuity
+            (${Number(this.actor.system.ingenuity) || 0}). From a Gear Kit, the Score Limit of their starting Tier of Power.</p>
+          <label class="dbu-wager"><span>Starting Tier of Power</span>
+            <input type="number" name="tier" value="1" min="1" step="1"/>
+            <em>Score Limit 8 at Tier 1, +3 a Tier</em></label>`,
+        buttons: [
+          { action: "made", label: "Made by them" },
+          { action: "kit", label: "From a Gear Kit", callback: (event, button, dialog) =>
+            ({ tier: Number(dialog.element.querySelector('input[name="tier"]')?.value) || 1 }) },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!kit || (kit === "cancel")) return;
+      if (typeof kit === "object") data.system.recorded = gearKitIngenuity(kit.tier);
+    }
 
     // "Upon creating this Basic Item, select an Item ... you possess for it to be connected
     // to." Asked now, among the character's own; refused if there is nothing to connect.

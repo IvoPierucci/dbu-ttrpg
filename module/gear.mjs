@@ -1922,12 +1922,32 @@ export function triggersOf(definition) {
  * your Scholarship Modifier at the time of creating/modifying an Item".
  */
 export function recordedFrom(definition, actor) {
-  const attribute = String(definition?.records ?? "").trim().toLowerCase();
+  const attribute = recordsOf(definition);
   if (!attribute) return null;
   const modifier = (attribute === "ingenuity")
     ? actor?.system?.ingenuity
     : actor?.system?.attributes?.[attribute]?.mod;
   return Number.isFinite(Number(modifier)) ? Number(modifier) : 0;
+}
+
+/**
+ * What an Item records from its maker: its own header, or - a Device - Ingenuity. "A Basic Item with
+ * this Detail records the creator's Ingenuity at its time of creation ... The 'Recorded Ingenuity'
+ * refers to this value."
+ */
+export function recordsOf(definition) {
+  const said = String(definition?.records ?? "").trim().toLowerCase();
+  if (said) return said;
+  return listOf(definition?.details).includes("device") ? "ingenuity" : "";
+}
+
+/**
+ * Device, "gained from a Gear Kit": "it records a value equal to the Score Limit for your starting
+ * Tier of Power" - 8 at Tier 1, 3 more a Tier. The starting Tier is asked when the Item is given
+ * (the user's ruling); this is the Limit it stands for.
+ */
+export function gearKitIngenuity(startingTier = 1) {
+  return 8 + (Math.max(1, Math.floor(Number(startingTier) || 1)) - 1) * 3;
 }
 
 /** What a recorded value is called on the card: "Recorded Ingenuity", "Recorded Scholarship". */
@@ -2033,7 +2053,7 @@ export function gearItemFrom(definition, actor = null) {
       // What an Item that records something from its maker, and goes off, needs to keep.
       // Copied rather than read from the file each time, as everything else here is: the
       // Item is the character's, and the file may change under it.
-      records: String(definition.records ?? "").trim().toLowerCase(),
+      records: recordsOf(definition),
       recorded: recordedFrom(definition, actor),
       triggers,
       trigger: triggers[0] ?? "",

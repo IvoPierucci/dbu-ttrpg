@@ -6,8 +6,10 @@ craftDC: Qualified
 # "The Damage Attribute for that Attacking Maneuver is the Recorded Ingenuity" - the maker's, recorded
 # when it is given, the way the Bomb's is, and editable on the Item.
 records: ingenuity
-# Its Details. Consumable: "destroyed once it is used" - thrown, it is gone.
-details: technology, consumable
+# Its Details. Consumable: "destroyed once it is used" - thrown, it is gone. Device - the Details
+# printed leave it out, but its Effect reads the Recorded Ingenuity, which only a Device records (the
+# user's ruling: the Device was missing).
+details: technology, consumable, device
 source: Core Rule
 description: >
   Thrown with the Throw Maneuver: a Minor Sphere around the target, the Recorded Ingenuity as the
@@ -15,7 +17,7 @@ description: >
 text: >
   Grenade [Tech]: A hand-held explosive that you lob at an enemy.
   –Craft DC: Qualified
-  –Details: Technology, Consumable
+  –Details: Technology, Consumable, Device
   –Effects: When using the Throw Maneuver, that Attacking Maneuver has a Minor Sphere AoE (centered
   on the initial target of this Maneuver) and the Damage Attribute for that Attacking Maneuver is
   the Recorded Ingenuity.
