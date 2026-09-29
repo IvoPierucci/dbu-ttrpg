@@ -1895,6 +1895,67 @@ export function techniqueDefinition(item) {
 }
 
 /**
+ * Karmic Assault (2 Karma): "If you use an Ultimate Signature Technique, you may apply a Super
+ * Profile of your choice to that Attacking Maneuver."
+ *
+ * The user's rulings: asked at declaration; an Ascended Super is an Ultimate for it; not for an attack
+ * that already has a Super Profile (a Dramatic Finisher's, an Elemental Blade's) - one is the most an
+ * attack carries; and the Super Profile's KP is paid. Its Prerequisites are read on the final attack,
+ * as every Super Profile's are. Multi-Profile asks for its second Profile.
+ *
+ * @returns {Promise<?{maneuver: object, declared: object}>} null when the question was put away
+ */
+export async function karmicAssault(actor, maneuver, declared) {
+  const unchanged = { maneuver, declared };
+  if (!declared || !maneuver.signature || maneuver.signatureTechnique) return unchanged;
+  if (!(maneuver.ultimate || maneuver.ascended) || maneuver.superProfile) return unchanged;
+  const { allKarmicEffects, spendKarma } = await import("./karma.mjs");
+  const effect = allKarmicEffects().find(entry => entry.key === "karmic-assault");
+  if (!effect || ((Number(actor.system.karma) || 0) < (effect.cost ?? 0))) return unchanged;
+
+  const escape = Handlebars.escapeExpression;
+  const supers = Object.entries(SUPER_PROFILES).map(([id, entry]) =>
+    `<option value="${id}">${escape(entry.label)} (${entry.kiCostPerTier ?? 0}(T))</option>`).join("");
+  const seconds = Object.entries(PROFILES).filter(([id]) => id !== declared.profile)
+    .map(([id, profile]) => `<option value="${id}">${escape(profile.label)}</option>`).join("");
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${maneuver.name} - Karmic Assault` },
+    content: `<p class="dbu-respond-hint" data-tooltip="${escape(effect.text)}">Karmic Assault: ${effect.cost} Karma for a
+        Super Profile on this Ultimate. Its KP is paid; its Prerequisites still apply.</p>
+      <label class="dbu-wager"><span>Super Profile</span>
+        <select name="super"><option value="">None</option>${supers}</select></label>
+      <label class="dbu-wager" data-tooltip="Only for Multi-Profile"><span>Second Profile</span>
+        <select name="second">${seconds}</select></label>`,
+    buttons: [
+      { action: "confirm", label: "Confirm", callback: (event, button, dialog) => ({
+        id: dialog.element.querySelector('select[name="super"]')?.value ?? "",
+        second: dialog.element.querySelector('select[name="second"]')?.value ?? "" }) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!answer || (answer === "cancel")) return null;
+  if (!answer.id || !SUPER_PROFILES[answer.id]) return unchanged;
+
+  if (!await spendKarma(actor, effect)) return unchanged;
+  const second = (answer.id === "multi-profile") ? answer.second : (maneuver.secondProfile ?? "");
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const ki = superProfileKiPerTier(answer.id, second) * tier;
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${escape(`${actor.name} spends ${effect.cost} Karma: Karmic Assault puts `
+      + `${SUPER_PROFILES[answer.id].label}${(answer.id === "multi-profile") ? ` (${PROFILES[second]?.label ?? second})` : ""} `
+      + `on ${maneuver.name} (+${ki} KP).`)}</div>` });
+  return {
+    maneuver: { ...maneuver, superProfile: answer.id, secondProfile: second },
+    declared: { ...declared, superProfileKi: (Number(declared.superProfileKi) || 0) + ki, karmicAssault: answer.id,
+      // "Considered to be of that Profile": Multi-Profile's second hands out what it hands out.
+      advantages: (answer.id === "multi-profile")
+        ? withGranted(declared.advantages ?? [], PROFILES[second]?.grantsAdvantage) : (declared.advantages ?? []) }
+  };
+}
+
+/**
  * Elemental Blade: "Apply the Multi-Profile Super Profile to any Attacking Maneuvers you use, with
  * the Profile selected for the Multi-Profile Super Profile being the Elemental Profile you selected.
  * If it meets the Prerequisites, also apply the Compressed Element Disadvantage".
@@ -2728,6 +2789,11 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     const bladed = await elementalBlade(actor, maneuver, declared);
     if (!bladed) return false;
     ({ maneuver, declared } = bladed);
+    // Karmic Assault: a Super Profile on an Ultimate, for 2 Karma - asked before the Technique's own
+    // questions, so what the Super Profile asks for (Giga Flare's Actions...) is asked with them.
+    const assaulted = await karmicAssault(actor, maneuver, declared);
+    if (!assaulted) return false;
+    ({ maneuver, declared } = assaulted);
 
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
     // with the declaration, and only where something worn offers one for this attack.

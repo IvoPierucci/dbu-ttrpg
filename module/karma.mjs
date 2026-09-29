@@ -37,6 +37,8 @@ export function allKarmicEffects() {
       // do something on the sheet. Those are marked in the file, and spending the
       // Karma Points and saying so is the whole of what the system should do.
       manual: trait.manual === true,
+      // Taken somewhere else than the Respond dialog - Karmic Assault, when an Ultimate is declared.
+      takenAt: String(trait.takenAt ?? ""),
       // Otherwise, an effect starts with a bracketed header - so that is what says
       // whether one has actually been written.
       written: (trait.manual === true) || /^\s*\[/m.test(trait.script ?? ""),
@@ -64,6 +66,7 @@ export function karmicOptionsFor(actor, message = null) {
     if (already && (already !== effect.key)) blocked = "one Karmic Effect at a time";
     else if (already === effect.key) blocked = "already applied";
     else if (!effect.written) blocked = "not written yet";
+    else if (effect.takenAt) blocked = effect.takenAt;
     else if ((cost !== null) && (karma < cost)) blocked = `needs ${cost} Karma`;
     else if ((cost === null) && (karma < 1)) blocked = "needs at least 1 Karma";
 

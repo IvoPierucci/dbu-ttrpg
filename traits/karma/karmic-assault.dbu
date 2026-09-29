@@ -3,6 +3,7 @@ name: Karmic Assault
 kind: karma
 cost: 2
 manual: yes
+takenAt: offered when an Ultimate Signature Technique is declared
 description: >
   With every fiber of your being, you push a ton of extra power into your attack.
 text: >
@@ -11,8 +12,9 @@ text: >
 
 ---
 
-# No script. Ultimate Signature Techniques and Super Profiles are not in
-# the system yet, so there is nothing to write against - when they arrive
-# this becomes a triggered effect on declare-maneuver.
-# Marked manual so it is offered rather than greyed out: the table can
-# apply the Super Profile by hand and the Karma is still spent.
+# No script: it is asked in code when an Ultimate Signature Technique is declared (use-maneuver.mjs
+# `karmicAssault`), and shown greyed in the Respond dialog with where it is taken.
+#
+# The user's rulings: an Ascended Super counts as an Ultimate for it; not on an attack that already
+# has a Super Profile (a Dramatic Finisher's, an Elemental Blade's); the Super Profile's KP is paid;
+# its Prerequisites are read on the final attack as any Super Profile's are.

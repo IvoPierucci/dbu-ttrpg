@@ -2795,6 +2795,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
     // Elemental Blade's Multi-Profile, paid on the attack (the user's ruling) - less the Super
     // Profile it stood in for, where the Technique had one.
     cost += Number(declared?.multiProfileKi) || 0;
+    // Karmic Assault's Super Profile, paid as any Super Profile is (the user's ruling).
+    cost += Number(declared?.superProfileKi) || 0;
     // Back Flip: "If this Attacking Maneuver has the Charging Assault Advantage ... the KP Cost of
     // this Maneuver is reduced by 1(T)" - a discount on the use, which may go under the Profile.
     const features = declared?.advantages ?? maneuver.advantages ?? [];
