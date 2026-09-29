@@ -1,0 +1,22 @@
+id: sealing-bottle
+name: Sealing Bottle
+kind: gear
+craftDC: Expert
+source: Core Rule
+description: >
+  A small, leak-proof bottle. It can hold what the Sealing Unique Ability seals, with no Sealing
+  Talisman - 1 Action to seal it.
+text: >
+  Sealing Bottle: A small, leak-proof bottle designed for long-term storage.
+  –Craft DC: Expert
+  –Details: N/A
+  –Effects: A bottle that can be used to hold a small amount of liquid. Additionally, it can be
+  used for the Sealing Unique Ability. This Item doesn’t require the Sealing Talisman, but you
+  still must spend 1 Action to seal the Item.
+
+---
+
+# --- What is not built -------------------------------------------------------------------------
+#
+# What it is for: the Sealing Unique Ability, and the Sealing Talisman it spares. Unique Abilities
+# are not in this system yet; until they are it is an entry the table reads.
