@@ -824,10 +824,10 @@ export function thrownAs(item, thrower, getTrait) {
     thrown.mightClash = piece["piece.thrownMightClash"] === true;
   }
   // "That Attacking Maneuver has a Minor Sphere AoE (centered on the initial target of this
-  // Maneuver) and the Damage Attribute for that Attacking Maneuver is the Scholarship
-  // Modifier recorded ... but this Basic Item is destroyed after concluding the Maneuver."
+  // Maneuver) and the Damage Attribute for that Attacking Maneuver is the Recorded Ingenuity" - and,
+  // Consumable, "destroyed once it is used".
   if (system.gearId === "grenade") {
-    thrown.destroyed = true;
+    thrown.destroyed = isConsumable(item, getTrait);
     thrown.area = { shape: "sphere", magnitude: "minor", centredOnTarget: true };
     thrown.damageAttribute = system.records
       ? { label: `${item.name}, ${recordedLabel(system.records)}`, value: system.recorded ?? 0 }
@@ -1756,6 +1756,16 @@ export function craftedItemFrom(kindKey, actor, getTrait) {
 }
 
 /** A list header, from one value or several. */
+/**
+ * Whether an Item is destroyed once it is used: Consumable in its Details, read off its own file too,
+ * so one given before its entry said so is used up the same way.
+ */
+export function isConsumable(item, getTrait = null) {
+  if (item?.system?.consumed) return true;
+  const definition = getTrait?.(item?.system?.gearId ?? "");
+  return (definition?.consumed === true) || listOf(definition?.details).includes("consumable");
+}
+
 function listOf(raw) {
   const list = Array.isArray(raw) ? raw : String(raw ?? "").split(",");
   return list.map(entry => String(entry).trim().toLowerCase()).filter(Boolean);
@@ -2240,7 +2250,10 @@ export function gearItemFrom(definition, actor = null) {
         ki: definition.healKi === true
       },
       oncePerEncounter: definition.oncePerEncounter === true,
-      consumed: definition.consumed === true,
+      // Consumable: "A Basic Item with this Detail is destroyed once it is used" - the Details line,
+      // or the header that said so before there was one.
+      details: listOf(definition.details),
+      consumed: (definition.consumed === true) || listOf(definition.details).includes("consumable"),
 
       // What an Item left on the ground does to whoever moves through it - Caltrops.
       hazard: {

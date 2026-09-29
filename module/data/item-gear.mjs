@@ -409,6 +409,8 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       oncePerEncounter: new fields.BooleanField({ required: true, initial: false }),
       /** Used up when it is used. */
       consumed: new fields.BooleanField({ required: true, initial: false }),
+      /** Its Details, as its entry lists them: "technology", "consumable", "device"... */
+      details: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { initial: [] }),
 
       /** What it does to whoever moves through it, once it is on the ground - Caltrops. */
       hazard: new fields.SchemaField({

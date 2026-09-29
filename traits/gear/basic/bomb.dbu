@@ -8,6 +8,8 @@ craftDC: Qualified
 # is made as far as this system can tell - and editable on the Item, since the one who made it is
 # not always the one holding it.
 records: ingenuity
+# Its Details. Consumable: "destroyed once it is used" - gone once it has gone off.
+details: technology, consumable, device
 # "Then, select a trigger" - asked when it is given, and changeable on the Item.
 triggers: remote, timed, proximity
 # "By spending 1 Action while adjacent to your chosen position to place the bomb."
@@ -22,8 +24,9 @@ description: >
   An explosive you place and set off later: by remote, on a timer, or when someone steps
   near it.
 text: >
-  Bomb [Tech]: An explosive device that you place in a specific location.
+  Bomb: An explosive device that you place in a specific location.
   –Craft DC: Qualified
+  –Details: Technology, Consumable, Device
   –Effects: When you create this Basic Item, select a trigger:
 
   * Remote Controlled. You can trigger this Bomb using a Remote Control Basic Item.
@@ -64,5 +67,5 @@ text: >
 # Timed is counted: at the start of each Combat Round a placed Bomb on a timer comes one Round
 # closer, and when its Rounds have passed the Round's card offers to set it off.
 #
-# It stays on the character after it goes off, and the player takes it off - the entry does
-# not say it is used up.
+# Consumable: gone from the character once its attack is made. Technology and Device have no rules
+# here yet.

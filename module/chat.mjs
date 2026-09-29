@@ -11987,8 +11987,8 @@ function renderMoment(message, html) {
  * paid: the Bomb makes it.
  *
  * The first one it catches is the one targeted; the rest of the Sphere are added from the
- * card, as for any Clearing attack. The Item stays, taken out of play, for the player to
- * remove.
+ * card, as for any Clearing attack. A Consumable one - "destroyed once it is used" - is gone once
+ * its attack is made; any other stays, taken out of play.
  */
 export async function detonateGear(actor, item) {
   const detonation = item?.system?.detonation;
@@ -12016,7 +12016,11 @@ export async function detonateGear(actor, item) {
       ? { label: `${item.name}, ${recordedLabel(item.system.records)}`, value: item.system.recorded ?? 0 }
       : null,
     autoHit: detonation.autoHit
-  }, { asOutOfSequence: true });
+  }, { asOutOfSequence: true }).then(async card => {
+    const { isConsumable } = await import("./gear.mjs");
+    if (card && isConsumable(item, getTrait)) await item.delete();
+    return card;
+  });
 }
 
 /**

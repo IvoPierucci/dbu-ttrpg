@@ -90,6 +90,7 @@ import {
   techniqueTPCharged as techniqueTPChargedOf
 } from "../technique.mjs";
 import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-use.mjs";
+import { isConsumable } from "../gear.mjs";
 import {
   exclusiveAttributeGroups,
   raceOptions,
@@ -3173,13 +3174,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
       content: `<p>${Handlebars.escapeExpression(this.actor.name)} ${
-        item.system.consumed ? "consumes" : "uses"} ${Handlebars.escapeExpression(item.name)}${
+        isConsumable(item, getTrait) ? "consumes" : "uses"} ${Handlebars.escapeExpression(item.name)}${
         names.length
           ? `, and is no longer ${Handlebars.escapeExpression(names.join(" or "))}`
           : ""}.</p>`
     });
 
-    if (item.system.consumed) await item.delete();
+    if (isConsumable(item, getTrait)) await item.delete();
   }
 
   /**
