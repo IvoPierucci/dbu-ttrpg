@@ -1,0 +1,28 @@
+id: rice-cooker
+name: Rice Cooker
+kind: gear
+tags: tech
+craftDC: Apprentice
+# Its Details.
+details: technology
+source: Core Rule
+description: >
+  Cooks rice: while Adventuring, 1 Hour and 1 Ingredient make a Snack, once a Session. It can
+  also hold what the Sealing Unique Ability seals.
+text: >
+  Rice Cooker [Tech]: An electric pot designed to cook rice to delicious perfection.
+  –Craft DC: Apprentice
+  –Details: Technology
+  –Effects: This item can cook rice. While Adventuring, you can spend 1 Hour and 1 Ingredient to
+  produce a Snack Basic Item (this is considered an Adventuring Maneuver with a Session Limit of
+  1). Additionally, it can be used as a container for the Sealing Unique Ability. While acting as
+  a container, it cannot produce the Snack Basic Item through its effects.
+
+---
+
+# --- What is not built -------------------------------------------------------------------------
+#
+# Everything it does, each waiting on a system that is not here yet: the Adventuring Maneuver that
+# makes the Snack (Adventuring, its Hours and its Session Limit), the Ingredient it uses, and the
+# Sealing Unique Ability it can hold. Until then it is an entry the table reads, and a Snack it makes
+# is given from the Gear tab.
