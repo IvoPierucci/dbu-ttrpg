@@ -268,7 +268,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     stealth:          { label: "Stealth",          attribute: "agility" },
     thievery:         { label: "Thievery",         attribute: "agility" },
 
-    craft:            { label: "Craft",            attribute: "scholarship", required: true, encompassing: true },
+    // Its Specialties are a list the entry names: "Basic Item ... Apparel ... Weapons ... Vehicles".
+    // Any number of them, ticked (the user's ruling), kept in the same field a written
+    // specialisation is.
+    craft:            { label: "Craft",            attribute: "scholarship", required: true, encompassing: true,
+                        specialties: { basic: "Basic Item", apparel: "Apparel", weapons: "Weapons", vehicles: "Vehicles" } },
     investigation:    { label: "Investigation",    attribute: "scholarship",
                         specialManeuver: "analysis" },
     knowledge:        { label: "Knowledge",        attribute: "scholarship", encompassing: true },
@@ -836,6 +840,24 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     return DBUCharacterData.isLevel1SkillImprovement(entry)
       ? DBUCharacterData.SKILL_IMPROVEMENT_TP_LEVEL_1
       : DBUCharacterData.SKILL_IMPROVEMENT_TP;
+  }
+
+  /**
+   * The Specialties held of a Skill that lists them, off its stored field: keys, comma-separated. A
+   * name written before the list existed ("Apparel") is read as the one it names.
+   */
+  static specialtiesHeld(skill, stored) {
+    const known = Object.entries(skill?.specialties ?? {});
+    const wanted = new Set(String(stored ?? "").split(",").map(each => each.trim().toLowerCase()).filter(Boolean)
+      .map(each => known.find(([key, label]) => (key === each) || (label.toLowerCase() === each))?.[0])
+      .filter(Boolean));
+    // In the entry's own order, however they were stored.
+    return known.map(([key]) => key).filter(key => wanted.has(key));
+  }
+
+  /** Those Specialties by name, for the Skill's roll: "Apparel, Weapons". */
+  static specialtyLabels(skill, stored) {
+    return DBUCharacterData.specialtiesHeld(skill, stored).map(key => skill.specialties[key]).join(", ");
   }
 
   /** Skill rank slots a progression row offers: 6 for the Level 1 slot, 4 otherwise. */
@@ -1953,7 +1975,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // Slot and Skills are settled before it runs. Starts as the Bonus, since
         // that is what it is a modification of.
         roll: 0,
-        specialization: skill.encompassing ? this.skillSpecializations[key] : "",
+        specialization: skill.encompassing
+          ? (skill.specialties ? DBUCharacterData.specialtyLabels(skill, this.skillSpecializations[key])
+            : this.skillSpecializations[key])
+          : "",
+        // A Skill whose Specialties the entry lists: each one, and whether it is held.
+        specialties: skill.specialties ? Object.entries(skill.specialties).map(([value, label]) => ({
+          value, label, held: DBUCharacterData.specialtiesHeld(skill, this.skillSpecializations[key]).includes(value)
+        })) : null,
         // A Required Skill with no Ranks cannot be rolled at all - it always fails.
         untrained: Boolean(skill.required) && (ranks === 0),
         overCap: ranks > rankCap

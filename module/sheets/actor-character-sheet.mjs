@@ -462,6 +462,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollAttribute: DBUCharacterSheet._onAttributeRoll,
       dbuChangeTab: DBUCharacterSheet._onChangeTab,
       rollSkill: DBUCharacterSheet._onSkillRoll,
+      toggleSpecialty: DBUCharacterSheet._onToggleSpecialty,
       rollSave: DBUCharacterSheet._onSaveRoll,
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
@@ -1674,6 +1675,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * Attributes themselves are listed. Force and Tenacity govern none, so they are
    * left out rather than shown empty.
    */
+  /** A listed Specialty ticked or unticked: the Skill's field holds the keys, comma-separated. */
+  static async _onToggleSpecialty(event, target) {
+    const key = target.dataset.skill;
+    const skill = DBUCharacterData.SKILLS[key];
+    if (!skill?.specialties) return;
+    const held = new Set(DBUCharacterData.specialtiesHeld(skill, this.actor.system.skillSpecializations?.[key]));
+    if (target.checked) held.add(target.dataset.specialty);
+    else held.delete(target.dataset.specialty);
+    const ordered = Object.keys(skill.specialties).filter(each => held.has(each));
+    return this.actor.update({ [`system.skillSpecializations.${key}`]: ordered.join(",") });
+  }
+
   _prepareSkillGroups(workings = {}) {
     // Each Skill carries the table for its own roll. The roll, not the Bonus: what the
     // sheet shows is what the button rolls, and the Bonus is a row inside it.

@@ -72,7 +72,16 @@
             {{#if skill.required}}<span class="skill-flag" data-tooltip="Required: cannot be rolled without at least one Rank">R</span>{{/if}}
           </span>
 
-          {{#if skill.encompassing}}
+          {{#if skill.specialties}}
+          {{! The Specialties the entry lists, ticked - any number of them. }}
+          <span class="skill-specialties">
+            {{#each skill.specialties as |specialty|}}
+            <label class="skill-specialty" data-tooltip="{{specialty.label}} Specialty">
+              <input type="checkbox" data-action="toggleSpecialty" data-skill="{{skill.key}}" data-specialty="{{specialty.value}}"
+                     {{#if specialty.held}}checked{{/if}}/>{{specialty.label}}</label>
+            {{/each}}
+          </span>
+          {{else if skill.encompassing}}
           <input type="text" class="skill-specialization" placeholder="specialisation"
                  name="system.skillSpecializations.{{skill.key}}" value="{{skill.specialization}}"/>
           {{/if}}
