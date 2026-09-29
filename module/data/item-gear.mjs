@@ -409,6 +409,8 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       oncePerEncounter: new fields.BooleanField({ required: true, initial: false }),
       /** Used up when it is used. */
       consumed: new fields.BooleanField({ required: true, initial: false }),
+      /** What consuming it does that the system cannot, said on the card. */
+      consumeNote: new fields.StringField({ required: true, blank: true, initial: "" }),
       /** Its Details, as its entry lists them: "technology", "consumable", "device"... */
       details: new fields.ArrayField(new fields.StringField({ required: true, blank: false }), { initial: [] }),
 

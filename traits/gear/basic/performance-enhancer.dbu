@@ -1,0 +1,33 @@
+id: performance-enhancer
+name: Performance Enhancer
+kind: gear
+tags: med
+craftDC: Master
+# "Spend an Action to consume this Basic Item."
+placeCost: 1
+# Its Details. Consumable: "destroyed once it is used".
+details: medicine, consumable
+# What consuming it does, said on the card: there are no Transformations here yet, so entering the
+# Enhancement is the table's.
+# No comma in it: a header splits on commas.
+consumeNote: enters the Doping Enhancement (even without access to it)
+source: Core Rule
+description: >
+  Consume it for an Action: you enter the Doping Enhancement, even without access to it.
+text: >
+  Performance Enhancer [Med]: A powerful medication that improves your athletic prowess.
+  –Craft DC: Master
+  –Details: Medicine, Consumable
+  –Effects: Spend an Action to consume this Basic Item and enter the Doping Enhancement (even if
+  you do not have access to it).
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Consume: 1 Action, the card says they enter the Doping Enhancement, and it is used up.
+#
+# --- What is not built -------------------------------------------------------------------------
+#
+# The Doping Enhancement itself: Transformations are not in this system yet. Entering it is the
+# table's until they are.

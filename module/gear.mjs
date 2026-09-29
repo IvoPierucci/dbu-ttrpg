@@ -2263,6 +2263,9 @@ export function gearItemFrom(definition, actor = null) {
       // An Item used up to take Conditions off, or to heal - the Longevity Supplement,
       // Medicine.
       removes: listOf(definition.removes),
+      // What consuming it does that the system cannot, said on the card - the Performance
+      // Enhancer's Doping Enhancement.
+      consumeNote: String(definition.consumeNote ?? "").trim(),
       heal: {
         dice: String(definition.healDice ?? ""),
         scale: String(definition.healScale ?? ""),

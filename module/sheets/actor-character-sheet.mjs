@@ -1170,7 +1170,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         draws: Boolean(item.system.storesDrain) && ((item.system.charges ?? 0) > 0),
         charges: item.system.charges ?? 0,
         // An Item used up to take Conditions off, and whether it has been this Encounter.
-        consumable: ((item.system.removes ?? []).length > 0) || Boolean(item.system.heal?.dice),
+        consumable: ((item.system.removes ?? []).length > 0) || Boolean(item.system.heal?.dice)
+          || Boolean(item.system.consumeNote),
         usedUp: Boolean(item.system.oncePerEncounter) && usedThisEncounter(this.actor, item),
         // A Capsule, and what it holds.
         capsule: Boolean(item.system.capsule),
@@ -3175,7 +3176,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const removes = item?.system.removes ?? [];
     // Medicine: "regain 2d10(bT) Life Points", with the base Tier of whoever takes it.
     const heal = tierDice(item?.system.heal, this.actor);
-    if (!removes.length && !heal) return;
+    const note = item?.system.consumeNote ?? "";
+    if (!removes.length && !heal && !note) return;
 
     if (item.system.oncePerEncounter && usedThisEncounter(this.actor, item)) {
       ui.notifications.warn(`${this.actor.name} has already used a ${item.name} this Combat `
@@ -3185,7 +3187,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // Not used up for nothing. Something that heals always might.
     const held = removes.filter(key => (Number(this.actor.system.conditions?.[key]) || 0) > 0);
-    if (!held.length && !heal) {
+    if (!held.length && !heal && !note) {
       ui.notifications.info(`${this.actor.name} has nothing for the ${item.name} to take off.`);
       return;
     }
@@ -3229,7 +3231,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         isConsumable(item, getTrait) ? "consumes" : "uses"} ${Handlebars.escapeExpression(item.name)}${
         names.length
           ? `, and is no longer ${Handlebars.escapeExpression(names.join(" or "))}`
-          : ""}.</p>`
+          : ""}${note ? `, and ${Handlebars.escapeExpression(note)}` : ""}.</p>`
     });
 
     if (isConsumable(item, getTrait)) await item.delete();
