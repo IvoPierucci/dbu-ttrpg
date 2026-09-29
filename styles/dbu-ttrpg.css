@@ -484,10 +484,11 @@
 .dbu-ttrpg .sheet-tabs > .item:nth-child(3) { grid-area: 1 / 5 / auto / span 2; }
 .dbu-ttrpg .sheet-tabs > .item:nth-child(4) { grid-area: 1 / 7 / auto / span 2; }
 .dbu-ttrpg .sheet-tabs > .item:nth-child(5) { grid-area: 1 / 9 / auto / span 2; }
-.dbu-ttrpg .sheet-tabs > .item:nth-child(6) { grid-area: 2 / 2 / auto / span 2; }
-.dbu-ttrpg .sheet-tabs > .item:nth-child(7) { grid-area: 2 / 4 / auto / span 2; }
-.dbu-ttrpg .sheet-tabs > .item:nth-child(8) { grid-area: 2 / 6 / auto / span 2; }
-.dbu-ttrpg .sheet-tabs > .item:nth-child(9) { grid-area: 2 / 8 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(6) { grid-area: 2 / 1 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(7) { grid-area: 2 / 3 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(8) { grid-area: 2 / 5 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(9) { grid-area: 2 / 7 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(10) { grid-area: 2 / 9 / auto / span 2; }
 
 .dbu-ttrpg .tab.active {
   display: block;
@@ -2758,9 +2759,10 @@
   cursor: default;
 }
 
-/* --- Standing (Biography) ------------------------------------------------- */
+/* --- Standing (Biography), and the Adventure tab's --------------------------- */
 
-.dbu-ttrpg .bio-standing {
+.dbu-ttrpg .bio-standing,
+.dbu-ttrpg .adventure-standing {
   display: flex;
   flex-direction: column;
   gap: 8px;

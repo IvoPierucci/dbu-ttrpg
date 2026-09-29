@@ -556,6 +556,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       scrollable: [""]
     },
     gear: { template: "systems/dbu-ttrpg/templates/parts/actor-gear.hbs", scrollable: [""] },
+    adventure: {
+      template: "systems/dbu-ttrpg/templates/parts/actor-adventure.hbs",
+      scrollable: [""]
+    },
     progression: {
       template: "systems/dbu-ttrpg/templates/parts/actor-progression.hbs",
       scrollable: [""]
@@ -658,6 +662,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Beside the Combat tab's values rather than inside them: four lists of rows that each open
     // to a published entry is most of a page on its own.
     maneuvers: { id: "maneuvers", group: "primary", label: "Maneuvers" },
+    // Time outside a Combat Encounter: the Adventure rules.
+    adventure: { id: "adventure", group: "primary", label: "Adventure" },
     biography: { id: "biography", group: "primary", label: "Biography" },
     progression: { id: "progression", group: "primary", label: "Progression" }
   };

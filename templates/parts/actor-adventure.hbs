@@ -1,0 +1,13 @@
+<div class="tab {{tabs.adventure.cssClass}}" data-group="primary" data-tab="adventure">
+
+  {{! Everything that is time spent outside a Combat Encounter. }}
+  <section class="panel adventure-standing">
+    <h3 class="panel-title">Adventure</h3>
+
+    <label class="bio-toggle"
+           data-tooltip="Out of a Combat Encounter. Off when one starts, on again when it ends. A Buddy's Adventure Effect applies while it is on.">
+      <input type="checkbox" name="system.adventuring" {{#if system.adventuring}}checked{{/if}}/>
+      Adventuring
+    </label>
+  </section>
+</div>
