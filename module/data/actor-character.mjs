@@ -271,7 +271,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Its Specialties are a list the entry names: "Basic Item ... Apparel ... Weapons ... Vehicles".
     // Any number of them, ticked (the user's ruling), kept in the same field a written
     // specialisation is.
+    // "Special Maneuver: You gain access to the Repair Maneuver."
     craft:            { label: "Craft",            attribute: "scholarship", required: true, encompassing: true,
+                        specialManeuver: "repair",
                         specialties: { basic: "Basic Item", apparel: "Apparel", weapons: "Weapons", vehicles: "Vehicles" } },
     investigation:    { label: "Investigation",    attribute: "scholarship",
                         specialManeuver: "analysis" },

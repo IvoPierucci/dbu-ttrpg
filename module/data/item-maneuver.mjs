@@ -457,6 +457,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * Maneuver had the same problem with Ki Points and is answered the same way.
        */
       treatment: new fields.BooleanField({ required: true, initial: false }),
+      /** Repairs a Weapon or a piece of Apparel: the Repair Maneuver. The Item is not the character. */
+      repair: new fields.BooleanField({ required: true, initial: false }),
       /**
        * An Instant that is itself an attack, made with the Simple Profile or with the one
        * other Profile its owner's tail was built for.

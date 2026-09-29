@@ -78,6 +78,7 @@ import { techniqueUseEntries, ultimatesUsed, whyNotTechnique, whyNotTechniqueAga
 import * as soarNames from "./environments.mjs";
 import { featureDef as signatureFeature, requirementHolds, superProfileKiPerTier } from "./technique.mjs";
 import { withGranted } from "./signature.mjs";
+import * as gearReadingModule from "./gear.mjs";
 import { SUPER_PROFILES, askFeatures, forcedFullWager, maxKiWager, maxLifeWager, minimumKiWager } from "./maneuvers.mjs";
 import { askUnitedPartner } from "./united-attack.mjs";
 
@@ -1817,6 +1818,7 @@ export function definitionOf(item) {
     terrify: item.system.terrify,
     transfiguration: item.system.transfiguration,
     treatment: item.system.treatment,
+    repair: item.system.repair,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
     kiCostCoversProfile: item.system.kiCostCoversProfile,
@@ -2203,6 +2205,73 @@ async function recordTailVariant(actor, maneuver, variant) {
  * amount of Life Points they gain by 1/2 to make a Skill Clash". Asked while the whole
  * thing can still be taken back.
  */
+/**
+ * What the Repair Maneuver can mend: each Weapon and piece of Apparel the character has, with the
+ * Craft DC it is checked at, and refused - with the reason - where their Craft lacks its Specialty
+ * (the user's ruling) or there is nothing to mend.
+ */
+export function repairables(actor) {
+  const { craftedReading } = gearReadingModule;
+  const held = DBUCharacterData.specialtiesHeld(DBUCharacterData.SKILLS.craft, actor.system.skillSpecializations?.craft);
+  return Array.from(actor.items ?? []).filter(item => ["weapon", "apparel"].includes(item.system?.crafted?.kind))
+    .map(item => {
+      const kind = item.system.crafted.kind;
+      const reading = craftedReading(item.system.crafted, { getTrait, difficulties: DBUCharacterData.DIFFICULTIES,
+        data: actor.system }) ?? {};
+      const specialty = (kind === "weapon") ? "weapons" : "apparel";
+      const worn = (kind === "weapon")
+        ? (item.system.crafted.destroyed || ((Number(item.system.crafted.lifeLost) || 0) > 0))
+        : (item.system.crafted.destroyed || ((reading.breakLeft ?? 0) < (reading.breakValue ?? 0)));
+      const why = !held.includes(specialty)
+        ? `needs the ${DBUCharacterData.SKILLS.craft.specialties[specialty]} Craft Specialty`
+        : !worn ? "nothing to repair" : "";
+      return { item, kind, specialty, craftDC: reading.craftDC ?? "", why };
+    });
+}
+
+/** Repair: which Weapon or piece of Apparel. */
+async function askRepair(actor) {
+  const options = repairables(actor);
+  if (!options.length) {
+    ui.notifications.warn(`${actor.name} has no Weapon or Apparel to repair.`);
+    return null;
+  }
+  const escape = Handlebars.escapeExpression;
+  const rows = options.map((entry, index) => {
+    const dc = DBUCharacterData.DIFFICULTIES[entry.craftDC];
+    return `<label class="dbu-technique${entry.why ? " dbu-technique-spent" : ""}" ${entry.why ? `data-tooltip="${escape(entry.why)}"` : ""}>
+      <input type="radio" name="item" value="${entry.item.id}" ${entry.why ? "disabled" : ""}/>
+      <span class="dbu-technique-name">${escape(entry.item.name)}</span>
+      <span class="dbu-technique-note">${dc ? `${dc.label} ${dc.tn}` : ""}${entry.why ? ` &middot; ${escape(entry.why)}` : ""}</span></label>`;
+  }).join("");
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - Repair` },
+    content: `<div class="dbu-technique-picker">${rows}</div>`,
+    buttons: [
+      { action: "confirm", label: "Repair", callback: (event, button, dialog) =>
+        dialog.element.querySelector('input[name="item"]:checked')?.value ?? null },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  const entry = options.find(option => option.item.id === picked);
+  return (entry && !entry.why) ? entry : null;
+}
+
+/** The Repair card: the Check it owes, at its Difficulty; the card's button mends the Item. */
+async function postRepair(actor, maneuver, entry) {
+  const { postManeuver } = await import("./chat.mjs");
+  const dc = DBUCharacterData.DIFFICULTIES[entry.craftDC];
+  const specialty = DBUCharacterData.SKILLS.craft.specialties[entry.specialty];
+  return postManeuver(actor, maneuver, {
+    note: `${actor.name} repairs ${entry.item.name}: a Craft (${specialty}) Skill Check${dc
+      ? ` at the ${dc.label} Difficulty - Target Number ${dc.tn}, matched or exceeded` : ""}. Roll it from the sheet and `
+      + "pick that Difficulty there; the card will say whether it was met.",
+    repair: { actorUuid: actor.uuid, itemId: entry.item.id, itemName: entry.item.name, kind: entry.kind, applied: false }
+  });
+}
+
 async function treatAlly(actor, ally, maneuver) {
   if (!ally) {
     ui.notifications.warn(
@@ -2742,6 +2811,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // Which of a Maneuver's own effects the player picked, where it has several and the
   // choice comes before the dice rather than after them.
   let trick = "";
+  let repairing = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -2961,6 +3031,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     if (maneuver.magicTrick) {
       trick = await askMagicTrick(actor, maneuver, targetActor);
       if (!trick) return false;
+    }
+
+    // Repair: which Item, asked before the Actions are paid.
+    if (maneuver.repair) {
+      repairing = await askRepair(actor);
+      if (!repairing) return false;
     }
 
     // "Additionally, if not in a High Environment, you can enter the Low Sky Environment.
@@ -3377,6 +3453,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     // opened for the poison half, and every other use of it opens none at all.
     : maneuver.treatment
     ? await treatAlly(actor, targetActor, maneuver)
+    : (maneuver.repair && repairing)
+    ? await postRepair(actor, maneuver, repairing)
     // Two of the Magic Trick's three effects open its Clash and the third opens nothing.
     // Asked before the Clash routes below, so the third does not fall into one.
     : (maneuver.magicTrick && (trick === "move"))
@@ -3988,6 +4066,7 @@ export function maneuverItemFrom(definition) {
       terrify: Boolean(definition.terrify),
       transfiguration: Boolean(definition.transfiguration),
       treatment: Boolean(definition.treatment),
+      repair: Boolean(definition.repair),
       outsideDiminishing: Boolean(definition.outsideDiminishing),
       tailAttack: Boolean(definition.tailAttack),
       kiCostCoversProfile: Boolean(definition.kiCostCoversProfile),

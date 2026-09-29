@@ -2525,6 +2525,7 @@ function onRenderChatMessage(message, html) {
   renderOutOfSequence(message, html);
   renderAfterTheFact(message, html);
   renderCurePoison(message, html);
+  renderRepair(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
@@ -2901,6 +2902,62 @@ export async function sufferGearHazard(victim, hazard) {
  *
  * Gone once it has been pressed, like every other button here that is drawn from a flag.
  */
+/** The Repair card's button, for whoever made the Check - and the GM. */
+function renderRepair(message, html) {
+  const repair = message.getFlag(SCOPE, REPAIR_FLAG);
+  if (!repair || repair.applied) return;
+  const repairer = fromUuidSync(repair.actorUuid);
+  if (!game.user.isGM && !repairer?.isOwner) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = `The Check was made - repair ${repair.itemName}`;
+  button.dataset.tooltip = (repair.kind === "weapon")
+    ? "2d10(bT) plus your Craft Skill Bonus back in Life Points - a broken one too."
+    : "2 Break Value back - a broken one too.";
+  button.addEventListener("click", () => repairGear(message, repair));
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/**
+ * The Repair Maneuver, succeeded: "restore the Life Points of the Weapon ... by 2d10(bT) plus your
+ * Skill Bonus for the relevant Craft Skill Specialization or regain 2 Break Value for that piece of
+ * Apparel." A broken one comes back (the user's ruling). Marked on the card first, so one press is one
+ * repair.
+ */
+export function repairAmount(kind, { baseTier = 1, dice = 0, skillBonus = 0 } = {}) {
+  return (kind === "weapon") ? Math.max(0, dice + skillBonus) : REPAIR_BREAK_VALUE;
+}
+
+/** "Regain 2 Break Value." */
+export const REPAIR_BREAK_VALUE = 2;
+
+async function repairGear(message, repair) {
+  const actor = fromUuidSync(repair.actorUuid);
+  const item = actor?.items?.get(repair.itemId);
+  if (!item) {
+    ui.notifications.warn(`${repair.itemName} is gone.`);
+    return;
+  }
+  await message.setFlag(SCOPE, REPAIR_FLAG, { ...repair, applied: true });
+  const crafted = item.system.crafted;
+  if (repair.kind === "weapon") {
+    const baseTier = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+    const roll = await new Roll(`${2 * baseTier}d10`).evaluate();
+    const bonus = Number(actor.system.skills?.craft?.bonus) || 0;
+    const back = repairAmount("weapon", { dice: roll.total, skillBonus: bonus });
+    const lost = Math.max(0, (Number(crafted.lifeLost) || 0) - back);
+    await item.update({ "system.crafted.lifeLost": lost, "system.crafted.destroyed": false });
+    return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${item.name}: ${roll.total} (${2 * baseTier}d10) `
+        + `+ ${bonus} (Craft) = ${back} Life Points back.`)}</div>` });
+  }
+  const lost = Math.max(0, (Number(crafted.breakLost) || 0) - REPAIR_BREAK_VALUE);
+  await item.update({ "system.crafted.breakLost": lost, "system.crafted.destroyed": false });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${item.name}: ${REPAIR_BREAK_VALUE} Break Value back.`)}</div>` });
+}
+
 function renderCurePoison(message, html) {
   const cure = message.getFlag(SCOPE, CURE_FLAG);
   if (!cure || cure.applied) return;
@@ -3770,7 +3827,7 @@ function beingMovedOn(message, actor) {
 export async function postManeuver(actor, maneuver,
                                    { asOutOfSequence = false, foundation = null,
                                      rapidMovement = false, spent = null, note = "",
-                                     curePoison = null, ride = null } = {}) {
+                                     curePoison = null, ride = null, repair = null } = {}) {
   const type = MANEUVER_TYPES[maneuver.type];
   const label = asOutOfSequence ? MANEUVER_TYPES.outOfSequence.label : type.label;
   const cost = (type.action && !asOutOfSequence)
@@ -3803,6 +3860,8 @@ export async function postManeuver(actor, maneuver,
         // the sheet. The card carries who it is on, because by the time the Check is made
         // the only thing that still knows is the card.
         ...(curePoison ? { [CURE_FLAG]: curePoison } : {}),
+        // The Repair Maneuver's Item, waiting on a Check made off the sheet, as the poison above.
+        ...(repair ? { [REPAIR_FLAG]: repair } : {}),
         // A Movement is the one Maneuver somebody else can answer without being aimed at,
         // so its card says who moved and what it took.
         //
@@ -5060,6 +5119,7 @@ const MOVEMENT_FLAG = "movement";
  * once the table says it was made.
  */
 const CURE_FLAG = "curePoison";
+const REPAIR_FLAG = "repair";
 
 /**
  * An Item left on the ground for whoever moves through it - Caltrops. The card is posted

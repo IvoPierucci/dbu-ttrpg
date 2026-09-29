@@ -1,0 +1,34 @@
+id: repair
+name: Repair
+type: standard
+actionCost: 2
+kiCost: 0
+attacking: false
+special: true
+usageLimit: 1/encounter
+repair: true
+source: Core Rule
+description: >
+  A Craft Skill Check at a Weapon's or a piece of Apparel's Craft DC: the Weapon gets back 2d10(bT)
+  plus your Craft Skill Bonus in Life Points, the Apparel 2 Break Value.
+text: >
+  Repair Maneuver [1/Encounter]: Take a moment during battle to take care of your gear.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 2 Actions
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Make a Craft Skill Check against the Craft DC of a Weapon/piece of Apparel you possess OR a Vehicle/Battle Jacket you are adjacent to. If you succeed, depending on the chosen Item: restore the Life Points of the Weapon/Vehicle/Battle Jacket by 2d10(bT) plus your Skill Bonus for the relevant Craft Skill Specialization or regain 2 Break Value for that piece of Apparel.
+
+---
+
+# No script: it changes an Item, which a script cannot reach. `repair: true` hands it to the code
+# (use-maneuver.mjs `askRepair`, chat.mjs `repairGear`). The Item is picked before anything is paid;
+# the card names the Check and its Difficulty, the Check is rolled from the sheet as the Treatment
+# Maneuver's is, and the card's button applies what it restores.
+#
+# The user's rulings: only an Item whose Craft Specialty the character has ticked (Weapons for a
+# Weapon, Apparel for Apparel) - the others are shown refused, with the reason; and a broken one (0
+# Life Points, 0 Break Value) is brought back by it.
+#
+# Not built: Vehicles and Battle Jackets, which are not in the system.

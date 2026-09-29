@@ -2967,6 +2967,7 @@ export async function loadManeuvers() {
     terrify: Boolean(trait.terrify),
     transfiguration: Boolean(trait.transfiguration),
     treatment: Boolean(trait.treatment),
+    repair: Boolean(trait.repair),
     tailAttack: Boolean(trait.tailAttack),
     kiCostCoversProfile: Boolean(trait.kiCostCoversProfile),
     // The library's copy is nobody's, so it holds no variant: the choice belongs to a
