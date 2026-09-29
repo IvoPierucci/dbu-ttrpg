@@ -3,6 +3,8 @@ name: Communicator
 kind: gear
 tags: tech
 craftDC: Apprentice
+# Its Details.
+details: technology
 source: Core Rule
 description: >
   Talk to anyone else with a Communicator, anywhere in the same galaxy.
@@ -10,6 +12,7 @@ text: >
   Communicator [Tech]: A long-range communications device enabling real-time communication
   across vast distances.
   –Craft DC: Apprentice
+  –Details: Technology
   –Effects: With this device, you can communicate with anyone else that has a Communicator
   as long as they are within the same galaxy!
 
