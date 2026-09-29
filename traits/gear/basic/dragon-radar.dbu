@@ -3,6 +3,8 @@ name: Dragon Radar
 kind: gear
 tags: tech
 craftDC: Master
+# Its Details.
+details: technology
 source: Core Rule
 description: >
   Finds Dragon Balls, however far away. Grants the Item Search Adventure Maneuver, for
@@ -10,6 +12,7 @@ description: >
 text: >
   Dragon Radar [Tech]: A radar for finding the notorious Dragon Balls.
   –Craft DC: Master
+  –Details: Technology
   –Effects: A portable device that helps you locate Dragon Balls by scanning for the
   electromagnetic pulse emitted by them. Notably, the radar gives a visual representation of
   depth and height, but it doesn’t give actual values for those metrics. Pressing the button
