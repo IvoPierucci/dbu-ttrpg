@@ -1,0 +1,26 @@
+id: sealing-talisman
+name: Sealing Talisman
+kind: gear
+craftDC: Qualified
+source: Core Rule
+description: >
+  1 Action on a container holding a Character sealed by the Sealing Unique Ability: sealed until the
+  seal is removed.
+text: >
+  Sealing Talisman: A mystical charm crafted to blockade or trap evil spirits.
+  –Craft DC: Qualified
+  –Details: N/A
+  –Effects: You can spend 1 Action to apply it to a container holding a Character sealed with the
+  Sealing Unique Ability. If you do so, they are sealed indefinitely until the seal is removed. The
+  seal can be removed by an attack with a Called Shot or by spending 1 Action to remove it when
+  adjacent to the container.
+
+  If attempted to be created through Magical Materialization, the Craft DC for this item is
+  Apprentice.
+
+---
+
+# --- What is not built -------------------------------------------------------------------------
+#
+# What it is for: the Sealing Unique Ability, and Magical Materialization's lower Craft DC. Neither is
+# in this system yet; until they are it is an entry the table reads.
