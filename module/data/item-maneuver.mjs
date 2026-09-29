@@ -568,6 +568,12 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         superProfile: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** Gained from a Transformation Trait: left out of the Ultimate-to-Super count. */
         fromTransformation: new fields.BooleanField({ required: true, initial: false }),
+        /**
+         * TP this Technique does not take from the character - Power Level 1's "20 TP to spend on
+         * one Signature Technique". Its TP, its cap and its KP are unchanged: only what the
+         * character pays for it is less.
+         */
+        freeTP: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         features: new fields.ArrayField(new fields.SchemaField({
           id: new fields.StringField({ required: true, blank: false }),
           ranks: new fields.NumberField({ required: true, integer: true, initial: 1, min: 1 }),

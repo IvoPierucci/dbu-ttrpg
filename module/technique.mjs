@@ -55,6 +55,7 @@ export function signatureOf(item) {
     secondProfile: sig.secondProfile ?? "",
     superProfile: sig.superProfile ?? "",
     fromTransformation: Boolean(sig.fromTransformation),
+    freeTP: Math.max(0, Math.floor(Number(sig.freeTP) || 0)),
     features: Array.from(sig.features ?? []).map(entry => ({
       id: entry.id, ranks: Math.max(1, Number(entry.ranks) || 1), choice: entry.choice ?? ""
     })).filter(entry => entry.id)
@@ -117,6 +118,14 @@ export function techniqueTP(sig) {
     sum + featureTP(featureDef(entry.id), entry.ranks), 0);
   const built = Math.max(MINIMUM_TP, BASE_TP + features);
   return built + (isUltimate(sig.level) ? ULTIMATE_TP : 0);
+}
+
+/**
+ * What the Technique takes from the character's TP: its TP, less whatever was given for it free -
+ * never below nothing. Its TP is still its TP for the cap and the KP (the user's ruling).
+ */
+export function techniqueTPCharged(sig) {
+  return Math.max(0, techniqueTP(sig) - Math.max(0, Number(sig.freeTP) || 0));
 }
 
 /** How many ranks of one feature a build carries. */

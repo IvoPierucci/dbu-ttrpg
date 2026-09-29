@@ -30,7 +30,7 @@
           {{/if}}
           <span class="maneuver-uses">{{row.level}}{{#if row.fromTransformation}} &middot; Transformation{{/if}}</span>
           <span class="maneuver-source">{{row.profile}}</span>
-          <span class="maneuver-cost">{{row.tp}} TP</span>
+          <span class="maneuver-cost" {{#if row.freeTip}}data-tooltip="{{row.freeTip}}"{{/if}}>{{row.tp}} TP</span>
           <span class="maneuver-cost" {{#if row.kpTip}}data-tooltip="{{row.kpTip}}"{{/if}}>{{row.kp}} KP</span>
           <button type="button" class="maneuver-control" data-action="editItem" data-item-id="{{row.itemId}}"
                   data-tooltip="Build or change this Technique">&#9998;</button>

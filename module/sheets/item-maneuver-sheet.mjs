@@ -9,7 +9,7 @@ import DBUCharacterData from "../data/actor-character.mjs";
 import {
   LEVELS, choiceLabel, composeTechniqueEffects, featureCatalogue, featureDef, featureProblem,
   featureTP, isUltimate, maxRanks, profileKiPerTier, signatureOf, superProfileKiPerTier,
-  superProfileProblem, techniqueKiPerTier, techniqueTP, tierTpCap
+  superProfileProblem, techniqueKiPerTier, techniqueTP, techniqueTPCharged, tierTpCap
 } from "../technique.mjs";
 
 /**
@@ -163,6 +163,8 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
 
     const reading = {
       tp,
+      free: sig.freeTP,
+      charged: techniqueTPCharged(sig),
       cap,
       over: tp > cap ? `Over the ${cap} TP a Technique may be worth at base Tier ${baseTier}.` : "",
       profileKi,
@@ -224,6 +226,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       dramatic,
       ultimate: isUltimate(sig.level),
       fromTransformation: sig.fromTransformation,
+      freeTP: sig.freeTP,
       reading,
       rows,
       groups: [group("Advantages", catalogue.advantages), group("Disadvantages", catalogue.disadvantages)],

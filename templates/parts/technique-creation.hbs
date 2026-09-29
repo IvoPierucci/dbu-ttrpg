@@ -55,6 +55,10 @@
         <em>From a Transformation</em>
         <input type="checkbox" name="system.signature.fromTransformation" {{#if technique.fromTransformation}}checked{{/if}}/>
       </label>
+      <label data-tooltip="TP this Technique does not take from the character, such as Power Level 1's 20 TP for one Signature Technique. Its TP, cap and KP stay the same.">
+        <em>Free TP</em>
+        <input type="number" name="system.signature.freeTP" value="{{technique.freeTP}}" min="0" step="1"/>
+      </label>
     </div>
   </section>
 
@@ -65,7 +69,8 @@
     {{/if}}
     <div class="technique-reading">
       <div data-tooltip="8, plus its Advantages, less its Disadvantages, never under 8; +4 for an Ultimate">
-        TP: <b>{{technique.reading.tp}}</b> / {{technique.reading.cap}}</div>
+        TP: <b>{{technique.reading.tp}}</b> / {{technique.reading.cap}}{{#if technique.reading.free}}
+        <span data-tooltip="What the character pays for it: its TP less the Free TP">&middot; {{technique.reading.charged}} from the character</span>{{/if}}</div>
       <div data-tooltip="Profile {{technique.reading.profileKi}}(T) + Technique {{technique.reading.techniqueKi}}(T) (1/5 of its TP, rounded up){{#if technique.reading.superKi}} + Super Profile {{technique.reading.superKi}}(T){{/if}}">
         KP: <b>{{technique.reading.totalPerTier}}(T)</b> = {{technique.reading.total}} at Tier {{technique.reading.tier}}</div>
     </div>

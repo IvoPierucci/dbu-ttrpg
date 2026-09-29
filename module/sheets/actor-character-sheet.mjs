@@ -86,7 +86,8 @@ import {
   profileKiPerTier as profileKiPerTierOf,
   signatureOf as signatureOfTechnique,
   techniqueKiPerTier as techniqueKiPerTierOf,
-  techniqueTP as techniqueTPOf
+  techniqueTP as techniqueTPOf,
+  techniqueTPCharged as techniqueTPChargedOf
 } from "../technique.mjs";
 import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-use.mjs";
 import {
@@ -1582,6 +1583,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         profile: [PROFILES[sig.profile]?.label, SUPER_PROFILES[sig.superProfile]?.label].filter(Boolean).join(" + ")
           || (built ? "" : "Not built yet"),
         tp: built ? techniqueTPOf(sig) : "-",
+        // Free TP: shown, and left out of what the character has spent.
+        freeTip: (built && sig.freeTP) ? `${techniqueTPChargedOf(sig)} TP from the character, ${Math.min(sig.freeTP, techniqueTPOf(sig))} free` : "",
         kp: built ? `${perTier * tier}` : `${maneuverKiCost(definition, null, actor)}`,
         kpTip: built ? `${perTier}(T)` : "",
         buddyOnly: buddyOnly.has(item.id),
@@ -1600,7 +1603,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const ultimates = counted.filter(sig => isUltimateLevel(sig.level)).length;
     const supers = counted.filter(sig => !isUltimateLevel(sig.level)).length;
     const dramatic = built.filter(sig => sig.level === "dramatic").length;
-    const spent = built.reduce((sum, sig) => sum + techniqueTPOf(sig), 0);
+    const spent = built.reduce((sum, sig) => sum + techniqueTPChargedOf(sig), 0);
     const available = Number(actor.system.techniquePoints) || 0;
     const warnings = [
       (spent > available) ? `${spent} TP spent on Techniques, and ${available} TP to spend.` : "",
