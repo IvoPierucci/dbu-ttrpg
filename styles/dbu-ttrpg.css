@@ -395,6 +395,34 @@
   text-align: right;
 }
 
+/* A Technique's Adv & Disadv tab: a card each, edged green for an Advantage and red for a
+   Disadvantage, its controls on top and its text beneath. */
+.dbu-ttrpg .technique-feature-card {
+  margin: 6px 0;
+  border: 1px solid var(--dbu-border);
+  border-left-width: 4px;
+  border-radius: 4px;
+  background: var(--dbu-panel-raised);
+}
+
+.dbu-ttrpg .technique-advantage-card {
+  border-left-color: #4caf50;
+}
+
+.dbu-ttrpg .technique-disadvantage-card {
+  border-left-color: #e0564a;
+}
+
+.dbu-ttrpg .technique-feature-card > .gear-row {
+  border-bottom: 1px solid var(--dbu-border);
+}
+
+.dbu-ttrpg .technique-feature-text {
+  padding: 4px 8px 6px;
+  font-size: 0.9em;
+  color: var(--dbu-text-dim);
+}
+
 /* A Technique's row, opened: its Advantages in green and its Disadvantages in red. */
 .dbu-ttrpg .technique-advantage {
   color: #4caf50;

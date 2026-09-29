@@ -21,6 +21,8 @@
       </ol>
     </div>
     {{#each technique.rows as |row|}}
+    {{! A card each: its controls on top, its text under them. }}
+    <div class="technique-feature-card {{#if row.disadvantage}}technique-disadvantage-card{{else}}technique-advantage-card{{/if}}{{#if row.problem}} off{{/if}}">
     <div class="gear-row technique-feature{{#if row.problem}} off{{/if}}">
       <span class="gear-name" data-tooltip="{{row.tip}}">{{row.name}}</span>
       <span class="gear-type">{{row.side}}</span>
@@ -41,6 +43,16 @@
       {{#if row.problem}}<span class="gear-warning" data-tooltip="{{row.problem}}">Requirement not met</span>{{/if}}
       <button type="button" class="gear-remove" data-action="removeFeature"
               data-index="{{row.index}}" data-tooltip="Remove">&times;</button>
+    </div>
+    <div class="technique-feature-text">
+      {{#each row.lines as |line|}}
+      {{#if line.gap}}
+      <div class="dbu-entry-break"></div>
+      {{else}}
+      <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>
+      {{/if}}
+      {{/each}}
+    </div>
     </div>
     {{else}}
     <p class="tab-placeholder">None.</p>

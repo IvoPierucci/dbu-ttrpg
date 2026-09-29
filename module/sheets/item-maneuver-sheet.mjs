@@ -192,7 +192,12 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
         choose: def?.choose ?? "",
         choiceLabel: entry.choice ? choiceLabel(def, entry.choice) : (def?.choose ? "Not chosen" : ""),
         problem: featureProblem(entry.id, sig, { actor }),
-        tip: [def?.summary, def?.text].filter(Boolean).join("\n\n")
+        disadvantage: def?.owner === "disadvantages",
+        tip: def?.summary ?? "",
+        // Its text as printed, in the card under its controls: one entry a printed line, a blank
+        // one a paragraph break, the bullets the text's own.
+        lines: String(def?.text ?? "").split("\n").map(line => line.trim())
+          .map(line => (line ? { text: line, bullet: /^[*•]/.test(line) } : { gap: true }))
       };
     });
 
