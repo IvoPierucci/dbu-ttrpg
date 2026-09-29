@@ -8,6 +8,8 @@ placeCost: 1
 # next turn." The Smoked mark, on everyone in it, to the end of the thrower's next turn.
 areaMark: smoked
 areaUntil: end
+# Its Details.
+details: consumable
 source: Core Rule
 description: >
   Thrown for an Action: everyone in the Sphere it bursts in is in Obscured Squares until the
@@ -16,6 +18,7 @@ text: >
   Smoke Bomb: A mixture of black powder and chemicals set to ignite upon physical impact, this
   object creates a thick black cloud of smoke when used.
   –Craft DC: Apprentice
+  –Details: Consumable
   –Effects: You may spend 1 Action to throw the Smoke Bomb at any Square within a Destructive
   Sphere AoE (centered on you). Create a Destructive Sphere AoE centered on your chosen
   Square. In this AoE, all Squares gain the Obscured Environmental Quality until the end of
@@ -34,4 +37,4 @@ text: >
 #
 # Which Square, and who the Sphere covers. There are no Squares here, so a Square with nobody
 # in it has nothing to carry the smoke - it is Obscured at the table, and nothing here needs
-# to know. Whether the Smoke Bomb is used up the entry does not say, and it stays.
+# to know. Consumable: it comes off the character once thrown.

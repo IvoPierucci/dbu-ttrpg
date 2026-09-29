@@ -4055,7 +4055,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const caught = [...game.user.targets].map(token => token.actor).filter(Boolean);
     const { burstGear } = await import("../chat.mjs");
-    return burstGear(this.actor, item, caught);
+    const done = await burstGear(this.actor, item, caught);
+    // Consumable: "destroyed once it is used" - gone once thrown.
+    if (isConsumable(item, getTrait)) await item.delete();
+    return done;
   }
 
   /**
