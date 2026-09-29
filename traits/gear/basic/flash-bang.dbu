@@ -11,6 +11,8 @@ placeCost: 1
 clashSave: impulsive
 clashCondition: blinded
 clashUntil: start
+# Its Details. Consumable: "destroyed once it is used" - gone once it is thrown.
+details: technology, consumable
 source: Core Rule
 description: >
   Thrown to blind everyone around where it lands. Win a Clash (Impulsive) and they are
@@ -18,6 +20,7 @@ description: >
 text: >
   Flash Bang [Tech]: A thrown weapon that blinds and deafens targets.
   –Craft DC: Qualified
+  –Details: Technology, Consumable
   –Effects: Spend 1 Action to target a Square within a Destructive Sphere AoE (centered on
   yourself). Make a Clash (Impulsive) against all Characters within a Sphere AoE of your
   targeted Square. If you win, they gain the Blinded Combat Condition until the start of
@@ -38,4 +41,4 @@ text: >
 # it catches are the ones targeted when it is thrown.
 #
 # "Blinds and deafens" is the flavour line; the effect names only Blinded, and only Blinded
-# is given. Whether it is used up the entry does not say, and it stays on the character.
+# is given. Consumable: it is taken off the character once its Clashes are posted.

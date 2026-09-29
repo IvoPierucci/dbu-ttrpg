@@ -3109,6 +3109,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const { postGearClash } = await import("../chat.mjs");
     for (const actor of caught) await postGearClash(this.actor, actor, item);
+    // Consumable: "destroyed once it is used" - the cards carry what they need, so it can go now.
+    if (isConsumable(item, getTrait)) await item.delete();
   }
 
   /**
