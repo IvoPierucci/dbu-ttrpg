@@ -9,6 +9,8 @@ placeCost: 3
 # a Qualified Concealment Skill Check."
 scanSkill: concealment
 scanDifficulty: qualified
+# Its Details.
+details: technology
 source: Core Rule
 description: >
   Three Actions to read someone's Tier of Power - and their Power Level, if they are at
@@ -17,6 +19,7 @@ text: >
   Scout Scope [Tech]: A handheld device capable of indicating a combatant’s individual combat
   strength.
   –Craft DC: Apprentice
+  –Details: Technology
   –Effects: You can spend 3 Actions to attempt to scan the strength of another Character. Any
   Character that is using the Holding Back Maneuver or is aware of the scanning can make a
   Qualified Concealment Skill Check. If they succeed, nothing happens and they automatically
