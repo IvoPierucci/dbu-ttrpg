@@ -230,6 +230,18 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   const cost = choice ? choice.cost : profileCost;
   const wager = Math.max(0, Math.min(Number(answer.wager) || 0, cap));
 
+  // What the Advantages it brings ask at declaration, answered by whoever brings them - before
+  // anything is paid, so putting it away costs nothing.
+  const bonus = unitedWoundBonus(joiner, attack.foundation);
+  const existing = [...(attack.technique?.features ?? attack.advantages ?? [])];
+  const added = choice ? unitedAdditions(existing, answer.picked ?? {}, baseTier) : [];
+  let answers = {};
+  if (added.length) {
+    const { askJoinedDeclaration } = await import("./use-maneuver.mjs");
+    answers = await askJoinedDeclaration(joiner, attack, added);
+    if (!answers) return null;
+  }
+
   // Paid: 1 Action, then the Ki and the wager together - both come out of Capacity.
   if (!await spendActions(joiner, 1)) return null;
   if (!await spendManeuverCost(joiner, { name: united.name }, cost + wager)) {
@@ -247,10 +259,12 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   }
   // Counted for the joiner's Diminishing Offense (the ruling): it is an Attacking Maneuver of theirs.
   await joiner.update({ "system.attacksThisRound": (Number(joiner.system.attacksThisRound) || 0) + 1 });
-
-  const bonus = unitedWoundBonus(joiner, attack.foundation);
-  const existing = [...(attack.technique?.features ?? attack.advantages ?? [])];
-  const added = choice ? unitedAdditions(existing, answer.picked ?? {}, baseTier) : [];
+  // Final Chance, brought: their Life Points to 0 and onto the wager, their Defeat held to the end of
+  // their turn at the latest, as the attacker's is.
+  if (answers.finalChanceLife) {
+    await joiner.update({ "system.life.value": 0 }, { dbuDefeatHeld: true });
+    await joiner.setFlag("dbu-ttrpg", "finalChance", "united");
+  }
   return {
     uuid: joiner.uuid,
     name: joiner.name,
@@ -261,7 +275,10 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
     wound: bonus.value,
     modifier: bonus.modifier,
     attributeLabel: (bonus.attribute === "magic") ? "Magic" : "Force",
-    advantages: added
+    advantages: added,
+    answers,
+    // Final Chance's Life, on the wager - not Ki, so not given back as Ki at a Duel's start.
+    lifeWager: Number(answers.finalChanceLife) || 0
   };
 }
 
@@ -321,10 +338,12 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap })
  * limit, the ruling), and the Advantages they brought on its features - read on the final attack,
  * so one whose Requirement fails there is carried but does nothing.
  */
-export function withJoiner(attack, entry, attacker) {
+export function withJoiner(attack, entry, attacker, { ceiling = Infinity } = {}) {
   const united = [...(attack.united ?? []), entry];
-  const next = { ...attack, united, kiWager: (Number(attack.kiWager) || 0) + entry.wager };
+  const next = { ...attack, united,
+    kiWager: (Number(attack.kiWager) || 0) + entry.wager + (Number(entry.lifeWager) || 0) };
   if (!entry.advantages.length) return next;
+  const answers = entry.answers ?? {};
 
   const features = [...(attack.technique?.features ?? attack.advantages ?? []), ...entry.advantages];
   const choices = { ...entry.choices, ...(attack.technique?.choices ?? {}) };
@@ -337,17 +356,27 @@ export function withJoiner(attack, entry, attacker) {
     secondProfile: attack.technique?.secondProfile ?? "",
     featureChoices: choices
   }, { profile: attack.profile, foundation: attack.foundation, advantages: [...features, ...(attack.technique?.off ?? []).map(off => off.id)],
-    charges: Number(attack.energyCharges) || 0, squaresCharged: attack.squaresCharged ?? 0 },
+    charges: Number(attack.energyCharges) || 0,
+    squaresCharged: Math.max(Number(attack.squaresCharged) || 0, Number(answers.squaresCharged) || 0),
+    transformed: Boolean(answers.transformed), powerbomb: Boolean(answers.powerbomb) },
   { targets: (attack.targets ?? []).map(target => ({ uuid: target.uuid })), shaken: [] });
 
-  // What was settled at declaration stays settled: the Charges already counted and their sources,
-  // the area's notes. A joined Advantage's own Charges are the table's.
+  // What was settled at declaration stays settled: the Charges already counted and their sources, the
+  // area's notes. What a joined Advantage brings besides (Concentrated Strike, Transformation Boost...)
+  // is added, held to the attack's most Charges (the table's ruling).
+  const had = new Set((attack.technique?.bonusCharges ?? []).map(entry => entry.label));
+  const fresh = (rebuilt.bonusCharges ?? []).filter(entry => !had.has(entry.label));
+  const gained = fresh.reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
   const technique = attack.technique
-    ? { ...rebuilt, bonusCharges: attack.technique.bonusCharges, thresholdsBelow: attack.technique.thresholdsBelow,
-        powerbomb: attack.technique.powerbomb, notes: [...(attack.technique.notes ?? []), ...rebuilt.notes] }
-    : { ...rebuilt, bonusCharges: [], chargeCeilingBonus: 0 };
+    ? { ...rebuilt, bonusCharges: [...(attack.technique.bonusCharges ?? []), ...fresh],
+        thresholdsBelow: attack.technique.thresholdsBelow, powerbomb: attack.technique.powerbomb || rebuilt.powerbomb,
+        notes: [...(attack.technique.notes ?? []), ...rebuilt.notes] }
+    : { ...rebuilt, bonusCharges: fresh, chargeCeilingBonus: 0 };
+  const charges = Number(attack.energyCharges) || 0;
+  const most = ceiling + (Number(technique.chargeCeilingBonus) || 0);
   return {
     ...next,
+    energyCharges: gained ? Math.max(charges, Math.min(charges + gained, most)) : charges,
     technique,
     advantages: [...(attack.advantages ?? []), ...entry.advantages],
     powerShotRanks: Math.min(featureRanks(technique.features, "power-shot"), POWER_SHOT_MAX_RANKS),

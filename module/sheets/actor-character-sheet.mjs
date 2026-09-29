@@ -1637,6 +1637,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const { cancelCharge } = await import("../use-maneuver.mjs");
       await cancelCharge(this.actor);
     }
+    // A Delayed record still out: its Imminent marks go with it, since nothing is left to detonate.
+    const record = item.system.signature?.delayed;
+    if (record?.messageId) {
+      const { requestActorUpdate } = await import("../chat.mjs");
+      for (const uuid of record.targets ?? []) {
+        const target = fromUuidSync(uuid);
+        if (!target) continue;
+        const marks = (target.getFlag?.("dbu-ttrpg", "imminent") ?? []).filter(mark => mark.itemId !== item.id);
+        await requestActorUpdate(target, { "flags.dbu-ttrpg.imminent": marks });
+      }
+    }
     return item.delete();
   }
 

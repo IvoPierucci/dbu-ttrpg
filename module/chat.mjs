@@ -11432,7 +11432,8 @@ async function uniteOnCard(message, attack, joiner) {
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${joiner.name} joins `
       + `${attack.attackerName}'s ${attack.maneuverName} with United Attack${entry.techniqueName
         ? ` (${entry.techniqueName})` : ""}: ${entry.cost} Ki${entry.wager ? `, ${entry.wager} wagered` : ""}.`)}</div>` });
-  return requestEdit(message, { type: "attack", attack: withJoiner(attack, entry, attacker) });
+  return requestEdit(message, { type: "attack", attack: withJoiner(attack, entry, attacker,
+    { ceiling: maxEnergyCharges(attack.profile, DBUCharacterData.MAX_ENERGY_CHARGES) }) });
 }
 
 /**

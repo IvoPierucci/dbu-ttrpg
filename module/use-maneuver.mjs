@@ -78,7 +78,7 @@ import { techniqueUseEntries, ultimatesUsed, whyNotTechnique, whyNotTechniqueAga
 import * as soarNames from "./environments.mjs";
 import { featureDef as signatureFeature, requirementHolds, superProfileKiPerTier } from "./technique.mjs";
 import { withGranted } from "./signature.mjs";
-import { SUPER_PROFILES } from "./maneuvers.mjs";
+import { SUPER_PROFILES, askFeatures, forcedFullWager, maxKiWager, maxLifeWager, minimumKiWager } from "./maneuvers.mjs";
 import { askUnitedPartner } from "./united-attack.mjs";
 
 /**
@@ -1946,13 +1946,73 @@ export async function karmicAssault(actor, maneuver, declared) {
     content: `<div class="dbu-settled-note">${escape(`${actor.name} spends ${effect.cost} Karma: Karmic Assault puts `
       + `${SUPER_PROFILES[answer.id].label}${(answer.id === "multi-profile") ? ` (${PROFILES[second]?.label ?? second})` : ""} `
       + `on ${maneuver.name} (+${ki} KP).`)}</div>` });
-  return {
-    maneuver: { ...maneuver, superProfile: answer.id, secondProfile: second },
-    declared: { ...declared, superProfileKi: (Number(declared.superProfileKi) || 0) + ki, karmicAssault: answer.id,
-      // "Considered to be of that Profile": Multi-Profile's second hands out what it hands out.
-      advantages: (answer.id === "multi-profile")
-        ? withGranted(declared.advantages ?? [], PROFILES[second]?.grantsAdvantage) : (declared.advantages ?? []) }
-  };
+  const next = { ...maneuver, superProfile: answer.id, secondProfile: second };
+  const out = { ...declared, superProfileKi: (Number(declared.superProfileKi) || 0) + ki, karmicAssault: answer.id,
+    // "Considered to be of that Profile": Multi-Profile's second hands out what it hands out.
+    advantages: (answer.id === "multi-profile")
+      ? withGranted(declared.advantages ?? [], PROFILES[second]?.grantsAdvantage) : (declared.advantages ?? []) };
+  return { maneuver: next, declared: (answer.id === "multi-profile") ? await wagerAgain(actor, next, declared, out, second) : out };
+}
+
+/**
+ * The wager, asked again when a second Profile added after it was asked brings Full Wager (Elemental
+ * (Light)) or the Life wager (Elemental (Dark)): the table's ruling - asked again with the new ceiling,
+ * from the one already given. Put away, the wager stays as it was.
+ */
+async function wagerAgain(actor, maneuver, before, declared, second) {
+  const full = PROFILES[second]?.grantsAdvantage === "full-wager" && !(before.advantages ?? []).includes("full-wager");
+  const lifeNow = Boolean(PROFILES[second]?.wagerFromLife) && !PROFILES[declared.profile]?.wagerFromLife;
+  if (!full && !lifeNow) return declared;
+  const advantages = declared.advantages ?? [];
+  const life = Boolean(PROFILES[second]?.wagerFromLife || PROFILES[declared.profile]?.wagerFromLife);
+  const kiMax = maxKiWager(actor, advantages);
+  const lifeMax = life ? maxLifeWager(actor, advantages) : 0;
+  const floor = forcedFullWager(advantages) ? kiMax : minimumKiWager(actor, maneuver);
+  const current = Number(declared.kiWager) || 0;
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${maneuver.name} - Ki Wager` },
+    content: `<p class="dbu-respond-hint">${Handlebars.escapeExpression(PROFILES[second].label)} changes what you may
+        wager.</p>
+      <label class="dbu-wager"><span>Ki Wager</span>
+        <input type="number" name="kiWager" value="${current}" min="0" max="${Math.max(kiMax, lifeMax)}"/>
+        <em>max ${kiMax}${life ? `, ${lifeMax} in Life Points` : ""}</em></label>${life ? `
+      <label class="dbu-wager"><input type="checkbox" name="wagerFromLife" ${declared.wagerFromLife ? "checked" : ""}/>
+        <span>Wager Life Points</span></label>` : ""}`,
+    buttons: [
+      { action: "confirm", label: "Confirm", callback: (event, button, dialog) => ({
+        amount: Math.floor(Number(dialog.element.querySelector('input[name="kiWager"]')?.value) || 0),
+        fromLife: Boolean(dialog.element.querySelector('input[name="wagerFromLife"]')?.checked) }) },
+      { action: "cancel", label: "Keep it" }
+    ],
+    rejectClose: false
+  });
+  if (!answer || (answer === "cancel")) return declared;
+  const fromLife = life && answer.fromLife;
+  const ceiling = fromLife ? lifeMax : kiMax;
+  const wager = Math.max(Math.min(floor, ceiling), Math.min(Math.max(0, answer.amount), ceiling));
+  return { ...declared, kiWager: wager, wagerFromLife: fromLife };
+}
+
+/**
+ * The questions an Advantage brought by United Attack asks, put to the one who brought it (the table's
+ * ruling): Transformation Boost's Form, Powerbomb's Grapple, Final Chance's Life, Charging Assault's
+ * Squares. Splitting's targets are the attacker's, and not asked.
+ *
+ * @returns {Promise<?object>} the answers, or null when put away
+ */
+export async function askJoinedDeclaration(joiner, attack, added) {
+  const asked = added.filter(id => id !== "splitting");
+  if (!asked.length) return {};
+  const target = fromUuidSync(attack.targetUuid ?? "") ?? null;
+  const technique = { name: `United Attack - ${attack.maneuverName}`, ultimate: Boolean(attack.technique?.ultimate),
+    superProfile: "", secondProfile: "", actionCost: 1 };
+  const answers = await askTechniqueDeclaration(joiner, technique, { profile: attack.profile, advantages: asked }, target);
+  if (!answers) return null;
+  const charged = await askFeatures(technique, joiner, asked);
+  if (charged === null) return null;
+  return { transformed: Boolean(answers.transformed), powerbomb: Boolean(answers.powerbomb),
+    finalChanceLife: answers.finalChance ? (Number(answers.finalChanceLife) || 0) : 0, ...charged };
 }
 
 /**
@@ -1996,10 +2056,12 @@ export async function elementalBlade(actor, maneuver, declared) {
       const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
       const was = own ? superProfileKiPerTier(own, maneuver.secondProfile ?? "") : 0;
       next = { ...maneuver, superProfile: "multi-profile", secondProfile: blade };
+      const before = out;
       out = { ...out,
         multiProfileKi: (superProfileKiPerTier("multi-profile", blade) - was) * tier,
         // "Considered to be of that Profile": what it hands out comes with it.
         advantages: withGranted(out.advantages ?? [], PROFILES[blade].grantsAdvantage) };
+      out = await wagerAgain(actor, next, before, out, blade);
     }
     // "If it meets the Prerequisites, also apply the Compressed Element Disadvantage".
     const compressed = signatureFeature("compressed-element");

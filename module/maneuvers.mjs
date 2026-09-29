@@ -2018,7 +2018,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
  *
  * @returns {Promise<object|null>} the answers, or null if the declaration was dropped
  */
-async function askFeatures(maneuver, actor, advantages) {
+export async function askFeatures(maneuver, actor, advantages) {
   const asks = featureAsks(advantages);
   if (!asks.length) return {};
 
