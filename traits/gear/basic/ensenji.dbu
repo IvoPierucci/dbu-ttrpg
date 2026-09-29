@@ -1,0 +1,36 @@
+id: ensenji
+name: Ensenji
+kind: gear
+tags: food
+# "You can spend 1 Action to consume this Basic Item."
+placeCost: 1
+# Its Details. Consumable: "destroyed once it is used".
+details: food, consumable
+# "Regain all of your Life and Ki Points, up to their maximum."
+healFull: true
+healKi: true
+# The Awakening is not here yet: the card says it.
+consumeNote: gains a stack of the Unlocked Potential Awakening as a Level 1 Temporary Awakening
+source: Core Rule
+description: >
+  Consume it for an Action: all your Life and Ki Points back, and a stack of the Unlocked Potential
+  Awakening as a Level 1 Temporary Awakening.
+text: >
+  Ensenji: This powerful fruit bears the magical ability to restore you to full health, making you
+  stronger in the process.
+  –Details: Food, Consumable
+  –Effects: You can spend 1 Action to consume this Basic Item. If you do, regain all of your Life and
+  Ki Points, up to their maximum. Additionally, gain a stack of the Unlocked Potential Awakening as a
+  Level 1 Temporary Awakening.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Consume: 1 Action, Life and Ki Points to their maximum, and it is used up. The card says the
+# Awakening.
+#
+# --- What is not built -------------------------------------------------------------------------
+#
+# The Unlocked Potential Awakening, and Temporary Awakenings: Transformations are not in this system
+# yet. Gaining it is the table's until they are.

@@ -2279,7 +2279,9 @@ export function gearItemFrom(definition, actor = null) {
         dice: String(definition.healDice ?? ""),
         scale: String(definition.healScale ?? ""),
         // Ki Points as well as Life, each rolled for - the Snack's "Life and Ki Points".
-        ki: definition.healKi === true
+        ki: definition.healKi === true,
+        // All of it, no roll - the Ensenji's "regain all of your Life and Ki Points".
+        full: definition.healFull === true
       },
       oncePerEncounter: definition.oncePerEncounter === true,
       // Consumable: "A Basic Item with this Detail is destroyed once it is used" - the Details line,

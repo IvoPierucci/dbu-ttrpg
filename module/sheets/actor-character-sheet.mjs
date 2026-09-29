@@ -1175,7 +1175,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         charges: item.system.charges ?? 0,
         // An Item used up to take Conditions off, and whether it has been this Encounter.
         consumable: ((item.system.removes ?? []).length > 0) || Boolean(item.system.heal?.dice)
-          || Boolean(item.system.consumeNote),
+          || Boolean(item.system.heal?.full) || Boolean(item.system.consumeNote),
         usedUp: Boolean(item.system.oncePerEncounter) && usedThisEncounter(this.actor, item),
         // A Capsule, and what it holds.
         capsule: Boolean(item.system.capsule),
@@ -3181,7 +3181,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Medicine: "regain 2d10(bT) Life Points", with the base Tier of whoever takes it.
     const heal = tierDice(item?.system.heal, this.actor);
     const note = item?.system.consumeNote ?? "";
-    if (!removes.length && !heal && !note) return;
+    const full = Boolean(item?.system.heal?.full);
+    if (!removes.length && !heal && !note && !full) return;
 
     if (item.system.oncePerEncounter && usedThisEncounter(this.actor, item)) {
       ui.notifications.warn(`${this.actor.name} has already used a ${item.name} this Combat `
@@ -3201,6 +3202,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const { setCondition } = await import("../conditions.mjs");
     for (const key of held) await setCondition(this.actor, key, 0);
+
+    // All of it, to the maximum - the Ensenji's "regain all of your Life and Ki Points".
+    if (full) {
+      const pools = item.system.heal.ki ? ["life", "ki"] : ["life"];
+      await this.actor.update(Object.fromEntries(pools.map(pool =>
+        [`system.${pool}.value`, this.actor.system[pool].max])));
+    }
 
     // Regained, and never past the maximum - which is what regaining is everywhere here.
     // Life, and Ki as well where the Item says so: a roll for each, the way Combat Recovery
@@ -3235,7 +3243,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         isConsumable(item, getTrait) ? "consumes" : "uses"} ${Handlebars.escapeExpression(item.name)}${
         names.length
           ? `, and is no longer ${Handlebars.escapeExpression(names.join(" or "))}`
-          : ""}${note ? `, and ${Handlebars.escapeExpression(note)}` : ""}.</p>`
+          : ""}${full ? `, regaining all of their ${item.system.heal.ki ? "Life and Ki" : "Life"} Points` : ""}${
+          note ? `, and ${Handlebars.escapeExpression(note)}` : ""}.</p>`
     });
 
     if (isConsumable(item, getTrait)) await item.delete();

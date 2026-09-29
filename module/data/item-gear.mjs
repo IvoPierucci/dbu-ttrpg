@@ -410,7 +410,9 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         dice: new fields.StringField({ required: true, blank: true, initial: "" }),
         scale: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** Ki Points too, rolled for separately - the Snack. */
-        ki: new fields.BooleanField({ required: true, initial: false })
+        ki: new fields.BooleanField({ required: true, initial: false }),
+        /** All of them, to their maximum, with no roll - the Ensenji. */
+        full: new fields.BooleanField({ required: true, initial: false })
       }),
       /** "You can only use this Basic Item once per Combat Encounter." */
       oncePerEncounter: new fields.BooleanField({ required: true, initial: false }),
