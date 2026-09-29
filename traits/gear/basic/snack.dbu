@@ -11,12 +11,15 @@ consumed: true
 healDice: 1d10
 healScale: bT
 healKi: true
+# Its Details.
+details: food, consumable
 source: Core Rule
 description: >
   Eat it for an Action: regain 1d10(bT) Life Points and 1d10(bT) Ki Points.
 text: >
   Snack [Food]: A delicious and satisfying treat to keep you going when your energy is low.
   –Craft DC: Apprentice
+  –Details: Food, Consumable
   –Effects: You can spend 1 Action to consume this Item and regain 1d10(bT) Life and Ki
   Points. Consuming a Snack will also reduce your Hunger by 1 until the end of the Combat
   Encounter.
