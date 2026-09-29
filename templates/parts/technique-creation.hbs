@@ -29,35 +29,32 @@
           {{/each}}
         </select>
       </label>
-      {{#if technique.dramatic}}
-      <label data-tooltip="A Dramatic Finisher's Super Profile. One per character; not at Character Creation.">
+      {{! Every field always here, closed where it does not apply, so none moves when another changes. }}
+      <label data-tooltip="TP this Technique does not take from the character, such as Power Level 1's 20 TP for one Signature Technique. Its TP, cap and KP stay the same.">
+        <em>Free TP</em>
+        <input type="number" name="system.signature.freeTP" value="{{technique.freeTP}}" min="0" step="1"/>
+      </label>
+      <label data-tooltip="{{#if technique.dramatic}}A Dramatic Finisher's Super Profile. One per character; not at Character Creation.{{else}}Only a Dramatic Finisher has one.{{/if}}">
         <em>Super Profile</em>
-        <select name="system.signature.superProfile">
+        <select name="system.signature.superProfile" {{#unless technique.dramatic}}disabled{{/unless}}>
           <option value="">-</option>
           {{#each technique.superProfiles as |entry|}}
           <option value="{{entry.value}}" {{#if entry.chosen}}selected{{/if}}>{{entry.label}}</option>
           {{/each}}
         </select>
       </label>
-      {{/if}}
-      {{#if technique.secondProfiles.length}}
-      <label data-tooltip="Multi-Profile: the other Profile applied to it, without its Ki Point Cost">
+      <label data-tooltip="{{#if technique.multi}}Multi-Profile: the other Profile applied to it, without its Ki Point Cost{{else}}Only with the Multi-Profile Super Profile.{{/if}}">
         <em>Second Profile</em>
-        <select name="system.signature.secondProfile">
+        <select name="system.signature.secondProfile" {{#unless technique.multi}}disabled{{/unless}}>
           <option value="">-</option>
           {{#each technique.secondProfiles as |profile|}}
           <option value="{{profile.value}}" {{#if profile.chosen}}selected{{/if}}>{{profile.label}}</option>
           {{/each}}
         </select>
       </label>
-      {{/if}}
       <label data-tooltip="Gained from a Transformation Trait: not counted when Ultimates are matched against Supers">
         <em>From a Transformation</em>
         <input type="checkbox" name="system.signature.fromTransformation" {{#if technique.fromTransformation}}checked{{/if}}/>
-      </label>
-      <label data-tooltip="TP this Technique does not take from the character, such as Power Level 1's 20 TP for one Signature Technique. Its TP, cap and KP stay the same.">
-        <em>Free TP</em>
-        <input type="number" name="system.signature.freeTP" value="{{technique.freeTP}}" min="0" step="1"/>
       </label>
     </div>
   </section>

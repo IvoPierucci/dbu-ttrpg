@@ -145,15 +145,14 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       .map(([value, profile]) => ({ value, label: `${profile.label} (${profile.kiCostPerTier ?? 0}(T))`,
         chosen: value === sig.profile }));
     const dramatic = sig.level === "dramatic";
-    const superProfiles = dramatic
-      ? Object.entries(SUPER_PROFILES).map(([value, entry]) => ({ value, label: entry.label,
-        chosen: value === sig.superProfile, tip: entry.text }))
-      : [];
-    const secondProfiles = (dramatic && (sig.superProfile === "multi-profile"))
-      ? Object.entries(PROFILES).filter(([value]) => value !== sig.profile)
-        .map(([value, profile]) => ({ value, label: `${profile.label} (${profile.kiCostPerTier ?? 0}(T))`,
-          chosen: value === sig.secondProfile }))
-      : [];
+    // Both lists are always drawn, closed where they do not apply, so nothing on the tab moves when
+    // the Level or the Super Profile changes.
+    const superProfiles = Object.entries(SUPER_PROFILES).map(([value, entry]) => ({ value, label: entry.label,
+      chosen: dramatic && (value === sig.superProfile), tip: entry.text }));
+    const multi = dramatic && (sig.superProfile === "multi-profile");
+    const secondProfiles = Object.entries(PROFILES).filter(([value]) => value !== sig.profile)
+      .map(([value, profile]) => ({ value, label: `${profile.label} (${profile.kiCostPerTier ?? 0}(T))`,
+        chosen: multi && (value === sig.secondProfile) }));
 
     const tp = techniqueTP(sig);
     const cap = tierTpCap(baseTier);
@@ -224,6 +223,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       superProfiles,
       secondProfiles,
       dramatic,
+      multi,
       ultimate: isUltimate(sig.level),
       fromTransformation: sig.fromTransformation,
       freeTP: sig.freeTP,
