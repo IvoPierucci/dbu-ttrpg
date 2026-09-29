@@ -38,18 +38,13 @@
                   data-tooltip="Delete this Technique">&#10005;</button>
         </div>
         <div class="maneuver-body">
-          {{#if row.advantages.length}}
-          <p class="dbu-respond-hint dbu-list-label">Advantages</p>
+          {{! Green for an Advantage, red for a Disadvantage: the colour says which, no heading. }}
           {{#each row.advantages as |feature|}}
-          <div class="dbu-profile-line" {{#if feature.summary}}data-tooltip="{{feature.summary}}"{{/if}}>{{feature.label}}</div>
+          <div class="dbu-profile-line technique-advantage" {{#if feature.summary}}data-tooltip="{{feature.summary}}"{{/if}}>{{feature.label}}</div>
           {{/each}}
-          {{/if}}
-          {{#if row.disadvantages.length}}
-          <p class="dbu-respond-hint dbu-list-label">Disadvantages</p>
           {{#each row.disadvantages as |feature|}}
-          <div class="dbu-profile-line" {{#if feature.summary}}data-tooltip="{{feature.summary}}"{{/if}}>{{feature.label}}</div>
+          <div class="dbu-profile-line technique-disadvantage" {{#if feature.summary}}data-tooltip="{{feature.summary}}"{{/if}}>{{feature.label}}</div>
           {{/each}}
-          {{/if}}
           {{#unless row.advantages.length}}{{#unless row.disadvantages.length}}
           <p class="maneuver-nothing">No Advantages or Disadvantages yet. The pencil opens it.</p>
           {{/unless}}{{/unless}}

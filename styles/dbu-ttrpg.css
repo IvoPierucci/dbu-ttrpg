@@ -395,6 +395,15 @@
   text-align: right;
 }
 
+/* A Technique's row, opened: its Advantages in green and its Disadvantages in red. */
+.dbu-ttrpg .technique-advantage {
+  color: #4caf50;
+}
+
+.dbu-ttrpg .technique-disadvantage {
+  color: #e0564a;
+}
+
 .dbu-ttrpg .technique-summary {
   display: flex;
   gap: 18px;
