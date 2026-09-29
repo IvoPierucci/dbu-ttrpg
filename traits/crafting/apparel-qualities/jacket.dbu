@@ -2,27 +2,30 @@ id: jacket
 name: Jacket
 kind: crafting
 categories: standard-clothing
-slots: 1
+# "Quality Slots: 1~3" - which, asked when it is added.
+slots: 1~3
 source: Core Rule
 description: >
-  Soak Value 1(bT) higher, and it can go on over Armor.
+  Soak Value 1(bT) higher for each Slot it takes, and it can go on over Armor.
 # What it does, for the Effects on its Item's sheet: its Effects line as printed, word for
 # word, cut into one line to an effect, each opening with its tag as the rulebook writes one.
 summary: >
-  [Passive]: Increase your Soak Value by 1(bT).
+  [Passive]: Increase your Soak Value by x(bT), where x is equal to the number of Quality Slots
+  this Apparel Quality is occupying.
 
-  [Passive]: This piece of Apparel can be worn over Armor.
+  [Passive]: Additionally, this piece of Apparel can be worn over Armor.
 text: >
   Jacket: A piece of clothing designed to protect another piece of clothing underneath.
   –Apparel Category: Standard Clothing
   –Prerequisites: N/A
-  –Quality Slots: 1
-  –Effects: Increase your Soak Value by 1(bT). This piece of Apparel can be worn over Armor.
+  –Quality Slots: 1~3
+  –Effects: Increase your Soak Value by x(bT), where x is equal to the number of Quality Slots this
+  Apparel Quality is occupying. Additionally, this piece of Apparel can be worn over Armor.
 
 ---
 
-# The Soak Value is the wearer's, while worn. Going on over Armor: while Armor is worn nothing
-# goes on but this, and it goes on top of the Armor - equipPlan() in module/gear.mjs.
+# The Soak Value is the wearer's, while worn: 1(bT) for each Slot. Going on over Armor: while Armor
+# is worn nothing goes on but this, and it goes on top of the Armor - equipPlan() in module/gear.mjs.
 [passive]
-soakValue += 1(bT);
+soakValue += 1(bT) * $slots;
 piece.wornOverArmor = true;
