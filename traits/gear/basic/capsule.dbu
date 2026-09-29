@@ -7,17 +7,21 @@ craftDC: Qualified
 capsule: true
 # "You can spend 1 Action to throw the Capsule."
 placeCost: 1
+# Its Details.
+details: technology
 source: Core Rule
 description: >
   Holds almost anything in a device small enough to carry. Throw it and what is inside
   appears.
 text: >
-  Capsule [Tech]: An item that can hold almost anything in it, keeping it in a compact, easy
-  to carry device.
+  Capsule: An item that can hold almost anything in it, keeping it in a compact, easy to carry
+  device.
   –Craft DC: Qualified
+  –Details: Technology
   –Effects: You can store any Basic Item into a Capsule. Vehicles and Bases can also be
   stored within Capsules through the Capsule Quality. You cannot store a living thing or a
-  Capsule within a Capsule.
+  Capsule within a Capsule, and can only store one thing in each Capsule Basic Item you
+  possess.
 
   You can spend 1 Action to throw the Capsule into an unoccupied Square within a Destructive
   Sphere AoE (centered on you). If you do, and there’s enough space for the size of the item,
@@ -36,8 +40,7 @@ text: >
 # Throw: 1 Action, and what was inside is out again. Where it lands, whether there is room
 # for it, and which Square is its centre are the table's. The Capsule stays, empty.
 #
-# One Item to a Capsule. The entry stores "any Basic Item into a Capsule" and throws the
-# Capsule to make "it" appear - one thing in, one thing out.
+# One Item to a Capsule: "can only store one thing in each Capsule Basic Item you possess".
 #
 # --- What is not built ---------------------------------------------------------------------------
 #
