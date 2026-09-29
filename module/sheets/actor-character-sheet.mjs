@@ -637,29 +637,26 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.actor.createEmbeddedDocuments("Item", [item.toObject()]);
   }
 
+  // Laid out as a mirror: five over four, each row's names matched in length from the outside in,
+  // Signature Techniques - the longest - in the middle of the top row. Where each one goes is the
+  // stylesheet's (`.sheet-tabs`); the order here is the order they are placed in.
   static TABS = {
     main: { id: "main", group: "primary", label: "Main" },
     combat: { id: "combat", group: "primary", label: "Combat" },
-    // Beside the Combat tab rather than inside it. Four lists of rows that each open to
-    // a published entry is most of a page on its own, and it was the part of that tab a
-    // player scrolled past everything else to reach.
-    maneuvers: { id: "maneuvers", group: "primary", label: "Maneuvers" },
-    // The Techniques this character built, on a tab of their own beside the Maneuvers they are
-    // thrown through - with what they cost in Technique Points.
+    // The Techniques this character built, on a tab of their own - with what they cost in
+    // Technique Points.
     techniques: { id: "techniques", group: "primary", label: "Signature Techniques" },
     traits: { id: "traits", group: "primary", label: "Traits" },
-    // A section of the rules that has not been given yet. The tab is here so there is
-    // somewhere for it to go; what fills it is written when the rules arrive rather than
-    // guessed at from the name.
-    //
-    // Beside Traits rather than inside Combat: a Battlefield is something the whole table
-    // is standing in, and the Combat tab is this character's own tracking values.
-    battlefields: { id: "battlefields", group: "primary", label: "Battlefields" },
-    // Gear, which is the rulebook's Equipment. Here ahead of its rules, as Battlefields
-    // was, so there is somewhere for them to go.
+    // Gear, which is the rulebook's Equipment.
     gear: { id: "gear", group: "primary", label: "Gear" },
-    progression: { id: "progression", group: "primary", label: "Progression" },
-    biography: { id: "biography", group: "primary", label: "Biography" }
+    // A Battlefield is something the whole table is standing in; the Combat tab is this
+    // character's own tracking values.
+    battlefields: { id: "battlefields", group: "primary", label: "Battlefields" },
+    // Beside the Combat tab's values rather than inside them: four lists of rows that each open
+    // to a published entry is most of a page on its own.
+    maneuvers: { id: "maneuvers", group: "primary", label: "Maneuvers" },
+    biography: { id: "biography", group: "primary", label: "Biography" },
+    progression: { id: "progression", group: "primary", label: "Progression" }
   };
 
   /** The character's Maneuver Items, as the plain definitions the rules speak in. */

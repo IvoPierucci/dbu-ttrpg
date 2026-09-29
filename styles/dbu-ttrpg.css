@@ -446,7 +446,8 @@
 }
 
 /* Five over four, the second row set half a tab across from the first, so they sit
-   staggered like bricks rather than stacked in columns. Signature Techniques is the ninth.
+   staggered like bricks rather than stacked in columns. The order (the sheet's TABS) mirrors
+   each row by the length of its names, the longest in the middle of the top row.
 
    Ten columns, each tab two of them: the first row starts on the odd columns and the
    second on the even ones, which is the half-tab shift. Placed by position, so a tenth tab
