@@ -1900,6 +1900,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       });
     }
 
+    // Ingenuity, a rule of Scholarship: "It is a unique Aptitude that is equal to your Scholarship
+    // Modifier at the time of creating/modifying an Item (ignoring any bonuses from Enhancements and
+    // Forms)." Its value now; an Item created or modified records it then. There are no Enhancements
+    // or Forms here yet, so nothing is left out of it.
+    this.ingenuity = atts.scholarship.mod;
+
     // --- Skills ---
     // A Rank is one filled slot on an earned Skill Improvement row. Rows set to any
     // other option keep their slots hidden, so they must not be counted.
