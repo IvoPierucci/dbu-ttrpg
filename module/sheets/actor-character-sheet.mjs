@@ -3019,7 +3019,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
 
     const { postGearHazard } = await import("../chat.mjs");
-    return postGearHazard(this.actor, item);
+    const card = await postGearHazard(this.actor, item);
+    // Consumable: "destroyed once it is used" - the card carries what it needs.
+    if (card && isConsumable(item, getTrait)) await item.delete();
+    return card;
   }
 
   /**

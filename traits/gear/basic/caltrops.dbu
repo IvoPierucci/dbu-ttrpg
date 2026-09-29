@@ -2,8 +2,10 @@ id: caltrops
 name: Caltrops
 kind: gear
 craftDC: Qualified
-# Scattering them costs 1 Action, by the table's ruling: the entry gives no Action Cost.
+# "Spend 1 Action to select a Square."
 placeCost: 1
+# Its Details. Consumable: "destroyed once it is used" - gone once scattered.
+details: consumable
 # "Any Character (except those in a High Environment) who moves through any Square in that
 # AoE has their Life Points reduced by 1d4(bT)." Rolled with the base Tier of Power of whoever
 # moves through - the one suffering it, as with burning ground or a collision - by the
@@ -17,8 +19,9 @@ description: >
 text: >
   Caltrops: A handful of spikes you scatter across the ground to prevent pursuit.
   –Craft DC: Qualified
-  –Effects: Select a Square within a Destructive Sphere AoE (centered on you). Create a
-  Sphere AoE centered on that Square. Any Character (except those in a High Environment) who
+  –Details: Consumable
+  –Effects: Spend 1 Action to select a Square within a Destructive Sphere AoE (centered on
+  you). Create a Sphere AoE centered on that Square. Any Character (except those in a High Environment) who
   moves through any Square in that AoE has their Life Points reduced by 1d4(bT). This effect
   does not stack if they move through multiple Squares.
 
@@ -41,5 +44,5 @@ text: >
 # movement through the spikes, however many of their Squares it crossed. That is the
 # player's to keep, the way the Squares are.
 #
-# How long they stay down, and whether they are used up, the entry does not say. The card
-# stays in the chat and the Caltrops stay on the character, for the table to decide.
+# How long they stay down the entry does not say: the card stays in the chat for the table to
+# decide. Consumable: the Caltrops come off the character once scattered.
