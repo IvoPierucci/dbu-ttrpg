@@ -506,6 +506,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       attuneGear: DBUCharacterSheet._onAttuneGear,
       snackGear: DBUCharacterSheet._onSnackGear,
       poisonGear: DBUCharacterSheet._onPoisonGear,
+      chargeGear: DBUCharacterSheet._onChargeGear,
       flexGear: DBUCharacterSheet._onFlexGear,
       resizeGear: DBUCharacterSheet._onResizeGear,
       repairGear: DBUCharacterSheet._onRepairGear,
@@ -1168,6 +1169,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         poisoned: Boolean(item.system.crafted?.poisoned),
         // Ki stored in it, to draw back out.
         draws: Boolean(item.system.storesDrain) && ((item.system.charges ?? 0) > 0),
+        // A charge spent for an effect said on the card - the Sake Bottle's Drink.
+        spendsCharge: Boolean(item.system.chargeUseNote) && ((item.system.charges ?? 0) > 0),
+        chargeUseLabel: item.system.chargeUseLabel || "Use",
         charges: item.system.charges ?? 0,
         // An Item used up to take Conditions off, and whether it has been this Encounter.
         consumable: ((item.system.removes ?? []).length > 0) || Boolean(item.system.heal?.dice)
@@ -3593,6 +3597,24 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * A Poison Vial: "You may spend 1 Action and 1 Poison Drop to Poison a Weapon" - one of the
    * character's, until the Combat Encounter ends.
    */
+  /**
+   * Spend a charge for an effect the card says: the Sake Bottle's "You can spend 1 Action and 1
+   * Alcohol from the Sake Bottle to enter the Drunk Special State until the start of your next turn."
+   */
+  static async _onChargeGear(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system.chargeUseNote || !((item.system.charges ?? 0) > 0)) return;
+    const { spendActions } = await import("../combat.mjs");
+    if (!await spendActions(this.actor, item.system.placeCost ?? 0)) return;
+    const left = Math.max(0, (item.system.charges ?? 0) - 1);
+    await item.update({ "system.charges": left });
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${Handlebars.escapeExpression(`${this.actor.name} uses 1 ${item.system.chargesLabel || "charge"} from `
+        + `${item.name} (${left} left), and ${item.system.chargeUseNote}.`)}</p>`
+    });
+  }
+
   static async _onPoisonGear(event, target) {
     const vial = this.actor.items.get(target.dataset.itemId);
     if (!((vial?.system.charges ?? 0) > 0)) return;

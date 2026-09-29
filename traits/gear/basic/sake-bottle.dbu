@@ -1,0 +1,41 @@
+id: sake-bottle
+name: Sake Bottle
+kind: gear
+tags: food
+craftDC: Qualified
+# Its Details.
+details: food
+# "When this item is created, it holds 4 stacks of Alcohol and cannot hold more than 4."
+chargesDice: 4
+chargesLabel: Alcohol
+# "You can spend 1 Action and 1 Alcohol from the Sake Bottle to enter the Drunk Special State until
+# the start of your next turn." The Drunk Special State is not here yet: the card says it.
+placeCost: 1
+chargeUseLabel: Drink
+chargeUseNote: enters the Drunk Special State until the start of their next turn
+source: Core Rule
+description: >
+  Holds 4 Alcohol. An Action and 1 Alcohol: Drunk until the start of your next turn.
+text: >
+  Sake Bottle [Food]: A flask, gourd, or other drink container which you can fill with your choice
+  of drink.
+  –Craft DC: Qualified
+  –Details: Food
+  –Effects: When this item is created, it holds 4 stacks of Alcohol and cannot hold more than 4
+  stacks of Alcohol. You can spend 1 Action and 1 Alcohol from the Sake Bottle to enter the Drunk
+  Special State until the start of your next turn.
+
+  You can refill your Sake Bottle while Adventuring, but when it has no Alcohol left in it, it can
+  be used for the Sealing Unique Ability.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# 4 Alcohol when given, shown on its row and editable on the Item. Drink, on its row: 1 Action and 1
+# Alcohol, and the card says they are Drunk until the start of their next turn.
+#
+# --- What is not built -------------------------------------------------------------------------
+#
+# The Drunk Special State (the card says it; the table applies it). Refilling while Adventuring -
+# set its Alcohol back on the Item, up to 4. The Sealing Unique Ability it can hold when empty.

@@ -2167,6 +2167,10 @@ export function gearItemFrom(definition, actor = null) {
       // Charges it is made with, rolled when it is given - the Poison Vial's Drops.
       chargesDice: String(definition.chargesDice ?? ""),
       chargesLabel: String(definition.chargesLabel ?? ""),
+      // A charge spent for an effect the system cannot apply, said on the card: the Sake Bottle's
+      // "1 Action and 1 Alcohol ... to enter the Drunk Special State".
+      chargeUseLabel: String(definition.chargeUseLabel ?? "").trim(),
+      chargeUseNote: String(definition.chargeUseNote ?? "").trim(),
       // Or so many per base Tier of Power of whoever makes it, "at the time of creation" -
       // the Jetpack's 30(bT) Ki. Worked out off the character it is given to, and kept as
       // the most it holds.
