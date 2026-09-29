@@ -2362,7 +2362,31 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (data.system.lock?.locks) {
       data.system.lock.id = foundry.utils.randomID();
       return this.actor.createEmbeddedDocuments("Item",
-        [data, keyItemFor(definition.name, data.system.lock.id)]);
+        [data, keyItemFor(definition.name, data.system.lock.id, getTrait("key"))]);
+    }
+
+    // The Key: "When you create this Key, you must target a Base's Door where you are the Owner, or
+    // a Basic Item you created that requires it." One of their own locking Items, or a Door - the
+    // table's, since there are no Bases here.
+    if (definition.key === true) {
+      const locks = this.actor.items.filter(owned => owned.system?.lock?.locks && owned.system.lock.id);
+      const target = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${definition.name} - for what?` },
+        content: `<select name="for" class="dbu-gear-pick">${locks.map(owned =>
+          `<option value="${owned.id}">${escape(owned.name)}</option>`).join("")}
+          <option value="door">A Base's Door</option></select>`,
+        buttons: [
+          { action: "confirm", label: "Make", callback: (event, button, dialog) =>
+            dialog.element.querySelector('select[name="for"]')?.value ?? null },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!target || (target === "cancel")) return;
+      const lock = this.actor.items.get(target);
+      data.name = `${definition.name} (${lock ? lock.name : "Base Door"})`;
+      data.system.keyFor = lock ? lock.system.lock.id : "";
     }
     return this.actor.createEmbeddedDocuments("Item", [data]);
   }

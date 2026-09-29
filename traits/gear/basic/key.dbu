@@ -1,0 +1,28 @@
+id: key
+name: Key
+kind: gear
+craftDC: Qualified
+# "When you create this Key, you must target a Base's Door where you are the Owner, or a Basic Item
+# you created that requires it." Asked when it is given.
+key: true
+source: Core Rule
+description: >
+  Opens the one Base Door or Basic Item it was made for, and nothing else.
+text: >
+  Key: A tool to open a lock, this item is practically a necessity for any home.
+  –Craft DC: Qualified
+  –Details: N/A
+  –Effects: When you create this Key, you must target a Base’s Door where you are the Owner, or a
+  Basic Item you created that requires it. This Key only works on that chosen target.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Given from the Gear tab: it asks which of the character's own locking Items it is for (a
+# Ki-Sealing Handcuff) and opens that one and no other; or a Base's Door, which is the table's -
+# there are no Bases here. A Ki-Sealing Handcuff makes its own Key with it, from this entry.
+#
+# --- What is not built -------------------------------------------------------------------------
+#
+# Bases and their Doors.

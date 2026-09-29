@@ -2911,14 +2911,17 @@ export function lockedBy(items, key) {
 
 /**
  * A Key for a locking Item, made with it: "When this Accessory is created, you must create
- * a Key Basic Item for this instance of the Accessory."
+ * a Key Basic Item for this instance of the Accessory." The Key Basic Item's own entry where there
+ * is one: "This Key only works on that chosen target."
  */
-export function keyItemFor(lockName, lockId) {
+export function keyItemFor(lockName, lockId, keyDefinition = null) {
+  const made = keyDefinition ? gearItemFrom(keyDefinition) : null;
   return {
+    ...(made ?? {}),
     name: `Key (${lockName})`,
     type: "gear",
     img: GEAR_ICON,
-    system: { gearId: "", itemType: "basic", keyFor: lockId,
+    system: { ...(made?.system ?? {}), gearId: made?.system?.gearId ?? "", itemType: "basic", keyFor: lockId,
       description: `<p>Opens the ${lockName} it was made with.</p>` }
   };
 }
