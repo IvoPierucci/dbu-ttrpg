@@ -36,5 +36,6 @@ text: >
 # Capacity added outside the attacker's own limit, and a count toward the joiner's Diminishing
 # Offense.
 #
-# Not built: the Duel parts, which wait for the Duel Maneuver. Whether the one joining is an Ally is
-# the table's.
+# In a Duel (duel.dbu): 1/4 of the Modifier, a wager of up to 1/10 of Max Capacity on each Duel Clash
+# instead of one up front, and a joiner whose side loses the Duel is hit with it. A Duel's initiator can
+# be joined the same way. Whether the one joining is an Ally is the table's.

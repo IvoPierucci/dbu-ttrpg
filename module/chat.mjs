@@ -1,4 +1,7 @@
 import { unitedPending, unitedWoundParts, withJoiner } from "./united-attack.mjs";
+import { duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
+  duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
+  woundResourceStacks, woundResources } from "./duel.mjs";
 import { featureDef } from "./technique.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { reactiveFor, usesLeft } from "./effects/registry.mjs";
@@ -4406,7 +4409,10 @@ async function respondDialog(message, respondable) {
     // Defend, which also left the exchange waiting on an answer they could not give.
     const isTarget = Boolean(attack)
       && attackTargets(attack).some(target => target.uuid === actor.uuid);
-    const unresolved = isTarget && !attack.result;
+    const unresolved = isTarget && !attack.result && !endedByDuel(attack);
+    // A Duel on this attack: whoever is not in it waits for its winner (the user's ruling), and
+    // whoever is in it has already answered. Joining it is the one answer left.
+    const waiting = unresolved && (duelRunning(attack) || Boolean(duelSideOf(attack, actor.uuid)));
 
     // Nothing is picked to begin with, so confirming the dialog without touching a
     // group answers nothing. The Instants carry an explicit "nothing" of their own,
@@ -4450,7 +4456,7 @@ async function respondDialog(message, respondable) {
     // Picked to begin with: dodging is what answering an attack means when nothing
     // else is chosen, so confirming without touching this is a real answer rather
     // than a dialog that quietly did nothing.
-    const dodge = unresolved
+    const dodge = (unresolved && !waiting)
       ? `<label class="dbu-respond-option dbu-respond-dodge">
            <input type="radio" name="counter-${actor.id}" value="dodge" checked/>
            <span class="dbu-respond-name">Dodge</span>
@@ -4476,9 +4482,15 @@ async function respondDialog(message, respondable) {
     const counters = counterManeuvers().map(maneuver => {
       // A Counter Maneuver answers an Attacking Maneuver aimed at you, so a character
       // who is not the target is shown it but cannot take it.
-      let blocked = !unresolved;
-      let reason = blocked
-        ? "only the target of an attack may answer it, and only before it resolves" : "";
+      let blocked = !unresolved || waiting;
+      let reason = !unresolved
+        ? "only the target of an attack may answer it, and only before it resolves"
+        : waiting ? "the Duel on this attack has to have a winner first" : "";
+      // The Duel Maneuver: judged against the attack, and joinable while one is still being set up.
+      if (maneuver.duel && unresolved && !duelSideOf(attack, actor.uuid)) {
+        reason = whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsLeft(actor, "counter") : 1 });
+        blocked = Boolean(reason);
+      }
 
       // The Sudden Stop answers being moved, which is a third thing again.
       if (maneuver.suddenStop) {
@@ -4531,7 +4543,8 @@ async function respondDialog(message, respondable) {
         ? `${maneuver.source} - ${maneuverKiCost(maneuver, null, actor)} KP`
         : maneuver.source;
 
-      return option(`counter-${actor.id}`, maneuver.id, maneuver.name, note, blocked, reason);
+      const label = (maneuver.duel && duelRunning(attack)) ? "Join the Duel" : maneuver.name;
+      return option(`counter-${actor.id}`, maneuver.id, label, note, blocked, reason);
     }).join("");
 
     // Both Dodge and the Defend Maneuver are called for by being attacked, and a
@@ -4838,6 +4851,7 @@ async function playCounter(message, actor, answer, attack) {
 
   const maneuver = getManeuver(answer);
   if (!maneuver) return;
+  if (maneuver.duel) return enterDuel(message, actor);
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
   await recordManeuverType(actor, "counter");
@@ -8001,7 +8015,7 @@ function chooseDefence(message, target, defence, wager = 0, foundation = "energy
   // Read fresh rather than trusting what the dialog was opened with: the other side
   // may have confirmed since, and writing a stale copy back would erase it.
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
-  if (!attack || attack.result) return;
+  if (!attack || attack.result || endedByDuel(attack)) return;
 
   // Replaced rather than merged in, so choosing again overwrites rather than piling up.
   const others = (attack.defences ?? []).filter(entry => entry.uuid !== target.uuid);
@@ -8016,7 +8030,7 @@ function chooseDefence(message, target, defence, wager = 0, foundation = "energy
 /** Record that the attacker has finished applying whatever they are bringing. */
 function readyAttacker(message) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
-  if (!attack || attack.result) return;
+  if (!attack || attack.result || endedByDuel(attack)) return;
 
   return settleAttack(message, {
     ...attack,
@@ -8026,7 +8040,9 @@ function readyAttacker(message) {
 
 /** Write the attack back, and roll it if that was the last confirmation needed. */
 async function settleAttack(message, attack) {
-  if (!attackIsReady(attack)) return requestEdit(message, { type: "attack", attack });
+  if (!attackIsReady(attack) || duelRunning(attack) || endedByDuel(attack)) {
+    return requestEdit(message, { type: "attack", attack });
+  }
   return resolveAttack(message, attack);
 }
 
@@ -8130,6 +8146,8 @@ async function resolveAttack(message, attack) {
     // character winning a Dodge and being hit anyway reads as the rule not working.
     const forced = attack.autoHit
       ? `${attack.maneuverName} hits automatically`
+      : (attack.duelLosers ?? []).includes(uuid)
+      ? "Lost the Duel"
       : (attack.autoHitUuids ?? []).includes(uuid)
       ? "Volatile Explosion: hit automatically"
       : attacker.system.effects?.slots?.["attack.autoHit"] === true
@@ -9812,6 +9830,14 @@ const DEFENCES = {
     wound: (total) => total
   },
 
+  // In the Duel, and on the side that lost it: hit, with nothing rolled against the Strike.
+  duel: {
+    label: "Duel",
+    answer: () => null,
+    soak: (soak) => soak,
+    wound: (total) => total
+  },
+
   directHit: {
     label: "Direct Hit",
     answer: () => null,
@@ -10681,6 +10707,446 @@ async function applySquareQuality(target, id) {
  * the table's; what it is made of is the entry's, and saying it here saves going back to
  * the entry to find out.
  */
+/** The Duel on the card: who is in it, the Clashes so far, and whose wager it is waiting on. */
+function duelRows(attack) {
+  const duel = attack.duel;
+  if (!duel) return "";
+  const escape = Handlebars.escapeExpression;
+  const sides = duelSides(attack);
+  const names = list => list.map(entry => escape(entry.name)).join(", ");
+  const how = (duel.initiating?.kind === "power") ? "Power Duel" : escape(duel.initiating?.name ?? "");
+  const rows = [`<div class="dbu-respond-hint">Duel: ${names(sides.attacker)} against ${names(sides.defender)}
+    (${how}) &middot; ${duel.wins?.attacker ?? 0}-${duel.wins?.defender ?? 0}${
+    duelTotal(duel) ? ` &middot; ${duelTotal(duel)} KP wagered` : ""}</div>`];
+  (duel.clashes ?? []).forEach((clash, index) => {
+    const staked = side => clash.wagers.filter(entry => entry.side === side)
+      .reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+    const winner = (clash.winner === "attacker") ? attack.attackerName
+      : (clash.winner === "defender") ? duel.initiatorName : "tie";
+    rows.push(`<div class="dbu-respond-hint">Duel Clash ${index + 1}: ${escape(attack.attackerName)} ${clash.attacker}
+      (${staked("attacker")} wagered) vs ${escape(duel.initiatorName)} ${clash.defender} (${staked("defender")} wagered)
+      &middot; ${escape(winner)}${clash.redone ? ", wagers back and redone" : ""}</div>`);
+  });
+  if (duelRunning(attack)) {
+    const owed = duelWaitingOn(attack);
+    rows.push(`<div class="dbu-respond-hint">Next Duel Clash: waiting for ${names(owed)}'s wager${
+      owed.length > 1 ? "s" : ""}.</div>`);
+  }
+  return rows.join("");
+}
+
+/** A Wager button for each of this user's characters in the Duel who has not given one. */
+function duelButtons(message, attack, container) {
+  const given = new Set((attack.duel.wagers ?? []).map(entry => entry.uuid));
+  for (const entry of duelParticipants(attack)) {
+    if (given.has(entry.uuid)) continue;
+    const actor = fromUuidSync(entry.uuid);
+    if (!actor?.isOwner) continue;
+    const element = document.createElement("button");
+    element.type = "button";
+    element.className = "dbu-clash-button";
+    element.textContent = `Duel wager: ${actor.name}`;
+    element.dataset.tooltip = entry.primary
+      ? "Up to 1/2 of your Max Capacity, whatever Capacity is left; nobody sees it until the Clash is rolled."
+      : "Up to 1/10 of your Max Capacity, added to your side's roll; nobody sees it until the Clash is rolled.";
+    element.addEventListener("click", () => submitDuelWager(message, actor));
+    container.append(element);
+  }
+}
+
+/**
+ * The Duel Maneuver, played from the response dialog: begun, or joined (United Duel).
+ *
+ * "You may initiate the Duel Maneuver by spending the Ki Points to make an Attacking Maneuver of the
+ * same Foundation ... as the incoming Attacking Maneuver". Or Power Duel: "forgo using an Initiating
+ * Attack and simply contest the opponent with pure might. This costs no Ki Points."
+ */
+async function enterDuel(message, actor) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const why = whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsLeft(actor, "counter") : 1 });
+  if (why) {
+    ui.notifications.warn(`${actor.name}: Duel - ${why}.`);
+    return;
+  }
+  if (duelRunning(attack)) return joinDuel(message, attack, actor);
+
+  const initiating = await askInitiatingAttack(actor, attack);
+  if (!initiating) return;
+
+  if (!await spendActions(actor, 1, "counter")) return;
+  if (initiating.cost && !await spendManeuverCost(actor, { name: initiating.name }, initiating.cost)) {
+    await refundActions(actor, 1, "counter");
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  const attacker = fromUuidSync(attack.attackerUuid);
+
+  // A Signature Technique used for it is a use of it, and takes its charge with it.
+  if (initiating.kind === "technique") {
+    const { signatureTechniquesOf, collectCharges } = await import("./use-maneuver.mjs");
+    const { techniqueUseEntries } = await import("./technique-use.mjs");
+    const technique = signatureTechniquesOf(actor).find(entry => entry.itemId === initiating.itemId);
+    const door = getManeuver("signature-technique");
+    if (door && !(technique?.advantages ?? []).includes("low-stakes-attack")) await recordManeuverUse(actor, door);
+    if (technique) await recordManeuverUse(actor, technique);
+    const entries = technique ? techniqueUseEntries(technique) : [];
+    if (entries.length) await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), ...entries] });
+    if (actor.system.charging?.maneuverId === initiating.itemId) initiating.charges = await collectCharges(actor);
+  }
+  // "You may trigger any effects that would occur upon using an Attacking Maneuver ... as if you had
+  // used your Initiating Attack" - its own on-used, scoped to the Item that is it.
+  const own = (initiating.kind === "technique") ? actor.items.get(initiating.itemId)
+    : (initiating.kind === "profile") ? actor.items.find(item => (item.type === "maneuver")
+      && ((item.system.maneuverId || item.id) === "basic-attack")) : null;
+  if (own) {
+    const { fireMoment } = await import("./effects/moments-runtime.mjs");
+    await fireMoment(actor, "on-used", { maneuver: { id: own.system.maneuverId || own.id, name: own.name, itemId: own.id,
+      attacking: true }, actionsSpent: 0, targets: attacker ? [attacker] : [] }, { only: own.id });
+  }
+  // Diminishing, both (the user's ruling): an Attacking Maneuver of theirs, and a defence.
+  await actor.update({
+    "system.attacksThisRound": (Number(actor.system.attacksThisRound) || 0) + 1,
+    "system.diminishingDefense": (Number(actor.system.diminishingDefense) || 0)
+      + (Number(actor.system.diminishing?.defense?.perAttack) || 0)
+  });
+
+  // "At the start of a Duel Maneuver, the attacking Character regains Ki Points and Capacity equal to
+  // their initial Ki Wager, losing the Ki Wager in the process." Each gets back what they put on it:
+  // the attacker theirs, a United Attack joiner theirs.
+  const joinersWager = (attack.united ?? []).reduce((sum, entry) => sum + (Number(entry.wager) || 0), 0);
+  const own_ = Math.max(0, (Number(attack.kiWager) || 0) - joinersWager);
+  const giveBack = async (who, amount, life = false) => {
+    if (!who || !amount) return;
+    await requestActorUpdate(who, life
+      ? { "system.life.value": Math.min(who.system.life.max, who.system.life.value + amount),
+          "system.capacity.spent": Math.max(0, who.system.capacity.spent - amount) }
+      : { "system.ki.value": Math.min(who.system.ki.max, who.system.ki.value + amount),
+          "system.capacity.spent": Math.max(0, who.system.capacity.spent - amount) });
+  };
+  await giveBack(attacker, own_, Boolean(attack.wagerFromLife));
+  for (const entry of attack.united ?? []) await giveBack(fromUuidSync(entry.uuid), Number(entry.wager) || 0);
+
+  const duel = {
+    initiatorUuid: actor.uuid,
+    initiatorName: actor.name,
+    initiating,
+    originalWager: Number(attack.kiWager) || 0,
+    joined: [],
+    united: [],
+    clashes: [],
+    wagers: [],
+    wins: { attacker: 0, defender: 0 },
+    total: 0,
+    outcome: null
+  };
+  await settledNote(message, `${actor.name} answers ${attack.maneuverName} with a Duel (${
+    initiating.kind === "power" ? "Power Duel" : initiating.name}).${
+    (attack.technique?.features ?? []).includes("transformation-flare")
+      ? ` Transformation Flare: ${attack.attackerName} may Transform out of sequence before any Duel roll.` : ""}`);
+  // Read again: others may have answered while the Initiating Attack was being chosen.
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  return requestEdit(message, { type: "attack", attack: { ...fresh, kiWager: 0,
+    united: (fresh.united ?? []).map(entry => ({ ...entry, wager: 0 })), duel } });
+}
+
+/**
+ * The Initiating Attack: Power Duel, a Profile of the same Foundation (Energy and Magic as one), or a
+ * Signature Technique of it. No Ki Wager is asked - the Duel's wagers are the ones that count.
+ */
+async function askInitiatingAttack(actor, attack) {
+  const group = duelFoundations(attack.foundation);
+  const escape = Handlebars.escapeExpression;
+  const { signatureTechniquesOf } = await import("./use-maneuver.mjs");
+  const { whyNotTechnique } = await import("./technique-use.mjs");
+  const { withGranted } = await import("./signature.mjs");
+  const { maneuverUsesLeft } = await import("./maneuvers.mjs");
+  const door = getManeuver("signature-technique");
+  const techniques = signatureTechniquesOf(actor).map(technique => {
+    const pinned = technique.profileFoundation?.[technique.profile];
+    const foundation = pinned ?? (PROFILES[technique.profile]?.foundations ?? []).find(key => group.includes(key));
+    if (!foundation || !group.includes(foundation)) return null;
+    const lowStakes = (technique.advantages ?? []).includes("low-stakes-attack");
+    const why = whyNotTechnique(actor, technique, { via: "duel" })
+      || ((!lowStakes && door && (maneuverUsesLeft(actor, door) <= 0))
+        ? "the Signature Technique Maneuver has been used this Combat Round" : "")
+      || ((maneuverUsesLeft(actor, technique) <= 0) ? "no uses left" : "");
+    const advantages = withGranted(technique.advantages ?? [], PROFILES[technique.profile]?.grantsAdvantage);
+    const declared = { profile: technique.profile, foundation, advantages, kiWager: 0 };
+    return { technique, why, declared, cost: maneuverKiCost(technique, declared, actor) };
+  }).filter(Boolean);
+
+  const rows = [
+    `<label class="dbu-technique"><input type="radio" name="how" value="power" checked/>
+      <span class="dbu-technique-name">Power Duel</span><span class="dbu-technique-note">0 KP</span></label>`,
+    `<label class="dbu-technique"><input type="radio" name="how" value="profile"/>
+      <span class="dbu-technique-name">A Profile</span>
+      <span class="dbu-technique-note">${escape(group.map(key => DBUCharacterData.FOUNDATIONS[key]?.label ?? key).join(" / "))}</span></label>`,
+    ...techniques.map(entry => `<label class="dbu-technique${entry.why ? " dbu-technique-spent" : ""}"
+        ${entry.why ? `data-tooltip="${escape(entry.why)}"` : ""}>
+      <input type="radio" name="how" value="${entry.technique.itemId}" ${entry.why ? "disabled" : ""}/>
+      <span class="dbu-technique-name">${escape(entry.technique.name)}</span>
+      <span class="dbu-technique-note">${entry.cost} KP</span></label>`)
+  ].join("");
+  const how = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - Duel` },
+    content: `<p class="dbu-respond-hint" data-tooltip="1 Counter Action. Three Duel Clashes with hidden Ki Wagers; whoever wins two rolls their Initiating Attack's Wound with every wager on it. Power Duel costs nothing and hits for your Might plus the wagers.">
+        Your Initiating Attack against ${escape(attack.attackerName)}'s ${escape(attack.maneuverName)}</p>
+      <div class="dbu-technique-picker">${rows}</div>`,
+    buttons: [
+      { action: "confirm", label: "Duel",
+        callback: (event, button, dialog) => dialog.element.querySelector('input[name="how"]:checked')?.value ?? null },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!how || (how === "cancel")) return null;
+
+  if (how === "power") {
+    return { kind: "power", name: "Power Duel", cost: 0, charges: 0, powerShotRanks: 0, woundCriticalTarget: null };
+  }
+  if (how === "profile") {
+    const basic = getManeuver("basic-attack");
+    const foundations = Object.fromEntries(Object.entries(DBUCharacterData.FOUNDATIONS)
+      .filter(([key]) => group.includes(key)));
+    const declared = await declareAttack(basic, foundations, actor, { wagerCap: 0 });
+    if (!declared?.profile) return null;
+    const cost = maneuverKiCost(basic, { ...declared, kiWager: 0 }, actor);
+    return { kind: "profile", name: `${basic.name} (${PROFILES[declared.profile]?.label ?? declared.profile})`, cost,
+      profile: declared.profile, foundation: declared.foundation, advantages: declared.advantages ?? [], charges: 0,
+      powerShotRanks: Math.min(featureRanks(declared.advantages ?? [], "power-shot"), POWER_SHOT_MAX_RANKS),
+      woundCriticalTarget: PROFILES[declared.profile]?.woundCriticalTarget ?? null };
+  }
+  const entry = techniques.find(candidate => candidate.technique.itemId === how);
+  if (!entry || entry.why) return null;
+  return { kind: "technique", name: entry.technique.name, itemId: how, cost: entry.cost,
+    profile: entry.declared.profile, foundation: entry.declared.foundation, advantages: entry.declared.advantages,
+    charges: 0, powerShotRanks: Math.min(featureRanks(entry.declared.advantages, "power-shot"), POWER_SHOT_MAX_RANKS),
+    woundCriticalTarget: PROFILES[entry.declared.profile]?.woundCriticalTarget ?? null };
+}
+
+/**
+ * United Duel: another target joins the Duel. "They must select a primary Character to play through the
+ * Duel Maneuver while all other Characters participate ... by Ki Wagering up to 1/10th of their Max
+ * Capacity". The user's ruling: they spend 1 Counter Action and meet the requirement themselves.
+ */
+async function joinDuel(message, attack, actor) {
+  if (!await spendActions(actor, 1, "counter")) return;
+  await recordManeuverType(actor, "counter");
+  await actor.update({ "system.diminishingDefense": (Number(actor.system.diminishingDefense) || 0)
+    + (Number(actor.system.diminishing?.defense?.perAttack) || 0) });
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const duel = { ...fresh.duel, joined: [...(fresh.duel.joined ?? []), { uuid: actor.uuid, name: actor.name }] };
+  await settledNote(message, `${actor.name} joins ${duel.initiatorName}'s Duel.`);
+  return requestEdit(message, { type: "attack", attack: { ...fresh, duel } });
+}
+
+/** United Attack onto the initiator's Initiating Attack: a secondary of their side. */
+async function uniteDuelSide(message, attack, joiner) {
+  const { joinUnitedAttack } = await import("./united-attack.mjs");
+  const { signatureTechniquesOf } = await import("./use-maneuver.mjs");
+  const duel = attack.duel;
+  const initiator = fromUuidSync(duel.initiatorUuid);
+  const initiating = duel.initiating;
+  const onDuel = { ...attack, attackerUuid: duel.initiatorUuid, attackerName: duel.initiatorName,
+    maneuverName: `Duel (${initiating.name})`, profile: initiating.profile, foundation: initiating.foundation,
+    profileLabel: PROFILES[initiating.profile]?.label ?? initiating.profile, technique: null,
+    advantages: initiating.advantages ?? [], united: duel.united ?? [] };
+  const entry = await joinUnitedAttack(onDuel, joiner, { attacker: initiator, techniques: signatureTechniquesOf(joiner),
+    duel: true });
+  if (!entry) return;
+  await recordManeuverType(joiner, "instant", { messageId: message.id });
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const next = { ...fresh.duel, united: [...(fresh.duel.united ?? []), entry],
+    initiating: { ...fresh.duel.initiating, advantages: [...(fresh.duel.initiating.advantages ?? []), ...entry.advantages],
+      powerShotRanks: Math.min(featureRanks([...(fresh.duel.initiating.advantages ?? []), ...entry.advantages],
+        "power-shot"), POWER_SHOT_MAX_RANKS) } };
+  await settledNote(message, `${joiner.name} joins ${duel.initiatorName}'s Duel with United Attack: ${entry.cost} Ki.`);
+  return requestEdit(message, { type: "attack", attack: { ...fresh, duel: next } });
+}
+
+/**
+ * One character's wager for the next Duel Clash. "The opposing Characters should not know of the
+ * amount the other Character is Ki Wagering until each Duel Clash begins" - the card says only that it
+ * is in. Taken from their Ki now, and not from their Capacity; given back if the Clash is redone.
+ */
+async function submitDuelWager(message, actor) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!duelRunning(attack)) return;
+  if ((attack.duel.wagers ?? []).some(entry => entry.uuid === actor.uuid)) return;
+  const side = duelSideOf(attack, actor.uuid);
+  if (!side) return;
+  const primary = duelParticipants(attack).find(entry => entry.uuid === actor.uuid)?.primary ?? false;
+  const cap = duelWagerCap(actor, { primary });
+  const amount = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - Duel Clash ${(attack.duel.clashes?.length ?? 0) + 1}` },
+    content: `<label class="dbu-wager"><span>Ki Wager (max ${cap})</span>
+        <input type="number" name="wager" value="0" min="0" max="${cap}"/></label>
+      <p class="dbu-respond-hint">Nobody sees it until the Clash is rolled. It does not touch your Capacity.</p>`,
+    buttons: [
+      { action: "confirm", label: "Wager",
+        callback: (event, button, dialog) => Number(dialog.element.querySelector('input[name="wager"]')?.value) || 0 },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!Number.isFinite(amount)) return;
+  const wager = Math.max(0, Math.min(Math.floor(amount), cap));
+  if (wager) await actor.update({ "system.ki.value": actor.system.ki.value - wager });
+
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const next = { ...fresh, duel: { ...fresh.duel,
+    wagers: [...(fresh.duel.wagers ?? []), { uuid: actor.uuid, name: actor.name, side, amount: wager }] } };
+  if (duelWaitingOn(next).length) return requestEdit(message, { type: "attack", attack: next });
+  return rollDuelClash(message, next);
+}
+
+/**
+ * A Duel Clash, rolled once every wager is in. "A Clash that uses the higher of each Character's Force
+ * or Magic Modifier for their rolls. Any Tier of Power Extra Dice that would be applied to the Wound
+ * Roll of the Initiating Attack are also applied", and so is any lower Critical Target it has.
+ */
+async function rollDuelClash(message, attack) {
+  const duel = attack.duel;
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const initiator = fromUuidSync(duel.initiatorUuid);
+  if (!attacker || !initiator) {
+    ui.notifications.warn("One of the characters in this Duel no longer exists.");
+    return;
+  }
+  const names = woundResources();
+  const sides = duelSides(attack);
+  const wagers = side => duel.wagers.filter(entry => (entry.side === side) && (entry.amount > 0))
+    .map(entry => ({ label: `Ki Wager (${entry.name})`, value: entry.amount }));
+  const critical = (actor, target) => (Number.isFinite(target)
+    ? Math.min(target, Number(actor.system.criticalTarget) || target) : null);
+  const [mine, theirs] = await Promise.all([
+    rollSide(attacker, [...duelClashRows(attacker, { charges: attack.energyCharges, powerShotRanks: attack.powerShotRanks,
+      allies: sides.attacker.length - 1, resourceStacks: woundResourceStacks(attacker, names) }), ...wagers("attacker")], {
+      extraDice: attacker.system.dice.extra.formula, criticalDice: attacker.system.dice.critical.formula,
+      criticalTarget: critical(attacker, profileFor(attack)?.woundCriticalTarget) }),
+    rollSide(initiator, [...duelClashRows(initiator, { charges: duel.initiating?.charges, powerShotRanks:
+      duel.initiating?.powerShotRanks, allies: sides.defender.length - 1,
+      resourceStacks: woundResourceStacks(initiator, names) }), ...wagers("defender")], {
+      extraDice: initiator.system.dice.extra.formula, criticalDice: initiator.system.dice.critical.formula,
+      criticalTarget: critical(initiator, duel.initiating?.woundCriticalTarget) })
+  ]);
+  const settled = settleDuelClash(duel, { attacker: mine.total, defender: theirs.total, wagers: duel.wagers });
+  const clashes = [...settled.duel.clashes];
+  clashes[clashes.length - 1] = { ...clashes[clashes.length - 1], attackerRoll: mine, defenderRoll: theirs };
+  for (const entry of settled.refund) {
+    const who = fromUuidSync(entry.uuid);
+    if (who) await requestActorUpdate(who, { "system.ki.value": Math.min(who.system.ki.max, who.system.ki.value + entry.amount) });
+  }
+  const next = { ...attack, duel: { ...settled.duel, clashes } };
+  if (!next.duel.outcome) return requestEdit(message, { type: "attack", attack: next });
+  return finishDuel(message, next);
+}
+
+/**
+ * The Duel won, or tied on the third Clash. "All Characters involved in a Duel Maneuver have their
+ * Capacity reduced to 0 after completing that Maneuver."
+ */
+async function finishDuel(message, attack) {
+  const duel = attack.duel;
+  const everyone = duelParticipants(attack).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
+  for (const who of everyone) await requestActorUpdate(who, { "system.capacity.spent": who.system.capacity.max });
+
+  if (duel.outcome === "tie") {
+    await requestEdit(message, { type: "attack", attack });
+    const loss = duelTieLoss(duel);
+    for (const who of everyone) if (loss) await reduceLifePoints(who, loss, { reason: "The Duel tied" });
+    return;
+  }
+
+  const sides = duelSides(attack);
+  if (duel.outcome === "attacker") {
+    // The attack goes on. Its wager is every wager of the Duel; the losing side is hit, with no
+    // Dodge - they spent their Counter on this (the user's ruling) - and whoever United-Attacked the
+    // initiator is "also considered a target".
+    const losers = sides.defender;
+    const targets = [...attackTargets(attack)];
+    for (const entry of losers) if (!targets.some(target => target.uuid === entry.uuid)) targets.push({ uuid: entry.uuid, name: entry.name });
+    const others = (attack.defences ?? []).filter(entry => !losers.some(loser => loser.uuid === entry.uuid));
+    return settleAttack(message, { ...attack, targets, kiWager: duelTotal(duel),
+      duelLosers: losers.map(entry => entry.uuid),
+      defences: [...others, ...losers.map(entry => ({ uuid: entry.uuid, defence: "duel", wager: 0, foundation: attack.foundation, parryWith: [] }))],
+      ready: [...new Set([...(attack.ready ?? []), ...losers.map(entry => entry.uuid)])] });
+  }
+
+  await requestEdit(message, { type: "attack", attack });
+  return postDuelWinner(message, attack);
+}
+
+/**
+ * The initiator won: "rolls their Wound Roll for their Attacking Maneuver against the opposing
+ * Character(s) as usual, but also applies a Ki Wager equal to the total Ki Wager used by all
+ * Characters involved". A card of its own, already past the Strike. Power Duel: "a Dice Score for a
+ * Wound Roll equal to your Might plus the total Ki Wagers", at Standard (the user's ruling).
+ */
+async function postDuelWinner(message, attack) {
+  const duel = attack.duel;
+  const initiator = fromUuidSync(duel.initiatorUuid);
+  const losers = duelSides(attack).attacker.map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
+  if (!initiator || !losers.length) return;
+  const initiating = duel.initiating;
+  const total = duelTotal(duel);
+  const power = initiating.kind === "power";
+  let maneuver;
+  if (power) {
+    maneuver = { id: "power-duel", name: "Power Duel", type: "counter", attacking: true, tags: [], outsideDiminishing: true };
+  }
+  else if (initiating.kind === "technique") {
+    const { signatureTechniquesOf } = await import("./use-maneuver.mjs");
+    const technique = signatureTechniquesOf(initiator).find(entry => entry.itemId === initiating.itemId);
+    maneuver = technique ? { ...technique, signature: true, signatureTechnique: false, outsideDiminishing: true } : null;
+  }
+  else maneuver = { ...getManeuver("basic-attack"), outsideDiminishing: true };
+  if (!maneuver) {
+    ui.notifications.warn(`${initiator.name}: the Initiating Attack is gone; roll its Wound by hand.`);
+    return;
+  }
+  const declared = power
+    ? { profile: "simple", foundation: attack.foundation, kiWager: 0, advantages: [] }
+    : { profile: initiating.profile, foundation: initiating.foundation, kiWager: total,
+        advantages: initiating.advantages ?? [] };
+  const card = await postAttack(initiator, losers[0], maneuver,
+    { ...declared, charges: initiating.charges ?? 0, extraTargets: losers.slice(1).map(who => ({ uuid: who.uuid, name: who.name })) },
+    { asOutOfSequence: true });
+  const made = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!made) return;
+  const category = resolveDamageCategory(made.damageCategory, made.damageCategoryShift ?? 0);
+  return requestEdit(card, { type: "attack", attack: {
+    ...made,
+    fromDuel: true,
+    maneuverName: `${made.maneuverName} (won the Duel)`,
+    united: duel.united ?? [],
+    ...(power ? { fixedWound: powerDuelWound(initiator, duel), powerDuel: true } : {}),
+    ready: [made.attackerUuid, ...attackTargets(made).map(target => target.uuid)],
+    result: {
+      strike: null,
+      targets: attackTargets(made).map(target => ({ uuid: target.uuid, defense: "duel", defenseLabel: "Lost the Duel",
+        answer: null, hit: true, automatic: true, forced: "Lost the Duel", longRange: 0, analysis: 0, against: 0,
+        damageCategory: category, incomingDamage: null, counterWound: null, applied: false })),
+      wound: null
+    }
+  } });
+}
+
+/**
+ * Power Duel, won: "If your Opponent is not Defeated, they gain the Shaken Combat Condition for the
+ * remainder of the Combat Encounter or until you are knocked through a Health Threshold (whichever
+ * happens first)."
+ */
+async function powerDuelShaken(winner, loser) {
+  if (!winner || !loser || loser.system.defeated) return;
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  if (await gainCondition(loser, "shaken", 1) === false) return;
+  await lasting(loser, { kind: KINDS.CONDITION, key: "shaken", edge: EDGES.ENCOUNTER,
+    until: `threshold:${winner.uuid}`, source: "Power Duel" });
+}
+
 /** Who joined this attack with the United Attack Maneuver, and whom the Technique is waiting on. */
 function unitedRows(attack) {
   const escape = Handlebars.escapeExpression;
@@ -10715,7 +11181,7 @@ function unitedButtons(message, attack, container) {
     .concat(game.user?.character ? [game.user.character] : [])
     .filter((actor, index, all) => actor?.isOwner && (actor.type === "character")
       && (actor.uuid !== attack.attackerUuid) && (all.findIndex(other => other?.uuid === actor.uuid) === index)
-      && !(attack.united ?? []).some(entry => entry.uuid === actor.uuid));
+      && !(attack.united ?? []).some(entry => entry.uuid === actor.uuid) && !duelSideOf(attack, actor.uuid));
   if (!mine.length && !(asked?.isOwner)) {
     if (pending && attacker?.isOwner) {
       button("Not joining", `${attack.unitedWith.name} cannot or will not join: the Technique fails and you `
@@ -10730,6 +11196,12 @@ function unitedButtons(message, attack, container) {
       + "your Force or Magic Modifier to their Wound, up to 1(bT) ranks of your Technique's Advantages, and a "
       + "Ki Wager of up to 1/4 of your Max Capacity.",
       () => uniteOnCard(message, attack, joiner));
+    // "When an Ally uses an Attacking Maneuver or Duel Maneuver": the initiator's Initiating Attack.
+    if (attack.duel && (attack.duel.initiating?.kind !== "power")) {
+      button(`United Attack: ${attack.duel.initiatorName}${joiners.length > 1 ? ` (${joiner.name})` : ""}`,
+        `Join ${attack.duel.initiatorName}'s Duel: the same, on their Initiating Attack; you wager on each Duel Clash.`,
+        () => uniteDuelSide(message, attack, joiner));
+    }
   }
   if (pending && (asked?.isOwner || attacker?.isOwner)) {
     button("Refuse", `${attack.unitedWith.name} does not join: ${attack.maneuverName} fails, and `
@@ -10969,6 +11441,7 @@ async function applyAttackDamage(message, target, attack) {
   // What a Signature Technique does once its Damage is taken.
   if (attacker && attack.technique) {
     await techniqueAfterDamage(message, attack, attacker, target, { damage, own, knockedThrough });
+    if (attack.powerDuel) await powerDuelShaken(attacker, target);
     // Final Chance's held Defeat, once the last of its targets has taken what it did.
     const rest = (attack.result?.targets ?? []).filter(entry => (entry.uuid !== target.uuid) && !entry.applied);
     if (!rest.length && (attacker.getFlag?.(SCOPE, "finalChance") === message.id)) {
@@ -11988,9 +12461,12 @@ function renderAttack(message, html) {
           : ""}${featureNote(profileFor(attack), attack)}</span>
     </div>
     ${result
-      ? attackSide("Strike", attack.attackerName, result.strike)
+      ? (result.strike ? attackSide("Strike", attack.attackerName, result.strike)
+        : `<div class="dbu-respond-hint">No Strike Roll: ${Handlebars.escapeExpression(attack.fromDuel
+          ? `${attack.attackerName} won the Duel` : "hit automatically")}</div>`)
       : attackerRow(attack)}
     ${unitedRows(attack)}
+    ${duelRows(attack)}
     ${attackTargets(attack).map(target => targetRow(attack, target)).join("")}
     ${followUpRows(attack)}
     ${result?.wound
@@ -11998,12 +12474,17 @@ function renderAttack(message, html) {
       : ""}
     ${flareRows(attack)}
     ${absorbRow(attack)}
-    <div class="dbu-clash-result">${attack.unitedFailed
+    <div class="dbu-clash-result">${endedByDuel(attack)
+      ? Handlebars.escapeExpression((attack.duel.outcome === "tie")
+        ? `The Duel ended in a tie: everyone in it loses ${duelTieLoss(attack.duel)} Life Points, and the attack is over.`
+        : `${attack.duel.initiatorName} won the Duel: the attack is over.`)
+      : attack.unitedFailed
       ? `United Attack: ${Handlebars.escapeExpression(attack.unitedWith?.name ?? "")} did not join - `
         + `${Handlebars.escapeExpression(attack.maneuverName)} fails, and its Action and Ki are regained.`
       : result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
   if (attack.unitedFailed) return;
+  if (endedByDuel(attack)) return;
 
   // An attack with an area reaches more than the one it was aimed at, and who it
   // reaches is the table's to agree. Offered for as long as the attacker owns the
@@ -12023,7 +12504,7 @@ function renderAttack(message, html) {
   // while the attacker was still working out who else was caught.
   const committed = (attack.ready ?? []).includes(attack.attackerUuid);
   const bombHeld = attack.technique?.features?.includes("personal-bomb") && !attack.detonation;
-  if (attackArea(attack) && thrower?.isOwner && !result && !committed && !bombHeld) {
+  if (attackArea(attack) && thrower?.isOwner && !result && !committed && !bombHeld && !attack.duel) {
     const add = document.createElement("button");
     add.type = "button";
     add.className = "dbu-clash-button";
@@ -12036,14 +12517,18 @@ function renderAttack(message, html) {
   }
 
   // United Attack: an Instant, played while the attack is still open - before the attacker commits.
-  if (!result && !committed && !attack.reflectedFrom) unitedButtons(message, attack, container);
+  if (!result && !committed && !attack.reflectedFrom && !duelUnderway(attack.duel)) {
+    unitedButtons(message, attack, container);
+  }
+  // The Duel Clashes: a wager from each who is in it, then the roll.
+  if (!result && duelRunning(attack)) duelButtons(message, attack, container);
 
   // The attacker prepares their Strike before anything is rolled. The button doubles
   // as their confirmation, since the exchange waits on everyone having finished.
   if (!result) {
     const attacker = fromUuidSync(attack.attackerUuid);
     // The United Attack Disadvantage: nothing is rolled until the Ally asked has joined or refused.
-    if (attacker?.isOwner && unitedPending(attack)) return;
+    if (attacker?.isOwner && (unitedPending(attack) || duelRunning(attack))) return;
     if (attacker?.isOwner && !(attack.ready ?? []).includes(attack.attackerUuid)) {
       const ready = document.createElement("button");
       ready.type = "button";

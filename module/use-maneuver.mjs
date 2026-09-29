@@ -1767,6 +1767,7 @@ export function definitionOf(item) {
     defend: item.system.defend,
     intervene: item.system.intervene,
     united: item.system.united,
+    duel: item.system.duel,
     exploit: item.system.exploit,
     empower: item.system.empower,
     grapple: item.system.grapple,
@@ -2237,6 +2238,11 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // United Attack joins somebody else's attack, so it is played from that attack's card.
   if (maneuver.united) {
     ui.notifications.warn(`${maneuver.name} is played from an Ally's attack card, with its United Attack button.`);
+    return false;
+  }
+  // The Duel answers an attack aimed at you, so it is played from that attack's Respond.
+  if (maneuver.duel) {
+    ui.notifications.warn(`${maneuver.name} answers an attack aimed at you: use Respond on that attack's card.`);
     return false;
   }
 
@@ -3703,6 +3709,7 @@ export function maneuverItemFrom(definition) {
       defend: Boolean(definition.defend),
       intervene: Boolean(definition.intervene),
       united: Boolean(definition.united),
+      duel: Boolean(definition.duel),
       exploit: Boolean(definition.exploit),
       empower: Boolean(definition.empower),
       grapple: Boolean(definition.grapple),

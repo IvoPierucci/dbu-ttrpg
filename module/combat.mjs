@@ -11,7 +11,7 @@
  */
 
 import DBUCharacterData from "./data/actor-character.mjs";
-import { EDGES, edgeReached, encounterEnded } from "./durations.mjs";
+import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { replaceObject, setCondition } from "./conditions.mjs";
 import { getTrait } from "./effects/traits.mjs";
@@ -809,6 +809,16 @@ async function announceThreshold(actor, before) {
   // in the system that knows a Threshold was crossed downward: it is derived from Life
   // Points and leaves no record of its own.
   await loseBreath(actor, "knocked through a Health Threshold");
+
+  // Power Duel's Shaken, on whoever lost to this character: "for the remainder of the Combat Encounter
+  // or until you are knocked through a Health Threshold (whichever happens first)". Swept by the GM's
+  // client, as the other `until` clocks are.
+  if (game.users?.activeGM === game.user) {
+    const scene = (canvas?.tokens?.placeables ?? []).map(token => token.actor).filter(Boolean);
+    for (const other of new Map(scene.map(entry => [entry.uuid, entry])).values()) {
+      await endedBy(other, `threshold:${actor.uuid}`);
+    }
+  }
 
   // The Moment says it "fires after the Maneuver that pushed you through finishes",
   // and this is that: Life Points are written when the Damage is applied, which is the

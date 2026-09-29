@@ -9,8 +9,10 @@
  * Whether the one joining is an Ally is the table's: the system never assumes it. Only the
  * adjacency is measured, and only when there is a scene to measure it on.
  *
- * The Duel parts (1/4 of the Modifier, 1/10 of Capacity a roll, "also considered a target if the
- * Duel is lost") wait for the Duel Maneuver.
+ * In a Duel (duel.mjs) the joiner's Wound row is 1/4 of the Modifier instead of 1/2, their wager is
+ * the 1/10 of Max Capacity each Duel Clash takes rather than one up front, and if their side loses the
+ * Duel they are hit along with it. A Duel's initiator can be joined the same way, on their Initiating
+ * Attack.
  */
 
 import {
@@ -39,7 +41,7 @@ export function unitedWagerCap(joiner) {
 export function unitedWoundBonus(joiner, foundation) {
   const key = (foundation === "magic") ? "magic" : "force";
   const mod = Number(joiner?.system?.attributes?.[key]?.mod) || 0;
-  return { attribute: key, value: Math.floor(mod / 2) };
+  return { attribute: key, value: Math.floor(mod / 2), modifier: mod };
 }
 
 /**
@@ -79,8 +81,13 @@ export function unitedAdditions(existing, picked, allowance) {
 
 /** The rows a United Attack adds to the attack's Wound Roll: one for each who joined. */
 export function unitedWoundParts(attack) {
-  return (attack?.united ?? []).filter(entry => entry.wound)
-    .map(entry => ({ label: `United Attack (${entry.name}, 1/2 ${entry.attributeLabel})`, value: entry.wound }));
+  // "... or 1/4 if they are engaging in a Duel Maneuver": the attack that went through a Duel, and the
+  // card its winner rolls.
+  const duel = Boolean(attack?.duel || attack?.fromDuel);
+  return (attack?.united ?? []).map(entry => {
+    const value = (duel && Number.isFinite(entry.modifier)) ? Math.floor(entry.modifier / 4) : entry.wound;
+    return { label: `United Attack (${entry.name}, 1/${duel ? 4 : 2} ${entry.attributeLabel})`, value };
+  }).filter(part => part.value);
 }
 
 /** Characters with a Signature Technique of this name, not this one: whom United Attack may ask. */
@@ -182,7 +189,7 @@ export function whyNotUnite(joiner, attack, attacker, { actionsLeft = () => 1 } 
  *
  * @returns {Promise<?object>} the joiner's entry for the card, or null if nothing happened
  */
-export async function joinUnitedAttack(attack, joiner, { attacker = null, techniques = [] } = {}) {
+export async function joinUnitedAttack(attack, joiner, { attacker = null, techniques = [], duel = false } = {}) {
   // Imported here: the combat module brings the data models with it, which a harness has not got.
   const { actionsLeft, refundActions, spendActions } = await import("./combat.mjs");
   const refused = whyNotUnite(joiner, attack, attacker, { actionsLeft });
@@ -210,7 +217,9 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
     return { technique, why, cost, lowStakes, offer: unitedOfferable(technique) };
   });
 
-  const answer = await askUnite(attack, joiner, { profileCost, choices, baseTier });
+  // Joining a Duel: the wager is the one each Duel Clash asks for, not one made now.
+  const cap = duel ? 0 : unitedWagerCap(joiner);
+  const answer = await askUnite(attack, joiner, { profileCost, choices, baseTier, cap });
   if (!answer) return null;
 
   const choice = answer.itemId ? choices.find(entry => entry.technique.itemId === answer.itemId) : null;
@@ -219,7 +228,7 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
     return null;
   }
   const cost = choice ? choice.cost : profileCost;
-  const wager = Math.max(0, Math.min(Number(answer.wager) || 0, unitedWagerCap(joiner)));
+  const wager = Math.max(0, Math.min(Number(answer.wager) || 0, cap));
 
   // Paid: 1 Action, then the Ki and the wager together - both come out of Capacity.
   if (!await spendActions(joiner, 1)) return null;
@@ -250,14 +259,14 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
     cost,
     wager,
     wound: bonus.value,
+    modifier: bonus.modifier,
     attributeLabel: (bonus.attribute === "magic") ? "Magic" : "Force",
     advantages: added
   };
 }
 
 /** The question: how they join, what they bring, what they wager. */
-async function askUnite(attack, joiner, { profileCost, choices, baseTier }) {
-  const cap = unitedWagerCap(joiner);
+async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap }) {
   const ways = [
     `<label class="dbu-technique"><input type="radio" name="way" value="" checked/>
       <span class="dbu-technique-name">${escape(attack.profileLabel ?? "Same Profile")}</span>
@@ -286,8 +295,9 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier }) {
       <div class="dbu-technique-picker">${ways}</div>
       ${advantages ? `<p class="dbu-respond-hint dbu-list-label"
         data-tooltip="Only those of the Technique you use.">Advantages (up to ${baseTier} ranks)</p>${advantages}` : ""}
-      <label class="dbu-wager"><span>Ki Wager (max ${cap})</span>
-        <input type="number" name="wager" value="0" min="0" max="${cap}"/></label>`,
+      ${cap ? `<label class="dbu-wager"><span>Ki Wager (max ${cap})</span>
+        <input type="number" name="wager" value="0" min="0" max="${cap}"/></label>`
+        : `<p class="dbu-respond-hint">In a Duel you wager on each Duel Clash instead.</p>`}`,
     buttons: [
       { action: "confirm", label: "Join",
         callback: (event, button, dialog) => {

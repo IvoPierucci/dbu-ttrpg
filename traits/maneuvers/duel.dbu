@@ -1,0 +1,54 @@
+id: duel
+name: Duel
+type: counter
+actionCost: 1
+kiCost: 0
+attacking: false
+duel: true
+source: Core Rule
+description: >
+  Answer an attack with 2+ Energy Charges or a Ki Wager of 10(bT) or more. Three Duel Clashes with
+  hidden Ki Wagers; whoever wins two rolls their Initiating Attack's Wound with every wager on it.
+text: >
+  Duel Maneuver: Fight back against a serious attack with your full might!
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter
+  –KP Cost: N/A
+  –Effect: If you are the target of an Attacking Maneuver that has 2+ Energy Charges, or has a Ki Wager of 10(bT) or more, you may initiate the Duel Maneuver by spending the Ki Points to make an Attacking Maneuver of the same Foundation (Energy and Magic both count as a single Foundation for a Duel Maneuver) as the incoming Attacking Maneuver (you can use a Signature Technique if you have access to one of the same Foundation). You may trigger any effects that would occur upon using an Attacking Maneuver when initiating a Duel Maneuver, as if you had used your Initiating Attack (see below).
+  At the start of a Duel Maneuver, the attacking Character regains Ki Points and Capacity equal to their initial Ki Wager, losing the Ki Wager in the process. After this, the Characters in the Duel Maneuver make 3 Duel Clashes (explained below). During each Duel Clash, they can Ki Wager up to 1/2 of their Max Capacity (ignoring their current Capacity) to increase their Dice Score by an equal amount. Any wagered Ki Points do not reduce the Capacity of that Character, but all Characters involved in a Duel Maneuver have their Capacity reduced to 0 after completing that Maneuver. Whoever wins at least 2 Duel Clashes wins the Duel Maneuver and rolls their Wound Roll for their Attacking Maneuver against the opposing Character(s) as usual, but also applies a Ki Wager equal to the total Ki Wager used by all Characters involved in the Duel Maneuver.
+
+  * Power Duel. When making a Duel Maneuver, you can decide to forgo using an Initiating Attack and simply contest the opponent with pure might. This costs no Ki Points. If you win the Duel Maneuver, you do not roll Wound but instead apply a Dice Score for a Wound Roll equal to your Might plus the total Ki Wagers involved in the Duel Maneuver.
+
+  If you win a Duel Maneuver when using the effects of Power Duel and your Opponent is not Defeated, they gain the Shaken Combat Condition for the remainder of the Combat Encounter or until you are knocked through a Health Threshold (whichever happens first).
+  * Initiating Attack. This term refers to the Attacking Maneuvers which are clashing – both the original Attacking Maneuver that was responded to with the Duel Maneuver and the Attacking Maneuver used by the Character who initiated the Duel Maneuver in response. These attacks are each Character’s ‘Initiating Attack’.
+  * Duel Clash. A Duel Clash is a Clash that uses the higher of each Character’s Force or Magic Modifier for their rolls. Any Tier of Power Extra Dice that would be applied to the Wound Roll of the Initiating Attack are also applied to the Duel Clash.
+
+  A Character’s Duel Clash roll has its Dice Score increased by 2(T) for every Energy Charge applied to their Initiating Attack. A Character’s Duel Clash roll is also increased by 1(T) for every: Allied Character participating as part of a United Duel (see below), Power Shot applied to the attack, Super Stack they possess, every State (Raging or Mindful) they are currently in, and every stack of a resource they possess that has the passive effect of increasing the Dice Score of their Wound Rolls (for example, Power stacks or Battle Born stacks applied to Wound).
+
+  Any reductions to the Critical Target of the Initiating Attack’s Wound Roll are also applied to a Duel Clash.
+  * Ki Wagering on a Duel Clash. To keep things fair, the opposing Characters should not know of the amount the other Character is Ki Wagering until each Duel Clash begins. Before each Duel Clash, both Characters will inform the ARC of the amount they wish to Ki Wager – which the ARC will record. After they roll, the ARC will declare the amount both Characters Ki Wagered and the result. If a Character controlled by the ARC is participating in their Duel Clash, they should record their own Ki Wager before being told the Ki Wager of any other Character involved for the sake of keeping things fair.
+  * Duel Clash Tie. If a Duel Clash results in a tie, refund any Ki Wagers and redo the Duel Clash if it is not the third Duel Clash. If it was the third Duel Clash, instead of redoing the Duel Clash or refunding any Ki Wagers, the Duel Maneuver ends in a tie and all participating Characters have their Life Points reduced by 1/2 of the total Ki Wagered by all participating Characters.
+  * United Duels. If an Initiating Attack had the United Attack Maneuver applied to it or multiple Characters are targets of the Attacking Maneuver and wish to enter a Duel Maneuver at the same time, they must select a primary Character to play through the Duel Maneuver while all other Characters participate at the start of Duel Clash by Ki Wagering up to 1/10th of their Max Capacity, which increases their primary Character’s Dice Score by an equal amount.
+
+---
+
+# No script: it runs on the attack's card, between two characters (duel.mjs, and the Duel functions in
+# chat.mjs). `duel: true` hands it to that code; it is offered in the target's Respond dialog.
+#
+# Built: the requirement (2+ Energy Charges, or a Ki Wager of 10(bT) of whoever enters), the Initiating
+# Attack (a Profile of the same Foundation - Energy and Magic as one -, a Signature Technique, or Power
+# Duel) paid with 1 Counter and its KP, its on-used effects, the attacker's wager given back, three
+# Duel Clashes (1d10 + the higher of Force or Magic, Tier Extra Dice, the Initiating Attack's Critical
+# Target, +2(T) a Charge, +1(T) for each ally, Power Shot, Super Stack, Raging/Mindful and Wound
+# resource stack), hidden wagers (1/2 Max Capacity for the two who roll, 1/10 for the rest), ties
+# redone with the wagers back, a third tie costing everyone half the wagers in Life Points, Capacity
+# to 0 for all, the winner's Wound with every wager, Power Duel's Might + wagers and its Shaken, and
+# United Duels.
+#
+# The user's rulings: the Duel replaces the Strike; the other targets wait for its winner; the losing
+# side is hit with no Dodge; if the initiator wins or it ties, the attack is over; joiners spend a
+# Counter and meet the requirement; it counts for the initiator's Diminishing Offense and Defense;
+# Power Duel is the initiator's, at Standard Damage Category.
+#
+# Not built: triggered effects during a Duel Clash (it is not a Combat Roll here). The secrecy of the
+# wagers is the card's: the numbers sit in its data.

@@ -2926,6 +2926,7 @@ export async function loadManeuvers() {
     defend: Boolean(trait.defend),
     intervene: Boolean(trait.intervene),
     united: Boolean(trait.united),
+    duel: Boolean(trait.duel),
     exploit: Boolean(trait.exploit),
     empower: Boolean(trait.empower),
     grapple: Boolean(trait.grapple),
