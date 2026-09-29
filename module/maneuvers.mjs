@@ -1200,9 +1200,14 @@ export function longRangePenalty(actor, target) {
  *
  * @returns {null|string} null if it may be made, otherwise why it may not
  */
-export function whyNotInReach(actor, target, { foundation, profile } = {}, extra = 0) {
+export function whyNotInReach(actor, target, { foundation, profile, advantages = [] } = {}, extra = 0) {
   if (!FOUNDATION_RULES[foundation]?.meleeOnly) return null;
   if (PROFILES[profile]?.ignoresMeleeRule) return null;
+  // Charging Assault: "you may move up to your Boosted Speed in a straight line towards your Opponent
+  // before any rolls, as long as your Movement would end with them in your Melee Range." The move is
+  // the player's, on the map, so where the target stands now is no reason to refuse (the user's
+  // ruling) - Blitz's, granted, the same.
+  if ((advantages ?? []).includes("charging-assault")) return null;
   // `extra` is what the Weapon it is made with adds for it - Extending's 3.
   return whyNotWithinMelee(actor, target, "A Physical Attack", extra);
 }
