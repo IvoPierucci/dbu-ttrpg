@@ -533,6 +533,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stepCondition: DBUCharacterSheet._onStepCondition,
       useConditionAbility: DBUCharacterSheet._onUseConditionAbility,
       stepKarma: DBUCharacterSheet._onStepKarma,
+      travel: DBUCharacterSheet._onTravel,
       editImage: DBUCharacterSheet._onEditImage
     },
     form: {
@@ -4322,6 +4323,50 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Spend or regain a Karma Point. */
+  /**
+   * Complete an instance of Travel. Its time is the ARC's to declare; its Type is asked, and with it
+   * whether it went by Vehicle or with a Rest on the way - and the Ki Points it costs come off.
+   */
+  static async _onTravel() {
+    const { TRAVEL_TYPES, travelKiLoss } = await import("../adventure.mjs");
+    const escape = Handlebars.escapeExpression;
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.actor.name} - Travel` },
+      content: `<label class="dbu-wager"><span>Travel Type</span>
+          <select name="type">${Object.entries(TRAVEL_TYPES).map(([key, type]) =>
+            `<option value="${key}">${escape(type.label)} (${escape(type.time)})</option>`).join("")}</select></label>
+        <label class="dbu-respond-option" data-tooltip="Regardless of the Travel Type, no Ki Points are lost.">
+          <input type="checkbox" name="vehicle"/> <span class="dbu-respond-name">By Vehicle</span></label>
+        <label class="dbu-respond-option" data-tooltip="The Rest Maneuver used during a Medium or Long Travel that takes less than 2 days: no Ki Points are lost, and the Travel takes the Rest's Time Cost longer.">
+          <input type="checkbox" name="rested"/> <span class="dbu-respond-name">Rested on the way</span></label>`,
+      buttons: [
+        { action: "travel", label: "Travel", default: true, callback: (event, button, dialog) => {
+          const form = dialog.element;
+          return {
+            type: form.querySelector('select[name="type"]')?.value ?? "short",
+            vehicle: Boolean(form.querySelector('input[name="vehicle"]')?.checked),
+            rested: Boolean(form.querySelector('input[name="rested"]')?.checked)
+          };
+        } },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!chosen || (typeof chosen !== "object")) return;
+
+    const ki = this.actor.system.ki;
+    const { loss, reason } = travelKiLoss({ ...chosen, maxKi: ki.max,
+      flightRanks: this.actor.system.skills?.flight?.ranks ?? 0 });
+    const lost = Math.min(loss, Math.max(0, Number(ki.value) || 0));
+    if (lost) await this.actor.update({ "system.ki.value": ki.value - lost });
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<p>${escape(this.actor.name)} completes a ${escape(TRAVEL_TYPES[chosen.type]?.label ?? "")} Travel${
+        loss ? `, and loses ${lost} Ki Points (${escape(reason)})` : (reason ? ` ${escape(reason)}, losing no Ki Points` : "")}.</p>`
+    });
+  }
+
   static async _onStepKarma(event, target) {
     const step = Number(target.dataset.step) || 0;
     const wanted = (this.actor.system.karma ?? 0) + step;

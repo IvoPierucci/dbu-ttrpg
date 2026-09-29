@@ -2802,6 +2802,11 @@
   cursor: pointer;
 }
 
+/* Travel, on the Adventure tab: a button its own size, not the panel's width. */
+.dbu-ttrpg .adventure-travel {
+  align-self: flex-start;
+}
+
 /* Spending Karma after the result is known, offered on the settled card. */
 .dbu-ttrpg .dbu-karma-button,
 .dbu-karma-button {
