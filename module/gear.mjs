@@ -1520,6 +1520,8 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
   return {
     itemId: item.id,
     name: item.name,
+    // Elemental Blade: "select a Profile with 'Elemental' in the name" - chosen when it was made.
+    elementalBlade: qualityEntries(crafted).find(entry => entry.id === "elemental-blade")?.choice ?? "",
     category: as.category,
     categoryName: getTrait?.(as.category)?.name ?? as.category,
     weaponType: as.weaponType,

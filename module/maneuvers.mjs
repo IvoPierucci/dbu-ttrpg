@@ -610,8 +610,7 @@ export const PROFILES = Object.freeze({
     // starts: a stack of Darkened, whose file says which way it moves the Level.
     squareMark: { condition: "darkened", stacks: 1 },
     // "+2(T) Wound with Elemental (Light)" is read where a Multi-Profile Technique carries both
-    // (technique-attack.mjs). The AoE sentence waits for an attack that gives this one an Area.
-    needs: "the AoE sentence - no attack here gives this Profile an Area."
+    // (technique-attack.mjs). The AoE sentence is the card's area marking (chat.mjs `markArea`).
   },
 
   elementalEarth: {
@@ -656,7 +655,6 @@ export const PROFILES = Object.freeze({
     // Their Square is Aflame until the start of the attacker's next turn: the Ignited mark,
     // whose file names the Quality it stands for.
     squareMark: { condition: "ignited", stacks: 1 },
-    needs: "the AoE sentence - no attack here gives this Profile an Area."
   },
 
   elementalIce: {
@@ -679,7 +677,6 @@ export const PROFILES = Object.freeze({
     // Fire's shape exactly, with Slowed for Broken and Frozen for Aflame.
     onThreshold: { condition: "slowed", stacks: 1 },
     squareMark: { condition: "frosted", stacks: 1 },
-    needs: "the AoE sentence - no attack here gives this Profile an Area."
   },
 
   elementalLight: {
@@ -708,7 +705,6 @@ export const PROFILES = Object.freeze({
     grantsAdvantage: "full-wager",
     // Dark's mirror: a stack of Brightened, a Level up.
     squareMark: { condition: "brightened", stacks: 1 },
-    needs: "the AoE sentence - no attack here gives this Profile an Area."
   },
 
   elementalLightning: {
@@ -730,7 +726,6 @@ export const PROFILES = Object.freeze({
     // Fire's shape again, with Impediment and Electrified.
     onThreshold: { condition: "impediment", stacks: 1 },
     squareMark: { condition: "crackling", stacks: 1 },
-    needs: "the AoE sentence - no attack here gives this Profile an Area."
   },
 
   elementalMetal: {
@@ -756,8 +751,11 @@ export const PROFILES = Object.freeze({
     // "Their Hardness Rank increased to 3 if it was lower" is Metallic's own floor,
     // `hardnessMin: 3` in its file, which the ground's Rank already answers to.
     squareQuality: "metallic",
-    needs: "the AoE sentence (Squares and Features, Dangerous and Sharp) - no attack here "
-      + "gives this Profile an Area."
+    // With an AoE: "all Squares and Features within the AoE become Metallic and gain the Dangerous
+    // Environment Quality or the Sharp Feature Quality respectively" - the Squares' here, the
+    // Features' the table's (nothing here holds a Feature).
+    areaSquareQualities: ["metallic", "dangerous"],
+    areaNote: "Features in it become Metallic, with the Sharp Quality and a Hardness Rank of 3 at least.",
   },
 
   elementalPlantlife: {
@@ -810,7 +808,6 @@ export const PROFILES = Object.freeze({
     // keeps on the Poisoned is also what the Treatment Maneuver reads to find who did it.
     onThreshold: { condition: "poisoned", stacks: 1 },
     squareMark: { condition: "tainted", stacks: 1 },
-    needs: "the AoE sentence - no attack here gives this Profile an Area."
   },
 
   elementalWater: {
@@ -836,7 +833,6 @@ export const PROFILES = Object.freeze({
     // The Square turned into another Environment rather than given a Quality: the Flooded
     // mark, whose file says what it `becomes`.
     squareMark: { condition: "flooded", stacks: 1 },
-    needs: "the AoE sentence - no attack here gives this Profile an Area."
   },
 
   elementalWind: {
@@ -2796,6 +2792,9 @@ export function maneuverKiCost(maneuver, declared, actor) {
     cost += Number(declared?.weapon?.kiCost) || 0;
     // Giga Flare: "2(T) per Action spent through its effects", asked at declaration.
     cost += Number(declared?.kiSurcharge) || 0;
+    // Elemental Blade's Multi-Profile, paid on the attack (the user's ruling) - less the Super
+    // Profile it stood in for, where the Technique had one.
+    cost += Number(declared?.multiProfileKi) || 0;
     // Back Flip: "If this Attacking Maneuver has the Charging Assault Advantage ... the KP Cost of
     // this Maneuver is reduced by 1(T)" - a discount on the use, which may go under the Profile.
     const features = declared?.advantages ?? maneuver.advantages ?? [];

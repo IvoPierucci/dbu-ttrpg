@@ -76,6 +76,9 @@ import { techniqueUseEntries, ultimatesUsed, whyNotTechnique, whyNotTechniqueAga
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
 import * as soarNames from "./environments.mjs";
+import { featureDef as signatureFeature, requirementHolds, superProfileKiPerTier } from "./technique.mjs";
+import { withGranted } from "./signature.mjs";
+import { SUPER_PROFILES } from "./maneuvers.mjs";
 import { askUnitedPartner } from "./united-attack.mjs";
 
 /**
@@ -1892,6 +1895,77 @@ export function techniqueDefinition(item) {
 }
 
 /**
+ * Elemental Blade: "Apply the Multi-Profile Super Profile to any Attacking Maneuvers you use, with
+ * the Profile selected for the Multi-Profile Super Profile being the Elemental Profile you selected.
+ * If it meets the Prerequisites, also apply the Compressed Element Disadvantage".
+ *
+ * The table's rulings: only on attacks made with the Weapon; its Multi-Profile's KP is paid; an
+ * attack that has a Super Profile already asks which one it keeps; the same Profile as the attack's
+ * still counts. Then, for any attack with two Profiles that each mark Squares, the player picks
+ * whose mark it leaves (both Threshold effects apply).
+ *
+ * @returns {Promise<?{maneuver: object, declared: object}>} null when a question was put away
+ */
+export async function elementalBlade(actor, maneuver, declared) {
+  if (!declared) return { maneuver, declared };
+  const blade = declared.weapon?.elementalBlade ?? "";
+  let next = maneuver;
+  let out = declared;
+  if (blade && PROFILES[blade]) {
+    const own = maneuver.superProfile ?? "";
+    let take = true;
+    if (own) {
+      const keep = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${maneuver.name} - one Super Profile` },
+        content: `<p class="dbu-respond-hint">An attack has one Super Profile. ${Handlebars.escapeExpression(
+          declared.weapon.name)}'s Elemental Blade would make it Multi-Profile (${Handlebars.escapeExpression(
+          PROFILES[blade].label)}).</p>`,
+        buttons: [
+          { action: "own", label: `Keep ${SUPER_PROFILES[own]?.label ?? own}` },
+          { action: "blade", label: "Elemental Blade" },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!keep || (keep === "cancel")) return null;
+      take = keep === "blade";
+    }
+    if (take) {
+      const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+      const was = own ? superProfileKiPerTier(own, maneuver.secondProfile ?? "") : 0;
+      next = { ...maneuver, superProfile: "multi-profile", secondProfile: blade };
+      out = { ...out,
+        multiProfileKi: (superProfileKiPerTier("multi-profile", blade) - was) * tier,
+        // "Considered to be of that Profile": what it hands out comes with it.
+        advantages: withGranted(out.advantages ?? [], PROFILES[blade].grantsAdvantage) };
+    }
+    // "If it meets the Prerequisites, also apply the Compressed Element Disadvantage".
+    const compressed = signatureFeature("compressed-element");
+    if (compressed && requirementHolds(compressed.requires ?? "", { profiles: [out.profile, next.secondProfile ?? ""] })) {
+      out = { ...out, compressedElement: true };
+    }
+  }
+
+  // Two Profiles that each mark the Squares: the player picks whose (the table's ruling).
+  const marking = [out.profile, next.secondProfile ?? ""]
+    .filter(id => PROFILES[id]?.squareMark || PROFILES[id]?.squareQuality);
+  if ((marking.length === 2) && (marking[0] !== marking[1]) && !out.markFrom) {
+    const pick = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${next.name} - the Squares` },
+      content: `<p class="dbu-respond-hint">Two Profiles mark the Squares. Which one does this attack leave?</p>`,
+      buttons: [...marking.map(id => ({ action: id, label: PROFILES[id].label })),
+        { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    if (!pick || (pick === "cancel")) return null;
+    out = { ...out, markFrom: pick };
+  }
+  return { maneuver: next, declared: out };
+}
+
+/**
  * Use a Maneuver: check it is allowed, pay for it, and announce it.
  *
  * @param {Actor} actor
@@ -2649,6 +2723,11 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
           value: actor.system.attributes?.scholarship?.mod ?? 0 } };
       }
     }
+
+    // Elemental Blade, and whose Square effect a two-Profile attack carries.
+    const bladed = await elementalBlade(actor, maneuver, declared);
+    if (!bladed) return false;
+    ({ maneuver, declared } = bladed);
 
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
     // with the declaration, and only where something worn offers one for this attack.

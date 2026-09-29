@@ -6440,7 +6440,7 @@ async function takeOutOfSequence(message, actor, offer) {
   // A Signature Technique handed over - Counter's, Exploiting Technique's: which of the Techniques
   // with that Advantage, then the Technique itself through its door, out of sequence.
   if (offer.technique) return takeTechniqueOffer(message, actor, offer);
-  const maneuver = getManeuver(offer.maneuverId);
+  let maneuver = getManeuver(offer.maneuverId);
   if (!maneuver) return;
 
   // "You cannot use any Special Maneuvers until you have gained access to them." Asked
@@ -6535,6 +6535,11 @@ async function takeOutOfSequence(message, actor, offer) {
     const { armOutOfSequence } = await import("./use-maneuver.mjs");
     declared = await armOutOfSequence(actor, maneuver, declared, target, granted?.modifiers ?? []);
     if (!declared) return;
+    // Elemental Blade, the same out of sequence.
+    const { elementalBlade } = await import("./use-maneuver.mjs");
+    const bladed = await elementalBlade(actor, maneuver, declared);
+    if (!bladed) return;
+    ({ maneuver, declared } = bladed);
 
     // The same rule on the way in out of sequence: a Physical Attack only reaches your
     // Melee Range, and an Out-of-Sequence Maneuver is no exception to it - the Weapon's reach
@@ -6701,7 +6706,8 @@ export async function postAttack(actor, target, maneuver,
                                    advantages = [], squaresCharged = 0, thrown = null,
                                    area = null, weapon = null, transformed = false, gigaFlare = 0,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
-                                   extraTargets = [], freeWager = 0, unitedWith = null },
+                                   extraTargets = [], freeWager = 0, unitedWith = null,
+                                   markFrom = "", compressedElement = false },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -6802,6 +6808,13 @@ export async function postAttack(actor, target, maneuver,
           ...(selfCaught ? { autoHitUuids: [actor.uuid] } : {}),
           // A Signature Technique's features on this attack, worked out as it was declared.
           technique,
+          // A second Profile outside a Technique: Elemental Blade's Multi-Profile on an ordinary
+          // attack. A Technique's is on its own block.
+          secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
+          // Which Profile's Square effect it leaves, where two would (the player's pick), and whether
+          // Compressed Element came with a Weapon rather than the Technique.
+          markFrom,
+          compressedElement: Boolean(compressedElement),
           // The United Attack Disadvantage: the Ally asked to join, and what the attacker paid, which
           // comes back if they do not. Null on every other attack.
           unitedWith: reflecting ? null : (unitedWith ?? null),
@@ -6824,7 +6837,8 @@ export async function postAttack(actor, target, maneuver,
           profileLabel: PROFILES[profile].label,
           // Carried on the attack rather than looked up later: a Profile's Damage
           // Category is part of what was declared.
-          damageCategory: profileFor({ profile, technique }).damageCategory,
+          damageCategory: profileFor({ profile, technique,
+            secondProfile: technique ? "" : (maneuver.secondProfile ?? "") }).damageCategory,
           // Steps applied by the attacker's own effects, summed with the defender's
           // before anything is clamped. Mega Flare is the first thing to write here:
           // "if the number of Energy Charges applied is 7+, increase the Damage
@@ -7454,12 +7468,95 @@ function energyChargeDice(attacker, attack) {
  */
 function profileFor(attack) {
   const main = PROFILES[attack?.profile];
-  const second = PROFILES[attack?.technique?.secondProfile];
+  const second = PROFILES[secondProfileOf(attack)];
   if (!main || !second) return main;
   const order = Object.keys(DAMAGE_CATEGORIES);
   const higher = (order.indexOf(second.damageCategory) > order.indexOf(main.damageCategory))
     ? second.damageCategory : main.damageCategory;
   return { ...second, ...main, damageCategory: higher, label: `${main.label} + ${second.label}` };
+}
+
+/** The attack's second Profile: a Technique's Multi-Profile, or an Elemental Blade's on any attack. */
+function secondProfileOf(attack) {
+  return attack?.technique?.secondProfile || attack?.secondProfile || "";
+}
+
+/** Compressed Element on this attack, from the Technique or from an Elemental Blade. */
+function compressedOn(attack) {
+  return Boolean(attack?.technique?.features?.includes("compressed-element") || attack?.compressedElement);
+}
+
+/**
+ * The Profile whose Square effect an attack leaves: the one picked where two would, or the one that
+ * has any. Null under Compressed Element - "Ignore the second listed effect of the Elemental
+ * Profile(s)" - which is that one.
+ */
+function squareRider(attack) {
+  if (compressedOn(attack)) return null;
+  const ids = [attack?.profile, secondProfileOf(attack)].filter(Boolean);
+  const marks = id => PROFILES[id]?.squareMark || PROFILES[id]?.squareQuality;
+  const id = (attack?.markFrom && ids.includes(attack.markFrom) && marks(attack.markFrom))
+    ? attack.markFrom : ids.find(marks);
+  return id ? PROFILES[id] : null;
+}
+
+/**
+ * The AoE sentence: "If this Attacking Maneuver has an AoE, then all Squares within the AoE become
+ * Aflame ... instead." The system counts no Squares, so the mark goes on whoever stands in them:
+ * every target of the attack, hit or not (with the Damage, the table's ruling), and whoever else the
+ * attacker says the Area covers. Empty Squares and Features are said on the card.
+ */
+async function markArea(message, attack, { others = false } = {}) {
+  const rider = squareRider(attack);
+  const area = attackArea(attack);
+  if (!rider || !area) return;
+  const attacker = fromUuidSync(attack.attackerUuid);
+  if (!attacker) return;
+  let who = [];
+  if (!attack.areaMarked) who = attackTargets(attack).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
+  if (others) {
+    const already = new Set([...(attack.areaMarked ? attackTargets(attack).map(entry => entry.uuid) : []),
+      ...who.map(entry => entry.uuid), ...(attack.areaOthers ?? [])]);
+    const unique = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
+      .filter(other => other && (other.type === "character") && !already.has(other.uuid))
+      .map(other => [other.uuid, other])).values()];
+    if (unique.length) {
+      const rows = unique.map(other => `<label class="dbu-respond-option">
+          <input type="checkbox" name="caught" value="${other.uuid}"/>
+          <span class="dbu-respond-name">${Handlebars.escapeExpression((other.uuid === attacker.uuid)
+            ? `Yourself (${other.name})` : other.name)}</span></label>`).join("");
+      const chosen = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${attack.maneuverName} - ${rider.label}` },
+        content: `<p class="dbu-respond-hint">Who else stands in the ${Handlebars.escapeExpression(areaLabel(area))}?</p>${rows}`,
+        buttons: [{ action: "confirm", label: "Mark", callback: (event, button, dialog) =>
+          [...dialog.element.querySelectorAll('input[name="caught"]:checked')].map(input => input.value) },
+          { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      });
+      if (Array.isArray(chosen)) who = [...who, ...chosen.map(uuid => fromUuidSync(uuid)).filter(Boolean)];
+    }
+  }
+  const qualities = rider.areaSquareQualities ?? (rider.squareQuality ? [rider.squareQuality] : []);
+  for (const each of who) {
+    if (rider.squareMark) {
+      await markUntilNextTurn(attacker, each, rider.squareMark.condition, rider.squareMark.stacks, "start", rider.label);
+    }
+    for (const quality of qualities) await applySquareQuality(each, quality);
+  }
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const firstTime = !fresh.areaMarked;
+  if (firstTime) {
+    const what = rider.squareMark
+      ? (getTrait(rider.squareMark.condition)?.name ?? rider.squareMark.condition)
+      : qualities.map(id => getTrait(id)?.name ?? id).join(" and ");
+    await settledNote(message, `${rider.label}: every Square in the ${areaLabel(area)} takes it (${what})`
+      + `${rider.squareMark ? " until the start of " + attack.attackerName + "'s next turn" : ""}. Empty Squares are the `
+      + `table's.${rider.areaNote ? " " + rider.areaNote : ""}`);
+  }
+  return requestEdit(message, { type: "attack", attack: { ...fresh, areaMarked: true,
+    areaOthers: [...(fresh.areaOthers ?? []), ...who.filter(each => !attackTargets(fresh).some(entry => entry.uuid === each.uuid))
+      .map(each => each.uuid)] } });
 }
 
 /**
@@ -11363,7 +11460,7 @@ function featureNote(profile, attack = null) {
   if (!made) return "";
   // Compressed Element: the Profile's second listed effect - Plantlife's Feature - is not applied.
   const features = attack?.technique?.features ?? [];
-  if (features.includes("compressed-element")) return " &middot; Compressed Element: no Feature";
+  if (compressedOn(attack)) return " &middot; Compressed Element: no Feature";
   // Reinforced Plantlife: "Increase the Hardness Rank of the Features created ... by the number of
   // ranks in this Advantage."
   const reinforced = features.filter(id => id === "reinforced-plantlife").length;
@@ -11516,19 +11613,23 @@ async function applyAttackDamage(message, target, attack) {
   // Frozen - "until the start of your next turn", and "if you knock an Opponent through a
   // Health Threshold, they gain a stack of the Broken" - or Slowed - "Combat Condition until
   // the end of your next turn". Which mark and which Condition is the Profile's to say.
-  const riders = profileFor(attack) ?? {};
+  // Compressed Element: "Ignore the second listed effect of the Elemental Profile(s)" - the Square's
+  // (`squareRider` gives none). With two Profiles, the picked one's Square, and both Thresholds.
+  const riders = squareRider(attack) ?? {};
   const attacker = fromUuidSync(attack.attackerUuid);
-  // Compressed Element: "Ignore the second listed effect of the Elemental Profile(s)" - the Square's.
-  const compressed = attack.technique?.features?.includes("compressed-element");
+  if (attacker && attackArea(attack) && squareRider(attack) && !attack.areaMarked) await markArea(message, attack);
   if (attacker && (damage > 0) && !isAbsoluteMiss(own)) {
-    if (riders.squareMark && !compressed) {
+    if (riders.squareMark && !attackArea(attack)) {
       await markUntilNextTurn(attacker, target, riders.squareMark.condition,
         riders.squareMark.stacks, "start", riders.label);
     }
-    if (riders.squareQuality) await applySquareQuality(target, riders.squareQuality);
-    if (riders.onThreshold && knockedThrough) {
-      await markUntilNextTurn(attacker, target, riders.onThreshold.condition,
-        riders.onThreshold.stacks, riders.onThreshold.untimed ? null : "end", riders.label);
+    if (riders.squareQuality && !attackArea(attack)) await applySquareQuality(target, riders.squareQuality);
+    for (const id of [...new Set([attack.profile, secondProfileOf(attack)].filter(Boolean))]) {
+      const onThreshold = PROFILES[id]?.onThreshold;
+      if (onThreshold && knockedThrough) {
+        await markUntilNextTurn(attacker, target, onThreshold.condition,
+          onThreshold.stacks, onThreshold.untimed ? null : "end", PROFILES[id].label);
+      }
     }
   }
 
@@ -12833,6 +12934,19 @@ function renderAttack(message, html) {
 
   // A Wound not yet rolled has nothing to apply anywhere.
   if (!result.wound) return;
+
+  // The AoE sentence: the attacker says who else stands in the Area. The targets are marked with the
+  // Damage, or here if nobody takes any.
+  const areaRider = squareRider(attack);
+  if (areaRider && attackArea(attack) && fromUuidSync(attack.attackerUuid)?.isOwner) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = attack.areaMarked ? `${areaRider.label}: others in the Area` : `${areaRider.label}: mark the Area`;
+    button.dataset.tooltip = "Every Square in the Area takes it: the targets, hit or not, and whoever else stands there.";
+    button.addEventListener("click", () => markArea(message, attack, { others: true }));
+    container.append(button);
+  }
 
   // Damage taken in somebody else's place, which belongs to no target line - the one
   // who stepped in is not a target of the attack, and may not be on the card at all.

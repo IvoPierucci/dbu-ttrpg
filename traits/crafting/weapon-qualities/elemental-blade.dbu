@@ -3,6 +3,7 @@ name: Elemental Blade
 kind: crafting
 types: physical, energy
 slots: 2
+choices: elementalDark=Elemental (Dark), elementalEarth=Elemental (Earth), elementalFire=Elemental (Fire), elementalIce=Elemental (Ice), elementalLight=Elemental (Light), elementalLightning=Elemental (Lightning), elementalMetal=Elemental (Metal), elementalPlantlife=Elemental (Plantlife), elementalPoison=Elemental (Poison), elementalWater=Elemental (Water), elementalWind=Elemental (Wind)
 special: true
 source: Core Rule
 description: >
@@ -27,9 +28,9 @@ text: >
 
 ---
 
-# --- What is not built ---------------------------------------------------------------------------
-#
-# Everything it does. An attack carries one Profile in this system, and neither the Multi-Profile
-# Super Profile nor the Compressed Element Disadvantage is in it. When they are, by the table's
-# rulings: only attacks made with this Weapon; the Elemental Profile chosen when it is made; and,
-# where the attack already has a Super Profile, the player chooses which.
+# Built in code (use-maneuver.mjs `elementalBlade`), by the table's rulings: only attacks made with
+# this Weapon; the Elemental Profile chosen when it is made, as the Multi-Profile's second Profile
+# (even the same one as the attack's); Multi-Profile's KP is paid; where the attack already has a
+# Super Profile, the player chooses which; and Compressed Element when an Elemental Profile it names
+# is on the attack. With two Profiles that mark Squares, the player picks whose mark; both Profiles'
+# Threshold effects apply.

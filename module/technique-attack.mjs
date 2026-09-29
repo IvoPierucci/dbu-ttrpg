@@ -174,7 +174,7 @@ export function techniqueStrikeParts(attacker, attack) {
 
 /** Whether both Elemental (Dark) and Elemental (Light) are on this attack - Multi-Profile's pair. */
 export function darkAndLight(attack) {
-  const profiles = [attack?.profile, attack?.technique?.secondProfile];
+  const profiles = [attack?.profile, attack?.technique?.secondProfile || attack?.secondProfile];
   return profiles.includes("elementalDark") && profiles.includes("elementalLight");
 }
 
@@ -331,7 +331,7 @@ export function linkedPick(first, second, mode) {
 
 /** The Profiles an attack is "of" - its own, and Multi-Profile's second. */
 export function attackProfiles(attack) {
-  return [attack.profile, attack.technique?.secondProfile].filter(id => id && PROFILES[id]);
+  return [attack.profile, attack.technique?.secondProfile || attack.secondProfile].filter(id => id && PROFILES[id]);
 }
 
 /** Whether an attack carries a Profile flag through any of its Profiles. */
