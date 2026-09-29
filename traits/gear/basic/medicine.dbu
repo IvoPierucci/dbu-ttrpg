@@ -11,12 +11,15 @@ healDice: 2d10
 healScale: bT
 # "If you were suffering from the Poisoned Combat Condition, remove that Combat Condition."
 removes: poisoned
+# Its Details.
+details: medicine, consumable
 source: Core Rule
 description: >
   Consume it for an Action: regain 2d10(bT) Life Points, and it cures being Poisoned.
 text: >
   Medicine [Med]: A drug designed to treat your wounds.
   –Craft DC: Qualified
+  –Details: Medicine, Consumable
   –Effects: Spend an Action to consume this Basic Item and regain 2d10(bT) Life Points. If
   you were suffering from the Poisoned Combat Condition, remove that Combat Condition.
 
