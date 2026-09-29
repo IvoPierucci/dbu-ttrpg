@@ -8,6 +8,8 @@ craftDC: Expert
 connects: bomb, shock-collar
 # "For a Bomb, you can spend 1 Action to trigger that Bomb."
 placeCost: 1
+# Its Details.
+details: technology
 source: Core Rule
 description: >
   Connected to one of your Items when you get it: trigger a Bomb, or set off a Collar, for
@@ -16,6 +18,7 @@ text: >
   Remote Control [Tech]: A portable device capable of wireless communication with the
   advanced computational systems of a Battle Jacket, allowing for remote operation.
   –Craft DC: Expert
+  –Details: Technology
   –Effects: Upon creating this Basic Item, select an Item (Bomb/Collar/Vehicle/Battle
   Jacket) you possess for it to be connected to. This Remote Control can be used to control
   that Item, allowing you to spend your Actions as if you are Piloting a Vehicle or Battle
