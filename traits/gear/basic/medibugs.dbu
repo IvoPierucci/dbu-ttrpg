@@ -21,12 +21,15 @@ zutsuRemoves: impaired, impediment
 # "Beaut Bug. Increase your Persuasion Skill Checks by 2 for an hour."
 beautLabel: Beaut Bug
 beautGains: beautified
+# Its Details.
+details: consumable
 source: Core Rule
 description: >
   Up to 1d6 bugs of four kinds, an Action each: Life and Ki full; Damage Over Time and Broken
   gone; Impaired and Impediment gone; or Persuasion 2 better for an hour.
 text: >
   Medibugs: These bugs have medicinal properties when consumed. Slimy, but satisfying.
+  –Details: Consumable
   –Effects: Upon gaining this Basic Item, select up to 1d6 Medibugs from the categories below.
   You gain those Medibugs. You can spend 1 Action to consume a Medibug and apply the benefits
   listed:
@@ -51,3 +54,5 @@ text: >
 #
 # "For an hour" is story time, and nothing here counts hours: Beautified lasts until the
 # player ends it, from the Combat tab where marks are shown.
+#
+# Consumable: the Item is destroyed with the last bug eaten.

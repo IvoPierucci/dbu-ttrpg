@@ -3426,12 +3426,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       await gainCondition(this.actor, gains, 1);
     }
 
-    await item.update({ "system.portions": portions.map((entry, i) =>
-      (i === index) ? { ...entry, count: entry.count - 1 } : entry) });
+    const left = portions.map((entry, i) => (i === index) ? { ...entry, count: entry.count - 1 } : entry);
+    // Consumable: "destroyed once it is used" - the Item goes with its last one.
+    const { isConsumable } = await import("../gear.mjs");
+    const gone = isConsumable(item, getTrait) && left.every(entry => !(entry.count > 0));
+    if (gone) await item.delete();
+    else await item.update({ "system.portions": left });
     return ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
       content: `<p>${Handlebars.escapeExpression(this.actor.name)} eats a `
-        + `${Handlebars.escapeExpression(portion.label)}.</p>`
+        + `${Handlebars.escapeExpression(portion.label)}${gone ? ", the last of them" : ""}.</p>`
     });
   }
 
