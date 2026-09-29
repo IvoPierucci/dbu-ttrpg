@@ -18,8 +18,10 @@
 
     <ul class="maneuver-list technique-list">
       {{#each techniques.rows as |row|}}
-      <li class="maneuver technique-row{{#if row.refused}} maneuver-exhausted{{/if}}" data-item-id="{{row.itemId}}" draggable="true">
-        <div class="maneuver-head">
+      <li class="maneuver technique-row{{#if row.refused}} maneuver-exhausted{{/if}}{{#if row.open}} maneuver-open{{/if}}"
+          data-item-id="{{row.itemId}}" draggable="true">
+        <div class="maneuver-head" data-action="toggleManeuver">
+          <span class="maneuver-mark" aria-hidden="true"></span>
           {{#if row.buddyOnly}}
           <span class="maneuver-name maneuver-triggered" data-tooltip="Used only through its Warrior Buddy">{{row.name}}</span>
           {{else}}
@@ -33,7 +35,23 @@
           <button type="button" class="maneuver-control" data-action="editItem" data-item-id="{{row.itemId}}"
                   data-tooltip="Build or change this Technique">&#9998;</button>
         </div>
-        {{#if row.features}}<div class="technique-features-line">{{row.features}}</div>{{/if}}
+        <div class="maneuver-body">
+          {{#if row.advantages.length}}
+          <p class="dbu-respond-hint dbu-list-label">Advantages</p>
+          {{#each row.advantages as |feature|}}
+          <div class="dbu-profile-line" {{#if feature.summary}}data-tooltip="{{feature.summary}}"{{/if}}>{{feature.label}}</div>
+          {{/each}}
+          {{/if}}
+          {{#if row.disadvantages.length}}
+          <p class="dbu-respond-hint dbu-list-label">Disadvantages</p>
+          {{#each row.disadvantages as |feature|}}
+          <div class="dbu-profile-line" {{#if feature.summary}}data-tooltip="{{feature.summary}}"{{/if}}>{{feature.label}}</div>
+          {{/each}}
+          {{/if}}
+          {{#unless row.advantages.length}}{{#unless row.disadvantages.length}}
+          <p class="maneuver-nothing">No Advantages or Disadvantages yet. The pencil opens it.</p>
+          {{/unless}}{{/unless}}
+        </div>
         {{#if row.charged}}<div class="dbu-profile-note">{{row.charged}}</div>{{/if}}
         {{#if row.delayed}}
         <div class="dbu-profile-note">

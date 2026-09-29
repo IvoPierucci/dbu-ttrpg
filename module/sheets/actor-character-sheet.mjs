@@ -79,6 +79,7 @@ import { SUPER_PROFILES } from "../maneuvers.mjs";
 import {
   LEVELS as LEVELS_OF_TECHNIQUES,
   ULTIMATES_PER_ENCOUNTER as ULTIMATES_PER_ENCOUNTER_CAP,
+  choiceLabel as choiceLabelOf,
   featureDef as featureDefOf,
   isBuilt as isBuiltTechnique,
   isUltimate as isUltimateLevel,
@@ -420,6 +421,26 @@ function clockNotes(timed, key, kind = KINDS.RESOURCE) {
   }
 
   return [...counts].map(([when, count]) => `${count} ${when}`);
+}
+
+/**
+ * A Technique's Advantages and Disadvantages, as its row lists them: name, ranks and choice, with the
+ * feature's summary for the tooltip.
+ */
+function featureLists(sig) {
+  const entries = (sig.features ?? []).map(entry => {
+    const def = featureDefOf(entry.id);
+    const choice = choiceLabelOf(def, entry.choice);
+    return {
+      side: (def?.owner === "disadvantages") ? "disadvantages" : "advantages",
+      label: `${def?.name ?? entry.id}${(entry.ranks > 1) ? ` ${entry.ranks}` : ""}${choice ? ` (${choice})` : ""}`,
+      summary: def?.summary ?? ""
+    };
+  });
+  return {
+    advantages: entries.filter(entry => entry.side === "advantages"),
+    disadvantages: entries.filter(entry => entry.side === "disadvantages")
+  };
 }
 
 export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
@@ -1567,10 +1588,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         charged: mandatory ? `Charged ${(charging.maneuverId === item.id) ? (Number(charging.charges) || 0) : 0} / ${2 * mandatory}` : "",
         delayed: Boolean(delayed?.messageId),
         fromTransformation: sig.fromTransformation,
-        features: sig.features.map(entry => {
-          const def = featureDefOf(entry.id);
-          return `${def?.name ?? entry.id}${(entry.ranks > 1) ? ` ${entry.ranks}` : ""}`;
-        }).join(", ")
+        // Opened like a Maneuver row, to what it was built with; each summary on hover.
+        open: Boolean(this.#openSections[`maneuver-${item.id}`]),
+        ...featureLists(sig)
       };
     });
 

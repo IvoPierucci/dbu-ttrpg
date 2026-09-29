@@ -32,7 +32,6 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     actions: {
       dbuChangeTab: DBUManeuverSheet._onChangeTab,
       editImage: DBUManeuverSheet._onEditImage,
-      toggleSignature: DBUManeuverSheet._onToggleSignature,
       addFeature: DBUManeuverSheet._onAddFeature,
       removeFeature: DBUManeuverSheet._onRemoveFeature,
       rankFeature: DBUManeuverSheet._onRankFeature,
@@ -107,7 +106,6 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
 
     // Read off the tag, which is where it lives: three rules match on it, and none of
     // them would see a separate field.
-    context.isSignature = (this.item.system.tags ?? []).includes("signature");
 
     // The Tail Attack's one-time choice, editable here for as long as the Item exists.
     // Asked at the first use, because "when you first gain access" is a moment nothing
@@ -257,17 +255,6 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
    * second place for it to be wrong. A checkbox cannot post one entry of a list, so it
    * is toggled here instead of submitted.
    */
-  static async _onToggleSignature(event, target) {
-    if (!this.isEditable) return;
-
-    const tags = this.item.system.tags ?? [];
-    const next = target.checked
-      ? [...new Set([...tags, "signature"])]
-      : tags.filter(tag => tag !== "signature");
-
-    return this.item.update({ "system.tags": next });
-  }
-
   // --- The Adv & Disadv tab ---------------------------------------------------------------------
 
   /** An update that changes the features, with the Effects they write. */

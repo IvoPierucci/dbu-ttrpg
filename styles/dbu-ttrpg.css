@@ -401,11 +401,6 @@
   margin-bottom: 6px;
 }
 
-.dbu-ttrpg .technique-features-line {
-  padding: 0 8px 4px 26px;
-  font-size: 0.85em;
-  color: var(--dbu-text-dim);
-}
 
 .dbu-gear-pick optgroup option {
   background: var(--dbu-panel, #1e1e1e);
