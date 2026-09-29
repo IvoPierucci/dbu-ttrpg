@@ -257,7 +257,10 @@ export const PROFILES = Object.freeze({
       –Foundations: All
       –Damage Category: Standard
       –KP Cost: 0
-      –Effect: None.`,
+      –Effect: Reduce the starting TP Cost of a Signature Technique made with this Profile from 8 to 4.`,
+    // Read where a Technique's TP is summed (technique.mjs `techniqueTP`): its start, and - specific
+    // over general, the user's ruling - its floor too.
+    techniqueStartTP: 4
   },
 
   combination: {

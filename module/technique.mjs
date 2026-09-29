@@ -112,11 +112,21 @@ export function featureTP(def, ranks = 1) {
 /**
  * The Technique's TP Cost: 8, plus its Advantages, less its Disadvantages, never under 8 -
  * and then +4 for an Ultimate, "applied after all modifications".
+ *
+ * Its Profile can start it lower: Simple's "Reduce the starting TP Cost of a Signature Technique
+ * made with this Profile from 8 to 4" - and the floor with it, specific over general (the user's
+ * ruling). The main Profile's, which is the one it is made with.
  */
+export function techniqueStartTP(sig) {
+  const start = Number(PROFILES[sig?.profile]?.techniqueStartTP);
+  return Number.isFinite(start) ? start : BASE_TP;
+}
+
 export function techniqueTP(sig) {
   const features = (sig.features ?? []).reduce((sum, entry) =>
     sum + featureTP(featureDef(entry.id), entry.ranks), 0);
-  const built = Math.max(MINIMUM_TP, BASE_TP + features);
+  const start = techniqueStartTP(sig);
+  const built = Math.max(Math.min(MINIMUM_TP, start), start + features);
   return built + (isUltimate(sig.level) ? ULTIMATE_TP : 0);
 }
 
