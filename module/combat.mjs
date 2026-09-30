@@ -166,6 +166,32 @@ export function newRoundFor(actor) {
   };
 }
 
+/**
+ * A mark held entering a Combat Encounter that lasts its first Combat Rounds - Stretched's "for the
+ * first 3 Combat Rounds of that Combat Encounter". Put on a Round clock here, before the first
+ * Round's own edge is counted: one edge more than the Rounds, so it comes off as the fourth begins.
+ */
+async function firstRoundsBegin(actor) {
+  const { traitsOfKind } = await import("./effects/traits.mjs");
+  const { EDGES, KINDS, lasting } = await import("./durations.mjs");
+  for (const trait of traitsOfKind("conditions")) {
+    const rounds = Number(trait.firstRounds) || 0;
+    if (!rounds || !((Number(actor.system.conditions?.[trait.id]) || 0) > 0)) continue;
+    await lasting(actor, { kind: KINDS.CONDITION, key: trait.id, edge: EDGES.ROUND, extra: rounds,
+      source: trait.name });
+  }
+}
+
+/** And gone when the Encounter ends, however few of those Rounds it lasted. */
+async function firstRoundsEnd(actor) {
+  const { traitsOfKind } = await import("./effects/traits.mjs");
+  const { setCondition } = await import("./conditions.mjs");
+  for (const trait of traitsOfKind("conditions")) {
+    if (!(Number(trait.firstRounds) > 0)) continue;
+    if ((Number(actor.system.conditions?.[trait.id]) || 0) > 0) await setCondition(actor, trait.id, 0);
+  }
+}
+
 /** What entering a Combat Encounter clears, and what it announces. */
 async function startEncounter(combat) {
   for (const actor of combatants(combat)) {
@@ -185,6 +211,7 @@ async function startEncounter(combat) {
       "system.resources": replaceObject({})
     });
     await stopCharging(actor);
+    await firstRoundsBegin(actor);
     await fireMoment(actor, "start-of-encounter");
   }
 
@@ -517,6 +544,7 @@ export function registerCombatHooks() {
       // Every clock stops here, not only the ones counting the Encounter: a turn edge
       // that never arrives is a duration that never ends, and there are no more turns.
       await encounterEnded(actor);
+      await firstRoundsEnd(actor);
       await regenerateWeapons(actor);
       // Delayed's records and Imminent marks, which only lasted for the Encounter.
       const { clearDelayed } = await import("./chat.mjs");

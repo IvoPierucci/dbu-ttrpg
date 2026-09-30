@@ -1,0 +1,29 @@
+id: stretch
+name: Stretch
+prerequisite: 2+ Skill Ranks in Acrobatics
+# Held by whoever meets it: the Skill and the Ranks it asks.
+requiresSkill: acrobatics
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 2 Minutes
+# Done: the Stretched mark, which the next Combat Encounter turns into its first 3 Combat Rounds.
+gains: stretched
+source: Core Rule
+description: >
+  Two minutes limbering up: enter a Combat Encounter within the hour, and your Combat Rolls are
+  1(T) better for its first 3 Combat Rounds.
+text: >
+  Stretch: You limber up for battle, stretching your muscles to prepare for the rigors of strenuous
+  combat.
+  –Prerequisite: 2+ Skill Ranks in Acrobatics
+  –Session Limit: 1
+  –Time Cost: 2 Minutes
+  –Effect: If you enter a Combat Encounter within the next hour, increase your Combat Rolls by 1(T)
+  for the first 3 Combat Rounds of that Combat Encounter.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Acrobatics. The card's button, once the
+# Time Cost is spent, gives the Stretched mark; entering a Combat Encounter puts it on a clock of the
+# first 3 Combat Rounds, and the Encounter ending takes it off whatever is left. "Within the next
+# hour" is story time: the player ends the mark by hand if the hour passes first.

@@ -748,7 +748,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     {
       const { adventuringManeuvers } = await import("../adventure.mjs");
       context.adventuringManeuvers = adventuringManeuvers(traitsOfKind("adventuring"),
-        this.actor.system.adventureUses ?? []);
+        this.actor.system.adventureUses ?? [], this.actor.system);
     }
     context.progressionRows = this._prepareProgressionRows();
     // Handlebars has no literal-array helper, so the Attribute columns are supplied
@@ -4382,7 +4382,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onUseAdventuring(event, target) {
     const { adventuringManeuvers, whyNotAdventuring } = await import("../adventure.mjs");
     const uses = this.actor.system.adventureUses ?? [];
-    const entry = adventuringManeuvers(traitsOfKind("adventuring"), uses)
+    const entry = adventuringManeuvers(traitsOfKind("adventuring"), uses, this.actor.system)
       .find(each => each.id === target.dataset.maneuver);
     const refused = whyNotAdventuring(entry, { adventuring: this.actor.system.adventuring });
     if (refused) {

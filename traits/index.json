@@ -2,6 +2,7 @@
   "_comment": "Generated at release. A browser cannot list a directory, and FilePicker.browse needs a permission an ordinary player does not have - so every file is named here.",
   "traits": [
     "adventuring/rest.dbu",
+    "adventuring/stretch.dbu",
     "adventuring/take-a-breather.dbu",
     "battlefields/blinding.dbu",
     "battlefields/bog-environment.dbu",
@@ -59,6 +60,7 @@
     "conditions/beautified.dbu",
     "conditions/staggered.dbu",
     "conditions/stress-exhaustion.dbu",
+    "conditions/stretched.dbu",
     "conditions/suffocating.dbu",
     "conditions/transfigured.dbu",
     "high/deep-space.dbu",

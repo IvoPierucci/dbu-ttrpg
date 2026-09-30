@@ -1,0 +1,28 @@
+id: stretched
+name: Stretched
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the entry raises Combat Rolls and never names one.
+combatCondition: no
+# "Within the next hour" is story time, and nothing here counts hours: the player ends it.
+endedByHand: true
+# Held entering a Combat Encounter: it lasts that Encounter's first 3 Combat Rounds, and goes when
+# the Encounter ends.
+firstRounds: 3
+source: Core Rule
+description: >
+  Limbered up by the Stretch Adventuring Maneuver. Combat Rolls 1(T) better for the first 3 Combat
+  Rounds of a Combat Encounter entered within the hour.
+text: >
+  Stretched: the Stretch Adventuring Maneuver's mark. "If you enter a Combat Encounter within the
+  next hour, increase your Combat Rolls by 1(T) for the first 3 Combat Rounds of that Combat
+  Encounter."
+
+---
+
+# Combat Rolls only in a Combat Encounter: held while Adventuring, it waits.
+
+[passive]
+if (!adventuring) {
+  combatRolls += 1(T);
+}

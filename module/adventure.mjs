@@ -45,9 +45,9 @@ export function travelKiLoss({ type, maxKi = 0, flightRanks = 0, vehicle = false
  * Maneuvers can only be attempted once during each Adventuring Session, some may be able to be used
  * multiple times up to a listed Session Limit."
  */
-export function adventuringManeuvers(definitions, uses = []) {
+export function adventuringManeuvers(definitions, uses = [], system = null) {
   return definitions
-    .filter(definition => definition.universal === true)
+    .filter(definition => (definition.universal === true) || meetsPrerequisite(definition, system))
     .map(definition => {
       const limit = Math.max(1, Number(definition.sessionLimit) || 1);
       const used = uses.filter(id => id === definition.id).length;
@@ -61,6 +61,17 @@ export function adventuringManeuvers(definitions, uses = []) {
         text: String(definition.text ?? "")
       };
     });
+}
+
+/**
+ * "To use an Adventuring Maneuver, you may have to meet a certain requirement" - so many Skill Ranks,
+ * Stretch's "2+ Skill Ranks in Acrobatics". One that is not met is not offered.
+ */
+export function meetsPrerequisite(definition, system) {
+  const skill = String(definition?.requiresSkill ?? "").trim().toLowerCase();
+  if (!skill) return false;
+  const ranks = Number(system?.skills?.[skill]?.ranks) || 0;
+  return ranks >= (Number(definition.requiresRanks) || 0);
 }
 
 /**

@@ -3071,7 +3071,10 @@ export async function postAdventuring(actor, definition) {
       + "Interrupted, or without the full Time Cost, there are no benefits.</p>",
     flags: { [SCOPE]: { [ADVENTURING_FLAG]: {
       actorUuid: actor.uuid, id: definition.id, name: definition.name,
-      share: Number(definition.regainShare) || 0, applied: false
+      share: Number(definition.regainShare) || 0,
+      // A mark it leaves - Stretch's Stretched.
+      gains: String(definition.gains ?? "").trim().toLowerCase(),
+      applied: false
     } } }
   });
 }
@@ -3094,14 +3097,22 @@ async function settleAdventuring(message, adventuring) {
   const actor = fromUuidSync(adventuring.actorUuid);
   if (!actor) return;
   await message.setFlag(SCOPE, ADVENTURING_FLAG, { ...adventuring, applied: true });
-  const { regainedShare } = await import("./adventure.mjs");
-  const back = regainedShare(adventuring.share, actor.system);
-  await actor.update({
-    "system.life.value": actor.system.life.value + back.life,
-    "system.ki.value": actor.system.ki.value + back.ki
-  });
-  return settledNote(message,
-    `${actor.name} finishes ${adventuring.name}: ${back.life} Life and ${back.ki} Ki Points back.`);
+  const said = [];
+  if (adventuring.share) {
+    const { regainedShare } = await import("./adventure.mjs");
+    const back = regainedShare(adventuring.share, actor.system);
+    await actor.update({
+      "system.life.value": actor.system.life.value + back.life,
+      "system.ki.value": actor.system.ki.value + back.ki
+    });
+    said.push(`${back.life} Life and ${back.ki} Ki Points back`);
+  }
+  if (adventuring.gains) {
+    const { gainCondition } = await import("./effects/moments-runtime.mjs");
+    await gainCondition(actor, adventuring.gains, 1);
+    said.push(getTrait(adventuring.gains)?.name ?? adventuring.gains);
+  }
+  return settledNote(message, `${actor.name} finishes ${adventuring.name}${said.length ? `: ${said.join(", ")}` : ""}.`);
 }
 
 function renderCurePoison(message, html) {
