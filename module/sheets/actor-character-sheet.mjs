@@ -469,7 +469,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
       newTechnique: DBUCharacterSheet._onNewTechnique,
-      newUniqueAbility: DBUCharacterSheet._onNewUniqueAbility,
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
@@ -1824,18 +1823,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
 
     return this.actor.createEmbeddedDocuments("Item", [uniqueItemFrom(definition, children, { chosenType, applied })]);
-  }
-
-  /** A blank Unique Ability, opened on its UA tab: once per Combat Round, as every one is. */
-  static async _onNewUniqueAbility() {
-    if (!this.isEditable) return;
-    const [item] = await this.actor.createEmbeddedDocuments("Item", [{
-      name: "New Unique Ability",
-      type: "maneuver",
-      img: "icons/magic/symbols/rune-sigil-black-pink.webp",
-      system: { type: "standard", tags: ["uniqueAbility"], usageLimit: "1/round", actionCost: 1 }
-    }]);
-    item?.sheet?.render(true);
   }
 
   static async _onNewTechnique() {

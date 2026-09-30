@@ -37,9 +37,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       rankFeature: DBUManeuverSheet._onRankFeature,
       chooseFeature: DBUManeuverSheet._onChooseFeature,
       resyncTechnique: DBUManeuverSheet._onResyncTechnique,
-      addUniqueEntry: DBUManeuverSheet._onAddUniqueEntry,
       editUniqueEntry: DBUManeuverSheet._onEditUniqueEntry,
-      removeUniqueEntry: DBUManeuverSheet._onRemoveUniqueEntry,
       toggleUniqueEntry: DBUManeuverSheet._onToggleUniqueEntry,
       addUniqueFeature: DBUManeuverSheet._onAddUniqueFeature
     },
@@ -174,15 +172,14 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
         selected: unique.chosenType === value })),
       tp: uniqueTPOf(unique),
       // The Adv & Disadv tab's shape (the user's): the search offers what is not had yet - locked ones shown
-      // and refused - and a card each for what is.
+      // and refused - and a card each for what is. Only what came from the game's files: nothing is made here
+      // (the user's ruling), and one made before that is left out once it is not had.
       groups: [
-        { label: "Advancements", choices: unique.advancements.filter(entry => !entry.bought).map(entry => ({
+        { label: "Advancements", choices: unique.advancements.filter(entry => !entry.bought && entry.key).map(entry => ({
           value: `adv:${entry.id}`, name: entry.name, label: `${entry.name} (${advancementTPOf(entry)} TP)`,
           blocked: locked.has(String(entry.name).trim().toLowerCase()) ? "Locked by a Restriction" : "" })) },
-        { label: "Restrictions", choices: unique.restrictions.filter(entry => !entry.applied).map(entry => ({
-          value: `res:${entry.id}`, name: entry.name, label: `${entry.name} (-${entry.reduction} TP)`, blocked: "" })) },
-        { label: "New", choices: [{ value: "new:advancements", name: "New Advancement", label: "New Advancement", blocked: "" },
-          { value: "new:restrictions", name: "New Restriction", label: "New Restriction", blocked: "" }] }
+        { label: "Restrictions", choices: unique.restrictions.filter(entry => !entry.applied && entry.key).map(entry => ({
+          value: `res:${entry.id}`, name: entry.name, label: `${entry.name} (-${entry.reduction} TP)`, blocked: "" })) }
       ].filter(group => group.choices.length),
       rows: [
         ...unique.advancements.filter(entry => entry.bought).map(entry => ({ ...entry, list: "advancements",
@@ -195,36 +192,14 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     };
   }
 
-  /**
-   * An Advancement bought or a Restriction applied, from the search - or a new one of either, blank, bought
-   * or applied, and opened for writing.
-   */
+  /** An Advancement bought or a Restriction applied, from the search. */
   static async _onAddUniqueFeature(event, target) {
     if (!this.isEditable) return;
     const pick = this.#pickedFeature();
     if (!pick) return this.element.querySelector("[data-feature-search]")?.focus();
     const [kind, id] = pick.split(":");
-    if (kind === "new") {
-      const list = (id === "restrictions") ? "restrictions" : "advancements";
-      const entries = this.item.system.unique[list] ?? [];
-      const blank = (list === "advancements")
-        ? { id: foundry.utils.randomID(), name: "New Advancement", tp: 0, prerequisite: "", text: "", script: "", bought: true }
-        : { id: foundry.utils.randomID(), name: "New Restriction", reduction: 0, locked: "", text: "", script: "", applied: true };
-      await this.item.update({ [`system.unique.${list}`]: [...entries, blank] });
-      return DBUManeuverSheet._onEditUniqueEntry.call(this, event, { dataset: { list, id: blank.id } });
-    }
     const list = (kind === "res") ? "restrictions" : "advancements";
     return DBUManeuverSheet._onToggleUniqueEntry.call(this, event, { dataset: { list, id } });
-  }
-
-  /** A new Advancement or Restriction, blank and named - its fields are written with the pencil. */
-  static async _onAddUniqueEntry(event, target) {
-    const list = (target.dataset.list === "restrictions") ? "restrictions" : "advancements";
-    const entries = this.item.system.unique[list] ?? [];
-    const blank = (list === "advancements")
-      ? { id: foundry.utils.randomID(), name: "New Advancement", tp: 0, prerequisite: "", text: "", script: "", bought: false }
-      : { id: foundry.utils.randomID(), name: "New Restriction", reduction: 0, locked: "", text: "", script: "", applied: false };
-    return this.item.update({ [`system.unique.${list}`]: [...entries, blank] });
   }
 
   /** An Advancement's or a Restriction's fields, written in a window: name, TP, Prerequisite, text, script. */
@@ -262,13 +237,6 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     });
     if (!saved || (typeof saved !== "object")) return;
     return this.item.update({ [`system.unique.${list}`]: entries.map(each => (each.id === entry.id) ? { ...each, ...saved } : each) });
-  }
-
-  /** An Advancement or Restriction taken off the list altogether. */
-  static async _onRemoveUniqueEntry(event, target) {
-    const list = (target.dataset.list === "restrictions") ? "restrictions" : "advancements";
-    return this.item.update({ [`system.unique.${list}`]:
-      (this.item.system.unique[list] ?? []).filter(each => each.id !== target.dataset.id) });
   }
 
   /**
