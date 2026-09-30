@@ -460,16 +460,16 @@
   font-weight: normal;
 }
 
-/* Five over four, the second row set half a tab across from the first, so they sit
-   staggered like bricks rather than stacked in columns. The order (the sheet's TABS) mirrors
-   each row by the length of its names, the longest in the middle of the top row.
+/* Six over five, the second row set half a tab across from the first, so they sit staggered like
+   bricks rather than stacked in columns. The order (the sheet's TABS) mirrors each row by the length of
+   its names, the longest in the middle of the top row - Signature Techniques and Unique Abilities.
 
-   Ten columns, each tab two of them: the first row starts on the odd columns and the
-   second on the even ones, which is the half-tab shift. Placed by position, so a tenth tab
-   would land in a third row rather than overlap anything. */
+   Twelve columns, each tab two of them: the first row starts on the odd columns and the second on the
+   even ones, which is the half-tab shift. Placed by position, so a twelfth tab would land in a third row
+   rather than overlap anything. */
 .dbu-ttrpg .sheet-tabs {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(12, 1fr);
   row-gap: 2px;
 }
 
@@ -484,11 +484,12 @@
 .dbu-ttrpg .sheet-tabs > .item:nth-child(3) { grid-area: 1 / 5 / auto / span 2; }
 .dbu-ttrpg .sheet-tabs > .item:nth-child(4) { grid-area: 1 / 7 / auto / span 2; }
 .dbu-ttrpg .sheet-tabs > .item:nth-child(5) { grid-area: 1 / 9 / auto / span 2; }
-.dbu-ttrpg .sheet-tabs > .item:nth-child(6) { grid-area: 2 / 1 / auto / span 2; }
-.dbu-ttrpg .sheet-tabs > .item:nth-child(7) { grid-area: 2 / 3 / auto / span 2; }
-.dbu-ttrpg .sheet-tabs > .item:nth-child(8) { grid-area: 2 / 5 / auto / span 2; }
-.dbu-ttrpg .sheet-tabs > .item:nth-child(9) { grid-area: 2 / 7 / auto / span 2; }
-.dbu-ttrpg .sheet-tabs > .item:nth-child(10) { grid-area: 2 / 9 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(6) { grid-area: 1 / 11 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(7) { grid-area: 2 / 2 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(8) { grid-area: 2 / 4 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(9) { grid-area: 2 / 6 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(10) { grid-area: 2 / 8 / auto / span 2; }
+.dbu-ttrpg .sheet-tabs > .item:nth-child(11) { grid-area: 2 / 10 / auto / span 2; }
 
 .dbu-ttrpg .tab.active {
   display: block;

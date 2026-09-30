@@ -563,6 +563,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       scrollable: [""]
     },
     techniques: { template: "systems/dbu-ttrpg/templates/parts/actor-techniques.hbs", scrollable: [""] },
+    uniqueAbilities: { template: "systems/dbu-ttrpg/templates/parts/actor-unique-abilities.hbs", scrollable: [""] },
     traits: { template: "systems/dbu-ttrpg/templates/parts/actor-traits.hbs", scrollable: [""] },
     battlefields: {
       template: "systems/dbu-ttrpg/templates/parts/actor-battlefields.hbs",
@@ -666,6 +667,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // The Techniques this character built, on a tab of their own - with what they cost in
     // Technique Points.
     techniques: { id: "techniques", group: "primary", label: "Signature Techniques" },
+    // The Unique Abilities, on a tab of their own beside the Techniques (the user's).
+    uniqueAbilities: { id: "uniqueAbilities", group: "primary", label: "Unique Abilities" },
     traits: { id: "traits", group: "primary", label: "Traits" },
     // Gear, which is the rulebook's Equipment.
     gear: { id: "gear", group: "primary", label: "Gear" },
