@@ -277,3 +277,15 @@ export function scrapCost(difficulty, { battleJacket = false } = {}) {
 export function canCreateWith(system, skill, specialty = "") {
   return meetsPrerequisite({ requiresSkill: skill, requiresRanks: 2, requiresSpecialty: specialty }, system);
 }
+
+/**
+ * Whether a character already holds a Blueprint of this - one of each thing is enough. A Basic Item's
+ * by its file; anything else by its name.
+ */
+export function hasBlueprint(items, { kind, id, name }) {
+  return (items ?? []).some(item => {
+    const record = item?.system?.blueprint;
+    if (!record?.kind || (record.kind !== kind)) return false;
+    return (kind === "basic") ? (record.id === id) : (record.name.trim().toLowerCase() === String(name ?? "").trim().toLowerCase());
+  });
+}

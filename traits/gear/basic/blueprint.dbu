@@ -1,0 +1,21 @@
+id: blueprint
+name: Blueprint
+kind: gear
+# Gained through the Create Maneuver, never given or crafted: no Craft DC.
+special: true
+source: Core Rule
+description: >
+  What something made through the Create Maneuver is recorded on: making it again with Create succeeds
+  without the Check.
+text: >
+  Blueprint: Once you have created anything through the Create Maneuver, you gain a Blueprint of what was
+  created. A Blueprint is a Basic Item that can be used when using the Create Maneuver to instantly
+  succeed at recreating whatever is recorded on the Blueprint.
+
+---
+
+# Given by Create's Made it - named "Blueprint: <what>", and what it records kept on it (a Basic Item's
+# file, or a Weapon's, Apparel's, Vehicle's or Battle Jacket's name, asked). One for each thing: a second
+# of the same is not given. Picked in Create's list, it skips the Check alone (the user's ruling): the
+# Scrap or Ingredient, the Time Cost and the Session Limit are paid as ever, and the card says it
+# succeeds. A Blueprint's making is not recorded on another.

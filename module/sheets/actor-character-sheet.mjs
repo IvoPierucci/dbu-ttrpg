@@ -4556,7 +4556,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const pieces = [["weapon", "A Weapon", "weapons"], ["apparel", "A piece of Apparel", "apparel"],
       ["vehicle", "A Vehicle", "vehicles"], ["battleJacket", "A Battle Jacket", "vehicles"]]
       .filter(([, , specialty]) => canCreateWith(system, "craft", specialty));
-    if (!basics.length && !pieces.length) {
+    // "A Blueprint is a Basic Item that can be used when using the Create Maneuver to instantly succeed
+    // at recreating whatever is recorded on the Blueprint."
+    const blueprints = this.actor.items.filter(item => item.system.blueprint?.kind);
+    if (!basics.length && !pieces.length && !blueprints.length) {
       ui.notifications.warn(`${this.actor.name} has nothing they can Create - 2+ Ranks and the Specialty for it.`);
       return;
     }
@@ -4567,7 +4570,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       content: `<label class="dbu-wager"><span>Make</span><select name="what" class="dbu-gear-pick">
           ${basics.length ? `<optgroup label="Basic Items">${basics.map(({ item }) =>
             `<option value="basic:${escape(item.id)}">${escape(item.name)} (${escape(item.craftDC)})</option>`).join("")}</optgroup>` : ""}
-          ${pieces.map(([key, label]) => `<option value="${key}">${escape(label)}</option>`).join("")}</select></label>
+          ${pieces.map(([key, label]) => `<option value="${key}">${escape(label)}</option>`).join("")}
+          ${blueprints.length ? `<optgroup label="Blueprints - no Check">${blueprints.map(item =>
+            `<option value="bp:${item.id}">${escape(item.name)}</option>`).join("")}</optgroup>` : ""}</select></label>
         <label class="dbu-wager"><span>Difficulty</span><select name="difficulty">${DIFFICULTY_ORDER.map(key =>
           `<option value="${key}">${escape(labels[key]?.label ?? key)}</option>`).join("")}</select>
           <em>For a Weapon, Apparel or Vehicle - or a Variable Craft DC</em></label>`,
@@ -4582,6 +4587,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
     if (!chosen || (typeof chosen !== "object") || !chosen.what) return;
 
+    // From a Blueprint: what it records, made again - the Check skipped, and nothing else (the user's
+    // ruling).
+    const plan = chosen.what.startsWith("bp:") ? this.actor.items.get(chosen.what.slice(3))?.system.blueprint : null;
+    if (plan) {
+      const definitionOf = plan.id ? getTrait(plan.id) : null;
+      chosen.what = (plan.kind === "basic") ? `basic:${plan.id}` : plan.kind;
+      if (plan.difficulty) chosen.difficulty = plan.difficulty;
+      if ((plan.kind === "basic") && definitionOf && !basics.some(({ item }) => item.id === plan.id)) {
+        basics.push({ item: definitionOf, tags: tagsOf(definitionOf), ...createSkillFor(tagsOf(definitionOf)) });
+      }
+    }
+
     const basic = chosen.what.startsWith("basic:") ? basics.find(({ item }) => `basic:${item.id}` === chosen.what) : null;
     const kind = basic ? "basic" : chosen.what;
     // A Basic Item's Craft DC as written - or, where it varies, the one picked.
@@ -4594,8 +4611,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
     const roll = basic ? { skill: basic.skill, specialty: basic.specialty }
       : { skill: "craft", specialty: (kind === "weapon") ? "weapons" : (kind === "apparel") ? "apparel" : "vehicles" };
-    const name = basic ? basic.item.name : { weapon: "a Weapon", apparel: "a piece of Apparel", vehicle: "a Vehicle",
-      battleJacket: "a Battle Jacket" }[kind];
+    const name = basic ? basic.item.name : (plan?.name || { weapon: "a Weapon", apparel: "a piece of Apparel",
+      vehicle: "a Vehicle", battleJacket: "a Battle Jacket" }[kind]);
     const time = String(definition[{ basic: "timeBasic", weapon: "timeWeapon", apparel: "timeApparel" }[kind] ?? "timeVehicle"] ?? "");
 
     // What it costs. Scrap once - "Tech. Scrap is required", and a Vehicle's or Battle Jacket's; an
@@ -4619,7 +4636,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     await this.actor.update({ "system.adventureUses": [...(system.adventureUses ?? []), entry.id] });
     const { postCreate } = await import("../chat.mjs");
-    return postCreate(this.actor, { kind, id: basic?.item.id ?? "", name, difficulty, time, food, scrap, ...roll });
+    return postCreate(this.actor, { kind, id: basic?.item.id ?? "", name, difficulty, time, food, scrap, ...roll,
+      blueprint: Boolean(plan) });
   }
 
   /**

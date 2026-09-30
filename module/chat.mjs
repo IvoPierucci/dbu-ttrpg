@@ -3386,9 +3386,11 @@ export async function postCreate(actor, create) {
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${escape(actor.name)} begins Create: ${escape(create.name)} - ${escape(create.time)}`
-      + `${create.scrap ? `, ${create.scrap} Scrap` : ""}${create.food ? ", 1 Ingredient" : ""}. A ${escape(skill)}${escape(specialty)} `
-      + `Skill Check at the ${escape(dc?.label ?? create.difficulty)} Difficulty - Target Number ${dc?.tn ?? "?"}, matched or `
-      + "exceeded. Roll it from the sheet.</p>",
+      + `${create.scrap ? `, ${create.scrap} Scrap` : ""}${create.food ? ", 1 Ingredient" : ""}. `
+      + (create.blueprint
+        ? "From its Blueprint: no Check - it succeeds once the Time Cost is spent.</p>"
+        : `A ${escape(skill)}${escape(specialty)} Skill Check at the ${escape(dc?.label ?? create.difficulty)} Difficulty - `
+          + `Target Number ${dc?.tn ?? "?"}, matched or exceeded. Roll it from the sheet.</p>`),
     flags: { [SCOPE]: { [CREATE_FLAG]: { actorUuid: actor.uuid, ...create, applied: false } } }
   });
 }
@@ -3399,10 +3401,12 @@ function renderCreate(message, html) {
   const maker = fromUuidSync(create.actorUuid);
   if (!game.user.isGM && !maker?.isOwner) return;
   const at = html.querySelector(".message-content") ?? html;
-  for (const [outcome, label, tip] of [
-    ["made", "Made it", "It is theirs."],
-    ["again", "Try again", `Another ${create.time}${create.food ? " and another Ingredient" : ""} - the same Create.`],
-    ["quit", "Give up", "Nothing is made."]]) {
+  // From a Blueprint there is no Check to fail: the time spent, it is made.
+  for (const [outcome, label, tip] of create.blueprint
+    ? [["made", "The Time Cost was spent", "It is theirs."]]
+    : [["made", "Made it", "It is theirs - and a Blueprint of it."],
+      ["again", "Try again", `Another ${create.time}${create.food ? " and another Ingredient" : ""} - the same Create.`],
+      ["quit", "Give up", "Nothing is made."]]) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "dbu-clash-button";
@@ -3435,11 +3439,49 @@ async function settleCreate(message, create, outcome) {
     const definition = getTrait(create.id);
     if (definition) await maker.sheet?.giveGear?.(definition, { made: true, craftDC: create.difficulty });
     await settledNote(message, `${maker.name} makes ${create.name}.`);
-    return;
   }
-  await settledNote(message, (["weapon", "apparel"].includes(create.kind))
-    ? `${maker.name} makes ${create.name} - add it on the Gear tab and build it.`
-    : `${maker.name} makes ${create.name}. Vehicles and Battle Jackets are not built yet: the table keeps it.`);
+  else {
+    await settledNote(message, (["weapon", "apparel"].includes(create.kind))
+      ? `${maker.name} makes ${create.name} - add it on the Gear tab and build it.`
+      : `${maker.name} makes ${create.name}. Vehicles and Battle Jackets are not built yet: the table keeps it.`);
+  }
+  // "Once you have created anything through the Create Maneuver, you gain a Blueprint of what was
+  // created." Not from a Blueprint - that one is already held.
+  if (!create.blueprint) await giveBlueprint(maker, create);
+}
+
+/**
+ * A Blueprint of what Create made: a Basic Item's file, or - for a Weapon, Apparel, Vehicle or Battle
+ * Jacket - the name it is given, asked. One of each thing: none if one is held already.
+ */
+async function giveBlueprint(maker, create) {
+  const { hasBlueprint } = await import("./adventure.mjs");
+  let name = create.name;
+  if (create.kind !== "basic") {
+    const typed = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: "Blueprint" },
+      content: `<label class="dbu-wager"><span>What was made</span>
+        <input type="text" name="name" value="${Handlebars.escapeExpression(create.name)}" autofocus/></label>`,
+      buttons: [
+        { action: "keep", label: "Keep the Blueprint", default: true, callback: (event, button, dialog) =>
+          String(dialog.element.querySelector('input[name="name"]')?.value ?? "").trim() },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!typed || (typed === "cancel")) return;
+    name = typed;
+  }
+  const record = { kind: create.kind, id: create.id ?? "", name, difficulty: create.difficulty };
+  if (hasBlueprint(Array.from(maker.items ?? []), record)) return;
+  const definition = getTrait("blueprint");
+  if (!definition) return;
+  const { gearItemFrom } = await import("./gear.mjs");
+  const data = gearItemFrom(definition, maker);
+  data.name = `Blueprint: ${name}`;
+  data.system.blueprint = record;
+  await requestCreateItem(maker, data);
 }
 
 function renderCurePoison(message, html) {
