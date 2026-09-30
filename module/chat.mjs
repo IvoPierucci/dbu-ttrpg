@@ -2388,7 +2388,7 @@ async function settleGrapple(message, clash) {
  * itself is what was bought.
  */
 async function settledNote(message, text, { to = null } = {}) {
-  await ChatMessage.create({
+  return ChatMessage.create({
     speaker: message.speaker,
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(text)}</div>`,
     ...(to ? { whisper: whisperTo(to) } : {})
@@ -3414,7 +3414,7 @@ export async function postMaterialize(actor, maneuver, plan) {
     flags: { [SCOPE]: { [MATERIALIZE_FLAG]: { actorUuid: actor.uuid, maneuverName: maneuver.name, ...plan, applied: false } } }
   });
   const total = await actor.sheet?.rollSkillAgainst?.(plan.skill, plan.difficulty,
-    { minus: plan.diceMinus, minusLabel: "One Category harder" });
+    { minus: plan.diceMinus, minusLabel: "One Category harder", settles: { kind: "materialize", messageId: message.id } });
   const tn = DBUCharacterData.DIFFICULTIES[plan.difficulty]?.tn ?? Infinity;
   await settleMaterialize(message, message.getFlag(SCOPE, MATERIALIZE_FLAG), (typeof total === "number") && (total >= tn));
   return message;
@@ -3423,41 +3423,72 @@ export async function postMaterialize(actor, maneuver, plan) {
 /**
  * Made: a Basic Item given as the Gear tab gives one, marked Materialized - to the Ally, with Projectile
  * Materialization; a Weapon or a piece of Apparel said (the user's ruling); Weights at an Opponent open
- * Restrictive Weights' Clash. Failed: nothing, and the Ki Points stay spent.
+ * Restrictive Weights' Clash. Failed: nothing, and the Ki Points stay spent. What was done is kept on the card, so a
+ * Critical Die or a Karmic Chance that turns the Check round can take it back.
  */
 async function settleMaterialize(message, made, success) {
   const maker = fromUuidSync(made.actorUuid);
   if (!maker) return;
-  await message.setFlag(SCOPE, MATERIALIZE_FLAG, { ...made, applied: true });
-  if (!success) {
-    await settledNote(message, "Nothing is made.");
-    return;
-  }
+  const done = { success, notes: [], given: null };
+  const say = async text => { const note = await settledNote(message, text); if (note) done.notes.push(note.id); };
   const recipient = made.recipientUuid ? fromUuidSync(made.recipientUuid) : null;
-  if (made.kind === "weights") {
-    if (!recipient) return;
-    await settledNote(message, `Weights at ${recipient.name}.`);
-    return postSaveClash(maker, recipient, {
-      maneuverName: "Restrictive Weights",
-      clashLabel: "Restrictive Weights",
-      reason: `Win and ${recipient.name} equips the Weights as their top layer of Apparel; lose and they are created on a `
-        + `Square adjacent to ${recipient.name}.`,
-      saves: ["cognitive"],
-      defenderSaves: ["impulsive"],
-      winNote: { text: "{defender} equips the Weights {challenger} made as their top layer of Apparel (a fourth layer if "
-        + "need be) - and they give no Doff Bonus once removed", applied: false }
-    });
-  }
-  if (made.kind === "basic") {
-    const definition = getTrait(made.id);
+  if (!success) await say("Nothing is made.");
+  else if (made.kind === "weights") {
+    if (recipient) {
+      await say(`Weights at ${recipient.name}.`);
+      const clash = await postSaveClash(maker, recipient, {
+        maneuverName: "Restrictive Weights",
+        clashLabel: "Restrictive Weights",
+        reason: `Win and ${recipient.name} equips the Weights as their top layer of Apparel; lose and they are created on a `
+          + `Square adjacent to ${recipient.name}.`,
+        saves: ["cognitive"],
+        defenderSaves: ["impulsive"],
+        winNote: { text: "{defender} equips the Weights {challenger} made as their top layer of Apparel (a fourth layer if "
+          + "need be) - and they give no Doff Bonus once removed", applied: false }
+      });
+      if (clash) done.notes.push(clash.id);
+    }
+  } else {
+    const definition = (made.kind === "basic") ? getTrait(made.id) : null;
     if (definition) {
       await maker.sheet?.giveGear?.(definition, { made: true, materialized: true, craftDC: made.difficulty,
         to: recipient ?? null });
+      done.given = { actorUuid: (recipient ?? maker).uuid, name: definition.name };
     }
-    await settledNote(message, `${made.name} materialized${recipient ? ` - ${recipient.name}` : ""}.`);
-    return;
+    await say(`${made.name} materialized${recipient ? ` - ${recipient.name}` : ""}.`);
   }
-  await settledNote(message, `${made.name} materialized${recipient ? ` - ${recipient.name}` : ""}.`);
+  await message.setFlag(SCOPE, MATERIALIZE_FLAG, { ...made, applied: true, done });
+}
+
+/** Take a Materialization back: the Item it gave, and the notes and Clash it posted. */
+async function unsettleMaterialize(made) {
+  const done = made.done ?? {};
+  if (done.given) {
+    const holder = fromUuidSync(done.given.actorUuid);
+    const item = Array.from(holder?.items ?? []).reverse()
+      .find(each => each.system?.materialized && (each.name === done.given.name));
+    if (item) await requestDeleteItem(holder, item.id);
+  }
+  for (const id of done.notes ?? []) {
+    const note = game.messages.get(id);
+    if (note && (note.isAuthor || game.user.isGM)) await note.delete();
+  }
+}
+
+/**
+ * A Check that settled something, changed afterwards - by its Critical Die or a Karmic Chance. Judged again against
+ * its Difficulty; turned round, what it did is taken back and the other outcome given.
+ */
+async function resettleCheck(settles, total, against) {
+  if (!settles || !against) return;
+  const message = game.messages.get(settles.messageId);
+  if (settles.kind !== "materialize") return;
+  const made = message?.getFlag(SCOPE, MATERIALIZE_FLAG);
+  if (!made?.done) return;
+  const success = total >= against.tn;
+  if (success === made.done.success) return;
+  await unsettleMaterialize(made);
+  await settleMaterialize(message, made, success);
 }
 
 function renderCreate(message, html) {
@@ -3993,6 +4024,7 @@ async function takeOnCheck(message, actor, check, key) {
   });
 
   if (message.isAuthor || game.user.isGM) await message.delete();
+  await resettleCheck(check.settles, again.total, check.against ?? null);
 }
 
 /**
@@ -13865,4 +13897,5 @@ async function rollCriticalDie(message, button, criticalDice) {
 
   // Author or GM only; for anyone else the button just stays disabled locally.
   if (message.isAuthor || game.user.isGM) await message.delete();
+  await resettleCheck(check?.settles, total, check?.against ?? null);
 }

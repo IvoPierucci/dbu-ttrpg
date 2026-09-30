@@ -5296,7 +5296,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * which offers the extra die as a button on the message (see chat.mjs).
    */
   async #rollCheck({ parts = [], flavor, criticalDice, skillRoll = false, urgent = false,
-                    criticalTarget = null, difficulty = "", naturalAdd = 0 }) {
+                    criticalTarget = null, difficulty = "", naturalAdd = 0, settles = null }) {
     // The Difficulty this Check is measured against, where it has one. Resolved once here
     // rather than looked up in each of the three branches below, all of which say whether
     // it was met - a willing failure that totals 0 has still missed a Target Number, and
@@ -5351,7 +5351,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       botchPenalty,
       flavor,
       // So Karmic Chance moves the new die as this one was moved.
-      rules: { naturalAdd }
+      rules: { naturalAdd },
+      // What a rule settled by this Check, judged again if its Critical Die or a Karmic Chance changes it.
+      ...(settles ? { settles } : {})
     };
 
     // A willing failure applies to any roll at all, this one included. It is decided
@@ -5546,7 +5548,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * A Skill Check a rule rolls rather than the Skills list: no window, straight to its card, judged against the
    * Difficulty given. What it came to - null for a willing failure, or a Required Skill with no Ranks.
    */
-  async rollSkillAgainst(key, difficulty, { minus = 0, minusLabel = "" } = {}) {
+  async rollSkillAgainst(key, difficulty, { minus = 0, minusLabel = "", settles = null } = {}) {
     const skill = this.actor.system.skills?.[key];
     if (!skill) return null;
     if (skill.untrained) {
@@ -5564,7 +5566,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,
       skillRoll: true,
       difficulty,
-      naturalAdd: skillNatural(this.actor, key, [])
+      naturalAdd: skillNatural(this.actor, key, []),
+      settles
     });
     return (typeof total === "number") ? total : null;
   }
