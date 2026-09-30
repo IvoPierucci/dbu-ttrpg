@@ -164,7 +164,16 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     const { UNIQUE_TYPES, advancementTPOf, lockedAdvancements, uniqueTPOf } = await import("../unique.mjs");
     const unique = this.item.system.unique;
     const locked = lockedAdvancements(unique);
+    const system = this.item.system;
+    const kind = MANEUVER_TYPES[system.type];
     return {
+      // Read, not written: what its file says (the user's ruling).
+      typeLabel: UNIQUE_TYPES[unique.uaType]?.label ?? "-",
+      maneuverTypeLabel: kind?.label ?? system.type,
+      actionLabel: kind?.action ? `${system.actionCost} ${kind.action.charAt(0).toUpperCase()}${kind.action.slice(1)} `
+        + `Action${(system.actionCost === 1) ? "" : "s"}` : "N/A",
+      kpLabel: system.kiCostPerTier ? `${system.kiCostPerTier}(T)` : system.kiCostPerBaseTier
+        ? `${system.kiCostPerBaseTier}(bT)` : (system.kiCost ? String(system.kiCost) : "N/A"),
       types: Object.entries(UNIQUE_TYPES).map(([value, type]) => ({ value, label: type.label, selected: unique.uaType === value })),
       both: unique.uaType === "both",
       chosen: ["technical", "magical"].map(value => ({ value, label: UNIQUE_TYPES[value].label,

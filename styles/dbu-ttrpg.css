@@ -432,6 +432,13 @@
   border-bottom: 1px solid var(--dbu-border);
 }
 
+/* A Unique Ability's own figures, read on its UA tab rather than written there. */
+.dbu-ttrpg .stat-read {
+  display: block;
+  padding: 2px 0;
+  font-weight: bold;
+}
+
 /* An Advancement's TP Cost Change, on its card. */
 .dbu-ttrpg .unique-tp-change {
   width: 3.5em;
