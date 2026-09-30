@@ -632,6 +632,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
           clashNote: new fields.StringField({ required: true, blank: true, initial: "" }),
           /** No Diminishing Defense from the attack it answered - Sonic Sway. */
           noDiminishing: new fields.BooleanField({ required: true, initial: false }),
+          /** Bought without its TP being charged (the user's). */
+          free: new fields.BooleanField({ required: true, initial: false }),
           tp: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
           prerequisite: new fields.StringField({ required: true, blank: true, initial: "" }),
           text: new fields.StringField({ required: true, blank: true, initial: "" }),

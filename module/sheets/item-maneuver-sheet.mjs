@@ -238,11 +238,12 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
    */
   static async _onToggleUniqueEntry(event, target) {
     const list = (target.dataset.list === "restrictions") ? "restrictions" : "advancements";
-    const flag = (list === "advancements") ? "bought" : "applied";
+    // An Advancement's Free toggle, beside its Bought one.
+    const flag = (list === "advancements") ? ((target.dataset.flag === "free") ? "free" : "bought") : "applied";
     const entries = this.item.system.unique[list] ?? [];
     const entry = entries.find(each => each.id === target.dataset.id);
     if (!entry) return;
-    if ((list === "advancements") && !entry.bought) {
+    if ((list === "advancements") && (flag === "bought") && !entry.bought) {
       const { lockedAdvancements } = await import("../unique.mjs");
       if (lockedAdvancements(this.item.system.unique).has(String(entry.name).trim().toLowerCase())) {
         ui.notifications.warn(`${entry.name} is locked by a Restriction applied to ${this.item.name}.`);

@@ -17,6 +17,9 @@
         <span class="reputation-name" data-tooltip="{{entry.text}}">{{entry.name}}</span>
         {{#if entry.prerequisite}}<span class="reputation-tn">{{entry.prerequisite}}</span>{{/if}}
         <span class="reputation-tn">{{entry.tp}} TP</span>
+        <label class="reputation-tn" data-tooltip="Its TP is not charged">
+          <input type="checkbox" data-action="toggleUniqueEntry" data-list="advancements" data-flag="free" data-id="{{entry.id}}"
+                 {{#if entry.free}}checked{{/if}}/> Free</label>
         <button type="button" class="maneuver-control" data-action="editUniqueEntry" data-list="advancements" data-id="{{entry.id}}" data-tooltip="Edit">&#9998;</button>
         <button type="button" class="maneuver-control" data-action="removeUniqueEntry" data-list="advancements" data-id="{{entry.id}}" data-tooltip="Remove">&#10005;</button>
       </li>
