@@ -4439,6 +4439,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       return setResource(this.actor, chosen.name, chosen.stacks);
     }
 
+    // The Cook Maneuver: who is fed and how much, the Difficulty, and the Ingredients paid.
+    if (definition.cooks === true) return this.#startCook(definition);
+
     // Full Repair: what, and for how long, asked first.
     if (definition.fullRepair === true) return this.#startFullRepair(entry, definition, "");
 
@@ -4517,6 +4520,95 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     await this.actor.update({ "system.adventureUses": [...uses, entry.id] });
     const { postAdventuring } = await import("../chat.mjs");
     return postAdventuring(this.actor, definition, { topic, patient });
+  }
+
+  /**
+   * The Cook Maneuver, begun: "you must decide two things: the Ingredient Cost and the Difficulty
+   * Category". The cook and every token targeted, each given 0 to 3 Ingredients - a stage of Hunger each;
+   * the Difficulty by the highest Rarity of Special Ingredient used, which the cook says. Then "pay your
+   * Ingredient Cost" - from which of their Ingredients, asked if they carry more than one - and the card
+   * states the Cooking Skill Check.
+   */
+  async #startCook(definition) {
+    const escape = Handlebars.escapeExpression;
+    const { COOK_DIFFICULTIES, HUNGER_STAGES, mealCost, ingredientsTaken } = await import("../adventure.mjs");
+    const pools = this.actor.items.filter(item => (item.system.gearId === "ingredients")
+      && ((Number(item.system.charges) || 0) > 0));
+    if (!pools.length) {
+      ui.notifications.warn(`${this.actor.name} has no Ingredients to cook with.`);
+      return;
+    }
+    const diners = [this.actor, ...Array.from(game.user.targets ?? []).map(token => token.actor).filter(Boolean)]
+      .filter((actor, index, all) => all.findIndex(other => other.uuid === actor.uuid) === index);
+    const hungerOf = actor => Number(actor.system.conditions?.hunger) || 0;
+    const difficulties = DBUCharacterData.DIFFICULTIES;
+    const plan = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.actor.name} - ${definition.name}` },
+      content: `<p class="dbu-respond-hint">Ingredients for each - a stage of Hunger each. Target others to feed them.</p>
+        ${diners.map((actor, index) => `<label class="dbu-wager"><span>${escape(actor.name)}
+            (${escape(HUNGER_STAGES[hungerOf(actor)]?.label ?? "Fed")})</span>
+          <select name="diner-${index}">${[0, 1, 2, 3].map(n => `<option value="${n}" ${
+            (n === Math.min(3, hungerOf(actor))) ? "selected" : ""}>${n}</option>`).join("")}</select></label>`).join("")}
+        <label class="dbu-wager"><span>Difficulty</span>
+          <select name="difficulty">${COOK_DIFFICULTIES.map(entry => `<option value="${entry.key}">${
+            escape(difficulties[entry.key]?.label ?? entry.key)} - ${escape(entry.special)}</option>`).join("")}</select></label>`,
+      buttons: [
+        { action: "cook", label: "Cook", default: true, callback: (event, button, dialog) => ({
+          stages: diners.map((actor, index) =>
+            Number(dialog.element.querySelector(`select[name="diner-${index}"]`)?.value) || 0),
+          difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "apprentice"
+        }) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!plan || (typeof plan !== "object")) return;
+    const portions = diners.map((actor, index) => ({ uuid: actor.uuid, name: actor.name, stages: plan.stages[index] }))
+      .filter(portion => portion.stages > 0);
+    const cost = mealCost(portions);
+    if (!cost) return;
+
+    const offered = pools.map(item => ({ id: item.id, name: item.name, charges: Number(item.system.charges) || 0 }));
+    let taken = ingredientsTaken(offered, cost);
+    if (!taken) {
+      ui.notifications.warn(`${this.actor.name} carries fewer than ${cost} Ingredients.`);
+      return;
+    }
+    // From which, where there is more than one to take from - a Special Ingredient among them.
+    if (offered.length > 1) {
+      const chosen = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${definition.name} - ${cost} Ingredients` },
+        content: offered.map(pool => `<label class="dbu-wager"><span>${escape(pool.name)}</span>
+            <input type="number" name="${pool.id}" value="${taken.find(each => each.id === pool.id)?.count ?? 0}"
+              min="0" max="${pool.charges}" step="1"/><em>of ${pool.charges}</em></label>`).join(""),
+        buttons: [
+          { action: "pay", label: "Pay", default: true, callback: (event, button, dialog) =>
+            Object.fromEntries(offered.map(pool =>
+              [pool.id, dialog.element.querySelector(`input[name="${pool.id}"]`)?.value])) },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!chosen || (typeof chosen !== "object")) return;
+      taken = ingredientsTaken(offered, cost, chosen);
+      if (!taken) {
+        ui.notifications.warn(`${definition.name}: take ${cost} Ingredients in all, no more than each has.`);
+        return;
+      }
+    }
+
+    // "Pay your Ingredient Cost" - an Item spent to nothing is gone.
+    for (const { id, count } of taken) {
+      const item = this.actor.items.get(id);
+      const left = (Number(item.system.charges) || 0) - count;
+      if (left > 0) await item.update({ "system.charges": left });
+      else await item.delete();
+    }
+    const { postCook } = await import("../chat.mjs");
+    return postCook(this.actor, definition, { portions, cost, difficulty: plan.difficulty,
+      paid: taken.map(({ id, count }) => `${count} ${offered.find(pool => pool.id === id)?.name ?? "Ingredients"}`) });
   }
 
   /**

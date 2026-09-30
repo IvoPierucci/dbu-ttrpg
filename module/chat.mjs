@@ -2653,6 +2653,7 @@ function onRenderChatMessage(message, html) {
   renderGamble(message, html);
   renderAdventuring(message, html);
   renderRegulated(message, html);
+  renderCook(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
@@ -3310,6 +3311,63 @@ function renderRegulated(message, html) {
     });
     at.append(button);
   }
+}
+
+/**
+ * The Cook Maneuver, paid for: its Cooking Skill Check stated - rolled from the sheet, at the Difficulty
+ * the cook picked there - and what each outcome does. "If you succeed, everyone has a hearty meal! If you
+ * fail, you lose your Ingredients and no one gains an edible meal, meaning that their Hunger does not
+ * change."
+ */
+export async function postCook(actor, definition, { portions, cost, difficulty, paid }) {
+  const escape = Handlebars.escapeExpression;
+  const dc = DBUCharacterData.DIFFICULTIES[difficulty];
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${escape(actor.name)} cooks a Meal - ${escape(definition.timeCost ?? "")}, ${cost} Ingredients `
+      + `(${escape(paid.join(", "))}): ${escape(portions.map(portion =>
+        `${portion.name} ${portion.stages}`).join(", "))}. A Cooking Skill Check at the ${escape(dc?.label ?? difficulty)} `
+      + `Difficulty - Target Number ${dc?.tn ?? "?"}, matched or exceeded. Roll it from the sheet.</p>`,
+    flags: { [SCOPE]: { [COOK_FLAG]: { actorUuid: actor.uuid, portions, applied: false } } }
+  });
+}
+
+function renderCook(message, html) {
+  const cook = message.getFlag(SCOPE, COOK_FLAG);
+  if (!cook || cook.applied) return;
+  const cooker = fromUuidSync(cook.actorUuid);
+  if (!game.user.isGM && !cooker?.isOwner) return;
+  const at = html.querySelector(".message-content") ?? html;
+  for (const [made, label, tip] of [
+    [true, "Made it", "The Meal is served: each Character's Hunger drops by their share."],
+    [false, "Failed it", "The Ingredients are lost, and no one's Hunger changes."]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = label;
+    button.dataset.tooltip = tip;
+    button.addEventListener("click", () => settleCook(message, cook, made));
+    at.append(button);
+  }
+}
+
+async function settleCook(message, cook, made) {
+  await message.setFlag(SCOPE, COOK_FLAG, { ...cook, applied: true });
+  if (!made) {
+    await settledNote(message, "The Meal is ruined: the Ingredients are lost, and no one's Hunger changes.");
+    return;
+  }
+  const { hungerAfter, HUNGER_STAGES } = await import("./adventure.mjs");
+  const { setCondition } = await import("./conditions.mjs");
+  const said = [];
+  for (const portion of cook.portions) {
+    const diner = fromUuidSync(portion.uuid);
+    if (!diner) continue;
+    const now = hungerAfter(diner.system.conditions?.hunger, portion.stages);
+    await setCondition(diner, "hunger", now);
+    said.push(`${diner.name} ${HUNGER_STAGES[now]?.label ?? "Fed"}`);
+  }
+  await settledNote(message, `A hearty Meal: ${said.join(", ")}.`);
 }
 
 function renderCurePoison(message, html) {
@@ -5480,6 +5538,8 @@ const GAMBLE_FLAG = "gamble";
 const ADVENTURING_FLAG = "adventuring";
 /** Holding Back stacks carried into a Combat Encounter, kept or lost - Power Regulation. */
 const REGULATED_FLAG = "regulated";
+/** A Meal cooked, waiting on its Cooking Skill Check - the Cook Maneuver. */
+const COOK_FLAG = "cook";
 
 /**
  * An Item left on the ground for whoever moves through it - Caltrops. The card is posted

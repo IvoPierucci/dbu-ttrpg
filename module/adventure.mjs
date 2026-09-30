@@ -182,3 +182,48 @@ export const HUNGER_STAGES = Object.freeze([
   { stage: 2, label: "Ravenous", tip: "Quarter your Surgency and reduce your Combat Rolls and Soak Value by 1(bT)." },
   { stage: 3, label: "Starving", tip: "Set your Surgency to 0 and reduce your Combat Rolls and Soak Value by 3(bT)." }
 ]);
+
+/**
+ * The Cook Maneuver's Difficulty Category, by "the highest Rarity of any Special Ingredients you used to
+ * pay the Ingredient Cost of a Meal".
+ */
+export const COOK_DIFFICULTIES = Object.freeze([
+  { key: "apprentice", special: "No Special Ingredient" },
+  { key: "qualified", special: "Uncommon Ingredient" },
+  { key: "expert", special: "Rare Ingredient" },
+  { key: "master", special: "Legendary Ingredient" }
+]);
+
+/**
+ * "Each individual you intend to feed is worth 1~3 Ingredients, depending on the intended reduction to
+ * Hunger Stages." The Ingredient Cost of so many portions - each 0 (not fed) to 3.
+ */
+export function mealCost(portions) {
+  return (portions ?? []).reduce((sum, portion) => sum + Math.max(0, Math.min(3, Number(portion?.stages) || 0)), 0);
+}
+
+/**
+ * How many Ingredients to take from each Item carried, so many in all: from the first on as far as each
+ * goes, unless a choice says otherwise. Null if they do not carry enough.
+ */
+export function ingredientsTaken(pools, cost, chosen = null) {
+  const wanted = Math.max(0, Number(cost) || 0);
+  const have = (pools ?? []).reduce((sum, pool) => sum + Math.max(0, Number(pool.charges) || 0), 0);
+  if (have < wanted) return null;
+  if (chosen) {
+    const taken = pools.map(pool => ({ id: pool.id,
+      count: Math.min(Math.max(0, Math.floor(Number(chosen[pool.id]) || 0)), Math.max(0, Number(pool.charges) || 0)) }));
+    return (taken.reduce((sum, each) => sum + each.count, 0) === wanted) ? taken.filter(each => each.count) : null;
+  }
+  let left = wanted;
+  return pools.map(pool => {
+    const count = Math.min(left, Math.max(0, Number(pool.charges) || 0));
+    left -= count;
+    return { id: pool.id, count };
+  }).filter(each => each.count);
+}
+
+/** A fed Character's Hunger after the Meal: so many stages off, never below none. */
+export function hungerAfter(stage, stages) {
+  return Math.max(0, (Number(stage) || 0) - Math.max(0, Number(stages) || 0));
+}

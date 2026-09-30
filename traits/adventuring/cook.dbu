@@ -1,0 +1,58 @@
+id: cook
+name: Cook
+prerequisite: 2+ Skill Ranks in Cooking
+requiresSkill: cooking
+requiresRanks: 2
+# "Unlimited (but you only apply the effects from the last Meal you consumed upon entering a Combat
+# Encounter)."
+sessionLimit: unlimited
+timeCost: 1 Hour
+# Who is fed and how much, the Difficulty, and the Ingredients paid: asked when it is used.
+cooks: true
+source: Core Rule
+description: >
+  An hour in the kitchen: Ingredients spent - 1 to 3 for each Character fed, a stage of Hunger each - and
+  a Cooking Check at Apprentice, or harder with Special Ingredients. Made, their Hunger drops; failed,
+  the Ingredients are lost.
+text: >
+  Cook Maneuver: You use your skill in the kitchen to whip up some delicious grub.
+  –Prerequisite: 2+ Skill Ranks in Cooking
+  –Session Limit: Unlimited (but you only apply the effects from the last Meal you consumed upon entering
+  a Combat Encounter)
+  –Time Cost: 1 Hour
+  –Effect: When you use the Cook Maneuver, you create a Meal through making a Cooking Skill Check. Before
+  you begin cooking, however, you must decide two things: the Ingredient Cost and the Difficulty Category
+  of that Cooking Skill Check.
+
+  The Ingredient Cost is decided by you, but it has two important factors: the number of Characters you
+  intend to feed and the stages of Hunger you intend to deal with. Each individual you intend to feed is
+  worth 1~3 Ingredients, depending on the intended reduction to Hunger Stages. For example, in a party of
+  4 Characters who are suffering from the Ravenous stage of Hunger, you would have to spend 8 Ingredients
+  to completely remove Hunger for all of them. If you were only intending to reduce Ravenous to Hungry,
+  however, it would only cost 4 Ingredients. You may even portion the Meal unfairly, spending 5
+  Ingredients to (in the scenario described) reduce the Hunger of 3 Characters from Ravenous to Hungry,
+  while curing 1 Character’s Hunger entirely.
+
+  The Difficulty Category is decided by the addition of Special Ingredients. Depending on the highest
+  Rarity of any Special Ingredients you used to pay the Ingredient Cost of a Meal, the Difficulty
+  Category for that Meal’s Skill Check changes:
+
+  * No Special Ingredient. The Difficulty Category is Apprentice.
+  * Uncommon Ingredient. The Difficulty Category is Qualified.
+  * Rare Ingredient. The Difficulty Category is Expert.
+  * Legendary Ingredient. The Difficulty Category is Master.
+
+  Once you have your Difficulty Category and Ingredient Cost, pay your Ingredient Cost and make your
+  Cooking Skill Check. If you succeed, everyone has a hearty meal! If you fail, you lose your Ingredients
+  and no one gains an edible meal, meaning that their Hunger does not change.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Cooking, with no Session Limit. Used: the cook
+# and every token targeted are listed, each with how many Ingredients go to them (0 to 3 - a stage of
+# Hunger each), and the Difficulty is picked by the highest Rarity used - Special Ingredients are
+# renamed Ingredients (the user's ruling), so the cook says which. The cost is paid from their
+# Ingredients - asked from which, if they carry more than one - and the card states the Cooking Check,
+# rolled from the sheet. Made it: each fed Character's Hunger drops by their share. Failed it: the
+# Ingredients are gone and no Hunger changes. A Kitchen, the Special Ingredients' effects in the next
+# Combat Encounter, and which Meal was the last are the table's.
