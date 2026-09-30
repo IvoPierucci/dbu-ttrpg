@@ -2670,10 +2670,8 @@ function onRenderChatMessage(message, html) {
   renderAfterTheFact(message, html);
   renderCurePoison(message, html);
   renderRepair(message, html);
-  renderGamble(message, html);
   renderAdventuring(message, html);
   renderRegulated(message, html);
-  renderCook(message, html);
   renderCreate(message, html);
   renderMaterialize(message, html);
   renderGearHazard(message, html);
@@ -3111,8 +3109,7 @@ async function repairGear(message, repair) {
 
 /**
  * Consumed, and the Saving Throw it asks for: "make a Corporeal check against a DC of 10
- * (increased by double your base Tier of Power)". Rolled from the sheet, where the Base Die, the
- * critical and the Karmic Effects live; the card states the DC and settles either way.
+ * (increased by double your base Tier of Power)". Rolled on the card and settled by it.
  */
 export async function postGamble(actor, item) {
   const { gambleDC } = await import("./gear.mjs");
@@ -3121,36 +3118,16 @@ export async function postGamble(actor, item) {
   const save = actor.system.savingThrows?.[gamble.save]?.label
     ?? `${gamble.save.charAt(0).toUpperCase()}${gamble.save.slice(1)}`;
   const escape = Handlebars.escapeExpression;
-  return ChatMessage.create({
+  const message = await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p>${escape(actor.name)} consumes ${escape(item.name)}: a ${escape(save)} Check against DC `
-      + `${dc}, matched or exceeded. Roll it from the sheet.</p>`,
+    content: `<p>${escape(item.name)}: ${escape(save)}, DC ${dc}</p>`,
     flags: { [SCOPE]: { [GAMBLE_FLAG]: {
       actorUuid: actor.uuid, itemName: item.name, save, dc, note: item.system.consumeNote ?? "", applied: false
     } } }
   });
-}
-
-function renderGamble(message, html) {
-  const gamble = message.getFlag(SCOPE, GAMBLE_FLAG);
-  if (!gamble || gamble.applied) return;
-  const drinker = fromUuidSync(gamble.actorUuid);
-  if (!game.user.isGM && !drinker?.isOwner) return;
-  const at = html.querySelector(".message-content") ?? html;
-  const made = document.createElement("button");
-  made.type = "button";
-  made.className = "dbu-clash-button";
-  made.textContent = "Made it";
-  made.dataset.tooltip = "Life and Ki Points to their maximums.";
-  made.addEventListener("click", () => settleGamble(message, gamble, true));
-  const failed = document.createElement("button");
-  failed.type = "button";
-  failed.className = "dbu-clash-button";
-  failed.textContent = "Failed it";
-  failed.dataset.tooltip = "Life Points to their minimum: Defeated. Dies at once outside a Combat Encounter, "
-    + "or at its end if still Defeated.";
-  failed.addEventListener("click", () => settleGamble(message, gamble, false));
-  at.append(made, failed);
+  const total = await actor.sheet?.rollSaveAgainst?.(gamble.save, dc, { settles: { kind: "gamble", messageId: message.id } });
+  await settleGamble(message, message.getFlag(SCOPE, GAMBLE_FLAG), (typeof total === "number") && (total >= dc));
+  return message;
 }
 
 /**
@@ -3158,23 +3135,41 @@ function renderGamble(message, html) {
  * Awakening and have your Life and Ki Points set to their respective maximums. If you fail, your
  * Life Points are set to their minimum value and you are Defeated. If outside of a Combat Encounter,
  * you die immediately, but if not, then you will die if you remain Defeated at the end of that Combat
- * Encounter." There is no record of being dead apart from being Defeated, so the card says it.
+ * Encounter." There is no record of being dead apart from being Defeated, so the card says it. The Life and Ki
+ * it found are kept, so a Critical Die or a Karmic Chance that turns it round can put them back.
  */
 async function settleGamble(message, gamble, made) {
   const actor = fromUuidSync(gamble.actorUuid);
   if (!actor) return;
-  await message.setFlag(SCOPE, GAMBLE_FLAG, { ...gamble, applied: true });
+  const done = { success: made, notes: [],
+    before: { life: Number(actor.system.life.value) || 0, ki: Number(actor.system.ki.value) || 0 } };
+  const say = async text => { const note = await settledNote(message, text); if (note) done.notes.push(note.id); };
   if (made) {
     await actor.update({ "system.life.value": actor.system.life.max, "system.ki.value": actor.system.ki.max });
-    return settledNote(message, `${actor.name} makes it: Life and Ki Points to their maximums`
-      + `${gamble.note ? `, and ${actor.name} ${gamble.note}` : ""}.`);
+    await say(`Life and Ki Points to their maximums${gamble.note ? `, and ${actor.name} ${gamble.note}` : ""}.`);
+  } else {
+    await reduceLifePoints(actor, Math.max(0, Number(actor.system.life.value) || 0),
+      { reason: `${gamble.itemName}, failed` });
+    const fighting = Boolean(game.combat?.combatants?.some(entry => entry.actor?.uuid === actor.uuid));
+    await say(fighting ? "Defeated - dies if still Defeated at the end of this Combat Encounter." : "Defeated, and dies.");
   }
-  await reduceLifePoints(actor, Math.max(0, Number(actor.system.life.value) || 0),
-    { reason: `${gamble.itemName}, failed` });
-  const fighting = Boolean(game.combat?.combatants?.some(entry => entry.actor?.uuid === actor.uuid));
-  return settledNote(message, fighting
-    ? `${actor.name} fails: Defeated, and dies if still Defeated at the end of this Combat Encounter.`
-    : `${actor.name} fails: Defeated, and dies - outside a Combat Encounter, at once.`);
+  await message.setFlag(SCOPE, GAMBLE_FLAG, { ...gamble, applied: true, done });
+}
+
+/** Take a Gamble back: the Life and Ki it found, and its note. */
+async function unsettleGamble(gamble) {
+  const actor = fromUuidSync(gamble.actorUuid ?? "");
+  const before = gamble.done?.before;
+  if (actor && before) await actor.update({ "system.life.value": before.life, "system.ki.value": before.ki });
+  await dropNotes(gamble.done);
+}
+
+/** A settled card's notes, taken off with what they said. */
+async function dropNotes(done) {
+  for (const id of done?.notes ?? []) {
+    const note = game.messages.get(id);
+    if (note && (note.isAuthor || game.user.isGM)) await note.delete();
+  }
 }
 
 /**
@@ -3336,60 +3331,54 @@ function renderRegulated(message, html) {
 }
 
 /**
- * The Cook Maneuver, paid for: its Cooking Skill Check stated - rolled from the sheet, at the Difficulty
- * the cook picked there - and what each outcome does. "If you succeed, everyone has a hearty meal! If you
- * fail, you lose your Ingredients and no one gains an edible meal, meaning that their Hunger does not
- * change."
+ * The Cook Maneuver, paid for: its Cooking Skill Check, at the Difficulty the cook picked, rolled on the card and
+ * settled by it. "If you succeed, everyone has a hearty meal! If you fail, you lose your Ingredients and no one
+ * gains an edible meal, meaning that their Hunger does not change."
  */
 export async function postCook(actor, definition, { portions, cost, difficulty, paid }) {
   const escape = Handlebars.escapeExpression;
-  const dc = DBUCharacterData.DIFFICULTIES[difficulty];
-  return ChatMessage.create({
+  const message = await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p>${escape(actor.name)} cooks a Meal - ${escape(definition.timeCost ?? "")}, ${cost} Ingredients `
-      + `(${escape(paid.join(", "))}): ${escape(portions.map(portion =>
-        `${portion.name} ${portion.stages}`).join(", "))}. A Cooking Skill Check at the ${escape(dc?.label ?? difficulty)} `
-      + `Difficulty - Target Number ${dc?.tn ?? "?"}, matched or exceeded. Roll it from the sheet.</p>`,
+    content: `<p>Cook: ${escape(definition.timeCost ?? "")}, ${cost} Ingredients (${escape(paid.join(", "))})</p>`,
     flags: { [SCOPE]: { [COOK_FLAG]: { actorUuid: actor.uuid, portions, applied: false } } }
   });
+  const total = await actor.sheet?.rollSkillAgainst?.("cooking", difficulty, { settles: { kind: "cook", messageId: message.id } });
+  const tn = DBUCharacterData.DIFFICULTIES[difficulty]?.tn ?? Infinity;
+  await settleCook(message, message.getFlag(SCOPE, COOK_FLAG), (typeof total === "number") && (total >= tn));
+  return message;
 }
 
-function renderCook(message, html) {
-  const cook = message.getFlag(SCOPE, COOK_FLAG);
-  if (!cook || cook.applied) return;
-  const cooker = fromUuidSync(cook.actorUuid);
-  if (!game.user.isGM && !cooker?.isOwner) return;
-  const at = html.querySelector(".message-content") ?? html;
-  for (const [made, label, tip] of [
-    [true, "Made it", "The Meal is served: each Character's Hunger drops by their share."],
-    [false, "Failed it", "The Ingredients are lost, and no one's Hunger changes."]]) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "dbu-clash-button";
-    button.textContent = label;
-    button.dataset.tooltip = tip;
-    button.addEventListener("click", () => settleCook(message, cook, made));
-    at.append(button);
-  }
-}
-
+/** Served or ruined. The Hunger each diner had is kept, so a Critical Die or a Karmic Chance can put it back. */
 async function settleCook(message, cook, made) {
-  await message.setFlag(SCOPE, COOK_FLAG, { ...cook, applied: true });
-  if (!made) {
-    await settledNote(message, "The Meal is ruined: the Ingredients are lost, and no one's Hunger changes.");
-    return;
+  const done = { success: made, notes: [], before: [] };
+  const say = async text => { const note = await settledNote(message, text); if (note) done.notes.push(note.id); };
+  if (!made) await say("The Meal is ruined.");
+  else {
+    const { hungerAfter, HUNGER_STAGES } = await import("./adventure.mjs");
+    const { setCondition } = await import("./conditions.mjs");
+    const said = [];
+    for (const portion of cook.portions) {
+      const diner = fromUuidSync(portion.uuid);
+      if (!diner) continue;
+      const was = Number(diner.system.conditions?.hunger) || 0;
+      const now = hungerAfter(was, portion.stages);
+      done.before.push({ uuid: diner.uuid, hunger: was });
+      await setCondition(diner, "hunger", now);
+      said.push(`${diner.name} ${HUNGER_STAGES[now]?.label ?? "Fed"}`);
+    }
+    await say(`A hearty Meal: ${said.join(", ")}.`);
   }
-  const { hungerAfter, HUNGER_STAGES } = await import("./adventure.mjs");
+  await message.setFlag(SCOPE, COOK_FLAG, { ...cook, applied: true, done });
+}
+
+/** Take a Meal back: each diner's Hunger as it was, and its note. */
+async function unsettleCook(cook) {
   const { setCondition } = await import("./conditions.mjs");
-  const said = [];
-  for (const portion of cook.portions) {
-    const diner = fromUuidSync(portion.uuid);
-    if (!diner) continue;
-    const now = hungerAfter(diner.system.conditions?.hunger, portion.stages);
-    await setCondition(diner, "hunger", now);
-    said.push(`${diner.name} ${HUNGER_STAGES[now]?.label ?? "Fed"}`);
+  for (const { uuid, hunger } of cook.done?.before ?? []) {
+    const diner = fromUuidSync(uuid);
+    if (diner) await setCondition(diner, "hunger", hunger);
   }
-  await settledNote(message, `A hearty Meal: ${said.join(", ")}.`);
+  await dropNotes(cook.done);
 }
 
 /**
@@ -3530,7 +3519,9 @@ async function resettleCheck(settles, total, against) {
   const message = game.messages.get(settles.messageId);
   const [flag, unsettle, settle] = {
     materialize: [MATERIALIZE_FLAG, unsettleMaterialize, settleMaterialize],
-    create: [CREATE_FLAG, unsettleCreate, settleCreate]
+    create: [CREATE_FLAG, unsettleCreate, settleCreate],
+    cook: [COOK_FLAG, unsettleCook, settleCook],
+    gamble: [GAMBLE_FLAG, unsettleGamble, settleGamble]
   }[settles.kind] ?? [];
   const made = flag ? message?.getFlag(SCOPE, flag) : null;
   // Tried again already: that Create is its own card now.

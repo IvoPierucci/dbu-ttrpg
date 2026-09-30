@@ -5329,12 +5329,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * which offers the extra die as a button on the message (see chat.mjs).
    */
   async #rollCheck({ parts = [], flavor, criticalDice, skillRoll = false, urgent = false,
-                    criticalTarget = null, difficulty = "", naturalAdd = 0, settles = null }) {
+                    criticalTarget = null, difficulty = "", naturalAdd = 0, settles = null, target = null }) {
     // The Difficulty this Check is measured against, where it has one. Resolved once here
     // rather than looked up in each of the three branches below, all of which say whether
     // it was met - a willing failure that totals 0 has still missed a Target Number, and
     // saying nothing there would read as though the Difficulty had been forgotten.
-    const against = DBUCharacterData.DIFFICULTIES[difficulty] ?? null;
+    const against = target ?? DBUCharacterData.DIFFICULTIES[difficulty] ?? null;
     // Same rule as a Combat Roll: penalties cancel bonuses but never take a roll below
     // what the dice said - and what the floor hands back is shown rather than left for
     // the reader to discover by failing to add the column up.
@@ -5600,6 +5600,25 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       skillRoll: true,
       difficulty,
       naturalAdd: skillNatural(this.actor, key, []),
+      settles
+    });
+    return (typeof total === "number") ? total : null;
+  }
+
+  /**
+   * A Saving Throw a rule rolls - the Ultra Divine Water's - against a DC of its own: no window, straight to its
+   * card. What it came to, or null for a willing failure.
+   */
+  async rollSaveAgainst(key, dc, { settles = null } = {}) {
+    const save = this.actor.system.savingThrows?.[key];
+    if (!save) return null;
+    const total = await this.#rollCheck({
+      parts: [{ label: save.label, value: save.value }],
+      flavor: `${save.label} Saving Throw`,
+      criticalDice: this.actor.system.dice.critical.formula,
+      criticalTarget: save.criticalTarget,
+      naturalAdd: Number(this.actor.system.saveNatural) || 0,
+      target: { label: "DC", tn: dc },
       settles
     });
     return (typeof total === "number") ? total : null;
