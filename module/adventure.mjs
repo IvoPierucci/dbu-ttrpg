@@ -340,3 +340,37 @@ export function reputationRows(entries) {
     ...list.filter(entry => (entry.kind === "individual") && !known.has(entry.faction)).map(entry => row(entry))
   ];
 }
+
+/**
+ * "Status is separated into several Status categories based on your amount of Riches" - each with the
+ * least Riches it takes.
+ */
+export const STATUSES = Object.freeze([
+  { label: "Destitute", min: 0, tip: "You have no money whatsoever." },
+  { label: "Broke", min: 1, tip: "You can barely afford to put food on your table." },
+  { label: "Comfortable", min: 3, tip: "You can afford all the basic necessities and then some." },
+  { label: "Rich", min: 6, tip: "You are able to afford a good amount of luxury in your lifestyle." },
+  { label: "Filthy Rich", min: 9, tip: "For you, even extravagant luxuries are pocket change." }
+]);
+
+/** The Riches that count: their own, and Scam's "increase your Riches by 1 for 1 day" while its mark is held. */
+export function richesNow(system) {
+  const own = Math.max(0, Math.min(10, Number(system?.riches) || 0));
+  const scammed = (Number(system?.conditions?.["scam-riches"]) || 0) > 0 ? 1 : 0;
+  return { own, scammed, total: Math.min(10, own + scammed) };
+}
+
+/** The Status so many Riches give. */
+export function statusFor(riches) {
+  const value = Math.max(0, Math.min(10, Number(riches) || 0));
+  return [...STATUSES].reverse().find(status => value >= status.min) ?? STATUSES[0];
+}
+
+/**
+ * A Wealth Check's Target Number by the rule of thumb: "4+(the minimum Riches value for the lowest Status
+ * you think should succeed at this check)".
+ */
+export function wealthTN(status) {
+  const found = STATUSES.find(entry => entry.label === status);
+  return found ? 4 + found.min : null;
+}

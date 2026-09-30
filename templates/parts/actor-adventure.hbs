@@ -93,6 +93,7 @@
         {{subject.label}}
         {{#if subject.isReputation}}<span class="panel-note">{{@root.reputation.length}}</span>{{/if}}
         {{#if subject.isTraining}}<span class="panel-note">{{@root.trainingBonuses.length}}</span>{{/if}}
+        {{#if subject.isWealth}}<span class="panel-note">{{@root.wealth.status.label}}</span>{{/if}}
       </summary>
       {{#if subject.isReputation}}
       {{! Factions and Individuals, each with its Affection and Alarm Rating (0~4) - an Individual under its
@@ -123,6 +124,23 @@
         </li>
         {{/each}}
       </ul>
+      {{else if subject.isWealth}}
+      {{! Riches, set as the ARC says, and the Status they come to; Scam's day adds 1 while its mark is held. }}
+      <div class="karma">
+        <span class="karma-label" data-tooltip="Up to 10. Gaining or losing them is the ARC's to decide.">Riches</span>
+        <button type="button" class="karma-step" data-action="stepRiches" data-step="-1">&minus;</button>
+        <span class="karma-count">{{@root.wealth.total}}<span class="karma-max">/10</span></span>
+        <button type="button" class="karma-step" data-action="stepRiches" data-step="1">+</button>
+        {{#if @root.wealth.scammed}}<span class="reputation-tn" data-tooltip="Scam: increase your Riches by 1 for 1 day">+1 Scam</span>{{/if}}
+      </div>
+      <div class="karma">
+        <span class="karma-label">Status</span>
+        <span class="reputation-value" data-tooltip="{{@root.wealth.status.tip}}">{{@root.wealth.status.label}}</span>
+      </div>
+      <div class="adventure-actions">
+        <button type="button" class="adventure-travel" data-action="wealthCheck"
+                data-tooltip="A d10, increased by your Riches.">Wealth Check</button>
+      </div>
       {{else if subject.isTraining}}
       {{! Training Bonuses: "temporary effects that grant heightened powers to players for a short period".
           A published one works by itself; the ARC's own is on its name's hover, for the table. }}

@@ -1493,6 +1493,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       { required: true, initial: [] }
     );
 
+    // "Riches represent your current amount of wealth ... You can have up to 10 Riches." Set by hand, as the
+    // ARC says - "at Character Creation, you may start with up to 3 Riches".
+    schema.riches = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0, max: 10 });
+
     // Training Bonuses held: a published one by its mark's id (the mark does what it says), or one the ARC
     // made up, by its name and what it does, for the table - each with how long it lasts, as the ARC says.
     schema.trainingBonuses = new fields.ArrayField(new fields.SchemaField({

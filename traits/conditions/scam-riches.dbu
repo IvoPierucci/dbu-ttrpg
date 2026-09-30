@@ -14,5 +14,6 @@ text: >
 
 ---
 
-# Riches are not in this system yet: nothing reads this mark. It keeps the "+1 for 1 day" in view until
-# the day is over and it is ended - Cancel buff on the Scam row, or from the Combat tab.
+# Read by the Wealth fold (adventure.mjs `richesNow`): while it is held, Riches count 1 more - up to 10 -
+# for the Status and the Wealth Check. Ended when the day is over - Cancel buff on the Scam row, or from the
+# Combat tab.

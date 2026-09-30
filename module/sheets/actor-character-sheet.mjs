@@ -538,6 +538,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       newAdventureSession: DBUCharacterSheet._onNewAdventureSession,
       cancelAdventuringBuff: DBUCharacterSheet._onCancelAdventuringBuff,
       setHunger: DBUCharacterSheet._onSetHunger,
+      stepRiches: DBUCharacterSheet._onStepRiches,
+      wealthCheck: DBUCharacterSheet._onWealthCheck,
       gainTrainingBonus: DBUCharacterSheet._onGainTrainingBonus,
       endTrainingBonus: DBUCharacterSheet._onEndTrainingBonus,
       addReputation: DBUCharacterSheet._onAddReputation,
@@ -765,7 +767,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         open: Boolean(this.#openSections[`adventure-${key}`]),
         // Reputation has a body of its own: the Factions and Individuals - and Training, its Bonuses.
         isReputation: key === "reputation",
-        isTraining: key === "training" }));
+        isTraining: key === "training",
+        isWealth: key === "wealth" }));
+      const { richesNow, statusFor } = await import("../adventure.mjs");
+      const riches = richesNow(this.actor.system);
+      context.wealth = { ...riches, status: statusFor(riches.total) };
       // A published Bonus shows while its mark is held - ended from the Combat tab, it is gone here too.
       context.trainingBonuses = (this.actor.system.trainingBonuses ?? [])
         .filter(bonus => !bonus.key || ((Number(this.actor.system.conditions?.[bonus.key]) || 0) > 0))
@@ -4827,6 +4833,44 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onSetHunger(event, target) {
     return setCondition(this.actor, "hunger", Math.max(0, Math.min(3, Number(target.dataset.stage) || 0)));
+  }
+
+  /** Riches a step up or down, between 0 and 10 - "gaining or losing Riches is ultimately decided by your ARC". */
+  static async _onStepRiches(event, target) {
+    const step = Number(target.dataset.step) || 0;
+    return this.actor.update({ "system.riches": Math.max(0, Math.min(10, (Number(this.actor.system.riches) || 0) + step)) });
+  }
+
+  /**
+   * "A Wealth Check is very simple. Roll a d10 and increase the Dice Score by your Riches." The Target Number
+   * is the ARC's - picked by the rule of thumb, the lowest Status that should succeed, or none.
+   */
+  static async _onWealthCheck() {
+    const { STATUSES, richesNow, wealthTN } = await import("../adventure.mjs");
+    const escape = Handlebars.escapeExpression;
+    const riches = richesNow(this.actor.system);
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.actor.name} - Wealth Check` },
+      content: `<label class="dbu-wager"><span>Target Number</span><select name="status">
+          <option value="">None - the ARC reads it</option>
+          ${STATUSES.map(status => `<option value="${escape(status.label)}">${escape(status.label)} should succeed - TN ${
+            wealthTN(status.label)}</option>`).join("")}</select></label>`,
+      buttons: [
+        { action: "roll", label: "Roll", default: true, callback: (ev, button, dialog) =>
+          dialog.element.querySelector('select[name="status"]')?.value ?? "" },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if ((picked === null) || (picked === undefined) || (picked === "cancel")) return;
+    const roll = await new Roll(`1d10 + ${riches.total}`).evaluate();
+    const tn = picked ? wealthTN(picked) : null;
+    return roll.toMessage({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      flavor: `Wealth Check - ${riches.total} Riches${riches.scammed ? " (1 from Scam)" : ""}${
+        (tn === null) ? "" : ` against TN ${tn}: ${(roll.total >= tn) ? "succeeds" : "fails"}`}`
+    });
   }
 
   /**

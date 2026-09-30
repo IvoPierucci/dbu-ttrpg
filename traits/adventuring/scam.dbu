@@ -5,8 +5,8 @@ requiresSkill: bluff
 requiresRanks: 2
 sessionLimit: 1
 timeCost: 2 Hours
-# "Increase your Riches by 1 for 1 day." Riches are not in this system: a mark keeps the day, ended with
-# Cancel buff on this row.
+# "Increase your Riches by 1 for 1 day." A mark keeps the day - the Wealth fold counts it as 1 Riches more
+# while it is held - ended with Cancel buff on this row.
 gains: scam-riches
 source: Core Rule
 description: >
@@ -21,5 +21,5 @@ text: >
 ---
 
 # Offered on the Adventure tab to whoever has 2+ Ranks in Bluff. Once the two hours are spent the card
-# gives the Riches +1 (Scam) mark - Riches are not built, so the mark is what keeps the "+1 for 1 day"
-# in view - and Cancel buff on this row ends it when the day is over.
+# gives the Riches +1 (Scam) mark - 1 Riches more on the Wealth fold, for the Status and the Wealth Check -
+# and Cancel buff on this row ends it when the day is over.
