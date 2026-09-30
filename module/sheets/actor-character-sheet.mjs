@@ -788,7 +788,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // tab's toggle, keyed `maneuver-adv-<id>`.
       const { printedLines } = await import("../effects/traits.mjs");
       context.adventuringManeuvers = adventuringManeuvers(traitsOfKind("adventuring"),
-        this.actor.system.adventureUses ?? [], this.actor.system).map(entry => ({ ...entry,
+        this.actor.system.adventureUses ?? [], this.actor.system, this.#uniqueHeld()).map(entry => ({ ...entry,
         lines: printedLines(entry.text).map(line => ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line })),
         open: Boolean(this.#openSections[`maneuver-adv-${entry.id}`]) }));
     }
@@ -1151,6 +1151,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         restores: Boolean(item.system.restore?.full) && ((item.system.charges ?? 0) > 0),
         feeds: Boolean(item.system.restore?.feedsDefeated),
         // Who it was made for, where it names someone.
+        materialized: Boolean(item.system.materialized),
         intendedName: item.system.declaresIntended
           ? (item.system.intended?.name || "nobody declared") : "",
         // An Accessory, and whether it is being worn.
@@ -1828,8 +1829,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       if (!Array.isArray(chosen)) return;
       applied = chosen;
     }
+    // Each applied one's choice, where it asks one - Limited Creation's kind of Item.
+    const choices = {};
+    const { askRestrictionChoice } = await import("../unique-ask.mjs");
+    for (const id of applied) {
+      const choice = await askRestrictionChoice(children.find(child => child.id === id), null);
+      if (choice === null) return;
+      choices[id] = choice;
+    }
 
-    return this.actor.createEmbeddedDocuments("Item", [uniqueItemFrom(definition, children, { chosenType, applied })]);
+    return this.actor.createEmbeddedDocuments("Item", [uniqueItemFrom(definition, children, { chosenType, applied, choices })]);
   }
 
   static async _onNewTechnique() {
@@ -2378,8 +2387,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * tab's Add, and from the Create Maneuver once it is made - `made`, which records its maker's
    * Ingenuity without asking about a Gear Kit, and `craftDC`, where Create already said which.
    */
-  async giveGear(definition, { made = false, craftDC = "" } = {}) {
+  async giveGear(definition, { made = false, craftDC = "", materialized = false, to = null } = {}) {
     const escape = Handlebars.escapeExpression;
+    // Given to someone else - Projectile Materialization's Ally - relayed where they are not this user's.
+    const recipient = to ?? this.actor;
+    const give = async list => {
+      if (materialized) for (const each of list) each.system = { ...(each.system ?? {}), materialized: true };
+      if (recipient === this.actor) return this.actor.createEmbeddedDocuments("Item", list);
+      const { requestCreateItem } = await import("../chat.mjs");
+      for (const each of list) await requestCreateItem(recipient, each);
+    };
 
     // What it records off this character, and the trigger asked now - both can be changed on the
     // Item afterwards.
@@ -2563,8 +2580,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // of the Accessory." Made together, and paired: that Key opens this one and no other.
     if (data.system.lock?.locks) {
       data.system.lock.id = foundry.utils.randomID();
-      return this.actor.createEmbeddedDocuments("Item",
-        [data, keyItemFor(definition.name, data.system.lock.id, getTrait("key"))]);
+      return give([data, keyItemFor(definition.name, data.system.lock.id, getTrait("key"))]);
     }
 
     // The Key: "When you create this Key, you must target a Base's Door where you are the Owner, or
@@ -2590,7 +2606,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.name = `${definition.name} (${lock ? lock.name : "Base Door"})`;
       data.system.keyFor = lock ? lock.system.lock.id : "";
     }
-    return this.actor.createEmbeddedDocuments("Item", [data]);
+    return give([data]);
   }
 
   /** How large a set an Item belongs to, and which of it this one is. */
@@ -4568,7 +4584,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onUseAdventuring(event, target) {
     const { adventuringManeuvers, whyNotAdventuring } = await import("../adventure.mjs");
     const uses = this.actor.system.adventureUses ?? [];
-    const entry = adventuringManeuvers(traitsOfKind("adventuring"), uses, this.actor.system)
+    const entry = adventuringManeuvers(traitsOfKind("adventuring"), uses, this.actor.system, this.#uniqueHeld())
       .find(each => each.id === target.dataset.maneuver);
     const refused = whyNotAdventuring(entry, { adventuring: this.actor.system.adventuring });
     if (refused) {
@@ -4704,17 +4720,24 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   async #startCreate(entry, definition) {
     const escape = Handlebars.escapeExpression;
     const { createSkillFor, scrapCost, canCreateWith, ingredientsTaken, DIFFICULTY_ORDER } = await import("../adventure.mjs");
+    const { uniqueDefinitionOf } = await import("../unique.mjs");
     const system = this.actor.system;
     const labels = DBUCharacterData.DIFFICULTIES;
     const keyOf = label => DIFFICULTY_ORDER.find(key => labels[key]?.label.toLowerCase() === String(label ?? "").trim().toLowerCase()) ?? "";
 
+    // Magical Materialization: "You gain access to the Create Maneuver and may use your Use Magic Skill instead of
+    // the Craft Skill for its effects" - what a Craft would make, made with Use Magic.
+    const materializer = this.actor.items.find(item => (item.type === "maneuver")
+      && (item.system.unique?.libraryId === "magical-materialization"));
+    const viaMagic = skill => Boolean(materializer) && String(skill).startsWith("craft");
     const basics = gearOfList(traitsOfKind("gear"), "basic")
       .filter(item => (item.special !== true) && item.craftDC)
       .map(item => ({ item, tags: tagsOf(item), ...createSkillFor(tagsOf(item)) }))
-      .filter(({ skill, specialty }) => canCreateWith(system, skill, specialty));
+      .filter(({ skill, specialty }) => canCreateWith(system, skill, specialty) || viaMagic(skill));
     const pieces = [["weapon", "A Weapon", "craftWeapons"], ["apparel", "A piece of Apparel", "craftApparel"],
       ["vehicle", "A Vehicle", "craftVehicles"], ["battleJacket", "A Battle Jacket", "craftVehicles"]]
-      .filter(([, , skill]) => canCreateWith(system, skill));
+      .filter(([, , skill]) => canCreateWith(system, skill) || viaMagic(skill));
+    const materializeKi = materializer ? maneuverKiCost(uniqueDefinitionOf(materializer), null, this.actor) : 0;
     // "A Blueprint is a Basic Item that can be used when using the Create Maneuver to instantly succeed
     // at recreating whatever is recorded on the Blueprint."
     const blueprints = this.actor.items.filter(item => item.system.blueprint?.kind);
@@ -4734,11 +4757,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             `<option value="bp:${item.id}">${escape(item.name)}</option>`).join("")}</optgroup>` : ""}</select></label>
         <label class="dbu-wager"><span>Difficulty</span><select name="difficulty">${DIFFICULTY_ORDER.map(key =>
           `<option value="${key}">${escape(labels[key]?.label ?? key)}</option>`).join("")}</select>
-          <em>For a Weapon, Apparel or Vehicle - or a Variable Craft DC</em></label>`,
+          <em>For a Weapon, Apparel or Vehicle - or a Variable Craft DC</em></label>
+        ${materializer ? `<label class="dbu-wager"><span>Roll with</span><select name="rollWith">
+            <option value="useMagic">Use Magic (Magical Materialization)</option><option value="craft">Craft</option></select>
+            <em>In place of a Craft - a [Med] or [Food] Basic Item keeps its own</em></label>
+          <label class="dbu-respond-option" data-tooltip="Magical Materialization's KP: the Time Cost 1 Minute, one Difficulty Category harder (4 off the Dice Score at Grandmaster), and no Blueprint">
+            <input type="checkbox" name="quick"/> <span class="dbu-respond-name">Materialize it quickly</span>
+            <span class="dbu-respond-source">${materializeKi} KP - a Basic Item, Weapon or Apparel</span></label>` : ""}`,
       buttons: [
         { action: "make", label: "Begin", default: true, callback: (event, button, dialog) => ({
           what: dialog.element.querySelector('select[name="what"]')?.value ?? "",
-          difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "apprentice"
+          difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "apprentice",
+          rollWith: dialog.element.querySelector('select[name="rollWith"]')?.value ?? "craft",
+          quick: Boolean(dialog.element.querySelector('input[name="quick"]')?.checked)
         }) },
         { action: "cancel", label: "Cancel" }
       ],
@@ -4770,9 +4801,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
     const roll = basic ? { skill: basic.skill, specialty: basic.specialty }
       : { skill: (kind === "weapon") ? "craftWeapons" : (kind === "apparel") ? "craftApparel" : "craftVehicles", specialty: "" };
+    // Use Magic in place of a Craft: where it was picked, or where it is the only way they can make it.
+    if (viaMagic(roll.skill) && ((chosen.rollWith === "useMagic") || !canCreateWith(system, roll.skill))) roll.skill = "useMagic";
+    // The quick one: "spend the Ki Point Cost of Magical Materialization to reduce the Time Cost to 1 Minute, but
+    // increase the Difficulty Category by 1 Category (or reduce your Dice Score by 4 if the Difficulty Category was
+    // Grandmaster) and you do not gain a Blueprint".
+    let quick = null;
+    if (materializer && chosen.quick && ["basic", "weapon", "apparel"].includes(kind) && !plan) {
+      const { harderBy1 } = await import("../unique.mjs");
+      quick = harderBy1(difficulty);
+    }
     const name = basic ? basic.item.name : (plan?.name || { weapon: "a Weapon", apparel: "a piece of Apparel",
       vehicle: "a Vehicle", battleJacket: "a Battle Jacket" }[kind]);
-    const time = String(definition[{ basic: "timeBasic", weapon: "timeWeapon", apparel: "timeApparel" }[kind] ?? "timeVehicle"] ?? "");
+    const time = quick ? "1 Minute"
+      : String(definition[{ basic: "timeBasic", weapon: "timeWeapon", apparel: "timeApparel" }[kind] ?? "timeVehicle"] ?? "");
 
     // What it costs. Scrap once - "Tech. Scrap is required", and a Vehicle's or Battle Jacket's; an
     // Ingredient for [Food], this attempt's.
@@ -4785,6 +4827,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       ui.notifications.warn(`${this.actor.name} needs ${scrap} Scrap for ${name}.`);
       return;
     }
+    if (quick) {
+      const { spendManeuverCost } = await import("../maneuvers.mjs");
+      if (!await spendManeuverCost(this.actor, uniqueDefinitionOf(materializer), materializeKi)) return;
+    }
     if (food && !(await this.#payIngredient(name))) return;
     for (const { id, count } of scrapTaken) {
       const item = this.actor.items.get(id);
@@ -4795,8 +4841,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     await this.actor.update({ "system.adventureUses": [...(system.adventureUses ?? []), entry.id] });
     const { postCreate } = await import("../chat.mjs");
-    return postCreate(this.actor, { kind, id: basic?.item.id ?? "", name, difficulty, time, food, scrap, ...roll,
-      blueprint: Boolean(plan) });
+    return postCreate(this.actor, { kind, id: basic?.item.id ?? "", name, difficulty: quick?.difficulty ?? difficulty, time,
+      food, scrap, ...roll, blueprint: Boolean(plan), noBlueprint: Boolean(quick), diceMinus: quick?.diceMinus ?? 0 });
+  }
+
+  /** The Unique Abilities this character holds, by their file - what grants an Adventuring Maneuver. */
+  #uniqueHeld() {
+    return this.actor.items.filter(item => (item.type === "maneuver") && item.system.unique?.libraryId)
+      .map(item => item.system.unique.libraryId);
   }
 
   /**

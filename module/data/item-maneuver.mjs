@@ -611,6 +611,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         prerequisite: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The file it was gained from, if any - `unique/<id>.dbu`. */
         libraryId: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** Its Effect makes an Item - Magical Materialization (use-maneuver.mjs askMaterialize). */
+        materialize: new fields.BooleanField({ required: true, initial: false }),
         /**
          * A Counter that raises the Defense Value against the attack it answers - the Afterimage Technique's
          * 2(T), `defense` per Tier - and what it offers out of sequence if that attack is avoided.
@@ -645,6 +647,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         restrictions: new fields.ArrayField(new fields.SchemaField({
           id: new fields.StringField({ required: true, blank: false }),
           key: new fields.StringField({ required: true, blank: true, initial: "" }),
+          /** What was chosen when it was applied - Limited Creation's kind of Item. */
+          choice: new fields.StringField({ required: true, blank: true, initial: "" }),
           name: new fields.StringField({ required: true, blank: true, initial: "" }),
           /** Its TP Cost Reduction - and what it costs to remove it at a Power Level. */
           reduction: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),

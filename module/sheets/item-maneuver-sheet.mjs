@@ -163,7 +163,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
   async #uniqueContext() {
     const { UNIQUE_TYPES, advancementTPOf, lockedAdvancements, uniqueTPOf } = await import("../unique.mjs");
     const unique = this.item.system.unique;
-    const locked = lockedAdvancements(unique);
+    const locked = lockedAdvancements(unique, getTrait);
     const system = this.item.system;
     const kind = MANEUVER_TYPES[system.type];
     return {
@@ -223,13 +223,20 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     if (!entry) return;
     if ((list === "advancements") && (flag === "bought") && !entry.bought) {
       const { lockedAdvancements } = await import("../unique.mjs");
-      if (lockedAdvancements(this.item.system.unique).has(String(entry.name).trim().toLowerCase())) {
+      if (lockedAdvancements(this.item.system.unique, getTrait).has(String(entry.name).trim().toLowerCase())) {
         ui.notifications.warn(`${entry.name} is locked by a Restriction applied to ${this.item.name}.`);
         return;
       }
     }
+    // A Restriction that asks for a choice - Limited Creation's kind of Item - asks it as it is applied.
+    let choice = entry.choice ?? "";
+    if ((list === "restrictions") && !entry.applied) {
+      const { askRestrictionChoice } = await import("../unique-ask.mjs");
+      choice = await askRestrictionChoice(getTrait(entry.key), entry.name);
+      if (choice === null) return;
+    }
     return this.item.update({ [`system.unique.${list}`]: entries.map(each =>
-      (each.id === entry.id) ? { ...each, [flag]: !each[flag] } : each) });
+      (each.id === entry.id) ? { ...each, [flag]: !each[flag], ...((list === "restrictions") ? { choice } : {}) } : each) });
   }
 
   /** What the three Technique tabs show. */

@@ -15,6 +15,7 @@
         <img src="{{row.img}}" width="24" height="24"/>
         <span class="gear-name">{{row.name}}</span>
         {{#each row.tags as |tag|}}<span class="gear-tag">[{{tag}}]</span>{{/each}}
+        {{#if row.materialized}}<span class="gear-warning" data-tooltip="Magical Materialization: destroyed at the end of a Combat Encounter, unless a Karma Point is spent to preserve it">Materialized</span>{{/if}}
         <span class="gear-type">{{row.typeLabel}}{{#if row.sizeLabel}} &middot; {{row.sizeLabel}}{{/if}}</span>
         {{#if row.intendedName}}
         <span class="gear-type">for {{row.intendedName}}</span>

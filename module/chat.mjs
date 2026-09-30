@@ -2657,6 +2657,7 @@ function onRenderChatMessage(message, html) {
   renderRegulated(message, html);
   renderCook(message, html);
   renderCreate(message, html);
+  renderMaterialize(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
@@ -3391,9 +3392,90 @@ export async function postCreate(actor, create) {
       + (create.blueprint
         ? "From its Blueprint: no Check - it succeeds once the Time Cost is spent.</p>"
         : `A ${escape(skill)}${escape(specialty)} Skill Check at the ${escape(dc?.label ?? create.difficulty)} Difficulty - `
-          + `Target Number ${dc?.tn ?? "?"}, matched or exceeded. Roll it from the sheet.</p>`),
+          + `Target Number ${dc?.tn ?? "?"}${create.diceMinus ? `, with ${create.diceMinus} off the Dice Score` : ""}, `
+          + "matched or exceeded. Roll it from the sheet."
+          + `${create.noBlueprint ? " Materialized quickly: no Blueprint." : ""}</p>`),
     flags: { [SCOPE]: { [CREATE_FLAG]: { actorUuid: actor.uuid, ...create, applied: false } } }
   });
+}
+
+/**
+ * Magical Materialization, paid for: "Roll the Craft Skill Check for your choice, using the Use Magic Skill
+ * instead of the relevant Craft Specialization, but increase the Difficulty Category by 1. If you fail, you do
+ * not create the item, but you still lose the Ki Points." Rolled from the sheet.
+ */
+export async function postMaterialize(actor, maneuver, plan) {
+  const escape = Handlebars.escapeExpression;
+  const dc = DBUCharacterData.DIFFICULTIES[plan.difficulty];
+  const skill = actor.system.skills?.[plan.skill]?.label ?? plan.skill;
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${escape(actor.name)} uses ${escape(maneuver.name)}: ${escape(plan.name)}`
+      + `${(plan.recipientName && (plan.kind !== "weights")) ? ` into ${escape(plan.recipientName)}'s hands` : ""}`
+      + `${(plan.kind === "weights") ? ` at ${escape(plan.recipientName)}` : ""}. A ${escape(skill)} Skill Check at the `
+      + `${escape(dc?.label ?? plan.difficulty)} Difficulty - Target Number ${dc?.tn ?? "?"}`
+      + `${plan.diceMinus ? `, with ${plan.diceMinus} off the Dice Score` : ""}, matched or exceeded. Roll it from the sheet. `
+      + "Failed, nothing is made and the Ki Points are still lost.</p>"
+      + (plan.notes ?? []).map(note => `<p class="dbu-respond-note">${escape(note)}</p>`).join(""),
+    flags: { [SCOPE]: { [MATERIALIZE_FLAG]: { actorUuid: actor.uuid, maneuverName: maneuver.name, ...plan, applied: false } } }
+  });
+}
+
+function renderMaterialize(message, html) {
+  const made = message.getFlag(SCOPE, MATERIALIZE_FLAG);
+  if (!made || made.applied) return;
+  const maker = fromUuidSync(made.actorUuid);
+  if (!game.user.isGM && !maker?.isOwner) return;
+  const at = html.querySelector(".message-content") ?? html;
+  for (const [outcome, label] of [[true, "Made it"], [false, "Failed it"]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = label;
+    button.addEventListener("click", () => settleMaterialize(message, made, outcome));
+    at.append(button);
+  }
+}
+
+/**
+ * Made: a Basic Item given as the Gear tab gives one, marked Materialized - to the Ally, with Projectile
+ * Materialization; a Weapon or a piece of Apparel said (the user's ruling); Weights at an Opponent open
+ * Restrictive Weights' Clash. Failed: nothing, and the Ki Points stay spent.
+ */
+async function settleMaterialize(message, made, success) {
+  const maker = fromUuidSync(made.actorUuid);
+  if (!maker) return;
+  await message.setFlag(SCOPE, MATERIALIZE_FLAG, { ...made, applied: true });
+  if (!success) {
+    await settledNote(message, `${maker.name} fails: nothing is made, and the Ki Points are lost.`);
+    return;
+  }
+  const recipient = made.recipientUuid ? fromUuidSync(made.recipientUuid) : null;
+  const kept = "Materialized: destroyed at the end of a Combat Encounter, unless a Karma Point is spent to preserve it.";
+  if (made.kind === "weights") {
+    if (!recipient) return;
+    await settledNote(message, `${maker.name} conjures Weights at ${recipient.name}.`);
+    return postSaveClash(maker, recipient, {
+      maneuverName: "Restrictive Weights",
+      clashLabel: "Restrictive Weights",
+      reason: `Win and ${recipient.name} equips the Weights as their top layer of Apparel; lose and they are created on a `
+        + `Square adjacent to ${recipient.name}.`,
+      saves: ["cognitive"],
+      defenderSaves: ["impulsive"],
+      winNote: { text: "{defender} equips the Weights {challenger} made as their top layer of Apparel (a fourth layer if "
+        + "need be) - and they give no Doff Bonus once removed", applied: false }
+    });
+  }
+  if (made.kind === "basic") {
+    const definition = getTrait(made.id);
+    if (definition) {
+      await maker.sheet?.giveGear?.(definition, { made: true, materialized: true, craftDC: made.difficulty,
+        to: recipient ?? null });
+    }
+    await settledNote(message, `${maker.name} materializes ${made.name}${recipient ? ` in ${recipient.name}'s hands` : ""}. ${kept}`);
+    return;
+  }
+  await settledNote(message, `${maker.name} materializes ${made.name}${recipient ? ` for ${recipient.name}` : ""}. ${kept}`);
 }
 
 function renderCreate(message, html) {
@@ -3448,7 +3530,8 @@ async function settleCreate(message, create, outcome) {
   }
   // "Once you have created anything through the Create Maneuver, you gain a Blueprint of what was
   // created." Not from a Blueprint - that one is already held.
-  if (!create.blueprint) await giveBlueprint(maker, create);
+  // Nor from the quick one: "you do not gain a Blueprint from that use of the Create Maneuver".
+  if (!create.blueprint && !create.noBlueprint) await giveBlueprint(maker, create);
 }
 
 /**
@@ -5702,6 +5785,8 @@ const REGULATED_FLAG = "regulated";
 const COOK_FLAG = "cook";
 /** Something being made, waiting on its Skill Check - the Create Maneuver. */
 const CREATE_FLAG = "create";
+/** Something conjured, waiting on its Skill Check - Magical Materialization. */
+const MATERIALIZE_FLAG = "materialize";
 
 /**
  * An Item left on the ground for whoever moves through it - Caltrops. The card is posted

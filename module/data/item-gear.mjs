@@ -418,6 +418,11 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
       oncePerEncounter: new fields.BooleanField({ required: true, initial: false }),
       /** Used up when it is used. */
       consumed: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * Made by Magical Materialization: "destroyed at the end of a Combat Encounter, unless you spend a Karma
+       * Point to preserve that Item". Marked, and the table's to act on (the user's ruling).
+       */
+      materialized: new fields.BooleanField({ required: true, initial: false }),
       /** What consuming it does that the system cannot, said on the card. */
       consumeNote: new fields.StringField({ required: true, blank: true, initial: "" }),
       /** A Blueprint's record: what Create made - "basic" and its file, or a Weapon's (and so on) name. */

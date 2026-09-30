@@ -1,0 +1,21 @@
+id: limited-creation
+name: Limited Creation
+restriction: true
+reduction: 5
+# "Weapon Summoner (unless you choose Weapon for the effects of Limited Creation), Projectile Materialization"
+locked: Weapon Summoner, Projectile Materialization
+# What is chosen when it is applied, and the Locked Advancement a choice frees.
+choices: basic, apparel, weapon
+unlocksIf: weapon=Weapon Summoner
+source: Core Rule
+text: >
+  Limited Creation: You are only able to make one kind of item.
+  –Locked Advancements: Weapon Summoner (unless you choose Weapon for the effects of Limited Creation),
+  Projectile Materialization
+  –TP Cost: -5
+  –Effect: Select either Basic Item, Apparel, or Weapon. You can only create your selected Item through the
+  effects of Magical Materialization.
+
+---
+
+# Its choice is asked when it is applied, and the Effect offers only that kind of Item.

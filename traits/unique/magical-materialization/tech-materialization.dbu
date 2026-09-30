@@ -1,0 +1,17 @@
+id: tech-materialization
+name: Tech Materialization
+advancement: true
+prerequisite: 2+ Skill Ranks in Craft (Basic Item)
+tpCost: 5
+allowsTag: tech
+noHarderAt: craft=4
+source: Core Rule
+text: >
+  Tech Materialization: You understand technology to such an extent that you are able to conjure it.
+  –Prerequisites: 2+ Skill Ranks in Craft (Basic Item)
+  –TP Cost: 5 TP
+  –Effect: You may create Basic Items with the [Tech] tag through Magical Materialization. If you have 4+
+  Skill Ranks in Craft (Basic Item), you do not increase the Difficulty Category of a Basic Item with the
+  [Tech] tag that would be created through this effect.
+
+---

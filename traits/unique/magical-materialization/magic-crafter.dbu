@@ -1,0 +1,15 @@
+id: magic-crafter
+name: Magic Crafter
+advancement: true
+prerequisite: Scholarship or Insight Score of 8+
+tpCost: 5
+noHarder: all
+source: Core Rule
+text: >
+  Magic Crafter: You are skilled at conjuring items with magic.
+  –Prerequisites: Scholarship or Insight Score of 8+
+  –TP Cost: 5 TP
+  –Effect: Do not increase the Difficulty Category for the Use Magic Skill Check of Magical
+  Materialization.
+
+---

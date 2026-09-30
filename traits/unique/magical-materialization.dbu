@@ -1,0 +1,56 @@
+id: magical-materialization
+name: Magical Materialization
+uaType: magical
+prerequisite: 2+ Skill Ranks in Use Magic
+tpCost: 10
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 6
+# The Effect: a Basic Item, a piece of Apparel or a Weapon made with a Use Magic Check at its Craft DC one
+# Category higher - picked when it is used (use-maneuver.mjs askMaterialize).
+materializes: true
+source: Core Rule
+description: >
+  Conjure a Basic Item, a piece of Apparel or a Weapon: Use Magic at its Craft DC one Category higher, gone at
+  the end of the Combat Encounter unless a Karma Point keeps it. Passive: the Create Maneuver with Use Magic,
+  and a quick one for its KP.
+text: >
+  Magical Materialization: You are capable of conjuring objects out of thin air, allowing you to manifest
+  anything you desire, within a limit.
+  –Ability Type: Magical
+  –Prerequisites: 2+ Skill Ranks in Use Magic
+  –TP Cost: 10
+  –KP Cost: 6(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: You gain access to the Create Maneuver (see — Crafting) and may use your Use Magic Skill
+  instead of the Craft Skill for its effects. When using the Create Maneuver to create a Basic Item, Weapon,
+  or Apparel, you can spend the Ki Point Cost of Magical Materialization to reduce the Time Cost to 1 Minute,
+  but increase the Difficulty Category by 1 Category (or reduce your Dice Score by 4 if the Difficulty
+  Category was Grandmaster) and you do not gain a Blueprint from that use of the Create Maneuver.
+  –Effect: Select either a Basic Item that does not have the [Tech] or [Food] tag, a piece of Apparel, or a
+  Weapon. Roll the Craft Skill Check for your choice, using the Use Magic Skill instead of the relevant Craft
+  Specialization, but increase the Difficulty Category by 1. If you fail, you do not create the item, but
+  you still lose the Ki Points. If you succeed, you create the selected Item.
+
+  The created item is either made in your hand, or in a Square within your Melee Range. Any Item made by
+  Magical Materialization is destroyed at the end of a Combat Encounter, unless you spend a Karma Point to
+  preserve that Item (if you created multiple Items, each Item requires a Karma Point to be preserved).
+
+  You cannot Integrate any Items created through Magical Materialization, nor can you create any Accessory
+  with a Craft DC of Grandmaster.
+
+---
+
+# The Passive Bonus is the Create Maneuver's (traits/adventuring/create.dbu `grantedBy`): offered to whoever
+# has this, Use Magic in place of Craft where they pick it, and the quick Create - its KP paid, 1 Minute, one
+# Category harder, no Blueprint.
+#
+# The Effect, used: what to make, the Check at its Craft DC one Category higher (Use Magic in place of Craft;
+# a [Med] Basic Item's Medicine and a [Food] one's Cooking stay theirs - the user's ruling), and the card's
+# Made it or Failed it. A Basic Item made is given as the Gear tab gives one, marked Materialized; a Weapon or
+# a piece of Apparel is said on the card (the user's ruling). Its KP is spent either way.
+#
+# The table's: where it appears, the end of the Combat Encounter and its Karma Points - the Item is marked,
+# not destroyed (the user's ruling) - and Integration, which is not built.

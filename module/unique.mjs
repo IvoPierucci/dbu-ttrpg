@@ -28,10 +28,20 @@ export function uniqueTypeOf(unique) {
   return ["technical", "magical"].includes(unique?.chosenType) ? unique.chosenType : "";
 }
 
-/** The names of the Advancements its applied Restrictions lock - "Locked Advancements". */
-export function lockedAdvancements(unique) {
-  return new Set((unique?.restrictions ?? []).filter(entry => entry.applied)
-    .flatMap(entry => String(entry.locked ?? "").split(",").map(name => name.trim().toLowerCase()).filter(Boolean)));
+/**
+ * The names of the Advancements its applied Restrictions lock - "Locked Advancements" - less any its choice
+ * frees: Limited Creation's "Weapon Summoner (unless you choose Weapon for the effects of Limited Creation)",
+ * read off its file's `unlocksIf: weapon=Weapon Summoner`.
+ */
+export function lockedAdvancements(unique, getTrait = null) {
+  return new Set((unique?.restrictions ?? []).filter(entry => entry.applied).flatMap(entry => {
+    const freed = new Set(listOf(getTrait?.(entry.key)?.unlocksIf)
+      .map(rule => rule.split("="))
+      .filter(([choice]) => String(choice).trim().toLowerCase() === String(entry.choice ?? "").toLowerCase())
+      .map(([, name]) => String(name ?? "").trim().toLowerCase()));
+    return String(entry.locked ?? "").split(",").map(name => name.trim().toLowerCase())
+      .filter(name => name && !freed.has(name));
+  }));
 }
 
 /**
@@ -91,7 +101,7 @@ function listOf(raw) {
  * tagged, once per Combat Round, with everything it can have bought onto it - none bought, and the
  * Restrictions chosen when it is gained applied. `chosenType` where it lists both.
  */
-export function uniqueItemFrom(definition, children = [], { chosenType = "", applied = [] } = {}) {
+export function uniqueItemFrom(definition, children = [], { chosenType = "", applied = [], choices = {} } = {}) {
   const id = () => foundry.utils.randomID();
   const number = raw => Math.max(0, Number(raw) || 0);
   return {
@@ -103,6 +113,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
       actionCost: number(definition.actionCost),
       kiCost: number(definition.kiCost),
       kiCostPerTier: number(definition.kiCostPerTier),
+      kiCostPerBaseTier: number(definition.kiCostPerBaseTier),
       attacking: definition.attacking === true,
       requiresTarget: definition.requiresTarget === true,
       tags: [UNIQUE_TAG],
@@ -116,6 +127,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         tpCost: number(definition.tpCost),
         prerequisite: String(definition.prerequisite ?? ""),
         libraryId: definition.id,
+        materialize: definition.materializes === true,
         evade: { defense: number(definition.evadeDefense), offer: String(definition.evadeOffer ?? "") },
         advancements: children.filter(child => child.advancement === true).map(child => ({
           id: id(), key: child.id, name: child.name, tp: number(child.tpCost),
@@ -127,7 +139,8 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         restrictions: children.filter(child => child.restriction === true).map(child => ({
           id: id(), key: child.id, name: child.name, reduction: number(child.reduction),
           locked: listOf(child.locked).join(", "), text: String(child.text ?? ""), script: String(child.script ?? ""),
-          applied: applied.includes(child.id)
+          applied: applied.includes(child.id),
+          choice: String(choices[child.id] ?? "")
         }))
       }
     }
@@ -176,4 +189,57 @@ export function uniqueDefinitionOf(item) {
     tags: system.tags ?? [],
     usageLimit: limit ? { amount: Number(limit[1]), per: limit[2].toLowerCase() } : null
   };
+}
+
+/** The Difficulty Categories in order, Novice to Grandmaster. */
+const ORDER = ["novice", "apprentice", "qualified", "expert", "master", "grandmaster"];
+
+/**
+ * A Difficulty one Category harder - Magical Materialization's "increase the Difficulty Category by 1" - or,
+ * already at Grandmaster, the same with 4 off the Dice Score: "(or reduce your Dice Score by 4 if the
+ * Difficulty Category was Grandmaster)".
+ */
+export function harderBy1(difficulty) {
+  const at = ORDER.indexOf(String(difficulty ?? ""));
+  if (at < 0) return { difficulty, diceMinus: 0 };
+  if (at === ORDER.length - 1) return { difficulty, diceMinus: 4 };
+  return { difficulty: ORDER[at + 1], diceMinus: 0 };
+}
+
+/**
+ * The Advancements bought onto a Unique Ability, as their files: what each does is written there
+ * (`projectile: true`, `allowsTag: tech`...), and the Item keeps only which were bought.
+ */
+export function boughtTraits(unique, getTrait) {
+  return (unique?.advancements ?? []).filter(entry => entry.bought && entry.key)
+    .map(entry => getTrait?.(entry.key)).filter(Boolean);
+}
+
+/**
+ * Whether Magical Materialization makes this one harder: "Do not increase the Difficulty Category" with Magic
+ * Crafter; a [Tech] Basic Item with Tech Materialization and 4+ Ranks in Craft (Basic Item), a [Food] one with
+ * Food Materialization and 4+ in Cooking.
+ */
+export function materializeHarder(tags, bought, system) {
+  if (bought.some(trait => String(trait.noHarder ?? "") === "all")) return false;
+  for (const trait of bought) {
+    const tag = String(trait.allowsTag ?? "").toLowerCase();
+    const [skill, ranks] = String(trait.noHarderAt ?? "").split("=");
+    if (!tag || !(tags ?? []).includes(tag) || !skill) continue;
+    if ((Number(system?.skills?.[skill.trim()]?.ranks) || 0) >= (Number(ranks) || 0)) return false;
+  }
+  return true;
+}
+
+/**
+ * The Basic Items Magical Materialization may make: "a Basic Item that does not have the [Tech] or [Food] tag"
+ * - unless an Advancement allows that tag - with a Craft DC, and never "any Accessory with a Craft DC of
+ * Grandmaster".
+ */
+export function materializable(definition, tags, itemType, bought) {
+  if (!definition?.craftDC || (definition.special === true)) return false;
+  const allowed = bought.map(trait => String(trait.allowsTag ?? "").toLowerCase()).filter(Boolean);
+  if ((tags ?? []).some(tag => ["tech", "food"].includes(tag) && !allowed.includes(tag))) return false;
+  if ((itemType === "accessory") && (String(definition.craftDC).trim().toLowerCase() === "grandmaster")) return false;
+  return true;
 }

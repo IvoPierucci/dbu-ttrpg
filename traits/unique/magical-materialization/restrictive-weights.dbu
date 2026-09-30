@@ -1,0 +1,23 @@
+id: restrictive-weights
+name: Restrictive Weights
+advancement: true
+prerequisite: Projectile Materialization
+tpCost: 6
+weights: true
+source: Core Rule
+text: >
+  Restrictive Weights: You are able to create an item that burdens your opponents, slowing them in combat.
+  –Prerequisites: Projectile Materialization
+  –TP Cost: 6
+  –Effect: You may target an Opponent with the effects of Projectile Materialization, but you may only
+  create Weights. Make a Clash (Cognitive vs Impulsive) against the targeted Opponent. If they win, your
+  selected Weights are created on a Square adjacent to that Opponent. If you win, that opponent
+  automatically equips the Weights you created as their top layer of Apparel (this can allow them to wear
+  4 layers of Apparel).
+
+  These Weights do not give a Doff Bonus once removed.
+
+---
+
+# Offered when it is used, at the Opponent targeted: made, the Clash opens, and winning says what the
+# Weights do - Apparel is the table's (the user's ruling).

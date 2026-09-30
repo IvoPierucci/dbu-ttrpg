@@ -1,0 +1,18 @@
+id: power-builder
+name: Power Builder
+advancement: true
+prerequisite: Force Score 4+
+tpCost: 2
+powerBuilder: true
+source: Core Rule
+text: >
+  Power Builder: You may conjure objects using your prowess in manipulating your life energy rather than
+  your magic energy.
+  –Prerequisites: Force Score 4+
+  –TP Cost: 2 TP
+  –Effect: When making a Use Magic Skill Check for the effects of Magical Materialization, you may use
+  your Force Score instead of your Magic Score for the Use Magic Skill’s Skill Bonus.
+
+---
+
+# Said on the card: the Check is rolled from the sheet, with the Skill Bonus it has there.

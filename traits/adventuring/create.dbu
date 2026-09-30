@@ -5,6 +5,8 @@ prerequisite: 2+ Skill Ranks in the Craft Skill (or Medicine/Cooking for their r
 # for [Food] ones.
 requiresSkill: craft, craftApparel, craftWeapons, craftVehicles, medicine, cooking
 requiresRanks: 2
+# "You gain access to the Create Maneuver" - Magical Materialization's Passive Bonus.
+grantedBy: magical-materialization
 sessionLimit: 1
 timeCost: Varies
 # "The Time Cost for the Create Maneuver depends on what you are trying to create."

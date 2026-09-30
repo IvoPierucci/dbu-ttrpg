@@ -1,0 +1,18 @@
+id: dematerialize
+name: Dematerialize
+advancement: true
+prerequisite: Scholarship or Magic Score 7+
+tpCost: 6
+dematerialize: true
+source: Core Rule
+text: >
+  Dematerialize: Just as you can create, so too can you destroy.
+  –Prerequisites: Scholarship or Magic Score 7+
+  –TP Cost: 6
+  –Effect: You may forgo Magical Materialization’s effect to target an item created through Magical
+  Materialization within your Melee Range and destroy it.
+
+---
+
+# Offered when it is used: one Item marked Materialized - the user's own, or the targeted Character's -
+# destroyed, and nothing made.

@@ -437,6 +437,16 @@
     "unique/afterimage-technique.dbu",
     "unique/afterimage-technique/afterimage-strike.dbu",
     "unique/afterimage-technique/sonic-sway.dbu",
-    "unique/afterimage-technique/wild-sense.dbu"
+    "unique/afterimage-technique/wild-sense.dbu",
+    "unique/magical-materialization.dbu",
+    "unique/magical-materialization/weapon-summoner.dbu",
+    "unique/magical-materialization/power-builder.dbu",
+    "unique/magical-materialization/projectile-materialization.dbu",
+    "unique/magical-materialization/restrictive-weights.dbu",
+    "unique/magical-materialization/dematerialize.dbu",
+    "unique/magical-materialization/magic-crafter.dbu",
+    "unique/magical-materialization/tech-materialization.dbu",
+    "unique/magical-materialization/food-materialization.dbu",
+    "unique/magical-materialization/limited-creation.dbu"
   ]
 }

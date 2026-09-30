@@ -1,0 +1,21 @@
+id: projectile-materialization
+name: Projectile Materialization
+advancement: true
+prerequisite: Insight Score 4+
+tpCost: 2
+projectile: true
+source: Core Rule
+text: >
+  Projectile Materialization: You can materialize items at a short distance, directly in the hands or on
+  the person of an ally.
+  –Prerequisites: Insight Score 4+
+  –TP Cost: 2
+  –Effect: Target a willing Ally within a Sphere AoE (centered on you). If you succeed on the Skill Check
+  for Magical Materialization to create an Accessory, Apparel, or Weapon, the targeted Ally gains that
+  item. If it was a piece of Apparel or an Accessory, they may replace one layer of Apparel or Accessory
+  they are currently wearing, or equip it as an additional item (they decide).
+
+---
+
+# Offered when it is used: the Item goes to the Ally targeted. An Accessory is given to them; Apparel and
+# Weapons are said on the card (the user's ruling), and so is what they do with what they wear.

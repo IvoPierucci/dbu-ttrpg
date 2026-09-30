@@ -1819,6 +1819,8 @@ export function definitionOf(item) {
     transfiguration: item.system.transfiguration,
     treatment: item.system.treatment,
     repair: item.system.repair,
+    // Magical Materialization's Effect: what to make, asked before it is paid for.
+    materialize: item.system.unique?.materialize === true,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
     kiCostCoversProfile: item.system.kiCostCoversProfile,
@@ -2226,6 +2228,118 @@ export function repairables(actor) {
         : !worn ? "nothing to repair" : "";
       return { item, kind, specialty, craftDC: reading.craftDC ?? "", why };
     });
+}
+
+/**
+ * Magical Materialization, used: "Select either a Basic Item that does not have the [Tech] or [Food] tag, a
+ * piece of Apparel, or a Weapon" - what its Advancements allow and its Limited Creation leaves - and the Check
+ * at its Craft DC one Category higher. With Restrictive Weights, Weights at the Opponent targeted; with
+ * Projectile Materialization, into the targeted Ally's hands; with Dematerialize, an Item marked Materialized
+ * destroyed instead. Null if nothing is picked.
+ */
+async function askMaterialize(actor, maneuver) {
+  const item = actor.items?.get(maneuver.itemId);
+  const unique = item?.system?.unique;
+  if (!unique) return null;
+  const { boughtTraits, materializable, materializeHarder, harderBy1 } = await import("./unique.mjs");
+  const { gearOfList, gearItemFrom, tagsOf, typeOf } = await import("./gear.mjs");
+  const { traitsOfKind } = await import("./effects/traits.mjs");
+  const escape = Handlebars.escapeExpression;
+  const labels = DBUCharacterData.DIFFICULTIES;
+  const order = ["novice", "apprentice", "qualified", "expert", "master", "grandmaster"];
+  const keyOf = label => order.find(key => labels[key]?.label.toLowerCase() === String(label ?? "").trim().toLowerCase()) ?? "";
+
+  const bought = boughtTraits(unique, getTrait);
+  const has = flag => bought.some(trait => trait[flag] === true);
+  // Limited Creation: "You can only create your selected Item."
+  const limited = (unique.restrictions ?? []).find(entry => entry.applied && entry.choice)?.choice ?? "";
+  const allows = kind => !limited || (limited === kind);
+  const target = Array.from(game.user.targets ?? []).map(token => token.actor)
+    .find(other => other && (other.uuid !== actor.uuid)) ?? null;
+
+  const basics = allows("basic")
+    ? gearOfList(traitsOfKind("gear"), "basic").filter(def => materializable(def, tagsOf(def), typeOf(def), bought)) : [];
+  const materialized = owner => Array.from(owner?.items ?? []).filter(each => each.system?.materialized)
+    .map(each => ({ owner, item: each }));
+  const demats = has("dematerialize") ? [...materialized(actor), ...(target ? materialized(target) : [])] : [];
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<label class="dbu-wager"><span>Make</span><select name="what" class="dbu-gear-pick">
+        ${basics.length ? `<optgroup label="Basic Items">${basics.map(def =>
+          `<option value="basic:${escape(def.id)}">${escape(def.name)} (${escape(def.craftDC)})</option>`).join("")}</optgroup>` : ""}
+        ${allows("weapon") ? `<option value="weapon">A Weapon</option>` : ""}
+        ${allows("apparel") ? `<option value="apparel">A piece of Apparel</option>` : ""}
+        ${(has("weights") && target) ? `<option value="weights">Weights, at ${escape(target.name)} (Restrictive Weights)</option>` : ""}
+        ${demats.length ? `<optgroup label="Dematerialize">${demats.map(({ owner, item: made }) =>
+          `<option value="demat:${escape(owner.uuid)}|${escape(made.id)}">${escape(made.name)} (${escape(owner.name)})</option>`).join("")}</optgroup>` : ""}
+      </select></label>
+      <label class="dbu-wager"><span>Craft DC</span><select name="difficulty">${order.map(key =>
+        `<option value="${key}">${escape(labels[key]?.label ?? key)}</option>`).join("")}</select>
+        <em>A Weapon's, Apparel's or Weights' - or a Variable one; one Category harder is added</em></label>
+      ${(has("projectile") && target) ? `<label class="dbu-respond-option"><input type="checkbox" name="projectile"/>
+        <span class="dbu-respond-name">Into ${escape(target.name)}'s hands (Projectile Materialization)</span></label>` : ""}`,
+    buttons: [
+      { action: "make", label: "Materialize", default: true, callback: (event, button, dialog) => ({
+        what: dialog.element.querySelector('select[name="what"]')?.value ?? "",
+        difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "apprentice",
+        projectile: Boolean(dialog.element.querySelector('input[name="projectile"]')?.checked)
+      }) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object") || !chosen.what) return null;
+
+  // "You may forgo Magical Materialization's effect to target an item created through Magical Materialization
+  // within your Melee Range and destroy it."
+  if (chosen.what.startsWith("demat:")) {
+    const [ownerUuid, itemId] = chosen.what.slice(6).split("|");
+    const found = demats.find(({ owner, item: made }) => (owner.uuid === ownerUuid) && (made.id === itemId));
+    return found ? { demat: { ownerUuid, itemId, name: found.item.name, ownerName: found.owner.name } } : null;
+  }
+
+  const basic = chosen.what.startsWith("basic:") ? basics.find(def => `basic:${def.id}` === chosen.what) : null;
+  const kind = basic ? "basic" : chosen.what;
+  const tags = basic ? tagsOf(basic) : [];
+  let difficulty = chosen.difficulty;
+  if (basic) {
+    const choices = gearItemFrom(basic, actor).system.craftDCChoices ?? [];
+    difficulty = choices.length ? (choices.includes(chosen.difficulty) ? chosen.difficulty : choices[0]) : keyOf(basic.craftDC);
+  }
+  // "Increase the Difficulty Category by 1" - unless Magic Crafter, or Tech or Food Materialization with 4+ Ranks.
+  const harder = materializeHarder(tags, bought, actor.system) ? harderBy1(difficulty) : { difficulty, diceMinus: 0 };
+  // The Check: Use Magic in place of Craft; a [Med] Basic Item's Medicine and a [Food] one's Cooking stay theirs
+  // (the user's ruling).
+  const skill = tags.includes("med") ? "medicine" : tags.includes("food") ? "cooking" : "useMagic";
+  const notes = [];
+  if (has("powerBuilder") && (skill === "useMagic")) {
+    notes.push("Power Builder: the Force Score may stand in for the Magic Score in the Use Magic Skill Bonus.");
+  }
+  if (has("summonsWeapons") && (kind === "weapon")) {
+    notes.push(`Weapon Summoner: automatic success for a Weapon of Craftsmanship Grade ${Number(actor.system.skills?.useMagic?.ranks) || 0} or lower.`);
+  }
+  // Projectile Materialization: "the targeted Ally gains that item" - an Accessory, Apparel or Weapon. Restrictive
+  // Weights' Opponent is the one targeted.
+  const accessory = basic && (typeOf(basic) === "accessory");
+  const recipient = ((kind === "weights") || (chosen.projectile && (accessory || ["weapon", "apparel"].includes(kind)))) ? target : null;
+  return {
+    kind, id: basic?.id ?? "", name: basic?.name ?? { weapon: "a Weapon", apparel: "a piece of Apparel", weights: "Weights" }[kind],
+    difficulty: harder.difficulty, diceMinus: harder.diceMinus, skill, notes,
+    recipientUuid: recipient?.uuid ?? "", recipientName: recipient?.name ?? ""
+  };
+}
+
+/** Magical Materialization's card, or - Dematerialized - the Item destroyed and said. */
+async function postMaterialize(actor, maneuver, plan) {
+  const chat = await import("./chat.mjs");
+  if (plan.demat) {
+    const owner = fromUuidSync(plan.demat.ownerUuid);
+    if (owner) await chat.requestDeleteItem(owner, plan.demat.itemId);
+    return chat.postManeuver(actor, maneuver, { note: `${actor.name} dematerializes ${plan.demat.name} (${plan.demat.ownerName}).` });
+  }
+  return chat.postMaterialize(actor, maneuver, plan);
 }
 
 /** Repair: which Weapon or piece of Apparel. */
@@ -2817,6 +2931,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // choice comes before the dice rather than after them.
   let trick = "";
   let repairing = null;
+  let materializing = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3042,6 +3157,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     if (maneuver.repair) {
       repairing = await askRepair(actor);
       if (!repairing) return false;
+    }
+
+    // Magical Materialization: what to make - or, with Dematerialize, what to destroy - asked before it is
+    // paid for.
+    if (maneuver.materialize) {
+      materializing = await askMaterialize(actor, maneuver);
+      if (!materializing) return false;
     }
 
     // "Additionally, if not in a High Environment, you can enter the Low Sky Environment.
@@ -3460,6 +3582,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await treatAlly(actor, targetActor, maneuver)
     : (maneuver.repair && repairing)
     ? await postRepair(actor, maneuver, repairing)
+    : (maneuver.materialize && materializing)
+    ? await postMaterialize(actor, maneuver, materializing)
     // Two of the Magic Trick's three effects open its Clash and the third opens nothing.
     // Asked before the Clash routes below, so the third does not fall into one.
     : (maneuver.magicTrick && (trick === "move"))

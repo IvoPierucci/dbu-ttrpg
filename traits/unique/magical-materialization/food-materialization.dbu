@@ -1,0 +1,17 @@
+id: food-materialization
+name: Food Materialization
+advancement: true
+prerequisite: 2+ Skill Ranks in Cooking
+tpCost: 5
+allowsTag: food
+noHarderAt: cooking=4
+source: Core Rule
+text: >
+  Food Materialization: Thanks to your skills in the kitchen, you are able to conjure food from thin air.
+  –Prerequisites: 2+ Skill Ranks in Cooking
+  –TP Cost: 5 TP
+  –Effect: You may create Basic Items with the [Food] tag through Magical Materialization. If you have 4+
+  Skill Ranks in Cooking, you do not increase the Difficulty Category of a Basic Item with the [Food] tag
+  that would be created through this effect.
+
+---

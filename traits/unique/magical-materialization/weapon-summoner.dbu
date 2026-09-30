@@ -1,0 +1,19 @@
+id: weapon-summoner
+name: Weapon Summoner
+advancement: true
+prerequisite: Insight Score 8+
+tpCost: 5
+summonsWeapons: true
+source: Core Rule
+text: >
+  Weapon Summoner: You can conjure weapons with ease.
+  –Prerequisites: Insight Score 8+
+  –TP Cost: 5 TP
+  –Effect: You automatically succeed each Use Magic Skill Check to make a Weapon with a Craftsmanship
+  Grade equal to or lower than your number of Use Magic Skill Ranks. You can dismiss any Weapon you’ve
+  created with Magical Materialization as an Instant Maneuver OR as part of Magical Materialization in
+  addition to its other effects.
+
+---
+
+# Weapons are said on the card (the user's ruling): so are its automatic success and its dismissal.

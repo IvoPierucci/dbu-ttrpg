@@ -45,9 +45,11 @@ export function travelKiLoss({ type, maxKi = 0, flightRanks = 0, vehicle = false
  * Maneuvers can only be attempted once during each Adventuring Session, some may be able to be used
  * multiple times up to a listed Session Limit."
  */
-export function adventuringManeuvers(definitions, uses = [], system = null) {
+export function adventuringManeuvers(definitions, uses = [], system = null, owned = []) {
   return definitions
-    .filter(definition => (definition.universal === true) || meetsPrerequisite(definition, system))
+    // Universal, met by Ranks - or granted by a Unique Ability held: Magical Materialization's Create.
+    .filter(definition => (definition.universal === true) || meetsPrerequisite(definition, system)
+      || (Boolean(definition.grantedBy) && owned.includes(String(definition.grantedBy).trim())))
     .map(definition => {
       // "Session Limit: Infinite" - or "Unlimited" - null, and never reached.
       const infinite = ["infinite", "unlimited"].includes(String(definition.sessionLimit ?? "").trim().toLowerCase());
