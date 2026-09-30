@@ -3120,13 +3120,14 @@ async function settleGamble(message, gamble, made) {
  * An Adventuring Maneuver begun: its Time Cost said, and its benefits on a button for when that time
  * has been spent in full. Interrupted, the button is simply never pressed.
  */
-export async function postAdventuring(actor, definition, { repair = null } = {}) {
+export async function postAdventuring(actor, definition, { repair = null, topic = "" } = {}) {
   const escape = Handlebars.escapeExpression;
   // Full Repair says what it is on, and the hours chosen in place of its "2~10 Hours".
   const time = repair ? `${repair.hours} Hours` : (definition.timeCost ?? "");
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p>${escape(actor.name)} begins ${escape(definition.name)}${repair ? ` on ${escape(repair.itemName)}` : ""} - `
+    content: `<p>${escape(actor.name)} begins ${escape(definition.name)}${repair ? ` on ${escape(repair.itemName)}` : ""}${
+      topic ? ` into ${escape(topic)}` : ""} - `
       + `${escape(time)}. Interrupted, or without the full Time Cost, there are no benefits.</p>`,
     flags: { [SCOPE]: { [ADVENTURING_FLAG]: {
       actorUuid: actor.uuid, id: definition.id, name: definition.name,
@@ -3135,6 +3136,8 @@ export async function postAdventuring(actor, definition, { repair = null } = {})
       gains: String(definition.gains ?? "").trim().toLowerCase(),
       // What it does that the system cannot, said once it is done - Tune Up's Vehicle.
       note: String(definition.effectNote ?? "").trim(),
+      // Research's topic.
+      topic,
       // And the Specialty it reads, as written on that Skill - Recall's Knowledge.
       specialty: definition.effectSpecialty
         ? String(actor.system.skillSpecializations?.[String(definition.effectSpecialty).trim().toLowerCase()] ?? "").trim()
@@ -3180,7 +3183,8 @@ async function settleAdventuring(message, adventuring) {
     await gainCondition(actor, adventuring.gains, 1);
     said.push(getTrait(adventuring.gains)?.name ?? adventuring.gains);
   }
-  if (adventuring.note) said.push(`${actor.name} ${adventuring.note}${adventuring.specialty ? ` (${adventuring.specialty})` : ""}`);
+  if (adventuring.note) said.push(`${actor.name} ${adventuring.note}${adventuring.specialty ? ` (${adventuring.specialty})` : ""}${
+    adventuring.topic ? ` - the topic: ${adventuring.topic}` : ""}`);
   if (adventuring.repair) said.push(await fullRepairDone(actor, adventuring.repair));
   return settledNote(message, `${actor.name} finishes ${adventuring.name}${said.length ? `: ${said.join(", ")}` : ""}.`);
 }

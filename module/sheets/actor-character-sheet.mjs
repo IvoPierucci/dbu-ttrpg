@@ -4432,9 +4432,26 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       return;
     }
 
+    // Research's "Select a topic" - asked before anything counts, and named on the card.
+    let topic = "";
+    if (definition.asksTopic === true) {
+      topic = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${this.actor.name} - ${definition.name}` },
+        content: `<label class="dbu-wager"><span>Topic</span><input type="text" name="topic" autofocus/></label>`,
+        buttons: [
+          { action: "go", label: "Begin", default: true, callback: (event, button, dialog) =>
+            String(dialog.element.querySelector('input[name="topic"]')?.value ?? "").trim() },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!topic || (topic === "cancel")) return;
+    }
+
     await this.actor.update({ "system.adventureUses": [...uses, entry.id] });
     const { postAdventuring } = await import("../chat.mjs");
-    return postAdventuring(this.actor, definition);
+    return postAdventuring(this.actor, definition, { topic });
   }
 
   /**

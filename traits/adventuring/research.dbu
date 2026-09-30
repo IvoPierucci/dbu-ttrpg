@@ -1,0 +1,32 @@
+id: research
+name: Research
+prerequisite: 2+ Skill Ranks in Knowledge
+requiresSkill: knowledge
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 2 Hours
+# "Select a topic." Asked when it is used, and named on the card.
+asksTopic: true
+# The Check is rolled from the sheet, at the Difficulty the ARC picks there; what is learned is theirs.
+effectNote: makes a Knowledge Skill Check at a Difficulty Category the ARC decides (rolled from the sheet) - succeeding gives information on that subject that can prove helpful; failing gives relatively useless information that may hint towards a clue or may not
+source: Core Rule
+description: >
+  Two hours with the books on a topic: a Knowledge Check at the ARC's Difficulty - helpful information
+  if it is made, something that may or may not hint at a clue if not.
+text: >
+  Research: You hit the books, determined to learn something that may help with your current
+  predicament.
+  –Prerequisite: 2+ Skill Ranks in Knowledge
+  –Session Limit: 1
+  –Time Cost: 2 Hours
+  –Effect: Select a topic. Make a Knowledge Skill Check with a Difficulty Category decided by your ARC.
+  If you succeed, you gain information on that subject that can prove helpful to your current
+  circumstance. If you fail, you gain relatively useless information that may hint towards a clue, or
+  may not.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Knowledge. The topic is asked when it is
+# used, and the card names it; once the two hours are spent the card says the Check is owed - rolled
+# from the sheet, where the Difficulty the ARC decides is picked - and what each outcome gives, which
+# the ARC tells.
