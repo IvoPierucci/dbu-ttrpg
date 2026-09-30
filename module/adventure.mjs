@@ -289,3 +289,54 @@ export function hasBlueprint(items, { kind, id, name }) {
     return (kind === "basic") ? (record.id === id) : (record.name.trim().toLowerCase() === String(name ?? "").trim().toLowerCase());
   });
 }
+
+/** "Reputation for Affection is measured in Affection Rating, a value between 0~4." */
+export const AFFECTION_RATINGS = Object.freeze([
+  { label: "Hated", tip: "This Individual or Faction actively hates your Character and will act against them in most situations. They may go out of their way to spite or try to harm your Character, depending on their beliefs." },
+  { label: "Disliked", tip: "While not to the extent of hatred, this Individual or Faction finds your Character unpleasant or harbors some kind of grudge. Generally speaking, they will act against your Character, but may not go out of their way to purposefully upset you." },
+  { label: "Neutral", tip: "This Individual or Faction has no particular feelings about your Character, and will treat them like any other stranger they’d encounter." },
+  { label: "Liked", tip: "This Individual or Faction likes your Character, typically being on their side and doing what they can to help them. They may not act to their own detriment in doing so, but they will offer aid where they can." },
+  { label: "Loved", tip: "This Individual or Faction loves your Character, they may act even to their own detriment to help them, or act in surprising ways to your Character’s benefit." }
+]);
+
+/** "Reputation for Alarm is measured in Alarm Rating, a value between 0~4." */
+export const ALARM_RATINGS = Object.freeze([
+  { label: "Harmless", tip: "Your Character is seen as completely harmless by this Individual or Faction. They won’t be scared to act against you, and may exploit your presence without concern." },
+  { label: "Unbothered", tip: "This Individual or Faction does not consider you a threat, and is generally unbothered by your presence. While they may treat you with some degree of awareness as an individual, they are unlikely to budge due to your actions." },
+  { label: "Neutral", tip: "This Individual or Faction has no strong feelings of fear about your Character beyond what they’d have against an unknown stranger." },
+  { label: "Feared", tip: "This Individual or Faction fears your Character. They may hesitate to act against them and may act in a way that supports your Character purely to try and remain on their good side." },
+  { label: "Terrified", tip: "This Individual or Faction is absolutely terrified of your Character and is highly unlikely to act against them, unless they gain some kind of unique edge, ally, or power that changes the dynamics. They will likely accept any requests and may act for you just to avoid angering your Character." }
+]);
+
+/**
+ * "Reduce/increase the TN of any Persuasion Skill Check against an Individual or Faction based on how much
+ * higher/lower their Affection Rating is than 2" - and Intimidation by the Alarm Rating, the same way.
+ */
+export function reputationTN(rating) {
+  return 2 - Math.max(0, Math.min(4, Number(rating) || 0));
+}
+
+/**
+ * The list as the sheet shows it: each Faction with its Individuals under it, then the Individuals of
+ * none - "a Character’s particular Reputation in relation to that Character supersedes the Reputation they
+ * possess with the Faction as a whole".
+ */
+export function reputationRows(entries) {
+  const list = entries ?? [];
+  const row = (entry, member = false) => {
+    const affection = Math.max(0, Math.min(4, Number(entry.affection) || 0));
+    const alarm = Math.max(0, Math.min(4, Number(entry.alarm) || 0));
+    const signed = n => (n > 0) ? `+${n}` : String(n);
+    return { ...entry, member, affection, alarm, kindLabel: (entry.kind === "faction") ? "Faction" : "Individual",
+      affectionLabel: AFFECTION_RATINGS[affection].label, affectionTip: AFFECTION_RATINGS[affection].tip,
+      alarmLabel: ALARM_RATINGS[alarm].label, alarmTip: ALARM_RATINGS[alarm].tip,
+      persuasionTN: signed(reputationTN(affection)), intimidationTN: signed(reputationTN(alarm)) };
+  };
+  const factions = list.filter(entry => entry.kind === "faction");
+  const known = new Set(factions.map(faction => faction.id));
+  return [
+    ...factions.flatMap(faction => [row(faction),
+      ...list.filter(entry => (entry.kind === "individual") && (entry.faction === faction.id)).map(entry => row(entry, true))]),
+    ...list.filter(entry => (entry.kind === "individual") && !known.has(entry.faction)).map(entry => row(entry))
+  ];
+}

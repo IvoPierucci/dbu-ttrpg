@@ -1493,6 +1493,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       { required: true, initial: [] }
     );
 
+    // Reputation: the Factions and Individuals this character keeps track of, each with an Affection
+    // and an Alarm Rating (0~4). The player's own list (the user's ruling), in an ArrayField so a
+    // removal is a removal.
+    schema.reputation = new fields.ArrayField(new fields.SchemaField({
+      id: new fields.StringField({ required: true, blank: false }),
+      kind: new fields.StringField({ required: true, blank: false, initial: "faction", choices: ["faction", "individual"] }),
+      name: new fields.StringField({ required: true, blank: true, initial: "" }),
+      // An Individual's Faction, by its entry's id - "" for none.
+      faction: new fields.StringField({ required: true, blank: true, initial: "" }),
+      affection: new fields.NumberField({ required: true, integer: true, initial: 2, min: 0, max: 4 }),
+      alarm: new fields.NumberField({ required: true, integer: true, initial: 2, min: 0, max: 4 })
+    }), { required: true, initial: [] });
+
     // --- Stat Drain ---
     // The ranks of Stat Drain running on this character, taken off their Combat Rolls and Soak
     // Value per base Tier; a clock of its own takes it back to nothing.

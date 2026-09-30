@@ -89,8 +89,42 @@
   <section class="panel">
     <details class="condition-group" data-section="adventure-{{subject.key}}"
              {{#if subject.open}}open{{/if}}>
-      <summary class="panel-title">{{subject.label}}</summary>
+      <summary class="panel-title">
+        {{subject.label}}
+        {{#if subject.isReputation}}<span class="panel-note">{{@root.reputation.length}}</span>{{/if}}
+      </summary>
+      {{#if subject.isReputation}}
+      {{! Factions and Individuals, each with its Affection and Alarm Rating (0~4) - an Individual under its
+          Faction, since theirs supersedes it. What each value means is on its name's hover. }}
+      <div class="adventure-actions">
+        <button type="button" class="adventure-travel" data-action="addReputation" data-kind="faction">Create Faction</button>
+        <button type="button" class="adventure-travel" data-action="addReputation" data-kind="individual">Add Individual</button>
+      </div>
+      <ul class="reputation-list">
+        {{#each @root.reputation as |entry|}}
+        <li class="reputation-row{{#if entry.member}} reputation-member{{/if}}">
+          <span class="reputation-name" data-tooltip="{{entry.kindLabel}}">{{entry.name}}</span>
+          <span class="reputation-rating">
+            <span class="karma-label">Affection</span>
+            <button type="button" class="karma-step" data-action="stepReputation" data-id="{{entry.id}}" data-which="affection" data-step="-1">&minus;</button>
+            <span class="reputation-value" data-tooltip="{{entry.affectionTip}}">{{entry.affectionLabel}} ({{entry.affection}})</span>
+            <button type="button" class="karma-step" data-action="stepReputation" data-id="{{entry.id}}" data-which="affection" data-step="1">+</button>
+          </span>
+          <span class="reputation-rating">
+            <span class="karma-label">Alarm</span>
+            <button type="button" class="karma-step" data-action="stepReputation" data-id="{{entry.id}}" data-which="alarm" data-step="-1">&minus;</button>
+            <span class="reputation-value" data-tooltip="{{entry.alarmTip}}">{{entry.alarmLabel}} ({{entry.alarm}})</span>
+            <button type="button" class="karma-step" data-action="stepReputation" data-id="{{entry.id}}" data-which="alarm" data-step="1">+</button>
+          </span>
+          <span class="reputation-tn" data-tooltip="The TN of Persuasion and of Intimidation Checks against them">TN {{entry.persuasionTN}} / {{entry.intimidationTN}}</span>
+          <button type="button" class="maneuver-control" data-action="renameReputation" data-id="{{entry.id}}" data-tooltip="Rename">&#9998;</button>
+          <button type="button" class="maneuver-control" data-action="deleteReputation" data-id="{{entry.id}}" data-tooltip="Remove">&#10005;</button>
+        </li>
+        {{/each}}
+      </ul>
+      {{else}}
       <p class="adventure-empty">Not built yet.</p>
+      {{/if}}
     </details>
   </section>
   {{/each}}

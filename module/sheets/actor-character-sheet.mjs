@@ -538,6 +538,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       newAdventureSession: DBUCharacterSheet._onNewAdventureSession,
       cancelAdventuringBuff: DBUCharacterSheet._onCancelAdventuringBuff,
       setHunger: DBUCharacterSheet._onSetHunger,
+      addReputation: DBUCharacterSheet._onAddReputation,
+      stepReputation: DBUCharacterSheet._onStepReputation,
+      renameReputation: DBUCharacterSheet._onRenameReputation,
+      deleteReputation: DBUCharacterSheet._onDeleteReputation,
       editImage: DBUCharacterSheet._onEditImage
     },
     form: {
@@ -756,7 +760,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // The sub-rules of Adventure not built yet, each a fold of its own (the user's list).
       context.adventureSubjects = [["crafting", "Crafting"], ["reputation", "Reputation"], ["training", "Training"],
         ["wealth", "Wealth"]].map(([key, label]) => ({ key, label,
-        open: Boolean(this.#openSections[`adventure-${key}`]) }));
+        open: Boolean(this.#openSections[`adventure-${key}`]),
+        // Reputation has a body of its own: the Factions and Individuals.
+        isReputation: key === "reputation" }));
+      const { reputationRows } = await import("../adventure.mjs");
+      context.reputation = reputationRows(this.actor.system.reputation ?? []);
       // Each with its entry laid out as printed, and open if it was left open - the Maneuvers
       // tab's toggle, keyed `maneuver-adv-<id>`.
       const { printedLines } = await import("../effects/traits.mjs");
@@ -4812,6 +4820,80 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onSetHunger(event, target) {
     return setCondition(this.actor, "hunger", Math.max(0, Math.min(3, Number(target.dataset.stage) || 0)));
+  }
+
+  /**
+   * A Faction or an Individual to keep track of: its name asked, and an Individual's Faction among the
+   * ones already kept. Both Ratings start at 2, Neutral.
+   */
+  static async _onAddReputation(event, target) {
+    const kind = (target.dataset.kind === "individual") ? "individual" : "faction";
+    const entries = this.actor.system.reputation ?? [];
+    const factions = entries.filter(entry => entry.kind === "faction");
+    const escape = Handlebars.escapeExpression;
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: (kind === "faction") ? "Create Faction" : "Add Individual" },
+      content: `<label class="dbu-wager"><span>Name</span><input type="text" name="name" autofocus/></label>
+        ${((kind === "individual") && factions.length) ? `<label class="dbu-wager"><span>Faction</span>
+          <select name="faction"><option value="">None</option>${factions.map(faction =>
+            `<option value="${escape(faction.id)}">${escape(faction.name)}</option>`).join("")}</select></label>` : ""}`,
+      buttons: [
+        { action: "add", label: "Add", default: true, callback: (ev, button, dialog) => ({
+          name: String(dialog.element.querySelector('input[name="name"]')?.value ?? "").trim(),
+          faction: dialog.element.querySelector('select[name="faction"]')?.value ?? ""
+        }) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!chosen || (typeof chosen !== "object") || !chosen.name) return;
+    return this.actor.update({ "system.reputation": [...entries, { id: foundry.utils.randomID(), kind,
+      name: chosen.name, faction: (kind === "individual") ? chosen.faction : "", affection: 2, alarm: 2 }] });
+  }
+
+  /** One Rating a step up or down, kept within 0~4. */
+  static async _onStepReputation(event, target) {
+    const { id, which } = target.dataset;
+    if (!["affection", "alarm"].includes(which)) return;
+    const step = Number(target.dataset.step) || 0;
+    return this.actor.update({ "system.reputation": (this.actor.system.reputation ?? []).map(entry =>
+      (entry.id === id) ? { ...entry, [which]: Math.max(0, Math.min(4, (Number(entry[which]) || 0) + step)) } : entry) });
+  }
+
+  /** A new name for a Faction or an Individual. */
+  static async _onRenameReputation(event, target) {
+    const entries = this.actor.system.reputation ?? [];
+    const entry = entries.find(each => each.id === target.dataset.id);
+    if (!entry) return;
+    const name = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: "Rename" },
+      content: `<label class="dbu-wager"><span>Name</span><input type="text" name="name"
+        value="${Handlebars.escapeExpression(entry.name)}" autofocus/></label>`,
+      buttons: [
+        { action: "save", label: "Save", default: true, callback: (ev, button, dialog) =>
+          String(dialog.element.querySelector('input[name="name"]')?.value ?? "").trim() },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!name || (name === "cancel")) return;
+    return this.actor.update({ "system.reputation": entries.map(each => (each.id === entry.id) ? { ...each, name } : each) });
+  }
+
+  /** Stop keeping track of one - a Faction's Individuals stay, belonging to none. */
+  static async _onDeleteReputation(event, target) {
+    const entries = this.actor.system.reputation ?? [];
+    const entry = entries.find(each => each.id === target.dataset.id);
+    if (!entry) return;
+    const sure = await foundry.applications.api.DialogV2.confirm({
+      window: { title: "Remove" }, content: `<p>Stop keeping track of ${Handlebars.escapeExpression(entry.name)}?</p>`,
+      rejectClose: false
+    });
+    if (!sure) return;
+    return this.actor.update({ "system.reputation": entries.filter(each => each.id !== entry.id)
+      .map(each => (each.faction === entry.id) ? { ...each, faction: "" } : each) });
   }
 
   /**

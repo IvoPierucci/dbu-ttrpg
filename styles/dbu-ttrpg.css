@@ -2829,6 +2829,49 @@
   flex: 0 0 auto;
 }
 
+/* Reputation: a Faction or an Individual to a row, its two Ratings stepped in place. */
+.dbu-ttrpg .reputation-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.dbu-ttrpg .reputation-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--dbu-border);
+}
+
+/* An Individual under its Faction: theirs supersedes it. */
+.dbu-ttrpg .reputation-member {
+  padding-left: 18px;
+}
+
+.dbu-ttrpg .reputation-name {
+  flex: 1 1 auto;
+  font-weight: bold;
+}
+
+.dbu-ttrpg .reputation-rating {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.dbu-ttrpg .reputation-value {
+  min-width: 82px;
+  text-align: center;
+  color: var(--dbu-accent);
+}
+
+.dbu-ttrpg .reputation-tn {
+  color: var(--dbu-text-dim);
+  white-space: nowrap;
+}
+
 /* A sub-rule of Adventure with nothing in it yet. */
 .dbu-ttrpg .adventure-empty {
   margin: 2px 0;
