@@ -502,6 +502,10 @@ export function registerCombatHooks() {
     // turn starting above the Encounter that had not started yet. There are no turns
     // before an Encounter, because there is no Encounter for them to be turns of.
     if (!combat.started) return;
+    // Nor the first turn: Foundry calls `combatStart` before it writes Round 1, so our handler is still
+    // awaiting its Encounter and Round when this arrives - and that handler begins the first turn itself,
+    // after them. Answered here too, it came before both and then a second time.
+    if (!(Number(previous?.round) > 0)) return;
 
     // Through the Combatant rather than by actor id, so an unlinked token gets its own
     // Actor rather than the one in the sidebar it was made from.
