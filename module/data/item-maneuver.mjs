@@ -634,6 +634,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
           noDiminishing: new fields.BooleanField({ required: true, initial: false }),
           /** Bought without its TP being charged (the user's). */
           free: new fields.BooleanField({ required: true, initial: false }),
+          /** Added to its TP Cost, up or down - never below nothing (the user's). */
+          tpChange: new fields.NumberField({ required: true, integer: true, initial: 0 }),
           tp: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
           prerequisite: new fields.StringField({ required: true, blank: true, initial: "" }),
           text: new fields.StringField({ required: true, blank: true, initial: "" }),

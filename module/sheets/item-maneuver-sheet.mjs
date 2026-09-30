@@ -164,7 +164,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
 
   /** What a Unique Ability's UA and Advancements/Restrictions tabs show. */
   async #uniqueContext() {
-    const { UNIQUE_TYPES, lockedAdvancements, uniqueTPOf } = await import("../unique.mjs");
+    const { UNIQUE_TYPES, advancementTPOf, lockedAdvancements, uniqueTPOf } = await import("../unique.mjs");
     const unique = this.item.system.unique;
     const locked = lockedAdvancements(unique);
     return {
@@ -177,7 +177,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       // and refused - and a card each for what is.
       groups: [
         { label: "Advancements", choices: unique.advancements.filter(entry => !entry.bought).map(entry => ({
-          value: `adv:${entry.id}`, name: entry.name, label: `${entry.name} (${entry.tp} TP)`,
+          value: `adv:${entry.id}`, name: entry.name, label: `${entry.name} (${advancementTPOf(entry)} TP)`,
           blocked: locked.has(String(entry.name).trim().toLowerCase()) ? "Locked by a Restriction" : "" })) },
         { label: "Restrictions", choices: unique.restrictions.filter(entry => !entry.applied).map(entry => ({
           value: `res:${entry.id}`, name: entry.name, label: `${entry.name} (-${entry.reduction} TP)`, blocked: "" })) },
@@ -186,7 +186,8 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       ].filter(group => group.choices.length),
       rows: [
         ...unique.advancements.filter(entry => entry.bought).map(entry => ({ ...entry, list: "advancements",
-          side: "Advancement", cost: `${entry.tp} TP`, advancement: true })),
+          side: "Advancement", cost: `${advancementTPOf(entry)} TP`, advancement: true,
+          costTip: `${entry.tp} TP listed${Number(entry.tpChange) ? `, ${(entry.tpChange > 0) ? "+" : ""}${entry.tpChange}` : ""}` })),
         ...unique.restrictions.filter(entry => entry.applied).map(entry => ({ ...entry, list: "restrictions",
           side: "Restriction", cost: `-${entry.reduction} TP`, restriction: true }))
       ].map(row => ({ ...row, lines: printedLines(row.text || "").map(line =>
@@ -408,6 +409,16 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
   async _onRender(context, options) {
     await super._onRender(context, options);
     this.#wireFeatureSearch();
+    // An Advancement's TP Cost Change, written on its card: kept on the entry, not submitted with the form.
+    for (const input of this.element.querySelectorAll("[data-advancement-change]")) {
+      input.addEventListener("change", event => {
+        event.stopPropagation();
+        const entries = this.item.system.unique?.advancements ?? [];
+        const change = Math.trunc(Number(input.value) || 0);
+        this.item.update({ "system.unique.advancements": entries.map(each =>
+          (each.id === input.dataset.advancementChange) ? { ...each, tpChange: change } : each) });
+      });
+    }
   }
 
   static _onChangeTab(event, target) {

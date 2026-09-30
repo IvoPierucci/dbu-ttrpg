@@ -432,6 +432,11 @@
   border-bottom: 1px solid var(--dbu-border);
 }
 
+/* An Advancement's TP Cost Change, on its card. */
+.dbu-ttrpg .unique-tp-change {
+  width: 3.5em;
+}
+
 .dbu-ttrpg .technique-feature-text {
   padding: 4px 8px 6px;
   font-size: 0.9em;

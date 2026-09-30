@@ -28,8 +28,10 @@
       <span class="gear-type">{{row.side}}</span>
       {{#if row.prerequisite}}<span class="gear-type" data-tooltip="Prerequisite">{{row.prerequisite}}</span>{{/if}}
       {{#if row.locked}}<span class="gear-type" data-tooltip="Locked Advancements">Locks {{row.locked}}</span>{{/if}}
-      <span class="gear-type">{{row.cost}}</span>
+      <span class="gear-type" {{#if row.costTip}}data-tooltip="{{row.costTip}}"{{/if}}>{{row.cost}}</span>
       {{#if row.advancement}}
+      <label class="gear-type" data-tooltip="TP Cost Change: added to its TP Cost, or taken off it - never below 0">
+        &plusmn; <input type="number" class="unique-tp-change" data-advancement-change="{{row.id}}" value="{{row.tpChange}}" step="1"/></label>
       <label class="gear-type" data-tooltip="Its TP is not charged">
         <input type="checkbox" data-action="toggleUniqueEntry" data-list="advancements" data-flag="free" data-id="{{row.id}}"
                {{#if row.free}}checked{{/if}}/> Free</label>

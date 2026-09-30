@@ -51,8 +51,13 @@ export function uniqueTPOf(unique) {
   const free = unique?.free === true;
   const charged = free ? 0 : base;
   const advancements = (unique?.advancements ?? []).filter(entry => entry.bought && !entry.free)
-    .reduce((sum, entry) => sum + Math.max(0, Number(entry.tp) || 0), 0);
+    .reduce((sum, entry) => sum + advancementTPOf(entry), 0);
   return { listed, change, reduction, floor, base, free, charged, advancements, total: charged + advancements };
+}
+
+/** An Advancement's TP Cost: its own, changed by its TP Cost Change - never below nothing (the user's). */
+export function advancementTPOf(entry) {
+  return Math.max(0, (Number(entry?.tp) || 0) + Math.trunc(Number(entry?.tpChange) || 0));
 }
 
 /**
