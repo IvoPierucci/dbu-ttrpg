@@ -10,20 +10,22 @@
       Adventuring
     </label>
 
-    <button type="button" class="adventure-travel" data-action="travel"
-            data-tooltip="Moving to another location. Its time is the ARC's to declare. Medium Travel costs 1/10 of your Maximum Ki Points, Long 1/4 - doubled under 2 Ranks in Flight, none by Vehicle or with a Rest on the way.">
-      Travel
-    </button>
+    <div class="adventure-actions">
+      <button type="button" class="adventure-travel" data-action="travel"
+              data-tooltip="Moving to another location. Its time is the ARC's to declare. Medium Travel costs 1/10 of your Maximum Ki Points, Long 1/4 - doubled under 2 Ranks in Flight, none by Vehicle or with a Rest on the way.">
+        Travel
+      </button>
+      <button type="button" class="adventure-travel" data-action="newAdventureSession"
+              data-tooltip="A new Adventuring Session: every Adventuring Maneuver's Session Limit full again, and Pickpocket's attempts forgotten.">
+        New Session
+      </button>
+    </div>
   </section>
 
   {{! "Each Adventuring Maneuver has a Time Cost" and a Session Limit. The whole entry is on the
       name's hover. }}
   <section class="panel">
-    <h3 class="panel-title">
-      Adventuring Maneuvers
-      <button type="button" class="edit-toggle" data-action="newAdventureSession"
-              data-tooltip="A new Adventuring Session: every Session Limit full again.">New Session</button>
-    </h3>
+    <h3 class="panel-title">Adventuring Maneuvers</h3>
     <ul class="adventuring-list">
       {{#each adventuringManeuvers as |maneuver|}}
       <li class="adventuring-row{{#if maneuver.exhausted}} maneuver-exhausted{{/if}}">

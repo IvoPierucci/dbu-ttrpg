@@ -2802,9 +2802,14 @@
   cursor: pointer;
 }
 
-/* Travel, on the Adventure tab: a button its own size, not the panel's width. */
+/* Travel and New Session, on the Adventure tab: buttons their own size, side by side. */
+.dbu-ttrpg .adventure-actions {
+  display: flex;
+  gap: 6px;
+}
+
 .dbu-ttrpg .adventure-travel {
-  align-self: flex-start;
+  flex: 0 0 auto;
 }
 
 /* Adventuring Maneuvers: a name to use it, its Time Cost, what is left of its Session Limit. */
