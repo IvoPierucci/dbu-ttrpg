@@ -4538,6 +4538,26 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       [patient] = aimed;
     }
 
+    // Which Knowledge - Recall's "your chosen Specialty", Research's Check - among those with 2+ Ranks
+    // (the user's ruling). Asked where there is more than one, before anything counts.
+    let knowledge = "";
+    if (definition.asksKnowledge === true) {
+      const { knowledgeHeld } = await import("../adventure.mjs");
+      const held = knowledgeHeld(this.actor.system);
+      knowledge = held[0] ?? "";
+      if (held.length > 1) {
+        knowledge = await foundry.applications.api.DialogV2.wait({
+          classes: ["dbu-dialog"],
+          window: { title: `${this.actor.name} - ${definition.name}` },
+          content: "",
+          buttons: [...held.map(key => ({ action: key, label: this.actor.system.skills[key].label })),
+            { action: "cancel", label: "Cancel" }],
+          rejectClose: false
+        });
+        if (!held.includes(knowledge)) return;
+      }
+    }
+
     // Research's "Select a topic" - asked before anything counts, and named on the card.
     let topic = "";
     if (definition.asksTopic === true) {
@@ -4558,7 +4578,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     await this.actor.update({ "system.adventureUses": [...uses, entry.id] });
     const { postAdventuring } = await import("../chat.mjs");
-    return postAdventuring(this.actor, definition, { topic, patient });
+    return postAdventuring(this.actor, definition, { topic, patient,
+      knowledge: knowledge ? (this.actor.system.skills?.[knowledge]?.label ?? "") : "" });
   }
 
   /**

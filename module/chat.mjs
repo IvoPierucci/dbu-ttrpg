@@ -3160,7 +3160,8 @@ async function settleGamble(message, gamble, made) {
  * An Adventuring Maneuver begun: its Time Cost said, and its benefits on a button for when that time
  * has been spent in full. Interrupted, the button is simply never pressed.
  */
-export async function postAdventuring(actor, definition, { repair = null, topic = "", patient = null } = {}) {
+export async function postAdventuring(actor, definition, { repair = null, topic = "", patient = null,
+  knowledge = "" } = {}) {
   const escape = Handlebars.escapeExpression;
   // Full Repair says what it is on, and the hours chosen in place of its "2~10 Hours".
   const time = repair ? `${repair.hours} Hours` : (definition.timeCost ?? "");
@@ -3186,10 +3187,8 @@ export async function postAdventuring(actor, definition, { repair = null, topic 
       // Care's: whom, a quarter of their Life, and the Maneuver they may be treated as having used.
       patient: patient ? { uuid: patient.uuid, name: patient.name, lifeShare: Number(definition.lifeShare) || 4,
         alsoAs: String(definition.alsoAs ?? "").trim().toLowerCase() } : null,
-      // And the Specialty it reads, as written on that Skill - Recall's Knowledge.
-      specialty: definition.effectSpecialty
-        ? String(actor.system.skillSpecializations?.[String(definition.effectSpecialty).trim().toLowerCase()] ?? "").trim()
-        : "",
+      // The Knowledge picked - Recall's and Research's - put where the note says {knowledge}.
+      knowledge,
       // Full Repair's: what, and for how many hours, and the fifths they earn.
       repair: repair ? { ...repair, share: Number(definition.repairShare) || 5, per: Number(definition.repairHours) || 2,
         min: Number(definition.hoursMin) || 2, max: Number(definition.hoursMax) || 10 } : null,
@@ -3231,7 +3230,7 @@ async function settleAdventuring(message, adventuring) {
     await gainCondition(actor, adventuring.gains, 1);
     said.push(getTrait(adventuring.gains)?.name ?? adventuring.gains);
   }
-  if (adventuring.note) said.push(`${actor.name} ${adventuring.note}${adventuring.specialty ? ` (${adventuring.specialty})` : ""}${
+  if (adventuring.note) said.push(`${actor.name} ${adventuring.note.replaceAll("{knowledge}", adventuring.knowledge || "Knowledge")}${
     adventuring.topic ? ` - the topic: ${adventuring.topic}` : ""}`);
   if (adventuring.repair) said.push(await fullRepairDone(actor, adventuring.repair));
   if (adventuring.patient) said.push(await careDone(adventuring.patient));

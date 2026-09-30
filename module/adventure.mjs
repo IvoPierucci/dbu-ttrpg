@@ -374,3 +374,11 @@ export function wealthTN(status) {
   const found = STATUSES.find(entry => entry.label === status);
   return found ? 4 + found.min : null;
 }
+
+/** Knowledge's Specialties, each a Skill of its own. */
+export const KNOWLEDGE_SKILLS = Object.freeze(["knowledge", "knowledgeProfession", "knowledgeHistory"]);
+
+/** The Knowledge Skills a character has so many Ranks in - Recall's and Research's "2+". */
+export function knowledgeHeld(system, least = 2) {
+  return KNOWLEDGE_SKILLS.filter(key => (Number(system?.skills?.[key]?.ranks) || 0) >= least);
+}

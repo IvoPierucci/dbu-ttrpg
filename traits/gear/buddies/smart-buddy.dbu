@@ -29,6 +29,9 @@ text: >
 if ($active == 1) {
   allow maneuver.analysis;
 }
+# "Your Knowledge Skill" - each of Knowledge's three, a Skill of its own now (the user's ruling).
 if (adventuring) {
   skill.knowledge += ceil($buddyAttribute / 4);
+  skill.knowledgeProfession += ceil($buddyAttribute / 4);
+  skill.knowledgeHistory += ceil($buddyAttribute / 4);
 }

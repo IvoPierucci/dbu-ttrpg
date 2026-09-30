@@ -282,7 +282,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
                         specialManeuver: "repair" },
     investigation:    { label: "Investigation",    attribute: "scholarship",
                         specialManeuver: "analysis" },
-    knowledge:        { label: "Knowledge",        attribute: "scholarship", encompassing: true },
+    // Knowledge's Specialties - "Science ... Profession ... History" - each a Skill of its own, as Craft's
+    // are (the user's ruling). `knowledge` is the Science one, so the Ranks a character had are theirs.
+    knowledge:        { label: "Knowledge (Science)", attribute: "scholarship" },
+    knowledgeProfession: { label: "Knowledge (Profession)", attribute: "scholarship" },
+    knowledgeHistory: { label: "Knowledge (History)", attribute: "scholarship" },
     // "2 Skill Ranks in Medicine give the Treatment Maneuver" - the 2+ every Skill grants
     // one at. The sixth entry where the Skill that opens a Maneuver is a Skill that
     // Maneuver rolls, and still not a rule: Bluff opens the Feint and the Dirty Trick rolls
@@ -1596,8 +1600,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     });
 
     // --- Specialisations for Encompassing Skills ---
-    // Craft and Knowledge each cover a field too broad to roll against directly, so
-    // the player writes what theirs is in.
+    // A Skill covering a field too broad to roll against directly, where the player writes what theirs is
+    // in. Craft and Knowledge were; their Specialties are Skills of their own now, and none is left.
     schema.skillSpecializations = new fields.SchemaField(
       Object.fromEntries(
         Object.entries(DBUCharacterData.SKILLS)

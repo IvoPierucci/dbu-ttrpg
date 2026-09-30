@@ -1,13 +1,14 @@
 id: recall
 name: Recall
 prerequisite: 2+ Skill Ranks in Knowledge
-requiresSkill: knowledge
+# Any of Knowledge's three, each a Skill of its own - and which, asked when it is used.
+requiresSkill: knowledge, knowledgeProfession, knowledgeHistory
 requiresRanks: 2
+asksKnowledge: true
 sessionLimit: 1
 timeCost: 1 Minute
-# The information is the ARC's to give: said on the card - with the Specialty chosen for Knowledge.
-effectNote: recalls a piece of information related to their chosen Specialty that may help with the current situation
-effectSpecialty: knowledge
+# The information is the ARC's to give: said on the card - with the Knowledge picked.
+effectNote: recalls a piece of information related to their chosen Specialty ({knowledge}) that may help with the current situation
 source: Core Rule
 description: >
   A minute's thought: a piece of information from your Knowledge Specialty that may help right now.
@@ -21,6 +22,6 @@ text: >
 
 ---
 
-# Offered on the Adventure tab to whoever has 2+ Ranks in Knowledge. The card's button, once the minute
-# is spent, says what it does and names the Specialty written on their Knowledge Skill; what they
-# recall is the ARC's.
+# Offered on the Adventure tab to whoever has 2+ Ranks in any Knowledge - which, asked where they have
+# more than one (the user's ruling). The card's button, once the minute is spent, says what it does and
+# names that Knowledge; what they recall is the ARC's.
