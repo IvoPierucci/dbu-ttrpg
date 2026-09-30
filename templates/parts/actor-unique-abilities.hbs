@@ -36,7 +36,7 @@
                   data-tooltip="Delete this Unique Ability">&#10005;</button>
         </div>
         <div class="maneuver-body">
-          {{#if row.prerequisite}}<div class="dbu-profile-line">&ndash;Prerequisite: {{row.prerequisite}}</div>{{/if}}
+          {{! The entry as printed - its own Prerequisites line among the rest. }}
           {{#each row.lines as |line|}}
           {{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}
           <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>{{/if}}
