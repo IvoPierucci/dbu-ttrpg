@@ -1,0 +1,24 @@
+id: recruit
+name: Recruit
+prerequisite: 2+ Skill Ranks in Persuasion
+requiresSkill: persuasion
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 1 Day
+# The Minion Creation Rules are not in this system: what it does is said on the card.
+effectNote: creates a Minion - its Race decided by the ARC
+source: Core Rule
+description: >
+  A day convincing someone to follow you: a Minion, of a Race the ARC decides.
+text: >
+  Recruit: You convince someone to join your ranks, following you on your adventures.
+  –Prerequisite: 2+ Skill Ranks in Persuasion
+  –Session Limit: 1
+  –Time Cost: 1 Day
+  –Effect: Create a Minion. That Minion’s Race is decided by the ARC.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Persuasion. Once the day is spent the card says
+# a Minion is made, its Race the ARC's: the Minion Creation Rules are not built, so making it is the
+# table's.
