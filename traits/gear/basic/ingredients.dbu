@@ -1,0 +1,47 @@
+id: ingredients
+name: Ingredients
+kind: gear
+# "Adventure Resources count as Basic Items." Given by the ARC or gathered - Scavenge - and never
+# crafted: no Craft DC.
+special: true
+# How many, as its charges: asked when it is given, and changed on its sheet.
+chargesLabel: Ingredients
+chargesAsked: true
+source: Core Rule
+description: >
+  An Adventure Resource: the Ingredients you carry, spent to cook. A Special Ingredient is one of these
+  too - named as such on its sheet.
+text: >
+  Ingredients: Ingredients are an Adventure Resource (see — Adventure) that is used to cook, representing
+  the various Ingredients you have present. You gather Ingredients through various Adventuring Maneuvers
+  (the most prominent of which is the Scavenge Maneuver), though your ARC may enable you to gain them
+  through other means – such as from defeated monsters, or maybe a gift from some people you’ve helped or
+  supporters to your party’s purpose.
+
+  Cooking spends Ingredients to remove or reduce the stages of Hunger.
+
+  Special Ingredients. While normal Ingredients are a typical Adventure Resource, Special Ingredients are
+  unique Ingredients that, while counting as 1 Ingredient each for the effects of Cooking, apply
+  additional benefits to any Meal made with them.
+
+  Special Ingredients are split by Rarity – rated on a scale of 1~3, with the degree of effect that they
+  give becoming greater the higher the Rarity:
+
+  * Uncommon (1). An Uncommon Ingredient is something that can be found occasionally, but is no major
+  call for cheer. The effects of each Uncommon Ingredient should be comparable to an increase of 1(T) to
+  your Strike Rolls, if not slightly better.
+  * Rare (2). A Rare Ingredient is a true delicacy that is worth fighting for. They should come
+  infrequently and with some degree of challenge behind obtaining them. The effects of each Rare
+  Ingredient should be comparable to an increase of 1(T) to all Combat Rolls!
+  * Legendary (3). An absolutely breath-taking, almost one-of-a-kind Ingredient that any chef would kill
+  to cook with. They should be obtained incredibly rarely, with great risk to the party to obtain them.
+  The effects of each Legendary Ingredient should be comparable to a Lesser Awakening.
+
+  All effects granted by a Special Ingredient only apply to the next Combat Encounter after consuming
+  the Meal they were used to make.
+
+---
+
+# A Basic Item on the Gear tab, its count the charges on its row: asked when it is added, changed on its
+# sheet, spent by Cooking. Special Ingredients are not a kind of their own (the user's ruling): one is
+# this Item, renamed on its sheet to say what it is - and what it does is written there, for the table.

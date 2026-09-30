@@ -2305,6 +2305,25 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data.name = `${definition.name} (${set.number}-Star)`;
     }
 
+    // How many, where the file leaves it to whoever gives it - Ingredients, an Adventure Resource.
+    if (definition.chargesAsked === true) {
+      const count = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: definition.name },
+        content: `<label class="dbu-wager"><span>How many</span>
+          <input type="number" name="count" value="1" min="0" step="1" autofocus/></label>`,
+        buttons: [
+          { action: "give", label: "Give", default: true, callback: (event, button, dialog) =>
+            Math.max(0, Math.floor(Number(dialog.element.querySelector('input[name="count"]')?.value) || 0)) },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (typeof count !== "number") return;
+      data.system.charges = count;
+      data.system.chargesMax = count;
+    }
+
     // "Bags of Senzu Beans come in various sizes" - which one, asked now, and its dice are
     // what the charges are rolled with.
     if (data.system.sizes.length) {
