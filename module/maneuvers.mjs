@@ -2836,7 +2836,9 @@ export function maneuverUsesLeft(actor, maneuver) {
   if (!maneuver.usageLimit) return Infinity;
 
   const spent = (actor.system.usedManeuvers ?? []).filter(entry => usedIs(entry, maneuver)).length;
-  return Math.max(0, maneuver.usageLimit.amount - spent);
+  // And what an effect adds to it - Energizing Training's Surge "an additional time".
+  const more = Math.max(0, applySlot(actor.system.effects?.slots, `${maneuver.id}.uses`, 0));
+  return Math.max(0, maneuver.usageLimit.amount + more - spent);
 }
 
 /**

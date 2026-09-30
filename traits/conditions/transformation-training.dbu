@@ -1,0 +1,25 @@
+id: transformation-training
+name: Transformation Training
+kind: conditions
+maxStacks: 1
+# A Training Bonus: not a Combat Condition, and gained on the Adventure tab's Training fold.
+combatCondition: no
+trainingBonus: true
+# "They will only maintain that for a length of time that depends on the ARC": ended by hand.
+endedByHand: true
+source: Core Rule
+description: >
+  Stress Bonus 2 higher, and FO/MA Modifiers 1(T) higher while in a Form or Transcended Enhancement.
+text: >
+  Transformation Training: Unlocking a new Transformation has made this Character more than ready to
+  push their limits and make the most use of it in combat.
+  –Effects: Increase your Stress Bonus by 2 and increase your Attribute Modifiers (FO/MA) by 1(T)
+  while in a Form or Transcended Enhancement.
+
+---
+
+# The Stress Bonus is here. The Modifiers wait on Transformations, which are not in this system: while
+# in a Form or a Transcended Enhancement, that part is the table's.
+
+[passive]
+stressBonus += 2;

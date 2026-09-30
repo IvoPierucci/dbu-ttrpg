@@ -649,6 +649,10 @@ const PATTERNS = [
   { match: /^(\w[\w-]*)\.kiCost$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: () => true,
     doc: "Ki Point Cost of one named Maneuver." },
+  { match: /^(\w[\w-]*)\.uses$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    valid: () => true,
+    doc: "Uses of one named Maneuver's limit, beyond its own - Energizing Training's \"use the Surge "
+       + "Maneuver an additional time during each Combat Encounter\" is `surge.uses += 1`." },
   { match: /^threshold\.(\w+)\.at$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: () => true,
     doc: "Where one Health Threshold falls." },

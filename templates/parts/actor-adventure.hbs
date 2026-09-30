@@ -92,6 +92,7 @@
       <summary class="panel-title">
         {{subject.label}}
         {{#if subject.isReputation}}<span class="panel-note">{{@root.reputation.length}}</span>{{/if}}
+        {{#if subject.isTraining}}<span class="panel-note">{{@root.trainingBonuses.length}}</span>{{/if}}
       </summary>
       {{#if subject.isReputation}}
       {{! Factions and Individuals, each with its Affection and Alarm Rating (0~4) - an Individual under its
@@ -119,6 +120,22 @@
           <span class="reputation-tn" data-tooltip="The TN of Persuasion and of Intimidation Checks against them">TN {{entry.persuasionTN}} / {{entry.intimidationTN}}</span>
           <button type="button" class="maneuver-control" data-action="renameReputation" data-id="{{entry.id}}" data-tooltip="Rename">&#9998;</button>
           <button type="button" class="maneuver-control" data-action="deleteReputation" data-id="{{entry.id}}" data-tooltip="Remove">&#10005;</button>
+        </li>
+        {{/each}}
+      </ul>
+      {{else if subject.isTraining}}
+      {{! Training Bonuses: "temporary effects that grant heightened powers to players for a short period".
+          A published one works by itself; the ARC's own is on its name's hover, for the table. }}
+      <div class="adventure-actions">
+        <button type="button" class="adventure-travel" data-action="gainTrainingBonus">Gain Training Bonus</button>
+      </div>
+      <ul class="reputation-list">
+        {{#each @root.trainingBonuses as |bonus|}}
+        <li class="reputation-row">
+          <span class="reputation-name" data-tooltip="{{bonus.tip}}">{{bonus.name}}</span>
+          {{#if bonus.length}}<span class="reputation-tn">{{bonus.length}}</span>{{/if}}
+          <button type="button" class="edit-toggle" data-action="endTrainingBonus" data-id="{{bonus.id}}"
+                  data-tooltip="Its time has elapsed, or its battle is over.">End</button>
         </li>
         {{/each}}
       </ul>

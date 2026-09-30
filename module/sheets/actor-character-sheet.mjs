@@ -538,6 +538,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       newAdventureSession: DBUCharacterSheet._onNewAdventureSession,
       cancelAdventuringBuff: DBUCharacterSheet._onCancelAdventuringBuff,
       setHunger: DBUCharacterSheet._onSetHunger,
+      gainTrainingBonus: DBUCharacterSheet._onGainTrainingBonus,
+      endTrainingBonus: DBUCharacterSheet._onEndTrainingBonus,
       addReputation: DBUCharacterSheet._onAddReputation,
       stepReputation: DBUCharacterSheet._onStepReputation,
       renameReputation: DBUCharacterSheet._onRenameReputation,
@@ -761,8 +763,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       context.adventureSubjects = [["crafting", "Crafting"], ["reputation", "Reputation"], ["training", "Training"],
         ["wealth", "Wealth"]].map(([key, label]) => ({ key, label,
         open: Boolean(this.#openSections[`adventure-${key}`]),
-        // Reputation has a body of its own: the Factions and Individuals.
-        isReputation: key === "reputation" }));
+        // Reputation has a body of its own: the Factions and Individuals - and Training, its Bonuses.
+        isReputation: key === "reputation",
+        isTraining: key === "training" }));
+      // A published Bonus shows while its mark is held - ended from the Combat tab, it is gone here too.
+      context.trainingBonuses = (this.actor.system.trainingBonuses ?? [])
+        .filter(bonus => !bonus.key || ((Number(this.actor.system.conditions?.[bonus.key]) || 0) > 0))
+        .map(bonus => ({ ...bonus, tip: bonus.key ? (getTrait(bonus.key)?.text ?? "") : bonus.text }));
       const { reputationRows } = await import("../adventure.mjs");
       context.reputation = reputationRows(this.actor.system.reputation ?? []);
       // Each with its entry laid out as printed, and open if it was left open - the Maneuvers
@@ -4820,6 +4827,55 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onSetHunger(event, target) {
     return setCondition(this.actor, "hunger", Math.max(0, Math.min(3, Number(target.dataset.stage) || 0)));
+  }
+
+  /**
+   * A Training Bonus, gained: "you may have players select a single Training Bonus from a series of
+   * Training Bonuses that are offered". One of the published ones - its mark does what it says - or one
+   * the ARC made up, by its name and what it does, for the table. How long it lasts is the ARC's: "until a
+   * particular Combat Encounter" or "a set amount of time", written down.
+   */
+  static async _onGainTrainingBonus() {
+    const escape = Handlebars.escapeExpression;
+    const published = traitsOfKind("conditions").filter(trait => trait.trainingBonus === true);
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.actor.name} - Training Bonus` },
+      content: `<label class="dbu-wager"><span>Bonus</span><select name="key" class="dbu-gear-pick">
+          ${published.map(trait => `<option value="${escape(trait.id)}">${escape(trait.name)}</option>`).join("")}
+          <option value="">One of the ARC's own</option></select></label>
+        <label class="dbu-wager"><span>Its name</span><input type="text" name="name"/><em>The ARC's own only</em></label>
+        <label class="dbu-wager"><span>What it does</span><input type="text" name="text"/><em>The ARC's own only</em></label>
+        <label class="dbu-wager"><span>Lasts</span><input type="text" name="length"
+          placeholder="Until the fight with Cell / For 2 weeks"/></label>`,
+      buttons: [
+        { action: "gain", label: "Gain", default: true, callback: (ev, button, dialog) => {
+          const read = name => String(dialog.element.querySelector(`[name="${name}"]`)?.value ?? "").trim();
+          return { key: read("key"), name: read("name"), text: read("text"), length: read("length") };
+        } },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!chosen || (typeof chosen !== "object")) return;
+    const trait = chosen.key ? getTrait(chosen.key) : null;
+    if (!trait && !chosen.name) {
+      ui.notifications.warn("Name the ARC's Training Bonus.");
+      return;
+    }
+    if (trait) await setCondition(this.actor, trait.id, 1);
+    const kept = (this.actor.system.trainingBonuses ?? []).filter(bonus => !trait || (bonus.key !== trait.id));
+    return this.actor.update({ "system.trainingBonuses": [...kept, { id: foundry.utils.randomID(),
+      key: trait?.id ?? "", name: trait?.name ?? chosen.name, text: trait ? "" : chosen.text, length: chosen.length }] });
+  }
+
+  /** A Training Bonus over - its time elapsed, or its battle fought: gone, and its mark with it. */
+  static async _onEndTrainingBonus(event, target) {
+    const bonuses = this.actor.system.trainingBonuses ?? [];
+    const bonus = bonuses.find(each => each.id === target.dataset.id);
+    if (!bonus) return;
+    if (bonus.key) await setCondition(this.actor, bonus.key, 0);
+    return this.actor.update({ "system.trainingBonuses": bonuses.filter(each => each.id !== bonus.id) });
   }
 
   /**

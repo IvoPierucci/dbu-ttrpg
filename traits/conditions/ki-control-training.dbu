@@ -1,0 +1,26 @@
+id: ki-control-training
+name: Ki Control Training
+kind: conditions
+maxStacks: 1
+# A Training Bonus: not a Combat Condition, and gained on the Adventure tab's Training fold.
+combatCondition: no
+trainingBonus: true
+# "They will only maintain that for a length of time that depends on the ARC": ended by hand.
+endedByHand: true
+source: Core Rule
+description: >
+  Maneuvers cost 1(T) fewer Ki Points, and no Drained.
+text: >
+  Ki Control Training: After training, you feel a deeper connection to your ki and are able to refine
+  its control.
+  –Effects: Reduce the Ki Point Cost of your Maneuvers by 1(T), and you cannot gain the Drained Combat
+  Condition.
+
+---
+
+# The Attacking Maneuvers' Ki Point Cost is the Slot there is; any other Maneuver's cost, 1(T) lower, is
+# the table's.
+
+[passive]
+attack.kiCost -= 1(T);
+forbid condition.drained;

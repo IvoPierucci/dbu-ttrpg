@@ -1,0 +1,28 @@
+id: survival-training
+name: Survival Training
+kind: conditions
+maxStacks: 1
+# A Training Bonus: not a Combat Condition, and gained on the Adventure tab's Training fold.
+combatCondition: no
+trainingBonus: true
+# "They will only maintain that for a length of time that depends on the ARC": ended by hand.
+endedByHand: true
+source: Core Rule
+description: >
+  Soak Value 2(bT) higher, Steadfast Checks 1 better, and 2 more Maximum Life Points for each Power
+  Level.
+text: >
+  Survival Training: After training in a harsh environment and pushing themselves to the limit, this
+  Character has refined their strategies for survival and is ready to engage even the most dangerous
+  threats.
+  –Effects: Increase your Soak Value by 2(bT), the Dice Score of your Steadfast Checks by 1, and your
+  Maximum Life Points by 2 for each Power Level reached.
+
+---
+
+# "By 2 for each Power Level reached" - the Life Points gained per Power Level, 2 more.
+
+[passive]
+soakValue += 2(bT);
+steadfast.dice += 1;
+life.perLevel += 2;

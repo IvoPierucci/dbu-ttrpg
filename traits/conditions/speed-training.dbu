@@ -1,0 +1,23 @@
+id: speed-training
+name: Speed Training
+kind: conditions
+maxStacks: 1
+# A Training Bonus: not a Combat Condition, and gained on the Adventure tab's Training fold.
+combatCondition: no
+trainingBonus: true
+# "They will only maintain that for a length of time that depends on the ARC": ended by hand.
+endedByHand: true
+source: Core Rule
+description: >
+  Awareness and Defense Value 1(bT) higher, Boosted Speed 3(bT).
+text: >
+  Speed Training: After training to push their speed to its limits, this Character is ready to chase
+  down those faster Adversaries and keep them on their toes.
+  –Effects: Increase your Awareness and Defense Value by 1(bT) and your Boosted Speed by 3(bT).
+
+---
+
+[passive]
+awareness += 1(bT);
+defenseValue += 1(bT);
+speed.boosted += 3(bT);

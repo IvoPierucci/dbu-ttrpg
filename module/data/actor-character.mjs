@@ -1493,6 +1493,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       { required: true, initial: [] }
     );
 
+    // Training Bonuses held: a published one by its mark's id (the mark does what it says), or one the ARC
+    // made up, by its name and what it does, for the table - each with how long it lasts, as the ARC says.
+    schema.trainingBonuses = new fields.ArrayField(new fields.SchemaField({
+      id: new fields.StringField({ required: true, blank: false }),
+      key: new fields.StringField({ required: true, blank: true, initial: "" }),
+      name: new fields.StringField({ required: true, blank: true, initial: "" }),
+      text: new fields.StringField({ required: true, blank: true, initial: "" }),
+      length: new fields.StringField({ required: true, blank: true, initial: "" })
+    }), { required: true, initial: [] });
+
     // Reputation: the Factions and Individuals this character keeps track of, each with an Affection
     // and an Alarm Rating (0~4). The player's own list (the user's ruling), in an ArrayField so a
     // removal is a removal.

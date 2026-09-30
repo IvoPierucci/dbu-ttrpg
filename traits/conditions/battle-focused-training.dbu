@@ -1,0 +1,21 @@
+id: battle-focused-training
+name: Battle-Focused Training
+kind: conditions
+maxStacks: 1
+# A Training Bonus: not a Combat Condition, and gained on the Adventure tab's Training fold.
+combatCondition: no
+trainingBonus: true
+# "They will only maintain that for a length of time that depends on the ARC": ended by hand.
+endedByHand: true
+source: Core Rule
+description: >
+  Combat Rolls 1(bT) higher.
+text: >
+  Battle-Focused Training: After training in a manner focused on enhancing their skills in combat,
+  this Character has a lot of new combat experience fresh in their mind.
+  –Effects: Increase your Combat Rolls by 1(bT).
+
+---
+
+[passive]
+combatRolls += 1(bT);

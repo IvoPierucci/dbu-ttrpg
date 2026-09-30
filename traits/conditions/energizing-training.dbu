@@ -1,0 +1,25 @@
+id: energizing-training
+name: Energizing Training
+kind: conditions
+maxStacks: 1
+# A Training Bonus: not a Combat Condition, and gained on the Adventure tab's Training fold.
+combatCondition: no
+trainingBonus: true
+# "They will only maintain that for a length of time that depends on the ARC": ended by hand.
+endedByHand: true
+source: Core Rule
+description: >
+  Surgency 2(bT) higher, and the Surge Maneuver once more each Combat Encounter.
+text: >
+  Energizing Training: After training in a healthy way with plenty of breaks and time to recover, this
+  Character feels energized and ready to face any threat.
+  –Effects: Increase your Surgency by 2(bT) and you may use the Surge Maneuver an additional time
+  during each Combat Encounter.
+
+---
+
+# The extra Surge: a use more on the Surge Maneuver's limit, through `surge.uses`.
+
+[passive]
+surgency += 2(bT);
+surge.uses += 1;
