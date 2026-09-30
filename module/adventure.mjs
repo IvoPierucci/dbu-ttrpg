@@ -142,3 +142,20 @@ export function repairedLoss({ lifeMax = 0, lifeLost = 0, steps = 0, share = 5 }
   const back = steps * Math.floor(Math.max(0, Number(lifeMax) || 0) / (Number(share) || 5));
   return Math.max(0, (Number(lifeLost) || 0) - back);
 }
+
+/**
+ * Care, done: "They regain Life Points equal to 1/4 of their maximum", and - where they take it - "treated
+ * as if they used the Rest Maneuver": that one's share of Life and Ki on top. Each up to its maximum,
+ * rounded down. What they are left at.
+ */
+export function caredFor({ life, ki }, { lifeShare = 4, restShare = 0 } = {}) {
+  const lifeMax = Math.max(0, Number(life?.max) || 0);
+  const kiMax = Math.max(0, Number(ki?.max) || 0);
+  let lifeNow = Math.min(lifeMax, (Number(life?.value) || 0) + Math.floor(lifeMax / (Number(lifeShare) || 4)));
+  let kiNow = Number(ki?.value) || 0;
+  if (restShare) {
+    lifeNow = Math.min(lifeMax, lifeNow + Math.floor(lifeMax / restShare));
+    kiNow = Math.min(kiMax, kiNow + Math.floor(kiMax / restShare));
+  }
+  return { life: Math.max(Number(life?.value) || 0, lifeNow), ki: Math.max(Number(ki?.value) || 0, kiNow) };
+}

@@ -4432,6 +4432,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       return;
     }
 
+    // Care's "Target a Character": the one token targeted, themselves included.
+    let patient = null;
+    if (definition.targetsCharacter === true) {
+      const aimed = Array.from(game.user.targets ?? []).map(token => token.actor).filter(Boolean);
+      if (aimed.length !== 1) {
+        ui.notifications.warn(`${this.actor.name}: target the one Character for ${definition.name}.`);
+        return;
+      }
+      [patient] = aimed;
+    }
+
     // Research's "Select a topic" - asked before anything counts, and named on the card.
     let topic = "";
     if (definition.asksTopic === true) {
@@ -4451,7 +4462,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     await this.actor.update({ "system.adventureUses": [...uses, entry.id] });
     const { postAdventuring } = await import("../chat.mjs");
-    return postAdventuring(this.actor, definition, { topic });
+    return postAdventuring(this.actor, definition, { topic, patient });
   }
 
   /**

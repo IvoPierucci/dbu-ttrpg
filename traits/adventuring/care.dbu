@@ -1,0 +1,33 @@
+id: care
+name: Care
+prerequisite: 2+ Skill Ranks in Medicine
+requiresSkill: medicine
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 2 Hours
+# "Target a Character." The one token targeted - themselves too.
+targetsCharacter: true
+# "They regain Life Points equal to 1/4 of their maximum."
+lifeShare: 4
+# "That Character may also be treated as if they used the Rest Maneuver (this does not count towards the
+# Rest Maneuver's Session Limit)." Offered when it is done; the Rest's own use is not touched.
+alsoAs: rest
+source: Core Rule
+description: >
+  Two hours tending someone: a quarter of their Life Points back - and, if they like, a Rest's worth
+  too, without spending their Rest.
+text: >
+  Care: You provide extensive medical intervention for someone who has been injured.
+  –Prerequisite: 2+ Skill Ranks in Medicine
+  –Session Limit: 1
+  –Time Cost: 2 Hours
+  –Effect: Target a Character. They regain Life Points equal to 1/4 of their maximum. That Character
+  may also be treated as if they used the Rest Maneuver (this does not count towards the Rest
+  Maneuver’s Session Limit).
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Medicine. Used at the one token targeted;
+# the card names them. Once the two hours are spent, its button gives them a quarter of their most
+# Life Points, and asks whether they are also treated as having Rested - half their Life and Ki Points,
+# the Rest Maneuver's own - which leaves their Rest unspent.

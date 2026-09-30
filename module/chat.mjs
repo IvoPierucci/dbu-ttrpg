@@ -3120,14 +3120,14 @@ async function settleGamble(message, gamble, made) {
  * An Adventuring Maneuver begun: its Time Cost said, and its benefits on a button for when that time
  * has been spent in full. Interrupted, the button is simply never pressed.
  */
-export async function postAdventuring(actor, definition, { repair = null, topic = "" } = {}) {
+export async function postAdventuring(actor, definition, { repair = null, topic = "", patient = null } = {}) {
   const escape = Handlebars.escapeExpression;
   // Full Repair says what it is on, and the hours chosen in place of its "2~10 Hours".
   const time = repair ? `${repair.hours} Hours` : (definition.timeCost ?? "");
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${escape(actor.name)} begins ${escape(definition.name)}${repair ? ` on ${escape(repair.itemName)}` : ""}${
-      topic ? ` into ${escape(topic)}` : ""} - `
+      topic ? ` into ${escape(topic)}` : ""}${patient ? ` for ${escape(patient.name)}` : ""} - `
       + `${escape(time)}. Interrupted, or without the full Time Cost, there are no benefits.</p>`,
     flags: { [SCOPE]: { [ADVENTURING_FLAG]: {
       actorUuid: actor.uuid, id: definition.id, name: definition.name,
@@ -3138,6 +3138,9 @@ export async function postAdventuring(actor, definition, { repair = null, topic 
       note: String(definition.effectNote ?? "").trim(),
       // Research's topic.
       topic,
+      // Care's: whom, a quarter of their Life, and the Maneuver they may be treated as having used.
+      patient: patient ? { uuid: patient.uuid, name: patient.name, lifeShare: Number(definition.lifeShare) || 4,
+        alsoAs: String(definition.alsoAs ?? "").trim().toLowerCase() } : null,
       // And the Specialty it reads, as written on that Skill - Recall's Knowledge.
       specialty: definition.effectSpecialty
         ? String(actor.system.skillSpecializations?.[String(definition.effectSpecialty).trim().toLowerCase()] ?? "").trim()
@@ -3186,7 +3189,28 @@ async function settleAdventuring(message, adventuring) {
   if (adventuring.note) said.push(`${actor.name} ${adventuring.note}${adventuring.specialty ? ` (${adventuring.specialty})` : ""}${
     adventuring.topic ? ` - the topic: ${adventuring.topic}` : ""}`);
   if (adventuring.repair) said.push(await fullRepairDone(actor, adventuring.repair));
+  if (adventuring.patient) said.push(await careDone(adventuring.patient));
   return settledNote(message, `${actor.name} finishes ${adventuring.name}${said.length ? `: ${said.join(", ")}` : ""}.`);
+}
+
+/**
+ * Care's two hours spent: a quarter of the patient's Life Points, and - asked, since they "may" - the
+ * Rest Maneuver's own as well, which leaves their Rest unspent.
+ */
+async function careDone(patient) {
+  const target = fromUuidSync(patient.uuid);
+  if (!target) return `${patient.name} is gone`;
+  const rest = patient.alsoAs ? getTrait(patient.alsoAs) : null;
+  const also = rest ? await pick(`Care - ${target.name}`,
+    `Is ${target.name} also treated as if they used the ${rest.name} Maneuver? It does not count towards its Session Limit.`,
+    [{ action: "yes", label: `Also ${rest.name}` }, { action: "no", label: "Care only" }]) : null;
+  const { caredFor } = await import("./adventure.mjs");
+  const now = caredFor(target.system, { lifeShare: patient.lifeShare,
+    restShare: (also === "yes") ? (Number(rest?.regainShare) || 0) : 0 });
+  const life = now.life - target.system.life.value;
+  const ki = now.ki - target.system.ki.value;
+  await requestActorUpdate(target, { "system.life.value": now.life, "system.ki.value": now.ki });
+  return `${target.name} regains ${life} Life${ki ? ` and ${ki} Ki` : ""} Points${(also === "yes") ? ` (with the ${rest.name})` : ""}`;
 }
 
 /**
