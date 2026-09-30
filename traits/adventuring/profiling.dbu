@@ -1,0 +1,37 @@
+id: profiling
+name: Profiling
+prerequisite: 2+ Skill Ranks in Intuition
+requiresSkill: intuition
+requiresRanks: 2
+# "Session Limit: Infinite."
+sessionLimit: infinite
+timeCost: 1 Minute
+# "Target a Character you can see. Make a Clash (Intuition vs Bluff/Intuition) against that Character."
+clashSkill: intuition
+clashDefenderSkills: bluff, intuition
+# "You cannot target the same Character with the Profiling Maneuver more than once during an
+# Adventuring Session."
+oncePerTarget: true
+source: Core Rule
+description: >
+  An Intuition Clash against someone's Bluff or Intuition: the ARC tells you about their personality
+  and intentions - true if you win, false if you lose. Once for each Character in an Adventuring
+  Session.
+text: >
+  Profiling: You build a detailed personality profile about an individual, determining whether or not
+  they are a potential threat.
+  –Prerequisite: 2+ Skill Ranks in Intuition
+  –Session Limit: Infinite
+  –Time Cost: 1 Minute
+  –Effect: Target a Character you can see. Make a Clash (Intuition vs Bluff/Intuition) against that
+  Character. If you win or lose, the ARC will supply you with information about that Character’s
+  personality and their intentions. If you win, this information will be true. If you lose, this
+  information will be false. You cannot target the same Character with the Profiling Maneuver more than
+  once during an Adventuring Session.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Intuition, with no Session Limit. Used at the
+# one token targeted - refused if they were already Profiled this Adventuring Session - and the Clash
+# card opens at once. Nothing is added when it settles (the user's ruling): the Clash is seen, and what
+# the ARC tells them - true or false - is the table's.
