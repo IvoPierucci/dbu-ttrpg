@@ -92,8 +92,10 @@ export function targetPenalty(uses, id, targetUuid, per) {
  * Stretch's "2+ Skill Ranks in Acrobatics". One that is not met is not offered.
  */
 export function meetsPrerequisite(definition, system) {
-  const skill = String(definition?.requiresSkill ?? "").trim().toLowerCase();
-  if (!skill) return false;
+  const said = String(definition?.requiresSkill ?? "").trim();
+  if (!said) return false;
+  // The Skill's own key, whatever case the file wrote it in - `creatureHandling`.
+  const skill = Object.keys(system?.skills ?? {}).find(key => key.toLowerCase() === said.toLowerCase()) ?? said;
   const ranks = Number(system?.skills?.[skill]?.ranks) || 0;
   if (ranks < (Number(definition.requiresRanks) || 0)) return false;
   // And a Specialty of it, where it names one - Tune Up's "Craft (Vehicles)", ticked on the Skill.

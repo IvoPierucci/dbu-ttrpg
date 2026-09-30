@@ -1,0 +1,25 @@
+id: tame
+name: Tame
+prerequisite: 2+ Skill Ranks in Animal Handling
+# "Animal Handling" is the Creature Handling Skill (the user's ruling).
+requiresSkill: creatureHandling
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 1 Day
+# The Minion Creation Rules are not in this system: what it does is said on the card.
+effectNote: creates a Minion of the Animal Minion Race
+source: Core Rule
+description: >
+  A day with a wild animal: a Minion of the Animal Minion Race, following your lead.
+text: >
+  Tame: You subdue a wild animal, teaching it to follow your lead.
+  –Prerequisite: 2+ Skill Ranks in Animal Handling
+  –Session Limit: 1
+  –Time Cost: 1 Day
+  –Effect: Create a Minion. This Minion must be of the Animal Minion Race.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Creature Handling - the entry's "Animal
+# Handling" (the user's ruling). Once the day is spent, the card says a Minion of the Animal Minion
+# Race is made: the Minion Creation Rules are not built, so making it is the table's.

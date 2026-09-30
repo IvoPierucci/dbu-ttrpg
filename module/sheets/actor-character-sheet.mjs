@@ -4423,14 +4423,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const { targetPenalty } = await import("../adventure.mjs");
       await this.actor.update({ "system.adventureUses": [...uses, ...aimed.map(victim => `${entry.id}@${victim.uuid}`)] });
       const list = raw => (Array.isArray(raw) ? raw : String(raw ?? "").split(","))
-        .map(each => String(each).trim().toLowerCase()).filter(Boolean);
+        .map(each => String(each).trim()).filter(Boolean);
       const { postSkillClash } = await import("../chat.mjs");
       for (const victim of aimed) {
         const penalty = targetPenalty(uses, entry.id, victim.uuid, definition.targetPenalty);
         await postSkillClash(this.actor, victim, {
           name: definition.name,
           type: "adventuring",
-          clash: { skill: String(definition.clashSkill).trim().toLowerCase(), defenderSkills: list(definition.clashDefenderSkills) }
+          clash: { skill: String(definition.clashSkill).trim(), defenderSkills: list(definition.clashDefenderSkills) }
         }, {
           challengerRows: penalty ? [{ label: `${definition.name} (${victim.name}, again)`, value: -penalty }] : [],
           ...(definition.steals ? { pickpocket: { steals: String(definition.steals).trim().toLowerCase(), applied: false } } : {}),
