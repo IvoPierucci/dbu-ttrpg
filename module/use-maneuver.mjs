@@ -2521,6 +2521,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ui.notifications.warn(`${maneuver.name} is played from an Ally's attack card, with its United Attack button.`);
     return false;
   }
+  // A Counter Unique Ability answers an attack aimed at you - the Afterimage Technique - so it is played from
+  // that attack's Respond, never from the sheet or the hotbar.
+  if ((maneuver.type === "counter") && (maneuver.tags ?? []).includes("uniqueAbility")) {
+    ui.notifications.warn(`${maneuver.name} is a Counter Maneuver: use Respond on the card of the attack aimed at you.`);
+    return false;
+  }
   // The Duel answers an attack aimed at you, so it is played from that attack's Respond.
   if (maneuver.duel) {
     ui.notifications.warn(`${maneuver.name} answers an attack aimed at you: use Respond on that attack's card.`);

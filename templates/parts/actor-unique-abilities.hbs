@@ -20,9 +20,14 @@
       <li class="maneuver{{#if row.open}} maneuver-open{{/if}}" data-item-id="{{row.itemId}}" draggable="true">
         <div class="maneuver-head" data-action="toggleManeuver">
           <span class="maneuver-mark" aria-hidden="true"></span>
+          {{#if row.playable}}
           <button type="button" class="maneuver-name rollable" data-action="useManeuver" data-item-id="{{row.itemId}}">{{row.name}}</button>
-          <span class="maneuver-uses">{{row.type}}</span>
-          <span class="maneuver-cost">{{row.actions}} Actions</span>
+          {{else}}
+          {{! A Counter: played from Respond on the card of the attack aimed at you. }}
+          <span class="maneuver-name maneuver-triggered" data-tooltip="A {{row.maneuverType}} Maneuver: played from Respond on the card of the attack aimed at you">{{row.name}}</span>
+          {{/if}}
+          <span class="maneuver-uses">{{row.type}} &middot; {{row.maneuverType}}</span>
+          <span class="maneuver-cost">{{row.actions}}</span>
           <span class="maneuver-cost">{{row.kp}} KP</span>
           <span class="maneuver-cost">{{row.tp}} TP</span>
           <button type="button" class="maneuver-control" data-action="editItem" data-item-id="{{row.itemId}}"

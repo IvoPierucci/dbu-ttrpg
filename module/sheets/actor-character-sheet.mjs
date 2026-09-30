@@ -1739,9 +1739,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       return {
         itemId: item.id,
         name: item.name,
+        // A Counter or an Out-of-Sequence one is played from the card it answers, not from here - as the
+        // Maneuvers tab's are.
+        playable: !["counter", "outOfSequence"].includes(item.system.type),
+        maneuverType: MANEUVER_TYPES[item.system.type]?.label ?? item.system.type,
         type: UNIQUE_TYPES[uniqueTypeOf(unique)]?.label ?? UNIQUE_TYPES[unique.uaType]?.label ?? "",
         kp: maneuverKiCost(definitionOf(item), null, actor),
-        actions: item.system.actionCost,
+        actions: MANEUVER_TYPES[item.system.type]?.action
+          ? `${item.system.actionCost} ${MANEUVER_TYPES[item.system.type].action.charAt(0).toUpperCase()}`
+            + `${MANEUVER_TYPES[item.system.type].action.slice(1)} Action${(item.system.actionCost === 1) ? "" : "s"}`
+          : "No Action",
         tp: tp.total,
         prerequisite: unique.prerequisite,
         advancements: unique.advancements.filter(entry => entry.bought).map(entry => ({ label: entry.name, tip: entry.text })),
