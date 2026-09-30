@@ -127,3 +127,18 @@ export function regainedShare(share, { life, ki }) {
   };
   return { life: back(life), ki: back(ki) };
 }
+
+/**
+ * Full Repair's "1/5 of their respective maximums for every 2 hours spent": the fifths earned by so
+ * many hours. Any hour from 2 to 10 may be spent (the user's ruling); an odd one rounds down.
+ */
+export function repairSteps(hours, { per = 2, min = 2, max = 10 } = {}) {
+  const spent = Math.min(max, Math.max(min, Math.floor(Number(hours) || 0)));
+  return Math.floor(spent / (Number(per) || 2));
+}
+
+/** The Life Points a Weapon is left having lost, so many fifths of its most given back. */
+export function repairedLoss({ lifeMax = 0, lifeLost = 0, steps = 0, share = 5 } = {}) {
+  const back = steps * Math.floor(Math.max(0, Number(lifeMax) || 0) / (Number(share) || 5));
+  return Math.max(0, (Number(lifeLost) || 0) - back);
+}

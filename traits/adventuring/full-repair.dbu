@@ -1,0 +1,35 @@
+id: full-repair
+name: Full Repair
+prerequisite: 2+ Skill Ranks in Craft
+requiresSkill: craft
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 2~10 Hours
+# How long, asked when it is used: any hour from 2 to 10.
+hoursMin: 2
+hoursMax: 10
+# "Regains Life ... equal to 1/5 of their respective maximums for every 2 hours spent."
+fullRepair: true
+repairShare: 5
+repairHours: 2
+source: Core Rule
+description: >
+  Two to ten hours on a Vehicle, a Battle Jacket or a Weapon: a fifth of its Life Points back - and a
+  Battle Jacket's Ki Points - for every 2 hours.
+text: >
+  Full Repair: You painstakingly repair damage to your vehicle, replacing damaged parts and ensuring
+  full funtionality.
+  –Prerequisite: 2+ Skill Ranks in Craft
+  –Session Limit: 1
+  –Time Cost: 2~10 Hours
+  –Effect: Select a Vehicle or Battle Jacket. It regains Life and (for the Battle Jacket) Ki Points
+  equal to 1/5 of their respective maximums for every 2 hours spent on the Full Repair Maneuver.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Craft - and it is what a Weapon's Repair on
+# the Gear tab does: "To repair a Weapon, use the Full Repair Adventuring Maneuver" (the user's ruling:
+# Weapons too). Asked: which - one of their Weapons, or a Vehicle or Battle Jacket - and how many
+# hours, 2 to 10; every full 2 is a fifth (5 hours is two fifths). The use counts at once; the card's
+# button, once the hours are spent, gives the Weapon its Life Points back (a destroyed one comes back).
+# Vehicles and Battle Jackets are not built: for those the card says what they regain.

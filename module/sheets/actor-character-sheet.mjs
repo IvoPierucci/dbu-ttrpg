@@ -2483,19 +2483,23 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onRepairGear(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
-    // A Weapon: "To repair a Weapon, use the Full Repair Adventuring Maneuver." There are no
-    // Adventuring Maneuvers here, so this is what making it does - broken or not, whole again.
+    // A Weapon: "To repair a Weapon, use the Full Repair Adventuring Maneuver" - which it is: its
+    // Prerequisite, its Session Limit, the hours asked, and the Life Points once they are spent.
     if (item?.system.crafted?.kind === "weapon") {
-      if (game.combat?.started) {
-        ui.notifications.warn("Weapons are not repaired in a Combat Encounter.");
+      const { adventuringManeuvers, whyNotAdventuring } = await import("../adventure.mjs");
+      const definition = getTrait("full-repair");
+      const entry = adventuringManeuvers(definition ? [definition] : [], this.actor.system.adventureUses ?? [],
+        this.actor.system)[0];
+      if (!entry) {
+        ui.notifications.warn(`${this.actor.name}: Full Repair needs 2+ Skill Ranks in Craft.`);
         return;
       }
-      await item.update({ "system.crafted.lifeLost": 0, "system.crafted.destroyed": false });
-      return ChatMessage.create({
-        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-        content: `<p>${Handlebars.escapeExpression(this.actor.name)} repairs `
-          + `${Handlebars.escapeExpression(item.name)}: its Life Points are whole again.</p>`
-      });
+      const refused = whyNotAdventuring(entry, { adventuring: this.actor.system.adventuring });
+      if (refused) {
+        ui.notifications.warn(`${this.actor.name}: ${refused}`);
+        return;
+      }
+      return this.#startFullRepair(entry, definition, item.id);
     }
     if (!item?.system.crafted?.kind || item.system.crafted.destroyed) return;
     if (game.combat?.started) {
@@ -4392,6 +4396,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
     const definition = getTrait(entry.id);
 
+    // Full Repair: what, and for how long, asked first.
+    if (definition.fullRepair === true) return this.#startFullRepair(entry, definition, "");
+
     // A Clash at a Character - Pickpocket's "Target a Character. Make a Clash (Thievery vs
     // Perception/Thievery)". At the one token targeted, and every earlier attempt on them this
     // Adventuring Session a penalty on the challenger's side.
@@ -4428,6 +4435,44 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     await this.actor.update({ "system.adventureUses": [...uses, entry.id] });
     const { postAdventuring } = await import("../chat.mjs");
     return postAdventuring(this.actor, definition);
+  }
+
+  /**
+   * Full Repair, begun: "Select a Vehicle or Battle Jacket" - or one of their Weapons, the user's
+   * ruling after "To repair a Weapon, use the Full Repair Adventuring Maneuver" - and the hours spent,
+   * 2 to 10. The use counts once both are said; the card gives the Life Points once they are spent.
+   */
+  async #startFullRepair(entry, definition, itemId) {
+    const escape = Handlebars.escapeExpression;
+    const weapons = this.actor.items.filter(item => (item.system.crafted?.kind === "weapon")
+      && (((Number(item.system.crafted.lifeLost) || 0) > 0) || item.system.crafted.destroyed));
+    const min = Number(definition.hoursMin) || 2;
+    const max = Number(definition.hoursMax) || 10;
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.actor.name} - ${definition.name}` },
+      content: `<label class="dbu-wager"><span>Repair</span>
+          <select name="what">${weapons.map(item => `<option value="${item.id}" ${(item.id === itemId) ? "selected" : ""}>${
+            escape(item.name)}</option>`).join("")}<option value="vehicle">A Vehicle or Battle Jacket</option></select></label>
+        <label class="dbu-wager"><span>Hours</span>
+          <input type="number" name="hours" value="${min}" min="${min}" max="${max}" step="1"/>
+          <em>1/5 of the most for every 2</em></label>`,
+      buttons: [
+        { action: "repair", label: "Begin", default: true, callback: (event, button, dialog) => ({
+          what: dialog.element.querySelector('select[name="what"]')?.value ?? "vehicle",
+          hours: Math.min(max, Math.max(min, Math.floor(Number(dialog.element.querySelector('input[name="hours"]')?.value) || min)))
+        }) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!chosen || (typeof chosen !== "object")) return;
+    const item = (chosen.what === "vehicle") ? null : this.actor.items.get(chosen.what);
+    await this.actor.update({ "system.adventureUses": [...(this.actor.system.adventureUses ?? []), entry.id] });
+    const { postAdventuring } = await import("../chat.mjs");
+    return postAdventuring(this.actor, definition, {
+      repair: { itemId: item?.id ?? "", itemName: item?.name ?? "a Vehicle or Battle Jacket", hours: chosen.hours }
+    });
   }
 
   /**

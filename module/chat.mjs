@@ -3120,12 +3120,14 @@ async function settleGamble(message, gamble, made) {
  * An Adventuring Maneuver begun: its Time Cost said, and its benefits on a button for when that time
  * has been spent in full. Interrupted, the button is simply never pressed.
  */
-export async function postAdventuring(actor, definition) {
+export async function postAdventuring(actor, definition, { repair = null } = {}) {
   const escape = Handlebars.escapeExpression;
+  // Full Repair says what it is on, and the hours chosen in place of its "2~10 Hours".
+  const time = repair ? `${repair.hours} Hours` : (definition.timeCost ?? "");
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p>${escape(actor.name)} begins ${escape(definition.name)} - ${escape(definition.timeCost ?? "")}. `
-      + "Interrupted, or without the full Time Cost, there are no benefits.</p>",
+    content: `<p>${escape(actor.name)} begins ${escape(definition.name)}${repair ? ` on ${escape(repair.itemName)}` : ""} - `
+      + `${escape(time)}. Interrupted, or without the full Time Cost, there are no benefits.</p>`,
     flags: { [SCOPE]: { [ADVENTURING_FLAG]: {
       actorUuid: actor.uuid, id: definition.id, name: definition.name,
       share: Number(definition.regainShare) || 0,
@@ -3133,6 +3135,9 @@ export async function postAdventuring(actor, definition) {
       gains: String(definition.gains ?? "").trim().toLowerCase(),
       // What it does that the system cannot, said once it is done - Tune Up's Vehicle.
       note: String(definition.effectNote ?? "").trim(),
+      // Full Repair's: what, and for how many hours, and the fifths they earn.
+      repair: repair ? { ...repair, share: Number(definition.repairShare) || 5, per: Number(definition.repairHours) || 2,
+        min: Number(definition.hoursMin) || 2, max: Number(definition.hoursMax) || 10 } : null,
       applied: false
     } } }
   });
@@ -3172,7 +3177,30 @@ async function settleAdventuring(message, adventuring) {
     said.push(getTrait(adventuring.gains)?.name ?? adventuring.gains);
   }
   if (adventuring.note) said.push(`${actor.name} ${adventuring.note}`);
+  if (adventuring.repair) said.push(await fullRepairDone(actor, adventuring.repair));
   return settledNote(message, `${actor.name} finishes ${adventuring.name}${said.length ? `: ${said.join(", ")}` : ""}.`);
+}
+
+/**
+ * Full Repair's hours spent: "It regains Life and (for the Battle Jacket) Ki Points equal to 1/5 of
+ * their respective maximums for every 2 hours spent." A Weapon's Life Points given back here - a
+ * destroyed one comes back with them; a Vehicle's or a Battle Jacket's said, since those are not built.
+ */
+async function fullRepairDone(actor, repair) {
+  const { repairSteps, repairedLoss } = await import("./adventure.mjs");
+  const steps = repairSteps(repair.hours, repair);
+  const item = repair.itemId ? actor.items.get(repair.itemId) : null;
+  if (!repair.itemId) {
+    return `${repair.itemName} regains ${steps}/${repair.share} of its Life Points (and a Battle Jacket of its Ki Points)`;
+  }
+  if (!item) return `${repair.itemName} is gone`;
+  const { craftedReading } = await import("./gear.mjs");
+  const lifeMax = craftedReading(item.system.crafted, { getTrait, difficulties: {}, data: actor.system })?.lifeMax ?? 0;
+  const before = item.system.crafted.destroyed ? lifeMax : (Number(item.system.crafted.lifeLost) || 0);
+  const lifeLost = repairedLoss({ lifeMax, lifeLost: before, steps, share: repair.share });
+  await item.update({ "system.crafted.lifeLost": lifeLost,
+    ...((lifeLost < lifeMax) ? { "system.crafted.destroyed": false } : {}) });
+  return `${item.name} regains ${before - lifeLost} Life Points (${lifeMax - lifeLost}/${lifeMax})`;
 }
 
 function renderCurePoison(message, html) {
