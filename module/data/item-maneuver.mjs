@@ -613,6 +613,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         libraryId: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** Its Effect makes an Item - Magical Materialization (use-maneuver.mjs askMaterialize). */
         materialize: new fields.BooleanField({ required: true, initial: false }),
+        /** Its Effect moves an Opponent up the Initiative Order - Precognition (use-maneuver.mjs askPrecognition). */
+        precognition: new fields.BooleanField({ required: true, initial: false }),
         /**
          * A Counter that raises the Defense Value against the attack it answers - the Afterimage Technique's
          * 2(T), `defense` per Tier - and what it offers out of sequence if that attack is avoided.

@@ -17,10 +17,13 @@
 
     <ul class="maneuver-list technique-list">
       {{#each uniqueAbilities.rows as |row|}}
-      <li class="maneuver{{#if row.open}} maneuver-open{{/if}}" data-item-id="{{row.itemId}}" draggable="true">
+      <li class="maneuver{{#if row.open}} maneuver-open{{/if}}" data-item-id="{{row.itemId}}" {{#unless row.grantedBy}}draggable="true"{{/unless}}>
         <div class="maneuver-head" data-action="toggleManeuver">
           <span class="maneuver-mark" aria-hidden="true"></span>
-          {{#if row.playable}}
+          {{#if row.grantedBy}}
+          <button type="button" class="maneuver-name rollable" data-action="useGrantedUnique" data-unique-id="{{row.libraryId}}"
+                  data-tooltip="Given by {{row.grantedBy}}, while it is Active">{{row.name}}</button>
+          {{else if row.playable}}
           <button type="button" class="maneuver-name rollable" data-action="useManeuver" data-item-id="{{row.itemId}}">{{row.name}}</button>
           {{else}}
           {{! A Counter: played from Respond on the card of the attack aimed at you. }}
@@ -29,11 +32,15 @@
           <span class="maneuver-uses">{{row.type}} &middot; {{row.maneuverType}}</span>
           <span class="maneuver-cost">{{row.actions}}</span>
           <span class="maneuver-cost">{{row.kp}} KP</span>
+          {{#if row.grantedBy}}
+          <span class="maneuver-cost">{{row.grantedBy}}</span>
+          {{else}}
           <span class="maneuver-cost">{{row.tp}} TP</span>
           <button type="button" class="maneuver-control" data-action="editItem" data-item-id="{{row.itemId}}"
                   data-tooltip="Edit this Unique Ability">&#9998;</button>
           <button type="button" class="maneuver-control" data-action="deleteTechnique" data-item-id="{{row.itemId}}"
                   data-tooltip="Delete this Unique Ability">&#10005;</button>
+          {{/if}}
         </div>
         <div class="maneuver-body">
           {{! The entry as printed - its own Prerequisites line among the rest. }}

@@ -67,6 +67,14 @@ export const NOT_GRAPPLING = Object.freeze({
 async function startRound(combat) {
   const { EDGES, edgeReached } = await import("./durations.mjs");
 
+  // Precognition's "for this Combat Round": whoever it moved goes back to their own Initiative.
+  for (const combatant of combat.combatants ?? []) {
+    const kept = combatant.getFlag?.("dbu-ttrpg", "foreseen");
+    if (typeof kept !== "number") continue;
+    await combatant.update({ initiative: kept });
+    await combatant.unsetFlag("dbu-ttrpg", "foreseen");
+  }
+
   for (const actor of combatants(combat)) {
     // Before anything else this Round. "Until the end of the Combat Round" ends here -
     // the start of the next one is the end of the last from where this stands, since
@@ -75,6 +83,7 @@ async function startRound(combat) {
     await edgeReached(actor, EDGES.ROUND);
 
     await actor.update(newRoundFor(actor));
+    if (actor.system.foresight?.opponentUuid) await actor.update({ "system.foresight": FORESEEN_NOTHING });
     await fireMoment(actor, "start-of-round");
 
     // "At the end of each Combat Round ... you lose a stack of Held Breath." The end of
@@ -144,6 +153,22 @@ export const NOT_CHARGING = Object.freeze({
  */
 export async function stopCharging(actor) {
   if (actor.system.conditions?.["guard-down"]) await setCondition(actor, "guard-down", 0);
+}
+
+/** Nothing foreseen - Precognition's turn over, or its Round. */
+export const FORESEEN_NOTHING = Object.freeze({ opponentUuid: "", opponentName: "", active: false });
+
+/**
+ * Precognition, as the Opponent it moved up takes their turn: "you gain 1 Counter Action to use during their
+ * turn and increase your Strike and Dodge Rolls against that Opponent by 1(T) for the duration of that turn".
+ * On as it begins, off as it ends.
+ */
+async function foresee(combat, actor, arriving) {
+  for (const seer of combatants(combat)) {
+    const foresight = seer.system.foresight;
+    if (!foresight?.opponentUuid || (foresight.opponentUuid !== actor.uuid)) continue;
+    await seer.update({ "system.foresight": arriving ? { ...foresight, active: true } : FORESEEN_NOTHING });
+  }
 }
 
 export function newRoundFor(actor) {
@@ -482,6 +507,7 @@ export function registerCombatHooks() {
     // Actor rather than the one in the sidebar it was made from.
     const leaving = previous?.combatantId
       ? combat.combatants.get(previous.combatantId)?.actor : null;
+    if (leaving) await foresee(combat, leaving, false);
     if (leaving?.type === "character") {
       await fireMoment(leaving, "end-of-turn");
 
@@ -518,6 +544,7 @@ export function registerCombatHooks() {
     }
 
     const arriving = combat.combatant?.actor;
+    if (arriving) await foresee(combat, arriving, true);
     if ((arriving?.type === "character") && !await beginTurn(arriving)) {
       return combat.nextTurn();
     }
@@ -545,7 +572,8 @@ export function registerCombatHooks() {
         // A charge that was never thrown does not follow you out of the Encounter,
         // and neither does a hold: a Grapple is a hold in a fight, and the fight is over.
         ...NOT_CHARGING,
-        ...NOT_GRAPPLING
+        ...NOT_GRAPPLING,
+        "system.foresight": FORESEEN_NOTHING
       });
       await stopCharging(actor);
       // Every clock stops here, not only the ones counting the Encounter: a turn edge

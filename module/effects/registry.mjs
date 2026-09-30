@@ -8,7 +8,7 @@
  * changing.
  */
 
-import { uniqueScriptOf } from "../unique.mjs";
+import { grantedUniques, uniqueScriptOf } from "../unique.mjs";
 import { legacyToProgram } from "./migrate.mjs";
 import { compile as compileScript } from "./parser.mjs";
 import { PRIORITY } from "./interpreter.mjs";
@@ -325,6 +325,17 @@ function buddyPrograms(actor, report, { baseTier = 1, skills = {} } = {}) {
       level: 0,
       stacks: 1
     });
+  }
+  // The Unique Ability an Active Buddy gives access to - the Oracle Fish's Precognition - and so its Passive.
+  const active = buddiesOf(Array.from(actor.items ?? [])).find(item => item.system?.buddy?.active) ?? null;
+  for (const id of grantedUniques(active, actor.items, (item, key) => buddyHeader(item, getTrait, key))) {
+    const trait = getTrait(id);
+    if (!trait?.script) continue;
+    const { program, errors } = compile(`buddy:${active.id}:${id}`, { script: trait.script },
+      message => report(`${trait.name}: ${message}`));
+    if (errors.length) continue;
+    entries.push({ program, priority: PRIORITY.talent, sourceId: `${active.id}:${id}`, sourceUuid: active.uuid ?? null,
+      sourceName: `${trait.name} (${active.name})`, level: 0, stacks: 1 });
   }
   return entries;
 }

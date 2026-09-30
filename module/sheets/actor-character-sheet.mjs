@@ -445,6 +445,16 @@ function featureLists(sig) {
   };
 }
 
+/**
+ * A Unique Ability given by an Active Buddy, as an Item held by nobody: built from its file each time, with a
+ * steady id so its once per Combat Round is counted.
+ */
+async function grantedUniqueItem(actor, trait) {
+  const { uniqueItemFrom } = await import("../unique.mjs");
+  const _id = `granted${trait.id}`.replace(/[^A-Za-z0-9]/g, "").padEnd(16, "0").slice(0, 16);
+  return new Item.implementation({ ...uniqueItemFrom(trait, []), _id }, { parent: actor });
+}
+
 export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static DEFAULT_OPTIONS = {
@@ -470,6 +480,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useManeuver: DBUCharacterSheet._onUseManeuver,
       newTechnique: DBUCharacterSheet._onNewTechnique,
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
+      useGrantedUnique: DBUCharacterSheet._onUseGrantedUnique,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
@@ -1729,16 +1740,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * TP spent on them and on the Techniques together, against what the character has.
    */
   async #prepareUniqueAbilities(techniques) {
-    const { UNIQUE_TYPES, isUniqueAbility, uniqueTypeOf, uniqueTPOf } = await import("../unique.mjs");
+    const { UNIQUE_TYPES, isUniqueAbility, uniqueTypeOf, uniqueTPOf, grantedUniques } = await import("../unique.mjs");
     const { definitionOf } = await import("../use-maneuver.mjs");
     const { printedLines } = await import("../effects/traits.mjs");
     const actor = this.actor;
     const items = actor.items.filter(isUniqueAbility).sort((a, b) => a.name.localeCompare(b.name));
-    const rows = items.map(item => {
+    const rowOf = (item, grantedBy = "") => {
       const unique = item.system.unique;
-      const tp = uniqueTPOf(unique);
+      const tp = grantedBy ? { total: 0 } : uniqueTPOf(unique);
       return {
         itemId: item.id,
+        // Given by an Active Buddy - the Oracle Fish's Precognition: used from here, not bought, not edited.
+        grantedBy,
+        libraryId: unique.libraryId,
         name: item.name,
         // A Counter or an Out-of-Sequence one is played from the card it answers, not from here - as the
         // Maneuvers tab's are.
@@ -1757,7 +1771,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         lines: printedLines(item.system.text || "").map(line => ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line })),
         open: Boolean(this.#openSections[`maneuver-${item.id}`])
       };
-    });
+    };
+    const rows = items.map(item => rowOf(item));
+    const buddy = activeBuddy(actor.items.contents);
+    for (const id of grantedUniques(buddy, actor.items, (item, key) => buddyHeader(item, getTrait, key))) {
+      const trait = getTrait(id);
+      if (trait) rows.push(rowOf(await grantedUniqueItem(actor, trait), buddy.name));
+    }
     const spent = rows.reduce((sum, row) => sum + row.tp, 0);
     const together = spent + (techniques?.spent ?? 0);
     const available = techniques?.available ?? 0;
@@ -1772,6 +1792,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * category can be chosen when gaining the Unique Ability" - and "upon attempting to gain a Unique Ability,
    * you may apply any relevant Restriction". Its Advancements come with it, none bought.
    */
+  /** A Unique Ability an Active Buddy gives access to, used from its row - the Oracle Fish's Precognition. */
+  static async _onUseGrantedUnique(event, target) {
+    const trait = getTrait(target.dataset.uniqueId);
+    if (!trait) return;
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    return useManeuver(this.actor, definitionOf(await grantedUniqueItem(this.actor, trait)));
+  }
+
   static async _onAddUniqueAbility() {
     if (!this.isEditable) return;
     const escape = Handlebars.escapeExpression;

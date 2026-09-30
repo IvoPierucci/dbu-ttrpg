@@ -1821,6 +1821,8 @@ export function definitionOf(item) {
     repair: item.system.repair,
     // Magical Materialization's Effect: what to make, asked before it is paid for.
     materialize: item.system.unique?.materialize === true,
+    // Precognition's Effect: which Opponent moves up, asked before it is used.
+    precognition: item.system.unique?.precognition === true,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
     kiCostCoversProfile: item.system.kiCostCoversProfile,
@@ -2340,6 +2342,60 @@ async function postMaterialize(actor, maneuver, plan) {
     return chat.postManeuver(actor, maneuver, { note: `${actor.name} dematerializes ${plan.demat.name} (${plan.demat.ownerName}).` });
   }
   return chat.postMaterialize(actor, maneuver, plan);
+}
+
+/**
+ * Precognition: "Target an Opponent who hasn't done their turn yet" - one after the current turn in the
+ * Initiative Order, the one targeted picked first. Null if there is none, or nothing is picked.
+ */
+async function askPrecognition(actor, maneuver) {
+  const combat = game.combat;
+  if (!combat?.started) {
+    ui.notifications.warn(`${maneuver.name} needs a Combat Encounter.`);
+    return null;
+  }
+  const later = combat.turns.slice((combat.turn ?? 0) + 1)
+    .filter(combatant => combatant.actor && (combatant.actor.uuid !== actor.uuid) && !combatant.defeated);
+  if (!later.length) {
+    ui.notifications.warn("Nobody is left to act this Combat Round.");
+    return null;
+  }
+  const targeted = new Set(Array.from(game.user.targets ?? []).map(token => token.actor?.uuid));
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<select name="opponent" class="dbu-gear-pick">${later.map(combatant =>
+      `<option value="${combatant.id}" ${targeted.has(combatant.actor.uuid) ? "selected" : ""}>${escape(combatant.name)}</option>`).join("")}</select>`,
+    buttons: [
+      { action: "foresee", label: "Foresee", default: true, callback: (event, button, dialog) =>
+        dialog.element.querySelector('select[name="opponent"]')?.value ?? null },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  const combatant = (picked && (picked !== "cancel")) ? combat.combatants.get(picked) : null;
+  return combatant ? { combatantId: combatant.id, uuid: combatant.actor.uuid, name: combatant.name } : null;
+}
+
+/**
+ * "For this Combat Round, move their place in the Initiative Order to the next turn after the current one" -
+ * their Initiative set between the current turn's and the next one's, and put back when the Round ends
+ * (combat.mjs). What it gives is held on the character until that turn is over.
+ */
+async function postPrecognition(actor, maneuver, foreseen) {
+  const combat = game.combat;
+  const turns = combat?.turns ?? [];
+  const current = turns[combat?.turn ?? 0];
+  const next = turns[(combat?.turn ?? 0) + 1];
+  const chat = await import("./chat.mjs");
+  if (current && next && (next.id !== foreseen.combatantId)) {
+    const high = Number(current.initiative) || 0;
+    const low = Number(next.initiative) || 0;
+    await chat.requestForesee(combat, foreseen.combatantId, (high + low) / 2);
+  }
+  await actor.update({ "system.foresight": { opponentUuid: foreseen.uuid, opponentName: foreseen.name, active: false } });
+  return chat.postManeuver(actor, maneuver, { note: `${foreseen.name} goes next.` });
 }
 
 /** Repair: which Weapon or piece of Apparel. */
@@ -2932,6 +2988,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let trick = "";
   let repairing = null;
   let materializing = null;
+  let foreseen = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3164,6 +3221,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     if (maneuver.materialize) {
       materializing = await askMaterialize(actor, maneuver);
       if (!materializing) return false;
+    }
+
+    // Precognition: which Opponent yet to act moves up.
+    if (maneuver.precognition) {
+      foreseen = await askPrecognition(actor, maneuver);
+      if (!foreseen) return false;
     }
 
     // "Additionally, if not in a High Environment, you can enter the Low Sky Environment.
@@ -3584,6 +3647,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postRepair(actor, maneuver, repairing)
     : (maneuver.materialize && materializing)
     ? await postMaterialize(actor, maneuver, materializing)
+    : (maneuver.precognition && foreseen)
+    ? await postPrecognition(actor, maneuver, foreseen)
     // Two of the Magic Trick's three effects open its Clash and the third opens nothing.
     // Asked before the Clash routes below, so the third does not fall into one.
     : (maneuver.magicTrick && (trick === "move"))

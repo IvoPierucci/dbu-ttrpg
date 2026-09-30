@@ -195,6 +195,7 @@ function applyRequest(request) {
     case "createItem": return fromUuidSync(request.actorUuid)
       ?.createEmbeddedDocuments("Item", [request.data]);
     case "deleteItem": return fromUuidSync(request.actorUuid)?.items.get(request.itemId)?.delete();
+    case "foresee": return applyForesee(request.combatId, request.combatantId, request.initiative);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
     case "karmic": return applyKarmicRecord(request.messageId, request.actorId, request.key);
@@ -275,6 +276,23 @@ export function requestActorUpdate(actor, changes) {
   if (actor.isOwner) return actor.update(changes);
   if (!game.users.activeGM) return;
   game.socket.emit(CHANNEL, { type: "actor", actorUuid: actor.uuid, changes });
+}
+
+/**
+ * Precognition: a Combatant's Initiative moved for this Combat Round, the one it had kept on it to be put back
+ * when the Round ends (combat.mjs). A Combatant is seldom the player's own, so it goes through the GM.
+ */
+export function requestForesee(combat, combatantId, initiative) {
+  if (game.user.isGM) return applyForesee(combat.id, combatantId, initiative);
+  if (!game.users.activeGM) return;
+  game.socket.emit(CHANNEL, { type: "foresee", combatId: combat.id, combatantId, initiative });
+}
+
+async function applyForesee(combatId, combatantId, initiative) {
+  const combatant = game.combats.get(combatId)?.combatants.get(combatantId);
+  if (!combatant) return;
+  const kept = combatant.getFlag(SCOPE, "foreseen");
+  await combatant.update({ initiative, [`flags.${SCOPE}.foreseen`]: (typeof kept === "number") ? kept : combatant.initiative });
 }
 
 /** Give a character an Item, whoever owns them - the handcuff put on somebody else. */
@@ -9087,7 +9105,8 @@ async function resolveAttack(message, attack) {
     // "Increase your Combat Rolls against Analyzed Opponents." Added here for the same
     // reason the Long Range penalty is taken here: one Strike Roll reaches several people
     // and what it is worth against each of them is not the same number.
-    const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0);
+    const analysis = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target)]
+      .reduce((sum, p) => sum + p.value, 0);
     const against = Math.max(0, (strike.total + analysis) - longRange);
 
     // The defender wins ties, as everywhere else: the attacker has to beat them.
@@ -10385,7 +10404,18 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   // Your Dodge against somebody you Analyzed. The attacker is named on the attack, which
   // is what makes this answerable from the defender's side.
   parts.push(...analysisBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
+  parts.push(...foresightBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   return parts;
+}
+
+/**
+ * Precognition: "increase your Strike and Dodge Rolls against that Opponent by 1(T) for the duration of that
+ * turn" - while the turn it moved them to is under way.
+ */
+function foresightBonus(actor, other) {
+  const foresight = actor?.system?.foresight;
+  if (!foresight?.active || !other || (foresight.opponentUuid !== other.uuid)) return [];
+  return [{ label: "Precognition", written: "+1(T)", value: Math.max(1, actor.system.tierOfPower ?? 1) }];
 }
 
 /**

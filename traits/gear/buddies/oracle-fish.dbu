@@ -5,6 +5,8 @@ itemType: buddy
 special: true
 buddyKind: unique
 buddyEffect: passive
+# "You gain access to the Precognition Unique Ability": while Active, on the Unique Abilities tab.
+grantsUnique: precognition
 source: Core Rule
 description: >
   Unique. Active: the Precognition Unique Ability. Adventuring: its stories, for an hour and an
@@ -25,5 +27,4 @@ text: >
 
 # --- What is not built ---------------------------------------------------------------------------
 #
-# The Precognition Unique Ability, and Ingredients and Cooking, are not in this system. Its
-# stories are the ARC's.
+# Its stories are the ARC's.

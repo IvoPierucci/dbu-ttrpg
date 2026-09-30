@@ -1,0 +1,37 @@
+id: precognition
+name: Precognition
+uaType: magical
+prerequisite: Insight Score of 7+, 2+ Skill Ranks in Use Magic
+tpCost: 30
+type: instant
+actionCost: 0
+# The Effect: an Opponent yet to act this Combat Round moved to the turn after the current one - picked when it
+# is used (use-maneuver.mjs askPrecognition) - and, for that turn, a Counter Action and 1(T) on Strike and Dodge
+# Rolls against them (system.foresight).
+foresees: true
+source: Core Rule
+description: >
+  Instant: an Opponent yet to act goes next; during their turn, a Counter Action and 1(T) on Strike and Dodge
+  Rolls against them. Passive: Initiative 1(T) higher, and the Foresight Adventuring Maneuver.
+text: >
+  Precognition: You can witness the future, allowing you to respond accordingly.
+  –Ability Type: Magical
+  –Prerequisites: Insight Score of 7+, 2+ Skill Ranks in Use Magic
+  –TP Cost: 30
+  –KP Cost: N/A
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –Minions: N/A
+  –Passive Bonus: Increase your Initiative by 1(T) and gain access to the Foresight Adventuring Maneuver.
+  –Effect: Target an Opponent who hasn’t done their turn yet. For this Combat Round, move their place in the
+  Initiative Order to the next turn after the current one. If you do, you gain 1 Counter Action to use during
+  their turn and increase your Strike and Dodge Rolls against that Opponent by 1(T) for the duration of that
+  turn.
+
+---
+
+# The Foresight Adventuring Maneuver waits on its text (the user's ruling: left pending).
+
+# "Increase your Initiative by 1(T)."
+[passive]
+initiative += 1(T);

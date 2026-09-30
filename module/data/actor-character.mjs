@@ -1422,6 +1422,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       required: true, integer: true, initial: 0, min: 0
     });
 
+    // --- Precognition: the Opponent moved up the Initiative Order this Combat Round ---
+    // Active through that Opponent's turn: a Counter Action, and 1(T) on Strike and Dodge Rolls against them.
+    schema.foresight = new fields.SchemaField({
+      opponentUuid: new fields.StringField({ required: true, blank: true, initial: "" }),
+      opponentName: new fields.StringField({ required: true, blank: true, initial: "" }),
+      active: new fields.BooleanField({ required: true, initial: false })
+    });
+
     // --- The Grapple this character is in, if any ---
     // The first thing here that is a link between two characters rather than something
     // one of them carries alone. Held by both sides, each naming the other: both are
@@ -2081,6 +2089,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         DBUCharacterData.BASE_STANDARD_ACTIONS + this.actionModifiers.standard)),
       counter: Math.max(0, withEffects(this, "actions.counter",
         DBUCharacterData.BASE_COUNTER_ACTIONS + this.actionModifiers.counter))
+        // Precognition: "you gain 1 Counter Action to use during their turn".
+        + (this.foresight?.active ? 1 : 0)
     };
 
     // Haste: 1/2 Agility Modifier, added to Strike Rolls.

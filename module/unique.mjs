@@ -91,6 +91,16 @@ export function uniqueKiFloor(listed, tierOfPower) {
   return (cost >= 4 * Math.max(1, Number(tierOfPower) || 1)) ? Math.ceil(cost / 2) : 0;
 }
 
+/**
+ * The Unique Abilities an Active Buddy gives access to - the Oracle Fish's Precognition, `grantsUnique` - that
+ * the character does not already have.
+ */
+export function grantedUniques(buddy, items, headerOf) {
+  if (!buddy || buddy.system?.buddy?.locked || buddy.system?.buddy?.destroyed) return [];
+  const owned = new Set(Array.from(items ?? []).filter(isUniqueAbility).map(item => item.system.unique?.libraryId));
+  return listOf(headerOf(buddy, "grantsUnique")).filter(id => !owned.has(id));
+}
+
 /** A header list - "a, b" or a parsed list - as clean strings. */
 function listOf(raw) {
   return (Array.isArray(raw) ? raw : String(raw ?? "").split(",")).map(each => String(each).trim()).filter(Boolean);
@@ -125,9 +135,10 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         uaType: String(definition.uaType ?? ""),
         chosenType,
         tpCost: number(definition.tpCost),
-        prerequisite: String(definition.prerequisite ?? ""),
+        prerequisite: listOf(definition.prerequisite).join(", "),
         libraryId: definition.id,
         materialize: definition.materializes === true,
+        precognition: definition.foresees === true,
         evade: { defense: number(definition.evadeDefense), offer: String(definition.evadeOffer ?? "") },
         advancements: children.filter(child => child.advancement === true).map(child => ({
           id: id(), key: child.id, name: child.name, tp: number(child.tpCost),
