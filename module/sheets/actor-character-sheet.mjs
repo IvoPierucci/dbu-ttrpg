@@ -4436,14 +4436,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     await setCondition(this.actor, key, 0);
   }
 
-  /** A new Adventuring Session: every Session Limit full again. Only by hand (the user's ruling). */
+  /**
+   * A new Adventuring Session: every Session Limit full again. Only by hand, and only this character's
+   * own - nothing said in chat (the user's rulings).
+   */
   static async _onNewAdventureSession() {
-    await this.actor.update({ "system.adventureUses": [] });
-    return ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      content: `<p>${Handlebars.escapeExpression(this.actor.name)} begins a new Adventuring Session: every `
-        + "Adventuring Maneuver's Session Limit is full again.</p>"
-    });
+    return this.actor.update({ "system.adventureUses": [] });
   }
 
   static async _onStepKarma(event, target) {
