@@ -3395,26 +3395,29 @@ async function settleCook(message, cook, made) {
 /**
  * The Create Maneuver, paid for: "Make a Craft Skill Check using the relevant Specialty for what you are
  * trying to create ... against the Difficulty Category listed by what you are attempting to create. If
- * you succeed, you gain the item. If you fail, you may pay the Time Cost to try again." Rolled from the
- * sheet - where Craft's Auto-Succeed applies.
+ * you succeed, you gain the item. If you fail, you may pay the Time Cost to try again." Rolled on the card
+ * against that Difficulty and settled by it - from a Blueprint, or within Craft's Auto-Succeed, no roll.
  */
 export async function postCreate(actor, create) {
   const escape = Handlebars.escapeExpression;
-  const dc = DBUCharacterData.DIFFICULTIES[create.difficulty];
-  const skill = actor.system.skills?.[create.skill]?.label ?? create.skill;
-  const specialty = "";
-  return ChatMessage.create({
+  const cost = [create.time, create.scrap ? `${create.scrap} Scrap` : "", create.food ? "1 Ingredient" : ""].filter(Boolean);
+  const { craftAutoSucceeds } = await import("./adventure.mjs");
+  const auto = !create.blueprint && String(create.skill ?? "").startsWith("craft")
+    && craftAutoSucceeds(actor.system.skills?.[create.skill]?.ranks, create.difficulty);
+  const message = await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p>${escape(actor.name)} begins Create: ${escape(create.name)} - ${escape(create.time)}`
-      + `${create.scrap ? `, ${create.scrap} Scrap` : ""}${create.food ? ", 1 Ingredient" : ""}. `
-      + (create.blueprint
-        ? "From its Blueprint: no Check - it succeeds once the Time Cost is spent.</p>"
-        : `A ${escape(skill)}${escape(specialty)} Skill Check at the ${escape(dc?.label ?? create.difficulty)} Difficulty - `
-          + `Target Number ${dc?.tn ?? "?"}${create.diceMinus ? `, with ${create.diceMinus} off the Dice Score` : ""}, `
-          + "matched or exceeded. Roll it from the sheet."
-          + `${create.noBlueprint ? " Materialized quickly: no Blueprint." : ""}</p>`),
+    content: `<p>Create: ${escape(create.name)} - ${escape(cost.join(", "))}`
+      + `${create.blueprint ? " (Blueprint)" : auto ? " (Auto-Succeed)" : ""}</p>`,
     flags: { [SCOPE]: { [CREATE_FLAG]: { actorUuid: actor.uuid, ...create, applied: false } } }
   });
+  let success = true;
+  if (!create.blueprint && !auto) {
+    const total = await actor.sheet?.rollSkillAgainst?.(create.skill, create.difficulty,
+      { minus: create.diceMinus, minusLabel: "One Category harder", settles: { kind: "create", messageId: message.id } });
+    success = (typeof total === "number") && (total >= (DBUCharacterData.DIFFICULTIES[create.difficulty]?.tn ?? Infinity));
+  }
+  await settleCreate(message, message.getFlag(SCOPE, CREATE_FLAG), success);
+  return message;
 }
 
 /**
@@ -3525,69 +3528,104 @@ async function unsettleMaterialize(made) {
 async function resettleCheck(settles, total, against) {
   if (!settles || !against) return;
   const message = game.messages.get(settles.messageId);
-  if (settles.kind !== "materialize") return;
-  const made = message?.getFlag(SCOPE, MATERIALIZE_FLAG);
-  if (!made?.done) return;
+  const [flag, unsettle, settle] = {
+    materialize: [MATERIALIZE_FLAG, unsettleMaterialize, settleMaterialize],
+    create: [CREATE_FLAG, unsettleCreate, settleCreate]
+  }[settles.kind] ?? [];
+  const made = flag ? message?.getFlag(SCOPE, flag) : null;
+  // Tried again already: that Create is its own card now.
+  if (!made?.done || made.done.retried) return;
   const success = total >= against.tn;
   if (success === made.done.success) return;
-  await unsettleMaterialize(made);
-  await settleMaterialize(message, made, success);
+  await unsettle(made);
+  await settle(message, made, success);
 }
 
+/** Create item, on a Basic Item made; Try again, on a Check failed - once. */
 function renderCreate(message, html) {
   const create = message.getFlag(SCOPE, CREATE_FLAG);
-  if (!create || create.applied) return;
+  const done = create?.done;
+  if (!done) return;
   const maker = fromUuidSync(create.actorUuid);
   if (!game.user.isGM && !maker?.isOwner) return;
-  const at = html.querySelector(".message-content") ?? html;
-  // From a Blueprint there is no Check to fail: the time spent, it is made.
-  for (const [outcome, label, tip] of create.blueprint
-    ? [["made", "The Time Cost was spent", "It is theirs."]]
-    : [["made", "Made it", "It is theirs - and a Blueprint of it."],
-      ["again", "Try again", `Another ${create.time}${create.food ? " and another Ingredient" : ""} - the same Create.`],
-      ["quit", "Give up", "Nothing is made."]]) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "dbu-clash-button";
-    button.textContent = label;
-    button.dataset.tooltip = tip;
-    button.addEventListener("click", () => settleCreate(message, create, outcome));
-    at.append(button);
-  }
+  const [label, tip, act] = (done.success && (create.kind === "basic") && !done.given)
+    ? ["Create item", "", createMade]
+    : (!done.success && !done.retried)
+    ? ["Try again", `Another ${create.time}${create.food ? " and another Ingredient" : ""}`, createAgain]
+    : [];
+  if (!label) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = label;
+  if (tip) button.dataset.tooltip = tip;
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    return act(message);
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
 }
 
-async function settleCreate(message, create, outcome) {
+/**
+ * Made or failed. A Basic Item is taken with the card's Create item button; a Weapon, Apparel, Vehicle or Battle
+ * Jacket is said (the user's ruling), and its Blueprint given. What was done is kept on the card, so a Critical Die
+ * or a Karmic Chance that turns the Check round can take it back.
+ */
+async function settleCreate(message, create, success) {
   const maker = fromUuidSync(create.actorUuid);
   if (!maker) return;
-  if (outcome === "again") {
-    // "Pay the Time Cost to try again": the same Create, no second use - and a [Food] Basic Item's
-    // Ingredient again. Refused, and the card left as it is, if there is none.
-    if (create.food && !(await maker.sheet?.payIngredientFor?.(create.name))) return;
-    await message.setFlag(SCOPE, CREATE_FLAG, { ...create, applied: true });
-    await settledNote(message, `${maker.name} fails, and tries again.`);
-    return postCreate(maker, { ...create, scrap: 0 });
+  const done = { success, notes: [], given: null, blueprint: "", retried: false };
+  const say = async text => { const note = await settledNote(message, text); if (note) done.notes.push(note.id); };
+  if (!success) await say("Failed.");
+  else if (create.kind !== "basic") {
+    await say(["weapon", "apparel"].includes(create.kind) ? `${create.name} made - build it on the Gear tab.` : `${create.name} made.`);
+    // "Once you have created anything through the Create Maneuver, you gain a Blueprint of what was created." Not
+    // from a Blueprint, nor from Magical Materialization's quick one.
+    if (!create.blueprint && !create.noBlueprint) done.blueprint = await giveBlueprint(maker, create);
   }
-  await message.setFlag(SCOPE, CREATE_FLAG, { ...create, applied: true });
-  if (outcome === "quit") {
-    await settledNote(message, `${maker.name} gives up on ${create.name}.`);
-    return;
+  await message.setFlag(SCOPE, CREATE_FLAG, { ...create, applied: true, done });
+}
+
+/** Create item: the Basic Item given as the Gear tab gives one - its maker's Ingenuity recorded - and its Blueprint. */
+async function createMade(message) {
+  const create = message.getFlag(SCOPE, CREATE_FLAG);
+  const maker = fromUuidSync(create?.actorUuid ?? "");
+  const definition = getTrait(create?.id ?? "");
+  if (!maker || !definition || !create.done?.success || create.done.given) return;
+  await maker.sheet?.giveGear?.(definition, { made: true, craftDC: create.difficulty });
+  const blueprint = (!create.blueprint && !create.noBlueprint) ? await giveBlueprint(maker, create) : "";
+  await message.setFlag(SCOPE, CREATE_FLAG,
+    { ...create, done: { ...create.done, given: { actorUuid: maker.uuid, name: definition.name }, blueprint } });
+}
+
+/** "Pay the Time Cost to try again": the same Create, no second use - and a [Food] Basic Item's Ingredient again. */
+async function createAgain(message) {
+  const { done, applied, ...create } = message.getFlag(SCOPE, CREATE_FLAG) ?? {};
+  const maker = fromUuidSync(create.actorUuid ?? "");
+  if (!maker || !done || done.success || done.retried) return;
+  if (create.food && !(await maker.sheet?.payIngredientFor?.(create.name))) return;
+  await message.setFlag(SCOPE, CREATE_FLAG, { ...create, applied, done: { ...done, retried: true } });
+  return postCreate(maker, { ...create, scrap: 0 });
+}
+
+/** Take a Create back: the Item and the Blueprint it gave, and its notes. */
+async function unsettleCreate(create) {
+  const done = create.done ?? {};
+  const maker = fromUuidSync(create.actorUuid ?? "");
+  const newest = (holder, test) => Array.from(holder?.items ?? []).reverse().find(test);
+  if (done.given) {
+    const holder = fromUuidSync(done.given.actorUuid);
+    const item = newest(holder, each => (each.type === "gear") && (each.name === done.given.name));
+    if (item) await requestDeleteItem(holder, item.id);
   }
-  // Made. A Basic Item is given as the Gear tab gives one - its maker's Ingenuity recorded; the rest
-  // is said (the user's ruling).
-  if (create.kind === "basic") {
-    const definition = getTrait(create.id);
-    if (definition) await maker.sheet?.giveGear?.(definition, { made: true, craftDC: create.difficulty });
-    await settledNote(message, `${maker.name} makes ${create.name}.`);
+  if (done.blueprint) {
+    const item = newest(maker, each => each.system?.blueprint && (each.system.blueprint.name === done.blueprint));
+    if (item) await requestDeleteItem(maker, item.id);
   }
-  else {
-    await settledNote(message, (["weapon", "apparel"].includes(create.kind))
-      ? `${maker.name} makes ${create.name} - add it on the Gear tab and build it.`
-      : `${maker.name} makes ${create.name}. Vehicles and Battle Jackets are not built yet: the table keeps it.`);
+  for (const id of done.notes ?? []) {
+    const note = game.messages.get(id);
+    if (note && (note.isAuthor || game.user.isGM)) await note.delete();
   }
-  // "Once you have created anything through the Create Maneuver, you gain a Blueprint of what was
-  // created." Not from a Blueprint - that one is already held.
-  // Nor from the quick one: "you do not gain a Blueprint from that use of the Create Maneuver".
-  if (!create.blueprint && !create.noBlueprint) await giveBlueprint(maker, create);
 }
 
 /**
@@ -3610,18 +3648,19 @@ async function giveBlueprint(maker, create) {
       ],
       rejectClose: false
     });
-    if (!typed || (typed === "cancel")) return;
+    if (!typed || (typed === "cancel")) return "";
     name = typed;
   }
   const record = { kind: create.kind, id: create.id ?? "", name, difficulty: create.difficulty };
-  if (hasBlueprint(Array.from(maker.items ?? []), record)) return;
+  if (hasBlueprint(Array.from(maker.items ?? []), record)) return "";
   const definition = getTrait("blueprint");
-  if (!definition) return;
+  if (!definition) return "";
   const { gearItemFrom } = await import("./gear.mjs");
   const data = gearItemFrom(definition, maker);
   data.name = `Blueprint: ${name}`;
   data.system.blueprint = record;
   await requestCreateItem(maker, data);
+  return name;
 }
 
 function renderCurePoison(message, html) {
