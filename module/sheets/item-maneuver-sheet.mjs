@@ -4,7 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { compile } from "../effects/parser.mjs";
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { MANEUVER_TYPES, PROFILES, SUPER_PROFILES, TAIL_VARIANTS, getManeuver } from "../maneuvers.mjs";
-import { namePrefixMatches } from "../gear.mjs";
+import { pickedName, wireNameSearch } from "../search.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import {
   LEVELS, choiceLabel, composeTechniqueEffects, featureCatalogue, featureDef, featureProblem,
@@ -397,76 +397,13 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
   /** The Add search, the way the Apparel sheet's Add Quality search works. */
   #wireFeatureSearch() {
     const input = this.element.querySelector("[data-feature-search]");
-    const list = this.element.querySelector("[data-feature-list]");
-    if (!input || !list) return;
-    const options = [...list.querySelectorAll("[data-feature-option]")];
-    const groups = [...list.querySelectorAll("[data-feature-group]")];
-    const none = list.querySelector("[data-feature-none]");
-    const shown = () => options.filter(option => !option.hidden);
-    const lit = () => options.find(option => option.classList.contains("active"));
-    const light = option => {
-      for (const each of options) each.classList.toggle("active", each === option);
-      if (!option) return;
-      const top = option.offsetTop;
-      const bottom = top + option.offsetHeight;
-      if (top < list.scrollTop) list.scrollTop = top;
-      else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
-    };
-    const filter = () => {
-      for (const option of options) option.hidden = !namePrefixMatches(option.dataset.name, input.value);
-      for (const group of groups) {
-        group.hidden = !options.some(option => !option.hidden
-          && (option.dataset.group === group.dataset.featureGroup));
-      }
-      if (none) none.hidden = shown().length > 0;
-      light(shown()[0]);
-    };
-    const open = () => { list.hidden = false; filter(); };
-    const pick = option => {
-      input.value = option.dataset.name;
-      input.dataset.picked = option.dataset.featureOption;
-      list.hidden = true;
-    };
-    input.addEventListener("focus", open);
-    input.addEventListener("click", () => list.hidden && open());
-    input.addEventListener("input", () => { delete input.dataset.picked; open(); });
-    input.addEventListener("change", event => event.stopPropagation());
-    input.addEventListener("blur", () => { list.hidden = true; });
-    input.addEventListener("keydown", event => {
-      const visible = shown();
-      const at = visible.indexOf(lit());
-      if ((event.key === "ArrowDown") || (event.key === "ArrowUp")) {
-        event.preventDefault();
-        if (list.hidden) return open();
-        const step = (event.key === "ArrowDown") ? 1 : -1;
-        light(visible[Math.min(Math.max(at + step, 0), visible.length - 1)]);
-      } else if (event.key === "Enter") {
-        event.preventDefault();
-        if (!list.hidden && lit()) pick(lit());
-        else if (input.dataset.picked) {
-          (this.#unique ? DBUManeuverSheet._onAddUniqueFeature : DBUManeuverSheet._onAddFeature).call(this, event, input);
-        }
-      } else if ((event.key === "Escape") && !list.hidden) {
-        event.preventDefault();
-        event.stopPropagation();
-        list.hidden = true;
-      }
-    });
-    list.addEventListener("mousedown", event => {
-      event.preventDefault();
-      const option = event.target.closest("[data-feature-option]");
-      if (option) pick(option);
-    });
+    wireNameSearch(input, this.element.querySelector("[data-feature-list]"), { onSubmit: event =>
+      (this.#unique ? DBUManeuverSheet._onAddUniqueFeature : DBUManeuverSheet._onAddFeature).call(this, event, input) });
   }
 
   /** Which feature the search means: the one picked, or the first whose name starts so. */
   #pickedFeature() {
-    const input = this.element.querySelector("[data-feature-search]");
-    if (!input) return "";
-    if (input.dataset.picked) return input.dataset.picked;
-    if (!input.value.trim()) return "";
-    return [...this.element.querySelectorAll("[data-feature-option]")]
-      .find(option => namePrefixMatches(option.dataset.name, input.value))?.dataset.featureOption ?? "";
+    return pickedName(this.element.querySelector("[data-feature-search]"), this.element.querySelector("[data-feature-list]"));
   }
 
   /**

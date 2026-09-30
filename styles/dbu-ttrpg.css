@@ -3252,3 +3252,58 @@
   font-weight: bold;
   opacity: 0.8;
 }
+
+/* Add Unique Ability: the Advantages' search in a window of its own - the list always shown under it. */
+.dbu-ua-search .gear-quality-search {
+  width: 100%;
+}
+
+.dbu-ua-search .gear-quality-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--dbu-border, #555555);
+  border-radius: 4px;
+  background: var(--dbu-panel, #1e1e1e);
+}
+
+.dbu-ua-search .gear-quality-list li[hidden] {
+  display: none;
+}
+
+.dbu-ua-search .gear-quality-group {
+  padding: 2px 6px;
+  background: #000000;
+  color: var(--dbu-chat-accent, #dfe288);
+  font-weight: bold;
+}
+
+.dbu-ua-search .gear-quality-option,
+.dbu-ua-search .gear-quality-none {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 14px;
+  color: var(--dbu-text, #e8e8e8);
+}
+
+.dbu-ua-search .gear-quality-option {
+  cursor: pointer;
+}
+
+.dbu-ua-search .gear-quality-option.active {
+  background: rgba(223, 226, 136, 0.2);
+}
+
+.dbu-ua-search .gear-quality-option.blocked {
+  opacity: 0.5;
+}
+
+.dbu-ua-search .gear-quality-none {
+  font-style: italic;
+}
+
+.dbu-ua-search .gear-quality-cost {
+  opacity: 0.75;
+}
