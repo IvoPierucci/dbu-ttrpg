@@ -1,0 +1,26 @@
+id: recall
+name: Recall
+prerequisite: 2+ Skill Ranks in Knowledge
+requiresSkill: knowledge
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 1 Minute
+# The information is the ARC's to give: said on the card - with the Specialty chosen for Knowledge.
+effectNote: recalls a piece of information related to their chosen Specialty that may help with the current situation
+effectSpecialty: knowledge
+source: Core Rule
+description: >
+  A minute's thought: a piece of information from your Knowledge Specialty that may help right now.
+text: >
+  Recall: You wrack your memory for relevant information to present to your comrades.
+  –Prerequisite: 2+ Skill Ranks in Knowledge
+  –Session Limit: 1
+  –Time Cost: 1 Minute
+  –Effect: You recall a piece of information related to your chosen Specialty that may help with your
+  current situation.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Knowledge. The card's button, once the minute
+# is spent, says what it does and names the Specialty written on their Knowledge Skill; what they
+# recall is the ARC's.

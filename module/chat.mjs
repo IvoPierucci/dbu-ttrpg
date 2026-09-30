@@ -3135,6 +3135,10 @@ export async function postAdventuring(actor, definition, { repair = null } = {})
       gains: String(definition.gains ?? "").trim().toLowerCase(),
       // What it does that the system cannot, said once it is done - Tune Up's Vehicle.
       note: String(definition.effectNote ?? "").trim(),
+      // And the Specialty it reads, as written on that Skill - Recall's Knowledge.
+      specialty: definition.effectSpecialty
+        ? String(actor.system.skillSpecializations?.[String(definition.effectSpecialty).trim().toLowerCase()] ?? "").trim()
+        : "",
       // Full Repair's: what, and for how many hours, and the fifths they earn.
       repair: repair ? { ...repair, share: Number(definition.repairShare) || 5, per: Number(definition.repairHours) || 2,
         min: Number(definition.hoursMin) || 2, max: Number(definition.hoursMax) || 10 } : null,
@@ -3176,7 +3180,7 @@ async function settleAdventuring(message, adventuring) {
     await gainCondition(actor, adventuring.gains, 1);
     said.push(getTrait(adventuring.gains)?.name ?? adventuring.gains);
   }
-  if (adventuring.note) said.push(`${actor.name} ${adventuring.note}`);
+  if (adventuring.note) said.push(`${actor.name} ${adventuring.note}${adventuring.specialty ? ` (${adventuring.specialty})` : ""}`);
   if (adventuring.repair) said.push(await fullRepairDone(actor, adventuring.repair));
   return settledNote(message, `${actor.name} finishes ${adventuring.name}${said.length ? `: ${said.join(", ")}` : ""}.`);
 }
