@@ -1,0 +1,47 @@
+id: create
+name: Create
+prerequisite: 2+ Skill Ranks in the Craft Skill (or Medicine/Cooking for their relevant Basic Items)
+# Any of the three: Craft for most things, Medicine for [Med] Basic Items, Cooking for [Food] ones.
+requiresSkill: craft, medicine, cooking
+requiresRanks: 2
+sessionLimit: 1
+timeCost: Varies
+# "The Time Cost for the Create Maneuver depends on what you are trying to create."
+timeBasic: 8 Hours
+timeWeapon: 1 Day
+timeApparel: 1 Day
+timeVehicle: 5 Days
+# What, the Check, what it costs, and the card: asked when it is used.
+creates: true
+source: Core Rule
+description: >
+  A Craft Check - Medicine or Cooking for their Basic Items - at what you make's Difficulty: 8 hours for a
+  Basic Item, a day for a Weapon or Apparel, five for a Vehicle. Made, it is yours; failed, try again for
+  the time.
+text: >
+  Create: You craft an item from base components, creating something with function and purpose.
+  –Prerequisite: 2+ Skill Ranks in the Craft Skill (or Medicine/Cooking for their relevant Basic Items)
+  –Session Limit: 1
+  –Time Cost: Varies
+  –Effect: Make a Craft Skill Check using the relevant Specialty for what you are trying to create (Basic
+  Item/Weapon/Apparel/Vehicle), against the Difficulty Category listed by what you are attempting to
+  create. If you succeed, you gain the item. If you fail, you may pay the Time Cost to try again.
+
+  The Time Cost for the Create Maneuver depends on what you are trying to create:
+
+  * Basic Item. 8 hours.
+  * Weapon. 1 day.
+  * Apparel. 1 day.
+  * Vehicle/Battle Jacket. 5 days.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Craft, Medicine or Cooking. Used: what is made
+# is picked among what they can make - a Basic Item with a Craft DC (Craft with the Basic Items Specialty;
+# [Med] with Medicine, [Food] with Cooking), or a Weapon, Apparel, Vehicle or Battle Jacket (Craft with its
+# Specialty). What it costs is paid once: Scrap for [Tech] and Vehicles, 1 to 6 by Difficulty, doubled for
+# a Battle Jacket (the user's ruling: not paid again on a retry); an Ingredient for [Food], every attempt.
+# The card states the Check - rolled from the sheet, where Craft's Auto-Succeed applies - with Made it,
+# Try again (the same Create, another Time Cost: no second use) and Give up. Made, a Basic Item is given
+# as the Gear tab gives one, recording its maker's Ingenuity; a Weapon, Apparel, Vehicle or Battle Jacket
+# is only said (the user's ruling) - built on the Gear tab, or the table's.

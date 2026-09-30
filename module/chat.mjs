@@ -2654,6 +2654,7 @@ function onRenderChatMessage(message, html) {
   renderAdventuring(message, html);
   renderRegulated(message, html);
   renderCook(message, html);
+  renderCreate(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
@@ -3368,6 +3369,77 @@ async function settleCook(message, cook, made) {
     said.push(`${diner.name} ${HUNGER_STAGES[now]?.label ?? "Fed"}`);
   }
   await settledNote(message, `A hearty Meal: ${said.join(", ")}.`);
+}
+
+/**
+ * The Create Maneuver, paid for: "Make a Craft Skill Check using the relevant Specialty for what you are
+ * trying to create ... against the Difficulty Category listed by what you are attempting to create. If
+ * you succeed, you gain the item. If you fail, you may pay the Time Cost to try again." Rolled from the
+ * sheet - where Craft's Auto-Succeed applies.
+ */
+export async function postCreate(actor, create) {
+  const escape = Handlebars.escapeExpression;
+  const dc = DBUCharacterData.DIFFICULTIES[create.difficulty];
+  const skill = actor.system.skills?.[create.skill]?.label ?? create.skill;
+  const specialty = create.specialty
+    ? ` (${DBUCharacterData.SKILLS.craft?.specialties?.[create.specialty] ?? create.specialty})` : "";
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${escape(actor.name)} begins Create: ${escape(create.name)} - ${escape(create.time)}`
+      + `${create.scrap ? `, ${create.scrap} Scrap` : ""}${create.food ? ", 1 Ingredient" : ""}. A ${escape(skill)}${escape(specialty)} `
+      + `Skill Check at the ${escape(dc?.label ?? create.difficulty)} Difficulty - Target Number ${dc?.tn ?? "?"}, matched or `
+      + "exceeded. Roll it from the sheet.</p>",
+    flags: { [SCOPE]: { [CREATE_FLAG]: { actorUuid: actor.uuid, ...create, applied: false } } }
+  });
+}
+
+function renderCreate(message, html) {
+  const create = message.getFlag(SCOPE, CREATE_FLAG);
+  if (!create || create.applied) return;
+  const maker = fromUuidSync(create.actorUuid);
+  if (!game.user.isGM && !maker?.isOwner) return;
+  const at = html.querySelector(".message-content") ?? html;
+  for (const [outcome, label, tip] of [
+    ["made", "Made it", "It is theirs."],
+    ["again", "Try again", `Another ${create.time}${create.food ? " and another Ingredient" : ""} - the same Create.`],
+    ["quit", "Give up", "Nothing is made."]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = label;
+    button.dataset.tooltip = tip;
+    button.addEventListener("click", () => settleCreate(message, create, outcome));
+    at.append(button);
+  }
+}
+
+async function settleCreate(message, create, outcome) {
+  const maker = fromUuidSync(create.actorUuid);
+  if (!maker) return;
+  if (outcome === "again") {
+    // "Pay the Time Cost to try again": the same Create, no second use - and a [Food] Basic Item's
+    // Ingredient again. Refused, and the card left as it is, if there is none.
+    if (create.food && !(await maker.sheet?.payIngredientFor?.(create.name))) return;
+    await message.setFlag(SCOPE, CREATE_FLAG, { ...create, applied: true });
+    await settledNote(message, `${maker.name} fails, and tries again.`);
+    return postCreate(maker, { ...create, scrap: 0 });
+  }
+  await message.setFlag(SCOPE, CREATE_FLAG, { ...create, applied: true });
+  if (outcome === "quit") {
+    await settledNote(message, `${maker.name} gives up on ${create.name}.`);
+    return;
+  }
+  // Made. A Basic Item is given as the Gear tab gives one - its maker's Ingenuity recorded; the rest
+  // is said (the user's ruling).
+  if (create.kind === "basic") {
+    const definition = getTrait(create.id);
+    if (definition) await maker.sheet?.giveGear?.(definition, { made: true, craftDC: create.difficulty });
+    await settledNote(message, `${maker.name} makes ${create.name}.`);
+    return;
+  }
+  await settledNote(message, (["weapon", "apparel"].includes(create.kind))
+    ? `${maker.name} makes ${create.name} - add it on the Gear tab and build it.`
+    : `${maker.name} makes ${create.name}. Vehicles and Battle Jackets are not built yet: the table keeps it.`);
 }
 
 function renderCurePoison(message, html) {
@@ -5540,6 +5612,8 @@ const ADVENTURING_FLAG = "adventuring";
 const REGULATED_FLAG = "regulated";
 /** A Meal cooked, waiting on its Cooking Skill Check - the Cook Maneuver. */
 const COOK_FLAG = "cook";
+/** Something being made, waiting on its Skill Check - the Create Maneuver. */
+const CREATE_FLAG = "create";
 
 /**
  * An Item left on the ground for whoever moves through it - Caltrops. The card is posted

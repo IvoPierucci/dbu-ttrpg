@@ -92,8 +92,12 @@ export function targetPenalty(uses, id, targetUuid, per) {
  * Stretch's "2+ Skill Ranks in Acrobatics". One that is not met is not offered.
  */
 export function meetsPrerequisite(definition, system) {
-  const said = String(definition?.requiresSkill ?? "").trim();
-  if (!said) return false;
+  const named = (Array.isArray(definition?.requiresSkill) ? definition.requiresSkill
+    : String(definition?.requiresSkill ?? "").split(",")).map(each => String(each).trim()).filter(Boolean);
+  if (!named.length) return false;
+  // Any of several - Create's "Craft Skill (or Medicine/Cooking ...)".
+  if (named.length > 1) return named.some(one => meetsPrerequisite({ ...definition, requiresSkill: one }, system));
+  const [said] = named;
   // The Skill's own key, whatever case the file wrote it in - `creatureHandling`.
   const skill = Object.keys(system?.skills ?? {}).find(key => key.toLowerCase() === said.toLowerCase()) ?? said;
   const ranks = Number(system?.skills?.[skill]?.ranks) || 0;
@@ -101,8 +105,9 @@ export function meetsPrerequisite(definition, system) {
   // And a Specialty of it, where it names one - Tune Up's "Craft (Vehicles)", ticked on the Skill.
   const specialty = String(definition.requiresSpecialty ?? "").trim().toLowerCase();
   if (!specialty) return true;
+  // Stored by the Specialty's name - "Basic Item", "Vehicles" - which opens with its key.
   return String(system?.skillSpecializations?.[skill] ?? "").split(",")
-    .map(each => each.trim().toLowerCase()).includes(specialty);
+    .map(each => each.trim().toLowerCase()).some(each => each.startsWith(specialty));
 }
 
 /**
@@ -240,4 +245,35 @@ export function craftAutoSucceeds(ranks, difficulty) {
   if (at < 0) return false;
   const reach = ((Number(ranks) || 0) >= 5) ? "expert" : ((Number(ranks) || 0) >= 4) ? "qualified" : "";
   return Boolean(reach) && (at <= order.indexOf(reach));
+}
+
+/** The Difficulty Categories in order, Novice to Grandmaster. */
+export const DIFFICULTY_ORDER = Object.freeze(["novice", "apprentice", "qualified", "expert", "master", "grandmaster"]);
+
+/**
+ * What the Create Maneuver rolls for a Basic Item: "Medicine. Use your Medicine Skill instead of the
+ * Craft Skill"; "Food ... use your Cooking Skill instead"; otherwise Craft, with its Basic Items
+ * Specialty.
+ */
+export function createSkillFor(tags) {
+  const list = (tags ?? []).map(tag => String(tag).toLowerCase());
+  if (list.includes("med")) return { skill: "medicine", specialty: "" };
+  if (list.includes("food")) return { skill: "cooking", specialty: "" };
+  return { skill: "craft", specialty: "basic" };
+}
+
+/**
+ * "To create a Basic Item with the [Tech] tag, a Vehicle, or a Battle Jacket, you must spend a number of
+ * Scrap depending on the Difficulty Category (1~6, from Novice to Grandmaster). For creating a Battle
+ * Jacket, however, you must double the amount of Scrap required."
+ */
+export function scrapCost(difficulty, { battleJacket = false } = {}) {
+  const at = DIFFICULTY_ORDER.indexOf(String(difficulty ?? ""));
+  if (at < 0) return 0;
+  return (at + 1) * (battleJacket ? 2 : 1);
+}
+
+/** Whether a character may use a Skill for Create: 2+ Ranks, and the Specialty ticked where one is named. */
+export function canCreateWith(system, skill, specialty = "") {
+  return meetsPrerequisite({ requiresSkill: skill, requiresRanks: 2, requiresSpecialty: specialty }, system);
 }

@@ -11,7 +11,7 @@ import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } fr
 import { WEATHER_TIERS, weatherEffectsUpTo } from "../weather.mjs";
 import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectable,
   connectedItem, connectedTarget, encounterUseKey, equipProblem, gearItemFrom, gearOfList, heldBy, isAccessory,
-  inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered,
+  inEffect, isStored, keyItemFor, lockedBy, lockedOn, portionEffects, setGathered, tagsOf,
   craftedItemFrom, craftedReading, APPAREL_LAYERS, APPAREL_EQUIP_COST, equipPlan, onLayer, pieceSlots,
   grantDoffBonus, topLayerPiece, unequipCost, wieldProblem, WEAPON_SIZES, WEAPON_TYPES,
   MULTI_STORAGE_THROWS, throwsCopies, activeForm, flexibleCategories, variableSizes,
@@ -2232,6 +2232,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     const definition = offered.find(entry => entry.id === chosen);
     if (!definition) return;
+    return this.giveGear(definition);
+  }
+
+  /**
+   * Give this character an Item from its file, asking what it asks when it is gained. From the Gear
+   * tab's Add, and from the Create Maneuver once it is made - `made`, which records its maker's
+   * Ingenuity without asking about a Gear Kit, and `craftDC`, where Create already said which.
+   */
+  async giveGear(definition, { made = false, craftDC = "" } = {}) {
+    const escape = Handlebars.escapeExpression;
 
     // What it records off this character, and the trigger asked now - both can be changed on the
     // Item afterwards.
@@ -2239,8 +2249,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // A Device: "records the creator's Ingenuity at its time of creation or, if it is gained from a
     // Gear Kit, it records a value equal to the Score Limit for your starting Tier of Power." Which
-    // of the two is asked, and the starting Tier with it (the user's ruling).
-    if (data.system.records === "ingenuity") {
+    // of the two is asked, and the starting Tier with it (the user's ruling) - unless it was made.
+    if ((data.system.records === "ingenuity") && !made) {
       const kit = await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"],
         window: { title: `${definition.name} - Recorded Ingenuity` },
@@ -2337,7 +2347,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Concealment Check it asks for, and what can destroy it.
     if (data.system.craftDCChoices?.length) {
       const labels = DBUCharacterData.DIFFICULTIES;
-      const chosen = await foundry.applications.api.DialogV2.wait({
+      const chosen = data.system.craftDCChoices.includes(craftDC) ? craftDC : await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"],
         window: { title: `${definition.name} - Craft DC` },
         content: "",
@@ -4439,6 +4449,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       return setResource(this.actor, chosen.name, chosen.stacks);
     }
 
+    // The Create Maneuver: what is made, its Check, and what it costs.
+    if (definition.creates === true) return this.#startCreate(entry, definition);
+
     // The Cook Maneuver: who is fed and how much, the Difficulty, and the Ingredients paid.
     if (definition.cooks === true) return this.#startCook(definition);
 
@@ -4520,6 +4533,132 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     await this.actor.update({ "system.adventureUses": [...uses, entry.id] });
     const { postAdventuring } = await import("../chat.mjs");
     return postAdventuring(this.actor, definition, { topic, patient });
+  }
+
+  /**
+   * The Create Maneuver, begun. What is made, among what this character can: a Basic Item with a Craft
+   * DC - Craft with the Basic Items Specialty, or Medicine for [Med] and Cooking for [Food] - or a Weapon,
+   * Apparel, Vehicle or Battle Jacket, by Craft with its Specialty. The Difficulty is the Basic Item's
+   * Craft DC, or picked for the rest. Then what it costs, paid once - Scrap for [Tech] and Vehicles, an
+   * Ingredient for [Food] - the use counted, and the card.
+   */
+  async #startCreate(entry, definition) {
+    const escape = Handlebars.escapeExpression;
+    const { createSkillFor, scrapCost, canCreateWith, ingredientsTaken, DIFFICULTY_ORDER } = await import("../adventure.mjs");
+    const system = this.actor.system;
+    const labels = DBUCharacterData.DIFFICULTIES;
+    const keyOf = label => DIFFICULTY_ORDER.find(key => labels[key]?.label.toLowerCase() === String(label ?? "").trim().toLowerCase()) ?? "";
+
+    const basics = gearOfList(traitsOfKind("gear"), "basic")
+      .filter(item => (item.special !== true) && item.craftDC)
+      .map(item => ({ item, tags: tagsOf(item), ...createSkillFor(tagsOf(item)) }))
+      .filter(({ skill, specialty }) => canCreateWith(system, skill, specialty));
+    const pieces = [["weapon", "A Weapon", "weapons"], ["apparel", "A piece of Apparel", "apparel"],
+      ["vehicle", "A Vehicle", "vehicles"], ["battleJacket", "A Battle Jacket", "vehicles"]]
+      .filter(([, , specialty]) => canCreateWith(system, "craft", specialty));
+    if (!basics.length && !pieces.length) {
+      ui.notifications.warn(`${this.actor.name} has nothing they can Create - 2+ Ranks and the Specialty for it.`);
+      return;
+    }
+
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.actor.name} - ${definition.name}` },
+      content: `<label class="dbu-wager"><span>Make</span><select name="what" class="dbu-gear-pick">
+          ${basics.length ? `<optgroup label="Basic Items">${basics.map(({ item }) =>
+            `<option value="basic:${escape(item.id)}">${escape(item.name)} (${escape(item.craftDC)})</option>`).join("")}</optgroup>` : ""}
+          ${pieces.map(([key, label]) => `<option value="${key}">${escape(label)}</option>`).join("")}</select></label>
+        <label class="dbu-wager"><span>Difficulty</span><select name="difficulty">${DIFFICULTY_ORDER.map(key =>
+          `<option value="${key}">${escape(labels[key]?.label ?? key)}</option>`).join("")}</select>
+          <em>For a Weapon, Apparel or Vehicle - or a Variable Craft DC</em></label>`,
+      buttons: [
+        { action: "make", label: "Begin", default: true, callback: (event, button, dialog) => ({
+          what: dialog.element.querySelector('select[name="what"]')?.value ?? "",
+          difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "apprentice"
+        }) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!chosen || (typeof chosen !== "object") || !chosen.what) return;
+
+    const basic = chosen.what.startsWith("basic:") ? basics.find(({ item }) => `basic:${item.id}` === chosen.what) : null;
+    const kind = basic ? "basic" : chosen.what;
+    // A Basic Item's Craft DC as written - or, where it varies, the one picked.
+    const choices = basic ? (gearItemFrom(basic.item, this.actor).system.craftDCChoices ?? []) : [];
+    const difficulty = basic ? (choices.length ? (choices.includes(chosen.difficulty) ? chosen.difficulty : choices[0])
+      : keyOf(basic.item.craftDC)) : chosen.difficulty;
+    if (!labels[difficulty]) {
+      ui.notifications.warn(`${definition.name}: "${basic?.item.craftDC}" is not a Difficulty Category.`);
+      return;
+    }
+    const roll = basic ? { skill: basic.skill, specialty: basic.specialty }
+      : { skill: "craft", specialty: (kind === "weapon") ? "weapons" : (kind === "apparel") ? "apparel" : "vehicles" };
+    const name = basic ? basic.item.name : { weapon: "a Weapon", apparel: "a piece of Apparel", vehicle: "a Vehicle",
+      battleJacket: "a Battle Jacket" }[kind];
+    const time = String(definition[{ basic: "timeBasic", weapon: "timeWeapon", apparel: "timeApparel" }[kind] ?? "timeVehicle"] ?? "");
+
+    // What it costs. Scrap once - "Tech. Scrap is required", and a Vehicle's or Battle Jacket's; an
+    // Ingredient for [Food], this attempt's.
+    const scrap = (basic ? basic.tags.includes("tech") : true) ? scrapCost(difficulty, { battleJacket: kind === "battleJacket" }) : 0;
+    const food = Boolean(basic?.tags.includes("food"));
+    const poolsOf = id => this.actor.items.filter(item => (item.system.gearId === id) && ((Number(item.system.charges) || 0) > 0))
+      .map(item => ({ id: item.id, charges: Number(item.system.charges) || 0 }));
+    const scrapTaken = scrap ? ingredientsTaken(poolsOf("scrap"), scrap) : [];
+    if (!scrapTaken) {
+      ui.notifications.warn(`${this.actor.name} needs ${scrap} Scrap for ${name}.`);
+      return;
+    }
+    if (food && !(await this.#payIngredient(name))) return;
+    for (const { id, count } of scrapTaken) {
+      const item = this.actor.items.get(id);
+      const left = (Number(item.system.charges) || 0) - count;
+      if (left > 0) await item.update({ "system.charges": left });
+      else await item.delete();
+    }
+
+    await this.actor.update({ "system.adventureUses": [...(system.adventureUses ?? []), entry.id] });
+    const { postCreate } = await import("../chat.mjs");
+    return postCreate(this.actor, { kind, id: basic?.item.id ?? "", name, difficulty, time, food, scrap, ...roll });
+  }
+
+  /**
+   * One Ingredient, spent: "Food. You must spend an Ingredient to attempt and create this Basic Item."
+   * From which, where they carry more than one kind. False if they have none, or cancel.
+   */
+  async #payIngredient(forWhat) {
+    const pools = this.actor.items.filter(item => (item.system.gearId === "ingredients") && ((Number(item.system.charges) || 0) > 0));
+    if (!pools.length) {
+      ui.notifications.warn(`${this.actor.name} needs an Ingredient for ${forWhat}.`);
+      return false;
+    }
+    let item = pools[0];
+    if (pools.length > 1) {
+      const escape = Handlebars.escapeExpression;
+      const picked = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${forWhat} - an Ingredient` },
+        content: `<select name="from" class="dbu-gear-pick">${pools.map(pool =>
+          `<option value="${pool.id}">${escape(pool.name)} (${pool.system.charges})</option>`).join("")}</select>`,
+        buttons: [
+          { action: "pay", label: "Spend", default: true, callback: (event, button, dialog) =>
+            dialog.element.querySelector('select[name="from"]')?.value ?? null },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      item = pools.find(pool => pool.id === picked);
+      if (!item) return false;
+    }
+    const left = (Number(item.system.charges) || 0) - 1;
+    if (left > 0) await item.update({ "system.charges": left });
+    else await item.delete();
+    return true;
+  }
+
+  /** Create's Try again with a [Food] Basic Item: another Ingredient, this attempt's. */
+  async payIngredientFor(forWhat) {
+    return this.#payIngredient(forWhat);
   }
 
   /**
