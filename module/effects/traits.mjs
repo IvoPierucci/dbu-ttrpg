@@ -40,6 +40,9 @@ export const KINDS = Object.freeze({
   // sixth in that folder is a sixth chance for a header to be forgotten.
   high: { label: "High Environment", priority: PRIORITY.base },
   maneuvers: { label: "Maneuver", priority: PRIORITY.base },
+  // Adventuring Maneuvers: "used exclusively outside of Combat Encounters", each with a Time Cost
+  // and a Session Limit. Nothing is gathered from these as effects - the Adventure tab reads them.
+  adventuring: { label: "Adventuring Maneuver", priority: PRIORITY.base },
   // Gear: the Items a character can be given, copied from here onto the character when
   // they gain one. Nothing is gathered from these as effects yet - a file here is read by
   // the Add Item window and by the Item's own sheet.

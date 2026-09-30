@@ -1486,6 +1486,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       { required: true, initial: [] }
     );
 
+    // The Adventuring Maneuvers attempted this Adventuring Session, one id to an attempt. Emptied
+    // by hand - "New Session" on the Adventure tab - and by nothing else (the user's ruling).
+    schema.adventureUses = new fields.ArrayField(
+      new fields.StringField({ required: true, blank: false }),
+      { required: true, initial: [] }
+    );
+
     // --- Stat Drain ---
     // The ranks of Stat Drain running on this character, taken off their Combat Rolls and Soak
     // Value per base Tier; a clock of its own takes it back to nothing.

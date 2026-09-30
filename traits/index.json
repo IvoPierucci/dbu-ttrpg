@@ -1,6 +1,8 @@
 {
   "_comment": "Generated at release. A browser cannot list a directory, and FilePicker.browse needs a permission an ordinary player does not have - so every file is named here.",
   "traits": [
+    "adventuring/rest.dbu",
+    "adventuring/take-a-breather.dbu",
     "battlefields/blinding.dbu",
     "battlefields/bog-environment.dbu",
     "battlefields/bright.dbu",

@@ -2807,6 +2807,31 @@
   align-self: flex-start;
 }
 
+/* Adventuring Maneuvers: a name to use it, its Time Cost, what is left of its Session Limit. */
+.dbu-ttrpg .adventuring-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dbu-ttrpg .adventuring-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--dbu-border);
+}
+
+.dbu-ttrpg .adventuring-row .maneuver-name {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.dbu-ttrpg .adventuring-time {
+  color: var(--dbu-text-dim);
+  white-space: nowrap;
+}
+
 /* Spending Karma after the result is known, offered on the settled card. */
 .dbu-ttrpg .dbu-karma-button,
 .dbu-karma-button {

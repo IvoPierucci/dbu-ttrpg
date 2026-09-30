@@ -37,3 +37,53 @@ export function travelKiLoss({ type, maxKi = 0, flightRanks = 0, vehicle = false
     reason: `1/${share} of their Maximum Ki Points${doubled ? `, doubled - under ${TRAVEL_FLIGHT_RANKS} Ranks in Flight` : ""}`
   };
 }
+
+/**
+ * The Adventuring Maneuvers a character has, each with what is left of its Session Limit.
+ *
+ * "Universal Adventuring Maneuvers ... are possessed by all Characters." "While most Adventuring
+ * Maneuvers can only be attempted once during each Adventuring Session, some may be able to be used
+ * multiple times up to a listed Session Limit."
+ */
+export function adventuringManeuvers(definitions, uses = []) {
+  return definitions
+    .filter(definition => definition.universal === true)
+    .map(definition => {
+      const limit = Math.max(1, Number(definition.sessionLimit) || 1);
+      const used = uses.filter(id => id === definition.id).length;
+      return {
+        id: definition.id,
+        name: definition.name,
+        timeCost: String(definition.timeCost ?? ""),
+        prerequisite: String(definition.prerequisite ?? "N/A"),
+        limit,
+        left: Math.max(0, limit - used),
+        text: String(definition.text ?? "")
+      };
+    });
+}
+
+/**
+ * Why an Adventuring Maneuver cannot be attempted now, or null. "Adventuring Maneuvers are Maneuvers
+ * that can be exclusively used outside of Combat Encounters."
+ */
+export function whyNotAdventuring(entry, { adventuring = true } = {}) {
+  if (!entry) return "There is no such Adventuring Maneuver.";
+  if (!adventuring) return "Only outside a Combat Encounter.";
+  if (entry.left <= 0) return `Its Session Limit (${entry.limit}) is reached this Adventuring Session.`;
+  return null;
+}
+
+/**
+ * Life and Ki Points regained - "equal to 1/10th of their respective maximums", "half" - each up to
+ * its maximum. Rounded down.
+ */
+export function regainedShare(share, { life, ki }) {
+  const back = pool => {
+    const max = Math.max(0, Number(pool?.max) || 0);
+    const value = Number(pool?.value) || 0;
+    const gain = share ? Math.floor(max / share) : 0;
+    return Math.max(0, Math.min(max, value + gain) - value);
+  };
+  return { life: back(life), ki: back(ki) };
+}

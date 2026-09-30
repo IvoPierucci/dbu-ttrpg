@@ -1,0 +1,24 @@
+id: take-a-breather
+name: Take a Breather
+# "These Adventuring Maneuvers are possessed by all Characters."
+universal: true
+prerequisite: N/A
+sessionLimit: 1
+timeCost: 1 Hour
+# "Regain Life and Ki Points equal to 1/10th of their respective maximums."
+regainShare: 10
+source: Core Rule
+description: >
+  An hour's pause, once an Adventuring Session: a tenth of your Life and Ki Points back.
+text: >
+  Take a Breather: You take the time to regain some stamina.
+  –Prerequisite: N/A
+  –Session Limit: 1
+  –Time Cost: 1 Hour
+  –Effect: Regain Life and Ki Points equal to 1/10th of their respective maximums.
+
+---
+
+# Used from the Adventure tab, outside a Combat Encounter: the use counts at once (it was
+# attempted), and the card's button gives the Life and Ki Points once the table says the full
+# Time Cost was spent. Interrupted, the button is never pressed.

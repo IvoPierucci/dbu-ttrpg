@@ -1,0 +1,27 @@
+id: rest
+name: Rest
+# "These Adventuring Maneuvers are possessed by all Characters."
+universal: true
+prerequisite: N/A
+sessionLimit: 1
+timeCost: 8 Hours
+# "Regain Life and Ki Points equal to half of their respective maximums."
+regainShare: 2
+source: Core Rule
+description: >
+  A full night's rest, once an Adventuring Session: half your Life and Ki Points back.
+text: >
+  Rest: With a full night’s rest, you feel refreshed and ready to go.
+  –Prerequisite: N/A
+  –Session Limit: 1
+  –Time Cost: 8 Hours
+  –Effect: Regain Life and Ki Points equal to half of their respective maximums.
+
+---
+
+# Used from the Adventure tab, outside a Combat Encounter: the use counts at once (it was
+# attempted), and the card's button gives the Life and Ki Points once the table says the full
+# Time Cost was spent. Interrupted, the button is never pressed.
+#
+# Travel and Rest: used during a Medium or Long Travel under 2 days, the Travel costs no Ki
+# Points - the Travel window's "Rested on the way".

@@ -534,6 +534,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useConditionAbility: DBUCharacterSheet._onUseConditionAbility,
       stepKarma: DBUCharacterSheet._onStepKarma,
       travel: DBUCharacterSheet._onTravel,
+      useAdventuring: DBUCharacterSheet._onUseAdventuring,
+      newAdventureSession: DBUCharacterSheet._onNewAdventureSession,
       editImage: DBUCharacterSheet._onEditImage
     },
     form: {
@@ -743,6 +745,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.actor = this.actor;
     context.system = this.actor.system;
     context.tabs = this._getTabs();
+    {
+      const { adventuringManeuvers } = await import("../adventure.mjs");
+      context.adventuringManeuvers = adventuringManeuvers(traitsOfKind("adventuring"),
+        this.actor.system.adventureUses ?? []);
+    }
     context.progressionRows = this._prepareProgressionRows();
     // Handlebars has no literal-array helper, so the Attribute columns are supplied
     // here. The progression table's headings and cells both read from this, so they
@@ -4365,6 +4372,32 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       content: `<p>${escape(this.actor.name)} completes a ${escape(TRAVEL_TYPES[chosen.type]?.label ?? "")} Travel${
         loss ? `, and loses ${lost} Ki Points (${escape(reason)})` : (reason ? ` ${escape(reason)}, losing no Ki Points` : "")}.</p>`
     });
+  }
+
+  /**
+   * Attempt an Adventuring Maneuver. The attempt counts at once against its Session Limit; the card
+   * gives its benefits when the full Time Cost is spent - "if you are interrupted or unable to spend
+   * the full Time Cost for any reason, you do not gain the benefits".
+   */
+  static async _onUseAdventuring(event, target) {
+    const { adventuringManeuvers, whyNotAdventuring } = await import("../adventure.mjs");
+    const uses = this.actor.system.adventureUses ?? [];
+    const entry = adventuringManeuvers(traitsOfKind("adventuring"), uses)
+      .find(each => each.id === target.dataset.maneuver);
+    const refused = whyNotAdventuring(entry, { adventuring: this.actor.system.adventuring });
+    if (refused) {
+      ui.notifications.warn(`${this.actor.name}: ${refused}`);
+      return;
+    }
+    await this.actor.update({ "system.adventureUses": [...uses, entry.id] });
+    const { postAdventuring } = await import("../chat.mjs");
+    return postAdventuring(this.actor, getTrait(entry.id));
+  }
+
+  /** A new Adventuring Session: every Session Limit full again. Only by hand (the user's ruling). */
+  static async _onNewAdventureSession() {
+    await this.actor.update({ "system.adventureUses": [] });
+    ui.notifications.info(`${this.actor.name}: a new Adventuring Session.`);
   }
 
   static async _onStepKarma(event, target) {

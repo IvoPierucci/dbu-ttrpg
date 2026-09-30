@@ -2558,6 +2558,7 @@ function onRenderChatMessage(message, html) {
   renderCurePoison(message, html);
   renderRepair(message, html);
   renderGamble(message, html);
+  renderAdventuring(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
@@ -3056,6 +3057,51 @@ async function settleGamble(message, gamble, made) {
   return settledNote(message, fighting
     ? `${actor.name} fails: Defeated, and dies if still Defeated at the end of this Combat Encounter.`
     : `${actor.name} fails: Defeated, and dies - outside a Combat Encounter, at once.`);
+}
+
+/**
+ * An Adventuring Maneuver begun: its Time Cost said, and its benefits on a button for when that time
+ * has been spent in full. Interrupted, the button is simply never pressed.
+ */
+export async function postAdventuring(actor, definition) {
+  const escape = Handlebars.escapeExpression;
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${escape(actor.name)} begins ${escape(definition.name)} - ${escape(definition.timeCost ?? "")}. `
+      + "Interrupted, or without the full Time Cost, there are no benefits.</p>",
+    flags: { [SCOPE]: { [ADVENTURING_FLAG]: {
+      actorUuid: actor.uuid, id: definition.id, name: definition.name,
+      share: Number(definition.regainShare) || 0, applied: false
+    } } }
+  });
+}
+
+function renderAdventuring(message, html) {
+  const adventuring = message.getFlag(SCOPE, ADVENTURING_FLAG);
+  if (!adventuring || adventuring.applied) return;
+  const actor = fromUuidSync(adventuring.actorUuid);
+  if (!game.user.isGM && !actor?.isOwner) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "The Time Cost was spent";
+  button.dataset.tooltip = getTrait(adventuring.id)?.text?.split("–Effect:")[1]?.trim() ?? "";
+  button.addEventListener("click", () => settleAdventuring(message, adventuring));
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+async function settleAdventuring(message, adventuring) {
+  const actor = fromUuidSync(adventuring.actorUuid);
+  if (!actor) return;
+  await message.setFlag(SCOPE, ADVENTURING_FLAG, { ...adventuring, applied: true });
+  const { regainedShare } = await import("./adventure.mjs");
+  const back = regainedShare(adventuring.share, actor.system);
+  await actor.update({
+    "system.life.value": actor.system.life.value + back.life,
+    "system.ki.value": actor.system.ki.value + back.ki
+  });
+  return settledNote(message,
+    `${actor.name} finishes ${adventuring.name}: ${back.life} Life and ${back.ki} Ki Points back.`);
 }
 
 function renderCurePoison(message, html) {
@@ -5222,6 +5268,8 @@ const CURE_FLAG = "curePoison";
 const REPAIR_FLAG = "repair";
 /** An Item's Saving Throw on being consumed, waiting on the sheet's roll - Ultra Divine Water. */
 const GAMBLE_FLAG = "gamble";
+/** An Adventuring Maneuver begun, waiting on its Time Cost. */
+const ADVENTURING_FLAG = "adventuring";
 
 /**
  * An Item left on the ground for whoever moves through it - Caltrops. The card is posted

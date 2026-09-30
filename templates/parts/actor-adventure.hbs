@@ -15,4 +15,24 @@
       Travel
     </button>
   </section>
+
+  {{! "Each Adventuring Maneuver has a Time Cost" and a Session Limit. The whole entry is on the
+      name's hover. }}
+  <section class="panel">
+    <h3 class="panel-title">
+      Adventuring Maneuvers
+      <button type="button" class="edit-toggle" data-action="newAdventureSession"
+              data-tooltip="A new Adventuring Session: every Session Limit full again.">New Session</button>
+    </h3>
+    <ul class="adventuring-list">
+      {{#each adventuringManeuvers as |maneuver|}}
+      <li class="adventuring-row{{#unless maneuver.left}} maneuver-exhausted{{/unless}}">
+        <button type="button" class="maneuver-name rollable" data-action="useAdventuring"
+                data-maneuver="{{maneuver.id}}" data-tooltip="{{maneuver.text}}">{{maneuver.name}}</button>
+        <span class="adventuring-time" data-tooltip="Time Cost">{{maneuver.timeCost}}</span>
+        <span class="maneuver-uses" data-tooltip="Session Limit">{{maneuver.left}}/{{maneuver.limit}} left</span>
+      </li>
+      {{/each}}
+    </ul>
+  </section>
 </div>
