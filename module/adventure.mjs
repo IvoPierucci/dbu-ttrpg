@@ -49,15 +49,18 @@ export function adventuringManeuvers(definitions, uses = [], system = null) {
   return definitions
     .filter(definition => (definition.universal === true) || meetsPrerequisite(definition, system))
     .map(definition => {
-      const limit = Math.max(1, Number(definition.sessionLimit) || 1);
-      const used = uses.filter(id => id === definition.id).length;
+      // "Session Limit: Infinite" - null, and never reached.
+      const infinite = String(definition.sessionLimit ?? "").trim().toLowerCase() === "infinite";
+      const limit = infinite ? null : Math.max(1, Number(definition.sessionLimit) || 1);
+      const used = uses.filter(entry => usedAs(entry, definition.id)).length;
       return {
         id: definition.id,
         name: definition.name,
         timeCost: String(definition.timeCost ?? ""),
         prerequisite: String(definition.prerequisite ?? "N/A"),
         limit,
-        left: Math.max(0, limit - used),
+        left: infinite ? null : Math.max(0, limit - used),
+        exhausted: !infinite && (used >= limit),
         text: String(definition.text ?? ""),
         // The mark it leaves, and whether it is held now - for the row's Cancel buff.
         gains: String(definition.gains ?? "").trim().toLowerCase(),
@@ -65,6 +68,23 @@ export function adventuringManeuvers(definitions, uses = [], system = null) {
           && ((Number(system?.conditions?.[String(definition.gains).trim().toLowerCase()]) || 0) > 0)
       };
     });
+}
+
+/**
+ * One attempt recorded for this Adventuring Maneuver: its id, or its id and whom it was aimed at -
+ * `pickpocket@Actor.x` - where that matters.
+ */
+function usedAs(entry, id) {
+  return (entry === id) || String(entry).startsWith(`${id}@`);
+}
+
+/**
+ * Pickpocket's "each time you target a Character with this Adventuring Maneuver during an
+ * Adventuring Session, reduce the Dice Score of your Thievery Skill against that Character by 3 for
+ * any subsequent checks" - so much for every earlier attempt on them.
+ */
+export function targetPenalty(uses, id, targetUuid, per) {
+  return (uses ?? []).filter(entry => entry === `${id}@${targetUuid}`).length * (Number(per) || 0);
 }
 
 /**
@@ -85,7 +105,7 @@ export function meetsPrerequisite(definition, system) {
 export function whyNotAdventuring(entry, { adventuring = true } = {}) {
   if (!entry) return "There is no such Adventuring Maneuver.";
   if (!adventuring) return "Only outside a Combat Encounter.";
-  if (entry.left <= 0) return `Its Session Limit (${entry.limit}) is reached this Adventuring Session.`;
+  if ((entry.left !== null) && (entry.left <= 0)) return `Its Session Limit (${entry.limit}) is reached this Adventuring Session.`;
   return null;
 }
 

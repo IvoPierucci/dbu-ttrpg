@@ -444,6 +444,10 @@ async function applyClash(messageId, clash) {
     await settleTreatment(message, clash);
   }
 
+  if (clash.pickpocket && clash.result && !clash.pickpocket.applied) {
+    await settlePickpocket(message, clash);
+  }
+
   if (clash.stagger && clash.result && !clash.stagger.applied) {
     await settleStagger(message, clash);
   }
@@ -839,6 +843,44 @@ async function settleStagger(message, clash) {
   });
 
   await settledNote(message, `${target.name} is Staggered until the end of their turn.`);
+}
+
+/**
+ * Pickpocket, settled: "If you win, you may steal a Basic Item that belongs to that Character." The
+ * thief picks which - or none, since they may - and it changes hands.
+ */
+async function settlePickpocket(message, clash) {
+  const thief = fromUuidSync(clash.challengerUuid);
+  const victim = fromUuidSync(clash.defenderUuid);
+  if (!thief || !victim) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, pickpocket: { ...clash.pickpocket, applied: true } });
+
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${victim.name} notices, and keeps what is theirs.`);
+    return;
+  }
+  const kinds = (clash.pickpocket.steals === "basic") ? ["basic"] : [clash.pickpocket.steals];
+  const pockets = Array.from(victim.items ?? [])
+    .filter(item => (item.type === "gear") && kinds.includes(item.system.itemType));
+  if (!pockets.length) {
+    await settledNote(message, `${thief.name} wins, but ${victim.name} has no Basic Item to take.`);
+    return;
+  }
+  const chosen = await pick(`${clash.maneuverName} - ${victim.name}`,
+    `${thief.name} may steal one of ${victim.name}'s Basic Items.`,
+    pockets.map(item => ({ action: item.id, label: item.name })));
+  const item = chosen ? victim.items.get(chosen) : null;
+  if (!item) {
+    await settledNote(message, `${thief.name} wins, and takes nothing.`);
+    return;
+  }
+  const data = item.toObject();
+  delete data._id;
+  // Taken, not worn or held: it is in the thief's pack now.
+  if (data.system) data.system.equipped = false;
+  await requestCreateItem(thief, data);
+  await requestDeleteItem(victim, item.id);
+  await settledNote(message, `${thief.name} steals ${item.name} from ${victim.name}.`);
 }
 
 /**
@@ -5667,7 +5709,9 @@ const CLASH_ROLLS = ({
     // scope and "against a Seen Opponent" has no meaning off one.
     parts: (actor, clash, uuid) => [
       ...seenBonus(actor, clashOpponent(clash, uuid), "skill"),
-      ...terrifyPenalty(actor, clash, uuid)
+      ...terrifyPenalty(actor, clash, uuid),
+      // The challenger's own rows - Pickpocket's -3 for each earlier attempt on the same Character.
+      ...((uuid === clash.challengerUuid) ? (clash.challengerRows ?? []) : [])
     ],
 
     criticalDice: () => DBUCharacterData.SKILL_CRITICAL_DIE,

@@ -1,0 +1,39 @@
+id: pickpocket
+name: Pickpocket
+prerequisite: 2+ Skill Ranks in Thievery
+requiresSkill: thievery
+requiresRanks: 2
+# "Session Limit: Infinite."
+sessionLimit: infinite
+timeCost: 1 Minute
+# "Target a Character. Make a Clash (Thievery vs Perception/Thievery) against that Character."
+clashSkill: thievery
+clashDefenderSkills: perception, thievery
+# "Each time you target a Character with this Adventuring Maneuver during an Adventuring Session,
+# reduce the Dice Score of your Thievery Skill against that Character by 3 for any subsequent checks
+# made through the Pickpocket Maneuver."
+targetPenalty: 3
+# "If you win, you may steal a Basic Item that belongs to that Character."
+steals: basic
+source: Core Rule
+description: >
+  A Thievery Clash against someone's Perception or Thievery: win, and one of their Basic Items is
+  yours. 3 worse against them for every time already this Adventuring Session.
+text: >
+  Pickpocket: You snatch something that does not belong to you from another person’s pocket, pouch,
+  or pack.
+  –Prerequisite: 2+ Skill Ranks in Thievery
+  –Session Limit: Infinite
+  –Time Cost: 1 Minute
+  –Effect: Target a Character. Make a Clash (Thievery vs Perception/Thievery) against that Character.
+  If you win, you may steal a Basic Item that belongs to that Character. Each time you target a
+  Character with this Adventuring Maneuver during an Adventuring Session, reduce the Dice Score of
+  your Thievery Skill against that Character by 3 for any subsequent checks made through the
+  Pickpocket Maneuver.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Thievery, with no Session Limit. Used at the
+# one token targeted: the Clash card opens at once (a minute is too short to wait on), and each
+# earlier attempt on that Character this Adventuring Session is a -3 row on the thief's side. Won, the
+# thief picks one of the other's Basic Items - or none - and it changes hands.
