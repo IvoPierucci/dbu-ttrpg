@@ -3,6 +3,7 @@
   "traits": [
     "adventuring/care.dbu",
     "adventuring/full-repair.dbu",
+    "adventuring/gauge.dbu",
     "adventuring/obscure.dbu",
     "adventuring/pickpocket.dbu",
     "adventuring/recall.dbu",

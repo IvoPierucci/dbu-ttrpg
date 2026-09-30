@@ -452,6 +452,10 @@ async function applyClash(messageId, clash) {
     await settleUnaware(message, clash);
   }
 
+  if (clash.reveals && clash.result && !clash.reveals.applied) {
+    await settleReveals(message, clash);
+  }
+
   if (clash.stagger && clash.result && !clash.stagger.applied) {
     await settleStagger(message, clash);
   }
@@ -858,6 +862,23 @@ async function settleUnaware(message, clash) {
   await settledNote(message, (whoWonClash(clash.result) === "challenger")
     ? `${clash.defenderName} is unaware of ${clash.challengerName}.`
     : `${clash.defenderName} is aware of ${clash.challengerName}.`);
+}
+
+/**
+ * Gauge, settled: "If you win, you learn their Power Level and Alignment." Whispered to the one who
+ * learns it, and the GM.
+ */
+async function settleReveals(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, reveals: { ...clash.reveals, applied: true } });
+  const gauger = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (whoWonClash(clash.result) !== "challenger" || !gauger || !target) {
+    await settledNote(message, `${clash.defenderName} gives nothing away.`);
+    return;
+  }
+  const alignment = DBUCharacterData.ALIGNMENTS[target.system.alignment ?? 0]?.label ?? "Neutral";
+  await settledNote(message, `${target.name}: Power Level ${target.system.powerLevel ?? "?"}, ${alignment}.`,
+    { to: gauger });
 }
 
 /**

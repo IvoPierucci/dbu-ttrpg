@@ -4412,6 +4412,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           + `${definition.name}.`);
         return;
       }
+      // Gauge's "You cannot target the same Character twice ... in an Adventuring Session."
+      const again = (definition.oncePerTarget === true)
+        ? aimed.filter(victim => uses.includes(`${entry.id}@${victim.uuid}`)) : [];
+      if (again.length) {
+        ui.notifications.warn(`${this.actor.name}: ${again.map(victim => victim.name).join(", ")} already `
+          + `${definition.name}d this Adventuring Session.`);
+        return;
+      }
       const { targetPenalty } = await import("../adventure.mjs");
       await this.actor.update({ "system.adventureUses": [...uses, ...aimed.map(victim => `${entry.id}@${victim.uuid}`)] });
       const list = raw => (Array.isArray(raw) ? raw : String(raw ?? "").split(","))
@@ -4426,7 +4434,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         }, {
           challengerRows: penalty ? [{ label: `${definition.name} (${victim.name}, again)`, value: -penalty }] : [],
           ...(definition.steals ? { pickpocket: { steals: String(definition.steals).trim().toLowerCase(), applied: false } } : {}),
-          ...((definition.clashUnaware === true) ? { unaware: { applied: false } } : {})
+          ...((definition.clashUnaware === true) ? { unaware: { applied: false } } : {}),
+          ...((definition.clashReveals === true) ? { reveals: { applied: false } } : {})
         });
       }
       return;

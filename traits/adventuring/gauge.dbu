@@ -1,0 +1,35 @@
+id: gauge
+name: Gauge
+prerequisite: 2+ Skill Ranks in Clairvoyance
+requiresSkill: clairvoyance
+requiresRanks: 2
+# "Session Limit: Infinite."
+sessionLimit: infinite
+timeCost: 1 Minute
+# "Target a Character you can sense. Make a Clash (Clairvoyance vs Concealment) against them."
+clashSkill: clairvoyance
+clashDefenderSkills: concealment
+# "You cannot target the same Character twice with the Gauge Maneuver in an Adventuring Session."
+oncePerTarget: true
+# "If you win, you learn their Power Level and Alignment."
+clashReveals: true
+source: Core Rule
+description: >
+  A Clairvoyance Clash against someone's Concealment: win, and you learn their Power Level and
+  Alignment. Once for each Character in an Adventuring Session.
+text: >
+  Gauge: Using your ability to sense energy, you size up a potential threat, learning their relative
+  strength compared to your own.
+  –Prerequisite: 2+ Skill Ranks in Clairvoyance
+  –Session Limit: Infinite
+  –Time Cost: 1 Minute
+  –Effect: Target a Character you can sense. Make a Clash (Clairvoyance vs Concealment) against them.
+  If you win, you learn their Power Level and Alignment. You cannot target the same Character twice
+  with the Gauge Maneuver in an Adventuring Session.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Clairvoyance, with no Session Limit. Used at
+# the one token targeted - refused if they were already Gauged this Adventuring Session - and the
+# Clash card opens at once. Won, their Power Level and Alignment are whispered to the one who Gauged
+# them (and the GM). Whether they can be sensed is the table's.
