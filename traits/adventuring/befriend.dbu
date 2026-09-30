@@ -1,0 +1,37 @@
+id: befriend
+name: Befriend
+prerequisite: 2+ Skill Ranks in Persuasion
+requiresSkill: persuasion
+requiresRanks: 2
+# "Session Limit: Infinite."
+sessionLimit: infinite
+timeCost: Instant
+# "Target a Character you can see or speak to. Make a Clash (Persuasion vs Intuition/Persuasion)."
+clashSkill: persuasion
+clashDefenderSkills: intuition, persuasion
+# "You cannot target the same Character twice with the Befriend Maneuver in an Adventuring Session (or
+# while they are still influenced by its effects)."
+oncePerTarget: true
+# "If you win, increase your Affection Rating for that Character by 1 for 1 Day." Affection Ratings are
+# not in this system: said on the card, {challenger} and {defender} named.
+clashWinNote: {challenger}'s Affection Rating for {defender} is 1 higher for 1 Day
+source: Core Rule
+description: >
+  A Persuasion Clash against someone's Intuition or Persuasion: win, and your Affection Rating for them
+  is 1 higher for a day. Once for each Character in an Adventuring Session.
+text: >
+  Befriend: You convince someone that you are on the same side as them.
+  –Prerequisite: 2+ Skill Ranks in Persuasion
+  –Session Limit: Infinite
+  –Time Cost: Instant
+  –Effect: Target a Character you can see or speak to. Make a Clash (Persuasion vs
+  Intuition/Persuasion) against them. If you win, increase your Affection Rating for that Character by 1
+  for 1 Day. You cannot target the same Character twice with the Befriend Maneuver in an Adventuring
+  Session (or while they are still influenced by its effects).
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Persuasion, with no Session Limit. Used at the
+# one token targeted - refused if they were already Befriended this Adventuring Session - and the Clash
+# card opens at once. Won, the card says the Affection Rating: those are not built, so keeping it, the
+# day it lasts, and a Character still influenced into the next Session are the table's.
