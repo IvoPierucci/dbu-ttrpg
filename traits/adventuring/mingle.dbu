@@ -1,0 +1,27 @@
+id: mingle
+name: Mingle
+prerequisite: 2+ Skill Ranks in Persuasion
+requiresSkill: persuasion
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 2 Hours
+# What it gives is the ARC's to tell: said on the card. Affection Ratings are not in this system.
+effectNote: gains any information the Characters of the settlement have relevant to their situation - and used enough times may raise their Affection Rating with its Individuals or Factions
+source: Core Rule
+description: >
+  Two hours among the locals of a settlement: whatever they know that bears on your situation, and -
+  often enough - their Affection for you.
+text: >
+  Mingle: You socialize with the locals, learning from them and improving their opinions of you.
+  –Prerequisite: 2+ Skill Ranks in Persuasion
+  –Session Limit: 1
+  –Time Cost: 2 Hours
+  –Effect: You enter a settlement and spend your time getting to know the people there. You gain any
+  information Characters there may have relevant to your situation and may increase your Affection
+  Rating with the Individuals or Factions at that settlement if you use the Mingle Maneuver enough times.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Persuasion. Once the two hours are spent the
+# card says what it gives; the information, and how many times is "enough" for the Affection Rating, are
+# the ARC's - Affection Ratings are not built.
