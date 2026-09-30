@@ -161,3 +161,16 @@ export function caredFor({ life, ki }, { lifeShare = 4, restShare = 0 } = {}) {
   }
   return { life: Math.max(Number(life?.value) || 0, lifeNow), ki: Math.max(Number(ki?.value) || 0, kiNow) };
 }
+
+/**
+ * The most an Adventuring Maneuver's area can be for so many Skill Ranks - Fraud's "At 2~3 Skill Ranks,
+ * at most you can affect a single city. At 4 Skill Ranks ... a full country. At 5 Skill Ranks ... an
+ * entire planet." Written `area2:`, `area4:`, `area5:` - the highest reached.
+ */
+export function areaFor(definition, ranks) {
+  const steps = Object.entries(definition ?? {})
+    .map(([key, value]) => [Number(key.match(/^area(\d+)$/)?.[1]), String(value ?? "").trim()])
+    .filter(([at, said]) => Number.isFinite(at) && said)
+    .sort(([a], [b]) => a - b);
+  return steps.filter(([at]) => at <= (Number(ranks) || 0)).pop()?.[1] ?? "";
+}

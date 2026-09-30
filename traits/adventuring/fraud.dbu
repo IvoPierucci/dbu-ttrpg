@@ -1,0 +1,46 @@
+id: fraud
+name: Fraud
+prerequisite: 2+ Skill Ranks in Bluff
+requiresSkill: bluff
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 4 Hours
+# "Spread rumours and/or misinformation within an area of your choosing." What is spread, asked when it
+# is used and named on the card.
+asksTopic: true
+topicLabel: Rumour
+topicWord: spreading
+# "The area affected by your Fraud varies based on your number of Skill Ranks in Bluff" - the most it can
+# reach, read off their Ranks and named on the card.
+areaSkill: bluff
+area2: at most a single city
+area4: a full country
+area5: an entire planet
+# The Check is rolled from the sheet, at the Difficulty the ARC picks there.
+effectNote: makes a Bluff Skill Check against a Difficulty Category the ARC sets (rolled from the sheet) - won: the common people (and any NPCs the ARC decides) within that area believe it until it is proven false
+source: Core Rule
+description: >
+  Four hours spreading rumours: a Bluff Check at the ARC's Difficulty, and the people of the area
+  believe them until proven false - a city, a country at 4 Ranks, a planet at 5.
+text: >
+  Fraud: You pull the wool over the eyes of the unsuspecting sheep of your local area, leading them to
+  believe that whatever you say is obviously true.
+  –Prerequisite: 2+ Skill Ranks in Bluff
+  –Session Limit: 1
+  –Time Cost: 4 Hours
+  –Effect: Spread rumours and/or misinformation within an area of your choosing. Make a Skill Check
+  (Bluff) against a Difficulty Category set by your ARC. If you win, the common people (and any NPCs
+  decided by the ARC) within that area believe the rumours and/or misinformation you’ve supplied until
+  proven to be false.
+
+  The area affected by your Fraud varies based on your number of Skill Ranks in Bluff:
+
+  At 2~3 Skill Ranks, at most you can affect a single city. At 4 Skill Ranks, you may be able to mislead
+  a full country. At 5 Skill Ranks, even an entire planet may believe your lies.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Bluff. The rumour is asked when it is used,
+# and the card names it with the most its area can be for their Ranks in Bluff. Once the four hours are
+# spent the card says the Check is owed - rolled from the sheet, at the Difficulty the ARC sets - and
+# what winning does; who believes what is the ARC's.

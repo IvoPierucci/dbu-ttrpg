@@ -3146,10 +3146,15 @@ export async function postAdventuring(actor, definition, { repair = null, topic 
   const escape = Handlebars.escapeExpression;
   // Full Repair says what it is on, and the hours chosen in place of its "2~10 Hours".
   const time = repair ? `${repair.hours} Hours` : (definition.timeCost ?? "");
+  // Fraud's area, the most their Ranks reach.
+  const { areaFor } = await import("./adventure.mjs");
+  const areaSkill = String(definition.areaSkill ?? "").trim();
+  const area = areaSkill ? areaFor(definition, actor.system.skills?.[areaSkill]?.ranks) : "";
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${escape(actor.name)} begins ${escape(definition.name)}${repair ? ` on ${escape(repair.itemName)}` : ""}${
-      topic ? ` into ${escape(topic)}` : ""}${patient ? ` for ${escape(patient.name)}` : ""} - `
+      topic ? ` ${escape(definition.topicWord ?? "into")} ${escape(topic)}` : ""}${area ? ` (${escape(area)})` : ""}${
+      patient ? ` for ${escape(patient.name)}` : ""} - `
       + `${escape(time)}. Interrupted, or without the full Time Cost, there are no benefits.</p>`,
     flags: { [SCOPE]: { [ADVENTURING_FLAG]: {
       actorUuid: actor.uuid, id: definition.id, name: definition.name,

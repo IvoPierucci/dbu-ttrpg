@@ -4468,7 +4468,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       topic = await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"],
         window: { title: `${this.actor.name} - ${definition.name}` },
-        content: `<label class="dbu-wager"><span>Topic</span><input type="text" name="topic" autofocus/></label>`,
+        content: `<label class="dbu-wager"><span>${Handlebars.escapeExpression(definition.topicLabel ?? "Topic")}</span>`
+          + `<input type="text" name="topic" autofocus/></label>`,
         buttons: [
           { action: "go", label: "Begin", default: true, callback: (event, button, dialog) =>
             String(dialog.element.querySelector('input[name="topic"]')?.value ?? "").trim() },
