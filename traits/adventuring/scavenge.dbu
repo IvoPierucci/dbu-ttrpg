@@ -1,0 +1,31 @@
+id: scavenge
+name: Scavenge
+prerequisite: 2+ Skill Ranks in Survival
+requiresSkill: survival
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 2 Hours
+# The Check is rolled from the sheet, at the Difficulty the ARC picks there. Ingredients are an Adventure
+# Resource not yet in this system: said on the card.
+effectNote: makes a Survival Skill Check at a Difficulty Category the ARC decides (rolled from the sheet) - succeeding gains Ingredients: how many and whether any are Special Ingredients depends on how far the Difficulty is exceeded (no more than the number of players in the campaign)
+source: Core Rule
+description: >
+  Two hours foraging in the wilds: a Survival Check at the ARC's Difficulty, and Ingredients if it is
+  made - more, and maybe Special ones, the further past it.
+text: >
+  Scavenge: You search for food in the wilds, coming back with wild vegetables and/or meat.
+  –Prerequisite: 2+ Skill Ranks in Survival
+  –Session Limit: 1
+  –Time Cost: 2 Hours
+  –Effect: You go out into the wilderness searching for food. Make a Survival Skill Check, with the
+  Difficulty Category decided by your ARC (taking into consideration where you begin to Scavenge and
+  what is available there). If you succeed, you will gain Ingredients. The amount- and if there’s any
+  Special Ingredients- will vary based on how much you exceed the Difficulty Category. The amount of
+  Ingredients shouldn’t exceed the number of players in the campaign.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Survival. Once the two hours are spent the
+# card says the Check is owed - rolled from the sheet, where the Difficulty the ARC decides is picked -
+# and what it gives. Ingredients are an Adventure Resource, not built yet: how many are gained is the
+# ARC's, and keeping them is the table's until they are.
