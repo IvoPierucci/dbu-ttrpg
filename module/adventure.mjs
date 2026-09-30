@@ -227,3 +227,17 @@ export function ingredientsTaken(pools, cost, chosen = null) {
 export function hungerAfter(stage, stages) {
   return Math.max(0, (Number(stage) || 0) - Math.max(0, Number(stages) || 0));
 }
+
+/**
+ * Crafting's Auto-Succeed: "Once you possess 4 Skill Ranks in Craft, you automatically succeed at all
+ * Craft Skill Checks against Difficulty Categories of Qualified or less. Upon reaching 5 Skill Ranks,
+ * increase this to Expert or less." Whether a Craft Check at this Difficulty, with so many Ranks, needs no
+ * roll.
+ */
+export function craftAutoSucceeds(ranks, difficulty) {
+  const order = ["novice", "apprentice", "qualified", "expert", "master", "grandmaster"];
+  const at = order.indexOf(String(difficulty ?? ""));
+  if (at < 0) return false;
+  const reach = ((Number(ranks) || 0) >= 5) ? "expert" : ((Number(ranks) || 0) >= 4) ? "qualified" : "";
+  return Boolean(reach) && (at <= order.indexOf(reach));
+}

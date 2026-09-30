@@ -5038,6 +5038,21 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     );
     if (!ready) return;
 
+    // Crafting's Auto-Succeed: at 4 Ranks in Craft a Check at Qualified or less needs no roll - at 5,
+    // Expert or less. Said on a card rather than rolled.
+    if (target.dataset.skill === "craft") {
+      const { craftAutoSucceeds } = await import("../adventure.mjs");
+      if (craftAutoSucceeds(skill.ranks, ready.difficulty)) {
+        const dc = DBUCharacterData.DIFFICULTIES[ready.difficulty];
+        return ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+          content: `<p>${Handlebars.escapeExpression(this.actor.name)} automatically succeeds at the `
+            + `${Handlebars.escapeExpression(name)} Check at the ${dc?.label ?? ready.difficulty} Difficulty `
+            + `(${skill.ranks} Skill Ranks in Craft).</p>`
+        });
+      }
+    }
+
     // A Skill's critical die is a flat 1d4: it does not grow with Tier of Power.
     // Two rows, because they are two things: the Skill Bonus the sheet shows, and
     // whatever applies only to rolling this Skill - which does not raise that Bonus and

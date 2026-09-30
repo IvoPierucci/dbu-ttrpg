@@ -1,0 +1,25 @@
+id: scrap
+name: Scrap
+kind: gear
+# "Scrap is an Adventure Resource" - and "Adventure Resources count as Basic Items". Given by the ARC or
+# gathered, never crafted: no Craft DC.
+special: true
+# How many, as its charges: asked when it is given, and changed on its sheet - as Ingredients are.
+chargesLabel: Scrap
+chargesAsked: true
+source: Core Rule
+description: >
+  An Adventure Resource: the pieces and materials anything is made from - spent to create Vehicles,
+  Battle Jackets and [Tech] Basic Items.
+text: >
+  Scrap: To understand Crafting, you must first understand Scrap. Scrap is an Adventure Resource that
+  represents the various pieces and materials required to make anything.
+
+  Scrap is used to make Vehicles, Battle Jackets, and Basic Items with the [Tech] tag, but may also be
+  required for various other Craft-related Adventure Maneuvers.
+
+---
+
+# A Basic Item on the Gear tab, its count the charges on its row: asked when it is added, changed on its
+# sheet - the Ingredients' pattern (the user's ruling for Adventure Resources). Spent by the Create
+# Maneuver, once it is here.
