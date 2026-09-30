@@ -1177,13 +1177,15 @@
 }
 
 /* Turns to point down when the row is open. Drawn rather than a glyph in the markup, so
-   there is nothing on the row for a click to land on by accident. */
+   there is nothing on the row for a click to land on by accident. Large enough, and in the
+   accent, to read as the thing that opens it - the one arrow every fold on the sheet uses
+   (the user's). */
 .dbu-ttrpg .maneuver-mark {
   flex: 0 0 auto;
-  width: 8px;
-  font-size: 9px;
+  width: 12px;
+  font-size: 12px;
   line-height: 1;
-  color: var(--dbu-text-dim);
+  color: var(--dbu-accent);
   transition: transform 120ms ease;
 }
 
@@ -2611,24 +2613,39 @@
 
 /* Collapsed by default when the character has none, so the Combat tab is not
    dominated by a checklist of eighteen things that are not happening. */
-.dbu-ttrpg .condition-group > summary {
+.dbu-ttrpg .condition-group > summary,
+.dbu-ttrpg .maneuver-group > summary,
+.dbu-ttrpg .trait-group > summary,
+.dbu-ttrpg .effect-resolved > summary {
   cursor: pointer;
   list-style: none;
 }
 
-.dbu-ttrpg .condition-group > summary::-webkit-details-marker {
+.dbu-ttrpg .condition-group > summary::-webkit-details-marker,
+.dbu-ttrpg .maneuver-group > summary::-webkit-details-marker,
+.dbu-ttrpg .trait-group > summary::-webkit-details-marker,
+.dbu-ttrpg .effect-resolved > summary::-webkit-details-marker {
   display: none;
 }
 
-.dbu-ttrpg .condition-group > summary::before {
+/* The rows' arrow (.maneuver-mark), on every fold: one look for everything that opens. */
+.dbu-ttrpg .condition-group > summary::before,
+.dbu-ttrpg .maneuver-group > summary::before,
+.dbu-ttrpg .trait-group > summary::before,
+.dbu-ttrpg .effect-resolved > summary::before {
   content: "\25B8";
   display: inline-block;
-  width: 10px;
-  color: var(--dbu-text-dim);
-  transition: transform 0.1s ease;
+  width: 14px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--dbu-accent);
+  transition: transform 120ms ease;
 }
 
-.dbu-ttrpg .condition-group[open] > summary::before {
+.dbu-ttrpg .condition-group[open] > summary::before,
+.dbu-ttrpg .maneuver-group[open] > summary::before,
+.dbu-ttrpg .trait-group[open] > summary::before,
+.dbu-ttrpg .effect-resolved[open] > summary::before {
   transform: rotate(90deg);
 }
 
@@ -2847,14 +2864,6 @@
 .dbu-ttrpg .adventuring-list .maneuver-name {
   flex: 1 1 auto;
   text-align: left;
-}
-
-/* The arrow that opens the row, a little larger than the Maneuvers tab's so it reads as the thing to
-   click: the name beside it uses the Maneuver. */
-.dbu-ttrpg .adventuring-list .maneuver-mark {
-  width: 12px;
-  font-size: 12px;
-  color: var(--dbu-accent);
 }
 
 .dbu-ttrpg .adventuring-time {
