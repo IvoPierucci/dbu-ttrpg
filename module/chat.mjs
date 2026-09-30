@@ -2657,6 +2657,7 @@ function onRenderChatMessage(message, html) {
   renderRegulated(message, html);
   renderCook(message, html);
   renderCreate(message, html);
+  renderMaterialize(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
@@ -3448,16 +3449,40 @@ async function settleMaterialize(message, made, success) {
       });
       if (clash) done.notes.push(clash.id);
     }
-  } else {
-    const definition = (made.kind === "basic") ? getTrait(made.id) : null;
-    if (definition) {
-      await maker.sheet?.giveGear?.(definition, { made: true, materialized: true, craftDC: made.difficulty,
-        to: recipient ?? null });
-      done.given = { actorUuid: (recipient ?? maker).uuid, name: definition.name };
-    }
+  } else if (made.kind !== "basic") {
     await say(`${made.name} materialized${recipient ? ` - ${recipient.name}` : ""}.`);
   }
+  // A Basic Item made is taken with the card's Create item button.
   await message.setFlag(SCOPE, MATERIALIZE_FLAG, { ...made, applied: true, done });
+}
+
+/** Create item: on the card of a Basic Item made, until it is taken. */
+function renderMaterialize(message, html) {
+  const made = message.getFlag(SCOPE, MATERIALIZE_FLAG);
+  if ((made?.kind !== "basic") || !made.done?.success || made.done.given) return;
+  const maker = fromUuidSync(made.actorUuid);
+  if (!game.user.isGM && !maker?.isOwner) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Create item";
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    return createMaterialized(message);
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/** The Basic Item given as the Gear tab gives one, marked Materialized - to the Ally, with Projectile Materialization. */
+async function createMaterialized(message) {
+  const made = message.getFlag(SCOPE, MATERIALIZE_FLAG);
+  const maker = fromUuidSync(made?.actorUuid ?? "");
+  const definition = getTrait(made?.id ?? "");
+  if (!maker || !definition || !made.done?.success || made.done.given) return;
+  const recipient = made.recipientUuid ? fromUuidSync(made.recipientUuid) : null;
+  await maker.sheet?.giveGear?.(definition, { made: true, materialized: true, craftDC: made.difficulty, to: recipient ?? null });
+  await message.setFlag(SCOPE, MATERIALIZE_FLAG,
+    { ...made, done: { ...made.done, given: { actorUuid: (recipient ?? maker).uuid, name: definition.name } } });
 }
 
 /** Take a Materialization back: the Item it gave, and the notes and Clash it posted. */
