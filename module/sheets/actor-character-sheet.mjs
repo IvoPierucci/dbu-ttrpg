@@ -1811,15 +1811,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       ui.notifications.info("There are no Unique Abilities to add yet.");
       return;
     }
-    // A search, as the Advantages and Disadvantages are found (the user's): grouped by Ability Type, the ones
-    // already held named and not offered twice.
+    // A search, as the Advantages and Disadvantages are found (the user's): in alphabetical order, no groups (the
+    // user's), the ones already held named and not offered twice.
     const { pickedName, wireNameSearch } = await import("../search.mjs");
     const held = new Set(this.actor.items.filter(item => (item.type === "maneuver") && item.system.unique?.libraryId)
       .map(item => item.system.unique.libraryId));
-    const TYPES = [["technical", "Technical"], ["magical", "Magical"], ["both", "Technical/Magical"]];
-    const groups = TYPES.map(([key, label]) => ({ label, choices: library.filter(trait => (trait.uaType ?? "") === key) }))
-      .concat([{ label: "Other", choices: library.filter(trait => !TYPES.some(([key]) => key === trait.uaType)) }])
-      .filter(group => group.choices.length);
+    const sorted = [...library].sort((a, b) => a.name.localeCompare(b.name));
     const picked = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog", "dbu-ua-search"],
       window: { title: `${this.actor.name} - Add Unique Ability` },
@@ -1828,11 +1825,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         <input type="text" class="gear-quality-search" data-feature-search autocomplete="off" autofocus
                placeholder="Type a Unique Ability"/>
         <ol class="gear-quality-list" data-feature-list>
-          ${groups.map(group => `<li class="gear-quality-group" data-feature-group="${escape(group.label)}">${escape(group.label)}</li>
-            ${group.choices.map(trait => `<li class="gear-quality-option${held.has(trait.id) ? " blocked" : ""}"
-              data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}" data-group="${escape(group.label)}"
-              data-tooltip="${escape(held.has(trait.id) ? "Already held" : (trait.description ?? ""))}">${escape(trait.name)}
-              <span class="gear-quality-cost">${escape(String(trait.tpCost ?? 0))} TP</span></li>`).join("")}`).join("")}
+          ${sorted.map(trait => `<li class="gear-quality-option${held.has(trait.id) ? " blocked" : ""}"
+            data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
+            data-tooltip="${escape(held.has(trait.id) ? "Already held" : (trait.description ?? ""))}">${escape(trait.name)}
+            <span class="gear-quality-cost">${escape(String(trait.tpCost ?? 0))} TP</span></li>`).join("")}
           <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
         </ol></div>`,
       buttons: [
