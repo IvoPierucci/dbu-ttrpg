@@ -3131,6 +3131,8 @@ export async function postAdventuring(actor, definition) {
       share: Number(definition.regainShare) || 0,
       // A mark it leaves - Stretch's Stretched.
       gains: String(definition.gains ?? "").trim().toLowerCase(),
+      // What it does that the system cannot, said once it is done - Tune Up's Vehicle.
+      note: String(definition.effectNote ?? "").trim(),
       applied: false
     } } }
   });
@@ -3169,6 +3171,7 @@ async function settleAdventuring(message, adventuring) {
     await gainCondition(actor, adventuring.gains, 1);
     said.push(getTrait(adventuring.gains)?.name ?? adventuring.gains);
   }
+  if (adventuring.note) said.push(`${actor.name} ${adventuring.note}`);
   return settledNote(message, `${actor.name} finishes ${adventuring.name}${said.length ? `: ${said.join(", ")}` : ""}.`);
 }
 

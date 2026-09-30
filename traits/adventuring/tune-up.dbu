@@ -1,0 +1,29 @@
+id: tune-up
+name: Tune Up
+prerequisite: 2+ Skill Ranks in Craft (Vehicles)
+requiresSkill: craft
+requiresRanks: 2
+# The Craft Specialty it asks for, ticked on the Craft Skill.
+requiresSpecialty: vehicles
+sessionLimit: 1
+timeCost: 4 Hours
+# Vehicles and Battle Jackets are not in this system: what it does is said on the card, and done by
+# the table.
+effectNote: recreates a Vehicle or Battle Jacket exactly as it was (with their current Power Level and - for a Battle Jacket - their Scholarship Score if higher than its Jacket Attribute)
+source: Core Rule
+description: >
+  Four hours on a Vehicle or Battle Jacket: made again as it was, at your current Power Level - and a
+  Battle Jacket at your Scholarship Score, if that is higher.
+text: >
+  Tune Up: You repair and upgrade a vehicle, routinely maintaining its form and function.
+  –Prerequisite: 2+ Skill Ranks in Craft (Vehicles)
+  –Session Limit: 1
+  –Time Cost: 4 Hours
+  –Effect: Recreate a Vehicle or Battle Jacket exactly as it was, but with your current Power Level
+  and (for Battle Jackets) your Scholarship Score (if its higher than the current Jacket Attribute).
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Craft with the Vehicles Specialty ticked.
+# The use counts, the card says the Time Cost, and its button - once the time is spent - says what it
+# does. Vehicles and Battle Jackets are not built: the recreating is the table's.
