@@ -4445,7 +4445,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           challengerRows: penalty ? [{ label: `${definition.name} (${victim.name}, again)`, value: -penalty }] : [],
           ...(definition.steals ? { pickpocket: { steals: String(definition.steals).trim().toLowerCase(), applied: false } } : {}),
           ...((definition.clashUnaware === true) ? { unaware: { applied: false } } : {}),
-          ...((definition.clashReveals === true) ? { reveals: { applied: false } } : {})
+          ...((definition.clashReveals === true) ? { reveals: { applied: false } } : {}),
+          ...(definition.clashWinNote ? { winNote: { text: String(definition.clashWinNote), applied: false } } : {})
         });
       }
       return;

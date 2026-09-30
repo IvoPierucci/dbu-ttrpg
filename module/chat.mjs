@@ -456,6 +456,10 @@ async function applyClash(messageId, clash) {
     await settleReveals(message, clash);
   }
 
+  if (clash.winNote && clash.result && !clash.winNote.applied) {
+    await settleWinNote(message, clash);
+  }
+
   if (clash.stagger && clash.result && !clash.stagger.applied) {
     await settleStagger(message, clash);
   }
@@ -862,6 +866,17 @@ async function settleUnaware(message, clash) {
   await settledNote(message, (whoWonClash(clash.result) === "challenger")
     ? `${clash.defenderName} is unaware of ${clash.challengerName}.`
     : `${clash.defenderName} is aware of ${clash.challengerName}.`);
+}
+
+/**
+ * What winning does that the system cannot, said on the card when it is won - Frighten's Alarm Rating.
+ * `{challenger}` and `{defender}` are the two names. Lost, nothing is added.
+ */
+async function settleWinNote(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, winNote: { ...clash.winNote, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return;
+  await settledNote(message, `${String(clash.winNote.text)
+    .replaceAll("{challenger}", clash.challengerName).replaceAll("{defender}", clash.defenderName)}.`);
 }
 
 /**

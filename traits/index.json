@@ -3,6 +3,7 @@
   "traits": [
     "adventuring/care.dbu",
     "adventuring/fraud.dbu",
+    "adventuring/frighten.dbu",
     "adventuring/full-repair.dbu",
     "adventuring/gauge.dbu",
     "adventuring/obscure.dbu",

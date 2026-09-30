@@ -1,0 +1,37 @@
+id: frighten
+name: Frighten
+prerequisite: 2+ Skill Ranks in Intimidation
+requiresSkill: intimidation
+requiresRanks: 2
+# "Session Limit: Infinite."
+sessionLimit: infinite
+timeCost: Instant
+# "Target a Character you can see or speak to. Make a Clash (Intimidation vs Intuition/Intimidation)."
+clashSkill: intimidation
+clashDefenderSkills: intuition, intimidation
+# "You cannot target the same Character twice with the Frighten Maneuver in an Adventuring Session (or
+# while they are still influenced by its effects)."
+oncePerTarget: true
+# "If you win, increase your Alarm Rating for that Character by 1 for 1 Day." Alarm Ratings are not in
+# this system: said on the card, {challenger} and {defender} named.
+clashWinNote: {challenger}'s Alarm Rating for {defender} is 1 higher for 1 Day
+source: Core Rule
+description: >
+  An Intimidation Clash against someone's Intuition or Intimidation: win, and your Alarm Rating for them
+  is 1 higher for a day. Once for each Character in an Adventuring Session.
+text: >
+  Frighten: You scare someone into believing you’re a threat to them.
+  –Prerequisite: 2+ Skill Ranks in Intimidation
+  –Session Limit: Infinite
+  –Time Cost: Instant
+  –Effect: Target a Character you can see or speak to. Make a Clash (Intimidation vs
+  Intuition/Intimidation) against them. If you win, increase your Alarm Rating for that Character by 1
+  for 1 Day. You cannot target the same Character twice with the Frighten Maneuver in an Adventuring
+  Session (or while they are still influenced by its effects).
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Intimidation, with no Session Limit. Used at
+# the one token targeted - refused if they were already Frightened this Adventuring Session - and the
+# Clash card opens at once. Won, the card says the Alarm Rating: those are not built, so keeping it, the
+# day it lasts, and a Character still influenced into the next Session are the table's.
