@@ -2657,7 +2657,6 @@ function onRenderChatMessage(message, html) {
   renderRegulated(message, html);
   renderCook(message, html);
   renderCreate(message, html);
-  renderMaterialize(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
@@ -3402,39 +3401,23 @@ export async function postCreate(actor, create) {
 /**
  * Magical Materialization, paid for: "Roll the Craft Skill Check for your choice, using the Use Magic Skill
  * instead of the relevant Craft Specialization, but increase the Difficulty Category by 1. If you fail, you do
- * not create the item, but you still lose the Ki Points." Rolled from the sheet.
+ * not create the item, but you still lose the Ki Points." Rolled straight away against that Difficulty, and
+ * settled by what it came to.
  */
 export async function postMaterialize(actor, maneuver, plan) {
   const escape = Handlebars.escapeExpression;
-  const dc = DBUCharacterData.DIFFICULTIES[plan.difficulty];
-  const skill = actor.system.skills?.[plan.skill]?.label ?? plan.skill;
-  return ChatMessage.create({
+  const toward = !plan.recipientName ? "" : (plan.kind === "weights") ? ` at ${plan.recipientName}` : ` - ${plan.recipientName}`;
+  const message = await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p>${escape(actor.name)} uses ${escape(maneuver.name)}: ${escape(plan.name)}`
-      + `${(plan.recipientName && (plan.kind !== "weights")) ? ` into ${escape(plan.recipientName)}'s hands` : ""}`
-      + `${(plan.kind === "weights") ? ` at ${escape(plan.recipientName)}` : ""}. A ${escape(skill)} Skill Check at the `
-      + `${escape(dc?.label ?? plan.difficulty)} Difficulty - Target Number ${dc?.tn ?? "?"}`
-      + `${plan.diceMinus ? `, with ${plan.diceMinus} off the Dice Score` : ""}, matched or exceeded. Roll it from the sheet. `
-      + "Failed, nothing is made and the Ki Points are still lost.</p>"
+    content: `<p>${escape(maneuver.name)}: ${escape(plan.name)}${escape(toward)}</p>`
       + (plan.notes ?? []).map(note => `<p class="dbu-respond-note">${escape(note)}</p>`).join(""),
     flags: { [SCOPE]: { [MATERIALIZE_FLAG]: { actorUuid: actor.uuid, maneuverName: maneuver.name, ...plan, applied: false } } }
   });
-}
-
-function renderMaterialize(message, html) {
-  const made = message.getFlag(SCOPE, MATERIALIZE_FLAG);
-  if (!made || made.applied) return;
-  const maker = fromUuidSync(made.actorUuid);
-  if (!game.user.isGM && !maker?.isOwner) return;
-  const at = html.querySelector(".message-content") ?? html;
-  for (const [outcome, label] of [[true, "Made it"], [false, "Failed it"]]) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "dbu-clash-button";
-    button.textContent = label;
-    button.addEventListener("click", () => settleMaterialize(message, made, outcome));
-    at.append(button);
-  }
+  const total = await actor.sheet?.rollSkillAgainst?.(plan.skill, plan.difficulty,
+    { minus: plan.diceMinus, minusLabel: "One Category harder" });
+  const tn = DBUCharacterData.DIFFICULTIES[plan.difficulty]?.tn ?? Infinity;
+  await settleMaterialize(message, message.getFlag(SCOPE, MATERIALIZE_FLAG), (typeof total === "number") && (total >= tn));
+  return message;
 }
 
 /**
@@ -3447,14 +3430,13 @@ async function settleMaterialize(message, made, success) {
   if (!maker) return;
   await message.setFlag(SCOPE, MATERIALIZE_FLAG, { ...made, applied: true });
   if (!success) {
-    await settledNote(message, `${maker.name} fails: nothing is made, and the Ki Points are lost.`);
+    await settledNote(message, "Nothing is made.");
     return;
   }
   const recipient = made.recipientUuid ? fromUuidSync(made.recipientUuid) : null;
-  const kept = "Materialized: destroyed at the end of a Combat Encounter, unless a Karma Point is spent to preserve it.";
   if (made.kind === "weights") {
     if (!recipient) return;
-    await settledNote(message, `${maker.name} conjures Weights at ${recipient.name}.`);
+    await settledNote(message, `Weights at ${recipient.name}.`);
     return postSaveClash(maker, recipient, {
       maneuverName: "Restrictive Weights",
       clashLabel: "Restrictive Weights",
@@ -3472,10 +3454,10 @@ async function settleMaterialize(message, made, success) {
       await maker.sheet?.giveGear?.(definition, { made: true, materialized: true, craftDC: made.difficulty,
         to: recipient ?? null });
     }
-    await settledNote(message, `${maker.name} materializes ${made.name}${recipient ? ` in ${recipient.name}'s hands` : ""}. ${kept}`);
+    await settledNote(message, `${made.name} materialized${recipient ? ` - ${recipient.name}` : ""}.`);
     return;
   }
-  await settledNote(message, `${maker.name} materializes ${made.name}${recipient ? ` for ${recipient.name}` : ""}. ${kept}`);
+  await settledNote(message, `${made.name} materialized${recipient ? ` - ${recipient.name}` : ""}.`);
 }
 
 function renderCreate(message, html) {

@@ -2315,10 +2315,10 @@ async function askMaterialize(actor, maneuver) {
   const skill = tags.includes("med") ? "medicine" : tags.includes("food") ? "cooking" : "useMagic";
   const notes = [];
   if (has("powerBuilder") && (skill === "useMagic")) {
-    notes.push("Power Builder: the Force Score may stand in for the Magic Score in the Use Magic Skill Bonus.");
+    notes.push("Power Builder: Force may stand in for Magic.");
   }
   if (has("summonsWeapons") && (kind === "weapon")) {
-    notes.push(`Weapon Summoner: automatic success for a Weapon of Craftsmanship Grade ${Number(actor.system.skills?.useMagic?.ranks) || 0} or lower.`);
+    notes.push(`Weapon Summoner: auto-success up to Grade ${Number(actor.system.skills?.useMagic?.ranks) || 0}.`);
   }
   // Projectile Materialization: "the targeted Ally gains that item" - an Accessory, Apparel or Weapon. Restrictive
   // Weights' Opponent is the one targeted.

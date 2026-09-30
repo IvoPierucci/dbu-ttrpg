@@ -5542,6 +5542,33 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return this.actor.update({ "system.battlefield.qualities": next });
   }
 
+  /**
+   * A Skill Check a rule rolls rather than the Skills list: no window, straight to its card, judged against the
+   * Difficulty given. What it came to - null for a willing failure, or a Required Skill with no Ranks.
+   */
+  async rollSkillAgainst(key, difficulty, { minus = 0, minusLabel = "" } = {}) {
+    const skill = this.actor.system.skills?.[key];
+    if (!skill) return null;
+    if (skill.untrained) {
+      ui.notifications.warn(`${skill.label} is a Required Skill and cannot be rolled without at least one Rank.`);
+      return null;
+    }
+    const name = skill.specialization ? `${skill.label} (${skill.specialization})` : skill.label;
+    const total = await this.#rollCheck({
+      parts: [
+        { label: name, value: skill.bonus },
+        { label: "Effects", value: skill.roll - skill.bonus },
+        ...(minus ? [{ label: minusLabel, value: -minus }] : [])
+      ],
+      flavor: `${name} Check`,
+      criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,
+      skillRoll: true,
+      difficulty,
+      naturalAdd: skillNatural(this.actor, key, [])
+    });
+    return (typeof total === "number") ? total : null;
+  }
+
   static async _onSkillRoll(event, target) {
     const skill = this.actor.system.skills[target.dataset.skill];
     if (!skill) return;
