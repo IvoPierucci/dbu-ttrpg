@@ -29,6 +29,10 @@
       <li class="adventuring-row{{#unless maneuver.left}} maneuver-exhausted{{/unless}}">
         <button type="button" class="maneuver-name rollable" data-action="useAdventuring"
                 data-maneuver="{{maneuver.id}}" data-tooltip="{{maneuver.text}}">{{maneuver.name}}</button>
+        {{#if maneuver.buffed}}
+        <button type="button" class="edit-toggle" data-action="cancelAdventuringBuff" data-maneuver="{{maneuver.id}}"
+                data-tooltip="End what it gave, if its time has passed.">Cancel buff</button>
+        {{/if}}
         <span class="adventuring-time" data-tooltip="Time Cost">{{maneuver.timeCost}}</span>
         <span class="maneuver-uses" data-tooltip="Session Limit">{{maneuver.left}}/{{maneuver.limit}} left</span>
       </li>

@@ -536,6 +536,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       travel: DBUCharacterSheet._onTravel,
       useAdventuring: DBUCharacterSheet._onUseAdventuring,
       newAdventureSession: DBUCharacterSheet._onNewAdventureSession,
+      cancelAdventuringBuff: DBUCharacterSheet._onCancelAdventuringBuff,
       editImage: DBUCharacterSheet._onEditImage
     },
     form: {
@@ -4392,6 +4393,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     await this.actor.update({ "system.adventureUses": [...uses, entry.id] });
     const { postAdventuring } = await import("../chat.mjs");
     return postAdventuring(this.actor, getTrait(entry.id));
+  }
+
+  /**
+   * Take off the mark an Adventuring Maneuver left - Stretch's, once the hour has passed with no
+   * Combat Encounter. Its clock too, if it has one. The user's: a button on the Maneuver's own row.
+   */
+  static async _onCancelAdventuringBuff(event, target) {
+    const key = String(getTrait(target.dataset.maneuver)?.gains ?? "").trim().toLowerCase();
+    if (!key) return;
+    const timed = this.actor.system.timed ?? [];
+    const kept = timed.filter(entry => !((entry.kind === "condition") && (entry.key === key)));
+    if (kept.length !== timed.length) await this.actor.update({ "system.timed": kept });
+    await setCondition(this.actor, key, 0);
   }
 
   /** A new Adventuring Session: every Session Limit full again. Only by hand (the user's ruling). */

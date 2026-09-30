@@ -58,7 +58,11 @@ export function adventuringManeuvers(definitions, uses = [], system = null) {
         prerequisite: String(definition.prerequisite ?? "N/A"),
         limit,
         left: Math.max(0, limit - used),
-        text: String(definition.text ?? "")
+        text: String(definition.text ?? ""),
+        // The mark it leaves, and whether it is held now - for the row's Cancel buff.
+        gains: String(definition.gains ?? "").trim().toLowerCase(),
+        buffed: Boolean(definition.gains)
+          && ((Number(system?.conditions?.[String(definition.gains).trim().toLowerCase()]) || 0) > 0)
       };
     });
 }

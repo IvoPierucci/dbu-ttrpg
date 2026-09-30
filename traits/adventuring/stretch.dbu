@@ -26,4 +26,5 @@ text: >
 # Offered on the Adventure tab to whoever has 2+ Ranks in Acrobatics. The card's button, once the
 # Time Cost is spent, gives the Stretched mark; entering a Combat Encounter puts it on a clock of the
 # first 3 Combat Rounds, and the Encounter ending takes it off whatever is left. "Within the next
-# hour" is story time: the player ends the mark by hand if the hour passes first.
+# hour" is story time: if the hour passes first, the player ends the mark with Cancel buff on this
+# Maneuver's row (the user's ruling), or from the Combat tab.
