@@ -1,0 +1,47 @@
+<div class="tab {{tabs.uaFeatures.cssClass}}" data-group="primary" data-tab="uaFeatures">
+  {{#if isUnique}}
+  {{! What it costs, all told: its TP Cost less its Restrictions (never below half), and each Advancement. }}
+  <p class="technique-summary" data-tooltip="Listed {{unique.tp.listed}}, less {{unique.tp.reduction}} in Restrictions (never below {{unique.tp.floor}}), plus {{unique.tp.advancements}} in Advancements">
+    TP <b>{{unique.tp.total}}</b></p>
+
+  <section class="panel">
+    <h3 class="panel-title">
+      Advancements
+      <button type="button" class="edit-toggle" data-action="addUniqueEntry" data-list="advancements">Add</button>
+    </h3>
+    <ul class="reputation-list">
+      {{#each unique.advancements as |entry|}}
+      <li class="reputation-row{{#if entry.locked}} maneuver-exhausted{{/if}}">
+        <input type="checkbox" data-action="toggleUniqueEntry" data-list="advancements" data-id="{{entry.id}}"
+               {{#if entry.bought}}checked{{/if}} {{#if entry.locked}}disabled data-tooltip="Locked by a Restriction"{{else}}data-tooltip="Bought"{{/if}}/>
+        <span class="reputation-name" data-tooltip="{{entry.text}}">{{entry.name}}</span>
+        {{#if entry.prerequisite}}<span class="reputation-tn">{{entry.prerequisite}}</span>{{/if}}
+        <span class="reputation-tn">{{entry.tp}} TP</span>
+        <button type="button" class="maneuver-control" data-action="editUniqueEntry" data-list="advancements" data-id="{{entry.id}}" data-tooltip="Edit">&#9998;</button>
+        <button type="button" class="maneuver-control" data-action="removeUniqueEntry" data-list="advancements" data-id="{{entry.id}}" data-tooltip="Remove">&#10005;</button>
+      </li>
+      {{/each}}
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">
+      Restrictions
+      <button type="button" class="edit-toggle" data-action="addUniqueEntry" data-list="restrictions">Add</button>
+    </h3>
+    <ul class="reputation-list">
+      {{#each unique.restrictions as |entry|}}
+      <li class="reputation-row">
+        <input type="checkbox" data-action="toggleUniqueEntry" data-list="restrictions" data-id="{{entry.id}}"
+               {{#if entry.applied}}checked{{/if}} data-tooltip="Applied"/>
+        <span class="reputation-name" data-tooltip="{{entry.text}}">{{entry.name}}</span>
+        {{#if entry.locked}}<span class="reputation-tn" data-tooltip="Locked Advancements">Locks {{entry.locked}}</span>{{/if}}
+        <span class="reputation-tn">&minus;{{entry.reduction}} TP</span>
+        <button type="button" class="maneuver-control" data-action="editUniqueEntry" data-list="restrictions" data-id="{{entry.id}}" data-tooltip="Edit">&#9998;</button>
+        <button type="button" class="maneuver-control" data-action="removeUniqueEntry" data-list="restrictions" data-id="{{entry.id}}" data-tooltip="Remove">&#10005;</button>
+      </li>
+      {{/each}}
+    </ul>
+  </section>
+  {{/if}}
+</div>

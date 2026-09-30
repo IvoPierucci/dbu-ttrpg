@@ -2819,6 +2819,15 @@ export function maneuverKiCost(maneuver, declared, actor) {
     cost = Math.max(cost, minimumAttackKiCost(declared?.profile, actor));
   }
 
+  // A Unique Ability's: "If a Unique Ability's Ki Point Cost (before modifications) is 4(T) or higher, you
+  // cannot reduce it below 1/2 of its Ki Point Cost."
+  if ((maneuver.tags ?? []).includes("uniqueAbility")) {
+    const listed = baseKiCost(maneuver, actor);
+    const tier = actor?.system?.tierOfPower ?? 1;
+    const floor = (listed >= 4 * Math.max(1, tier)) ? Math.ceil(listed / 2) : 0;
+    cost = Math.max(cost, floor);
+  }
+
   // The wager is Ki spent on the attack like any other, so it is paid here - which is
   // also what takes it out of Capacity. A Talent that cheapens Attacking Maneuvers
   // discounts the Maneuver, never the wager: the wager is what you chose to spend, and

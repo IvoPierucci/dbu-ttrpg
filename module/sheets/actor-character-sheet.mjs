@@ -469,6 +469,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
       newTechnique: DBUCharacterSheet._onNewTechnique,
+      newUniqueAbility: DBUCharacterSheet._onNewUniqueAbility,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
@@ -1350,6 +1351,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.skillGroups = this._prepareSkillGroups(context.workings);
     context.maneuverGroups = this._prepareManeuverGroups();
     context.techniques = this._prepareTechniques();
+    context.uniqueAbilities = await this.#prepareUniqueAbilities(context.techniques);
     // Delayed's Imminent on this character: a mark, not a Combat Condition.
     context.imminent = this.actor.getFlag("dbu-ttrpg", "imminent") ?? [];
     context.racialSkillRanks = this._prepareRacialSkillRanks();
@@ -1552,8 +1554,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // in one.
         maneuvers: this.#ownedManeuvers()
           .filter(maneuver => maneuver.type === group.key)
-          // Signature Techniques have a tab of their own.
+          // Signature Techniques have a tab of their own - and so do Unique Abilities.
           .filter(maneuver => !(maneuver.signature && !maneuver.signatureTechnique))
+          .filter(maneuver => !(maneuver.tags ?? []).includes("uniqueAbility"))
           // A Maneuver nothing has opened yet is not listed. The Item is still theirs -
           // renamed, edited, whatever they have done to it - and it comes back the moment
           // whatever opens it is true again.
@@ -1720,6 +1723,54 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** New Signature Technique: a blank Super, opened on its Sig Creation tab. */
+  /**
+   * The Unique Abilities tab: each one, with its type, what using it costs and what it cost in TP - and the
+   * TP spent on them and on the Techniques together, against what the character has.
+   */
+  async #prepareUniqueAbilities(techniques) {
+    const { UNIQUE_TYPES, isUniqueAbility, uniqueTypeOf, uniqueTPOf } = await import("../unique.mjs");
+    const { definitionOf } = await import("../use-maneuver.mjs");
+    const { printedLines } = await import("../effects/traits.mjs");
+    const actor = this.actor;
+    const items = actor.items.filter(isUniqueAbility).sort((a, b) => a.name.localeCompare(b.name));
+    const rows = items.map(item => {
+      const unique = item.system.unique;
+      const tp = uniqueTPOf(unique);
+      return {
+        itemId: item.id,
+        name: item.name,
+        type: UNIQUE_TYPES[uniqueTypeOf(unique)]?.label ?? UNIQUE_TYPES[unique.uaType]?.label ?? "",
+        kp: maneuverKiCost(definitionOf(item), null, actor),
+        actions: item.system.actionCost,
+        tp: tp.total,
+        prerequisite: unique.prerequisite,
+        advancements: unique.advancements.filter(entry => entry.bought).map(entry => ({ label: entry.name, tip: entry.text })),
+        restrictions: unique.restrictions.filter(entry => entry.applied).map(entry => ({ label: entry.name, tip: entry.text })),
+        lines: printedLines(item.system.text || "").map(line => ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line })),
+        open: Boolean(this.#openSections[`maneuver-${item.id}`])
+      };
+    });
+    const spent = rows.reduce((sum, row) => sum + row.tp, 0);
+    const together = spent + (techniques?.spent ?? 0);
+    const available = techniques?.available ?? 0;
+    // Said, never refused - as the Techniques' own overspending is.
+    const warning = (together > available)
+      ? `${together} TP spent on Unique Abilities and Techniques, and ${available} TP to spend.` : "";
+    return { rows, spent, together, available, warning };
+  }
+
+  /** A blank Unique Ability, opened on its UA tab: once per Combat Round, as every one is. */
+  static async _onNewUniqueAbility() {
+    if (!this.isEditable) return;
+    const [item] = await this.actor.createEmbeddedDocuments("Item", [{
+      name: "New Unique Ability",
+      type: "maneuver",
+      img: "icons/magic/symbols/rune-sigil-black-pink.webp",
+      system: { type: "standard", tags: ["uniqueAbility"], usageLimit: "1/round", actionCost: 1 }
+    }]);
+    item?.sheet?.render(true);
+  }
+
   static async _onNewTechnique() {
     if (!this.isEditable) return;
     const [item] = await this.actor.createEmbeddedDocuments("Item", [{

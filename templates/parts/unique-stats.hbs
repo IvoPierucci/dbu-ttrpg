@@ -1,0 +1,65 @@
+<div class="tab {{tabs.ua.cssClass}}" data-group="primary" data-tab="ua">
+  {{#if isUnique}}
+  {{! What a Unique Ability is and costs. Used as a Maneuver: "only once per Combat Round", paying its
+      KP Cost and Action Cost. }}
+  <section class="panel">
+    <h3 class="panel-title">Unique Ability</h3>
+    <div class="stat-grid">
+      <div class="stat" data-tooltip="Technical: pure skill. Magical: it needs magic. Both: chosen when it is gained.">
+        <em>Type</em>
+        <select name="system.unique.uaType">
+          <option value="" {{#unless system.unique.uaType}}selected{{/unless}}>-</option>
+          {{#each unique.types as |type|}}
+          <option value="{{type.value}}" {{#if type.selected}}selected{{/if}}>{{type.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{#if unique.both}}
+      <div class="stat" data-tooltip="Listed as both: the one it counts as.">
+        <em>Counts as</em>
+        <select name="system.unique.chosenType">
+          <option value="" {{#unless system.unique.chosenType}}selected{{/unless}}>-</option>
+          {{#each unique.chosen as |type|}}
+          <option value="{{type.value}}" {{#if type.selected}}selected{{/if}}>{{type.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{/if}}
+      <div class="stat" data-tooltip="Its listed TP Cost. Restrictions reduce it, never below half.">
+        <em>TP Cost</em>
+        <input type="number" name="system.unique.tpCost" value="{{system.unique.tpCost}}" min="0"/>
+      </div>
+      <div class="stat stat-wide">
+        <em>Prerequisite</em>
+        <input type="text" name="system.unique.prerequisite" value="{{system.unique.prerequisite}}"/>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3 class="panel-title">Costs <span class="panel-note">Once per Combat Round</span></h3>
+    <div class="stat-grid">
+      <div class="stat">
+        <em>Maneuver Type</em>
+        <select name="system.type">
+          {{#each types as |type|}}
+          <option value="{{type.value}}" {{#if (eq type.value ../system.type)}}selected{{/if}}>{{type.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="stat">
+        <em>Action Cost</em>
+        <input type="number" name="system.actionCost" value="{{system.actionCost}}" min="0"/>
+      </div>
+      <div class="stat" data-tooltip="A flat KP Cost.">
+        <em>KP Cost</em>
+        <input type="number" name="system.kiCost" value="{{system.kiCost}}" min="0"/>
+      </div>
+      <div class="stat" data-tooltip="A KP Cost written x(T). At 4(T) or more it is never reduced below half.">
+        <em>KP Cost (T)</em>
+        <input type="number" name="system.kiCostPerTier" value="{{system.kiCostPerTier}}"/>
+      </div>
+    </div>
+  </section>
+  {{/if}}
+</div>

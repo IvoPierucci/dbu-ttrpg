@@ -594,6 +594,39 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         })
       }),
 
+      /**
+       * A Unique Ability's own: its type, its TP Cost and Prerequisite, and the Advancements bought onto it
+       * and Restrictions applied to it - each with a script of its own, added to the Ability's while it
+       * counts (module/unique.mjs). Blank on every other Maneuver.
+       */
+      unique: new fields.SchemaField({
+        /** technical, magical, or both - "then the category can be chosen when gaining" it. */
+        uaType: new fields.StringField({ required: true, blank: true, initial: "" }),
+        chosenType: new fields.StringField({ required: true, blank: true, initial: "" }),
+        tpCost: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        prerequisite: new fields.StringField({ required: true, blank: true, initial: "" }),
+        advancements: new fields.ArrayField(new fields.SchemaField({
+          id: new fields.StringField({ required: true, blank: false }),
+          name: new fields.StringField({ required: true, blank: true, initial: "" }),
+          tp: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+          prerequisite: new fields.StringField({ required: true, blank: true, initial: "" }),
+          text: new fields.StringField({ required: true, blank: true, initial: "" }),
+          script: new fields.StringField({ required: true, blank: true, initial: "" }),
+          bought: new fields.BooleanField({ required: true, initial: false })
+        }), { required: true, initial: [] }),
+        restrictions: new fields.ArrayField(new fields.SchemaField({
+          id: new fields.StringField({ required: true, blank: false }),
+          name: new fields.StringField({ required: true, blank: true, initial: "" }),
+          /** Its TP Cost Reduction - and what it costs to remove it at a Power Level. */
+          reduction: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+          /** The Advancements it locks, by name, comma-separated. */
+          locked: new fields.StringField({ required: true, blank: true, initial: "" }),
+          text: new fields.StringField({ required: true, blank: true, initial: "" }),
+          script: new fields.StringField({ required: true, blank: true, initial: "" }),
+          applied: new fields.BooleanField({ required: true, initial: false })
+        }), { required: true, initial: [] })
+      }),
+
       /** How often it may be used, as "1/round" or "2/encounter". Blank means freely. */
       usageLimit: new fields.StringField({ required: true, blank: true, initial: "" }),
 

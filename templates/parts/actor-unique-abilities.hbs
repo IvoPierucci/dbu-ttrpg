@@ -1,6 +1,49 @@
 <div class="tab {{tabs.uniqueAbilities.cssClass}}" data-group="primary" data-tab="uniqueAbilities">
-  {{! The Unique Abilities this character has - filled in as their rules are built. }}
+  {{! The Unique Abilities this character has: each a Maneuver, once per Combat Round, bought with the same
+      Technique Points as the Signature Techniques. }}
   <section class="panel">
-    <h3 class="panel-title">Unique Abilities</h3>
+    <h3 class="panel-title">
+      Unique Abilities
+      <button type="button" class="edit-toggle" data-action="newUniqueAbility"
+              data-tooltip="A blank Unique Ability, opened on its UA tab">New Unique Ability</button>
+    </h3>
+
+    <div class="technique-summary">
+      <span data-tooltip="TP on Unique Abilities, and on them and the Signature Techniques together, against the TP Progression has given">
+        TP <b>{{uniqueAbilities.spent}}</b> &middot; with Techniques <b>{{uniqueAbilities.together}}</b> / {{uniqueAbilities.available}}</span>
+    </div>
+    {{#if uniqueAbilities.warning}}<p class="gear-warning">{{uniqueAbilities.warning}}</p>{{/if}}
+
+    <ul class="maneuver-list technique-list">
+      {{#each uniqueAbilities.rows as |row|}}
+      <li class="maneuver{{#if row.open}} maneuver-open{{/if}}" data-item-id="{{row.itemId}}" draggable="true">
+        <div class="maneuver-head" data-action="toggleManeuver">
+          <span class="maneuver-mark" aria-hidden="true"></span>
+          <button type="button" class="maneuver-name rollable" data-action="useManeuver" data-item-id="{{row.itemId}}">{{row.name}}</button>
+          <span class="maneuver-uses">{{row.type}}</span>
+          <span class="maneuver-cost">{{row.actions}} Actions</span>
+          <span class="maneuver-cost">{{row.kp}} KP</span>
+          <span class="maneuver-cost">{{row.tp}} TP</span>
+          <button type="button" class="maneuver-control" data-action="editItem" data-item-id="{{row.itemId}}"
+                  data-tooltip="Edit this Unique Ability">&#9998;</button>
+          <button type="button" class="maneuver-control" data-action="deleteTechnique" data-item-id="{{row.itemId}}"
+                  data-tooltip="Delete this Unique Ability">&#10005;</button>
+        </div>
+        <div class="maneuver-body">
+          {{#if row.prerequisite}}<div class="dbu-profile-line">&ndash;Prerequisite: {{row.prerequisite}}</div>{{/if}}
+          {{#each row.lines as |line|}}
+          {{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}
+          <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>{{/if}}
+          {{/each}}
+          {{#each row.advancements as |feature|}}
+          <div class="dbu-profile-line technique-advantage" {{#if feature.tip}}data-tooltip="{{feature.tip}}"{{/if}}>{{feature.label}}</div>
+          {{/each}}
+          {{#each row.restrictions as |feature|}}
+          <div class="dbu-profile-line technique-disadvantage" {{#if feature.tip}}data-tooltip="{{feature.tip}}"{{/if}}>{{feature.label}}</div>
+          {{/each}}
+        </div>
+      </li>
+      {{/each}}
+    </ul>
   </section>
 </div>

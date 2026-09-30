@@ -36,7 +36,11 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       removeFeature: DBUManeuverSheet._onRemoveFeature,
       rankFeature: DBUManeuverSheet._onRankFeature,
       chooseFeature: DBUManeuverSheet._onChooseFeature,
-      resyncTechnique: DBUManeuverSheet._onResyncTechnique
+      resyncTechnique: DBUManeuverSheet._onResyncTechnique,
+      addUniqueEntry: DBUManeuverSheet._onAddUniqueEntry,
+      editUniqueEntry: DBUManeuverSheet._onEditUniqueEntry,
+      removeUniqueEntry: DBUManeuverSheet._onRemoveUniqueEntry,
+      toggleUniqueEntry: DBUManeuverSheet._onToggleUniqueEntry
     },
     form: { submitOnChange: true }
   };
@@ -54,7 +58,9 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     features: { template: "systems/dbu-ttrpg/templates/parts/technique-features.hbs", scrollable: [""] },
     techniqueEffects: {
       template: "systems/dbu-ttrpg/templates/parts/technique-effects.hbs", scrollable: [""]
-    }
+    },
+    ua: { template: "systems/dbu-ttrpg/templates/parts/unique-stats.hbs", scrollable: [""] },
+    uaFeatures: { template: "systems/dbu-ttrpg/templates/parts/unique-features.hbs", scrollable: [""] }
   };
 
   tabGroups = { primary: "" };
@@ -73,6 +79,26 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     techniqueEffects: { id: "techniqueEffects", group: "primary", label: "Effects" }
   };
 
+  /** A Unique Ability's four, in the user's order. The Effects tab is every Maneuver's own. */
+  static UNIQUE_TABS = {
+    description: { id: "description", group: "primary", label: "Description" },
+    ua: { id: "ua", group: "primary", label: "UA" },
+    uaFeatures: { id: "uaFeatures", group: "primary", label: "Advancements/Restrictions" },
+    effect: { id: "effect", group: "primary", label: "Effects" }
+  };
+
+  /** Whether this Maneuver is a Unique Ability: read off the tag. */
+  get #unique() {
+    return (this.item.system.tags ?? []).includes("uniqueAbility");
+  }
+
+  /** The tabs this Maneuver has: a Technique's, a Unique Ability's, or every other Maneuver's. */
+  get #tabSet() {
+    if (this.#technique) return this.constructor.TECHNIQUE_TABS;
+    if (this.#unique) return this.constructor.UNIQUE_TABS;
+    return this.constructor.TABS;
+  }
+
   /** Whether this Maneuver is a Signature Technique of its owner's: read off the tag. */
   get #technique() {
     return (this.item.system.tags ?? []).includes("signature") && !this.item.system.signatureTechnique;
@@ -84,8 +110,11 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     context.item = this.item;
     context.system = this.item.system;
     context.isTechnique = this.#technique;
-    const tabs = context.isTechnique ? this.constructor.TECHNIQUE_TABS : this.constructor.TABS;
-    if (!tabs[this.tabGroups.primary]) this.tabGroups.primary = context.isTechnique ? "creation" : "rules";
+    context.isUnique = this.#unique;
+    const tabs = this.#tabSet;
+    if (!tabs[this.tabGroups.primary]) {
+      this.tabGroups.primary = context.isTechnique ? "creation" : context.isUnique ? "ua" : "rules";
+    }
     context.tabs = this._getTabs();
     context.types = Object.entries(MANEUVER_TYPES)
       .map(([value, type]) => ({ value, label: type.label }));
@@ -128,7 +157,100 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       .enrichHTML(this.item.system.description, { relativeTo: this.item });
 
     if (context.isTechnique) context.technique = this.#techniqueContext();
+    if (context.isUnique) context.unique = await this.#uniqueContext();
     return context;
+  }
+
+  /** What a Unique Ability's UA and Advancements/Restrictions tabs show. */
+  async #uniqueContext() {
+    const { UNIQUE_TYPES, lockedAdvancements, uniqueTPOf } = await import("../unique.mjs");
+    const unique = this.item.system.unique;
+    const locked = lockedAdvancements(unique);
+    return {
+      types: Object.entries(UNIQUE_TYPES).map(([value, type]) => ({ value, label: type.label, selected: unique.uaType === value })),
+      both: unique.uaType === "both",
+      chosen: ["technical", "magical"].map(value => ({ value, label: UNIQUE_TYPES[value].label,
+        selected: unique.chosenType === value })),
+      tp: uniqueTPOf(unique),
+      advancements: unique.advancements.map(entry => ({ ...entry,
+        locked: locked.has(String(entry.name).trim().toLowerCase()) })),
+      restrictions: unique.restrictions
+    };
+  }
+
+  /** A new Advancement or Restriction, blank and named - its fields are written with the pencil. */
+  static async _onAddUniqueEntry(event, target) {
+    const list = (target.dataset.list === "restrictions") ? "restrictions" : "advancements";
+    const entries = this.item.system.unique[list] ?? [];
+    const blank = (list === "advancements")
+      ? { id: foundry.utils.randomID(), name: "New Advancement", tp: 0, prerequisite: "", text: "", script: "", bought: false }
+      : { id: foundry.utils.randomID(), name: "New Restriction", reduction: 0, locked: "", text: "", script: "", applied: false };
+    return this.item.update({ [`system.unique.${list}`]: [...entries, blank] });
+  }
+
+  /** An Advancement's or a Restriction's fields, written in a window: name, TP, Prerequisite, text, script. */
+  static async _onEditUniqueEntry(event, target) {
+    const list = (target.dataset.list === "restrictions") ? "restrictions" : "advancements";
+    const entries = this.item.system.unique[list] ?? [];
+    const entry = entries.find(each => each.id === target.dataset.id);
+    if (!entry) return;
+    const escape = Handlebars.escapeExpression;
+    const advancement = list === "advancements";
+    const field = (label, name, value, type = "text") => `<label class="dbu-wager"><span>${label}</span>
+      <input type="${type}" name="${name}" value="${escape(value ?? "")}" ${(type === "number") ? 'min="0" step="1"' : ""}/></label>`;
+    const saved = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.item.name} - ${advancement ? "Advancement" : "Restriction"}` },
+      content: field("Name", "name", entry.name)
+        + (advancement ? field("TP Cost", "tp", entry.tp, "number") + field("Prerequisite", "prerequisite", entry.prerequisite)
+          : field("TP Cost Reduction", "reduction", entry.reduction, "number")
+            + field("Locked Advancements", "locked", entry.locked))
+        + `<label class="dbu-wager"><span>Text</span><textarea name="text" rows="4">${escape(entry.text ?? "")}</textarea></label>
+          <label class="dbu-wager"><span>Effect</span><textarea class="effect-script" name="script" rows="5"
+            spellcheck="false">${escape(entry.script ?? "")}</textarea></label>`,
+      buttons: [
+        { action: "save", label: "Save", default: true, callback: (ev, button, dialog) => {
+          const read = name => dialog.element.querySelector(`[name="${name}"]`)?.value ?? "";
+          return advancement
+            ? { name: read("name").trim(), tp: Math.max(0, Math.floor(Number(read("tp")) || 0)),
+              prerequisite: read("prerequisite").trim(), text: read("text"), script: read("script") }
+            : { name: read("name").trim(), reduction: Math.max(0, Math.floor(Number(read("reduction")) || 0)),
+              locked: read("locked").trim(), text: read("text"), script: read("script") };
+        } },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!saved || (typeof saved !== "object")) return;
+    return this.item.update({ [`system.unique.${list}`]: entries.map(each => (each.id === entry.id) ? { ...each, ...saved } : each) });
+  }
+
+  /** An Advancement or Restriction taken off the list altogether. */
+  static async _onRemoveUniqueEntry(event, target) {
+    const list = (target.dataset.list === "restrictions") ? "restrictions" : "advancements";
+    return this.item.update({ [`system.unique.${list}`]:
+      (this.item.system.unique[list] ?? []).filter(each => each.id !== target.dataset.id) });
+  }
+
+  /**
+   * An Advancement bought or given back; a Restriction applied or removed. A locked Advancement is not bought:
+   * "Advancements you cannot gain for this Unique Ability while this Restriction is applied to it."
+   */
+  static async _onToggleUniqueEntry(event, target) {
+    const list = (target.dataset.list === "restrictions") ? "restrictions" : "advancements";
+    const flag = (list === "advancements") ? "bought" : "applied";
+    const entries = this.item.system.unique[list] ?? [];
+    const entry = entries.find(each => each.id === target.dataset.id);
+    if (!entry) return;
+    if ((list === "advancements") && !entry.bought) {
+      const { lockedAdvancements } = await import("../unique.mjs");
+      if (lockedAdvancements(this.item.system.unique).has(String(entry.name).trim().toLowerCase())) {
+        ui.notifications.warn(`${entry.name} is locked by a Restriction applied to ${this.item.name}.`);
+        return;
+      }
+    }
+    return this.item.update({ [`system.unique.${list}`]: entries.map(each =>
+      (each.id === entry.id) ? { ...each, [flag]: !each[flag] } : each) });
   }
 
   /** What the three Technique tabs show. */
@@ -236,7 +358,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
   }
 
   _getTabs() {
-    const tabs = this.#technique ? this.constructor.TECHNIQUE_TABS : this.constructor.TABS;
+    const tabs = this.#tabSet;
     return Object.fromEntries(Object.entries(tabs).map(([key, tab]) => [key, {
       ...tab,
       cssClass: this.tabGroups[tab.group] === key ? "active" : ""

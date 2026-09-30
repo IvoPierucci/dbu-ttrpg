@@ -8,6 +8,7 @@
  * changing.
  */
 
+import { uniqueScriptOf } from "../unique.mjs";
 import { legacyToProgram } from "./migrate.mjs";
 import { compile as compileScript } from "./parser.mjs";
 import { PRIORITY } from "./interpreter.mjs";
@@ -82,9 +83,12 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
     // why there are five of those.
     if ((item.type !== "talent") && (item.type !== "maneuver")) continue;
 
+    // A Unique Ability's script is its own and each Advancement bought and Restriction applied.
+    const script = (item.type === "maneuver") && (item.system?.tags ?? []).includes("uniqueAbility")
+      ? uniqueScriptOf(item.system) : item.system?.script;
     const { program, errors } = compile(
       item.uuid,
-      { script: item.system?.script, rows: item.system?.effects },
+      { script, rows: item.system?.effects },
       message => report(`${item.name}: ${message}`)
     );
     // A Trait that does not compile is skipped and named, never applied half-way.
