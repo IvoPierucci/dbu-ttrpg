@@ -1,50 +1,59 @@
 <div class="tab {{tabs.uaFeatures.cssClass}}" data-group="primary" data-tab="uaFeatures">
   {{#if isUnique}}
-  {{! What it costs, all told: its TP Cost less its Restrictions (never below half), and each Advancement. }}
-  <p class="technique-summary" data-tooltip="Listed {{unique.tp.listed}}, changed by {{unique.tp.change}}, less {{unique.tp.reduction}} in Restrictions (never below {{unique.tp.floor}}){{#if unique.tp.free}} - Free, so not charged{{/if}}, plus {{unique.tp.advancements}} in Advancements">
-    TP <b>{{unique.tp.total}}</b>{{#if unique.tp.free}} <span class="reputation-tn">Free</span>{{/if}}</p>
-
+  {{! The Signature Techniques' Adv & Disadv tab, the user's model: the search on top, a card each for an
+      Advancement bought (green) or a Restriction applied (red) beneath it. }}
   <section class="panel">
-    <h3 class="panel-title">
-      Advancements
-      <button type="button" class="edit-toggle" data-action="addUniqueEntry" data-list="advancements">Add</button>
-    </h3>
-    <ul class="reputation-list">
-      {{#each unique.advancements as |entry|}}
-      <li class="reputation-row{{#if entry.locked}} maneuver-exhausted{{/if}}">
-        <input type="checkbox" data-action="toggleUniqueEntry" data-list="advancements" data-id="{{entry.id}}"
-               {{#if entry.bought}}checked{{/if}} {{#if entry.locked}}disabled data-tooltip="Locked by a Restriction"{{else}}data-tooltip="Bought"{{/if}}/>
-        <span class="reputation-name" data-tooltip="{{entry.text}}">{{entry.name}}</span>
-        {{#if entry.prerequisite}}<span class="reputation-tn">{{entry.prerequisite}}</span>{{/if}}
-        <span class="reputation-tn">{{entry.tp}} TP</span>
-        <label class="reputation-tn" data-tooltip="Its TP is not charged">
-          <input type="checkbox" data-action="toggleUniqueEntry" data-list="advancements" data-flag="free" data-id="{{entry.id}}"
-                 {{#if entry.free}}checked{{/if}}/> Free</label>
-        <button type="button" class="maneuver-control" data-action="editUniqueEntry" data-list="advancements" data-id="{{entry.id}}" data-tooltip="Edit">&#9998;</button>
-        <button type="button" class="maneuver-control" data-action="removeUniqueEntry" data-list="advancements" data-id="{{entry.id}}" data-tooltip="Remove">&#10005;</button>
-      </li>
+    <div class="gear-add-quality">
+      <div class="gear-quality-search-row">
+        <input type="text" class="gear-quality-search" data-feature-search autocomplete="off"
+               placeholder="Type an Advancement or Restriction"/>
+        <button type="button" class="dbu-clash-button" data-action="addUniqueFeature">Add</button>
+      </div>
+      <ol class="gear-quality-list" data-feature-list hidden>
+        {{#each unique.groups as |group|}}
+        <li class="gear-quality-group" data-feature-group="{{group.label}}">{{group.label}}</li>
+        {{#each group.choices as |choice|}}
+        <li class="gear-quality-option{{#if choice.blocked}} blocked{{/if}}" data-feature-option="{{choice.value}}"
+            data-name="{{choice.name}}" data-group="{{group.label}}"
+            {{#if choice.blocked}}data-tooltip="{{choice.blocked}}"{{/if}}>{{choice.label}}</li>
+        {{/each}}
+        {{/each}}
+        <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
+      </ol>
+    </div>
+    {{#each unique.rows as |row|}}
+    <div class="technique-feature-card {{#if row.restriction}}technique-disadvantage-card{{else}}technique-advantage-card{{/if}}">
+    <div class="gear-row technique-feature">
+      <span class="gear-name">{{row.name}}</span>
+      <span class="gear-type">{{row.side}}</span>
+      {{#if row.prerequisite}}<span class="gear-type" data-tooltip="Prerequisite">{{row.prerequisite}}</span>{{/if}}
+      {{#if row.locked}}<span class="gear-type" data-tooltip="Locked Advancements">Locks {{row.locked}}</span>{{/if}}
+      <span class="gear-type">{{row.cost}}</span>
+      {{#if row.advancement}}
+      <label class="gear-type" data-tooltip="Its TP is not charged">
+        <input type="checkbox" data-action="toggleUniqueEntry" data-list="advancements" data-flag="free" data-id="{{row.id}}"
+               {{#if row.free}}checked{{/if}}/> Free</label>
+      {{/if}}
+      <button type="button" class="gear-remove" data-action="editUniqueEntry" data-list="{{row.list}}" data-id="{{row.id}}"
+              data-tooltip="Edit">&#9998;</button>
+      <button type="button" class="gear-remove" data-action="toggleUniqueEntry" data-list="{{row.list}}" data-id="{{row.id}}"
+              data-tooltip="Remove">&times;</button>
+    </div>
+    <div class="technique-feature-text">
+      {{#each row.lines as |line|}}
+      {{#if line.gap}}
+      <div class="dbu-entry-break"></div>
+      {{else}}
+      <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>
+      {{/if}}
       {{/each}}
-    </ul>
-  </section>
-
-  <section class="panel">
-    <h3 class="panel-title">
-      Restrictions
-      <button type="button" class="edit-toggle" data-action="addUniqueEntry" data-list="restrictions">Add</button>
-    </h3>
-    <ul class="reputation-list">
-      {{#each unique.restrictions as |entry|}}
-      <li class="reputation-row">
-        <input type="checkbox" data-action="toggleUniqueEntry" data-list="restrictions" data-id="{{entry.id}}"
-               {{#if entry.applied}}checked{{/if}} data-tooltip="Applied"/>
-        <span class="reputation-name" data-tooltip="{{entry.text}}">{{entry.name}}</span>
-        {{#if entry.locked}}<span class="reputation-tn" data-tooltip="Locked Advancements">Locks {{entry.locked}}</span>{{/if}}
-        <span class="reputation-tn">&minus;{{entry.reduction}} TP</span>
-        <button type="button" class="maneuver-control" data-action="editUniqueEntry" data-list="restrictions" data-id="{{entry.id}}" data-tooltip="Edit">&#9998;</button>
-        <button type="button" class="maneuver-control" data-action="removeUniqueEntry" data-list="restrictions" data-id="{{entry.id}}" data-tooltip="Remove">&#10005;</button>
-      </li>
-      {{/each}}
-    </ul>
+    </div>
+    </div>
+    {{else}}
+    <p class="tab-placeholder">None.</p>
+    {{/each}}
+    <p class="technique-total" data-tooltip="Listed {{unique.tp.listed}}, changed by {{unique.tp.change}}, less {{unique.tp.reduction}} in Restrictions (never below {{unique.tp.floor}}){{#if unique.tp.free}} - Free, so not charged{{/if}}, plus {{unique.tp.advancements}} in Advancements">
+      TP: <b>{{unique.tp.total}}</b>{{#if unique.tp.free}} (Free){{/if}}</p>
   </section>
   {{/if}}
 </div>

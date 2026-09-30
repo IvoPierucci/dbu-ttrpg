@@ -2,7 +2,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { compile } from "../effects/parser.mjs";
-import { getTrait, traitsOfKind } from "../effects/traits.mjs";
+import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { MANEUVER_TYPES, PROFILES, SUPER_PROFILES, TAIL_VARIANTS, getManeuver } from "../maneuvers.mjs";
 import { namePrefixMatches } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
@@ -40,7 +40,8 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       addUniqueEntry: DBUManeuverSheet._onAddUniqueEntry,
       editUniqueEntry: DBUManeuverSheet._onEditUniqueEntry,
       removeUniqueEntry: DBUManeuverSheet._onRemoveUniqueEntry,
-      toggleUniqueEntry: DBUManeuverSheet._onToggleUniqueEntry
+      toggleUniqueEntry: DBUManeuverSheet._onToggleUniqueEntry,
+      addUniqueFeature: DBUManeuverSheet._onAddUniqueFeature
     },
     form: { submitOnChange: true }
   };
@@ -172,10 +173,47 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       chosen: ["technical", "magical"].map(value => ({ value, label: UNIQUE_TYPES[value].label,
         selected: unique.chosenType === value })),
       tp: uniqueTPOf(unique),
-      advancements: unique.advancements.map(entry => ({ ...entry,
-        locked: locked.has(String(entry.name).trim().toLowerCase()) })),
-      restrictions: unique.restrictions
+      // The Adv & Disadv tab's shape (the user's): the search offers what is not had yet - locked ones shown
+      // and refused - and a card each for what is.
+      groups: [
+        { label: "Advancements", choices: unique.advancements.filter(entry => !entry.bought).map(entry => ({
+          value: `adv:${entry.id}`, name: entry.name, label: `${entry.name} (${entry.tp} TP)`,
+          blocked: locked.has(String(entry.name).trim().toLowerCase()) ? "Locked by a Restriction" : "" })) },
+        { label: "Restrictions", choices: unique.restrictions.filter(entry => !entry.applied).map(entry => ({
+          value: `res:${entry.id}`, name: entry.name, label: `${entry.name} (-${entry.reduction} TP)`, blocked: "" })) },
+        { label: "New", choices: [{ value: "new:advancements", name: "New Advancement", label: "New Advancement", blocked: "" },
+          { value: "new:restrictions", name: "New Restriction", label: "New Restriction", blocked: "" }] }
+      ].filter(group => group.choices.length),
+      rows: [
+        ...unique.advancements.filter(entry => entry.bought).map(entry => ({ ...entry, list: "advancements",
+          side: "Advancement", cost: `${entry.tp} TP`, advancement: true })),
+        ...unique.restrictions.filter(entry => entry.applied).map(entry => ({ ...entry, list: "restrictions",
+          side: "Restriction", cost: `-${entry.reduction} TP`, restriction: true }))
+      ].map(row => ({ ...row, lines: printedLines(row.text || "").map(line =>
+        ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line })) }))
     };
+  }
+
+  /**
+   * An Advancement bought or a Restriction applied, from the search - or a new one of either, blank, bought
+   * or applied, and opened for writing.
+   */
+  static async _onAddUniqueFeature(event, target) {
+    if (!this.isEditable) return;
+    const pick = this.#pickedFeature();
+    if (!pick) return this.element.querySelector("[data-feature-search]")?.focus();
+    const [kind, id] = pick.split(":");
+    if (kind === "new") {
+      const list = (id === "restrictions") ? "restrictions" : "advancements";
+      const entries = this.item.system.unique[list] ?? [];
+      const blank = (list === "advancements")
+        ? { id: foundry.utils.randomID(), name: "New Advancement", tp: 0, prerequisite: "", text: "", script: "", bought: true }
+        : { id: foundry.utils.randomID(), name: "New Restriction", reduction: 0, locked: "", text: "", script: "", applied: true };
+      await this.item.update({ [`system.unique.${list}`]: [...entries, blank] });
+      return DBUManeuverSheet._onEditUniqueEntry.call(this, event, { dataset: { list, id: blank.id } });
+    }
+    const list = (kind === "res") ? "restrictions" : "advancements";
+    return DBUManeuverSheet._onToggleUniqueEntry.call(this, event, { dataset: { list, id } });
   }
 
   /** A new Advancement or Restriction, blank and named - its fields are written with the pencil. */
@@ -446,7 +484,9 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       } else if (event.key === "Enter") {
         event.preventDefault();
         if (!list.hidden && lit()) pick(lit());
-        else if (input.dataset.picked) DBUManeuverSheet._onAddFeature.call(this, event, input);
+        else if (input.dataset.picked) {
+          (this.#unique ? DBUManeuverSheet._onAddUniqueFeature : DBUManeuverSheet._onAddFeature).call(this, event, input);
+        }
       } else if ((event.key === "Escape") && !list.hidden) {
         event.preventDefault();
         event.stopPropagation();
