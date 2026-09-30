@@ -1,8 +1,8 @@
 <div class="tab {{tabs.uaFeatures.cssClass}}" data-group="primary" data-tab="uaFeatures">
   {{#if isUnique}}
   {{! What it costs, all told: its TP Cost less its Restrictions (never below half), and each Advancement. }}
-  <p class="technique-summary" data-tooltip="Listed {{unique.tp.listed}}, less {{unique.tp.reduction}} in Restrictions (never below {{unique.tp.floor}}), plus {{unique.tp.advancements}} in Advancements">
-    TP <b>{{unique.tp.total}}</b></p>
+  <p class="technique-summary" data-tooltip="Listed {{unique.tp.listed}}, changed by {{unique.tp.change}}, less {{unique.tp.reduction}} in Restrictions (never below {{unique.tp.floor}}){{#if unique.tp.free}} - Free, so not charged{{/if}}, plus {{unique.tp.advancements}} in Advancements">
+    TP <b>{{unique.tp.total}}</b>{{#if unique.tp.free}} <span class="reputation-tn">Free</span>{{/if}}</p>
 
   <section class="panel">
     <h3 class="panel-title">

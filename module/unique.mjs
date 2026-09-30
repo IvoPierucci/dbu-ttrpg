@@ -35,20 +35,24 @@ export function lockedAdvancements(unique) {
 }
 
 /**
- * What a Unique Ability costs in Technique Points: its listed cost, less its applied Restrictions - "The TP
- * Cost for a Unique Ability cannot be reduced below 1/2 of its listed TP Cost" - and each Advancement bought
- * on top.
+ * What a Unique Ability costs in Technique Points: its listed cost, changed by its TP Cost Change and less its
+ * applied Restrictions - "The TP Cost for a Unique Ability cannot be reduced below 1/2 of its listed TP Cost" -
+ * and each Advancement bought on top. Free, its own price is not charged; its Advancements still are (the
+ * user's rulings).
  */
 export function uniqueTPOf(unique) {
   const listed = Math.max(0, Number(unique?.tpCost) || 0);
+  const change = Math.trunc(Number(unique?.tpChange) || 0);
   const reduction = (unique?.restrictions ?? []).filter(entry => entry.applied)
     .reduce((sum, entry) => sum + Math.max(0, Number(entry.reduction) || 0), 0);
-  // Never below half: a half-point would be below it, so it is kept.
+  // Never below half the listed cost: a half-point would be below it, so it is kept.
   const floor = Math.ceil(listed / 2);
-  const base = Math.max(floor, listed - reduction);
+  const base = Math.max(floor, listed + change - reduction);
+  const free = unique?.free === true;
+  const charged = free ? 0 : base;
   const advancements = (unique?.advancements ?? []).filter(entry => entry.bought)
     .reduce((sum, entry) => sum + Math.max(0, Number(entry.tp) || 0), 0);
-  return { listed, reduction, floor, base, advancements, total: base + advancements };
+  return { listed, change, reduction, floor, base, free, charged, advancements, total: charged + advancements };
 }
 
 /**

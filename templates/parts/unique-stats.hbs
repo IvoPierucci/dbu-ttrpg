@@ -29,6 +29,14 @@
         <em>TP Cost</em>
         <input type="number" name="system.unique.tpCost" value="{{system.unique.tpCost}}" min="0"/>
       </div>
+      <div class="stat" data-tooltip="Added to the TP Cost, or taken off it with a negative number - never below half the listed cost.">
+        <em>TP Cost Change</em>
+        <input type="number" name="system.unique.tpChange" value="{{system.unique.tpChange}}"/>
+      </div>
+      <div class="stat" data-tooltip="Its own TP Cost is not charged. Advancements bought onto it still are.">
+        <em>Free</em>
+        <input type="checkbox" name="system.unique.free" {{#if system.unique.free}}checked{{/if}}/>
+      </div>
       <div class="stat stat-wide">
         <em>Prerequisite</em>
         <input type="text" name="system.unique.prerequisite" value="{{system.unique.prerequisite}}"/>

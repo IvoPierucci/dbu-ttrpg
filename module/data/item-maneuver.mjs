@@ -604,6 +604,10 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         uaType: new fields.StringField({ required: true, blank: true, initial: "" }),
         chosenType: new fields.StringField({ required: true, blank: true, initial: "" }),
         tpCost: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        /** Added to the listed TP Cost, up or down - never below the rule's minimum (the user's). */
+        tpChange: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        /** Its own price not charged; what is bought onto it still is (the user's). */
+        free: new fields.BooleanField({ required: true, initial: false }),
         prerequisite: new fields.StringField({ required: true, blank: true, initial: "" }),
         advancements: new fields.ArrayField(new fields.SchemaField({
           id: new fields.StringField({ required: true, blank: false }),
