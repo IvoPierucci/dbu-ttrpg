@@ -1,8 +1,9 @@
 id: create
 name: Create
 prerequisite: 2+ Skill Ranks in the Craft Skill (or Medicine/Cooking for their relevant Basic Items)
-# Any of the three: Craft for most things, Medicine for [Med] Basic Items, Cooking for [Food] ones.
-requiresSkill: craft, medicine, cooking
+# Any of them: a Craft for what it makes - each its own Skill - Medicine for [Med] Basic Items, Cooking
+# for [Food] ones.
+requiresSkill: craft, craftApparel, craftWeapons, craftVehicles, medicine, cooking
 requiresRanks: 2
 sessionLimit: 1
 timeCost: Varies

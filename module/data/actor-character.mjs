@@ -268,13 +268,18 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     stealth:          { label: "Stealth",          attribute: "agility" },
     thievery:         { label: "Thievery",         attribute: "agility" },
 
-    // Its Specialties are a list the entry names: "Basic Item ... Apparel ... Weapons ... Vehicles".
-    // Any number of them, ticked (the user's ruling), kept in the same field a written
-    // specialisation is.
-    // "Special Maneuver: You gain access to the Repair Maneuver."
-    craft:            { label: "Craft",            attribute: "scholarship", required: true, encompassing: true,
-                        specialManeuver: "repair",
-                        specialties: { basic: "Basic Item", apparel: "Apparel", weapons: "Weapons", vehicles: "Vehicles" } },
+    // Craft's Specialties - "Basic Item ... Apparel ... Weapons ... Vehicles" - each a Skill of its own,
+    // with its own Ranks and Bonus (the user's ruling). `craft` is the Basic Item one, so the Ranks a
+    // character had in Craft are theirs. "Special Maneuver: You gain access to the Repair Maneuver" - at 2+
+    // in any of the four; what it mends asks for its own.
+    craft:            { label: "Craft (Basic Item)", attribute: "scholarship", required: true,
+                        specialManeuver: "repair" },
+    craftApparel:     { label: "Craft (Apparel)",  attribute: "scholarship", required: true,
+                        specialManeuver: "repair" },
+    craftWeapons:     { label: "Craft (Weapons)",  attribute: "scholarship", required: true,
+                        specialManeuver: "repair" },
+    craftVehicles:    { label: "Craft (Vehicles)", attribute: "scholarship", required: true,
+                        specialManeuver: "repair" },
     investigation:    { label: "Investigation",    attribute: "scholarship",
                         specialManeuver: "analysis" },
     knowledge:        { label: "Knowledge",        attribute: "scholarship", encompassing: true },
@@ -2502,18 +2507,27 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
      * than one Slot: both have to be able to answer it, and a `forbid` still closes it
      * either way.
      */
-    this.specialManeuvers = Object.values(this.skills)
+    // One entry for each Maneuver: several Skills may open the same one - the four Crafts, the Repair -
+    // and whoever asks takes the first entry, so they are joined, open if any of them is.
+    this.specialManeuvers = Object.values(Object.values(this.skills)
       .filter(skill => skill.specialManeuver)
-      .map(skill => ({
-        maneuver: skill.specialManeuver,
-        skill: skill.label,
-        ranks: skill.ranks,
-        // What it wants, carried beside what they have: the sentence that says a Maneuver
-        // is not open yet has both numbers in it, and reaching for the constant from
-        // maneuvers.mjs would have that module importing this one back.
-        needs: DBUCharacterData.SKILL_MANEUVER_RANKS,
-        open: skill.ranks >= DBUCharacterData.SKILL_MANEUVER_RANKS
-      }));
+      .reduce((by, skill) => {
+        const open = skill.ranks >= DBUCharacterData.SKILL_MANEUVER_RANKS;
+        const had = by[skill.specialManeuver];
+        by[skill.specialManeuver] = had
+          ? { ...had, skill: `${had.skill} or ${skill.label}`, ranks: Math.max(had.ranks, skill.ranks), open: had.open || open }
+          : {
+            maneuver: skill.specialManeuver,
+            skill: skill.label,
+            ranks: skill.ranks,
+            // What it wants, carried beside what they have: the sentence that says a Maneuver
+            // is not open yet has both numbers in it, and reaching for the constant from
+            // maneuvers.mjs would have that module importing this one back.
+            needs: DBUCharacterData.SKILL_MANEUVER_RANKS,
+            open
+          };
+        return by;
+      }, {}));
 
     // Saving Throws: tied to Attribute Score (not Modifier) per the rules. The race's
     // focused Saving Throw gains +1(bT) - which does not grow with a Breakthrough,

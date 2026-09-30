@@ -3073,13 +3073,14 @@ async function repairGear(message, repair) {
   if (repair.kind === "weapon") {
     const baseTier = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
     const roll = await new Roll(`${2 * baseTier}d10`).evaluate();
-    const bonus = Number(actor.system.skills?.craft?.bonus) || 0;
+    // "Plus your Skill Bonus for the relevant Craft Skill Specialization" - Craft (Weapons).
+    const bonus = Number(actor.system.skills?.[repair.skill ?? "craftWeapons"]?.bonus) || 0;
     const back = repairAmount("weapon", { dice: roll.total, skillBonus: bonus });
     const lost = Math.max(0, (Number(crafted.lifeLost) || 0) - back);
     await item.update({ "system.crafted.lifeLost": lost, "system.crafted.destroyed": false });
     return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), rolls: [roll],
       content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${item.name}: ${roll.total} (${2 * baseTier}d10) `
-        + `+ ${bonus} (Craft) = ${back} Life Points back.`)}</div>` });
+        + `+ ${bonus} (Craft (Weapons)) = ${back} Life Points back.`)}</div>` });
   }
   const lost = Math.max(0, (Number(crafted.breakLost) || 0) - REPAIR_BREAK_VALUE);
   await item.update({ "system.crafted.breakLost": lost, "system.crafted.destroyed": false });
@@ -3381,8 +3382,7 @@ export async function postCreate(actor, create) {
   const escape = Handlebars.escapeExpression;
   const dc = DBUCharacterData.DIFFICULTIES[create.difficulty];
   const skill = actor.system.skills?.[create.skill]?.label ?? create.skill;
-  const specialty = create.specialty
-    ? ` (${DBUCharacterData.SKILLS.craft?.specialties?.[create.specialty] ?? create.specialty})` : "";
+  const specialty = "";
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${escape(actor.name)} begins Create: ${escape(create.name)} - ${escape(create.time)}`

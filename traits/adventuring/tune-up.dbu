@@ -1,10 +1,9 @@
 id: tune-up
 name: Tune Up
 prerequisite: 2+ Skill Ranks in Craft (Vehicles)
-requiresSkill: craft
+# Craft (Vehicles), a Skill of its own.
+requiresSkill: craftVehicles
 requiresRanks: 2
-# The Craft Specialty it asks for, ticked on the Craft Skill.
-requiresSpecialty: vehicles
 sessionLimit: 1
 timeCost: 4 Hours
 # Vehicles and Battle Jackets are not in this system: what it does is said on the card, and done by
@@ -24,6 +23,6 @@ text: >
 
 ---
 
-# Offered on the Adventure tab to whoever has 2+ Ranks in Craft with the Vehicles Specialty ticked.
+# Offered on the Adventure tab to whoever has 2+ Ranks in Craft (Vehicles).
 # The use counts, the card says the Time Cost, and its button - once the time is spent - says what it
 # does. Vehicles and Battle Jackets are not built: the recreating is the table's.

@@ -2560,7 +2560,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const entry = adventuringManeuvers(definition ? [definition] : [], this.actor.system.adventureUses ?? [],
         this.actor.system)[0];
       if (!entry) {
-        ui.notifications.warn(`${this.actor.name}: Full Repair needs 2+ Skill Ranks in Craft.`);
+        ui.notifications.warn(`${this.actor.name}: Full Repair needs 2+ Skill Ranks in Craft (Weapons) or (Vehicles).`);
         return;
       }
       const refused = whyNotAdventuring(entry, { adventuring: this.actor.system.adventuring });
@@ -4579,14 +4579,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       .filter(item => (item.special !== true) && item.craftDC)
       .map(item => ({ item, tags: tagsOf(item), ...createSkillFor(tagsOf(item)) }))
       .filter(({ skill, specialty }) => canCreateWith(system, skill, specialty));
-    const pieces = [["weapon", "A Weapon", "weapons"], ["apparel", "A piece of Apparel", "apparel"],
-      ["vehicle", "A Vehicle", "vehicles"], ["battleJacket", "A Battle Jacket", "vehicles"]]
-      .filter(([, , specialty]) => canCreateWith(system, "craft", specialty));
+    const pieces = [["weapon", "A Weapon", "craftWeapons"], ["apparel", "A piece of Apparel", "craftApparel"],
+      ["vehicle", "A Vehicle", "craftVehicles"], ["battleJacket", "A Battle Jacket", "craftVehicles"]]
+      .filter(([, , skill]) => canCreateWith(system, skill));
     // "A Blueprint is a Basic Item that can be used when using the Create Maneuver to instantly succeed
     // at recreating whatever is recorded on the Blueprint."
     const blueprints = this.actor.items.filter(item => item.system.blueprint?.kind);
     if (!basics.length && !pieces.length && !blueprints.length) {
-      ui.notifications.warn(`${this.actor.name} has nothing they can Create - 2+ Ranks and the Specialty for it.`);
+      ui.notifications.warn(`${this.actor.name} has nothing they can Create - 2+ Ranks in the Skill for it.`);
       return;
     }
 
@@ -4636,7 +4636,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       return;
     }
     const roll = basic ? { skill: basic.skill, specialty: basic.specialty }
-      : { skill: "craft", specialty: (kind === "weapon") ? "weapons" : (kind === "apparel") ? "apparel" : "vehicles" };
+      : { skill: (kind === "weapon") ? "craftWeapons" : (kind === "apparel") ? "craftApparel" : "craftVehicles", specialty: "" };
     const name = basic ? basic.item.name : (plan?.name || { weapon: "a Weapon", apparel: "a piece of Apparel",
       vehicle: "a Vehicle", battleJacket: "a Battle Jacket" }[kind]);
     const time = String(definition[{ basic: "timeBasic", weapon: "timeWeapon", apparel: "timeApparel" }[kind] ?? "timeVehicle"] ?? "");
@@ -4801,8 +4801,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   async #startFullRepair(entry, definition, itemId) {
     const escape = Handlebars.escapeExpression;
-    const weapons = this.actor.items.filter(item => (item.system.crafted?.kind === "weapon")
-      && (((Number(item.system.crafted.lifeLost) || 0) > 0) || item.system.crafted.destroyed));
+    // What they can repair, by the Craft of it (the user's ruling): Weapons with 2+ Ranks in Craft
+    // (Weapons), a Vehicle or Battle Jacket with 2+ in Craft (Vehicles).
+    const ranksIn = key => Number(this.actor.system.skills?.[key]?.ranks) || 0;
+    const weapons = (ranksIn("craftWeapons") >= 2) ? this.actor.items.filter(item => (item.system.crafted?.kind === "weapon")
+      && (((Number(item.system.crafted.lifeLost) || 0) > 0) || item.system.crafted.destroyed)) : [];
+    const vehicles = ranksIn("craftVehicles") >= 2;
+    if (!weapons.length && !vehicles) {
+      ui.notifications.warn(`${this.actor.name} has nothing to Full Repair: 2+ Ranks in Craft (Weapons) and a damaged `
+        + "Weapon, or 2+ in Craft (Vehicles).");
+      return;
+    }
     const min = Number(definition.hoursMin) || 2;
     const max = Number(definition.hoursMax) || 10;
     const chosen = await foundry.applications.api.DialogV2.wait({
@@ -4810,7 +4819,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       window: { title: `${this.actor.name} - ${definition.name}` },
       content: `<label class="dbu-wager"><span>Repair</span>
           <select name="what">${weapons.map(item => `<option value="${item.id}" ${(item.id === itemId) ? "selected" : ""}>${
-            escape(item.name)}</option>`).join("")}<option value="vehicle">A Vehicle or Battle Jacket</option></select></label>
+            escape(item.name)}</option>`).join("")}${vehicles ? `<option value="vehicle">A Vehicle or Battle Jacket</option>` : ""}</select></label>
         <label class="dbu-wager"><span>Hours</span>
           <input type="number" name="hours" value="${min}" min="${min}" max="${max}" step="1"/>
           <em>1/5 of the most for every 2</em></label>`,
@@ -5384,7 +5393,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // Crafting's Auto-Succeed: at 4 Ranks in Craft a Check at Qualified or less needs no roll - at 5,
     // Expert or less. Said on a card rather than rolled.
-    if (target.dataset.skill === "craft") {
+    if (String(target.dataset.skill).startsWith("craft")) {
       const { craftAutoSucceeds } = await import("../adventure.mjs");
       if (craftAutoSucceeds(skill.ranks, ready.difficulty)) {
         const dc = DBUCharacterData.DIFFICULTIES[ready.difficulty];
@@ -5392,7 +5401,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           speaker: ChatMessage.getSpeaker({ actor: this.actor }),
           content: `<p>${Handlebars.escapeExpression(this.actor.name)} automatically succeeds at the `
             + `${Handlebars.escapeExpression(name)} Check at the ${dc?.label ?? ready.difficulty} Difficulty `
-            + `(${skill.ranks} Skill Ranks in Craft).</p>`
+            + `(${skill.ranks} Skill Ranks in ${Handlebars.escapeExpression(skill.label)}).</p>`
         });
       }
     }

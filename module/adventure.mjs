@@ -240,6 +240,7 @@ export function hungerAfter(stage, stages) {
  * roll.
  */
 export function craftAutoSucceeds(ranks, difficulty) {
+  // Each Craft its own Skill: the Ranks are the one rolled's.
   const order = ["novice", "apprentice", "qualified", "expert", "master", "grandmaster"];
   const at = order.indexOf(String(difficulty ?? ""));
   if (at < 0) return false;
@@ -252,14 +253,13 @@ export const DIFFICULTY_ORDER = Object.freeze(["novice", "apprentice", "qualifie
 
 /**
  * What the Create Maneuver rolls for a Basic Item: "Medicine. Use your Medicine Skill instead of the
- * Craft Skill"; "Food ... use your Cooking Skill instead"; otherwise Craft, with its Basic Items
- * Specialty.
+ * Craft Skill"; "Food ... use your Cooking Skill instead"; otherwise Craft (Basic Item).
  */
 export function createSkillFor(tags) {
   const list = (tags ?? []).map(tag => String(tag).toLowerCase());
   if (list.includes("med")) return { skill: "medicine", specialty: "" };
   if (list.includes("food")) return { skill: "cooking", specialty: "" };
-  return { skill: "craft", specialty: "basic" };
+  return { skill: "craft", specialty: "" };
 }
 
 /**
@@ -273,7 +273,7 @@ export function scrapCost(difficulty, { battleJacket = false } = {}) {
   return (at + 1) * (battleJacket ? 2 : 1);
 }
 
-/** Whether a character may use a Skill for Create: 2+ Ranks, and the Specialty ticked where one is named. */
+/** Whether a character may use a Skill for Create: 2+ Ranks in it - each Craft its own Skill. */
 export function canCreateWith(system, skill, specialty = "") {
   return meetsPrerequisite({ requiresSkill: skill, requiresRanks: 2, requiresSpecialty: specialty }, system);
 }

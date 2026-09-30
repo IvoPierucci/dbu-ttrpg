@@ -2207,23 +2207,22 @@ async function recordTailVariant(actor, maneuver, variant) {
  */
 /**
  * What the Repair Maneuver can mend: each Weapon and piece of Apparel the character has, with the
- * Craft DC it is checked at, and refused - with the reason - where their Craft lacks its Specialty
- * (the user's ruling) or there is nothing to mend.
+ * Craft DC it is checked at, and refused - with the reason - where they have no Ranks in its Craft (the
+ * user's ruling: Craft (Weapons) for a Weapon, Craft (Apparel) for Apparel) or there is nothing to mend.
  */
 export function repairables(actor) {
   const { craftedReading } = gearReadingModule;
-  const held = DBUCharacterData.specialtiesHeld(DBUCharacterData.SKILLS.craft, actor.system.skillSpecializations?.craft);
   return Array.from(actor.items ?? []).filter(item => ["weapon", "apparel"].includes(item.system?.crafted?.kind))
     .map(item => {
       const kind = item.system.crafted.kind;
       const reading = craftedReading(item.system.crafted, { getTrait, difficulties: DBUCharacterData.DIFFICULTIES,
         data: actor.system }) ?? {};
-      const specialty = (kind === "weapon") ? "weapons" : "apparel";
+      const specialty = (kind === "weapon") ? "craftWeapons" : "craftApparel";
       const worn = (kind === "weapon")
         ? (item.system.crafted.destroyed || ((Number(item.system.crafted.lifeLost) || 0) > 0))
         : (item.system.crafted.destroyed || ((reading.breakLeft ?? 0) < (reading.breakValue ?? 0)));
-      const why = !held.includes(specialty)
-        ? `needs the ${DBUCharacterData.SKILLS.craft.specialties[specialty]} Craft Specialty`
+      const why = !((Number(actor.system.skills?.[specialty]?.ranks) || 0) > 0)
+        ? `needs Ranks in ${DBUCharacterData.SKILLS[specialty].label}`
         : !worn ? "nothing to repair" : "";
       return { item, kind, specialty, craftDC: reading.craftDC ?? "", why };
     });
@@ -2263,12 +2262,13 @@ async function askRepair(actor) {
 async function postRepair(actor, maneuver, entry) {
   const { postManeuver } = await import("./chat.mjs");
   const dc = DBUCharacterData.DIFFICULTIES[entry.craftDC];
-  const specialty = DBUCharacterData.SKILLS.craft.specialties[entry.specialty];
+  const skill = DBUCharacterData.SKILLS[entry.specialty]?.label ?? "Craft";
   return postManeuver(actor, maneuver, {
-    note: `${actor.name} repairs ${entry.item.name}: a Craft (${specialty}) Skill Check${dc
+    note: `${actor.name} repairs ${entry.item.name}: a ${skill} Skill Check${dc
       ? ` at the ${dc.label} Difficulty - Target Number ${dc.tn}, matched or exceeded` : ""}. Roll it from the sheet and `
       + "pick that Difficulty there; the card will say whether it was met.",
-    repair: { actorUuid: actor.uuid, itemId: entry.item.id, itemName: entry.item.name, kind: entry.kind, applied: false }
+    repair: { actorUuid: actor.uuid, itemId: entry.item.id, itemName: entry.item.name, kind: entry.kind,
+      skill: entry.specialty, applied: false }
   });
 }
 
@@ -2297,8 +2297,7 @@ async function treatAlly(actor, ally, maneuver) {
     return postSkillClash(actor, culprit, maneuver, {
       clashLabel: "Treatment",
       reason: `${actor.name} works against ${culprit.name}'s poison in ${ally.name}. Win `
-        + "and it comes out. Their side may answer with Medicine or with Craft - whether "
-        + "their Craft is Basic Items is the table's to say.",
+        + "and it comes out. Their side may answer with Medicine or with Craft (Basic Item).",
       treatment: { applied: false, allyUuid: ally.uuid, allyName: ally.name }
     });
   }

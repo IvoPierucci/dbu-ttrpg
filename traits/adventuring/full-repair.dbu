@@ -1,7 +1,9 @@
 id: full-repair
 name: Full Repair
 prerequisite: 2+ Skill Ranks in Craft
-requiresSkill: craft
+# The Craft of what it repairs (the user's ruling): Craft (Weapons) for a Weapon, Craft (Vehicles) for a
+# Vehicle or Battle Jacket - offered with 2+ in either.
+requiresSkill: craftWeapons, craftVehicles
 requiresRanks: 2
 sessionLimit: 1
 timeCost: 2~10 Hours
