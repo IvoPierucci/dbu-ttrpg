@@ -757,8 +757,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       context.adventureSubjects = [["crafting", "Crafting"], ["reputation", "Reputation"], ["training", "Training"],
         ["wealth", "Wealth"]].map(([key, label]) => ({ key, label,
         open: Boolean(this.#openSections[`adventure-${key}`]) }));
+      // Each with its entry laid out as printed, and open if it was left open - the Maneuvers
+      // tab's toggle, keyed `maneuver-adv-<id>`.
+      const { printedLines } = await import("../effects/traits.mjs");
       context.adventuringManeuvers = adventuringManeuvers(traitsOfKind("adventuring"),
-        this.actor.system.adventureUses ?? [], this.actor.system);
+        this.actor.system.adventureUses ?? [], this.actor.system).map(entry => ({ ...entry,
+        lines: printedLines(entry.text).map(line => ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line })),
+        open: Boolean(this.#openSections[`maneuver-adv-${entry.id}`]) }));
     }
     context.progressionRows = this._prepareProgressionRows();
     // Handlebars has no literal-array helper, so the Attribute columns are supplied

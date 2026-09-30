@@ -2844,15 +2844,7 @@
   padding: 0;
 }
 
-.dbu-ttrpg .adventuring-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 4px;
-  border-bottom: 1px solid var(--dbu-border);
-}
-
-.dbu-ttrpg .adventuring-row .maneuver-name {
+.dbu-ttrpg .adventuring-list .maneuver-name {
   flex: 1 1 auto;
   text-align: left;
 }

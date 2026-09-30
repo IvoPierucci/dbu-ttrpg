@@ -23,8 +23,8 @@
     </div>
   </section>
 
-  {{! "Each Adventuring Maneuver has a Time Cost" and a Session Limit. The whole entry is on the
-      name's hover. }}
+  {{! "Each Adventuring Maneuver has a Time Cost" and a Session Limit. A click on the row opens its
+      entry as printed - the Maneuvers tab's rows, and the same toggle; Use is its own button. }}
   <section class="panel">
     <details class="condition-group" data-section="adventure-maneuvers"
              {{#if openSections.adventure-maneuvers}}open{{/if}}>
@@ -32,17 +32,32 @@
         Adventuring Maneuvers
         <span class="panel-note">{{adventuringManeuvers.length}}</span>
       </summary>
-      <ul class="adventuring-list">
+      <ul class="maneuver-list adventuring-list">
         {{#each adventuringManeuvers as |maneuver|}}
-        <li class="adventuring-row{{#if maneuver.exhausted}} maneuver-exhausted{{/if}}">
-          <button type="button" class="maneuver-name rollable" data-action="useAdventuring"
-                  data-maneuver="{{maneuver.id}}" data-tooltip="{{maneuver.text}}">{{maneuver.name}}</button>
-          {{#if maneuver.buffed}}
-          <button type="button" class="edit-toggle" data-action="cancelAdventuringBuff" data-maneuver="{{maneuver.id}}"
-                  data-tooltip="End what it gave, if its time has passed.">Cancel buff</button>
-          {{/if}}
-          <span class="adventuring-time" data-tooltip="Time Cost">{{maneuver.timeCost}}</span>
-          <span class="maneuver-uses" data-tooltip="Session Limit">{{#if maneuver.limit}}{{maneuver.left}}/{{maneuver.limit}} left{{else}}&infin;{{/if}}</span>
+        <li class="maneuver{{#if maneuver.exhausted}} maneuver-exhausted{{/if}}{{#if maneuver.open}} maneuver-open{{/if}}"
+            data-item-id="adv-{{maneuver.id}}">
+          <div class="maneuver-head" data-action="toggleManeuver">
+            <span class="maneuver-mark" aria-hidden="true"></span>
+            <span class="maneuver-name">{{maneuver.name}}</span>
+            {{#if maneuver.buffed}}
+            <button type="button" class="edit-toggle" data-action="cancelAdventuringBuff" data-maneuver="{{maneuver.id}}"
+                    data-tooltip="End what it gave, if its time has passed.">Cancel buff</button>
+            {{/if}}
+            <span class="adventuring-time" data-tooltip="Time Cost">{{maneuver.timeCost}}</span>
+            <span class="maneuver-uses" data-tooltip="Session Limit">{{#if maneuver.limit}}{{maneuver.left}}/{{maneuver.limit}} left{{else}}&infin;{{/if}}</span>
+            <button type="button" class="edit-toggle" data-action="useAdventuring" data-maneuver="{{maneuver.id}}">Use</button>
+          </div>
+          <div class="maneuver-body">
+            <div class="maneuver-entry">
+              {{#each maneuver.lines as |line|}}
+              {{#if line.gap}}
+              <div class="dbu-entry-break"></div>
+              {{else}}
+              <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>
+              {{/if}}
+              {{/each}}
+            </div>
+          </div>
         </li>
         {{/each}}
       </ul>
