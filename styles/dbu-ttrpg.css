@@ -2812,6 +2812,24 @@
   flex: 0 0 auto;
 }
 
+/* Hunger: four stages side by side, the one held lit. */
+.dbu-ttrpg .adventure-hunger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dbu-ttrpg .hunger-stage {
+  flex: 0 0 auto;
+  opacity: 0.6;
+}
+
+.dbu-ttrpg .hunger-stage.active {
+  opacity: 1;
+  border-color: var(--dbu-accent);
+  color: var(--dbu-accent);
+}
+
 /* Adventuring Maneuvers: a name to use it, its Time Cost, what is left of its Session Limit. */
 .dbu-ttrpg .adventuring-list {
   list-style: none;

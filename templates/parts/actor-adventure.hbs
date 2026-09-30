@@ -10,6 +10,15 @@
       Adventuring
     </label>
 
+    {{! "Hunger is a penalty that comes in three stages", given by the ARC. }}
+    <div class="adventure-hunger">
+      <span class="karma-label" data-tooltip="Given by your ARC when it seems narratively impactful.">Hunger</span>
+      {{#each hungerStages as |entry|}}
+      <button type="button" class="hunger-stage{{#if entry.active}} active{{/if}}" data-action="setHunger"
+              data-stage="{{entry.stage}}" data-tooltip="{{entry.tip}}">{{entry.label}}</button>
+      {{/each}}
+    </div>
+
     <div class="adventure-actions">
       <button type="button" class="adventure-travel" data-action="travel"
               data-tooltip="Moving to another location. Its time is the ARC's to declare. Medium Travel costs 1/10 of your Maximum Ki Points, Long 1/4 - doubled under 2 Ranks in Flight, none by Vehicle or with a Rest on the way.">

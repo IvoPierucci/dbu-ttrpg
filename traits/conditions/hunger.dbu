@@ -1,0 +1,42 @@
+id: hunger
+name: Hunger
+kind: conditions
+# "Hunger is a penalty that comes in three stages": Hungry (1), Ravenous (2), Starving (3).
+maxStacks: 3
+# Not a Combat Condition: a penalty of the Adventure rules, set by the ARC.
+combatCondition: no
+source: Core Rule
+description: >
+  Hungry halves your Surgency; Ravenous quarters it and costs 1(bT) of Combat Rolls and Soak Value;
+  Starving sets it to 0 and costs 3(bT) of both.
+text: >
+  Hunger: Hunger is a penalty that comes in three stages. Each one has different penalties:
+
+  * Hungry (1). Halve your Surgency.
+  * Ravenous (2). Quarter your Surgency and reduce your Combat Rolls and Soak Value by 1(bT).
+  * Starving (3). Set your Surgency to 0 and reduce your Combat Rolls and Soak Value by 3(bT).
+
+  Gaining Hunger. There is no exact timing for when you would gain Hunger. Ultimately, stages of Hunger
+  are given by your ARC when they seem narratively impactful. While usually you will go through the
+  stages of Hunger one by one, after a long period with a series of battles, your ARC may decide to place
+  you directly into the Ravenous or Starving stage of Hunger.
+
+---
+
+# The stage is the stack count, picked on the Adventure tab - the ARC's to give. One stage at a time:
+# each replaces the one before it rather than adding to it.
+
+[passive]
+if (stacks == 1) {
+  surgency *= 0.5;
+}
+if (stacks == 2) {
+  surgency *= 0.25;
+  combatRolls -= 1(bT);
+  soakValue -= 1(bT);
+}
+if (stacks >= 3) {
+  surgency = 0;
+  combatRolls -= 3(bT);
+  soakValue -= 3(bT);
+}

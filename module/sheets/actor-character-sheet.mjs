@@ -537,6 +537,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useAdventuring: DBUCharacterSheet._onUseAdventuring,
       newAdventureSession: DBUCharacterSheet._onNewAdventureSession,
       cancelAdventuringBuff: DBUCharacterSheet._onCancelAdventuringBuff,
+      setHunger: DBUCharacterSheet._onSetHunger,
       editImage: DBUCharacterSheet._onEditImage
     },
     form: {
@@ -747,7 +748,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.system = this.actor.system;
     context.tabs = this._getTabs();
     {
-      const { adventuringManeuvers } = await import("../adventure.mjs");
+      const { adventuringManeuvers, HUNGER_STAGES } = await import("../adventure.mjs");
+      const hungry = Number(this.actor.system.conditions?.hunger) || 0;
+      context.hungerStages = HUNGER_STAGES.map(entry => ({ ...entry, active: entry.stage === hungry }));
       context.adventuringManeuvers = adventuringManeuvers(traitsOfKind("adventuring"),
         this.actor.system.adventureUses ?? [], this.actor.system);
     }
@@ -4522,6 +4525,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return postAdventuring(this.actor, definition, {
       repair: { itemId: item?.id ?? "", itemName: item?.name ?? "a Vehicle or Battle Jacket", hours: chosen.hours }
     });
+  }
+
+  /**
+   * A stage of Hunger - "given by your ARC when they seem narratively impactful", and straight into
+   * Ravenous or Starving where the ARC says so. The stage is the Hunger mark's stack count.
+   */
+  static async _onSetHunger(event, target) {
+    return setCondition(this.actor, "hunger", Math.max(0, Math.min(3, Number(target.dataset.stage) || 0)));
   }
 
   /**

@@ -51,6 +51,7 @@
     "conditions/drained.dbu",
     "conditions/fatigued.dbu",
     "conditions/guard-down.dbu",
+    "conditions/hunger.dbu",
     "conditions/hyped.dbu",
     "conditions/impaired.dbu",
     "conditions/impediment.dbu",

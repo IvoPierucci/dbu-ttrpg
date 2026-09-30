@@ -174,3 +174,11 @@ export function areaFor(definition, ranks) {
     .sort(([a], [b]) => a - b);
   return steps.filter(([at]) => at <= (Number(ranks) || 0)).pop()?.[1] ?? "";
 }
+
+/** "Hunger is a penalty that comes in three stages" - the stack count of the Hunger mark, and none. */
+export const HUNGER_STAGES = Object.freeze([
+  { stage: 0, label: "Fed", tip: "No Hunger." },
+  { stage: 1, label: "Hungry", tip: "Halve your Surgency." },
+  { stage: 2, label: "Ravenous", tip: "Quarter your Surgency and reduce your Combat Rolls and Soak Value by 1(bT)." },
+  { stage: 3, label: "Starving", tip: "Set your Surgency to 0 and reduce your Combat Rolls and Soak Value by 3(bT)." }
+]);
