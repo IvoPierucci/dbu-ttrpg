@@ -101,6 +101,40 @@ export function grantedUniques(buddy, items, headerOf) {
   return listOf(headerOf(buddy, "grantsUnique")).filter(id => !owned.has(id));
 }
 
+/**
+ * A Unique Ability as its file says it now. The files are where a Unique Ability is written (the user's ruling),
+ * so a change there reaches everybody who already has it: what the Item keeps of its own is only what was chosen -
+ * the type it counts as, its Free and TP Cost Change, each Advancement bought with its Free and TP Cost Change,
+ * each Restriction applied with its choice. The rest is read from the file; the copy made when it was gained is
+ * kept only for a file that is gone. An Advancement or Restriction added to the file appears, not bought; one
+ * taken out of it goes, unless it was bought or applied.
+ *
+ * Written onto the prepared data (DBUManeuverData.prepareDerivedData), so every reader sees the file's.
+ */
+export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
+  const unique = system?.unique;
+  const definition = unique?.libraryId ? getTrait?.(unique.libraryId) : null;
+  if (!definition) return false;
+  const fresh = uniqueItemFrom(definition, traitsOfKind?.("unique", definition.id) ?? []).system;
+  for (const key of ["type", "actionCost", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
+    "requiresTarget", "usageLimit", "source", "text", "script"]) system[key] = fresh[key];
+  system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "evade"]) {
+    unique[key] = fresh.unique[key];
+  }
+  const merge = (stored, files, kept, held) => {
+    const fromFile = files.map(entry => {
+      const own = stored.find(each => each.key === entry.key);
+      return { ...entry, id: own?.id ?? entry.key, ...Object.fromEntries(kept.map(key => [key, own?.[key] ?? entry[key]])) };
+    });
+    const known = new Set(files.map(entry => entry.key));
+    return [...fromFile, ...stored.filter(each => !each.key || (!known.has(each.key) && each[held]))];
+  };
+  unique.advancements = merge(unique.advancements ?? [], fresh.unique.advancements, ["bought", "free", "tpChange"], "bought");
+  unique.restrictions = merge(unique.restrictions ?? [], fresh.unique.restrictions, ["applied", "choice"], "applied");
+  return true;
+}
+
 /** A header list - "a, b" or a parsed list - as clean strings. */
 function listOf(raw) {
   return (Array.isArray(raw) ? raw : String(raw ?? "").split(",")).map(each => String(each).trim()).filter(Boolean);
@@ -145,7 +179,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
           prerequisite: String(child.prerequisite ?? ""), text: String(child.text ?? ""), script: String(child.script ?? ""),
           alsoOffer: String(child.evadeAlso ?? ""), clashSave: String(child.evadeClash ?? ""),
           clashAgainst: String(child.evadeClashAgainst ?? ""), clashNote: String(child.evadeClashNote ?? ""),
-          noDiminishing: child.evadeNoDiminishing === true, bought: false
+          noDiminishing: child.evadeNoDiminishing === true, bought: false, free: false, tpChange: 0
         })),
         restrictions: children.filter(child => child.restriction === true).map(child => ({
           id: id(), key: child.id, name: child.name, reduction: number(child.reduction),

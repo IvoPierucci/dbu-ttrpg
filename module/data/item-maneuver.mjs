@@ -1,3 +1,6 @@
+import { getTrait, traitsOfKind } from "../effects/traits.mjs";
+import { withLibrary } from "../unique.mjs";
+
 const { fields } = foundry.data;
 
 /**
@@ -677,6 +680,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
    */
   prepareDerivedData() {
     super.prepareDerivedData?.();
+    // A Unique Ability gained from a file reads that file as it is now (unique.mjs withLibrary).
+    this.fromLibrary = withLibrary(this, { getTrait, traitsOfKind });
     const features = this.signature?.features ?? [];
     if (!features.length) return;
     this.advantages = features.flatMap(entry =>

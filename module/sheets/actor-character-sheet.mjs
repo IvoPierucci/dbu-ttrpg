@@ -4,6 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
 import { reactiveFor } from "../effects/registry.mjs";
+import { grantedUniques } from "../unique.mjs";
 import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
   from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
@@ -1752,6 +1753,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         itemId: item.id,
         // Given by an Active Buddy - the Oracle Fish's Precognition: used from here, not bought, not edited.
         grantedBy,
+        usesGranted: Boolean(grantedBy) && !["counter", "outOfSequence"].includes(item.system.type),
         libraryId: unique.libraryId,
         name: item.name,
         // A Counter or an Out-of-Sequence one is played from the card it answers, not from here - as the
@@ -4875,8 +4877,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
   /** The Unique Abilities this character holds, by their file - what grants an Adventuring Maneuver. */
   #uniqueHeld() {
-    return this.actor.items.filter(item => (item.type === "maneuver") && item.system.unique?.libraryId)
+    const owned = this.actor.items.filter(item => (item.type === "maneuver") && item.system.unique?.libraryId)
       .map(item => item.system.unique.libraryId);
+    // And one an Active Buddy gives access to - the Oracle Fish's Precognition, and what its Passive grants.
+    const buddy = activeBuddy(this.actor.items.contents);
+    return [...owned, ...grantedUniques(buddy, this.actor.items, (item, key) => buddyHeader(item, getTrait, key))];
   }
 
   /**

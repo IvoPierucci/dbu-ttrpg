@@ -12,7 +12,8 @@
       not an effect written on top of it. This is for the ones that change something.
     </p>
 
-    <textarea class="effect-script" name="system.script" rows="10" spellcheck="false"
+    {{#if fromFile}}<p class="tab-placeholder">From <code>{{publishedEntry}}</code>, with what is bought and applied. Edit the file to change it.</p>{{/if}}
+    <textarea class="effect-script" {{#if fromFile}}readonly{{else}}name="system.script"{{/if}} rows="10" spellcheck="false"
               placeholder="[passive]&#10;attack.kiCost -= 1(T);">{{system.script}}</textarea>
 
     {{#if errors.length}}

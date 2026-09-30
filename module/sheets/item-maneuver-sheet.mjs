@@ -126,7 +126,9 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     const definition = getManeuver(this.item.system.maneuverId);
     context.publishedEntry = definition?.text
       ? `traits/maneuvers/${this.item.system.maneuverId}.dbu`
-      : "";
+      : this.item.system.fromLibrary ? `traits/unique/${this.item.system.unique.libraryId}.dbu` : "";
+    // A Unique Ability's wording and script are its file's, and changed there (the user's ruling).
+    context.fromFile = Boolean(this.item.system.fromLibrary);
 
     const { errors } = compile(this.item.system.script, this.item.actor?.system);
     context.errors = errors;

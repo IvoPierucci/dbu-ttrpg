@@ -36,7 +36,7 @@
     </p>
     {{/if}}
 
-    <textarea class="effect-text" name="system.text" rows="12"
+    <textarea class="effect-text" {{#if fromFile}}readonly{{else}}name="system.text"{{/if}} rows="12"
               placeholder="Combat Recovery [1/Round]: Talk or rest to recover as much stamina as possible.&#10;&#8211;Maneuver Type: Standard&#10;&#8211;Action Cost: Variable (2~3 Actions)">{{system.text}}</textarea>
   </section>
 </div>

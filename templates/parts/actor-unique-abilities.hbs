@@ -20,7 +20,7 @@
       <li class="maneuver{{#if row.open}} maneuver-open{{/if}}" data-item-id="{{row.itemId}}" {{#unless row.grantedBy}}draggable="true"{{/unless}}>
         <div class="maneuver-head" data-action="toggleManeuver">
           <span class="maneuver-mark" aria-hidden="true"></span>
-          {{#if row.grantedBy}}
+          {{#if row.usesGranted}}
           <button type="button" class="maneuver-name rollable" data-action="useGrantedUnique" data-unique-id="{{row.libraryId}}"
                   data-tooltip="Given by {{row.grantedBy}}, while it is Active">{{row.name}}</button>
           {{else if row.playable}}
