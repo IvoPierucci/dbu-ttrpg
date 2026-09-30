@@ -37,7 +37,6 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       rankFeature: DBUManeuverSheet._onRankFeature,
       chooseFeature: DBUManeuverSheet._onChooseFeature,
       resyncTechnique: DBUManeuverSheet._onResyncTechnique,
-      editUniqueEntry: DBUManeuverSheet._onEditUniqueEntry,
       toggleUniqueEntry: DBUManeuverSheet._onToggleUniqueEntry,
       addUniqueFeature: DBUManeuverSheet._onAddUniqueFeature
     },
@@ -200,43 +199,6 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     const [kind, id] = pick.split(":");
     const list = (kind === "res") ? "restrictions" : "advancements";
     return DBUManeuverSheet._onToggleUniqueEntry.call(this, event, { dataset: { list, id } });
-  }
-
-  /** An Advancement's or a Restriction's fields, written in a window: name, TP, Prerequisite, text, script. */
-  static async _onEditUniqueEntry(event, target) {
-    const list = (target.dataset.list === "restrictions") ? "restrictions" : "advancements";
-    const entries = this.item.system.unique[list] ?? [];
-    const entry = entries.find(each => each.id === target.dataset.id);
-    if (!entry) return;
-    const escape = Handlebars.escapeExpression;
-    const advancement = list === "advancements";
-    const field = (label, name, value, type = "text") => `<label class="dbu-wager"><span>${label}</span>
-      <input type="${type}" name="${name}" value="${escape(value ?? "")}" ${(type === "number") ? 'min="0" step="1"' : ""}/></label>`;
-    const saved = await foundry.applications.api.DialogV2.wait({
-      classes: ["dbu-dialog"],
-      window: { title: `${this.item.name} - ${advancement ? "Advancement" : "Restriction"}` },
-      content: field("Name", "name", entry.name)
-        + (advancement ? field("TP Cost", "tp", entry.tp, "number") + field("Prerequisite", "prerequisite", entry.prerequisite)
-          : field("TP Cost Reduction", "reduction", entry.reduction, "number")
-            + field("Locked Advancements", "locked", entry.locked))
-        + `<label class="dbu-wager"><span>Text</span><textarea name="text" rows="4">${escape(entry.text ?? "")}</textarea></label>
-          <label class="dbu-wager"><span>Effect</span><textarea class="effect-script" name="script" rows="5"
-            spellcheck="false">${escape(entry.script ?? "")}</textarea></label>`,
-      buttons: [
-        { action: "save", label: "Save", default: true, callback: (ev, button, dialog) => {
-          const read = name => dialog.element.querySelector(`[name="${name}"]`)?.value ?? "";
-          return advancement
-            ? { name: read("name").trim(), tp: Math.max(0, Math.floor(Number(read("tp")) || 0)),
-              prerequisite: read("prerequisite").trim(), text: read("text"), script: read("script") }
-            : { name: read("name").trim(), reduction: Math.max(0, Math.floor(Number(read("reduction")) || 0)),
-              locked: read("locked").trim(), text: read("text"), script: read("script") };
-        } },
-        { action: "cancel", label: "Cancel" }
-      ],
-      rejectClose: false
-    });
-    if (!saved || (typeof saved !== "object")) return;
-    return this.item.update({ [`system.unique.${list}`]: entries.map(each => (each.id === entry.id) ? { ...each, ...saved } : each) });
   }
 
   /**

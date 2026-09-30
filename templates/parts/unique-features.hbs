@@ -1,7 +1,9 @@
 <div class="tab {{tabs.uaFeatures.cssClass}}" data-group="primary" data-tab="uaFeatures">
   {{#if isUnique}}
   {{! The Signature Techniques' Adv & Disadv tab, the user's model: the search on top, a card each for an
-      Advancement bought (green) or a Restriction applied (red) beneath it. }}
+      Advancement bought (green) or a Restriction applied (red) beneath it. What each one is and does comes from
+      the game's files and is not written here (the user's ruling): only bought, applied, Free, and its TP
+      Cost Change. }}
   <section class="panel">
     <div class="gear-add-quality">
       <div class="gear-quality-search-row">
@@ -36,8 +38,6 @@
         <input type="checkbox" data-action="toggleUniqueEntry" data-list="advancements" data-flag="free" data-id="{{row.id}}"
                {{#if row.free}}checked{{/if}}/> Free</label>
       {{/if}}
-      <button type="button" class="gear-remove" data-action="editUniqueEntry" data-list="{{row.list}}" data-id="{{row.id}}"
-              data-tooltip="Edit">&#9998;</button>
       <button type="button" class="gear-remove" data-action="toggleUniqueEntry" data-list="{{row.list}}" data-id="{{row.id}}"
               data-tooltip="Remove">&times;</button>
     </div>
