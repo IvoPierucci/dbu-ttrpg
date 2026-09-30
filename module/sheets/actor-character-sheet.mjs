@@ -4396,6 +4396,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
     const definition = getTrait(entry.id);
 
+    // Power Regulation's "You may freely gain or lose stacks of Holding Back": that Maneuver's own
+    // question, and the stacks set. No Session Limit and nothing said in chat.
+    if (definition.regulates) {
+      const { askHoldingBack } = await import("../use-maneuver.mjs");
+      const chosen = await askHoldingBack(this.actor, { id: String(definition.regulates).trim(), name: definition.name });
+      if (!chosen) return;
+      const { setResource } = await import("../chat.mjs");
+      return setResource(this.actor, chosen.name, chosen.stacks);
+    }
+
     // Full Repair: what, and for how long, asked first.
     if (definition.fullRepair === true) return this.#startFullRepair(entry, definition, "");
 

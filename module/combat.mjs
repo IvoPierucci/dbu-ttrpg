@@ -195,6 +195,9 @@ async function firstRoundsEnd(actor) {
 /** What entering a Combat Encounter clears, and what it announces. */
 async function startEncounter(combat) {
   for (const actor of combatants(combat)) {
+    // Power Regulation's "When entering a Combat Encounter, you choose if you maintain or lose these
+    // stacks of Holding Back." Read before every Resource is cleared below, and asked on a card.
+    const regulated = Number(actor.system.resources?.holdingback?.stacks) || 0;
     await actor.update({
       "system.talentUses.encounter": [],
       "system.armedTalents": [],
@@ -211,6 +214,10 @@ async function startEncounter(combat) {
       "system.resources": replaceObject({})
     });
     await stopCharging(actor);
+    if (regulated) {
+      const { postRegulated } = await import("./chat.mjs");
+      await postRegulated(actor, regulated);
+    }
     await firstRoundsBegin(actor);
     await fireMoment(actor, "start-of-encounter");
   }

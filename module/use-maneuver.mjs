@@ -1174,7 +1174,7 @@ async function askSoar(actor, maneuver) {
   return (chosen === "stay") ? false : Number(chosen);
 }
 
-async function askHoldingBack(actor, maneuver) {
+export async function askHoldingBack(actor, maneuver) {
   const { resourceCeiling, resourceDefinitions } = await import("./effects/traits.mjs");
 
   const found = Object.entries(resourceDefinitions())

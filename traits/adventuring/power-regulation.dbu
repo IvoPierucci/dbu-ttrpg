@@ -1,0 +1,29 @@
+id: power-regulation
+name: Power Regulation
+prerequisite: 2+ Skill Ranks in Concealment
+requiresSkill: concealment
+requiresRanks: 2
+# "Session Limit: Unlimited."
+sessionLimit: unlimited
+timeCost: N/A
+# "You may freely gain or lose stacks of Holding Back." The Holding Back Maneuver's own question: a new
+# total, from nothing to the base Tier of Power.
+regulates: holding-back
+source: Core Rule
+description: >
+  Gain or lose stacks of Holding Back at will, outside a Combat Encounter - and choose, entering one,
+  whether they stay.
+text: >
+  Power Regulation: You adjust your detectable strength, concealing or revealing it at-will.
+  –Prerequisite: 2+ Skill Ranks in Concealment
+  –Session Limit: Unlimited
+  –Time Cost: N/A
+  –Effect: You may freely gain or lose stacks of Holding Back. When entering a Combat Encounter, you
+  choose if you maintain or lose these stacks of Holding Back.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Concealment, with no Session Limit. Used: the
+# Holding Back Maneuver's window, and the stacks set - nothing said in chat, since hiding one's strength
+# is the point. Entering a Combat Encounter clears every Resource; one who held Holding Back stacks
+# gets a card - Keep them, or Lose them - and keeping puts them back (combat.mjs startEncounter).

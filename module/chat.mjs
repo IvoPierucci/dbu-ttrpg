@@ -2637,6 +2637,7 @@ function onRenderChatMessage(message, html) {
   renderRepair(message, html);
   renderGamble(message, html);
   renderAdventuring(message, html);
+  renderRegulated(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
@@ -3254,6 +3255,41 @@ async function fullRepairDone(actor, repair) {
   await item.update({ "system.crafted.lifeLost": lifeLost,
     ...((lifeLost < lifeMax) ? { "system.crafted.destroyed": false } : {}) });
   return `${item.name} regains ${before - lifeLost} Life Points (${lifeMax - lifeLost}/${lifeMax})`;
+}
+
+/**
+ * Power Regulation: "When entering a Combat Encounter, you choose if you maintain or lose these stacks
+ * of Holding Back." Entering cleared them with every other Resource; this card puts them back, or not.
+ */
+export async function postRegulated(actor, stacks) {
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(actor.name)} enters the Combat Encounter Holding Back ${stacks} `
+      + `stack${(stacks === 1) ? "" : "s"}.</p>`,
+    whisper: whisperTo(actor),
+    flags: { [SCOPE]: { [REGULATED_FLAG]: { actorUuid: actor.uuid, stacks, applied: false } } }
+  });
+}
+
+function renderRegulated(message, html) {
+  const regulated = message.getFlag(SCOPE, REGULATED_FLAG);
+  if (!regulated || regulated.applied) return;
+  const actor = fromUuidSync(regulated.actorUuid);
+  if (!game.user.isGM && !actor?.isOwner) return;
+  const at = html.querySelector(".message-content") ?? html;
+  for (const [keep, label] of [[true, "Keep them"], [false, "Lose them"]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = label;
+    button.addEventListener("click", async () => {
+      await message.setFlag(SCOPE, REGULATED_FLAG, { ...regulated, applied: true });
+      if (keep && actor) await setResource(actor, "holdingback", regulated.stacks);
+      await settledNote(message, keep ? `${actor?.name} keeps Holding Back.` : `${actor?.name} stops Holding Back.`,
+        { to: actor });
+    });
+    at.append(button);
+  }
 }
 
 function renderCurePoison(message, html) {
@@ -5422,6 +5458,8 @@ const REPAIR_FLAG = "repair";
 const GAMBLE_FLAG = "gamble";
 /** An Adventuring Maneuver begun, waiting on its Time Cost. */
 const ADVENTURING_FLAG = "adventuring";
+/** Holding Back stacks carried into a Combat Encounter, kept or lost - Power Regulation. */
+const REGULATED_FLAG = "regulated";
 
 /**
  * An Item left on the ground for whoever moves through it - Caltrops. The card is posted

@@ -49,8 +49,8 @@ export function adventuringManeuvers(definitions, uses = [], system = null) {
   return definitions
     .filter(definition => (definition.universal === true) || meetsPrerequisite(definition, system))
     .map(definition => {
-      // "Session Limit: Infinite" - null, and never reached.
-      const infinite = String(definition.sessionLimit ?? "").trim().toLowerCase() === "infinite";
+      // "Session Limit: Infinite" - or "Unlimited" - null, and never reached.
+      const infinite = ["infinite", "unlimited"].includes(String(definition.sessionLimit ?? "").trim().toLowerCase());
       const limit = infinite ? null : Math.max(1, Number(definition.sessionLimit) || 1);
       const used = uses.filter(entry => usedAs(entry, definition.id)).length;
       return {
