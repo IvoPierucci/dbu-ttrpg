@@ -1,0 +1,18 @@
+id: scam-riches
+name: Riches +1 (Scam)
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the Scam Adventuring Maneuver's mark.
+combatCondition: no
+# "For 1 day" is story time, and nothing here counts days: the player ends it.
+endedByHand: true
+source: Core Rule
+description: >
+  A Scam paid off: your Riches are 1 higher for a day.
+text: >
+  Riches +1 (Scam): the Scam Adventuring Maneuver's mark. "Increase your Riches by 1 for 1 day."
+
+---
+
+# Riches are not in this system yet: nothing reads this mark. It keeps the "+1 for 1 day" in view until
+# the day is over and it is ended - Cancel buff on the Scam row, or from the Combat tab.

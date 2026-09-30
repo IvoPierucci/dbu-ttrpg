@@ -1,0 +1,25 @@
+id: scam
+name: Scam
+prerequisite: 2+ Skill Ranks in Bluff
+requiresSkill: bluff
+requiresRanks: 2
+sessionLimit: 1
+timeCost: 2 Hours
+# "Increase your Riches by 1 for 1 day." Riches are not in this system: a mark keeps the day, ended with
+# Cancel buff on this row.
+gains: scam-riches
+source: Core Rule
+description: >
+  Two hours tricking someone out of their money: your Riches 1 higher for a day.
+text: >
+  Scam: You trick someone into giving you their money.
+  –Prerequisite: 2+ Skill Ranks in Bluff
+  –Session Limit: 1
+  –Time Cost: 2 Hours
+  –Effect: Increase your Riches by 1 for 1 day.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Bluff. Once the two hours are spent the card
+# gives the Riches +1 (Scam) mark - Riches are not built, so the mark is what keeps the "+1 for 1 day"
+# in view - and Cancel buff on this row ends it when the day is over.
