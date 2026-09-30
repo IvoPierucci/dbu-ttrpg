@@ -1,6 +1,7 @@
 <div class="tab {{tabs.adventure.cssClass}}" data-group="primary" data-tab="adventure">
 
-  {{! Everything that is time spent outside a Combat Encounter. }}
+  {{! Everything that is time spent outside a Combat Encounter. What is always wanted stays open at
+      the top; the rest folds away by subject, closed until opened (the user's ruling). }}
   <section class="panel adventure-standing">
     <h3 class="panel-title">Adventure</h3>
 
@@ -9,15 +10,6 @@
       <input type="checkbox" name="system.adventuring" {{#if system.adventuring}}checked{{/if}}/>
       Adventuring
     </label>
-
-    {{! "Hunger is a penalty that comes in three stages", given by the ARC. }}
-    <div class="adventure-hunger">
-      <span class="karma-label" data-tooltip="Given by your ARC when it seems narratively impactful.">Hunger</span>
-      {{#each hungerStages as |entry|}}
-      <button type="button" class="hunger-stage{{#if entry.active}} active{{/if}}" data-action="setHunger"
-              data-stage="{{entry.stage}}" data-tooltip="{{entry.tip}}">{{entry.label}}</button>
-      {{/each}}
-    </div>
 
     <div class="adventure-actions">
       <button type="button" class="adventure-travel" data-action="travel"
@@ -34,20 +26,56 @@
   {{! "Each Adventuring Maneuver has a Time Cost" and a Session Limit. The whole entry is on the
       name's hover. }}
   <section class="panel">
-    <h3 class="panel-title">Adventuring Maneuvers</h3>
-    <ul class="adventuring-list">
-      {{#each adventuringManeuvers as |maneuver|}}
-      <li class="adventuring-row{{#if maneuver.exhausted}} maneuver-exhausted{{/if}}">
-        <button type="button" class="maneuver-name rollable" data-action="useAdventuring"
-                data-maneuver="{{maneuver.id}}" data-tooltip="{{maneuver.text}}">{{maneuver.name}}</button>
-        {{#if maneuver.buffed}}
-        <button type="button" class="edit-toggle" data-action="cancelAdventuringBuff" data-maneuver="{{maneuver.id}}"
-                data-tooltip="End what it gave, if its time has passed.">Cancel buff</button>
-        {{/if}}
-        <span class="adventuring-time" data-tooltip="Time Cost">{{maneuver.timeCost}}</span>
-        <span class="maneuver-uses" data-tooltip="Session Limit">{{#if maneuver.limit}}{{maneuver.left}}/{{maneuver.limit}} left{{else}}&infin;{{/if}}</span>
-      </li>
-      {{/each}}
-    </ul>
+    <details class="condition-group" data-section="adventure-maneuvers"
+             {{#if openSections.adventure-maneuvers}}open{{/if}}>
+      <summary class="panel-title">
+        Adventuring Maneuvers
+        <span class="panel-note">{{adventuringManeuvers.length}}</span>
+      </summary>
+      <ul class="adventuring-list">
+        {{#each adventuringManeuvers as |maneuver|}}
+        <li class="adventuring-row{{#if maneuver.exhausted}} maneuver-exhausted{{/if}}">
+          <button type="button" class="maneuver-name rollable" data-action="useAdventuring"
+                  data-maneuver="{{maneuver.id}}" data-tooltip="{{maneuver.text}}">{{maneuver.name}}</button>
+          {{#if maneuver.buffed}}
+          <button type="button" class="edit-toggle" data-action="cancelAdventuringBuff" data-maneuver="{{maneuver.id}}"
+                  data-tooltip="End what it gave, if its time has passed.">Cancel buff</button>
+          {{/if}}
+          <span class="adventuring-time" data-tooltip="Time Cost">{{maneuver.timeCost}}</span>
+          <span class="maneuver-uses" data-tooltip="Session Limit">{{#if maneuver.limit}}{{maneuver.left}}/{{maneuver.limit}} left{{else}}&infin;{{/if}}</span>
+        </li>
+        {{/each}}
+      </ul>
+    </details>
   </section>
+
+  {{! Cooking: Hunger, and what cooking does about it. The stage shows on the fold while closed. }}
+  <section class="panel">
+    <details class="condition-group" data-section="adventure-cooking"
+             {{#if openSections.adventure-cooking}}open{{/if}}>
+      <summary class="panel-title">
+        Cooking
+        <span class="panel-note">{{hungerNow}}</span>
+      </summary>
+      {{! "Hunger is a penalty that comes in three stages", given by the ARC. }}
+      <div class="adventure-hunger">
+        <span class="karma-label" data-tooltip="Given by your ARC when it seems narratively impactful.">Hunger</span>
+        {{#each hungerStages as |entry|}}
+        <button type="button" class="hunger-stage{{#if entry.active}} active{{/if}}" data-action="setHunger"
+                data-stage="{{entry.stage}}" data-tooltip="{{entry.tip}}">{{entry.label}}</button>
+        {{/each}}
+      </div>
+    </details>
+  </section>
+
+  {{! The other sub-rules of Adventure, filled in as each is built. }}
+  {{#each adventureSubjects as |subject|}}
+  <section class="panel">
+    <details class="condition-group" data-section="adventure-{{subject.key}}"
+             {{#if subject.open}}open{{/if}}>
+      <summary class="panel-title">{{subject.label}}</summary>
+      <p class="adventure-empty">Not built yet.</p>
+    </details>
+  </section>
+  {{/each}}
 </div>

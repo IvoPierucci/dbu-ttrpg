@@ -751,6 +751,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       const { adventuringManeuvers, HUNGER_STAGES } = await import("../adventure.mjs");
       const hungry = Number(this.actor.system.conditions?.hunger) || 0;
       context.hungerStages = HUNGER_STAGES.map(entry => ({ ...entry, active: entry.stage === hungry }));
+      // Said on the Cooking fold while it is closed - nothing, when there is no Hunger.
+      context.hungerNow = hungry ? (HUNGER_STAGES[hungry]?.label ?? "") : "";
+      // The sub-rules of Adventure not built yet, each a fold of its own (the user's list).
+      context.adventureSubjects = [["crafting", "Crafting"], ["reputation", "Reputation"], ["training", "Training"],
+        ["wealth", "Wealth"]].map(([key, label]) => ({ key, label,
+        open: Boolean(this.#openSections[`adventure-${key}`]) }));
       context.adventuringManeuvers = adventuringManeuvers(traitsOfKind("adventuring"),
         this.actor.system.adventureUses ?? [], this.actor.system);
     }
