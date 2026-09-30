@@ -2849,6 +2849,14 @@
   text-align: left;
 }
 
+/* The arrow that opens the row, a little larger than the Maneuvers tab's so it reads as the thing to
+   click: the name beside it uses the Maneuver. */
+.dbu-ttrpg .adventuring-list .maneuver-mark {
+  width: 12px;
+  font-size: 12px;
+  color: var(--dbu-accent);
+}
+
 .dbu-ttrpg .adventuring-time {
   color: var(--dbu-text-dim);
   white-space: nowrap;

@@ -23,8 +23,9 @@
     </div>
   </section>
 
-  {{! "Each Adventuring Maneuver has a Time Cost" and a Session Limit. A click on the row opens its
-      entry as printed - the Maneuvers tab's rows, and the same toggle; Use is its own button. }}
+  {{! "Each Adventuring Maneuver has a Time Cost" and a Session Limit. The Maneuvers tab's rows: the
+      name uses it, and the arrow - or anywhere else on the row - opens its entry as printed. No Use
+      button (the user's ruling). }}
   <section class="panel">
     <details class="condition-group" data-section="adventure-maneuvers"
              {{#if openSections.adventure-maneuvers}}open{{/if}}>
@@ -38,14 +39,14 @@
             data-item-id="adv-{{maneuver.id}}">
           <div class="maneuver-head" data-action="toggleManeuver">
             <span class="maneuver-mark" aria-hidden="true"></span>
-            <span class="maneuver-name">{{maneuver.name}}</span>
+            <button type="button" class="maneuver-name rollable" data-action="useAdventuring"
+                    data-maneuver="{{maneuver.id}}">{{maneuver.name}}</button>
             {{#if maneuver.buffed}}
             <button type="button" class="edit-toggle" data-action="cancelAdventuringBuff" data-maneuver="{{maneuver.id}}"
                     data-tooltip="End what it gave, if its time has passed.">Cancel buff</button>
             {{/if}}
             <span class="adventuring-time" data-tooltip="Time Cost">{{maneuver.timeCost}}</span>
             <span class="maneuver-uses" data-tooltip="Session Limit">{{#if maneuver.limit}}{{maneuver.left}}/{{maneuver.limit}} left{{else}}&infin;{{/if}}</span>
-            <button type="button" class="edit-toggle" data-action="useAdventuring" data-maneuver="{{maneuver.id}}">Use</button>
           </div>
           <div class="maneuver-body">
             <div class="maneuver-entry">
