@@ -84,7 +84,7 @@
     </details>
   </section>
 
-  {{! The other sub-rules of Adventure, filled in as each is built. }}
+  {{! The other sub-rules of Adventure - only those with something in them (the user's ruling). }}
   {{#each adventureSubjects as |subject|}}
   <section class="panel">
     <details class="condition-group" data-section="adventure-{{subject.key}}"
@@ -157,8 +157,6 @@
         </li>
         {{/each}}
       </ul>
-      {{else}}
-      <p class="adventure-empty">Not built yet.</p>
       {{/if}}
     </details>
   </section>

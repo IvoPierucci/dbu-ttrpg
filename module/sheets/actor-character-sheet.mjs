@@ -761,8 +761,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       context.hungerStages = HUNGER_STAGES.map(entry => ({ ...entry, active: entry.stage === hungry }));
       // Said on the Cooking fold while it is closed - nothing, when there is no Hunger.
       context.hungerNow = hungry ? (HUNGER_STAGES[hungry]?.label ?? "") : "";
-      // The sub-rules of Adventure not built yet, each a fold of its own (the user's list).
-      context.adventureSubjects = [["crafting", "Crafting"], ["reputation", "Reputation"], ["training", "Training"],
+      // The sub-rules of Adventure with something to show, each a fold of its own (the user's list). One with
+      // nothing in it has no fold at all (the user's ruling) - Crafting's Create, Scrap and Blueprints live
+      // among the Adventuring Maneuvers and on the Gear tab.
+      context.adventureSubjects = [["reputation", "Reputation"], ["training", "Training"],
         ["wealth", "Wealth"]].map(([key, label]) => ({ key, label,
         open: Boolean(this.#openSections[`adventure-${key}`]),
         // Reputation has a body of its own: the Factions and Individuals - and Training, its Bonuses.

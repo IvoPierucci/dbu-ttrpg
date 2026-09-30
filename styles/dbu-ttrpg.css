@@ -2872,13 +2872,6 @@
   white-space: nowrap;
 }
 
-/* A sub-rule of Adventure with nothing in it yet. */
-.dbu-ttrpg .adventure-empty {
-  margin: 2px 0;
-  color: var(--dbu-text-dim);
-  font-style: italic;
-}
-
 /* Hunger: four stages side by side, the one held lit. */
 .dbu-ttrpg .adventure-hunger {
   display: flex;
