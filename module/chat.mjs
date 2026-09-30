@@ -2673,6 +2673,7 @@ function onRenderChatMessage(message, html) {
   renderAdventuring(message, html);
   renderRegulated(message, html);
   renderCreate(message, html);
+  renderUpkeep(message, html);
   renderMaterialize(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
@@ -3379,6 +3380,55 @@ async function unsettleCook(cook) {
     if (diner) await setCondition(diner, "hunger", hunger);
   }
   await dropNotes(cook.done);
+}
+
+/**
+ * "At the start of each of your turns, pay the Ki Point Cost for this Unique Ability or stop applying its effects."
+ * Paid on its own, with a Stop on the card that gives it back and ends it; ended if it cannot be paid (the user's).
+ */
+export async function upkeepUniques(actor) {
+  const { definitionOf } = await import("./use-maneuver.mjs");
+  const { maneuverKiCost } = await import("./maneuvers.mjs");
+  const held = Array.from(actor.items ?? []).filter(item => (item.type === "maneuver")
+    && item.system.unique?.sustained && item.system.unique?.applied);
+  for (const item of held) {
+    const cost = maneuverKiCost(definitionOf(item), null, actor) + (Number(item.system.unique.upkeepKi) || 0);
+    const { ki, capacity } = actor.system;
+    const speaker = ChatMessage.getSpeaker({ actor });
+    if ((ki.value < cost) || (cost > capacity.remaining)) {
+      await item.update({ "system.unique.applied": false });
+      await ChatMessage.create({ speaker,
+        content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} ends.</div>` });
+      continue;
+    }
+    await actor.update({ "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost });
+    await ChatMessage.create({ speaker,
+      content: `<p>${Handlebars.escapeExpression(item.name)}: ${cost} KP</p>`,
+      flags: { [SCOPE]: { [UPKEEP_FLAG]: { actorUuid: actor.uuid, itemId: item.id, paid: cost, stopped: false } } } });
+  }
+}
+
+function renderUpkeep(message, html) {
+  const upkeep = message.getFlag(SCOPE, UPKEEP_FLAG);
+  if (!upkeep || upkeep.stopped) return;
+  const actor = fromUuidSync(upkeep.actorUuid);
+  if (!game.user.isGM && !actor?.isOwner) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Stop";
+  button.dataset.tooltip = "Not paid: its Ki Points back, and it stops";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    const item = actor?.items?.get(upkeep.itemId);
+    await message.setFlag(SCOPE, UPKEEP_FLAG, { ...upkeep, stopped: true });
+    if (!actor) return;
+    await actor.update({ "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + upkeep.paid),
+      "system.capacity.spent": Math.max(0, actor.system.capacity.spent - upkeep.paid) });
+    await item?.update({ "system.unique.applied": false });
+    await settledNote(message, `${item?.name ?? "It"} stops.`);
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
 }
 
 /**
@@ -5870,6 +5920,7 @@ const ADVENTURING_FLAG = "adventuring";
 const REGULATED_FLAG = "regulated";
 /** A Meal cooked, waiting on its Cooking Skill Check - the Cook Maneuver. */
 const COOK_FLAG = "cook";
+const UPKEEP_FLAG = "upkeep";
 /** Something being made, waiting on its Skill Check - the Create Maneuver. */
 const CREATE_FLAG = "create";
 /** Something conjured, waiting on its Skill Check - Magical Materialization. */

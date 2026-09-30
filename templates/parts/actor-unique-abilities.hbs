@@ -30,6 +30,10 @@
           <span class="maneuver-name maneuver-triggered" data-tooltip="A {{row.maneuverType}} Maneuver: played from Respond on the card of the attack aimed at you">{{row.name}}</span>
           {{/if}}
           <span class="maneuver-uses">{{row.type}} &middot; {{row.maneuverType}}</span>
+          {{#if row.applied}}
+          <button type="button" class="maneuver-cost unique-applied" data-action="stopUnique" data-item-id="{{row.itemId}}"
+                  data-tooltip="{{#if row.area}}{{row.area}} Sphere. {{/if}}Click to stop it">Applied</button>
+          {{/if}}
           <span class="maneuver-cost">{{row.actions}}</span>
           <span class="maneuver-cost">{{row.kp}} KP</span>
           {{#if row.grantedBy}}

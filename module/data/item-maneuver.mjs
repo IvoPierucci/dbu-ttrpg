@@ -619,6 +619,15 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         /** Its Effect moves an Opponent up the Initiative Order - Precognition (use-maneuver.mjs askPrecognition). */
         precognition: new fields.BooleanField({ required: true, initial: false }),
         /**
+         * Its effects stay applied, their Ki Point Cost paid again at the start of each of your turns - the Atmospheric
+         * Bubble's (chat.mjs upkeepUniques). `applied`, what that costs on top (`upkeepKi`, Big Bubble's Magnitudes)
+         * and the Sphere it was applied in are this character's own.
+         */
+        sustained: new fields.BooleanField({ required: true, initial: false }),
+        applied: new fields.BooleanField({ required: true, initial: false }),
+        upkeepKi: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        area: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /**
          * A Counter that raises the Defense Value against the attack it answers - the Afterimage Technique's
          * 2(T), `defense` per Tier - and what it offers out of sequence if that attack is avoided.
          */

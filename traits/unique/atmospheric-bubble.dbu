@@ -1,0 +1,38 @@
+id: atmospheric-bubble
+name: Atmospheric Bubble
+uaType: magical
+prerequisite: 2+ Skill Ranks in Use Magic
+tpCost: 10
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 4
+# "While this Unique Ability's effects are applied" - applied when used, and kept by paying its Ki Point Cost at
+# the start of each of your turns (chat.mjs upkeepUniques: paid on its own, a Stop on the card - the user's).
+sustained: true
+source: Core Rule
+description: >
+  Applied, you ignore the rules for Unbreathable Environments; its KP paid again at the start of each of your
+  turns, or it stops.
+text: >
+  Atmospheric Bubble: You create a shield around you that provides fresh air for you, regardless of the conditions
+  outside.
+  –Ability Type: Magical
+  –Prerequisites: 2+ Skill Ranks in Use Magic
+  –TP Cost: 10
+  –KP Cost: 4(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Ignore the rules for Unbreathable Environments while this Unique Ability’s effects are applied.
+
+  At the start of each of your turns, pay the Ki Point Cost for this Unique Ability or stop applying its effects.
+
+---
+
+# "Ignore the rules for Unbreathable Environments while this Unique Ability's effects are applied." `$applied`
+# is 1 while they are (unique.mjs uniqueScriptOf).
+[passive]
+if ($applied == 1) {
+  forbid unbreathableEnvironments;
+}

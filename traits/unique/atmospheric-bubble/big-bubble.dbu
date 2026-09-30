@@ -1,0 +1,23 @@
+id: big-bubble
+name: Big Bubble
+advancement: true
+prerequisite: 3+ Skill Ranks in Use Magic
+tpCost: 5
+# "You may apply the effects of this Unique Ability within a Sphere AoE" - a Standard one, no Magnitude named - "For
+# every Skill Rank in Use Magic you possess past the second, you can increase the Ki Point Cost of this Unique
+# Ability by 2(T) to increase the Magnitude of this Sphere AoE by 1 Magnitude." Asked when it is used; the
+# Sphere is said on the card and who is inside it is the table's (the user's ruling).
+sphere: true
+sphereStepKiPerTier: 2
+sphereStepsSkill: useMagic
+sphereStepsPast: 2
+source: Core Rule
+description: >
+  Applied within a Sphere AoE, 1 Magnitude larger for 2(T) KP per Use Magic Rank past the second.
+text: >
+  Big Bubble: You are able to create a larger bubble to protect others besides yourself.
+  –Prerequisites: 3+ Skill Ranks in Use Magic
+  –TP Cost: 5
+  –Effect: When using this Unique Ability, you may apply the effects of this Unique Ability within a Sphere AoE. For
+  every Skill Rank in Use Magic you possess past the second, you can increase the Ki Point Cost of this Unique
+  Ability by 2(T) to increase the Magnitude of this Sphere AoE by 1 Magnitude.

@@ -79,7 +79,9 @@ export function uniqueScriptOf(system) {
   return [system?.script ?? "",
     ...(unique.advancements ?? []).filter(entry => entry.bought).map(entry => entry.script ?? ""),
     ...(unique.restrictions ?? []).filter(entry => entry.applied).map(entry => entry.script ?? "")]
-    .map(part => String(part).trim()).filter(Boolean).join("\n\n");
+    .map(part => String(part).trim()).filter(Boolean).join("\n\n")
+    // "While this Unique Ability's effects are applied" - the Atmospheric Bubble's.
+    .replace(/\$applied\b/g, unique.applied ? "1" : "0");
 }
 
 /**
@@ -119,7 +121,7 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   for (const key of ["type", "actionCost", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
     "requiresTarget", "usageLimit", "source", "text", "script"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -173,6 +175,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         libraryId: definition.id,
         materialize: definition.materializes === true,
         precognition: definition.foresees === true,
+        sustained: definition.sustained === true,
         evade: { defense: number(definition.evadeDefense), offer: String(definition.evadeOffer ?? "") },
         advancements: children.filter(child => child.advancement === true).map(child => ({
           id: id(), key: child.id, name: child.name, tp: number(child.tpCost),

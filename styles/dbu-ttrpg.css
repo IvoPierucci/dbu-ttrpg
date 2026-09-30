@@ -3307,3 +3307,16 @@
 .dbu-ua-search .gear-quality-cost {
   opacity: 0.75;
 }
+
+/* A Unique Ability applied until it is not paid for - the Atmospheric Bubble: said on its row, clicked to stop. */
+.dbu-ttrpg .unique-applied {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0 6px;
+  line-height: 18px;
+  border: 1px solid var(--dbu-chat-accent, #dfe288);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--dbu-chat-accent, #dfe288);
+  cursor: pointer;
+}

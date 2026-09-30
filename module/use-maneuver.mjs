@@ -1823,6 +1823,8 @@ export function definitionOf(item) {
     materialize: item.system.unique?.materialize === true,
     // Precognition's Effect: which Opponent moves up, asked before it is used.
     precognition: item.system.unique?.precognition === true,
+    // Applied until it is not paid for - the Atmospheric Bubble.
+    sustained: item.system.unique?.sustained === true,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
     kiCostCoversProfile: item.system.kiCostCoversProfile,
@@ -2396,6 +2398,57 @@ async function postPrecognition(actor, maneuver, foreseen) {
   }
   await actor.update({ "system.foresight": { opponentUuid: foreseen.uuid, opponentName: foreseen.name, active: false } });
   return chat.postManeuver(actor, maneuver, { note: `${foreseen.name} goes next.` });
+}
+
+/**
+ * A Unique Ability applied until it is not paid for - the Atmospheric Bubble. Refused while it already is. With Big
+ * Bubble: "you may apply the effects of this Unique Ability within a Sphere AoE" - Standard, no Magnitude named -
+ * "For every Skill Rank in Use Magic you possess past the second, you can increase the Ki Point Cost of this Unique
+ * Ability by 2(T) to increase the Magnitude of this Sphere AoE by 1 Magnitude." Null if backed out of.
+ */
+async function askSustain(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  if (unique.applied) {
+    ui.notifications.warn(`${maneuver.name} is already applied.`);
+    return null;
+  }
+  const { boughtTraits } = await import("./unique.mjs");
+  const sphere = boughtTraits(unique, getTrait).find(trait => trait.sphere === true);
+  if (!sphere) return { extraKi: 0, area: "" };
+  const from = MAGNITUDES.indexOf("standard");
+  const ranks = Number(actor.system.skills?.[sphere.sphereStepsSkill]?.ranks) || 0;
+  const steps = Math.max(0, Math.min(ranks - (Number(sphere.sphereStepsPast) || 0), MAGNITUDES.length - 1 - from));
+  const perStep = (Number(sphere.sphereStepKiPerTier) || 0) * Math.max(1, actor.system.tierOfPower ?? 1);
+  const label = key => key.charAt(0).toUpperCase() + key.slice(1);
+  const options = [{ value: "", text: "Only you" },
+    ...Array.from({ length: steps + 1 }, (_, step) => ({ value: String(step),
+      text: `${label(MAGNITUDES[from + step])} Sphere${step ? ` (+${step * perStep} KP)` : ""}` }))];
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<select name="area" class="dbu-gear-pick">${options.map(option =>
+      `<option value="${option.value}">${Handlebars.escapeExpression(option.text)}</option>`).join("")}</select>`,
+    buttons: [
+      { action: "apply", label: "Apply", default: true, callback: (event, button, dialog) =>
+        ({ area: dialog.element.querySelector('select[name="area"]')?.value ?? "" }) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!picked || (typeof picked !== "object")) return null;
+  if (picked.area === "") return { extraKi: 0, area: "" };
+  const step = Number(picked.area) || 0;
+  return { extraKi: step * perStep, area: label(MAGNITUDES[from + step]) };
+}
+
+/** Applied: on the Item, with what keeping it costs on top and its Sphere; the card says the Sphere. */
+async function postSustain(actor, maneuver, sustaining) {
+  const item = actor.items?.get(maneuver.itemId);
+  await item?.update({ "system.unique.applied": true, "system.unique.upkeepKi": sustaining.extraKi,
+    "system.unique.area": sustaining.area });
+  const { postManeuver } = await import("./chat.mjs");
+  return postManeuver(actor, maneuver, { note: sustaining.area ? `${sustaining.area} Sphere.` : "" });
 }
 
 /** Repair: which Weapon or piece of Apparel. */
@@ -2989,6 +3042,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let repairing = null;
   let materializing = null;
   let foreseen = null;
+  let sustaining = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3229,6 +3283,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       if (!foreseen) return false;
     }
 
+    // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    if (maneuver.sustained) {
+      sustaining = await askSustain(actor, maneuver);
+      if (!sustaining) return false;
+    }
+
     // "Additionally, if not in a High Environment, you can enter the Low Sky Environment.
     // If in a High Environment, you can increase your rank of High Environment by +/- 1
     // Rank." Which way, and whether at all - "can", so staying where you are is an answer
@@ -3453,7 +3513,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // you decide to go faster. Everything else pays what its Profile and its effects say.
   const price = crossing
     ? movementKiCost(actor, crossing)
-    : maneuverKiCost(maneuver, declared, actor);
+    : maneuverKiCost(maneuver, declared, actor) + (Number(sustaining?.extraKi) || 0);
 
   // A wager paid in Life shares the Capacity with the Ki, so both are checked before
   // either is spent.
@@ -3649,6 +3709,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postMaterialize(actor, maneuver, materializing)
     : (maneuver.precognition && foreseen)
     ? await postPrecognition(actor, maneuver, foreseen)
+    : (maneuver.sustained && sustaining)
+    ? await postSustain(actor, maneuver, sustaining)
     // Two of the Magic Trick's three effects open its Clash and the third opens nothing.
     // Asked before the Clash routes below, so the third does not fall into one.
     : (maneuver.magicTrick && (trick === "move"))

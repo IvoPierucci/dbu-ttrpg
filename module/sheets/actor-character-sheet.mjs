@@ -482,6 +482,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       newTechnique: DBUCharacterSheet._onNewTechnique,
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
       useGrantedUnique: DBUCharacterSheet._onUseGrantedUnique,
+      stopUnique: DBUCharacterSheet._onStopUnique,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
@@ -1753,6 +1754,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         itemId: item.id,
         // Given by an Active Buddy - the Oracle Fish's Precognition: used from here, not bought, not edited.
         grantedBy,
+        // Applied until it is not paid for - the Atmospheric Bubble - and the Sphere it was applied in.
+        applied: Boolean(unique.sustained && unique.applied),
+        area: unique.area,
         usesGranted: Boolean(grantedBy) && !["counter", "outOfSequence"].includes(item.system.type),
         libraryId: unique.libraryId,
         name: item.name,
@@ -1800,6 +1804,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!trait) return;
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     return useManeuver(this.actor, definitionOf(await grantedUniqueItem(this.actor, trait)));
+  }
+
+  /** An applied Unique Ability stopped - the Atmospheric Bubble, where there is no turn to stop it at. */
+  static async _onStopUnique(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system?.unique?.applied) return;
+    await item.update({ "system.unique.applied": false });
+    return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} stops.</div>` });
   }
 
   static async _onAddUniqueAbility() {

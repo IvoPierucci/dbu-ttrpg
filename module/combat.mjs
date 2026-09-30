@@ -329,6 +329,11 @@ async function beginTurn(actor) {
 
   await announceTurn(actor, { skipped, ran });
 
+  // A Unique Ability applied until it is not paid for - the Atmospheric Bubble: "At the start of each of your turns,
+  // pay the Ki Point Cost for this Unique Ability or stop applying its effects." A skipped turn is still yours.
+  const { upkeepUniques } = await import("./chat.mjs");
+  await upkeepUniques(actor);
+
   // "For each stack of DOT you possess, reduce your Life Points by 1(bT) at the start of
   // your turn." After the Moment rather than before it, so an effect that answers the
   // start of your turn by taking a stack off takes it off before it burns you - the
