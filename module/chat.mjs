@@ -448,6 +448,10 @@ async function applyClash(messageId, clash) {
     await settlePickpocket(message, clash);
   }
 
+  if (clash.unaware && clash.result && !clash.unaware.applied) {
+    await settleUnaware(message, clash);
+  }
+
   if (clash.stagger && clash.result && !clash.stagger.applied) {
     await settleStagger(message, clash);
   }
@@ -843,6 +847,17 @@ async function settleStagger(message, clash) {
   });
 
   await settledNote(message, `${target.name} is Staggered until the end of their turn.`);
+}
+
+/**
+ * Obscure, settled: "Those who lose become unaware of your presence." Said on the card; who is unaware
+ * of whom is the table's to keep.
+ */
+async function settleUnaware(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, unaware: { ...clash.unaware, applied: true } });
+  await settledNote(message, (whoWonClash(clash.result) === "challenger")
+    ? `${clash.defenderName} is unaware of ${clash.challengerName}.`
+    : `${clash.defenderName} is aware of ${clash.challengerName}.`);
 }
 
 /**

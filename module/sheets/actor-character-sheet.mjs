@@ -4396,26 +4396,33 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Perception/Thievery)". At the one token targeted, and every earlier attempt on them this
     // Adventuring Session a penalty on the challenger's side.
     if (definition.clashSkill) {
-      const aimed = Array.from(game.user.targets ?? []).map(token => token.actor).filter(Boolean);
-      if (aimed.length !== 1) {
-        ui.notifications.warn(`${this.actor.name}: target the one Character for ${definition.name}.`);
+      // Obscure's "against all Characters within your vicinity": every one targeted, a Clash each.
+      const many = String(definition.clashTargets ?? "").trim().toLowerCase() === "many";
+      const aimed = Array.from(game.user.targets ?? []).map(token => token.actor).filter(Boolean)
+        .filter(actor => actor.uuid !== this.actor.uuid);
+      if (many ? !aimed.length : (aimed.length !== 1)) {
+        ui.notifications.warn(`${this.actor.name}: target ${many ? "the Characters" : "the one Character"} for `
+          + `${definition.name}.`);
         return;
       }
-      const [victim] = aimed;
       const { targetPenalty } = await import("../adventure.mjs");
-      const penalty = targetPenalty(uses, entry.id, victim.uuid, definition.targetPenalty);
-      await this.actor.update({ "system.adventureUses": [...uses, `${entry.id}@${victim.uuid}`] });
+      await this.actor.update({ "system.adventureUses": [...uses, ...aimed.map(victim => `${entry.id}@${victim.uuid}`)] });
       const list = raw => (Array.isArray(raw) ? raw : String(raw ?? "").split(","))
         .map(each => String(each).trim().toLowerCase()).filter(Boolean);
       const { postSkillClash } = await import("../chat.mjs");
-      return postSkillClash(this.actor, victim, {
-        name: definition.name,
-        type: "adventuring",
-        clash: { skill: String(definition.clashSkill).trim().toLowerCase(), defenderSkills: list(definition.clashDefenderSkills) }
-      }, {
-        challengerRows: penalty ? [{ label: `${definition.name} (${victim.name}, again)`, value: -penalty }] : [],
-        ...(definition.steals ? { pickpocket: { steals: String(definition.steals).trim().toLowerCase(), applied: false } } : {})
-      });
+      for (const victim of aimed) {
+        const penalty = targetPenalty(uses, entry.id, victim.uuid, definition.targetPenalty);
+        await postSkillClash(this.actor, victim, {
+          name: definition.name,
+          type: "adventuring",
+          clash: { skill: String(definition.clashSkill).trim().toLowerCase(), defenderSkills: list(definition.clashDefenderSkills) }
+        }, {
+          challengerRows: penalty ? [{ label: `${definition.name} (${victim.name}, again)`, value: -penalty }] : [],
+          ...(definition.steals ? { pickpocket: { steals: String(definition.steals).trim().toLowerCase(), applied: false } } : {}),
+          ...((definition.clashUnaware === true) ? { unaware: { applied: false } } : {})
+        });
+      }
+      return;
     }
 
     await this.actor.update({ "system.adventureUses": [...uses, entry.id] });

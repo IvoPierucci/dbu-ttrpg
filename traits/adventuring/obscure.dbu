@@ -1,0 +1,44 @@
+id: obscure
+name: Obscure
+prerequisite: 2+ Skill Ranks in Stealth
+requiresSkill: stealth
+requiresRanks: 2
+# "Session Limit: Infinite."
+sessionLimit: infinite
+timeCost: N/A
+# "Make a Clash (Stealth vs Perception) against all Characters within your vicinity."
+clashSkill: stealth
+clashDefenderSkills: perception
+# Every Character targeted, a Clash each - rather than the one.
+clashTargets: many
+# "Those who lose become unaware of your presence."
+clashUnaware: true
+source: Core Rule
+description: >
+  A Stealth Clash against the Perception of everyone around: those who lose are unaware of you. Used
+  again for anyone met while you are Obscuring.
+text: >
+  Obscure: You hide from view, making yourself much harder for enemies to detect.
+  –Prerequisite: 2+ Skill Ranks in Stealth
+  –Session Limit: Infinite
+  –Time Cost: N/A
+  –Effect: You begin Obscuring your presence, disappearing from sight, often moving to hide behind
+  something or otherwise making some distance between you and those present. Make a Clash (Stealth
+  vs Perception) against all Characters within your vicinity. Those who lose become unaware of your
+  presence, enabling you to initiate a Surprise Round in a Combat Encounter, or learn information you
+  would potentially not know if you were around.
+
+  Make the Clash against any individuals encountered while you are Obscuring yourself, to see if they
+  are aware or unaware of your presence.
+
+  While you are successfully Obscured from any Characters that would become Opponents in an initiated
+  Combat Encounter, you can choose not to enter that Combat Encounter, or enter it later on at your
+  whim.
+
+---
+
+# Offered on the Adventure tab to whoever has 2+ Ranks in Stealth, with no Session Limit. Used at the
+# tokens targeted - everyone in the vicinity, and later anyone met - a Clash card each, and each card
+# says whether they are aware or unaware. Whether the character is still Obscuring, who is unaware of
+# them, the Surprise Round, and staying out of a Combat Encounter or entering it later are the table's
+# (the user's ruling: no mark).
