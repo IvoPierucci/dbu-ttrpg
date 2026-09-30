@@ -432,6 +432,11 @@
   border-bottom: 1px solid var(--dbu-border);
 }
 
+/* A Unique Ability's UA tab: two rows of three, in the user's order. */
+.dbu-ttrpg .stat-grid.stat-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 /* A Unique Ability's own figures, read on its UA tab rather than written there. */
 .dbu-ttrpg .stat-read {
   display: block;

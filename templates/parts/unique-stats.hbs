@@ -5,10 +5,20 @@
       and Free. Used as a Maneuver: "only once per Combat Round", paying its KP Cost and Action Cost. }}
   <section class="panel">
     <h3 class="panel-title">Unique Ability</h3>
-    <div class="stat-grid">
+    {{! Two rows of three, the user's order: what it is - Type, Prerequisite, TP Cost - and what is the
+        character's - Counts as, TP Cost Change, Free. }}
+    <div class="stat-grid stat-grid-3">
       <div class="stat" data-tooltip="Technical: pure skill. Magical: it needs magic. Both: chosen when it is gained.">
         <em>Type</em>
         <span class="stat-read">{{unique.typeLabel}}</span>
+      </div>
+      <div class="stat">
+        <em>Prerequisite</em>
+        <span class="stat-read">{{#if system.unique.prerequisite}}{{system.unique.prerequisite}}{{else}}N/A{{/if}}</span>
+      </div>
+      <div class="stat" data-tooltip="Its listed TP Cost. Restrictions reduce it, never below half.">
+        <em>TP Cost</em>
+        <span class="stat-read">{{system.unique.tpCost}}</span>
       </div>
       {{#if unique.both}}
       <div class="stat" data-tooltip="Listed as both: the one it counts as.">
@@ -20,11 +30,12 @@
           {{/each}}
         </select>
       </div>
-      {{/if}}
-      <div class="stat" data-tooltip="Its listed TP Cost. Restrictions reduce it, never below half.">
-        <em>TP Cost</em>
-        <span class="stat-read">{{system.unique.tpCost}}</span>
+      {{else}}
+      <div class="stat" data-tooltip="Listed as one type: the one it counts as.">
+        <em>Counts as</em>
+        <span class="stat-read">{{unique.typeLabel}}</span>
       </div>
+      {{/if}}
       <div class="stat" data-tooltip="Added to the TP Cost, or taken off it with a negative number - never below half the listed cost.">
         <em>TP Cost Change</em>
         <input type="number" name="system.unique.tpChange" value="{{system.unique.tpChange}}"/>
@@ -32,10 +43,6 @@
       <div class="stat" data-tooltip="Its own TP Cost is not charged. Advancements bought onto it still are.">
         <em>Free</em>
         <input type="checkbox" name="system.unique.free" {{#if system.unique.free}}checked{{/if}}/>
-      </div>
-      <div class="stat stat-wide">
-        <em>Prerequisite</em>
-        <span class="stat-read">{{#if system.unique.prerequisite}}{{system.unique.prerequisite}}{{else}}N/A{{/if}}</span>
       </div>
     </div>
   </section>
