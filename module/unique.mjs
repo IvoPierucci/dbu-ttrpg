@@ -75,3 +75,100 @@ export function uniqueKiFloor(listed, tierOfPower) {
   const cost = Math.max(0, Number(listed) || 0);
   return (cost >= 4 * Math.max(1, Number(tierOfPower) || 1)) ? Math.ceil(cost / 2) : 0;
 }
+
+/** A header list - "a, b" or a parsed list - as clean strings. */
+function listOf(raw) {
+  return (Array.isArray(raw) ? raw : String(raw ?? "").split(",")).map(each => String(each).trim()).filter(Boolean);
+}
+
+/**
+ * A Unique Ability's Item, from its file and the files of its Advancements and Restrictions: a Maneuver,
+ * tagged, once per Combat Round, with everything it can have bought onto it - none bought, and the
+ * Restrictions chosen when it is gained applied. `chosenType` where it lists both.
+ */
+export function uniqueItemFrom(definition, children = [], { chosenType = "", applied = [] } = {}) {
+  const id = () => foundry.utils.randomID();
+  const number = raw => Math.max(0, Number(raw) || 0);
+  return {
+    name: definition.name,
+    type: "maneuver",
+    img: "icons/magic/symbols/rune-sigil-black-pink.webp",
+    system: {
+      type: String(definition.type ?? "standard"),
+      actionCost: number(definition.actionCost),
+      kiCost: number(definition.kiCost),
+      kiCostPerTier: number(definition.kiCostPerTier),
+      attacking: definition.attacking === true,
+      requiresTarget: definition.requiresTarget === true,
+      tags: [UNIQUE_TAG],
+      usageLimit: "1/round",
+      source: String(definition.source ?? ""),
+      text: String(definition.text ?? ""),
+      script: String(definition.script ?? ""),
+      unique: {
+        uaType: String(definition.uaType ?? ""),
+        chosenType,
+        tpCost: number(definition.tpCost),
+        prerequisite: String(definition.prerequisite ?? ""),
+        libraryId: definition.id,
+        evade: { defense: number(definition.evadeDefense), offer: String(definition.evadeOffer ?? "") },
+        advancements: children.filter(child => child.advancement === true).map(child => ({
+          id: id(), key: child.id, name: child.name, tp: number(child.tpCost),
+          prerequisite: String(child.prerequisite ?? ""), text: String(child.text ?? ""), script: String(child.script ?? ""),
+          alsoOffer: String(child.evadeAlso ?? ""), clashSave: String(child.evadeClash ?? ""),
+          clashAgainst: String(child.evadeClashAgainst ?? ""), clashNote: String(child.evadeClashNote ?? ""),
+          noDiminishing: child.evadeNoDiminishing === true, bought: false
+        })),
+        restrictions: children.filter(child => child.restriction === true).map(child => ({
+          id: id(), key: child.id, name: child.name, reduction: number(child.reduction),
+          locked: listOf(child.locked).join(", "), text: String(child.text ?? ""), script: String(child.script ?? ""),
+          applied: applied.includes(child.id)
+        }))
+      }
+    }
+  };
+}
+
+/**
+ * What answering an attack with this Unique Ability brings to it - the Afterimage Technique's: the Defense
+ * Value it adds, and what the attack avoided offers, with every Advancement bought onto it.
+ */
+export function evasionOf(item, tierOfPower) {
+  const unique = item?.system?.unique;
+  const defense = Number(unique?.evade?.defense) || 0;
+  if (!defense) return null;
+  const bought = (unique.advancements ?? []).filter(entry => entry.bought);
+  const clash = bought.find(entry => entry.clashSave);
+  return {
+    itemId: item.id,
+    name: item.name,
+    bonus: defense * Math.max(1, Number(tierOfPower) || 1),
+    written: `+${defense}(T)`,
+    offer: String(unique.evade.offer ?? ""),
+    also: bought.map(entry => entry.alsoOffer).filter(Boolean),
+    alsoFrom: bought.filter(entry => entry.alsoOffer).map(entry => entry.name),
+    clash: clash ? { save: clash.clashSave, against: clash.clashAgainst, note: clash.clashNote, from: clash.name } : null,
+    noDiminishing: bought.some(entry => entry.noDiminishing)
+  };
+}
+
+/**
+ * A Unique Ability's Item as the Maneuver rules read one - what it costs, its limit, its tags - for the
+ * doors that are not the sheet's: the Afterimage Technique answered from an attack's card.
+ */
+export function uniqueDefinitionOf(item) {
+  const system = item?.system ?? {};
+  const limit = String(system.usageLimit ?? "").match(/^(\d+)\s*\/\s*(round|encounter)$/i);
+  return {
+    id: item.id,
+    itemId: item.id,
+    name: item.name,
+    type: system.type,
+    actionCost: system.actionCost,
+    kiCost: system.kiCost,
+    kiCostPerBaseTier: system.kiCostPerBaseTier,
+    kiCostPerTier: system.kiCostPerTier,
+    tags: system.tags ?? [],
+    usageLimit: limit ? { amount: Number(limit[1]), per: limit[2].toLowerCase() } : null
+  };
+}

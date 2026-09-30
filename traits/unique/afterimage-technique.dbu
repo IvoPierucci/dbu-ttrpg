@@ -1,0 +1,46 @@
+id: afterimage-technique
+name: Afterimage Technique
+# "Ability Type: Technical/Magical" - chosen when it is gained.
+uaType: both
+prerequisite: Agility Score 4+
+tpCost: 8
+type: counter
+actionCost: 1
+kiCostPerTier: 2
+# "When targeted by an Attacking Maneuver, you can increase your Defense Value by 2(T) for the duration of
+# the Attacking Maneuver. If you avoid the Attacking Maneuver, you can use the Movement Maneuver as an
+# Out-of-Sequence Action. This Movement Maneuver does not trigger the Exploit Maneuver."
+evadeDefense: 2
+evadeOffer: movement
+source: Core Rule
+description: >
+  A Counter Maneuver when attacked: Defense Value 2(T) higher for that attack, and if it misses, a Movement
+  out of sequence that provokes no Exploit. Passive: Rapid Movement's Strike bonus 1(T) higher.
+text: >
+  Afterimage Technique: You possess the ability to move faster than the naked eye can see, allowing you to
+  create visual illusions of your presence in locations that you are no longer in or to seemingly vanish
+  when attacked.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Agility Score 4+
+  –TP Cost: 8
+  –KP Cost: 2(T)
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –Minions: N/A
+  –Passive Bonus: Increase the bonus to your Strike Roll from Rapid Movement by 1(T).
+  –Effect: When targeted by an Attacking Maneuver, you can increase your Defense Value by 2(T) for the
+  duration of the Attacking Maneuver. If you avoid the Attacking Maneuver, you can use the Movement
+  Maneuver as an Out-of-Sequence Action. This Movement Maneuver does not trigger the Exploit Maneuver.
+
+---
+
+# Offered in Respond to whoever it targets, among their Counter Maneuvers: 2(T) KP and a Counter Action,
+# once per Combat Round, and the Dodge that answers the attack carries the 2(T) as a row of its own. Avoided,
+# the card offers the Movement out of sequence, and that Movement offers no Exploit.
+
+# "Increase the bonus to your Strike Roll from Rapid Movement by 1(T)." Rapid Movement's bonus is held as
+# the `rapid` Resource until the end of the turn (maneuvers/movement.dbu); while it is, 1(T) more.
+[passive]
+if (rapid.stacks > 0) {
+  strike += 1(T);
+}

@@ -433,6 +433,10 @@
     "talents/effective-defenses.dbu",
     "talents/insightful-warrior.dbu",
     "talents/power-of-the-z-warrior.dbu",
-    "talents/resilience.dbu"
+    "talents/resilience.dbu",
+    "unique/afterimage-technique.dbu",
+    "unique/afterimage-technique/afterimage-strike.dbu",
+    "unique/afterimage-technique/sonic-sway.dbu",
+    "unique/afterimage-technique/wild-sense.dbu"
   ]
 }

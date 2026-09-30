@@ -43,6 +43,10 @@ export const KINDS = Object.freeze({
   // Adventuring Maneuvers: "used exclusively outside of Combat Encounters", each with a Time Cost
   // and a Session Limit. Nothing is gathered from these as effects - the Adventure tab reads them.
   adventuring: { label: "Adventuring Maneuver", priority: PRIORITY.base },
+  // Unique Abilities: a file each, its Advancements and Restrictions in a folder named for it -
+  // `unique/afterimage-technique/wild-sense.dbu`. Copied onto the character as a Maneuver Item when gained;
+  // nothing is gathered from the file itself.
+  unique: { label: "Unique Ability", priority: PRIORITY.base },
   // Gear: the Items a character can be given, copied from here onto the character when
   // they gain one. Nothing is gathered from these as effects yet - a file here is read by
   // the Add Item window and by the Item's own sheet.

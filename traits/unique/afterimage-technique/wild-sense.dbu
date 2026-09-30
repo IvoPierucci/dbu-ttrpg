@@ -1,0 +1,18 @@
+id: wild-sense
+name: Wild Sense
+advancement: true
+prerequisite: Insight Score 6+
+tpCost: 6
+# "If you would use the Movement Maneuver through the effects of the Afterimage Technique, you may instead
+# use the Basic Attack Maneuver." Offered beside the Movement; one of the two is taken.
+evadeAlso: basic-attack
+source: Core Rule
+text: >
+  Wild Sense: Your battle instincts are sharp, allowing you to move at such high speed and attack in the
+  same breath.
+  –Prerequisites: Insight Score 6+
+  –TP Cost: 6
+  –Effect: If you would use the Movement Maneuver through the effects of the Afterimage Technique, you may
+  instead use the Basic Attack Maneuver.
+
+---

@@ -61,8 +61,10 @@ import {
   whyNotSpecial,
   maxKiWager,
   refundManeuverCost,
-  spendManeuverCost
+  spendManeuverCost,
+  maneuverUsesLeft
 } from "./maneuvers.mjs";
+import { evasionOf, uniqueDefinitionOf } from "./unique.mjs";
 
 /** Flag scope for everything this system stores on a ChatMessage. */
 const SCOPE = "dbu-ttrpg";
@@ -4352,7 +4354,7 @@ function beingMovedOn(message, actor) {
 export async function postManeuver(actor, maneuver,
                                    { asOutOfSequence = false, foundation = null,
                                      rapidMovement = false, spent = null, note = "",
-                                     curePoison = null, ride = null, repair = null } = {}) {
+                                     curePoison = null, ride = null, repair = null, noExploit = false } = {}) {
   const type = MANEUVER_TYPES[maneuver.type];
   const label = asOutOfSequence ? MANEUVER_TYPES.outOfSequence.label : type.label;
   const cost = (type.action && !asOutOfSequence)
@@ -4420,7 +4422,8 @@ export async function postManeuver(actor, maneuver,
     }
   });
 
-  offerExploits(card, actor, maneuver);
+  // The Afterimage Technique's Movement "does not trigger the Exploit Maneuver".
+  if (!noExploit) offerExploits(card, actor, maneuver);
   return card;
 }
 
@@ -5066,7 +5069,12 @@ async function respondDialog(message, respondable) {
     const moved = beingMovedOn(message, actor);
     const canStop = Boolean(moved) && !moved.suddenStop;
 
-    const counters = counterManeuvers().map(maneuver => {
+    // And the Counter Unique Abilities this character has - the Afterimage Technique - by their Item.
+    const ownCounters = (actor.items ?? []).filter(item => (item.type === "maneuver") && (item.system.type === "counter")
+      && (item.system.tags ?? []).includes("uniqueAbility") && evasionOf(item, 1))
+      .map(item => ({ ...uniqueDefinitionOf(item), id: `ua:${item.id}`,
+        source: `Unique Ability - ${maneuverKiCost(uniqueDefinitionOf(item), null, actor)} KP` }));
+    const counters = [...counterManeuvers(), ...ownCounters].map(maneuver => {
       // A Counter Maneuver answers an Attacking Maneuver aimed at you, so a character
       // who is not the target is shown it but cannot take it.
       let blocked = !unresolved || waiting;
@@ -5098,6 +5106,12 @@ async function respondDialog(message, respondable) {
           : (movement.actorUuid === actor.uuid)
           ? "you cannot stand in your own way"
           : "";
+      }
+
+      // A Unique Ability is once per Combat Round.
+      if (!blocked && maneuver.itemId && (maneuverUsesLeft(actor, maneuver) <= 0)) {
+        blocked = true;
+        reason = "once per Combat Round";
       }
 
       // Energy Cancel needs a charge to let go of, whoever is looking at it.
@@ -5435,6 +5449,8 @@ async function playCounter(message, actor, answer, attack) {
   // Dodging is not a Maneuver, so it neither costs a Counter Action nor gets you out
   // from under an Instant.
   if (answer === "dodge") return chooseDefence(message, actor, "dodge");
+  // A Counter Unique Ability, by its Item - the Afterimage Technique.
+  if (String(answer).startsWith("ua:")) return playEvasion(message, actor, String(answer).slice(3));
 
   const maneuver = getManeuver(answer);
   if (!maneuver) return;
@@ -5454,6 +5470,37 @@ async function playCounter(message, actor, answer, attack) {
 
   if (!maneuver.defend) return;
   return defendAgainst(message, actor, attack);
+}
+
+/**
+ * The Afterimage Technique, played: "When targeted by an Attacking Maneuver, you can increase your Defense
+ * Value by 2(T) for the duration of the Attacking Maneuver." Its KP and the Counter Action paid, its once per
+ * Combat Round counted, and the Dodge that answers this attack carries it - with what avoiding it offers.
+ */
+async function playEvasion(message, actor, itemId) {
+  const item = actor.items?.get(itemId);
+  const evasion = evasionOf(item, actor.system.tierOfPower);
+  if (!item || !evasion) return;
+  const maneuver = uniqueDefinitionOf(item);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) {
+    ui.notifications.warn(`${item.name} is once per Combat Round.`);
+    return;
+  }
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+    await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || endedByDuel(attack)) return;
+  const others = (attack.defences ?? []).filter(entry => entry.uuid !== actor.uuid);
+  return settleAttack(message, {
+    ...attack,
+    defences: [...others, { uuid: actor.uuid, defence: "dodge", wager: 0, foundation: "energy", parryWith: [], evade: evasion }],
+    ready: [...new Set([...(attack.ready ?? []), actor.uuid])]
+  });
 }
 
 /**
@@ -7291,7 +7338,24 @@ async function takeOutOfSequence(message, actor, offer) {
         rapidMovement: Boolean(crossing?.rapid),
         // No Action was spent, which is what out of sequence means. The Ki was, and a
         // Blockade that wins hands it back.
-        spent: { actions: 0, kind: "standard", ki: price }
+        spent: { actions: 0, kind: "standard", ki: price },
+        noExploit: Boolean(offer.noExploit)
+      }).then(async card => {
+        // Afterimage Strike: "If you use the Movement Maneuver through the effects of the Afterimage Technique,
+        // make a Clash (Impulsive vs Cognitive) against the Opponent who targeted you."
+        const clash = offer.evadeClash;
+        const opponent = clash?.attackerUuid ? fromUuidSync(clash.attackerUuid) : null;
+        if (clash && opponent) {
+          await postSaveClash(actor, opponent, {
+            maneuverName: clash.from || clash.name,
+            clashLabel: `${clash.from || clash.name}`,
+            reason: `Win and ${String(clash.note || "").replaceAll("{challenger}", actor.name).replaceAll("{defender}", opponent.name)}.`,
+            saves: [clash.save],
+            defenderSaves: clash.against ? [clash.against] : [],
+            winNote: { text: clash.note, applied: false }
+          });
+        }
+        return card;
       });
 }
 
@@ -8967,7 +9031,9 @@ async function resolveAttack(message, attack) {
     // Homing's: "Attacks from the Homing Advantage are still considered one Attacking Maneuver and
     // therefore do not inflict further Diminishing Defense upon an Opponent" - and Rebound's "Only the
     // Opponent who was initially targeted ... receives Diminishing Defense".
-    if (defence.gainsDiminishingDefense && answer && !attack.homing) {
+    // Sonic Sway: "You do not gain stacks of Diminishing Defense from an Attacking Maneuver you used the
+    // Afterimage Technique in response to."
+    if (defence.gainsDiminishingDefense && answer && !attack.homing && !defenceFor(attack, uuid)?.evade?.noDiminishing) {
       // Sweeping doubles what a target takes, but only "if you deal Damage with this
       // Attacking Maneuver" - which is not known yet. So the multiplier travels with
       // the attack and the stacks are settled once the Damage is.
@@ -9054,6 +9120,24 @@ async function resolveAttack(message, attack) {
     requestEdit(message, { type: "offer", offer: { actorUuid: attack.attackerUuid,
       actorName: attack.attackerName, maneuverId: "basic-attack", maneuverName: "Basic Attack",
       targetUuid: dodger.uuid, reason: `Fake Out - ${dodger.name} dodged` } });
+  }
+
+  // The Afterimage Technique: "If you avoid the Attacking Maneuver, you can use the Movement Maneuver as an
+  // Out-of-Sequence Action. This Movement Maneuver does not trigger the Exploit Maneuver." Wild Sense offers the
+  // Basic Attack beside it - one of the two is taken; Afterimage Strike's Clash goes with the Movement.
+  for (const { uuid, actor: target } of targets) {
+    const own = branches.find(entry => entry.uuid === uuid);
+    const evaded = defenceFor(attack, uuid)?.evade;
+    if (!evaded?.offer || !own || own.hit) continue;
+    const names = { movement: "Movement", "basic-attack": "Basic Attack" };
+    requestEdit(message, { type: "offer", offer: { actorUuid: uuid, actorName: target.name, maneuverId: evaded.offer,
+      maneuverName: names[evaded.offer] ?? evaded.offer, reason: `${evaded.name} - avoided`,
+      noExploit: true,
+      ...(evaded.clash ? { evadeClash: { ...evaded.clash, attackerUuid: attack.attackerUuid, name: evaded.name } } : {}) } });
+    for (const also of evaded.also ?? []) {
+      requestEdit(message, { type: "offer", offer: { actorUuid: uuid, actorName: target.name, maneuverId: also,
+        maneuverName: names[also] ?? also, reason: `${evaded.alsoFrom?.join(", ") || evaded.name} - instead` } });
+    }
   }
 
   // "If you avoid an Attacking Maneuver due to using the Parry option of the Defend
@@ -10168,6 +10252,9 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   }
   parts.push(...thresholdPenalty(actor));
   parts.push(...rapidMovementDodge(actor, attack));
+  // The Afterimage Technique's Defense Value, for the attack it answered.
+  const evaded = (attack?.defences ?? []).find(entry => entry.uuid === actor.uuid)?.evade ?? null;
+  if (evaded?.bonus) parts.push({ label: evaded.name, written: evaded.written, value: evaded.bonus });
   parts.push(...rideExploitBonus(actor, attack));
   parts.push(...flyinDodge(actor, attack));
   parts.push(...openedAgainst(actor));

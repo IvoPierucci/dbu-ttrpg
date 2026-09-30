@@ -1,0 +1,18 @@
+id: sonic-sway
+name: Sonic Sway
+advancement: true
+prerequisite: Wild Sense
+tpCost: 6
+# "You do not gain stacks of Diminishing Defense from an Attacking Maneuver you used the Afterimage
+# Technique in response to."
+evadeNoDiminishing: true
+source: Core Rule
+text: >
+  Sonic Sway: Your overwhelming speed makes it difficult for other to strike you even when they work
+  together.
+  –Prerequisites: Wild Sense
+  –TP Cost: 6
+  –Effect: You do not gain stacks of Diminishing Defense from an Attacking Maneuver you used the Afterimage
+  Technique in response to.
+
+---

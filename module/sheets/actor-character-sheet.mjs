@@ -470,6 +470,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useManeuver: DBUCharacterSheet._onUseManeuver,
       newTechnique: DBUCharacterSheet._onNewTechnique,
       newUniqueAbility: DBUCharacterSheet._onNewUniqueAbility,
+      addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
@@ -1757,6 +1758,72 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const warning = (together > available)
       ? `${together} TP spent on Unique Abilities and Techniques, and ${available} TP to spend.` : "";
     return { rows, spent, together, available, warning };
+  }
+
+  /**
+   * A published Unique Ability, gained: picked from the library, its type chosen where it lists both - "the
+   * category can be chosen when gaining the Unique Ability" - and "upon attempting to gain a Unique Ability,
+   * you may apply any relevant Restriction". Its Advancements come with it, none bought.
+   */
+  static async _onAddUniqueAbility() {
+    if (!this.isEditable) return;
+    const escape = Handlebars.escapeExpression;
+    const { uniqueItemFrom } = await import("../unique.mjs");
+    const library = traitsOfKind("unique").filter(trait => !trait.owner);
+    if (!library.length) {
+      ui.notifications.info("There are no Unique Abilities to add yet.");
+      return;
+    }
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.actor.name} - Add Unique Ability` },
+      content: `<select name="ua" class="dbu-gear-pick">${library.map(trait =>
+        `<option value="${escape(trait.id)}">${escape(trait.name)} (${escape(String(trait.tpCost ?? 0))} TP)</option>`).join("")}</select>`,
+      buttons: [
+        { action: "add", label: "Add", default: true, callback: (ev, button, dialog) =>
+          dialog.element.querySelector('select[name="ua"]')?.value ?? null },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    const definition = library.find(trait => trait.id === picked);
+    if (!definition) return;
+    const children = traitsOfKind("unique", definition.id);
+
+    let chosenType = "";
+    if (definition.uaType === "both") {
+      chosenType = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${definition.name} - Type` },
+        content: "",
+        buttons: [{ action: "technical", label: "Technical" }, { action: "magical", label: "Magical" },
+          { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      });
+      if (!["technical", "magical"].includes(chosenType)) return;
+    }
+
+    let applied = [];
+    const restrictions = children.filter(child => child.restriction === true);
+    if (restrictions.length) {
+      const chosen = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"],
+        window: { title: `${definition.name} - Restrictions` },
+        content: restrictions.map(child => `<label class="dbu-respond-option" data-tooltip="${escape(child.text ?? "")}">
+          <input type="checkbox" name="${escape(child.id)}"/> <span class="dbu-respond-name">${escape(child.name)}</span>
+          <span class="dbu-respond-source">-${escape(String(child.reduction ?? 0))} TP</span></label>`).join(""),
+        buttons: [
+          { action: "gain", label: "Gain", default: true, callback: (ev, button, dialog) =>
+            restrictions.filter(child => dialog.element.querySelector(`input[name="${child.id}"]`)?.checked).map(child => child.id) },
+          { action: "cancel", label: "Cancel" }
+        ],
+        rejectClose: false
+      });
+      if (!Array.isArray(chosen)) return;
+      applied = chosen;
+    }
+
+    return this.actor.createEmbeddedDocuments("Item", [uniqueItemFrom(definition, children, { chosenType, applied })]);
   }
 
   /** A blank Unique Ability, opened on its UA tab: once per Combat Round, as every one is. */

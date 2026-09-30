@@ -609,9 +609,29 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         /** Its own price not charged; what is bought onto it still is (the user's). */
         free: new fields.BooleanField({ required: true, initial: false }),
         prerequisite: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** The file it was gained from, if any - `unique/<id>.dbu`. */
+        libraryId: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /**
+         * A Counter that raises the Defense Value against the attack it answers - the Afterimage Technique's
+         * 2(T), `defense` per Tier - and what it offers out of sequence if that attack is avoided.
+         */
+        evade: new fields.SchemaField({
+          defense: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+          offer: new fields.StringField({ required: true, blank: true, initial: "" })
+        }),
         advancements: new fields.ArrayField(new fields.SchemaField({
           id: new fields.StringField({ required: true, blank: false }),
+          /** Its file's id, where it came from one - what the code asks after. */
+          key: new fields.StringField({ required: true, blank: true, initial: "" }),
           name: new fields.StringField({ required: true, blank: true, initial: "" }),
+          /** What it adds to the evasion: a Maneuver offered beside it - Wild Sense's Basic Attack. */
+          alsoOffer: new fields.StringField({ required: true, blank: true, initial: "" }),
+          /** A Clash on taking that offer - Afterimage Strike's Impulsive vs Cognitive - and what winning says. */
+          clashSave: new fields.StringField({ required: true, blank: true, initial: "" }),
+          clashAgainst: new fields.StringField({ required: true, blank: true, initial: "" }),
+          clashNote: new fields.StringField({ required: true, blank: true, initial: "" }),
+          /** No Diminishing Defense from the attack it answered - Sonic Sway. */
+          noDiminishing: new fields.BooleanField({ required: true, initial: false }),
           tp: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
           prerequisite: new fields.StringField({ required: true, blank: true, initial: "" }),
           text: new fields.StringField({ required: true, blank: true, initial: "" }),
@@ -620,6 +640,7 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         }), { required: true, initial: [] }),
         restrictions: new fields.ArrayField(new fields.SchemaField({
           id: new fields.StringField({ required: true, blank: false }),
+          key: new fields.StringField({ required: true, blank: true, initial: "" }),
           name: new fields.StringField({ required: true, blank: true, initial: "" }),
           /** Its TP Cost Reduction - and what it costs to remove it at a Power Level. */
           reduction: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
