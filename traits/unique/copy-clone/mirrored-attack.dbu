@@ -1,0 +1,20 @@
+id: mirrored-attack
+name: Mirrored Attack
+advancement: true
+prerequisite: N/A
+tpCost: 10
+# Copy Clone answers an attack aimed at you, from Respond (1 Counter Action, its KP): the Duplicate of the attacker
+# Duels them. The user's ruling: a Duel whose Clashes the Duplicate rolls with the attacker's own bonuses, its Ki Wagers
+# taken from nobody - the Duplicate is a Character apart - and you are not hit, whoever wins.
+mirroredAttack: true
+source: Core Rule
+description: >
+  Copy Clone as a Counter when attacked: a Duplicate of the attacker takes the attack, and Duels them.
+text: >
+  Mirrored Attack: Your copied clones can be used as a shield against harm.
+  –Prerequisites: N/A
+  –TP Cost: 10
+  –Effect: If you are targeted by an Attacking Maneuver, you may use the effects of Copy Clone as a Counter Maneuver with
+  an Action Cost of 1 Counter Action, but you must target the attacking Character. The created Minion becomes the target
+  for that Attacking Maneuver and must respond with the Duel Maneuver (if possible). After that Attacking Maneuver is
+  concluded, that Duplicate Minion ceases to exist.

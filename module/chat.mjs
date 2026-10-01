@@ -5718,6 +5718,15 @@ async function respondDialog(message, respondable) {
       && (item.system.tags ?? []).includes("uniqueAbility") && evasionOf(item, 1))
       .map(item => ({ ...uniqueDefinitionOf(item), id: `ua:${item.id}`,
         source: `Unique Ability - ${maneuverKiCost(uniqueDefinitionOf(item), null, actor)} KP` }));
+    // Copy Clone with Mirrored Attack: "you may use the effects of Copy Clone as a Counter Maneuver with an Action Cost
+    // of 1 Counter Action" - a Duplicate of the attacker that Duels them.
+    for (const item of actor.items ?? []) {
+      if ((item.type !== "maneuver") || !item.system.unique?.libraryId) continue;
+      if (!boughtTraits(item.system.unique, getTrait).some(trait => trait.mirroredAttack === true)) continue;
+      const maneuver = uniqueDefinitionOf(item);
+      ownCounters.push({ ...maneuver, id: `mirror:${item.id}`, type: "counter", actionCost: 1, mirror: true,
+        name: `${item.name} (Mirrored Attack)`, source: `Unique Ability - ${maneuverKiCost(maneuver, null, actor)} KP` });
+    }
     const counters = [...counterManeuvers(), ...ownCounters].map(maneuver => {
       // A Counter Maneuver answers an Attacking Maneuver aimed at you, so a character
       // who is not the target is shown it but cannot take it.
@@ -5728,6 +5737,12 @@ async function respondDialog(message, respondable) {
       // The Duel Maneuver: judged against the attack, and joinable while one is still being set up.
       if (maneuver.duel && unresolved && !duelSideOf(attack, actor.uuid)) {
         reason = whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsLeft(actor, "counter") : 1 });
+        blocked = Boolean(reason);
+      }
+      // Mirrored Attack's Duplicate "must respond with the Duel Maneuver (if possible)": possible, and no Duel begun yet.
+      if (maneuver.mirror && unresolved && !waiting) {
+        reason = attack?.duel ? "a Duel is already on this attack"
+          : whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsLeft(actor, "counter") : 1 });
         blocked = Boolean(reason);
       }
 
@@ -6095,6 +6110,8 @@ async function playCounter(message, actor, answer, attack) {
   if (answer === "dodge") return chooseDefence(message, actor, "dodge");
   // A Counter Unique Ability, by its Item - the Afterimage Technique.
   if (String(answer).startsWith("ua:")) return playEvasion(message, actor, String(answer).slice(3));
+  // Copy Clone, by Mirrored Attack.
+  if (String(answer).startsWith("mirror:")) return playMirror(message, actor, String(answer).slice(7));
 
   const maneuver = getManeuver(answer);
   if (!maneuver) return;
@@ -12429,20 +12446,7 @@ async function enterDuel(message, actor) {
   // "At the start of a Duel Maneuver, the attacking Character regains Ki Points and Capacity equal to
   // their initial Ki Wager, losing the Ki Wager in the process." Each gets back what they put on it:
   // the attacker theirs, a United Attack joiner theirs.
-  const joinersWager = (attack.united ?? []).reduce((sum, entry) => sum + (Number(entry.wager) || 0), 0);
-  const own_ = Math.max(0, (Number(attack.kiWager) || 0) - joinersWager);
-  const giveBack = async (who, amount, life = false) => {
-    if (!who || !amount) return;
-    await requestActorUpdate(who, life
-      ? { "system.life.value": Math.min(who.system.life.max, who.system.life.value + amount),
-          "system.capacity.spent": Math.max(0, who.system.capacity.spent - amount) }
-      : { "system.ki.value": Math.min(who.system.ki.max, who.system.ki.value + amount),
-          "system.capacity.spent": Math.max(0, who.system.capacity.spent - amount) });
-  };
-  await giveBack(attacker, own_, Boolean(attack.wagerFromLife));
-  for (const entry of attack.united ?? []) await giveBack(fromUuidSync(entry.uuid), Number(entry.wager) || 0);
-  const returned = [{ uuid: attack.attackerUuid, amount: own_, life: Boolean(attack.wagerFromLife) },
-    ...(attack.united ?? []).map(entry => ({ uuid: entry.uuid, amount: Number(entry.wager) || 0, life: false }))];
+  const returned = await returnInitialWagers(attack, attacker);
 
   const duel = {
     initiatorUuid: actor.uuid,
@@ -12469,6 +12473,87 @@ async function enterDuel(message, actor) {
   const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
   return requestEdit(message, { type: "attack", attack: { ...fresh, kiWager: 0,
     united: (fresh.united ?? []).map(entry => ({ ...entry, wager: 0 })), duel } });
+}
+
+/**
+ * "At the start of a Duel Maneuver, the attacking Character regains Ki Points and Capacity equal to their initial Ki
+ * Wager, losing the Ki Wager in the process." Each gets back what they put on it: the attacker theirs, a United Attack
+ * joiner theirs. What was given back, for a Duel Escape to take again.
+ */
+async function returnInitialWagers(attack, attacker) {
+  const joinersWager = (attack.united ?? []).reduce((sum, entry) => sum + (Number(entry.wager) || 0), 0);
+  const own = Math.max(0, (Number(attack.kiWager) || 0) - joinersWager);
+  const giveBack = async (who, amount, life = false) => {
+    if (!who || !amount) return;
+    await requestActorUpdate(who, life
+      ? { "system.life.value": Math.min(who.system.life.max, who.system.life.value + amount),
+          "system.capacity.spent": Math.max(0, who.system.capacity.spent - amount) }
+      : { "system.ki.value": Math.min(who.system.ki.max, who.system.ki.value + amount),
+          "system.capacity.spent": Math.max(0, who.system.capacity.spent - amount) });
+  };
+  await giveBack(attacker, own, Boolean(attack.wagerFromLife));
+  for (const entry of attack.united ?? []) await giveBack(fromUuidSync(entry.uuid), Number(entry.wager) || 0);
+  return [{ uuid: attack.attackerUuid, amount: own, life: Boolean(attack.wagerFromLife) },
+    ...(attack.united ?? []).map(entry => ({ uuid: entry.uuid, amount: Number(entry.wager) || 0, life: false }))];
+}
+
+/**
+ * Mirrored Attack: "If you are targeted by an Attacking Maneuver, you may use the effects of Copy Clone as a Counter
+ * Maneuver with an Action Cost of 1 Counter Action, but you must target the attacking Character. The created Minion
+ * becomes the target for that Attacking Maneuver and must respond with the Duel Maneuver." The user's ruling: a Duel
+ * the Duplicate rolls with the attacker's own bonuses, its wagers taken from nobody, and you are not hit whoever wins -
+ * its Initiating Attack a Power Duel, made with the attacker's Might.
+ */
+async function playMirror(message, actor, itemId) {
+  const item = actor.items?.get(itemId);
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!item || !attack || attack.result || attack.duel) return;
+  const why = whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsLeft(actor, "counter") : 1 });
+  if (why) {
+    ui.notifications.warn(`${actor.name}: ${item.name} - ${why}.`);
+    return;
+  }
+  const maneuver = uniqueDefinitionOf(item);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) {
+    ui.notifications.warn(`${item.name} is once per Combat Round.`);
+    return;
+  }
+  const cost = maneuverKiCost(maneuver, null, actor);
+  if (!await spendManeuverCost(actor, maneuver, cost)) return;
+  if (!await spendActions(actor, 1, "counter")) {
+    await refundManeuverCost(actor, { ...maneuver, kiCost: cost });
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const returned = await returnInitialWagers(attack, attacker);
+  const duel = {
+    initiatorUuid: actor.uuid,
+    initiatorName: `${attack.attackerName}'s Duplicate`,
+    initiating: { kind: "power", name: "Power Duel", cost: 0, charges: 0, powerShotRanks: 0, woundCriticalTarget: null },
+    originalWager: Number(attack.kiWager) || 0,
+    joined: [],
+    united: [],
+    clashes: [],
+    wagers: [],
+    wins: { attacker: 0, defender: 0 },
+    total: 0,
+    outcome: null,
+    returned,
+    escape: "pending",
+    // Whose Duplicate it is: the one who wagers for it and is never hit.
+    mirror: { userUuid: actor.uuid, itemId }
+  };
+  await settledNote(message, `${actor.name}'s ${item.name}: a Duplicate of ${attack.attackerName} takes the attack, and Duels.`);
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  return requestEdit(message, { type: "attack", attack: { ...fresh, kiWager: 0,
+    united: (fresh.united ?? []).map(entry => ({ ...entry, wager: 0 })), duel } });
+}
+
+/** Whether this character's place in this Duel is wagered by their Duplicate - Mirrored Attack. */
+function mirroredBy(duel, uuid) {
+  return Boolean(duel?.mirror && (duel.mirror.userUuid === uuid));
 }
 
 /**
@@ -12671,7 +12756,10 @@ async function submitDuelWager(message, actor) {
   const side = duelSideOf(attack, actor.uuid);
   if (!side) return;
   const primary = duelParticipants(attack).find(entry => entry.uuid === actor.uuid)?.primary ?? false;
-  const cap = duelWagerCap(actor, { primary });
+  // The Duplicate wagers as the one it copies, and from Ki that is nobody's (the user's ruling).
+  const mirrored = mirroredBy(attack.duel, actor.uuid);
+  const copied = mirrored ? fromUuidSync(attack.attackerUuid) : null;
+  const cap = mirrored ? Math.floor((Number(copied?.system?.capacity?.max) || 0) / 2) : duelWagerCap(actor, { primary });
   const amount = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${actor.name} - Duel Clash ${(attack.duel.clashes?.length ?? 0) + 1}` },
@@ -12687,7 +12775,7 @@ async function submitDuelWager(message, actor) {
   });
   if (!Number.isFinite(amount)) return;
   const wager = Math.max(0, Math.min(Math.floor(amount), cap));
-  if (wager) await actor.update({ "system.ki.value": actor.system.ki.value - wager });
+  if (wager && !mirrored) await actor.update({ "system.ki.value": actor.system.ki.value - wager });
 
   const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
   const next = { ...fresh, duel: { ...fresh.duel,
@@ -12715,21 +12803,26 @@ async function rollDuelClash(message, attack) {
     .map(entry => ({ label: `Ki Wager (${entry.name})`, value: entry.amount }));
   const critical = (actor, target) => (Number.isFinite(target)
     ? Math.min(target, Number(actor.system.criticalTarget) || target) : null);
+  // Mirrored Attack: the Duplicate is a copy of the attacker, and Clashes with their bonuses (the user's ruling).
+  const bonusOf = duel.mirror ? attacker : initiator;
   const [mine, theirs] = await Promise.all([
     rollSide(attacker, [...duelClashRows(attacker, { charges: attack.energyCharges, powerShotRanks: attack.powerShotRanks,
       allies: sides.attacker.length - 1, resourceStacks: woundResourceStacks(attacker, names) }), ...wagers("attacker")], {
       extraDice: attacker.system.dice.extra.formula, criticalDice: attacker.system.dice.critical.formula,
       criticalTarget: critical(attacker, profileFor(attack)?.woundCriticalTarget) }),
-    rollSide(initiator, [...duelClashRows(initiator, { charges: duel.initiating?.charges, powerShotRanks:
+    rollSide(initiator, [...duelClashRows(bonusOf, { charges: duel.initiating?.charges, powerShotRanks:
       duel.initiating?.powerShotRanks, allies: sides.defender.length - 1,
-      resourceStacks: woundResourceStacks(initiator, names) }), ...wagers("defender")], {
-      extraDice: initiator.system.dice.extra.formula, criticalDice: initiator.system.dice.critical.formula,
-      criticalTarget: critical(initiator, duel.initiating?.woundCriticalTarget) })
+      resourceStacks: woundResourceStacks(bonusOf, names) }), ...wagers("defender")], {
+      extraDice: bonusOf.system.dice.extra.formula, criticalDice: bonusOf.system.dice.critical.formula,
+      criticalTarget: critical(bonusOf, duel.initiating?.woundCriticalTarget),
+      // The Duplicate's roll is the attacker's copy's: none of its master's own effects.
+      collect: !duel.mirror })
   ]);
   const settled = settleDuelClash(duel, { attacker: mine.total, defender: theirs.total, wagers: duel.wagers });
   const clashes = [...settled.duel.clashes];
   clashes[clashes.length - 1] = { ...clashes[clashes.length - 1], attackerRoll: mine, defenderRoll: theirs };
   for (const entry of settled.refund) {
+    if (mirroredBy(duel, entry.uuid)) continue;
     const who = fromUuidSync(entry.uuid);
     if (who) await requestActorUpdate(who, { "system.ki.value": Math.min(who.system.ki.max, who.system.ki.value + entry.amount) });
   }
@@ -12744,7 +12837,9 @@ async function rollDuelClash(message, attack) {
  */
 async function finishDuel(message, attack) {
   const duel = attack.duel;
-  const everyone = duelParticipants(attack).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
+  // Not whoever sent a Duplicate in their place: it took part, and it ceases to exist.
+  const everyone = duelParticipants(attack).filter(entry => !mirroredBy(duel, entry.uuid))
+    .map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
   for (const who of everyone) await requestActorUpdate(who, { "system.capacity.spent": who.system.capacity.max });
 
   if (duel.outcome === "tie") {
@@ -12755,6 +12850,25 @@ async function finishDuel(message, attack) {
   }
 
   const sides = duelSides(attack);
+  if ((duel.outcome === "attacker") && duel.mirror) {
+    // Mirrored Attack, lost: "The created Minion becomes the target for that Attacking Maneuver" - the Duplicate is hit
+    // in its master's place, and ceases to exist; the attack goes on for anybody else.
+    const userUuid = duel.mirror.userUuid;
+    const others = attackTargets(attack).filter(target => target.uuid !== userUuid);
+    await settledNote(message, `${attack.attackerName} wins the Duel: the Duplicate takes ${attack.maneuverName}, and is gone.`);
+    if (!others.length) {
+      return requestEdit(message, { type: "attack", attack: { ...attack, duel: { ...duel, outcome: "mirrored" } } });
+    }
+    const losers = duelSides(attack).defender.filter(entry => entry.uuid !== userUuid);
+    const targets = [...others];
+    for (const entry of losers) if (!targets.some(target => target.uuid === entry.uuid)) targets.push({ uuid: entry.uuid, name: entry.name });
+    const defences = (attack.defences ?? []).filter(entry => (entry.uuid !== userUuid)
+      && !losers.some(loser => loser.uuid === entry.uuid));
+    return settleAttack(message, { ...attack, targets, kiWager: duelTotal(duel),
+      duelLosers: losers.map(entry => entry.uuid),
+      defences: [...defences, ...losers.map(entry => ({ uuid: entry.uuid, defence: "duel", wager: 0, foundation: attack.foundation, parryWith: [] }))],
+      ready: [...new Set([...(attack.ready ?? []).filter(uuid => uuid !== userUuid), ...losers.map(entry => entry.uuid)])] });
+  }
   if (duel.outcome === "attacker") {
     // The attack goes on. Its wager is every wager of the Duel; the losing side is hit, with no
     // Dodge - they spent their Counter on this (the user's ruling) - and whoever United-Attacked the
@@ -12816,7 +12930,9 @@ async function postDuelWinner(message, attack) {
     fromDuel: true,
     maneuverName: `${made.maneuverName} (won the Duel)`,
     united: duel.united ?? [],
-    ...(power ? { fixedWound: powerDuelWound(initiator, duel), powerDuel: true } : {}),
+    // Mirrored Attack's Duplicate: a Power Duel made with the Might of the one it copies.
+    ...(power ? { fixedWound: powerDuelWound(duel.mirror ? (fromUuidSync(attack.attackerUuid) ?? initiator) : initiator, duel),
+      powerDuel: true } : {}),
     ready: [made.attackerUuid, ...attackTargets(made).map(target => target.uuid)],
     result: {
       strike: null,
@@ -14183,6 +14299,8 @@ function renderAttack(message, html) {
         ? `The Duel ended in a tie: everyone in it loses ${duelTieLoss(attack.duel)} Life Points, and the attack is over.`
         : (attack.duel.outcome === "escaped")
         ? `${attack.attackerName} escaped the Duel: the attack is nullified.`
+        : (attack.duel.outcome === "mirrored")
+        ? `The Duplicate took ${attack.maneuverName}, and is gone.`
         : `${attack.duel.initiatorName} won the Duel: the attack is over.`)
       : attack.unitedFailed
       ? `United Attack: ${Handlebars.escapeExpression(attack.unitedWith?.name ?? "")} did not join - `

@@ -1,0 +1,25 @@
+id: copy-clone
+name: Copy Clone
+uaType: magical
+prerequisite: Copy Being
+tpCost: 20
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 8
+# All the table's (the user's ruling): the Duplicate Minion of the one targeted is theirs to run.
+source: Core Rule
+description: >
+  A Duplicate Minion of a Character on the Battlefield not at Long Range and of no higher Tier, under your command.
+text: >
+  Copy Clone: You are able to create a perfect copy of another being, commanding that copy at-will.
+  –Ability Type: Magical
+  –Prerequisites: Copy Being
+  –TP Cost: 20
+  –KP Cost: 8(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 1
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Target a Character (except a Fusion) on the Battlefield who is not at Long Range. You create a Duplicate
+  Minion, but instead of a Duplicate Minion of yourself, it is a Duplicate Minion of that Character (you are still their
+  Master). You cannot target a Character whose Tier of Power is higher than yours.
