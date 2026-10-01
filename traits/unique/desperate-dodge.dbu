@@ -1,0 +1,37 @@
+id: desperate-dodge
+name: Desperate Dodge
+uaType: technical
+prerequisite: Agility Score 4+
+tpCost: 8
+type: counter
+actionCost: 1
+kiCost: 0
+# "If an Opponent would use the Exploit Maneuver in response to you triggering it, before any Counter Actions are spent
+# or the Maneuver is actually used, make a Clash (Impulsive/Corporeal) against that Opponent." Offered beside the
+# Exploit it answers (chat.mjs desperateDodge): while its Clash is out the Exploit waits, and won it is gone.
+dodgesExploits: true
+source: Core Rule
+description: >
+  A Counter against an Exploit you triggered: win a Clash (Impulsive/Corporeal) and you did not trigger it. Passive:
+  Diminishing Defense's penalty 1 lower, and 1 more every 2 Base Tiers after the first.
+text: >
+  Desperate Dodge: You twist out of the way of an exploitative attack at the last possible second.
+  –Ability Type: Technical
+  –Prerequisites: Agility Score 4+
+  –TP Cost: 8
+  –KP Cost: N/A
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –Minions: N/A
+  –Passive Bonus: Reduce your total penalties from Diminishing Defense by 1 (increasing by 1 every 2 base Tier of Power
+  reached after the first).
+  –Effect: If an Opponent would use the Exploit Maneuver in response to you triggering it, before any Counter Actions
+  are spent or the Maneuver is actually used, make a Clash (Impulsive/Corporeal) against that Opponent. If you win, you
+  do not trigger that Exploit Maneuver (and therefore they do not use it).
+
+---
+
+# "Reduce your total penalties from Diminishing Defense by 1 (increasing by 1 every 2 base Tier of Power reached after
+# the first)" - 1 at Base Tier 1 and 2, 2 at 3 and 4, and so on.
+[passive]
+diminishing.defense.reduction += 1 + floor((1(bT) - 1) / 2);

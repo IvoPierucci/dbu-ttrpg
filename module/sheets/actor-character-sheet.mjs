@@ -1776,6 +1776,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // A Counter is played from the attack's card: Respond, or - Barrier - once it has hit.
         playedFrom: unique.barrier ? "the attack's card, once it has hit you"
           : unique.cyclone ? "the card of your Energy Attack that missed everyone"
+          : unique.dodgesExploits ? "beside an Exploit you triggered"
           : "Respond on the card of the attack aimed at you",
         area: unique.area,
         // Binding: who it holds.

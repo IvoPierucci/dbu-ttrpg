@@ -198,6 +198,8 @@ function applyRequest(request) {
     case "foresee": return applyForesee(request.combatId, request.combatantId, request.initiative);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
+    case "desperate": return game.messages.get(request.messageId)?.setFlag(SCOPE, DESPERATE_FLAG,
+      { ...(game.messages.get(request.messageId)?.getFlag(SCOPE, DESPERATE_FLAG) ?? {}), [request.exploiterUuid]: request.state });
     case "karmic": return applyKarmicRecord(request.messageId, request.actorId, request.key);
     default:
       console.warn("DBU TTRPG | Unknown relayed edit", request);
@@ -502,6 +504,10 @@ async function applyClash(messageId, clash) {
 
   if (clash.bluffAttack && clash.result && !clash.bluffAttack.applied) {
     await settleBluffAttack(message, clash);
+  }
+
+  if (clash.desperateDodge && clash.result && !clash.desperateDodge.applied) {
+    await settleDesperateDodge(message, clash);
   }
 
   if (clash.drain && clash.result && !clash.drain.applied) {
@@ -6432,6 +6438,7 @@ const COOK_FLAG = "cook";
 const UPKEEP_FLAG = "upkeep";
 const BIND_FLAG = "bind";
 const VOLLEY_FLAG = "volleyball";
+const DESPERATE_FLAG = "desperate";
 /** Something being made, waiting on its Skill Check - the Create Maneuver. */
 const CREATE_FLAG = "create";
 /** Something conjured, waiting on its Skill Check - Magical Materialization. */
@@ -7767,10 +7774,14 @@ function renderOutOfSequence(message, html) {
         <span class="dbu-oos-reason">${Handlebars.escapeExpression(offer.reason ?? "")}</span>`;
 
       const actor = fromUuidSync(offer.actorUuid);
+      // Desperate Dodge: an Exploit being dodged waits on its Clash, and one dodged is gone.
+      const dodged = (offer.maneuverId === "exploit") ? (message.getFlag(SCOPE, DESPERATE_FLAG) ?? {})[offer.actorUuid] : "";
+      if (dodged === "won") item.querySelector(".dbu-oos-reason").textContent = "Desperate Dodge: not triggered";
       // One Out-of-Sequence Maneuver per trigger, and each of these is somebody's own
       // trigger: four defenders who each chose Cross Counter each struck back, and an
       // Exploit provoked for every adjacent Opponent is an opening each of them saw.
-      if (!taken.includes(offer.actorUuid) && actor?.isOwner) {
+      if (!taken.includes(offer.actorUuid) && !dodged) desperateButton(message, offer, item);
+      if (!taken.includes(offer.actorUuid) && actor?.isOwner && !["pending", "won"].includes(dodged)) {
         const use = document.createElement("button");
         use.type = "button";
         use.className = "dbu-oos-button";
@@ -7795,6 +7806,54 @@ function renderOutOfSequence(message, html) {
     container.append(note);
   }
 
+}
+
+/**
+ * Desperate Dodge, offered to whoever triggered this Exploit: "before any Counter Actions are spent or the Maneuver is
+ * actually used, make a Clash (Impulsive/Corporeal) against that Opponent." 1 Counter Action, once a Combat Round.
+ */
+function desperateButton(message, offer, row) {
+  const dodger = fromUuidSync(offer.targetUuid ?? "");
+  if (!dodger?.isOwner) return;
+  const item = Array.from(dodger.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.dodgesExploits);
+  if (!item || (maneuverUsesLeft(dodger, uniqueDefinitionOf(item)) <= 0)) return;
+  if (game.combat?.started && (actionsLeft(dodger, "counter") < 1)) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-oos-button";
+  button.textContent = item.name;
+  button.dataset.tooltip = `1 Counter Action: a Clash (Impulsive/Corporeal) against ${offer.actorName} - win and you did not trigger it`;
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    return desperateDodge(message, dodger, item, offer);
+  });
+  row.append(button);
+}
+
+async function desperateDodge(message, dodger, item, offer) {
+  const exploiter = fromUuidSync(offer.actorUuid);
+  if (!exploiter) return;
+  if (!await spendActions(dodger, 1, "counter")) return;
+  await recordManeuverType(dodger, "counter");
+  await recordManeuverUse(dodger, uniqueDefinitionOf(item));
+  requestEdit(message, { type: "desperate", exploiterUuid: exploiter.uuid, state: "pending" });
+  return postSaveClash(dodger, exploiter, {
+    maneuverName: item.name,
+    reason: `Win and ${dodger.name} did not trigger ${exploiter.name}'s Exploit.`,
+    saves: ["impulsive", "corporeal"],
+    defenderSaves: ["impulsive", "corporeal"],
+    desperateDodge: { applied: false, messageId: message.id, exploiterUuid: exploiter.uuid }
+  });
+}
+
+/** Desperate Dodge, settled: won, the Exploit is not triggered; lost, it may be used. A tie is the Defender's. */
+async function settleDesperateDodge(message, clash) {
+  const record = clash.desperateDodge;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, desperateDodge: { ...record, applied: true } });
+  const won = whoWonClash(clash.result) === "challenger";
+  const card = game.messages.get(record.messageId);
+  if (card) requestEdit(card, { type: "desperate", exploiterUuid: record.exploiterUuid, state: won ? "won" : "lost" });
+  await settledNote(message, won ? `${clash.challengerName} slips away: no Exploit.` : `${clash.defenderName} may Exploit.`);
 }
 
 /**

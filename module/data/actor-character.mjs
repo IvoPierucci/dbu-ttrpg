@@ -2305,7 +2305,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // made every attack aimed at you worth more stacks than it should be.
         perAttack: withEffects(this, "diminishing.defense.perAttack",
           DBUCharacterData.diminishingDefensePerAttack(this.baseTierOfPower)),
-        penalty: this.diminishingDefense
+        // What an effect takes off the total - Desperate Dodge's - never below nothing.
+        penalty: Math.max(0, this.diminishingDefense - Math.max(0, withEffects(this, "diminishing.defense.reduction", 0)))
       }
     };
 

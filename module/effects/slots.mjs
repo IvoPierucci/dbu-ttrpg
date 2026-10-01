@@ -354,6 +354,8 @@ const TABLE = [
     doc: "What one stack of Diminishing Offense costs your Strike Rolls." },
   { key: "diminishing.defense.perAttack", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Stacks of Diminishing Defense gained per attack aimed at you." },
+  { key: "diminishing.defense.reduction", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Taken off the total penalty from Diminishing Defense - Desperate Dodge's." },
 
   // --- Damage Over Time --------------------------------------------------------
   { key: "dot", phase: PHASES.CORE, kind: N, ops: NUMERIC,
