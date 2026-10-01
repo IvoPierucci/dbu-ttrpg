@@ -510,6 +510,10 @@ async function applyClash(messageId, clash) {
     await settleDesperateDodge(message, clash);
   }
 
+  if (clash.devilmite && clash.result && !clash.devilmite.applied) {
+    await settleDevilmite(message, clash);
+  }
+
   if (clash.drain && clash.result && !clash.drain.applied) {
     await settleDrain(message, clash);
   }
@@ -7844,6 +7848,31 @@ async function desperateDodge(message, dodger, item, offer) {
     defenderSaves: ["impulsive", "corporeal"],
     desperateDodge: { applied: false, messageId: message.id, exploiterUuid: exploiter.uuid }
   });
+}
+
+/**
+ * Devilmite Beam, won: "apply the following effects depending on the alignment of their Z-Soul" - Pure Evil Defeated;
+ * Evil 1/5 of their maximum Life Points; Neutral 1/10; Good 1/20; Pure Good nothing. A tie is the Defender's.
+ */
+async function settleDevilmite(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, devilmite: { ...clash.devilmite, applied: true } });
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return;
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} resists.`);
+    return;
+  }
+  const alignment = Number(target.system.alignment) || 0;
+  const max = Number(target.system.life?.max) || 0;
+  const label = DBUCharacterData.ALIGNMENTS?.[alignment]?.label ?? "";
+  if (alignment >= 2) {
+    await settledNote(message, `${target.name} is ${label}: nothing happens.`);
+    return;
+  }
+  const amount = (alignment <= -2) ? Math.max(0, Number(target.system.life?.value) || 0)
+    : Math.floor(max / ({ [-1]: 5, 0: 10, 1: 20 }[alignment]));
+  await reduceLifePoints(target, amount, { reason: `${clash.maneuverName} (${label})` });
+  if (alignment <= -2) await settledNote(message, `${target.name} is ${label}: Defeated.`);
 }
 
 /** Desperate Dodge, settled: won, the Exploit is not triggered; lost, it may be used. A tie is the Defender's. */

@@ -119,9 +119,9 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   if (!definition) return false;
   const fresh = uniqueItemFrom(definition, traitsOfKind?.("unique", definition.id) ?? []).system;
   for (const key of ["type", "actionCost", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
-    "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills"]) system[key] = fresh[key];
+    "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills", "clashSaves", "clashDefenderSaves"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "barrier", "binds", "bluffs", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "barrier", "binds", "bluffs", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -168,6 +168,9 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
       // A Clash the Effect makes - Bluff Attack's "(Bluff vs Bluff/Intuition)".
       clashSkill: String(definition.clashSkill ?? ""),
       clashDefenderSkills: listOf(definition.clashDefenderSkills),
+      // Or a Clash of Saving Throws - Devilmite Beam's "(Cognitive vs Impulsive)".
+      clashSaves: listOf(definition.clashSaves),
+      clashDefenderSaves: listOf(definition.clashDefenderSaves),
       tags: [UNIQUE_TAG],
       usageLimit: String(definition.usageLimit ?? "") || "1/round",
       source: String(definition.source ?? ""),
@@ -193,6 +196,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         upkeepActions: number(definition.upkeepActions),
         pullsAtEnd: definition.pullsAtEnd === true,
         dodgesExploits: definition.dodgesExploits === true,
+        devilmite: definition.devilmite === true,
         barrier: definition.barrier === true,
         binds: definition.binds === true,
         bluffs: definition.bluffs === true,

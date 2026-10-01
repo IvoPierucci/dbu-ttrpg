@@ -1840,6 +1840,7 @@ export function definitionOf(item) {
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
+    devilmite: item.system.unique?.devilmite === true,
     kiCostPerTierChange: Number(item.system.unique?.kiCostPerTierChange) || 0,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
@@ -3822,7 +3823,9 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
         defenderSaves: maneuver.clashDefenderSaves ?? [],
         reason: saveClashReason(actor, targetActor, maneuver),
         ...(maneuver.insult ? { insult: { applied: false } } : {}),
-        ...(maneuver.internalAttack ? { internalAttack: { applied: false, inside: false } } : {})
+        ...(maneuver.internalAttack ? { internalAttack: { applied: false, inside: false } } : {}),
+        // Devilmite Beam's: won, read off their alignment.
+        ...(maneuver.devilmite ? { devilmite: { applied: false } } : {})
       })
     // Thrown at a Feature: no Strike Roll and no Wound Roll, because the entry settles
     // both before the dice - "you always automatically hit a Feature and only inflict

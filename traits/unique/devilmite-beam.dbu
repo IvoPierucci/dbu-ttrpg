@@ -1,0 +1,37 @@
+id: devilmite-beam
+name: Devilmite Beam
+uaType: technical
+prerequisite: Insight Score 6+, Personality Score 4+
+tpCost: 50
+type: standard
+actionCost: 3
+kiCostPerTier: 12
+requiresTarget: true
+# "Make a Clash (Cognitive vs Impulsive) against them." Won, what it does is read off their alignment (chat.mjs
+# settleDevilmite).
+clashSaves: cognitive
+clashDefenderSaves: impulsive
+devilmite: true
+source: Core Rule
+description: >
+  A Clash (Cognitive vs Impulsive): won, by their alignment - Pure Evil Defeated, Evil 1/5 of their Max Life Points, Neutral
+  1/10, Good 1/20, Pure Good nothing.
+text: >
+  Devilmite Beam: With your grand power of justice, you cause the evil in your target’s heart to expand until it explodes,
+  killing the target.
+  –Ability Type: Technical
+  –Prerequisites: Insight Score 6+, Personality Score 4+
+  –TP Cost: 50
+  –KP Cost: 12(T)
+  –Maneuver Type: Standard
+  –Action Cost: 3 Actions
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target an Opponent and make a Clash (Cognitive vs Impulsive) against them. If you win, apply the following
+  effects depending on the alignment of their Z-Soul:
+
+  * Pure Evil: The target is Defeated.
+  * Evil: Reduce the target’s Life Points by 1/5 of their maximum Life Points.
+  * Neutral: Reduce the target’s Life Points by 1/10 of their maximum Life Points.
+  * Good: Reduce the target’s Life Points by 1/20 of their maximum Life Points.
+  * Pure Good: Nothing happens.
