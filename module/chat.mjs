@@ -64,7 +64,7 @@ import {
   spendManeuverCost,
   maneuverUsesLeft
 } from "./maneuvers.mjs";
-import { evasionOf, uniqueDefinitionOf } from "./unique.mjs";
+import { boughtTraits, evasionOf, uniqueDefinitionOf } from "./unique.mjs";
 
 /** Flag scope for everything this system stores on a ChatMessage. */
 const SCOPE = "dbu-ttrpg";
@@ -4329,7 +4329,7 @@ async function resettleWound(message, situation, attack, result) {
     const raw = negated
       ? 0
       : Math.max(0, effectiveWound - (own.soak ?? 0) - (own.reduction ?? 0));
-    const damage = damageTaken(raw, { "incoming.damage": own.incomingDamage });
+    const damage = Math.max(0, damageTaken(raw, { "incoming.damage": own.incomingDamage }) - (Number(own.barrier?.total) || 0));
 
     // A Karmic Effect that takes the Damage down to nothing rattles the attacker
     // exactly as a Direct Hit that did so on its own would.
@@ -10409,7 +10409,8 @@ async function rollAttackWound(message, attack) {
     // What the Technique adds once there is Damage: Minion Destroyer, Shattering Blow, Complete
     // Annihilation against the Undying.
     const extra = techniqueDamageParts(attacker, attack, target, taken);
-    const damage = taken + extra.reduce((sum, part) => sum + part.value, 0);
+    // Barrier: "Reduce the Damage you receive by the Dice Score."
+    const damage = Math.max(0, taken + extra.reduce((sum, part) => sum + part.value, 0) - (Number(own.barrier?.total) || 0));
 
     await maybeShakeAttacker(attacker, attack, defence, damage);
 
@@ -11175,6 +11176,98 @@ function struckWeapon(attack, uuid, own) {
  * in hand, a Counter Action free, and none spent answering this attack already - "one Counter
  * Action answers one Maneuver", so a Dodge, which costs none, is the only answer it follows.
  */
+/**
+ * Who may play Barrier here: hit, and the Wound Roll not yet made. On themselves - or, with Ally Barrier, on whoever
+ * it hit that is not at Long Range from them. Once a Combat Round, a Counter Action, its Ki.
+ */
+function possibleBarriers(attack) {
+  const hits = targetResults(attack).filter(({ own }) => own?.hit && !own.barrier && !isAbsoluteMiss(own));
+  if (!hits.length) return [];
+  const found = [];
+  for (const user of ownedCharacters()) {
+    const item = Array.from(user.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.barrier);
+    if (!item) continue;
+    if (game.combat?.started && (actionsLeft(user, "counter") < 1)) continue;
+    if (maneuverUsesLeft(user, uniqueDefinitionOf(item)) <= 0) continue;
+    const bought = boughtTraits(item.system.unique, getTrait);
+    const ally = bought.some(trait => trait.allyBarrier === true);
+    const covers = hits.filter(({ uuid }) => (uuid === user.uuid)
+      || (ally && !atLongRange(user, fromUuidSync(uuid))));
+    if (covers.length) found.push({ user, item, covers, massive: bought.find(trait => trait.massiveBarrier === true) ?? null });
+  }
+  return found;
+}
+
+/**
+ * Barrier: "make a Wound Roll as if you made an Attacking Maneuver of the Simple Profile (any Foundation). Reduce
+ * the Damage you receive by the Dice Score." Whose Damage - theirs, an Ally's with Ally Barrier, everyone's it hit
+ * with Massive Barrier (4(T) more) - and which Foundation, asked; paid; rolled; kept on each line it covers, and
+ * taken off the Damage when the Wound Roll is settled.
+ */
+async function barrierStage(message, attack, { user, item, covers, massive }) {
+  const escape = Handlebars.escapeExpression;
+  const tier = Math.max(1, user.system.tierOfPower ?? 1);
+  const hitCount = targetResults(attack).filter(({ own }) => own?.hit && !isAbsoluteMiss(own)).length;
+  const massiveKi = (massive && attackArea(attack) && (hitCount > 1)) ? (Number(massive.massiveKiPerTier) || 0) * tier : 0;
+  const wounds = user.system.combat?.wound ?? {};
+  const foundations = ["physical", "energy", "magic"].filter(key => key in wounds);
+  const best = foundations.reduce((top, key) => ((wounds[key] ?? 0) > (wounds[top] ?? -Infinity) ? key : top), foundations[0]);
+  const label = key => key.charAt(0).toUpperCase() + key.slice(1);
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${user.name} - ${item.name}` },
+    content: `${(covers.length > 1) || (covers[0].uuid !== user.uuid) ? `<label class="dbu-wager"><span>On</span>
+        <select name="on">${covers.map(entry => `<option value="${escape(entry.uuid)}" ${(entry.uuid === user.uuid) ? "selected" : ""}>
+          ${escape(entry.name)}</option>`).join("")}</select></label>` : ""}
+      <label class="dbu-wager"><span>Foundation</span><select name="foundation">${foundations.map(key =>
+        `<option value="${key}" ${(key === best) ? "selected" : ""}>${label(key)} (${wounds[key] ?? 0})</option>`).join("")}</select></label>
+      ${massiveKi ? `<label class="dbu-respond-option"><input type="checkbox" name="all"/>
+        <span class="dbu-respond-name">Everyone it hit (+${massiveKi} KP)</span></label>` : ""}`,
+    buttons: [
+      { action: "raise", label: item.name, default: true, callback: (event, button, dialog) => ({
+        on: dialog.element.querySelector('select[name="on"]')?.value ?? covers[0].uuid,
+        foundation: dialog.element.querySelector('select[name="foundation"]')?.value ?? best,
+        all: Boolean(dialog.element.querySelector('input[name="all"]')?.checked)
+      }) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object")) return;
+  const maneuver = uniqueDefinitionOf(item);
+  const cost = maneuverKiCost(maneuver, null, user) + (chosen.all ? massiveKi : 0);
+  if (!await spendManeuverCost(user, maneuver, cost)) return;
+  if (!await spendActions(user, maneuver.actionCost ?? 1, "counter")) {
+    await refundManeuverCost(user, { ...maneuver, kiCost: cost });
+    return;
+  }
+  await recordManeuverType(user, "counter");
+  await recordManeuverUse(user, maneuver);
+
+  const roll = await rollSide(user, [{ label: "Wound", value: wounds[chosen.foundation] ?? 0 }], {
+    extraDice: user.system.dice.extra.formula,
+    criticalDice: user.system.dice.critical.formula,
+    combatRoll: true,
+    // A defence, as Power Flare's Wound Roll is: not marked as an Attacking Maneuver, so a Compelled defender's
+    // Urgency does not reach it.
+    slot: "wound"
+  });
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const on = chosen.all
+    ? targetResults(fresh).filter(({ own }) => own?.hit && !isAbsoluteMiss(own)).map(({ uuid }) => uuid)
+    : [chosen.on];
+  const barrier = { name: item.name, byName: user.name, total: roll.total };
+  let targets = fresh.result?.targets ?? [];
+  for (const uuid of on) targets = targets.map(line => (line.uuid === uuid) ? { ...line, barrier } : line);
+  requestEdit(message, { type: "attack", attack: { ...fresh, result: { ...fresh.result, targets } } });
+  const names = on.map(uuid => attackTargets(fresh).find(entry => entry.uuid === uuid)?.name ?? "").filter(Boolean);
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: user }),
+    content: `<div class="dbu-settled-note">${escape(item.name)}: ${roll.total}${
+      ((on.length > 1) || (on[0] !== user.uuid)) ? ` - ${escape(names.join(", "))}` : ""}</div>`
+  });
+}
+
 function possibleBlockers(attack) {
   const found = [];
   for (const { uuid, own } of targetResults(attack)) {
@@ -13569,7 +13662,8 @@ function outcomeFor(attack, { own }) {
   // Named separately from Soak, because it is subtracted separately: the Category note
   // sits with the Soak it applied to, and Damage Reduction stands outside it.
   const dr = reduction ? ` - DR ${reduction}` : "";
-  const detail = `Wound ${effectiveWound}${reduced} - Soak ${soak}${stepped}${dr}`;
+  const barred = own.barrier ? ` - ${own.barrier.name} ${own.barrier.total}` : "";
+  const detail = `Wound ${effectiveWound}${reduced} - Soak ${soak}${stepped}${dr}${barred}`;
   return (damage <= 0) ? `${detail}: no damage` : `${detail} = ${damage} damage`;
 }
 
@@ -13766,6 +13860,18 @@ function renderAttack(message, html) {
   // has not been made. Combination's extra Strikes happen inside it, not before it.
   // The Block Maneuver: "When you are hit by an Attacking Maneuver, you may use this Counter
   // Maneuver." Hit, and the Wound Roll not yet made - the same window Intervene answers.
+  // Barrier: "When you are hit by an Attacking Maneuver" - the same window.
+  if (!result.wound) {
+    for (const entry of possibleBarriers(attack)) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = `${entry.user.name}: ${entry.item.name}`;
+      button.dataset.tooltip = "1 Counter Action. Your Wound Roll: the Damage taken is that much less.";
+      button.addEventListener("click", () => barrierStage(message, attack, entry));
+      container.append(button);
+    }
+  }
   if (!result.wound) {
     for (const { target, shields } of possibleBlockers(attack)) {
       const block = document.createElement("button");

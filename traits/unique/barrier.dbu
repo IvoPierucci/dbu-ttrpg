@@ -1,0 +1,27 @@
+id: barrier
+name: Barrier
+uaType: both
+prerequisite: Force or Magic Score of 4+
+tpCost: 15
+type: counter
+actionCost: 1
+kiCostPerTier: 10
+# "When you are hit by an Attacking Maneuver" - a button on the attack's card once it has hit and before its Wound
+# Roll, as the Block Maneuver's is (chat.mjs barrierStage). Its own Wound Roll, Simple Profile, any Foundation.
+barrier: true
+source: Core Rule
+description: >
+  A Counter when hit: your own Wound Roll (Simple Profile, any Foundation), and the Damage you take is that much
+  less.
+text: >
+  Barrier: You create a shield of some sort around you, protecting yourself from harm.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Force or Magic Score of 4+
+  –TP Cost: 15
+  –KP Cost: 10(T)
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: When you are hit by an Attacking Maneuver, make a Wound Roll as if you made an Attacking Maneuver of the
+  Simple Profile (any Foundation). Reduce the Damage you receive by the Dice Score.

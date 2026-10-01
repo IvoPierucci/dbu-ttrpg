@@ -1,0 +1,16 @@
+id: efficient-barrier
+name: Efficient Barrier
+advancement: true
+prerequisite: N/A
+tpCost: 5
+# "Reduce the Ki Point Cost of the Barrier Unique Ability by 2(T)." Taken off its 10(T), never below the half the
+# Unique Ability rules keep it at.
+kiCostPerTierChange: -2
+source: Core Rule
+description: >
+  Barrier's KP Cost 2(T) lower.
+text: >
+  Efficient Barrier: You control the amount of energy you feed into your barrier, reducing waste.
+  –Prerequisites: N/A
+  –TP Cost: 5
+  –Effect: Reduce the Ki Point Cost of the Barrier Unique Ability by 2(T).

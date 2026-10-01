@@ -624,6 +624,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
          * and the Sphere it was applied in are this character's own.
          */
         sustained: new fields.BooleanField({ required: true, initial: false }),
+        /** A Counter played once hit, before the Wound Roll - Barrier's (chat.mjs barrierStage). */
+        barrier: new fields.BooleanField({ required: true, initial: false }),
         applied: new fields.BooleanField({ required: true, initial: false }),
         upkeepKi: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         area: new fields.StringField({ required: true, blank: true, initial: "" }),

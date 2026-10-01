@@ -1,0 +1,20 @@
+id: massive-barrier
+name: Massive Barrier
+advancement: true
+prerequisite: Insight Score 6+
+tpCost: 15
+# "If you use the Barrier Unique Ability when hit by an Attacking Maneuver that has an AoE and hit multiple
+# Characters, you may increase the Ki Point Cost by 4(T) to apply the reduction to Damage to all Characters hit by
+# that Attacking Maneuver." Offered on Barrier's window when it is so.
+massiveBarrier: true
+massiveKiPerTier: 4
+source: Core Rule
+description: >
+  Against an AoE that hit several: for 4(T) KP more, everyone it hit takes the reduction.
+text: >
+  Massive Barrier: Your barrier can protect your comrades as well.
+  –Prerequisites: Insight Score 6+
+  –TP Cost: 15
+  –Effect: If you use the Barrier Unique Ability when hit by an Attacking Maneuver that has an AoE and hit multiple
+  Characters, you may increase the Ki Point Cost by 4(T) to apply the reduction to Damage to all Characters hit by
+  that Attacking Maneuver.

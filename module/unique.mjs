@@ -121,7 +121,7 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   for (const key of ["type", "actionCost", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
     "requiresTarget", "usageLimit", "source", "text", "script"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "barrier", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -134,6 +134,9 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   };
   unique.advancements = merge(unique.advancements ?? [], fresh.unique.advancements, ["bought", "free", "tpChange"], "bought");
   unique.restrictions = merge(unique.restrictions ?? [], fresh.unique.restrictions, ["applied", "choice"], "applied");
+  // What its bought Advancements do to its Ki Point Cost - Efficient Barrier's "by 2(T)" (maneuverKiCost).
+  unique.kiCostPerTierChange = boughtTraits(unique, getTrait)
+    .reduce((sum, trait) => sum + (Number(trait.kiCostPerTierChange) || 0), 0);
   return true;
 }
 
@@ -176,6 +179,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         materialize: definition.materializes === true,
         precognition: definition.foresees === true,
         sustained: definition.sustained === true,
+        barrier: definition.barrier === true,
         evade: { defense: number(definition.evadeDefense), offer: String(definition.evadeOffer ?? "") },
         advancements: children.filter(child => child.advancement === true).map(child => ({
           id: id(), key: child.id, name: child.name, tp: number(child.tpCost),
@@ -235,6 +239,7 @@ export function uniqueDefinitionOf(item) {
     kiCostPerBaseTier: system.kiCostPerBaseTier,
     kiCostPerTier: system.kiCostPerTier,
     tags: system.tags ?? [],
+    kiCostPerTierChange: Number(system.unique?.kiCostPerTierChange) || 0,
     usageLimit: limit ? { amount: Number(limit[1]), per: limit[2].toLowerCase() } : null
   };
 }

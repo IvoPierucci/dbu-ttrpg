@@ -1825,6 +1825,7 @@ export function definitionOf(item) {
     precognition: item.system.unique?.precognition === true,
     // Applied until it is not paid for - the Atmospheric Bubble.
     sustained: item.system.unique?.sustained === true,
+    kiCostPerTierChange: Number(item.system.unique?.kiCostPerTierChange) || 0,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
     kiCostCoversProfile: item.system.kiCostCoversProfile,

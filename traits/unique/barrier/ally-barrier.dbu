@@ -1,0 +1,19 @@
+id: ally-barrier
+name: Ally Barrier
+advancement: true
+prerequisite: Insight Score 6+
+tpCost: 15
+# "If an Ally who is not at Long Range is hit by an Attacking Maneuver, you can use the Barrier Unique Ability as if
+# you were the target of that Attacking Maneuver but apply its effects to that Character (you still make the Wound
+# Roll for its effects)." Barrier's button offered for whoever it hit that is not at Long Range from you.
+allyBarrier: true
+source: Core Rule
+description: >
+  Barrier used for an Ally hit who is not at Long Range: your Wound Roll, their Damage reduced.
+text: >
+  Ally Barrier: You wrap your barrier around another person, shielding them from harm.
+  –Prerequisites: Insight Score 6+
+  –TP Cost: 15
+  –Effect: If an Ally who is not at Long Range is hit by an Attacking Maneuver, you can use the Barrier Unique
+  Ability as if you were the target of that Attacking Maneuver but apply its effects to that Character (you still
+  make the Wound Roll for its effects).

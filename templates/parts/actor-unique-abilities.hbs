@@ -27,7 +27,7 @@
           <button type="button" class="maneuver-name rollable" data-action="useManeuver" data-item-id="{{row.itemId}}">{{row.name}}</button>
           {{else}}
           {{! A Counter: played from Respond on the card of the attack aimed at you. }}
-          <span class="maneuver-name maneuver-triggered" data-tooltip="A {{row.maneuverType}} Maneuver: played from Respond on the card of the attack aimed at you">{{row.name}}</span>
+          <span class="maneuver-name maneuver-triggered" data-tooltip="A {{row.maneuverType}} Maneuver: played from {{row.playedFrom}}">{{row.name}}</span>
           {{/if}}
           <span class="maneuver-uses">{{row.type}} &middot; {{row.maneuverType}}</span>
           {{#if row.applied}}

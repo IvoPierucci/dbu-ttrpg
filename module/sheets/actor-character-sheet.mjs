@@ -1756,6 +1756,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         grantedBy,
         // Applied until it is not paid for - the Atmospheric Bubble - and the Sphere it was applied in.
         applied: Boolean(unique.sustained && unique.applied),
+        // A Counter is played from the attack's card: Respond, or - Barrier - once it has hit.
+        playedFrom: unique.barrier ? "the attack's card, once it has hit you" : "Respond on the card of the attack aimed at you",
         area: unique.area,
         usesGranted: Boolean(grantedBy) && !["counter", "outOfSequence"].includes(item.system.type),
         libraryId: unique.libraryId,
