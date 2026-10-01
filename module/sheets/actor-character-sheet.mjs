@@ -250,7 +250,7 @@ function resourceRows(system, owned = null) {
   // Maneuver: every Resource in the library is declared by one. When a Condition or a
   // Talent declares one, this is the line that grows.
   const reachable = Object.entries(known)
-    .filter(([, definition]) => !definition.internal
+    .filter(([, definition]) => !definition.internal && !definition.manual
       && definition.id && owned?.has(definition.id))
     .map(([key]) => key);
 
@@ -281,8 +281,6 @@ function resourceRows(system, owned = null) {
         // can possess is equal to your base Tier of Power" - is worked out here, from the
         // same data the row is drawn from.
         max: resourceCeiling(definition, { system }) || (Number(resource.max) || 0),
-        // Its stacks given and taken from here - Unfamiliar's.
-        manual: Boolean(definition.manual),
         note: clockNotes(timed, key).join(" \u00b7 "),
         tooltip: definition.source
           ? `From ${definition.source}. ${definition.description ?? ""}`.trim()
@@ -447,6 +445,15 @@ function featureLists(sig) {
     advantages: entries.filter(entry => entry.side === "advantages"),
     disadvantages: entries.filter(entry => entry.side === "disadvantages")
   };
+}
+
+/** The Resource a Unique Ability's file declares, as its row shows it: how many held, and the most. */
+function uniqueResource(actor, libraryId) {
+  const key = String(getTrait(libraryId)?.resource ?? "").toLowerCase();
+  const definition = key ? resourceDefinitions()[key] : null;
+  if (!definition) return null;
+  return { key, label: definition.label, stacks: Number(actor.system.resources?.[key]?.stacks) || 0,
+    max: resourceCeiling(definition, actor) };
 }
 
 /**
@@ -1783,6 +1790,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         advancements: unique.advancements.filter(entry => entry.bought).map(entry => ({ label: entry.name, tip: entry.text })),
         restrictions: unique.restrictions.filter(entry => entry.applied).map(entry => ({ label: entry.name, tip: entry.text })),
         lines: printedLines(item.system.text || "").map(line => ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line })),
+        // The Resource it gives, set a stack at a time under its entry - Body Change's Unfamiliar (the user's).
+        resource: uniqueResource(actor, unique.libraryId),
         open: Boolean(this.#openSections[`maneuver-${item.id}`])
       };
     };

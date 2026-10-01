@@ -58,6 +58,16 @@
           {{#each row.restrictions as |feature|}}
           <div class="dbu-profile-line technique-disadvantage" {{#if feature.tip}}data-tooltip="{{feature.tip}}"{{/if}}>{{feature.label}}</div>
           {{/each}}
+          {{#if row.resource}}
+          <div class="unique-resource">
+            <span>{{row.resource.label}}</span>
+            <b>{{row.resource.stacks}}{{#if row.resource.max}}/{{row.resource.max}}{{/if}}</b>
+            <button type="button" class="stack-step" data-action="stepResource" data-resource="{{row.resource.key}}" data-step="-1"
+                    data-tooltip="A stack off">&minus;</button>
+            <button type="button" class="stack-step" data-action="stepResource" data-resource="{{row.resource.key}}" data-step="1"
+                    data-tooltip="A stack on">+</button>
+          </div>
+          {{/if}}
         </div>
       </li>
       {{/each}}

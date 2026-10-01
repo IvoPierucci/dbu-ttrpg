@@ -3321,7 +3321,14 @@
   cursor: pointer;
 }
 
-/* A Resource the table gives and takes by hand - Unfamiliar: a stack on, a stack off. */
+/* A Resource the table gives and takes by hand - Unfamiliar, under its Unique Ability's entry: a stack on, a stack off. */
+.dbu-ttrpg .unique-resource {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
 .dbu-ttrpg .stack-step {
   flex: 0 0 auto;
   width: 18px;
