@@ -191,6 +191,8 @@ function applyRequest(request) {
     case "scan": return applyScan(request.messageId, request.scan);
     case "spikes": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, SPIKE_FLAG, request.spikes);
+    case "armsHit": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
     case "createItem": return fromUuidSync(request.actorUuid)
       ?.createEmbeddedDocuments("Item", [request.data]);
@@ -284,6 +286,60 @@ export const ARMS_USES = Object.freeze({
   combination: "round:multiple-arms.combination",
   instant: "round:multiple-arms.instant"
 });
+
+/** Whether Multiple Arms' extra Strike for a Combination is theirs to take now - in it, and unspent this Round. */
+function armsCombinationOpen(actor) {
+  return Boolean(actor?.system?.effects?.slots?.["combination.extraRoll"])
+    && !(actor.system.usedManeuvers ?? []).includes(ARMS_USES.combination);
+}
+
+/** Whether Multiple Arms' Diminishing Defense on a Physical hit is theirs to apply now. */
+function armsHitOpen(actor) {
+  return Boolean(actor?.system?.effects?.slots?.["diminishing.defense.onPhysicalHit"])
+    && !(actor.system.usedManeuvers ?? []).includes(ARMS_USES.hit);
+}
+
+/** A hit Multiple Arms can add to, waiting for its attacker to say so. */
+const ARMS_HIT_FLAG = "armsHit";
+
+/**
+ * Multiple Arms on a Physical hit: a card with the button, for the attacker to press or leave - it is Triggered, so
+ * keeping it for a later hit this Round is theirs to choose. Good for the Round it was offered in.
+ */
+async function offerArmsHit(attacker, target) {
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: attacker }),
+    content: `<p>Multiple Arms: ${Handlebars.escapeExpression(target.name)}</p>`,
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [ARMS_HIT_FLAG]: {
+      attackerUuid: attacker.uuid, targetUuid: target.uuid, targetName: target.name,
+      combatId: game.combat?.id ?? "", round: game.combat?.round ?? 0, applied: false
+    } } }
+  });
+}
+
+/** Its button: the stacks of one more Attacking Maneuver on them, and the Round's use spent. */
+function renderArmsHit(message, html) {
+  const offer = message.getFlag(SCOPE, ARMS_HIT_FLAG);
+  if (!offer || offer.applied) return;
+  const attacker = fromUuidSync(offer.attackerUuid);
+  const target = fromUuidSync(offer.targetUuid);
+  if (!attacker?.isOwner || !target) return;
+  if ((offer.combatId !== (game.combat?.id ?? "")) || (offer.round !== (game.combat?.round ?? 0))) return;
+  if (!armsHitOpen(attacker)) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = `+${target.system.diminishing.defense.perAttack} Diminishing Defense`;
+  button.dataset.tooltip = "As if targeted by one more Attacking Maneuver - Multiple Arms, once a Combat Round.";
+  button.addEventListener("click", async () => {
+    if (!armsHitOpen(attacker)) return ui.notifications.warn(`${attacker.name}: already used this Combat Round.`);
+    requestEdit(message, { type: "armsHit", offer: { ...offer, applied: true } });
+    await attacker.update({ "system.usedManeuvers": [...(attacker.system.usedManeuvers ?? []), ARMS_USES.hit] });
+    await requestActorUpdate(target, { "system.diminishingDefense":
+      (Number(target.system.diminishingDefense) || 0) + target.system.diminishing.defense.perAttack });
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
+}
 
 export function requestActorUpdate(actor, changes) {
   if (actor.isOwner) return actor.update(changes);
@@ -2782,6 +2838,7 @@ function onRenderChatMessage(message, html) {
   renderGearHazard(message, html);
   renderGearScan(message, html);
   renderGearSpikes(message, html);
+  renderArmsHit(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -11160,7 +11217,7 @@ function isAbsoluteMiss(own) {
  * rebuilding would silently drop it. Collected effects are not offered again, though -
  * these are three repetitions of one roll, not three more exchanges.
  */
-async function rollFollowUpStrikes(message, attack, attacker) {
+async function rollFollowUpStrikes(message, attack, attacker, { withArms = false } = {}) {
   const profile = profileFor(attack);
   const plan = profile?.followUps;
   if (!plan) return;
@@ -11188,10 +11245,9 @@ async function rollFollowUpStrikes(message, attack, attacker) {
   const rolls = [];
   // Alotta Lotta Attacks and Super Combination: "roll your Strike Roll an additional time for each
   // rank".
-  // Multiple Arms: "If you use an Attacking Maneuver of the Combination Profile, you may roll your Strike Roll an
-  // additional time" - once a Combat Round. One more of these, like Alotta Lotta Attacks.
-  const arms = Boolean(attacker.system.effects?.slots?.["combination.extraRoll"])
-    && !(attacker.system.usedManeuvers ?? []).includes(ARMS_USES.combination);
+  // Multiple Arms: "[1/Round, Triggered] If you use an Attacking Maneuver of the Combination Profile, you may roll
+  // your Strike Roll an additional time" - one more of these, like Alotta Lotta Attacks, when the player picks it.
+  const arms = withArms && armsCombinationOpen(attacker);
   if (arms) {
     await requestActorUpdate(attacker,
       { "system.usedManeuvers": [...(attacker.system.usedManeuvers ?? []), ARMS_USES.combination] });
@@ -13803,14 +13859,11 @@ async function applyAttackDamage(message, target, attack) {
     && DEFENCES[own.defense]?.gainsDiminishingDefense
     && !own.forced;
 
-  // Multiple Arms: "If you hit an Opponent with a Physical Attack, apply additional stack(s) of Diminishing
-  // Defense as if they were targeted by an additional Attacking Maneuver" - once a Combat Round.
+  // Multiple Arms: "[1/Round, Triggered] If you hit an Opponent with a Physical Attack, apply additional stack(s)
+  // of Diminishing Defense ..." - offered, below, for the attacker to apply or keep for a later hit this Round.
   const armsUser = fromUuidSync(attack.attackerUuid);
   const arms = Boolean(armsUser) && (armsUser.uuid !== target.uuid) && own.hit && !isAbsoluteMiss(own)
-    && (attack.foundation === "physical")
-    && Boolean(armsUser.system.effects?.slots?.["diminishing.defense.onPhysicalHit"])
-    && !(armsUser.system.usedManeuvers ?? []).includes(ARMS_USES.hit);
-  const extraStacks = ((doubled ? 1 : 0) + (arms ? 1 : 0)) * target.system.diminishing.defense.perAttack;
+    && (attack.foundation === "physical") && armsHitOpen(armsUser);
 
   // Floored at zero for everyone except whoever has been granted otherwise - the Undying
   // State being the one thing in the rules that grants it.
@@ -13831,14 +13884,15 @@ async function applyAttackDamage(message, target, attack) {
   // read second may not have seen the first yet.
   await target.update({
     "system.life.value": floor,
-    ...(extraStacks
-      ? { "system.diminishingDefense": target.system.diminishingDefense + extraStacks }
+    ...(doubled
+      ? {
+        "system.diminishingDefense":
+          target.system.diminishingDefense + target.system.diminishing.defense.perAttack
+      }
       : {})
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
-  if (arms) {
-    await requestActorUpdate(armsUser, { "system.usedManeuvers": [...(armsUser.system.usedManeuvers ?? []), ARMS_USES.hit] });
-  }
+  if (arms) await offerArmsHit(armsUser, target);
 
   // "Apparel loses 1 Break Value if you are knocked through a Health Threshold" - and a
   // Called Shot at it that hit takes 1 off it besides. The Top Layer's, both.
@@ -15248,17 +15302,25 @@ function renderAttack(message, html) {
     if (!attacker?.isOwner) return;
 
     const plan = profileFor(attack).followUps;
+    const count = plan.rolls + (Number(attack.technique?.followUpRolls) || 0);
     const more = document.createElement("button");
     more.type = "button";
     more.className = "dbu-clash-button";
-    // Multiple Arms' one more, while it is still unspent this Round - the count rollFollowUpStrikes will roll.
-    const arms = Boolean(attacker.system.effects?.slots?.["combination.extraRoll"])
-      && !(attacker.system.usedManeuvers ?? []).includes(ARMS_USES.combination);
-    more.textContent = `Roll ${plan.rolls + (Number(attack.technique?.followUpRolls) || 0) + (arms ? 1 : 0)} additional Strikes`;
+    more.textContent = `Roll ${count} additional Strikes`;
     more.dataset.tooltip = "Each one that beats the defence they already made adds "
       + `${plan.woundPerHitPerTier}(T) to the Wound Roll.`;
     more.addEventListener("click", () => rollFollowUpStrikes(message, attack, attacker));
     container.append(more);
+    // Multiple Arms is Triggered - the player's to use or keep for later this Round - so it is a second button.
+    if (armsCombinationOpen(attacker)) {
+      const armed = document.createElement("button");
+      armed.type = "button";
+      armed.className = "dbu-clash-button";
+      armed.textContent = `Roll ${count + 1}: Multiple Arms`;
+      armed.dataset.tooltip = "One more Strike Roll - Multiple Arms, once a Combat Round.";
+      armed.addEventListener("click", () => rollFollowUpStrikes(message, attack, attacker, { withArms: true }));
+      container.append(armed);
+    }
     return;
   }
 

@@ -29,9 +29,10 @@ text: >
 # Counter Actions are counted against what is spent this Round, so one more is there at once.
 #
 # (3), (4) and (5) are once a Combat Round, each counted on its own - `round:multiple-arms.*` among
-# the uses a new Round hands back (chat.mjs ARMS_USES). (3) is read where the Damage of a hit is
-# settled, (4) where Combination's follow-up Strikes are rolled - one more, like Alotta Lotta
-# Attacks - and (5) is the "Instant" button on the Basic Attack's row.
+# the uses a new Round hands back (chat.mjs ARMS_USES). (3) and (4) are Triggered: the player's to
+# use or not, so each is a button - (3) a card offered on a Physical hit, (4) "Roll 4: Multiple Arms"
+# beside Combination's own (one more follow-up, like Alotta Lotta Attacks) - and nothing is spent
+# until it is pressed. (5) is the "Instant" button on the Basic Attack's row.
 [passive]
 weapons.wielded min= 4;
 actions.counter += 1;
