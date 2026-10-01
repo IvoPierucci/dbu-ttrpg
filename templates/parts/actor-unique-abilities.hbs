@@ -58,6 +58,12 @@
           {{#each row.restrictions as |feature|}}
           <div class="dbu-profile-line technique-disadvantage" {{#if feature.tip}}data-tooltip="{{feature.tip}}"{{/if}}>{{feature.label}}</div>
           {{/each}}
+          {{#if row.barrierClash}}
+          <div class="unique-resource">
+            <button type="button" class="dbu-clash-button" data-action="barrierClash" data-item-id="{{row.itemId}}"
+                    data-tooltip="Powerful Barrier: against the attacking Character you target, 1(T) off for each Energy Charge">Might Clash</button>
+          </div>
+          {{/if}}
           {{#if row.resource}}
           <div class="unique-resource">
             <span>{{row.resource.label}}</span>

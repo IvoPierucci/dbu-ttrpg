@@ -3,7 +3,9 @@ name: Powerful Barrier
 advancement: true
 prerequisite: 12+ Force or Magic Score
 tpCost: 12
-# Its Might Clash is the table's (the user's ruling: only the Ki is followed).
+# Its Might Clash opened from Bound Battlefield's row (the user's): against the one targeted, the Energy Charges of their
+# attack asked and 1(T) off your Dice Score for each. What winning does to the attack is the table's.
+barrierClash: true
 source: Core Rule
 description: >
   A Might Clash, 1(T) off per Energy Charge, against an attack across your Bound Squares: won, it cannot target them.

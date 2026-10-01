@@ -494,6 +494,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useGrantedUnique: DBUCharacterSheet._onUseGrantedUnique,
       stopUnique: DBUCharacterSheet._onStopUnique,
       stepResource: DBUCharacterSheet._onStepResource,
+      barrierClash: DBUCharacterSheet._onBarrierClash,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
@@ -1753,7 +1754,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * TP spent on them and on the Techniques together, against what the character has.
    */
   async #prepareUniqueAbilities(techniques) {
-    const { UNIQUE_TYPES, isUniqueAbility, uniqueTypeOf, uniqueTPOf, grantedUniques } = await import("../unique.mjs");
+    const { UNIQUE_TYPES, isUniqueAbility, uniqueTypeOf, uniqueTPOf, grantedUniques, boughtTraits } = await import("../unique.mjs");
     const { definitionOf } = await import("../use-maneuver.mjs");
     const { printedLines } = await import("../effects/traits.mjs");
     const actor = this.actor;
@@ -1792,6 +1793,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         lines: printedLines(item.system.text || "").map(line => ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line })),
         // The Resource it gives, set a stack at a time under its entry - Body Change's Unfamiliar (the user's).
         resource: uniqueResource(actor, unique.libraryId),
+        // Powerful Barrier's Might Clash, opened from here.
+        barrierClash: !grantedBy && boughtTraits(unique, getTrait).some(trait => trait.barrierClash === true),
         open: Boolean(this.#openSections[`maneuver-${item.id}`])
       };
     };
@@ -1821,6 +1824,40 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!trait) return;
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     return useManeuver(this.actor, definitionOf(await grantedUniqueItem(this.actor, trait)));
+  }
+
+  /**
+   * Powerful Barrier: "you may make a Might Clash against the attacking Character but reduce your Dice Score by 1(T) for
+   * every Energy Charge applied to that Attacking Maneuver." Against the one targeted; the Charges asked.
+   */
+  static async _onBarrierClash(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const attacker = Array.from(game.user.targets ?? []).map(token => token.actor)
+      .find(other => other && (other.uuid !== this.actor.uuid)) ?? null;
+    if (!item) return;
+    if (!attacker) return ui.notifications.warn("Target the attacking Character first.");
+    const charges = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.actor.name} - Powerful Barrier` },
+      content: `<label class="dbu-wager"><span>Energy Charges</span>
+        <input type="number" name="charges" value="0" min="0" step="1" autofocus/>
+        <em>${Handlebars.escapeExpression(attacker.name)}'s attack</em></label>`,
+      buttons: [
+        { action: "clash", label: "Might Clash", default: true, callback: (ev, button, dialog) =>
+          Math.max(0, Math.floor(Number(dialog.element.querySelector('input[name="charges"]')?.value) || 0)) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!Number.isFinite(charges)) return;
+    const tier = Math.max(1, this.actor.system.tierOfPower ?? 1);
+    const { postMightClash } = await import("../chat.mjs");
+    return postMightClash(this.actor, attacker, {
+      maneuverName: "Powerful Barrier",
+      reason: `Win and ${attacker.name}'s attack cannot target those on your Bound Squares.`,
+      ...(charges ? { rowsFor: { [this.actor.uuid]: [{ label: `${charges} Energy Charge${(charges === 1) ? "" : "s"}`,
+        value: -charges * tier }] } } : {})
+    });
   }
 
   /** A Resource the table gives and takes, a stack at a time - Unfamiliar. */
