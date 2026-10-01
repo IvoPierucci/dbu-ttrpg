@@ -1,0 +1,42 @@
+id: dead-zone
+name: Dead Zone
+uaType: magical
+prerequisite: 2+ Skill Ranks in Use Magic
+tpCost: 30
+type: standard
+actionCost: 3
+kiCostPerBaseTier: 10
+# Only its Actions, its Ki and its Might Clash are followed (the user's ruling). Open when used; "To maintain the
+# existence of the Dead Zone portal, you must spend 1 Action and 5(T) Ki Points at the start of each of your turns" -
+# paid on its own, a Stop on the card. The portal, the Dimension and the moving are the table's.
+sustained: true
+upkeepKiPerTier: 5
+upkeepActions: 1
+sphereMagnitude: minor
+# "At the end of each of your turns, make a Might Clash against all Characters on the Battlefield" (combat.mjs).
+pullsAtEnd: true
+source: Core Rule
+description: >
+  A Minor Sphere portal to the Dead Zone: whoever enters it is sent there. At the end of each of your turns a Might Clash
+  against everyone - losers move up to your Might toward it. 1 Action and 5(T) KP each turn keep it open.
+text: >
+  Dead Zone: You create a portal to the Dead Zone, sending whoever passes through to an eternal prison.
+  –Ability Type: Magical
+  –Prerequisites: 2+ Skill Ranks in Use Magic
+  –TP Cost: 30
+  –KP Cost: 10(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 3 Actions
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: You open the Dead Zone, creating a Minor Sphere AoE centered on an unoccupied Square within a Sphere AoE
+  (centered on you) that has no Characters on an adjacent Square. This AoE is a portal into the Dead Zone, a Dimension
+  (see — Dimensions) that can seal someone away within perpetual darkness. Any Character that enters a Square within the
+  AoE created by this Unique Ability is immediately sent to the Dead Zone Dimension. If you are sent into the Dead Zone
+  Dimension, the portal immediately closes.
+
+  At the end of each of your turns, make a Might Clash against all Characters on the Battlefield. If they lose, they
+  move a number of Squares up to your Might in the most direct path towards the Dead Zone portal.
+
+  To maintain the existence of the Dead Zone portal, you must spend 1 Action and 5(T) Ki Points at the start of each of
+  your turns. If you do not pay this cost, the portal to the Dead Zone will close.

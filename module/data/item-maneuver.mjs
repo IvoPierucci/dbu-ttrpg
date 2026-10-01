@@ -655,6 +655,12 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         keepsPools: new fields.BooleanField({ required: true, initial: false }),
         /** Offered on your Energy Attack that missed everyone - Cyclone Energy's (chat.mjs cycloneStage). */
         cyclone: new fields.BooleanField({ required: true, initial: false }),
+        /**
+         * Dead Zone's: Actions spent each turn to keep it, beside its Ki - "1 Action and 5(T) Ki Points" - and a Might Clash
+         * against everyone at the end of each of your turns while it is open.
+         */
+        upkeepActions: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        pullsAtEnd: new fields.BooleanField({ required: true, initial: false }),
         kept: new fields.SchemaField({
           life: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
           ki: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),

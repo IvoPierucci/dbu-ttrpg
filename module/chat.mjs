@@ -3448,8 +3448,12 @@ export async function upkeepUniques(actor) {
     }
     // Cage of Light: "you may spend all of your Actions and pay the KP Cost" - none left to spend, nothing kept.
     const allActions = item.system.unique.upkeepAllActions;
-    const actionsHeld = allActions ? actionsLeft(actor, "standard") : 0;
-    if ((ki.value < cost) || (cost > capacity.remaining) || (allActions && game.combat?.started && !actionsHeld)) {
+    // Or a number of them - Dead Zone's 1 Action.
+    const fixedActions = Number(item.system.unique.upkeepActions) || 0;
+    const left = actionsLeft(actor, "standard");
+    const actionsHeld = allActions ? left : (game.combat?.started ? fixedActions : 0);
+    const short = game.combat?.started && ((allActions && !left) || (fixedActions && (left < fixedActions)));
+    if ((ki.value < cost) || (cost > capacity.remaining) || short) {
       if (item.system.unique.binds) await releaseBinding(actor, item);
       else {
         await item.update({ "system.unique.applied": false });
@@ -3470,7 +3474,7 @@ export async function upkeepUniques(actor) {
       ? { ki: (Number(shrinker.shrinkKiPerBaseTier) || 0) * Math.max(1, actor.system.baseTierOfPower ?? 1), done: false }
       : null;
     await ChatMessage.create({ speaker,
-      content: `<p>${Handlebars.escapeExpression(item.name)}: ${cost} KP${actionsHeld ? `, ${actionsHeld} Actions` : ""}${item.system.unique.area
+      content: `<p>${Handlebars.escapeExpression(item.name)}: ${cost} KP${actionsHeld ? `, ${actionsHeld} Action${(actionsHeld === 1) ? "" : "s"}` : ""}${item.system.unique.area
         ? ` - ${Handlebars.escapeExpression(item.system.unique.area)} Sphere` : ""}</p>`,
       flags: { [SCOPE]: { [UPKEEP_FLAG]: { actorUuid: actor.uuid, itemId: item.id, paid: cost, stopped: false,
         ...(actionsHeld ? { actions: actionsHeld } : {}),
@@ -3539,6 +3543,29 @@ async function shrinkSustained(message, actor) {
   const smaller = MAGNITUDES[at - 1].charAt(0).toUpperCase() + MAGNITUDES[at - 1].slice(1);
   await item.update({ "system.unique.area": smaller });
   await settledNote(message, `${item.name}: ${smaller} Sphere.`);
+}
+
+/**
+ * Dead Zone: "At the end of each of your turns, make a Might Clash against all Characters on the Battlefield. If they
+ * lose, they move a number of Squares up to your Might in the most direct path towards the Dead Zone portal." Everyone
+ * in the Combat Encounter but you, each a Might Clash of their own; the moving is the table's.
+ */
+export async function pullAtEndOfTurn(actor, combat) {
+  const open = Array.from(actor.items ?? []).filter(item => (item.type === "maneuver")
+    && item.system.unique?.pullsAtEnd && item.system.unique?.applied);
+  if (!open.length) return;
+  const others = [...new Map((combat?.combatants ?? []).map(combatant => combatant.actor)
+    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .map(other => [other.uuid, other])).values()];
+  const might = Number(actor.system.might) || 0;
+  for (const item of open) {
+    for (const other of others) {
+      await postMightClash(actor, other, {
+        maneuverName: item.name,
+        reason: `Lose and ${other.name} moves up to ${might} Squares toward the portal.`
+      });
+    }
+  }
 }
 
 /**

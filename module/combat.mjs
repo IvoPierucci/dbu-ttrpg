@@ -526,6 +526,10 @@ export function registerCombatHooks() {
     if (leaving?.type === "character") {
       await fireMoment(leaving, "end-of-turn");
 
+      // Dead Zone, open: its Might Clash against everyone, at the end of each of its user's turns.
+      const { pullAtEndOfTurn } = await import("./chat.mjs");
+      await pullAtEndOfTurn(leaving, combat);
+
       // Final Chance's held Defeat, at the end of the turn at the latest.
       await releaseFinalChance(leaving);
 
