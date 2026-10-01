@@ -1,0 +1,17 @@
+id: mighty-explosive-wave
+name: Mighty Explosive Wave
+advancement: true
+prerequisite: Force or Magic Score of 8+
+tpCost: 10
+# "If you win the Might Clash against a Character for the effects of Explosive Wave, reduce that Character's Life Points
+# by 1/2 of your Might."
+waveDamage: true
+source: Core Rule
+description: >
+  Each one it pushes loses 1/2 of your Might in Life Points.
+text: >
+  Mighty Explosive Wave: The force of your energy shoving away your foes also damages them.
+  –Prerequisites: Force or Magic Score of 8+
+  –TP Cost: 10
+  –Effect: If you win the Might Clash against a Character for the effects of Explosive Wave, reduce that Character’s Life
+  Points by 1/2 of your Might.

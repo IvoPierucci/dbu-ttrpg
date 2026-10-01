@@ -1846,6 +1846,7 @@ export function definitionOf(item) {
     shiftsEnvironment: item.system.unique?.shiftsEnvironment === true,
     kiPerAction: item.system.unique?.kiPerAction === true,
     explodes: item.system.unique?.explodes === true,
+    waves: item.system.unique?.waves === true,
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
@@ -2524,7 +2525,7 @@ function askBinding(actor, maneuver) {
  * of)." Who is an Opponent is asked - everyone in the Combat Encounter (or the targeted, outside one), ticked but for
  * whose Melee Range you stand in and whom you are already Hidden from. Null if nobody is picked.
  */
-async function askHide(actor, maneuver, { burst = false } = {}) {
+async function askHide(actor, maneuver, { burst = false, area = "Minor Sphere" } = {}) {
   const { isHiddenFrom } = await import("./hidden.mjs");
   const pool = game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
@@ -2556,7 +2557,7 @@ async function askHide(actor, maneuver, { burst = false } = {}) {
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${actor.name} - ${maneuver.name}` },
-    content: `<p class="dbu-respond-hint">${burst ? "Your Opponents within its Minor Sphere" : "Your Opponents"}</p>${rows}`,
+    content: `<p class="dbu-respond-hint">${burst ? `Who is within its ${escape(area)}` : "Your Opponents"}</p>${rows}`,
     buttons: [
       { action: "hide", label: maneuver.name, default: true, callback: (event, button, dialog) =>
         others.filter(other => dialog.element.querySelector(`input[name="${CSS.escape(other.uuid)}"]`)?.checked)
@@ -3344,6 +3345,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let snatching = null;
   let talking = null;
   let exploding = null;
+  let waving = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3595,6 +3597,16 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Explosive Wave: who is within its Sphere - a Minor one, a Large one with Super Explosive Wave.
+    if (maneuver.waves) {
+      const { boughtTraits } = await import("./unique.mjs");
+      const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+      const larger = boughtTraits(unique, getTrait).find(trait => trait.waveMagnitude)?.waveMagnitude ?? "";
+      const size = larger || unique?.sphereMagnitude || "minor";
+      waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
+      if (!waving) return false;
+    }
+
     // Explosion Sorcery: "Target a Character for each Action spent" - the ones targeted.
     if (maneuver.explodes) {
       exploding = await askExplosion(actor, maneuver, actionsSpent);
@@ -4081,6 +4093,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postHide(actor, maneuver, hiding)
     : maneuver.gathers
     ? await postGathering(actor, maneuver, actionsSpent)
+    : (maneuver.waves && waving)
+    ? await (await import("./chat.mjs")).postWave(actor, maneuver, waving.uuids)
     : (maneuver.explodes && exploding)
     ? await (await import("./chat.mjs")).postExplosion(actor, maneuver, exploding.uuids)
     : ((maneuver.id === "talk") && talking)

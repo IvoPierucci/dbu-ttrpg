@@ -515,6 +515,10 @@ async function applyClash(messageId, clash) {
     await settleDevilmite(message, clash);
   }
 
+  if (clash.wave && clash.result && !clash.wave.applied) {
+    await settleWave(message, clash);
+  }
+
   if (clash.explosion && clash.result && !clash.explosion.applied) {
     await settleExplosion(message, clash);
   }
@@ -8213,6 +8217,47 @@ async function settleTalk(message, clash) {
     const uuids = (barred?.combatId === combatId) ? (barred.uuids ?? []) : [];
     await requestActorUpdate(talker, { [`flags.${SCOPE}.talkBarred`]: { combatId, uuids: [...new Set([...uuids, target.uuid])] } });
     await settledNote(message, `${talker.name} cannot Talk to ${target.name} again this Combat Encounter.`);
+  }
+}
+
+/**
+ * Explosive Wave: "Make a Might Clash against all Characters within a Minor Sphere AoE (centered on you)" - a card naming
+ * them and a Might Clash each, carrying a Knockback's collision button, since what it does is move them.
+ */
+export async function postWave(actor, maneuver, uuids) {
+  const targets = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  const damage = boughtTraits(unique, getTrait).some(trait => trait.waveDamage);
+  const might = Number(actor.system.might) || 0;
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(targets.map(t => t.name).join(", "))}</p>` });
+  for (const target of targets) {
+    await postMightClash(actor, target, {
+      maneuverName: maneuver.name,
+      reason: `Win and move ${target.name} up to ${might} Squares in a straight line away from you`
+        + `${damage ? `, ${Math.floor(might / 2)} Life Points off them` : ""}.`,
+      collision: { doubles: false, doubledBy: "" },
+      wave: { applied: false, damage }
+    });
+  }
+  return card;
+}
+
+/**
+ * Explosive Wave, won: "If you win the Might Clash for this effect against a Character who is in a Grapple with you as the
+ * Grappled and them as the Grappler, end that Grapple before applying the movement" - and, with Mighty Explosive Wave,
+ * "reduce that Character's Life Points by 1/2 of your Might".
+ */
+async function settleWave(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, wave: { ...clash.wave, applied: true } });
+  const user = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!user || !target || (whoWonClash(clash.result) !== "challenger")) return;
+  if ((user.system.grapple?.partner === target.uuid) && (user.system.grapple?.role === "grappled")) {
+    await endGrapple(target, user);
+  }
+  if (clash.wave.damage) {
+    await reduceLifePoints(target, Math.floor((Number(user.system.might) || 0) / 2), { reason: clash.maneuverName });
   }
 }
 

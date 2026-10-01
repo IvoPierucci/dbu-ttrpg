@@ -1,0 +1,32 @@
+id: explosive-wave
+name: Explosive Wave
+uaType: both
+prerequisite: Force or Magic Score of 6+
+tpCost: 10
+type: instant
+actionCost: 0
+kiCostPerTier: 4
+# "Make a Might Clash against all Characters within a Minor Sphere AoE (centered on you)" - who is inside asked
+# (use-maneuver.mjs askHide, its burst); won, moved up to your Might away, as a Knockback moves them - its collision
+# button with it (chat.mjs settleWave).
+waves: true
+sphereMagnitude: minor
+source: Core Rule
+description: >
+  A Might Clash against everyone within a Minor Sphere around you: won, they are moved up to your Might in Squares away -
+  and a Grappler holding you lets go first.
+text: >
+  Explosive Wave: Using your energy, you forcefully push enemies away from you.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Force or Magic Score of 6+
+  –TP Cost: 10
+  –KP Cost: 4(T)
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Make a Might Clash against all Characters within a Minor Sphere AoE (centered on you). If you win, that
+  Character is moved a number of Squares up to your Might in a straight line away from you.
+
+  If you win the Might Clash for this effect against a Character who is in a Grapple with you as the Grappled and them
+  as the Grappler, end that Grapple before applying the movement.

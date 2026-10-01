@@ -1,0 +1,15 @@
+id: super-explosive-wave
+name: Super Explosive Wave
+advancement: true
+prerequisite: Mighty Explosive Wave
+tpCost: 5
+# "Instead of a Minor Sphere AoE, use a Large Sphere AoE."
+waveMagnitude: large
+source: Core Rule
+description: >
+  A Large Sphere in place of the Minor one.
+text: >
+  Super Explosive Wave: Expelling even more energy, you shove even more foes away from you.
+  –Prerequisites: Mighty Explosive Wave
+  –TP Cost: 5
+  –Effect: Instead of a Minor Sphere AoE, use a Large Sphere AoE.

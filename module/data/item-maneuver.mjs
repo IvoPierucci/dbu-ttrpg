@@ -676,6 +676,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         /** Its KP Cost "for each Action spent", and a Clash at a Character for each - Explosion Sorcery's. */
         kiPerAction: new fields.BooleanField({ required: true, initial: false }),
         explodes: new fields.BooleanField({ required: true, initial: false }),
+        /** A Might Clash against everyone around, won pushing them away - Explosive Wave's (chat.mjs postWave). */
+        waves: new fields.BooleanField({ required: true, initial: false }),
         kept: new fields.SchemaField({
           life: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
           ki: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
