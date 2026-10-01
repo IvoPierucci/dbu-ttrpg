@@ -2751,7 +2751,7 @@ async function revertTransfiguration(actor, target, maneuver) {
 
 export async function useManeuver(actor, maneuver, { atFeature = false, techniqueId = "", via = "",
                                                     outOfSequence = false, targetUuid = "",
-                                                    presetThrown = null } = {}) {
+                                                    presetThrown = null, volleyball = null } = {}) {
   if (!actor || !maneuver) return false;
   // Whether this use is an Ultimate that began as a Super - Ascended Signature. Set when the
   // Technique is picked.
@@ -3786,7 +3786,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     : (atFeature && declared)
     ? await postFeatureAttack(actor, maneuver, declared, charges)
     : declared
-    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges },
+    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges, ...(volleyball ? { volleyball } : {}) },
         { modifiers: [...appliedModifiers(modifiers), ...drawn.rows], asOutOfSequence: outOfSequence })
     // A Movement card carries whether Rapid Movement was paid for, because the Dodge
     // bonus it buys is against "an Exploit Maneuver provoked by this instance" - and this
@@ -4222,7 +4222,7 @@ export async function useOwnedManeuver(actor, itemId, { atFeature = false } = {}
  *   Maneuver itself - what Required Counter and the like read.
  */
 export async function useTechnique(actor, itemId, { atFeature = false, via = "", outOfSequence = false,
-                                                  targetUuid = "", presetThrown = null } = {}) {
+                                                  targetUuid = "", presetThrown = null, volleyball = null } = {}) {
   const door = actor?.items?.find(item => (item.type === "maneuver") && item.system.signatureTechnique);
   if (!door) {
     ui.notifications.warn(`${actor?.name ?? "This character"} has no Signature Technique Maneuver. `
@@ -4230,7 +4230,7 @@ export async function useTechnique(actor, itemId, { atFeature = false, via = "",
     return false;
   }
   return useManeuver(actor, definitionOf(door), { atFeature, techniqueId: itemId, via, outOfSequence,
-    targetUuid, presetThrown });
+    targetUuid, presetThrown, volleyball });
 }
 
 /**

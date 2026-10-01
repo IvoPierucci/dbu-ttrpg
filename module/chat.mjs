@@ -2683,6 +2683,7 @@ function onRenderChatMessage(message, html) {
   renderCreate(message, html);
   renderUpkeep(message, html);
   renderBind(message, html);
+  renderVolleyball(message, html);
   renderMaterialize(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
@@ -3542,6 +3543,7 @@ async function settleBind(message, clash) {
  */
 function renderBind(message, html) {
   const bind = message.getFlag(SCOPE, BIND_FLAG);
+  if (bind?.used && bind.volley && !bind.volleyball) volleyballButton(message, html, bind);
   if (!bind || bind.used) return;
   const upkeep = message.getFlag(SCOPE, UPKEEP_FLAG);
   if (upkeep?.stopped) return;
@@ -3588,6 +3590,152 @@ async function squeeze(message, { ki, life, volley }) {
       await requestActorUpdate(target, { "system.ki.value": target.system.ki.value - drained });
       await settledNote(message, `${target.name} loses ${drained} Ki Points.`);
     }
+  }
+}
+
+/**
+ * Binding Volleyball: "If you use the effects of Binding Volley, you may move the targeted Opponent to a Square adjacent
+ * to you. If you do, they become known as the 'Volleyball' and the Combat Encounter pauses as you begin Volleyball Time!"
+ */
+function volleyballButton(message, html, bind) {
+  const binder = fromUuidSync(bind.binderUuid);
+  const item = binder?.items?.get(bind.itemId);
+  if (!item || !binder.isOwner || binder.getFlag(SCOPE, "volleyball")?.active) return;
+  if (!boughtTraits(item.system.unique, getTrait).some(trait => trait.volleyball)) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Volleyball Time!";
+  button.dataset.tooltip = "Move them to a Square adjacent to you first";
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    return startVolleyball(message, bind);
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/** Whether this character has used Binding Volleyball's Basic Attack this Combat Encounter. */
+function volleyedThisEncounter(actor) {
+  return actor?.getFlag?.(SCOPE, "volleyballUsed") === (game.combat?.id ?? "none");
+}
+
+/** The offer of Volleyball Time!'s Basic Attack - the Launching Profile, at the Volleyball - to one character. */
+function volleyOffer(actor, targetUuid, binderUuid) {
+  return { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack (Launching)", reason: "Volleyball Time!", targetUuid,
+    grants: { profile: "launching" }, volleyball: { binderUuid } };
+}
+
+/**
+ * Volleyball Time! begun: "make a Basic Attack Maneuver of the Launching Profile against the Volleyball as an
+ * Out-of-Sequence Maneuver." Marked on whoever began it, with the hits the Spike! will count.
+ */
+async function startVolleyball(message, bind) {
+  const binder = fromUuidSync(bind.binderUuid);
+  const target = fromUuidSync(bind.targetUuid ?? binder?.items?.get(bind.itemId)?.system?.unique?.boundUuid ?? "");
+  if (!binder || !target) return;
+  await message.setFlag(SCOPE, BIND_FLAG, { ...bind, volleyball: true });
+  await binder.setFlag(SCOPE, "volleyball", { active: true, targetUuid: target.uuid, itemId: bind.itemId, hits: 0 });
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: binder }),
+    content: `<p><strong>Volleyball Time!</strong> ${Handlebars.escapeExpression(target.name)} is the Volleyball.</p>`,
+    flags: { [SCOPE]: {
+      [VOLLEY_FLAG]: { binderUuid: binder.uuid },
+      [OOS_OFFERS_FLAG]: volleyedThisEncounter(binder) ? [] : [volleyOffer(binder, target.uuid, binder.uuid)]
+    } }
+  });
+}
+
+/** Whoever began it may end it: when nobody is left to pass it to. */
+function renderVolleyball(message, html) {
+  const volley = message.getFlag(SCOPE, VOLLEY_FLAG);
+  const binder = volley ? fromUuidSync(volley.binderUuid) : null;
+  if (!binder?.isOwner || !binder.getFlag(SCOPE, "volleyball")?.active) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "End Volleyball Time!";
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    return endVolleyball(binder);
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/**
+ * Who the Volleyball may be knocked into: anybody in the Encounter but the Volleyball and the one who knocked it, not a
+ * Minion, not Defeated. Whoever began it takes the Spike! - when an Ally knocked it; anybody else their Basic Attack,
+ * once a Combat Encounter.
+ */
+function volleyballReceivers(clash) {
+  const vb = clash.volleyball;
+  const binder = fromUuidSync(vb.binderUuid);
+  if (!binder?.getFlag?.(SCOPE, "volleyball")?.active) return [];
+  return (game.combat?.combatants ?? []).map(combatant => combatant.actor)
+    .filter(actor => actor && (actor.type === "character") && !actor.system.minion && !actor.system.defeated
+      && (actor.uuid !== clash.defenderUuid) && (actor.uuid !== vb.attackerUuid))
+    .map(actor => ({ actor, spike: actor.uuid === binder.uuid }))
+    .filter(({ actor, spike }) => spike || !volleyedThisEncounter(actor));
+}
+
+/** The pass: no Collision, and the one it reached offered their Basic Attack - or the Spike!. */
+async function passVolleyball(message, clash, { actor, spike }) {
+  requestEdit(message, { type: "clash", clash: { ...clash, collisionApplied: true } });
+  const binderUuid = clash.volleyball.binderUuid;
+  const offer = spike
+    ? { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "", maneuverName: "Spike!", reason: "Volleyball Time!",
+        targetUuid: clash.defenderUuid, spike: { binderUuid } }
+    : volleyOffer(actor, clash.defenderUuid, binderUuid);
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: fromUuidSync(clash.challengerUuid) }),
+    content: `<p>${Handlebars.escapeExpression(clash.defenderName)} - ${Handlebars.escapeExpression(actor.name)}</p>`,
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } }
+  });
+}
+
+/**
+ * The Spike!: "you may use the Signature Technique Maneuver to use the Spike! Signature Technique as an Out-of-Sequence
+ * Maneuver, even if you do not possess the Spike! Signature Technique. The Spike! Signature is a Super Signature
+ * Technique of the Mega Flare Profile with no Advantages or Disadvantages, but it gains 1 Energy Charge for each time the
+ * Opponent has been hit by an Attacking Maneuver from your Allies during Volleyball Time!" Lent for Volleyball Time!,
+ * charged nothing in TP, and gone when it ends.
+ */
+async function takeSpike(message, actor, offer) {
+  const vb = actor.getFlag(SCOPE, "volleyball");
+  if (!vb?.active) {
+    ui.notifications.warn("Volleyball Time! is over.");
+    return;
+  }
+  let spike = actor.items.find(item => item.getFlag?.(SCOPE, "spike"));
+  if (!spike) {
+    [spike] = await actor.createEmbeddedDocuments("Item", [{
+      name: "Spike!", type: "maneuver", img: "icons/magic/lightning/bolt-strike-blue.webp",
+      system: { type: "standard", attacking: true, requiresTarget: true, tags: ["signature"],
+        signature: { level: "super", profile: "megaFlare", freeTP: 999 } },
+      flags: { [SCOPE]: { spike: true } }
+    }]);
+  }
+  if (!spike) return;
+  const { useTechnique } = await import("./use-maneuver.mjs");
+  const used = await useTechnique(actor, spike.id, { outOfSequence: true, targetUuid: offer.targetUuid,
+    volleyball: { binderUuid: actor.uuid, spike: true, charges: Number(vb.hits) || 0 } });
+  if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+}
+
+/** Volleyball Time! over: the mark off, the Spike! given back - and, the Spike! having hit, the Volleyball freed. */
+export async function endVolleyball(binder, { release = false, quiet = false } = {}) {
+  const vb = binder.getFlag(SCOPE, "volleyball");
+  if (!vb) return;
+  await binder.setFlag(SCOPE, "volleyball", null);
+  const lent = binder.items.filter(item => item.getFlag?.(SCOPE, "spike")).map(item => item.id);
+  if (lent.length) await binder.deleteEmbeddedDocuments("Item", lent);
+  if (release) {
+    const item = binder.items.get(vb.itemId);
+    if (item) await releaseBinding(binder, item);
+  }
+  if (!quiet) {
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: binder }),
+      content: `<div class="dbu-settled-note">Volleyball Time! ends.</div>` });
   }
 }
 
@@ -6113,6 +6261,7 @@ const REGULATED_FLAG = "regulated";
 const COOK_FLAG = "cook";
 const UPKEEP_FLAG = "upkeep";
 const BIND_FLAG = "bind";
+const VOLLEY_FLAG = "volleyball";
 /** Something being made, waiting on its Skill Check - the Create Maneuver. */
 const CREATE_FLAG = "create";
 /** Something conjured, waiting on its Skill Check - Magical Materialization. */
@@ -7227,6 +7376,21 @@ function renderSkillClash(message, html) {
       container.append(run);
     }
 
+    // Volleyball Time!: "If the movement from this Attacking Maneuver would make them Collide with any of your Allies
+    // (except Minions), instead of undergoing the rules for Collision, that Ally can use the Basic Attack Maneuver of the
+    // Launching Profile against the Volleyball" - or, colliding with whoever began it, the Spike!.
+    if (clash.collision && clash.volleyball && wonIt && !clash.collisionApplied && challenger?.isOwner) {
+      for (const who of volleyballReceivers(clash)) {
+        const pass = document.createElement("button");
+        pass.type = "button";
+        pass.className = "dbu-clash-button";
+        pass.textContent = `${who.spike ? "Spike!" : "Into"} ${who.actor.name}`;
+        pass.dataset.tooltip = who.spike ? "It collides with you: the Spike!" : "It collides with them: their Launching Basic Attack";
+        pass.addEventListener("click", () => passVolleyball(message, clash, who));
+        container.append(pass);
+      }
+    }
+
     if (clash.collision && wonIt && !clash.collisionApplied && challenger?.isOwner) {
       const collision = document.createElement("button");
       collision.type = "button";
@@ -7504,8 +7668,11 @@ async function takeOutOfSequence(message, actor, offer) {
   // A Signature Technique handed over - Counter's, Exploiting Technique's: which of the Techniques
   // with that Advantage, then the Technique itself through its door, out of sequence.
   if (offer.technique) return takeTechniqueOffer(message, actor, offer);
+  if (offer.spike) return takeSpike(message, actor, offer);
   let maneuver = getManeuver(offer.maneuverId);
   if (!maneuver) return;
+  // A Profile the offer names - Volleyball Time!'s "Basic Attack Maneuver of the Launching Profile".
+  if (offer.grants?.profile) maneuver = { ...maneuver, profile: offer.grants.profile };
 
   // "You cannot use any Special Maneuvers until you have gained access to them." Asked
   // here as well as at the sheet's door, because being handed a chance to use one is not
@@ -7632,6 +7799,7 @@ async function takeOutOfSequence(message, actor, offer) {
       ui.notifications.warn(wrongFoundation);
       return;
     }
+    if (offer.volleyball) declared = { ...declared, volleyball: offer.volleyball };
   }
 
   // A Movement's price is a choice rather than a number - Normal Speed for nothing,
@@ -7682,6 +7850,9 @@ async function takeOutOfSequence(message, actor, offer) {
   await recordManeuverType(actor, "outOfSequence", { messageId: message.id });
 
   requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  // "Each Character can only use the Basic Attack Maneuver through the effects of Binding Volleyball once during
+  // each Combat Encounter."
+  if (offer.volleyball) await requestActorUpdate(actor, { [`flags.${SCOPE}.volleyballUsed`]: game.combat?.id ?? "none" });
 
   // What a held Maneuver was paid for, read before the holding is let go of because
   // letting go is what clears it. A script asking `actionsSpent` is asking what the player
@@ -7788,7 +7959,7 @@ export async function postAttack(actor, target, maneuver,
                                    area = null, weapon = null, transformed = false, gigaFlare = 0,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
                                    extraTargets = [], freeWager = 0, unitedWith = null,
-                                   markFrom = "", compressedElement = false },
+                                   markFrom = "", compressedElement = false, volleyball = null },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -7810,7 +7981,7 @@ export async function postAttack(actor, target, maneuver,
     ? (reflecting.technique ?? null)
     : ((maneuver.signature && !maneuver.signatureTechnique)
       ? techniqueAttack(actor, maneuver, { profile, foundation, advantages, weapon, thrown, charges,
-          squaresCharged, transformed, gigaFlare, superCombination, powerbomb, areaFrom },
+          squaresCharged, transformed, gigaFlare, superCombination, powerbomb, areaFrom, volleyball },
         { targets: everyone, shaken: everyone.filter(who => (Number(who?.system?.conditions?.shaken) || 0) > 0) })
       : null);
 
@@ -7889,6 +8060,8 @@ export async function postAttack(actor, target, maneuver,
           ...(selfCaught ? { autoHitUuids: [actor.uuid] } : {}),
           // A Signature Technique's features on this attack, worked out as it was declared.
           technique,
+          // Made during Volleyball Time! - whose, and whether it is the Spike!.
+          ...(volleyball ? { volleyball } : {}),
           // A second Profile outside a Technique: Elemental Blade's Multi-Profile on an ordinary
           // attack. A Technique's is on its own block.
           secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
@@ -10641,6 +10814,13 @@ async function rollAttackWound(message, attack) {
       result: { ...attack.result, wound, targets: settledTargets }
     }
   });
+
+  // "If you hit the Volleyball with the Spike! Signature Technique, after concluding that Attacking Maneuver, Volleyball
+  // Time! ends and that Opponent is no longer Pinned through your use of the Binding Maneuver."
+  if (attack.volleyball?.spike && settledTargets.some(line => line.hit)) {
+    const binder = fromUuidSync(attack.volleyball.binderUuid);
+    if (binder) await endVolleyball(binder, { release: true });
+  }
 }
 
 /**
@@ -11223,6 +11403,13 @@ export async function shockCollar(holder, collar, wearer) {
  * nobody answers is a card nobody answers.
  */
 async function openKnockback(attack, attacker, target, { extra = 0, from = "" } = {}) {
+  // Volleyball Time!: an Ally's hit counts towards the Spike!, and the Clash carries the pass.
+  const volley = attack.volleyball ? { volleyball: { ...attack.volleyball, attackerUuid: attacker.uuid } } : {};
+  if (attack.volleyball && (attacker.uuid !== attack.volleyball.binderUuid)) {
+    const binder = fromUuidSync(attack.volleyball.binderUuid);
+    const vb = binder?.getFlag?.(SCOPE, "volleyball");
+    if (vb?.active) await requestActorUpdate(binder, { [`flags.${SCOPE}.volleyball`]: { ...vb, hits: (Number(vb.hits) || 0) + 1 } });
+  }
   // "For the Might Clash initiated by the Knockback Advantage and for calculating the
   // number of Squares the target(s) are moved" - both, and they are the same number
   // twice: the Clash rolls Might and the distance is Might in Squares. Carried on the
@@ -11258,6 +11445,7 @@ async function openKnockback(attack, attacker, target, { extra = 0, from = "" } 
       reason: `${attack.maneuverName} · Super Launch: won, and ${target.name} is moved up to ${squares} `
         + "Squares in a straight line away from you.",
       collision,
+      ...volley,
       result: {
         challenger: { actorUuid: attacker.uuid, actorName: attacker.name, total: 0, succeeded: true,
           automatic: "Super Launch", lines: [], breakdown: "" },
@@ -11276,7 +11464,8 @@ async function openKnockback(attack, attacker, target, { extra = 0, from = "" } 
       + `${squares} Squares in a straight line away from you.${notes.length ? ` (${notes.join(", ")})` : ""}${
         extra ? ` ${from} adds ${extra} to your Might for this.`
         : from ? ` ${from} gave this attack its Knockback.` : ""}`,
-    collision
+    collision,
+    ...volley
   });
 }
 

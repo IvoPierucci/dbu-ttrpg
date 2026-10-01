@@ -78,7 +78,10 @@ export function techniqueAttack(actor, maneuver, declared, { targets = [], shake
     .concat(has("transformation-boost") && declared.transformed ? [{ label: "Transformation Boost", amount: 1 }] : [])
     .concat(ultimate && thresholdsBelow(actor) ? [{ label: "Ultimate (Thresholds)", amount: thresholdsBelow(actor) }] : [])
     .concat(declared.gigaFlare ? [{ label: "Giga Flare", amount: 2 * declared.gigaFlare }] : [])
-    .concat(declared.superCombination ? [{ label: "Super Combination", amount: declared.superCombination }] : []);
+    .concat(declared.superCombination ? [{ label: "Super Combination", amount: declared.superCombination }] : [])
+    // Spike!: "it gains 1 Energy Charge for each time the Opponent has been hit by an Attacking Maneuver from your
+    // Allies during Volleyball Time!"
+    .concat(declared.volleyball?.charges ? [{ label: "Volleyball Time!", amount: declared.volleyball.charges }] : []);
 
   // The Super Profile, if its Prerequisite holds on this attack.
   const superEntry = SUPER_PROFILES[superId] ?? null;

@@ -597,8 +597,10 @@ export function registerCombatHooks() {
       await firstRoundsEnd(actor);
       await regenerateWeapons(actor);
       // Delayed's records and Imminent marks, which only lasted for the Encounter.
-      const { clearDelayed } = await import("./chat.mjs");
+      const { clearDelayed, endVolleyball } = await import("./chat.mjs");
       await clearDelayed(actor);
+      // And Volleyball Time!, which paused it.
+      if (actor.getFlag?.("dbu-ttrpg", "volleyball")) await endVolleyball(actor, { quiet: true });
     }
 
     await announceEncounterEnd(rounds);
