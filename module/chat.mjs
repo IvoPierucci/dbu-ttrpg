@@ -500,6 +500,10 @@ async function applyClash(messageId, clash) {
     await settleBindEscape(message, clash);
   }
 
+  if (clash.bluffAttack && clash.result && !clash.bluffAttack.applied) {
+    await settleBluffAttack(message, clash);
+  }
+
   if (clash.drain && clash.result && !clash.drain.applied) {
     await settleDrain(message, clash);
   }
@@ -1572,6 +1576,34 @@ async function settleMagicTrick(message, clash) {
     + `${caster.name}'s Use Magic Ranks. Where to is ${caster.name}'s to say.`);
 }
 
+/**
+ * Bluff Attack, settled. Won: "that Opponent gains the Staggered Combat Condition until the end of the turn and gains
+ * the Shaken Combat Condition until the end of their next turn." Lost - a tie is the Defender's: "you trigger your
+ * targeted Opponent's Exploit Maneuver."
+ */
+async function settleBluffAttack(message, clash) {
+  const bluffer = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!bluffer || !target) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, bluffAttack: { ...clash.bluffAttack, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} sees through it.`);
+    offerExploitTo(message, target, bluffer, `${clash.maneuverName} - the Clash was lost`, "bluff-attack");
+    return;
+  }
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  // The turn under way - whoever's it is - and the target's own next one.
+  const turnHolder = game.combat?.started ? (game.combat.combatant?.actor ?? bluffer) : bluffer;
+  if (await gainCondition(target, "staggered", 1) !== false) {
+    await lasting(turnHolder, { kind: KINDS.CONDITION, key: "staggered", edge: EDGES.END, on: target.uuid,
+      source: clash.maneuverName });
+  }
+  if (await gainCondition(target, "shaken", 1) !== false) {
+    await lasting(target, { kind: KINDS.CONDITION, key: "shaken", edge: EDGES.END, next: true, source: clash.maneuverName });
+  }
+  await settledNote(message, `${target.name} is Staggered until the end of the turn and Shaken until the end of their next.`);
+}
+
 /** How far a Magic Trick moves somebody: the caster's Ranks in the Skill it is made with. */
 function casterSquares(caster, clash) {
   const ranks = caster.system.skills?.[clash.skill]?.ranks ?? 0;
@@ -1585,7 +1617,7 @@ function casterSquares(caster, clash) {
  * A line that names one person - "this triggers the Exploit Maneuver from the target" -
  * wants this instead.
  */
-function offerExploitTo(message, who, against, reason) {
+function offerExploitTo(message, who, against, reason, maneuverId = "magic-trick") {
   if (!who || !against) return;
   if (!who.items?.some(item => (item.type === "maneuver") && item.system.exploit)) return;
 
@@ -1599,7 +1631,7 @@ function offerExploitTo(message, who, against, reason) {
       targetUuid: against.uuid,
       reason,
       provokedBy: {
-        maneuverId: "magic-trick",
+        maneuverId,
         maneuverName: message.getFlag(SCOPE, CLASH_FLAG)?.maneuverName ?? "",
         messageId: message.id
       }

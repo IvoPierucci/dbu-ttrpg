@@ -1,0 +1,41 @@
+id: bluff-attack
+name: Bluff Attack
+uaType: both
+prerequisite: 2+ Skill Ranks in Bluff Skill
+tpCost: 15
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 2
+requiresTarget: true
+# "Make a Clash (Bluff vs Bluff/Intuition)" - the defender choosing - at an Opponent within your Melee Range.
+clashSkill: bluff
+clashDefenderSkills: bluff, intuition
+# Won: Staggered until the end of the turn, Shaken until the end of their next. Lost: their Exploit (chat.mjs
+# settleBluffAttack).
+bluffs: true
+source: Core Rule
+description: >
+  A Clash of Bluff against their Bluff or Intuition at someone in your Melee Range: won, Staggered for the turn and
+  Shaken until the end of their next; lost, their Exploit. Passive: Bluff 1 higher.
+text: >
+  Bluff Attack: You rear back, charge up a powerful attack, and wait for your opponent to brace for impact- then laugh
+  at them for falling for your ruse!
+  –Ability Type: Technical/Magical
+  –Prerequisites: 2+ Skill Ranks in Bluff Skill
+  –TP Cost: 15
+  –KP Cost: 2(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: Increase the Skill Bonus of your Bluff Skill by 1.
+  –Effect: Target an Opponent within your Melee Range and make a Clash (Bluff vs Bluff/Intuition) against that
+  Opponent. If you win, that Opponent gains the Staggered Combat Condition until the end of the turn and gains the
+  Shaken Combat Condition until the end of their next turn.
+
+  If you lose the Clash for the effects of Bluff Attack, you trigger your targeted Opponent’s Exploit Maneuver.
+
+---
+
+# "Increase the Skill Bonus of your Bluff Skill by 1."
+[passive]
+skill.bluff += 1;

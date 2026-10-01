@@ -628,6 +628,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         barrier: new fields.BooleanField({ required: true, initial: false }),
         /** Its Effect Pins somebody and holds them - Binding's (chat.mjs postBinding); who, while it does. */
         binds: new fields.BooleanField({ required: true, initial: false }),
+        /** Its Clash won Staggers and Shakes, lost hands over their Exploit - Bluff Attack's (chat.mjs settleBluffAttack). */
+        bluffs: new fields.BooleanField({ required: true, initial: false }),
         boundUuid: new fields.StringField({ required: true, blank: true, initial: "" }),
         applied: new fields.BooleanField({ required: true, initial: false }),
         upkeepKi: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),

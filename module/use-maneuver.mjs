@@ -1827,6 +1827,7 @@ export function definitionOf(item) {
     sustained: item.system.unique?.sustained === true,
     // Pins somebody and holds them - Binding.
     binds: item.system.unique?.binds === true,
+    bluffs: item.system.unique?.bluffs === true,
     kiCostPerTierChange: Number(item.system.unique?.kiCostPerTierChange) || 0,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
@@ -3413,6 +3414,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       return false;
     }
 
+    // Bluff Attack: "Target an Opponent within your Melee Range".
+    const outOfBluff = maneuver.bluffs && targetActor && whyNotWithinMelee(actor, targetActor, maneuver.name);
+    if (outOfBluff) {
+      ui.notifications.warn(outOfBluff);
+      return false;
+    }
+
     // "Target an Opponent within your Melee Range" - the same sentence again, for the
     // Maneuver that shoves rather than grabs.
     const outOfShove = maneuver.thrust && targetActor
@@ -3763,6 +3771,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
         // rather than to the room. Nothing is decided here: what is known is what they
         // hold when the Clash settles, not what they held when it opened.
         ...(maneuver.sense ? { sense: { applied: false } } : {}),
+        // Bluff Attack's: Staggered and Shaken won, their Exploit lost.
+        ...(maneuver.bluffs ? { bluffAttack: { applied: false } } : {}),
         // Winning leaves a Condition, and whether it leaves a second one depends on what
         // the target was carrying when it settles - so nothing about that is decided here
         // either. The flag is on the card because the Clash's own roll needs it: the

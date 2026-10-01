@@ -119,9 +119,9 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   if (!definition) return false;
   const fresh = uniqueItemFrom(definition, traitsOfKind?.("unique", definition.id) ?? []).system;
   for (const key of ["type", "actionCost", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
-    "requiresTarget", "usageLimit", "source", "text", "script"]) system[key] = fresh[key];
+    "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "barrier", "binds", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "barrier", "binds", "bluffs", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -165,6 +165,9 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
       kiCostPerBaseTier: number(definition.kiCostPerBaseTier),
       attacking: definition.attacking === true,
       requiresTarget: definition.requiresTarget === true,
+      // A Clash the Effect makes - Bluff Attack's "(Bluff vs Bluff/Intuition)".
+      clashSkill: String(definition.clashSkill ?? ""),
+      clashDefenderSkills: listOf(definition.clashDefenderSkills),
       tags: [UNIQUE_TAG],
       usageLimit: "1/round",
       source: String(definition.source ?? ""),
@@ -181,6 +184,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         sustained: definition.sustained === true,
         barrier: definition.barrier === true,
         binds: definition.binds === true,
+        bluffs: definition.bluffs === true,
         evade: { defense: number(definition.evadeDefense), offer: String(definition.evadeOffer ?? "") },
         advancements: children.filter(child => child.advancement === true).map(child => ({
           id: id(), key: child.id, name: child.name, tp: number(child.tpCost),
