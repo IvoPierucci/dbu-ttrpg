@@ -515,6 +515,10 @@ async function applyClash(messageId, clash) {
     await settleDevilmite(message, clash);
   }
 
+  if (clash.talk && clash.result && !clash.talk.applied) {
+    await settleTalk(message, clash);
+  }
+
   if (clash.search && clash.result && !clash.search.applied) {
     await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, search: { ...clash.search, applied: true } });
     // Search: "If you win, you are no longer Oblivious of them."
@@ -8149,6 +8153,63 @@ export async function postEnvironmentShift(actor, maneuver, { quality, uuids }) 
     flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: others.map(other => ({ actorUuid: other.uuid, actorName: other.name,
       maneuverId: "movement", maneuverName: "Movement", reason: `${maneuver.name} - 1 Counter Action`, counterCost: 1 })) } }
   });
+}
+
+/**
+ * Talk, paid for. Compelled or Rampaging: "make an Urgent Clash (Morale) against them". Turned into an Ally: "make a Clash
+ * (Cognitive/Morale) against the Character that turned them into their Ally".
+ */
+export async function postTalk(actor, target, maneuver, { mode, turnerUuid }) {
+  if (mode === "ally") {
+    const turner = fromUuidSync(turnerUuid);
+    if (!turner) return null;
+    return postSaveClash(actor, turner, {
+      maneuverName: maneuver.name,
+      reason: `Win and ${target.name} stops being ${turner.name}'s Ally.`,
+      saves: ["cognitive", "morale"],
+      defenderSaves: ["cognitive", "morale"],
+      talk: { applied: false, mode, targetUuid: target.uuid, targetName: target.name }
+    });
+  }
+  return postSaveClash(actor, target, {
+    maneuverName: maneuver.name,
+    reason: `Win and ${target.name} leaves Compelled, and may ignore Rampaging until the end of their next turn.`,
+    saves: ["morale"],
+    urgent: true,
+    talk: { applied: false, mode, targetUuid: target.uuid, targetName: target.name }
+  });
+}
+
+/**
+ * Talk, settled. Won: Compelled left at once - Rampaging ignored until the end of their next turn, said - or no longer
+ * an Ally of whoever turned them, said. Lost - a tie is the Defender's: "this triggers the Exploit Maneuver from the
+ * target", and against an Ally's turner, "you cannot target that Character with the Talk Maneuver again during this
+ * Combat Encounter".
+ */
+async function settleTalk(message, clash) {
+  const talk = clash.talk;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, talk: { ...talk, applied: true } });
+  const talker = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(talk.targetUuid);
+  if (!talker || !target) return;
+  if (whoWonClash(clash.result) === "challenger") {
+    if (talk.mode === "ally") {
+      await settledNote(message, `${target.name} is no longer ${clash.defenderName}'s Ally.`);
+      return;
+    }
+    const { setCondition } = await import("./conditions.mjs");
+    if ((Number(target.system?.conditions?.compelled) || 0) > 0) await setCondition(target, "compelled", 0);
+    await settledNote(message, `${target.name} is no longer Compelled, and may ignore Rampaging until the end of their next turn.`);
+    return;
+  }
+  offerExploitTo(message, target, talker, `${clash.maneuverName} - the Clash was lost`, "talk");
+  if (talk.mode === "ally") {
+    const barred = talker.getFlag(SCOPE, "talkBarred");
+    const combatId = game.combat?.id ?? "none";
+    const uuids = (barred?.combatId === combatId) ? (barred.uuids ?? []) : [];
+    await requestActorUpdate(talker, { [`flags.${SCOPE}.talkBarred`]: { combatId, uuids: [...new Set([...uuids, target.uuid])] } });
+    await settledNote(message, `${talker.name} cannot Talk to ${target.name} again this Combat Encounter.`);
+  }
 }
 
 /** Desperate Dodge, settled: won, the Exploit is not triggered; lost, it may be used. A tie is the Defender's. */

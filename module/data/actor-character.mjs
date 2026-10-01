@@ -416,7 +416,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
                         specialManeuver: "terrify" },
     performance:      { label: "Performance",      attribute: "personality",
                         specialManeuver: "hype" },
-    persuasion:       { label: "Persuasion",       attribute: "personality" }
+    // The Talk Maneuver, opened at 2+ Ranks like every other Skill's.
+    persuasion:       { label: "Persuasion",       attribute: "personality",
+                        specialManeuver: "talk" }
   });
 
   /**

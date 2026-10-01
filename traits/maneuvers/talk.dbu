@@ -1,0 +1,41 @@
+id: talk
+name: Talk
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+# Folded, because `coerce` splits a header value on commas and this line has one in it.
+exploitable: >
+  If you fail the initial Clash, this triggers the Exploit Maneuver from the target.
+exploitOnLoss: true
+source: Core Rule
+description: >
+  Reach someone Compelled or Rampaging - an Urgent Clash (Morale), won and they are free of it - or turned into an Ally by
+  Manipulation Sorcery or a Mystic Talisman - a Clash (Cognitive/Morale) against whoever turned them.
+text: >
+  Talk Maneuver [1/Round]: You verbally approach someone in an attempt to help them reclaim their own mind.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Non-Minion
+  –KP Cost: N/A
+  –Exploitable: If you fail the initial Clash, this triggers the Exploit Maneuver from the target.
+  –Effect: Target a Character who is suffering from the Compelled Combat Condition or is in a Transformation with the
+  Rampaging Aspect, or has been made an Ally of one of your Opponents through the effects of Manipulation Sorcery (see —
+  Warlock) or Mystic Talisman (see — Witchcraft).
+
+  If the Character is suffering from the Compelled Combat Condition or is in a Transformation with the Rampaging Aspect,
+  make an Urgent Clash (Morale) against them. If you win, they may ignore the effects of the Rampaging Aspect until the
+  end of their next turn and immediately leave the Compelled Combat Condition.
+
+  If the Character was turned into an Ally through the effects of Manipulation Sorcery or Mystic Talisman, make a Clash
+  (Cognitive/Morale) against the Character that turned them into their Ally. If you win, they stop being an Ally of that
+  Character. If you lose, you cannot target that Character with the Talk Maneuver again during this Combat Encounter.
+
+---
+
+# Opened by 2+ Ranks in Persuasion, like every other Skill's. Which of the two it is, and who turned them, asked when it
+# is used (use-maneuver.mjs askTalk); the Clash settled in chat.mjs settleTalk. Transformations, the Rampaging Aspect,
+# Manipulation Sorcery and the Mystic Talisman are not built: what winning does to them is said for the table.

@@ -2579,6 +2579,48 @@ async function postHide(actor, maneuver, { uuids }) {
   return card;
 }
 
+/**
+ * Talk: "Target a Character who is suffering from the Compelled Combat Condition or is in a Transformation with the
+ * Rampaging Aspect, or has been made an Ally of one of your Opponents through the effects of Manipulation Sorcery ... or
+ * Mystic Talisman" - which, asked, and for the second whoever turned them. Refused at someone a lost Talk has shut off
+ * this Combat Encounter.
+ */
+async function askTalk(actor, target, maneuver) {
+  const barred = actor.getFlag?.("dbu-ttrpg", "talkBarred");
+  if (barred && (barred.combatId === (game.combat?.id ?? "none")) && (barred.uuids ?? []).includes(target.uuid)) {
+    ui.notifications.warn(`${actor.name} cannot Talk to ${target.name} again this Combat Encounter.`);
+    return null;
+  }
+  const escape = Handlebars.escapeExpression;
+  const compelled = (Number(target.system?.conditions?.compelled) || 0) > 0;
+  const pool = game.combat?.started ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
+    : (canvas?.tokens?.placeables ?? []).map(token => token.actor);
+  const turners = [...new Map(pool.filter(other => other && (other.type === "character")
+    && (other.uuid !== actor.uuid) && (other.uuid !== target.uuid)).map(other => [other.uuid, other])).values()];
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<label class="dbu-respond-option"><input type="radio" name="mode" value="free" ${compelled || !turners.length ? "checked" : ""}/>
+        <span class="dbu-respond-name">Compelled or Rampaging</span>
+        <span class="dbu-respond-source">Urgent Clash (Morale)</span></label>
+      ${turners.length ? `<label class="dbu-respond-option"><input type="radio" name="mode" value="ally" ${compelled ? "" : "checked"}/>
+        <span class="dbu-respond-name">Turned into an Ally by</span>
+        <select name="turner">${turners.map(other => `<option value="${escape(other.uuid)}">${escape(other.name)}</option>`).join("")}</select>
+        <span class="dbu-respond-source">Clash (Cognitive/Morale)</span></label>` : ""}`,
+    buttons: [
+      { action: "talk", label: maneuver.name, default: true, callback: (event, button, dialog) => ({
+        mode: dialog.element.querySelector('input[name="mode"]:checked')?.value ?? "free",
+        turnerUuid: dialog.element.querySelector('select[name="turner"]')?.value ?? ""
+      }) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object")) return null;
+  if ((chosen.mode === "ally") && !chosen.turnerUuid) return null;
+  return chosen;
+}
+
 /** Snatch: which of their Basic Items - "who you know possesses a certain Basic Item". Null if they have none, or none is named. */
 async function askSnatch(actor, target, maneuver) {
   const items = Array.from(target.items ?? []).filter(item => (item.type === "gear") && (item.system.itemType === "basic"));
@@ -3276,6 +3318,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let bursting = null;
   let shifting = null;
   let snatching = null;
+  let talking = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3645,6 +3688,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       return false;
     }
 
+    // Talk: which of its two, and against whom.
+    if ((maneuver.id === "talk") && targetActor) {
+      talking = await askTalk(actor, targetActor, maneuver);
+      if (!talking) return false;
+    }
+
     // Snatch: "Target an Opponent within your Melee Range who you know possesses a certain Basic Item."
     if ((maneuver.id === "snatch") && targetActor) {
       const reach = whyNotWithinMelee(actor, targetActor, maneuver.name);
@@ -3999,6 +4048,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postHide(actor, maneuver, hiding)
     : maneuver.gathers
     ? await postGathering(actor, maneuver, actionsSpent)
+    : ((maneuver.id === "talk") && talking)
+    ? await (await import("./chat.mjs")).postTalk(actor, targetActor, maneuver, talking)
     : (maneuver.shiftsEnvironment && shifting)
     ? await (await import("./chat.mjs")).postEnvironmentShift(actor, maneuver, shifting)
     : (maneuver.downBurst && bursting)
