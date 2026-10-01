@@ -992,6 +992,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // not a moment Foundry has a hook for. So the character says when, once, and this is
     // what stops them saying it twice.
     schema.enteredEncounter = new fields.BooleanField({ required: true, initial: false });
+
+    // --- Hidden (module/hidden.mjs) ---
+    // Whom this character is Hidden from - each of them Oblivious of them - and the attacks aimed at them since: the
+    // second ends it (the user's rulings).
+    schema.hiddenFrom = new fields.ArrayField(new fields.SchemaField({
+      uuid: new fields.StringField({ required: true, blank: true, initial: "" }),
+      name: new fields.StringField({ required: true, blank: true, initial: "" }),
+      attacks: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+    }));
     schema.diminishingDefense = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 
     // --- Super Stacks ---

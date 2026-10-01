@@ -514,6 +514,14 @@ async function applyClash(messageId, clash) {
     await settleDevilmite(message, clash);
   }
 
+  if (clash.hides && clash.result && !clash.hides.applied) {
+    await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, hides: { ...clash.hides, applied: true } });
+    if (whoWonClash(clash.result) === "challenger") {
+      const { hideFrom } = await import("./hidden.mjs");
+      await hideFrom(fromUuidSync(clash.challengerUuid), fromUuidSync(clash.defenderUuid));
+    }
+  }
+
   if (clash.drain && clash.result && !clash.drain.applied) {
     await settleDrain(message, clash);
   }
@@ -8066,6 +8074,13 @@ async function takeOutOfSequence(message, actor, offer) {
       ui.notifications.warn(`${maneuver.name} needs a target. Target a token first.`);
       return;
     }
+    // Hidden, out of sequence as in it: they cannot be targeted.
+    const { whyHidden } = await import("./hidden.mjs");
+    const unseen = whyHidden(actor, target);
+    if (unseen) {
+      ui.notifications.warn(unseen);
+      return;
+    }
   }
 
   let declared = null;
@@ -8284,7 +8299,9 @@ async function takeOutOfSequence(message, actor, offer) {
             reason: `Win and ${String(clash.note || "").replaceAll("{challenger}", actor.name).replaceAll("{defender}", opponent.name)}.`,
             saves: [clash.save],
             defenderSaves: clash.against ? [clash.against] : [],
-            winNote: { text: clash.note, applied: false }
+            winNote: { text: clash.note, applied: false },
+            // Afterimage Strike: "If you win, you become Hidden to that Opponent."
+            ...(clash.hides ? { hides: { applied: false } } : {})
           });
         }
         return card;
@@ -8321,6 +8338,9 @@ export async function postAttack(actor, target, maneuver,
   // A Signature Technique's features on this attack: which hold, its Area, the Charges they
   // bring, the flags the rolls read. A reflected attack keeps the one it was thrown with.
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
+  // Hidden from any of them: "made 2 attacks" at them ends it.
+  const { countHiddenAttack } = await import("./hidden.mjs");
+  for (const aimed of everyone) await countHiddenAttack(actor, aimed);
   const technique = reflecting
     ? (reflecting.technique ?? null)
     : ((maneuver.signature && !maneuver.signatureTechnique)
@@ -9910,6 +9930,8 @@ async function resolveAttack(message, attack) {
     // What this defender's own effects do about being hit - Superior taking more
     // Damage, Prone taking it a category harder. Collected once, used at the Wound Roll.
     const incoming = hit ? atMoment(target, "being-hit", { attack: 1, attacker: 1 }) : null;
+    // Hidden from them: "hit an enemy with 1 attack" ends it.
+    if (hit && attacker) (await import("./hidden.mjs")).revealOnHit(attacker, target);
 
     // "Or until they are hit by an Attacking Maneuver (whichever comes first)." The other
     // half of a whichever: the turn edge goes on counting and this ends it early.

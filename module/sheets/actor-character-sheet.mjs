@@ -495,6 +495,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stopUnique: DBUCharacterSheet._onStopUnique,
       stepResource: DBUCharacterSheet._onStepResource,
       barrierClash: DBUCharacterSheet._onBarrierClash,
+      hideFromTargets: DBUCharacterSheet._onHideFromTargets,
+      revealTo: DBUCharacterSheet._onRevealTo,
       cageHit: DBUCharacterSheet._onCageHit,
       recordKept: DBUCharacterSheet._onRecordKept,
       cageClash: DBUCharacterSheet._onCageClash,
@@ -886,6 +888,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // alone, which is why it is not called that: the section is about what you are
     // carrying, and those two are carried the same way even though they are not Resources.
     context.stacks = stackRows(this.actor.system, traitsOwned(this.actor));
+    // Hidden: whom from, with the attacks aimed at them since, and whom this character is Oblivious of.
+    {
+      const { hiddenEntries, obliviousOf, HIDDEN_ATTACKS } = await import("../hidden.mjs");
+      const from = hiddenEntries(this.actor).map(entry => ({ uuid: entry.uuid, name: entry.name,
+        attacks: Number(entry.attacks) || 0, of: HIDDEN_ATTACKS }));
+      const of = obliviousOf(this.actor).map(other => ({ name: other.name }));
+      context.hidden = { from, of, any: Boolean(from.length || of.length),
+        summary: [from.length ? `Hidden from ${from.map(entry => entry.name).join(", ")}` : "",
+          of.length ? `Oblivious of ${of.map(entry => entry.name).join(", ")}` : ""].filter(Boolean).join(" · ") };
+    }
     // What the summary line says when the section is shut - the same shape the States and
     // the Combat Conditions use, and only what is actually there.
     const carried = context.stacks.filter(row => row.stacks > 0);
@@ -1885,11 +1897,34 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       capacity: Number(capacity?.max) || 0 } });
   }
 
+  /** Hidden from everyone this user has targeted - what the Special Maneuvers that hide would do, by hand for now. */
+  static async _onHideFromTargets() {
+    const aimed = Array.from(game.user.targets ?? []).map(token => token.actor)
+      .filter(other => other && (other.uuid !== this.actor.uuid));
+    if (!aimed.length) return ui.notifications.warn("Target the ones to be Hidden from first.");
+    const { hideFrom } = await import("../hidden.mjs");
+    for (const other of aimed) await hideFrom(this.actor, other);
+  }
+
+  /** No longer Hidden from one of them, by hand. */
+  static async _onRevealTo(event, target) {
+    const seeker = fromUuidSync(target.dataset.uuid);
+    const { revealTo } = await import("../hidden.mjs");
+    if (seeker) return revealTo(this.actor, seeker);
+    const { hiddenEntries } = await import("../hidden.mjs");
+    return this.actor.update({ "system.hiddenFrom": hiddenEntries(this.actor).filter(entry => entry.uuid !== target.dataset.uuid) });
+  }
+
   /** The one targeted, for an effect aimed from a row. */
   #targeted() {
     const other = Array.from(game.user.targets ?? []).map(token => token.actor)
       .find(each => each && (each.uuid !== this.actor.uuid)) ?? null;
     if (!other) ui.notifications.warn("Target a token first.");
+    // Hidden: "that enemy cannot target you with any Maneuver or effect".
+    else if ((other.system?.hiddenFrom ?? []).some(entry => entry.uuid === this.actor.uuid)) {
+      ui.notifications.warn(`${other.name} is Hidden from ${this.actor.name}.`);
+      return null;
+    }
     return other;
   }
 

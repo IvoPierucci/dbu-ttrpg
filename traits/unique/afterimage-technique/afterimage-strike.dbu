@@ -5,10 +5,11 @@ prerequisite: Agility Score 8+
 tpCost: 10
 # "If you use the Movement Maneuver through the effects of the Afterimage Technique, make a Clash (Impulsive
 # vs Cognitive) against the Opponent who targeted you with an Attacking Maneuver. If you win, you become
-# Hidden to that Opponent." Hidden is not built: said on the card when it is won.
+# Hidden to that Opponent." Won, Hidden from them (module/hidden.mjs).
 evadeClash: impulsive
 evadeClashAgainst: cognitive
 evadeClashNote: {challenger} becomes Hidden to {defender}
+evadeClashHides: true
 source: Core Rule
 text: >
   Afterimage Strike: You are able to use your insane speed to hide from the enemy, allowing you to surprise

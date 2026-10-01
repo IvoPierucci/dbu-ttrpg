@@ -739,11 +739,15 @@ async function techniqueTableQuestions(actor, technique) {
       }
     }
   }
+  // Sneak Attack: "You can only use this Signature Technique when Hidden, and all of your target(s) for this Attacking
+  // Maneuver must be your Oblivious Characters" - Hidden from every one of them.
   if (has("sneak-attack")) {
-    const hidden = await ask(`${technique.name} - Sneak Attack`,
-      `<p>Is ${Handlebars.escapeExpression(actor.name)} Hidden, and are all the targets Oblivious to them?</p>`);
-    if (!hidden) {
-      ui.notifications.warn(`${technique.name}: Sneak Attack - only while Hidden, against Oblivious targets.`);
+    const { isHiddenFrom } = await import("./hidden.mjs");
+    const aimed = Array.from(game.user.targets ?? []).map(token => token.actor).filter(Boolean);
+    const seen = aimed.filter(target => !isHiddenFrom(actor, target));
+    if (!aimed.length || seen.length) {
+      ui.notifications.warn(`${technique.name}: Sneak Attack - ${actor.name} is not Hidden from ${
+        seen.map(target => target.name).join(", ") || "anyone targeted"}.`);
       return false;
     }
   }
@@ -2499,6 +2503,10 @@ function askBinding(actor, maneuver) {
     ui.notifications.warn(`${maneuver.name} needs a target. Target a token first.`);
     return null;
   }
+  if ((target.system?.hiddenFrom ?? []).some(entry => entry.uuid === actor.uuid)) {
+    ui.notifications.warn(`${target.name} is Hidden from ${actor.name}.`);
+    return null;
+  }
   if (atLongRange(actor, target)) {
     ui.notifications.warn(`${target.name} is at Long Range.`);
     return null;
@@ -3035,6 +3043,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
     if (targetActor.uuid === actor.uuid) {
       ui.notifications.warn(`${maneuver.name} cannot target its own user.`);
+      return false;
+    }
+    // Hidden: "that enemy cannot target you with any Maneuver or effect".
+    const { whyHidden } = await import("./hidden.mjs");
+    const unseen = whyHidden(actor, targetActor);
+    if (unseen) {
+      ui.notifications.warn(unseen);
       return false;
     }
   }

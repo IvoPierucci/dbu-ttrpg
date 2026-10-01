@@ -207,6 +207,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
           prerequisite: listOf(child.prerequisite).join(", "), text: String(child.text ?? ""), script: String(child.script ?? ""),
           alsoOffer: String(child.evadeAlso ?? ""), clashSave: String(child.evadeClash ?? ""),
           clashAgainst: String(child.evadeClashAgainst ?? ""), clashNote: String(child.evadeClashNote ?? ""),
+          clashHides: child.evadeClashHides === true,
           noDiminishing: child.evadeNoDiminishing === true, bought: false, free: false, tpChange: 0
         })),
         restrictions: children.filter(child => child.restriction === true).map(child => ({
@@ -238,7 +239,8 @@ export function evasionOf(item, tierOfPower) {
     offer: String(unique.evade.offer ?? ""),
     also: bought.map(entry => entry.alsoOffer).filter(Boolean),
     alsoFrom: bought.filter(entry => entry.alsoOffer).map(entry => entry.name),
-    clash: clash ? { save: clash.clashSave, against: clash.clashAgainst, note: clash.clashNote, from: clash.name } : null,
+    clash: clash ? { save: clash.clashSave, against: clash.clashAgainst, note: clash.clashNote, from: clash.name,
+      hides: Boolean(clash.clashHides) } : null,
     noDiminishing: bought.some(entry => entry.noDiminishing)
   };
 }

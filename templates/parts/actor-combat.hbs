@@ -479,6 +479,33 @@
       </ul>
       {{/if}}
     </details>
+
+    {{! Hidden and Oblivious (the user's rulings): whom this character is Hidden from - they cannot target them - and
+        whom they are Oblivious of. }}
+    <details class="condition-group" data-section="hidden" {{#if openSections.hidden}}open{{/if}}>
+      <summary class="panel-title">
+        Hidden
+        <span class="panel-note">{{#if hidden.any}}{{hidden.summary}}{{else}}None{{/if}}</span>
+      </summary>
+      <ul class="condition-list dbu-stack-list">
+        {{#each hidden.from as |entry|}}
+        <li class="condition condition-active"
+            data-tooltip="{{entry.name}} cannot target you. Ends when you hit them, after {{entry.of}} attacks at them, or when you end your turn in their Melee Range">
+          <span class="condition-name">Hidden from {{entry.name}}</span>
+          <span class="stack-count">{{entry.attacks}}/{{entry.of}}</span>
+          <button type="button" class="stack-step" data-action="revealTo" data-uuid="{{entry.uuid}}"
+                  data-tooltip="No longer Hidden from them">&times;</button>
+        </li>
+        {{/each}}
+        {{#each hidden.of as |entry|}}
+        <li class="condition" data-tooltip="You cannot target {{entry.name}}">
+          <span class="condition-name">Oblivious of {{entry.name}}</span>
+        </li>
+        {{/each}}
+      </ul>
+      <button type="button" class="dbu-clash-button" data-action="hideFromTargets"
+              data-tooltip="Hidden from everyone you have targeted">Hide from targeted</button>
+    </details>
   </section>
 
   {{! Stand-ins for systems that do not exist yet, so the rules that depend on them
