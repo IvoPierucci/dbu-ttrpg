@@ -1,0 +1,50 @@
+id: cage-of-light
+name: Cage of Light
+uaType: technical
+prerequisite: Force or Magic Score 10+, Insight Score 8+
+tpCost: 16
+type: standard
+# "All of your remaining Actions (Min. 2)".
+actionCost: 2
+spendsAllActions: true
+kiCostPerTier: 10
+# Applied when used, and "at the start of each of your turns, you may spend all of your Actions and pay the KP Cost of
+# Cage of Light to maintain the Cage" - paid on its own with a Stop on the card (chat.mjs upkeepUniques). "You can remove
+# the Cage as an Instant Action" - from its row's Applied.
+sustained: true
+upkeepAllActions: true
+instantRelease: true
+# "Create a Large Sphere AoE centered on your chosen Square."
+sphereMagnitude: large
+# Who is inside is the table's (the user's ruling): the Life Point reductions and the Might Clash to enter or leave are
+# buttons under its entry, at the one targeted.
+cage: true
+source: Core Rule
+description: >
+  A Large Sphere Cage within 8 Squares: dodging inside costs 1/4 of your Might in Life Points, reaching its edge double
+  your Might, crossing it a Might Clash. All your Actions and its KP each turn keep it.
+text: >
+  Cage of Light: You create a trap for your enemies of pure energy, keeping some inside, and some outside.
+  –Ability Type: Technical
+  –Prerequisites: Force or Magic Score 10+, Insight Score 8+
+  –TP Cost: 16
+  –KP Cost: 10(T)
+  –Maneuver Type: Standard
+  –Action Cost: All of your remaining Actions (Min. 2)
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Target a Square within 8 Squares of you. Create a Large Sphere AoE centered on your chosen Square, this is
+  known as the Cage. Characters within the Cage have their Life Points reduced by 1/4 (rounded up) of your Might
+  whenever they would successfully dodge an Attacking Maneuver.
+
+  Characters within the Cage cannot move outside of the Cage, and Characters outside of the Cage cannot move into the
+  Cage, and will cease movement on a Square adjacent to the perimeter of the Cage. Any Character that moves onto an
+  adjacent Square to the perimeter of the Cage has their Life Points reduced by double your Might.
+
+  Characters can attempt to enter or exit the Cage when using the Movement Maneuver (they still suffer the reduction to
+  Life Points listed above) by making a Might Clash against you. If they win, they enter/exit the Cage.
+
+  At the start of each of your turns, you may spend all of your Actions and pay the KP Cost of Cage of Light to maintain
+  the Cage. If you choose not to, the Cage will disappear.
+
+  You cannot use this Unique Ability while a Cage is active but you can remove the Cage as an Instant Action.

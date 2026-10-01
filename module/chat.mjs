@@ -3446,7 +3446,10 @@ export async function upkeepUniques(actor) {
       await item.update({ "system.unique.applied": false, "system.unique.boundUuid": "" });
       continue;
     }
-    if ((ki.value < cost) || (cost > capacity.remaining)) {
+    // Cage of Light: "you may spend all of your Actions and pay the KP Cost" - none left to spend, nothing kept.
+    const allActions = item.system.unique.upkeepAllActions;
+    const actionsHeld = allActions ? actionsLeft(actor, "standard") : 0;
+    if ((ki.value < cost) || (cost > capacity.remaining) || (allActions && game.combat?.started && !actionsHeld)) {
       if (item.system.unique.binds) await releaseBinding(actor, item);
       else {
         await item.update({ "system.unique.applied": false });
@@ -3456,6 +3459,7 @@ export async function upkeepUniques(actor) {
       continue;
     }
     await actor.update({ "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost });
+    if (actionsHeld) await spendActions(actor, actionsHeld, "standard");
     // Binding: "If you do, you may spend 2(T) Ki Points to reduce that target's Life Points by 1/2 of your Might."
     const bind = item.system.unique.binds ? { targetUuid: item.system.unique.boundUuid, used: false } : null;
     // Shrinking Battlefield: "you may spend an additional 2(bT) Ki Points to reduce the AoE of the Bound Squares by 1
@@ -3466,9 +3470,10 @@ export async function upkeepUniques(actor) {
       ? { ki: (Number(shrinker.shrinkKiPerBaseTier) || 0) * Math.max(1, actor.system.baseTierOfPower ?? 1), done: false }
       : null;
     await ChatMessage.create({ speaker,
-      content: `<p>${Handlebars.escapeExpression(item.name)}: ${cost} KP${item.system.unique.area
+      content: `<p>${Handlebars.escapeExpression(item.name)}: ${cost} KP${actionsHeld ? `, ${actionsHeld} Actions` : ""}${item.system.unique.area
         ? ` - ${Handlebars.escapeExpression(item.system.unique.area)} Sphere` : ""}</p>`,
       flags: { [SCOPE]: { [UPKEEP_FLAG]: { actorUuid: actor.uuid, itemId: item.id, paid: cost, stopped: false,
+        ...(actionsHeld ? { actions: actionsHeld } : {}),
         ...(shrink ? { shrink } : {}) },
         ...(bind ? { [BIND_FLAG]: { binderUuid: actor.uuid, itemId: item.id, ...bind } } : {}) } } });
   }
@@ -3491,6 +3496,7 @@ function renderUpkeep(message, html) {
     if (!actor) return;
     await actor.update({ "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + upkeep.paid),
       "system.capacity.spent": Math.max(0, actor.system.capacity.spent - upkeep.paid) });
+    if (upkeep.actions) await refundActions(actor, upkeep.actions, "standard");
     // Binding's squeeze goes with what it was paid alongside.
     const bind = message.getFlag(SCOPE, BIND_FLAG);
     if (bind) await message.setFlag(SCOPE, BIND_FLAG, { ...bind, used: true });

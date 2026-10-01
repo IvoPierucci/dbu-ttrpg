@@ -113,6 +113,16 @@ async function askActionsSpent(actor, maneuver) {
   const least = maneuver.actionCost ?? 1;
   const kind = (maneuver.type === "counter") ? "counter" : "standard";
 
+  // "All of your remaining Actions (Min. 2)": nothing to ask - every one left, if that is enough.
+  if (maneuver.spendsAllActions) {
+    const left = game.combat?.started ? actionsLeft(actor, kind) : least;
+    if (left < least) {
+      ui.notifications.warn(`${maneuver.name} needs at least ${least} Actions.`);
+      return null;
+    }
+    return left;
+  }
+
   // Only what they can actually afford. Offering four Actions to somebody holding two is
   // offering a choice that ends in a refusal two steps later.
   const affordable = game.combat?.started
@@ -1827,6 +1837,8 @@ export function definitionOf(item) {
     sustained: item.system.unique?.sustained === true,
     // Pins somebody and holds them - Binding.
     binds: item.system.unique?.binds === true,
+    // "All of your remaining Actions (Min. 2)" - Cage of Light.
+    spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
     kiCostPerTierChange: Number(item.system.unique?.kiCostPerTierChange) || 0,
     outsideDiminishing: item.system.outsideDiminishing,

@@ -641,6 +641,14 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         upkeepKiPerTier: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         sphereMagnitude: new fields.StringField({ required: true, blank: true, initial: "" }),
         /**
+         * Cage of Light's: "All of your remaining Actions (Min. 2)" to use and to keep; removed as an Instant; and its Life
+         * Point reductions and Might Clash as buttons under its entry while it stands.
+         */
+        spendsAllActions: new fields.BooleanField({ required: true, initial: false }),
+        upkeepAllActions: new fields.BooleanField({ required: true, initial: false }),
+        instantRelease: new fields.BooleanField({ required: true, initial: false }),
+        cage: new fields.BooleanField({ required: true, initial: false }),
+        /**
          * A Counter that raises the Defense Value against the attack it answers - the Afterimage Technique's
          * 2(T), `defense` per Tier - and what it offers out of sequence if that attack is avoided.
          */

@@ -495,6 +495,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stopUnique: DBUCharacterSheet._onStopUnique,
       stepResource: DBUCharacterSheet._onStepResource,
       barrierClash: DBUCharacterSheet._onBarrierClash,
+      cageHit: DBUCharacterSheet._onCageHit,
+      cageClash: DBUCharacterSheet._onCageClash,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
@@ -1768,6 +1770,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         grantedBy,
         // Applied until it is not paid for - the Atmospheric Bubble - and the Sphere it was applied in.
         applied: Boolean(unique.sustained && unique.applied),
+        // Removed as an Instant - Cage of Light.
+        instant: Boolean(unique.instantRelease),
         // A Counter is played from the attack's card: Respond, or - Barrier - once it has hit.
         playedFrom: unique.barrier ? "the attack's card, once it has hit you" : "Respond on the card of the attack aimed at you",
         area: unique.area,
@@ -1795,6 +1799,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         resource: uniqueResource(actor, unique.libraryId),
         // Powerful Barrier's Might Clash, opened from here.
         barrierClash: !grantedBy && boughtTraits(unique, getTrait).some(trait => trait.barrierClash === true),
+        // Cage of Light, standing: its Life Point reductions and its Might Clash, at the one targeted.
+        cage: Boolean(unique.cage && unique.applied) && (() => {
+          const might = Number(actor.system.might) || 0;
+          return { dodged: Math.ceil(might / 4), perimeter: 2 * might };
+        })(),
         open: Boolean(this.#openSections[`maneuver-${item.id}`])
       };
     };
@@ -1860,6 +1869,41 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     });
   }
 
+  /** The one targeted, for an effect aimed from a row. */
+  #targeted() {
+    const other = Array.from(game.user.targets ?? []).map(token => token.actor)
+      .find(each => each && (each.uuid !== this.actor.uuid)) ?? null;
+    if (!other) ui.notifications.warn("Target a token first.");
+    return other;
+  }
+
+  /**
+   * Cage of Light's Life Point reductions, at the one targeted: "1/4 (rounded up) of your Might whenever they would
+   * successfully dodge an Attacking Maneuver"; "double your Might" moving onto a Square adjacent to its perimeter.
+   */
+  static async _onCageHit(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const who = this.#targeted();
+    if (!item || !who) return;
+    const might = Number(this.actor.system.might) || 0;
+    const dodged = target.dataset.kind === "dodged";
+    const { reduceLifePoints } = await import("../chat.mjs");
+    return reduceLifePoints(who, dodged ? Math.ceil(might / 4) : 2 * might,
+      { reason: `${item.name}, ${dodged ? "a Dodge inside it" : "its perimeter"}` });
+  }
+
+  /** Cage of Light: "Characters can attempt to enter or exit the Cage ... by making a Might Clash against you." */
+  static async _onCageClash(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const who = this.#targeted();
+    if (!item || !who) return;
+    const { postMightClash } = await import("../chat.mjs");
+    return postMightClash(who, this.actor, {
+      maneuverName: item.name,
+      reason: `Win and ${who.name} crosses the Cage.`
+    });
+  }
+
   /** A Resource the table gives and takes, a stack at a time - Unfamiliar. */
   static async _onStepResource(event, target) {
     const key = target.dataset.resource;
@@ -1872,13 +1916,20 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onStopUnique(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     if (!item?.system?.unique?.applied) return;
-    // Binding: "You can also remove the effects of Binding as an Instant Maneuver."
-    if (item.system.unique.binds) {
+    // Binding: "You can also remove the effects of Binding as an Instant Maneuver." Cage of Light: "you can remove the
+    // Cage as an Instant Action."
+    if (item.system.unique.binds || item.system.unique.instantRelease) {
       const { whyNotAnotherInstant, recordManeuverType } = await import("../maneuvers.mjs");
       const blocked = whyNotAnotherInstant(this.actor);
       if (blocked) return ui.notifications.warn(`${this.actor.name}: ${blocked}`);
-      const { releaseBinding } = await import("../chat.mjs");
-      await releaseBinding(this.actor, item);
+      if (item.system.unique.binds) {
+        const { releaseBinding } = await import("../chat.mjs");
+        await releaseBinding(this.actor, item);
+      } else {
+        await item.update({ "system.unique.applied": false });
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+          content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} is removed.</div>` });
+      }
       return recordManeuverType(this.actor, "instant");
     }
     await item.update({ "system.unique.applied": false });
