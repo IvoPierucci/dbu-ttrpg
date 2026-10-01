@@ -58,6 +58,18 @@
           {{#each row.restrictions as |feature|}}
           <div class="dbu-profile-line technique-disadvantage" {{#if feature.tip}}data-tooltip="{{feature.tip}}"{{/if}}>{{feature.label}}</div>
           {{/each}}
+          {{#if row.kept}}
+          <div class="unique-resource unique-kept">
+            <label data-tooltip="Your Maximum Life Points">Max Life
+              <input type="number" min="0" step="1" value="{{row.kept.life}}" data-unique-kept="life" data-item-id="{{row.itemId}}"/></label>
+            <label data-tooltip="Your Maximum Ki Points">Max Ki
+              <input type="number" min="0" step="1" value="{{row.kept.ki}}" data-unique-kept="ki" data-item-id="{{row.itemId}}"/></label>
+            <label data-tooltip="Your Maximum Capacity">Max Capacity
+              <input type="number" min="0" step="1" value="{{row.kept.capacity}}" data-unique-kept="capacity" data-item-id="{{row.itemId}}"/></label>
+            <button type="button" class="stack-step unique-kept-record" data-action="recordKept" data-item-id="{{row.itemId}}"
+                    data-tooltip="Fill in from this sheet as it stands">&#8635;</button>
+          </div>
+          {{/if}}
           {{#if row.cage}}
           <div class="unique-resource">
             <button type="button" class="dbu-clash-button" data-action="cageHit" data-kind="dodged" data-item-id="{{row.itemId}}"

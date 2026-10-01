@@ -121,7 +121,7 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   for (const key of ["type", "actionCost", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
     "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "barrier", "binds", "bluffs", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "barrier", "binds", "bluffs", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -169,7 +169,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
       clashSkill: String(definition.clashSkill ?? ""),
       clashDefenderSkills: listOf(definition.clashDefenderSkills),
       tags: [UNIQUE_TAG],
-      usageLimit: "1/round",
+      usageLimit: String(definition.usageLimit ?? "") || "1/round",
       source: String(definition.source ?? ""),
       text: String(definition.text ?? ""),
       script: String(definition.script ?? ""),
@@ -188,6 +188,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         upkeepAllActions: definition.upkeepAllActions === true,
         instantRelease: definition.instantRelease === true,
         cage: definition.cage === true,
+        keepsPools: definition.keepsPools === true,
         barrier: definition.barrier === true,
         binds: definition.binds === true,
         bluffs: definition.bluffs === true,

@@ -1,0 +1,45 @@
+id: copy-being
+name: Copy Being
+uaType: magical
+prerequisite: 4+ Skill Ranks in Use Magic
+tpCost: 50
+type: standard
+actionCost: 3
+kiCost: 0
+# "You can only use Copy Being once per Combat Encounter."
+usageLimit: 1/encounter
+# "You still use your Life Points, Ki Points, and Capacity (and their respective Maximums)" - recorded under its entry,
+# for while a copy of their sheet is used. The copying itself is the table's (the user's ruling).
+keepsPools: true
+source: Core Rule
+description: >
+  Become an exact Copy of a Character on the Battlefield - their sheet in place of yours - keeping your Tier of Power,
+  Life, Ki and Capacity.
+text: >
+  Copy Being: You are able to perfectly mimic another person.
+  –Ability Type: Magical
+  –Prerequisites: 4+ Skill Ranks in Use Magic
+  –TP Cost: 50
+  –KP Cost: N/A
+  –Maneuver Type: Standard
+  –Action Cost: 3
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target a Character (except a Fusion) on the Battlefield. You become an exact Copy of that Character in every
+  way (Race, Subraces, Factors, Apparel, Accessories, Weapons, Attribute Scores, Size Category, Talents, Skills,
+  Signature Techniques, Unique Abilities, Transformations, etc) except that you do not change your Tier of Power, and
+  your Life Points, Ki Points, or Capacity (or their respective Maximums) do not change. Use a copy of their character
+  sheet instead of your own, but you still use your Life Points, Ki Points, and Capacity (and their respective
+  Maximums).
+
+  If the Character you are a Copy of was in a Form and/or Enhancement when you used this Unique Ability, you
+  automatically enter those Transformation(s).
+
+  You can only use Copy Being once per Combat Encounter, and you stop being a Copy if you are Defeated, the Combat
+  Encounter ends, or if you fail a Steadfast Check. You can also stop being a Copy as an Instant Maneuver.
+
+  Any Apparel, Accessories, Weapons, or other Items created by being a Copy are destroyed when you stop being a Copy.
+
+  Any theoretical Characters created due to being part of the Character you copied through the Unified or Absorption
+  Awakenings (or otherwise) do not exist, and thus cannot be freed from you or otherwise leave you by any means while
+  you are a Copy.

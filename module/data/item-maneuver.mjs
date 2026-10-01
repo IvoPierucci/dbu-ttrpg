@@ -649,6 +649,16 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         instantRelease: new fields.BooleanField({ required: true, initial: false }),
         cage: new fields.BooleanField({ required: true, initial: false }),
         /**
+         * Copy Being's: "you still use your Life Points, Ki Points, and Capacity (and their respective Maximums)" - the
+         * Maximums recorded under its entry, this character's own (the user's).
+         */
+        keepsPools: new fields.BooleanField({ required: true, initial: false }),
+        kept: new fields.SchemaField({
+          life: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+          ki: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+          capacity: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+        }),
+        /**
          * A Counter that raises the Defense Value against the attack it answers - the Afterimage Technique's
          * 2(T), `defense` per Tier - and what it offers out of sequence if that attack is avoided.
          */

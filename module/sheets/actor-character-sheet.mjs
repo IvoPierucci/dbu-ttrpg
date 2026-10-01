@@ -496,6 +496,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       stepResource: DBUCharacterSheet._onStepResource,
       barrierClash: DBUCharacterSheet._onBarrierClash,
       cageHit: DBUCharacterSheet._onCageHit,
+      recordKept: DBUCharacterSheet._onRecordKept,
       cageClash: DBUCharacterSheet._onCageClash,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
@@ -1799,6 +1800,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         resource: uniqueResource(actor, unique.libraryId),
         // Powerful Barrier's Might Clash, opened from here.
         barrierClash: !grantedBy && boughtTraits(unique, getTrait).some(trait => trait.barrierClash === true),
+        // Copy Being: the Maximums kept while a copy of somebody else's sheet is used.
+        kept: (unique.keepsPools && !grantedBy) ? { ...unique.kept } : null,
         // Cage of Light, standing: its Life Point reductions and its Might Clash, at the one targeted.
         cage: Boolean(unique.cage && unique.applied) && (() => {
           const might = Number(actor.system.might) || 0;
@@ -1867,6 +1870,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       ...(charges ? { rowsFor: { [this.actor.uuid]: [{ label: `${charges} Energy Charge${(charges === 1) ? "" : "s"}`,
         value: -charges * tier }] } } : {})
     });
+  }
+
+  /** Copy Being: the Maximums kept, written in from this sheet as it stands. */
+  static async _onRecordKept(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
+    const { life, ki, capacity } = this.actor.system;
+    return item.update({ "system.unique.kept": { life: Number(life?.max) || 0, ki: Number(ki?.max) || 0,
+      capacity: Number(capacity?.max) || 0 } });
   }
 
   /** The one targeted, for an effect aimed from a row. */
@@ -2341,6 +2353,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** @override */
   _onRender(context, options) {
     super._onRender(context, options);
+
+    // Copy Being's kept Maximums: written onto its Item, not submitted with the character's form.
+    for (const input of this.element.querySelectorAll("[data-unique-kept]")) {
+      input.addEventListener("change", event => {
+        event.stopPropagation();
+        const item = this.actor.items.get(input.dataset.itemId);
+        item?.update({ [`system.unique.kept.${input.dataset.uniqueKept}`]: Math.max(0, Math.floor(Number(input.value) || 0)) });
+      });
+    }
 
     // An "Attribute Addition" row may spread at most 2 points across its seven
     // attribute cells, and no cell may leave the 0-2 range. The `min`/`max`

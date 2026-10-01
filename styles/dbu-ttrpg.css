@@ -3338,3 +3338,22 @@
   line-height: 16px;
   font-size: 12px;
 }
+
+/* Copy Being: the Maximums kept, three small fields under its entry. */
+.dbu-ttrpg .unique-kept {
+  flex-wrap: wrap;
+}
+
+.dbu-ttrpg .unique-kept label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dbu-ttrpg .unique-kept input {
+  width: 56px;
+}
+
+.dbu-ttrpg .unique-kept-record {
+  width: 22px;
+}
