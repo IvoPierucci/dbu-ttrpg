@@ -1,0 +1,20 @@
+id: shifted-poisonous
+name: Shifted (Poisonous)
+kind: conditions
+# One stack per clock: the Square keeps the Quality until the last Environment Shift's clock runs out.
+maxStacks: 99
+# Not a Combat Condition: the entry gives the Squares a Quality and never names one.
+combatCondition: no
+# The Environmental Quality this mark puts on the Square while it is held (environments.mjs qualitiesFromEffects).
+quality: poisonous
+source: Core Rule
+description: >
+  Environment Shift made your Square Poisonous until the start of its user's next turn.
+text: >
+  Shifted (Poisonous): Environment Shift's mark. "Those Squares gain one of the following Environmental Qualities until the
+  start of your next turn: Aflame, Bouncy, Dangerous, Electrified, Frozen, or Poisonous."
+
+---
+
+# A mark rather than a tick in the Battlefields tab's list, as Ignited is: it runs out on the user's clock, and the list
+# stays the player's. What the ground does is the Poisonous Quality's own file.

@@ -8127,6 +8127,28 @@ function renderLifeforce(message, html) {
   (html.querySelector(".message-content") ?? html).append(button);
 }
 
+/**
+ * Environment Shift: the Squares of its Sphere "gain one of the following Environmental Qualities until the start of your
+ * next turn" - a mark on each one standing there, on your clock; "You are unaffected by the effects of your chosen
+ * Environmental Quality (except Dangerous)", so you are marked only for Dangerous. "Any other Character who is within the
+ * Sphere AoE may spend a Counter Action to use the Movement Maneuver as an Out-of-Sequence Maneuver in response."
+ */
+export async function postEnvironmentShift(actor, maneuver, { quality, uuids }) {
+  const others = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  const label = getTrait(quality)?.name ?? quality;
+  const file = getTrait(actor.items?.get(maneuver.itemId)?.system?.unique?.libraryId ?? "");
+  const reachesYou = [].concat(file?.shiftAffectsSelf ?? []).map(String).includes(quality);
+  const marked = [...(reachesYou ? [actor] : []), ...others];
+  for (const who of marked) await markUntilNextTurn(actor, who, `shifted-${quality}`, 1, "start", maneuver.name);
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(label)}${others.length
+      ? ` - ${Handlebars.escapeExpression(others.map(other => other.name).join(", "))}` : ""}</p>`,
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: others.map(other => ({ actorUuid: other.uuid, actorName: other.name,
+      maneuverId: "movement", maneuverName: "Movement", reason: `${maneuver.name} - 1 Counter Action`, counterCost: 1 })) } }
+  });
+}
+
 /** Desperate Dodge, settled: won, the Exploit is not triggered; lost, it may be used. A tie is the Defender's. */
 async function settleDesperateDodge(message, clash) {
   const record = clash.desperateDodge;
@@ -8243,6 +8265,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.spike) return takeSpike(message, actor, offer);
   // A Search handed out by someone Hidden powering up: "even if they do not have access" to it.
   if (offer.search) return takeSearch(message, actor, offer);
+  // An offer that costs a Counter Action to take - Environment Shift's Movement.
+  if (offer.counterCost && !await spendActions(actor, offer.counterCost, "counter")) return;
   // Energy Gathering's Energy Charge, for the Genki Dramatic Finisher.
   if (offer.genki) return takeGenkiCharge(message, actor, offer);
   let maneuver = getManeuver(offer.maneuverId);

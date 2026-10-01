@@ -1,0 +1,37 @@
+id: environment-shift
+name: Environment Shift
+uaType: magical
+prerequisite: N/A
+tpCost: 10
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 4
+# The Quality and who stands in its Sphere asked when it is used (use-maneuver.mjs askShift); each of them marked with
+# it until the start of your next turn - you only for Dangerous - and every other one offered the Movement Maneuver out
+# of sequence for a Counter Action (chat.mjs postEnvironmentShift).
+shiftsEnvironment: true
+# Which Qualities it offers, and the one that reaches its user too: "You are unaffected by the effects of your chosen
+# Environmental Quality (except Dangerous)". Named here, not in the code.
+shiftQualities: aflame, bouncy, dangerous, electrified, frozen, poisonous
+shiftAffectsSelf: dangerous
+source: Core Rule
+description: >
+  The Squares of a Sphere around you Aflame, Bouncy, Dangerous, Electrified, Frozen or Poisonous until the start of your
+  next turn - you unaffected but by Dangerous; anyone else inside may move away for a Counter Action.
+text: >
+  Environment Shift: You alter the world around you to suit your needs.
+  –Ability Type: Magical
+  –Prerequisites: N/A
+  –TP Cost: 10
+  –KP Cost: 4(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target all Squares within a Sphere AoE (centered on you). Those Squares gain one of the following
+  Environmental Qualities until the start of your next turn: Aflame, Bouncy, Dangerous, Electrified, Frozen, or Poisonous.
+  You are unaffected by the effects of your chosen Environmental Quality (except Dangerous) until the start of your next
+  turn.
+
+  Any other Character who is within the Sphere AoE may spend a Counter Action to use the Movement Maneuver as an
+  Out-of-Sequence Maneuver in response to this Unique Ability.

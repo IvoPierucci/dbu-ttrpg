@@ -1843,6 +1843,7 @@ export function definitionOf(item) {
     binds: item.system.unique?.binds === true,
     downBurst: item.system.unique?.downBurst === true,
     gathers: item.system.unique?.gathers === true,
+    shiftsEnvironment: item.system.unique?.shiftsEnvironment === true,
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
@@ -2579,6 +2580,45 @@ async function postHide(actor, maneuver, { uuids }) {
 }
 
 /**
+ * Environment Shift: "one of the following Environmental Qualities: Aflame, Bouncy, Dangerous, Electrified, Frozen, or
+ * Poisonous" - and who else stands "within the Sphere AoE (centered on you)": everyone in the Encounter (or targeted,
+ * outside one), the ones beside you ticked and the rest the table's. Null if backed out of.
+ */
+async function askShift(actor, maneuver) {
+  const file = getTrait(actor.items?.get(maneuver.itemId)?.system?.unique?.libraryId ?? "");
+  const QUALITIES = [].concat(file?.shiftQualities ?? []).map(String).filter(Boolean);
+  const escape = Handlebars.escapeExpression;
+  const pool = game.combat?.started
+    ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
+    : Array.from(game.user.targets ?? []).map(token => token.actor);
+  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .map(other => [other.uuid, other])).values()];
+  const rows = others.map(other => {
+    const near = (squaresAway(actor, other) !== null) && !whyNotWithinMelee(actor, other, "");
+    return `<label class="dbu-respond-option"><input type="checkbox" name="${escape(other.uuid)}" ${near ? "checked" : ""}/>
+      <span class="dbu-respond-name">${escape(other.name)}</span></label>`;
+  }).join("");
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<label class="dbu-wager"><span>Quality</span><select name="quality">${QUALITIES.map(key =>
+      `<option value="${key}">${escape(getTrait(key)?.name ?? key)}</option>`).join("")}</select></label>
+      ${others.length ? `<p class="dbu-respond-hint">Who else is within its Sphere</p>${rows}` : ""}`,
+    buttons: [
+      { action: "shift", label: maneuver.name, default: true, callback: (event, button, dialog) => ({
+        quality: dialog.element.querySelector('select[name="quality"]')?.value ?? "",
+        uuids: others.filter(other => dialog.element.querySelector(`input[name="${CSS.escape(other.uuid)}"]`)?.checked)
+          .map(other => other.uuid)
+      }) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object") || !QUALITIES.includes(chosen.quality)) return null;
+  return chosen;
+}
+
+/**
  * Energy Gathering: "For each Action spent, gain a stack of Lifeforce from the planet you are on" - held to its ceiling.
  * With a Dramatic Finisher of the Genki Super Profile, the Energy Charge Maneuver offered out of sequence for it, its
  * Charges "1 less than the amount of Lifeforce stacks you gained".
@@ -3210,6 +3250,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let binding = null;
   let hiding = null;
   let bursting = null;
+  let shifting = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3461,6 +3502,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Environment Shift: which Quality, and who stands in its Sphere.
+    if (maneuver.shiftsEnvironment) {
+      shifting = await askShift(actor, maneuver);
+      if (!shifting) return false;
+    }
+
     // Down Burst: which Opponents are within its Minor Sphere.
     if (maneuver.downBurst) {
       bursting = await askHide(actor, maneuver, { burst: true });
@@ -3916,6 +3963,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postHide(actor, maneuver, hiding)
     : maneuver.gathers
     ? await postGathering(actor, maneuver, actionsSpent)
+    : (maneuver.shiftsEnvironment && shifting)
+    ? await (await import("./chat.mjs")).postEnvironmentShift(actor, maneuver, shifting)
     : (maneuver.downBurst && bursting)
     ? await (await import("./chat.mjs")).postDownBurst(actor, maneuver, bursting.uuids)
     : (maneuver.binds && binding)
