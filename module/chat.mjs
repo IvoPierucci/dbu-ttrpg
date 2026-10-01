@@ -15251,7 +15251,10 @@ function renderAttack(message, html) {
     const more = document.createElement("button");
     more.type = "button";
     more.className = "dbu-clash-button";
-    more.textContent = `Roll ${plan.rolls + (Number(attack.technique?.followUpRolls) || 0)} additional Strikes`;
+    // Multiple Arms' one more, while it is still unspent this Round - the count rollFollowUpStrikes will roll.
+    const arms = Boolean(attacker.system.effects?.slots?.["combination.extraRoll"])
+      && !(attacker.system.usedManeuvers ?? []).includes(ARMS_USES.combination);
+    more.textContent = `Roll ${plan.rolls + (Number(attack.technique?.followUpRolls) || 0) + (arms ? 1 : 0)} additional Strikes`;
     more.dataset.tooltip = "Each one that beats the defence they already made adds "
       + `${plan.woundPerHitPerTier}(T) to the Wound Roll.`;
     more.addEventListener("click", () => rollFollowUpStrikes(message, attack, attacker));
