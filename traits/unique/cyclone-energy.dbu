@@ -1,0 +1,28 @@
+id: cyclone-energy
+name: Cyclone Energy
+uaType: technical
+prerequisite: Insight Score of 8+
+tpCost: 20
+type: outOfSequence
+actionCost: 0
+kiCostPerTier: 2
+# "If you use an Energy Attack and fail to hit any of your target(s)" - offered on that attack's card, to whoever made it
+# (chat.mjs cycloneStage): the Energy Charge Maneuver at once, out of sequence, its declared Attacking Maneuver gaining
+# the Energy Charges the missed one had.
+cyclone: true
+source: Core Rule
+description: >
+  An Energy Attack that missed everyone: the Energy Charge Maneuver at once, and its Charges carried into the next one.
+text: >
+  Cyclone Energy: You are able to regather the energy that you have used to attack, so long as it isn’t expended.
+  –Ability Type: Technical
+  –Prerequisites: Insight Score of 8+
+  –TP Cost: 20
+  –KP Cost: 2(T)
+  –Maneuver Type: Out-of-Sequence
+  –Action Cost: N/A
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: If you use an Energy Attack and fail to hit any of your target(s), you may use this Unique Ability to
+  immediately use the Energy Charge Maneuver. If you do, your declared Attacking Maneuver gains any Energy Charges that
+  were applied to your missed Attacking Maneuver.

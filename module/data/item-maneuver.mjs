@@ -653,6 +653,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
          * Maximums recorded under its entry, this character's own (the user's).
          */
         keepsPools: new fields.BooleanField({ required: true, initial: false }),
+        /** Offered on your Energy Attack that missed everyone - Cyclone Energy's (chat.mjs cycloneStage). */
+        cyclone: new fields.BooleanField({ required: true, initial: false }),
         kept: new fields.SchemaField({
           life: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
           ki: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),

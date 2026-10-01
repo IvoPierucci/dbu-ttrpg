@@ -3856,6 +3856,47 @@ async function settleBindEscape(message, clash) {
 }
 
 /**
+ * Cyclone Energy: "you may use this Unique Ability to immediately use the Energy Charge Maneuver. If you do, your declared
+ * Attacking Maneuver gains any Energy Charges that were applied to your missed Attacking Maneuver." Its 2(T), then the
+ * Energy Charge Maneuver out of sequence - its own Ki, no Action - and the Charges carried, held to the Profile's ceiling.
+ */
+async function cycloneStage(message, actor, item) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.cycloned) return;
+  const maneuver = uniqueDefinitionOf(item);
+  const charge = getManeuver("energy-charge");
+  if (!charge) return;
+  const cost = maneuverKiCost(maneuver, null, actor);
+  const chargeCost = maneuverKiCost(charge, null, actor);
+  if ((Number(actor.system.ki.value) || 0) < (cost + chargeCost)) {
+    ui.notifications.warn(`${actor.name} needs ${cost + chargeCost} Ki Points: ${cost} for ${item.name}, ${chargeCost} for ${charge.name}.`);
+    return;
+  }
+  if (!await spendManeuverCost(actor, maneuver, cost)) return;
+  const { declareCharge } = await import("./use-maneuver.mjs");
+  if (!await declareCharge(actor)) {
+    await refundManeuverCost(actor, { ...maneuver, kiCost: cost });
+    return;
+  }
+  await spendManeuverCost(actor, charge, chargeCost);
+  await recordManeuverUse(actor, maneuver);
+  await recordManeuverUse(actor, charge);
+  requestEdit(message, { type: "attack", attack: { ...attack, cycloned: true } });
+  const { maxEnergyCharges } = await import("./maneuvers.mjs");
+  const charging = actor.system.charging ?? {};
+  const ceiling = maxEnergyCharges(charging.profile, DBUCharacterData.MAX_ENERGY_CHARGES);
+  const carried = Math.max(0, Number(attack.energyCharges) || 0);
+  const now = Math.min(ceiling, (Number(charging.charges) || 0) + carried);
+  await actor.update({ "system.charging.charges": now });
+  const held = actor.items.get(charging.maneuverId);
+  const card = await postManeuver(actor, charge, {
+    note: `${item.name}: ${held?.name ?? "the Attacking Maneuver"} holds ${now} Energy Charge${(now === 1) ? "" : "s"}.`
+  });
+  // Used, the Energy Charge Maneuver is what an Opponent beside you may Exploit.
+  offerExploits(card, actor, charge);
+}
+
+/**
  * The Create Maneuver, paid for: "Make a Craft Skill Check using the relevant Specialty for what you are
  * trying to create ... against the Difficulty Category listed by what you are attempting to create. If
  * you succeed, you gain the item. If you fail, you may pay the Time Cost to try again." Rolled on the card
@@ -14490,6 +14531,27 @@ function renderAttack(message, html) {
 
   // Homing: "When you miss an Opponent with this Signature Technique, you may roll your Strike Roll an
   // additional time equal to the ranks of this Advantage."
+  // Cyclone Energy: "If you use an Energy Attack and fail to hit any of your target(s)".
+  if (!result.wound && !attack.cycloned && (attack.foundation === "energy")
+    && targetResults(attack).length && targetResults(attack).every(({ own }) => own && !own.hit)) {
+    const attacker = fromUuidSync(attack.attackerUuid);
+    const item = attacker?.isOwner ? Array.from(attacker.items ?? []).find(each => (each.type === "maneuver")
+      && each.system.unique?.cyclone) : null;
+    if (item && (maneuverUsesLeft(attacker, uniqueDefinitionOf(item)) > 0)) {
+      const cyclone = document.createElement("button");
+      cyclone.type = "button";
+      cyclone.className = "dbu-clash-button";
+      cyclone.textContent = item.name;
+      cyclone.dataset.tooltip = `The Energy Charge Maneuver at once, out of sequence: what you charge gains this attack's ${
+        attack.energyCharges ?? 0} Energy Charges`;
+      cyclone.addEventListener("click", () => {
+        cyclone.disabled = true;
+        return cycloneStage(message, attacker, item);
+      });
+      container.append(cyclone);
+    }
+  }
+
   const homingRanks = featureRanks(attack.technique?.features ?? [], "homing");
   if (homingRanks && !result.wound) {
     const attacker = fromUuidSync(attack.attackerUuid);

@@ -1774,7 +1774,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Removed as an Instant - Cage of Light.
         instant: Boolean(unique.instantRelease),
         // A Counter is played from the attack's card: Respond, or - Barrier - once it has hit.
-        playedFrom: unique.barrier ? "the attack's card, once it has hit you" : "Respond on the card of the attack aimed at you",
+        playedFrom: unique.barrier ? "the attack's card, once it has hit you"
+          : unique.cyclone ? "the card of your Energy Attack that missed everyone"
+          : "Respond on the card of the attack aimed at you",
         area: unique.area,
         // Binding: who it holds.
         held: unique.binds ? (fromUuidSync(unique.boundUuid ?? "")?.name ?? "") : "",

@@ -4122,7 +4122,7 @@ async function askThrown(actor, maneuver) {
  *
  * @returns {Promise<boolean>} False when nothing was declared and nothing should be paid.
  */
-async function declareCharge(actor) {
+export async function declareCharge(actor) {
   const charging = actor.system.charging;
 
   if (charging.maneuverId) {
