@@ -122,6 +122,8 @@
     "maneuvers/energy-charge.dbu",
     "maneuvers/exploit.dbu",
     "maneuvers/feint.dbu",
+    "maneuvers/hide.dbu",
+    "maneuvers/search.dbu",
     "maneuvers/flip.dbu",
     "maneuvers/grapple.dbu",
     "maneuvers/holding-back.dbu",

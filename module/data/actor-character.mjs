@@ -265,7 +265,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
                         specialManeuver: "flip" },
     flight:           { label: "Flight",           attribute: "agility",     required: true,
                         specialManeuver: "soar" },
-    stealth:          { label: "Stealth",          attribute: "agility" },
+    // The Hide Maneuver, opened at 2+ Ranks like every other Skill's (the user's ruling).
+    stealth:          { label: "Stealth",          attribute: "agility",
+                        specialManeuver: "hide" },
     thievery:         { label: "Thievery",         attribute: "agility" },
 
     // Craft's Specialties - "Basic Item ... Apparel ... Weapons ... Vehicles" - each a Skill of its own,
@@ -346,7 +348,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Fraud, Stretch and Power Regulation, none of them recorded.
     intuition:        { label: "Intuition",        attribute: "insight",
                         specialManeuver: "intuit" },
-    perception:       { label: "Perception",       attribute: "insight" },
+    // The Search Maneuver, opened at 2+ Ranks like every other Skill's (the user's ruling).
+    perception:       { label: "Perception",       attribute: "insight",
+                        specialManeuver: "search" },
     pilot:            { label: "Pilot",            attribute: "insight",     required: true },
     // "Special Maneuver: you gain access to the Brace Maneuver." Two Ranks opens it, like
     // every other Skill's; the 4+ in Brace's own entry is a different threshold in the

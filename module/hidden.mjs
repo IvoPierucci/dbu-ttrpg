@@ -13,6 +13,10 @@
 
 import { squaresBetween } from "./maneuvers.mjs";
 
+/** The Hide and Search Maneuvers, by their files. */
+export const HIDE_MANEUVER = "hide";
+export const SEARCH_MANEUVER = "search";
+
 /** "Made 2 attacks" at them: the second one ends it. */
 export const HIDDEN_ATTACKS = 2;
 

@@ -1,0 +1,28 @@
+id: hide
+name: Hide
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+source: Core Rule
+description: >
+  A Clash of your Stealth against the Perception of every Opponent whose Melee Range you are not in: win, and you are
+  Hidden from them.
+text: >
+  Hide Maneuver [1/Round]: Get out of sight to get the drop on your opponents.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Free
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Make a Skill Clash (Stealth vs Perception) against all of your Opponents (except those you are in the Melee
+  Range of). If you win against an Opponent, you become Hidden from that Opponent.
+
+---
+
+# Opened by 2+ Ranks in Stealth (the user's ruling). Who the Opponents are is asked when it is used - everyone in the
+# Combat Encounter, ticked but for those whose Melee Range you stand in (measured on the tokens) - and each gets a
+# Clash of their own (use-maneuver.mjs askHide). Won, Hidden from them (module/hidden.mjs).

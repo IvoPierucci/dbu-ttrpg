@@ -1,0 +1,29 @@
+id: search
+name: Search
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+clashSkill: perception
+clashDefenderSkills: stealth
+source: Core Rule
+description: >
+  A Clash of your Perception against the Stealth of an Opponent Hidden from you: win, and you are no longer Oblivious of
+  them.
+text: >
+  Search Maneuver [1/Round]: Look for a hidden opponent!
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Free
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Target an Opponent that is Hidden from you. Make a Skill Clash (Perception vs Stealth) against them. If you
+  win, you are no longer Oblivious of them.
+
+---
+
+# Opened by 2+ Ranks in Perception (the user's ruling). The one Maneuver that may target someone Hidden from you - and
+# only such a one (use-maneuver.mjs). Won, they are no longer Hidden from you (module/hidden.mjs).

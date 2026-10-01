@@ -514,6 +514,16 @@ async function applyClash(messageId, clash) {
     await settleDevilmite(message, clash);
   }
 
+  if (clash.search && clash.result && !clash.search.applied) {
+    await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, search: { ...clash.search, applied: true } });
+    // Search: "If you win, you are no longer Oblivious of them."
+    if (whoWonClash(clash.result) === "challenger") {
+      const { revealTo } = await import("./hidden.mjs");
+      await revealTo(fromUuidSync(clash.defenderUuid), fromUuidSync(clash.challengerUuid), "found by a Search");
+    }
+    else await settledNote(message, `${clash.defenderName} stays Hidden.`);
+  }
+
   if (clash.hides && clash.result && !clash.hides.applied) {
     await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, hides: { ...clash.hides, applied: true } });
     if (whoWonClash(clash.result) === "challenger") {

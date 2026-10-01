@@ -2514,6 +2514,60 @@ function askBinding(actor, maneuver) {
   return { targetUuid: target.uuid };
 }
 
+/**
+ * Hide: "Make a Skill Clash (Stealth vs Perception) against all of your Opponents (except those you are in the Melee Range
+ * of)." Who is an Opponent is asked - everyone in the Combat Encounter (or the targeted, outside one), ticked but for
+ * whose Melee Range you stand in and whom you are already Hidden from. Null if nobody is picked.
+ */
+async function askHide(actor, maneuver) {
+  const { isHiddenFrom } = await import("./hidden.mjs");
+  const pool = game.combat?.started
+    ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
+    : Array.from(game.user.targets ?? []).map(token => token.actor);
+  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .map(other => [other.uuid, other])).values()];
+  if (!others.length) {
+    ui.notifications.warn(`${maneuver.name}: nobody to hide from${game.combat?.started ? "" : " - target them first"}.`);
+    return null;
+  }
+  const escape = Handlebars.escapeExpression;
+  const rows = others.map(other => {
+    const close = (squaresAway(other, actor) !== null) && !whyNotWithinMelee(other, actor, "");
+    const already = isHiddenFrom(actor, other);
+    const why = close ? "you are in their Melee Range" : already ? "already Hidden from them" : "";
+    return `<label class="dbu-respond-option" ${why ? `data-tooltip="${escape(why)}"` : ""}>
+      <input type="checkbox" name="${escape(other.uuid)}" ${why ? "disabled" : "checked"}/>
+      <span class="dbu-respond-name">${escape(other.name)}</span>
+      ${why ? `<span class="dbu-respond-source">${escape(why)}</span>` : ""}</label>`;
+  }).join("");
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<p class="dbu-respond-hint">Your Opponents</p>${rows}`,
+    buttons: [
+      { action: "hide", label: maneuver.name, default: true, callback: (event, button, dialog) =>
+        others.filter(other => dialog.element.querySelector(`input[name="${CSS.escape(other.uuid)}"]`)?.checked)
+          .map(other => other.uuid) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!Array.isArray(chosen) || !chosen.length) return null;
+  return { uuids: chosen };
+}
+
+/** Hide, paid for: a Skill Clash (Stealth vs Perception) against each; won, Hidden from them. */
+async function postHide(actor, maneuver, { uuids }) {
+  const chat = await import("./chat.mjs");
+  const others = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  const card = await chat.postManeuver(actor, maneuver, { note: `Hiding from ${others.map(other => other.name).join(", ")}.` });
+  for (const other of others) {
+    await chat.postSkillClash(actor, other, { ...maneuver, clash: { skill: "stealth", defenderSkills: ["perception"] } },
+      { hides: { applied: false } });
+  }
+  return card;
+}
+
 /** Applied: on the Item, with what keeping it costs on top and its Sphere; the card says the Sphere. */
 async function postSustain(actor, maneuver, sustaining) {
   const item = actor.items?.get(maneuver.itemId);
@@ -3045,9 +3099,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       ui.notifications.warn(`${maneuver.name} cannot target its own user.`);
       return false;
     }
-    // Hidden: "that enemy cannot target you with any Maneuver or effect".
-    const { whyHidden } = await import("./hidden.mjs");
-    const unseen = whyHidden(actor, targetActor);
+    // Hidden: "that enemy cannot target you with any Maneuver or effect" - but for the Search Maneuver, which targets
+    // nobody else: "Target an Opponent that is Hidden from you".
+    const { whyHidden, isHiddenFrom, SEARCH_MANEUVER } = await import("./hidden.mjs");
+    const searching = maneuver.id === SEARCH_MANEUVER;
+    const unseen = searching
+      ? (isHiddenFrom(targetActor, actor) ? "" : `${targetActor.name} is not Hidden from ${actor.name}.`)
+      : whyHidden(actor, targetActor);
     if (unseen) {
       ui.notifications.warn(unseen);
       return false;
@@ -3123,6 +3181,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let foreseen = null;
   let sustaining = null;
   let binding = null;
+  let hiding = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3364,6 +3423,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Hide: from which Opponents.
+    if (maneuver.id === "hide") {
+      hiding = await askHide(actor, maneuver);
+      if (!hiding) return false;
+    }
+
     // Binding: who, not at Long Range - and never while it already holds somebody.
     if (maneuver.binds) {
       binding = askBinding(actor, maneuver);
@@ -3803,6 +3868,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postPrecognition(actor, maneuver, foreseen)
     : (maneuver.sustained && sustaining)
     ? await postSustain(actor, maneuver, sustaining)
+    : ((maneuver.id === "hide") && hiding)
+    ? await postHide(actor, maneuver, hiding)
     : (maneuver.binds && binding)
     ? await (await import("./chat.mjs")).postBinding(actor, maneuver, binding)
     // Two of the Magic Trick's three effects open its Clash and the third opens nothing.
@@ -3823,6 +3890,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
         ...(maneuver.sense ? { sense: { applied: false } } : {}),
         // Bluff Attack's: Staggered and Shaken won, their Exploit lost.
         ...(maneuver.bluffs ? { bluffAttack: { applied: false } } : {}),
+        // Search's: won, no longer Oblivious of them.
+        ...((maneuver.id === "search") ? { search: { applied: false } } : {}),
         // Winning leaves a Condition, and whether it leaves a second one depends on what
         // the target was carrying when it settles - so nothing about that is decided here
         // either. The flag is on the card because the Clash's own roll needs it: the
