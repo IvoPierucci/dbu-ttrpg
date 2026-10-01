@@ -7560,6 +7560,23 @@ function renderSkillClash(message, html) {
     // Volleyball Time!: "If the movement from this Attacking Maneuver would make them Collide with any of your Allies
     // (except Minions), instead of undergoing the rules for Collision, that Ally can use the Basic Attack Maneuver of the
     // Launching Profile against the Volleyball" - or, colliding with whoever began it, the Spike!.
+    // Dragon Dash: "If one of your Attacking Maneuvers or effects moves an Opponent out of your Melee Range".
+    if (clash.collision && wonIt && !clash.dashed && challenger?.isOwner) {
+      const dash = Array.from(challenger.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.dashes);
+      if (dash && (maneuverUsesLeft(challenger, uniqueDefinitionOf(dash)) > 0)) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "dbu-clash-button";
+        button.textContent = dash.name;
+        button.dataset.tooltip = "If it took them out of your Melee Range: the Movement Maneuver out of sequence, toward them or away";
+        button.addEventListener("click", () => {
+          button.disabled = true;
+          return dashStage(message, clash, challenger, dash);
+        });
+        container.append(button);
+      }
+    }
+
     if (clash.collision && clash.volleyball && wonIt && !clash.collisionApplied && challenger?.isOwner) {
       for (const who of volleyballReceivers(clash)) {
         const pass = document.createElement("button");
@@ -7886,6 +7903,68 @@ async function settleDesperateDodge(message, clash) {
 }
 
 /**
+ * Dragon Dash: "you may use the Movement Maneuver to move in a straight line towards that Opponent or away from that
+ * Opponent as an Out-of-Sequence Maneuver" - or, with Z-Burst Dash, "to any Square within that Opponent's Melee Range"
+ * no farther than twice the Boosted Speed. Its 2(T), then the Movement offered; Deadly Chaser's or Spread Shot Retreat's
+ * Basic Attack follows the Movement taken.
+ */
+async function dashStage(message, clash, actor, item) {
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target || clash.dashed) return;
+  const bought = boughtTraits(item.system.unique, getTrait);
+  const boosted = Number(actor.system.speed?.boosted) || 0;
+  const ways = [{ action: "toward", label: "Toward them" }, { action: "away", label: "Away" },
+    ...(bought.some(trait => trait.dashTeleport) ? [{ action: "burst", label: "Into their Melee Range" }] : []),
+    { action: "cancel", label: "Cancel" }];
+  const way = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - ${item.name}` },
+    content: bought.some(trait => trait.dashTeleport)
+      ? `<p class="dbu-respond-hint">Z-Burst Dash: any Square in their Melee Range, up to ${2 * boosted} Squares away.</p>` : "",
+    buttons: ways, rejectClose: false
+  });
+  if (!["toward", "away", "burst"].includes(way)) return;
+  const maneuver = uniqueDefinitionOf(item);
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
+  await recordManeuverUse(actor, maneuver);
+  requestEdit(message, { type: "clash", clash: { ...clash, dashed: true } });
+  const follow = bought.find(trait => trait.dashFollow === ((way === "away") ? "spread" : "chaser"))?.dashFollow ?? "";
+  const where = { toward: `toward ${target.name}`, away: `away from ${target.name}`,
+    burst: `into ${target.name}'s Melee Range` }[way];
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(item.name)}: ${Handlebars.escapeExpression(where)}</p>`,
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [{ actorUuid: actor.uuid, actorName: actor.name, maneuverId: "movement",
+      maneuverName: "Movement", reason: `${item.name} - ${where}`, dash: { targetUuid: target.uuid, follow } }] } }
+  });
+}
+
+/**
+ * Deadly Chaser - "you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you may apply the
+ * Knockback Advantage" - or Spread Shot Retreat - "you cannot Ki Wager on this Attacking Maneuver, but that Attacking
+ * Maneuver gains 2 ranks of the Long Shot Advantage": offered once the Dash's Movement is taken.
+ */
+async function dashFollowUp(actor, dash) {
+  const target = fromUuidSync(dash.targetUuid);
+  if (!target || !dash.follow) return;
+  const chaser = dash.follow === "chaser";
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [{ actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack", targetUuid: target.uuid,
+      reason: chaser ? "Deadly Chaser - with Knockback" : "Spread Shot Retreat - no Ki Wager, Long Shot 2",
+      grants: chaser ? { knockback: true } : { wagerCap: 0, longShot: 2 } }] } }
+  });
+}
+
+/** Long Shot granted to an attack that is no Technique - Spread Shot Retreat's: 1(T) a rank, 9+ Squares away. */
+function grantedLongShot(attacker, attack, target) {
+  const granted = Number(attack?.longShotRanks) || 0;
+  if ((granted <= 0) || attack.technique || !atLongRange(attacker, target)) return 0;
+  return granted * Math.max(1, attacker.system.tierOfPower ?? 1);
+}
+
+/**
  * A Signature Technique offered out of sequence: Counter's strike back, Exploiting Technique's.
  * Only a Technique with the Advantage that opened it may be picked; it goes through the Signature
  * Technique Maneuver, whose 1/Round and Ultimate limits still count (the user's ruling), without
@@ -8058,6 +8137,11 @@ async function takeOutOfSequence(message, actor, offer) {
       return;
     }
     if (offer.volleyball) declared = { ...declared, volleyball: offer.volleyball };
+    // Deadly Chaser's Knockback, if it has none; Spread Shot Retreat's 2 ranks of Long Shot.
+    if (granted?.knockback && !(declared.advantages ?? []).includes("knockback")) {
+      declared = { ...declared, advantages: [...(declared.advantages ?? []), "knockback"] };
+    }
+    if (granted?.longShot) declared = { ...declared, longShotRanks: granted.longShot };
   }
 
   // A Movement's price is a choice rather than a number - Normal Speed for nothing,
@@ -8111,6 +8195,8 @@ async function takeOutOfSequence(message, actor, offer) {
   // "Each Character can only use the Basic Attack Maneuver through the effects of Binding Volleyball once during
   // each Combat Encounter."
   if (offer.volleyball) await requestActorUpdate(actor, { [`flags.${SCOPE}.volleyballUsed`]: game.combat?.id ?? "none" });
+  // Dragon Dash's Movement taken: what follows it, where an Advancement says so.
+  if (offer.dash?.follow) await dashFollowUp(actor, offer.dash);
 
   // What a held Maneuver was paid for, read before the holding is let go of because
   // letting go is what clears it. A script asking `actionsSpent` is asking what the player
@@ -8217,7 +8303,7 @@ export async function postAttack(actor, target, maneuver,
                                    area = null, weapon = null, transformed = false, gigaFlare = 0,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
                                    extraTargets = [], freeWager = 0, unitedWith = null,
-                                   markFrom = "", compressedElement = false, volleyball = null },
+                                   markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0 },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -8320,6 +8406,8 @@ export async function postAttack(actor, target, maneuver,
           technique,
           // Made during Volleyball Time! - whose, and whether it is the Spike!.
           ...(volleyball ? { volleyball } : {}),
+          // Long Shot granted to an attack that is no Technique - Spread Shot Retreat's.
+          ...(longShotRanks ? { longShotRanks } : {}),
           // A second Profile outside a Technique: Elemental Blade's Multi-Profile on an ordinary
           // attack. A Technique's is on its own block.
           secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
@@ -9806,7 +9894,8 @@ async function resolveAttack(message, attack) {
         // Long Shot, Short Range and a Trick Attack's won Clash: against this one alone.
         - techniqueStrikeAgainst(attacker, attack, { longRange: atLongRange(attacker, target),
             outsideMelee: Boolean(whyNotWithinMelee(attacker, target, "")),
-            tricked: (attack.tricked ?? []).includes(uuid) }));
+            tricked: (attack.tricked ?? []).includes(uuid) })
+        - grantedLongShot(attacker, attack, target));
 
     // "Increase your Combat Rolls against Analyzed Opponents." Added here for the same
     // reason the Long Range penalty is taken here: one Strike Roll reaches several people
@@ -10965,6 +11054,7 @@ async function rollAttackWound(message, attack) {
     // them - so it is added where what the roll comes to is already worked out per person,
     // which is the same place a Guard halves it.
     const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
+      + grantedLongShot(attacker, attack, target)
       + techniqueWoundAgainst(attacker, attack, { longRange: atLongRange(attacker, target),
           outsideMelee: Boolean(whyNotWithinMelee(attacker, target, "")),
           alreadyConditioned: conditionAlreadyOn(attack, target) });

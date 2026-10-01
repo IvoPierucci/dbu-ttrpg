@@ -1,0 +1,18 @@
+id: z-burst-dash
+name: Z-Burst Dash
+advancement: true
+prerequisite: N/A
+tpCost: 5
+# A third way to dash: to any Square within their Melee Range, no farther than twice the Boosted Speed.
+dashTeleport: true
+source: Core Rule
+description: >
+  Dash to any Square within their Melee Range, up to twice your Boosted Speed away.
+text: >
+  Z-Burst Dash: You teleport directly to your Opponent to keep the pressure up.
+  –Prerequisites: N/A
+  –TP Cost: 5
+  –Effect: Instead of moving in a straight line towards an Opponent through the effects of the Dragon Dash Unique
+  Ability, you can instead choose to move your Character to any Square within that Opponent’s Melee Range. You cannot
+  move to a Square that is further away than twice the number of Squares you would be able to move with your Boosted
+  Speed.

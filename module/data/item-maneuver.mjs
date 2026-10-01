@@ -665,6 +665,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         dodgesExploits: new fields.BooleanField({ required: true, initial: false }),
         /** Its Clash won, read off the target's alignment - Devilmite Beam's (chat.mjs settleDevilmite). */
         devilmite: new fields.BooleanField({ required: true, initial: false }),
+        /** Offered on a Knockback Clash you won - Dragon Dash's (chat.mjs dashStage). */
+        dashes: new fields.BooleanField({ required: true, initial: false }),
         kept: new fields.SchemaField({
           life: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
           ki: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),

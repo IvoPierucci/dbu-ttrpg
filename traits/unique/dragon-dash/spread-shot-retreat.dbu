@@ -1,0 +1,17 @@
+id: spread-shot-retreat
+name: Spread Shot Retreat
+advancement: true
+prerequisite: N/A
+tpCost: 10
+# Dashed away: the Basic Attack Maneuver out of sequence, at them - no Ki Wager, 2 ranks of Long Shot.
+dashFollow: spread
+source: Core Rule
+description: >
+  Dashed away: a Basic Attack out of sequence, no Ki Wager, with 2 ranks of Long Shot.
+text: >
+  Spread Shot Retreat: You cover your retreat with a ranged attack to avoid pursuit by your foes.
+  –Prerequisites: N/A
+  –TP Cost: 10
+  –Effect: If you move away from the triggering Opponent through the effects of the Dragon Dash Advancement, you may use
+  the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you cannot Ki Wager on this Attacking Maneuver,
+  but that Attacking Maneuver gains 2 ranks of the Long Shot Advantage.

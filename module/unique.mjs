@@ -121,7 +121,7 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   for (const key of ["type", "actionCost", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
     "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills", "clashSaves", "clashDefenderSaves"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "barrier", "binds", "bluffs", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "barrier", "binds", "bluffs", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -197,6 +197,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         pullsAtEnd: definition.pullsAtEnd === true,
         dodgesExploits: definition.dodgesExploits === true,
         devilmite: definition.devilmite === true,
+        dashes: definition.dashes === true,
         barrier: definition.barrier === true,
         binds: definition.binds === true,
         bluffs: definition.bluffs === true,

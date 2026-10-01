@@ -1,0 +1,17 @@
+id: deadly-chaser
+name: Deadly Chaser
+advancement: true
+prerequisite: N/A
+tpCost: 10
+# Dashed toward them: the Basic Attack Maneuver out of sequence, at them, with the Knockback Advantage if it has none.
+dashFollow: chaser
+source: Core Rule
+description: >
+  Dashed into their Melee Range: a Basic Attack out of sequence, with Knockback.
+text: >
+  Deadly Chaser: You chase down your opponent to keep pummeling them into the ground.
+  –Prerequisites: N/A
+  –TP Cost: 10
+  –Effect: If you move to a Square that places the triggering Opponent in your Melee Range through the effects of the
+  Dragon Dash Unique Ability, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you may
+  apply the Knockback Advantage to that Attacking Maneuver if it does not already possess it.
