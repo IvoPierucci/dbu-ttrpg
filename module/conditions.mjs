@@ -102,7 +102,9 @@ export function statesFor(actor) {
       levels: Number(trait.levels) || 1,
       level,
       active: level > 0,
-      levelled: (Number(trait.levels) || 1) > 1
+      levelled: (Number(trait.levels) || 1) > 1,
+      // A Special State: entered only through an effect, never for the story (the user's terminology).
+      special: trait.specialState === true
     };
   });
 }

@@ -1334,8 +1334,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       : null;
 
     context.grapple = this.#grapple();
-    context.states = statesFor(this.actor);
-    const entered = context.states.filter(s => s.active);
+    const allStates = statesFor(this.actor);
+    // The States entered when the story calls for it, and the Special States only an effect gives - apart.
+    context.states = allStates.filter(s => !s.special);
+    context.specialStates = allStates.filter(s => s.special);
+    const entered = allStates.filter(s => s.active);
     context.anyState = entered.length > 0;
     context.stateSummary = entered
       .map(s => (s.levelled ? `${s.name} ${s.level}` : s.name))

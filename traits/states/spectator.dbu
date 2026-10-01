@@ -1,6 +1,8 @@
 id: spectator
 name: Spectator
 kind: state
+# A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
+specialState: true
 description: >
   You step out of the fight to watch it, and to steady an ally from the side.
 text: >

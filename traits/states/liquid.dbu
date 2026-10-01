@@ -1,6 +1,8 @@
 id: liquid
 name: Liquid
 kind: state
+# A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
+specialState: true
 description: >
   Amorphous. A Size Category smaller, harder to hold and impossible to Pin, quieter,
   free to move - and unable to attack.

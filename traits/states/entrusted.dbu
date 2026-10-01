@@ -1,6 +1,8 @@
 id: entrusted
 name: Entrusted
 kind: state
+# A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
+specialState: true
 description: >
   Everything your allies had, you are carrying.
 text: >

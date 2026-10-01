@@ -375,6 +375,24 @@
         </li>
         {{/each}}
       </ul>
+
+      {{! The Special States: no Narrative Requirement, entered only through an effect that gives them. Still ticked by
+          hand, for the effects not built yet. }}
+      {{#if specialStates.length}}
+      <h4 class="condition-subhead" data-tooltip="Entered only through an effect that gives them">Special States</h4>
+      <ul class="condition-list">
+        {{#each specialStates as |state|}}
+        <li class="condition {{#if state.active}}condition-active{{/if}}">
+          <button type="button" class="condition-toggle" data-action="toggleState"
+                  data-state="{{state.key}}" data-tooltip="Special State: entered only through an effect. {{state.text}}"
+                  aria-pressed="{{#if state.active}}true{{else}}false{{/if}}">
+            <span class="condition-mark">{{#if state.active}}&#10003;{{/if}}</span>
+            <span class="condition-name">{{state.name}}</span>
+          </button>
+        </li>
+        {{/each}}
+      </ul>
+      {{/if}}
     </details>
   </section>
 

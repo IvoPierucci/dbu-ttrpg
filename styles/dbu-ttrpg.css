@@ -3357,3 +3357,10 @@
 .dbu-ttrpg .unique-kept-record {
   width: 22px;
 }
+
+/* The Special States, under the States: a heading of their own. */
+.dbu-ttrpg .condition-subhead {
+  margin: 8px 0 4px;
+  font-size: 0.9em;
+  opacity: 0.8;
+}
