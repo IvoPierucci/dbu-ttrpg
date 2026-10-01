@@ -635,6 +635,12 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         upkeepKi: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         area: new fields.StringField({ required: true, blank: true, initial: "" }),
         /**
+         * What keeping it costs each turn where that is not its own KP Cost - Bound Battlefield's 6(T) - and the Sphere
+         * it is applied in where the entry names one - its Destructive.
+         */
+        upkeepKiPerTier: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        sphereMagnitude: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /**
          * A Counter that raises the Defense Value against the attack it answers - the Afterimage Technique's
          * 2(T), `defense` per Tier - and what it offers out of sequence if that attack is avoided.
          */

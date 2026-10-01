@@ -1,0 +1,16 @@
+id: variable-battlefield
+name: Variable Battlefield
+advancement: true
+prerequisite: 8+ Insight Score
+tpCost: 8
+# "You may select any Magnitude between Standard and Destructive." Asked when it is used.
+variableMagnitude: true
+source: Core Rule
+description: >
+  Its Sphere any Magnitude from Standard to Destructive.
+text: >
+  Variable Battlefield: You can choose the size of your barrier.
+  –Prerequisites: 8+ Insight Score
+  –TP Cost: 8
+  –Effect: When using the Bound Battlefield Unique Ability, you may select the Magnitude for its effect. You may select
+  any Magnitude between Standard and Destructive.

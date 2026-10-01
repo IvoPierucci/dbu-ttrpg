@@ -1,0 +1,20 @@
+id: shrinking-battlefield
+name: Shrinking Battlefield
+advancement: true
+prerequisite: Variable Battlefield Advancement
+tpCost: 4
+# "If you pay the Ki Points to maintain your Bound Squares, you may spend an additional 2(bT) Ki Points to reduce the
+# AoE of the Bound Squares by 1 Magnitude." A button on the start-of-turn card; moving whoever is inside is the table's.
+shrinks: true
+shrinkKiPerBaseTier: 2
+source: Core Rule
+description: >
+  At the start of your turn, 2(bT) KP more makes the Bound Squares 1 Magnitude smaller.
+text: >
+  Shrinking Battlefield: You can pull your trapped foes ever closer to their inevitable demise.
+  –Prerequisites: Variable Battlefield Advancement
+  –TP Cost: 4
+  –Effect: At the start of your turn, if you pay the Ki Points to maintain your Bound Squares, you may spend an
+  additional 2(bT) Ki Points to reduce the AoE of the Bound Squares by 1 Magnitude. Any Characters who are occupying
+  those Squares are moved 1 Square of their choice so that they remain on a Bound Square. This movement cannot be
+  reduced or negated by any means.

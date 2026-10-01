@@ -3433,8 +3433,12 @@ export async function upkeepUniques(actor) {
   const { maneuverKiCost } = await import("./maneuvers.mjs");
   const held = Array.from(actor.items ?? []).filter(item => (item.type === "maneuver")
     && item.system.unique?.sustained && item.system.unique?.applied);
+  const { MAGNITUDES } = await import("./maneuvers.mjs");
   for (const item of held) {
-    const cost = maneuverKiCost(definitionOf(item), null, actor) + (Number(item.system.unique.upkeepKi) || 0);
+    // Its own KP Cost again - or what the entry names for keeping it: Bound Battlefield's 6(T).
+    const perTier = Number(item.system.unique.upkeepKiPerTier) || 0;
+    const cost = (perTier ? perTier * Math.max(1, actor.system.tierOfPower ?? 1) : maneuverKiCost(definitionOf(item), null, actor))
+      + (Number(item.system.unique.upkeepKi) || 0);
     const { ki, capacity } = actor.system;
     const speaker = ChatMessage.getSpeaker({ actor });
     // Binding holds somebody, or nothing is kept: gone free already, there is nothing to pay for.
@@ -3454,9 +3458,18 @@ export async function upkeepUniques(actor) {
     await actor.update({ "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost });
     // Binding: "If you do, you may spend 2(T) Ki Points to reduce that target's Life Points by 1/2 of your Might."
     const bind = item.system.unique.binds ? { targetUuid: item.system.unique.boundUuid, used: false } : null;
+    // Shrinking Battlefield: "you may spend an additional 2(bT) Ki Points to reduce the AoE of the Bound Squares by 1
+    // Magnitude" - offered while there is a smaller one.
+    const shrinker = boughtTraits(item.system.unique, getTrait).find(trait => trait.shrinks === true);
+    const at = MAGNITUDES.indexOf(String(item.system.unique.area ?? "").toLowerCase());
+    const shrink = (shrinker && (at > 0))
+      ? { ki: (Number(shrinker.shrinkKiPerBaseTier) || 0) * Math.max(1, actor.system.baseTierOfPower ?? 1), done: false }
+      : null;
     await ChatMessage.create({ speaker,
-      content: `<p>${Handlebars.escapeExpression(item.name)}: ${cost} KP</p>`,
-      flags: { [SCOPE]: { [UPKEEP_FLAG]: { actorUuid: actor.uuid, itemId: item.id, paid: cost, stopped: false },
+      content: `<p>${Handlebars.escapeExpression(item.name)}: ${cost} KP${item.system.unique.area
+        ? ` - ${Handlebars.escapeExpression(item.system.unique.area)} Sphere` : ""}</p>`,
+      flags: { [SCOPE]: { [UPKEEP_FLAG]: { actorUuid: actor.uuid, itemId: item.id, paid: cost, stopped: false,
+        ...(shrink ? { shrink } : {}) },
         ...(bind ? { [BIND_FLAG]: { binderUuid: actor.uuid, itemId: item.id, ...bind } } : {}) } } });
   }
 }
@@ -3486,6 +3499,40 @@ function renderUpkeep(message, html) {
     await settledNote(message, `${item?.name ?? "It"} stops.`);
   });
   (html.querySelector(".message-content") ?? html).append(button);
+
+  if (upkeep.shrink && !upkeep.shrink.done) {
+    const smaller = document.createElement("button");
+    smaller.type = "button";
+    smaller.className = "dbu-clash-button";
+    smaller.textContent = `Shrink: ${upkeep.shrink.ki} KP`;
+    smaller.dataset.tooltip = "1 Magnitude smaller; whoever is inside moves 1 Square to stay on it";
+    smaller.addEventListener("click", () => {
+      smaller.disabled = true;
+      return shrinkSustained(message, actor);
+    });
+    (html.querySelector(".message-content") ?? html).append(smaller);
+  }
+}
+
+/** Shrinking Battlefield, paid: the Sphere 1 Magnitude smaller. */
+async function shrinkSustained(message, actor) {
+  const upkeep = message.getFlag(SCOPE, UPKEEP_FLAG);
+  const item = actor?.items?.get(upkeep?.itemId);
+  if (!item || !upkeep.shrink || upkeep.shrink.done || upkeep.stopped) return;
+  const { MAGNITUDES } = await import("./maneuvers.mjs");
+  const at = MAGNITUDES.indexOf(String(item.system.unique.area ?? "").toLowerCase());
+  if (at <= 0) return;
+  const ki = upkeep.shrink.ki;
+  const { ki: pool, capacity } = actor.system;
+  if ((pool.value < ki) || (ki > capacity.remaining)) {
+    ui.notifications.warn(`${actor.name} needs ${ki} Ki Points and the Capacity for them.`);
+    return;
+  }
+  await message.setFlag(SCOPE, UPKEEP_FLAG, { ...upkeep, shrink: { ...upkeep.shrink, done: true } });
+  await actor.update({ "system.ki.value": pool.value - ki, "system.capacity.spent": capacity.spent + ki });
+  const smaller = MAGNITUDES[at - 1].charAt(0).toUpperCase() + MAGNITUDES[at - 1].slice(1);
+  await item.update({ "system.unique.area": smaller });
+  await settledNote(message, `${item.name}: ${smaller} Sphere.`);
 }
 
 /**

@@ -1,0 +1,18 @@
+id: powerful-barrier
+name: Powerful Barrier
+advancement: true
+prerequisite: 12+ Force or Magic Score
+tpCost: 12
+# Its Might Clash is the table's (the user's ruling: only the Ki is followed).
+source: Core Rule
+description: >
+  A Might Clash, 1(T) off per Energy Charge, against an attack across your Bound Squares: won, it cannot target them.
+text: >
+  Powerful Barrier: Your barrier defends against attacks as well.
+  –Prerequisites: 12+ Force or Magic Score
+  –TP Cost: 12
+  –Effect: If a Character not occupying one of your Bound Squares targets a Character(s) occupying one of your Bound
+  Squares with an Attacking Maneuver, or vice-versa, you may make a Might Clash against the attacking Character but
+  reduce your Dice Score by 1(T) for every Energy Charge applied to that Attacking Maneuver. If you win, that Attacking
+  Maneuver cannot target those Character(s) and if it has no targets as a result, it is cancelled. If it is cancelled,
+  the attacking Character regains any Actions spent on that Attacking Maneuver but does not regain any Ki Points spent.

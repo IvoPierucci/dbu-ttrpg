@@ -2418,13 +2418,35 @@ async function askSustain(actor, maneuver) {
     return null;
   }
   const { boughtTraits } = await import("./unique.mjs");
-  const sphere = boughtTraits(unique, getTrait).find(trait => trait.sphere === true);
+  const bought = boughtTraits(unique, getTrait);
+  const label = key => key.charAt(0).toUpperCase() + key.slice(1);
+  // Bound Battlefield's Destructive Sphere - and, with Variable Battlefield, "any Magnitude between Standard and
+  // Destructive", asked.
+  const named = String(unique.sphereMagnitude ?? "");
+  if (named && bought.some(trait => trait.variableMagnitude === true)) {
+    const keys = MAGNITUDES.slice(MAGNITUDES.indexOf("standard"));
+    const size = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${actor.name} - ${maneuver.name}` },
+      content: `<select name="area" class="dbu-gear-pick">${keys.map(key =>
+        `<option value="${key}" ${(key === named) ? "selected" : ""}>${label(key)} Sphere</option>`).join("")}</select>`,
+      buttons: [
+        { action: "apply", label: "Apply", default: true, callback: (event, button, dialog) =>
+          dialog.element.querySelector('select[name="area"]')?.value ?? named },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!size || !keys.includes(size)) return null;
+    return { extraKi: 0, area: label(size) };
+  }
+  if (named) return { extraKi: 0, area: label(named) };
+  const sphere = bought.find(trait => trait.sphere === true);
   if (!sphere) return { extraKi: 0, area: "" };
   const from = MAGNITUDES.indexOf("standard");
   const ranks = Number(actor.system.skills?.[sphere.sphereStepsSkill]?.ranks) || 0;
   const steps = Math.max(0, Math.min(ranks - (Number(sphere.sphereStepsPast) || 0), MAGNITUDES.length - 1 - from));
   const perStep = (Number(sphere.sphereStepKiPerTier) || 0) * Math.max(1, actor.system.tierOfPower ?? 1);
-  const label = key => key.charAt(0).toUpperCase() + key.slice(1);
   const options = [{ value: "", text: "Only you" },
     ...Array.from({ length: steps + 1 }, (_, step) => ({ value: String(step),
       text: `${label(MAGNITUDES[from + step])} Sphere${step ? ` (+${step * perStep} KP)` : ""}` }))];
