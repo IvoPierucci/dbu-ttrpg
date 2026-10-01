@@ -61,9 +61,9 @@ async function say(actor, text) {
  * `hider` becomes Hidden from `seeker`. Compelled's "If your target becomes Hidden to you, change your target" is said
  * to a Compelled seeker - whom they were told to attack is the table's.
  */
-export async function hideFrom(hider, seeker, { quiet = false } = {}) {
+export async function hideFrom(hider, seeker, { quiet = false, until = "" } = {}) {
   if (!hider || !seeker || (hider.uuid === seeker.uuid) || isHiddenFrom(hider, seeker)) return;
-  await write(hider, [...hiddenEntries(hider), { uuid: seeker.uuid, name: seeker.name, attacks: 0 }]);
+  await write(hider, [...hiddenEntries(hider), { uuid: seeker.uuid, name: seeker.name, attacks: 0, until }]);
   if (quiet) return;
   const compelled = (Number(seeker.system?.conditions?.compelled) || 0) > 0;
   await say(hider, `${hider.name} is Hidden from ${seeker.name}.${compelled
@@ -105,5 +105,18 @@ export async function revealAtTurnEnd(actor) {
     if (squares <= Math.max(0, Number(seeker.system?.meleeRange) || 0)) {
       await revealTo(actor, seeker, `ended the turn within their Melee Range`);
     }
+  }
+}
+
+/**
+ * The end of this character's turn: whoever was Hidden from them only "until the end of their next turn" - Down Burst's -
+ * is no longer.
+ */
+export async function expireHiddenAtTurnEnd(seeker, combat) {
+  const others = new Map();
+  for (const combatant of combat?.combatants ?? []) if (combatant.actor) others.set(combatant.actor.uuid, combatant.actor);
+  for (const hider of others.values()) {
+    const entry = hiddenEntries(hider).find(each => (each.uuid === seeker.uuid) && (each.until === "turn"));
+    if (entry) await revealTo(hider, seeker, "the end of their turn");
   }
 }

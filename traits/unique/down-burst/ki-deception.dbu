@@ -1,0 +1,19 @@
+id: ki-deception
+name: Ki Deception
+advancement: true
+prerequisite: 2+ Skill Ranks in Bluff
+tpCost: 10
+# The Basic Attack Maneuver offered beside the Soar and the Movement; at one Opponent, a Clash (Bluff vs
+# Perception/Intuition), won, an Energy Charge on it (chat.mjs settleKiDeception).
+kiDeception: true
+source: Core Rule
+description: >
+  Down Burst's Basic Attack in place of the Soar or Movement: at one Opponent, win a Bluff Clash and it gains an Energy
+  Charge.
+text: >
+  Ki Deception: Taking advantage of the confusion, you launch a powerful attack!
+  –Prerequisites: 2+ Skill Ranks in Bluff
+  –TP Cost: 10
+  –Effect: Instead of the Soar Maneuver or Movement Maneuver, you may use the Basic Attack Maneuver through the effects of
+  Down Burst. If you do, and the Attacking Maneuver targets only one Opponent, make a Clash (Bluff vs
+  Perception/Intuition) against that Opponent. If you win, apply an Energy Charge to that Attacking Maneuver.

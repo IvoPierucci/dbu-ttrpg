@@ -1841,6 +1841,7 @@ export function definitionOf(item) {
     sustained: item.system.unique?.sustained === true,
     // Pins somebody and holds them - Binding.
     binds: item.system.unique?.binds === true,
+    downBurst: item.system.unique?.downBurst === true,
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
@@ -2519,7 +2520,7 @@ function askBinding(actor, maneuver) {
  * of)." Who is an Opponent is asked - everyone in the Combat Encounter (or the targeted, outside one), ticked but for
  * whose Melee Range you stand in and whom you are already Hidden from. Null if nobody is picked.
  */
-async function askHide(actor, maneuver) {
+async function askHide(actor, maneuver, { burst = false } = {}) {
   const { isHiddenFrom } = await import("./hidden.mjs");
   const pool = game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
@@ -2534,6 +2535,14 @@ async function askHide(actor, maneuver) {
   const rows = others.map(other => {
     const close = (squaresAway(other, actor) !== null) && !whyNotWithinMelee(other, actor, "");
     const already = isHiddenFrom(actor, other);
+    // Down Burst: "all Opponents within a Minor Sphere AoE (centered on you)" - the ones beside you ticked, the rest the
+    // table's to tick.
+    if (burst) {
+      const near = (squaresAway(actor, other) !== null) && !whyNotWithinMelee(actor, other, "");
+      return `<label class="dbu-respond-option">
+        <input type="checkbox" name="${escape(other.uuid)}" ${near ? "checked" : ""}/>
+        <span class="dbu-respond-name">${escape(other.name)}</span></label>`;
+    }
     const why = close ? "you are in their Melee Range" : already ? "already Hidden from them" : "";
     return `<label class="dbu-respond-option" ${why ? `data-tooltip="${escape(why)}"` : ""}>
       <input type="checkbox" name="${escape(other.uuid)}" ${why ? "disabled" : "checked"}/>
@@ -2543,7 +2552,7 @@ async function askHide(actor, maneuver) {
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${actor.name} - ${maneuver.name}` },
-    content: `<p class="dbu-respond-hint">Your Opponents</p>${rows}`,
+    content: `<p class="dbu-respond-hint">${burst ? "Your Opponents within its Minor Sphere" : "Your Opponents"}</p>${rows}`,
     buttons: [
       { action: "hide", label: maneuver.name, default: true, callback: (event, button, dialog) =>
         others.filter(other => dialog.element.querySelector(`input[name="${CSS.escape(other.uuid)}"]`)?.checked)
@@ -3182,6 +3191,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let sustaining = null;
   let binding = null;
   let hiding = null;
+  let bursting = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3423,6 +3433,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Down Burst: which Opponents are within its Minor Sphere.
+    if (maneuver.downBurst) {
+      bursting = await askHide(actor, maneuver, { burst: true });
+      if (!bursting) return false;
+    }
+
     // Hide: from which Opponents.
     if (maneuver.id === "hide") {
       hiding = await askHide(actor, maneuver);
@@ -3870,6 +3886,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postSustain(actor, maneuver, sustaining)
     : ((maneuver.id === "hide") && hiding)
     ? await postHide(actor, maneuver, hiding)
+    : (maneuver.downBurst && bursting)
+    ? await (await import("./chat.mjs")).postDownBurst(actor, maneuver, bursting.uuids)
     : (maneuver.binds && binding)
     ? await (await import("./chat.mjs")).postBinding(actor, maneuver, binding)
     // Two of the Magic Trick's three effects open its Clash and the third opens nothing.

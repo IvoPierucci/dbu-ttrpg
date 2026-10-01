@@ -527,8 +527,10 @@ export function registerCombatHooks() {
       await fireMoment(leaving, "end-of-turn");
 
       // Hidden: "if you end your turn in their Melee Range, you stop being Hidden from them".
-      const { revealAtTurnEnd } = await import("./hidden.mjs");
+      const { revealAtTurnEnd, expireHiddenAtTurnEnd } = await import("./hidden.mjs");
       await revealAtTurnEnd(leaving);
+      // And whoever was Hidden from them only until the end of their next turn - Down Burst.
+      await expireHiddenAtTurnEnd(leaving, combat);
 
       // Dead Zone, open: its Might Clash against everyone, at the end of each of its user's turns.
       const { pullAtEndOfTurn } = await import("./chat.mjs");

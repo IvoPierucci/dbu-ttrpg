@@ -1003,7 +1003,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     schema.hiddenFrom = new fields.ArrayField(new fields.SchemaField({
       uuid: new fields.StringField({ required: true, blank: true, initial: "" }),
       name: new fields.StringField({ required: true, blank: true, initial: "" }),
-      attacks: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      attacks: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      // "until the end of their next turn" - Down Burst's: "turn", or blank for as long as the rules let it last.
+      until: new fields.StringField({ required: true, blank: true, initial: "" })
     }));
     schema.diminishingDefense = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 

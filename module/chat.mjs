@@ -198,6 +198,7 @@ function applyRequest(request) {
     case "foresee": return applyForesee(request.combatId, request.combatantId, request.initiative);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
+    case "downBurst": return applyDownBurst(request.messageId, request.uuid, request.won);
     case "desperate": return game.messages.get(request.messageId)?.setFlag(SCOPE, DESPERATE_FLAG,
       { ...(game.messages.get(request.messageId)?.getFlag(SCOPE, DESPERATE_FLAG) ?? {}), [request.exploiterUuid]: request.state });
     case "karmic": return applyKarmicRecord(request.messageId, request.actorId, request.key);
@@ -522,6 +523,14 @@ async function applyClash(messageId, clash) {
       await revealTo(fromUuidSync(clash.defenderUuid), fromUuidSync(clash.challengerUuid), "found by a Search");
     }
     else await settledNote(message, `${clash.defenderName} stays Hidden.`);
+  }
+
+  if (clash.downBurst && clash.result && !clash.downBurst.applied) {
+    await settleDownBurst(message, clash);
+  }
+
+  if (clash.kiDeception && clash.result && !clash.kiDeception.applied) {
+    await settleKiDeception(message, clash);
   }
 
   if (clash.hides && clash.result && !clash.hides.applied) {
@@ -6493,6 +6502,7 @@ const UPKEEP_FLAG = "upkeep";
 const BIND_FLAG = "bind";
 const VOLLEY_FLAG = "volleyball";
 const DESPERATE_FLAG = "desperate";
+const DOWN_BURST_FLAG = "downBurst";
 /** Something being made, waiting on its Skill Check - the Create Maneuver. */
 const CREATE_FLAG = "create";
 /** Something conjured, waiting on its Skill Check - Magical Materialization. */
@@ -7942,6 +7952,92 @@ async function settleDevilmite(message, clash) {
   if (alignment <= -2) await settledNote(message, `${target.name} is ${label}: Defeated.`);
 }
 
+/**
+ * Down Burst: "Make a Clash (Impulsive) against all Opponents within a Minor Sphere AoE (centered on you)." A card of its
+ * own that keeps what each Clash came to, and a Clash each.
+ */
+export async function postDownBurst(actor, maneuver, uuids) {
+  const others = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  const card = await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(others.map(other => other.name).join(", "))}</p>`,
+    flags: { [SCOPE]: { [DOWN_BURST_FLAG]: { actorUuid: actor.uuid, itemId: maneuver.itemId ?? "",
+      uuids: others.map(other => other.uuid), results: {} } } }
+  });
+  for (const other of others) {
+    await postSaveClash(actor, other, {
+      maneuverName: maneuver.name,
+      reason: `Win and ${actor.name} is Hidden from ${other.name} until the end of their next turn or a hit.`,
+      saves: ["impulsive"],
+      downBurst: { applied: false, cardId: card.id }
+    });
+  }
+  return card;
+}
+
+/** One of Down Burst's Clashes: won, "Hidden from that Opponent until the end of their next turn or until you hit them". */
+async function settleDownBurst(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, downBurst: { ...clash.downBurst, applied: true } });
+  const won = whoWonClash(clash.result) === "challenger";
+  if (won) {
+    const { hideFrom } = await import("./hidden.mjs");
+    await hideFrom(fromUuidSync(clash.challengerUuid), fromUuidSync(clash.defenderUuid), { until: "turn" });
+  }
+  const card = game.messages.get(clash.downBurst.cardId);
+  if (card) requestEdit(card, { type: "downBurst", uuid: clash.defenderUuid, won });
+}
+
+/**
+ * Down Burst's card, told one Clash. All of them won: "you may use the Soar Maneuver or Movement Maneuver as an
+ * Out-of-Sequence Maneuver" - no Exploit - and, with Ki Deception, the Basic Attack Maneuver instead.
+ */
+async function applyDownBurst(messageId, uuid, won) {
+  const card = game.messages.get(messageId);
+  const burst = card?.getFlag(SCOPE, DOWN_BURST_FLAG);
+  if (!burst) return;
+  const results = { ...(burst.results ?? {}), [uuid]: Boolean(won) };
+  await card.setFlag(SCOPE, DOWN_BURST_FLAG, { ...burst, results });
+  if (!burst.uuids.every(each => each in results) || !burst.uuids.every(each => results[each])) return;
+  const actor = fromUuidSync(burst.actorUuid);
+  if (!actor) return;
+  const item = actor.items?.get(burst.itemId);
+  const deceives = item ? boughtTraits(item.system.unique, getTrait).some(trait => trait.kiDeception) : false;
+  const offer = (maneuverId, maneuverName, extra = {}) => ({ actorUuid: actor.uuid, actorName: actor.name, maneuverId,
+    maneuverName, reason: "Down Burst - won against all", noExploit: true, ...extra });
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [
+      offer("soar", "Soar", { grantsAccess: true }),
+      offer("movement", "Movement"),
+      ...(deceives ? [offer("basic-attack", "Basic Attack (Ki Deception)", { grants: { kiDeception: true } })] : [])
+    ] } }
+  });
+}
+
+/**
+ * Ki Deception: "If you do, and the Attacking Maneuver targets only one Opponent, make a Clash (Bluff vs
+ * Perception/Intuition) against that Opponent. If you win, apply an Energy Charge to that Attacking Maneuver."
+ */
+async function kiDeceptionClash(actor, target, card) {
+  return postSkillClash(actor, target, { name: "Ki Deception", type: "outOfSequence",
+    clash: { skill: "bluff", defenderSkills: ["perception", "intuition"] } },
+    { kiDeception: { applied: false, attackMessageId: card.id } });
+}
+
+async function settleKiDeception(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, kiDeception: { ...clash.kiDeception, applied: true } });
+  const attackMessage = game.messages.get(clash.kiDeception.attackMessageId);
+  const attack = attackMessage?.getFlag(SCOPE, ATTACK_FLAG);
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${clash.defenderName} is not fooled.`);
+    return;
+  }
+  if (!attack || attack.result?.wound || (attackTargets(attack).length !== 1)) return;
+  requestEdit(attackMessage, { type: "attack", attack: { ...attack, energyCharges: (Number(attack.energyCharges) || 0) + 1 } });
+  await settledNote(message, `${attack.maneuverName}: +1 Energy Charge.`);
+}
+
 /** Desperate Dodge, settled: won, the Exploit is not triggered; lost, it may be used. A tie is the Defender's. */
 async function settleDesperateDodge(message, clash) {
   const record = clash.desperateDodge;
@@ -8067,7 +8163,8 @@ async function takeOutOfSequence(message, actor, offer) {
   // here as well as at the sheet's door, because being handed a chance to use one is not
   // being given it - access can also have been taken away between the offer and the click.
   const closed = whyNotSpecial(actor, maneuver);
-  if (closed) {
+  // Unless the effect handing it over gives it - Down Burst's "you may use the Soar Maneuver".
+  if (closed && !offer.grantsAccess) {
     ui.notifications.warn(closed);
     return;
   }
@@ -8323,6 +8420,10 @@ async function takeOutOfSequence(message, actor, offer) {
         // same thing to this attack: a named change with a row of its own.
         modifiers: granted?.modifiers ?? [],
         defencesAllowed: granted?.defencesAllowed ?? []
+      }).then(async card => {
+        // Ki Deception: its Clash, at the one Opponent it targets.
+        if (granted?.kiDeception && card && target) await kiDeceptionClash(actor, target, card);
+        return card;
       })
     : postManeuver(actor, maneuver, {
         asOutOfSequence: true,
