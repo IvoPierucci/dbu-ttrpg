@@ -912,8 +912,8 @@ export const SUPER_PROFILES = Object.freeze({
   "genki": {
     label: "Genki",
     kiCostPerTier: 0,
-    // The Energy Gathering Unique Ability does not exist here yet, so its Prerequisite cannot
-    // be read; it does not block until it can be.
+    // Energy Gathering is a Unique Ability now, but nothing yet reads "you possess" one as a Prerequisite; it does not
+    // block until something does.
     prerequisite: "",
     prerequisiteText: "You possess the Energy Gathering Unique Ability.",
     genki: true,
@@ -2297,6 +2297,13 @@ export async function recordManeuverType(actor, type, { messageId = "", maneuver
   if (!MANEUVER_KINDS.has(type)) {
     console.warn(`DBU TTRPG | "${type}" is not a kind of Maneuver; the Instant rule is unchanged.`);
     return;
+  }
+
+  // Energy Gathering: "If you use a Maneuver other than the Signature Technique Maneuver, Energy Charge Maneuver, or
+  // Energy Gathering Unique Ability, you must spend a Karma Point or lose all stacks of Lifeforce."
+  if (Number(actor.system?.resources?.lifeforce?.stacks) > 0) {
+    const { lifeforceOnManeuver } = await import("./chat.mjs");
+    await lifeforceOnManeuver(actor, maneuverId);
   }
 
   // Every Maneuver used is the last one now - Lead Up's and Special Set Up's chains. Any

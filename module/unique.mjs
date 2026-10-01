@@ -118,10 +118,10 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   const definition = unique?.libraryId ? getTrait?.(unique.libraryId) : null;
   if (!definition) return false;
   const fresh = uniqueItemFrom(definition, traitsOfKind?.("unique", definition.id) ?? []).system;
-  for (const key of ["type", "actionCost", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
+  for (const key of ["type", "actionCost", "actionCostMax", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
     "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills", "clashSaves", "clashDefenderSaves"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "downBurst", "barrier", "binds", "bluffs", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "downBurst", "gathers", "barrier", "binds", "bluffs", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -160,6 +160,8 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
     system: {
       type: String(definition.type ?? "standard"),
       actionCost: number(definition.actionCost),
+      // "1~3 Actions": the most it may be given - Energy Gathering's.
+      actionCostMax: number(definition.actionCostMax),
       kiCost: number(definition.kiCost),
       kiCostPerTier: number(definition.kiCostPerTier),
       kiCostPerBaseTier: number(definition.kiCostPerBaseTier),
@@ -199,6 +201,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         devilmite: definition.devilmite === true,
         dashes: definition.dashes === true,
         downBurst: definition.downBurst === true,
+        gathers: definition.gathers === true,
         barrier: definition.barrier === true,
         binds: definition.binds === true,
         bluffs: definition.bluffs === true,

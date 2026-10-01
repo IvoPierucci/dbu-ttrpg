@@ -134,8 +134,9 @@ export function resourceLimits(actor = null) {
 export function resourceCeiling(definition, actor = null) {
   if (!definition?.maxFrom) return definition?.max ?? 0;
   if (!actor?.system) return 0;
-  return Math.max(0,
-    Math.floor(Number(foundry.utils.getProperty(actor.system, definition.maxFrom)) || 0));
+  // And how many of it - Lifeforce's "3x your number of Skill Ranks in Clairvoyance".
+  return Math.max(0, Math.floor((Number(foundry.utils.getProperty(actor.system, definition.maxFrom)) || 0)
+    * (Number(definition.maxTimes) || 1)));
 }
 
 /**
@@ -163,6 +164,7 @@ export function resourceDefinitions() {
       // Where the ceiling is a value about the character rather than a number the rule
       // states. Blank on every Resource whose limit is simply written down.
       maxFrom: trait.resourceMaxFrom ?? "",
+      maxTimes: Number(trait.resourceMaxTimes) || 1,
       label: trait.resourceLabel || (name.charAt(0).toUpperCase() + name.slice(1)),
       source: trait.name ?? "",
       description: trait.description ?? "",

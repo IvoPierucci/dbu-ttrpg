@@ -1,0 +1,16 @@
+id: distant-energy-gatherer
+name: Distant Energy Gatherer
+advancement: true
+prerequisite: 4+ Skill Ranks in Clairvoyance
+tpCost: 10
+# Whether there are nearby worlds to draw from is the ARC's.
+source: Core Rule
+description: >
+  Lifeforce drawn from other nearby worlds, if the ARC says there are any.
+text: >
+  Distant Energy Gatherer: Reaching out through the void, you call upon the energy of other planets.
+  –Prerequisites: 4+ Skill Ranks in Clairvoyance
+  –TP Cost: 10
+  –Effect: You may draw the Lifeforce from other nearby worlds. When using Energy Gathering, you may ask your ARC if there
+  are nearby planets to draw from, rather than the planet you are currently on. If so, then you may draw the Lifeforce
+  from those worlds.

@@ -1,0 +1,15 @@
+id: combat-gatherer
+name: Combat Gatherer
+advancement: true
+prerequisite: 5+ Skill Ranks in Clairvoyance
+tpCost: 10
+# "You may use other Maneuvers without losing your stacks of Lifeforce."
+keepsLifeforce: true
+source: Core Rule
+description: >
+  Other Maneuvers no longer cost your Lifeforce.
+text: >
+  Combat Gatherer: You’ve learned to hold onto the energy you gather without such intense focus.
+  –Prerequisites: 5+ Skill Ranks in Clairvoyance
+  –TP Cost: 10
+  –Effect: You may use other Maneuvers without losing your stacks of Lifeforce through the effects of Energy Gathering.

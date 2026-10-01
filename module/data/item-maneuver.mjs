@@ -669,6 +669,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         dashes: new fields.BooleanField({ required: true, initial: false }),
         /** Its Clash (Impulsive) against everyone around, won Hidden - Down Burst's (chat.mjs postDownBurst). */
         downBurst: new fields.BooleanField({ required: true, initial: false }),
+        /** Gathers Lifeforce - Energy Gathering's (use-maneuver.mjs postGathering). */
+        gathers: new fields.BooleanField({ required: true, initial: false }),
         kept: new fields.SchemaField({
           life: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
           ki: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),

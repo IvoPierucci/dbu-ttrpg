@@ -2753,6 +2753,7 @@ function onRenderChatMessage(message, html) {
   renderUpkeep(message, html);
   renderBind(message, html);
   renderVolleyball(message, html);
+  renderLifeforce(message, html);
   renderMaterialize(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
@@ -6503,6 +6504,7 @@ const BIND_FLAG = "bind";
 const VOLLEY_FLAG = "volleyball";
 const DESPERATE_FLAG = "desperate";
 const DOWN_BURST_FLAG = "downBurst";
+const LIFEFORCE_FLAG = "lifeforce";
 /** Something being made, waiting on its Skill Check - the Create Maneuver. */
 const CREATE_FLAG = "create";
 /** Something conjured, waiting on its Skill Check - Magical Materialization. */
@@ -8038,6 +8040,93 @@ async function settleKiDeception(message, clash) {
   await settledNote(message, `${attack.maneuverName}: +1 Energy Charge.`);
 }
 
+/** Energy Gathering, with a Genki Dramatic Finisher: the Energy Charge Maneuver, out of sequence, for it. */
+export function offerGenkiCharge(card, actor, charges) {
+  requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "energy-charge",
+    maneuverName: `Energy Charge (Genki, ${charges} Charge${(charges === 1) ? "" : "s"})`, reason: "Energy Gathering",
+    genki: { charges } } });
+}
+
+/**
+ * That Energy Charge, taken: "you must declare that Signature Technique for its effects ... instead of gaining 1 Energy
+ * Charge through its effects, gain a number of Energy Charges equal to 1 less than the amount of Lifeforce stacks you
+ * gained". Its own Ki, no Action; the Charges held to the Profile's ceiling.
+ */
+async function takeGenkiCharge(message, actor, offer) {
+  const charge = getManeuver("energy-charge");
+  const finishers = actor.items.filter(item => (item.type === "maneuver") && (item.system.signature?.level === "dramatic")
+    && (item.system.signature?.superProfile === "genki"));
+  if (!charge || !finishers.length) return;
+  let chosen = finishers[0];
+  if (finishers.length > 1) {
+    const id = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: offer.maneuverName }, content: "",
+      buttons: [...finishers.map(item => ({ action: item.id, label: item.name })), { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    chosen = finishers.find(item => item.id === id);
+    if (!chosen) return;
+  }
+  if (!await spendManeuverCost(actor, charge, maneuverKiCost(charge, null, actor))) return;
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  await recordManeuverUse(actor, charge);
+  const { maxEnergyCharges } = await import("./maneuvers.mjs");
+  const profile = chosen.system.signature?.profile ?? "";
+  const ceiling = maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES);
+  const held = actor.system.charging ?? {};
+  const already = (held.maneuverId === chosen.id) ? (Number(held.charges) || 0) : 0;
+  const now = Math.min(ceiling, already + (Number(offer.genki.charges) || 0));
+  await actor.update({ "system.charging.maneuverId": chosen.id, "system.charging.profile": profile,
+    "system.charging.charges": now });
+  // "Until you use the chosen Attacking Maneuver, you suffer from the Guard Down Combat Condition."
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "guard-down", 1);
+  await recordManeuverType(actor, "outOfSequence", { maneuverId: charge.id });
+  return postManeuver(actor, charge, { asOutOfSequence: true,
+    note: `${chosen.name} holds ${now} Energy Charge${(now === 1) ? "" : "s"}.` });
+}
+
+/**
+ * Energy Gathering: "If you use a Maneuver other than the Signature Technique Maneuver, Energy Charge Maneuver, or Energy
+ * Gathering Unique Ability, you must spend a Karma Point or lose all stacks of Lifeforce" - lost at once, a button on the
+ * card to keep them for the Karma Point. Not with Combat Gatherer.
+ */
+export async function lifeforceOnManeuver(actor, maneuverId) {
+  const stacks = Number(actor.system?.resources?.lifeforce?.stacks) || 0;
+  if (!stacks) return;
+  const item = maneuverId ? actor.items?.get(maneuverId) : null;
+  const allowed = ["signature-technique", "energy-charge"].includes(maneuverId)
+    || Boolean(item?.system?.unique?.gathers) || (item?.system?.tags ?? []).includes("signature");
+  if (allowed) return;
+  const gatherer = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.gathers);
+  if (gatherer && boughtTraits(gatherer.system.unique, getTrait).some(trait => trait.keepsLifeforce)) return;
+  await setResource(actor, "lifeforce", 0);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${stacks} Lifeforce lost.</div>`,
+    flags: { [SCOPE]: { [LIFEFORCE_FLAG]: { actorUuid: actor.uuid, stacks, kept: false } } } });
+}
+
+/** Keep them: a Karma Point, and the stacks back. */
+function renderLifeforce(message, html) {
+  const lost = message.getFlag(SCOPE, LIFEFORCE_FLAG);
+  if (!lost || lost.kept) return;
+  const actor = fromUuidSync(lost.actorUuid);
+  if (!actor?.isOwner) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Keep: 1 Karma Point";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    const { spendKarma } = await import("./karma.mjs");
+    if (!await spendKarma(actor, { name: "Lifeforce", cost: 1 })) return;
+    await message.setFlag(SCOPE, LIFEFORCE_FLAG, { ...lost, kept: true });
+    await setResource(actor, "lifeforce", (Number(actor.system.resources?.lifeforce?.stacks) || 0) + lost.stacks);
+    await settledNote(message, `${lost.stacks} Lifeforce kept.`);
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
 /** Desperate Dodge, settled: won, the Exploit is not triggered; lost, it may be used. A tie is the Defender's. */
 async function settleDesperateDodge(message, clash) {
   const record = clash.desperateDodge;
@@ -8154,6 +8243,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.spike) return takeSpike(message, actor, offer);
   // A Search handed out by someone Hidden powering up: "even if they do not have access" to it.
   if (offer.search) return takeSearch(message, actor, offer);
+  // Energy Gathering's Energy Charge, for the Genki Dramatic Finisher.
+  if (offer.genki) return takeGenkiCharge(message, actor, offer);
   let maneuver = getManeuver(offer.maneuverId);
   if (!maneuver) return;
   // A Profile the offer names - Volleyball Time!'s "Basic Attack Maneuver of the Launching Profile".
@@ -8465,7 +8556,8 @@ export async function postAttack(actor, target, maneuver,
                                    area = null, weapon = null, transformed = false, gigaFlare = 0,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
                                    extraTargets = [], freeWager = 0, unitedWith = null,
-                                   markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0 },
+                                   markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
+                                   genkiLifeforce = 0 },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -8573,6 +8665,8 @@ export async function postAttack(actor, target, maneuver,
           ...(volleyball ? { volleyball } : {}),
           // Long Shot granted to an attack that is no Technique - Spread Shot Retreat's.
           ...(longShotRanks ? { longShotRanks } : {}),
+          // Genki's: the Lifeforce it took as it was made.
+          ...(genkiLifeforce ? { genkiLifeforce } : {}),
           // A second Profile outside a Technique: Elemental Blade's Multi-Profile on an ordinary
           // attack. A Technique's is on its own block.
           secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
@@ -11102,6 +11196,10 @@ async function rollAttackWound(message, attack) {
     // United Attack: "Increase their Wound Roll by 1/2 of your relevant Attribute Modifier".
     ...unitedWoundParts(attack),
     ...superStackWoundParts(attacker, attack),
+    // Genki: "For each stack of Lifeforce lost through this effect, increase your Wound Roll by 2(bT)."
+    ...((Number(attack.genkiLifeforce) || 0) > 0
+      ? [{ label: `Genki, ${attack.genkiLifeforce} Lifeforce`, written: `+${2 * attack.genkiLifeforce}(bT)`,
+          value: 2 * attack.genkiLifeforce * Math.max(1, attacker.system.baseTierOfPower ?? 1) }] : []),
     ...modifierWoundParts(attacker, attack),
     ...(attack.weapon?.wound ?? []),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },

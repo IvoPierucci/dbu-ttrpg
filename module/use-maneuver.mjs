@@ -1842,6 +1842,7 @@ export function definitionOf(item) {
     // Pins somebody and holds them - Binding.
     binds: item.system.unique?.binds === true,
     downBurst: item.system.unique?.downBurst === true,
+    gathers: item.system.unique?.gathers === true,
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
@@ -2577,6 +2578,23 @@ async function postHide(actor, maneuver, { uuids }) {
   return card;
 }
 
+/**
+ * Energy Gathering: "For each Action spent, gain a stack of Lifeforce from the planet you are on" - held to its ceiling.
+ * With a Dramatic Finisher of the Genki Super Profile, the Energy Charge Maneuver offered out of sequence for it, its
+ * Charges "1 less than the amount of Lifeforce stacks you gained".
+ */
+async function postGathering(actor, maneuver, actionsSpent) {
+  const chat = await import("./chat.mjs");
+  const before = Number(actor.system.resources?.lifeforce?.stacks) || 0;
+  await chat.setResource(actor, "lifeforce", before + Math.max(1, Number(actionsSpent) || 1));
+  const gained = Math.max(0, (Number(actor.system.resources?.lifeforce?.stacks) || 0) - before);
+  const card = await chat.postManeuver(actor, maneuver, { note: `+${gained} Lifeforce.` });
+  const genki = actor.items.some(item => (item.type === "maneuver") && (item.system.signature?.level === "dramatic")
+    && (item.system.signature?.superProfile === "genki"));
+  if (card && genki) await chat.offerGenkiCharge(card, actor, Math.max(0, gained - 1));
+  return card;
+}
+
 /** Applied: on the Item, with what keeping it costs on top and its Sphere; the card says the Sphere. */
 async function postSustain(actor, maneuver, sustaining) {
   const item = actor.items?.get(maneuver.itemId);
@@ -3026,7 +3044,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
 
     await recordManeuverUse(actor, maneuver);
     await recordManeuverType(actor, maneuver.type,
-      { messageId: (await postManeuver(actor, maneuver, { foundation: null }))?.id });
+      { messageId: (await postManeuver(actor, maneuver, { foundation: null }))?.id, maneuverId: maneuver.id });
     return true;
   }
 
@@ -3328,6 +3346,16 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     const genki = ((charging?.maneuverId === maneuver.itemId) && (maneuver.superProfile === "genki"))
       ? (Number(charging.bonusWager) || 0) : 0;
     if (genki) declared = { ...declared, freeWager: genki };
+    // And "lose all stacks of Lifeforce. For each stack of Lifeforce lost through this effect, increase your Wound Roll
+    // by 2(bT)" - the stacks carried to the Wound Roll.
+    if (maneuver.superProfile === "genki") {
+      const lifeforce = Number(actor.system.resources?.lifeforce?.stacks) || 0;
+      if (lifeforce) {
+        declared = { ...declared, genkiLifeforce: lifeforce };
+        const { setResource } = await import("./chat.mjs");
+        await setResource(actor, "lifeforce", 0);
+      }
+    }
 
     // What a Signature Technique asks at Attack Declaration: the table's answers its features need.
     if (maneuver.signature && !maneuver.signatureTechnique) {
@@ -3886,6 +3914,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postSustain(actor, maneuver, sustaining)
     : ((maneuver.id === "hide") && hiding)
     ? await postHide(actor, maneuver, hiding)
+    : maneuver.gathers
+    ? await postGathering(actor, maneuver, actionsSpent)
     : (maneuver.downBurst && bursting)
     ? await (await import("./chat.mjs")).postDownBurst(actor, maneuver, bursting.uuids)
     : (maneuver.binds && binding)
