@@ -354,6 +354,15 @@ const TABLE = [
     doc: "What one stack of Diminishing Offense costs your Strike Rolls." },
   { key: "diminishing.defense.perAttack", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Stacks of Diminishing Defense gained per attack aimed at you." },
+  { key: "diminishing.defense.onPhysicalHit", phase: PHASES.CORE, kind: F, ops: ["set"],
+    doc: "Once a Combat Round, a Physical Attack that hits gives its target the Diminishing Defense of "
+       + "one more Attacking Maneuver - Multiple Arms." },
+  { key: "combination.extraRoll", phase: PHASES.CORE, kind: F, ops: ["set"],
+    doc: "Once a Combat Round, one more of Combination's follow-up Strike Rolls - Multiple Arms." },
+  { key: "basicAttack.asInstant", phase: PHASES.CORE, kind: F, ops: ["set"],
+    doc: "Once a Combat Round, the Basic Attack as an Instant Maneuver for 2 Counter Actions - Multiple Arms." },
+  { key: "weapons.wielded", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Weapons you can wield at once - two, four in Multiple Arms." },
   { key: "diminishing.defense.reduction", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Taken off the total penalty from Diminishing Defense - Desperate Dodge's." },
 

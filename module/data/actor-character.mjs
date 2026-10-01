@@ -2306,6 +2306,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         DBUCharacterData.BOTCH_PENALTY * this.baseTierOfPower)
     };
 
+    // "You can only wield two Weapons at any one time" - four in Multiple Arms.
+    this.weaponsWielded = withEffects(this, "weapons.wielded", 2);
+
     // --- Diminishing Offense and Defense ---
     // Offense only begins once the round's free attacks are used up, and each stack
     // costs 1(bT) - so it bites harder the stronger you are. Defense is a flat 1 per

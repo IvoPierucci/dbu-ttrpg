@@ -489,6 +489,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
+      basicAttackInstant: DBUCharacterSheet._onBasicAttackInstant,
       newTechnique: DBUCharacterSheet._onNewTechnique,
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
       useGrantedUnique: DBUCharacterSheet._onUseGrantedUnique,
@@ -1613,6 +1614,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             kiCost: maneuverKiCost(maneuver, null, this.actor),
             usageLabel: usageLimitLabel(maneuver),
             usesLeft: maneuverUsesLeft(this.actor, maneuver),
+            // Multiple Arms: "You can spend 2 Counter Actions to use the Basic Attack Maneuver as an Instant".
+            asInstant: (maneuver.id === "basic-attack")
+              && Boolean(this.actor.system.effects?.slots?.["basicAttack.asInstant"]),
             // Off the group, unless the Maneuver has a reason of its own to be here.
             playable: (group.playable || this.#playableAlone(maneuver))
               && !this.#playedThrough(maneuver)
@@ -3221,7 +3225,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         data.system.crafted.grade = Math.min(5, Math.max(1, Math.ceil(baseTier / 2)));
         data.system.crafted.lifeFixed = buddyAttribute(baseTier);
         data.system.crafted.fromBuddy = item.id;
-        data.system.equipped = !wieldProblem(actor.items.contents, { system: { crafted: {} } }, getTrait);
+        data.system.equipped = !wieldProblem(actor.items.contents, { system: { crafted: {} } }, getTrait,
+          actor.system.weaponsWielded);
         const [made] = await actor.createEmbeddedDocuments("Item", [data]);
         made?.sheet?.render(true);
       }
@@ -4043,7 +4048,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       data: this.actor.system, baseTier: this.actor.system.baseTierOfPower ?? 1 });
     const lost = Number(item.system.crafted?.lifeLost) || 0;
     const wielded = Boolean(item.system.equipped) && !item.system.crafted?.destroyed;
-    const problem = wielded ? "" : wieldProblem(items, item, getTrait);
+    const problem = wielded ? "" : wieldProblem(items, item, getTrait, this.actor.system.weaponsWielded);
     const now = activeForm(item.system.crafted);
     return {
       weapon: true,
@@ -4215,7 +4220,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (item?.system.crafted?.kind !== "weapon") return;
     const drawing = !item.system.equipped;
     if (drawing) {
-      const problem = wieldProblem(this.actor.items.contents, item, getTrait);
+      const problem = wieldProblem(this.actor.items.contents, item, getTrait, this.actor.system.weaponsWielded);
       if (problem) {
         ui.notifications.warn(problem);
         return;
@@ -5538,6 +5543,28 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * Use a Maneuver: pay for it and announce it. A Standard Maneuver is announced as
    * respondable, so other players can answer it with an Instant Maneuver.
    */
+  /**
+   * Multiple Arms: "[1/Round]: You can spend 2 Counter Actions to use the Basic Attack Maneuver as an Instant
+   * Maneuver." Played as an Instant - no Action Cost, and the Instant's own rule on the one before - and the two
+   * Counter Actions paid once it is.
+   */
+  static async _onBasicAttackInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || !this.actor.system.effects?.slots?.["basicAttack.asInstant"]) return;
+    const { ARMS_USES } = await import("../chat.mjs");
+    const used = this.actor.system.usedManeuvers ?? [];
+    if (used.includes(ARMS_USES.instant)) {
+      return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
+    }
+    if (game.combat?.started && (actionsLeft(this.actor, "counter") < 2)) {
+      return ui.notifications.warn(`${this.actor.name} needs 2 Counter Actions for this.`);
+    }
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
+    await spendActions(this.actor, 2, "counter");
+    return this.actor.update({ "system.usedManeuvers": [...(this.actor.system.usedManeuvers ?? []), ARMS_USES.instant] });
+  }
+
   static async _onUseManeuver(event, target) {
     // The same call the hotbar macro makes, so the two cannot drift apart.
     return useOwnedManeuver(this.actor, target.dataset.itemId ?? target.dataset.maneuver);

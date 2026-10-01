@@ -1,0 +1,41 @@
+id: multiple-arms
+name: Multiple Arms
+kind: state
+# A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
+specialState: true
+description: >
+  More arms: more Weapons in hand, more answers, more blows before they tire.
+text: >
+  (1)-[Passive]: You can wield up to 4 Weapons simultaneously.
+
+  (2)-[Triggered]: Upon entering this State or at the start of each Combat Round, gain an
+  additional Counter Action to spend this Combat Round.
+
+  (3)-[Triggered, 1/Round]: If you hit an Opponent with a Physical Attack, apply additional
+  stack(s) of Diminishing Defense as if they were targeted by an additional Attacking Maneuver.
+
+  (4)-[Triggered, 1/Round]: If you use an Attacking Maneuver of the Combination Profile, you
+  may roll your Strike Roll an additional time.
+
+  (5)-[1/Round]: You can spend 2 Counter Actions to use the Basic Attack Maneuver as an
+  Instant Maneuver.
+
+  (6)-[Passive]: Diminishing Offense doesn't apply until after your 4th Attacking Maneuver
+  during each Combat Round.
+
+---
+
+# (2) is a Counter Action more for every Round spent in it, the one it is entered in included: the
+# Counter Actions are counted against what is spent this Round, so one more is there at once.
+#
+# (3), (4) and (5) are once a Combat Round, each counted on its own - `round:multiple-arms.*` among
+# the uses a new Round hands back (chat.mjs ARMS_USES). (3) is read where the Damage of a hit is
+# settled, (4) where Combination's follow-up Strikes are rolled - one more, like Alotta Lotta
+# Attacks - and (5) is the "Instant" button on the Basic Attack's row.
+[passive]
+weapons.wielded min= 4;
+actions.counter += 1;
+diminishing.defense.onPhysicalHit = true;
+combination.extraRoll = true;
+basicAttack.asInstant = true;
+attacks.free min= 4;

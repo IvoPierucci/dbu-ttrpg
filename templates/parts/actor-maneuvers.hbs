@@ -39,6 +39,11 @@
                 nothing at all. }}
             <button type="button" class="maneuver-name rollable" data-action="useManeuver"
                     data-item-id="{{maneuver.itemId}}">{{maneuver.name}}</button>
+            {{#if maneuver.asInstant}}
+            <button type="button" class="maneuver-control" data-action="basicAttackInstant"
+                    data-item-id="{{maneuver.itemId}}"
+                    data-tooltip="Multiple Arms: as an Instant Maneuver, for 2 Counter Actions (1/Round)">Instant</button>
+            {{/if}}
             {{else}}
             {{! Reactive: it is played from the message of the attack it answers. }}
             <span class="maneuver-name maneuver-triggered">{{maneuver.name}}</span>

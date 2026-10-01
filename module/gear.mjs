@@ -1418,15 +1418,15 @@ export function wieldedWeapons(items) {
 
 /**
  * Why a Weapon cannot be taken in hand, or "": broken, or both hands full - "You can only wield
- * two Weapons at any one time."
+ * two Weapons at any one time." `most` is the wielder's own - four in Multiple Arms.
  */
-export function wieldProblem(items, item, getTrait = null) {
+export function wieldProblem(items, item, getTrait = null, most = WEAPONS_WIELDED) {
   if (item?.system?.crafted?.destroyed) return "Broken: repair it first.";
   // Telekinetic: "Wielding this Weapon does not count towards your maximum number of Weapons".
   if (heldByMind(items, item, getTrait)) return "";
   const held = wieldedWeapons(items).filter(other => (other !== item)
     && !heldByMind(items, other, getTrait));
-  if (held.length >= WEAPONS_WIELDED) return `Already wielding ${WEAPONS_WIELDED} Weapons.`;
+  if (held.length >= most) return `Already wielding ${most} Weapons.`;
   return "";
 }
 

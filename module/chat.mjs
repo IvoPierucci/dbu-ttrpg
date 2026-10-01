@@ -275,6 +275,16 @@ async function applyActorUpdate(actorUuid, changes) {
  * often not the one that owns the character rolling - so spending a triggered effect
  * has to be relayed the same way a message edit is.
  */
+/**
+ * Multiple Arms' three [1/Round] effects, each counted on its own among the uses a new Combat Round hands back:
+ * the Diminishing Defense of a Physical hit, Combination's extra Strike Roll, the Basic Attack as an Instant.
+ */
+export const ARMS_USES = Object.freeze({
+  hit: "round:multiple-arms.hit",
+  combination: "round:multiple-arms.combination",
+  instant: "round:multiple-arms.instant"
+});
+
 export function requestActorUpdate(actor, changes) {
   if (actor.isOwner) return actor.update(changes);
   if (!game.users.activeGM) return;
@@ -11178,7 +11188,15 @@ async function rollFollowUpStrikes(message, attack, attacker) {
   const rolls = [];
   // Alotta Lotta Attacks and Super Combination: "roll your Strike Roll an additional time for each
   // rank".
-  const howMany = plan.rolls + (Number(attack.technique?.followUpRolls) || 0);
+  // Multiple Arms: "If you use an Attacking Maneuver of the Combination Profile, you may roll your Strike Roll an
+  // additional time" - once a Combat Round. One more of these, like Alotta Lotta Attacks.
+  const arms = Boolean(attacker.system.effects?.slots?.["combination.extraRoll"])
+    && !(attacker.system.usedManeuvers ?? []).includes(ARMS_USES.combination);
+  if (arms) {
+    await requestActorUpdate(attacker,
+      { "system.usedManeuvers": [...(attacker.system.usedManeuvers ?? []), ARMS_USES.combination] });
+  }
+  const howMany = plan.rolls + (Number(attack.technique?.followUpRolls) || 0) + (arms ? 1 : 0);
   // Dead-Link on the Strike reaches these too - the text excludes nothing, unlike Twin-Linked,
   // which "is not applied to the additional Strike Rolls made with the Combination Profile".
   const deadLink = attack.technique?.linked?.strike === "low";
@@ -13785,6 +13803,15 @@ async function applyAttackDamage(message, target, attack) {
     && DEFENCES[own.defense]?.gainsDiminishingDefense
     && !own.forced;
 
+  // Multiple Arms: "If you hit an Opponent with a Physical Attack, apply additional stack(s) of Diminishing
+  // Defense as if they were targeted by an additional Attacking Maneuver" - once a Combat Round.
+  const armsUser = fromUuidSync(attack.attackerUuid);
+  const arms = Boolean(armsUser) && (armsUser.uuid !== target.uuid) && own.hit && !isAbsoluteMiss(own)
+    && (attack.foundation === "physical")
+    && Boolean(armsUser.system.effects?.slots?.["diminishing.defense.onPhysicalHit"])
+    && !(armsUser.system.usedManeuvers ?? []).includes(ARMS_USES.hit);
+  const extraStacks = ((doubled ? 1 : 0) + (arms ? 1 : 0)) * target.system.diminishing.defense.perAttack;
+
   // Floored at zero for everyone except whoever has been granted otherwise - the Undying
   // State being the one thing in the rules that grants it.
   const settled = target.system.life.value - damage;
@@ -13804,14 +13831,14 @@ async function applyAttackDamage(message, target, attack) {
   // read second may not have seen the first yet.
   await target.update({
     "system.life.value": floor,
-    ...(doubled
-      ? {
-        "system.diminishingDefense":
-          target.system.diminishingDefense + target.system.diminishing.defense.perAttack
-      }
+    ...(extraStacks
+      ? { "system.diminishingDefense": target.system.diminishingDefense + extraStacks }
       : {})
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
+  if (arms) {
+    await requestActorUpdate(armsUser, { "system.usedManeuvers": [...(armsUser.system.usedManeuvers ?? []), ARMS_USES.hit] });
+  }
 
   // "Apparel loses 1 Break Value if you are knocked through a Health Threshold" - and a
   // Called Shot at it that hit takes 1 off it besides. The Top Layer's, both.
