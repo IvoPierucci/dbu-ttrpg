@@ -14,7 +14,7 @@ import DBUCharacterData from "./data/actor-character.mjs";
 import { EDGES, edgeReached, encounterEnded, endedBy } from "./durations.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { replaceObject, setCondition } from "./conditions.mjs";
-import { getTrait } from "./effects/traits.mjs";
+import { getTrait, keptResources } from "./effects/traits.mjs";
 import { enteredUnbreathable, isUnbreathable, leftUnbreathable, loseBreath }
   from "./breath.mjs";
 
@@ -235,8 +235,8 @@ async function startEncounter(combat) {
       ...NOT_CHARGING,
       // Nobody starts an Encounter already being held.
       ...NOT_GRAPPLING,
-      // Every Resource is lost when an Encounter ends, so one starts with none.
-      "system.resources": replaceObject({})
+      // Every Resource is lost when an Encounter ends, so one starts with none - but the ones that keep.
+      "system.resources": replaceObject(keptResources(actor.system.resources))
     });
     await stopCharging(actor);
     if (regulated) {
@@ -578,7 +578,7 @@ export function registerCombatHooks() {
         "system.talentUses.encounter": [],
         "system.armedTalents": [],
         "system.usedManeuvers": [],
-        "system.resources": replaceObject({}),
+        "system.resources": replaceObject(keptResources(actor.system.resources)),
         "system.defeatsEscaped": 0,
         // The next Encounter is a different one, and begins for them again.
         "system.enteredEncounter": false,

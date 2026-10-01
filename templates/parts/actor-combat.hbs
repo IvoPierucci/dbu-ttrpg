@@ -463,6 +463,12 @@
           {{! A Resource with no ceiling says how many and nothing more: "3/0" would be
               a maximum of nothing rather than no maximum at all. }}
           <span class="stack-count">{{row.stacks}}{{#if row.max}}/{{row.max}}{{/if}}</span>
+          {{#if row.manual}}
+          <button type="button" class="stack-step" data-action="stepResource" data-resource="{{row.key}}" data-step="-1"
+                  data-tooltip="A stack off">&minus;</button>
+          <button type="button" class="stack-step" data-action="stepResource" data-resource="{{row.key}}" data-step="1"
+                  data-tooltip="A stack on">+</button>
+          {{/if}}
         </li>
         {{/each}}
       </ul>

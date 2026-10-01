@@ -108,6 +108,12 @@ export function getTrait(id) {
  *
  * @returns {Record<string, number>} resource name to its maximum, 0 meaning no maximum
  */
+/** What of a character's Resources outlives a Combat Encounter: the ones whose file says they keep. */
+export function keptResources(resources = {}) {
+  const known = resourceDefinitions();
+  return Object.fromEntries(Object.entries(resources ?? {}).filter(([key]) => known[key]?.keeps));
+}
+
 export function resourceLimits(actor = null) {
   const limits = {};
   for (const [name, definition] of Object.entries(resourceDefinitions())) {
@@ -164,7 +170,11 @@ export function resourceDefinitions() {
       // effect had to last and a Resource is the thing here that takes a clock. The
       // rulebook calls exactly one of them a Resource, and a sheet that lists the rest
       // under that heading teaches a player a word the book does not use.
-      internal: Boolean(trait.resourceInternal)
+      internal: Boolean(trait.resourceInternal),
+      // Not lost when a Combat Encounter ends or begins - Unfamiliar's, which a body keeps.
+      keeps: Boolean(trait.resourceKeeps),
+      // Set from the sheet, its stacks the table's to give and take - Unfamiliar's.
+      manual: Boolean(trait.resourceManual)
     };
   }
   return found;

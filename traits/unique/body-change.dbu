@@ -1,0 +1,64 @@
+id: body-change
+name: Body Change
+uaType: magical
+prerequisite: N/A
+tpCost: 50
+type: standard
+actionCost: 3
+# "KP Cost: Your entire Capacity" - paid by the table, as the swap is (the user's ruling).
+kiCost: 0
+# Having it gives access to the Unfamiliar Resource (the user's ruling): its stacks set from the sheet, kept from one
+# Combat Encounter to the next, and what they cost applied below. The swap itself is the table's.
+resource: unfamiliar
+resourceMax: 3
+resourceKeeps: true
+resourceManual: true
+source: Core Rule
+description: >
+  Swap bodies with someone who loses a Clash (Cognitive vs Impulsive) - the table's. Unfamiliar: each stack 1(bT) off
+  Combat Rolls and 1 off the Stress Bonus; at 2+, Tier of Power 1 lower.
+text: >
+  Body Change: With the cry of “Change Now!” you can swap bodies with your enemy, making their strengths your own.
+  –Ability Type: Magical
+  –Prerequisites: N/A
+  –TP Cost: 50
+  –KP Cost: Your entire Capacity
+  –Maneuver Type: Standard
+  –Action Cost: 3 Actions
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target a Character who is not at Long Range and make a Clash (Cognitive vs Impulsive) against them. If you
+  win, you swap bodies (including your position on the Battlefield).
+  For both Characters who have swapped bodies, follow the below rules:
+
+  * Swap Attribute Scores (AG/TE/FO/MA).
+  * Swap Races for the sake of any Racial Requirements, Racial Saving Throw Bonus, and Racial Life Modifiers.
+  * Recalculate your Maximum Life Points and then swap current Life Point values.
+  * Swap Body Racial Traits. You cannot gain more than 5 Racial Traits (both Body and Mind) in total. If you would gain
+  more than 5 Racial Traits, decide which 5 Racial Traits (2 Primary and up to 3 Secondary) you can use from the list
+  of Body and Mind Racial Traits you possess. Any Option effects for Body Racial Traits must be the same as the
+  original owner of the body and any Option effects for your Mind Racial Traits remain the same as what you decided in
+  Character Creation.
+  * Swap Awakenings of the Body Awakening Origin to those of the body. This cannot allow you to exceed the Awakening
+  Limit. When entering a Body, record the number of Awakenings of the Body Awakening Origin present. Rather than swap
+  with your Character, anyone who enters this body due to Body Change refers to the Awakenings recorded to that body.
+  * Swap Apparel, Weapons, and all Items you have access to. This includes any Integrated Items.
+  * After swapping bodies, both Characters gain 3 stacks of Unfamiliar. Each stack of Unfamiliar reduces your Combat
+  Rolls by 1(bT) and your Stress Bonus by 1. While you have 2+ stacks of Unfamiliar, reduce your current Tier of Power
+  by 1.
+  * At the end of each Combat Encounter you participate in, you may remove a stack of Unfamiliar. You lose all previous
+  stacks of Unfamiliar when you swap to a new body, but you still gain the 3 stacks for entering a new body. If you are
+  swapped back into your original body, you do not gain Unfamiliar stacks.
+
+---
+
+# "Each stack of Unfamiliar reduces your Combat Rolls by 1(bT) and your Stress Bonus by 1. While you have 2+ stacks of
+# Unfamiliar, reduce your current Tier of Power by 1."
+[passive]
+if (unfamiliar.stacks > 0) {
+  combatRolls -= (unfamiliar.stacks * 1(bT));
+  stressBonus -= unfamiliar.stacks;
+}
+if (unfamiliar.stacks >= 2) {
+  tierOfPower -= 1;
+}

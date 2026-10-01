@@ -3320,3 +3320,14 @@
   color: var(--dbu-chat-accent, #dfe288);
   cursor: pointer;
 }
+
+/* A Resource the table gives and takes by hand - Unfamiliar: a stack on, a stack off. */
+.dbu-ttrpg .stack-step {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin-left: 2px;
+  line-height: 16px;
+  font-size: 12px;
+}

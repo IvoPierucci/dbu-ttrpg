@@ -281,6 +281,8 @@ function resourceRows(system, owned = null) {
         // can possess is equal to your base Tier of Power" - is worked out here, from the
         // same data the row is drawn from.
         max: resourceCeiling(definition, { system }) || (Number(resource.max) || 0),
+        // Its stacks given and taken from here - Unfamiliar's.
+        manual: Boolean(definition.manual),
         note: clockNotes(timed, key).join(" \u00b7 "),
         tooltip: definition.source
           ? `From ${definition.source}. ${definition.description ?? ""}`.trim()
@@ -358,7 +360,8 @@ function stackRows(system, owned = null) {
 function traitsOwned(actor) {
   return new Set(actor.items
     .filter(item => item.type === "maneuver")
-    .map(item => item.system.maneuverId)
+    // A Unique Ability by its file - Body Change's Unfamiliar.
+    .map(item => item.system.maneuverId || item.system.unique?.libraryId)
     .filter(Boolean));
 }
 
@@ -483,6 +486,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
       useGrantedUnique: DBUCharacterSheet._onUseGrantedUnique,
       stopUnique: DBUCharacterSheet._onStopUnique,
+      stepResource: DBUCharacterSheet._onStepResource,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
       resetCapacity: DBUCharacterSheet._onResetCapacity,
@@ -1808,6 +1812,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!trait) return;
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     return useManeuver(this.actor, definitionOf(await grantedUniqueItem(this.actor, trait)));
+  }
+
+  /** A Resource the table gives and takes, a stack at a time - Unfamiliar. */
+  static async _onStepResource(event, target) {
+    const key = target.dataset.resource;
+    const now = Number(this.actor.system.resources?.[key]?.stacks) || 0;
+    const { setResource } = await import("../chat.mjs");
+    return setResource(this.actor, key, Math.max(0, now + (Number(target.dataset.step) || 0)));
   }
 
   /** An applied Unique Ability stopped - the Atmospheric Bubble, where there is no turn to stop it at. */
