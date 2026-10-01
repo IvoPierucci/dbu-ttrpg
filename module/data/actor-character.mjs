@@ -353,7 +353,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // The Search Maneuver, opened at 2+ Ranks like every other Skill's (the user's ruling).
     perception:       { label: "Perception",       attribute: "insight",
                         specialManeuver: "search" },
-    pilot:            { label: "Pilot",            attribute: "insight",     required: true },
+    // The Eject Maneuver, opened at 2+ Ranks like every other Skill's.
+    pilot:            { label: "Pilot",            attribute: "insight",     required: true,
+                        specialManeuver: "eject" },
     // "Special Maneuver: you gain access to the Brace Maneuver." Two Ranks opens it, like
     // every other Skill's; the 4+ in Brace's own entry is a different threshold in the
     // same Skill, and doubles what it is worth rather than opening it.

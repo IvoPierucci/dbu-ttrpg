@@ -1,0 +1,34 @@
+id: eject
+name: Eject
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/encounter
+# "Move a number of Squares away from the Vehicle/Battle Jacket in a straight line equal to your number of Skill Ranks
+# in Piloting" - said on the card from the Pilot Ranks.
+moveSkill: pilot
+movePerRank: 1
+says: >
+  Out of the Vehicle/Battle Jacket, in a straight line away from it. An attack already aimed at it still lands on it as
+  if you were its Pilot.
+source: Core Rule
+description: >
+  Leave a Vehicle or Battle Jacket at once, moving away from it a Square for each Pilot Rank.
+text: >
+  Eject Maneuver [1/Encounter]: Escape from your vehicle in a hurry!
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –Minions: N/A
+  –KP Cost: N/A
+  –Effect: Immediately leave a Vehicle/Battle Jacket and move a number of Squares away from the Vehicle/Battle Jacket in a
+  straight line equal to your number of Skill Ranks in Piloting. If that Vehicle/Battle Jacket was targeted for an
+  Attacking Maneuver when you used this effect, and you were the Pilot, carry out that Attacking Maneuver against the
+  Vehicle/Battle Jacket as if you were still the Pilot.
+
+---
+
+# Opened by 2+ Ranks in Pilot, like every other Skill's. Vehicles and Battle Jackets are not built in this system: the
+# leaving and the attack carried out against it are the table's; the card says how far.
