@@ -3944,11 +3944,10 @@ async function cycloneStage(message, actor, item) {
   const now = Math.min(ceiling, (Number(charging.charges) || 0) + carried);
   await actor.update({ "system.charging.charges": now });
   const held = actor.items.get(charging.maneuverId);
-  const card = await postManeuver(actor, charge, {
+  // Through postManeuver, which offers its Exploits - the Energy Charge Maneuver used - and a Hidden one's Searches.
+  return postManeuver(actor, charge, {
     note: `${item.name}: ${held?.name ?? "the Attacking Maneuver"} holds ${now} Energy Charge${(now === 1) ? "" : "s"}.`
   });
-  // Used, the Energy Charge Maneuver is what an Opponent beside you may Exploit.
-  offerExploits(card, actor, charge);
 }
 
 /**
@@ -5164,7 +5163,40 @@ export async function postManeuver(actor, maneuver,
 
   // The Afterimage Technique's Movement "does not trigger the Exploit Maneuver".
   if (!noExploit) offerExploits(card, actor, maneuver);
+  // Hidden, and powering up, charging or transforming: whoever is Oblivious of them may Search for them.
+  offerSearches(card, actor, maneuver);
   return card;
+}
+
+/**
+ * Hidden (the user's ruling): "If someone Hidden uses the Power Up, Energy Charge or Transformation Maneuver, the
+ * Oblivious may use the Search Maneuver targeting them as an Out-of-Sequence Maneuver, even without access to it."
+ * Offered on that Maneuver's card to each of them.
+ */
+function offerSearches(card, actor, maneuver) {
+  if (!card || !actor) return;
+  const loud = ["power-up", "energy-charge"].includes(maneuver?.id) || (maneuver?.tags ?? []).includes("transformation");
+  if (!loud) return;
+  for (const entry of actor.system?.hiddenFrom ?? []) {
+    if (!entry?.uuid) continue;
+    requestEdit(card, { type: "offer", offer: { actorUuid: entry.uuid, actorName: entry.name, maneuverId: "search",
+      maneuverName: "Search", targetUuid: actor.uuid, reason: `${actor.name} used ${maneuver.name}`, search: true } });
+  }
+}
+
+/** That Search, taken: no Action, and whether they have the Maneuver or not; its Clash, won, ends the Hidden. */
+async function takeSearch(message, actor, offer) {
+  const target = fromUuidSync(offer.targetUuid ?? "");
+  const search = getManeuver("search");
+  if (!target || !search) return;
+  const { isHiddenFrom } = await import("./hidden.mjs");
+  if (!isHiddenFrom(target, actor)) {
+    ui.notifications.warn(`${target.name} is not Hidden from ${actor.name}.`);
+    return;
+  }
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  await recordManeuverType(actor, search.type);
+  return postSkillClash(actor, target, { ...search, name: `${search.name} (Out-of-Sequence)` }, { search: { applied: false } });
 }
 
 /**
@@ -8024,6 +8056,8 @@ async function takeOutOfSequence(message, actor, offer) {
   // with that Advantage, then the Technique itself through its door, out of sequence.
   if (offer.technique) return takeTechniqueOffer(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
+  // A Search handed out by someone Hidden powering up: "even if they do not have access" to it.
+  if (offer.search) return takeSearch(message, actor, offer);
   let maneuver = getManeuver(offer.maneuverId);
   if (!maneuver) return;
   // A Profile the offer names - Volleyball Time!'s "Basic Attack Maneuver of the Launching Profile".
