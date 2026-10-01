@@ -1844,6 +1844,8 @@ export function definitionOf(item) {
     downBurst: item.system.unique?.downBurst === true,
     gathers: item.system.unique?.gathers === true,
     shiftsEnvironment: item.system.unique?.shiftsEnvironment === true,
+    kiPerAction: item.system.unique?.kiPerAction === true,
+    explodes: item.system.unique?.explodes === true,
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
@@ -2577,6 +2579,28 @@ async function postHide(actor, maneuver, { uuids }) {
       { hides: { applied: false } });
   }
   return card;
+}
+
+/** Explosion Sorcery: the Characters targeted, one for each Action spent at most - none Hidden from you. */
+async function askExplosion(actor, maneuver, actionsSpent) {
+  const { whyHidden } = await import("./hidden.mjs");
+  const aimed = [...new Map(Array.from(game.user.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid)).map(other => [other.uuid, other])).values()];
+  const most = Math.max(1, Number(actionsSpent) || 1);
+  if (!aimed.length) {
+    ui.notifications.warn(`${maneuver.name}: target a Character for each Action spent.`);
+    return null;
+  }
+  if (aimed.length > most) {
+    ui.notifications.warn(`${maneuver.name}: ${most} Action${(most === 1) ? "" : "s"}, so ${most} target${(most === 1) ? "" : "s"} at most.`);
+    return null;
+  }
+  const unseen = aimed.map(other => whyHidden(actor, other)).find(Boolean);
+  if (unseen) {
+    ui.notifications.warn(unseen);
+    return null;
+  }
+  return { uuids: aimed.map(other => other.uuid) };
 }
 
 /**
@@ -3319,6 +3343,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let shifting = null;
   let snatching = null;
   let talking = null;
+  let exploding = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3570,6 +3595,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Explosion Sorcery: "Target a Character for each Action spent" - the ones targeted.
+    if (maneuver.explodes) {
+      exploding = await askExplosion(actor, maneuver, actionsSpent);
+      if (!exploding) return false;
+    }
+
     // Environment Shift: which Quality, and who stands in its Sphere.
     if (maneuver.shiftsEnvironment) {
       shifting = await askShift(actor, maneuver);
@@ -3846,7 +3877,9 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // you decide to go faster. Everything else pays what its Profile and its effects say.
   const price = crossing
     ? movementKiCost(actor, crossing)
-    : maneuverKiCost(maneuver, declared, actor) + (Number(sustaining?.extraKi) || 0);
+    : maneuverKiCost(maneuver, declared, actor) + (Number(sustaining?.extraKi) || 0)
+      // "6(T) for each Action spent" - Explosion Sorcery's.
+      + (maneuver.kiPerAction ? (Math.max(1, Number(actionsSpent) || 1) - 1) * maneuverKiCost(maneuver, null, actor) : 0);
 
   // A wager paid in Life shares the Capacity with the Ki, so both are checked before
   // either is spent.
@@ -4048,6 +4081,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postHide(actor, maneuver, hiding)
     : maneuver.gathers
     ? await postGathering(actor, maneuver, actionsSpent)
+    : (maneuver.explodes && exploding)
+    ? await (await import("./chat.mjs")).postExplosion(actor, maneuver, exploding.uuids)
     : ((maneuver.id === "talk") && talking)
     ? await (await import("./chat.mjs")).postTalk(actor, targetActor, maneuver, talking)
     : (maneuver.shiftsEnvironment && shifting)

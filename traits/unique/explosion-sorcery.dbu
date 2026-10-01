@@ -1,0 +1,31 @@
+id: explosion-sorcery
+name: Explosion Sorcery
+uaType: magical
+prerequisite: 2+ Skill Ranks in Use Magic
+tpCost: 20
+type: standard
+# "Variable (1~3 Actions)" at "6(T) for each Action spent".
+actionCost: 1
+actionCostMax: 3
+kiCostPerTier: 6
+kiPerAction: true
+# "Target a Character for each Action spent" - the ones targeted, no more than the Actions; a Clash (Cognitive vs
+# Cognitive/Impulsive/Corporeal) each (chat.mjs postExplosion).
+explodes: true
+source: Core Rule
+description: >
+  A Clash (Cognitive vs Cognitive/Impulsive/Corporeal) at a Character for each Action spent: won, they lose Life Points
+  equal to your Magic Modifier - a Minion is Defeated.
+text: >
+  Explosion Sorcery: Using your magical prowess, you cause another person to explode.
+  –Ability Type: Magical
+  –Prerequisites: 2+ Skill Ranks in Use Magic
+  –TP Cost: 20
+  –KP Cost: 6(T) for each Action spent
+  –Maneuver Type: Standard
+  –Action Cost: Variable (1~3 Actions)
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target a Character for each Action spent on this Maneuver. Make a Clash (Cognitive vs
+  Cognitive/Impulsive/Corporeal) against that Character. If you win, reduce that Character’s Life Points by your Magic
+  Modifier. If that Character was a Minion (except a Special Minion), they are Defeated instead.

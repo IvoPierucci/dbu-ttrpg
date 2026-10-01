@@ -515,6 +515,10 @@ async function applyClash(messageId, clash) {
     await settleDevilmite(message, clash);
   }
 
+  if (clash.explosion && clash.result && !clash.explosion.applied) {
+    await settleExplosion(message, clash);
+  }
+
   if (clash.talk && clash.result && !clash.talk.applied) {
     await settleTalk(message, clash);
   }
@@ -8210,6 +8214,45 @@ async function settleTalk(message, clash) {
     await requestActorUpdate(talker, { [`flags.${SCOPE}.talkBarred`]: { combatId, uuids: [...new Set([...uuids, target.uuid])] } });
     await settledNote(message, `${talker.name} cannot Talk to ${target.name} again this Combat Encounter.`);
   }
+}
+
+/** Explosion Sorcery: a card naming them, and "a Clash (Cognitive vs Cognitive/Impulsive/Corporeal)" against each. */
+export async function postExplosion(actor, maneuver, uuids) {
+  const targets = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(targets.map(t => t.name).join(", "))}</p>` });
+  for (const target of targets) {
+    await postSaveClash(actor, target, {
+      maneuverName: maneuver.name,
+      reason: `Win and ${target.name} loses Life Points equal to ${actor.name}'s Magic Modifier - a Minion is Defeated.`,
+      saves: ["cognitive"],
+      defenderSaves: ["cognitive", "impulsive", "corporeal"],
+      explosion: { applied: false }
+    });
+  }
+  return card;
+}
+
+/**
+ * Explosion Sorcery, won: "reduce that Character's Life Points by your Magic Modifier. If that Character was a Minion
+ * (except a Special Minion), they are Defeated instead." The system knows a Minion and not a Special one: the card says it.
+ */
+async function settleExplosion(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, explosion: { ...clash.explosion, applied: true } });
+  const caster = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!caster || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} holds together.`);
+    return;
+  }
+  if (target.system?.minion) {
+    await reduceLifePoints(target, Math.max(0, Number(target.system.life?.value) || 0), { reason: `${clash.maneuverName}, a Minion` });
+    await settledNote(message, `${target.name} is Defeated - unless a Special Minion, who loses ${Math.max(0,
+      Number(caster.system.attributes?.magic?.mod) || 0)} Life Points instead.`);
+    return;
+  }
+  await reduceLifePoints(target, Math.max(0, Number(caster.system.attributes?.magic?.mod) || 0), { reason: clash.maneuverName });
 }
 
 /** Desperate Dodge, settled: won, the Exploit is not triggered; lost, it may be used. A tie is the Defender's. */
