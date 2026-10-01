@@ -1759,6 +1759,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // A Counter is played from the attack's card: Respond, or - Barrier - once it has hit.
         playedFrom: unique.barrier ? "the attack's card, once it has hit you" : "Respond on the card of the attack aimed at you",
         area: unique.area,
+        // Binding: who it holds.
+        held: unique.binds ? (fromUuidSync(unique.boundUuid ?? "")?.name ?? "") : "",
         usesGranted: Boolean(grantedBy) && !["counter", "outOfSequence"].includes(item.system.type),
         libraryId: unique.libraryId,
         name: item.name,
@@ -1812,6 +1814,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onStopUnique(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     if (!item?.system?.unique?.applied) return;
+    // Binding: "You can also remove the effects of Binding as an Instant Maneuver."
+    if (item.system.unique.binds) {
+      const { whyNotAnotherInstant, recordManeuverType } = await import("../maneuvers.mjs");
+      const blocked = whyNotAnotherInstant(this.actor);
+      if (blocked) return ui.notifications.warn(`${this.actor.name}: ${blocked}`);
+      const { releaseBinding } = await import("../chat.mjs");
+      await releaseBinding(this.actor, item);
+      return recordManeuverType(this.actor, "instant");
+    }
     await item.update({ "system.unique.applied": false });
     return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
       content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} stops.</div>` });

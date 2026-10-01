@@ -1,0 +1,44 @@
+id: binding
+name: Binding
+uaType: both
+prerequisite: Force or Magic Score of 8+
+tpCost: 20
+type: standard
+actionCost: 1
+kiCostPerTier: 10
+# The Effect: a Clash (Energy Strike/Magic Strike vs Strike/Dodge), then a Might Clash, and won, Pinned - the Net's two
+# Clashes (chat.mjs postBinding / settleBind). The one held is marked `boundBy` with who holds them.
+binds: true
+# "At the start of each of your turns, while a Character is Pinned by the effects of your Binding, you must pay the KP
+# Cost of Binding or they stop being Pinned" - paid on its own, a Stop on the card (chat.mjs upkeepUniques).
+sustained: true
+source: Core Rule
+description: >
+  Win a Strike against their Strike or Dodge, then a Might Clash, and they are Pinned while you pay its KP each turn;
+  2(T) KP takes 1/2 your Might off their Life Points. Released as an Instant.
+text: >
+  Binding: You possess the ability to entrap a target, preventing them from moving so long as you maintain your
+  concentration.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Force or Magic Score of 8+
+  –TP Cost: 20
+  –KP Cost: 10(T)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target a Character who is not at Long Range. Make a Clash (Energy Strike/Magic Strike vs Strike/Dodge). If
+  you win, reduce their Defense Value by 1(T) until the end of your next turn and make a Might Clash against that same
+  Character. If you win, that target is Pinned. Upon the Target becoming Pinned, you may spend 2(T) Ki Points to reduce
+  that target’s Life Points by 1/2 of your Might.
+
+  At the start of each of your turns, while a Character is Pinned by the effects of your Binding, you must pay the KP
+  Cost of Binding or they stop being Pinned. If you do, you may spend 2(T) Ki Points to reduce that target’s Life
+  Points by 1/2 of your Might. You can also remove the effects of Binding as an Instant Maneuver.
+
+  For every Turn that an Opponent ends with the Pinned Combat Condition through the effects of your Binding, increase
+  the Dice Score of their Might Clash through the effects of the Pinned Combat Condition by 1(T) – using their Tier of
+  Power to calculate this bonus.
+
+  You cannot use this Unique Ability again if an Opponent is currently Pinned due to the effects of your use of
+  Binding.

@@ -1,0 +1,13 @@
+id: gentle-hold
+name: Gentle Hold
+restriction: true
+reduction: 5
+locked: Binding Volley, Psycho Thread
+# "You cannot spend Ki Points through the effects of Binding to reduce the Life Points of a Target."
+noSqueeze: true
+source: Core Rule
+text: >
+  Gentle Hold: Your binding energy is not strong enough to cause harm.
+  –Locked Advancements: Binding Volley, Psycho Thread
+  –TP Cost: -5
+  –Effect: You cannot spend Ki Points through the effects of Binding to reduce the Life Points of a Target.

@@ -360,6 +360,16 @@ export function registerConditionHooks() {
     if (snared && !((Number(actor.system.conditions?.[snared.condition]) || 0) > 0)) {
       await actor.unsetFlag("dbu-ttrpg", "snaredBy");
     }
+
+    // And Binding's: the Condition it put on them gone - Clashed off, taken off the sheet - lets the Binding go.
+    const bound = actor.getFlag("dbu-ttrpg", "boundBy");
+    if (bound && !((Number(actor.system.conditions?.[bound.condition]) || 0) > 0)) {
+      const binder = fromUuidSync(bound.by);
+      const item = binder?.items?.get(bound.itemId);
+      const { releaseBinding } = await import("./chat.mjs");
+      if (item?.system?.unique?.applied) await releaseBinding(binder, item, { said: false });
+      else await actor.setFlag("dbu-ttrpg", "boundBy", null);
+    }
   });
 }
 

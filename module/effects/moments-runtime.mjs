@@ -287,10 +287,21 @@ async function runVerb(actor, call, context) {
       const netted = snared && (snared.by === against.uuid)
         && ((Number(actor.system?.conditions?.[snared.condition]) || 0) > 0);
 
+      // Held by their Binding: "For every Turn that an Opponent ends with the Pinned Combat Condition through the
+      // effects of your Binding, increase the Dice Score of their Might Clash through the effects of the Pinned
+      // Combat Condition by 1(T) - using their Tier of Power" - and winning frees them.
+      const bound = actor.getFlag?.("dbu-ttrpg", "boundBy");
+      const binding = bound && (bound.by === against.uuid) && (bound.condition === "pinned")
+        && ((Number(actor.system?.conditions?.pinned) || 0) > 0);
+      const turns = binding ? (Number(bound.turns) || 0) : 0;
+
       const { postMightClash } = await import("../chat.mjs");
       return postMightClash(actor, against, {
         maneuverName: "Might Clash",
         reason: `${actor.name} against ${against.name}`,
+        ...(binding ? { bindEscape: { applied: false, itemId: bound.itemId } } : {}),
+        ...(turns ? { rowsFor: { [actor.uuid]: [{ label: `${bound.itemName}, ${turns} turn${(turns === 1) ? "" : "s"} held`,
+          value: turns * Math.max(1, actor.system.tierOfPower ?? 1) }] } } : {}),
         ...(netted
           ? { mightFor: { [against.uuid]: snared.might },
               mightLabel: `${snared.itemName} (Scholarship)` }

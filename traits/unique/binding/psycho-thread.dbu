@@ -1,0 +1,17 @@
+id: psycho-thread
+name: Psycho Thread
+advancement: true
+prerequisite: Insight Score 10+
+tpCost: 10
+# "When your Opponent loses Life Points through the effects of your use of the Binding Unique Ability, they lose Ki
+# Points equal to 1/2 of the amount of Life Points lost."
+drainsKi: true
+source: Core Rule
+description: >
+  Life Points your Binding takes cost them half as many Ki Points too.
+text: >
+  Psycho Thread: You can use your energy ensnaring an opponent to slowly sap them of their strength.
+  –Prerequisites: Insight Score 10+
+  –TP Cost: 10
+  –Effect: When your Opponent loses Life Points through the effects of your use of the Binding Unique Ability, they
+  lose Ki Points equal to 1/2 of the amount of Life Points lost.

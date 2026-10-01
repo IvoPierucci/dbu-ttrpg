@@ -121,7 +121,7 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   for (const key of ["type", "actionCost", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
     "requiresTarget", "usageLimit", "source", "text", "script"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "barrier", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "barrier", "binds", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -180,10 +180,11 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         precognition: definition.foresees === true,
         sustained: definition.sustained === true,
         barrier: definition.barrier === true,
+        binds: definition.binds === true,
         evade: { defense: number(definition.evadeDefense), offer: String(definition.evadeOffer ?? "") },
         advancements: children.filter(child => child.advancement === true).map(child => ({
           id: id(), key: child.id, name: child.name, tp: number(child.tpCost),
-          prerequisite: String(child.prerequisite ?? ""), text: String(child.text ?? ""), script: String(child.script ?? ""),
+          prerequisite: listOf(child.prerequisite).join(", "), text: String(child.text ?? ""), script: String(child.script ?? ""),
           alsoOffer: String(child.evadeAlso ?? ""), clashSave: String(child.evadeClash ?? ""),
           clashAgainst: String(child.evadeClashAgainst ?? ""), clashNote: String(child.evadeClashNote ?? ""),
           noDiminishing: child.evadeNoDiminishing === true, bought: false, free: false, tpChange: 0
@@ -263,6 +264,12 @@ export function harderBy1(difficulty) {
  * The Advancements bought onto a Unique Ability, as their files: what each does is written there
  * (`projectile: true`, `allowsTag: tech`...), and the Item keeps only which were bought.
  */
+/** The files of the Restrictions applied to it - Gentle Hold's, Weak Hold's. */
+export function appliedTraits(unique, getTrait) {
+  return (unique?.restrictions ?? []).filter(entry => entry.applied && entry.key)
+    .map(entry => getTrait?.(entry.key)).filter(Boolean);
+}
+
 export function boughtTraits(unique, getTrait) {
   return (unique?.advancements ?? []).filter(entry => entry.bought && entry.key)
     .map(entry => getTrait?.(entry.key)).filter(Boolean);

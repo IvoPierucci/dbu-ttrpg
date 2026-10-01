@@ -1,0 +1,15 @@
+id: psychic-grip
+name: Psychic Grip
+advancement: true
+prerequisite: Telekinesis, Force or Magic Score 8+
+tpCost: 5
+# The Telekinesis Unique Ability is not in this system yet: said, for the table.
+source: Core Rule
+description: >
+  Whoever your Binding holds has 2(T) off their Dice Score against your Telekinesis.
+text: >
+  Psychic Grip: You are able to move the target you’ve trapped with the power of your mind.
+  –Prerequisites: Telekinesis, Force or Magic Score 8+
+  –TP Cost: 5
+  –Effect: While an Opponent is Pinned due to the effects of Binding, reduce their Dice Score for the Clash against the
+  effects of Telekinesis by 2(T).

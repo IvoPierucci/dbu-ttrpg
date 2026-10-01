@@ -1,0 +1,16 @@
+id: energy-web
+name: Energy Web
+advancement: true
+prerequisite: Insight Score 6+
+tpCost: 10
+# "While that Opponent remains Pinned through those effects, they suffer from the Guard Down Combat Condition."
+bindGuardDown: true
+source: Core Rule
+description: >
+  Whoever your Binding Pins is Guard Down while they stay Pinned.
+text: >
+  Energy Web: You can bind your opponent in such a way as to leave them wide open.
+  –Prerequisites: Insight Score 6+
+  –TP Cost: 10
+  –Effect: If you inflict the Pinned Combat Condition through the Binding Unique Ability, while that Opponent remains
+  Pinned through those effects, they suffer from the Guard Down Combat Condition.

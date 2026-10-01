@@ -1,0 +1,33 @@
+id: binding-volleyball
+name: Binding Volleyball
+advancement: true
+prerequisite: Binding Volley
+tpCost: 10
+# Offered once Binding Volley is used: Volleyball Time! (chat.mjs volleyball).
+volleyball: true
+source: Core Rule
+description: >
+  After a Binding Volley: Volleyball Time! - Launching Basic Attacks out of sequence between Allies, and Spike! to end it.
+text: >
+  Binding Volleyball: You can use your energy to turn your opponent into a ball temporarily, allowing you to knock them
+  around the battlefield.
+  –Prerequisites: Binding Volley
+  –TP Cost: 10
+  –Effect: If you use the effects of Binding Volley, you may move the targeted Opponent to a Square adjacent to you. If
+  you do, they become known as the ‘Volleyball’ and the Combat Encounter pauses as you begin Volleyball Time!
+
+  Once Volleyball Time! begins, make a Basic Attack Maneuver of the Launching Profile against the Volleyball as an
+  Out-of-Sequence Maneuver. If the movement from this Attacking Maneuver would make them Collide with any of your Allies
+  (except Minions), instead of undergoing the rules for Collision, that Ally can use the Basic Attack Maneuver of the
+  Launching Profile against the Volleyball as an Out-of-Sequence Maneuver. If the movement from that Attacking Maneuver
+  would cause Collision with any of their Allies (except Minions), continue to apply this effect until it can no
+  longer be applied. Each Character can only use the Basic Attack Maneuver through the effects of Binding Volleyball
+  once during each Combat Encounter.
+
+  If an Ally’s Attacking Maneuver would cause the Volleyball to Collide with you, you may use the Signature Technique
+  Maneuver to use the Spike! Signature Technique as an Out-of-Sequence Maneuver, even if you do not possess the Spike!
+  Signature Technique. The Spike! Signature is a Super Signature Technique of the Mega Flare Profile with no Advantages
+  or Disadvantages, but it gains 1 Energy Charge for each time the Opponent has been hit by an Attacking Maneuver from
+  your Allies during Volleyball Time! If you hit the Volleyball with the Spike! Signature Technique, after concluding
+  that Attacking Maneuver, Volleyball Time! ends and that Opponent is no longer Pinned through your use of the Binding
+  Maneuver.

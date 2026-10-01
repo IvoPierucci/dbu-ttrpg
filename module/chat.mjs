@@ -64,7 +64,7 @@ import {
   spendManeuverCost,
   maneuverUsesLeft
 } from "./maneuvers.mjs";
-import { boughtTraits, evasionOf, uniqueDefinitionOf } from "./unique.mjs";
+import { appliedTraits, boughtTraits, evasionOf, uniqueDefinitionOf } from "./unique.mjs";
 
 /** Flag scope for everything this system stores on a ChatMessage. */
 const SCOPE = "dbu-ttrpg";
@@ -490,6 +490,14 @@ async function applyClash(messageId, clash) {
 
   if (clash.snare && clash.result && !clash.snare.applied) {
     await settleSnare(message, clash);
+  }
+
+  if (clash.bind && clash.result && !clash.bind.applied) {
+    await settleBind(message, clash);
+  }
+
+  if (clash.bindEscape && clash.result && !clash.bindEscape.applied) {
+    await settleBindEscape(message, clash);
   }
 
   if (clash.drain && clash.result && !clash.drain.applied) {
@@ -2674,6 +2682,7 @@ function onRenderChatMessage(message, html) {
   renderRegulated(message, html);
   renderCreate(message, html);
   renderUpkeep(message, html);
+  renderBind(message, html);
   renderMaterialize(message, html);
   renderGearHazard(message, html);
   renderGearScan(message, html);
@@ -3395,16 +3404,27 @@ export async function upkeepUniques(actor) {
     const cost = maneuverKiCost(definitionOf(item), null, actor) + (Number(item.system.unique.upkeepKi) || 0);
     const { ki, capacity } = actor.system;
     const speaker = ChatMessage.getSpeaker({ actor });
+    // Binding holds somebody, or nothing is kept: gone free already, there is nothing to pay for.
+    if (item.system.unique.binds && !boundTo(actor, item)) {
+      await item.update({ "system.unique.applied": false, "system.unique.boundUuid": "" });
+      continue;
+    }
     if ((ki.value < cost) || (cost > capacity.remaining)) {
-      await item.update({ "system.unique.applied": false });
-      await ChatMessage.create({ speaker,
-        content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} ends.</div>` });
+      if (item.system.unique.binds) await releaseBinding(actor, item);
+      else {
+        await item.update({ "system.unique.applied": false });
+        await ChatMessage.create({ speaker,
+          content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} ends.</div>` });
+      }
       continue;
     }
     await actor.update({ "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost });
+    // Binding: "If you do, you may spend 2(T) Ki Points to reduce that target's Life Points by 1/2 of your Might."
+    const bind = item.system.unique.binds ? { targetUuid: item.system.unique.boundUuid, used: false } : null;
     await ChatMessage.create({ speaker,
       content: `<p>${Handlebars.escapeExpression(item.name)}: ${cost} KP</p>`,
-      flags: { [SCOPE]: { [UPKEEP_FLAG]: { actorUuid: actor.uuid, itemId: item.id, paid: cost, stopped: false } } } });
+      flags: { [SCOPE]: { [UPKEEP_FLAG]: { actorUuid: actor.uuid, itemId: item.id, paid: cost, stopped: false },
+        ...(bind ? { [BIND_FLAG]: { binderUuid: actor.uuid, itemId: item.id, ...bind } } : {}) } } });
   }
 }
 
@@ -3425,10 +3445,181 @@ function renderUpkeep(message, html) {
     if (!actor) return;
     await actor.update({ "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + upkeep.paid),
       "system.capacity.spent": Math.max(0, actor.system.capacity.spent - upkeep.paid) });
+    // Binding's squeeze goes with what it was paid alongside.
+    const bind = message.getFlag(SCOPE, BIND_FLAG);
+    if (bind) await message.setFlag(SCOPE, BIND_FLAG, { ...bind, used: true });
+    if (item?.system?.unique?.binds) return releaseBinding(actor, item);
     await item?.update({ "system.unique.applied": false });
     await settledNote(message, `${item?.name ?? "It"} stops.`);
   });
   (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/**
+ * Binding: "Target a Character who is not at Long Range. Make a Clash (Energy Strike/Magic Strike vs Strike/Dodge)."
+ * The Net's first Clash, with the Defender choosing - the KP and the Action already paid.
+ */
+export async function postBinding(actor, maneuver, { targetUuid }) {
+  const target = fromUuidSync(targetUuid);
+  if (!target) return null;
+  const tier = Math.max(1, actor.system.tierOfPower ?? 1);
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [CLASH_FLAG]: {
+      category: "strike",
+      clashLabel: "Clash (Energy Strike/Magic Strike vs Strike/Dodge)",
+      maneuverName: maneuver.name,
+      reason: `Win and ${target.name}'s Defense Value drops by ${tier}, and a Might Clash follows.`,
+      challengerUuid: actor.uuid,
+      challengerName: actor.name,
+      defenderUuid: target.uuid,
+      defenderName: target.name,
+      defenderRoll: "",
+      bind: { stage: "strike", applied: false, itemId: maneuver.itemId, itemName: maneuver.name, tier },
+      ready: [],
+      result: null
+    } } }
+  });
+}
+
+/** Whether this Binding still holds the one it caught: the mark on them names it. */
+function boundTo(binder, item) {
+  const target = fromUuidSync(item.system.unique?.boundUuid ?? "");
+  const mark = target?.getFlag?.(SCOPE, "boundBy");
+  return (mark?.by === binder.uuid) && (mark?.itemId === item.id) ? target : null;
+}
+
+/**
+ * What a settled Binding Clash leaves. The Strike: "If you win, reduce their Defense Value by 1(T) until the end of
+ * your next turn and make a Might Clash against that same Character." The Might Clash: "If you win, that target is
+ * Pinned" - Guard Down instead with Weak Hold, and Guard Down as well with Energy Web - marked with who holds them,
+ * and the squeeze offered: "Upon the Target becoming Pinned, you may spend 2(T) Ki Points to reduce that target's
+ * Life Points by 1/2 of your Might."
+ */
+async function settleBind(message, clash) {
+  const binder = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!binder || !target) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, bind: { ...clash.bind, applied: true } });
+  const bind = clash.bind;
+  const item = binder.items?.get(bind.itemId);
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} slips free.`);
+    return;
+  }
+  if (bind.stage === "strike") {
+    await markUntilNextTurn(binder, target, "entangled", bind.tier, "end", bind.itemName);
+    return postMightClash(binder, target, {
+      maneuverName: bind.itemName,
+      reason: `Win and ${target.name} is held.`,
+      bind: { ...bind, stage: "might", applied: false }
+    });
+  }
+  if (!item) return;
+  const unique = item.system.unique;
+  const applied = appliedTraits(unique, getTrait);
+  const bought = boughtTraits(unique, getTrait);
+  const condition = applied.find(trait => trait.bindCondition)?.bindCondition ?? "pinned";
+  const web = (condition === "pinned") && bought.some(trait => trait.bindGuardDown === true);
+  const { setCondition } = await import("./conditions.mjs");
+  if (await setCondition(target, condition, 1) === false) return;
+  if (web) await setCondition(target, "guard-down", 1);
+  await requestActorUpdate(target, { [`flags.${SCOPE}.boundBy`]: {
+    by: binder.uuid, itemId: item.id, itemName: item.name, condition, web, turns: 0 } });
+  await item.update({ "system.unique.applied": true, "system.unique.boundUuid": target.uuid });
+  const name = getTrait(condition)?.name ?? condition;
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: binder }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(target.name)} is ${name}${web ? " and Guard Down" : ""}.</div>`,
+    flags: { [SCOPE]: { [BIND_FLAG]: { binderUuid: binder.uuid, itemId: item.id, targetUuid: target.uuid, used: false } } }
+  });
+}
+
+/**
+ * The squeeze, on the card that offers it - once: 2(T) KP for 1/2 the binder's Might off their Life Points; with
+ * Binding Volley, 4(T) for the whole of it. None with Gentle Hold.
+ */
+function renderBind(message, html) {
+  const bind = message.getFlag(SCOPE, BIND_FLAG);
+  if (!bind || bind.used) return;
+  const upkeep = message.getFlag(SCOPE, UPKEEP_FLAG);
+  if (upkeep?.stopped) return;
+  const binder = fromUuidSync(bind.binderUuid);
+  const item = binder?.items?.get(bind.itemId);
+  if (!item || (!game.user.isGM && !binder.isOwner)) return;
+  const unique = item.system.unique;
+  if (appliedTraits(unique, getTrait).some(trait => trait.noSqueeze)) return;
+  const tier = Math.max(1, binder.system.tierOfPower ?? 1);
+  const might = Number(binder.system.might) || 0;
+  const options = [{ ki: 2 * tier, life: Math.floor(might / 2), volley: false }];
+  if (boughtTraits(unique, getTrait).some(trait => trait.squeezeDouble)) options.push({ ki: 4 * tier, life: might, volley: true });
+  for (const option of options) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `${option.ki} KP: ${option.life} LP`;
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return squeeze(message, option);
+    });
+    (html.querySelector(".message-content") ?? html).append(button);
+  }
+}
+
+async function squeeze(message, { ki, life, volley }) {
+  const bind = message.getFlag(SCOPE, BIND_FLAG);
+  const binder = fromUuidSync(bind?.binderUuid ?? "");
+  const item = binder?.items?.get(bind.itemId);
+  const target = item ? boundTo(binder, item) : null;
+  if (!bind || bind.used || !target) return;
+  const { ki: pool, capacity } = binder.system;
+  if ((pool.value < ki) || (ki > capacity.remaining)) {
+    ui.notifications.warn(`${binder.name} needs ${ki} Ki Points and the Capacity for them.`);
+    return;
+  }
+  await message.setFlag(SCOPE, BIND_FLAG, { ...bind, used: true, volley });
+  await binder.update({ "system.ki.value": pool.value - ki, "system.capacity.spent": capacity.spent + ki });
+  const { taken } = await reduceLifePoints(target, life, { reason: item.name });
+  // Psycho Thread: "they lose Ki Points equal to 1/2 of the amount of Life Points lost."
+  if (taken && boughtTraits(item.system.unique, getTrait).some(trait => trait.drainsKi)) {
+    const drained = Math.min(Number(target.system.ki.value) || 0, Math.floor(taken / 2));
+    if (drained) {
+      await requestActorUpdate(target, { "system.ki.value": target.system.ki.value - drained });
+      await settledNote(message, `${target.name} loses ${drained} Ki Points.`);
+    }
+  }
+}
+
+/**
+ * Binding let go - not paid for, stopped, Released as an Instant, or the one held free: the Condition it put on them
+ * comes off with Energy Web's Guard Down, and the mark with it.
+ */
+export async function releaseBinding(binder, item, { said = true } = {}) {
+  const target = boundTo(binder, item);
+  await item.update({ "system.unique.applied": false, "system.unique.boundUuid": "" });
+  if (!target) return;
+  const mark = target.getFlag(SCOPE, "boundBy");
+  await requestActorUpdate(target, { [`flags.${SCOPE}.boundBy`]: null });
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, mark.condition, 0);
+  if (mark.web) await setCondition(target, "guard-down", 0);
+  if (said) {
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: binder }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(target.name)} is released.</div>` });
+  }
+}
+
+/**
+ * The Pinned's Might Clash against the one whose Binding holds them, won: "If they win, they stop being Pinned."
+ */
+async function settleBindEscape(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, bindEscape: { ...clash.bindEscape, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return;
+  const binder = fromUuidSync(clash.defenderUuid);
+  const item = binder?.items?.get(clash.bindEscape.itemId);
+  if (binder && item) await releaseBinding(binder, item, { said: false });
+  await settledNote(message, `${clash.challengerName} breaks free.`);
 }
 
 /**
@@ -5921,6 +6112,7 @@ const REGULATED_FLAG = "regulated";
 /** A Meal cooked, waiting on its Cooking Skill Check - the Cook Maneuver. */
 const COOK_FLAG = "cook";
 const UPKEEP_FLAG = "upkeep";
+const BIND_FLAG = "bind";
 /** Something being made, waiting on its Skill Check - the Create Maneuver. */
 const CREATE_FLAG = "create";
 /** Something conjured, waiting on its Skill Check - Magical Materialization. */
@@ -6377,7 +6569,9 @@ const CLASH_ROLLS = ({
         ? [{ label: clash.mightBonusLabel || "Knockback in space", value: clash.mightBonus }]
         : []),
       // A Signature Technique's own rows on the challenger's side: Hefty Stagger, Forceful Launch.
-      ...((uuid === clash.challengerUuid) ? (clash.challengerRows ?? []) : [])
+      ...((uuid === clash.challengerUuid) ? (clash.challengerRows ?? []) : []),
+      // And one side's own, named on the card - the turns Binding has held them.
+      ...(clash.rowsFor?.[uuid] ?? [])
     ]
   },
 

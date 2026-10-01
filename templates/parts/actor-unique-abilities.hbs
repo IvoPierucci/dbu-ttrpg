@@ -32,7 +32,7 @@
           <span class="maneuver-uses">{{row.type}} &middot; {{row.maneuverType}}</span>
           {{#if row.applied}}
           <button type="button" class="maneuver-cost unique-applied" data-action="stopUnique" data-item-id="{{row.itemId}}"
-                  data-tooltip="{{#if row.area}}{{row.area}} Sphere. {{/if}}Click to stop it">Applied</button>
+                  data-tooltip="{{#if row.held}}Holds {{row.held}}. Click to release them (Instant){{else}}{{#if row.area}}{{row.area}} Sphere. {{/if}}Click to stop it{{/if}}">Applied</button>
           {{/if}}
           <span class="maneuver-cost">{{row.actions}}</span>
           <span class="maneuver-cost">{{row.kp}} KP</span>

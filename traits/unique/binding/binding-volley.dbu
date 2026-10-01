@@ -1,0 +1,17 @@
+id: binding-volley
+name: Binding Volley
+advancement: true
+prerequisite: Force or Magic Score 10+
+tpCost: 10
+# "You may double the amount of Ki Points you spend to reduce the target's Life Points by your full Might value" - 4(T)
+# KP for the whole Might, offered beside the 2(T) for half.
+squeezeDouble: true
+source: Core Rule
+description: >
+  4(T) KP in place of 2(T): the whole of your Might off their Life Points.
+text: >
+  Binding Volley: You can trap your target in a stronger form of binding, causing more damage!
+  –Prerequisites: Force or Magic Score 10+
+  –TP Cost: 10
+  –Effect: You may double the amount of Ki Points you spend to reduce the target’s Life Points by your full Might value
+  through the effects of Binding.

@@ -70,7 +70,7 @@ import { getTrait } from "./effects/traits.mjs";
 import { emptiesCapacity } from "./signature.mjs";
 import { ULTIMATES_PER_ENCOUNTER, buildArea, choicesOf, isBuilt, isUltimate, signatureOf,
   techniqueKiPerTier } from "./technique.mjs";
-import { MAGNITUDES, magnitudeIndex } from "./maneuvers.mjs";
+import { MAGNITUDES, atLongRange, magnitudeIndex } from "./maneuvers.mjs";
 import { techniqueUseEntries, ultimatesUsed, whyNotTechnique, whyNotTechniqueAgainst }
   from "./technique-use.mjs";
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
@@ -1825,6 +1825,8 @@ export function definitionOf(item) {
     precognition: item.system.unique?.precognition === true,
     // Applied until it is not paid for - the Atmospheric Bubble.
     sustained: item.system.unique?.sustained === true,
+    // Pins somebody and holds them - Binding.
+    binds: item.system.unique?.binds === true,
     kiCostPerTierChange: Number(item.system.unique?.kiCostPerTierChange) || 0,
     outsideDiminishing: item.system.outsideDiminishing,
     tailAttack: item.system.tailAttack,
@@ -2443,6 +2445,31 @@ async function askSustain(actor, maneuver) {
   return { extraKi: step * perStep, area: label(MAGNITUDES[from + step]) };
 }
 
+/**
+ * Binding: "Target a Character who is not at Long Range" - the one targeted. "You cannot use this Unique Ability
+ * again if an Opponent is currently Pinned due to the effects of your use of Binding." Null, and said, if not.
+ */
+function askBinding(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  if (unique.applied) {
+    const held = fromUuidSync(unique.boundUuid ?? "");
+    ui.notifications.warn(`${maneuver.name} already holds ${held?.name ?? "somebody"}.`);
+    return null;
+  }
+  const target = Array.from(game.user.targets ?? []).map(token => token.actor)
+    .find(other => other && (other.uuid !== actor.uuid)) ?? null;
+  if (!target) {
+    ui.notifications.warn(`${maneuver.name} needs a target. Target a token first.`);
+    return null;
+  }
+  if (atLongRange(actor, target)) {
+    ui.notifications.warn(`${target.name} is at Long Range.`);
+    return null;
+  }
+  return { targetUuid: target.uuid };
+}
+
 /** Applied: on the Item, with what keeping it costs on top and its Sphere; the card says the Sphere. */
 async function postSustain(actor, maneuver, sustaining) {
   const item = actor.items?.get(maneuver.itemId);
@@ -3044,6 +3071,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let materializing = null;
   let foreseen = null;
   let sustaining = null;
+  let binding = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3285,7 +3313,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
-    if (maneuver.sustained) {
+    // Binding: who, not at Long Range - and never while it already holds somebody.
+    if (maneuver.binds) {
+      binding = askBinding(actor, maneuver);
+      if (!binding) return false;
+    }
+    else if (maneuver.sustained) {
       sustaining = await askSustain(actor, maneuver);
       if (!sustaining) return false;
     }
@@ -3712,6 +3745,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postPrecognition(actor, maneuver, foreseen)
     : (maneuver.sustained && sustaining)
     ? await postSustain(actor, maneuver, sustaining)
+    : (maneuver.binds && binding)
+    ? await (await import("./chat.mjs")).postBinding(actor, maneuver, binding)
     // Two of the Magic Trick's three effects open its Clash and the third opens nothing.
     // Asked before the Clash routes below, so the third does not fall into one.
     : (maneuver.magicTrick && (trick === "move"))

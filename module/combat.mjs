@@ -517,6 +517,12 @@ export function registerCombatHooks() {
     const leaving = previous?.combatantId
       ? combat.combatants.get(previous.combatantId)?.actor : null;
     if (leaving) await foresee(combat, leaving, false);
+    // Binding: "For every Turn that an Opponent ends with the Pinned Combat Condition through the effects of your
+    // Binding" - counted on the mark, read by their Might Clash.
+    const bound = leaving?.getFlag?.("dbu-ttrpg", "boundBy");
+    if (bound && ((Number(leaving.system.conditions?.[bound.condition]) || 0) > 0)) {
+      await leaving.setFlag("dbu-ttrpg", "boundBy", { ...bound, turns: (Number(bound.turns) || 0) + 1 });
+    }
     if (leaving?.type === "character") {
       await fireMoment(leaving, "end-of-turn");
 

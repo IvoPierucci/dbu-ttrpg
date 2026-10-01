@@ -1,0 +1,15 @@
+id: weak-hold
+name: Weak Hold
+restriction: true
+reduction: 5
+locked: Energy Web, Binding Volleyball
+# "Rather than inflict the Pinned Combat Condition, inflict the Guard Down Combat Condition."
+bindCondition: guard-down
+source: Core Rule
+text: >
+  Weak Hold: Even while you bind your enemies, they are still able to fight.
+  –Locked Advancements: Energy Web, Binding Volleyball
+  –TP Cost: -5
+  –Effect: Rather than inflict the Pinned Combat Condition, inflict the Guard Down Combat Condition through the effects
+  of the Binding Unique Ability. Replace all mentions of ‘Pinned’ with ‘Guard Down’ in the effects of the Binding Unique
+  Ability.
