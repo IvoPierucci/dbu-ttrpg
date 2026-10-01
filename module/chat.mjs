@@ -986,9 +986,11 @@ async function settlePickpocket(message, clash) {
     await settledNote(message, `${thief.name} wins, but ${victim.name} has no Basic Item to take.`);
     return;
   }
-  const chosen = await pick(`${clash.maneuverName} - ${victim.name}`,
-    `${thief.name} may steal one of ${victim.name}'s Basic Items.`,
-    pockets.map(item => ({ action: item.id, label: item.name })));
+  // Named before the Clash - Snatch's "a certain Basic Item" - or chosen now, as Pickpocket's is.
+  const chosen = clash.pickpocket.itemId
+    || await pick(`${clash.maneuverName} - ${victim.name}`,
+      `${thief.name} may steal one of ${victim.name}'s Basic Items.`,
+      pockets.map(item => ({ action: item.id, label: item.name })));
   const item = chosen ? victim.items.get(chosen) : null;
   if (!item) {
     await settledNote(message, `${thief.name} wins, and takes nothing.`);

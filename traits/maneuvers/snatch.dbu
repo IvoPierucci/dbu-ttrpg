@@ -1,0 +1,29 @@
+id: snatch
+name: Snatch
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+special: true
+usageLimit: 1/round
+clashSkill: thievery
+clashDefenderSkills: perception, thievery
+source: Core Rule
+description: >
+  A Clash of your Thievery against the Perception or Thievery of an Opponent in your Melee Range: win, and the Basic
+  Item you named is yours.
+text: >
+  Snatch Maneuver [1/Round]: Take something being held by your opponent!
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: N/A
+  –Effect: Target an Opponent within your Melee Range who you know possesses a certain Basic Item. Make a Skill Clash
+  (Thievery vs Perception/Thievery). If you win, you take that Basic Item from that Opponent.
+
+---
+
+# Opened by 2+ Ranks in Thievery, like every other Skill's. Which Basic Item is named before the Clash, from theirs
+# (use-maneuver.mjs askSnatch); won, it is taken as Pickpocket takes one (chat.mjs settlePickpocket).

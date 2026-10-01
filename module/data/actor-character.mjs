@@ -268,7 +268,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // The Hide Maneuver, opened at 2+ Ranks like every other Skill's (the user's ruling).
     stealth:          { label: "Stealth",          attribute: "agility",
                         specialManeuver: "hide" },
-    thievery:         { label: "Thievery",         attribute: "agility" },
+    // The Snatch Maneuver, opened at 2+ Ranks like every other Skill's.
+    thievery:         { label: "Thievery",         attribute: "agility",
+                        specialManeuver: "snatch" },
 
     // Craft's Specialties - "Basic Item ... Apparel ... Weapons ... Vehicles" - each a Skill of its own,
     // with its own Ranks and Bonus (the user's ruling). `craft` is the Basic Item one, so the Ranks a

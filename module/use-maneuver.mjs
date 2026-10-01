@@ -2579,6 +2579,30 @@ async function postHide(actor, maneuver, { uuids }) {
   return card;
 }
 
+/** Snatch: which of their Basic Items - "who you know possesses a certain Basic Item". Null if they have none, or none is named. */
+async function askSnatch(actor, target, maneuver) {
+  const items = Array.from(target.items ?? []).filter(item => (item.type === "gear") && (item.system.itemType === "basic"));
+  if (!items.length) {
+    ui.notifications.warn(`${target.name} has no Basic Item to take.`);
+    return null;
+  }
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<select name="item" class="dbu-gear-pick">${items.map(item =>
+      `<option value="${item.id}">${escape(item.name)}</option>`).join("")}</select>`,
+    buttons: [
+      { action: "snatch", label: maneuver.name, default: true, callback: (event, button, dialog) =>
+        dialog.element.querySelector('select[name="item"]')?.value ?? null },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  const item = (picked && (picked !== "cancel")) ? target.items.get(picked) : null;
+  return item ? { itemId: item.id, itemName: item.name } : null;
+}
+
 /**
  * Environment Shift: "one of the following Environmental Qualities: Aflame, Bouncy, Dangerous, Electrified, Frozen, or
  * Poisonous" - and who else stands "within the Sphere AoE (centered on you)": everyone in the Encounter (or targeted,
@@ -3251,6 +3275,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let hiding = null;
   let bursting = null;
   let shifting = null;
+  let snatching = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3620,6 +3645,17 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       return false;
     }
 
+    // Snatch: "Target an Opponent within your Melee Range who you know possesses a certain Basic Item."
+    if ((maneuver.id === "snatch") && targetActor) {
+      const reach = whyNotWithinMelee(actor, targetActor, maneuver.name);
+      if (reach) {
+        ui.notifications.warn(reach);
+        return false;
+      }
+      snatching = await askSnatch(actor, targetActor, maneuver);
+      if (!snatching) return false;
+    }
+
     // Bluff Attack: "Target an Opponent within your Melee Range".
     const outOfBluff = maneuver.bluffs && targetActor && whyNotWithinMelee(actor, targetActor, maneuver.name);
     if (outOfBluff) {
@@ -3987,6 +4023,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
         ...(maneuver.sense ? { sense: { applied: false } } : {}),
         // Bluff Attack's: Staggered and Shaken won, their Exploit lost.
         ...(maneuver.bluffs ? { bluffAttack: { applied: false } } : {}),
+        // Snatch's: won, the Basic Item named is taken.
+        ...(snatching ? { pickpocket: { applied: false, steals: "basic", itemId: snatching.itemId } } : {}),
         // Search's: won, no longer Oblivious of them.
         ...((maneuver.id === "search") ? { search: { applied: false } } : {}),
         // Winning leaves a Condition, and whether it leaves a second one depends on what
