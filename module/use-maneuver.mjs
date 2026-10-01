@@ -2299,7 +2299,7 @@ async function askMaterialize(actor, maneuver) {
     window: { title: `${actor.name} - ${maneuver.name}` },
     content: `<label class="dbu-wager"><span>Make</span><select name="what" class="dbu-gear-pick">
         ${basics.length ? `<optgroup label="Basic Items">${basics.map(def =>
-          `<option value="basic:${escape(def.id)}">${escape(def.name)} (${escape(def.craftDC)})</option>`).join("")}</optgroup>` : ""}
+          `<option value="basic:${escape(def.id)}">${escape(def.name)} (${escape(def.materializeDC || def.craftDC)})</option>`).join("")}</optgroup>` : ""}
         ${allows("weapon") ? `<option value="weapon">A Weapon</option>` : ""}
         ${allows("apparel") ? `<option value="apparel">A piece of Apparel</option>` : ""}
         ${(has("weights") && target) ? `<option value="weights">Weights, at ${escape(target.name)} (Restrictive Weights)</option>` : ""}
@@ -2337,7 +2337,10 @@ async function askMaterialize(actor, maneuver) {
   let difficulty = chosen.difficulty;
   if (basic) {
     const choices = gearItemFrom(basic, actor).system.craftDCChoices ?? [];
-    difficulty = choices.length ? (choices.includes(chosen.difficulty) ? chosen.difficulty : choices[0]) : keyOf(basic.craftDC);
+    // The Crystal Ball's: "If attempted to be created through Magical Materialization, the Craft DC for this item is
+    // Qualified."
+    difficulty = choices.length ? (choices.includes(chosen.difficulty) ? chosen.difficulty : choices[0])
+      : keyOf(basic.materializeDC || basic.craftDC);
   }
   // "Increase the Difficulty Category by 1" - unless Magic Crafter, or Tech or Food Materialization with 4+ Ranks.
   const harder = materializeHarder(tags, bought, actor.system) ? harderBy1(difficulty) : { difficulty, diceMinus: 0 };

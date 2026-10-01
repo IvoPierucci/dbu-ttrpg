@@ -18,6 +18,8 @@ Headers:
              Every other file is what its folder is.
   tags:      tech, med, food   - the [Tech], [Med], [Food] after its name
   craftDC:   the Craft DC, as the entry writes it
+  materializeDC: the Craft DC through Magical Materialization, where the entry gives
+             one of its own - the Crystal Ball's Qualified
   source:    Core Rule
   text: >    the entry, as printed
 

@@ -1,0 +1,39 @@
+id: crystal-ball
+name: Crystal Ball
+kind: gear
+craftDC: Expert
+# "If attempted to be created through Magical Materialization, the Craft DC for this item is Qualified."
+materializeDC: Qualified
+source: Core Rule
+description: >
+  A floating orb to ride or see far away through. Second Sight projected for everyone near, or a Use
+  Magic Check (Expert) to use Second Sight through it; held, Use Magic may stand in for Clairvoyance.
+text: >
+  Crystal Ball: A mystical orb of glass or precious mineral that is purported to give some people
+  the ability to see into the unknown…
+  –Craft DC: Expert
+  –Details: N/A
+  –Effects: A fortune teller’s ball that can be made to float with magical abilities, allowing you
+  to ride upon it or use it to see far away things. If you possess the Second Sight Unique Ability,
+  you may project it onto the Crystal Ball so that everyone within your nearby vicinity can see
+  what you’re seeing. If you do not possess the Unique Ability, you can make an Use Magic Skill
+  Check with a Difficulty Category of Expert. If you fail, nothing happens. If you pass, you may use
+  the Second Sight Magical Ability through the Crystal Ball even if you don’t have access to it.
+  Additionally, while holding this item, when making a Clairvoyance Skill Check, you may use the
+  Skill Bonus of your Use Magic Skill instead.
+
+  If attempted to be created through Magical Materialization, the Craft DC for this item is
+  Qualified.
+
+---
+
+# --- What the system does ---------------------------------------------------------------------
+#
+# Magical Materialization lists it at Qualified, its `materializeDC`, in place of Expert - and
+# Materialization's own Category harder goes on top of that, as on every other Item.
+#
+# --- What is not built -------------------------------------------------------------------------
+#
+# Second Sight, projected or borrowed through the Use Magic Check: the Second Sight Unique Ability
+# is not in this system yet. Floating and riding it, and Use Magic for Clairvoyance while it is
+# held, are the table's.
