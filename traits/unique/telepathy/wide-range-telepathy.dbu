@@ -1,0 +1,16 @@
+id: wide-range-telepathy
+name: Wide-Range Telepathy
+advancement: true
+prerequisite: 4+ Skill Ranks in Clairvoyance
+tpCost: 4
+# "You can select any number of targets with Telepathy" - no ceiling on the tokens targeted; the rest is the table's.
+telepathyUnlimited: true
+source: Core Rule
+description: >
+  Telepathy at any number of Characters, wherever they are.
+text: >
+  Wide-Range Telepathy: Your telepathic abilities have limitless range.
+  –Prerequisites: 4+ Skill Ranks in Clairvoyance
+  –TP Cost: 4
+  –Effect: You can select any number of targets with Telepathy. Additionally, you can target Characters outside of your
+  Battlefield that you cannot see.

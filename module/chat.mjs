@@ -11133,6 +11133,62 @@ function renderPsychicBack(message, html) {
   (html.querySelector(".message-content") ?? html).append(button);
 }
 
+/** Telepathy, before it is used: your targeted tokens, no more than your Clairvoyance Skill Ranks without Wide-Range Telepathy. */
+export async function askTelepathy(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  const unlimited = unique ? boughtTraits(unique, getTrait).some(trait => trait.telepathyUnlimited === true) : false;
+  const most = Math.max(0, Number(actor.system.skills?.clairvoyance?.ranks) || 0);
+  const minds = [...new Set(Array.from(game.user.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid)).map(other => other.uuid))];
+  if (!minds.length) {
+    ui.notifications.warn(`${maneuver.name}: target who you reach first.`);
+    return null;
+  }
+  if (!unlimited && (minds.length > most)) {
+    ui.notifications.warn(`${maneuver.name}: ${most} Character${(most === 1) ? "" : "s"} at most - your Clairvoyance Skill Ranks.`);
+    return null;
+  }
+  return { uuids: minds };
+}
+
+/** The Combat Round a Telepathy link is kept for: the current one, or none outside a Combat Encounter. */
+function telepathyRound() {
+  return game.combat?.started ? `${game.combat.id}:${game.combat.round}` : "";
+}
+
+/** Who a character is linked with this Combat Round - both sides keep the link. */
+function telepathyLinks(actor) {
+  const link = actor?.getFlag?.(SCOPE, "telepathy");
+  return (link && link.round && (link.round === telepathyRound())) ? (link.with ?? []) : [];
+}
+
+/** Telepathy, used: "Until the end of the Combat Round, you may communicate with those Characters telepathically." */
+export async function postTelepathy(actor, maneuver, plan) {
+  const round = telepathyRound();
+  const minds = plan.uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  const join = (who, more) => ({ [`flags.${SCOPE}.telepathy`]: { round,
+    with: [...new Set([...telepathyLinks(who), ...more])] } });
+  if (round) {
+    await requestActorUpdate(actor, join(actor, minds.map(other => other.uuid)));
+    for (const other of minds) await requestActorUpdate(other, join(other, [actor.uuid]));
+  }
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(actor.name)}`
+      + ` reaches ${Handlebars.escapeExpression(minds.map(other => other.name).join(", "))} until the end of the Combat Round.</div>` });
+}
+
+/**
+ * Telepathy's Passive: "If you are in the Melee Range of a Character you are telepathically communicating with, increase
+ * both of your Defense Values by 1(bT). This effect does not stack" - once, whoever else is linked and near.
+ */
+function telepathyBonus(actor) {
+  const near = telepathyLinks(actor).some(uuid => {
+    const other = fromUuidSync(uuid);
+    return other && !whyNotWithinMelee(actor, other, "");
+  });
+  return near ? [{ label: "Telepathy", written: "+1(bT)", value: Math.max(1, Number(actor.system.baseTierOfPower) || 1) }] : [];
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -15147,6 +15203,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...analysisBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Mind Reading's, against the one who read: the Dodge, and Combat Telepath's on it.
   parts.push(...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }));
+  // Telepathy: Defense Value 1(bT) higher beside a mind it is linked with.
+  parts.push(...telepathyBonus(actor));
   parts.push(...foresightBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   return parts;
 }

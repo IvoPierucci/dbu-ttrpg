@@ -1,0 +1,33 @@
+id: telepathy
+name: Telepathy
+uaType: magical
+prerequisite: 2+ Skill Ranks in Clairvoyance
+tpCost: 8
+type: instant
+actionCost: 0
+# "Target a number of Characters within your Battlefield up to your number of Clairvoyance Skill Ranks. Until the end of
+# the Combat Round, you may communicate with those Characters telepathically" - your targeted tokens, the link kept on
+# both sides for this Combat Round (chat.mjs postTelepathy). Its Passive, read where a Dodge is rolled: "If you are in
+# the Melee Range of a Character you are telepathically communicating with, increase both of your Defense Values by
+# 1(bT)" - once, however many links (telepathyBonus). Outside a Combat Encounter, the table's.
+telepathy: true
+source: Core Rule
+description: >
+  An Instant link with up to your Clairvoyance Ranks in Characters for the Combat Round; in each other's Melee Range,
+  both Defense Values 1(bT) higher.
+text: >
+  Telepathy: You possess the ability to project your thoughts and read the forethoughts of others, allowing you to
+  communicate without a single sound.
+  –Ability Type: Magical
+  –Prerequisites: 2+ Skill Ranks in Clairvoyance
+  –TP Cost: 8
+  –KP Cost: N/A
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –Minions: N/A
+  –Passive Bonus: If you are in the Melee Range of a Character you are telepathically communicating with, increase both
+  of your Defense Values by 1(bT). This effect does not stack if multiple Characters with the Telepathy Unique Ability are
+  in each other’s Melee Ranges. While outside of a Combat Encounter, you can communicate with anyone you can see (this
+  includes if you see them through the Magical Sight Adventuring Maneuver).
+  –Effect: Target a number of Characters within your Battlefield up to your number of Clairvoyance Skill Ranks. Until the
+  end of the Combat Round, you may communicate with those Characters telepathically.

@@ -1883,6 +1883,7 @@ export function definitionOf(item) {
     spiritSword: item.system.unique?.spiritSword === true,
     kamikaze: item.system.unique?.kamikaze === true,
     telekinesis: item.system.unique?.telekinesis === true,
+    telepathy: item.system.unique?.telepathy === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -3887,6 +3888,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let swording = null;
   let haunting = null;
   let lifting = null;
+  let linking = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4282,6 +4284,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const size = larger || unique?.sphereMagnitude || "minor";
       waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
       if (!waving) return false;
+    }
+
+    // Telepathy: "up to your number of Clairvoyance Skill Ranks" - any number with Wide-Range Telepathy.
+    if (maneuver.telepathy) {
+      linking = await (await import("./chat.mjs")).askTelepathy(actor, maneuver);
+      if (!linking) return false;
     }
 
     // Telekinesis: what it is done with, at whom.
@@ -4828,6 +4836,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : maneuver.portals
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
+    : (maneuver.telepathy && linking)
+    ? await (await import("./chat.mjs")).postTelepathy(actor, maneuver, linking)
     : (maneuver.telekinesis && lifting)
     ? await (await import("./chat.mjs")).postTelekinesis(actor, maneuver, lifting)
     : (maneuver.kamikaze && haunting)

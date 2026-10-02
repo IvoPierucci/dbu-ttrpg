@@ -694,6 +694,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         blockedName: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** Throw, take or Launch from 8 Squares away - Telekinesis's (chat.mjs postTelekinesis). */
         telekinesis: new fields.BooleanField({ required: true, initial: false }),
+        /** A link of minds for the Combat Round - Telepathy's (chat.mjs postTelepathy, telepathyBonus). */
+        telepathy: new fields.BooleanField({ required: true, initial: false }),
         shapeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeBestial: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         shapeForm: new fields.StringField({ required: true, blank: true, initial: "" }),
