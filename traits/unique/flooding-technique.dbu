@@ -1,0 +1,47 @@
+id: flooding-technique
+name: Flooding Technique
+uaType: magical
+prerequisite: N/A
+tpCost: 15
+type: standard
+actionCost: 2
+kiCostPerBaseTier: 6
+# Applied when used, never again while it is (use-maneuver.mjs askSustain); its KP paid at the start of each of your
+# turns with a Stop on the card, ended if it cannot be (chat.mjs upkeepUniques); "Applied" on its row ends it as an
+# Instant. The Large Sphere is said on the card.
+sustained: true
+instantRelease: true
+sphereMagnitude: large
+# "The Battle Environment becomes Underwater": yours, for you stand at the centre and it moves with you - the one you
+# had kept and given back when it ends. Whoever else is inside sets their own on the Battlefields tab (the table's).
+floods: underwater-environment
+source: Core Rule
+description: >
+  A Large Sphere around you, and moving with you, becomes Underwater - yours set; its KP again at the start of each of
+  your turns, or it ends; ended as an Instant. Passive: Combat Rolls 1(T) higher Underwater.
+text: >
+  Flooding Technique: You can magically produce enough water to change the tides of battle, creating an ocean on the
+  battlefield.
+  –Ability Type: Magical
+  –Prerequisites: N/A
+  –TP Cost: 15
+  –KP Cost: 6(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 2 Actions
+  –Minions: N/A
+  –Passive Bonus: While in the Underwater Battle Environment, increase your Combat Rolls by 1(T).
+  –Effect: Within a Large Sphere AoE (centered on you), the Battle Environment becomes Underwater. If you move to
+  another Square due to any effect, the AoE containing this Battle Environment moves the exact same distance and in the
+  same direction.
+
+  You cannot use this Unique Ability while it is active, and must pay the Ki Point Cost of this Unique Ability at the
+  start of each of your turns or return the Battle Environment to what it would normally be. You may return the Battle
+  Environment to normal as an Instant Action.
+
+---
+
+# "While in the Underwater Battle Environment" - yours, and not while you are above it in a High Environment.
+[passive]
+if (inEnvironment("underwater")) {
+  combatRolls += 1(T);
+}

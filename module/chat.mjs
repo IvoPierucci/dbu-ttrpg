@@ -3588,7 +3588,7 @@ export async function upkeepUniques(actor) {
       if (item.system.unique.binds) await releaseBinding(actor, item);
       else {
         await item.update({ "system.unique.applied": false });
-        await leaveToggledState(actor, item);
+        await endSustained(actor, item);
         await ChatMessage.create({ speaker,
           content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} ends.</div>` });
       }
@@ -3612,6 +3612,23 @@ export async function upkeepUniques(actor) {
         ...(actionsHeld ? { actions: actionsHeld } : {}),
         ...(shrink ? { shrink } : {}) },
         ...(bind ? { [BIND_FLAG]: { binderUuid: actor.uuid, itemId: item.id, ...bind } } : {}) } } });
+  }
+}
+
+/**
+ * A sustained Unique Ability ended - stopped, unpaid, or released: the State it put you in left (Extra Arms), the Battle
+ * Environment it gave you given back (Flooding Technique: "return the Battle Environment to what it would normally be").
+ */
+export async function endSustained(actor, item) {
+  await leaveToggledState(actor, item);
+  const floods = item.system?.unique?.floods;
+  if (!floods) return;
+  const before = item.system.unique.floodedFrom || "";
+  await item.update({ "system.unique.floodedFrom": "" });
+  // Only if it is still the one it gave: one changed since on the Battlefields tab is the table's to keep.
+  if (actor.system.battlefield?.environment === floods) {
+    const { STANDARD_ENVIRONMENT } = await import("./environments.mjs");
+    await actor.update({ "system.battlefield.environment": before || STANDARD_ENVIRONMENT });
   }
 }
 
@@ -3646,7 +3663,7 @@ function renderUpkeep(message, html) {
     if (bind) await message.setFlag(SCOPE, BIND_FLAG, { ...bind, used: true });
     if (item?.system?.unique?.binds) return releaseBinding(actor, item);
     await item?.update({ "system.unique.applied": false });
-    if (item) await leaveToggledState(actor, item);
+    if (item) await endSustained(actor, item);
     await settledNote(message, `${item?.name ?? "It"} stops.`);
   });
   (html.querySelector(".message-content") ?? html).append(button);

@@ -2778,6 +2778,12 @@ async function postSustain(actor, maneuver, sustaining) {
   const item = actor.items?.get(maneuver.itemId);
   await item?.update({ "system.unique.applied": true, "system.unique.upkeepKi": sustaining.extraKi,
     "system.unique.area": sustaining.area });
+  // Flooding Technique: "the Battle Environment becomes Underwater" - theirs, the one they had kept to give back.
+  const floods = item?.system?.unique?.floods;
+  if (floods) {
+    await item.update({ "system.unique.floodedFrom": actor.system.battlefield?.environment ?? "" });
+    await actor.update({ "system.battlefield.environment": floods });
+  }
   const { postManeuver } = await import("./chat.mjs");
   return postManeuver(actor, maneuver, { note: sustaining.area ? `${sustaining.area} Sphere.` : "" });
 }

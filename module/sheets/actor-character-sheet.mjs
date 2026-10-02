@@ -1897,12 +1897,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         await releaseBinding(this.actor, item);
       } else {
         await item.update({ "system.unique.applied": false });
+        const { endSustained } = await import("../chat.mjs");
+        await endSustained(this.actor, item);
         await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
           content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} is removed.</div>` });
       }
       return recordManeuverType(this.actor, "instant");
     }
     await item.update({ "system.unique.applied": false });
+    {
+      const { endSustained } = await import("../chat.mjs");
+      await endSustained(this.actor, item);
+    }
     return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
       content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} stops.</div>` });
   }

@@ -632,6 +632,10 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         fakeMoon: new fields.BooleanField({ required: true, initial: false }),
         /** Finish Sign's: a Signature Technique declared, and Finisher stacks for it (chat.mjs postFinishSign). */
         finishSign: new fields.BooleanField({ required: true, initial: false }),
+        /** The Battle Environment it gives its user while applied - Flooding Technique's Underwater. */
+        floods: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** The one they had before, given back when it ends. */
+        floodedFrom: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The Signature Technique it declared, by its Item's id - blank while none is. */
         finishTechnique: new fields.StringField({ required: true, blank: true, initial: "" }),
         moonRounds: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),

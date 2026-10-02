@@ -54,6 +54,18 @@ const PREDICATES = {
   /** Are you in a named State. */
   inState: (scope, name) => Boolean(scope.data?.states?.[String(name).toLowerCase()]),
 
+  /**
+   * Are you in a named Battle Environment - "While in the Underwater Battle Environment" - by its file, with or without
+   * "-environment" on the end. Not while you are above it in a High Environment: there it does not reach you.
+   */
+  inEnvironment: (scope, name) => {
+    const battlefield = scope.data?.battlefield ?? {};
+    if ((Number(battlefield.highEnvironment) || 0) > 0) return false;
+    const here = String(battlefield.environment ?? "").toLowerCase();
+    const wanted = String(name).trim().toLowerCase();
+    return (here === wanted) || (here === `${wanted}-environment`);
+  },
+
   /** Do you have a named Combat Condition. */
   hasCondition: (scope, name) => Boolean(scope.data?.conditions?.[String(name).toLowerCase()]),
 
