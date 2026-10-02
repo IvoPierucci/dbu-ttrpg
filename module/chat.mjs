@@ -7856,6 +7856,27 @@ function renderSkillClash(message, html) {
       }
     }
 
+    // Combo Portal: "If you move an Opponent with an effect, you may use Illusion Smash as an Instant Maneuver" - at them.
+    if (clash.collision && wonIt && !clash.portaled && challenger?.isOwner) {
+      const smash = Array.from(challenger.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.smashes
+        && boughtTraits(each.system.unique, getTrait).some(trait => trait.comboPortal === true));
+      if (smash && (maneuverUsesLeft(challenger, uniqueDefinitionOf(smash)) > 0)) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "dbu-clash-button";
+        button.textContent = `${smash.name} (Instant)`;
+        button.dataset.tooltip = "Combo Portal: a Basic Attack at the one moved, as if beside you - Knockback if you wish";
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          const { useManeuver } = await import("./use-maneuver.mjs");
+          const used = await useManeuver(challenger, { ...uniqueDefinitionOf(smash), type: "instant" },
+            { targetUuid: clash.defenderUuid, combo: true });
+          if (used) requestEdit(message, { type: "clash", clash: { ...message.getFlag(SCOPE, CLASH_FLAG), portaled: true } });
+        });
+        container.append(button);
+      }
+    }
+
     if (clash.collision && clash.volleyball && wonIt && !clash.collisionApplied && challenger?.isOwner) {
       for (const who of volleyballReceivers(clash)) {
         const pass = document.createElement("button");
@@ -8808,6 +8829,45 @@ async function applyIllusion(message, condition, how) {
   await settledNote(message, `${illusion.name}: ${conditionLabel(condition)} - ${how}.`);
 }
 
+/**
+ * Illusion Smash, paid for: its Basic Attack Out-of-Sequence at once - "treat them as if they were on a Square adjacent
+ * to you", "cannot possess an AoE", Smash Barrage's others with it, Combo Portal's Knockback - or Portal Control's other
+ * Maneuver, "as if that Character was in your Melee Range". The distance is set aside for this use alone
+ * (`_portalTo`, read by whyNotWithinMelee and whyNotInReach), and the attack carries `portal` to its rolls.
+ */
+export async function postSmash(actor, maneuver, plan) {
+  const [first, ...rest] = plan.uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  if (!first) return null;
+  actor._portalTo = new Set(plan.uuids);
+  try {
+    if (plan.use !== "basic") {
+      const item = actor.items.get(plan.use);
+      if (!item) return null;
+      const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+      const used = await useManeuver(actor, definitionOf(item), { outOfSequence: true, targetUuid: first.uuid, portal: true });
+      // "If you would use the Grapple Maneuver through this effect and successfully enter a Grapple as a result, move the
+      // Grappled Character into your Melee Range on an unoccupied Square of your choice."
+      if (used && definitionOf(item).grapple) {
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note">`
+          + `${Handlebars.escapeExpression(maneuver.name)}: if the Grapple takes hold, ${Handlebars.escapeExpression(first.name)} `
+          + "moves into your Melee Range, on an unoccupied Square of your choice.</div>" });
+      }
+      return null;
+    }
+    const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+      targetUuid: first.uuid, reason: maneuver.name,
+      grants: { noArea: true, portal: true, knockback: Boolean(plan.knockback),
+        extraTargets: rest.map(other => ({ uuid: other.uuid, name: other.name })) } };
+    const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+      flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
+    await takeOutOfSequence(card, actor, offer);
+    return card;
+  }
+  finally {
+    delete actor._portalTo;
+  }
+}
+
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
 export async function offerOutOfSequence(actor, offer) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
@@ -9480,6 +9540,9 @@ async function takeOutOfSequence(message, actor, offer) {
       declared = { ...declared, advantages: [...(declared.advantages ?? []), "knockback"] };
     }
     if (granted?.longShot) declared = { ...declared, longShotRanks: granted.longShot };
+    // Illusion Smash: as if beside you; Smash Barrage's others aimed at with it.
+    if (granted?.portal) declared = { ...declared, portal: true };
+    if (granted?.extraTargets?.length) declared = { ...declared, extraTargets: granted.extraTargets };
   }
 
   // A Movement's price is a choice rather than a number - Normal Speed for nothing,
@@ -9652,7 +9715,7 @@ export async function postAttack(actor, target, maneuver,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
                                    extraTargets = [], freeWager = 0, unitedWith = null,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
-                                   genkiLifeforce = 0 },
+                                   genkiLifeforce = 0, portal = false },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -9762,6 +9825,8 @@ export async function postAttack(actor, target, maneuver,
           ...(longShotRanks ? { longShotRanks } : {}),
           // Genki's: the Lifeforce it took as it was made.
           ...(genkiLifeforce ? { genkiLifeforce } : {}),
+          // Illusion Smash: "treat them as if they were on a Square adjacent to you for this Attacking Maneuver".
+          ...(portal ? { portal: true } : {}),
           // A second Profile outside a Technique: Elemental Blade's Multi-Profile on an ordinary
           // attack. A Technique's is on its own block.
           secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
@@ -11278,7 +11343,7 @@ async function resolveAttack(message, attack) {
     // anywhere around its wielder, so how far it came is the table's and nothing is taken.
     const weapon = attack.weapon ?? {};
     const skyWaived = skyAssaultWaives(attacker, attack, target);
-    const longRange = weapon.telekinetic ? 0
+    const longRange = (weapon.telekinetic || attack.portal) ? 0
       : ((weapon.ignoresLongRange || skyWaived ? 0 : longRangePenalty(attacker, target))
         - (atLongRange(attacker, target) ? (Number(weapon.longRangeStrike) || 0) : 0)
         // Long Shot, Short Range and a Trick Attack's won Clash: against this one alone.
@@ -12536,8 +12601,8 @@ async function rollAttackWound(message, attack) {
     const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
       + godMeteorPinned(attacker, target)
       + grantedLongShot(attacker, attack, target)
-      + techniqueWoundAgainst(attacker, attack, { longRange: atLongRange(attacker, target),
-          outsideMelee: Boolean(whyNotWithinMelee(attacker, target, "")),
+      + techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),
+          outsideMelee: !attack.portal && Boolean(whyNotWithinMelee(attacker, target, "")),
           alreadyConditioned: conditionAlreadyOn(attack, target) });
     const effectiveWound = defence.wound(wound.total + analysis);
 

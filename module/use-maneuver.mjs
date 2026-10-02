@@ -1863,6 +1863,7 @@ export function definitionOf(item) {
     heals: item.system.unique?.heals === true,
     selfShock: item.system.unique?.selfShock === true,
     illusion: item.system.unique?.illusion === true,
+    smashes: item.system.unique?.smashes === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -2726,6 +2727,64 @@ async function askIllusion(actor, maneuver) {
   return { ...chosen, area: label };
 }
 
+/**
+ * Illusion Smash: whom, and with what. "Target an Opponent" - your targeted token; Smash Barrage's "up to 3 Opponents"
+ * for its Basic Attack; Portal Control's "any Character" and "any Maneuver with an Action Cost of 1 that targets another
+ * Character" instead; Combo Portal's one moved, alone, with "the Knockback Advantage" a box. Null if it was dropped.
+ */
+async function askSmash(actor, maneuver, { targetUuid = "", combo = false } = {}) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  const { boughtTraits } = await import("./unique.mjs");
+  const bought = boughtTraits(unique, getTrait);
+  const barrage = Number(bought.find(trait => trait.smashBarrage)?.smashBarrage) || 0;
+  const control = bought.find(trait => trait.portalControl) ?? null;
+  const targets = combo
+    ? [fromUuidSync(targetUuid)].filter(Boolean)
+    : Array.from(game.user.targets ?? []).map(token => token.actor).filter(other => other && (other.uuid !== actor.uuid));
+  if (!targets.length) {
+    ui.notifications.warn(`${maneuver.name}: target who it reaches first.`);
+    return null;
+  }
+  const { whyHidden } = await import("./hidden.mjs");
+  const unseen = targets.map(other => whyHidden(actor, other)).find(Boolean);
+  if (unseen) {
+    ui.notifications.warn(unseen);
+    return null;
+  }
+  // Portal Control's: the Maneuvers of 1 Action aimed at another - not the Basic Attack, offered on its own, nor this.
+  const others = (control && !combo) ? actor.items.filter(item => (item.type === "maneuver") && (item.id !== actor.items.get(maneuver.itemId)?.id))
+    .map(definitionOf).filter(entry => entry.requiresTarget && ((entry.actionCost ?? 1) === 1) && (entry.type === "standard")
+      && (entry.id !== "basic-attack") && !entry.signatureTechnique && !(entry.tags ?? []).includes("signature"))
+    .sort((a, b) => a.name.localeCompare(b.name)) : [];
+  const escape = Handlebars.escapeExpression;
+  const most = barrage || 1;
+  const names = targets.map(other => other.name);
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<p class="dbu-respond-hint">${escape(names.join(", "))}${(targets.length > most)
+        ? ` - the Basic Attack reaches the first ${most}` : ""}</p>
+      ${others.length ? `<label class="dbu-wager"><span>Use</span><select name="use">
+        <option value="basic">Basic Attack</option>${others.map(entry =>
+          `<option value="${escape(entry.itemId)}">${escape(entry.name)} (${escape(control.name)})</option>`).join("")}
+        </select></label>` : ""}
+      ${combo ? `<label class="dbu-respond-option"><input type="checkbox" name="knockback"/>
+        <span class="dbu-respond-name">Knockback Advantage</span></label>` : ""}`,
+    buttons: [
+      { action: "smash", label: maneuver.name, default: true, callback: (event, button, dialog) => ({
+        use: dialog.element.querySelector('select[name="use"]')?.value ?? "basic",
+        knockback: Boolean(dialog.element.querySelector('input[name="knockback"]')?.checked)
+      }) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object")) return null;
+  const uuids = targets.map(other => other.uuid).slice(0, (chosen.use === "basic") ? most : 1);
+  return { use: chosen.use, uuids, knockback: chosen.knockback };
+}
+
 /** God Meteor: who is inside the Destructive Sphere around the Square it falls on - ticked by the player. */
 async function askMeteor(actor, maneuver) {
   const pool = game.combat?.started
@@ -3276,7 +3335,8 @@ async function revertTransfiguration(actor, target, maneuver) {
 
 export async function useManeuver(actor, maneuver, { atFeature = false, techniqueId = "", via = "",
                                                     outOfSequence = false, targetUuid = "",
-                                                    presetThrown = null, volleyball = null, meteor = "" } = {}) {
+                                                    presetThrown = null, volleyball = null, meteor = "",
+                                                    portal = false, combo = false } = {}) {
   if (!actor || !maneuver) return false;
   // Whether this use is an Ultimate that began as a Super - Ascended Signature. Set when the
   // Technique is picked.
@@ -3635,6 +3695,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let healing = null;
   let shocking = null;
   let illusioning = null;
+  let smashing = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3886,6 +3947,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Illusion Smash: whom, and with what - Combo Portal's one moved, by itself.
+    if (maneuver.smashes) {
+      smashing = await askSmash(actor, maneuver, { targetUuid, combo });
+      if (!smashing) return false;
+    }
+
     // Illusion: who is inside its Sphere, and which Skill is rolled.
     if (maneuver.illusion) {
       illusioning = await askIllusion(actor, maneuver);
@@ -4435,6 +4502,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.smashes && smashing)
+    ? await (await import("./chat.mjs")).postSmash(actor, maneuver, smashing)
     : (maneuver.illusion && illusioning)
     ? await (await import("./chat.mjs")).postIllusion(actor, maneuver, illusioning)
     : (maneuver.selfShock && shocking)
@@ -4508,7 +4577,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     : (atFeature && declared)
     ? await postFeatureAttack(actor, maneuver, declared, charges)
     : declared
-    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges, ...(volleyball ? { volleyball } : {}) },
+    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges, ...(volleyball ? { volleyball } : {}),
+        ...(portal ? { portal: true } : {}) },
         { modifiers: [...appliedModifiers(modifiers), ...drawn.rows], asOutOfSequence: outOfSequence })
     // A Movement card carries whether Rapid Movement was paid for, because the Dodge
     // bonus it buys is against "an Exploit Maneuver provoked by this instance" - and this

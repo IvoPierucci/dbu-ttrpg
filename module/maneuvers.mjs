@@ -1204,6 +1204,8 @@ export function longRangePenalty(actor, target) {
  * @returns {null|string} null if it may be made, otherwise why it may not
  */
 export function whyNotInReach(actor, target, { foundation, profile, advantages = [] } = {}, extra = 0) {
+  // Illusion Smash: "treat them as if they were on a Square adjacent to you" - for the use it is part of.
+  if (actor?._portalTo?.has?.(target?.uuid)) return null;
   if (!FOUNDATION_RULES[foundation]?.meleeOnly) return null;
   if (PROFILES[profile]?.ignoresMeleeRule) return null;
   // Charging Assault: "you may move up to your Boosted Speed in a straight line towards your Opponent
@@ -1228,6 +1230,8 @@ export function whyNotInReach(actor, target, { foundation, profile, advantages =
  * @param {string} what  what it is that only reaches, for the sentence
  */
 export function whyNotWithinMelee(actor, target, what, extra = 0) {
+  // Illusion Smash and Portal Control: "as if that Character was in your Melee Range" - for that use alone.
+  if (actor?._portalTo?.has?.(target?.uuid)) return null;
   const from = actor?.getActiveTokens?.(false, true)?.[0];
   const to = target?.getActiveTokens?.(false, true)?.[0];
   const squares = squaresBetween(from, to);

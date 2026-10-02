@@ -1,0 +1,24 @@
+id: portal-control
+name: Portal Control
+advancement: true
+prerequisite: N/A
+tpCost: 8
+# "Instead of targeting an Opponent, you may target any Character ... and, instead of using an Attacking Maneuver, may use
+# any Maneuver with an Action Cost of 1 that targets another Character as if that Character was in your Melee Range" -
+# picked in its window, used through it with the distance ignored. The Grapple's move into your Melee Range is said and
+# made by the table.
+portalControl: true
+source: Core Rule
+description: >
+  Illusion Smash may reach any Character, with any 1-Action Maneuver that targets another, as if they were in your Melee
+  Range.
+text: >
+  Portal Control: Your ability to utilize portals grows, allowing you to do more than just attack.
+  –Prerequisites: N/A
+  –TP Cost: 8
+  –Effect: Instead of targeting an Opponent, you may target any Character with the effects of Illusion Smash and,
+  instead of using an Attacking Maneuver, may use any Maneuver with an Action Cost of 1 that targets another Character
+  as if that Character was in your Melee Range.
+
+  If you would use the Grapple Maneuver through this effect and successfully enter a Grapple as a result, move the
+  Grappled Character into your Melee Range on an unoccupied Square of your choice.

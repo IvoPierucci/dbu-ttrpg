@@ -1,0 +1,19 @@
+id: combo-portal
+name: Combo Portal
+advancement: true
+prerequisite: Insight Score of 10+
+tpCost: 6
+# "If you move an Opponent with an effect, you may use Illusion Smash as an Instant Maneuver" - offered on the card of a
+# won Knockback or Explosive Wave Might Clash; "you can only target the Opponent you moved", and "this Attacking
+# Maneuver may gain the Knockback Advantage" - a box in its window.
+comboPortal: true
+source: Core Rule
+description: >
+  An Opponent you moved: Illusion Smash as an Instant at them, Knockback if you wish.
+text: >
+  Combo Portal: When you attack someone and send them flying, you can continue your assault without further movement.
+  –Prerequisites: Insight Score of 10+
+  –TP Cost: 6
+  –Effect: If you move an Opponent with an effect, you may use Illusion Smash as an Instant Maneuver. If you do, you can
+  only target the Opponent you moved with the Basic Attack Maneuver used through Illusion Smash. Additionally, this
+  Attacking Maneuver may gain the Knockback Advantage.

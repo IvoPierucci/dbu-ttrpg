@@ -642,6 +642,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         selfShock: new fields.BooleanField({ required: true, initial: false }),
         /** A Clash at everyone in a Sphere, losers given a Combat Condition - Illusion's (chat.mjs postIllusion). */
         illusion: new fields.BooleanField({ required: true, initial: false }),
+        /** A Basic Attack out of sequence as if they stood beside you - Illusion Smash's (chat.mjs postSmash). */
+        smashes: new fields.BooleanField({ required: true, initial: false }),
         /** A State it may only be used in - God Meteor's God Ki. */
         requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */

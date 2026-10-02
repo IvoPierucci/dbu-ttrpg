@@ -1,0 +1,17 @@
+id: smash-barrage
+name: Smash Barrage
+advancement: true
+prerequisite: Insight Score of 14+
+tpCost: 10
+# "You may target up to 3 Opponents with that Attacking Maneuver simultaneously" - your targeted tokens, three at most;
+# the Profile has no AoE, which Illusion Smash already holds it to.
+smashBarrage: 3
+source: Core Rule
+description: >
+  Illusion Smash's Basic Attack may target up to 3 Opponents at once.
+text: >
+  Smash Barrage: You can fight multiple enemies at once with your unique method.
+  –Prerequisites: Insight Score of 14+
+  –TP Cost: 10
+  –Effect: When using a Profile that does not possess an AoE through the Basic Attack Maneuver used through the effects
+  of Illusion Smash, you may target up to 3 Opponents with that Attacking Maneuver simultaneously.
