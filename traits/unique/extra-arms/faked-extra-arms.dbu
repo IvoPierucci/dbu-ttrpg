@@ -1,0 +1,24 @@
+id: faked-extra-arms
+name: Faked Extra Arms
+restriction: true
+reduction: 2
+locked: Four Witches Grip
+source: Core Rule
+description: >
+  In Multiple Arms through Extra Arms, its first effect is ignored: still two Weapons at most.
+text: >
+  Faked Extra Arms: You move your arms faster than the eye can see, appearing to have multiple arms because of the
+  afterimage left behind.
+  –Locked Advancements: Four Witches Grip
+  –TP Cost: -2
+  –Effect: If you enter the Multiple Arms State through the effects of Extra Arms, while you are in that State, ignore
+  the first effect of the Multiple Arms State.
+
+---
+
+# The first effect is "You can wield up to 4 Weapons simultaneously" (`weapons.wielded min= 4`). Ignored while Extra
+# Arms put you there - `$applied` - so the most is the two it always was: a ceiling under that floor.
+[passive]
+if ($applied == 1) {
+  weapons.wielded max= 2;
+}

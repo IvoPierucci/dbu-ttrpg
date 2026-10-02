@@ -162,6 +162,8 @@ const TABLE = [
   // "Increase all of your Grapple Checks made as the Grappled by 1(T)." The Grappled is
   // always the Defender of a Grapple Check, whoever opened it, so this is read there - and
   // only there, which is what makes it different from `strike`.
+  { key: "grapple.all", phase: PHASES.LATE, kind: N, ops: NUMERIC,
+    doc: "Every Grapple Check you make, as the Grappler or the Grappled - Four Witches Grip." },
   { key: "grapple.defending", phase: PHASES.LATE, kind: N, ops: NUMERIC,
     doc: "Grapple Checks you make as the Grappled. Not the ones you make as the Grappler, "
        + "which are Strike Rolls like any other." },

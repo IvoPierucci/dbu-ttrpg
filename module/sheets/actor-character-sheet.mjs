@@ -1673,6 +1673,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         grantedBy,
         // Applied until it is not paid for - the Atmospheric Bubble - and the Sphere it was applied in.
         applied: Boolean(unique.sustained && unique.applied),
+        // A State it put you in: left by using it again, or by its upkeep's Stop - not from here.
+        toggles: Boolean(item.system.togglesState),
         // Removed as an Instant - Cage of Light.
         instant: Boolean(unique.instantRelease),
         // A Counter is played from the attack's card: Respond, or - Barrier - once it has hit.
@@ -1856,7 +1858,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** An applied Unique Ability stopped - the Atmospheric Bubble, where there is no turn to stop it at. */
   static async _onStopUnique(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
-    if (!item?.system?.unique?.applied) return;
+    if (!item?.system?.unique?.applied || item.system.togglesState) return;
     // Binding: "You can also remove the effects of Binding as an Instant Maneuver." Cage of Light: "you can remove the
     // Cage as an Instant Action."
     if (item.system.unique.binds || item.system.unique.instantRelease) {

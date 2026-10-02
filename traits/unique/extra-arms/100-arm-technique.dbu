@@ -1,0 +1,21 @@
+id: 100-arm-technique
+name: 100 Arm Technique
+advancement: true
+prerequisite: Agility Score of 8+
+tpCost: 4
+source: Core Rule
+description: >
+  In the Multiple Arms Special State, Strike Rolls 1(T) higher.
+text: >
+  100 Arm Technique: You are able to attack as though you have one hundred arms!
+  –Prerequisites: Agility Score of 8+
+  –TP Cost: 4
+  –Effect: While in the Multiple Arms Special State, increase your Strike Rolls by 1(T).
+
+---
+
+# However the State was entered - "While in the Multiple Arms Special State".
+[passive]
+if (inState("multiple-arms")) {
+  strike += 1(T);
+}

@@ -119,9 +119,10 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   if (!definition) return false;
   const fresh = uniqueItemFrom(definition, traitsOfKind?.("unique", definition.id) ?? []).system;
   for (const key of ["type", "actionCost", "actionCostMax", "kiCost", "kiCostPerTier", "kiCostPerBaseTier", "attacking",
-    "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills", "clashSaves", "clashDefenderSaves"]) system[key] = fresh[key];
+    "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills", "clashSaves", "clashDefenderSaves",
+    "togglesState"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "downBurst", "gathers", "shiftsEnvironment", "kiPerAction", "explodes", "waves", "barrier", "binds", "bluffs", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepHalf", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "downBurst", "gathers", "shiftsEnvironment", "kiPerAction", "explodes", "waves", "barrier", "binds", "bluffs", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -173,6 +174,8 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
       // Or a Clash of Saving Throws - Devilmite Beam's "(Cognitive vs Impulsive)".
       clashSaves: listOf(definition.clashSaves),
       clashDefenderSaves: listOf(definition.clashDefenderSaves),
+      // A State it enters, or leaves if you are in it - Extra Arms' Multiple Arms.
+      togglesState: String(definition.togglesState ?? ""),
       tags: [UNIQUE_TAG],
       usageLimit: String(definition.usageLimit ?? "") || "1/round",
       source: String(definition.source ?? ""),
@@ -187,6 +190,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         materialize: definition.materializes === true,
         precognition: definition.foresees === true,
         sustained: definition.sustained === true,
+        upkeepHalf: definition.upkeepHalf === true,
         upkeepKiPerTier: number(definition.upkeepKiPerTier),
         sphereMagnitude: String(definition.sphereMagnitude ?? ""),
         spendsAllActions: definition.spendsAllActions === true,

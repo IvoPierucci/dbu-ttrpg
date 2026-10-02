@@ -624,6 +624,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
          * and the Sphere it was applied in are this character's own.
          */
         sustained: new fields.BooleanField({ required: true, initial: false }),
+        /** Kept for half its KP Cost at the start of each turn - Extra Arms'. */
+        upkeepHalf: new fields.BooleanField({ required: true, initial: false }),
         /** A Counter played once hit, before the Wound Roll - Barrier's (chat.mjs barrierStage). */
         barrier: new fields.BooleanField({ required: true, initial: false }),
         /** Its Effect Pins somebody and holds them - Binding's (chat.mjs postBinding); who, while it does. */

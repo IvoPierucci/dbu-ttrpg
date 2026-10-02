@@ -3639,7 +3639,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       binding = askBinding(actor, maneuver);
       if (!binding) return false;
     }
-    else if (maneuver.sustained) {
+    else if (maneuver.sustained && !maneuver.togglesState) {
       sustaining = await askSustain(actor, maneuver);
       if (!sustaining) return false;
     }
@@ -3664,6 +3664,9 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       const wasIn = (Number(actor.system.states?.[maneuver.togglesState]) || 0) > 0;
       if (!await setState(actor, maneuver.togglesState, wasIn ? 0 : 1)) return false;
       toggled = wasIn ? "out" : "in";
+      // Extra Arms: applied while it is what put you there, which is what its upkeep and Faked Extra Arms read.
+      const toggler = actor.items?.get(maneuver.itemId);
+      if (toggler?.system?.unique?.sustained) await toggler.update({ "system.unique.applied": toggled === "in" });
     }
 
     // "Gain any number of Holding Back Stacks... you can instead choose to remove any

@@ -1,0 +1,21 @@
+id: four-witches-grip
+name: Four Witches Grip
+advancement: true
+prerequisite: Insight Score of 6+
+tpCost: 4
+source: Core Rule
+description: >
+  In the Multiple Arms Special State, every Grapple Check 1(T) higher - as the Grappler or the Grappled.
+text: >
+  Four Witches Grip: Thanks to your extra arms, you are able to grapple more effectively.
+  –Prerequisites: Insight Score of 6+
+  –TP Cost: 4
+  –Effect: While in the Multiple Arms Special State, increase all of your Grapple Checks by 1(T).
+
+---
+
+# "All of your Grapple Checks": either side of one (chat.mjs, the Strike Clash's rows when it is a Grapple Check).
+[passive]
+if (inState("multiple-arms")) {
+  grapple.all += 1(T);
+}

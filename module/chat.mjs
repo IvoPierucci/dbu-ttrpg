@@ -3554,9 +3554,16 @@ export async function upkeepUniques(actor) {
     && item.system.unique?.sustained && item.system.unique?.applied);
   const { MAGNITUDES } = await import("./maneuvers.mjs");
   for (const item of held) {
-    // Its own KP Cost again - or what the entry names for keeping it: Bound Battlefield's 6(T).
+    // A State it put you in that you are no longer in - left some other way: nothing to keep.
+    if (item.system.togglesState && !((Number(actor.system.states?.[item.system.togglesState]) || 0) > 0)) {
+      await item.update({ "system.unique.applied": false });
+      continue;
+    }
+    // Its own KP Cost again - or what the entry names for keeping it: Bound Battlefield's 6(T), Extra Arms' half.
     const perTier = Number(item.system.unique.upkeepKiPerTier) || 0;
-    const cost = (perTier ? perTier * Math.max(1, actor.system.tierOfPower ?? 1) : maneuverKiCost(definitionOf(item), null, actor))
+    const own = maneuverKiCost(definitionOf(item), null, actor);
+    const cost = (perTier ? perTier * Math.max(1, actor.system.tierOfPower ?? 1)
+      : (item.system.unique.upkeepHalf ? Math.floor(own / 2) : own))
       + (Number(item.system.unique.upkeepKi) || 0);
     const { ki, capacity } = actor.system;
     const speaker = ChatMessage.getSpeaker({ actor });
@@ -3576,6 +3583,7 @@ export async function upkeepUniques(actor) {
       if (item.system.unique.binds) await releaseBinding(actor, item);
       else {
         await item.update({ "system.unique.applied": false });
+        await leaveToggledState(actor, item);
         await ChatMessage.create({ speaker,
           content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} ends.</div>` });
       }
@@ -3602,6 +3610,14 @@ export async function upkeepUniques(actor) {
   }
 }
 
+/** Not kept: "or leave the Multiple Arms State" - the State a Unique Ability put you in, left with it. */
+async function leaveToggledState(actor, item) {
+  const state = item.system?.togglesState;
+  if (!state || !((Number(actor.system.states?.[state]) || 0) > 0)) return;
+  const { setState } = await import("./conditions.mjs");
+  await setState(actor, state, 0);
+}
+
 function renderUpkeep(message, html) {
   const upkeep = message.getFlag(SCOPE, UPKEEP_FLAG);
   if (!upkeep || upkeep.stopped) return;
@@ -3625,6 +3641,7 @@ function renderUpkeep(message, html) {
     if (bind) await message.setFlag(SCOPE, BIND_FLAG, { ...bind, used: true });
     if (item?.system?.unique?.binds) return releaseBinding(actor, item);
     await item?.update({ "system.unique.applied": false });
+    if (item) await leaveToggledState(actor, item);
     await settledNote(message, `${item?.name ?? "It"} stops.`);
   });
   (html.querySelector(".message-content") ?? html).append(button);
@@ -7160,6 +7177,8 @@ const CLASH_ROLLS = ({
       ...(((uuid === clash.defenderUuid) && clash.grapple)
         ? grappleDefenceParts(actor)
         : []),
+      // "Increase all of your Grapple Checks" - Four Witches Grip's: as either side.
+      ...(clash.grapple ? grappleAllParts(actor) : []),
       // "Make a Grapple Check against the Grappled with your Dice Score reduced by
       // 1(bT)." The Grappler's alone, and the only Grapple Check made at a penalty.
       ...(((uuid === clash.challengerUuid) && (clash.grapple?.kind === "pin"))
@@ -7287,6 +7306,12 @@ Object.freeze(CLASH_ROLLS);
  * Returned as a list so it drops out of the breakdown entirely rather than showing as a
  * row worth nothing.
  */
+/** What an effect adds to every Grapple Check you make, Grappler or Grappled - Four Witches Grip's. */
+function grappleAllParts(actor) {
+  const value = Math.round(applySlot(actor.system.effects?.slots, "grapple.all", 0));
+  return value ? [{ label: "Grapple Checks", value }] : [];
+}
+
 function grappleDefenceParts(actor) {
   const value = Math.round(applySlot(actor.system.effects?.slots, "grapple.defending", 0));
   return value ? [{ label: "Grappled", value }] : [];
@@ -7909,6 +7934,7 @@ async function clashStage(message, actor) {
   // and Urgent here means what it means everywhere: it cannot be failed on purpose.
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
     { urgent: Boolean(opened.urgent), senses, formula: { base: DBUCharacterData.BASE_DIE,
+      dice: kind.options?.(actor, { ...opened, ...answer }, actor.uuid)?.combatRoll ? combatDiceGroups(actor) : [],
       parts: windowParts(actor, clashParts(kind, actor, { ...opened, ...answer }, actor.uuid)
         .map((part, index) => (index ? part
           : { ...part, workingsKey: clashWorkingsKey({ ...opened, ...answer }, actor.uuid) }))) } });
