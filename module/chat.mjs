@@ -5704,7 +5704,7 @@ export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll 
 export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
                                     combatRoll = false, attackingManeuver = false,
-                                    difficulties = false, senses = [], formula = null } = {}) {
+                                    difficulties = false, senses = [], formula = null, offerWilling = true } = {}) {
   const rows = effects.map(entry => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
@@ -5740,7 +5740,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
   const refused = rolling
     ? whyNotWilling(actor, { urgent, combatRoll, attackingManeuver })
     : null;
-  const willing = !rolling
+  const willing = (!rolling || !offerWilling)
     ? ""
     : refused
     ? `<label class="dbu-respond-option dbu-respond-willing dbu-respond-blocked"
@@ -9422,6 +9422,15 @@ async function playIntervene(message, attack, { who, ally, effect }) {
   const maneuver = getManeuver("intervene");
   if (!maneuver) return;
 
+  // Deflect and Distant Deflect's Might Clash: this side's roll, from its window - closed, nothing is paid.
+  if (option.clashes) {
+    const ready = await prepareRoll(actor, [], `${option.label}: Might Clash`, "", { formula: {
+      base: DBUCharacterData.BASE_DIE,
+      parts: windowParts(actor, [{ label: "Might", value: actor.system.might, workingsKey: "might" },
+        ...deflectPenalty(actor, attack)]) } });
+    if (!ready) return;
+  }
+
   // A Counter Action and the chosen effect's Ki, in that order: the Action is the one
   // that can be short, and a refused Maneuver must cost nothing.
   if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
@@ -11536,6 +11545,16 @@ async function homingRetry(message, attack, uuid) {
     }
   }
 
+  // From its window: the first Strike's parts, Homing's, and the Long Range it pays as the first did.
+  const ready = await prepareRoll(attacker, [], `${attack.maneuverName} - Homing`,
+    own.answer ? `Beat ${own.answer.total ?? 0}` : "", { combatRoll: true, attackingManeuver: true, formula: {
+      base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(attacker), parts: [
+        ...(attack.result?.strike?.lines ?? []).filter(entry => (entry.kind === "part") && !entry.outcome && entry.value)
+          .map(entry => ({ label: entry.source, value: entry.value })),
+        { label: `Homing (${misses} missed)`, value: misses * tier },
+        ...((Number(own.longRange) || 0) ? [{ label: "Long Range", value: -Number(own.longRange) }] : [])
+      ] } });
+  if (!ready) return;
   const roll = await rollSide(attacker, [
     { label: "Strike", value: attack.result?.strike?.bonus ?? 0 },
     { label: `Homing (${misses} missed)`, written: `+${misses}(T)`, value: misses * tier }
@@ -12636,23 +12655,33 @@ async function barrierStage(message, attack, { user, item, covers, massive }) {
   const foundations = ["physical", "energy", "magic"].filter(key => key in wounds);
   const best = foundations.reduce((top, key) => ((wounds[key] ?? 0) > (wounds[top] ?? -Infinity) ? key : top), foundations[0]);
   const label = key => key.charAt(0).toUpperCase() + key.slice(1);
+  // The Wound Roll it raises, per Foundation - the one shown follows the one picked.
+  const formulas = Object.fromEntries(foundations.map(key => [key, formulaHtml({ base: DBUCharacterData.BASE_DIE,
+    dice: combatDiceGroups(user),
+    parts: windowParts(user, [{ label: "Wound", value: wounds[key] ?? 0, workingsKey: `wound.${key}` }]) })]));
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${user.name} - ${item.name}` },
+    render: (event, dialog) => {
+      const select = dialog.element.querySelector('select[name="foundation"]');
+      const shown = dialog.element.querySelector("[data-barrier-formula]");
+      select?.addEventListener("change", () => { if (shown) shown.innerHTML = formulas[select.value] ?? ""; });
+    },
     content: `${(covers.length > 1) || (covers[0].uuid !== user.uuid) ? `<label class="dbu-wager"><span>On</span>
         <select name="on">${covers.map(entry => `<option value="${escape(entry.uuid)}" ${(entry.uuid === user.uuid) ? "selected" : ""}>
           ${escape(entry.name)}</option>`).join("")}</select></label>` : ""}
       <label class="dbu-wager"><span>Foundation</span><select name="foundation">${foundations.map(key =>
         `<option value="${key}" ${(key === best) ? "selected" : ""}>${label(key)} (${wounds[key] ?? 0})</option>`).join("")}</select></label>
       ${massiveKi ? `<label class="dbu-respond-option"><input type="checkbox" name="all"/>
-        <span class="dbu-respond-name">Everyone it hit (+${massiveKi} KP)</span></label>` : ""}`,
+        <span class="dbu-respond-name">Everyone it hit (+${massiveKi} KP)</span></label>` : ""}
+      <p class="dbu-formula" data-barrier-formula>${formulas[best] ?? ""}</p>`,
     buttons: [
-      { action: "raise", label: item.name, default: true, callback: (event, button, dialog) => ({
+      { action: "raise", label: "Roll", default: true, callback: (event, button, dialog) => ({
         on: dialog.element.querySelector('select[name="on"]')?.value ?? covers[0].uuid,
         foundation: dialog.element.querySelector('select[name="foundation"]')?.value ?? best,
         all: Boolean(dialog.element.querySelector('input[name="all"]')?.checked)
       }) },
-      { action: "cancel", label: "Cancel" }
+      { action: "cancel", label: "Close" }
     ],
     rejectClose: false
   });
@@ -12724,16 +12753,21 @@ async function blockStage(message, attack, target, shields) {
     shield = shields.find(item => item.id === chosen);
     if (!shield) return;
   }
-  if (!await spendActions(target, 1, "counter")) return;
-  await recordManeuverType(target, "counter");
-
   const withIt = weaponAttack(shield, target, { getTrait, sizes: Object.keys(DBUCharacterData.SIZES) });
-  const roll = await rollSide(target, [
-    { label: "Strike", value: target.system.combat.strike },
+  const parts = [
+    { label: "Strike", value: target.system.combat.strike, workingsKey: "strike" },
     ...(withIt?.strike ?? []),
     ...musclePenalty(target),
     ...thresholdPenalty(target)
-  ], {
+  ];
+  const ready = await prepareRoll(target, [], `Block - ${shield.name}`, `Beat ${attack.result?.strike?.total ?? 0}`,
+    { combatRoll: true, formula: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(target),
+      parts: windowParts(target, parts) } });
+  if (!ready) return;
+  if (!await spendActions(target, 1, "counter")) return;
+  await recordManeuverType(target, "counter");
+
+  const roll = await rollSide(target, parts, {
     extraDice: target.system.dice.extra.formula,
     criticalDice: target.system.dice.critical.formula,
     combatRoll: true,
@@ -13698,16 +13732,22 @@ async function submitDuelWager(message, actor) {
   const mirrored = mirroredBy(attack.duel, actor.uuid);
   const copied = mirrored ? fromUuidSync(attack.attackerUuid) : null;
   const cap = mirrored ? Math.floor((Number(copied?.system?.capacity?.max) || 0) / 2) : duelWagerCap(actor, { primary });
+  // The side's roll, before the wagers: whose dice they are - the attacker's, the Initiator's, or the copy's.
+  const roller = (side === "attacker") ? fromUuidSync(attack.attackerUuid)
+    : (attack.duel.mirror ? fromUuidSync(attack.attackerUuid) : fromUuidSync(attack.duel.initiatorUuid));
+  const formula = roller ? formulaHtml({ base: DBUCharacterData.BASE_DIE,
+    dice: [{ label: "Extra Dice (Tier of Power)", formula: roller.system.dice.extra.formula }],
+    parts: duelSideRows(attack, side) }) : "";
   const amount = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${actor.name} - Duel Clash ${(attack.duel.clashes?.length ?? 0) + 1}` },
-    content: `<label class="dbu-wager"><span>Ki Wager (max ${cap})</span>
+    content: `${formula ? `<p class="dbu-formula">${formula}</p>` : ""}<label class="dbu-wager"><span>Ki Wager (max ${cap})</span>
         <input type="number" name="wager" value="0" min="0" max="${cap}"/></label>
       <p class="dbu-respond-hint">Nobody sees it until the Clash is rolled. It does not touch your Capacity.</p>`,
     buttons: [
       { action: "confirm", label: "Wager",
         callback: (event, button, dialog) => Number(dialog.element.querySelector('input[name="wager"]')?.value) || 0 },
-      { action: "cancel", label: "Cancel" }
+      { action: "cancel", label: "Close" }
     ],
     rejectClose: false
   });
@@ -13720,6 +13760,26 @@ async function submitDuelWager(message, actor) {
     wagers: [...(fresh.duel.wagers ?? []), { uuid: actor.uuid, name: actor.name, side, amount: wager }] } };
   if (duelWaitingOn(next).length) return requestEdit(message, { type: "attack", attack: next });
   return rollDuelClash(message, next);
+}
+
+/**
+ * What one side of a Duel Clash rolls besides its dice and its wagers - one list for the roll and the wager window.
+ * The attacker's own; the defending side's is the Initiator's, or the attacker's copy's for a Mirrored Attack.
+ */
+function duelSideRows(attack, side) {
+  const duel = attack.duel;
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const initiator = fromUuidSync(duel.initiatorUuid);
+  const names = woundResources();
+  const sides = duelSides(attack);
+  if (side === "attacker") {
+    return attacker ? duelClashRows(attacker, { charges: attack.energyCharges, powerShotRanks: attack.powerShotRanks,
+      allies: sides.attacker.length - 1, resourceStacks: woundResourceStacks(attacker, names) }) : [];
+  }
+  const bonusOf = duel.mirror ? attacker : initiator;
+  return bonusOf ? duelClashRows(bonusOf, { charges: duel.initiating?.charges, powerShotRanks:
+    duel.initiating?.powerShotRanks, allies: sides.defender.length - 1,
+    resourceStacks: woundResourceStacks(bonusOf, names) }) : [];
 }
 
 /**
@@ -13744,13 +13804,10 @@ async function rollDuelClash(message, attack) {
   // Mirrored Attack: the Duplicate is a copy of the attacker, and Clashes with their bonuses (the user's ruling).
   const bonusOf = duel.mirror ? attacker : initiator;
   const [mine, theirs] = await Promise.all([
-    rollSide(attacker, [...duelClashRows(attacker, { charges: attack.energyCharges, powerShotRanks: attack.powerShotRanks,
-      allies: sides.attacker.length - 1, resourceStacks: woundResourceStacks(attacker, names) }), ...wagers("attacker")], {
+    rollSide(attacker, [...duelSideRows(attack, "attacker"), ...wagers("attacker")], {
       extraDice: attacker.system.dice.extra.formula, criticalDice: attacker.system.dice.critical.formula,
       criticalTarget: critical(attacker, profileFor(attack)?.woundCriticalTarget) }),
-    rollSide(initiator, [...duelClashRows(bonusOf, { charges: duel.initiating?.charges, powerShotRanks:
-      duel.initiating?.powerShotRanks, allies: sides.defender.length - 1,
-      resourceStacks: woundResourceStacks(bonusOf, names) }), ...wagers("defender")], {
+    rollSide(initiator, [...duelSideRows(attack, "defender"), ...wagers("defender")], {
       extraDice: bonusOf.system.dice.extra.formula, criticalDice: bonusOf.system.dice.critical.formula,
       criticalTarget: critical(bonusOf, duel.initiating?.woundCriticalTarget),
       // The Duplicate's roll is the attacker's copy's: none of its master's own effects.
@@ -14653,6 +14710,16 @@ export async function rollSteadfastCheck(actor) {
 
   const automatic = pending.slice(0, -1);
   const rolled = pending[pending.length - 1];
+
+  // From its window: each effect that adds to it by name, and what moves the die. Closed, nothing is recorded.
+  const added = (actor.system.effects?.slots?.["steadfast.dice"]?.parts ?? [])
+    .filter(part => (part.op === "add") && part.value).map(part => ({ label: part.source || "Effects", value: part.value }));
+  const ready = await prepareRoll(actor, [], `Steadfast Check - ${THRESHOLDS[rolled].label}`, `Needing ${target}`,
+    { offerWilling: false, formula: { base: die, parts: [
+      ...(natural ? [{ label: "Natural Result", value: natural }] : []),
+      ...(added.length ? added : (bonus ? [{ label: "Effects", value: bonus }] : []))
+    ] } });
+  if (!ready) return null;
   for (const key of automatic) updates[`system.thresholdChecks.${key}`] = "fail";
 
   // The bonus is part of the formula rather than added afterwards, so that the card shows
@@ -14799,6 +14866,12 @@ async function defendAgainst(message, target, attack) {
     return;
   }
 
+  // Power Flare's own Wound Roll - made as the attacker's is, so shown here: the Foundation's Wound and the wager.
+  const flareFormula = (foundation, wager) => formulaHtml({ base: DBUCharacterData.BASE_DIE,
+    dice: combatDiceGroups(target), parts: windowParts(target, [
+      { label: "Wound", value: target.system.combat.wound[foundation] ?? 0, workingsKey: `wound.${foundation}` },
+      { label: "Ki Wager", value: wager }]) });
+
   const options = open.map(([key, option], index) => {
     const cost = defendOptionCost(key, target, attack);
     // Power Flare makes a Wound Roll of its own, so it is the one option that can
@@ -14817,7 +14890,8 @@ async function defendAgainst(message, target, attack) {
            <span>Ki Wager</span>
            <input type="number" name="defenceWager" value="0" min="0" max="${wagerMax}" disabled/>
            <em>max ${wagerMax}</em>
-         </span>`
+         </span>
+         <span class="dbu-formula" data-flare-formula>${flareFormula("energy", 0)}</span>`
       : "";
 
     return `<label class="dbu-defend-option">
@@ -14845,12 +14919,20 @@ async function defendAgainst(message, target, attack) {
       const wagerField = dialog.element.querySelector('input[name="defenceWager"]');
       const foundationField = dialog.element.querySelector('select[name="defenceFoundation"]');
       if (!wagerField) return;
+      const flare = dialog.element.querySelector("[data-flare-formula]");
+      const redraw = () => {
+        if (flare) flare.innerHTML = flareFormula(foundationField?.value || "energy",
+          Math.min(Math.max(Math.floor(Number(wagerField.value)) || 0, 0), wagerMax));
+      };
+      wagerField.addEventListener("input", redraw);
+      foundationField?.addEventListener("change", redraw);
       for (const radio of dialog.element.querySelectorAll('input[name="defence"]')) {
         radio.addEventListener("change", () => {
           const option = DEFEND_OPTIONS[dialog.element.querySelector('input[name="defence"]:checked')?.value];
           wagerField.disabled = !option?.allowsKiWager;
           if (foundationField) foundationField.disabled = wagerField.disabled;
           if (wagerField.disabled) wagerField.value = "0";
+          redraw();
         });
       }
     },
