@@ -656,6 +656,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         lullaby: new fields.BooleanField({ required: true, initial: false }),
         /** An Ally Magically Enhanced until the end of their turn - Magical Enhancement's (chat.mjs postEnhance). */
         enhances: new fields.BooleanField({ required: true, initial: false }),
+        /** A Clash that leaves its target Compelled - Mind Control's (chat.mjs postMindControl). */
+        mindControl: new fields.BooleanField({ required: true, initial: false }),
         /** A State it may only be used in - God Meteor's God Ki. */
         requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */

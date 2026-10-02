@@ -1868,6 +1868,7 @@ export function definitionOf(item) {
     debilitates: item.system.unique?.debilitates === true,
     lullaby: item.system.unique?.lullaby === true,
     enhances: item.system.unique?.enhances === true,
+    mindControl: item.system.unique?.mindControl === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -4071,6 +4072,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Mind Control: "If you lose, you can't target this Character again ... for the rest of the Combat Encounter."
+    if (maneuver.mindControl && targetActor
+      && (actor.system.usedManeuvers ?? []).includes(`encounter:mind-control.${targetActor.uuid}`)) {
+      ui.notifications.warn(`${maneuver.name} lost against ${targetActor.name} this Combat Encounter.`);
+      return false;
+    }
+
     // Magical Enhancement: the Ally, and what its Advancements add.
     if (maneuver.enhances) {
       enhancing = await askEnhance(actor, maneuver);
@@ -4652,6 +4660,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.mindControl && targetActor)
+    ? await (await import("./chat.mjs")).postMindControl(actor, maneuver, targetActor)
     : (maneuver.enhances && enhancing)
     ? await (await import("./chat.mjs")).postEnhance(actor, maneuver, enhancing)
     : (maneuver.lullaby && lulling)

@@ -610,6 +610,10 @@ async function applyClash(messageId, clash) {
     else await settledNote(message, `${clash.defenderName} stays Hidden.`);
   }
 
+  if (clash.mindControl && clash.result && !clash.mindControl.applied) {
+    await settleMindControl(message, clash);
+  }
+
   if (clash.lullaby && clash.result && !clash.lullaby.applied) {
     await settleLullaby(message, clash);
   }
@@ -9293,6 +9297,36 @@ export async function postEnhance(actor, maneuver, plan) {
     content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(ally.name)} is Magically Enhanced`
       + `${plan.extra ? ` (+${plan.extra} Deeper)` : ""} until the end of their turn.</p>`
       + notes.filter(Boolean).map(note => `<p class="dbu-respond-note">${Handlebars.escapeExpression(note)}</p>`).join("") });
+}
+
+/** Mind Control, used: "a Clash (Cognitive vs Cognitive/Morale) against them". */
+export async function postMindControl(actor, maneuver, target) {
+  return postSaveClash(actor, target, {
+    maneuverName: maneuver.name,
+    reason: `Win and ${target.name} is Compelled against a target of ${actor.name}'s choice; lose and not at them again this Encounter.`,
+    saves: ["cognitive"],
+    defenderSaves: ["cognitive", "morale"],
+    mindControl: { applied: false }
+  });
+}
+
+/**
+ * Mind Control's Clash, settled. Won: "they gain the Compelled Combat Condition against a target of your choice" - which
+ * target is said and kept by the table. Lost: not at them again this Combat Encounter.
+ */
+async function settleMindControl(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, mindControl: { ...clash.mindControl, applied: true } });
+  const caster = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!caster || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") {
+    await requestActorUpdate(caster, { "system.usedManeuvers": [...(caster.system.usedManeuvers ?? []),
+      `encounter:mind-control.${target.uuid}`] });
+    return settledNote(message, `${caster.name} cannot target ${target.name} with Mind Control again this Combat Encounter.`);
+  }
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "compelled", Math.max(1, Number(target.system.conditions?.compelled) || 0));
+  await settledNote(message, `${target.name} is Compelled - against a target of ${caster.name}'s choice.`);
 }
 
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */

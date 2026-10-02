@@ -1,0 +1,31 @@
+id: mind-control
+name: Mind Control
+uaType: magical
+prerequisite: 2+ Skill Ranks in Use Magic
+tpCost: 20
+type: standard
+actionCost: 2
+kiCostPerTier: 12
+requiresTarget: true
+# "Make a Clash (Cognitive vs Cognitive/Morale) against them. If you win, they gain the Compelled Combat Condition against a
+# target of your choice" - whom, said on the card and kept by the table. "If you lose, you can't target this Character
+# again with the Mind Control Unique Ability for the rest of the Combat Encounter" - kept among the Encounter's uses and
+# refused before anything is paid (chat.mjs postMindControl).
+mindControl: true
+source: Core Rule
+description: >
+  A Clash (Cognitive vs Cognitive/Morale) at an Opponent: won, Compelled against a target of your choice; lost, not at
+  them again this Encounter.
+text: >
+  Mind Control: You take over and suppress an enemy’s mind, allowing you to control their body.
+  –Ability Type: Magical
+  –Prerequisites: 2+ Skill Ranks in Use Magic
+  –TP Cost: 20
+  –KP Cost: 12(T)
+  –Maneuver Type: Standard
+  –Action Cost: 2 Actions
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target an Opponent and make a Clash (Cognitive vs Cognitive/Morale) against them. If you win, they gain the
+  Compelled Combat Condition against a target of your choice. If you lose, you can’t target this Character again with the
+  Mind Control Unique Ability for the rest of the Combat Encounter.
