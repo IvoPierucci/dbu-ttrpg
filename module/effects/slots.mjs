@@ -628,6 +628,11 @@ const PATTERNS = [
   // What a Skill's Checks do to their own Natural Result - "increase the Natural Result
   // of any Perception Skill Check by 1". The die, not the total: it is what a Critical
   // and a Botch are read off, which a bonus to the roll never reaches.
+  // "Reduce the Critical Target of your Performance Skill Checks by 1" - Para Para Dance's. A move from the character's
+  // own Critical Target, held to the same floor.
+  { match: /^skill\.(\w+)\.criticalTarget$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
+    doc: "Added to the Critical Target of that Skill's Checks - negative is easier." },
   { match: /^skill\.(\w+)\.natural$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "Added to the Natural Result of that Skill's Checks." },

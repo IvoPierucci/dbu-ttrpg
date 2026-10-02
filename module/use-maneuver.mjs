@@ -1871,6 +1871,7 @@ export function definitionOf(item) {
     mindControl: item.system.unique?.mindControl === true,
     mindReading: item.system.unique?.mindReading === true,
     multiForm: item.system.unique?.multiForm === true,
+    paraPara: item.system.unique?.paraPara === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -4721,6 +4722,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await (await import("./chat.mjs")).postMindReading(actor, maneuver, targetActor)
     : (maneuver.mindControl && targetActor)
     ? await (await import("./chat.mjs")).postMindControl(actor, maneuver, targetActor)
+    : maneuver.paraPara
+    ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : (maneuver.multiForm && forming)
     ? await (await import("./chat.mjs")).postMultiForm(actor, maneuver, forming)
     : (maneuver.enhances && enhancing)

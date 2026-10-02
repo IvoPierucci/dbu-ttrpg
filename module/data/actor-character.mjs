@@ -2070,6 +2070,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // What its Checks do to their Natural Result: always, and per sense relied on.
         // Any may be below zero, so none is floored.
         natural: withEffects(this, `skill.${key}.natural`, 0, { min: null }),
+        // Its Checks' Critical Target, from the character's own - Para Para Dance's Performance, 1 lower.
+        criticalShift: withEffects(this, `skill.${key}.criticalTarget`, 0, { min: null }),
         naturalBy: Object.fromEntries(Object.keys(DBUCharacterData.SENSES).map(sense =>
           [sense, withEffects(this, `skill.${key}.natural.${sense}`, 0, { min: null })])),
         // What is rolled, filled in after the last phase: `skill.<key>` is a LATE

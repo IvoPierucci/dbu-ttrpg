@@ -342,6 +342,9 @@ async function beginTurn(actor) {
   // pay the Ki Point Cost for this Unique Ability or stop applying its effects." A skipped turn is still yours.
   const { upkeepUniques } = await import("./chat.mjs");
   await upkeepUniques(actor);
+  // Para Para Dance: the Actions it took, at the start of this turn.
+  const { paraParaTurnStart } = await import("./chat.mjs");
+  await paraParaTurnStart(actor);
   // Stealth Crawl: a move, faking it still.
   const { stealthCrawl } = await import("./hidden.mjs");
   await stealthCrawl(actor);

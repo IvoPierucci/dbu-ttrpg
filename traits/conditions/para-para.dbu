@@ -1,0 +1,18 @@
+id: para-para
+name: Para Para
+kind: conditions
+maxStacks: 3
+# Not a Combat Condition: Para Para Dance's mark, a stack for each Action it takes, on its holder's clock to the start of
+# their next turn - when the Actions are taken (combat.mjs).
+combatCondition: no
+source: Core Rule
+description: >
+  Caught dancing: 1(bT) off your Dodge Rolls for each stack, and that many Actions lost, at the start of your next turn.
+text: >
+  Para Para: "For each Action an Opponent loses through this effect, reduce their Dodge Rolls by 1(bT) until the start of
+  their next turn."
+
+---
+
+[passive per stack]
+dodge -= 1(bT);

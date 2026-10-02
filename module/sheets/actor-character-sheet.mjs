@@ -349,6 +349,13 @@ async function grantedUniqueItem(actor, trait) {
   return new Item.implementation({ ...uniqueItemFrom(trait, []), _id }, { parent: actor });
 }
 
+/** A Skill's Checks' Critical Target, where an effect moves it from the character's own - null where none does. */
+function skillCriticalTarget(actor, key) {
+  const shift = Number(actor.system.skills?.[key]?.criticalShift) || 0;
+  if (!shift) return null;
+  return Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, (Number(actor.system.criticalTarget) || 10) + shift);
+}
+
 export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static DEFAULT_OPTIONS = {
@@ -5775,6 +5782,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       flavor: `${name} Check`,
       criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,
       skillRoll: true,
+      criticalTarget: skillCriticalTarget(this.actor, key),
       difficulty,
       naturalAdd: skillNatural(this.actor, key, []),
       settles
@@ -5869,6 +5877,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       flavor: `${name} Check`,
       criticalDice: DBUCharacterData.SKILL_CRITICAL_DIE,
       skillRoll: true,
+      criticalTarget: skillCriticalTarget(this.actor, target.dataset.skill),
       difficulty: ready.difficulty,
       // What moves the Natural Result: the Skill's own, and each sense the Check relies on.
       naturalAdd: skillNatural(this.actor, target.dataset.skill, ready.senses ?? [])

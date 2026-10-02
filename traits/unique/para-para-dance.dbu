@@ -1,0 +1,53 @@
+id: para-para-dance
+name: Para Para Dance
+uaType: both
+prerequisite: 2+ Skill Ranks in Performance
+tpCost: 10
+type: standard
+# "Action Cost: Variable (1~3 Actions)", "KP Cost: 4(bT) per Action spent".
+actionCost: 1
+actionCostMax: 3
+kiCostPerBaseTier: 4
+kiPerAction: true
+# "Using Para Para Dance triggers the Exploit Maneuver from all Opponents who are not at Long Range" - offered on its
+# card; an attack through one of them that hits you fails it, its KP given back (chat.mjs paraParaHit). Then its Dance
+# button: "Target a number of Opponents up to the number of Actions spent" - your targeted tokens - "Make a Skill Clash
+# (Performance vs Performance/Intuition)". Won: Actions lost at the start of their next turn (combat.mjs), 1(bT) off
+# their Dodge Rolls for each until then (the Para Para mark).
+paraPara: true
+exploitable: All Opponents not at Long Range
+source: Core Rule
+description: >
+  1~3 Actions at 4(bT) each: a Skill Clash (Performance vs Performance/Intuition) at that many Opponents - won, they lose
+  that many Actions at the start of their next turn, their Dodge 1(bT) lower for each till then. Provokes Exploits; hit
+  by one, it fails. Passive: Performance's Critical Target 1 lower.
+text: >
+  Para Para Dance: Your infectious dance moves act as a form of control, allowing you to force your opponents to jam out
+  with you while you handily defeat them.
+  –Ability Type: Technical/Magical
+  –Prerequisites: 2+ Skill Ranks in Performance
+  –TP Cost: 10
+  –KP Cost: 4(bT) per Action spent
+  –Maneuver Type: Standard
+  –Action Cost: Variable (1~3 Actions)
+  –Minions: Non-Minion
+  –Passive Bonus: Reduce the Critical Target of your Performance Skill Checks by 1.
+  –Effect: Spend up to 3 Actions. Target a number of Opponents up to the number of Actions spent within a Large Sphere
+  AoE (centered on you). Make a Skill Clash (Performance vs Performance/Intuition). If you win, on their next turn, that
+  Opponent loses an equal number of Actions to the Actions spent on this Unique Ability at the start of their next turn,
+  and they cannot convert any Actions into Counter Actions if it would reduce their Actions to less than the amount they
+  need to reduce through this effect.
+
+  For each Action an Opponent loses through this effect, reduce their Dodge Rolls by 1(bT) until the start of their next
+  turn.
+
+  Using Para Para Dance triggers the Exploit Maneuver form all Opponents who are not at Long Range. If you are hit by an
+  Attacking Maneuver made through the Exploit Maneuver when trying to use the Para Para Dance, the Para Para Dance fails
+  (you do not regain any spent Actions, but you regain the Ki Points spent on the Para Para Dance).
+
+---
+
+# "Reduce the Critical Target of your Performance Skill Checks by 1." Converting Actions into Counter Actions is not a
+# thing this system does, so that clause has nothing to hold.
+[passive]
+skill.performance.criticalTarget -= 1;

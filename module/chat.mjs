@@ -198,6 +198,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, METEOR_FLAG, request.meteor);
     case "illusion": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ILLUSION_FLAG, request.illusion);
+    case "paraPara": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, PARA_FLAG, request.para);
     case "armsHit": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
@@ -608,6 +610,10 @@ async function applyClash(messageId, clash) {
       await revealTo(fromUuidSync(clash.defenderUuid), fromUuidSync(clash.challengerUuid), "found by a Search");
     }
     else await settledNote(message, `${clash.defenderName} stays Hidden.`);
+  }
+
+  if (clash.paraPara && clash.result && !clash.paraPara.applied) {
+    await settleParaPara(message, clash);
   }
 
   if (clash.mindReading && clash.result && !clash.mindReading.applied) {
@@ -2889,6 +2895,7 @@ function onRenderChatMessage(message, html) {
   renderShock(message, html);
   renderIllusion(message, html);
   renderDebilitated(message, html);
+  renderParaPara(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -7174,6 +7181,9 @@ const CLASH_ROLLS = ({
     // What the Skill does to its own Natural Result - and, for each sense the side said
     // the Check relies on, that part too.
     options: (actor, clash, uuid) => ({
+      ...((Number(actor.system.skills?.[skillPicked(clash, uuid)]?.criticalShift) || 0)
+        ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, (Number(actor.system.criticalTarget) || 10)
+          + Number(actor.system.skills[skillPicked(clash, uuid)].criticalShift)) } : {}),
       naturalAdd: skillNatural(actor, skillPicked(clash, uuid),
         Object.entries(clash.sensesBy ?? {})
           .filter(([, who]) => (who ?? []).includes(uuid)).map(([sense]) => sense))
@@ -9405,6 +9415,120 @@ export async function endMultiForm(actor, item, why) {
   await item.update({ "system.unique.duplicates": 0, "system.unique.applied": false });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}'s Duplicate Minions ${why}.</div>` });
+}
+
+/** Para Para Dance's card: its Exploits, then its Dance - or its failing. */
+const PARA_FLAG = "paraPara";
+
+/**
+ * Para Para Dance, paid for: a card offering the Exploits it triggers - "from all Opponents who are not at Long Range" -
+ * and, for its dancer, the Dance once they are answered.
+ */
+export async function postParaPara(actor, maneuver, actionsSpent) {
+  const actions = Math.max(1, Math.min(3, Number(actionsSpent) || 1));
+  const ki = maneuverKiCost(maneuver, null, actor) * actions;
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${actions} Action${(actions === 1) ? "" : "s"}</p>`,
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: isRespondable(maneuver), [PARA_FLAG]: { actorUuid: actor.uuid,
+      name: maneuver.name, actions, ki, danced: false, failed: false } } } });
+  offerExploits(card, actor, maneuver);
+  return card;
+}
+
+/** Its Dance button - its dancer's, once the Exploits are answered - or what became of it. */
+function renderParaPara(message, html) {
+  const para = message.getFlag(SCOPE, PARA_FLAG);
+  if (!para) return;
+  const container = html.querySelector(".message-content") ?? html;
+  if (para.failed) {
+    const note = document.createElement("div");
+    note.className = "dbu-settled-note";
+    note.textContent = "Hit through an Exploit: the dance fails, its Ki Points back.";
+    container.append(note);
+    return;
+  }
+  const dancer = fromUuidSync(para.actorUuid);
+  if (para.danced || !dancer?.isOwner) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Dance";
+  button.dataset.tooltip = `Once the Exploits are answered: a Skill Clash at up to ${para.actions} of your targeted Opponents`;
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    return dance(message, dancer);
+  });
+  container.append(button);
+}
+
+/**
+ * "Target a number of Opponents up to the number of Actions spent within a Large Sphere AoE (centered on you). Make a Skill
+ * Clash (Performance vs Performance/Intuition)" - your targeted tokens, the Sphere the table's.
+ */
+async function dance(message, dancer) {
+  const para = message.getFlag(SCOPE, PARA_FLAG);
+  if (!para || para.danced || para.failed) return;
+  const targets = Array.from(game.user.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== dancer.uuid)).slice(0, para.actions);
+  if (!targets.length) return ui.notifications.warn("Target who dances with you first.");
+  requestEdit(message, { type: "paraPara", para: { ...para, danced: true } });
+  for (const target of targets) {
+    await postSkillClash(dancer, target, { name: para.name, type: "outOfSequence",
+      clash: { skill: "performance", defenderSkills: ["performance", "intuition"] } },
+      { paraPara: { applied: false, actions: para.actions } });
+  }
+}
+
+/**
+ * "If you are hit by an Attacking Maneuver made through the Exploit Maneuver when trying to use the Para Para Dance, the
+ * Para Para Dance fails (you do not regain any spent Actions, but you regain the Ki Points spent on the Para Para Dance)."
+ */
+async function paraParaHit(attack, branches) {
+  const card = game.messages.get(attack?.provokedBy?.messageId ?? "");
+  const para = card?.getFlag(SCOPE, PARA_FLAG);
+  if (!para || para.danced || para.failed) return;
+  if (!branches.some(entry => (entry.uuid === para.actorUuid) && entry.hit)) return;
+  requestEdit(card, { type: "paraPara", para: { ...para, failed: true } });
+  const dancer = fromUuidSync(para.actorUuid);
+  if (dancer && para.ki) {
+    await requestActorUpdate(dancer, { "system.ki.value": Math.min(dancer.system.ki.max, dancer.system.ki.value + para.ki),
+      "system.capacity.spent": Math.max(0, dancer.system.capacity.spent - para.ki) });
+  }
+}
+
+/**
+ * Its Skill Clash, won: "that Opponent loses an equal number of Actions ... at the start of their next turn" - owed on
+ * them - and "For each Action an Opponent loses through this effect, reduce their Dodge Rolls by 1(bT) until the start of
+ * their next turn" - the Para Para mark, a stack an Action, on their clock.
+ */
+async function settleParaPara(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, paraPara: { ...clash.paraPara, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return;
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return;
+  const actions = Number(clash.paraPara.actions) || 1;
+  const owed = Math.max(actions, Number(target.getFlag?.(SCOPE, "paraParaLoss")) || 0);
+  await requestActorUpdate(target, { [`flags.${SCOPE}.paraParaLoss`]: owed });
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  const { lasting, EDGES, KINDS } = await import("./durations.mjs");
+  const before = Number(target.system.conditions?.["para-para"]) || 0;
+  if (await gainCondition(target, "para-para", Math.max(0, actions - before)) !== false) {
+    for (let i = before; i < actions; i++) {
+      await lasting(target, { kind: KINDS.CONDITION, key: "para-para", edge: EDGES.START, source: clash.maneuverName });
+    }
+  }
+  await settledNote(message, `${target.name} dances: ${actions} Action${(actions === 1) ? "" : "s"} lost at the start of their next turn.`);
+}
+
+/** The start of their turn: the Actions Para Para Dance took, taken. */
+export async function paraParaTurnStart(actor) {
+  const owed = Number(actor?.getFlag?.(SCOPE, "paraParaLoss")) || 0;
+  if (!owed) return;
+  await actor.unsetFlag(SCOPE, "paraParaLoss");
+  const taken = Math.min(owed, actionsLeft(actor, "standard"));
+  if (taken) await spendActions(actor, taken, "standard");
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)} loses ${taken} Action${(taken === 1) ? "" : "s"} - Para Para Dance.</div>` });
 }
 
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
@@ -12033,6 +12157,8 @@ async function resolveAttack(message, attack) {
       result: { strike, targets: branches, wound: null } }
   });
   if (chased) await postHostileChase(attack, attacker);
+  // An Exploit Para Para Dance provoked, hitting its dancer: the dance fails.
+  if (attack.provokedBy?.messageId) await paraParaHit(attack, branches);
 
   // Cross Counter strikes back the moment the clash is settled. It is offered rather
   // than fired so the defender still chooses when to take it, like any other
