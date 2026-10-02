@@ -1,0 +1,21 @@
+id: dimensional-hole
+name: Dimensional Hole
+advancement: true
+prerequisite: 4+ Skill Ranks in Use Magic
+tpCost: 10
+# A button on a Basic Attack at you with an Energy or Magic Foundation, before it is rolled: 1 Counter Action, the
+# Opponent you target its target instead, its Combat Rolls Urgent; once a Combat Encounter (chat.mjs dimensionalHole).
+dimensionalHole: true
+source: Core Rule
+description: >
+  Targeted by an Energy or Magic Basic Attack: 1 Counter Action, and an Opponent you target is its target instead, its
+  Combat Rolls Urgent. Once a Combat Encounter.
+text: >
+  Dimensional Hole: Using a portal to protect yourself from an attack, you redirect that attack against an enemy.
+  –Prerequisites: 4+ Skill Ranks in Use Magic
+  –TP Cost: 10
+  –Effect: If you are targeted by the Basic Attack Maneuver using an Energy or Magic Foundation, you may spend 1 Counter
+  Action. If you do, target an Opponent, they become the target of the Attacking Maneuver instead of you. The Combat
+  Rolls for that Attacking Maneuver become Urgent.
+
+  You can only use this effect once per Combat Encounter.

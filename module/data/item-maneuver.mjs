@@ -666,6 +666,9 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         paraPara: new fields.BooleanField({ required: true, initial: false }),
         /** A Strike Clash, then a Saving Throw Clash for Slowed - Petrification's (chat.mjs postPetrification). */
         petrifies: new fields.BooleanField({ required: true, initial: false }),
+        /** Portals made two at a time - Portal Creation's 2 at one time - and how many are held now (chat.mjs postPortals). */
+        portals: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        portalsHeld: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /** How many Duplicate Minions it has made that stand. */
         duplicates: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /** A State it may only be used in - God Meteor's God Ki. */

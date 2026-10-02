@@ -1,6 +1,7 @@
 const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
+import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
 import { reactiveFor } from "../effects/registry.mjs";
@@ -392,6 +393,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       cageHit: DBUCharacterSheet._onCageHit,
       recordKept: DBUCharacterSheet._onRecordKept,
       destroyMoon: DBUCharacterSheet._onDestroyMoon,
+      dismissPortals: DBUCharacterSheet._onDismissPortals,
+      throughPortal: DBUCharacterSheet._onThroughPortal,
       releaseFinish: DBUCharacterSheet._onReleaseFinish,
       cageClash: DBUCharacterSheet._onCageClash,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
@@ -1727,6 +1730,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Finish Sign: the Signature Technique declared, released as an Instant from here.
         finish: (unique.finishSign && unique.finishTechnique)
           ? { technique: this.actor.items.get(unique.finishTechnique)?.name ?? "" } : null,
+        // Portal Creation: the Portals held, dismissed as an Instant, and the next Maneuver through them.
+        portals: (unique.portals && !grantedBy) ? { held: Number(unique.portalsHeld) || 0, max: portalsMaxOf(unique),
+          through: Boolean(actor.getFlag?.("dbu-ttrpg", "throughPortal")) } : null,
         moon: (unique.fakeMoon && unique.applied) ? { label: (Number(unique.moonLeft) || 0)
           ? `${unique.moonLeft} Combat Round${(unique.moonLeft === 1) ? "" : "s"} left` : "Until the end of the Encounter" } : null,
         // Cage of Light, standing: its Life Point reductions and its Might Clash, at the one targeted.
@@ -1888,6 +1894,37 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Fake Moon: the False Moon destroyed - "you apply the effects as if it disappeared". */
+  /** Portal Creation: "can dismiss any number of Portals as an Instant Maneuver". */
+  static async _onDismissPortals(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const held = Number(item?.system?.unique?.portalsHeld) || 0;
+    if (!held) return;
+    const { whyNotAnotherInstant, recordManeuverType } = await import("../maneuvers.mjs");
+    const blocked = whyNotAnotherInstant(this.actor);
+    if (blocked) return ui.notifications.warn(`${this.actor.name}: ${blocked}`);
+    const counts = Array.from({ length: held }, (_, i) => i + 1);
+    const chosen = (held === 1) ? "1" : await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: "Dismiss Portals" },
+      content: "<p>How many?</p>",
+      buttons: [...counts.map(n => ({ action: String(n), label: String(n) })), { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    const gone = Number(chosen) || 0;
+    if (!gone) return;
+    await item.update({ "system.unique.portalsHeld": held - gone });
+    if ((held - gone) <= 0) await this.actor.unsetFlag("dbu-ttrpg", "throughPortal");
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="dbu-settled-note">${gone} Portal${(gone === 1) ? "" : "s"} dismissed.</div>` });
+    return recordManeuverType(this.actor, "instant");
+  }
+
+  /** The next Movement or Attacking Maneuver through a Portal: "as if they were the same Square". */
+  static async _onThroughPortal() {
+    if (this.actor.getFlag("dbu-ttrpg", "throughPortal")) return this.actor.unsetFlag("dbu-ttrpg", "throughPortal");
+    return this.actor.setFlag("dbu-ttrpg", "throughPortal", true);
+  }
+
   static async _onDestroyMoon(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     const { falseMoonGone } = await import("../chat.mjs");

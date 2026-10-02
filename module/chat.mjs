@@ -6042,7 +6042,8 @@ async function respondDialog(message, respondable) {
     // exists and why it is closed.
     const forced = whyNotWilling(actor, {
       combatRoll: rollsCombat(message),
-      attackingManeuver: attack?.attackerUuid === actor.uuid
+      attackingManeuver: attack?.attackerUuid === actor.uuid,
+      urgent: Boolean(attack?.urgentRolls)
     });
     const willing = !rollsOnMessage(message, actor)
       ? ""
@@ -6863,7 +6864,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
-                                           naturalAdd = 0, linked = "", fixedTotal = null } = {}) {
+                                           naturalAdd = 0, linked = "", fixedTotal = null, urgent = false } = {}) {
   // A roll already made: Delayed's "keep a record of the Dice Score of your Wound Roll", applied
   // later "against their Soak Value" as it was.
   if (Number.isFinite(fixedTotal)) {
@@ -6971,7 +6972,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // they said, so nothing that would raise or lower it is worked out at all - unless
   // something forbids it, which Compelled does to every Combat Roll a character makes.
   // Left armed rather than spent, so it still answers the next roll that allows it.
-  const forced = whyNotWilling(actor, { slots: answered?.slots });
+  const forced = whyNotWilling(actor, { slots: answered?.slots, urgent });
 
   // Declared, and refused by the roll itself. It used to be dropped in silence, which
   // left the player believing they had failed on purpose and looking at a total that
@@ -9692,6 +9693,77 @@ export async function petrifierDefeated(actor) {
   }
 }
 
+/** How many Portals a Portal Creation lets you possess: "2 Portals at one time" - up to 4 with Warp Zone. */
+export function portalsMaxOf(unique) {
+  const bought = boughtTraits(unique ?? {}, getTrait);
+  return Math.max(Number(unique?.portals) || 0, ...bought.map(trait => Number(trait.portalsMax) || 0));
+}
+
+/**
+ * Portal Creation, paid for: "Create a Portal on an adjacent Square ... Another Portal is created at that point in space,
+ * connecting the two Squares" - two more held, on the map the table's; with Warp Zone, what they connect to, said.
+ */
+export async function postPortals(actor, maneuver) {
+  const item = actor.items?.get(maneuver.itemId);
+  if (!item) return null;
+  const held = Number(item.system.unique.portalsHeld) || 0;
+  const max = portalsMaxOf(item.system.unique);
+  await item.update({ "system.unique.portalsHeld": Math.min(max, held + 2) });
+  const linked = (max > 2) && held;
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: a Portal on an adjacent Square, another on a Square of your choice`
+      + `${linked ? " - connected to the Portals you choose" : ""}. ${Math.min(max, held + 2)}/${max} Portals.</p>` });
+}
+
+/**
+ * Dimensional Hole: "If you are targeted by the Basic Attack Maneuver using an Energy or Magic Foundation, you may spend 1
+ * Counter Action." A button for each target holding it, before the attack is rolled, once a Combat Encounter.
+ */
+function dimensionalHoleButtons(message, html, attack) {
+  if (attack.result || attack.maneuverId !== "basic-attack" || !["energy", "magic"].includes(attack.foundation)) return;
+  const container = html.querySelector(".message-content") ?? html;
+  for (const entry of attack.targets ?? []) {
+    const target = fromUuidSync(entry.uuid);
+    if (!target?.isOwner || (target.system.usedManeuvers ?? []).includes("encounter:dimensional-hole")) continue;
+    const item = Array.from(target.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.portals
+      && boughtTraits(each.system.unique, getTrait).some(trait => trait.dimensionalHole === true));
+    if (!item) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-oos-button";
+    button.textContent = "Dimensional Hole";
+    button.dataset.tooltip = "1 Counter Action: the Opponent you target becomes its target instead of you, its Combat Rolls Urgent. Once a Combat Encounter";
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return dimensionalHole(message, target);
+    });
+    container.append(button);
+  }
+}
+
+/** "Target an Opponent, they become the target of the Attacking Maneuver instead of you. The Combat Rolls ... Urgent." */
+async function dimensionalHole(message, holder) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result) return;
+  const into = Array.from(game.user.targets ?? []).map(token => token.actor)
+    .find(other => other && (other.uuid !== holder.uuid) && !(attack.targets ?? []).some(entry => entry.uuid === other.uuid));
+  if (!into) return ui.notifications.warn("Target the Opponent it goes to first.");
+  if (!await spendActions(holder, 1, "counter")) return;
+  await recordManeuverType(holder, "counter");
+  await requestActorUpdate(holder, { "system.usedManeuvers": [...(holder.system.usedManeuvers ?? []), "encounter:dimensional-hole"] });
+  const swap = entry => (entry.uuid === holder.uuid) ? { uuid: into.uuid, name: into.name } : entry;
+  requestEdit(message, { type: "attack", attack: { ...attack,
+    targets: (attack.targets ?? []).map(swap),
+    ...(attack.targetUuid === holder.uuid ? { targetUuid: into.uuid, targetName: into.name } : {}),
+    defences: (attack.defences ?? []).filter(entry => entry.uuid !== holder.uuid),
+    ready: (attack.ready ?? []).filter(uuid => uuid !== holder.uuid),
+    urgentRolls: true,
+    dimensionalHole: { fromName: holder.name, intoName: into.name } } });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: holder }),
+    content: `<div class="dbu-settled-note">Dimensional Hole: ${Handlebars.escapeExpression(attack.maneuverName)} goes to `
+      + `${Handlebars.escapeExpression(into.name)} instead, its Combat Rolls Urgent.</div>` });
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -10829,6 +10901,8 @@ export async function postAttack(actor, target, maneuver,
           attackerName: actor.name,
           targetUuid: target.uuid,
           targetName: target.name,
+          // The Maneuver it was made through - the Basic Attack Dimensional Hole answers.
+          maneuverId: maneuver.id ?? "",
           // Who has confirmed what they are bringing, and what each target answered
           // with. Nothing is rolled until every participant appears here: both sides
           // may have effects to apply first, and a roll made before they do cannot be
@@ -12144,7 +12218,9 @@ async function resolveAttack(message, attack) {
   const attackerOptions = {
     extraDice: attacker.system.dice.extra.formula,
     criticalDice: attacker.system.dice.critical.formula,
-    combatRoll: true
+    combatRoll: true,
+    // Dimensional Hole's: "The Combat Rolls for that Attacking Maneuver become Urgent."
+    urgent: Boolean(attack.urgentRolls)
   };
 
   // One Strike Roll for the whole Maneuver. An area attack is one attack reaching
@@ -12180,7 +12256,8 @@ async function resolveAttack(message, attack) {
     const options = {
       extraDice: target.system.dice.extra.formula,
       criticalDice: target.system.dice.critical.formula,
-      combatRoll: true
+      combatRoll: true,
+      urgent: Boolean(attack.urgentRolls)
     };
 
     // Some things land whatever the Clash would have said: the Determined State on the
@@ -12851,7 +12928,7 @@ async function attackerStage(message, attack, attacker) {
   const triggers = relevantTriggers(attacker, message, "response");
   // Their own Attacking Maneuver, so Compelled's Urgency reaches this one.
   const ready = await prepareRoll(attacker, triggers, "Before the Strike Roll",
-    "", { combatRoll: true, attackingManeuver: true, formula: { base: DBUCharacterData.BASE_DIE,
+    "", { combatRoll: true, attackingManeuver: true, urgent: Boolean(attack.urgentRolls), formula: { base: DBUCharacterData.BASE_DIE,
       dice: combatDiceGroups(attacker), parts: windowParts(attacker, strikeParts(attacker, attack)) } });
   if (!ready) return;
   return readyAttacker(message);
@@ -12868,7 +12945,7 @@ async function woundStage(message, attack) {
       attackingManeuver: true,
       // "As an Urgent Roll." A reflected attack's Wound Roll cannot be failed on purpose
       // - the option is closed with its reason beside it, the way Compelled closes it.
-      urgent: Boolean(attack.urgentWound),
+      urgent: Boolean(attack.urgentWound || attack.urgentRolls),
       // A Wound Roll recorded when it hit - Delayed's - is not rolled again, so it has no formula.
       formula: Number.isFinite(attack.fixedWound) ? null : { base: DBUCharacterData.BASE_DIE,
         dice: combatDiceGroups(attacker, woundDice(attacker, attack)),
@@ -13386,6 +13463,7 @@ async function rollAttackWound(message, attack) {
     combatRoll: true,
     slot: "wound",
     attackingManeuver: true,
+    urgent: Boolean(attack.urgentWound || attack.urgentRolls),
     // Cutting: "on the Wound Roll, the Critical Target is 5 (ignoring the usual limit)."
     // The usual limit is the floor a character's own Critical Target is held to when it
     // is derived, so a stated one goes in as written rather than through it.
@@ -17172,6 +17250,7 @@ function renderAttack(message, html) {
       : result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
   if (attack.unitedFailed) return;
+  dimensionalHoleButtons(message, html, attack);
   if (endedByDuel(attack)) return;
 
   // An attack with an area reaches more than the one it was aimed at, and who it

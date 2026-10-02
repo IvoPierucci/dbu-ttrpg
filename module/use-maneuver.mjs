@@ -1873,6 +1873,7 @@ export function definitionOf(item) {
     multiForm: item.system.unique?.multiForm === true,
     paraPara: item.system.unique?.paraPara === true,
     petrifies: item.system.unique?.petrifies === true,
+    portals: Number(item.system.unique?.portals) || 0,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -3489,7 +3490,26 @@ async function revertTransfiguration(actor, target, maneuver) {
   });
 }
 
-export async function useManeuver(actor, maneuver, { atFeature = false, techniqueId = "", via = "",
+/**
+ * A Maneuver, used - through a Portal where its user said so (Portal Creation's Through a portal): "Any Movement or
+ * Attacking Maneuvers may treat the Squares occupied by Portals as if they were the same Square." Its Melee Range and reach
+ * are not measured (`_throughPortal`, read by whyNotWithinMelee and whyNotInReach), an attack carries `portal` - no Long
+ * Range - and the choice is spent once a Maneuver is made.
+ */
+export async function useManeuver(actor, maneuver, options = {}) {
+  if (!actor?.getFlag?.("dbu-ttrpg", "throughPortal")) return useManeuverOnce(actor, maneuver, options);
+  actor._throughPortal = true;
+  try {
+    const used = await useManeuverOnce(actor, maneuver, { ...options, portal: true });
+    if (used) await actor.unsetFlag("dbu-ttrpg", "throughPortal");
+    return used;
+  }
+  finally {
+    delete actor._throughPortal;
+  }
+}
+
+async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId = "", via = "",
                                                     outOfSequence = false, targetUuid = "",
                                                     presetThrown = null, volleyball = null, meteor = "",
                                                     portal = false, combo = false } = {}) {
@@ -4125,6 +4145,17 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       }
     }
 
+    // Portal Creation: "You can only possess 2 Portals at one time" - 4 with Warp Zone.
+    if (maneuver.portals) {
+      const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+      const { portalsMaxOf } = await import("./chat.mjs");
+      const max = portalsMaxOf(unique);
+      if ((Number(unique?.portalsHeld) || 0) + 2 > max) {
+        ui.notifications.warn(`${actor.name} already possesses ${unique?.portalsHeld ?? 0} of ${max} Portals: dismiss some first.`);
+        return false;
+      }
+    }
+
     // Petrification: "Target an Opponent who is not at Long Range."
     if (maneuver.petrifies && targetActor && atLongRange(actor, targetActor)) {
       ui.notifications.warn(`${targetActor.name} is at Long Range.`);
@@ -4731,6 +4762,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await (await import("./chat.mjs")).postMindControl(actor, maneuver, targetActor)
     : maneuver.paraPara
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
+    : maneuver.portals
+    ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
     : (maneuver.petrifies && targetActor)
     ? await (await import("./chat.mjs")).postPetrification(actor, maneuver, targetActor)
     : (maneuver.multiForm && forming)

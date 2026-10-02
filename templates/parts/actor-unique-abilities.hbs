@@ -79,6 +79,17 @@
                     data-tooltip="Instant: lose every Finisher and stop declaring it">Release</button>
           </div>
           {{/if}}
+          {{#if row.portals}}
+          <div class="unique-resource">
+            <span data-tooltip="Portals held, of the most you can possess">Portals {{row.portals.held}}/{{row.portals.max}}</span>
+            {{#if row.portals.held}}
+            <button type="button" class="dbu-clash-button{{#if row.portals.through}} active{{/if}}" data-action="throughPortal" data-item-id="{{row.itemId}}"
+                    data-tooltip="Your next Movement or Attacking Maneuver goes through a Portal: its Melee Range and Long Range are not measured">{{#if row.portals.through}}Through a portal: on{{else}}Through a portal{{/if}}</button>
+            <button type="button" class="dbu-clash-button" data-action="dismissPortals" data-item-id="{{row.itemId}}"
+                    data-tooltip="Instant: dismiss any number of your Portals">Dismiss</button>
+            {{/if}}
+          </div>
+          {{/if}}
           {{#if row.moon}}
           <div class="unique-resource">
             <span data-tooltip="False Moon">{{row.moon.label}}</span>

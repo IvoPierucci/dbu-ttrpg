@@ -1,0 +1,21 @@
+id: warp-zone
+name: Warp Zone
+advancement: true
+prerequisite: 4+ Skill Ranks in Use Magic and Clairvoyance
+tpCost: 6
+# "You can possess up to 4 Portals at one time." Which connect to which, the table's - said on the card.
+portalsMax: 4
+source: Core Rule
+description: >
+  Up to 4 Portals at one time, connected as you choose.
+text: >
+  Warp Zone: You are able to warp space in confusing and unpredictable ways.
+  –Prerequisites: 4+ Skill Ranks in Use Magic and Clairvoyance
+  –TP Cost: 6
+  –Effect: You can possess up to 4 Portals at one time. When you use the Portal Creation Unique Ability while you already
+  possess Portals, you may choose which Portals the new Portals are connected to.
+
+  For example, you could connect them to one another and have two sets of Portals active, or you could connect them to
+  all of the other Portals and allow for any Portal to lead to any other Portal, or you could connect all of the new
+  Portals to the Portal adjacent to you to effectively allow that Portal to lead to three different places while the
+  other Portals only lead back to it.
