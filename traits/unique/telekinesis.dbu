@@ -1,0 +1,43 @@
+id: telekinesis
+name: Telekinesis
+uaType: both
+prerequisite: Force or Magic Score of 4+
+tpCost: 15
+type: standard
+actionCost: 1
+kiCostPerTier: 6
+requiresTarget: true
+# "Target a Feature, Opponent, or an unequipped Item within 8 Squares of you" - asked as it is used, at your targeted token:
+# the Throw out of sequence (an Item or a Feature, asked by the Throw); one of their unequipped Items taken, a Weapon
+# equipped; or the Launch out of sequence "as if you were Grappling with that Character as the Grappler" - its Grapple
+# Check, no Grapple to end (chat.mjs askTelekinesis, postTelekinesis). The Toss Maneuver is not in the system yet.
+telekinesis: true
+source: Core Rule
+description: >
+  At something within 8 Squares: Throw an Item or a Feature out of sequence, take an unequipped Item (equipped if a
+  Weapon), or Launch a Character as if you held them.
+text: >
+  Telekinesis: You possess the ability to lift and throw objects or people with nothing but your mind.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Force or Magic Score of 4+
+  –TP Cost: 15
+  –KP Cost: 6(T)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: If you use the Terrain Lift Maneuver, you may use Magic instead of Force and you may lift any Feature
+  regardless of the number of Squares it occupies. Additionally, when using the Terrain Lift Maneuver, you may instead
+  target any Feature that is not at Long Range. Additionally, Elemental (Earth) becomes a Favored Element.
+  –Effect: Target a Feature, Opponent, or an unequipped Item within 8 Squares of you.
+
+  * If you targeted an Item, you may use the Throw Maneuver or Toss Maneuver as an Out-of-Sequence Maneuver as if you were
+  holding that Item. Instead of this effect, you may gain that Item and immediately equip it if it’s a Weapon.
+  * If you targeted a Feature, you may use the Throw Maneuver as an Out-of-Sequence Maneuver as if you were holding that
+  Feature.
+  * If you targeted a Character, you may use the Launch Maneuver as an Out-of-Sequence Maneuver as if you were Grappling
+  with that Character as the Grappler.
+
+---
+
+# The Passive waits on what it names: the Terrain Lift Maneuver and Favored Elements are not in the system yet (their
+# texts are pending). Telekinetic Weapons already read this Unique Ability by its name (gear.mjs telekinetic).

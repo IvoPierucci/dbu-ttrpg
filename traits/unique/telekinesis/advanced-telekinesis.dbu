@@ -1,0 +1,14 @@
+id: advanced-telekinesis
+name: Advanced Telekinesis
+advancement: true
+prerequisite: Force or Magic Score of 10+
+tpCost: 8
+advancedTelekinesis: true
+source: Core Rule
+description: >
+  Telekinesis's Throw at a second targeted token as well.
+text: >
+  Advanced Telekinesis: You can throw multiple targets telekinetically.
+  –Prerequisites: Force or Magic Score of 10+
+  –TP Cost: 8
+  –Effect: You can select an additional target to use the Throw Maneuver against through the effects of Telekinesis.

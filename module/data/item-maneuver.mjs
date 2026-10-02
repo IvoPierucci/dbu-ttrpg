@@ -692,6 +692,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         /** A Counter against one Signature Technique, by its name as written - Technique Block's (chat.mjs). */
         techniqueBlock: new fields.BooleanField({ required: true, initial: false }),
         blockedName: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** Throw, take or Launch from 8 Squares away - Telekinesis's (chat.mjs postTelekinesis). */
+        telekinesis: new fields.BooleanField({ required: true, initial: false }),
         shapeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeBestial: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         shapeForm: new fields.StringField({ required: true, blank: true, initial: "" }),

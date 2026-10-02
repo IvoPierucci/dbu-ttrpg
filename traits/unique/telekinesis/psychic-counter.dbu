@@ -1,0 +1,16 @@
+id: psychic-counter
+name: Psychic Counter
+advancement: true
+prerequisite: N/A
+tpCost: 4
+psychicCounter: true
+source: Core Rule
+description: >
+  Targeted by Telekinesis: a Might Clash - won, it fails, and yours back for a Counter Action.
+text: >
+  Psychic Counter: You can contest your opponent’s telekinesis with your own.
+  –Prerequisites: N/A
+  –TP Cost: 4
+  –Effect: If you are targeted by another Character using the Telekinesis Unique Ability, you may initiate a Might Clash.
+  If you win, they fail to target you with Telekinesis and you may spend 1 Counter Action to use the Telekinesis Unique
+  Ability to target that Opponent as an Out-of-Sequence Maneuver.

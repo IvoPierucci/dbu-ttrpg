@@ -203,6 +203,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, PARA_FLAG, request.para);
     case "petrify": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PETRIFY_FLAG, request.petrify);
+    case "psychicBack": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, PSYCHIC_FLAG, request.psychic);
     case "shapeshift": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, SHAPE_FLAG, request.shapeshift);
     case "crystal": return game.messages.get(request.messageId)
@@ -582,6 +584,10 @@ async function applyClash(messageId, clash) {
 
   if (clash.snare && clash.result && !clash.snare.applied) {
     await settleSnare(message, clash);
+  }
+
+  if (clash.psychic && clash.result && !clash.psychic.applied) {
+    await settlePsychic(message, clash);
   }
 
   if (clash.solarFlare && clash.result && !clash.solarFlare.applied) {
@@ -2565,6 +2571,14 @@ async function settleGrapple(message, clash) {
     return;
   }
 
+  // Telekinesis's Launch, with no Grapple: Psychic Counter's won, it never reached them; otherwise thrown or not.
+  if ((clash.grapple.kind === "launch") && clash.telekinetic) {
+    if (clash.tkFailed) return settledNote(message, `${grappler.name}'s Telekinesis fails to reach ${grappled.name}.`);
+    if (winner !== "challenger") return settledNote(message, `${grappled.name} slips out of ${grappler.name}'s Telekinesis.`);
+    return settledNote(message, `${grappler.name} throws ${grappled.name} - up to `
+      + `${Math.max(0, grappler.system.might ?? 0)} Squares in any direction.`);
+  }
+
   if (clash.grapple.kind === "launch") {
     // "If you lose, the Grappled Opponent escapes the Grapple." A tie is a loss here, as
     // it is in every Grapple Check: the Defender takes one, and the Defender is the
@@ -2940,6 +2954,8 @@ function onRenderChatMessage(message, html) {
   renderSealing(message, html);
   renderCrystal(message, html);
   renderShapeshift(message, html);
+  renderPsychicCounter(message, html);
+  renderPsychicBack(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -7671,7 +7687,7 @@ export async function postSkillClash(actor, target, maneuver, leaves = {}) {
  */
 export async function postGrappleCheck(grappler, grappled, {
   maneuverName = "Grapple", reason = "", kind = "start", earlierAttempts = 0, speaker = null,
-  maneuver = null
+  maneuver = null, telekinetic = false
 } = {}) {
   const tier = Math.max(1, grappled.system.tierOfPower ?? 1);
 
@@ -7710,6 +7726,8 @@ export async function postGrappleCheck(grappler, grappled, {
           collision: (kind === "launch") ? { doubles: false, doubledBy: "" } : null,
           collisionApplied: false,
           grapple: { kind, applied: false },
+          // Telekinesis's Launch: as if Grappling them, with no Grapple to end.
+          ...(telekinetic ? { telekinetic: true } : {}),
           ready: [],
           result: null
         }
@@ -10945,6 +10963,174 @@ export async function explodeGhost(actor, item) {
   if (!made) return;
   await item.update({ "system.unique.ghosts": Math.max(0, left - 1) });
   await settledNote(card, `A Kamikaze Ghost goes off, and is Defeated - ${Math.max(0, left - 1)} left.`);
+}
+
+/** What Telekinesis's Advancements add: Psychic Counter, Weapon Fixer, Advanced Telekinesis. */
+function telekinesisTraits(actor, itemId) {
+  const unique = actor?.items?.get(itemId)?.system?.unique;
+  const bought = unique ? boughtTraits(unique, getTrait) : [];
+  return { psychic: bought.some(trait => trait.psychicCounter === true),
+    fixer: bought.some(trait => trait.weaponFixer === true),
+    advanced: bought.some(trait => trait.advancedTelekinesis === true) };
+}
+
+/** Telekinesis's reach: "within 8 Squares of you" - unmeasurable is within, as everywhere here. */
+async function beyondTelekinesis(actor, target) {
+  const { squaresAway } = await import("./maneuvers.mjs");
+  const away = squaresAway(actor, target);
+  return (away !== null) && (away > 8);
+}
+
+/**
+ * Telekinesis, before it is paid: "Target a Feature, Opponent, or an unequipped Item within 8 Squares of you" - what it
+ * is done with, asked; the one it is aimed at, your targeted token (or the one handed over, Psychic Counter's).
+ */
+export async function askTelekinesis(actor, maneuver, given = null) {
+  const targeted = Array.from(game.user.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid));
+  const first = given ?? targeted[0] ?? null;
+  if (!first) {
+    ui.notifications.warn(`${maneuver.name}: target who it is aimed at first.`);
+    return null;
+  }
+  const mode = await pick(maneuver.name, "Telekinesis at what?", [
+    { action: "throw", label: `Throw an Item or a Feature at ${first.name}` },
+    { action: "take", label: `Take an unequipped Item from ${first.name}` },
+    { action: "launch", label: `Launch ${first.name}` }]);
+  if (!mode) return null;
+  if ((mode !== "throw") && await beyondTelekinesis(actor, first)) {
+    ui.notifications.warn(`${first.name} is more than 8 Squares away.`);
+    return null;
+  }
+  // Advanced Telekinesis: "an additional target to use the Throw Maneuver against".
+  const second = ((mode === "throw") && telekinesisTraits(actor, maneuver.itemId).advanced)
+    ? targeted.find(other => other.uuid !== first.uuid) : null;
+  return { mode, uuids: [first.uuid, ...(second ? [second.uuid] : [])] };
+}
+
+/** Telekinesis, paid for: the Throw or the Launch out of sequence, or the Item taken. */
+export async function postTelekinesis(actor, maneuver, plan) {
+  const [target, ...rest] = plan.uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  if (!target) return null;
+  if (plan.mode === "throw") {
+    // "You may use the Throw Maneuver ... as an Out-of-Sequence Maneuver as if you were holding that Item" - or that
+    // Feature: what is thrown, asked by the Throw.
+    const { useManeuver } = await import("./use-maneuver.mjs");
+    const thrower = getManeuver("throw");
+    if (!thrower) return null;
+    return useManeuver(actor, thrower, { outOfSequence: true, targetUuid: target.uuid,
+      extraTargets: rest.map(other => ({ uuid: other.uuid, name: other.name })) });
+  }
+  if (plan.mode === "launch") {
+    // "You may use the Launch Maneuver as an Out-of-Sequence Maneuver as if you were Grappling with that Character as the
+    // Grappler" - its Grapple Check, with no Grapple to end.
+    return postGrappleCheck(actor, target, { maneuverName: `${maneuver.name} - Launch`, kind: "launch", telekinetic: true,
+      reason: `Win and ${target.name} moves up to ${Math.max(0, actor.system.might ?? 0)} Squares in any direction.` });
+  }
+  return takeByTelekinesis(actor, maneuver, target);
+}
+
+/**
+ * "Instead of this effect, you may gain that Item and immediately equip it if it's a Weapon" - one of the target's
+ * unequipped Items; Weapon Fixer: "that Weapon may regain Life Points equal to twice your Might".
+ */
+async function takeByTelekinesis(actor, maneuver, holder) {
+  const loose = Array.from(holder.items ?? []).filter(item => (item.type === "gear") && !item.system.equipped);
+  if (!loose.length) return ui.notifications.warn(`${holder.name} has no unequipped Item.`);
+  const chosen = await pick(maneuver.name, `Which of ${holder.name}'s Items?`, loose.map(item => ({ action: item.id, label: item.name })));
+  const item = chosen ? holder.items.get(chosen) : null;
+  if (!item) return null;
+  const data = item.toObject();
+  delete data._id;
+  const weapon = data.system?.crafted?.kind === "weapon";
+  const said = [];
+  if (weapon) {
+    const fixed = telekinesisTraits(actor, maneuver.itemId).fixer;
+    if (fixed && ((Number(data.system.crafted.lifeLost) || 0) || data.system.crafted.destroyed)) {
+      const back = 2 * Math.max(0, Number(actor.system.might) || 0);
+      data.system.crafted.lifeLost = Math.max(0, (Number(data.system.crafted.lifeLost) || 0) - back);
+      if (back > 0) data.system.crafted.destroyed = false;
+      said.push(`Weapon Fixer: ${back} Life Points back`);
+    }
+    const { wieldProblem } = await import("./gear.mjs");
+    const blocked = wieldProblem(Array.from(actor.items ?? []), { system: data.system }, getTrait);
+    data.system.equipped = !blocked;
+    said.push(blocked ? `not equipped - ${blocked}` : "equipped");
+  }
+  else if (data.system) data.system.equipped = false;
+  await requestCreateItem(actor, data);
+  await requestDeleteItem(holder, item.id);
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(actor.name)}`
+      + ` takes ${Handlebars.escapeExpression(item.name)} from ${Handlebars.escapeExpression(holder.name)}`
+      + `${said.length ? ` - ${Handlebars.escapeExpression(said.join(", "))}` : ""}.</div>` });
+}
+
+/** Psychic Counter's card: Telekinesis back at whoever reached for you, for a Counter Action. */
+const PSYCHIC_FLAG = "psychicCounter";
+
+/**
+ * Psychic Counter: "If you are targeted by another Character using the Telekinesis Unique Ability, you may initiate a
+ * Might Clash" - a button on its Launch's Grapple Check, before you have answered it.
+ */
+function renderPsychicCounter(message, html) {
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (!clash?.telekinetic || clash.result || clash.tkFailed || clash.psychicAsked) return;
+  if ((clash.ready ?? []).includes(clash.defenderUuid)) return;
+  const defender = fromUuidSync(clash.defenderUuid);
+  const item = Array.from(defender?.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.telekinesis);
+  if (!defender?.isOwner || !item || !telekinesisTraits(defender, item.id).psychic) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-oos-button";
+  button.textContent = "Psychic Counter";
+  button.dataset.tooltip = "A Might Clash: win and their Telekinesis fails to reach you, and you may turn yours on them for a Counter Action";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    requestEdit(message, { type: "clash", clash: { ...clash, psychicAsked: true } });
+    const user = fromUuidSync(clash.challengerUuid);
+    if (!user) return;
+    await postMightClash(defender, user, { maneuverName: "Psychic Counter",
+      reason: `Win and ${user.name}'s Telekinesis fails to reach ${defender.name}.`,
+      psychic: { applied: false, cardId: message.id, itemId: item.id } });
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/** Its Might Clash, won: "they fail to target you with Telekinesis and you may spend 1 Counter Action" to turn it back. */
+async function settlePsychic(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, psychic: { ...clash.psychic, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return;
+  const card = game.messages.get(clash.psychic.cardId ?? "");
+  const launch = card?.getFlag(SCOPE, CLASH_FLAG);
+  if (launch && !launch.result) requestEdit(card, { type: "clash", clash: { ...launch, tkFailed: true, collision: null } });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: fromUuidSync(clash.challengerUuid) }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(clash.defenderName)}'s Telekinesis fails to reach `
+      + `${Handlebars.escapeExpression(clash.challengerName)}.</div>`,
+    flags: { [SCOPE]: { [PSYCHIC_FLAG]: { userUuid: clash.challengerUuid, targetUuid: clash.defenderUuid,
+      itemId: clash.psychic.itemId, used: false } } } });
+}
+
+/** Its Telekinesis back, out of sequence, for 1 Counter Action. */
+function renderPsychicBack(message, html) {
+  const back = message.getFlag(SCOPE, PSYCHIC_FLAG);
+  if (!back || back.used) return;
+  const user = fromUuidSync(back.userUuid);
+  const item = user?.items?.get(back.itemId);
+  if (!user?.isOwner || !item) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-oos-button";
+  button.textContent = item.name;
+  button.dataset.tooltip = "1 Counter Action: your Telekinesis at them, out of sequence";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    if (!await spendActions(user, 1, "counter")) return;
+    requestEdit(message, { type: "psychicBack", psychic: { ...back, used: true } });
+    const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+    await useManeuver(user, definitionOf(item), { outOfSequence: true, targetUuid: back.targetUuid });
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
 }
 
 /** Whether an attack was declared a Called Shot. */

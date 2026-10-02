@@ -1,0 +1,15 @@
+id: weapon-fixer
+name: Weapon Fixer
+advancement: true
+prerequisite: Magical Materialization
+tpCost: 5
+weaponFixer: true
+source: Core Rule
+description: >
+  A Weapon equipped through Telekinesis regains twice your Might in Life Points.
+text: >
+  Weapon Fixer: You are able to telekinetically put Weapons back together.
+  –Prerequisites: Magical Materialization
+  –TP Cost: 5
+  –Effect: If you equip a Weapon through the effects of the Telekinesis Unique Ability, that Weapon may regain Life
+  Points equal to twice your Might.

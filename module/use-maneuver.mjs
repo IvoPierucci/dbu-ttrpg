@@ -1882,6 +1882,7 @@ export function definitionOf(item) {
     solarFlare: item.system.unique?.solarFlare === true,
     spiritSword: item.system.unique?.spiritSword === true,
     kamikaze: item.system.unique?.kamikaze === true,
+    telekinesis: item.system.unique?.telekinesis === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -3520,7 +3521,8 @@ export async function useManeuver(actor, maneuver, options = {}) {
 async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId = "", via = "",
                                                     outOfSequence = false, targetUuid = "",
                                                     presetThrown = null, volleyball = null, meteor = "",
-                                                    portal = false, combo = false, spiritSword = null } = {}) {
+                                                    portal = false, combo = false, spiritSword = null,
+                                                    extraTargets = [] } = {}) {
   if (!actor || !maneuver) return false;
   // Whether this use is an Ultimate that began as a Super - Ascended Signature. Set when the
   // Technique is picked.
@@ -3884,6 +3886,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let flaring = null;
   let swording = null;
   let haunting = null;
+  let lifting = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4279,6 +4282,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const size = larger || unique?.sphereMagnitude || "minor";
       waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
       if (!waving) return false;
+    }
+
+    // Telekinesis: what it is done with, at whom.
+    if (maneuver.telekinesis) {
+      lifting = await (await import("./chat.mjs")).askTelekinesis(actor, maneuver, targetActor);
+      if (!lifting) return false;
     }
 
     // Super Ghost Kamikaze Attack: how many Ghosts - Balloon Flash Bomber's twice as many, asked.
@@ -4819,6 +4828,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : maneuver.portals
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
+    : (maneuver.telekinesis && lifting)
+    ? await (await import("./chat.mjs")).postTelekinesis(actor, maneuver, lifting)
     : (maneuver.kamikaze && haunting)
     ? await (await import("./chat.mjs")).postKamikaze(actor, maneuver, haunting)
     : (maneuver.spiritSword && swording)
@@ -4921,7 +4932,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await postFeatureAttack(actor, maneuver, declared, charges)
     : declared
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges, ...(volleyball ? { volleyball } : {}),
-        ...(portal ? { portal: true } : {}), ...(spiritSword ? { spiritSword } : {}) },
+        ...(portal ? { portal: true } : {}), ...(spiritSword ? { spiritSword } : {}),
+        ...(extraTargets.length ? { extraTargets: [...(declared.extraTargets ?? []), ...extraTargets] } : {}) },
         { modifiers: [...appliedModifiers(modifiers), ...drawn.rows], asOutOfSequence: outOfSequence })
     // A Movement card carries whether Rapid Movement was paid for, because the Dodge
     // bonus it buys is against "an Exploit Maneuver provoked by this instance" - and this
