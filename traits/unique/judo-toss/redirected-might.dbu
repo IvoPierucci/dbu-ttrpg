@@ -1,0 +1,16 @@
+id: redirected-might
+name: Redirected Might
+advancement: true
+prerequisite: Insight Score of 8+
+tpCost: 7
+# "For the Might Clash of Judo Toss, use your Opponents Might instead of your own if their Might is higher than yours."
+judoRedirect: true
+source: Core Rule
+description: >
+  Judo Toss's Might Clash uses their Might when it is higher than yours.
+text: >
+  Redirected Might: Through mastery of martial prowess, you turn an enemy’s own strength into their opponent.
+  –Prerequisites: Insight Score of 8+
+  –TP Cost: 7
+  –Effect: For the Might Clash of Judo Toss, use your Opponents Might instead of your own if their Might is higher than
+  yours.

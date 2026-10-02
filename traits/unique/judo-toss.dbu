@@ -1,0 +1,33 @@
+id: judo-toss
+name: Judo Toss
+uaType: technical
+prerequisite: Insight Score of 5+
+tpCost: 10
+type: counter
+actionCost: 1
+kiCost: 0
+# Offered in Respond against a Physical Attack from an Opponent within your Melee Range (chat.mjs playJudo): your
+# Physical Strike Roll in place of your Dodge Roll, 1(bT) off it for each Energy Charge or rank of Power Shot on the
+# attack (DEFENCES.judoToss). Won, a Might Clash button on the attack's card; that won, they move up to 1/2 their Might
+# in Squares in any direction - the table's map - or, with Opening Flip, are knocked Prone.
+judoToss: true
+source: Core Rule
+description: >
+  Against a Physical Attack from within your Melee Range: your Strike Roll in place of your Dodge, 1(bT) off for each
+  Energy Charge or Power Shot rank. Won, a Might Clash: won, they move 1/2 their Might in Squares, any direction.
+text: >
+  Judo Toss: You redirect an enemy’s momentum against them, sending them flying away from you in the process.
+  –Ability Type: Technical
+  –Prerequisites: Insight Score of 5+
+  –TP Cost: 10
+  –KP Cost: N/A
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: If you are targeted by a Physical Attack from an Opponent within your Melee Range, you may use your Physical
+  Strike Roll instead of your Dodge Roll against that Attacking Maneuver’s Strike Roll. Reduce your Dice Score by 1(bT)
+  for each Energy Charge or rank of Power Shot on the Attacking Maneuver.
+
+  If you win, you avoid the Attacking Maneuver and may make a Might Clash against that Opponent. If you succeed, you may
+  move that Opponent in any direction a number of squares equal to 1/2 of their Might.

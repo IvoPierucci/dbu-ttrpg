@@ -646,6 +646,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         smashes: new fields.BooleanField({ required: true, initial: false }),
         /** A Clash that leaves its target Debilitated, kept each turn - Internal Assault's (chat.mjs). */
         debilitates: new fields.BooleanField({ required: true, initial: false }),
+        /** A Counter answering a Physical Attack with your Strike Roll - Judo Toss's (chat.mjs playJudo). */
+        judoToss: new fields.BooleanField({ required: true, initial: false }),
         /** A State it may only be used in - God Meteor's God Ki. */
         requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */

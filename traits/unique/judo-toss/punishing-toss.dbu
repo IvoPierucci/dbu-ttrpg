@@ -1,0 +1,19 @@
+id: punishing-toss
+name: Punishing Toss
+advancement: true
+prerequisite: Opening Flip
+tpCost: 6
+# "If you knock an Opponent Prone through the effects of Judo Toss and the Opening Flip Advancement while you are not in
+# a High Environment, they suffer Collision with a Square they are occupying" - its Collision Damage asked as the Prone
+# is.
+judoPunish: true
+source: Core Rule
+description: >
+  Flipped Prone by Judo Toss while you are not in a High Environment: they suffer Collision with their Square.
+text: >
+  Punishing Toss: Your foe hits the ground with painful force.
+  –Prerequisites: Opening Flip
+  –TP Cost: 6
+  –Effect: If you knock an Opponent Prone through the effects of Judo Toss and the Opening Flip Advancement while you are
+  not in a High Environment, they suffer Collision with a Square they are occupying (if they are occupying multiple, you
+  decide which Square).

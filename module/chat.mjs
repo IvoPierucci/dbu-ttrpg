@@ -6061,6 +6061,12 @@ async function respondDialog(message, respondable) {
       && (item.system.tags ?? []).includes("uniqueAbility") && evasionOf(item, 1))
       .map(item => ({ ...uniqueDefinitionOf(item), id: `ua:${item.id}`,
         source: `Unique Ability - ${maneuverKiCost(uniqueDefinitionOf(item), null, actor)} KP` }));
+    // Judo Toss: "If you are targeted by a Physical Attack from an Opponent within your Melee Range".
+    for (const item of actor.items ?? []) {
+      if ((item.type !== "maneuver") || !item.system.unique?.judoToss) continue;
+      ownCounters.push({ ...uniqueDefinitionOf(item), id: `judo:${item.id}`, judo: true,
+        source: `Unique Ability - ${maneuverKiCost(uniqueDefinitionOf(item), null, actor)} KP` });
+    }
     // Copy Clone with Mirrored Attack: "you may use the effects of Copy Clone as a Counter Maneuver with an Action Cost
     // of 1 Counter Action" - a Duplicate of the attacker that Duels them.
     for (const item of actor.items ?? []) {
@@ -6086,6 +6092,12 @@ async function respondDialog(message, respondable) {
       if (maneuver.mirror && unresolved && !waiting) {
         reason = attack?.duel ? "a Duel is already on this attack"
           : whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsLeft(actor, "counter") : 1 });
+        blocked = Boolean(reason);
+      }
+
+      // Judo Toss: a Physical Attack, from within your Melee Range.
+      if (maneuver.judo && unresolved && !waiting) {
+        reason = whyNotJudo(actor, attack);
         blocked = Boolean(reason);
       }
 
@@ -6455,6 +6467,8 @@ async function playCounter(message, actor, answer, attack) {
   if (String(answer).startsWith("ua:")) return playEvasion(message, actor, String(answer).slice(3));
   // Copy Clone, by Mirrored Attack.
   if (String(answer).startsWith("mirror:")) return playMirror(message, actor, String(answer).slice(7));
+  // Judo Toss.
+  if (String(answer).startsWith("judo:")) return playJudo(message, actor, String(answer).slice(5));
 
   const maneuver = getManeuver(answer);
   if (!maneuver) return;
@@ -7887,6 +7901,22 @@ function renderSkillClash(message, html) {
       }
     }
 
+    // Opening Flip: "instead of moving that Opponent, you may knock them Prone".
+    if (clash.judo?.flip && wonIt && !clash.judo.applied && challenger?.isOwner) {
+      const defender = fromUuidSync(clash.defenderUuid);
+      const flip = document.createElement("button");
+      flip.type = "button";
+      flip.className = "dbu-clash-button";
+      flip.textContent = "Opening Flip: Prone";
+      flip.dataset.tooltip = clash.judo.punish ? "Instead of moving them - and Punishing Toss's Collision, if you are not in a High Environment"
+        : "Instead of moving them";
+      flip.addEventListener("click", () => {
+        flip.disabled = true;
+        return judoFlip(message, clash, challenger, defender);
+      });
+      if (defender) container.append(flip);
+    }
+
     // Combo Portal: "If you move an Opponent with an effect, you may use Illusion Smash as an Instant Maneuver" - at them.
     if (clash.collision && wonIt && !clash.portaled && challenger?.isOwner) {
       const smash = Array.from(challenger.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.smashes
@@ -9094,6 +9124,92 @@ async function settleDebilitateEscape(message, clash) {
   const caster = fromUuidSync(clash.defenderUuid);
   const item = caster?.items?.get(clash.debilitateEscape.itemId);
   if (item) await endDebilitation(caster, item);
+}
+
+/**
+ * Judo Toss, played from Respond: its Counter Action paid, its once per Combat Round counted, and this attack answered
+ * with "your Physical Strike Roll instead of your Dodge Roll" (DEFENCES.judoToss).
+ */
+async function playJudo(message, actor, itemId) {
+  const item = actor.items?.get(itemId);
+  if (!item?.system?.unique?.judoToss) return;
+  const maneuver = uniqueDefinitionOf(item);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) {
+    ui.notifications.warn(`${item.name} is once per Combat Round.`);
+    return;
+  }
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+    await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || endedByDuel(attack)) return;
+  const others = (attack.defences ?? []).filter(entry => entry.uuid !== actor.uuid);
+  return settleAttack(message, {
+    ...attack,
+    defences: [...others, { uuid: actor.uuid, defence: "judoToss", wager: 0, foundation: "energy", parryWith: [],
+      judo: { itemId } }],
+    ready: [...new Set([...(attack.ready ?? []), actor.uuid])]
+  });
+}
+
+/** Why Judo Toss cannot answer this attack, or "": "a Physical Attack from an Opponent within your Melee Range". */
+function whyNotJudo(actor, attack) {
+  if (attack?.foundation !== "physical") return "only against a Physical Attack";
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  return (attacker && whyNotWithinMelee(actor, attacker, "Judo Toss")) ? "only from an Opponent within your Melee Range" : "";
+}
+
+/** "Reduce your Dice Score by 1(bT) for each Energy Charge or rank of Power Shot on the Attacking Maneuver." */
+function judoPenalty(actor, attack) {
+  const count = (Number(attack?.energyCharges) || 0) + (Number(attack?.powerShotRanks) || 0);
+  if (!count) return [];
+  return [{ label: "Energy Charges / Power Shot", written: `-${count}(bT)`,
+    value: -count * Math.max(1, Number(actor.system.baseTierOfPower) || 1) }];
+}
+
+/**
+ * Judo Toss won: "you avoid the Attacking Maneuver and may make a Might Clash against that Opponent" - Redirected Might's
+ * "use your Opponents Might instead of your own if their Might is higher". Won, "you may move that Opponent in any
+ * direction a number of squares equal to 1/2 of their Might" - Size and Movement with it.
+ */
+async function judoClash(message, actor) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  const judo = defenceFor(attack, actor.uuid)?.judo;
+  const item = judo ? actor.items?.get(judo.itemId) : null;
+  if (!attacker || !item) return;
+  requestEdit(message, { type: "attack", attack: { ...attack, result: { ...attack.result,
+    targets: replaceTarget(attack, actor.uuid, { judoClashed: true }) } } });
+  const bought = boughtTraits(item.system.unique, getTrait);
+  const theirs = Number(attacker.system.might) || 0;
+  const redirect = bought.some(trait => trait.judoRedirect) && (theirs > (Number(actor.system.might) || 0));
+  const flip = bought.some(trait => trait.judoFlip);
+  const judoka = actor.uuid;
+  const squares = sizedMovement(attacker, actor, Math.floor(theirs / 2)).squares;
+  return postMightClash(actor, attacker, {
+    maneuverName: item.name,
+    reason: `Win and move ${attacker.name} up to ${squares} Squares in any direction${flip ? ", or knock them Prone" : ""}.`,
+    // Whose Might stands in, by the side it stands in for - the Net's arrangement.
+    ...(redirect ? { mightFor: { [judoka]: theirs }, mightLabel: "Redirected Might" } : {}),
+    judo: { applied: false, flip, punish: bought.some(trait => trait.judoPunish), name: item.name }
+  });
+}
+
+/**
+ * Opening Flip, on the won Clash: "instead of moving that Opponent, you may knock them Prone" - and Punishing Toss's
+ * "they suffer Collision with a Square they are occupying", while you are not in a High Environment.
+ */
+async function judoFlip(message, clash, actor, target) {
+  requestEdit(message, { type: "clash", clash: { ...clash, judo: { ...clash.judo, applied: true } } });
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "prone", Math.max(1, Number(target.system.conditions?.prone) || 0));
+  await settledNote(message, `${target.name} is knocked Prone.`);
+  const grounded = !((Number(actor.system.battlefield?.highEnvironment) || 0) > 0);
+  if (clash.judo.punish && grounded) await takeCollisionDamage(target);
 }
 
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
@@ -13403,6 +13519,22 @@ const DEFENCES = {
   },
 
   // Counter's: the whole Defense Value, and a Signature Technique to strike back with.
+  // Judo Toss: "your Physical Strike Roll instead of your Dodge Roll against that Attacking Maneuver's Strike Roll" -
+  // a Strike, so no Diminishing Defense on it or from it.
+  judoToss: {
+    label: "Judo Toss",
+    parts: (actor, attack) => [
+      { label: "Strike", value: actor.system.combat.strike },
+      ...judoPenalty(actor, attack),
+      ...musclePenalty(actor),
+      ...thresholdPenalty(actor),
+      ...openedAgainst(actor)
+    ],
+    answer: (actor, options, attack) => rollSide(actor, DEFENCES.judoToss.parts(actor, attack), { ...options, slot: "strike" }),
+    soak: (soak) => soak,
+    wound: (total) => total
+  },
+
   crossCounterSignature: {
     label: "Cross Counter (Signature Technique)",
     counterAttacks: "signature",
@@ -16685,6 +16817,23 @@ function renderAttack(message, html) {
       });
       container.append(cyclone);
     }
+  }
+
+  // Judo Toss won: "you avoid the Attacking Maneuver and may make a Might Clash against that Opponent".
+  for (const branch of result.targets ?? []) {
+    if ((branch.defense !== "judoToss") || branch.hit || branch.judoClashed) continue;
+    const judoka = fromUuidSync(branch.uuid);
+    if (!judoka?.isOwner) continue;
+    const toss = document.createElement("button");
+    toss.type = "button";
+    toss.className = "dbu-clash-button";
+    toss.textContent = "Judo Toss: Might Clash";
+    toss.dataset.tooltip = "Won, move them 1/2 their Might in Squares, any direction";
+    toss.addEventListener("click", () => {
+      toss.disabled = true;
+      return judoClash(message, judoka);
+    });
+    container.append(toss);
   }
 
   const homingRanks = featureRanks(attack.technique?.features ?? [], "homing");

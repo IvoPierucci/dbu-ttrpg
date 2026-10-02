@@ -1,0 +1,17 @@
+id: opening-flip
+name: Opening Flip
+advancement: true
+prerequisite: Insight Score of 8+
+tpCost: 7
+# "If you win the Might Clash for Judo Toss, instead of moving that Opponent, you may knock them Prone" - a button on
+# the won Clash.
+judoFlip: true
+source: Core Rule
+description: >
+  Judo Toss's Might Clash won: knock them Prone instead of moving them.
+text: >
+  Opening Flip: Rather than slinging your enemy away along their own trajectory, you flip them onto their back so that
+  you may take greater advantage of their new prone position.
+  –Prerequisites: Insight Score of 8+
+  –TP Cost: 7
+  –Effect: If you win the Might Clash for Judo Toss, instead of moving that Opponent, you may knock them Prone.
