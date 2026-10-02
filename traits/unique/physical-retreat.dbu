@@ -1,0 +1,31 @@
+id: physical-retreat
+name: Physical Retreat
+uaType: both
+prerequisite: Agility and Insight Score of 8+
+tpCost: 10
+type: counter
+actionCost: 1
+kiCostPerTier: 2
+# "If you are targeted by an Attacking Maneuver ... increase your Defense Value by 2(T) for the duration of this Maneuver"
+# - answered from the attack's Respond, as the Afterimage Technique is, the Dodge carrying it; "an additional 1(T) if the
+# Attacking Maneuver was a Called Shot". "... or the Grapple Maneuver" - a button on the Grapple Check, the 2(T) on the
+# Defender's Dodge, which is where a Defense Value is (chat.mjs playRetreat).
+evadeDefense: 2
+evadeCalledShot: 1
+evadeGrapple: true
+source: Core Rule
+description: >
+  A Counter Maneuver when attacked or Grappled: Defense Value 2(T) higher for that Maneuver, 3(T) against a Called Shot.
+text: >
+  Physical Retreat: By manipulating your physical body in unnatural ways, you’re able to pull your limbs, your head, or
+  even your vital organs out of harm’s way.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Agility and Insight Score of 8+
+  –TP Cost: 10
+  –KP Cost: 2(T)
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: If you are targeted by an Attacking Maneuver or the Grapple Maneuver, increase your Defense Value by 2(T) for
+  the duration of this Maneuver. Increase this bonus by an additional 1(T) if the Attacking Maneuver was a Called Shot.

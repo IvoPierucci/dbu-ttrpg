@@ -742,7 +742,11 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
          */
         evade: new fields.SchemaField({
           defense: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
-          offer: new fields.StringField({ required: true, blank: true, initial: "" })
+          offer: new fields.StringField({ required: true, blank: true, initial: "" }),
+          /** More per Tier against a Called Shot - Physical Retreat's 1(T). */
+          calledShot: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+          /** Answering the Grapple Maneuver too, on its Grapple Check's Dodge - Physical Retreat's. */
+          grapple: new fields.BooleanField({ required: true, initial: false })
         }),
         advancements: new fields.ArrayField(new fields.SchemaField({
           id: new fields.StringField({ required: true, blank: false }),

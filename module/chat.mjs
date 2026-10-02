@@ -2903,6 +2903,7 @@ function onRenderChatMessage(message, html) {
   renderDebilitated(message, html);
   renderParaPara(message, html);
   renderPetrify(message, html);
+  renderRetreat(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -6529,7 +6530,8 @@ async function playCounter(message, actor, answer, attack) {
  */
 async function playEvasion(message, actor, itemId) {
   const item = actor.items?.get(itemId);
-  const evasion = evasionOf(item, actor.system.tierOfPower);
+  const evasion = evasionOf(item, actor.system.tierOfPower,
+    { calledShot: isCalledShot(message.getFlag(SCOPE, ATTACK_FLAG)) });
   if (!item || !evasion) return;
   const maneuver = uniqueDefinitionOf(item);
   if (maneuverUsesLeft(actor, maneuver) <= 0) {
@@ -7304,6 +7306,10 @@ const CLASH_ROLLS = ({
         : []),
       // "Increase all of your Grapple Checks" - Four Witches Grip's: as either side.
       ...(clash.grapple ? grappleAllParts(actor, clash, uuid) : []),
+      // Physical Retreat: "increase your Defense Value by 2(T)" - a part of the Dodge, so on the Defender's Dodge.
+      ...(((uuid === clash.defenderUuid) && (clash.defenderRoll === "dodge") && clash.retreat?.bonus)
+        ? [{ label: clash.retreat.name, written: clash.retreat.written, value: clash.retreat.bonus }]
+        : []),
       // "Make a Grapple Check against the Grappled with your Dice Score reduced by
       // 1(bT)." The Grappler's alone, and the only Grapple Check made at a penalty.
       ...(((uuid === clash.challengerUuid) && (clash.grapple?.kind === "pin"))
@@ -9686,6 +9692,59 @@ export async function petrifierDefeated(actor) {
   }
 }
 
+/** Whether an attack was declared a Called Shot. */
+function isCalledShot(attack) {
+  return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
+}
+
+/**
+ * Physical Retreat against "the Grapple Maneuver": a button for the one it targets, before they have rolled - its KP
+ * and Counter Action paid, its 2(T) on their Dodge in that Grapple Check, where their Defense Value is.
+ */
+function renderRetreat(message, html) {
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if ((clash?.grapple?.kind !== "start") || clash.result || clash.retreat) return;
+  if ((clash.ready ?? []).includes(clash.defenderUuid)) return;
+  const defender = fromUuidSync(clash.defenderUuid);
+  if (!defender?.isOwner) return;
+  const container = html.querySelector(".message-content") ?? html;
+  for (const item of defender.items ?? []) {
+    if ((item.type !== "maneuver") || !item.system.unique?.evade?.grapple) continue;
+    const evasion = evasionOf(item, defender.system.tierOfPower);
+    if (!evasion) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-oos-button";
+    button.textContent = item.name;
+    button.dataset.tooltip = `Counter: your Dodge in this Grapple Check ${evasion.written} higher`;
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return playRetreat(message, defender, item);
+    });
+    container.append(button);
+  }
+}
+
+async function playRetreat(message, actor, item) {
+  const maneuver = uniqueDefinitionOf(item);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) {
+    ui.notifications.warn(`${item.name} is once per Combat Round.`);
+    return;
+  }
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+    await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  const evasion = evasionOf(item, actor.system.tierOfPower);
+  if (!clash || clash.result || !evasion) return;
+  requestEdit(message, { type: "clash", clash: { ...clash,
+    retreat: { name: evasion.name, written: evasion.written, bonus: evasion.bonus } } });
+}
+
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
 export async function offerOutOfSequence(actor, offer) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
@@ -11428,8 +11487,7 @@ async function techniqueOnHit(attacker, attack, target) {
   if (!tech) return [];
   const said = [];
   let broken = featureRanks(tech.features, "penetration");
-  const calledShot = (attack.modifiers ?? []).some(entry => entry.id === "called-shot"
-    || entry.modifier?.id === "called-shot");
+  const calledShot = isCalledShot(attack);
   if (tech.features.includes("pinpoint-precision") && calledShot) broken += 1;
   if (broken) {
     await markUntilNextTurn(attacker, target, "broken", broken, "start", attack.maneuverName);

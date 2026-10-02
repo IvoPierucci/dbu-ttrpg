@@ -242,7 +242,8 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         barrier: definition.barrier === true,
         binds: definition.binds === true,
         bluffs: definition.bluffs === true,
-        evade: { defense: number(definition.evadeDefense), offer: String(definition.evadeOffer ?? "") },
+        evade: { defense: number(definition.evadeDefense), offer: String(definition.evadeOffer ?? ""),
+          calledShot: number(definition.evadeCalledShot), grapple: definition.evadeGrapple === true },
         advancements: children.filter(child => child.advancement === true).map(child => ({
           id: id(), key: child.id, name: child.name, tp: number(child.tpCost),
           prerequisite: listOf(child.prerequisite).join(", "), text: String(child.text ?? ""), script: String(child.script ?? ""),
@@ -266,9 +267,11 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
  * What answering an attack with this Unique Ability brings to it - the Afterimage Technique's: the Defense
  * Value it adds, and what the attack avoided offers, with every Advancement bought onto it.
  */
-export function evasionOf(item, tierOfPower) {
+export function evasionOf(item, tierOfPower, { calledShot = false } = {}) {
   const unique = item?.system?.unique;
-  const defense = Number(unique?.evade?.defense) || 0;
+  // Physical Retreat's "an additional 1(T) if the Attacking Maneuver was a Called Shot".
+  const defense = (Number(unique?.evade?.defense) || 0)
+    + ((Number(unique?.evade?.defense) && calledShot) ? (Number(unique.evade.calledShot) || 0) : 0);
   if (!defense) return null;
   const bought = (unique.advancements ?? []).filter(entry => entry.bought);
   const clash = bought.find(entry => entry.clashSave);
