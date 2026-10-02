@@ -2850,6 +2850,7 @@ function onRenderChatMessage(message, html) {
   renderMeteor(message, html);
   renderMeteorHit(message, html);
   renderMeteorStrike(message, html);
+  renderLoss(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -12901,16 +12902,36 @@ export async function reduceKiPoints(target, amount, { reason = "Ki Point reduct
 
   await requestActorUpdate(target, { "system.ki.value": value - taken });
 
+  // How many is theirs to see, and their watchers' (renderLoss).
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
-    content: checkCard({
-      parts: `${Handlebars.escapeExpression(reason)}`,
-      total: `-${taken} KP`,
-      outcome: "botch"
-    })
+    content: "",
+    // The flag's keys written out (SCOPE, LOSS_FLAG): this function is run on its own, cut out of the module.
+    flags: { "dbu-ttrpg": { poolLoss: { actorUuid: target.uuid, name: target.name, taken, pool: "ki", reason } } }
   });
 
   return taken;
+}
+
+/** A loss of Life or Ki Points straight off the pool, said by what each reader may see. */
+const LOSS_FLAG = "poolLoss";
+
+/**
+ * "X loses N Life Points" - to whoever may watch them (the user's ruling: how many is a way to their numbers). Anyone
+ * else is told that they lost some, and why.
+ */
+function renderLoss(message, html) {
+  const loss = message.getFlag(SCOPE, LOSS_FLAG);
+  if (!loss) return;
+  const escape = Handlebars.escapeExpression;
+  const pool = (loss.pool === "ki") ? "Ki Points" : "Life Points";
+  const note = document.createElement("div");
+  note.className = "dbu-settled-note";
+  note.innerHTML = maySeeRolls(fromUuidSync(loss.actorUuid))
+    ? `${escape(loss.name)} loses <strong>${loss.taken}</strong> ${pool} &middot; ${escape(loss.reason)}${
+      (loss.pool === "life") ? " <em>past Soak and Damage Reduction</em>" : ""}`
+    : `${escape(loss.name)} loses ${pool} &middot; ${escape(loss.reason)}`;
+  (html.querySelector(".message-content") ?? html).append(note);
 }
 
 export async function reduceLifePoints(target, amount, { reason = "Life Point reduction" } = {}) {
@@ -12933,12 +12954,12 @@ export async function reduceLifePoints(target, amount, { reason = "Life Point re
 
   await requestActorUpdate(target, { "system.life.value": floor });
 
+  // How many is theirs to see, and their watchers' (renderLoss): the number is the way to their Life Points.
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
-    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(target.name)}
-      loses <strong>${taken}</strong> Life Points &middot;
-      ${Handlebars.escapeExpression(reason)}
-      <em>past Soak and Damage Reduction</em></div>`
+    content: "",
+    // The flag's keys written out (SCOPE, LOSS_FLAG): this function is run on its own, cut out of the module.
+    flags: { "dbu-ttrpg": { poolLoss: { actorUuid: target.uuid, name: target.name, taken, pool: "life", reason } } }
   });
   // "Apparel loses 1 Break Value if you are knocked through a Health Threshold."
   if (knockedThrough) await sayApparelBreak(target);
