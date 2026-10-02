@@ -7,8 +7,8 @@ type: counter
 actionCost: 1
 kiCostPerBaseTier: 2
 # Answered from Respond, as Judo Toss is: "If you are targeted by an Opponent's Energy or Magic Attack, you may use your
-# Physical or Energy Strike Roll instead of your Dodge Roll" (DEFENCES.stardust - one Strike in this system, whichever it
-# is called); "For every Energy Charge or rank of Power Shot applied to that Attacking Maneuver, increase the Ki Point cost
+# Physical or Energy Strike Roll instead of your Dodge Roll" (DEFENCES.stardust - which of the two, asked where they
+# differ); "For every Energy Charge or rank of Power Shot applied to that Attacking Maneuver, increase the Ki Point cost
 # of this Maneuver by 1(bT)" (stardustKi). Won: avoided, and Reflect offered as a Parry's is.
 stardust: true
 source: Core Rule

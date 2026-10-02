@@ -95,6 +95,15 @@ function withEffects(data, key, base, { min = 0, parts = null, as = "", wraps = 
 }
 
 /**
+ * A Foundation's own Strike or Wound - `strike.energy`, `wound.physical` - on top of the shared one, where something raises
+ * that Foundation's alone; the shared one, and its workings left where they were, where nothing does.
+ */
+function ownFoundation(data, key, shared) {
+  if (!data.effects?.slots?.[key]) return shared;
+  return withEffects(data, key, shared, { parts: [{ label: key.startsWith("wound") ? "Wound" : "Strike", value: shared }] });
+}
+
+/**
  * What a value is made of, kept beside the value.
  *
  * Two halves, and only one of them can be worked out here. What effects did is in the
@@ -2540,8 +2549,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       ]
     });
 
+    // Each Foundation's Strike: the shared one, and what raises that Foundation's alone - "Physical Strike", "Energy
+    // Strike", "Magic Strike".
+    const strikeBy = Object.fromEntries(Object.keys(DBUCharacterData.FOUNDATIONS).map(key =>
+      [key, ownFoundation(this, `strike.${key}`, combatStrike)]));
+
     this.combat = {
       strike: combatStrike,
+      strikeBy,
       // The whole Dodge Roll. Its Defense Value component stays reachable on its own,
       // since that is the part an effect can halve.
       dodge: withEffects(this, "dodge", this.defenseValue + this.rollModifiers.dodge, {
@@ -2552,8 +2567,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       }),
       // A Parry rolls the Strike value, so it takes Strike's effects and adds its own -
       // which exist for effects that only apply when Strike is rolled defensively.
-      parry: withEffects(this, "parry", combatStrike, {
-        parts: [{ label: "Strike Roll", value: combatStrike }]
+      // "Use your Strike Roll (as if you rolled a Physical Attack)" - the Physical Strike.
+      parry: withEffects(this, "parry", strikeBy.physical, {
+        parts: [{ label: "Physical Strike", value: strikeBy.physical }]
       }),
       // The Wound Roll is the Damage Attribute the Foundation names, and that alone.
       // It used to carry Might as well, which counted the same Modifier twice for
@@ -2564,7 +2580,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       wound: Object.fromEntries(
         Object.entries(DBUCharacterData.FOUNDATIONS)
           .map(([key, foundation]) =>
-            [key, withEffects(this, "wound", atts[foundation.attribute].mod, {
+            [key, ownFoundation(this, `wound.${key}`, withEffects(this, "wound", atts[foundation.attribute].mod, {
               as: `wound.${key}`,
               parts: [{
                 // The Damage Attribute this Foundation names, by name: a Wound Roll of
@@ -2574,7 +2590,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
                   + `${foundation.attribute.slice(1)} Modifier`,
                 value: atts[foundation.attribute].mod
               }]
-            })])
+            }))])
       )
     };
 

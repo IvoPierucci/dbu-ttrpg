@@ -237,6 +237,13 @@
           of a roll. }}
       <div class="stat"><em>Strike</em>
         <span data-tooltip-html="{{workings.strike}}">{{system.combat.strike}}</span></div>
+      {{! A Foundation's own Strike, shown only where something raises it apart. }}
+      {{#each strikeRolls as |strike|}}
+      <div class="stat">
+        <em>Strike &middot; {{strike.label}}</em>
+        <span data-tooltip-html="{{strike.workings}}">{{strike.value}}</span>
+      </div>
+      {{/each}}
       <div class="stat"><em>Dodge</em>
         <span data-tooltip-html="{{workings.dodge}}">{{system.combat.dodge}}</span></div>
       {{! Wound uses the Damage Attribute, which depends on the attack's Foundation. }}

@@ -784,6 +784,7 @@ export async function postDrainClash(actor, target, maneuver, actions, store) {
         [CLASH_FLAG]: {
           category: "strike",
           clashLabel: "Clash (Physical Strike vs Strike/Dodge)",
+          strikeFoundations: ["physical"],
           maneuverName: maneuver.name,
           reason: `Win and ${maneuver.name} takes from ${target.name}.`,
           challengerUuid: actor.uuid,
@@ -847,6 +848,7 @@ export async function postSnare(thrower, target, item) {
         [CLASH_FLAG]: {
           category: "strike",
           clashLabel: `Clash (${foundations} Strike vs Dodge)`,
+          strikeFoundations: snare.foundations ?? [],
           maneuverName: item.name,
           reason: `Win and ${target.name}'s Defense Value drops by ${tier}, and a Might Clash `
             + "follows.",
@@ -1284,6 +1286,7 @@ export async function postTransfiguration(actor, target, maneuver, { urgent = fa
         [CLASH_FLAG]: {
           category: "strike",
           clashLabel: "Transfiguration",
+          strikeFoundations: ["physical"],
           maneuverName: maneuver.name,
           reason: aimedAtSelf
             ? `${actor.name} has their own Transfiguration turned back on them. Both rolls `
@@ -3856,6 +3859,7 @@ export async function postBinding(actor, maneuver, { targetUuid }) {
     flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [CLASH_FLAG]: {
       category: "strike",
       clashLabel: "Clash (Energy Strike/Magic Strike vs Strike/Dodge)",
+      strikeFoundations: ["energy", "magic"],
       maneuverName: maneuver.name,
       reason: `Win and ${target.name}'s Defense Value drops by ${tier}, and a Might Clash follows.`,
       challengerUuid: actor.uuid,
@@ -7347,6 +7351,8 @@ const CLASH_ROLLS = ({
     family: "combat",
     of: (actor, clash, uuid) => ((uuid === clash.defenderUuid) && (clash.defenderRoll === "dodge"))
       ? { label: "Dodge", value: actor.system.combat.dodge }
+      : (uuid === clash.challengerUuid) && clash.strikeFoundations?.length
+      ? strikeOf(actor, clash.strikeFoundations)
       : { label: "Strike", value: actor.system.combat.strike },
 
     criticalDice: (actor) => actor.system.dice.critical.formula,
@@ -9283,6 +9289,10 @@ async function playStardust(message, actor, itemId) {
   }
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack || attack.result || endedByDuel(attack)) return;
+  const by = actor.system.combat?.strikeBy ?? {};
+  const foundation = (by.physical === by.energy) ? "energy" : await pick(item.name, "Which Strike?", [
+    { action: "physical", label: `Physical Strike ${by.physical}` }, { action: "energy", label: `Energy Strike ${by.energy}` }]);
+  if (!foundation) return;
   if (!await spendManeuverCost(actor, maneuver, stardustKi(actor, item, attack))) return;
   if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
     await refundManeuverCost(actor, maneuver);
@@ -9294,7 +9304,7 @@ async function playStardust(message, actor, itemId) {
   const others = (fresh.defences ?? []).filter(entry => entry.uuid !== actor.uuid);
   return settleAttack(message, {
     ...fresh,
-    defences: [...others, { uuid: actor.uuid, defence: "stardust", wager: 0, foundation: "energy", parryWith: [] }],
+    defences: [...others, { uuid: actor.uuid, defence: "stardust", wager: 0, foundation, parryWith: [] }],
     ready: [...new Set([...(fresh.ready ?? []), actor.uuid])]
   });
 }
@@ -13171,6 +13181,20 @@ async function settleAttack(message, attack) {
 }
 
 /**
+ * The Strike of a Foundation - "Physical Strike", "Energy Strike" - as a part: the shared Strike where nothing raises that
+ * Foundation's alone, its own where something does. Of several - "Energy Strike/Magic Strike" - the best of them.
+ */
+function strikeOf(actor, foundations) {
+  const keys = [foundations].flat().filter(key => key in (actor?.system?.combat?.strikeBy ?? {}));
+  const shared = Number(actor?.system?.combat?.strike) || 0;
+  if (!keys.length) return { label: "Strike", value: shared, workingsKey: "strike" };
+  const best = keys.reduce((top, key) => ((actor.system.combat.strikeBy[key] > actor.system.combat.strikeBy[top]) ? key : top));
+  const value = Number(actor.system.combat.strikeBy[best]) || 0;
+  const label = `${best.charAt(0).toUpperCase()}${best.slice(1)} Strike`;
+  return (value === shared) ? { label, value, workingsKey: "strike" } : { label, value, workingsKey: `strike.${best}` };
+}
+
+/**
  * What a Profile takes off the Strike Roll.
  *
  * Crushing: "only apply half of your Haste to the Strike Roll." Strike is Haste plus
@@ -13196,7 +13220,7 @@ function profileStrikeParts(attacker, attack) {
  */
 function strikeParts(attacker, attack) {
   return [
-    { label: "Strike", value: attacker.system.combat.strike, workingsKey: "strike" },
+    strikeOf(attacker, attack?.foundation),
     ...profileStrikeParts(attacker, attack),
     ...modifierStrikeParts(attacker, attack),
     ...(attack.weapon?.strike ?? []),
@@ -15139,9 +15163,10 @@ const DEFENCES = {
     // A Parry rolls Strike, so that is the Slot an effect names to change it - plus
     // `parry`, which is the one that applies only when Strike is rolled defensively.
     // A charged attack is harder to turn aside: 1(bT) off for each Energy Charge on it.
+    // The Physical Strike and what raises a Parry alone, together - `combat.parry` (it used to be added on top of the
+    // Strike, which counted the Strike twice).
     parts: (actor, attack) => [
-      { label: "Strike", value: actor.system.combat.strike },
-      { label: "Parry", value: actor.system.combat.parry ?? 0 },
+      { label: "Parry", value: actor.system.combat.parry ?? 0, workingsKey: "parry" },
       ...musclePenalty(actor),
       ...chargePenalty(actor, attack),
       ...thresholdPenalty(actor),
@@ -15196,7 +15221,7 @@ const DEFENCES = {
   stardust: {
     label: "Stardust Barrier",
     parts: (actor, attack) => [
-      { label: "Strike", value: actor.system.combat.strike },
+      strikeOf(actor, defenceFor(attack, actor.uuid)?.foundation ?? "energy"),
       ...musclePenalty(actor),
       ...thresholdPenalty(actor),
       ...openedAgainst(actor)
@@ -15209,7 +15234,7 @@ const DEFENCES = {
   judoToss: {
     label: "Judo Toss",
     parts: (actor, attack) => [
-      { label: "Strike", value: actor.system.combat.strike },
+      strikeOf(actor, "physical"),
       ...judoPenalty(actor, attack),
       ...musclePenalty(actor),
       ...thresholdPenalty(actor),

@@ -68,13 +68,9 @@ text: >
 #
 # --- "Physical Strike" -----------------------------------------------------------------------
 #
-# There is one Strike Roll in this system. A Foundation decides which Damage Attribute the
-# Wound Roll reads and nothing about Strike, so "Physical Strike" names the kind of attack
-# this stands in for rather than a second Strike value to look up.
-#
-# Built as the Strike Roll, which is also what the Grapple Check and the Thrust use for
-# "(Strike vs Strike/Dodge)". If a per-Foundation Strike ever exists, this is the line that
-# would want changing, and it is the only one.
+# Each Foundation has its Strike - the shared one, and what raises that Foundation's alone
+# (`strike.physical`). "Physical Strike" is that one: the Clash carries `strikeFoundations`.
+# A plain "(Strike vs Strike/Dodge)" - the Grapple Check, the Thrust - rolls the shared Strike.
 #
 # The slash on the other side is a choice made by whoever is rolling it, as it is in every
 # other "Strike/Dodge" here.

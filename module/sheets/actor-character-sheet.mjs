@@ -741,6 +741,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         { extra: atRollTime(this.actor.system, "wound") })
     }));
 
+    // A Foundation's own Strike, where something raises it apart from the shared one - "Energy Strike".
+    context.strikeRolls = Object.entries(DBUCharacterData.FOUNDATIONS)
+      .filter(([key]) => (this.actor.system.combat.strikeBy?.[key] ?? this.actor.system.combat.strike) !== this.actor.system.combat.strike)
+      .map(([key, foundation]) => ({
+        label: foundation.label,
+        value: this.actor.system.combat.strikeBy[key],
+        workings: workingsTable(this.actor.system, `strike.${key}`, { extra: atRollTime(this.actor.system, "strike") })
+      }));
+
     // What each value is made of, for the hover on it.
     context.workings = this.#workings();
 

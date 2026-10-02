@@ -578,6 +578,14 @@ const TABLE = [
  * list, so a Skill added to the data model needs no change here.
  */
 const PATTERNS = [
+  // One Foundation's: "your Energy Strike", "your Physical Wound Rolls" - on top of the Strike or Wound every Foundation
+  // shares, read where an attack, a Parry or a Clash names that Foundation.
+  { match: /^strike\.(physical|energy|magic)$/, phase: PHASES.LATE, kind: N, ops: NUMERIC,
+    valid: () => true,
+    doc: "That Foundation's Strike Rolls only - Physical, Energy or Magic Strike." },
+  { match: /^wound\.(physical|energy|magic)$/, phase: PHASES.LATE, kind: N, ops: NUMERIC,
+    valid: () => true,
+    doc: "That Foundation's Wound Rolls only - Physical, Energy or Magic Wound." },
   // The Combat Roll a piece narrows its Category's effects to - Focal's choice.
   { match: /^piece\.narrows\.(strike|dodge|wound)$/, phase: PHASES.PIECE, kind: F,
     ops: ["allow", "forbid", "set"],
