@@ -10795,6 +10795,87 @@ export async function swordAgainExpires(actor) {
     [`flags.${SCOPE}.-=swordAgain`]: null });
 }
 
+/**
+ * Super Ghost Kamikaze Attack, before it is paid: "For each Action spent, create a Kamikaze Ghost" - with Balloon Flash
+ * Bomber, "you may double the amount", its 3(bT) for each one more. Null if dropped or not afforded.
+ */
+export async function askKamikaze(actor, maneuver, actionsSpent) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  const actions = Math.max(1, Number(actionsSpent) || 1);
+  const each = 3 * Math.max(1, actor.system.baseTierOfPower ?? 1);
+  const doubles = boughtTraits(unique, getTrait).some(trait => trait.ghostsDouble === true);
+  if (!doubles) return { count: actions, extraKi: 0 };
+  const chosen = await pick(maneuver.name, "How many Kamikaze Ghosts?", [
+    { action: "single", label: `${actions}` },
+    { action: "double", label: `${2 * actions} (+${actions * each} KP)` }]);
+  if (!chosen) return null;
+  if (chosen === "single") return { count: actions, extraKi: 0 };
+  const extraKi = actions * each;
+  if ((Number(actor.system.ki?.value) || 0) < (maneuverKiCost(maneuver, null, actor) * actions + extraKi)) {
+    ui.notifications.warn(`${actor.name} has not the Ki Points for that.`);
+    return null;
+  }
+  return { count: 2 * actions, extraKi };
+}
+
+/** Paid for: the Ghosts counted on the Item - "Duplicate Minions with their Life Points reduced by 1/2", the table's to make. */
+export async function postKamikaze(actor, maneuver, plan) {
+  const item = actor.items?.get(maneuver.itemId);
+  if (!item) return null;
+  if (plan.extraKi) {
+    await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - plan.extraKi),
+      "system.capacity.spent": actor.system.capacity.spent + plan.extraKi });
+  }
+  await item.update({ "system.unique.ghosts": (Number(item.system.unique.ghosts) || 0) + plan.count });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${plan.count} Kamikaze Ghost${(plan.count === 1) ? "" : "s"} - `
+      + "Duplicate Minions with half their Life Points.</p>" });
+}
+
+/**
+ * A Kamikaze Ghost goes off - touched, hit in its Melee Range, or its own Physical Attack landing, as the table says:
+ * "the Kamikaze Ghost uses the Basic Attack Maneuver to use the Clearing Profile (targeting a Square they occupy) with the
+ * Small Scale Blast Disadvantage as an Out-of-Sequence Maneuver (this use of the Clearing Profile may use the Magic Modifier
+ * as its Damage Attribute). Increase the Wound Roll of this Attacking Maneuver by the amount of Life Points the Kamikaze
+ * Ghost possesses at that moment. After using this effect, the Kamikaze Ghost is Defeated." Rolled from its maker's
+ * sheet as a Duplicate's would be, its Ki the table's; the ones caught are the tokens targeted.
+ */
+export async function explodeGhost(actor, item) {
+  const left = Number(item?.system?.unique?.ghosts) || 0;
+  if (!left) return;
+  const caught = Array.from(game.user.targets ?? []).map(token => token.actor).filter(Boolean);
+  if (!caught.length) return ui.notifications.warn("Target who the blast catches first.");
+  const magic = Number(actor.system.attributes?.magic?.mod) || 0;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${item.name} - Explode` },
+    content: `<label>Its Life Points <input type="number" name="lp" min="0" step="1" value="0"/></label>
+      <label>Damage Attribute <select name="attribute" class="dbu-gear-pick">
+        <option value="">Force Modifier</option><option value="magic">Magic Modifier (${magic})</option></select></label>`,
+    buttons: [{ action: "go", label: "Explode", default: true, callback: (event, button, dialog) => ({
+      lp: Math.max(0, Number(dialog.element.querySelector('input[name="lp"]')?.value) || 0),
+      magic: dialog.element.querySelector('select[name="attribute"]')?.value === "magic" }) },
+    { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!chosen || (chosen === "cancel")) return;
+  const [first, ...rest] = caught;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    targetUuid: first.uuid, reason: `${item.name} - a Kamikaze Ghost`, free: true,
+    grants: { profile: "clearing", unarmed: true,
+      area: { ...(PROFILES.clearing?.area ?? { shape: "sphere", centredOnSquare: true }), magnitude: "minor" },
+      ...(chosen.magic ? { damageAttribute: { label: "Magic Modifier", value: magic } } : {}),
+      ghostBlast: { lp: chosen.lp, name: item.name },
+      extraTargets: rest.map(other => ({ uuid: other.uuid, name: other.name })) } };
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
+  const made = await takeOutOfSequence(card, actor, offer);
+  if (!made) return;
+  await item.update({ "system.unique.ghosts": Math.max(0, left - 1) });
+  await settledNote(card, `A Kamikaze Ghost goes off, and is Defeated - ${Math.max(0, left - 1)} left.`);
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -11479,7 +11560,8 @@ async function takeOutOfSequence(message, actor, offer) {
 
     // The Weapon it is made with, asked as it is in sequence.
     const { armOutOfSequence } = await import("./use-maneuver.mjs");
-    declared = await armOutOfSequence(actor, maneuver, declared, target, granted?.modifiers ?? []);
+    // A Kamikaze Ghost's blast is made with no Weapon.
+    if (!granted?.unarmed) declared = await armOutOfSequence(actor, maneuver, declared, target, granted?.modifiers ?? []);
     if (!declared) return;
     // Elemental Blade, the same out of sequence.
     const { elementalBlade } = await import("./use-maneuver.mjs");
@@ -11523,6 +11605,9 @@ async function takeOutOfSequence(message, actor, offer) {
     // Illusion Smash: as if beside you; Smash Barrage's others aimed at with it.
     if (granted?.portal) declared = { ...declared, portal: true };
     if (granted?.extraTargets?.length) declared = { ...declared, extraTargets: granted.extraTargets };
+    // A Kamikaze Ghost's: Small Scale Blast's Minor Sphere, and "may use the Magic Modifier as its Damage Attribute".
+    if (granted?.area) declared = { ...declared, area: granted.area };
+    if (granted?.damageAttribute) declared = { ...declared, damageAttribute: granted.damageAttribute };
     // Violent Punishment: "apply an Energy Charge to that Attacking Maneuver".
     if (granted?.charges) declared = { ...declared, charges: (Number(declared.charges) || 0) + Number(granted.charges) };
   }
@@ -11661,6 +11746,11 @@ async function takeOutOfSequence(message, actor, offer) {
         // Ki Deception: its Clash, at the one Opponent it targets.
         if (granted?.kiDeception && card && target) await kiDeceptionClash(actor, target, card);
         // Surprise Strike: "After concluding that Attacking Maneuver, you stop being Hidden."
+        // A Kamikaze Ghost's: its Life Points on the Wound Roll.
+        if (granted?.ghostBlast && card) {
+          const blast = card.getFlag(SCOPE, ATTACK_FLAG);
+          if (blast) requestEdit(card, { type: "attack", attack: { ...blast, ghostBlast: granted.ghostBlast } });
+        }
         if (offer.fakeDeathEnds && card) await (await import("./hidden.mjs")).endFakeDeath(actor, "Surprise Strike");
         return card;
       })
@@ -14071,6 +14161,9 @@ function woundParts(attacker, attack) {
       ? [{ label: `Genki, ${attack.genkiLifeforce} Lifeforce`, written: `+${2 * attack.genkiLifeforce}(bT)`,
           value: 2 * attack.genkiLifeforce * Math.max(1, attacker.system.baseTierOfPower ?? 1) }] : []),
     ...modifierWoundParts(attacker, attack),
+    // A Kamikaze Ghost's: "Increase the Wound Roll of this Attacking Maneuver by the amount of Life Points the Kamikaze
+    // Ghost possesses at that moment."
+    ...(attack.ghostBlast ? [{ label: "Kamikaze Ghost's Life Points", value: Number(attack.ghostBlast.lp) || 0 }] : []),
     ...(attack.weapon?.wound ?? []),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))

@@ -79,6 +79,15 @@
                     data-tooltip="Instant: lose every Finisher and stop declaring it">Release</button>
           </div>
           {{/if}}
+          {{#if row.ghosts}}
+          <div class="unique-resource">
+            <span data-tooltip="Kamikaze Ghosts standing - Duplicate Minions at half their Life Points">Ghosts {{row.ghosts}}</span>
+            <button type="button" class="dbu-clash-button" data-action="explodeGhost" data-item-id="{{row.itemId}}"
+                    data-tooltip="One is touched: its Clearing blast at the tokens you target, its Life Points on the Wound Roll - then it is Defeated">Explode</button>
+            <button type="button" class="dbu-clash-button" data-action="ghostGone" data-item-id="{{row.itemId}}"
+                    data-tooltip="One is Defeated without exploding">&minus;1</button>
+          </div>
+          {{/if}}
           {{#if row.shape}}
           <div class="unique-resource">
             <span data-tooltip="The shape taken - Bestial Traits are the table's">{{row.shape}}</span>

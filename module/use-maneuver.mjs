@@ -1881,6 +1881,7 @@ export function definitionOf(item) {
     shapeshift: item.system.unique?.shapeshift === true,
     solarFlare: item.system.unique?.solarFlare === true,
     spiritSword: item.system.unique?.spiritSword === true,
+    kamikaze: item.system.unique?.kamikaze === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -3882,6 +3883,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let shaping = null;
   let flaring = null;
   let swording = null;
+  let haunting = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4277,6 +4279,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const size = larger || unique?.sphereMagnitude || "minor";
       waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
       if (!waving) return false;
+    }
+
+    // Super Ghost Kamikaze Attack: how many Ghosts - Balloon Flash Bomber's twice as many, asked.
+    if (maneuver.kamikaze) {
+      haunting = await (await import("./chat.mjs")).askKamikaze(actor, maneuver, actionsSpent);
+      if (!haunting) return false;
     }
 
     // Spirit Sword: its Profile, Weapon Category and reach, asked before it is paid.
@@ -4811,6 +4819,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : maneuver.portals
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
+    : (maneuver.kamikaze && haunting)
+    ? await (await import("./chat.mjs")).postKamikaze(actor, maneuver, haunting)
     : (maneuver.spiritSword && swording)
     ? await (await import("./chat.mjs")).postSpiritSword(actor, maneuver, swording, targetActor)
     : (maneuver.solarFlare && flaring)

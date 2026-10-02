@@ -1,0 +1,37 @@
+id: super-ghost-kamikaze-attack
+name: Super Ghost Kamikaze Attack
+uaType: both
+prerequisite: Force or Magic Score 10+
+tpCost: 20
+type: standard
+actionCost: 1
+actionCostMax: 3
+# "KP Cost: Variable (3(bT) for each Kamikaze Ghost)" - an Action a Ghost; Balloon Flash Bomber's more paid as they are made.
+kiCostPerBaseTier: 3
+kiPerAction: true
+# "For each Action spent, create a Kamikaze Ghost!" - counted on the Item, the Duplicate Minions the table's to make (the
+# user's ruling). Its Explode button: the Ghost's Basic Attack out of sequence, Clearing with Small Scale Blast's Minor
+# Sphere, Wound Roll + its Life Points, then Defeated (chat.mjs postKamikaze, explodeGhost).
+kamikaze: true
+source: Core Rule
+description: >
+  A Kamikaze Ghost for each Action - Duplicate Minions at half their Life Points. Touched, it explodes: a Clearing Basic
+  Attack in a Minor Sphere, its Life Points on the Wound Roll, and it is Defeated.
+text: >
+  Super Ghost Kamikaze Attack: You create a horde of exploding ghostly replicas of yourself to assault your enemies.
+  –Ability Type: Magical/Technical
+  –Prerequisites: Force or Magic Score 10+
+  –TP Cost: 20
+  –KP Cost: Variable (3(bT) for each Kamikaze Ghost)
+  –Maneuver Type: Standard
+  –Action Cost: Variable (1~3 Actions)
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: For each Action spent, create a Kamikaze Ghost! The Kamikaze Ghosts are Duplicate Minions with their Life
+  Points reduced by 1/2. If a Character hits a Kamikaze Ghost with an Attacking Maneuver while in their Melee Range, is
+  hit by the Physical Attack of a Kamikaze Ghost, or otherwise touches the Kamikaze Ghost in any way (such as either
+  attempting to use the Grapple or Thrust Maneuver on the other, and it not failing due to a successful Dodge roll), the
+  Kamikaze Ghost uses the Basic Attack Maneuver to use the Clearing Profile (targeting a Square they occupy) with the
+  Small Scale Blast Disadvantage as an Out-of-Sequence Maneuver (this use of the Clearing Profile may use the Magic
+  Modifier as its Damage Attribute). Increase the Wound Roll of this Attacking Maneuver by the amount of Life Points the
+  Kamikaze Ghost possesses at that moment. After using this effect, the Kamikaze Ghost is Defeated.

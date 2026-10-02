@@ -1,0 +1,16 @@
+id: balloon-flash-bomber
+name: Balloon Flash Bomber
+advancement: true
+prerequisite: Force or Magic Score 16+
+tpCost: 10
+# Asked as it is used: twice the Ghosts, each one more at its 3(bT).
+ghostsDouble: true
+source: Core Rule
+description: >
+  Super Ghost Kamikaze Attack may make twice the Kamikaze Ghosts.
+text: >
+  Balloon Flash Bomber: You create even more of your ghostly duplicates!
+  –Prerequisites: Force or Magic Score 16+
+  –TP Cost: 10
+  –Effect: When you use the Super Ghost Kamikaze Attack Unique Ability, you may double the amount of Kamikaze Ghosts you
+  create.

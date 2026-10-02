@@ -394,6 +394,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       recordKept: DBUCharacterSheet._onRecordKept,
       destroyMoon: DBUCharacterSheet._onDestroyMoon,
       dismissPortals: DBUCharacterSheet._onDismissPortals,
+      explodeGhost: DBUCharacterSheet._onExplodeGhost,
+      ghostGone: DBUCharacterSheet._onGhostGone,
       throughPortal: DBUCharacterSheet._onThroughPortal,
       releaseFinish: DBUCharacterSheet._onReleaseFinish,
       cageClash: DBUCharacterSheet._onCageClash,
@@ -1743,6 +1745,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Finish Sign: the Signature Technique declared, released as an Instant from here.
         finish: (unique.finishSign && unique.finishTechnique)
           ? { technique: this.actor.items.get(unique.finishTechnique)?.name ?? "" } : null,
+        // Super Ghost Kamikaze Attack: the Ghosts standing, each to Explode from here.
+        ghosts: unique.kamikaze ? (Number(unique.ghosts) || 0) : 0,
         // Shapeshift, applied: the shape and its turns left.
         shape: (unique.shapeshift && unique.applied) ? [
           unique.shapeForm ? `A ${unique.shapeForm.charAt(0).toUpperCase()}${unique.shapeForm.slice(1)}` : "",
@@ -1914,6 +1918,21 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Fake Moon: the False Moon destroyed - "you apply the effects as if it disappeared". */
+  /** A Kamikaze Ghost goes off: its Basic Attack, out of sequence, and it is Defeated. */
+  static async _onExplodeGhost(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
+    const { explodeGhost } = await import("../chat.mjs");
+    return explodeGhost(this.actor, item);
+  }
+
+  /** A Kamikaze Ghost Defeated some other way: one fewer. */
+  static async _onGhostGone(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const left = Number(item?.system?.unique?.ghosts) || 0;
+    if (left) return item.update({ "system.unique.ghosts": left - 1 });
+  }
+
   /** Portal Creation: "can dismiss any number of Portals as an Instant Maneuver". */
   static async _onDismissPortals(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);

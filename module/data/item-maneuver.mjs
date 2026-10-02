@@ -686,6 +686,9 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         spiritSword: new fields.BooleanField({ required: true, initial: false }),
         /** A Counter rolling Strike against an Energy or Magic Attack - Stardust Barrier's (DEFENCES.stardust). */
         stardust: new fields.BooleanField({ required: true, initial: false }),
+        /** Kamikaze Ghosts made, and how many stand - Super Ghost Kamikaze Attack's (chat.mjs postKamikaze). */
+        kamikaze: new fields.BooleanField({ required: true, initial: false }),
+        ghosts: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         shapeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeBestial: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         shapeForm: new fields.StringField({ required: true, blank: true, initial: "" }),
