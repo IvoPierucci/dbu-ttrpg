@@ -2405,10 +2405,17 @@ export async function spendLifeWager(actor, declared) {
   const wager = declared?.wagerFromLife ? (declared.kiWager ?? 0) : 0;
   if (wager <= 0) return;
   const { capacity, life } = actor.system;
+  // The character's own data model's - this module does not import it.
+  const model = actor.system.constructor;
+  const thresholds = Object.keys(model.THRESHOLDS ?? {});
+  const through = Boolean(model.thresholdKey) && (thresholds.indexOf(model.thresholdKey(life.value - wager, life.max))
+    > thresholds.indexOf(model.thresholdKey(life.value, life.max)));
   await actor.update({
     "system.life.value": life.value - wager,
     "system.capacity.spent": capacity.spent + wager
   });
+  // Through a Health Threshold by your own wager: Reduced Momentum.
+  if (through) await (await import("./chat.mjs")).reducedMomentum(actor);
 }
 
 /**

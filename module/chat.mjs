@@ -8637,7 +8637,10 @@ export async function postShock(actor, maneuver, shock) {
   const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${Handlebars.escapeExpression(maneuver.name)}</p>`,
     flags: { [SCOPE]: { [SHOCK_FLAG]: { actorUuid: actor.uuid, total, lines: wound.lines ?? [], ki } } } });
-  await reduceLifePoints(actor, total, { reason: maneuver.name });
+  // Controlled Shock: "If you knock yourself through a Health Threshold through the use of the Holstein Shock Unique
+  // Ability, do not apply Reduced Momentum."
+  const controlled = unique ? boughtTraits(unique, getTrait).some(trait => trait.controlledShock === true) : false;
+  await reduceLifePoints(actor, total, { reason: maneuver.name, own: !controlled });
   if (ki) {
     const now = actor.system.ki;
     await actor.update({ "system.ki.value": Math.min(now.max, now.value + ki) });
@@ -8655,6 +8658,31 @@ function renderShock(message, html) {
   note.textContent = `Wound ${shock.total}${shock.ki ? ` - ${shock.ki} Ki Points regained` : ""}`;
   note.dataset.tooltipHtml = breakdownTable(shock.lines, shock.total);
   (html.querySelector(".message-content") ?? html).append(note);
+}
+
+/**
+ * Bonus Momentum: "You gain an additional Standard Action to spend if you knock an Opponent through a Health Threshold or
+ * Defeat a Minion with an Attacking Maneuver. You can only gain Bonus Momentum once per Combat Round."
+ */
+async function bonusMomentum(attacker, why) {
+  if (!game.combat?.started || ((Number(attacker.system.momentum?.bonus) || 0) > 0)) return;
+  await requestActorUpdate(attacker, { "system.momentum.bonus": 1 });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: attacker }),
+    content: `<div class="dbu-settled-note">Bonus Momentum: a Standard Action more this Combat Round - `
+      + `${Handlebars.escapeExpression(why)}.</div>` });
+}
+
+/**
+ * Reduced Momentum: "If you reduce your Life Points below a Health Threshold through your own effects, you gain 1 less
+ * Standard Action at the start of the next Combat Round. You can only suffer from Reduced Momentum once per Combat
+ * Round."
+ */
+export async function reducedMomentum(actor) {
+  if (!game.combat?.started || ((Number(actor.system.momentum?.pending) || 0) > 0)) return;
+  await requestActorUpdate(actor, { "system.momentum.pending": 1 });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">Reduced Momentum: ${Handlebars.escapeExpression(actor.name)} has a Standard `
+      + "Action fewer next Combat Round.</div>" });
 }
 
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
@@ -13061,7 +13089,7 @@ function renderLoss(message, html) {
   (html.querySelector(".message-content") ?? html).append(note);
 }
 
-export async function reduceLifePoints(target, amount, { reason = "Life Point reduction" } = {}) {
+export async function reduceLifePoints(target, amount, { reason = "Life Point reduction", own = false } = {}) {
   const taken = Math.max(0, Math.floor(amount));
   if (!taken) return { taken: 0, knockedThrough: false };
 
@@ -13090,6 +13118,8 @@ export async function reduceLifePoints(target, amount, { reason = "Life Point re
   });
   // "Apparel loses 1 Break Value if you are knocked through a Health Threshold."
   if (knockedThrough) await sayApparelBreak(target);
+  // Of their own doing - Holstein Shock's: Reduced Momentum.
+  if (knockedThrough && own) await reducedMomentum(target);
   return { taken, knockedThrough };
 }
 
@@ -14787,6 +14817,13 @@ async function applyAttackDamage(message, target, attack) {
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
   if (arms) await offerArmsHit(armsUser, target);
+  if (armsUser && (damage > 0) && !isAbsoluteMiss(own)) {
+    if (armsUser.uuid === target.uuid) {
+      if (knockedThrough) await reducedMomentum(target);
+    }
+    else if (knockedThrough) await bonusMomentum(armsUser, `${target.name} through a Health Threshold`);
+    else if (target.system.minion && (floor <= 0)) await bonusMomentum(armsUser, `${target.name}, a Minion, Defeated`);
+  }
   // Aggressive Taunt counts the attacks that dealt Damage to an Opponent on their maker's turn.
   if (armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) {
     await countDamagingAttack(armsUser, message.id);

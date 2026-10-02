@@ -184,6 +184,10 @@ export function newRoundFor(actor) {
     "system.diminishingDefense": 0,
     "system.actionsSpent.standard": 0,
     "system.actionsSpent.counter": 0,
+    // Bonus Momentum lasts the Round it was gained in; Reduced Momentum, owed, is this Round's.
+    "system.momentum.bonus": 0,
+    "system.momentum.reduced": (Number(actor.system.momentum?.pending) || 0) > 0 ? 1 : 0,
+    "system.momentum.pending": 0,
     // Capacity is spent within a round and comes back with the next one.
     "system.capacity.spent": 0,
     "system.talentUses.round": [],
@@ -232,6 +236,7 @@ async function startEncounter(combat) {
       "system.armedTalents": [],
       "system.usedManeuvers": [],
       "system.defeatsEscaped": 0,
+      "system.momentum": { bonus: 0, reduced: 0, pending: 0 },
       // Standing in it when it begins is one way of entering it, and it is this one -
       // so the button that offers the same thing to somebody who walks in later has
       // nothing left to offer these.
@@ -609,6 +614,7 @@ export function registerCombatHooks() {
         "system.usedManeuvers": [],
         "system.resources": replaceObject(keptResources(actor.system.resources)),
         "system.defeatsEscaped": 0,
+        "system.momentum": { bonus: 0, reduced: 0, pending: 0 },
         // The next Encounter is a different one, and begins for them again.
         "system.enteredEncounter": false,
         // And they are Adventuring again.

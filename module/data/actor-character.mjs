@@ -1087,6 +1087,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // --- Action economy ---
     // Actions spent this Combat Round, by kind. Refilled when the round turns over.
+    // Bonus and Reduced Momentum: a Standard Action more this Combat Round, one fewer this Combat Round, and one fewer owed
+    // to the start of the next - "you gain 1 less Standard Action at the start of the next Combat Round".
+    schema.momentum = new fields.SchemaField({
+      bonus: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      reduced: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      pending: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+    });
+
     schema.actionsSpent = new fields.SchemaField({
       standard: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       counter: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
@@ -2109,7 +2117,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // past zero.
     this.actions = {
       standard: Math.max(0, withEffects(this, "actions.standard",
-        DBUCharacterData.BASE_STANDARD_ACTIONS + this.actionModifiers.standard)),
+        DBUCharacterData.BASE_STANDARD_ACTIONS + this.actionModifiers.standard)
+        // Bonus Momentum's Standard Action more, Reduced Momentum's one fewer - this Combat Round's.
+        + (Number(this.momentum?.bonus) || 0) - (Number(this.momentum?.reduced) || 0)),
       counter: Math.max(0, withEffects(this, "actions.counter",
         DBUCharacterData.BASE_COUNTER_ACTIONS + this.actionModifiers.counter))
         // Precognition: "you gain 1 Counter Action to use during their turn".

@@ -3,8 +3,8 @@ name: Controlled Shock
 advancement: true
 prerequisite: Insight Score of 6+
 tpCost: 10
-# Not built: Reduced Momentum is a rule this system does not have yet - its text is coming (the user's ruling,
-# 2026-10-02). Until then, the table's.
+# Reduced Momentum not applied for the Threshold Holstein Shock takes you through (chat.mjs postShock).
+controlledShock: true
 source: Core Rule
 description: >
   Knocked through a Health Threshold by Holstein Shock: no Reduced Momentum.
