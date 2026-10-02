@@ -202,6 +202,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, PARA_FLAG, request.para);
     case "petrify": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PETRIFY_FLAG, request.petrify);
+    case "punish": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, PUNISH_FLAG, request.punish);
     case "positionChange": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, POSITION_FLAG, request.position);
     case "swapTokens": return swapTokens(request.aUuid, request.bUuid);
@@ -573,6 +575,10 @@ async function applyClash(messageId, clash) {
 
   if (clash.snare && clash.result && !clash.snare.applied) {
     await settleSnare(message, clash);
+  }
+
+  if (clash.punishCoward && clash.result && !clash.punishCoward.applied) {
+    await settlePunishCoward(message, clash);
   }
 
   if (clash.positionChange && clash.result && !clash.positionChange.applied) {
@@ -2912,6 +2918,7 @@ function onRenderChatMessage(message, html) {
   renderPetrify(message, html);
   renderRetreat(message, html);
   renderPositionChange(message, html);
+  renderPunisher(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -9996,6 +10003,162 @@ async function sacrificeSettled(plan, caster, target, won) {
     noCounters: [...(attack.noCounters ?? []), caster.uuid] });
 }
 
+/** Punisher Guard's card: the Exploit it opens, and what became of it. */
+const PUNISH_FLAG = "punisherGuard";
+
+/** What Punisher Guard's bought Advancements add: Violent Punishment's Energy Charge, Cowardly Opponent's Clash. */
+function punishTraits(actor, itemId) {
+  const unique = actor?.items?.get(itemId)?.system?.unique;
+  const bought = unique ? boughtTraits(unique, getTrait) : [];
+  return { charge: bought.reduce((sum, trait) => sum + (Number(trait.punishCharge) || 0), 0),
+    coward: bought.some(trait => trait.punishCoward === true) };
+}
+
+/** Punisher Guard, used: "Target an Opponent who is not at Long Range. Trigger the Exploit Maneuver of that Opponent." */
+export async function postPunisherGuard(actor, maneuver, target) {
+  const can = punishTraits(actor, maneuver.itemId);
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: an opening for ${Handlebars.escapeExpression(target.name)}</p>`,
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: isRespondable(maneuver), [PUNISH_FLAG]: { punisherUuid: actor.uuid,
+      punisherName: actor.name, targetUuid: target.uuid, targetName: target.name, name: maneuver.name,
+      charge: can.charge, coward: can.coward, exploited: false, exploitMessageId: "", exploitKi: 0,
+      settled: false, cancelled: false, unanswered: false } } } });
+  requestEdit(card, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "exploit",
+    maneuverName: "Exploit", targetUuid: actor.uuid, reason: `${maneuver.name} - an opening`,
+    provokedBy: { maneuverId: maneuver.id, maneuverName: maneuver.name, messageId: card.id } } });
+  return card;
+}
+
+/**
+ * Its Exploit, taken: "If that Opponent uses the Exploit Maneuver in response to this effect, you may use the Basic Attack
+ * Maneuver as an Out-of-Sequence Maneuver targeting that Opponent" - offered on the card, Violent Punishment's Energy
+ * Charge with it, and their attack held until it is done with.
+ */
+async function punisherExploited(card, exploiter, provokedBy, ki) {
+  const source = game.messages.get(provokedBy?.messageId ?? "");
+  const punish = source?.getFlag(SCOPE, PUNISH_FLAG);
+  if (!punish || punish.exploited || punish.unanswered || (exploiter.uuid !== punish.targetUuid)) return;
+  const attack = card.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack) return;
+  requestEdit(card, { type: "attack", attack: { ...attack,
+    punisherHold: { pending: true, cardId: source.id, punisherName: punish.punisherName } } });
+  requestEdit(source, { type: "punish", punish: { ...punish, exploited: true, exploitMessageId: card.id, exploitKi: ki } });
+  requestEdit(source, { type: "offer", offer: { actorUuid: punish.punisherUuid, actorName: punish.punisherName,
+    maneuverId: "basic-attack", maneuverName: "Basic Attack", targetUuid: exploiter.uuid, reason: `${punish.name} - punishing`,
+    grants: { punish: { cardId: source.id, exploiterUuid: exploiter.uuid }, ...(punish.charge ? { charges: punish.charge } : {}) } } });
+}
+
+/**
+ * The punishing attack done with: "If this Attacking Maneuver knocks that Opponent through a Health Threshold or Defeats
+ * them, their Attacking Maneuver is canceled (they regain any Ki Points spent on that Maneuver, but do not regain their
+ * Counter Action)." Otherwise - or let through - their attack goes on.
+ */
+async function punishRelease(cardId, cancel) {
+  const card = game.messages.get(cardId ?? "");
+  const punish = card?.getFlag(SCOPE, PUNISH_FLAG);
+  if (!punish || punish.settled) return;
+  requestEdit(card, { type: "punish", punish: { ...punish, settled: true, cancelled: Boolean(cancel) } });
+  const message = game.messages.get(punish.exploitMessageId ?? "");
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.punisherHold?.pending) return;
+  const released = { ...attack, punisherHold: { ...attack.punisherHold, pending: false } };
+  if (!cancel) return settleAttack(message, released);
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const ki = Number(punish.exploitKi) || 0;
+  if (attacker && ki) {
+    await requestActorUpdate(attacker, { "system.ki.value": Math.min(attacker.system.ki.max, attacker.system.ki.value + ki),
+      "system.capacity.spent": Math.max(0, attacker.system.capacity.spent - ki) });
+  }
+  return requestEdit(message, { type: "attack", attack: { ...released, punished: true } });
+}
+
+/** The punishing attack, rolled: missed, nothing to cancel by; hit, settled once its Damage is applied. */
+async function punishResolved(attack, branches) {
+  const own = branches.find(entry => entry.uuid === attack.punish?.exploiterUuid);
+  if (!own?.hit || isAbsoluteMiss(own)) await punishRelease(attack.punish.cardId, false);
+}
+
+/**
+ * "If your targeted Opponent does not use the Exploit Maneuver in response to this effect, regain 1d10(bT) Life and Ki
+ * Points" - Cowardly Opponent's Clash (Morale) first: won, "increase the amount ... by your Personality Modifier and your
+ * targeted Opponent gains the Shaken Combat Condition until the start of your next turn".
+ */
+async function punishUnanswered(card) {
+  const punish = card.getFlag(SCOPE, PUNISH_FLAG);
+  if (!punish || punish.exploited || punish.unanswered) return;
+  requestEdit(card, { type: "punish", punish: { ...punish, unanswered: true } });
+  const punisher = fromUuidSync(punish.punisherUuid);
+  const target = fromUuidSync(punish.targetUuid);
+  if (!punisher) return;
+  if (punish.coward && target) {
+    return postSaveClash(punisher, target, { maneuverName: punish.name,
+      reason: `Win and you regain your Personality Modifier more, and ${target.name} is Shaken until the start of your next turn.`,
+      saves: ["morale"], punishCoward: { applied: false } });
+  }
+  return punishHeal(punisher, punish.name, 0);
+}
+
+async function settlePunishCoward(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, punishCoward: { ...clash.punishCoward, applied: true } });
+  const punisher = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!punisher) return;
+  const won = (whoWonClash(clash.result) === "challenger") && target;
+  if (won) await markUntilNextTurn(punisher, target, "shaken", 1, "start", clash.maneuverName);
+  return punishHeal(punisher, clash.maneuverName,
+    won ? (Number(punisher.system.attributes?.personality?.mod) || 0) : 0);
+}
+
+/** 1d10(bT) Life and Ki Points back - the number only to those who may see this character's rolls. */
+async function punishHeal(actor, name, bonus) {
+  const dice = `${Math.max(1, actor.system.baseTierOfPower ?? 1)}d10`;
+  const roll = await new Roll(dice).evaluate();
+  const amount = Math.max(0, roll.total + bonus);
+  await requestActorUpdate(actor, {
+    "system.life.value": Math.min(actor.system.life.max, actor.system.life.value + amount),
+    "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + amount)
+  });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(name)}: ${Handlebars.escapeExpression(actor.name)} regains Life and Ki Points.</div>` });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor),
+    content: `<div class="dbu-settled-note">${dice}: ${roll.total}${bonus ? ` + ${bonus} Personality Modifier` : ""} = ${amount} Life and Ki Points.</div>` });
+}
+
+/** Its buttons, for its user: the Exploit not taken, or - taken - their attack let through unpunished. */
+function renderPunisher(message, html) {
+  const punish = message.getFlag(SCOPE, PUNISH_FLAG);
+  if (!punish) return;
+  const container = html.querySelector(".message-content") ?? html;
+  if (punish.cancelled) {
+    const note = document.createElement("div");
+    note.className = "dbu-settled-note";
+    note.textContent = `${punish.targetName}'s Exploit is cancelled - its Ki Points back.`;
+    return container.append(note);
+  }
+  const punisher = fromUuidSync(punish.punisherUuid);
+  if ((!punisher?.isOwner && !game.user.isGM) || punish.settled || punish.unanswered) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  if (!punish.exploited) {
+    button.textContent = "Not taken";
+    button.dataset.tooltip = `${punish.targetName} let the Exploit go: regain 1d10(bT) Life and Ki Points`
+      + (punish.coward ? " - a Clash (Morale) first" : "");
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return punishUnanswered(message);
+    });
+  } else {
+    button.textContent = "Let it through";
+    button.dataset.tooltip = "No punishing Basic Attack: their Exploit goes on";
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return punishRelease(message.id, false);
+    });
+  }
+  container.append(button);
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -10724,6 +10887,8 @@ async function takeOutOfSequence(message, actor, offer) {
     // Illusion Smash: as if beside you; Smash Barrage's others aimed at with it.
     if (granted?.portal) declared = { ...declared, portal: true };
     if (granted?.extraTargets?.length) declared = { ...declared, extraTargets: granted.extraTargets };
+    // Violent Punishment: "apply an Energy Charge to that Attacking Maneuver".
+    if (granted?.charges) declared = { ...declared, charges: (Number(declared.charges) || 0) + Number(granted.charges) };
   }
 
   // A Movement's price is a choice rather than a number - Normal Speed for nothing,
@@ -10851,6 +11016,12 @@ async function takeOutOfSequence(message, actor, offer) {
         modifiers: granted?.modifiers ?? [],
         defencesAllowed: granted?.defencesAllowed ?? []
       }).then(async card => {
+        // Punisher Guard: the Basic Attack it offered, marked; an Exploit it opened, held for that Basic Attack.
+        if (granted?.punish && card) {
+          const made = card.getFlag(SCOPE, ATTACK_FLAG);
+          if (made) requestEdit(card, { type: "attack", attack: { ...made, punish: granted.punish } });
+        }
+        if (card && offer.provokedBy?.messageId) await punisherExploited(card, actor, offer.provokedBy, fromStore ? 0 : price);
         // Ki Deception: its Clash, at the one Opponent it targets.
         if (granted?.kiDeception && card && target) await kiDeceptionClash(actor, target, card);
         // Surprise Strike: "After concluding that Attacking Maneuver, you stop being Hidden."
@@ -12362,8 +12533,10 @@ function readyAttacker(message) {
 
 /** Write the attack back, and roll it if that was the last confirmation needed. */
 async function settleAttack(message, attack) {
-  // Sacrifice Play's Clash, still to be rolled: who the attack is at waits on it.
-  if (!attackIsReady(attack) || duelRunning(attack) || endedByDuel(attack) || attack.sacrifice?.pending) {
+  // Sacrifice Play's Clash, still to be rolled: who the attack is at waits on it. Punisher Guard's Basic Attack: this
+  // Exploit waits on it, and is cancelled by it.
+  if (!attackIsReady(attack) || duelRunning(attack) || endedByDuel(attack) || attack.sacrifice?.pending
+    || attack.punisherHold?.pending || attack.punished) {
     return requestEdit(message, { type: "attack", attack });
   }
   return resolveAttack(message, attack);
@@ -12682,6 +12855,8 @@ async function resolveAttack(message, attack) {
   if (chased) await postHostileChase(attack, attacker);
   // An Exploit Para Para Dance provoked, hitting its dancer: the dance fails.
   if (attack.provokedBy?.messageId) await paraParaHit(attack, branches);
+  // Punisher Guard's Basic Attack: missed, the Exploit it answers goes on.
+  if (attack.punish) await punishResolved(attack, branches);
 
   // Cross Counter strikes back the moment the clash is settled. It is offered rather
   // than fired so the defender still chooses when to take it, like any other
@@ -13047,6 +13222,7 @@ function awaitingWhom(attack) {
     ...attackTargets(attack).filter(target => !(attack.ready ?? []).includes(target.uuid)).map(target => target.name)
   ];
   if (attack.sacrifice?.pending) waiting.push(`${attack.sacrifice.casterName}'s Sacrifice Play`);
+  if (attack.punisherHold?.pending) waiting.push(`${attack.punisherHold.punisherName}'s Punisher Guard`);
   return waiting.length ? `Waiting on ${waiting.map(name => Handlebars.escapeExpression(name)).join(", ")}` : "Rolling";
 }
 
@@ -16248,6 +16424,10 @@ async function applyAttackDamage(message, target, attack) {
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
   if (arms) await offerArmsHit(armsUser, target);
+  // Punisher Guard's Basic Attack, landed: through a Health Threshold or Defeated, the Exploit it answers is cancelled.
+  if (attack.punish && (attack.punish.exploiterUuid === target.uuid)) {
+    await punishRelease(attack.punish.cardId, (knockedThrough || (floor <= 0)) && (damage > 0) && !isAbsoluteMiss(own));
+  }
   if (armsUser && (damage > 0) && !isAbsoluteMiss(own)) {
     if (armsUser.uuid === target.uuid) {
       if (knockedThrough) await reducedMomentum(target);
@@ -17478,12 +17658,14 @@ function renderAttack(message, html) {
         : (attack.duel.outcome === "mirrored")
         ? `The Duplicate took ${attack.maneuverName}, and is gone.`
         : `${attack.duel.initiatorName} won the Duel: the attack is over.`)
+      : attack.punished
+      ? "Punisher Guard: cancelled - its Ki Points are regained, its Counter Action is not."
       : attack.unitedFailed
       ? `United Attack: ${Handlebars.escapeExpression(attack.unitedWith?.name ?? "")} did not join - `
         + `${Handlebars.escapeExpression(attack.maneuverName)} fails, and its Action and Ki are regained.`
       : result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
-  if (attack.unitedFailed) return;
+  if (attack.unitedFailed || attack.punished) return;
   dimensionalHoleButtons(message, html, attack);
   sacrificeButtons(message, html, attack);
   if (endedByDuel(attack)) return;

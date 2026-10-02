@@ -1,0 +1,37 @@
+id: punisher-guard
+name: Punisher Guard
+uaType: technical
+prerequisite: Personality Score of 8+
+tpCost: 15
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 3
+requiresTarget: true
+# "Target an Opponent who is not at Long Range" - refused before it is paid - "Trigger the Exploit Maneuver of that
+# Opponent": offered to them on its card. Taken: their attack held, and a Basic Attack out of sequence at them offered to
+# you; through a Health Threshold or Defeated by it, their attack cancelled, its Ki back. Not taken: the card's Not
+# taken button, 1d10(bT) Life and Ki Points (chat.mjs postPunisherGuard).
+punisherGuard: true
+source: Core Rule
+description: >
+  An Opponent not at Long Range may Exploit you: if they do, a Basic Attack at them out of sequence - through a Health
+  Threshold or Defeated, their attack is cancelled; if they do not, regain 1d10(bT) Life and Ki Points.
+text: >
+  Punisher Guard: Complete ego, you’re showing it off, and any reasonable person would want to knock you down a peg, to
+  smack that smug grin off your face, leaving them wide open.
+  –Ability Type: Technical
+  –Prerequisites: Personality Score of 8+
+  –TP Cost: 15
+  –KP Cost: 3(bT)
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target an Opponent who is not at Long Range. Trigger the Exploit Maneuver of that Opponent. If that Opponent
+  uses the Exploit Maneuver in response to this effect, you may use the Basic Attack Maneuver as an Out-of-Sequence
+  Maneuver targeting that Opponent. If this Attacking Maneuver knocks that Opponent through a Health Threshold or Defeats
+  them, their Attacking Maneuver is canceled (they regain any Ki Points spent on that Maneuver, but do not regain their
+  Counter Action).
+
+  If your targeted Opponent does not use the Exploit Maneuver in response to this effect, regain 1d10(bT) Life and Ki
+  Points.

@@ -1,0 +1,20 @@
+id: cowardly-opponent
+name: Cowardly Opponent
+advancement: true
+prerequisite: N/A
+tpCost: 10
+# Its Exploit not taken: a Clash (Morale) before the Life and Ki come back; won, the Personality Modifier more and Shaken
+# on them to the start of your next turn.
+punishCoward: true
+source: Core Rule
+description: >
+  Punisher Guard's Exploit not taken: a Clash (Morale) - won, your Personality Modifier more back and they are Shaken
+  until the start of your next turn.
+text: >
+  Cowardly Opponent: With a haughty laugh and an accusing stare, you point out your Opponent’s foolishness for not even
+  attempting to catch you off-guard.
+  –Prerequisites: N/A
+  –TP Cost: 10
+  –Effect: If your targeted Opponent does not use their Exploit Maneuver in response to the effects of Punisher Guard,
+  make a Clash (Morale) against them. If you win, increase the amount of Life and Ki Points you regain by your
+  Personality Modifier and your targeted Opponent gains the Shaken Combat Condition until the start of your next turn.

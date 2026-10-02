@@ -1,0 +1,17 @@
+id: violent-punishment
+name: Violent Punishment
+advancement: true
+prerequisite: Force or Magic Score of 8+
+tpCost: 10
+# "If you use an Attacking Maneuver through the effects of Punisher Guard, apply an Energy Charge to that Attacking
+# Maneuver" - granted with its Basic Attack.
+punishCharge: 1
+source: Core Rule
+description: >
+  Punisher Guard's Basic Attack with an Energy Charge.
+text: >
+  Violent Punishment: The brutal force of your counterattack leaves your enemies reeling.
+  –Prerequisites: Force or Magic Score of 8+
+  –TP Cost: 10
+  –Effect: If you use an Attacking Maneuver through the effects of Punisher Guard, apply an Energy Charge to that
+  Attacking Maneuver.

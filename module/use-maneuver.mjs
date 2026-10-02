@@ -1875,6 +1875,7 @@ export function definitionOf(item) {
     petrifies: item.system.unique?.petrifies === true,
     portals: Number(item.system.unique?.portals) || 0,
     positionChange: item.system.unique?.positionChange === true,
+    punisherGuard: item.system.unique?.punisherGuard === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -4164,8 +4165,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       }
     }
 
-    // Petrification: "Target an Opponent who is not at Long Range."
-    if (maneuver.petrifies && targetActor && atLongRange(actor, targetActor)) {
+    // Petrification and Punisher Guard: "Target an Opponent who is not at Long Range."
+    if ((maneuver.petrifies || maneuver.punisherGuard) && targetActor && atLongRange(actor, targetActor)) {
       ui.notifications.warn(`${targetActor.name} is at Long Range.`);
       return false;
     }
@@ -4772,6 +4773,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : maneuver.portals
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
+    : (maneuver.punisherGuard && targetActor)
+    ? await (await import("./chat.mjs")).postPunisherGuard(actor, maneuver, targetActor)
     : (maneuver.positionChange && positioning)
     ? await (await import("./chat.mjs")).postPositionChange(actor, maneuver, positioning)
     : (maneuver.petrifies && targetActor)
