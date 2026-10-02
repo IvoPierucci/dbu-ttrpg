@@ -3555,6 +3555,11 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
                                                     portal = false, combo = false, spiritSword = null,
                                                     extraTargets = [] } = {}) {
   if (!actor || !maneuver) return false;
+  // Time Freeze: no Out-of-Sequence Maneuver in a Frozen Turn - your own, or another's but a Surge.
+  if (outOfSequence && (frozenTurnOf(actor) || (frozenBy(actor) && !maneuver.surge))) {
+    ui.notifications.warn("Time is frozen: no Out-of-Sequence Maneuvers.");
+    return false;
+  }
   // Whether this use is an Ultimate that began as a Super - Ascended Signature. Set when the
   // Technique is picked.
   let ascended = false;

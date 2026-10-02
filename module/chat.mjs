@@ -4185,6 +4185,7 @@ async function settleBindEscape(message, clash) {
  * Energy Charge Maneuver out of sequence - its own Ki, no Action - and the Charges carried, held to the Profile's ceiling.
  */
 async function cycloneStage(message, actor, item) {
+  if (timeFrozen(actor)) return ui.notifications.warn("Time is frozen: no Out-of-Sequence Maneuvers.");
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack || attack.cycloned) return;
   const maneuver = uniqueDefinitionOf(item);
@@ -8361,7 +8362,7 @@ function desperateButton(message, offer, row) {
   if (!dodger?.isOwner) return;
   const item = Array.from(dodger.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.dodgesExploits);
   if (!item || (maneuverUsesLeft(dodger, uniqueDefinitionOf(item)) <= 0)) return;
-  if (game.combat?.started && (actionsWithin(dodger, "counter") < 1)) return;
+  if ((game.combat?.started && (actionsWithin(dodger, "counter") < 1)) || timeFrozen(dodger)) return;
   const button = document.createElement("button");
   button.type = "button";
   button.className = "dbu-oos-button";
@@ -9933,7 +9934,7 @@ function dimensionalHoleButtons(message, html, attack) {
   for (const entry of attack.targets ?? []) {
     const target = fromUuidSync(entry.uuid);
     if (!target?.isOwner || (target.system.usedManeuvers ?? []).includes("encounter:dimensional-hole")
-      || (attack.noCounters ?? []).includes(target.uuid)) continue;
+      || (attack.noCounters ?? []).includes(target.uuid) || timeFrozen(target)) continue;
     const item = Array.from(target.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.portals
       && boughtTraits(each.system.unique, getTrait).some(trait => trait.dimensionalHole === true));
     if (!item) continue;
@@ -10131,7 +10132,7 @@ function sacrificeButtons(message, html, attack) {
   const targeted = new Set((attack.targets ?? []).map(entry => entry.uuid));
   const container = html.querySelector(".message-content") ?? html;
   for (const actor of ownedCharacters()) {
-    if (targeted.has(actor.uuid) || (actor.uuid === attack.attackerUuid) || positionHeld(actor)) continue;
+    if (targeted.has(actor.uuid) || (actor.uuid === attack.attackerUuid) || positionHeld(actor) || timeFrozen(actor)) continue;
     const item = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.positionChange
       && positionTraits(actor, each.id).sacrifice);
     if (!item || (maneuverUsesLeft(actor, uniqueDefinitionOf(item)) <= 0)) continue;
@@ -11089,6 +11090,7 @@ function renderPsychicCounter(message, html) {
   if (!clash?.telekinetic || clash.result || clash.tkFailed || clash.psychicAsked) return;
   if ((clash.ready ?? []).includes(clash.defenderUuid)) return;
   const defender = fromUuidSync(clash.defenderUuid);
+  if (timeFrozen(defender)) return;
   const item = Array.from(defender?.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.telekinesis);
   if (!defender?.isOwner || !item || !telekinesisTraits(defender, item.id).psychic) return;
   const button = document.createElement("button");
@@ -11128,7 +11130,7 @@ function renderPsychicBack(message, html) {
   if (!back || back.used) return;
   const user = fromUuidSync(back.userUuid);
   const item = user?.items?.get(back.itemId);
-  if (!user?.isOwner || !item) return;
+  if (!user?.isOwner || !item || timeFrozen(user)) return;
   const button = document.createElement("button");
   button.type = "button";
   button.className = "dbu-oos-button";
@@ -11260,6 +11262,14 @@ export async function postTimeFreeze(actor, maneuver) {
 
 const FREEZE_FLAG = "timeFreeze";
 
+/**
+ * Whether time is frozen for this character: another's Frozen Turn holding them, or their own - either way no Counter,
+ * Instant or Out-of-Sequence Maneuver. Asked by the buttons on cards that are such Maneuvers, which Respond does not see.
+ */
+function timeFrozen(actor) {
+  return Boolean(frozenBy(actor) || frozenTurnOf(actor));
+}
+
 /** Everyone in the Combat Encounter a Frozen Turn holds: all but its user and whoever has Time Freeze of their own. */
 function frozenOthers(actor) {
   return [...new Map((game.combat?.combatants ?? []).map(entry => entry.actor).filter(Boolean)
@@ -11323,7 +11333,7 @@ function renderRetreat(message, html) {
   if ((clash?.grapple?.kind !== "start") || clash.result || clash.retreat) return;
   if ((clash.ready ?? []).includes(clash.defenderUuid)) return;
   const defender = fromUuidSync(clash.defenderUuid);
-  if (!defender?.isOwner) return;
+  if (!defender?.isOwner || timeFrozen(defender)) return;
   const container = html.querySelector(".message-content") ?? html;
   for (const item of defender.items ?? []) {
     if ((item.type !== "maneuver") || !item.system.unique?.evade?.grapple) continue;
@@ -16134,7 +16144,7 @@ function possibleBarriers(attack) {
   for (const user of ownedCharacters()) {
     const item = Array.from(user.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.barrier);
     if (!item) continue;
-    if (game.combat?.started && (actionsWithin(user, "counter") < 1)) continue;
+    if ((game.combat?.started && (actionsWithin(user, "counter") < 1)) || timeFrozen(user)) continue;
     if (maneuverUsesLeft(user, uniqueDefinitionOf(item)) <= 0) continue;
     const bought = boughtTraits(item.system.unique, getTrait);
     const ally = bought.some(trait => trait.allyBarrier === true);
@@ -16234,7 +16244,7 @@ function possibleBlockers(attack) {
     const shields = wieldedWeapons(Array.from(target.items ?? [])).filter(item =>
       craftedReading(item.system.crafted, { getTrait, difficulties: {} })?.blocks);
     if (!shields.length) continue;
-    if (game.combat?.started && (actionsWithin(target, "counter") < 1)) continue;
+    if ((game.combat?.started && (actionsWithin(target, "counter") < 1)) || timeFrozen(target)) continue;
     found.push({ target, shields });
   }
   return found;
