@@ -79,6 +79,12 @@
                     data-tooltip="Instant: lose every Finisher and stop declaring it">Release</button>
           </div>
           {{/if}}
+          {{#if row.blocks}}
+          <div class="unique-resource">
+            <label data-tooltip="The Signature Technique it answers - its name exactly as it is written">Technique
+              <input type="text" value="{{row.blocks.name}}" data-unique-text="blockedName" data-item-id="{{row.itemId}}"/></label>
+          </div>
+          {{/if}}
           {{#if row.ghosts}}
           <div class="unique-resource">
             <span data-tooltip="Kamikaze Ghosts standing - Duplicate Minions at half their Life Points">Ghosts {{row.ghosts}}</span>

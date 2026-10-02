@@ -689,6 +689,9 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         /** Kamikaze Ghosts made, and how many stand - Super Ghost Kamikaze Attack's (chat.mjs postKamikaze). */
         kamikaze: new fields.BooleanField({ required: true, initial: false }),
         ghosts: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        /** A Counter against one Signature Technique, by its name as written - Technique Block's (chat.mjs). */
+        techniqueBlock: new fields.BooleanField({ required: true, initial: false }),
+        blockedName: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeBestial: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         shapeForm: new fields.StringField({ required: true, blank: true, initial: "" }),

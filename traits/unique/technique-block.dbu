@@ -1,0 +1,31 @@
+id: technique-block
+name: Technique Block
+uaType: both
+prerequisite: Insight Score of 8+
+tpCost: 4
+type: counter
+actionCost: 1
+# "Upon gaining this Unique Ability, select a Signature Technique you are aware of" - its name written in the Unique
+# Ability's body exactly as the Technique is named, and matched against the attack's (the user's ruling). "When you are
+# targeted by that Signature Technique, you may use this Unique Ability to reduce that Signature Technique's Strike Roll
+# to 0" - answered from Respond; "The Ki Point Cost of this Unique Ability is equal to 1/2 of the Ki Point Cost of your
+# selected Signature Technique" - its maker's, rounded down (chat.mjs playTechniqueBlock).
+techniqueBlock: true
+source: Core Rule
+description: >
+  A Counter against one Signature Technique, named: its Strike Roll is 0. KP: half that Technique's.
+text: >
+  Technique Block: Petty and vindictive, you have specialized in preventing a specific technique from working against
+  you.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Insight Score of 8+
+  –TP Cost: 4
+  –KP Cost: Varies
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Upon gaining this Unique Ability, select a Signature Technique you are aware of. When you are targeted by
+  that Signature Technique, you may use this Unique Ability to reduce that Signature Technique’s Strike Roll is to 0.
+
+  The Ki Point Cost of this Unique Ability is equal to 1/2 of the Ki Point Cost of your selected Signature Technique.

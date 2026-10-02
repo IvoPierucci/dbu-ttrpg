@@ -6150,6 +6150,12 @@ async function respondDialog(message, respondable) {
       ownCounters.push({ ...uniqueDefinitionOf(item), id: `judo:${item.id}`, judo: true,
         source: `Unique Ability - ${maneuverKiCost(uniqueDefinitionOf(item), null, actor)} KP` });
     }
+    // Technique Block: "When you are targeted by that Signature Technique" - its KP half that Technique's.
+    for (const item of actor.items ?? []) {
+      if ((item.type !== "maneuver") || !item.system.unique?.techniqueBlock) continue;
+      ownCounters.push({ ...uniqueDefinitionOf(item), id: `techblock:${item.id}`, techniqueBlock: item.id,
+        source: `Unique Ability - ${techniqueBlockKi(attack, item) ?? "?"} KP` });
+    }
     // Stardust Barrier: "If you are targeted by an Opponent's Energy or Magic Attack" - its KP with this attack's Charges.
     for (const item of actor.items ?? []) {
       if ((item.type !== "maneuver") || !item.system.unique?.stardust) continue;
@@ -6181,6 +6187,12 @@ async function respondDialog(message, respondable) {
       if (maneuver.mirror && unresolved && !waiting) {
         reason = attack?.duel ? "a Duel is already on this attack"
           : whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsWithin(actor, "counter") : 1 });
+        blocked = Boolean(reason);
+      }
+
+      // Technique Block: only the Signature Technique named on it, written as it is named.
+      if (maneuver.techniqueBlock && unresolved && !waiting) {
+        reason = whyNotTechniqueBlock(attack, actor.items?.get(maneuver.techniqueBlock));
         blocked = Boolean(reason);
       }
 
@@ -6572,6 +6584,8 @@ async function playCounter(message, actor, answer, attack) {
   if (String(answer).startsWith("judo:")) return playJudo(message, actor, String(answer).slice(5));
   // Stardust Barrier.
   if (String(answer).startsWith("stardust:")) return playStardust(message, actor, String(answer).slice(9));
+  // Technique Block.
+  if (String(answer).startsWith("techblock:")) return playTechniqueBlock(message, actor, String(answer).slice(10));
 
   const maneuver = getManeuver(answer);
   if (!maneuver) return;
@@ -9269,6 +9283,63 @@ async function playJudo(message, actor, itemId) {
     defences: [...others, { uuid: actor.uuid, defence: "judoToss", wager: 0, foundation: "energy", parryWith: [],
       judo: { itemId } }],
     ready: [...new Set([...(attack.ready ?? []), actor.uuid])]
+  });
+}
+
+/** The Signature Technique an attack was made through, by its name - "(Out-of-Sequence)" set aside. */
+function techniqueNameOf(attack) {
+  return String(attack?.maneuverName ?? "").replace(/ \(Out-of-Sequence\)$/, "").trim();
+}
+
+/** Why Technique Block cannot answer this attack, or "": the Signature Technique named on it, by that name exactly. */
+function whyNotTechniqueBlock(attack, item) {
+  const named = String(item?.system?.unique?.blockedName ?? "").trim();
+  if (!named) return "no Signature Technique named on it";
+  if (!attack?.signature || (techniqueNameOf(attack) !== named)) return `only against ${named}`;
+  return "";
+}
+
+/**
+ * "The Ki Point Cost of this Unique Ability is equal to 1/2 of the Ki Point Cost of your selected Signature Technique" -
+ * the Technique's as its maker pays it, rounded down. Null where it cannot be read (no attack, or no such Technique).
+ */
+function techniqueBlockKi(attack, item) {
+  if (whyNotTechniqueBlock(attack, item)) return null;
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  const technique = Array.from(attacker?.items ?? []).find(each => (each.type === "maneuver")
+    && (each.system.tags ?? []).includes("signature") && !each.system.signatureTechnique && (each.name === techniqueNameOf(attack)));
+  if (!technique) return null;
+  return Math.floor(maneuverKiCost(uniqueDefinitionOf(technique), null, attacker) / 2);
+}
+
+/** Technique Block, played from Respond: half the Technique's KP and a Counter Action, and its Strike Roll 0. */
+async function playTechniqueBlock(message, actor, itemId) {
+  const item = actor.items?.get(itemId);
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!item?.system?.unique?.techniqueBlock || !attack || attack.result || endedByDuel(attack)) return;
+  const why = whyNotTechniqueBlock(attack, item);
+  if (why) return ui.notifications.warn(`${item.name}: ${why}.`);
+  const maneuver = uniqueDefinitionOf(item);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) {
+    ui.notifications.warn(`${item.name} is once per Combat Round.`);
+    return;
+  }
+  const ki = techniqueBlockKi(attack, item) ?? 0;
+  if (ki && !await spendManeuverCost(actor, maneuver, ki)) return;
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+    if (ki) await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  await settledNote(message, `${item.name}: ${techniqueNameOf(attack)}'s Strike Roll is 0.`);
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const others = (fresh.defences ?? []).filter(entry => entry.uuid !== actor.uuid);
+  return settleAttack(message, {
+    ...fresh,
+    techniqueBlocked: { byName: actor.name, itemName: item.name },
+    defences: [...others, { uuid: actor.uuid, defence: "dodge", wager: 0, foundation: "energy", parryWith: [] }],
+    ready: [...new Set([...(fresh.ready ?? []), actor.uuid])]
   });
 }
 
@@ -13467,7 +13538,8 @@ async function resolveAttack(message, attack) {
     const analysis = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target), ...mindReadBonus(attacker, target),
       ...secondSightBonus(attacker, target)]
       .reduce((sum, p) => sum + p.value, 0);
-    const against = Math.max(0, (strike.total + analysis) - longRange);
+    // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
+    const against = attack.techniqueBlocked ? 0 : Math.max(0, (strike.total + analysis) - longRange);
 
     // The defender wins ties, as everywhere else: the attacker has to beat them.
     const hit = automatic || (answer ? (against > answer.total) : true);

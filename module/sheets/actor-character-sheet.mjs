@@ -1745,6 +1745,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Finish Sign: the Signature Technique declared, released as an Instant from here.
         finish: (unique.finishSign && unique.finishTechnique)
           ? { technique: this.actor.items.get(unique.finishTechnique)?.name ?? "" } : null,
+        // Technique Block: the Signature Technique it answers, written as it is named.
+        blocks: unique.techniqueBlock ? { name: unique.blockedName ?? "" } : null,
         // Super Ghost Kamikaze Attack: the Ghosts standing, each to Explode from here.
         ghosts: unique.kamikaze ? (Number(unique.ghosts) || 0) : 0,
         // Shapeshift, applied: the shape and its turns left.
@@ -2402,6 +2404,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   /** @override */
   _onRender(context, options) {
     super._onRender(context, options);
+
+    // Technique Block's Signature Technique, by name: written onto its Item.
+    for (const input of this.element.querySelectorAll("[data-unique-text]")) {
+      input.addEventListener("change", event => {
+        event.stopPropagation();
+        const item = this.actor.items.get(input.dataset.itemId);
+        item?.update({ [`system.unique.${input.dataset.uniqueText}`]: String(input.value ?? "").trim() });
+      });
+    }
 
     // Copy Being's kept Maximums: written onto its Item, not submitted with the character's form.
     for (const input of this.element.querySelectorAll("[data-unique-kept]")) {
