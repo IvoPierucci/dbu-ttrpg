@@ -2849,6 +2849,7 @@ function onRenderChatMessage(message, html) {
   renderFakeDeath(message, html);
   renderMeteor(message, html);
   renderMeteorHit(message, html);
+  renderMeteorStrike(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -8302,6 +8303,30 @@ export function tauntsNow(actor, maneuver) {
 /** The Meteor Phase's card, and an attack at the God Meteor waiting on its Wound Roll. */
 const METEOR_FLAG = "godMeteor";
 const METEOR_HIT_FLAG = "godMeteorHit";
+/** What one attack did to the God Meteor, said to each reader by what they may see. */
+const METEOR_STRIKE_FLAG = "godMeteorStrike";
+
+/**
+ * An attack at the God Meteor, settled. Its user's players see it all; the attacker's, their own Wound Roll and its
+ * workings; everyone else, that it was struck - and whether it fell, which everyone would see.
+ */
+function renderMeteorStrike(message, html) {
+  const strike = message.getFlag(SCOPE, METEOR_STRIKE_FLAG);
+  if (!strike) return;
+  const note = document.createElement("div");
+  note.className = "dbu-settled-note";
+  const fell = strike.life ? "" : " - destroyed";
+  if (maySeeRolls(fromUuidSync(strike.userUuid))) {
+    note.textContent = `Wound ${strike.wound} - Damage Reduction ${strike.dr}: ${strike.damage} off the God Meteor`
+      + `${strike.life ? ` (${strike.life} left)` : fell}.`;
+  }
+  else if (maySeeRolls(fromUuidSync(strike.attackerUuid))) {
+    note.textContent = `Wound ${strike.wound} at the God Meteor${fell}.`;
+  }
+  else note.textContent = `The God Meteor is struck${fell}.`;
+  if (maySeeRolls(fromUuidSync(strike.attackerUuid))) note.dataset.tooltipHtml = breakdownTable(strike.lines, strike.wound);
+  (html.querySelector(".message-content") ?? html).append(note);
+}
 
 /**
  * God Meteor's Passive, the half that is about who is hit: "Increase your Wound Rolls by 1(T) ... against Pinned
@@ -8339,11 +8364,15 @@ function renderMeteor(message, html) {
   if (!meteor) return;
   const escape = Handlebars.escapeExpression;
   const container = html.querySelector(".message-content") ?? html;
+  // Its Life Points are its user's Maximum and its Damage Reduction their Might - theirs to see, and whoever may watch
+  // them: anyone else could read the character off the Meteor.
   const status = document.createElement("div");
   status.className = "dbu-settled-note";
-  status.textContent = (meteor.life > 0)
+  status.textContent = (meteor.life <= 0)
+    ? "God Meteor destroyed: nobody takes anything."
+    : maySeeRolls(fromUuidSync(meteor.userUuid))
     ? `God Meteor: ${meteor.life} / ${meteor.max} Life Points, Damage Reduction ${meteor.dr}`
-    : "God Meteor destroyed: nobody takes anything.";
+    : "God Meteor";
   container.append(status);
   const list = document.createElement("ul");
   list.className = "dbu-oos-list";
@@ -8475,9 +8504,11 @@ async function rollMeteorWound(message, actor, hit) {
   const life = Math.max(0, fresh.life - damage);
   requestEdit(card, { type: "meteor", meteor: { ...fresh, life,
     entries: fresh.entries.map(entry => (entry.uuid === actor.uuid) ? { ...entry, choice: "attack", done: true } : entry) } });
-  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<div class="dbu-settled-note" data-tooltip-html="${Handlebars.escapeExpression(breakdownTable(wound.lines ?? [], wound.total))}">`
-      + `Wound ${wound.total} - Damage Reduction ${fresh.dr}: ${damage} off the God Meteor${life ? ` (${life} left)` : " - destroyed"}.</div>` });
+  // Said on the card by what each reader may see (renderMeteorStrike): the roll is the attacker's, the Damage
+  // Reduction and what is left the Meteor's user's.
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [METEOR_STRIKE_FLAG]: { attackerUuid: actor.uuid, userUuid: fresh.userUuid, wound: wound.total,
+      lines: wound.lines ?? [], dr: fresh.dr, damage, life } } } });
 }
 
 /**
@@ -15672,6 +15703,8 @@ function interveneText(attack, entry) {
 
   const outcome = entry.outcome;
   if (!outcome) return `${opening}${option?.movement ? "" : ""}`;
+  // What it did to them is theirs to see, and their watchers' - as a target's Damage is.
+  if (!maySeeRolls(fromUuidSync(entry.uuid))) return outcome.defeated ? `${opening}, which Defeats them` : opening;
 
   const harder = (outcome.category !== attack.damageCategory)
     ? ` (${DAMAGE_CATEGORIES[outcome.category].label})`
@@ -15698,13 +15731,15 @@ function interveneText(attack, entry) {
  * Damage all the same. The arithmetic is spelt out only to the two sides, as everywhere
  * else - it quotes the Wound Roll and the Soak Value, which are theirs.
  */
-function absoluteOutcomeText(attack, own) {
+function absoluteOutcomeText(attack, own, uuid) {
   const { soak, reduction, damage, effectiveWound } = own;
 
-  if (!ownsEitherSide(attack)) {
-    return (damage <= 0)
-      ? "missed - Absolute Attack, no damage"
-      : `missed - Absolute Attack, ${damage} damage`;
+  // The Soak and what got past it are the target's numbers (the user's ruling): their watchers see them; the attacker's,
+  // only their own half of the Wound Roll.
+  if (!maySeeRolls(fromUuidSync(uuid))) {
+    return maySeeRolls(woundRoller(attack))
+      ? `missed - Absolute Attack, half the Wound Roll is ${effectiveWound}`
+      : "missed - Absolute Attack";
   }
 
   const defences = reduction
@@ -15719,7 +15754,7 @@ function absoluteOutcomeText(attack, own) {
 }
 
 /** What the attack came to for one of the people it reached. */
-function outcomeFor(attack, { own }) {
+function outcomeFor(attack, { own, uuid }) {
   if (!own) return "waiting";
 
   // Turned aside before the Wound Roll was ever made, for everyone it reached.
@@ -15734,7 +15769,7 @@ function outcomeFor(attack, { own }) {
     // "missed" on its own would read as the end of it.
     if (!attack.absolute) return "missed";
     if (!attack.result.wound) return "missed - Absolute Attack, Wound Roll still owed";
-    return absoluteOutcomeText(attack, own);
+    return absoluteOutcomeText(attack, own, uuid);
   }
 
   if (!attack.result.wound) return "hit";
@@ -15746,11 +15781,11 @@ function outcomeFor(attack, { own }) {
     return "Power Flare beats the Wound Roll: no damage";
   }
 
-  // The arithmetic quotes the Wound Roll and the Soak, which are the very numbers the
-  // sides withhold - so it is only spelt out to someone playing one of the two. Anyone
-  // else is told what happened, which is what a bystander would see at the table.
-  if (!ownsEitherSide(attack)) {
-    return (damage <= 0) ? "hit, and no damage" : `hit for ${damage} damage`;
+  // The arithmetic quotes the target's Soak and Damage Reduction, and the Damage is what got past them - from which
+  // both could be read back. So it is spelt out only to whoever may watch the target (the user's ruling); the
+  // attacker's players see their own Wound Roll, and anyone else that it hit.
+  if (!maySeeRolls(fromUuidSync(uuid))) {
+    return maySeeRolls(woundRoller(attack)) ? `hit - Wound ${wound.total}` : "hit";
   }
 
   // Say when Guard pulled the Category down, since that is why the Soak counts here.
