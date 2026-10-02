@@ -1860,6 +1860,7 @@ export function definitionOf(item) {
     fakeMoon: item.system.unique?.fakeMoon === true,
     finishSign: item.system.unique?.finishSign === true,
     meteor: item.system.unique?.meteor === true,
+    heals: item.system.unique?.heals === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -2542,6 +2543,139 @@ function askBinding(actor, maneuver) {
  * of)." Who is an Opponent is asked - everyone in the Combat Encounter (or the targeted, outside one), ticked but for
  * whose Melee Range you stand in and whom you are already Hidden from. Null if nobody is picked.
  */
+/**
+ * Healing Hands: whom, and what its Advancements add - asked, then its roll's window, before anything is paid. "Target
+ * another Character within your Melee Range"; with Energy Zone, "all Allies within a Large Sphere AoE" instead, ticked.
+ * Overexertion's 4(T), Desperate Heal's Capacity (one target), Patch-Up's Apparel: boxes. Natural Healing Hands refuses
+ * the Unnatural. Null if it was dropped.
+ */
+async function askHeal(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  const { boughtTraits, appliedTraits } = await import("./unique.mjs");
+  const bought = boughtTraits(unique, getTrait);
+  const applied = appliedTraits(unique, getTrait);
+  const find = key => bought.find(trait => trait[key]) ?? null;
+  const zone = find("healZone");
+  const might = find("healMightKiPerTier");
+  const desperate = find("healCapacity");
+  const patch = find("healPatch");
+  const natural = applied.find(trait => trait.healNatural) ?? null;
+  const noModifier = applied.some(trait => trait.healNoModifier);
+  const extraDice = bought.reduce((sum, trait) => sum + (Number(trait.healDice) || 0), 0);
+  const tier = Math.max(1, actor.system.tierOfPower ?? 1);
+  const baseTier = Math.max(1, actor.system.baseTierOfPower ?? 1);
+  const unnatural = who => who?.system?.effects?.slots?.unnatural === false;
+  const escape = Handlebars.escapeExpression;
+
+  const targeted = Array.from(game.user.targets ?? []).map(token => token.actor)
+    .find(other => other && (other.uuid !== actor.uuid)) ?? null;
+  const pool = zone ? [...new Map((game.combat?.started
+    ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
+    : Array.from(game.user.targets ?? []).map(token => token.actor))
+    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .map(other => [other.uuid, other])).values()] : [];
+  if (!targeted && !pool.length) {
+    ui.notifications.warn(`${maneuver.name}: target the Character to heal first.`);
+    return null;
+  }
+
+  const mightKi = might ? (Number(might.healMightKiPerTier) || 0) * tier : 0;
+  const own = maneuverKiCost(maneuver, null, actor);
+  const capacityNow = Math.max(0, Number(actor.system.capacity?.remaining) || 0);
+  const rows = pool.map(other => {
+    const closed = natural && unnatural(other) ? `${natural.name}: Unnatural` : "";
+    return `<label class="dbu-respond-option" ${closed ? `data-tooltip="${escape(closed)}"` : ""}>
+      <input type="checkbox" name="${escape(other.uuid)}" ${closed ? "disabled" : ""}/>
+      <span class="dbu-respond-name">${escape(other.name)}</span></label>`;
+  }).join("");
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `${zone ? `<label class="dbu-wager"><span>Heal</span><select name="mode">
+        ${targeted ? `<option value="one">${escape(targeted.name)} (Melee Range)</option>` : ""}
+        <option value="zone">${escape(zone.name)}: Allies in a ${escape(String(zone.healZone))} Sphere</option></select></label>
+        <p class="dbu-respond-hint">Who is within it</p>${rows}`
+        : `<p class="dbu-respond-hint">${escape(targeted.name)}</p>`}
+      ${might ? `<label class="dbu-respond-option"><input type="checkbox" name="might"/>
+        <span class="dbu-respond-name">${escape(might.name)}</span>
+        <span class="dbu-respond-source">${mightKi} KP more: their Might on top</span></label>` : ""}
+      ${desperate ? `<label class="dbu-respond-option"><input type="checkbox" name="desperate"/>
+        <span class="dbu-respond-name">${escape(desperate.name)}</span>
+        <span class="dbu-respond-source">Your Capacity in KP: that much on top</span></label>
+        ${zone ? `<label class="dbu-wager"><span>For</span><select name="desperateFor">${[targeted, ...pool]
+          .filter(Boolean).map(other => `<option value="${escape(other.uuid)}">${escape(other.name)}</option>`)
+          .join("")}</select></label>` : ""}` : ""}
+      ${patch ? `<label class="dbu-respond-option"><input type="checkbox" name="patch"/>
+        <span class="dbu-respond-name">${escape(patch.name)}</span>
+        <span class="dbu-respond-source">A damaged piece of their Apparel, whole again</span></label>` : ""}`,
+    buttons: [
+      { action: "heal", label: "Next", default: true, callback: (event, button, dialog) => {
+        const el = dialog.element;
+        return {
+          mode: el.querySelector('select[name="mode"]')?.value ?? "one",
+          ticked: pool.filter(other => el.querySelector(`input[name="${CSS.escape(other.uuid)}"]`)?.checked).map(other => other.uuid),
+          might: Boolean(el.querySelector('input[name="might"]')?.checked),
+          desperate: Boolean(el.querySelector('input[name="desperate"]')?.checked),
+          desperateFor: el.querySelector('select[name="desperateFor"]')?.value ?? targeted?.uuid ?? "",
+          patch: Boolean(el.querySelector('input[name="patch"]')?.checked)
+        };
+      } },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object")) return null;
+
+  // Whom: one within the Melee Range, or the Allies ticked.
+  let uuids;
+  if (chosen.mode === "zone") {
+    uuids = chosen.ticked;
+    if (!uuids.length) {
+      ui.notifications.warn(`${maneuver.name}: tick who is within it.`);
+      return null;
+    }
+  }
+  else {
+    if (!targeted) return null;
+    const far = whyNotWithinMelee(actor, targeted, maneuver.name);
+    if (far) {
+      ui.notifications.warn(far);
+      return null;
+    }
+    if (natural && unnatural(targeted)) {
+      ui.notifications.warn(`${natural.name}: ${targeted.name} is Unnatural.`);
+      return null;
+    }
+    uuids = [targeted.uuid];
+  }
+
+  // Desperate Heal: "a number of Ki Points equal to your current Capacity" - what is left of it once this use and
+  // Overexertion are paid, which is what it will be.
+  const desperateKi = chosen.desperate ? Math.max(0, capacityNow - own - (chosen.might ? mightKi : 0)) : 0;
+  const extraKi = (chosen.might ? mightKi : 0) + desperateKi;
+  if (extraKi && ((Number(actor.system.ki?.value) || 0) < (own + extraKi))) {
+    ui.notifications.warn(`${actor.name} has not the Ki Points for that.`);
+    return null;
+  }
+  const desperateFor = chosen.desperate ? ((chosen.mode === "zone") ? chosen.desperateFor : uuids[0]) : "";
+
+  // The roll, from its window.
+  const modifier = noModifier ? 0 : (Number(actor.system.attributes?.magic?.mod) || 0);
+  const dice = `${baseTier}d10`;
+  const moreDice = extraDice ? `${extraDice * baseTier}d10` : "";
+  const { prepareRoll } = await import("./chat.mjs");
+  const ready = await prepareRoll(actor, [], maneuver.name, chosen.might ? "And each one's Might" : "", {
+    offerWilling: false, formula: { base: dice,
+      dice: moreDice ? [{ label: find("healDice")?.name ?? "Dice", formula: moreDice }] : [],
+      parts: [...(modifier ? [{ label: "Magic Modifier", value: modifier }] : []),
+        ...(desperateKi ? [{ label: desperate.name, value: desperateKi }] : [])] } });
+  if (!ready) return null;
+
+  return { uuids, dice: [dice, moreDice].filter(Boolean).join(" + "), modifier,
+    mightKi: chosen.might ? mightKi : 0, desperateKi, desperateFor, patch: chosen.patch };
+}
+
 /** God Meteor: who is inside the Destructive Sphere around the Square it falls on - ticked by the player. */
 async function askMeteor(actor, maneuver) {
   const pool = game.combat?.started
@@ -3448,6 +3582,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
+  let healing = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3699,6 +3834,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Healing Hands: whom, what its Advancements add, and its roll's window.
+    if (maneuver.heals) {
+      healing = await askHeal(actor, maneuver);
+      if (!healing) return false;
+    }
+
     // God Meteor: "Every Character (except the user of this Unique Ability) within a Destructive Sphere AoE centered on
     // your targeted Square" - who they are, asked.
     if (maneuver.meteor) {
@@ -4230,6 +4371,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.heals && healing)
+    ? await (await import("./chat.mjs")).postHealing(actor, maneuver, healing)
     : (maneuver.meteor && meteorTargets)
     ? await (await import("./chat.mjs")).postMeteor(actor, maneuver, meteorTargets.uuids)
     : (maneuver.finishSign && finishing)

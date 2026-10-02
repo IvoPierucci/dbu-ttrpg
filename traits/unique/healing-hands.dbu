@@ -1,0 +1,34 @@
+id: healing-hands
+name: Healing Hands
+uaType: magical
+prerequisite: 2+ Skill Ranks in Use Magic
+tpCost: 10
+type: standard
+actionCost: 1
+kiCostPerTier: 5
+# "Target another Character within your Melee Range. That Character regains 1d10(bT) Life Points. Increase the amount
+# of Life Points they regain by your Magic Modifier." Who, and what its Advancements add, asked with the roll's window
+# before anything is paid (use-maneuver.mjs askHeal); rolled and given on a card (chat.mjs postHealing).
+heals: true
+source: Core Rule
+description: >
+  Another Character within your Melee Range regains 1d10(bT) Life Points plus your Magic Modifier. Passive: Medicine
+  Skill Checks 1 higher.
+text: >
+  Healing Hands: You can lay your hands upon your allies, restoring their vitality in the process.
+  –Ability Type: Magical
+  –Prerequisites: 2+ Skill Ranks in Use Magic
+  –TP Cost: 10
+  –KP Cost: 5(T)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: Increase your Medicine Skill Checks by 1.
+  –Effect: Target another Character within your Melee Range. That Character regains 1d10(bT) Life Points. Increase the
+  amount of Life Points they regain by your Magic Modifier.
+
+---
+
+# "Increase your Medicine Skill Checks by 1" - flat, not (T).
+[passive]
+skill.medicine.bonus += 1;

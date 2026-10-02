@@ -636,6 +636,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         floods: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The Meteor Phase - God Meteor's (chat.mjs postMeteor). */
         meteor: new fields.BooleanField({ required: true, initial: false }),
+        /** Life Points regained by another - Healing Hands' (chat.mjs postHealing). */
+        heals: new fields.BooleanField({ required: true, initial: false }),
         /** A State it may only be used in - God Meteor's God Ki. */
         requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */

@@ -1,0 +1,17 @@
+id: overexertion
+name: Overexertion
+advancement: true
+prerequisite: Personality Score of 4+
+tpCost: 5
+# "You may spend an additional 4(T) Ki Points to increase the amount of Life Points restored by your use of Healing Hands
+# by the target's Might" - a box in its window; each one healed gets their own Might.
+healMightKiPerTier: 4
+source: Core Rule
+description: >
+  4(T) KP more: the one healed regains their Might on top.
+text: >
+  Overexertion: Healing someone stronger than you requires greater effort, but the reward is greater as well.
+  –Prerequisites: Personality Score of 4+
+  –TP Cost: 5
+  –Effect: When you target a Character with Healing Hands, you may spend an additional 4(T) Ki Points to increase the
+  amount of Life Points restored by your use of Healing Hands by the target’s Might.

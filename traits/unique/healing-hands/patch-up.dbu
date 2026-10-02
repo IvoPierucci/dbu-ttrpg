@@ -1,0 +1,17 @@
+id: patch-up
+name: Patch-Up
+advancement: true
+prerequisite: Magical Materialization
+tpCost: 4
+# "You may also repair their Apparel. Restore a damaged or broken piece of Apparel to have their maximum Break Value" - a
+# box in its window; the first worn piece that has lost Break Value, for each one healed.
+healPatch: true
+source: Core Rule
+description: >
+  Healing Hands may also restore a damaged or broken piece of their Apparel to its full Break Value.
+text: >
+  Patch-Up: You can repair clothing as well as people.
+  –Prerequisites: Magical Materialization
+  –TP Cost: 4
+  –Effect: If you would target a Character with the Healing Hands Magical Ability, you may also repair their Apparel.
+  Restore a damaged or broken piece of Apparel to have their maximum Break Value.

@@ -2851,6 +2851,7 @@ function onRenderChatMessage(message, html) {
   renderMeteorHit(message, html);
   renderMeteorStrike(message, html);
   renderLoss(message, html);
+  renderHealing(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -8527,6 +8528,65 @@ async function endMeteor(message) {
     if (!who) continue;
     const amount = (entry.choice === "defend") ? Math.floor(meteor.life / 2) : meteor.life;
     await reduceLifePoints(who, amount, { reason: "God Meteor" });
+  }
+}
+
+/** Healing Hands' card: the roll, and what each one healed regained - said by what each reader may see. */
+const HEAL_FLAG = "healing";
+
+/**
+ * Healing Hands, paid for: Overexertion's and Desperate Heal's Ki on top; "That Character regains 1d10(bT) Life Points"
+ * - Healing Expertise's 1d10(bT) more - "Increase the amount ... by your Magic Modifier", Overexertion's "target's Might",
+ * Desperate Heal's Capacity to its one; Patch-Up's piece of Apparel whole again.
+ */
+export async function postHealing(actor, maneuver, plan) {
+  const extra = plan.mightKi + plan.desperateKi;
+  if (extra) {
+    await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - extra),
+      "system.capacity.spent": actor.system.capacity.spent + extra });
+  }
+  const roll = new Roll(plan.dice);
+  await roll.evaluate();
+  const lines = [];
+  for (const uuid of plan.uuids) {
+    const who = fromUuidSync(uuid);
+    if (!who) continue;
+    const amount = roll.total + plan.modifier + (plan.mightKi ? (Number(who.system.might) || 0) : 0)
+      + ((uuid === plan.desperateFor) ? plan.desperateKi : 0);
+    const life = who.system.life;
+    await requestActorUpdate(who, { "system.life.value": Math.min(life.max, life.value + amount) });
+    // Patch-Up: the first worn piece that has lost Break Value - "damaged or broken" - whole again.
+    const piece = plan.patch ? Array.from(who.items ?? []).find(item => (item.type === "gear")
+      && (item.system?.crafted?.kind === "apparel") && !item.system.crafted.destroyed
+      && ((Number(item.system.crafted.breakLost) || 0) > 0)) : null;
+    if (piece) await requestActorUpdate(who, { items: [{ _id: piece.id, "system.crafted.breakLost": 0 }] });
+    lines.push({ uuid, name: who.name, amount, patched: piece?.name ?? "" });
+  }
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}</p>`,
+    flags: { [SCOPE]: { [HEAL_FLAG]: { healerUuid: actor.uuid, dice: plan.dice, rolled: roll.total,
+      modifier: plan.modifier, lines } } } });
+}
+
+function renderHealing(message, html) {
+  const heal = message.getFlag(SCOPE, HEAL_FLAG);
+  if (!heal) return;
+  const escape = Handlebars.escapeExpression;
+  const container = html.querySelector(".message-content") ?? html;
+  if (maySeeRolls(fromUuidSync(heal.healerUuid))) {
+    const rolled = document.createElement("div");
+    rolled.className = "dbu-settled-note";
+    rolled.textContent = `${heal.dice}: ${heal.rolled}${heal.modifier ? ` + ${heal.modifier} Magic Modifier` : ""}`;
+    container.append(rolled);
+  }
+  for (const line of heal.lines) {
+    const row = document.createElement("div");
+    row.className = "dbu-settled-note";
+    // How much is theirs to see, and their watchers': Overexertion puts their Might in it.
+    row.innerHTML = `${escape(line.name)} regains ${maySeeRolls(fromUuidSync(line.uuid))
+      ? `<strong>${line.amount}</strong> ` : ""}Life Points${line.patched
+      ? ` &middot; ${escape(line.patched)} whole again` : ""}`;
+    container.append(row);
   }
 }
 

@@ -1,0 +1,20 @@
+id: desperate-heal
+name: Desperate Heal
+advancement: true
+prerequisite: Overexertion
+tpCost: 10
+# "You may spend a number of Ki Points equal to your current Capacity, if you do, increase the amount of Life Points the
+# target regains by an equal amount. If you possess the Energy Zone Advancement, this effect can only apply to ONE of the
+# targets." A box in its window, with which one where there are several.
+healCapacity: true
+source: Core Rule
+description: >
+  Your current Capacity in KP more: one target regains that much on top.
+text: >
+  Desperate Heal: You can pour even more energy into healing, allowing you to restore immense amounts of vitality to your
+  target.
+  –Prerequisites: Overexertion
+  –TP Cost: 10
+  –Effect: When you target a Character with Healing Hands, you may spend a number of Ki Points equal to your current
+  Capacity, if you do, increase the amount of Life Points the target regains by an equal amount. If you possess the
+  Energy Zone Advancement, this effect can only apply to ONE of the targets.

@@ -1,0 +1,15 @@
+id: natural-healing-hands
+name: Natural Healing Hands
+restriction: true
+reduction: 2
+locked: Patch-Up
+# "You cannot target Unnatural characters with Healing Hands" - Unnatural being `unnatural` forbidden on them.
+healNatural: true
+source: Core Rule
+description: >
+  Healing Hands cannot target Unnatural Characters.
+text: >
+  Natural Healing Hands: Your ability to heal others does not apply to arcane or artificial beings.
+  –Locked Advancements: Patch-Up
+  –TP Cost: -2
+  –Effect: You cannot target Unnatural characters with Healing Hands.

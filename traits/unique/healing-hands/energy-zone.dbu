@@ -1,0 +1,17 @@
+id: energy-zone
+name: Energy Zone
+advancement: true
+prerequisite: Magic Score of 10+
+tpCost: 10
+# "Instead of targeting a Character within your Melee Range, you may target all Allies within a Large Sphere Aoe
+# (centered on you)" - who is inside, ticked in its window.
+healZone: large
+source: Core Rule
+description: >
+  Healing Hands may heal every Ally within a Large Sphere around you instead.
+text: >
+  Energy Zone: You can heal all allies near you at once.
+  –Prerequisites: Magic Score of 10+
+  –TP Cost: 10
+  –Effect: Instead of targeting a Character within your Melee Range, you may target all Allies within a Large Sphere Aoe
+  (centered on you) for the effects of Healing Hands.

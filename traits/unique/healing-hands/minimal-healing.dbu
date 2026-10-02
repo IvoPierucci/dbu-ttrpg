@@ -1,0 +1,15 @@
+id: minimal-healing
+name: Minimal Healing
+restriction: true
+reduction: 5
+locked: Healing Expertise, Overexertion
+# "You do not increase the amount of Life Points regained by your Magic Modifier."
+healNoModifier: true
+source: Core Rule
+description: >
+  Healing Hands does not add your Magic Modifier.
+text: >
+  Minimal Healing: You aren’t able to heal as much damage as most.
+  –Locked Advancements: Healing Expertise, Overexertion
+  –TP Cost: -5
+  –Effect: You do not increase the amount of Life Points regained by your Magic Modifier.

@@ -1,0 +1,15 @@
+id: healing-expertise
+name: Healing Expertise
+advancement: true
+prerequisite: Magic Score of 8+
+tpCost: 6
+# "Increase the amount of Life Points restored by the Healing Hands Unique Ability by 1d10(bT)" - one more 1d10(bT).
+healDice: 1
+source: Core Rule
+description: >
+  Healing Hands restores 1d10(bT) more.
+text: >
+  Healing Expertise: You can restore even more vitality thanks to your expertise.
+  –Prerequisites: Magic Score of 8+
+  –TP Cost: 6
+  –Effect: Increase the amount of Life Points restored by the Healing Hands Unique Ability by 1d10(bT).
