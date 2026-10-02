@@ -5885,7 +5885,8 @@ export async function prepareRoll(actor, effects, title, hint = "",
     window: { title },
     content: `<div class="dbu-respond-dialog">
       ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}
-      ${formula ? `<p class="dbu-formula">${formulaHtml(formula)}</p>` : ""}
+      ${formula ? `<p class="dbu-formula">${formulaHtml({ ...formula,
+        parts: [...(formula.parts ?? []), ...multiFormRow(actor, combatRoll)] })}</p>` : ""}
       ${rows}${difficultyRows}${senseRows}${willing}${karmicGroup}
     </div>`,
     buttons: [
@@ -6869,7 +6870,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   }
   // A single netted number cannot be taken apart again, so what went into it is kept
   // as labelled parts and only summed for the roll itself.
-  const parts = (typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers;
+  const parts = [...((typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers),
+    ...multiFormRow(actor, combatRoll)];
 
   // Penalties cancel bonuses; they never drag a roll below the dice. A Strike with more
   // taken off it than it had adds nothing rather than subtracting - so a roll always
@@ -13457,11 +13459,19 @@ function thresholdPenalty(actor) {
   // "Each failure costs 1(bT) on every Combat Roll", so what is written is the rule and
   // what is shown beside it is what that came to for this character.
   const failures = actor.system.threshold.failures ?? 0;
-  // Multi-Form Technique at Tier of Power 1: "reduce your/their Combat Rolls by 2 instead" - every Combat Roll too, so
-  // read where the Thresholds' is.
-  const split = Number(actor.system.multiFormPenalty) || 0;
-  return [...(penalty ? [{ label: "Thresholds", written: `-${failures}(bT)`, value: -penalty }] : []),
-    ...(split ? [{ label: "Multi-Form", value: -split }] : [])];
+  return penalty
+    ? [{ label: "Thresholds", written: `-${failures}(bT)`, value: -penalty }]
+    : [];
+}
+
+/**
+ * Multi-Form Technique at Tier of Power 1: "reduce your/their Combat Rolls by 2 instead" - on every Combat Roll, added
+ * where every Combat Roll is made (rollSide) and shown in its window, apart from the Thresholds' (Last Legs sets those
+ * aside, not this).
+ */
+function multiFormRow(actor, combatRoll) {
+  const split = combatRoll ? (Number(actor?.system?.multiFormPenalty) || 0) : 0;
+  return split ? [{ label: "Multi-Form", value: -split }] : [];
 }
 
 /**
