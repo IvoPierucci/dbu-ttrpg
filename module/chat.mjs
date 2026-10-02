@@ -202,6 +202,9 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, PARA_FLAG, request.para);
     case "petrify": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PETRIFY_FLAG, request.petrify);
+    case "positionChange": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, POSITION_FLAG, request.position);
+    case "swapTokens": return swapTokens(request.aUuid, request.bUuid);
     case "armsHit": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
@@ -570,6 +573,10 @@ async function applyClash(messageId, clash) {
 
   if (clash.snare && clash.result && !clash.snare.applied) {
     await settleSnare(message, clash);
+  }
+
+  if (clash.positionChange && clash.result && !clash.positionChange.applied) {
+    await settlePositionChange(message, clash);
   }
 
   if (clash.petrify && clash.result && !clash.petrify.applied) {
@@ -2904,6 +2911,7 @@ function onRenderChatMessage(message, html) {
   renderParaPara(message, html);
   renderPetrify(message, html);
   renderRetreat(message, html);
+  renderPositionChange(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -6184,6 +6192,12 @@ async function respondDialog(message, respondable) {
           blocked = true;
           reason = "Fake Out: only Guard or a Dodge";
         }
+      }
+
+      // Sacrifice Play: "You cannot use a Counter Maneuver in response to that Attacking Maneuver".
+      if (!blocked && (attack?.noCounters ?? []).includes(actor.uuid)) {
+        blocked = true;
+        reason = "Sacrifice Play: only your Dodge";
       }
 
       const note = maneuver.cancelCharge
@@ -9724,7 +9738,8 @@ function dimensionalHoleButtons(message, html, attack) {
   const container = html.querySelector(".message-content") ?? html;
   for (const entry of attack.targets ?? []) {
     const target = fromUuidSync(entry.uuid);
-    if (!target?.isOwner || (target.system.usedManeuvers ?? []).includes("encounter:dimensional-hole")) continue;
+    if (!target?.isOwner || (target.system.usedManeuvers ?? []).includes("encounter:dimensional-hole")
+      || (attack.noCounters ?? []).includes(target.uuid)) continue;
     const item = Array.from(target.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.portals
       && boughtTraits(each.system.unique, getTrait).some(trait => trait.dimensionalHole === true));
     if (!item) continue;
@@ -9762,6 +9777,223 @@ async function dimensionalHole(message, holder) {
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: holder }),
     content: `<div class="dbu-settled-note">Dimensional Hole: ${Handlebars.escapeExpression(attack.maneuverName)} goes to `
       + `${Handlebars.escapeExpression(into.name)} instead, its Combat Rolls Urgent.</div>` });
+}
+
+/** Position Change's card: its Clashes tallied, then its swap - two tokens' places, on the GM's client. */
+const POSITION_FLAG = "positionChange";
+
+/** "You cannot use this Unique Ability while in a Grapple or in the Pinned Combat Condition." */
+function positionHeld(actor) {
+  if (actor?.system?.grapple?.partner) return "in a Grapple";
+  if ((Number(actor?.system?.conditions?.pinned) || 0) > 0) return "Pinned";
+  return "";
+}
+
+/** What Position Change's bought Advancements let it do. */
+function positionTraits(actor, itemId) {
+  const unique = actor?.items?.get(itemId)?.system?.unique;
+  const bought = unique ? boughtTraits(unique, getTrait) : [];
+  return { items: bought.some(trait => trait.itemSwap === true), people: bought.some(trait => trait.peopleSwap === true),
+    sacrifice: bought.some(trait => trait.sacrificePlay === true) };
+}
+
+/**
+ * Position Change, before it is paid: "Target a Character within a Destructive Sphere AoE (centered on you)" - your
+ * targeted token, the Sphere the table's; Item Swap's "Instead of swapping places with an Opponent, steal a Basic Item";
+ * People Swap's "two targets within the AoE".
+ */
+export async function askPositionChange(actor, maneuver) {
+  const why = positionHeld(actor);
+  if (why) {
+    ui.notifications.warn(`${maneuver.name}: not while ${why}.`);
+    return null;
+  }
+  const targets = Array.from(game.user.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid));
+  if (!targets.length) {
+    ui.notifications.warn("Target who you swap with first.");
+    return null;
+  }
+  const can = positionTraits(actor, maneuver.itemId);
+  const options = [{ action: "swap", label: `Swap places with ${targets[0].name}` },
+    ...(can.items ? [{ action: "item", label: `Steal a Basic Item from ${targets[0].name}` }] : []),
+    ...((can.people && (targets.length >= 2)) ? [{ action: "people", label: `Swap ${targets[0].name} and ${targets[1].name}` }] : [])];
+  const mode = (options.length === 1) ? "swap" : await pick(maneuver.name, "Which?", options);
+  if (!mode) return null;
+  return { mode, uuids: ((mode === "people") ? targets.slice(0, 2) : [targets[0]]).map(target => target.uuid) };
+}
+
+/** Paid for: "Make a Clash (Cognitive) against that Character" - against each, People Swap's both. */
+export async function postPositionChange(actor, maneuver, plan) {
+  const targets = plan.uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  if (!targets.length) return null;
+  const said = { swap: "swap places", item: "steal a Basic Item", people: "swap them", sacrifice: "take the hit" };
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${said[plan.mode] ?? ""}</p>`,
+    flags: { [SCOPE]: { [POSITION_FLAG]: { casterUuid: actor.uuid, name: maneuver.name, mode: plan.mode,
+      targets: targets.map(target => ({ uuid: target.uuid, name: target.name, won: null })),
+      attackMessageId: plan.attackMessageId ?? "", settled: false, all: false, swapped: false } } } });
+  for (const target of targets) {
+    await postSaveClash(actor, target, { maneuverName: maneuver.name,
+      reason: (plan.mode === "people") ? "Win against both and they swap places." : `Win and you ${said[plan.mode]}.`,
+      saves: ["cognitive"], positionChange: { applied: false, cardId: card.id } });
+  }
+  return card;
+}
+
+/** Each Clash, tallied on the card; all of them won, what it does - every one is needed for People Swap. */
+async function settlePositionChange(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, positionChange: { ...clash.positionChange, applied: true } });
+  const card = game.messages.get(clash.positionChange.cardId ?? "");
+  const plan = card?.getFlag(SCOPE, POSITION_FLAG);
+  if (!plan || plan.settled) return;
+  const won = whoWonClash(clash.result) === "challenger";
+  const targets = plan.targets.map(entry => (entry.uuid === clash.defenderUuid) ? { ...entry, won } : entry);
+  const settled = targets.every(entry => entry.won !== null);
+  const all = settled && targets.every(entry => entry.won);
+  requestEdit(card, { type: "positionChange", position: { ...plan, targets, settled, all } });
+  if (!settled) return;
+  const caster = fromUuidSync(plan.casterUuid);
+  const target = fromUuidSync(targets[0].uuid);
+  if (plan.mode === "sacrifice") await sacrificeSettled(plan, caster, target, all);
+  if (!all || !caster || !target) return;
+  if (plan.mode === "item") return stealByPosition(card, caster, target, plan.name);
+  if (plan.mode !== "people") await grappleSwap(card, caster, target);
+}
+
+/**
+ * "If your target was in a Grapple as the Grappler, also move the Grappled so they are in the Melee Range of the Grappler
+ * (the exact Square is decided by the Grappler). If your target was the Grappled in a Grapple, they stop being the
+ * Grappled and you become the Grappled in their place."
+ */
+async function grappleSwap(card, caster, target) {
+  const partner = fromUuidSync(target.system.grapple?.partner ?? "");
+  if (!partner) return;
+  if (target.system.grapple.role === "grappler") {
+    return settledNote(card, `${partner.name} moves into ${target.name}'s Melee Range - a Square of ${target.name}'s choice.`);
+  }
+  await endGrapple(partner, target);
+  await beginGrapple(partner, caster);
+  await settledNote(card, `${caster.name} is Grappled by ${partner.name} in ${target.name}'s place.`);
+}
+
+/** Item Swap: "steal a Basic Item they possess that you're aware of. This cannot be an Accessory they have equipped." */
+async function stealByPosition(card, thief, victim, name) {
+  const pockets = Array.from(victim.items ?? []).filter(item => (item.type === "gear") && (item.system.itemType === "basic"));
+  if (!pockets.length) return settledNote(card, `${victim.name} has no Basic Item to take.`);
+  const chosen = await pick(`${name} - ${victim.name}`, `${thief.name} may steal one of ${victim.name}'s Basic Items.`,
+    pockets.map(item => ({ action: item.id, label: item.name })));
+  const item = chosen ? victim.items.get(chosen) : null;
+  if (!item) return settledNote(card, `${thief.name} takes nothing.`);
+  const data = item.toObject();
+  delete data._id;
+  if (data.system) data.system.equipped = false;
+  await requestCreateItem(thief, data);
+  await requestDeleteItem(victim, item.id);
+  await settledNote(card, `${thief.name} steals ${item.name} from ${victim.name}.`);
+}
+
+/** Its Swap button, once every Clash is won: the two tokens' places, for its user or a GM. */
+function renderPositionChange(message, html) {
+  const plan = message.getFlag(SCOPE, POSITION_FLAG);
+  if (!plan?.settled || !plan.all || plan.swapped || (plan.mode === "item")) return;
+  const caster = fromUuidSync(plan.casterUuid);
+  if (!caster?.isOwner && !game.user.isGM) return;
+  const [a, b] = (plan.mode === "people") ? plan.targets.map(entry => entry.uuid) : [plan.casterUuid, plan.targets[0].uuid];
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Swap";
+  button.dataset.tooltip = "Swap the two tokens' places on the scene";
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    requestSwap(a, b);
+    return requestEdit(message, { type: "positionChange", position: { ...plan, swapped: true } });
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/** Two tokens' places swapped - by the GM, whose the tokens all are. */
+async function swapTokens(aUuid, bUuid) {
+  const a = fromUuidSync(aUuid)?.getActiveTokens?.(false, true)?.[0];
+  const b = fromUuidSync(bUuid)?.getActiveTokens?.(false, true)?.[0];
+  if (!a || !b || (a.parent !== b.parent)) return ui.notifications.warn("Both tokens must be on the same scene.");
+  return a.parent.updateEmbeddedDocuments("Token", [{ _id: a.id, x: b.x, y: b.y }, { _id: b.id, x: a.x, y: a.y }]);
+}
+
+function requestSwap(aUuid, bUuid) {
+  if (game.user.isGM) return swapTokens(aUuid, bUuid);
+  if (!game.users.activeGM) return ui.notifications.warn("A GM must be connected to move the tokens.");
+  game.socket.emit(CHANNEL, { type: "swapTokens", aUuid, bUuid });
+}
+
+/**
+ * Sacrifice Play: "You may use the Position Change Unique Ability as a Counter Maneuver at the cost of 1 Counter Action.
+ * If you do, you must target a Character targeted by an Attacking Maneuver while you are not targeted by that same
+ * Attacking Maneuver." A button on the attack for each such character of yours, before it is rolled.
+ */
+function sacrificeButtons(message, html, attack) {
+  if (attack.result || attack.sacrifice) return;
+  const targeted = new Set((attack.targets ?? []).map(entry => entry.uuid));
+  const container = html.querySelector(".message-content") ?? html;
+  for (const actor of ownedCharacters()) {
+    if (targeted.has(actor.uuid) || (actor.uuid === attack.attackerUuid) || positionHeld(actor)) continue;
+    const item = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.positionChange
+      && positionTraits(actor, each.id).sacrifice);
+    if (!item || (maneuverUsesLeft(actor, uniqueDefinitionOf(item)) <= 0)) continue;
+    if (game.combat?.started && (actionsWithin(actor, "counter") < 1)) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-oos-button";
+    button.textContent = `Sacrifice Play (${actor.name})`;
+    button.dataset.tooltip = "Counter: a Clash (Cognitive) against one it targets - won, you swap places and become its target, with only your Dodge to answer it";
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return sacrificePlay(message, actor, item);
+    });
+    container.append(button);
+  }
+}
+
+async function sacrificePlay(message, actor, item) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || attack.sacrifice) return;
+  const targets = attack.targets ?? [];
+  const chosen = (targets.length === 1) ? targets[0].uuid
+    : await pick(item.name, "Take whose place?", targets.map(entry => ({ action: entry.uuid, label: entry.name })));
+  const target = chosen ? fromUuidSync(chosen) : null;
+  if (!target) return;
+  const maneuver = uniqueDefinitionOf(item);
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
+  if (!await spendActions(actor, 1, "counter")) {
+    await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  requestEdit(message, { type: "attack", attack: { ...attack,
+    sacrifice: { pending: true, casterUuid: actor.uuid, casterName: actor.name, targetUuid: target.uuid } } });
+  await postPositionChange(actor, maneuver, { mode: "sacrifice", uuids: [target.uuid], attackMessageId: message.id });
+}
+
+/**
+ * Its Clash, settled: "If you win the Clash, swap places with them. You become the target of that Attacking Maneuver and
+ * the targeted Character stops being a target for that Attacking Maneuver. You cannot use a Counter Maneuver in response
+ * to that Attacking Maneuver, but you may still roll your Dodge as usual." The attack, held while it was rolled, goes on.
+ */
+async function sacrificeSettled(plan, caster, target, won) {
+  const message = game.messages.get(plan.attackMessageId ?? "");
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack) return;
+  const released = { ...attack, sacrifice: { ...attack.sacrifice, pending: false, won } };
+  if (!won || !caster || !target) return settleAttack(message, released);
+  const swap = entry => (entry.uuid === target.uuid) ? { uuid: caster.uuid, name: caster.name } : entry;
+  return settleAttack(message, { ...released,
+    targets: (attack.targets ?? []).map(swap),
+    ...((attack.targetUuid === target.uuid) ? { targetUuid: caster.uuid, targetName: caster.name } : {}),
+    defences: (attack.defences ?? []).filter(entry => entry.uuid !== target.uuid),
+    ready: (attack.ready ?? []).filter(uuid => uuid !== target.uuid),
+    noCounters: [...(attack.noCounters ?? []), caster.uuid] });
 }
 
 /** Whether an attack was declared a Called Shot. */
@@ -12130,7 +12362,8 @@ function readyAttacker(message) {
 
 /** Write the attack back, and roll it if that was the last confirmation needed. */
 async function settleAttack(message, attack) {
-  if (!attackIsReady(attack) || duelRunning(attack) || endedByDuel(attack)) {
+  // Sacrifice Play's Clash, still to be rolled: who the attack is at waits on it.
+  if (!attackIsReady(attack) || duelRunning(attack) || endedByDuel(attack) || attack.sacrifice?.pending) {
     return requestEdit(message, { type: "attack", attack });
   }
   return resolveAttack(message, attack);
@@ -12813,6 +13046,7 @@ function awaitingWhom(attack) {
     ...((attack.ready ?? []).includes(attack.attackerUuid) ? [] : [attack.attackerName]),
     ...attackTargets(attack).filter(target => !(attack.ready ?? []).includes(target.uuid)).map(target => target.name)
   ];
+  if (attack.sacrifice?.pending) waiting.push(`${attack.sacrifice.casterName}'s Sacrifice Play`);
   return waiting.length ? `Waiting on ${waiting.map(name => Handlebars.escapeExpression(name)).join(", ")}` : "Rolling";
 }
 
@@ -17251,6 +17485,7 @@ function renderAttack(message, html) {
   container.append(card);
   if (attack.unitedFailed) return;
   dimensionalHoleButtons(message, html, attack);
+  sacrificeButtons(message, html, attack);
   if (endedByDuel(attack)) return;
 
   // An attack with an area reaches more than the one it was aimed at, and who it

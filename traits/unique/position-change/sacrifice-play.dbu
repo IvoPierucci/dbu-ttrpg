@@ -1,0 +1,21 @@
+id: sacrifice-play
+name: Sacrifice Play
+advancement: true
+prerequisite: N/A
+tpCost: 4
+# A button on an attack at somebody else, before it is rolled (chat.mjs sacrificeButtons): its KP and 1 Counter Action,
+# the attack held for its Clash; won, you are its target in their place, with your Dodge and no Counter Maneuver.
+sacrificePlay: true
+source: Core Rule
+description: >
+  Position Change as a Counter at 1 Counter Action, at a Character an attack targets: won, you swap places and become
+  its target - your Dodge, no Counter Maneuver.
+text: >
+  Sacrifice Play: You may take the place of an ally who is under attack, taking the hit for them instead.
+  –Prerequisites: N/A
+  –TP Cost: 4
+  –Effect: You may use the Position Change Unique Ability as a Counter Maneuver at the cost of 1 Counter Action. If you
+  do, you must target a Character targeted by an Attacking Maneuver while you are not targeted by that same Attacking
+  Maneuver. If you win the Clash, swap places with them. You become the target of that Attacking Maneuver and the
+  targeted Character stops being a target for that Attacking Maneuver. You cannot use a Counter Maneuver in response to
+  that Attacking Maneuver, but you may still roll your Dodge as usual.

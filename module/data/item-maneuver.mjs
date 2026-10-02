@@ -669,6 +669,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         /** Portals made two at a time - Portal Creation's 2 at one time - and how many are held now (chat.mjs postPortals). */
         portals: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         portalsHeld: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        /** A Clash (Cognitive) that swaps places - Position Change's (chat.mjs postPositionChange). */
+        positionChange: new fields.BooleanField({ required: true, initial: false }),
         /** How many Duplicate Minions it has made that stand. */
         duplicates: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /** A State it may only be used in - God Meteor's God Ki. */

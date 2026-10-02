@@ -1,0 +1,36 @@
+id: position-change
+name: Position Change
+uaType: magical
+prerequisite: 2+ Skill Ranks of Use Magic, Insight Score of 4+
+tpCost: 12
+type: instant
+actionCost: 0
+kiCostPerTier: 5
+# "Target a Character within a Destructive Sphere AoE (centered on you)" - your targeted token, the Sphere the table's -
+# "Make a Clash (Cognitive) against that Character. If you win, swap your places in the Battlefield" - a Swap button that
+# swaps the two tokens; the Grapple it changes, changed. Refused while in a Grapple or Pinned (chat.mjs
+# askPositionChange).
+positionChange: true
+source: Core Rule
+description: >
+  An Instant Clash (Cognitive) at a Character in a Destructive Sphere around you: won, you swap places - taking their
+  place in a Grapple as the Grappled. Not while in a Grapple or Pinned.
+text: >
+  Position Change: By linking your position to your opponent’s, you are able to swap places with them on the
+  battlefield.
+  –Ability Type: Magical
+  –Prerequisites: 2+ Skill Ranks of Use Magic, Insight Score of 4+
+  –TP Cost: 12
+  –KP Cost: 5(T)
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Target a Character within a Destructive Sphere AoE (centered on you). Make a Clash (Cognitive) against that
+  Character. If you win, swap your places in the Battlefield.
+
+  If your target was in a Grapple as the Grappler, also move the Grappled so they are in the Melee Range of the Grappler
+  (the exact Square is decided by the Grappler). If your target was the Grappled in a Grapple, they stop being the
+  Grappled and you become the Grappled in their place.
+
+  You cannot use this Unique Ability while in a Grapple or in the Pinned Combat Condition.

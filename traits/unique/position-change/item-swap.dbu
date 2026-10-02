@@ -1,0 +1,17 @@
+id: item-swap
+name: Item Swap
+advancement: true
+prerequisite: 2+ Skill Ranks of Thievery
+tpCost: 6
+# Asked when it is used: steal instead - a Basic Item of theirs, picked once the Clash is won. Which ones you are aware
+# of, the table's.
+itemSwap: true
+source: Core Rule
+description: >
+  Position Change can steal a Basic Item of theirs instead of swapping places.
+text: >
+  Item Swap: You may grab an item from the linked space rather than a person.
+  –Prerequisites: 2+ Skill Ranks of Thievery
+  –TP Cost: 6
+  –Effect: Instead of swapping places with an Opponent, steal a Basic Item they possess that you’re aware of. This
+  cannot be an Accessory they have equipped.

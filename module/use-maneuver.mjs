@@ -1874,6 +1874,7 @@ export function definitionOf(item) {
     paraPara: item.system.unique?.paraPara === true,
     petrifies: item.system.unique?.petrifies === true,
     portals: Number(item.system.unique?.portals) || 0,
+    positionChange: item.system.unique?.positionChange === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -3871,6 +3872,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let talking = null;
   let exploding = null;
   let waving = null;
+  let positioning = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4143,6 +4145,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         ui.notifications.warn(why);
         return false;
       }
+    }
+
+    // Position Change: who, and what it does to them - refused while in a Grapple or Pinned.
+    if (maneuver.positionChange) {
+      positioning = await (await import("./chat.mjs")).askPositionChange(actor, maneuver);
+      if (!positioning) return false;
     }
 
     // Portal Creation: "You can only possess 2 Portals at one time" - 4 with Warp Zone.
@@ -4764,6 +4772,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : maneuver.portals
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
+    : (maneuver.positionChange && positioning)
+    ? await (await import("./chat.mjs")).postPositionChange(actor, maneuver, positioning)
     : (maneuver.petrifies && targetActor)
     ? await (await import("./chat.mjs")).postPetrification(actor, maneuver, targetActor)
     : (maneuver.multiForm && forming)

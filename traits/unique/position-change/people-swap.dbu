@@ -1,0 +1,16 @@
+id: people-swap
+name: People Swap
+advancement: true
+prerequisite: 3+ Skill Ranks in Use Magic
+tpCost: 5
+# Two targeted, asked when it is used: a Clash against each, and both won, the Swap button swaps them.
+peopleSwap: true
+source: Core Rule
+description: >
+  Position Change at two targets: both Clashes won, they swap places instead of you.
+text: >
+  People Swap: You are able to swap around two combatants on the battlefield.
+  –Prerequisites: 3+ Skill Ranks in Use Magic
+  –TP Cost: 5
+  –Effect: Instead of a single target, you may choose two targets within the AoE for the effects of Position Change. If
+  you win the Clash against both Characters, you may swap their positions on the Battlefield instead of changing yours.
