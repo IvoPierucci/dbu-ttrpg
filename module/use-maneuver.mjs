@@ -1866,6 +1866,7 @@ export function definitionOf(item) {
     illusion: item.system.unique?.illusion === true,
     smashes: item.system.unique?.smashes === true,
     debilitates: item.system.unique?.debilitates === true,
+    lullaby: item.system.unique?.lullaby === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -2787,6 +2788,42 @@ async function askSmash(actor, maneuver, { targetUuid = "", combo = false } = {}
   return { use: chosen.use, uuids, knockback: chosen.knockback };
 }
 
+/**
+ * Lullaby Fist: "Target a Character within a Large Sphere AoE (centered on you)" - your targeted tokens, as many as it
+ * may (Multi-Sleep: "an additional Character"); "You can only target a Character once per Combat Encounter".
+ */
+async function askLullaby(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  const { boughtTraits } = await import("./unique.mjs");
+  const most = (Number(getTrait(unique.libraryId)?.lullabyTargets) || 1)
+    + boughtTraits(unique, getTrait).reduce((sum, trait) => sum + (Number(trait.lullabyMore) || 0), 0);
+  const targets = Array.from(game.user.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid));
+  if (!targets.length) {
+    ui.notifications.warn(`${maneuver.name}: target who it is aimed at first.`);
+    return null;
+  }
+  if (targets.length > most) {
+    ui.notifications.warn(`${maneuver.name} targets ${most} Character${(most === 1) ? "" : "s"} at most.`);
+    return null;
+  }
+  const done = (actor.system.usedManeuvers ?? []).filter(entry => entry.startsWith("encounter:lullaby."))
+    .map(entry => entry.slice("encounter:lullaby.".length));
+  const again = targets.find(other => done.includes(other.uuid));
+  if (again) {
+    ui.notifications.warn(`${maneuver.name} has already targeted ${again.name} this Combat Encounter.`);
+    return null;
+  }
+  const { whyHidden } = await import("./hidden.mjs");
+  const unseen = targets.map(other => whyHidden(actor, other)).find(Boolean);
+  if (unseen) {
+    ui.notifications.warn(unseen);
+    return null;
+  }
+  return { uuids: targets.map(other => other.uuid) };
+}
+
 /** God Meteor: who is inside the Destructive Sphere around the Square it falls on - ticked by the player. */
 async function askMeteor(actor, maneuver) {
   const pool = game.combat?.started
@@ -3704,6 +3741,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let shocking = null;
   let illusioning = null;
   let smashing = null;
+  let lulling = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3955,6 +3993,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Lullaby Fist: your targeted tokens - one, or more with Multi-Sleep - none already lulled this Encounter.
+    if (maneuver.lullaby) {
+      lulling = await askLullaby(actor, maneuver);
+      if (!lulling) return false;
+    }
+
     // Internal Assault: "your Debilitated Opponent" - one at a time.
     if (maneuver.debilitates && actor.items?.get(maneuver.itemId)?.system?.unique?.applied) {
       ui.notifications.warn(`${maneuver.name} already holds someone Debilitated.`);
@@ -4524,6 +4568,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.lullaby && lulling)
+    ? await (await import("./chat.mjs")).postLullaby(actor, maneuver, lulling)
     : (maneuver.debilitates && targetActor)
     ? await (await import("./chat.mjs")).postInternalAssault(actor, maneuver, targetActor)
     : (maneuver.smashes && smashing)

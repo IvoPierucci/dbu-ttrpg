@@ -1,0 +1,15 @@
+id: multi-sleep
+name: Multi-Sleep
+advancement: true
+prerequisite: N/A
+tpCost: 5
+# "You may target an additional Character."
+lullabyMore: 1
+source: Core Rule
+description: >
+  Lullaby Fist may target one more Character.
+text: >
+  Multi-Sleep: Your hypnotic prowess allows you to put many people to sleep.
+  –Prerequisites: N/A
+  –TP Cost: 5 TP
+  –Effect: You may target an additional Character.

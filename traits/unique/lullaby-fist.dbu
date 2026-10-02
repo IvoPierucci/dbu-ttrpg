@@ -1,0 +1,32 @@
+id: lullaby-fist
+name: Lullaby Fist
+uaType: both
+prerequisite: 2+ Skill Ranks in Bluff and Use Magic
+tpCost: 12
+type: standard
+actionCost: 2
+kiCostPerTier: 8
+# "Target a Character within a Large Sphere AoE (centered on you)" - your targeted token, the Sphere the table's; one
+# more with Multi-Sleep. "Make a Clash (Cognitive vs Corporeal/Impulsive/Cognitive/Morale) against that Opponent. If you
+# win, they gain the Sleeping Combat Condition" (chat.mjs postLullaby). "You can only target a Character once per Combat
+# Encounter" - who, kept among the Encounter's uses.
+lullaby: true
+lullabyTargets: 1
+source: Core Rule
+description: >
+  A Character within a Large Sphere around you: a Clash (Cognitive vs Corporeal/Impulsive/Cognitive/Morale) - won,
+  Sleeping. Each Character once an Encounter.
+text: >
+  Lullaby Fist: You are able to put your opponents to sleep with your hypnotic prowess.
+  –Ability Type: Technical/Magical
+  –Prerequisites: 2+ Skill Ranks in Bluff and Use Magic
+  –TP Cost: 12
+  –KP Cost: 8(T)
+  –Maneuver Type: Standard
+  –Action Cost: 2 Actions
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target a Character within a Large Sphere AoE (centered on you). Make a Clash (Cognitive vs
+  Corporeal/Impulsive/Cognitive/Morale) against that Opponent. If you win, they gain the Sleeping Combat Condition.
+
+  You can only target a Character once per Combat Encounter with the effects of Lullaby Fist.

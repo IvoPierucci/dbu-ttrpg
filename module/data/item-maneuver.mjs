@@ -652,6 +652,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         upkeepKiPerBaseTier: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /** The Size it makes you count as while applied - Ki Avatar's Gigantic. */
         avatarSize: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** A Clash that puts its targets to sleep, each once an Encounter - Lullaby Fist's (chat.mjs postLullaby). */
+        lullaby: new fields.BooleanField({ required: true, initial: false }),
         /** A State it may only be used in - God Meteor's God Ki. */
         requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */

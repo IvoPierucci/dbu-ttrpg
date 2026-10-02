@@ -610,6 +610,10 @@ async function applyClash(messageId, clash) {
     else await settledNote(message, `${clash.defenderName} stays Hidden.`);
   }
 
+  if (clash.lullaby && clash.result && !clash.lullaby.applied) {
+    await settleLullaby(message, clash);
+  }
+
   if (clash.debilitate && clash.result && !clash.debilitate.applied) {
     await settleDebilitate(message, clash);
   }
@@ -9215,6 +9219,38 @@ async function judoFlip(message, clash, actor, target) {
   await settledNote(message, `${target.name} is knocked Prone.`);
   const grounded = !((Number(actor.system.battlefield?.highEnvironment) || 0) > 0);
   if (clash.judo.punish && grounded) await takeCollisionDamage(target);
+}
+
+/**
+ * Lullaby Fist, used: each target recorded for the Encounter, and "a Clash (Cognitive vs
+ * Corporeal/Impulsive/Cognitive/Morale)" against each.
+ */
+export async function postLullaby(actor, maneuver, plan) {
+  await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []),
+    ...plan.uuids.map(uuid => `encounter:lullaby.${uuid}`)] });
+  let card = null;
+  for (const uuid of plan.uuids) {
+    const target = fromUuidSync(uuid);
+    if (!target) continue;
+    card = await postSaveClash(actor, target, {
+      maneuverName: maneuver.name,
+      reason: `Win and ${target.name} is Sleeping.`,
+      saves: ["cognitive"],
+      defenderSaves: ["corporeal", "impulsive", "cognitive", "morale"],
+      lullaby: { applied: false }
+    }) ?? card;
+  }
+  return card;
+}
+
+/** Lullaby Fist's Clash, won: "they gain the Sleeping Combat Condition". */
+async function settleLullaby(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, lullaby: { ...clash.lullaby, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return;
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "sleeping", Math.max(1, Number(target.system.conditions?.sleeping) || 0));
 }
 
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
