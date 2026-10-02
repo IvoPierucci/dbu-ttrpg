@@ -1,0 +1,19 @@
+id: solar-flare-x100
+name: Solar Flare x100
+advancement: true
+prerequisite: Force Score of 10+
+tpCost: 8
+# "Increase the Magnitude of Solar Flare's AoE by 1 category" - a Destructive Cone, said on the card. "While an Opponent
+# suffers from the Blinded Combat Condition through the effects of Solar Flare, reduce their Clairvoyance Skill Checks by
+# 4" - the Solar Flared mark, on the same clock as the Blinded.
+flareMagnitudeSteps: 1
+flareClairvoyance: true
+source: Core Rule
+description: >
+  Solar Flare's Cone one Magnitude larger; Blinded by it, Clairvoyance Skill Checks 4 lower.
+text: >
+  Solar Flare x100: Your blinding flash is larger and brighter.
+  –Prerequisites: Force Score of 10+
+  –TP Cost: 8
+  –Effect: Increase the Magnitude of Solar Flare’s AoE by 1 category. While an Opponent suffers from the Blinded Combat
+  Condition through the effects of Solar Flare, reduce their Clairvoyance Skill Checks by 4.

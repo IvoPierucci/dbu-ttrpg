@@ -1879,6 +1879,7 @@ export function definitionOf(item) {
     seals: item.system.unique?.seals === true,
     secondSight: item.system.unique?.secondSight === true,
     shapeshift: item.system.unique?.shapeshift === true,
+    solarFlare: item.system.unique?.solarFlare === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -3878,6 +3879,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let waving = null;
   let positioning = null;
   let shaping = null;
+  let flaring = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4263,6 +4265,16 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const size = larger || unique?.sphereMagnitude || "minor";
       waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
       if (!waving) return false;
+    }
+
+    // Solar Flare: "all Opponents within a Huge Cone AoE" - the ones targeted.
+    if (maneuver.solarFlare) {
+      flaring = [...new Set(Array.from(game.user.targets ?? []).map(token => token.actor)
+        .filter(other => other && (other.uuid !== actor.uuid)).map(other => other.uuid))];
+      if (!flaring.length) {
+        ui.notifications.warn(`${maneuver.name}: target the Opponents in its Cone first.`);
+        return false;
+      }
     }
 
     // Explosion Sorcery: "Target a Character for each Action spent" - the ones targeted.
@@ -4781,6 +4793,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : maneuver.portals
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
+    : (maneuver.solarFlare && flaring)
+    ? await (await import("./chat.mjs")).postSolarFlare(actor, maneuver, flaring)
     : (maneuver.shapeshift && shaping)
     ? await (await import("./chat.mjs")).postShapeshift(actor, maneuver, shaping)
     : (maneuver.secondSight && targetActor)

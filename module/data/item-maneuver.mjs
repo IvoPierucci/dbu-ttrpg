@@ -680,6 +680,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         /** Another shape - Shapeshift's (chat.mjs postShapeshift) - and, while applied, its Size, Bestial Traits, form
          *  (a Vehicle or a Weapon, the table's) and turns left (0 is no limit). */
         shapeshift: new fields.BooleanField({ required: true, initial: false }),
+        /** A Cone of light - Solar Flare's (chat.mjs postSolarFlare). */
+        solarFlare: new fields.BooleanField({ required: true, initial: false }),
         shapeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeBestial: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         shapeForm: new fields.StringField({ required: true, blank: true, initial: "" }),

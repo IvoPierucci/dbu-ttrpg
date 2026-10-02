@@ -1,0 +1,18 @@
+id: solar-flared
+name: Solar Flared
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Solar Flare x100's mark beside the Blinded it gave, on the same clock - to the end of their next
+# turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Blinded by Solar Flare x100: your Clairvoyance Skill Checks 4 lower.
+text: >
+  Solar Flared: "While an Opponent suffers from the Blinded Combat Condition through the effects of Solar Flare, reduce
+  their Clairvoyance Skill Checks by 4."
+
+---
+
+[passive]
+skill.clairvoyance.bonus -= 4;

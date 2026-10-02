@@ -1,0 +1,28 @@
+id: solar-flare
+name: Solar Flare
+uaType: technical
+prerequisite: Force Score of 4+
+tpCost: 10
+type: standard
+actionCost: 1
+kiCostPerTier: 5
+# "Make a Clash (Impulsive) against all Opponents within a Huge Cone AoE (the direction is decided by you)" - your
+# targeted tokens, the Cone the table's (Destructive with Solar Flare x100). "If you win, they suffer from the Blinded
+# Combat Condition until the end of their next turn" - on their own clock; with Solar Flare x100, the Solar Flared mark
+# beside it: their Clairvoyance Skill Checks 4 lower while it lasts (chat.mjs postSolarFlare).
+solarFlare: true
+source: Core Rule
+description: >
+  A Clash (Impulsive) against every Opponent in a Huge Cone: won, Blinded until the end of their next turn.
+text: >
+  Solar Flare: You create a blinding flash of light, rendering anyone who sees it temporarily disabled.
+  –Ability Type: Technical
+  –Prerequisites: Force Score of 4+
+  –TP Cost: 10
+  –KP Cost: 5(T)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Make a Clash (Impulsive) against all Opponents within a Huge Cone AoE (the direction is decided by you). If you
+  win, they suffer from the Blinded Combat Condition until the end of their next turn.

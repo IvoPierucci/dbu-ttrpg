@@ -584,6 +584,10 @@ async function applyClash(messageId, clash) {
     await settleSnare(message, clash);
   }
 
+  if (clash.solarFlare && clash.result && !clash.solarFlare.applied) {
+    await settleSolarFlare(message, clash);
+  }
+
   if (clash.sealing && clash.result && !clash.sealing.applied) {
     await settleSealing(message, clash);
   }
@@ -10608,6 +10612,39 @@ function renderShapeshift(message, html) {
     await applyShape(actor, item, plan);
   });
   (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/** Solar Flare, used: its Cone said, and "a Clash (Impulsive)" against each Opponent targeted in it. */
+export async function postSolarFlare(actor, maneuver, uuids) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  const bought = unique ? boughtTraits(unique, getTrait) : [];
+  const steps = bought.reduce((sum, trait) => sum + (Number(trait.flareMagnitudeSteps) || 0), 0);
+  const clairvoyance = bought.some(trait => trait.flareClairvoyance === true);
+  const { MAGNITUDES } = await import("./maneuvers.mjs");
+  const magnitude = MAGNITUDES[Math.min(MAGNITUDES.length - 1, MAGNITUDES.indexOf("huge") + steps)];
+  const targets = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: a ${magnitude.charAt(0).toUpperCase()}${magnitude.slice(1)} Cone - `
+      + `${Handlebars.escapeExpression(targets.map(target => target.name).join(", "))}</p>` });
+  for (const target of targets) {
+    await postSaveClash(actor, target, { maneuverName: maneuver.name,
+      reason: `Win and ${target.name} is Blinded until the end of their next turn.`,
+      saves: ["impulsive"], solarFlare: { applied: false, clairvoyance } });
+  }
+  return card;
+}
+
+/**
+ * Its Clash, won: "they suffer from the Blinded Combat Condition until the end of their next turn" - on their own clock -
+ * and with Solar Flare x100 the Solar Flared mark beside it, on the same.
+ */
+async function settleSolarFlare(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, solarFlare: { ...clash.solarFlare, applied: true } });
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target || (whoWonClash(clash.result) !== "challenger")) return;
+  await markUntilNextTurn(target, target, "blinded", 1, "end", clash.maneuverName);
+  if (clash.solarFlare.clairvoyance) await markUntilNextTurn(target, target, "solar-flared", 1, "end", clash.maneuverName);
+  await settledNote(message, `${target.name} is Blinded until the end of their next turn.`);
 }
 
 /** Whether an attack was declared a Called Shot. */
