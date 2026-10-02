@@ -1,0 +1,32 @@
+id: false-courage
+name: False Courage
+uaType: technical
+prerequisite: Personality Score of 4+
+tpCost: 8
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 4
+source: Core Rule
+description: >
+  Combat Rolls 1(T) lower and Soak Value 2(T) higher, until the start of your next turn.
+text: >
+  False Courage: Putting on a facade of bravado that you absolutely do not feel, you prepare for danger.
+  –Ability Type: Technical
+  –Prerequisites: Personality Score of 4+
+  –TP Cost: 8
+  –KP Cost: 4(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: Free
+  –Passive Bonus: N/A
+  –Effect: Reduce your Combat Rolls by 1(T), but increase your Soak Value by 2(T) until the start of your next turn.
+
+---
+
+# The whole of it is a duration: the False Courage mark (conditions/false-courage-mark.dbu) carries both numbers, and a start
+# edge lifts it as your next turn begins - Brace's clock.
+#
+# "Minions: Free." There are no Minions in this system; carried as printed, as the Brace and Soar files carry theirs.
+[on used]
+gain(false-courage-mark);
+expires(false-courage-mark, start-of-next-turn);

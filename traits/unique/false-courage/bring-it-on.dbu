@@ -1,0 +1,21 @@
+id: bring-it-on
+name: Bring it On!
+advancement: true
+prerequisite: Personality Score of 8+
+tpCost: 12
+source: Core Rule
+description: >
+  False Courage no longer lowers your Combat Rolls.
+text: >
+  Bring it On!: No longer merely a facade, your bravery is very much the real deal, now.
+  –Prerequisites: Personality Score of 8+
+  –TP Cost: 12
+  –Effect: Do not reduce your Combat Rolls through the effects of False Courage.
+
+---
+
+# The mark's 1(T) off the Combat Rolls given back while it is held - the Soak Value it gives stays.
+[passive]
+if (hasCondition("false-courage-mark")) {
+  combatRolls += 1(T);
+}

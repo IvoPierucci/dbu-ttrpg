@@ -1,0 +1,20 @@
+id: false-courage-mark
+name: False Courage
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the False Courage entry names none. A duration held as a mark, Braced's shape.
+combatCondition: no
+source: Core Rule
+description: >
+  Combat Rolls 1(T) lower, Soak Value 2(T) higher, until the start of your next turn.
+text: >
+  False Courage: the False Courage Unique Ability's mark. "Reduce your Combat Rolls by 1(T), but increase your Soak
+  Value by 2(T) until the start of your next turn."
+
+---
+
+# The name is this system's: something has to hold "until the start of your next turn", and a mark with a clock on it
+# is what holds a duration here. Bring It On! puts the 1(T) back while it is held (its own file).
+[passive]
+combatRolls -= 1(T);
+soakValue += 2(T);
