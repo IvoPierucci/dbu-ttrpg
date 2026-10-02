@@ -72,6 +72,13 @@
                     data-tooltip="Fill in from this sheet as it stands">&#8635;</button>
           </div>
           {{/if}}
+          {{#if row.finish}}
+          <div class="unique-resource">
+            <span data-tooltip="The Signature Technique declared">{{row.finish.technique}}</span>
+            <button type="button" class="dbu-clash-button" data-action="releaseFinish" data-item-id="{{row.itemId}}"
+                    data-tooltip="Instant: lose every Finisher and stop declaring it">Release</button>
+          </div>
+          {{/if}}
           {{#if row.moon}}
           <div class="unique-resource">
             <span data-tooltip="False Moon">{{row.moon.label}}</span>

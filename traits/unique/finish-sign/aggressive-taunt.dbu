@@ -1,0 +1,19 @@
+id: aggressive-taunt
+name: Aggressive Taunt
+advancement: true
+prerequisite: Insight Score of 8+
+tpCost: 10
+# "If you have dealt Damage to an Opponent with 2+ Attacking Maneuvers on your turn, lower the Action Cost of this Unique
+# Ability to 1 until the end of your turn." The attacks that dealt Damage on your turn are counted as the Damage lands
+# (chat.mjs applyAttackDamage); at two, Finish Sign costs 1 Action this turn (use-maneuver.mjs).
+taunts: true
+source: Core Rule
+description: >
+  Two of your Attacking Maneuvers dealt Damage this turn: Finish Sign costs 1 Action for the rest of it.
+text: >
+  Aggressive Taunt: You’ve learned to blend aggression into your cockiness, shoving your superiority into your
+  Opponent’s face while they’re still reeling from your assault.
+  –Prerequisites: Insight Score of 8+
+  –TP Cost: 10
+  –Effect: If you have dealt Damage to an Opponent with 2+ Attacking Maneuvers on your turn, lower the Action Cost of
+  this Unique Ability to 1 until the end of your turn.

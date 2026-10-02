@@ -630,6 +630,10 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         fakesDeath: new fields.BooleanField({ required: true, initial: false }),
         /** A False Moon, counted: its Combat Rounds from the file, and how many are left of one made - Fake Moon's. */
         fakeMoon: new fields.BooleanField({ required: true, initial: false }),
+        /** Finish Sign's: a Signature Technique declared, and Finisher stacks for it (chat.mjs postFinishSign). */
+        finishSign: new fields.BooleanField({ required: true, initial: false }),
+        /** The Signature Technique it declared, by its Item's id - blank while none is. */
+        finishTechnique: new fields.StringField({ required: true, blank: true, initial: "" }),
         moonRounds: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /** Rounds left of the False Moon applied; 0 while applied is the rest of the Encounter (Lasting Moon). */
         moonLeft: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),

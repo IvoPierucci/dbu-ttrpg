@@ -8205,6 +8205,79 @@ export async function tickFalseMoons(actor) {
   }
 }
 
+/** Finish Sign held with a Signature Technique declared: that Technique's definition, or null. */
+export function finishDeclared(actor) {
+  const item = Array.from(actor?.items ?? []).find(each => (each.type === "maneuver")
+    && each.system?.unique?.finishSign && each.system.unique.finishTechnique);
+  return item ? (actor.items.get(item.system.unique.finishTechnique) ?? null) : null;
+}
+
+/**
+ * Finish Sign, used: "Declare a Signature Technique" - and "Each time you use Finish Sign with a declared Signature
+ * Technique (including the initial use of Finish Sign), gain a stack of 'Finisher' (max. 7)."
+ */
+export async function postFinishSign(actor, maneuver, techniqueId) {
+  const item = actor.items?.get(maneuver.itemId);
+  const technique = actor.items?.get(techniqueId);
+  if (!item || !technique) return null;
+  await item.update({ "system.unique.finishTechnique": techniqueId });
+  const stacks = Math.min(7, (Number(actor.system.resources?.finisher?.stacks) || 0) + 1);
+  await setResource(actor, "finisher", stacks);
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(technique.name)} - `
+      + `Finisher ${stacks}</p>` });
+}
+
+/**
+ * The declared Signature Technique used: "you must convert all of your Finisher stacks into Energy Charges for that
+ * Signature Technique" - and with it used, Finish Sign declares nothing. How many Charges that came to.
+ */
+export async function spendFinisher(actor, techniqueId) {
+  const item = Array.from(actor.items ?? []).find(each => (each.type === "maneuver")
+    && each.system?.unique?.finishSign && (each.system.unique.finishTechnique === techniqueId));
+  if (!item || !techniqueId) return 0;
+  const stacks = Number(actor.system.resources?.finisher?.stacks) || 0;
+  await setResource(actor, "finisher", 0);
+  await item.update({ "system.unique.finishTechnique": "" });
+  return stacks;
+}
+
+/**
+ * "As an Instant Maneuver, you can lose all stacks of Finisher, stop declaring your Signature Technique, and stop
+ * applying all effects of Finish Sign."
+ */
+export async function releaseFinishSign(actor, item) {
+  await setResource(actor, "finisher", 0);
+  await item.update({ "system.unique.finishTechnique": "" });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)}: released.</div>` });
+}
+
+/** This turn of theirs, as Aggressive Taunt counts it. */
+function turnKey() {
+  const combat = game.combat;
+  return combat?.started ? `${combat.id}:${combat.round}:${combat.turn}` : "";
+}
+
+/** An attack of theirs dealt Damage on their own turn - counted once an attack, for Aggressive Taunt. */
+async function countDamagingAttack(attacker, messageId) {
+  const { isTheirTurn } = await import("./combat.mjs");
+  const key = turnKey();
+  if (!key || !isTheirTurn(attacker)) return;
+  const held = attacker.getFlag?.(SCOPE, "damagingAttacks") ?? {};
+  const ids = (held.key === key) ? (held.ids ?? []) : [];
+  if (ids.includes(messageId)) return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.damagingAttacks`]: { key, ids: [...ids, messageId] } });
+}
+
+/** Aggressive Taunt bought, and 2+ of their Attacking Maneuvers dealt Damage on this, their turn. */
+export function tauntsNow(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique || !boughtTraits(unique, getTrait).some(trait => trait.taunts === true)) return false;
+  const held = actor.getFlag?.(SCOPE, "damagingAttacks") ?? {};
+  return Boolean(turnKey()) && (held.key === turnKey()) && ((held.ids ?? []).length >= 2);
+}
+
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
 export async function offerOutOfSequence(actor, offer) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
@@ -14314,6 +14387,10 @@ async function applyAttackDamage(message, target, attack) {
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
   if (arms) await offerArmsHit(armsUser, target);
+  // Aggressive Taunt counts the attacks that dealt Damage to an Opponent on their maker's turn.
+  if (armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) {
+    await countDamagingAttack(armsUser, message.id);
+  }
   // Fake Death, on Damage from an Opponent's Attacking Maneuver; Like the Dead, struck while faking it.
   if (armsUser && (armsUser.uuid !== target.uuid) && own.hit && !isAbsoluteMiss(own)) {
     await offerFakeDeath(target, armsUser, { damaged: damage > 0 });

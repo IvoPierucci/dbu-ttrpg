@@ -384,6 +384,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       cageHit: DBUCharacterSheet._onCageHit,
       recordKept: DBUCharacterSheet._onRecordKept,
       destroyMoon: DBUCharacterSheet._onDestroyMoon,
+      releaseFinish: DBUCharacterSheet._onReleaseFinish,
       cageClash: DBUCharacterSheet._onCageClash,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
@@ -1712,6 +1713,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Copy Being: the Maximums kept while a copy of somebody else's sheet is used.
         kept: (unique.keepsPools && !grantedBy) ? { ...unique.kept } : null,
         // Fake Moon: the False Moon standing, and its Rounds left - none counted for the rest of the Encounter.
+        // Finish Sign: the Signature Technique declared, released as an Instant from here.
+        finish: (unique.finishSign && unique.finishTechnique)
+          ? { technique: this.actor.items.get(unique.finishTechnique)?.name ?? "" } : null,
         moon: (unique.fakeMoon && unique.applied) ? { label: (Number(unique.moonLeft) || 0)
           ? `${unique.moonLeft} Combat Round${(unique.moonLeft === 1) ? "" : "s"} left` : "Until the end of the Encounter" } : null,
         // Cage of Light, standing: its Life Point reductions and its Might Clash, at the one targeted.
@@ -1860,6 +1864,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** An applied Unique Ability stopped - the Atmospheric Bubble, where there is no turn to stop it at. */
+  /** Finish Sign, released: "As an Instant Maneuver, you can lose all stacks of Finisher, stop declaring...". */
+  static async _onReleaseFinish(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item?.system?.unique?.finishTechnique) return;
+    const { whyNotAnotherInstant, recordManeuverType } = await import("../maneuvers.mjs");
+    const blocked = whyNotAnotherInstant(this.actor);
+    if (blocked) return ui.notifications.warn(`${this.actor.name}: ${blocked}`);
+    const { releaseFinishSign } = await import("../chat.mjs");
+    await releaseFinishSign(this.actor, item);
+    return recordManeuverType(this.actor, "instant");
+  }
+
   /** Fake Moon: the False Moon destroyed - "you apply the effects as if it disappeared". */
   static async _onDestroyMoon(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);

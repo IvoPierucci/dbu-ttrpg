@@ -204,6 +204,15 @@ function permitted(actor, maneuver) {
   // declared attack, which is the whole point, and the Energy Charge Maneuver, which is
   // what "any use of the Energy Charge Maneuver instead grants an additional charge"
   // takes for granted.
+  // Finish Sign: "Until you use your declared Signature Technique, you cannot use the Energy Charge Maneuver".
+  const finishing = maneuver.charge ? Array.from(actor.items ?? []).find(each => (each.type === "maneuver")
+    && each.system?.unique?.finishSign && each.system.unique.finishTechnique) : null;
+  const declaredFor = finishing ? actor.items.get(finishing.system.unique.finishTechnique) : null;
+  if (declaredFor) {
+    ui.notifications.warn(`${actor.name} declared ${declaredFor.name} through Finish Sign: no Energy Charge until it is used.`);
+    return false;
+  }
+
   const charging = actor.system.charging;
   if (charging?.maneuverId && !maneuver.charge
     && (maneuver.itemId !== charging.maneuverId)
@@ -1849,6 +1858,7 @@ export function definitionOf(item) {
     waves: item.system.unique?.waves === true,
     fakesDeath: item.system.unique?.fakesDeath === true,
     fakeMoon: item.system.unique?.fakeMoon === true,
+    finishSign: item.system.unique?.finishSign === true,
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
@@ -2530,6 +2540,37 @@ function askBinding(actor, maneuver) {
  * of)." Who is an Opponent is asked - everyone in the Combat Encounter (or the targeted, outside one), ticked but for
  * whose Melee Range you stand in and whom you are already Hidden from. Null if nobody is picked.
  */
+/**
+ * Finish Sign's Signature Technique: the one declared, while one is - "nor can you declare a different Signature
+ * Technique" - or one picked from those held. Null if there is none, or none was picked.
+ */
+async function askFinishSign(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  const held = signatureTechniquesOf(actor);
+  if (unique.finishTechnique && held.some(entry => entry.itemId === unique.finishTechnique)) {
+    return { itemId: unique.finishTechnique };
+  }
+  if (!held.length) {
+    ui.notifications.warn(`${actor.name} has no Signature Technique to declare.`);
+    return null;
+  }
+  const escape = Handlebars.escapeExpression;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<select name="technique" class="dbu-gear-pick">${held.map(entry =>
+      `<option value="${escape(entry.itemId)}">${escape(entry.name)}</option>`).join("")}</select>`,
+    buttons: [
+      { action: "declare", label: "Declare", default: true, callback: (event, button, dialog) =>
+        dialog.element.querySelector('select[name="technique"]')?.value ?? "" },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  return (chosen && (chosen !== "cancel")) ? { itemId: chosen } : null;
+}
+
 async function askHide(actor, maneuver, { burst = false, area = "Minor Sphere", all = false } = {}) {
   const { isHiddenFrom } = await import("./hidden.mjs");
   const pool = game.combat?.started
@@ -3079,6 +3120,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // Checked here and spent further down, so that a Maneuver abandoned at the target or
   // Profile prompt costs nothing - the same way its Ki Point Cost is handled.
   // Out of sequence - a Technique through Counter or Exploit - its Action Cost is waived.
+  // Aggressive Taunt: "If you have dealt Damage to an Opponent with 2+ Attacking Maneuvers on your turn, lower the
+  // Action Cost of this Unique Ability to 1 until the end of your turn."
+  if (maneuver.finishSign) {
+    const { tauntsNow } = await import("./chat.mjs");
+    if (tauntsNow(actor, maneuver)) maneuver = { ...maneuver, actionCost: 1 };
+  }
+
   if (!outOfSequence && !canAffordActions(actor, maneuver)) return false;
 
   // "Action Cost: Variable (2~3 Actions)" - so the player says how many, before anything
@@ -3353,6 +3401,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let exploding = null;
   let waving = null;
   let faking = null;
+  let finishing = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3604,6 +3653,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Finish Sign: the Signature Technique declared - asked the first time, the same one every time after.
+    if (maneuver.finishSign) {
+      finishing = await askFinishSign(actor, maneuver);
+      if (!finishing) return false;
+    }
+
     // Fake Moon: "Only one False Moon can exist on a Battlefield at a time" - yours, at least, while it stands.
     if (maneuver.fakeMoon && actor.items?.get(maneuver.itemId)?.system?.unique?.applied) {
       ui.notifications.warn(`${actor.name}'s False Moon still stands.`);
@@ -4021,9 +4076,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // Whatever was charged into this one comes with it, and the charging ends here -
   // Guard Down with it. Only for the Maneuver that was actually declared: throwing a
   // different attack cannot collect somebody else's charges, and cannot happen anyway.
-  const charges = (maneuver.itemId && (maneuver.itemId === actor.system.charging?.maneuverId))
+  const charges = ((maneuver.itemId && (maneuver.itemId === actor.system.charging?.maneuverId))
     ? await collectCharges(actor)
-    : 0;
+    : 0)
+    // Finish Sign: "When you use your declared Signature Technique, you must convert all of your Finisher stacks into
+    // Energy Charges for that Signature Technique."
+    + (maneuver.signature ? await (await import("./chat.mjs")).spendFinisher(actor, maneuver.itemId) : 0);
 
   // The height, now that it is certain to happen. The mark is the file's - `[on used]`
   // gains it and clocks it - and this is the half a script cannot do: a rank is a field,
@@ -4119,6 +4177,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.finishSign && finishing)
+    ? await (await import("./chat.mjs")).postFinishSign(actor, maneuver, finishing.itemId)
     : (maneuver.fakesDeath && faking)
     ? await (await import("./chat.mjs")).postFakeDeath(actor, maneuver, faking.uuids)
     : (maneuver.waves && waving)

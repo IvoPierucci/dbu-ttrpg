@@ -1,0 +1,40 @@
+id: finish-sign
+name: Finish Sign
+uaType: technical
+prerequisite: Personality Score of 8+
+tpCost: 15
+type: standard
+actionCost: 2
+kiCostPerBaseTier: 4
+# "Declare a Signature Technique" - asked the first time, kept on the Item until it is used or released - and "gain a
+# stack of 'Finisher' (max. 7)" each use (chat.mjs postFinishSign). Declared: no Energy Charge Maneuver; the Technique
+# used, every stack an Energy Charge on it (use-maneuver.mjs, with what was charged); Mandatory Charge counts them
+# (technique-use.mjs). Released as an Instant from its entry.
+finishSign: true
+resource: finisher
+resourceMax: 7
+resourceLabel: Finisher
+source: Core Rule
+description: >
+  Declare a Signature Technique and gain a Finisher (max 7) each use; no Energy Charge Maneuver until the Technique is
+  used, when every Finisher becomes an Energy Charge on it. Released as an Instant.
+text: >
+  Finish Sign: You are able to gather up power for an overwhelming attack under the guise of a cocky gesture.
+  –Ability Type: Technical
+  –Prerequisites: Personality Score of 8+
+  –TP Cost: 15
+  –KP Cost: 4(bT)
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 2 Actions
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Declare a Signature Technique. Until you use your declared Signature Technique, you cannot use the Energy
+  Charge Maneuver, nor can you declare a different Signature Technique through the effects of Finish Sign.
+
+  Each time you use Finish Sign with a declared Signature Technique (including the initial use of Finish Sign), gain a
+  stack of ‘Finisher’ (max. 7). When you use your declared Signature Technique, you must convert all of your Finisher
+  stacks into Energy Charges for that Signature Technique. Stacks of Finisher are considered to be uses of the Energy
+  Charge Maneuver for the sake of the Mandatory Charge Disadvantage.
+
+  As an Instant Maneuver, you can lose all stacks of Finisher, stop declaring your Signature Technique, and stop
+  applying all effects of Finish Sign.

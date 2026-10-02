@@ -599,6 +599,10 @@ export function registerCombatHooks() {
       for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.fakeMoon)) {
         await falseMoonGone(actor, item);
       }
+      // Finish Sign: its Finisher stacks are a Resource and end with the Encounter - and what they were for with them.
+      for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.finishTechnique)) {
+        await item.update({ "system.unique.finishTechnique": "" });
+      }
       await actor.update({
         "system.talentUses.encounter": [],
         "system.armedTalents": [],

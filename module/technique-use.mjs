@@ -116,7 +116,12 @@ export function whyNotTechnique(actor, technique, { via = "", ascended = false }
   const mandatory = ranks(technique, "mandatory-charge");
   if (mandatory) {
     const charging = actor.system?.charging ?? {};
-    const uses = (charging.maneuverId === technique.itemId) ? (Number(charging.charges) || 0) : 0;
+    const uses = ((charging.maneuverId === technique.itemId) ? (Number(charging.charges) || 0) : 0)
+      // Finish Sign: "Stacks of Finisher are considered to be uses of the Energy Charge Maneuver for the sake of the
+      // Mandatory Charge Disadvantage" - while it is this Technique that is declared.
+      + (Array.from(actor.items ?? []).some(item => (item.type === "maneuver") && item.system?.unique?.finishSign
+        && (item.system.unique.finishTechnique === technique.itemId))
+        ? (Number(actor.system?.resources?.finisher?.stacks) || 0) : 0);
     if (uses < (2 * mandatory)) return `${name} needs ${2 * mandatory} uses of Energy Charge first (${uses} so far).`;
   }
 
