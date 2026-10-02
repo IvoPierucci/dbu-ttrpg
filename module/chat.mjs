@@ -6,7 +6,7 @@ import { featureDef } from "./technique.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
-import { actionsLeft, refundActions, spendActions, strikeLightning, weatherToRoll }
+import { actionsLeft, actionsWithin, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
 import { activeBuddy, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
   recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
@@ -6110,13 +6110,13 @@ async function respondDialog(message, respondable) {
         : waiting ? "the Duel on this attack has to have a winner first" : "";
       // The Duel Maneuver: judged against the attack, and joinable while one is still being set up.
       if (maneuver.duel && unresolved && !duelSideOf(attack, actor.uuid)) {
-        reason = whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsLeft(actor, "counter") : 1 });
+        reason = whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsWithin(actor, "counter") : 1 });
         blocked = Boolean(reason);
       }
       // Mirrored Attack's Duplicate "must respond with the Duel Maneuver (if possible)": possible, and no Duel begun yet.
       if (maneuver.mirror && unresolved && !waiting) {
         reason = attack?.duel ? "a Duel is already on this attack"
-          : whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsLeft(actor, "counter") : 1 });
+          : whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsWithin(actor, "counter") : 1 });
         blocked = Boolean(reason);
       }
 
@@ -8233,7 +8233,7 @@ function desperateButton(message, offer, row) {
   if (!dodger?.isOwner) return;
   const item = Array.from(dodger.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.dodgesExploits);
   if (!item || (maneuverUsesLeft(dodger, uniqueDefinitionOf(item)) <= 0)) return;
-  if (game.combat?.started && (actionsLeft(dodger, "counter") < 1)) return;
+  if (game.combat?.started && (actionsWithin(dodger, "counter") < 1)) return;
   const button = document.createElement("button");
   button.type = "button";
   button.className = "dbu-oos-button";
@@ -14224,7 +14224,7 @@ function possibleBarriers(attack) {
   for (const user of ownedCharacters()) {
     const item = Array.from(user.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.barrier);
     if (!item) continue;
-    if (game.combat?.started && (actionsLeft(user, "counter") < 1)) continue;
+    if (game.combat?.started && (actionsWithin(user, "counter") < 1)) continue;
     if (maneuverUsesLeft(user, uniqueDefinitionOf(item)) <= 0) continue;
     const bought = boughtTraits(item.system.unique, getTrait);
     const ally = bought.some(trait => trait.allyBarrier === true);
@@ -14324,7 +14324,7 @@ function possibleBlockers(attack) {
     const shields = wieldedWeapons(Array.from(target.items ?? [])).filter(item =>
       craftedReading(item.system.crafted, { getTrait, difficulties: {} })?.blocks);
     if (!shields.length) continue;
-    if (game.combat?.started && (actionsLeft(target, "counter") < 1)) continue;
+    if (game.combat?.started && (actionsWithin(target, "counter") < 1)) continue;
     found.push({ target, shields });
   }
   return found;
@@ -14963,7 +14963,7 @@ function duelButtons(message, attack, container) {
  */
 async function enterDuel(message, actor) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
-  const why = whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsLeft(actor, "counter") : 1 });
+  const why = whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsWithin(actor, "counter") : 1 });
   if (why) {
     ui.notifications.warn(`${actor.name}: Duel - ${why}.`);
     return;
@@ -15075,7 +15075,7 @@ async function playMirror(message, actor, itemId) {
   const item = actor.items?.get(itemId);
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!item || !attack || attack.result || attack.duel) return;
-  const why = whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsLeft(actor, "counter") : 1 });
+  const why = whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsWithin(actor, "counter") : 1 });
   if (why) {
     ui.notifications.warn(`${actor.name}: ${item.name} - ${why}.`);
     return;

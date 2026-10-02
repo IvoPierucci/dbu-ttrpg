@@ -184,6 +184,7 @@ export function newRoundFor(actor) {
     "system.diminishingDefense": 0,
     "system.actionsSpent.standard": 0,
     "system.actionsSpent.counter": 0,
+    "system.actionsSpent.converted": 0,
     // Bonus Momentum lasts the Round it was gained in; Reduced Momentum, owed, is this Round's.
     "system.momentum.bonus": 0,
     "system.momentum.reduced": (Number(actor.system.momentum?.pending) || 0) > 0 ? 1 : 0,
@@ -962,6 +963,37 @@ export function actionsLeft(actor, kind = "standard") {
 }
 
 /**
+ * How many Standard Actions could become Counter Actions right now: "You can convert a Standard Action you possess into
+ * a Counter Action at any point during a Combat Round" - "You cannot gain more than 6 Counter Actions in a single Combat
+ * Round" - and, won at by Para Para Dance, never below the Actions it is to take ("they cannot convert any Actions into
+ * Counter Actions if it would reduce their Actions to less than the amount they need to reduce").
+ */
+export function convertibleActions(actor) {
+  const owed = Number(actor?.getFlag?.("dbu-ttrpg", "paraParaLoss")) || 0;
+  const room = DBUCharacterData.MAX_COUNTER_ACTIONS - (Number(actor?.system?.actions?.counter) || 0);
+  return Math.max(0, Math.min(actionsLeft(actor, "standard") - owed, room));
+}
+
+/** Actions of a kind within reach: Counter Actions left, and the Standard ones that could become them. */
+export function actionsWithin(actor, kind = "standard") {
+  return actionsLeft(actor, kind) + ((kind === "counter") ? convertibleActions(actor) : 0);
+}
+
+/** Standard Actions into Counter Actions: one spent, one more in the pool. False where the rules refuse it. */
+export async function convertActions(actor, amount = 1) {
+  if ((amount <= 0) || !game.combat?.started) return false;
+  if (convertibleActions(actor) < amount) {
+    ui.notifications.warn(`${actor.name} cannot convert ${amount} Action${(amount === 1) ? "" : "s"} now.`);
+    return false;
+  }
+  await actor.update({
+    "system.actionsSpent.standard": (actor.system.actionsSpent?.standard ?? 0) + amount,
+    "system.actionsSpent.converted": (actor.system.actionsSpent?.converted ?? 0) + amount
+  });
+  return true;
+}
+
+/**
  * Spend Actions, refusing when there are not enough.
  *
  * @returns {Promise<boolean>} False when nothing was spent.
@@ -973,6 +1005,18 @@ export async function spendActions(actor, amount, kind = "standard") {
   // the Actions back - spending them there would take them away for good. The guard
   // lives here, on the write, so a caller cannot forget it: one of them already had.
   if (!game.combat?.started) return true;
+
+  // Short of Counter Actions, with Standard Actions that could become them: the player's to say.
+  const short = amount - actionsLeft(actor, kind);
+  if ((kind === "counter") && (short > 0) && (convertibleActions(actor) >= short)) {
+    const convert = await foundry.applications.api.DialogV2.confirm({
+      classes: ["dbu-dialog"],
+      window: { title: "Convert Actions" },
+      content: `<p>Convert ${short} Action${(short === 1) ? "" : "s"} into Counter Action${(short === 1) ? "" : "s"}?</p>`,
+      rejectClose: false
+    });
+    if (convert) await convertActions(actor, short);
+  }
 
   if (actionsLeft(actor, kind) < amount) {
     ui.notifications.warn(

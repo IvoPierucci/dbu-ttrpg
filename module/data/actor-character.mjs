@@ -766,6 +766,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
   /** Actions a character has each Combat Round before any effect alters them. */
   static BASE_STANDARD_ACTIONS = 3;
   static BASE_COUNTER_ACTIONS = 1;
+  /** "You cannot gain more than 6 Counter Actions in a single Combat Round." */
+  static MAX_COUNTER_ACTIONS = 6;
 
   /** Breakthrough: the current Tier of Power may exceed the Base Tier by at most this. */
   static BREAKTHROUGH_LIMIT = 2;
@@ -1097,7 +1099,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     schema.actionsSpent = new fields.SchemaField({
       standard: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
-      counter: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      counter: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      // "You can convert a Standard Action you possess into a Counter Action at any point during a Combat Round" - how
+      // many this Round: each a Standard Action spent above and a Counter Action more in the pool (combat.mjs).
+      converted: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
     });
 
     // --- Combat Conditions ---
@@ -2139,10 +2144,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         DBUCharacterData.BASE_STANDARD_ACTIONS + this.actionModifiers.standard)
         // Bonus Momentum's Standard Action more, Reduced Momentum's one fewer - this Combat Round's.
         + (Number(this.momentum?.bonus) || 0) - (Number(this.momentum?.reduced) || 0)),
-      counter: Math.max(0, withEffects(this, "actions.counter",
+      // "You cannot gain more than 6 Counter Actions in a single Combat Round."
+      counter: Math.min(DBUCharacterData.MAX_COUNTER_ACTIONS, Math.max(0, withEffects(this, "actions.counter",
         DBUCharacterData.BASE_COUNTER_ACTIONS + this.actionModifiers.counter))
         // Precognition: "you gain 1 Counter Action to use during their turn".
         + (this.foresight?.active ? 1 : 0)
+        // And every Standard Action converted into one this Round.
+        + (Number(this.actionsSpent?.converted) || 0))
     };
 
     // Haste: 1/2 Agility Modifier, added to Strike Rolls.

@@ -58,7 +58,7 @@ import {
   postThrust,
   takeSurge
 } from "./chat.mjs";
-import { actionsLeft, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } from "./combat.mjs";
+import { actionsLeft, actionsWithin, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } from "./combat.mjs";
 import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
@@ -116,7 +116,7 @@ async function askActionsSpent(actor, maneuver) {
 
   // "All of your remaining Actions (Min. 2)": nothing to ask - every one left, if that is enough.
   if (maneuver.spendsAllActions) {
-    const left = game.combat?.started ? actionsLeft(actor, kind) : least;
+    const left = game.combat?.started ? actionsWithin(actor, kind) : least;
     if (left < least) {
       ui.notifications.warn(`${maneuver.name} needs at least ${least} Actions.`);
       return null;
@@ -127,7 +127,7 @@ async function askActionsSpent(actor, maneuver) {
   // Only what they can actually afford. Offering four Actions to somebody holding two is
   // offering a choice that ends in a refusal two steps later.
   const affordable = game.combat?.started
-    ? actionsLeft(actor, kind)
+    ? actionsWithin(actor, kind)
     : (maneuver.actionCostMax || least);
 
   // "Action Cost: Variable", with no number after it - what you have left is the
@@ -177,7 +177,7 @@ function canAffordActions(actor, maneuver) {
 
   const { kind, amount } = actionCostOf(maneuver);
   if (amount <= 0) return true;
-  if (actionsLeft(actor, kind) >= amount) return true;
+  if (actionsWithin(actor, kind) >= amount) return true;
 
   ui.notifications.warn(
     `${actor.name} has no ${kind} Actions left this round for ${maneuver.name}.`
@@ -1090,7 +1090,7 @@ async function applyModifiers(actor, applied) {
   }
 
   for (const [kind, amount] of Object.entries(actions)) {
-    if (amount && (actionsLeft(actor, kind) < amount)) {
+    if (amount && (actionsWithin(actor, kind) < amount)) {
       ui.notifications.warn(
         `${actor.name} needs ${amount} ${kind} Action(s) for those Modifier Maneuvers.`);
       return false;

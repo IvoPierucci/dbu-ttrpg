@@ -47,7 +47,7 @@ text: >
 
 ---
 
-# "Reduce the Critical Target of your Performance Skill Checks by 1." Converting Actions into Counter Actions is not a
-# thing this system does, so that clause has nothing to hold.
+# "Reduce the Critical Target of your Performance Skill Checks by 1." Its Actions owed hold back converting Actions
+# into Counter Actions below them (combat.mjs convertibleActions).
 [passive]
 skill.performance.criticalTarget -= 1;

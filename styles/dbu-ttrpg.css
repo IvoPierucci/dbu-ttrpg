@@ -2985,6 +2985,17 @@
   color: var(--dbu-text-dim);
 }
 
+/* A Standard Action into a Counter Action, beside the Counter Actions left. */
+.dbu-ttrpg .dbu-convert-action {
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--dbu-text-dim);
+  cursor: pointer;
+}
+.dbu-ttrpg .dbu-convert-action:hover {
+  color: inherit;
+}
+
 /* Out of Actions rather than out of uses: the round is what refills it, not the
    Encounter, so it is dimmed rather than struck through. */
 .dbu-ttrpg .maneuver-unaffordable .maneuver-name {

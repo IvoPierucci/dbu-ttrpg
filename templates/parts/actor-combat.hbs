@@ -118,6 +118,10 @@
         <input type="number" data-action-type="counter" value="{{system.actions.counter}}" min="0"/>
         {{else}}
         <span>{{actionsLeft.counter}}<span class="stat-of">/{{system.actions.counter}}</span></span>
+        {{#if actionsLeft.convertible}}
+        <a class="dbu-convert-action" data-action="convertAction"
+           data-tooltip="Convert a Standard Action into a Counter Action. At most 6 Counter Actions a Combat Round."><i class="fas fa-right-left"></i></a>
+        {{/if}}
         {{/if}}
       </div>
 

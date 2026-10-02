@@ -35,7 +35,8 @@ import {
   toggleCondition,
   toggleState
 } from "../conditions.mjs";
-import { actionsLeft, isTheirTurn, newRoundFor, spendActions } from "../combat.mjs";
+import { actionsLeft, actionsWithin, convertActions, convertibleActions, isTheirTurn, newRoundFor, spendActions }
+  from "../combat.mjs";
 import { whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
 import { baseDieLine, breakdownTable, extraDiceLine, partLine, noteLine, floorLine,
          fromOutcome, workingsTable, atRollTime } from "../breakdown.mjs";
@@ -398,6 +399,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       resetCapacity: DBUCharacterSheet._onResetCapacity,
       resetEncounter: DBUCharacterSheet._onResetEncounter,
       enterEncounter: DBUCharacterSheet._onEnterEncounter,
+      convertAction: DBUCharacterSheet._onConvertAction,
       steadfastCheck: DBUCharacterSheet._onSteadfastCheck,
       importTalents: DBUCharacterSheet._onImportTalents,
       reloadTalents: DBUCharacterSheet._onReloadTalents,
@@ -762,7 +764,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // is what has been spent, so the sheet cannot drift from what the rules allow.
     context.actionsLeft = {
       standard: actionsLeft(this.actor, "standard"),
-      counter: actionsLeft(this.actor, "counter")
+      counter: actionsLeft(this.actor, "counter"),
+      // A Standard Action that could become a Counter Action now, inside a Combat Encounter.
+      convertible: Boolean(game.combat?.started) && (convertibleActions(this.actor) > 0)
     };
     context.openSections = this.#openSections;
     context.threshold = this.actor.system.threshold;
@@ -2313,7 +2317,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const type = MANEUVER_TYPES[maneuver.type];
     if (!type?.action) return false;
 
-    return actionsLeft(this.actor, type.action) < (maneuver.actionCost ?? 1);
+    return actionsWithin(this.actor, type.action) < (maneuver.actionCost ?? 1);
   }
 
   /** Maximum attribute points a single "Attribute Addition" row may distribute. */
@@ -5451,6 +5455,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return enterEncounter(this.actor);
   }
 
+  /** "You can convert a Standard Action you possess into a Counter Action at any point during a Combat Round." */
+  static async _onConvertAction() {
+    return convertActions(this.actor, 1);
+  }
+
   static async _onResetEncounter() {
     return this.actor.update({
       "system.usedManeuvers": [],
@@ -5479,7 +5488,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (used.includes(ARMS_USES.instant)) {
       return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
     }
-    if (game.combat?.started && (actionsLeft(this.actor, "counter") < 2)) {
+    if (game.combat?.started && (actionsWithin(this.actor, "counter") < 2)) {
       return ui.notifications.warn(`${this.actor.name} needs 2 Counter Actions for this.`);
     }
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
