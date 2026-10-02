@@ -2852,6 +2852,7 @@ function onRenderChatMessage(message, html) {
   renderMeteorStrike(message, html);
   renderLoss(message, html);
   renderHealing(message, html);
+  renderShock(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -8588,6 +8589,72 @@ function renderHealing(message, html) {
       ? ` &middot; ${escape(line.patched)} whole again` : ""}`;
     container.append(row);
   }
+}
+
+/** Holstein Shock's card: the Wound Roll, said to whoever may watch the one who made it. */
+const SHOCK_FLAG = "holsteinShock";
+
+/** "As if you made an Attacking Maneuver of the Simple Profile" - the attack the Wound Roll reads, nothing on it. */
+function shockAttack(actor, foundation) {
+  return { maneuverName: "Holstein Shock", profile: "simple", foundation, kiWager: 0, advantages: [], weapon: null,
+    damageAttribute: null, technique: null, secondProfile: "", modifiers: [], united: [], unitedWith: null,
+    energyCharges: 0, chargeCategories: 0, signature: false, attackerUuid: actor.uuid, attackerName: actor.name };
+}
+
+/**
+ * Holstein Shock: "(any Foundation)" - which, asked - then its Wound Roll's window. The Foundation, or null if it was
+ * dropped before anything was paid.
+ */
+export async function askShock(actor, maneuver) {
+  const foundations = Object.entries(DBUCharacterData.FOUNDATIONS);
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - ${maneuver.name}` }, content: "",
+    buttons: [...foundations.map(([key, entry]) => ({ action: key, label: entry.label })),
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!picked || (picked === "cancel")) return null;
+  const attack = shockAttack(actor, picked);
+  const ready = await prepareRoll(actor, [], maneuver.name, "Off your own Life Points", { combatRoll: true,
+    formula: { base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor, woundDice(actor, attack)),
+      parts: windowParts(actor, woundParts(actor, attack)) } });
+  return ready ? { foundation: picked } : null;
+}
+
+/**
+ * Holstein Shock, used: the Wound Roll - "Reduce your Life Points by the Dice Score" - and Revitalizing Shock's "Regain
+ * Ki Points equal to 1/2 of the Dice Score".
+ */
+export async function postShock(actor, maneuver, shock) {
+  const attack = shockAttack(actor, shock.foundation);
+  const wound = await rollSide(actor, woundParts(actor, attack), {
+    extraDice: woundDice(actor, attack), criticalDice: actor.system.dice.critical.formula, combatRoll: true,
+    slot: "wound", collect: false });
+  const total = Math.max(0, Number(wound.total) || 0);
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  const revitalizing = unique ? boughtTraits(unique, getTrait).some(trait => trait.shockKiHalf === true) : false;
+  const ki = revitalizing ? Math.floor(total / 2) : 0;
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}</p>`,
+    flags: { [SCOPE]: { [SHOCK_FLAG]: { actorUuid: actor.uuid, total, lines: wound.lines ?? [], ki } } } });
+  await reduceLifePoints(actor, total, { reason: maneuver.name });
+  if (ki) {
+    const now = actor.system.ki;
+    await actor.update({ "system.ki.value": Math.min(now.max, now.value + ki) });
+  }
+  return card;
+}
+
+function renderShock(message, html) {
+  const shock = message.getFlag(SCOPE, SHOCK_FLAG);
+  if (!shock) return;
+  const actor = fromUuidSync(shock.actorUuid);
+  if (!maySeeRolls(actor)) return;
+  const note = document.createElement("div");
+  note.className = "dbu-settled-note";
+  note.textContent = `Wound ${shock.total}${shock.ki ? ` - ${shock.ki} Ki Points regained` : ""}`;
+  note.dataset.tooltipHtml = breakdownTable(shock.lines, shock.total);
+  (html.querySelector(".message-content") ?? html).append(note);
 }
 
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */

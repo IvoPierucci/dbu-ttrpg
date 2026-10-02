@@ -638,6 +638,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         meteor: new fields.BooleanField({ required: true, initial: false }),
         /** Life Points regained by another - Healing Hands' (chat.mjs postHealing). */
         heals: new fields.BooleanField({ required: true, initial: false }),
+        /** A Wound Roll of the Simple Profile off your own Life Points - Holstein Shock's (chat.mjs postShock). */
+        selfShock: new fields.BooleanField({ required: true, initial: false }),
         /** A State it may only be used in - God Meteor's God Ki. */
         requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */

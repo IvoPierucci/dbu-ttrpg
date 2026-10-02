@@ -1,0 +1,15 @@
+id: revitalizing-shock
+name: Revitalizing Shock
+advancement: true
+prerequisite: Controlled Shock Advancement
+tpCost: 5
+# "Regain Ki Points equal to 1/2 of the Dice Score" - rounded down, as everything here is.
+shockKiHalf: true
+source: Core Rule
+description: >
+  Holstein Shock also gives back half its Dice Score in Ki Points.
+text: >
+  Revitalizing Shock: Through the pain coursing through your body, you feel alive again.
+  –Prerequisites: Controlled Shock Advancement
+  –TP Cost: 5
+  –Effect: Regain Ki Points equal to 1/2 of the Dice Score for the effects of the Holstein Shock Unique Ability.

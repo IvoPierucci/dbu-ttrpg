@@ -1861,6 +1861,7 @@ export function definitionOf(item) {
     finishSign: item.system.unique?.finishSign === true,
     meteor: item.system.unique?.meteor === true,
     heals: item.system.unique?.heals === true,
+    selfShock: item.system.unique?.selfShock === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -3583,6 +3584,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let finishing = null;
   let meteorTargets = null;
   let healing = null;
+  let shocking = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3834,6 +3836,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Holstein Shock: the Foundation, and its Wound Roll's window.
+    if (maneuver.selfShock) {
+      shocking = await (await import("./chat.mjs")).askShock(actor, maneuver);
+      if (!shocking) return false;
+    }
+
     // Healing Hands: whom, what its Advancements add, and its roll's window.
     if (maneuver.heals) {
       healing = await askHeal(actor, maneuver);
@@ -4371,6 +4379,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.selfShock && shocking)
+    ? await (await import("./chat.mjs")).postShock(actor, maneuver, shocking)
     : (maneuver.heals && healing)
     ? await (await import("./chat.mjs")).postHealing(actor, maneuver, healing)
     : (maneuver.meteor && meteorTargets)

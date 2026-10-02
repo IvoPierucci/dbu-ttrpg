@@ -1,0 +1,28 @@
+id: holstein-shock
+name: Holstein Shock
+uaType: both
+prerequisite: N/A
+tpCost: 5
+type: standard
+actionCost: 1
+kiCost: 0
+# "Make a Wound Roll as if you made an Attacking Maneuver of the Simple Profile (any Foundation). Reduce your Life
+# Points by the Dice Score." The Foundation asked with the roll's window (use-maneuver.mjs askShock); rolled and taken
+# off your own Life Points (chat.mjs postShock).
+selfShock: true
+source: Core Rule
+description: >
+  A Wound Roll of the Simple Profile, any Foundation, off your own Life Points.
+text: >
+  Holstein Shock: You inflict harm upon yourself in order to gain a psychological or tactical advantage over your
+  enemies.
+  –Ability Type: Technical/Magical
+  –Prerequisites: N/A
+  –TP Cost: 5
+  –KP Cost: N/A
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Make a Wound Roll as if you made an Attacking Maneuver of the Simple Profile (any Foundation). Reduce your
+  Life Points by the Dice Score.
