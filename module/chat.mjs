@@ -25,7 +25,7 @@ import { armorPiercing, damageAttributeOf, karmicSteps, linkedPick, skyAssaultWa
 import { advantageWoundParts, featureRanks, pushes, staggers, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
 import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, floorLine,
-         fromOutcome, withoutOutcome, breakdownTable, breakdownText, formulaHtml } from "./breakdown.mjs";
+         fromOutcome, withoutOutcome, breakdownTable, breakdownText, formulaHtml, workingsTable } from "./breakdown.mjs";
 import { collectReactive, applySlot } from "./effects/interpreter.mjs";
 import {
   DAMAGE_CATEGORIES,
@@ -10275,6 +10275,51 @@ function profileStrikeParts(attacker, attack) {
 }
 
 /**
+ * What the Strike Roll adds to its dice - one list for the roll and for the window it is rolled from. Diminishing
+ * Offense blunts every Attacking Maneuver once the round's free attacks are spent. `workingsKey` names the sheet's
+ * workings for a part that has them, for that window's hover.
+ */
+function strikeParts(attacker, attack) {
+  return [
+    { label: "Strike", value: attacker.system.combat.strike, workingsKey: "strike" },
+    ...profileStrikeParts(attacker, attack),
+    ...modifierStrikeParts(attacker, attack),
+    ...(attack.weapon?.strike ?? []),
+    ...techniqueStrikeParts(attacker, attack),
+    // Power Burst: "ignoring the penalties to your Strike Roll from the Muscle Penalty".
+    ...(attack.technique?.noMusclePenalty ? [] : musclePenalty(attacker)),
+    // Left off entirely rather than shown at nothing: a row saying Diminishing Offense
+    // took nothing off is a row a reader has to work out the meaning of, and the rule is
+    // that it does not apply rather than that it applies and comes to zero.
+    ...(attack.outsideDiminishing
+      ? []
+      : [{ label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty }]),
+    // Last Legs: "Ignore all Health Threshold penalties during this Attacking Maneuver."
+    ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker)),
+    // Rebound's retry at another target: Homing's "+1(T) for each time you've missed".
+    ...(attack.homing?.bonus ? [{ label: `Homing (${attack.homing.misses} missed)`, value: attack.homing.bonus }] : [])
+  ];
+}
+
+/**
+ * The dice a Combat Roll carries beside the Base Die, by source, for its window: the Tier of Power's Extra Dice (or
+ * the groups given), and any Greater Dice on every Combat Roll - what rollSide adds.
+ */
+function combatDiceGroups(actor, groups = null) {
+  return [
+    ...(groups ?? [{ label: "Extra Dice (Tier of Power)", formula: actor.system.dice?.extra?.formula ?? "" }]),
+    ...(actor.system.effects?.slots?.["combatRolls.dice"] ?? [])
+      .map(die => ({ label: die.source || "Greater Dice", formula: die.formula }))
+  ].filter(group => group.formula);
+}
+
+/** A roll's parts for its window: each with the sheet's workings where it names them. */
+function windowParts(actor, parts) {
+  return parts.map(part => (part.workingsKey
+    ? { ...part, workings: workingsTable(actor.system, part.workingsKey) } : part));
+}
+
+/**
  * Roll the exchange: the Strike, and whatever each target chose to meet it with.
  */
 async function resolveAttack(message, attack) {
@@ -10301,25 +10346,7 @@ async function resolveAttack(message, attack) {
   //
   // Diminishing Offense blunts the Strike Roll of every Attacking Maneuver made once
   // the round's free attacks are spent.
-  const strike = await rollSide(attacker, [
-    { label: "Strike", value: attacker.system.combat.strike },
-    ...profileStrikeParts(attacker, attack),
-    ...modifierStrikeParts(attacker, attack),
-    ...(attack.weapon?.strike ?? []),
-    ...techniqueStrikeParts(attacker, attack),
-    // Power Burst: "ignoring the penalties to your Strike Roll from the Muscle Penalty".
-    ...(attack.technique?.noMusclePenalty ? [] : musclePenalty(attacker)),
-    // Left off entirely rather than shown at nothing: a row saying Diminishing Offense
-    // took nothing off is a row a reader has to work out the meaning of, and the rule is
-    // that it does not apply rather than that it applies and comes to zero.
-    ...(attack.outsideDiminishing
-      ? []
-      : [{ label: "Dim. Offense", value: -attacker.system.diminishing.offense.penalty }]),
-    // Last Legs: "Ignore all Health Threshold penalties during this Attacking Maneuver."
-    ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker)),
-    // Rebound's retry at another target: Homing's "+1(T) for each time you've missed".
-    ...(attack.homing?.bonus ? [{ label: `Homing (${attack.homing.misses} missed)`, value: attack.homing.bonus }] : [])
-  ], {
+  const strike = await rollSide(attacker, strikeParts(attacker, attack), {
     ...attackerOptions, slot: "strike", attackingManeuver: true,
     // Clearing puts a floor under the Natural Result; Cutting makes anything short of a
     // Critical a Botch. Both belong to the Profile rather than to the character, so they
@@ -11015,7 +11042,8 @@ async function attackerStage(message, attack, attacker) {
   const triggers = relevantTriggers(attacker, message, "response");
   // Their own Attacking Maneuver, so Compelled's Urgency reaches this one.
   const ready = await prepareRoll(attacker, triggers, "Before the Strike Roll",
-    "", { combatRoll: true, attackingManeuver: true });
+    "", { combatRoll: true, attackingManeuver: true, formula: { base: DBUCharacterData.BASE_DIE,
+      dice: combatDiceGroups(attacker), parts: windowParts(attacker, strikeParts(attacker, attack)) } });
   if (!ready) return;
   return readyAttacker(message);
 }
@@ -11031,7 +11059,11 @@ async function woundStage(message, attack) {
       attackingManeuver: true,
       // "As an Urgent Roll." A reflected attack's Wound Roll cannot be failed on purpose
       // - the option is closed with its reason beside it, the way Compelled closes it.
-      urgent: Boolean(attack.urgentWound)
+      urgent: Boolean(attack.urgentWound),
+      // A Wound Roll recorded when it hit - Delayed's - is not rolled again, so it has no formula.
+      formula: Number.isFinite(attack.fixedWound) ? null : { base: DBUCharacterData.BASE_DIE,
+        dice: combatDiceGroups(attacker, woundDice(attacker, attack)),
+        parts: windowParts(attacker, woundParts(attacker, attack)) }
     });
   if (!ready) return;
   return rollAttackWound(message, attack);
@@ -11065,6 +11097,42 @@ function woundRoller(attack) {
  * the attacker's effects add stays. "Using the recorded Scholarship Modifier as its Damage
  * Attribute": the Attribute is swapped, not the character.
  */
+/**
+ * What the Wound Roll adds to its dice - one list for the roll and its window. Combination's follow-ups, rolled in
+ * their own step before this one, first; Wagered Ki is added, already paid for when the attack was declared.
+ */
+function woundParts(attacker, attack) {
+  return [
+    ...combinationFollowUps(attacker, attack),
+    { ...woundBase(attacker, attack), workingsKey: `wound.${attack.foundation}` },
+    ...profileWoundParts(attacker, attack),
+    ...advantageWoundParts(attacker, attack),
+    ...techniqueWoundParts(attacker, attack),
+    // United Attack: "Increase their Wound Roll by 1/2 of your relevant Attribute Modifier".
+    ...unitedWoundParts(attack),
+    ...superStackWoundParts(attacker, attack),
+    // Genki: "For each stack of Lifeforce lost through this effect, increase your Wound Roll by 2(bT)."
+    ...((Number(attack.genkiLifeforce) || 0) > 0
+      ? [{ label: `Genki, ${attack.genkiLifeforce} Lifeforce`, written: `+${2 * attack.genkiLifeforce}(bT)`,
+          value: 2 * attack.genkiLifeforce * Math.max(1, attacker.system.baseTierOfPower ?? 1) }] : []),
+    ...modifierWoundParts(attacker, attack),
+    ...(attack.weapon?.wound ?? []),
+    { label: "Ki Wager", value: attack.kiWager ?? 0 },
+    ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))
+  ];
+}
+
+/**
+ * The Wound Roll's dice by source: the Tier of Power's Extra Dice, and each Energy Charge's die - a larger one for a
+ * Signature Technique - kept apart, since they are two different rules and the card says which is which.
+ */
+function woundDice(attacker, attack) {
+  return [
+    { label: "Extra dice", formula: attacker.system.dice.extra.formula },
+    { label: "Energy charges", formula: energyChargeDice(attacker, attack) }
+  ];
+}
+
 function woundBase(attacker, attack) {
   const wound = attacker.system.combat.wound[attack.foundation] ?? 0;
   const own = attack.damageAttribute;
@@ -11217,12 +11285,7 @@ async function askFollowUps(attack, attacker, { plan, beatable, longRange }) {
   const count = plan.rolls + (Number(attack.technique?.followUpRolls) || 0);
   const strike = attack.result?.strike ?? {};
   // The same dice rollFollowUpStrikes rolls: the Tier of Power's Extra Dice and any Greater Dice on Combat Rolls.
-  const groups = [
-    { label: "Extra Dice (Tier of Power)",
-      formula: attacker.system.dice?.extra?.formula ?? "" },
-    ...(attacker.system.effects?.slots?.["combatRolls.dice"] ?? [])
-      .map(die => ({ label: die.source || "Greater Dice", formula: die.formula }))
-  ].filter(group => group.formula);
+  const groups = combatDiceGroups(attacker);
   // The bonus is the first Strike's, so are its parts: each one that moved it, and where it came from - and the
   // Long Range penalty these pay as the first did.
   const formula = formulaHtml({ base: DBUCharacterData.BASE_DIE, dice: groups, parts: [
@@ -11492,45 +11555,11 @@ async function rollAttackWound(message, attack) {
     return;
   }
 
-  // Wagered Ki is added to the Wound Roll - already paid for when the attack was
-  // declared, which is what took it out of Capacity.
-  // Each Energy Charge adds a die to this roll - a larger one for a Signature
-  // Technique. They were declared through the Energy Charge Maneuver and came here with
-  // the attack, and this is where they are finally worth something.
-  const chargeDice = energyChargeDice(attacker, attack);
-
-  // Rolled in their own step before this one, which is where the rule puts them.
-  const followUps = combinationFollowUps(attacker, attack);
-
   // One Wound Roll for the whole Maneuver, like the Strike. What differs between the
   // people it reached is what each of them did about it - their Soak, their Damage
   // Reduction, and a Power Flare that answers it for them alone.
-  const wound = await rollSide(attacker, [
-    ...followUps,
-    woundBase(attacker, attack),
-    ...profileWoundParts(attacker, attack),
-    ...advantageWoundParts(attacker, attack),
-    ...techniqueWoundParts(attacker, attack),
-    // United Attack: "Increase their Wound Roll by 1/2 of your relevant Attribute Modifier".
-    ...unitedWoundParts(attack),
-    ...superStackWoundParts(attacker, attack),
-    // Genki: "For each stack of Lifeforce lost through this effect, increase your Wound Roll by 2(bT)."
-    ...((Number(attack.genkiLifeforce) || 0) > 0
-      ? [{ label: `Genki, ${attack.genkiLifeforce} Lifeforce`, written: `+${2 * attack.genkiLifeforce}(bT)`,
-          value: 2 * attack.genkiLifeforce * Math.max(1, attacker.system.baseTierOfPower ?? 1) }] : []),
-    ...modifierWoundParts(attacker, attack),
-    ...(attack.weapon?.wound ?? []),
-    { label: "Ki Wager", value: attack.kiWager ?? 0 },
-    ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))
-  ], {
-    // Kept apart rather than joined: the dice an Energy Charge is worth and the ones
-    // the Tier of Power grants are two different rules, and the card says which is
-    // which. Seven Charges at Tier 3 is twenty-one dice, and "where did those come
-    // from" is not a question anybody should have to work out.
-    extraDice: [
-      { label: "Extra dice", formula: attacker.system.dice.extra.formula },
-      { label: "Energy charges", formula: chargeDice }
-    ],
+  const wound = await rollSide(attacker, woundParts(attacker, attack), {
+    extraDice: woundDice(attacker, attack),
     criticalDice: attacker.system.dice.critical.formula,
     combatRoll: true,
     slot: "wound",
