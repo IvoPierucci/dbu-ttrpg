@@ -1,0 +1,24 @@
+id: weapon-seal
+name: Weapon Seal
+advancement: true
+prerequisite: 3+ Skill Ranks in Use Magic
+tpCost: 5
+# Your Weapons among the containers, sealed indefinitely; with an empty Quality Slot, Phantom Edge's Wound dice on its
+# attacks (chat.mjs phantomEdgeDice).
+sealWeapon: true
+source: Core Rule
+description: >
+  Sealing into a Weapon, for good; with an empty Quality Slot it gains Phantom Edge - its Wound Rolls with the sealed
+  Character's Tier of Power Extra Dice (min. 1d4).
+text: >
+  Weapon Seal: By trapping your target inside a weapon, you make it much harder for them to break free.
+  –Prerequisites: 3+ Skill Ranks in Use Magic
+  –TP Cost: 5 TP
+  –Effect: You may use a Weapon as a container for the Sealing Unique Ability. If you do, you do not need a Sealing
+  Talisman. The Weapon gains the Phantom Edge Special Quality if it possesses any number of empty Quality Slots.
+
+  Phantom Edge: This Weapon contains another being inside it, enhancing its effectiveness.
+  –Weapon Type: All
+  –Prerequisites: A being sealed inside this Weapon through the Sealing Unique Ability.
+  –Quality Slots: 1
+  –Effects: Increase your Wound Rolls by the Tier of Power Extra Dice (min. 1d4) of the sealed Character.

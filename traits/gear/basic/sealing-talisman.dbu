@@ -22,5 +22,6 @@ text: >
 
 # --- What is not built -------------------------------------------------------------------------
 #
-# What it is for: the Sealing Unique Ability, and Magical Materialization's lower Craft DC. Neither is
-# in this system yet; until they are it is an entry the table reads.
+# The Sealing Unique Ability spends it: 1 Action from Sealing's card, the Talisman gone and the sealed held
+# for good (chat.mjs sealForGood). Its removal - a Called Shot, or an Action beside it - is the table's: Release
+# on the card. Magical Materialization's lower Craft DC is not built.

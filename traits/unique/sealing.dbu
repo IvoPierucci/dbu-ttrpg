@@ -1,0 +1,42 @@
+id: sealing
+name: Sealing
+uaType: both
+prerequisite: Force or Magic Score of 4+ and an Insight Score of 6+
+tpCost: 25
+type: standard
+actionCost: 2
+kiCostPerTier: 12
+requiresTarget: true
+# "Target an Opponent who is not at Long Range" - refused before it is paid. "Make a Clash (Cognitive vs
+# Impulsive/Corporeal)"; won, Shaken to the start of your next turn and the Might Clash; won, the Seal button: a container
+# of yours (`sealContainer` on its file, a Weapon with Weapon Seal), the Sealed mark on them - clocked to the end of your
+# next turn, or for good with a Sealing Talisman, a Sealing Bottle's Action or a Weapon; Release when it is opened or
+# destroyed, their Initiative rerolled (chat.mjs postSealing).
+seals: true
+source: Core Rule
+description: >
+  A Clash (Cognitive vs Impulsive/Corporeal) at an Opponent not at Long Range: won, Shaken and a Might Clash - won, sealed
+  in a container of yours until the end of your next turn, or for good with a Sealing Talisman.
+text: >
+  Sealing: You can trap your enemies inside of specialized sealing containers.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Force or Magic Score of 4+ and an Insight Score of 6+
+  –TP Cost: 25
+  –KP Cost: 12(T)
+  –Maneuver Type: Standard
+  –Action Cost: 2 Actions
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Target an Opponent who is not at Long Range. Make a Clash (Cognitive vs Impulsive/Corporeal) against them. If
+  you win, they gain the Shaken Combat Condition until the start of your next turn, and you may make an additional Might
+  Clash against them. If you win this Clash, target a Basic Item that can be used for Sealing. They are sealed in the
+  container until the end of your next turn, unless you apply a Sealing Talisman (or use the effects of a Sealing
+  Bottle), in which case they are sealed indefinitely.
+
+  A sealed Character is removed from the Combat Encounter and cannot take any Actions, as they are sealed away within a
+  container. If the container is opened or destroyed, they return to the Battlefield on a Square adjacent to the
+  container they were sealed into. If they would return to the Combat Encounter, reroll their Initiative and, if they
+  haven’t taken a turn this Combat Round, they may immediately take their turn after the current turn (regardless of
+  their position in the Initiative Order).
+
+  Only a single being can be sealed into any single container.

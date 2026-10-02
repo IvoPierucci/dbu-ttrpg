@@ -1,0 +1,21 @@
+id: sealed
+name: Sealed
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Sealing's mark, on the one sealed in a container - clocked to the end of the sealer's next turn,
+# or kept for good. Gone, they come out (chat.mjs unsealed).
+combatCondition: no
+source: Core Rule
+description: >
+  Sealed in a container: no Actions and no turn until it is opened or destroyed.
+text: >
+  Sealed: "A sealed Character is removed from the Combat Encounter and cannot take any Actions, as they are sealed away
+  within a container."
+
+---
+
+[passive]
+forbid maneuvers;
+
+[automatic/start-of-turn, first]
+turn.skip = true;

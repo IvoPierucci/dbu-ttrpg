@@ -2,6 +2,10 @@ id: sealing-bottle
 name: Sealing Bottle
 kind: gear
 craftDC: Expert
+# "It can be used for the Sealing Unique Ability. This Item doesn't require the Sealing Talisman, but you still must spend
+# 1 Action to seal the Item."
+sealContainer: true
+sealBottle: true
 source: Core Rule
 description: >
   A small, leak-proof bottle. It can hold what the Sealing Unique Ability seals, with no Sealing
@@ -18,5 +22,5 @@ text: >
 
 # --- What is not built -------------------------------------------------------------------------
 #
-# What it is for: the Sealing Unique Ability, and the Sealing Talisman it spares. Unique Abilities
-# are not in this system yet; until they are it is an entry the table reads.
+# Its leak-proof bottle is the table's. Its Sealing is built: a container for the Sealing Unique Ability,
+# sealed for good with its own Action (chat.mjs sealForGood).

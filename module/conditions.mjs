@@ -374,6 +374,13 @@ export function registerConditionHooks() {
       else await actor.unsetFlag("dbu-ttrpg", "debilitatedBy");
     }
 
+    // Sealing's: the Sealed mark gone - opened, destroyed, its clock run out - and they come out.
+    const sealed = actor.getFlag("dbu-ttrpg", "sealedIn");
+    if (sealed && !((Number(actor.system.conditions?.sealed) || 0) > 0)) {
+      const { unsealed } = await import("./chat.mjs");
+      await unsealed(actor, sealed);
+    }
+
     // And Binding's: the Condition it put on them gone - Clashed off, taken off the sheet - lets the Binding go.
     const bound = actor.getFlag("dbu-ttrpg", "boundBy");
     if (bound && !((Number(actor.system.conditions?.[bound.condition]) || 0) > 0)) {

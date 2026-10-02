@@ -1,0 +1,16 @@
+id: mafuba
+name: Mafuba
+restriction: true
+reduction: 5
+locked: Weapon Seal
+# Its Life Points paid as Sealing is used; a Natural 1 on the Might Clash destroys the container.
+sealMafuba: true
+source: Core Rule
+description: >
+  Sealing costs 5x the target's Might in Life Points, won or not; a Natural 1 on its Might Clash destroys the container.
+text: >
+  Mafuba: Your sealing technique drains on your own life force to use.
+  –Locked Advancements: Weapon Seal
+  –TP Cost: -5
+  –Effect: When you use the Sealing Maneuver, if you succeed or not, reduce your Life Points by 5x the Might of the target.
+  If you score a Natural Result of 1 on the Might Clash, destroy the container.

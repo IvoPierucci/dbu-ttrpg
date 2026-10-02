@@ -13,6 +13,9 @@ chargesLabel: Alcohol
 placeCost: 1
 chargeUseLabel: Drink
 chargeUseNote: enters the Drunk Special State until the start of their next turn
+# "When it has no Alcohol left in it, it can be used for the Sealing Unique Ability."
+sealContainer: true
+sealWhenEmpty: true
 source: Core Rule
 description: >
   Holds 4 Alcohol. An Action and 1 Alcohol: Drunk until the start of your next turn.

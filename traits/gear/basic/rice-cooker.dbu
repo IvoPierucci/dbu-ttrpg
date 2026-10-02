@@ -5,6 +5,8 @@ tags: tech
 craftDC: Apprentice
 # Its Details.
 details: technology
+# "It can be used as a container for the Sealing Unique Ability."
+sealContainer: true
 source: Core Rule
 description: >
   Cooks rice: while Adventuring, 1 Hour and 1 Ingredient make a Snack, once a Session. It can
@@ -23,6 +25,6 @@ text: >
 # --- What is not built -------------------------------------------------------------------------
 #
 # Everything it does, each waiting on a system that is not here yet: the Adventuring Maneuver that
-# makes the Snack (Adventuring, its Hours and its Session Limit), the Ingredient it uses, and the
-# Sealing Unique Ability it can hold. Until then it is an entry the table reads, and a Snack it makes
+# makes the Snack (Adventuring, its Hours and its Session Limit) and the Ingredient it uses. Its Sealing is
+# built: `sealContainer` above. Until then it is an entry the table reads, and a Snack it makes
 # is given from the Gear tab.

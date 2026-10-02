@@ -202,6 +202,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, PARA_FLAG, request.para);
     case "petrify": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PETRIFY_FLAG, request.petrify);
+    case "sealing": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, SEAL_FLAG, request.sealing);
     case "punish": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PUNISH_FLAG, request.punish);
     case "positionChange": return game.messages.get(request.messageId)
@@ -575,6 +577,10 @@ async function applyClash(messageId, clash) {
 
   if (clash.snare && clash.result && !clash.snare.applied) {
     await settleSnare(message, clash);
+  }
+
+  if (clash.sealing && clash.result && !clash.sealing.applied) {
+    await settleSealing(message, clash);
   }
 
   if (clash.punishCoward && clash.result && !clash.punishCoward.applied) {
@@ -2919,6 +2925,7 @@ function onRenderChatMessage(message, html) {
   renderRetreat(message, html);
   renderPositionChange(message, html);
   renderPunisher(message, html);
+  renderSealing(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -10159,6 +10166,205 @@ function renderPunisher(message, html) {
   container.append(button);
 }
 
+/** Sealing's card: the container chosen, its Talisman or its Seal, and its opening. */
+const SEAL_FLAG = "sealing";
+
+/** What Sealing's Advancement and Restriction change: Weapon Seal's Weapons, Mafuba's price. */
+function sealTraits(actor, itemId) {
+  const unique = actor?.items?.get(itemId)?.system?.unique;
+  return { weapon: unique ? boughtTraits(unique, getTrait).some(trait => trait.sealWeapon === true) : false,
+    mafuba: unique ? appliedTraits(unique, getTrait).some(trait => trait.sealMafuba === true) : false };
+}
+
+/**
+ * Sealing, used: "Make a Clash (Cognitive vs Impulsive/Corporeal) against them." Mafuba's "When you use the Sealing
+ * Maneuver, if you succeed or not, reduce your Life Points by 5x the Might of the target" - paid as it is used.
+ */
+export async function postSealing(actor, maneuver, target) {
+  const can = sealTraits(actor, maneuver.itemId);
+  if (can.mafuba) {
+    await reduceLifePoints(actor, 5 * (Number(target.system.might) || 0), { reason: `${maneuver.name} - Mafuba`, own: true });
+  }
+  return postSaveClash(actor, target, {
+    maneuverName: maneuver.name,
+    reason: `Win and ${target.name} is Shaken until the start of your next turn, and a Might Clash may seal them.`,
+    saves: ["cognitive"],
+    defenderSaves: ["impulsive", "corporeal"],
+    sealing: { stage: "save", applied: false, name: maneuver.name, weapon: can.weapon, mafuba: can.mafuba }
+  });
+}
+
+/**
+ * Its Clashes, settled. The first won: "they gain the Shaken Combat Condition until the start of your next turn, and you
+ * may make an additional Might Clash against them". That one won: a card for its user to "target a Basic Item that can
+ * be used for Sealing". Mafuba's "If you score a Natural Result of 1 on the Might Clash, destroy the container."
+ */
+async function settleSealing(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, sealing: { ...clash.sealing, applied: true } });
+  const sealer = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!sealer || !target) return;
+  const seal = clash.sealing;
+  const won = whoWonClash(clash.result) === "challenger";
+  if (seal.stage === "save") {
+    if (!won) return;
+    await markUntilNextTurn(sealer, target, "shaken", 1, "start", seal.name);
+    return postMightClash(sealer, target, { maneuverName: seal.name,
+      reason: `Win and ${target.name} is sealed into a container of yours.`, sealing: { ...seal, stage: "might", applied: false } });
+  }
+  const broken = seal.mafuba && (Number(clash.result?.challenger?.natural) === 1);
+  if (!won) {
+    return settledNote(message, `${target.name} is not sealed.${broken ? " Mafuba: a Natural 1 - the container is destroyed." : ""}`);
+  }
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: sealer }),
+    content: `<p>${Handlebars.escapeExpression(seal.name)}: ${Handlebars.escapeExpression(target.name)}, to be sealed</p>`,
+    flags: { [SCOPE]: { [SEAL_FLAG]: { sealerUuid: sealer.uuid, targetUuid: target.uuid, targetName: target.name,
+      name: seal.name, weapon: seal.weapon, broken, itemId: "", itemName: "", bottle: false, indefinite: false,
+      released: false } } } });
+}
+
+/**
+ * What can hold them: "a Basic Item that can be used for Sealing" - `sealContainer` on its file, the Sake Bottle only with no
+ * Alcohol left - or a Weapon with Weapon Seal. "Only a single being can be sealed into any single container."
+ */
+function sealContainers(sealer, weapon) {
+  return Array.from(sealer.items ?? []).filter(item => {
+    if ((item.type !== "gear") || item.getFlag?.(SCOPE, "sealedInside")) return false;
+    if (item.system.crafted?.kind === "weapon") return weapon && !item.system.crafted.destroyed;
+    const definition = getTrait(item.system.gearId);
+    if (definition?.sealContainer !== true) return false;
+    return !(definition.sealWhenEmpty === true) || !((Number(item.system.charges) || 0) > 0);
+  });
+}
+
+/**
+ * "They are sealed in the container until the end of your next turn, unless you apply a Sealing Talisman (or use the
+ * effects of a Sealing Bottle), in which case they are sealed indefinitely." Weapon Seal's "you do not need a Sealing
+ * Talisman", and Phantom Edge on it while it has an empty Quality Slot.
+ */
+async function sealInto(card, sealer, target, item) {
+  const seal = card.getFlag(SCOPE, SEAL_FLAG);
+  if (!seal || seal.itemId || seal.released) return;
+  if (seal.broken) {
+    if (item.system.crafted?.kind) await item.update({ "system.crafted.destroyed": true, "system.equipped": false });
+    else await item.delete();
+    requestEdit(card, { type: "sealing", sealing: { ...seal, released: true } });
+    return settledNote(card, `Mafuba: a Natural 1 - ${item.name} is destroyed, and ${target.name} with it free.`);
+  }
+  const weapon = item.system.crafted?.kind === "weapon";
+  const reading = weapon ? craftedReading(item.system.crafted, { getTrait, difficulties: {} }) : null;
+  const phantom = Boolean(reading) && ((reading.slots - reading.used) > 0);
+  const { setCondition } = await import("./conditions.mjs");
+  if (await setCondition(target, "sealed", 1) === false) return;
+  await item.setFlag(SCOPE, "sealedInside", { uuid: target.uuid, name: target.name, phantom });
+  await requestActorUpdate(target, { [`flags.${SCOPE}.sealedIn`]: { by: sealer.uuid, itemId: item.id, itemName: item.name,
+    cardId: card.id } });
+  if (!weapon) {
+    const { lasting, EDGES, KINDS } = await import("./durations.mjs");
+    await lasting(sealer, { kind: KINDS.CONDITION, key: "sealed", edge: EDGES.END, next: true, on: target.uuid,
+      source: seal.name });
+  }
+  requestEdit(card, { type: "sealing", sealing: { ...seal, itemId: item.id, itemName: item.name, indefinite: weapon,
+    bottle: getTrait(item.system.gearId)?.sealBottle === true } });
+  await settledNote(card, `${target.name} is sealed in ${item.name}${weapon ? "" : " until the end of your next turn"}`
+    + `${phantom ? " - Phantom Edge" : ""}.`);
+}
+
+/** "You can spend 1 Action to apply it to a container" - the Sealing Talisman's, or the Sealing Bottle's own Action. */
+async function sealForGood(card, sealer) {
+  const seal = card.getFlag(SCOPE, SEAL_FLAG);
+  const target = fromUuidSync(seal?.targetUuid ?? "");
+  if (!seal || seal.indefinite || seal.released || !target) return;
+  const talisman = seal.bottle ? null
+    : Array.from(sealer.items ?? []).find(item => (item.type === "gear") && (item.system.gearId === "sealing-talisman"));
+  if (!seal.bottle && !talisman) return ui.notifications.warn(`${sealer.name} has no Sealing Talisman.`);
+  if (!await spendActions(sealer, 1, "standard")) return;
+  if (talisman) await talisman.delete();
+  const { clockOff, KINDS } = await import("./durations.mjs");
+  await clockOff(target, KINDS.CONDITION, ["sealed"]);
+  requestEdit(card, { type: "sealing", sealing: { ...seal, indefinite: true } });
+  await settledNote(card, `${target.name} is sealed in ${seal.itemName} indefinitely.`);
+}
+
+/**
+ * "If the container is opened or destroyed, they return to the Battlefield on a Square adjacent to the container" - the
+ * mark taken off here, and the rest done as it goes (unsealed).
+ */
+async function openSeal(card) {
+  const seal = card.getFlag(SCOPE, SEAL_FLAG);
+  const target = fromUuidSync(seal?.targetUuid ?? "");
+  if (!seal || seal.released || !target) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "sealed", 0);
+}
+
+/**
+ * The Sealed mark gone, however - opened, destroyed, or its clock run out: out of the container, "reroll their Initiative
+ * and, if they haven't taken a turn this Combat Round, they may immediately take their turn after the current turn".
+ * Run on the active GM's client.
+ */
+export async function unsealed(actor, sealed) {
+  await actor.unsetFlag(SCOPE, "sealedIn");
+  const sealer = fromUuidSync(sealed.by ?? "");
+  const item = sealer?.items?.get(sealed.itemId ?? "");
+  if (item) await item.unsetFlag(SCOPE, "sealedInside");
+  const card = game.messages.get(sealed.cardId ?? "");
+  const seal = card?.getFlag(SCOPE, SEAL_FLAG);
+  if (seal) await card.setFlag(SCOPE, SEAL_FLAG, { ...seal, released: true });
+  const combatant = game.combat?.combatants?.find(entry => entry.actor?.uuid === actor.uuid);
+  if (combatant) await game.combat.rollInitiative([combatant.id]);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)} is out of `
+      + `${Handlebars.escapeExpression(sealed.itemName ?? "the container")}, on a Square beside it`
+      + `${combatant ? " - Initiative rerolled; if they have not taken a turn this Combat Round, they take it after the current one" : ""}.</div>` });
+}
+
+/** Its buttons: the container, for its user; then Talisman or Seal for good, and Release for whoever holds the container. */
+function renderSealing(message, html) {
+  const seal = message.getFlag(SCOPE, SEAL_FLAG);
+  if (!seal || seal.released) return;
+  const sealer = fromUuidSync(seal.sealerUuid);
+  if (!sealer?.isOwner && !game.user.isGM) return;
+  const container = html.querySelector(".message-content") ?? html;
+  const add = (label, tip, act) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = label;
+    button.dataset.tooltip = tip;
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return act();
+    });
+    container.append(button);
+  };
+  const target = fromUuidSync(seal.targetUuid);
+  if (!seal.itemId) {
+    return add("Seal", "Choose the container: a Basic Item that can be used for Sealing", async () => {
+      const options = sealContainers(sealer, seal.weapon);
+      if (!options.length || !target) return ui.notifications.warn(`${sealer.name} has no container for ${seal.targetName}.`);
+      const chosen = await pick(seal.name, `Seal ${seal.targetName} into:`, options.map(item => ({ action: item.id, label: item.name })));
+      const item = chosen ? sealer.items.get(chosen) : null;
+      if (item) await sealInto(message, sealer, target, item);
+    });
+  }
+  if (!seal.indefinite) {
+    add(seal.bottle ? "Seal for good" : "Talisman",
+      seal.bottle ? "1 Action: the Sealing Bottle holds them indefinitely" : "1 Action and a Sealing Talisman: sealed indefinitely",
+      () => sealForGood(message, sealer));
+  }
+  add("Release", `${seal.itemName} is opened or destroyed: ${seal.targetName} comes out beside it`, () => openSeal(message));
+}
+
+/** Phantom Edge: "Increase your Wound Rolls by the Tier of Power Extra Dice (min. 1d4) of the sealed Character." */
+function phantomEdgeDice(attacker, attack) {
+  const item = attack?.weapon?.itemId ? attacker?.items?.get?.(attack.weapon.itemId) : null;
+  const inside = item?.getFlag?.(SCOPE, "sealedInside");
+  if (!inside?.phantom) return [];
+  const sealed = fromUuidSync(inside.uuid);
+  return [{ label: "Phantom Edge", formula: sealed?.system?.dice?.extra?.formula || "1d4" }];
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -13428,7 +13634,8 @@ function woundParts(attacker, attack) {
 function woundDice(attacker, attack) {
   return [
     { label: "Extra dice", formula: attacker.system.dice.extra.formula },
-    { label: "Energy charges", formula: energyChargeDice(attacker, attack) }
+    { label: "Energy charges", formula: energyChargeDice(attacker, attack) },
+    ...phantomEdgeDice(attacker, attack)
   ];
 }
 
