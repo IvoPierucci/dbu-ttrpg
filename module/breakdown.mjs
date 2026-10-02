@@ -270,3 +270,153 @@ export function breakdownText(lines, total) {
 function esc(text) {
   return Handlebars.escapeExpression(String(text ?? ""));
 }
+
+/**
+ * What one Slot contribution is called, and which way it points.
+ *
+ * The rules name these operations rather than writing them as arithmetic - "reduce your
+ * Soak Value by 2(bT)", "the Dice Score of the Wound Roll is halved" - so each row says
+ * the operation and lets the number speak for itself.
+ */
+function contributionLine(part) {
+  const value = Number(part.value) || 0;
+  const label = part.source || "an effect";
+
+  switch (part.op) {
+    case "multiply":
+      return { ...partLine({ label, value: 0, rank: "negative" }),
+        written: `x${value}`, shown: `x${value}` };
+    case "set":
+      return { ...partLine({ label, value, rank: "positive" }),
+        written: `set ${value}`, shown: `= ${value}` };
+    case "min":
+      return { ...partLine({ label, value, rank: "positive" }),
+        written: `at least ${value}`, shown: `>= ${value}` };
+    case "max":
+      return { ...partLine({ label, value, rank: "negative" }),
+        written: `at most ${value}`, shown: `<= ${value}` };
+    default:
+      return partLine({ label, value });
+  }
+}
+
+/**
+ * One derived value's workings, as the table a roll's hover uses.
+ *
+ * `key` may be a chain, for a value that went through more than one Slot on its way -
+ * the Soak Value is `soakValue` and then `soakValue.external`, one for what the character
+ * has and one for what anybody else did to it. The base and its ingredients come from the
+ * first; every Slot's contributions follow in the order they were applied; the total is
+ * the last one's.
+ *
+ * `extra` is for what the sheet cannot fold into the number: anything applied when the
+ * dice come out rather than when the character is derived. Those arrive as notes, which
+ * sit below the total rather than inside the sum.
+ *
+ * `total` overrides the answer, for the values clamped once more outside every Slot. A
+ * table whose answer differs from the number it is attached to is worse than no table.
+ */
+export function workingsTable(system, key, { extra = [], total = null } = {}) {
+  const keys = Array.isArray(key) ? key : [key];
+  const steps = keys.map(one => system.effects?.workings?.[one]).filter(Boolean);
+  if (!steps.length) return "";
+
+  const lines = [];
+  const first = steps[0];
+
+  // The base by its ingredients where the data model named them, and as one number where
+  // it did not. A part worth nothing is left out: "Size 0" is a row saying only that Size
+  // did not apply.
+  const named = (first.parts ?? []).filter(part => Number(part.value) !== 0);
+  if (named.length) for (const part of named) lines.push(partLine({ label: part.label, value: part.value }));
+  else lines.push(partLine({ label: "Base", value: first.base }));
+
+  for (const step of steps) {
+    for (const part of step.contributions ?? []) lines.push(contributionLine(part));
+
+    if ((step.floored !== null) && (step.floored !== undefined)) {
+      lines.push(floorLine(step.base, step.floored, "nothing goes below zero"));
+    }
+  }
+
+  for (const note of extra) if (note) lines.push(noteLine(note));
+
+  return breakdownTable(lines, total ?? steps[steps.length - 1].value);
+}
+
+/**
+ * Everything a Combat Roll picks up between the sheet and the dice.
+ *
+ * None of it is in the number above, and none of it can be: Diminishing Offense counts
+ * the attacks made this Combat Round, the Health Threshold penalty follows the Life
+ * Points, and the Muscle Penalty follows the Super Stacks held right now. All three are
+ * true of a roll rather than of a character, so they are said rather than folded in - the
+ * number on the sheet stays the one the rules call the Strike Roll.
+ */
+export function atRollTime(system, which) {
+  const notes = [];
+
+  if (which === "strike") {
+    const { stacks = 0, penalty = 0 } = system.diminishing?.offense ?? {};
+    if (penalty) notes.push(`-${penalty} Diminishing Offense, from ${stacks} stack(s) this round`);
+  }
+  if (which === "dodge") {
+    const { penalty = 0 } = system.diminishing?.defense ?? {};
+    if (penalty) notes.push(`-${penalty} Diminishing Defense, from ${penalty} stack(s) this round`);
+  }
+
+  // On the Strike and the Dodge, not on the Wound: the Muscle Penalty is written against
+  // the rolls you make with your body rather than the damage they do.
+  if ((which === "strike") || (which === "dodge")) {
+    const muscle = system.superStack?.musclePenalty ?? 0;
+    if (muscle) notes.push(`-${muscle} Muscle Penalty, from ${system.superStack.stacks} Super Stack(s)`);
+  }
+
+  // Every Combat Roll, the Wound Roll included. Failed Steadfast Checks, not the
+  // Threshold itself: reaching one costs nothing, and losing the Check it asks for costs
+  // 1(bT) on every Combat Roll from then on.
+  const threshold = system.threshold?.penalty ?? 0;
+  const failures = system.threshold?.failures ?? 0;
+  if (threshold) {
+    notes.push(`-${threshold} from ${failures} failed Steadfast Check${
+      failures === 1 ? "" : "s"} at a Health Threshold`);
+  }
+
+  const extra = system.dice?.extra?.formula ?? "";
+  if (extra) notes.push(`+${extra} Tier of Power Extra Dice, on every Combat Roll`);
+
+  return notes;
+}
+
+/**
+ * A roll as a formula, for the window it is rolled from: `1d10 + 1d4 + 1d6 + 20`. Each piece names itself on hover -
+ * the Base Die, each group of Extra or Greater Dice by what gave it, and the bonus as the table of what it is made of:
+ * the workings of each part that has them (its Talents, its Items, its effects - the same table as the sheet's hover)
+ * and the parts summed where there is more than one.
+ *
+ * @param {object} formula
+ * @param {string} [formula.base]   the Base Die
+ * @param {{formula: string, label: string}[]} [formula.dice]   the dice beside it, each group by its source
+ * @param {{label: string, value: number, workings?: string}[]} [formula.parts]   what is added, `workings` an HTML
+ *   table (workingsTable) where the part has one
+ */
+export function formulaHtml({ base = "1d10", dice = [], parts = [] } = {}) {
+  // Escaped here for an attribute, quotes and all: the tooltip may be a whole table.
+  const attr = text => String(text ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const piece = (text, tip, html = false) =>
+    `<span class="dbu-formula-piece" ${html ? "data-tooltip-html" : "data-tooltip"}="${attr(tip)}">${esc(text)}</span>`;
+  const counted = parts.filter(part => Number(part.value) || part.workings);
+  const netted = counted.reduce((sum, part) => sum + (Number(part.value) || 0), 0);
+  // Penalties cancel bonuses but never take a roll below its dice.
+  const bonus = Math.max(0, netted);
+  const tables = counted.filter(part => part.workings)
+    .map(part => `<div class="dbu-bd-head">${esc(part.label)}</div>${part.workings}`);
+  const summed = ((counted.length > 1) || !tables.length)
+    ? breakdownTable(counted.map(part => partLine({ label: part.label, value: Number(part.value) || 0 })), bonus) : "";
+  return [
+    piece(base, "Base Die"),
+    ...dice.filter(group => group.formula).map(group => piece(group.formula, group.label)),
+    piece(String(bonus), `${tables.join("")}${summed}`, true)
+  ].join(" + ");
+}

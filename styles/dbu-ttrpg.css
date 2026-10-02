@@ -3375,3 +3375,9 @@
   border-bottom: 1px dotted currentColor;
   cursor: help;
 }
+
+/* A part's name over its workings, in a roll formula's hover. */
+.dbu-bd-head {
+  font-weight: bold;
+  margin-top: 4px;
+}

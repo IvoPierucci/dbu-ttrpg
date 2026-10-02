@@ -38,7 +38,7 @@ import {
 import { actionsLeft, isTheirTurn, newRoundFor, spendActions } from "../combat.mjs";
 import { whyNotAnotherInstant, whyNotSpecial } from "../maneuvers.mjs";
 import { baseDieLine, breakdownTable, extraDiceLine, partLine, noteLine, floorLine,
-         fromOutcome } from "../breakdown.mjs";
+         fromOutcome, workingsTable, atRollTime } from "../breakdown.mjs";
 import { fireMoment } from "../effects/moments-runtime.mjs";
 import {
   checkCard,
@@ -105,123 +105,6 @@ import {
  * DBU TTRPG character sheet, built on the modern ApplicationV2 / ActorSheetV2
  * API (recommended approach as of Foundry v13+, required going forward in v14+).
  */
-
-/**
- * What one Slot contribution is called, and which way it points.
- *
- * The rules name these operations rather than writing them as arithmetic - "reduce your
- * Soak Value by 2(bT)", "the Dice Score of the Wound Roll is halved" - so each row says
- * the operation and lets the number speak for itself.
- */
-function contributionLine(part) {
-  const value = Number(part.value) || 0;
-  const label = part.source || "an effect";
-
-  switch (part.op) {
-    case "multiply":
-      return { ...partLine({ label, value: 0, rank: "negative" }),
-        written: `x${value}`, shown: `x${value}` };
-    case "set":
-      return { ...partLine({ label, value, rank: "positive" }),
-        written: `set ${value}`, shown: `= ${value}` };
-    case "min":
-      return { ...partLine({ label, value, rank: "positive" }),
-        written: `at least ${value}`, shown: `>= ${value}` };
-    case "max":
-      return { ...partLine({ label, value, rank: "negative" }),
-        written: `at most ${value}`, shown: `<= ${value}` };
-    default:
-      return partLine({ label, value });
-  }
-}
-
-/**
- * One derived value's workings, as the table a roll's hover uses.
- *
- * `key` may be a chain, for a value that went through more than one Slot on its way -
- * the Soak Value is `soakValue` and then `soakValue.external`, one for what the character
- * has and one for what anybody else did to it. The base and its ingredients come from the
- * first; every Slot's contributions follow in the order they were applied; the total is
- * the last one's.
- *
- * `extra` is for what the sheet cannot fold into the number: anything applied when the
- * dice come out rather than when the character is derived. Those arrive as notes, which
- * sit below the total rather than inside the sum.
- *
- * `total` overrides the answer, for the values clamped once more outside every Slot. A
- * table whose answer differs from the number it is attached to is worse than no table.
- */
-function workingsTable(system, key, { extra = [], total = null } = {}) {
-  const keys = Array.isArray(key) ? key : [key];
-  const steps = keys.map(one => system.effects?.workings?.[one]).filter(Boolean);
-  if (!steps.length) return "";
-
-  const lines = [];
-  const first = steps[0];
-
-  // The base by its ingredients where the data model named them, and as one number where
-  // it did not. A part worth nothing is left out: "Size 0" is a row saying only that Size
-  // did not apply.
-  const named = (first.parts ?? []).filter(part => Number(part.value) !== 0);
-  if (named.length) for (const part of named) lines.push(partLine({ label: part.label, value: part.value }));
-  else lines.push(partLine({ label: "Base", value: first.base }));
-
-  for (const step of steps) {
-    for (const part of step.contributions ?? []) lines.push(contributionLine(part));
-
-    if ((step.floored !== null) && (step.floored !== undefined)) {
-      lines.push(floorLine(step.base, step.floored, "nothing goes below zero"));
-    }
-  }
-
-  for (const note of extra) if (note) lines.push(noteLine(note));
-
-  return breakdownTable(lines, total ?? steps[steps.length - 1].value);
-}
-
-/**
- * Everything a Combat Roll picks up between the sheet and the dice.
- *
- * None of it is in the number above, and none of it can be: Diminishing Offense counts
- * the attacks made this Combat Round, the Health Threshold penalty follows the Life
- * Points, and the Muscle Penalty follows the Super Stacks held right now. All three are
- * true of a roll rather than of a character, so they are said rather than folded in - the
- * number on the sheet stays the one the rules call the Strike Roll.
- */
-function atRollTime(system, which) {
-  const notes = [];
-
-  if (which === "strike") {
-    const { stacks = 0, penalty = 0 } = system.diminishing?.offense ?? {};
-    if (penalty) notes.push(`-${penalty} Diminishing Offense, from ${stacks} stack(s) this round`);
-  }
-  if (which === "dodge") {
-    const { penalty = 0 } = system.diminishing?.defense ?? {};
-    if (penalty) notes.push(`-${penalty} Diminishing Defense, from ${penalty} stack(s) this round`);
-  }
-
-  // On the Strike and the Dodge, not on the Wound: the Muscle Penalty is written against
-  // the rolls you make with your body rather than the damage they do.
-  if ((which === "strike") || (which === "dodge")) {
-    const muscle = system.superStack?.musclePenalty ?? 0;
-    if (muscle) notes.push(`-${muscle} Muscle Penalty, from ${system.superStack.stacks} Super Stack(s)`);
-  }
-
-  // Every Combat Roll, the Wound Roll included. Failed Steadfast Checks, not the
-  // Threshold itself: reaching one costs nothing, and losing the Check it asks for costs
-  // 1(bT) on every Combat Roll from then on.
-  const threshold = system.threshold?.penalty ?? 0;
-  const failures = system.threshold?.failures ?? 0;
-  if (threshold) {
-    notes.push(`-${threshold} from ${failures} failed Steadfast Check${
-      failures === 1 ? "" : "s"} at a Health Threshold`);
-  }
-
-  const extra = system.dice?.extra?.formula ?? "";
-  if (extra) notes.push(`+${extra} Tier of Power Extra Dice, on every Combat Roll`);
-
-  return notes;
-}
 
 /**
  * The Resources a character is holding, as rows for the sheet.
@@ -2244,10 +2127,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Every roll opens the same window, even when a willing failure is the only thing
     // there is to declare: it is decided here, at the roll, rather than armed in
     // advance and waiting to catch a later one.
-    const ready = await prepareRoll(
-      this.actor, [], `${label} Check`,
-      `Roll <strong>${label}</strong>? (${DBUCharacterData.BASE_DIE} ${mod})`
-    );
+    const ready = await prepareRoll(this.actor, [], `${label} Check`, "", { formula: { base: DBUCharacterData.BASE_DIE,
+      parts: [{ label, value: attribute.mod, workings: workingsTable(this.actor.system, `${key}.mod`) }] } });
     if (!ready) return;
 
     // Not a Skill roll, so the critical uses the character's Critical Extra Dice.
@@ -2270,10 +2151,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const save = this.actor.system.savingThrows[key];
     if (!save) return;
 
-    const ready = await prepareRoll(
-      this.actor, [], `${save.label} Saving Throw`,
-      `Roll <strong>${save.label}</strong>? (${DBUCharacterData.BASE_DIE} +${save.value})`
-    );
+    const ready = await prepareRoll(this.actor, [], `${save.label} Saving Throw`, "", { formula: {
+      base: DBUCharacterData.BASE_DIE,
+      parts: [{ label: save.label, value: save.value, workings: workingsTable(this.actor.system, `save.${key}`) }] } });
     if (!ready) return;
 
     return this.#rollCheck({
@@ -2300,12 +2180,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const combatant = game.combat?.combatants?.find(c => c.actor?.uuid === this.actor.uuid);
 
     // An Initiative Check is Urgent, so it cannot be failed on purpose.
-    const ready = await prepareRoll(
-      this.actor, [], "Initiative",
-      `Roll <strong>Initiative</strong>? (${DBUCharacterData.BASE_DIE} `
-        + `+${this.actor.system.initiativeBonus})`,
-      { urgent: true }
-    );
+    const ready = await prepareRoll(this.actor, [], "Initiative", "", { urgent: true, formula: {
+      base: DBUCharacterData.BASE_DIE, parts: [{ label: "Initiative", value: this.actor.system.initiativeBonus,
+        workings: workingsTable(this.actor.system, "initiative") }] } });
     if (!ready) return;
 
     if (combatant) return game.combat.rollInitiative([combatant.id]);
@@ -5901,11 +5778,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Opponent in the form of a Clash or against a set Difficulty Category." The Clash is
     // opened by whatever rule calls for one; this is the other half, and it is the only
     // roll in the system that is offered a Target Number.
-    const ready = await prepareRoll(
-      this.actor, [], `${name} Check`,
-      `Roll <strong>${Handlebars.escapeExpression(name)}</strong>? (${BASE_DIE} ${bonus})`,
-      { difficulties: true, senses: sensesAsked(this.actor, target.dataset.skill) }
-    );
+    const ready = await prepareRoll(this.actor, [], `${name} Check`, "", {
+      difficulties: true, senses: sensesAsked(this.actor, target.dataset.skill),
+      formula: { base: BASE_DIE, parts: [
+        { label: name, value: skill.bonus, workings: workingsTable(this.actor.system, `skill.${target.dataset.skill}.bonus`) },
+        { label: "Effects", value: total - skill.bonus,
+          workings: (total !== skill.bonus) ? workingsTable(this.actor.system, `skill.${target.dataset.skill}`) : "" }
+      ] }
+    });
     if (!ready) return;
 
     // Crafting's Auto-Succeed: at 4 Ranks in Craft a Check at Qualified or less needs no roll - at 5,

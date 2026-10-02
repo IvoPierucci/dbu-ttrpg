@@ -25,7 +25,7 @@ import { armorPiercing, damageAttributeOf, karmicSteps, linkedPick, skyAssaultWa
 import { advantageWoundParts, featureRanks, pushes, staggers, POWER_SHOT_MAX_RANKS }
   from "./signature.mjs";
 import { baseDieLine, extraDiceLine, diceLine, partLine, noteLine, floorLine,
-         fromOutcome, withoutOutcome, breakdownTable, breakdownText } from "./breakdown.mjs";
+         fromOutcome, withoutOutcome, breakdownTable, breakdownText, formulaHtml } from "./breakdown.mjs";
 import { collectReactive, applySlot } from "./effects/interpreter.mjs";
 import {
   DAMAGE_CATEGORIES,
@@ -5665,7 +5665,7 @@ export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll 
 export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
                                     combatRoll = false, attackingManeuver = false,
-                                    difficulties = false, senses = [] } = {}) {
+                                    difficulties = false, senses = [], formula = null } = {}) {
   const rows = effects.map(entry => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
@@ -5747,12 +5747,16 @@ export async function prepareRoll(actor, effects, title, hint = "",
     classes: ["dbu-dialog"],
     window: { title },
     content: `<div class="dbu-respond-dialog">
-      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}${rows}${difficultyRows}${senseRows}${willing}${karmicGroup}
+      ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}
+      ${formula ? `<p class="dbu-formula">${formulaHtml(formula)}</p>` : ""}
+      ${rows}${difficultyRows}${senseRows}${willing}${karmicGroup}
     </div>`,
     buttons: [
       {
         action: "confirm",
-        label: "Confirm",
+        // The roll is made from here, or - after the fact - what was picked is applied.
+        label: rolling ? "Roll" : "Apply",
+        default: true,
         callback: (event, button, dialog) => ({
           triggers: [...dialog.element.querySelectorAll('input[name="trigger"]:checked')].map(input => input.value),
           willing: dialog.element.querySelector('input[name="willing"]')?.checked ?? null,
@@ -5762,7 +5766,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
             .map(input => input.value)
         })
       },
-      { action: "cancel", label: "Cancel" }
+      { action: "cancel", label: "Close" }
     ],
     rejectClose: false
   });
@@ -11219,15 +11223,13 @@ async function askFollowUps(attack, attacker, { plan, beatable, longRange }) {
     ...(attacker.system.effects?.slots?.["combatRolls.dice"] ?? [])
       .map(die => ({ label: die.source || "Greater Dice", formula: die.formula }))
   ].filter(group => group.formula);
-  // The bonus is the first Strike's, so are its parts: each one that moved it, and where it came from.
-  const parts = (strike.lines ?? []).filter(entry => (entry.kind === "part") && !entry.outcome && entry.value)
-    .map(entry => `${entry.source}: ${(entry.value > 0) ? "+" : ""}${entry.value}`);
-  const piece = (text, tip) => `<span class="dbu-formula-piece" data-tooltip="${escape(tip)}">${escape(text)}</span>`;
-  const formula = [
-    piece(DBUCharacterData.BASE_DIE, "Base Die"),
-    ...groups.map(group => piece(group.formula, group.label)),
-    piece(String(strike.bonus ?? 0), parts.length ? parts.join("<br>") : "Bonus")
-  ].join(" + ") + (longRange ? ` - ${piece(String(longRange), "Long Range")}` : "");
+  // The bonus is the first Strike's, so are its parts: each one that moved it, and where it came from - and the
+  // Long Range penalty these pay as the first did.
+  const formula = formulaHtml({ base: DBUCharacterData.BASE_DIE, dice: groups, parts: [
+    ...(strike.lines ?? []).filter(entry => (entry.kind === "part") && !entry.outcome && entry.value)
+      .map(entry => ({ label: entry.source, value: entry.value })),
+    ...(longRange ? [{ label: "Long Range", value: -longRange }] : [])
+  ] });
 
   // What may join these rolls. Multiple Arms is Triggered, so it is a box the player ticks or leaves.
   const arms = armsCombinationOpen(attacker);
