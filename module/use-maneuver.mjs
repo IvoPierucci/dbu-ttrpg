@@ -20,6 +20,7 @@ import {
   whyNotInReach,
   maxEnergyCharges,
   maneuverKiCost,
+  sizeDifference,
   lifeWagerProblem,
   spendLifeWager,
   maneuverUsesLeft,
@@ -4126,6 +4127,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
 
     // "Target a Character within your Melee Range." The same measurement a Physical
     // Attack makes, with a different sentence around it.
+    // Gigantic Grip: "If you are 3+ Size Categories larger than another Character, you cannot be targeted by their use of
+    // the Grapple or Pin Maneuvers."
+    if ((maneuver.grapple || maneuver.pin) && targetActor && (sizeDifference(targetActor, actor) >= 3)) {
+      ui.notifications.warn(`${targetActor.name} is too large for ${actor.name} to ${maneuver.pin ? "Pin" : "Grapple"}.`);
+      return false;
+    }
     const outOfGrasp = maneuver.grapple && targetActor
       && whyNotWithinMelee(actor, targetActor, "The Grapple Maneuver");
     if (outOfGrasp) {
@@ -4390,6 +4397,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // is in the file, as a passive reading the Resource - which is where a reader looks for
   // the rule.
   if (crossing?.rapid) await takeRapidMovement(actor);
+  // Tiny Target: an Opponent 2+ Size Categories larger, whose Melee Range you were in.
+  if (crossing?.rapid) await (await import("./chat.mjs")).tinyTarget(actor);
   // "If you use the Movement Maneuver while Hidden through the effect of Fake Death, you stop being Hidden."
   if (crossing) await (await import("./hidden.mjs")).endFakeDeath(actor, "used the Movement Maneuver");
 

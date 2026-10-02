@@ -1167,12 +1167,39 @@ export function heightRanksBetween(actor, target) {
  */
 export const LONG_RANGE_SQUARES = 9;
 
-/** Whether this target is at Long Range from this character. */
+/**
+ * Combat at Different Sizes: how many Size Categories `a` is larger than `b` - negative when smaller. Read off the
+ * prepared Size, so whatever moved it (Liquid, the Micro Band) is counted.
+ */
+export function sizeDifference(a, b) {
+  return (Number(a?.system?.size?.steps) || 0) - (Number(b?.system?.size?.steps) || 0);
+}
+
+/** "For every Size Category after Large" / "greater than Large you are" - Enormous 1, Gigantic 2, Colossal 3. */
+export function sizesAboveLarge(actor) {
+  return Math.max(0, (Number(actor?.system?.size?.steps) || 0) - 1);
+}
+
+/**
+ * Size and Movement: "If a Character's effect moves you" - smaller than them, "increase the amount of Squares you move
+ * by 1(bT) for each Size Category smaller"; larger, "reduce ... by 1(bT) for each Size Category larger" - either way no
+ * more than 3(bT). The Squares, and what changed them.
+ */
+export function sizedMovement(moved, by, squares) {
+  const steps = Math.max(-3, Math.min(3, sizeDifference(by, moved)));
+  const change = steps * Math.max(1, Number(moved?.system?.baseTierOfPower) || 1);
+  return { squares: Math.max(0, squares + change), change };
+}
+
+/**
+ * Whether this target is at Long Range from this character. Longer Sight: "For every Size Category greater than Large
+ * you are, increase the number of Squares until an Opponent is at Long Range by 2."
+ */
 export function atLongRange(actor, target) {
   const away = squaresAway(actor, target);
   // Unmeasurable is not far: out of combat there are no Squares, and a rule about them
   // cannot be enforced where there are none - the same answer the Melee Range gives.
-  return (away === null) ? false : (away >= LONG_RANGE_SQUARES);
+  return (away === null) ? false : (away >= (LONG_RANGE_SQUARES + (2 * sizesAboveLarge(actor))));
 }
 
 /**

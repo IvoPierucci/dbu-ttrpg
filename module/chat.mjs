@@ -35,6 +35,9 @@ import {
   PROFILES,
   areaLabel,
   maxEnergyCharges,
+  sizeDifference,
+  sizedMovement,
+  sizesAboveLarge,
   resolveDamageCategory,
   allManeuvers,
   declareAttack,
@@ -2614,7 +2617,12 @@ async function beginGrapple(grappler, grappled) {
     "system.grapple.role": "grappled"
   });
 
-  for (const actor of [grappler, grappled]) await setCondition(actor, "guard-down", 1);
+  // Gigantic Grip: "In a Grapple, if you are 3+ Size Categories larger than the Grappled, you do not gain the Guard Down
+  // Combat Condition from that Grapple."
+  for (const actor of [grappler, grappled]) {
+    if ((actor === grappler) && (sizeDifference(grappler, grappled) >= 3)) continue;
+    await setCondition(actor, "guard-down", 1);
+  }
 }
 
 /**
@@ -3735,7 +3743,7 @@ export async function pullAtEndOfTurn(actor, combat) {
     for (const other of others) {
       await postMightClash(actor, other, {
         maneuverName: item.name,
-        reason: `Lose and ${other.name} moves up to ${might} Squares toward the portal.`
+        reason: `Lose and ${other.name} moves up to ${sizedMovement(other, actor, might).squares} Squares toward the portal.`
       });
     }
   }
@@ -5032,7 +5040,9 @@ async function resettleWound(message, situation, attack, result) {
     const raw = negated
       ? 0
       : Math.max(0, effectiveWound - (own.soak ?? 0) - (own.reduction ?? 0));
-    const damage = Math.max(0, damageTaken(raw, { "incoming.damage": own.incomingDamage }) - (Number(own.barrier?.total) || 0));
+    const dealt = Math.max(0, damageTaken(raw, { "incoming.damage": own.incomingDamage }) - (Number(own.barrier?.total) || 0));
+    // Punching Down's 1d6(T), as rolled - and only while there is Damage for it to add to.
+    const damage = dealt + ((dealt > 0) ? (Number(own.punchingDown) || 0) : 0);
 
     // A Karmic Effect that takes the Damage down to nothing rattles the attacker
     // exactly as a Direct Hit that did so on its own would.
@@ -7226,7 +7236,7 @@ const CLASH_ROLLS = ({
         ? grappleDefenceParts(actor)
         : []),
       // "Increase all of your Grapple Checks" - Four Witches Grip's: as either side.
-      ...(clash.grapple ? grappleAllParts(actor) : []),
+      ...(clash.grapple ? grappleAllParts(actor, clash, uuid) : []),
       // "Make a Grapple Check against the Grappled with your Dice Score reduced by
       // 1(bT)." The Grappler's alone, and the only Grapple Check made at a penalty.
       ...(((uuid === clash.challengerUuid) && (clash.grapple?.kind === "pin"))
@@ -7355,9 +7365,13 @@ Object.freeze(CLASH_ROLLS);
  * row worth nothing.
  */
 /** What an effect adds to every Grapple Check you make, Grappler or Grappled - Four Witches Grip's. */
-function grappleAllParts(actor) {
+function grappleAllParts(actor, clash = null, uuid = "") {
   const value = Math.round(applySlot(actor.system.effects?.slots, "grapple.all", 0));
-  return value ? [{ label: "Grapple Checks", value }] : [];
+  // Gigantic Grip: "increase the Dice Score of your Grapple Check by 1(T) (max. 3(T)) for every Size Category you are
+  // larger than the opposing Character".
+  const larger = clash ? Math.min(3, Math.max(0, sizeDifference(actor, clashOpponent(clash, uuid)))) : 0;
+  return [...(value ? [{ label: "Grapple Checks", value }] : []),
+    ...(larger ? [{ label: "Gigantic Grip", written: `+${larger}(T)`, value: larger * Math.max(1, actor.system.tierOfPower ?? 1) }] : [])];
 }
 
 function grappleDefenceParts(actor) {
@@ -8868,6 +8882,86 @@ export async function postSmash(actor, maneuver, plan) {
   }
 }
 
+/**
+ * Tiny Target: "When you use the Rapid Movement Maneuver, if you were in the Melee Range of an Opponent that is 2+ Size
+ * Categories larger than you, make a Skill Clash (Acrobatics/Stealth vs Perception) against those Opponent(s). If you
+ * win, you become Hidden from that Opponent(s)." Whose Melee Range you were in is measured where there are tokens -
+ * ticked - and the table's to tick where there are none; which Skill, asked.
+ */
+export async function tinyTarget(actor) {
+  const { squaresAway } = await import("./maneuvers.mjs");
+  const pool = game.combat?.started
+    ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
+    : Array.from(game.user.targets ?? []).map(token => token.actor);
+  const larger = [...new Map(pool.filter(other => other && (other.uuid !== actor.uuid) && (sizeDifference(other, actor) >= 2))
+    .map(other => [other.uuid, other])).values()];
+  if (!larger.length) return;
+  const near = other => {
+    const away = squaresAway(other, actor);
+    return (away !== null) && (away <= Math.max(0, Number(other.system.meleeRange) || 0));
+  };
+  const escape = Handlebars.escapeExpression;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - Tiny Target` },
+    content: `<label class="dbu-wager"><span>Roll</span><select name="skill">${["acrobatics", "stealth"].map(key =>
+        `<option value="${key}">${escape(actor.system.skills?.[key]?.label ?? key)} ${actor.system.skills?.[key]?.roll ?? 0}</option>`)
+        .join("")}</select></label>
+      <p class="dbu-respond-hint">Opponents 2+ Size Categories larger whose Melee Range you were in</p>${larger.map(other =>
+        `<label class="dbu-respond-option"><input type="checkbox" name="${escape(other.uuid)}" ${near(other) ? "checked" : ""}/>
+          <span class="dbu-respond-name">${escape(other.name)}</span></label>`).join("")}`,
+    buttons: [
+      { action: "clash", label: "Clash", default: true, callback: (event, button, dialog) => ({
+        skill: dialog.element.querySelector('select[name="skill"]')?.value ?? "acrobatics",
+        uuids: larger.filter(other => dialog.element.querySelector(`input[name="${CSS.escape(other.uuid)}"]`)?.checked)
+          .map(other => other.uuid) }) },
+      { action: "skip", label: "Close" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object")) return;
+  for (const uuid of chosen.uuids) {
+    const other = fromUuidSync(uuid);
+    if (!other) continue;
+    await postSkillClash(actor, other, { name: "Tiny Target", type: "outOfSequence",
+      clash: { skill: chosen.skill, defenderSkills: ["perception"] } }, { hides: { applied: false } });
+  }
+}
+
+/** Punching Down's 1d6(T). */
+async function punchingDownRoll(attacker) {
+  const roll = new Roll(`${Math.max(1, attacker.system.tierOfPower ?? 1)}d6`);
+  await roll.evaluate();
+  return roll.total;
+}
+
+/**
+ * Punching Up: "If you target a Character with an Attacking Maneuver that lacks an AoE and that target is 2+ Size
+ * Categories larger than you ... if you do" - use the Called Shot Maneuver - how many Categories larger, or 0. Settled
+ * once, as the attack is made, and carried on it as `punchingUp`.
+ */
+function punchingUp(attacker, target, area, modifiers) {
+  if (area || !(modifiers ?? []).some(entry => (entry.id ?? entry.modifier?.id) === "called-shot")) return 0;
+  const larger = target ? sizeDifference(target, attacker) : 0;
+  return (larger >= 2) ? larger : 0;
+}
+
+/**
+ * The Area an attack ends up with, for its maker's Size. Giant Magnitude: "For every Size Category after Large, increase
+ * the Magnitude of any AoE Attacking Maneuvers you have by 1." Giant Strike: "If your Size Category is Gigantic, all of
+ * your Attacking Maneuvers that lack an AoE gain a Minor Sphere AoE unless you are targeting another Character who is
+ * of the Gigantic Size Category or higher (Giant Magnitude is not applied to this AoE). If your Size Category is
+ * Colossal, your Attacking Maneuvers gain a Standard Sphere AoE instead." Not through Illusion Smash, whose attack
+ * may have none (the user's ruling).
+ */
+function sizedArea(attacker, target, area, { portal = false } = {}) {
+  const above = sizesAboveLarge(attacker);
+  if (area) return above ? { ...area, magnitudeSteps: (Number(area.magnitudeSteps) || 0) + above, giantMagnitude: above } : area;
+  const steps = Number(attacker.system.size?.steps) || 0;
+  if (portal || (steps < 3) || ((Number(target?.system?.size?.steps) || 0) >= 3)) return null;
+  return { shape: "sphere", magnitude: (steps >= 4) ? "standard" : "minor", giantStrike: true };
+}
+
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
 export async function offerOutOfSequence(actor, offer) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
@@ -9210,7 +9304,7 @@ export async function postWave(actor, maneuver, uuids) {
   for (const target of targets) {
     await postMightClash(actor, target, {
       maneuverName: maneuver.name,
-      reason: `Win and move ${target.name} up to ${might} Squares in a straight line away from you`
+      reason: `Win and move ${target.name} up to ${sizedMovement(target, actor, might).squares} Squares in a straight line away from you`
         + `${damage ? `, ${Math.floor(might / 2)} Life Points off them` : ""}.`,
       collision: { doubles: false, doubledBy: "" },
       wave: { applied: false, damage }
@@ -9649,6 +9743,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (crossing?.rapid) {
     const { takeRapidMovement } = await import("./use-maneuver.mjs");
     await takeRapidMovement(actor);
+    // Tiny Target, against whoever larger you were beside.
+    await tinyTarget(actor);
   }
   // "If you use the Movement Maneuver while Hidden through the effect of Fake Death, you stop being Hidden."
   if (crossing) await (await import("./hidden.mjs")).endFakeDeath(actor, "used the Movement Maneuver");
@@ -9898,7 +9994,11 @@ export async function postAttack(actor, target, maneuver,
           // An Area the attack brings for itself, over its Profile's - the Grenade's Minor
           // Sphere. Null for every attack whose Area, if any, is its Profile's. A Technique's is
           // the one its features built.
-          area: technique ? technique.area : area,
+          area: sizedArea(actor, target, technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null),
+            { portal }),
+          // Punching Up, against the one it was aimed at.
+          punchingUp: punchingUp(actor, target, sizedArea(actor, target,
+            technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null), { portal }), modifiers),
           // "A Bomb's Strike Roll for this Attacking Maneuver will automatically succeed."
           // Carried on the attack, since it is the attack's and not the character's.
           autoHit: Boolean(autoHit),
@@ -11007,10 +11107,12 @@ function modifierCategoryShift(modifiers) {
 function modifierStrikeParts(attacker, attack) {
   const tier = attacker.system.tierOfPower ?? 1;
   const baseTier = attacker.system.baseTierOfPower ?? 1;
+  // Punching Up: "you suffer no penalties from using the Called Shot Maneuver" - settled as the attack was made.
+  const up = (Number(attack.punchingUp) || 0) > 0;
 
   return [
     ...(attack.modifiers ?? [])
-      .filter(entry => entry.strikePerTier)
+      .filter(entry => entry.strikePerTier && !(up && (entry.id === "called-shot")))
       .map(entry => ({
         label: entry.name,
         written: `${entry.strikePerTier > 0 ? "+" : ""}${entry.strikePerTier}(T)`,
@@ -12025,7 +12127,10 @@ function woundRoller(attack) {
  * their own step before this one, first; Wagered Ki is added, already paid for when the attack was declared.
  */
 function woundParts(attacker, attack) {
+  const up = Number(attack.punchingUp) || 0;
   return [
+    // Punching Up: "increase the Wound Roll of that Attacking Maneuver by 1(T) for every Size Category they are larger".
+    ...(up ? [{ label: "Punching Up", written: `+${up}(T)`, value: up * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...combinationFollowUps(attacker, attack),
     { ...woundBase(attacker, attack), workingsKey: `wound.${attack.foundation}` },
     ...profileWoundParts(attacker, attack),
@@ -12671,11 +12776,16 @@ async function rollAttackWound(message, attack) {
     // Annihilation against the Undying.
     const extra = techniqueDamageParts(attacker, attack, target, taken);
     // Barrier: "Reduce the Damage you receive by the Dice Score."
-    const damage = Math.max(0, taken + extra.reduce((sum, part) => sum + part.value, 0) - (Number(own.barrier?.total) || 0));
+    const dealt = Math.max(0, taken + extra.reduce((sum, part) => sum + part.value, 0) - (Number(own.barrier?.total) || 0));
+    // Punching Down: "If you hit a Character with an Attacking Maneuver that is 2+ Size Categories smaller than you,
+    // increase the amount of Damage they receive by 1d6(T)" - Damage there already is (the user's ruling).
+    const punchingDown = ((dealt > 0) && (sizeDifference(attacker, target) >= 2)) ? await punchingDownRoll(attacker) : 0;
+    const damage = dealt + punchingDown;
 
     await maybeShakeAttacker(attacker, attack, defence, damage);
 
     settledTargets.push({ ...own, counterWound, effectiveWound, soak, reduction, damage,
+      ...(punchingDown ? { punchingDown } : {}),
       ...(extra.length ? { techniqueExtra: extra } : {}) });
   }
 
@@ -13371,6 +13481,12 @@ async function openKnockback(attack, attacker, target, { extra = 0, from = "" } 
   if (tech?.features?.includes("precise-strike") && (attack.result?.strike?.outcome === "critical")) {
     squares = Math.floor(squares * 1.5);
     notes.push("Precise Strike: Critical");
+  }
+  // Size and Movement: the one moved larger or smaller than whoever moves them.
+  const sized = sizedMovement(target, attacker, squares);
+  if (sized.change) {
+    squares = sized.squares;
+    notes.push(`Size ${(sized.change > 0) ? "+" : ""}${sized.change}`);
   }
   if (tech?.superProfile === "super-launch") {
     // "You automatically succeed the Might Clash ... reduce their Life Points by the amount of Squares
@@ -16172,7 +16288,8 @@ function outcomeFor(attack, { own, uuid }) {
   // sits with the Soak it applied to, and Damage Reduction stands outside it.
   const dr = reduction ? ` - DR ${reduction}` : "";
   const barred = own.barrier ? ` - ${own.barrier.name} ${own.barrier.total}` : "";
-  const detail = `Wound ${effectiveWound}${reduced} - Soak ${soak}${stepped}${dr}${barred}`;
+  const down = own.punchingDown ? ` + Punching Down ${own.punchingDown}` : "";
+  const detail = `Wound ${effectiveWound}${reduced} - Soak ${soak}${stepped}${dr}${barred}${down}`;
   return (damage <= 0) ? `${detail}: no damage` : `${detail} = ${damage} damage`;
 }
 
