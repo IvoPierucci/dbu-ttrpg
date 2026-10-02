@@ -558,6 +558,10 @@ export function registerCombatHooks() {
       // Final Chance's held Defeat, at the end of the turn at the latest.
       await releaseFinalChance(leaving);
 
+      // Super Spirit Sword's use again: "during this turn" - unused, gone with it.
+      const { swordAgainExpires } = await import("./chat.mjs");
+      await swordAgainExpires(leaving);
+
       // After the Moment, not before it. "Until the end of your turn" lasts for the whole
       // of your turn, and the end of your turn is part of your turn - so whatever answers
       // that Moment still has it, and it goes once the answering is done.

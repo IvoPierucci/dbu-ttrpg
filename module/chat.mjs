@@ -10692,6 +10692,8 @@ export async function askSpiritSword(actor, maneuver) {
 
 /** Spirit Sword, paid for: "Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver" - or the Technique. */
 export async function postSpiritSword(actor, maneuver, plan, target) {
+  // Super Spirit Sword's use again, taken.
+  if (actor.getFlag?.(SCOPE, "swordAgain")) await actor.unsetFlag(SCOPE, "swordAgain");
   const spiritSword = { name: maneuver.name, itemId: maneuver.itemId, category: plan.category, reach: plan.reach,
     area: plan.area, again: plan.again };
   const { useManeuver, useTechnique } = await import("./use-maneuver.mjs");
@@ -10723,8 +10725,17 @@ async function spiritSwordLanded(message, attack, attacker, target, knockedThrou
   const at = used.indexOf(`round:${sword.itemId}`);
   if (at < 0) return;
   used.splice(at, 1);
-  await requestActorUpdate(attacker, { "system.usedManeuvers": used });
+  // "During this turn": marked, and taken back at its end if it was not used (swordAgainExpires).
+  await requestActorUpdate(attacker, { "system.usedManeuvers": used, [`flags.${SCOPE}.swordAgain`]: sword.itemId });
   await settledNote(message, `Super Spirit Sword: ${attacker.name} may use ${sword.name} again this turn.`);
+}
+
+/** Super Spirit Sword's use again, not taken by the end of the turn it was given in: gone. */
+export async function swordAgainExpires(actor) {
+  const itemId = actor?.getFlag?.(SCOPE, "swordAgain");
+  if (!itemId) return;
+  await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), `round:${itemId}`],
+    [`flags.${SCOPE}.-=swordAgain`]: null });
 }
 
 /** Whether an attack was declared a Called Shot. */
