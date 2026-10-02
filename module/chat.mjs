@@ -6957,6 +6957,26 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
  * would be comparing nothing. So the category is a property of the Clash and each side
  * reads its own number the same way.
  */
+/**
+ * What one side of a Clash rolls besides the Base Die - one list for the roll and its window: the value its category
+ * names, that category's rows, and Warding Weapon's on the side the Clash was opened against.
+ */
+function clashParts(kind, actor, clash, uuid) {
+  return [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
+    ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : [])];
+}
+
+/** The sheet's workings for the value a side rolls, for its window's hover - none for a value standing in for it. */
+function clashWorkingsKey(clash, uuid) {
+  switch (clash.category ?? "skill") {
+    case "skill": return `skill.${skillPicked(clash, uuid)}`;
+    case "might": return Number.isFinite(clash.mightFor?.[uuid]) ? "" : "might";
+    case "strike": return ((uuid === clash.defenderUuid) && (clash.defenderRoll === "dodge")) ? "dodge" : "strike";
+    case "save": return clash.valueFor?.[uuid] ? "" : `save.${savePicked(clash, uuid)}`;
+    default: return "";
+  }
+}
+
 const CLASH_ROLLS = ({
   skill: {
     label: "Skill Clash",
@@ -7849,7 +7869,10 @@ async function clashStage(message, actor) {
   // "All rolls involved become Urgent." A re-aimed Transfiguration says so on the card,
   // and Urgent here means what it means everywhere: it cannot be failed on purpose.
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
-    { urgent: Boolean(opened.urgent), senses });
+    { urgent: Boolean(opened.urgent), senses, formula: { base: DBUCharacterData.BASE_DIE,
+      parts: windowParts(actor, clashParts(kind, actor, { ...opened, ...answer }, actor.uuid)
+        .map((part, index) => (index ? part
+          : { ...part, workingsKey: clashWorkingsKey({ ...opened, ...answer }, actor.uuid) }))) } });
   if (!ready) return;
 
   // Read fresh rather than trusting what the card was drawn with: the other side may
@@ -7897,9 +7920,7 @@ async function resolveSkillClash(message, clash) {
   // of Power Extra Dice, the penalties one carries, and a Slot for effects to reach.
   const side = (actor, uuid) => rollSide(
     actor,
-    [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
-      // Warding Weapon's, on the side the Clash was opened against.
-      ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : [])],
+    clashParts(kind, actor, clash, uuid),
     {
       criticalDice: kind.criticalDice(actor),
       ...(kind.options ? kind.options(actor, clash, uuid) : {})
