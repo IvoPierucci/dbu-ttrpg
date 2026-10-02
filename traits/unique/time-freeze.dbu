@@ -1,0 +1,38 @@
+id: time-freeze
+name: Time Freeze
+uaType: magical
+prerequisite: Magic Score 8+, 2+ Skill Ranks in Use Magic
+tpCost: 40
+type: instant
+actionCost: 0
+kiCostPerBaseTier: 14
+# "Immediately begin a Frozen Turn" - its 2 Actions kept on its user, spent in place of their own (combat.mjs
+# frozenTurnOf); what may and may not be used during it refused where Maneuvers are (use-maneuver.mjs permitted, the
+# Respond dialog, out of sequence); everyone else under the Frozen in Time mark; ended when both are spent or from its
+# card (chat.mjs postTimeFreeze, endFrozenTurn). Applying Energy Charges through Traits during it is the table's.
+# Passive: "You are not affected by the usual rules during another Character's Frozen Turn" - whoever has it is left out.
+timeFreeze: true
+source: Core Rule
+description: >
+  An Instant Frozen Turn of 2 Actions: Standard Maneuvers only, no Ki Wager; everyone else's Defense Value 2(bT) and
+  Perception 2 lower, and no Counter, Instant or Out-of-Sequence Maneuvers.
+text: >
+  Time Freeze: You can momentarily stop time for everyone else, allowing you to do as you please.
+  –Ability Type: Magical
+  –Prerequisites: Magic Score 8+, 2+ Skill Ranks in Use Magic
+  –TP Cost: 40
+  –KP Cost: 14(bT)
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –Minions: N/A
+  –Passive Bonus: You are not affected by the usual rules during another Character’s Frozen Turn.
+  –Effect: Immediately begin a Frozen Turn. A Frozen Turn is a unique Turn in which you have 2 Actions to use during this
+  Turn, and the Turn ends when both of those Actions are used (you cannot use any other Actions you possess during a
+  Frozen Turn).
+
+  During a Frozen Turn you can only use Standard Maneuvers and cannot Ki Wager, use Instant or Out-of-Sequence Maneuvers,
+  use Combat Recovery, use the Power Up Maneuver, the Energy Charge Maneuver, apply Energy Charges to Attacking Maneuvers
+  through the effects of Traits, use any Special Maneuvers that target another Character, or use any Unique Abilities.
+
+  During a Frozen Turn, other Characters cannot use Counter Maneuvers, Instant Maneuvers, or Out-of-Sequence Maneuvers
+  (except Surges). Additionally, their Defense Value is reduced by 2(bT) and their Perception Skill Bonus is reduced by 2.

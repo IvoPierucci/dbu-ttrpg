@@ -1,0 +1,14 @@
+id: straining-time-freeze
+name: Straining Time Freeze
+restriction: true
+reduction: 5
+locked: Improved Time Freeze
+freezeStraining: true
+source: Core Rule
+description: >
+  Every Maneuver's KP Cost 2(T) higher during your Frozen Turn.
+text: >
+  Straining Time Freeze: Acting while time is frozen takes more concentration than usual.
+  –Locked Advancements: Improved Time Freeze
+  –TP Cost: -5
+  –Effect: Increase the Ki Point Cost of all Maneuvers during your Frozen Turn by 2(T).

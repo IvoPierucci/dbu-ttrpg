@@ -58,7 +58,7 @@ import {
   postThrust,
   takeSurge
 } from "./chat.mjs";
-import { actionsLeft, actionsWithin, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } from "./combat.mjs";
+import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } from "./combat.mjs";
 import { granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
@@ -223,6 +223,31 @@ function permitted(actor, maneuver) {
       `${actor.name} is charging ${held?.name ?? "an Attacking Maneuver"} and cannot use `
       + "another Attacking or Standard Maneuver until it is thrown."
     );
+    return false;
+  }
+
+  // Time Freeze. Its user's Frozen Turn: "you can only use Standard Maneuvers and cannot ... use Instant or Out-of-Sequence
+  // Maneuvers, use Combat Recovery, use the Power Up Maneuver, the Energy Charge Maneuver, ... use any Special Maneuvers that
+  // target another Character, or use any Unique Abilities" - Limited and Difficult Time Freeze's Attacking Maneuvers.
+  const frozen = frozenTurnOf(actor);
+  if (frozen) {
+    const why = (maneuver.type !== "standard") ? "only Standard Maneuvers"
+      : (maneuver.tags ?? []).includes("uniqueAbility") ? "no Unique Abilities"
+      : ["combat-recovery", "power-up", "energy-charge"].includes(maneuver.id) ? `not ${maneuver.name}`
+      : (maneuver.special && maneuver.requiresTarget) ? "no Special Maneuver that targets another Character"
+      : ((maneuver.attacking || maneuver.profile) && frozen.limited) ? "no Attacking Maneuvers (Limited Time Freeze)"
+      : ((maneuver.attacking || maneuver.profile) && frozen.difficult
+        && ((Number(actor.system.attacksThisRound) || 0) > (Number(frozen.attacksAtStart) || 0)))
+      ? "one Attacking Maneuver (Difficult Time Freeze)" : "";
+    if (why) {
+      ui.notifications.warn(`${actor.name}'s Frozen Turn: ${why}.`);
+      return false;
+    }
+  }
+  // Another's: "other Characters cannot use Counter Maneuvers, Instant Maneuvers, or Out-of-Sequence Maneuvers (except
+  // Surges)".
+  if (["counter", "instant", "outOfSequence"].includes(maneuver.type) && !maneuver.surge && frozenBy(actor)) {
+    ui.notifications.warn(`Time is frozen by ${frozenBy(actor).name}: no Counter, Instant or Out-of-Sequence Maneuvers.`);
     return false;
   }
 
@@ -1884,6 +1909,8 @@ export function definitionOf(item) {
     kamikaze: item.system.unique?.kamikaze === true,
     telekinesis: item.system.unique?.telekinesis === true,
     telepathy: item.system.unique?.telepathy === true,
+    timeFreeze: item.system.unique?.timeFreeze === true,
+    kiCostPerBaseTierChange: Number(item.system.unique?.kiCostPerBaseTierChange) || 0,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -4087,6 +4114,11 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Not a thrown one: "any number of Squares ... despite its different range".
     // Not with a Weapon whose reach is the whole Battlefield - Elongation - or one held by the
     // mind, whose attack may come from anywhere around its wielder: which Square, the table's.
+    // A Frozen Turn: "cannot Ki Wager".
+    if (frozenTurnOf(actor) && ((Number(declared?.kiWager) || 0) > 0)) {
+      ui.notifications.warn(`${actor.name}'s Frozen Turn: no Ki Wager.`);
+      return false;
+    }
     const unbounded = declared?.weapon?.wholeBattlefield || declared?.weapon?.telekinetic;
     const outOfReach = targetActor && !maneuver.throws && !unbounded
       && whyNotInReach(actor, targetActor, declared ?? {}, declared?.weapon?.meleeRange ?? 0);
@@ -4839,6 +4871,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : maneuver.portals
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
+    : maneuver.timeFreeze
+    ? await (await import("./chat.mjs")).postTimeFreeze(actor, maneuver)
     : (maneuver.telepathy && linking)
     ? await (await import("./chat.mjs")).postTelepathy(actor, maneuver, linking)
     : (maneuver.telekinesis && lifting)

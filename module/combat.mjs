@@ -966,6 +966,9 @@ async function announceThreshold(actor, before) {
 
 /** How many Actions of one kind a character has left this round. */
 export function actionsLeft(actor, kind = "standard") {
+  // A Frozen Turn's: "you have 2 Actions to use during this Turn ... (you cannot use any other Actions you possess)".
+  const frozen = frozenTurnOf(actor);
+  if (frozen) return (kind === "standard") ? Math.max(0, Number(frozen.left) || 0) : 0;
   const available = actor.system.actions?.[kind] ?? 0;
   const spent = actor.system.actionsSpent?.[kind] ?? 0;
   return Math.max(0, available - spent);
@@ -981,6 +984,21 @@ export function convertibleActions(actor) {
   const owed = Number(actor?.getFlag?.("dbu-ttrpg", "paraParaLoss")) || 0;
   const room = DBUCharacterData.MAX_COUNTER_ACTIONS - (Number(actor?.system?.actions?.counter) || 0);
   return Math.max(0, Math.min(actionsLeft(actor, "standard") - owed, room));
+}
+
+/** A Frozen Turn this character is taking - Time Freeze's - or null. */
+export function frozenTurnOf(actor) {
+  return actor?.getFlag?.("dbu-ttrpg", "frozenTurn") ?? null;
+}
+
+/**
+ * Whose Frozen Turn holds this character, or null: another's, and not one with Time Freeze of their own - "You are not
+ * affected by the usual rules during another Character's Frozen Turn".
+ */
+export function frozenBy(actor) {
+  if (!actor || Array.from(actor.items ?? []).some(item => (item.type === "maneuver") && item.system?.unique?.timeFreeze)) return null;
+  return (globalThis.game?.combat?.combatants ?? []).map(entry => entry.actor)
+    .find(other => other && (other.uuid !== actor.uuid) && frozenTurnOf(other)) ?? null;
 }
 
 /** Actions of a kind within reach: Counter Actions left, and the Standard ones that could become them. */
@@ -1014,6 +1032,22 @@ export async function spendActions(actor, amount, kind = "standard") {
   // the Actions back - spending them there would take them away for good. The guard
   // lives here, on the write, so a caller cannot forget it: one of them already had.
   if (!game.combat?.started) return true;
+
+  // A Frozen Turn's two Actions, and its end when both are used.
+  const frozen = frozenTurnOf(actor);
+  if (frozen) {
+    const left = Number(frozen.left) || 0;
+    if ((kind !== "standard") || (left < amount)) {
+      ui.notifications.warn(`${actor.name} has no ${kind} Actions left in the Frozen Turn.`);
+      return false;
+    }
+    await actor.update({ "flags.dbu-ttrpg.frozenTurn.left": left - amount });
+    if (left - amount <= 0) {
+      const { endFrozenTurn } = await import("./chat.mjs");
+      await endFrozenTurn(actor);
+    }
+    return true;
+  }
 
   // Short of Counter Actions, with Standard Actions that could become them: the player's to say.
   const short = amount - actionsLeft(actor, kind);

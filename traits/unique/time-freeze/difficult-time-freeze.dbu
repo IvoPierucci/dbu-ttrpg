@@ -1,0 +1,14 @@
+id: difficult-time-freeze
+name: Difficult Time Freeze
+restriction: true
+reduction: 5
+locked: Improved Time Freeze
+freezeOneAttack: true
+source: Core Rule
+description: >
+  One Attacking Maneuver at most during a Frozen Turn.
+text: >
+  Difficult Time Freeze: While not impossible, you find it difficult to affect the world around you while time is frozen.
+  –Locked Advancements: Improved Time Freeze
+  –TP Cost: -5
+  –Effect: You can only use 1 Attacking Maneuver during a Frozen Turn.

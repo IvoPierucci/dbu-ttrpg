@@ -1,0 +1,14 @@
+id: improved-time-freeze
+name: Improved Time Freeze
+advancement: true
+prerequisite: 5+ Skill Ranks in Use Magic
+tpCost: 10
+kiCostPerBaseTierChange: -2
+source: Core Rule
+description: >
+  Time Freeze's KP Cost 2(bT) lower.
+text: >
+  Improved Time Freeze: You are extremely adept at stopping time.
+  –Prerequisites: 5+ Skill Ranks in Use Magic
+  –TP Cost: 10
+  –Effect: Reduce the Ki Point Cost of Time Freeze by 2(bT).

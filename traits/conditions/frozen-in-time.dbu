@@ -1,0 +1,20 @@
+id: frozen-in-time
+name: Frozen in Time
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: another Character's Frozen Turn, on everyone it holds for as long as it lasts (chat.mjs
+# postTimeFreeze, endFrozenTurn). No Counter, Instant or Out-of-Sequence Maneuvers but Surges: refused where those are.
+combatCondition: no
+source: Core Rule
+description: >
+  Time is frozen: Defense Value 2(bT) lower, Perception 2 lower, and no Counter, Instant or Out-of-Sequence Maneuvers.
+text: >
+  Frozen in Time: "During a Frozen Turn, other Characters cannot use Counter Maneuvers, Instant Maneuvers, or
+  Out-of-Sequence Maneuvers (except Surges). Additionally, their Defense Value is reduced by 2(bT) and their Perception
+  Skill Bonus is reduced by 2."
+
+---
+
+[passive]
+defenseValue -= 2(bT);
+skill.perception.bonus -= 2;

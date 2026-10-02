@@ -2888,6 +2888,7 @@ export function maneuverKiCost(maneuver, declared, actor) {
     const tier = actor?.system?.tierOfPower ?? 1;
     // An Advancement's change to it - Efficient Barrier's 2(T) off - still held to the floor below.
     cost += (Number(maneuver.kiCostPerTierChange) || 0) * Math.max(1, tier);
+    cost += (Number(maneuver.kiCostPerBaseTierChange) || 0) * Math.max(1, actor?.system?.baseTierOfPower ?? 1);
     const floor = (listed >= 4 * Math.max(1, tier)) ? Math.ceil(listed / 2) : 0;
     cost = Math.max(cost, floor);
   }
@@ -2898,6 +2899,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // the Minimum is a floor under the price rather than under what you choose to add.
   // Unless it is paid in Life, which is not Ki: Elemental (Dark) takes it out of the
   // Life Points instead, through `spendLifeWager`.
+  // Straining Time Freeze: "Increase the Ki Point Cost of all Maneuvers during your Frozen Turn by 2(T)."
+  if (actor?.getFlag?.("dbu-ttrpg", "frozenTurn")?.straining) cost += 2 * Math.max(1, actor.system?.tierOfPower ?? 1);
   return Math.max(0, cost) + (declared?.wagerFromLife ? 0 : (declared?.kiWager ?? 0));
 }
 

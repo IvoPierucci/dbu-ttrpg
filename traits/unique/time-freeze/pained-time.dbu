@@ -1,0 +1,14 @@
+id: pained-time
+name: Pained Time
+restriction: true
+reduction: 10
+locked: 
+freezePained: true
+source: Core Rule
+description: >
+  Ending a Frozen Turn costs 1/5 of your Maximum Life Points.
+text: >
+  Pained Time: Holding back the flow of time drains your physical stamina.
+  –Locked Advancements: N/A
+  –TP Cost: -10
+  –Effect: When you finish your Frozen Turn, reduce your Life Points by 1/5 of your Maximum Life Points.

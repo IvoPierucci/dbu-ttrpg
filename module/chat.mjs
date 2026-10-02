@@ -6,7 +6,7 @@ import { featureDef } from "./technique.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
-import { actionsLeft, actionsWithin, refundActions, spendActions, strikeLightning, weatherToRoll }
+import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
 import { activeBuddy, apparelQualitiesInEffect, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
   recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
@@ -203,6 +203,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, PARA_FLAG, request.para);
     case "petrify": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PETRIFY_FLAG, request.petrify);
+    case "timeFreeze": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, FREEZE_FLAG, request.freeze);
     case "psychicBack": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PSYCHIC_FLAG, request.psychic);
     case "shapeshift": return game.messages.get(request.messageId)
@@ -2956,6 +2958,7 @@ function onRenderChatMessage(message, html) {
   renderShapeshift(message, html);
   renderPsychicCounter(message, html);
   renderPsychicBack(message, html);
+  renderTimeFreeze(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -6275,6 +6278,12 @@ async function respondDialog(message, respondable) {
         }
       }
 
+      // Time Freeze: none in another's Frozen Turn but Surges, and none in your own.
+      if (!blocked && !maneuver.surge && (frozenBy(actor) || frozenTurnOf(actor))) {
+        blocked = true;
+        reason = "time is frozen";
+      }
+
       // Sacrifice Play: "You cannot use a Counter Maneuver in response to that Attacking Maneuver".
       if (!blocked && (attack?.noCounters ?? []).includes(actor.uuid)) {
         blocked = true;
@@ -6314,6 +6323,8 @@ async function respondDialog(message, respondable) {
           // Maneuver."
           attack?.technique?.features?.includes("instant-assault")
             ? option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, true, "Instant Assault")
+            : (!maneuver.surge && (frozenBy(actor) || frozenTurnOf(actor)))
+            ? option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, true, "time is frozen")
             : option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, false, "")
         ).join("");
 
@@ -11225,6 +11236,79 @@ export async function webSave(actor, item) {
       + "any other Square of the Explosive Web.</div>" });
 }
 
+/**
+ * Time Freeze, used: "Immediately begin a Frozen Turn. A Frozen Turn is a unique Turn in which you have 2 Actions to use
+ * during this Turn, and the Turn ends when both of those Actions are used" - kept on its user (combat.mjs frozenTurnOf,
+ * read by actionsLeft and spendActions); everyone else in the Combat Encounter not immune to it - Time Freeze's Passive -
+ * under the Frozen in Time mark: "their Defense Value is reduced by 2(bT) and their Perception Skill Bonus is reduced by 2".
+ */
+export async function postTimeFreeze(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  const applied = unique ? appliedTraits(unique, getTrait) : [];
+  const has = key => applied.some(trait => trait[key] === true);
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: a Frozen Turn - 2 Actions.</p>`,
+    flags: { [SCOPE]: { [FREEZE_FLAG]: { actorUuid: actor.uuid, ended: false } } } });
+  await actor.update({ [`flags.${SCOPE}.frozenTurn`]: { left: 2, name: maneuver.name, messageId: card.id,
+    attacksAtStart: Number(actor.system.attacksThisRound) || 0,
+    limited: has("freezeNoAttacks"), difficult: has("freezeOneAttack"), straining: has("freezeStraining"),
+    pained: has("freezePained") } });
+  const { setCondition } = await import("./conditions.mjs");
+  for (const other of frozenOthers(actor)) await setCondition(other, "frozen-in-time", 1);
+  return card;
+}
+
+const FREEZE_FLAG = "timeFreeze";
+
+/** Everyone in the Combat Encounter a Frozen Turn holds: all but its user and whoever has Time Freeze of their own. */
+function frozenOthers(actor) {
+  return [...new Map((game.combat?.combatants ?? []).map(entry => entry.actor).filter(Boolean)
+    .map(other => [other.uuid, other])).values()]
+    .filter(other => (other.uuid !== actor.uuid)
+      && !Array.from(other.items ?? []).some(item => (item.type === "maneuver") && item.system.unique?.timeFreeze));
+}
+
+/**
+ * The Frozen Turn over - both its Actions used, or ended from its card: time runs again, and Pained Time's "When you
+ * finish your Frozen Turn, reduce your Life Points by 1/5 of your Maximum Life Points".
+ */
+export async function endFrozenTurn(actor) {
+  const frozen = actor?.getFlag?.(SCOPE, "frozenTurn");
+  if (!frozen) return;
+  await actor.unsetFlag(SCOPE, "frozenTurn");
+  const { setCondition } = await import("./conditions.mjs");
+  for (const other of [...new Map((game.combat?.combatants ?? []).map(entry => entry.actor).filter(Boolean)
+    .map(each => [each.uuid, each])).values()]) {
+    if ((Number(other.system.conditions?.["frozen-in-time"]) || 0) > 0) await setCondition(other, "frozen-in-time", 0);
+  }
+  const card = game.messages.get(frozen.messageId ?? "");
+  const said = card?.getFlag(SCOPE, FREEZE_FLAG);
+  if (said) requestEdit(card, { type: "timeFreeze", freeze: { ...said, ended: true } });
+  if (frozen.pained) {
+    await reduceLifePoints(actor, Math.floor((Number(actor.system.life?.max) || 0) / 5), { reason: "Pained Time", own: true });
+  }
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}'s Frozen Turn ends - time runs again.</div>` });
+}
+
+/** Its card: End Frozen Turn, for its user, while it lasts. */
+function renderTimeFreeze(message, html) {
+  const freeze = message.getFlag(SCOPE, FREEZE_FLAG);
+  if (!freeze || freeze.ended) return;
+  const actor = fromUuidSync(freeze.actorUuid);
+  if (!actor?.isOwner || !actor.getFlag?.(SCOPE, "frozenTurn")) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "End Frozen Turn";
+  button.dataset.tooltip = "End it before both Actions are used";
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    return endFrozenTurn(actor);
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -11796,6 +11880,11 @@ async function takeTechniqueOffer(message, actor, offer) {
  * the back of an Instant does not count as a Maneuver in its place.
  */
 async function takeOutOfSequence(message, actor, offer) {
+  // Time Freeze: no Out-of-Sequence Maneuver in a Frozen Turn - another's but Surges, or your own.
+  if (frozenTurnOf(actor) || (frozenBy(actor) && !offer.surge)) {
+    ui.notifications.warn("Time is frozen: no Out-of-Sequence Maneuvers.");
+    return null;
+  }
   // A Signature Technique handed over - Counter's, Exploiting Technique's: which of the Techniques
   // with that Advantage, then the Technique itself through its door, out of sequence.
   if (offer.technique) return takeTechniqueOffer(message, actor, offer);

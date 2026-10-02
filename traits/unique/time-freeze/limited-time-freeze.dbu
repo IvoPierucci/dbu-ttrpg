@@ -1,0 +1,14 @@
+id: limited-time-freeze
+name: Limited Time Freeze
+restriction: true
+reduction: 10
+locked: 
+freezeNoAttacks: true
+source: Core Rule
+description: >
+  No Attacking Maneuvers during your Frozen Turn.
+text: >
+  Limited Time Freeze: While time is frozen, you cannot harm the world around you.
+  –Locked Advancements: N/A
+  –TP Cost: -10
+  –Effect: You cannot use any Attacking Maneuvers during your Frozen Turn.

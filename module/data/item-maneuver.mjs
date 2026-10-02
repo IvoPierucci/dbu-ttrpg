@@ -698,6 +698,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         telepathy: new fields.BooleanField({ required: true, initial: false }),
         /** An Explosive Web that strikes who enters it - Threaded Energy's (chat.mjs webStrike). */
         explosiveWeb: new fields.BooleanField({ required: true, initial: false }),
+        /** A Frozen Turn - Time Freeze's (chat.mjs postTimeFreeze). */
+        timeFreeze: new fields.BooleanField({ required: true, initial: false }),
         shapeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeBestial: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         shapeForm: new fields.StringField({ required: true, blank: true, initial: "" }),
