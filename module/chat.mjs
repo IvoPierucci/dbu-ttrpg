@@ -191,6 +191,8 @@ function applyRequest(request) {
     case "scan": return applyScan(request.messageId, request.scan);
     case "spikes": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, SPIKE_FLAG, request.spikes);
+    case "meteor": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, METEOR_FLAG, request.meteor);
     case "armsHit": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
@@ -2845,6 +2847,8 @@ function onRenderChatMessage(message, html) {
   renderGearSpikes(message, html);
   renderArmsHit(message, html);
   renderFakeDeath(message, html);
+  renderMeteor(message, html);
+  renderMeteorHit(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -8295,6 +8299,205 @@ export function tauntsNow(actor, maneuver) {
   return Boolean(turnKey()) && (held.key === turnKey()) && ((held.ids ?? []).length >= 2);
 }
 
+/** The Meteor Phase's card, and an attack at the God Meteor waiting on its Wound Roll. */
+const METEOR_FLAG = "godMeteor";
+const METEOR_HIT_FLAG = "godMeteorHit";
+
+/**
+ * God Meteor's Passive, the half that is about who is hit: "Increase your Wound Rolls by 1(T) ... against Pinned
+ * Characters if you are not in the God Ki State." Added per target, where the Damage is worked out.
+ */
+function godMeteorPinned(attacker, target) {
+  const holds = Array.from(attacker?.items ?? []).some(item => (item.type === "maneuver") && item.system?.unique?.meteor);
+  if (!holds || ((Number(attacker.system.states?.["god-ki"]) || 0) > 0)) return 0;
+  return ((Number(target?.system?.conditions?.pinned) || 0) > 0) ? Math.max(1, attacker.system.tierOfPower ?? 1) : 0;
+}
+
+/**
+ * God Meteor, used: the Meteor Phase. "The God Meteor's Life Points are equal to the user's Maximum Life Points and it
+ * possesses Damage Reduction equal to the user's Might" - counted on the card, with everyone inside in Initiative order.
+ */
+export async function postMeteor(actor, maneuver, uuids) {
+  const initiative = uuid => game.combat?.combatants?.find(entry => entry.actor?.uuid === uuid)?.initiative ?? -Infinity;
+  const entries = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean)
+    .sort((a, b) => initiative(b.uuid) - initiative(a.uuid))
+    .map(other => ({ uuid: other.uuid, name: other.name, choice: "", done: false }));
+  const life = Math.max(0, Number(actor.system.life?.max) || 0);
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: the Meteor Phase</p>`,
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [METEOR_FLAG]: {
+      userUuid: actor.uuid, life, max: life, dr: Math.max(0, Number(actor.system.might) || 0), entries, ended: false
+    } } } });
+}
+
+/**
+ * The Meteor Phase on its card: the God Meteor's Life Points and Damage Reduction; in Initiative order, the next one
+ * to choose - "Defend or Attack" - on their owner's buttons; once all have, End Meteor Phase for its user or the GM.
+ */
+function renderMeteor(message, html) {
+  const meteor = message.getFlag(SCOPE, METEOR_FLAG);
+  if (!meteor) return;
+  const escape = Handlebars.escapeExpression;
+  const container = html.querySelector(".message-content") ?? html;
+  const status = document.createElement("div");
+  status.className = "dbu-settled-note";
+  status.textContent = (meteor.life > 0)
+    ? `God Meteor: ${meteor.life} / ${meteor.max} Life Points, Damage Reduction ${meteor.dr}`
+    : "God Meteor destroyed: nobody takes anything.";
+  container.append(status);
+  const list = document.createElement("ul");
+  list.className = "dbu-oos-list";
+  const next = meteor.entries.find(entry => !entry.done);
+  for (const entry of meteor.entries) {
+    const row = document.createElement("li");
+    row.innerHTML = `<span class="dbu-oos-actor">${escape(entry.name)}</span>
+      <span class="dbu-oos-reason">${entry.choice === "defend" ? "Defends" : entry.choice === "attack" ? "Attacked"
+        : (entry === next) ? "" : "Waiting"}</span>`;
+    const who = fromUuidSync(entry.uuid);
+    if ((entry === next) && !meteor.ended && (meteor.life > 0) && who?.isOwner) {
+      for (const [label, act, tip] of [["Defend", () => meteorDefend(message, entry.uuid), "Half of what falls on you"],
+        ["Attack", () => meteorAttack(message, who), "Basic Attack or a Signature Technique at the Meteor: it cannot miss"]]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "dbu-oos-button";
+        button.textContent = label;
+        button.dataset.tooltip = tip;
+        button.addEventListener("click", act);
+        row.append(button);
+      }
+    }
+    list.append(row);
+  }
+  container.append(list);
+  const user = fromUuidSync(meteor.userUuid);
+  // Its user's or the GM's, whenever: an attack paid for and never rolled must not hold the Phase open for ever.
+  if (!meteor.ended && (game.user.isGM || user?.isOwner)) {
+    const end = document.createElement("button");
+    end.type = "button";
+    end.className = "dbu-clash-button";
+    end.textContent = "End Meteor Phase";
+    end.dataset.tooltip = "What is left of its Life Points comes off everyone's - half for those who Defended";
+    end.addEventListener("click", () => {
+      end.disabled = true;
+      return endMeteor(message);
+    });
+    container.append(end);
+  }
+}
+
+/** "Those who Defend will reduce the Damage they take by 1/2." */
+function meteorDefend(message, uuid) {
+  const meteor = message.getFlag(SCOPE, METEOR_FLAG);
+  if (!meteor) return;
+  requestEdit(message, { type: "meteor", meteor: { ...meteor,
+    entries: meteor.entries.map(entry => (entry.uuid === uuid) ? { ...entry, choice: "defend", done: true } : entry) } });
+}
+
+/**
+ * "Those who Attack can use the Basic Attack Maneuver or Signature Attack Maneuver as an Out-of-Sequence Action" -
+ * which, asked; thrown at the Meteor as at a Feature, so no Character is aimed at and nothing can miss.
+ */
+async function meteorAttack(message, actor) {
+  const { signatureTechniquesOf, useManeuver, useTechnique } = await import("./use-maneuver.mjs");
+  const techniques = signatureTechniquesOf(actor);
+  const which = techniques.length ? await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - God Meteor` }, content: "",
+    buttons: [{ action: "basic", label: "Basic Attack" },
+      ...techniques.map(entry => ({ action: entry.itemId, label: entry.name })), { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  }) : "basic";
+  if (!which || (which === "cancel")) return;
+  const options = { atFeature: true, outOfSequence: true, meteor: message.id };
+  if (which === "basic") return useManeuver(actor, getManeuver("basic-attack"), options);
+  return useTechnique(actor, which, options);
+}
+
+/**
+ * An attack thrown at the God Meteor: its Wound Roll waits on a card of its own, as any Wound Roll waits on its card -
+ * the attack as the Wound reads it, built the way an attack's card builds it.
+ */
+export async function postMeteorAttack(actor, maneuver, declared, charges, messageId) {
+  const { profile, foundation, kiWager = 0, advantages = [], weapon = null, damageAttribute = null,
+    transformed = false, gigaFlare = 0, superCombination = 0 } = declared ?? {};
+  const technique = (maneuver.signature && !maneuver.signatureTechnique)
+    ? techniqueAttack(actor, maneuver, { profile, foundation, advantages, weapon, charges, transformed, gigaFlare,
+      superCombination }, { targets: [], shaken: [] })
+    : null;
+  const attack = {
+    maneuverName: maneuver.name, profile, foundation, kiWager, advantages, weapon, damageAttribute, technique,
+    secondProfile: technique ? "" : (maneuver.secondProfile ?? ""), modifiers: [], united: [], unitedWith: null,
+    signature: (maneuver.tags ?? []).includes("signature"),
+    chargeCategories: technique?.chargeCategories ?? 0,
+    energyCharges: Math.min(charges + (PROFILES[profile]?.grantsEnergyCharge ?? 0) + (Number(weapon?.energyCharges) || 0)
+      + (technique?.bonusCharges ?? []).reduce((sum, entry) => sum + entry.amount, 0),
+    maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES) + (technique?.chargeCeilingBonus ?? 0))
+      + (PROFILES[profile]?.grantsUncappedEnergyCharge ?? 0),
+    attackerUuid: actor.uuid, attackerName: actor.name
+  };
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)} (Out-of-Sequence) at the God Meteor</p>`,
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [METEOR_HIT_FLAG]: { messageId, attack, rolled: false } } } });
+}
+
+/** Its Wound Roll button, for the one who threw it - the window first, as every roll. */
+function renderMeteorHit(message, html) {
+  const hit = message.getFlag(SCOPE, METEOR_HIT_FLAG);
+  if (!hit || hit.rolled) return;
+  const actor = fromUuidSync(hit.attack.attackerUuid);
+  if (!actor?.isOwner) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Roll Wound";
+  button.addEventListener("click", () => rollMeteorWound(message, actor, hit));
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/**
+ * The Wound Roll at the God Meteor: "a God Meteor takes Damage like a Character would" with its Damage Reduction - the
+ * user's Might - and no Soak Value. What it comes to, off its Life Points on the Meteor Phase's card.
+ */
+async function rollMeteorWound(message, actor, hit) {
+  const card = game.messages.get(hit.messageId);
+  const meteor = card?.getFlag(SCOPE, METEOR_FLAG);
+  if (!meteor) return;
+  const attack = hit.attack;
+  const ready = await prepareRoll(actor, [], `${attack.maneuverName} - God Meteor`, `Damage Reduction ${meteor.dr}`,
+    { combatRoll: true, attackingManeuver: true, formula: { base: DBUCharacterData.BASE_DIE,
+      dice: combatDiceGroups(actor, woundDice(actor, attack)), parts: windowParts(actor, woundParts(actor, attack)) } });
+  if (!ready) return;
+  await message.setFlag(SCOPE, METEOR_HIT_FLAG, { ...hit, rolled: true });
+  const wound = await rollSide(actor, woundParts(actor, attack), {
+    extraDice: woundDice(actor, attack), criticalDice: actor.system.dice.critical.formula, combatRoll: true,
+    slot: "wound", attackingManeuver: true, criticalTarget: profileFor(attack)?.woundCriticalTarget ?? null });
+  const fresh = card.getFlag(SCOPE, METEOR_FLAG) ?? meteor;
+  const damage = Math.max(0, (Number(wound.total) || 0) - fresh.dr);
+  const life = Math.max(0, fresh.life - damage);
+  requestEdit(card, { type: "meteor", meteor: { ...fresh, life,
+    entries: fresh.entries.map(entry => (entry.uuid === actor.uuid) ? { ...entry, choice: "attack", done: true } : entry) } });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note" data-tooltip-html="${Handlebars.escapeExpression(breakdownTable(wound.lines ?? [], wound.total))}">`
+      + `Wound ${wound.total} - Damage Reduction ${fresh.dr}: ${damage} off the God Meteor${life ? ` (${life} left)` : " - destroyed"}.</div>` });
+}
+
+/**
+ * The Meteor Phase over: "If the God Meteor is not destroyed by the end of the Meteor Phase, all Combatants that were
+ * within the Meteor Phase have their Life Points reduced by the remaining Life Points of the God Meteor" - half for
+ * those who Defended. Destroyed, "no Character in the Meteor Phase will receive any damage".
+ */
+async function endMeteor(message) {
+  const meteor = message.getFlag(SCOPE, METEOR_FLAG);
+  if (!meteor || meteor.ended) return;
+  requestEdit(message, { type: "meteor", meteor: { ...meteor, ended: true } });
+  if (meteor.life <= 0) return settledNote(message, "The Meteor Phase ends: the God Meteor was destroyed.");
+  for (const entry of meteor.entries) {
+    const who = fromUuidSync(entry.uuid);
+    if (!who) continue;
+    const amount = (entry.choice === "defend") ? Math.floor(meteor.life / 2) : meteor.life;
+    await reduceLifePoints(who, amount, { reason: "God Meteor" });
+  }
+}
+
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
 export async function offerOutOfSequence(actor, offer) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
@@ -12021,6 +12224,7 @@ async function rollAttackWound(message, attack) {
     // them - so it is added where what the roll comes to is already worked out per person,
     // which is the same place a Guard halves it.
     const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
+      + godMeteorPinned(attacker, target)
       + grantedLongShot(attacker, attack, target)
       + techniqueWoundAgainst(attacker, attack, { longRange: atLongRange(attacker, target),
           outsideMelee: Boolean(whyNotWithinMelee(attacker, target, "")),

@@ -1,0 +1,67 @@
+id: god-meteor
+name: God Meteor
+uaType: both
+prerequisite: Force or Magic Score 10+, access to the God Ki Special State, Tier of Power 4+
+tpCost: 40
+type: standard
+actionCost: 3
+kiCostPerBaseTier: 15
+usageLimit: 1/encounter
+# "You can only use this Unique Ability while you are in the God Ki Special State." Refused otherwise, before anything
+# is paid (use-maneuver.mjs).
+requiresState: god-ki
+# The Meteor Phase, on a card of its own (chat.mjs postMeteor): who is inside the Destructive Sphere asked; the God
+# Meteor's Life Points (your Maximum) and Damage Reduction (your Might) counted on it; in Initiative order each picks
+# Defend or Attack - Attack, a Basic Attack or Signature Technique Out-of-Sequence that cannot miss, its Wound Roll less
+# the Damage Reduction off the Meteor (postMeteorAttack); End Meteor Phase takes what is left off everyone's Life
+# Points, half from those who Defended, nothing if it was destroyed.
+meteor: true
+source: Core Rule
+description: >
+  Once an Encounter, in God Ki: the Meteor Phase on a card - everyone in a Destructive Sphere Defends (half) or Attacks
+  the Meteor in Initiative order; what is left of its Life Points comes off theirs. Passive: Wound 1(T) in God Ki, or
+  against the Pinned out of it.
+text: >
+  God Meteor: You are capable of dropping a giant meteor from the heavens onto your enemies, dealing massive damage.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Force or Magic Score 10+, access to the God Ki Special State, Tier of Power 4+
+  –TP Cost: 40
+  –KP Cost: 15(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 3 Actions
+  –Minions: Non-Minion
+  –Passive Bonus: Increase your Wound Rolls by 1(T) while in the God Ki State, or against Pinned Characters if you are
+  not in the God Ki State.
+  –Effect: Target a Square on the Battlefield. Every Character (except the user of this Unique Ability) within a
+  Destructive Sphere AoE centered on your targeted Square enters the Meteor Phase, wherein a gigantic meteor falls from
+  the heavens onto those Characters.
+
+  Once the Meteor Phase starts, all combat stops and every Character within the Meteor Phase must choose to Defend or
+  Attack:
+
+  * Those who Defend will reduce the Damage they take by 1/2.
+
+  * Those who Attack can use the Basic Attack Maneuver or Signature Attack Maneuver as an Out-of-Sequence Action, but
+  they must target the Meteor in order of their place in the Initiative Order. No Character can miss the Meteor with
+  this Attacking Maneuver.
+
+  The God Meteor’s Life Points are equal to the user’s Maximum Life Points and it possesses Damage Reduction equal to
+  the user’s Might. If the Life Points of the God Meteor reaches 0, it is destroyed and no Character in the Meteor Phase
+  will receive any damage.
+
+  After all decisions and Attacking Maneuvers are made, the Meteor Phase ends. If the God Meteor is not destroyed by the
+  end of the Meteor Phase, all Combatants that were within the Meteor Phase have their Life Points reduced by the
+  remaining Life Points of the God Meteor. You can only use this Unique Ability while you are in the God Ki Special
+  State.
+
+  This Unique Ability can only be used once per Combat Encounter.
+
+---
+
+# "Increase your Wound Rolls by 1(T) while in the God Ki State" - here. "Or against Pinned Characters if you are not in
+# the God Ki State" is about who the Wound Roll lands on, so it is added per target where the Damage is worked out
+# (chat.mjs godMeteorPinned).
+[passive]
+if (inState("god-ki")) {
+  wound += 1(T);
+}

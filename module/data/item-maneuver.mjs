@@ -634,6 +634,10 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         finishSign: new fields.BooleanField({ required: true, initial: false }),
         /** The Battle Environment it gives its user while applied - Flooding Technique's Underwater. */
         floods: new fields.StringField({ required: true, blank: true, initial: "" }),
+        /** The Meteor Phase - God Meteor's (chat.mjs postMeteor). */
+        meteor: new fields.BooleanField({ required: true, initial: false }),
+        /** A State it may only be used in - God Meteor's God Ki. */
+        requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */
         floodedFrom: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The Signature Technique it declared, by its Item's id - blank while none is. */

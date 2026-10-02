@@ -1,0 +1,15 @@
+id: god-ki
+name: God Ki
+kind: state
+# A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
+specialState: true
+description: >
+  God Ki. Its own effects wait on its text; God Meteor asks for it.
+text: >
+  God Ki: a Special State. Its rule text has not been given yet.
+
+---
+
+# Made empty for now (the user's ruling, 2026-10-01) so God Meteor can ask whether you are in it - "access to the God Ki
+# Special State", "You can only use this Unique Ability while you are in the God Ki Special State", and its Passive.
+# Its own effects go here once its text arrives.

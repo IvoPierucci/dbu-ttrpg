@@ -1859,6 +1859,8 @@ export function definitionOf(item) {
     fakesDeath: item.system.unique?.fakesDeath === true,
     fakeMoon: item.system.unique?.fakeMoon === true,
     finishSign: item.system.unique?.finishSign === true,
+    meteor: item.system.unique?.meteor === true,
+    requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
@@ -2540,6 +2542,36 @@ function askBinding(actor, maneuver) {
  * of)." Who is an Opponent is asked - everyone in the Combat Encounter (or the targeted, outside one), ticked but for
  * whose Melee Range you stand in and whom you are already Hidden from. Null if nobody is picked.
  */
+/** God Meteor: who is inside the Destructive Sphere around the Square it falls on - ticked by the player. */
+async function askMeteor(actor, maneuver) {
+  const pool = game.combat?.started
+    ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
+    : Array.from(game.user.targets ?? []).map(token => token.actor);
+  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .map(other => [other.uuid, other])).values()];
+  if (!others.length) {
+    ui.notifications.warn(`${maneuver.name}: nobody for it to fall on${game.combat?.started ? "" : " - target them first"}.`);
+    return null;
+  }
+  const escape = Handlebars.escapeExpression;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<p class="dbu-respond-hint">Who is within its Destructive Sphere</p>${others.map(other =>
+      `<label class="dbu-respond-option"><input type="checkbox" name="${escape(other.uuid)}"/>
+        <span class="dbu-respond-name">${escape(other.name)}</span></label>`).join("")}`,
+    buttons: [
+      { action: "fall", label: maneuver.name, default: true, callback: (event, button, dialog) =>
+        others.filter(other => dialog.element.querySelector(`input[name="${CSS.escape(other.uuid)}"]`)?.checked)
+          .map(other => other.uuid) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!Array.isArray(chosen) || !chosen.length) return null;
+  return { uuids: chosen };
+}
+
 /**
  * Finish Sign's Signature Technique: the one declared, while one is - "nor can you declare a different Signature
  * Technique" - or one picked from those held. Null if there is none, or none was picked.
@@ -3060,7 +3092,7 @@ async function revertTransfiguration(actor, target, maneuver) {
 
 export async function useManeuver(actor, maneuver, { atFeature = false, techniqueId = "", via = "",
                                                     outOfSequence = false, targetUuid = "",
-                                                    presetThrown = null, volleyball = null } = {}) {
+                                                    presetThrown = null, volleyball = null, meteor = "" } = {}) {
   if (!actor || !maneuver) return false;
   // Whether this use is an Ultimate that began as a Super - Ascended Signature. Set when the
   // Technique is picked.
@@ -3126,6 +3158,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // Checked here and spent further down, so that a Maneuver abandoned at the target or
   // Profile prompt costs nothing - the same way its Ki Point Cost is handled.
   // Out of sequence - a Technique through Counter or Exploit - its Action Cost is waived.
+  // "You can only use this Unique Ability while you are in the God Ki Special State" - God Meteor's.
+  if (maneuver.requiresState && !((Number(actor.system.states?.[maneuver.requiresState]) || 0) > 0)) {
+    const state = getTrait(maneuver.requiresState)?.name ?? maneuver.requiresState;
+    ui.notifications.warn(`${maneuver.name} is only used in the ${state} State.`);
+    return false;
+  }
+
   // Aggressive Taunt: "If you have dealt Damage to an Opponent with 2+ Attacking Maneuvers on your turn, lower the
   // Action Cost of this Unique Ability to 1 until the end of your turn."
   if (maneuver.finishSign) {
@@ -3408,6 +3447,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let waving = null;
   let faking = null;
   let finishing = null;
+  let meteorTargets = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3659,6 +3699,13 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // God Meteor: "Every Character (except the user of this Unique Ability) within a Destructive Sphere AoE centered on
+    // your targeted Square" - who they are, asked.
+    if (maneuver.meteor) {
+      meteorTargets = await askMeteor(actor, maneuver);
+      if (!meteorTargets) return false;
+    }
+
     // Finish Sign: the Signature Technique declared - asked the first time, the same one every time after.
     if (maneuver.finishSign) {
       finishing = await askFinishSign(actor, maneuver);
@@ -4183,6 +4230,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.meteor && meteorTargets)
+    ? await (await import("./chat.mjs")).postMeteor(actor, maneuver, meteorTargets.uuids)
     : (maneuver.finishSign && finishing)
     ? await (await import("./chat.mjs")).postFinishSign(actor, maneuver, finishing.itemId)
     : (maneuver.fakesDeath && faking)
@@ -4243,6 +4292,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     // Thrown at a Feature: no Strike Roll and no Wound Roll, because the entry settles
     // both before the dice - "you always automatically hit a Feature and only inflict
     // Damage equal to your Tier of Power".
+    : (atFeature && declared && meteor)
+    ? await (await import("./chat.mjs")).postMeteorAttack(actor, maneuver, declared, charges, meteor)
     : (atFeature && declared)
     ? await postFeatureAttack(actor, maneuver, declared, charges)
     : declared
@@ -4682,7 +4733,8 @@ export async function useOwnedManeuver(actor, itemId, { atFeature = false } = {}
  *   Maneuver itself - what Required Counter and the like read.
  */
 export async function useTechnique(actor, itemId, { atFeature = false, via = "", outOfSequence = false,
-                                                  targetUuid = "", presetThrown = null, volleyball = null } = {}) {
+                                                  targetUuid = "", presetThrown = null, volleyball = null,
+                                                  meteor = "" } = {}) {
   const door = actor?.items?.find(item => (item.type === "maneuver") && item.system.signatureTechnique);
   if (!door) {
     ui.notifications.warn(`${actor?.name ?? "This character"} has no Signature Technique Maneuver. `
@@ -4690,7 +4742,7 @@ export async function useTechnique(actor, itemId, { atFeature = false, via = "",
     return false;
   }
   return useManeuver(actor, definitionOf(door), { atFeature, techniqueId: itemId, via, outOfSequence,
-    targetUuid, presetThrown, volleyball });
+    targetUuid, presetThrown, volleyball, meteor });
 }
 
 /**
