@@ -610,6 +610,10 @@ async function applyClash(messageId, clash) {
     else await settledNote(message, `${clash.defenderName} stays Hidden.`);
   }
 
+  if (clash.mindReading && clash.result && !clash.mindReading.applied) {
+    await settleMindReading(message, clash);
+  }
+
   if (clash.mindControl && clash.result && !clash.mindControl.applied) {
     await settleMindControl(message, clash);
   }
@@ -9329,6 +9333,50 @@ async function settleMindControl(message, clash) {
   await settledNote(message, `${target.name} is Compelled - against a target of ${caster.name}'s choice.`);
 }
 
+/** Mind Reading, used: "make a Clash (Cognitive) against them". */
+export async function postMindReading(actor, maneuver, target) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  const telepath = unique ? boughtTraits(unique, getTrait).some(trait => trait.mindTelepath === true) : false;
+  return postSaveClash(actor, target, {
+    maneuverName: maneuver.name,
+    reason: `Win and your Dodge and Parry against ${target.name} are 1(T) higher until the end of your next turn`
+      + `${telepath ? ", your Combat Rolls against them 1(bT)" : ""}.`,
+    saves: ["cognitive"],
+    mindReading: { applied: false, telepath }
+  });
+}
+
+/**
+ * Mind Reading's Clash, won: the Mind Read mark on them - Combat Telepath's beside it - on the reader's clock, to the end
+ * of their next turn; and "you may learn any piece of information they know that you are searching for", the ARC's.
+ */
+async function settleMindReading(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, mindReading: { ...clash.mindReading, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return;
+  const reader = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!reader || !target) return;
+  await markUntilNextTurn(reader, target, "mind-read", 1, "end", clash.maneuverName);
+  if (clash.mindReading.telepath) await markUntilNextTurn(reader, target, "telepathic-read", 1, "end", clash.maneuverName);
+  await settledNote(message, `${reader.name} reads ${target.name}: what they know that you seek, as far as the ARC allows.`);
+}
+
+/**
+ * What a Mind Reading gives its reader against the one read - theirs, by the clock on the reader: Mind Read's 1(T) on a
+ * Dodge or a Parry's Strike (`defending`), Combat Telepath's 1(bT) on any Combat Roll against them.
+ */
+function mindReadBonus(actor, opponent, { defending = false } = {}) {
+  if (!actor || !opponent) return [];
+  const held = key => (actor.system.timed ?? []).some(entry => (entry?.kind === "condition") && (entry.key === key)
+    && (entry.on === opponent.uuid));
+  return [
+    ...((defending && held("mind-read"))
+      ? [{ label: "Mind Reading", written: "+1(T)", value: Math.max(1, actor.system.tierOfPower ?? 1) }] : []),
+    ...(held("telepathic-read")
+      ? [{ label: "Combat Telepath", written: "+1(bT)", value: Math.max(1, actor.system.baseTierOfPower ?? 1) }] : [])
+  ];
+}
+
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
 export async function offerOutOfSequence(actor, offer) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
@@ -11824,7 +11872,7 @@ async function resolveAttack(message, attack) {
     // "Increase your Combat Rolls against Analyzed Opponents." Added here for the same
     // reason the Long Range penalty is taken here: one Strike Roll reaches several people
     // and what it is worth against each of them is not the same number.
-    const analysis = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target)]
+    const analysis = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target), ...mindReadBonus(attacker, target)]
       .reduce((sum, p) => sum + p.value, 0);
     const against = Math.max(0, (strike.total + analysis) - longRange);
 
@@ -13071,6 +13119,7 @@ async function rollAttackWound(message, attack) {
     // them - so it is added where what the roll comes to is already worked out per person,
     // which is the same place a Guard halves it.
     const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
+      + mindReadBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
       + godMeteorPinned(attacker, target)
       + grantedLongShot(attacker, attack, target)
       + techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),
@@ -13231,6 +13280,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   // Your Dodge against somebody you Analyzed. The attacker is named on the attack, which
   // is what makes this answerable from the defender's side.
   parts.push(...analysisBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
+  // Mind Reading's, against the one who read: the Dodge, and Combat Telepath's on it.
+  parts.push(...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }));
   parts.push(...foresightBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   return parts;
 }
@@ -13597,7 +13648,9 @@ const DEFENCES = {
       ...openedAgainst(actor),
       ...rideExploitBonus(actor, attack),
       // With a Weapon: its Size and the Weapon Penalty, chosen when the Parry was.
-      ...(defenceFor(attack, actor.uuid)?.parryWith ?? [])
+      ...(defenceFor(attack, actor.uuid)?.parryWith ?? []),
+      // Mind Reading: "the Dice Score of any Strike Roll made through the Parry effect of the Defend Maneuver".
+      ...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true })
     ],
     answer: (actor, options, attack) => rollSide(actor, DEFENCES.parry.parts(actor, attack),
       { ...options, slot: "strike" }),

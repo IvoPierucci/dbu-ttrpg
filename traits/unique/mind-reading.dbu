@@ -1,0 +1,38 @@
+id: mind-reading
+name: Mind Reading
+uaType: magical
+prerequisite: Insight Score of 6+, 2+ Skill Ranks in Clairvoyance
+tpCost: 10
+type: standard
+actionCost: 1
+kiCost: 0
+requiresTarget: true
+# "Target a Character who is not at Long Range" - within your Melee Range with Limited Range Reading - "and make a Clash
+# (Cognitive) against them. If you win, increase your Dodge Rolls and the Dice Score of any Strike Roll made through the
+# Parry effect of the Defend Maneuver against that Opponent by 1(T) until the end of your next turn" - the Mind Read mark
+# on them, on your clock, read where those rolls are made (chat.mjs mindReadBonus). What you learn is the ARC's word.
+mindReading: true
+source: Core Rule
+description: >
+  A Clash (Cognitive) at a Character not at Long Range: won, Dodge and Parry against them 1(T) higher until the end of your
+  next turn, and what they know that you seek, as far as the ARC allows.
+text: >
+  Mind Reading: You are able to touch a target and read their mind, giving you a glimpse at their thoughts, and
+  potentially aiding you in defending against them.
+  –Ability Type: Magical
+  –Prerequisites: Insight Score of 6+, 2+ Skill Ranks in Clairvoyance
+  –TP Cost: 10
+  –KP Cost: N/A
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: You gain access to the Instant Understanding Adventuring Maneuver.
+  –Effect: Target a Character who is not at Long Range and make a Clash (Cognitive) against them. If you win, increase
+  your Dodge Rolls and the Dice Score of any Strike Roll made through the Parry effect of the Defend Maneuver against that
+  Opponent by 1(T) until the end of your next turn. Additionally, you may learn any piece of information they know that
+  you are searching for. The amount of information you gain is limited by your ARC, some information may be repressed or
+  Characters may have some unnatural resistance against this ability.
+
+---
+
+# The Passive Bonus waits on the Instant Understanding Adventuring Maneuver, which is not in this system yet.

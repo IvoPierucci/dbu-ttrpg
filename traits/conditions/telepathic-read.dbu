@@ -1,0 +1,12 @@
+id: telepathic-read
+name: Telepathic Read
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Combat Telepath's mark beside Mind Read, on the reader's clock.
+combatCondition: no
+source: Core Rule
+description: >
+  Read by a Combat Telepath: their Combat Rolls against you 1(bT) higher until the end of their next turn.
+text: >
+  Telepathic Read: Combat Telepath's mark - "increase your Combat Rolls by 1(bT) against them until the end of your next
+  turn."

@@ -1869,6 +1869,7 @@ export function definitionOf(item) {
     lullaby: item.system.unique?.lullaby === true,
     enhances: item.system.unique?.enhances === true,
     mindControl: item.system.unique?.mindControl === true,
+    mindReading: item.system.unique?.mindReading === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -4072,6 +4073,19 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Mind Reading: "a Character who is not at Long Range" - within your Melee Range with Limited Range Reading.
+    if (maneuver.mindReading && targetActor) {
+      const { appliedTraits } = await import("./unique.mjs");
+      const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+      const meleeOnly = unique ? appliedTraits(unique, getTrait).some(trait => trait.mindMeleeOnly) : false;
+      const why = meleeOnly ? whyNotWithinMelee(actor, targetActor, maneuver.name)
+        : (atLongRange(actor, targetActor) ? `${targetActor.name} is at Long Range.` : "");
+      if (why) {
+        ui.notifications.warn(why);
+        return false;
+      }
+    }
+
     // Mind Control: "If you lose, you can't target this Character again ... for the rest of the Combat Encounter."
     if (maneuver.mindControl && targetActor
       && (actor.system.usedManeuvers ?? []).includes(`encounter:mind-control.${targetActor.uuid}`)) {
@@ -4660,6 +4674,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.mindReading && targetActor)
+    ? await (await import("./chat.mjs")).postMindReading(actor, maneuver, targetActor)
     : (maneuver.mindControl && targetActor)
     ? await (await import("./chat.mjs")).postMindControl(actor, maneuver, targetActor)
     : (maneuver.enhances && enhancing)

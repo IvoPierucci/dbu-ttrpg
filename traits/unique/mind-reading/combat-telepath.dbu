@@ -1,0 +1,17 @@
+id: combat-telepath
+name: Combat Telepath
+advancement: true
+prerequisite: Force or Magic Score of 6+
+tpCost: 5
+# "If you win the Clash against an Opponent with Mind Reading, increase your Combat Rolls by 1(bT) against them until the
+# end of your next turn" - the Telepathic Read mark beside the Mind Read one.
+mindTelepath: true
+source: Core Rule
+description: >
+  Mind Reading won: Combat Rolls against them 1(bT) higher until the end of your next turn.
+text: >
+  Combat Telepath: You can enhance your combat abilities by reading the minds of your enemies.
+  –Prerequisites: Force or Magic Score of 6+
+  –TP Cost: 5
+  –Effect: If you win the Clash against an Opponent with Mind Reading, increase your Combat Rolls by 1(bT) against them
+  until the end of your next turn.

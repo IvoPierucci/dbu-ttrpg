@@ -1,0 +1,13 @@
+id: mind-read
+name: Mind Read
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Mind Reading's mark, on the one read, clocked to the end of the reader's next turn - Analyzed's
+# shape. What it gives the reader is read where their Dodge and Parry are made (chat.mjs mindReadBonus).
+combatCondition: no
+source: Core Rule
+description: >
+  Read by Mind Reading: its reader's Dodge and Parry against you 1(T) higher until the end of their next turn.
+text: >
+  Mind Read: Mind Reading's mark - "increase your Dodge Rolls and the Dice Score of any Strike Roll made through the Parry
+  effect of the Defend Maneuver against that Opponent by 1(T) until the end of your next turn."

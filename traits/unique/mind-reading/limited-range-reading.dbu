@@ -1,0 +1,14 @@
+id: limited-range-reading
+name: Limited Range Reading
+restriction: true
+reduction: 2
+# "You can only target Characters within your Melee Range for the effects of Mind Reading."
+mindMeleeOnly: true
+source: Core Rule
+description: >
+  Mind Reading only reaches a Character within your Melee Range.
+text: >
+  Limited Range Reading: Your ability to read minds has a limited effective range.
+  –Locked Advancements: N/A
+  –TP Cost: -2
+  –Effect: You can only target Characters within your Melee Range for the effects of Mind Reading.
