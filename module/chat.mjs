@@ -8167,6 +8167,44 @@ export async function postDownBurst(actor, maneuver, uuids) {
   return card;
 }
 
+/**
+ * Fake Moon, used: a False Moon, counted - "A False Moon lasts for 5 Combat Rounds", or with Lasting Moon "for the
+ * remainder of the Combat Encounter". Only the count is kept (the user's ruling).
+ */
+export async function postFakeMoon(actor, maneuver) {
+  const item = actor.items?.get(maneuver.itemId);
+  if (!item) return null;
+  const lasting = boughtTraits(item.system.unique, getTrait).some(trait => trait.moonLasting === true);
+  const rounds = lasting ? 0 : (Number(item.system.unique.moonRounds) || 0);
+  await item.update({ "system.unique.applied": true, "system.unique.moonLeft": rounds });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: a False Moon - ${rounds
+      ? `${rounds} Combat Rounds` : "the rest of the Combat Encounter"}</p>` });
+}
+
+/**
+ * The False Moon gone - its Rounds run out, the Encounter over, or destroyed: "it will disappear and any Saiyan in the
+ * Oozaru or Golden Oozaru Transformations will suffer from Stress Exhaustion until the end of their next turn".
+ */
+export async function falseMoonGone(actor, item, how = "disappears") {
+  if (!item?.system?.unique?.applied) return;
+  await item.update({ "system.unique.applied": false, "system.unique.moonLeft": 0 });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">The False Moon ${Handlebars.escapeExpression(how)}: any Saiyan in the Oozaru or `
+      + "Golden Oozaru Transformations suffers Stress Exhaustion until the end of their next turn.</div>" });
+}
+
+/** A new Combat Round: one fewer for each False Moon counted - gone at none. */
+export async function tickFalseMoons(actor) {
+  for (const item of Array.from(actor.items ?? [])) {
+    const unique = item.system?.unique;
+    if ((item.type !== "maneuver") || !unique?.fakeMoon || !unique.applied || !(unique.moonLeft > 0)) continue;
+    const left = unique.moonLeft - 1;
+    if (left > 0) await item.update({ "system.unique.moonLeft": left });
+    else await falseMoonGone(actor, item);
+  }
+}
+
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
 export async function offerOutOfSequence(actor, offer) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",

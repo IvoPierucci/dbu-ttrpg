@@ -91,6 +91,10 @@ async function startRound(combat) {
     // happens between them - which is the same reading the Round edge above rests on.
     await loseBreath(actor, "the Combat Round ended");
 
+    // A False Moon one Round closer to disappearing - Fake Moon's.
+    const { tickFalseMoons } = await import("./chat.mjs");
+    await tickFalseMoons(actor);
+
     // A placed Timed Item comes one Round closer. The Round's card offers the ones that
     // have got there.
     const { tickCountdowns } = await import("./gear.mjs");
@@ -590,6 +594,11 @@ export function registerCombatHooks() {
 
     // Leaving an Encounter clears what only lasted for it.
     for (const actor of combatants(combat)) {
+      // A False Moon stands no longer than the Combat Encounter it was made in - Lasting Moon's included.
+      const { falseMoonGone } = await import("./chat.mjs");
+      for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.fakeMoon)) {
+        await falseMoonGone(actor, item);
+      }
       await actor.update({
         "system.talentUses.encounter": [],
         "system.armedTalents": [],

@@ -628,6 +628,11 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         upkeepHalf: new fields.BooleanField({ required: true, initial: false }),
         /** Prone and a Clash (Bluff vs Intuition) at every Opponent, won Hidden - Fake Death's (chat.mjs postFakeDeath). */
         fakesDeath: new fields.BooleanField({ required: true, initial: false }),
+        /** A False Moon, counted: its Combat Rounds from the file, and how many are left of one made - Fake Moon's. */
+        fakeMoon: new fields.BooleanField({ required: true, initial: false }),
+        moonRounds: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        /** Rounds left of the False Moon applied; 0 while applied is the rest of the Encounter (Lasting Moon). */
+        moonLeft: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /** A Counter played once hit, before the Wound Roll - Barrier's (chat.mjs barrierStage). */
         barrier: new fields.BooleanField({ required: true, initial: false }),
         /** Its Effect Pins somebody and holds them - Binding's (chat.mjs postBinding); who, while it does. */

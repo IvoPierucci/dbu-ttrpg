@@ -1,0 +1,17 @@
+id: lasting-moon
+name: Lasting Moon
+advancement: true
+prerequisite: Force or Magic Score of 8+
+tpCost: 5
+# "Your False Moon lasts for the remainder of the Combat Encounter" - no Rounds counted. Its doubled Life Points and
+# Damage Reduction are the table's, as the False Moon's own are.
+moonLasting: true
+source: Core Rule
+description: >
+  The False Moon lasts the rest of the Combat Encounter, its Life Points and Damage Reduction doubled.
+text: >
+  Lasting Moon: Your false full moon lasts much longer, extending your access to the hidden powers unlocked by it.
+  –Prerequisites: Force or Magic Score of 8+
+  –TP Cost: 5
+  –Effect: Your False Moon lasts for the remainder of the Combat Encounter and double both its Life Points and Damage
+  Reduction.

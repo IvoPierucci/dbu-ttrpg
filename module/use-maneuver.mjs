@@ -1848,6 +1848,7 @@ export function definitionOf(item) {
     explodes: item.system.unique?.explodes === true,
     waves: item.system.unique?.waves === true,
     fakesDeath: item.system.unique?.fakesDeath === true,
+    fakeMoon: item.system.unique?.fakeMoon === true,
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
@@ -3603,6 +3604,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Fake Moon: "Only one False Moon can exist on a Battlefield at a time" - yours, at least, while it stands.
+    if (maneuver.fakeMoon && actor.items?.get(maneuver.itemId)?.system?.unique?.applied) {
+      ui.notifications.warn(`${actor.name}'s False Moon still stands.`);
+      return false;
+    }
+
     // Fake Death: "a Clash (Bluff vs Intuition) against all Opponents" - who they are, asked.
     if (maneuver.fakesDeath) {
       faking = await askHide(actor, maneuver, { all: true });
@@ -4110,6 +4117,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postHide(actor, maneuver, hiding)
     : maneuver.gathers
     ? await postGathering(actor, maneuver, actionsSpent)
+    : maneuver.fakeMoon
+    ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
     : (maneuver.fakesDeath && faking)
     ? await (await import("./chat.mjs")).postFakeDeath(actor, maneuver, faking.uuids)
     : (maneuver.waves && waving)

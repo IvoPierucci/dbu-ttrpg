@@ -72,6 +72,13 @@
                     data-tooltip="Fill in from this sheet as it stands">&#8635;</button>
           </div>
           {{/if}}
+          {{#if row.moon}}
+          <div class="unique-resource">
+            <span data-tooltip="False Moon">{{row.moon.label}}</span>
+            <button type="button" class="dbu-clash-button" data-action="destroyMoon" data-item-id="{{row.itemId}}"
+                    data-tooltip="Its Life Points reached 0: it disappears">Destroy moon</button>
+          </div>
+          {{/if}}
           {{#if row.cage}}
           <div class="unique-resource">
             <button type="button" class="dbu-clash-button" data-action="cageHit" data-kind="dodged" data-item-id="{{row.itemId}}"

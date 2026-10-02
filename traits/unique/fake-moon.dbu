@@ -1,0 +1,46 @@
+id: fake-moon
+name: Fake Moon
+uaType: both
+prerequisite: Force or Magic Score 4+
+tpCost: 10
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 6
+# The False Moon is counted and nothing more (the user's ruling): applied when used, one at a time, its Combat Rounds
+# counted down at the start of each (combat.mjs), gone at none, at the end of the Encounter, or by the Destroy Moon
+# button on its entry - said on a card, with the Stress Exhaustion it leaves. Its Life Points, who attacks it, where
+# it stands, the Light Level and the Transformations it opens are the table's.
+fakeMoon: true
+moonRounds: 5
+source: Core Rule
+description: >
+  A False Moon for 5 Combat Rounds, counted on its entry, where Destroy Moon ends it sooner.
+text: >
+  Fake Moon: You have the ability to create a false full moon in the sky, allowing anything that relies on the full
+  moon to access its hidden power.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Force or Magic Score 4+
+  –TP Cost: 10
+  –KP Cost: 6(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Create a False Moon. A False Moon acts as a full moon and increases the Light Level of the Battlefield by 1
+  Light Level (to a maximum of Normal). All Characters with access to a Transformation with the Blutz Wave Aspect may
+  use the Transformation Maneuver as an Out-of-Sequence Maneuver to enter a Transformation with that Aspect.
+
+  A False Moon lasts for 5 Combat Rounds, after which it will disappear and any Saiyan in the Oozaru or Golden Oozaru
+  Transformations will suffer from Stress Exhaustion until the end of their next turn.
+
+  A False Moon is a Feature that can only be made in a High Environment of Rank 2 or higher (you can only select Deep
+  Space for this option if you are in Deep Space). The Feature is created on any Square within a Destructive Sphere
+  AoE (centered on you). The Feature is 4×4, has a Hardness Rank of 2, and possesses the Burning Feature Quality (see
+  — Battlefields).
+
+  Rather than the typical way to destroy a False Moon, a False Moon takes Damage like a Character would and has a pool
+  of Life Points equal to 5x the Might of its creator at the time of creation and Damage Reduction equal to their
+  creator’s Might at the time of creation. If a False Moon’s Life Points reach 0, it is destroyed and you apply the
+  effects as if it disappeared (seen above).
+
+  Only one False Moon can exist on a Battlefield at a time.

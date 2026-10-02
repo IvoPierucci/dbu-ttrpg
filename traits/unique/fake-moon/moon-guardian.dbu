@@ -1,0 +1,16 @@
+id: moon-guardian
+name: Moon Guardian
+advancement: true
+prerequisite: N/A
+tpCost: 5
+# The table's (the user's ruling), as everything that attacks the False Moon is.
+source: Core Rule
+description: >
+  The False Moon targeted by an attack with no AoE: a Counter Action to step beside it and take the attack yourself.
+text: >
+  Moon Guardian: You use your body to shield the full moon you’ve created.
+  –Prerequisites: N/A
+  –TP Cost: 5
+  –Effect: If your False Moon is targeted by an Attacking Maneuver that does not possess an AoE, you may spend a
+  Counter Action to move to an adjacent Square to that False Moon. If you do, shift the target of that Attacking
+  Maneuver to you.

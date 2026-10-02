@@ -383,6 +383,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       revealTo: DBUCharacterSheet._onRevealTo,
       cageHit: DBUCharacterSheet._onCageHit,
       recordKept: DBUCharacterSheet._onRecordKept,
+      destroyMoon: DBUCharacterSheet._onDestroyMoon,
       cageClash: DBUCharacterSheet._onCageClash,
       detonateTechnique: DBUCharacterSheet._onDetonateTechnique,
       deleteTechnique: DBUCharacterSheet._onDeleteTechnique,
@@ -1710,6 +1711,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         barrierClash: !grantedBy && boughtTraits(unique, getTrait).some(trait => trait.barrierClash === true),
         // Copy Being: the Maximums kept while a copy of somebody else's sheet is used.
         kept: (unique.keepsPools && !grantedBy) ? { ...unique.kept } : null,
+        // Fake Moon: the False Moon standing, and its Rounds left - none counted for the rest of the Encounter.
+        moon: (unique.fakeMoon && unique.applied) ? { label: (Number(unique.moonLeft) || 0)
+          ? `${unique.moonLeft} Combat Round${(unique.moonLeft === 1) ? "" : "s"} left` : "Until the end of the Encounter" } : null,
         // Cage of Light, standing: its Life Point reductions and its Might Clash, at the one targeted.
         cage: Boolean(unique.cage && unique.applied) && (() => {
           const might = Number(actor.system.might) || 0;
@@ -1856,6 +1860,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** An applied Unique Ability stopped - the Atmospheric Bubble, where there is no turn to stop it at. */
+  /** Fake Moon: the False Moon destroyed - "you apply the effects as if it disappeared". */
+  static async _onDestroyMoon(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    const { falseMoonGone } = await import("../chat.mjs");
+    return falseMoonGone(this.actor, item, "is destroyed");
+  }
+
   static async _onStopUnique(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     if (!item?.system?.unique?.applied || item.system.togglesState) return;
