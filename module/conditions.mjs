@@ -363,6 +363,17 @@ export function registerConditionHooks() {
       await actor.unsetFlag("dbu-ttrpg", "snaredBy");
     }
 
+    // Internal Assault's: "If a Debilitated Opponent loses the Impediment or Staggered Combat Conditions through any
+    // effect, they stop being Debilitated."
+    const debilitated = actor.getFlag("dbu-ttrpg", "debilitatedBy");
+    if (debilitated && ["impediment", "staggered"].some(key => !((Number(actor.system.conditions?.[key]) || 0) > 0))) {
+      const caster = fromUuidSync(debilitated.by);
+      const item = caster?.items?.get(debilitated.itemId);
+      const { endDebilitation } = await import("./chat.mjs");
+      if (item) await endDebilitation(caster, item);
+      else await actor.unsetFlag("dbu-ttrpg", "debilitatedBy");
+    }
+
     // And Binding's: the Condition it put on them gone - Clashed off, taken off the sheet - lets the Binding go.
     const bound = actor.getFlag("dbu-ttrpg", "boundBy");
     if (bound && !((Number(actor.system.conditions?.[bound.condition]) || 0) > 0)) {

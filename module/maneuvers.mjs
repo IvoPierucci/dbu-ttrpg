@@ -2330,6 +2330,12 @@ export async function recordManeuverType(actor, type, { messageId = "", maneuver
     return;
   }
 
+  // Debilitated: "loses Life Points equal to 1/4 (rounded up) of your Magic Modifier each time they use a Maneuver".
+  if (actor?.getFlag?.("dbu-ttrpg", "debilitatedBy")) {
+    const { debilitatedUse } = await import("./chat.mjs");
+    await debilitatedUse(actor);
+  }
+
   // Energy Gathering: "If you use a Maneuver other than the Signature Technique Maneuver, Energy Charge Maneuver, or
   // Energy Gathering Unique Ability, you must spend a Karma Point or lose all stacks of Lifeforce."
   if (Number(actor.system?.resources?.lifeforce?.stacks) > 0) {

@@ -644,6 +644,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         illusion: new fields.BooleanField({ required: true, initial: false }),
         /** A Basic Attack out of sequence as if they stood beside you - Illusion Smash's (chat.mjs postSmash). */
         smashes: new fields.BooleanField({ required: true, initial: false }),
+        /** A Clash that leaves its target Debilitated, kept each turn - Internal Assault's (chat.mjs). */
+        debilitates: new fields.BooleanField({ required: true, initial: false }),
         /** A State it may only be used in - God Meteor's God Ki. */
         requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */

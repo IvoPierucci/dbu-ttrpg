@@ -1865,6 +1865,7 @@ export function definitionOf(item) {
     selfShock: item.system.unique?.selfShock === true,
     illusion: item.system.unique?.illusion === true,
     smashes: item.system.unique?.smashes === true,
+    debilitates: item.system.unique?.debilitates === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -3410,6 +3411,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     return false;
   }
 
+  // Debilitated: "cannot use the Combat Recovery Maneuver".
+  if ((maneuver.id === "combat-recovery") && actor.getFlag?.("dbu-ttrpg", "debilitatedBy")) {
+    ui.notifications.warn(`${actor.name} is Debilitated and cannot use ${maneuver.name}.`);
+    return false;
+  }
+
   // Aggressive Taunt: "If you have dealt Damage to an Opponent with 2+ Attacking Maneuvers on your turn, lower the
   // Action Cost of this Unique Ability to 1 until the end of your turn."
   if (maneuver.finishSign) {
@@ -3948,6 +3955,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Internal Assault: "your Debilitated Opponent" - one at a time.
+    if (maneuver.debilitates && actor.items?.get(maneuver.itemId)?.system?.unique?.applied) {
+      ui.notifications.warn(`${maneuver.name} already holds someone Debilitated.`);
+      return false;
+    }
+
     // Illusion Smash: whom, and with what - Combo Portal's one moved, by itself.
     if (maneuver.smashes) {
       smashing = await askSmash(actor, maneuver, { targetUuid, combo });
@@ -4036,7 +4049,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       binding = askBinding(actor, maneuver);
       if (!binding) return false;
     }
-    else if (maneuver.sustained && !maneuver.togglesState) {
+    else if (maneuver.sustained && !maneuver.togglesState && !maneuver.debilitates) {
       sustaining = await askSustain(actor, maneuver);
       if (!sustaining) return false;
     }
@@ -4511,6 +4524,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.debilitates && targetActor)
+    ? await (await import("./chat.mjs")).postInternalAssault(actor, maneuver, targetActor)
     : (maneuver.smashes && smashing)
     ? await (await import("./chat.mjs")).postSmash(actor, maneuver, smashing)
     : (maneuver.illusion && illusioning)

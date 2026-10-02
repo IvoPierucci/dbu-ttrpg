@@ -1,0 +1,46 @@
+id: internal-assault
+name: Internal Assault
+uaType: magical
+prerequisite: Telekinesis Unique Ability
+tpCost: 15
+type: standard
+actionCost: 2
+kiCostPerTier: 11
+requiresTarget: true
+# "Make a Clash (Cognitive vs Cognitive/Corporeal) against that Opponent. If you win, that Opponent becomes
+# 'Debilitated'" - the Debilitated mark, Impediment and Staggered on them; Life Points off them each Maneuver they use
+# (maneuvers.mjs recordManeuverType); no Combat Recovery; gone with either Condition (conditions.mjs). Kept for its
+# Action Cost and KP at the start of each of your turns, a Stop on the card (chat.mjs upkeepUniques); ended as an Instant
+# from its row. Their Clash to break free is a button on the Debilitated card.
+debilitates: true
+sustained: true
+upkeepActions: 2
+instantRelease: true
+source: Core Rule
+description: >
+  A Clash (Cognitive vs Cognitive/Corporeal) at an Opponent: won, Debilitated - Impediment and Staggered, Life Points off
+  each Maneuver they use, no Combat Recovery. Kept for 2 Actions and its KP each of your turns; ended as an Instant.
+text: >
+  Internal Assault: You use your telekinetic prowess to assail someone from the inside out.
+  –Ability Type: Magical
+  –Prerequisites: Telekinesis Unique Ability
+  –TP Cost: 15
+  –KP Cost: 11(T)
+  –Maneuver Type: Standard
+  –Action Cost: 2 Actions
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target an Opponent and make a Clash (Cognitive vs Cognitive/Corporeal) against that Opponent. If you win,
+  that Opponent becomes ‘Debilitated’. A Debilitated Opponent loses Life Points equal to ¼ (rounded up) of your Magic
+  Modifier each time they use a Maneuver, cannot use the Combat Recovery Maneuver, and suffers from the Impediment and
+  Staggered Combat Conditions.
+
+  If a Debilitated Opponent loses the Impediment or Staggered Combat Conditions through any effect, they stop being
+  Debilitated.
+
+  At the start of each of your turns, you must spend the Action Cost and Ki Point Cost of Internal Assault or your
+  Debilitated Opponent stops being Debilitated. You may also stop an Opponent from being Debilitated through your use of
+  Internal Assault as an Instant Maneuver.
+
+  During their turn, as a Standard Maneuver with an Action Cost of 1 Action, a Debilitated Opponent may initiate a Clash
+  (Cognitive/Corporeal vs Cognitive) against you. If they win, they stop being Debilitated.

@@ -610,6 +610,14 @@ async function applyClash(messageId, clash) {
     else await settledNote(message, `${clash.defenderName} stays Hidden.`);
   }
 
+  if (clash.debilitate && clash.result && !clash.debilitate.applied) {
+    await settleDebilitate(message, clash);
+  }
+
+  if (clash.debilitateEscape && clash.result && !clash.debilitateEscape.applied) {
+    await settleDebilitateEscape(message, clash);
+  }
+
   if (clash.illusion && clash.result && !clash.illusion.applied) {
     await settleIllusion(message, clash);
   }
@@ -2868,6 +2876,7 @@ function onRenderChatMessage(message, html) {
   renderHealing(message, html);
   renderShock(message, html);
   renderIllusion(message, html);
+  renderDebilitated(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -3582,6 +3591,12 @@ export async function upkeepUniques(actor) {
     && item.system.unique?.sustained && item.system.unique?.applied);
   const { MAGNITUDES } = await import("./maneuvers.mjs");
   for (const item of held) {
+    // Internal Assault whose Opponent is Debilitated no longer: nothing to keep.
+    if (item.system.unique.debilitates
+      && !fromUuidSync(item.system.unique.boundUuid ?? "")?.getFlag?.(SCOPE, "debilitatedBy")) {
+      await item.update({ "system.unique.applied": false, "system.unique.boundUuid": "" });
+      continue;
+    }
     // A State it put you in that you are no longer in - left some other way: nothing to keep.
     if (item.system.togglesState && !((Number(actor.system.states?.[item.system.togglesState]) || 0) > 0)) {
       await item.update({ "system.unique.applied": false });
@@ -3644,6 +3659,8 @@ export async function upkeepUniques(actor) {
  */
 export async function endSustained(actor, item) {
   await leaveToggledState(actor, item);
+  // Internal Assault: "or your Debilitated Opponent stops being Debilitated".
+  if (item.system?.unique?.debilitates) await endDebilitation(actor, item);
   const floods = item.system?.unique?.floods;
   if (!floods) return;
   const before = item.system.unique.floodedFrom || "";
@@ -8960,6 +8977,123 @@ function sizedArea(attacker, target, area, { portal = false } = {}) {
   const steps = Number(attacker.system.size?.steps) || 0;
   if (portal || (steps < 3) || ((Number(target?.system?.size?.steps) || 0) >= 3)) return null;
   return { shape: "sphere", magnitude: (steps >= 4) ? "standard" : "minor", giantStrike: true };
+}
+
+/** The Debilitated card: its Opponent's button to break free, while they are. */
+const DEBILITATED_FLAG = "debilitated";
+
+/** Internal Assault, used: "make a Clash (Cognitive vs Cognitive/Corporeal) against that Opponent". */
+export async function postInternalAssault(actor, maneuver, target) {
+  return postSaveClash(actor, target, {
+    maneuverName: maneuver.name,
+    reason: `Win and ${target.name} is Debilitated.`,
+    saves: ["cognitive"],
+    defenderSaves: ["cognitive", "corporeal"],
+    debilitate: { applied: false, itemId: maneuver.itemId }
+  });
+}
+
+/**
+ * Internal Assault's Clash, settled. Won: "that Opponent becomes 'Debilitated'" - the mark, Impediment and Staggered, a
+ * note of whose - and the Unique Ability applied, so it is kept at the start of its user's turns.
+ */
+async function settleDebilitate(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, debilitate: { ...clash.debilitate, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return;
+  const caster = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  const item = caster?.items?.get(clash.debilitate.itemId);
+  if (!caster || !target || !item) return;
+  // The Conditions first, the note of whose after: the watch that ends it when either Condition goes must not see the
+  // note before the Conditions are there.
+  const { setCondition } = await import("./conditions.mjs");
+  for (const key of ["debilitated", "impediment", "staggered"]) {
+    await setCondition(target, key, Math.max(1, Number(target.system.conditions?.[key]) || 0));
+  }
+  await requestActorUpdate(target, { [`flags.${SCOPE}.debilitatedBy`]: { by: caster.uuid, itemId: item.id } });
+  await item.update({ "system.unique.applied": true, "system.unique.boundUuid": target.uuid });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: caster }),
+    content: `<p>${Handlebars.escapeExpression(target.name)} is Debilitated.</p>`,
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [DEBILITATED_FLAG]: { casterUuid: caster.uuid, targetUuid: target.uuid,
+      itemId: item.id } } } });
+}
+
+/** Whether `target` is Debilitated by this caster's Internal Assault still. */
+function debilitatedBy(target, caster, itemId) {
+  const held = target?.getFlag?.(SCOPE, "debilitatedBy");
+  return Boolean(held) && (held.by === caster?.uuid) && (!itemId || (held.itemId === itemId));
+}
+
+/**
+ * "They stop being Debilitated" - won free, not kept, ended as an Instant, or one of its Conditions gone. The mark and the
+ * two Conditions off them, the Unique Ability no longer applied.
+ */
+export async function endDebilitation(caster, item, { said = true } = {}) {
+  const target = fromUuidSync(item?.system?.unique?.boundUuid ?? "");
+  if (item?.system?.unique?.applied) await item.update({ "system.unique.applied": false, "system.unique.boundUuid": "" });
+  if (!target || !debilitatedBy(target, caster, item?.id)) return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.-=debilitatedBy`]: null });
+  const { setCondition } = await import("./conditions.mjs");
+  for (const key of ["debilitated", "impediment", "staggered"]) {
+    if ((Number(target.system.conditions?.[key]) || 0) > 0) await setCondition(target, key, 0);
+  }
+  if (said) {
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: caster }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(target.name)} is no longer Debilitated.</div>` });
+  }
+}
+
+/**
+ * "A Debilitated Opponent loses Life Points equal to 1/4 (rounded up) of your Magic Modifier each time they use a
+ * Maneuver" - asked as each Maneuver of theirs is recorded.
+ */
+export async function debilitatedUse(actor) {
+  const held = actor?.getFlag?.(SCOPE, "debilitatedBy");
+  if (!held) return;
+  const caster = fromUuidSync(held.by);
+  const amount = Math.ceil(Math.max(0, Number(caster?.system?.attributes?.magic?.mod) || 0) / 4);
+  if (amount > 0) await reduceLifePoints(actor, amount, { reason: "Debilitated" });
+}
+
+/**
+ * Its card's button, for the Debilitated: "During their turn, as a Standard Maneuver with an Action Cost of 1 Action, a
+ * Debilitated Opponent may initiate a Clash (Cognitive/Corporeal vs Cognitive) against you. If they win, they stop
+ * being Debilitated."
+ */
+function renderDebilitated(message, html) {
+  const card = message.getFlag(SCOPE, DEBILITATED_FLAG);
+  if (!card) return;
+  const target = fromUuidSync(card.targetUuid);
+  const caster = fromUuidSync(card.casterUuid);
+  if (!target?.isOwner || !caster || !debilitatedBy(target, caster, card.itemId)) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Break free: 1 Action";
+  button.dataset.tooltip = `A Clash (Cognitive/Corporeal vs Cognitive) against ${caster.name} - won, no longer Debilitated`;
+  button.addEventListener("click", async () => {
+    const { isTheirTurn } = await import("./combat.mjs");
+    if (game.combat?.started && !isTheirTurn(target)) return ui.notifications.warn("Only during your own turn.");
+    if (!await spendActions(target, 1, "standard")) return;
+    await recordManeuverType(target, "standard");
+    await postSaveClash(target, caster, {
+      maneuverName: "Break free",
+      reason: `Win and ${target.name} is no longer Debilitated.`,
+      saves: ["cognitive", "corporeal"],
+      defenderSaves: ["cognitive"],
+      debilitateEscape: { applied: false, itemId: card.itemId }
+    });
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/** Their Clash to break free, settled: won, Debilitated no longer. */
+async function settleDebilitateEscape(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, debilitateEscape: { ...clash.debilitateEscape, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return;
+  const caster = fromUuidSync(clash.defenderUuid);
+  const item = caster?.items?.get(clash.debilitateEscape.itemId);
+  if (item) await endDebilitation(caster, item);
 }
 
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */

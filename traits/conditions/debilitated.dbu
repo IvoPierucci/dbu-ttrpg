@@ -1,0 +1,14 @@
+id: debilitated
+name: Debilitated
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Internal Assault names it in quotes and gives it its own rules. A mark, so it shows on the
+# sheet; what it does is Internal Assault's (chat.mjs debilitate*).
+combatCondition: no
+source: Core Rule
+description: >
+  Internal Assault's: Life Points off each Maneuver used, no Combat Recovery, Impediment and Staggered.
+text: >
+  Debilitated: "A Debilitated Opponent loses Life Points equal to ¼ (rounded up) of your Magic Modifier each time they
+  use a Maneuver, cannot use the Combat Recovery Maneuver, and suffers from the Impediment and Staggered Combat
+  Conditions."
