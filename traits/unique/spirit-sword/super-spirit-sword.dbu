@@ -1,0 +1,15 @@
+id: super-spirit-sword
+name: Super Spirit Sword
+advancement: true
+prerequisite: Force or Magic Score of 12+
+tpCost: 15
+swordAgain: true
+source: Core Rule
+description: >
+  Damage dealt by Spirit Sword on your turn: Spirit Sword once more this turn.
+text: >
+  Super Spirit Sword: Your energy weapon persists after your attack, allowing you to use it again.
+  –Prerequisites: Force or Magic Score of 12+
+  –TP Cost: 15
+  –Effect: If you deal Damage to an Opponent with the Attacking Maneuver through the effects of Spirit Sword during
+  your turn, you may use the Spirit Sword Unique Ability an additional time during this turn.

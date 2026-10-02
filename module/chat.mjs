@@ -10647,6 +10647,86 @@ async function settleSolarFlare(message, clash) {
   await settledNote(message, `${target.name} is Blinded until the end of their next turn.`);
 }
 
+/**
+ * Spirit Sword, before it is paid: the Profile - Simple (Physical), Spirit Sword Rush's Combination (Physical), Galaxy
+ * Spirit Sword's Powered - "either the Slashing or Piercing Weapon Category", and "increase your Melee Range by up to
+ * 1(bT) Squares ... OR apply a Cone or Sphere AoE"; with Spirit Excalibur, a Signature Technique of that Profile instead
+ * of the Basic Attack. Null if dropped.
+ */
+export async function askSpiritSword(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  const bought = boughtTraits(unique, getTrait);
+  const profiles = ["simple", ...bought.map(trait => String(trait.swordProfile ?? "")).filter(Boolean)];
+  const { signatureTechniquesOf } = await import("./use-maneuver.mjs");
+  const techniques = bought.some(trait => trait.swordTechnique === true)
+    ? signatureTechniquesOf(actor).filter(technique => profiles.includes(technique.profile)) : [];
+  const reach = Math.max(1, actor.system.baseTierOfPower ?? 1);
+  const escape = Handlebars.escapeExpression;
+  const select = (name, options) => `<select name="${name}" class="dbu-gear-pick">${options.map(([value, label]) =>
+    `<option value="${value}">${escape(label)}</option>`).join("")}</select>`;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `${techniques.length ? `<label>Attack ${select("use", [["", "Basic Attack"],
+        ...techniques.map(technique => [technique.id, `${technique.name} (${PROFILES[technique.profile]?.label ?? technique.profile})`])])}</label>` : ""}
+      ${(profiles.length > 1) ? `<label>Profile ${select("profile", profiles.map(key => [key, `${PROFILES[key]?.label ?? key} (Physical)`]))}</label>` : ""}
+      <label>Weapon Category ${select("category", [["slashing", "Slashing"], ["piercing", "Piercing"]])}</label>
+      <label>And ${select("extend", [["", "Nothing more"], ...Array.from({ length: reach }, (_, i) =>
+        [`reach:${i + 1}`, `Melee Range +${i + 1}`]), ["area:cone", "A Cone AoE"], ["area:sphere", "A Sphere AoE"]])}</label>`,
+    buttons: [{ action: "go", label: "Strike", default: true, callback: (event, button, dialog) => {
+      const value = name => dialog.element.querySelector(`select[name="${name}"]`)?.value ?? "";
+      return { use: value("use"), profile: value("profile") || "simple", category: value("category") || "slashing",
+        extend: value("extend") };
+    } }, { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!chosen || (chosen === "cancel")) return null;
+  const technique = techniques.find(entry => entry.id === chosen.use) ?? null;
+  const [kind, amount] = String(chosen.extend).split(":");
+  return { techniqueId: technique?.id ?? "", profile: technique ? technique.profile : chosen.profile,
+    category: chosen.category, reach: (kind === "reach") ? (Number(amount) || 0) : 0,
+    area: (kind === "area") ? amount : "",
+    again: bought.some(trait => trait.swordAgain === true) };
+}
+
+/** Spirit Sword, paid for: "Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver" - or the Technique. */
+export async function postSpiritSword(actor, maneuver, plan, target) {
+  const spiritSword = { name: maneuver.name, itemId: maneuver.itemId, category: plan.category, reach: plan.reach,
+    area: plan.area, again: plan.again };
+  const { useManeuver, useTechnique } = await import("./use-maneuver.mjs");
+  if (plan.techniqueId) {
+    return useTechnique(actor, plan.techniqueId, { outOfSequence: true, targetUuid: target?.uuid ?? "", spiritSword });
+  }
+  const basic = getManeuver("basic-attack");
+  if (!basic) return null;
+  return useManeuver(actor, { ...basic, profile: plan.profile, profileFoundation: { [plan.profile]: "physical" } },
+    { outOfSequence: true, targetUuid: target?.uuid ?? "", spiritSword });
+}
+
+/** The Super Spirit Sword uses already given back, by the attack that earned them - one each. */
+const SWORD_AGAIN = new Set();
+
+/**
+ * Its attack, landed: "If you knock an Opponent through a Health Threshold with this Attacking Maneuver, they gain the
+ * Staggered Combat Condition until the start of your next turn." Super Spirit Sword: "If you deal Damage to an Opponent
+ * with the Attacking Maneuver through the effects of Spirit Sword during your turn, you may use the Spirit Sword Unique
+ * Ability an additional time during this turn" - a use of this Round's given back.
+ */
+async function spiritSwordLanded(message, attack, attacker, target, knockedThrough) {
+  const sword = attack.spiritSword;
+  if (knockedThrough) await markUntilNextTurn(attacker, target, "staggered", 1, "start", sword.name);
+  const { isTheirTurn } = await import("./combat.mjs");
+  if (!sword.again || SWORD_AGAIN.has(message.id) || (game.combat?.started && !isTheirTurn(attacker))) return;
+  SWORD_AGAIN.add(message.id);
+  const used = [...(attacker.system.usedManeuvers ?? [])];
+  const at = used.indexOf(`round:${sword.itemId}`);
+  if (at < 0) return;
+  used.splice(at, 1);
+  await requestActorUpdate(attacker, { "system.usedManeuvers": used });
+  await settledNote(message, `Super Spirit Sword: ${attacker.name} may use ${sword.name} again this turn.`);
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -11557,7 +11637,7 @@ export async function postAttack(actor, target, maneuver,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
                                    extraTargets = [], freeWager = 0, unitedWith = null,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
-                                   genkiLifeforce = 0, portal = false },
+                                   genkiLifeforce = 0, portal = false, spiritSword = null },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -11794,6 +11874,8 @@ export async function postAttack(actor, target, maneuver,
           targetName: target.name,
           // The Maneuver it was made through - the Basic Attack Dimensional Hole answers.
           maneuverId: maneuver.id ?? "",
+          // Spirit Sword's, made through it: its Staggered and Super Spirit Sword's use again, once it lands.
+          ...(spiritSword ? { spiritSword } : {}),
           // Who has confirmed what they are bringing, and what each target answered
           // with. Nothing is rolled until every participant appears here: both sides
           // may have effects to apply first, and a roll made before they do cannot be
@@ -16914,6 +16996,9 @@ async function applyAttackDamage(message, target, attack) {
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
   if (arms) await offerArmsHit(armsUser, target);
+  if (attack.spiritSword && armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) {
+    await spiritSwordLanded(message, attack, armsUser, target, knockedThrough);
+  }
   // Punisher Guard's Basic Attack, landed: through a Health Threshold or Defeated, the Exploit it answers is cancelled.
   if (attack.punish && (attack.punish.exploiterUuid === target.uuid)) {
     await punishRelease(attack.punish.cardId, (knockedThrough || (floor <= 0)) && (damage > 0) && !isAbsoluteMiss(own));

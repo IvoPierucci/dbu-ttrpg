@@ -1880,6 +1880,7 @@ export function definitionOf(item) {
     secondSight: item.system.unique?.secondSight === true,
     shapeshift: item.system.unique?.shapeshift === true,
     solarFlare: item.system.unique?.solarFlare === true,
+    spiritSword: item.system.unique?.spiritSword === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -3518,7 +3519,7 @@ export async function useManeuver(actor, maneuver, options = {}) {
 async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId = "", via = "",
                                                     outOfSequence = false, targetUuid = "",
                                                     presetThrown = null, volleyball = null, meteor = "",
-                                                    portal = false, combo = false } = {}) {
+                                                    portal = false, combo = false, spiritSword = null } = {}) {
   if (!actor || !maneuver) return false;
   // Whether this use is an Ultimate that began as a Super - Ascended Signature. Set when the
   // Technique is picked.
@@ -3880,6 +3881,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let positioning = null;
   let shaping = null;
   let flaring = null;
+  let swording = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -3994,7 +3996,17 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Armed Attack unless it has the 'Weapon Assisted' Advantage."
     const unassisted = (maneuver.tags ?? []).includes("signature")
       && !(declared.advantages ?? []).includes("weapon-assisted");
-    if (!thrown && !(maneuver.tags ?? []).includes("unarmed") && !unassisted && !maneuver.buddyAttack) {
+    // Spirit Sword's blade: "the effects of either the Slashing or Piercing Weapon Category", and "increase your Melee
+    // Range by up to 1(bT) Squares ... OR apply a Cone or Sphere AoE".
+    if (spiritSword && declared) {
+      const lent = borrowedCategory(spiritSword.category, actor, { profile: declared.profile, kiWager: declared.kiWager ?? 0,
+        target: targetActor, area: spiritSword.area ? { shape: spiritSword.area } : (PROFILES[declared.profile]?.area ?? null),
+        sizes: Object.keys(DBUCharacterData.SIZES), getTrait, source: spiritSword.name });
+      declared = { ...declared,
+        ...(lent ? { weapon: { ...lent, meleeRange: (Number(lent.meleeRange) || 0) + (Number(spiritSword.reach) || 0) } } : {}),
+        ...(spiritSword.area ? { area: { shape: spiritSword.area } } : {}) };
+    }
+    else if (!thrown && !(maneuver.tags ?? []).includes("unarmed") && !unassisted && !maneuver.buddyAttack) {
       const chosen = await askWeapon(actor, declared);
       if (chosen === null) return false;
       weaponItem = chosen?.item ?? null;
@@ -4265,6 +4277,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const size = larger || unique?.sphereMagnitude || "minor";
       waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
       if (!waving) return false;
+    }
+
+    // Spirit Sword: its Profile, Weapon Category and reach, asked before it is paid.
+    if (maneuver.spiritSword) {
+      swording = await (await import("./chat.mjs")).askSpiritSword(actor, maneuver);
+      if (!swording) return false;
     }
 
     // Solar Flare: "all Opponents within a Huge Cone AoE" - the ones targeted.
@@ -4793,6 +4811,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : maneuver.portals
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
+    : (maneuver.spiritSword && swording)
+    ? await (await import("./chat.mjs")).postSpiritSword(actor, maneuver, swording, targetActor)
     : (maneuver.solarFlare && flaring)
     ? await (await import("./chat.mjs")).postSolarFlare(actor, maneuver, flaring)
     : (maneuver.shapeshift && shaping)
@@ -4891,7 +4911,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await postFeatureAttack(actor, maneuver, declared, charges)
     : declared
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges, ...(volleyball ? { volleyball } : {}),
-        ...(portal ? { portal: true } : {}) },
+        ...(portal ? { portal: true } : {}), ...(spiritSword ? { spiritSword } : {}) },
         { modifiers: [...appliedModifiers(modifiers), ...drawn.rows], asOutOfSequence: outOfSequence })
     // A Movement card carries whether Rapid Movement was paid for, because the Dodge
     // bonus it buys is against "an Exploit Maneuver provoked by this instance" - and this
@@ -5328,7 +5348,7 @@ export async function useOwnedManeuver(actor, itemId, { atFeature = false } = {}
  */
 export async function useTechnique(actor, itemId, { atFeature = false, via = "", outOfSequence = false,
                                                   targetUuid = "", presetThrown = null, volleyball = null,
-                                                  meteor = "" } = {}) {
+                                                  meteor = "", spiritSword = null } = {}) {
   const door = actor?.items?.find(item => (item.type === "maneuver") && item.system.signatureTechnique);
   if (!door) {
     ui.notifications.warn(`${actor?.name ?? "This character"} has no Signature Technique Maneuver. `
@@ -5336,7 +5356,7 @@ export async function useTechnique(actor, itemId, { atFeature = false, via = "",
     return false;
   }
   return useManeuver(actor, definitionOf(door), { atFeature, techniqueId: itemId, via, outOfSequence,
-    targetUuid, presetThrown, volleyball, meteor });
+    targetUuid, presetThrown, volleyball, meteor, spiritSword });
 }
 
 /**

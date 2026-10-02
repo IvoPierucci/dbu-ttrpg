@@ -1,0 +1,15 @@
+id: spirit-sword-rush
+name: Spirit Sword Rush
+advancement: true
+prerequisite: Agility Score of 6+
+tpCost: 5
+swordProfile: combination
+source: Core Rule
+description: >
+  Spirit Sword with the Combination (Physical) Profile, if you like.
+text: >
+  Spirit Sword Rush: You unleash a series of deadly attacks in a row.
+  –Prerequisites: Agility Score of 6+
+  –TP Cost: 5
+  –Effect: You may use the Combination (Physical) Profile instead of the Simple (Physical) Profile for the effects of
+  Spirit Sword.

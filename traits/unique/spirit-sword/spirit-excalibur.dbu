@@ -1,0 +1,15 @@
+id: spirit-excalibur
+name: Spirit Excalibur
+advancement: true
+prerequisite: Insight Score of 6+
+tpCost: 10
+swordTechnique: true
+source: Core Rule
+description: >
+  Spirit Sword through a Signature Technique of its Profile.
+text: >
+  Spirit Excalibur: Supercharging your energy weapon, you use a special technique to land a decisive blow.
+  –Prerequisites: Insight Score of 6+
+  –TP Cost: 10
+  –Effect: You may use the Signature Technique Maneuver instead of the Basic Attack Maneuver for the effects of
+  Spirit Sword. If you do, you must still use the Profile listed for the effects of Spirit Sword.

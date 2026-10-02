@@ -1,0 +1,14 @@
+id: galaxy-spirit-sword
+name: Galaxy Spirit Sword
+advancement: true
+prerequisite: Force or Magic Score of 10+
+tpCost: 5
+swordProfile: powered
+source: Core Rule
+description: >
+  Spirit Sword with the Powered Profile, if you like.
+text: >
+  Galaxy Spirit Sword: Charging extra energy into your blade, you strike a single, devastating blow.
+  –Prerequisites: Force or Magic Score of 10+
+  –TP Cost: 5
+  –Effect: You may use the Powered Profile instead of the Simple (Physical) Profile for the effects of Spirit Sword.

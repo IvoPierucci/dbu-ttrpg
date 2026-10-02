@@ -682,6 +682,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         shapeshift: new fields.BooleanField({ required: true, initial: false }),
         /** A Cone of light - Solar Flare's (chat.mjs postSolarFlare). */
         solarFlare: new fields.BooleanField({ required: true, initial: false }),
+        /** A Basic Attack out of sequence with a blade of energy - Spirit Sword's (chat.mjs postSpiritSword). */
+        spiritSword: new fields.BooleanField({ required: true, initial: false }),
         shapeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeBestial: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         shapeForm: new fields.StringField({ required: true, blank: true, initial: "" }),
