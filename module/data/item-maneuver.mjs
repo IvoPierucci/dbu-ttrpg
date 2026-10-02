@@ -675,6 +675,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         punisherGuard: new fields.BooleanField({ required: true, initial: false }),
         /** A Clash, a Might Clash, and a container - Sealing's (chat.mjs postSealing). */
         seals: new fields.BooleanField({ required: true, initial: false }),
+        /** A Character watched from anywhere - Second Sight's (chat.mjs postSecondSight). */
+        secondSight: new fields.BooleanField({ required: true, initial: false }),
         /** How many Duplicate Minions it has made that stand. */
         duplicates: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /** A State it may only be used in - God Meteor's God Ki. */

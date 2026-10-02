@@ -1,0 +1,14 @@
+id: second-sight-mark
+name: Second Sight
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Second Sight's mark, on the one watched, clocked to the start of the watcher's next turn. What
+# it gives the watcher is read where their Strike Rolls and Long Range are (chat.mjs secondSightBonus, maneuvers.mjs
+# secondSightOn).
+combatCondition: no
+source: Core Rule
+description: >
+  Watched through Second Sight: its user's Strike Rolls against you 2(T) higher, and you are never at Long Range for them.
+text: >
+  Second Sight: "increase your Strike Rolls against that Character by 2(T) while they are targeted. If you are targeting a
+  Character at Long Range, they are not considered to be at Long Range for your Attacking Maneuvers and effects."

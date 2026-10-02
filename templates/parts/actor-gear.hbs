@@ -87,6 +87,10 @@
         <button type="button" class="gear-act" data-action="drawGear"
                 data-item-id="{{row.itemId}}">Draw</button>
         {{/if}}
+        {{#if row.crystalBall}}
+        <button type="button" class="gear-act" data-action="crystalBall" data-item-id="{{row.itemId}}"
+                data-tooltip="Use Magic Check (Expert): passed, you may use Second Sight through it">Second Sight</button>
+        {{/if}}
         {{#if row.spendsCharge}}
         <button type="button" class="gear-act" data-action="chargeGear"
                 data-item-id="{{row.itemId}}">{{row.chargeUseLabel}}</button>

@@ -435,6 +435,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       attuneGear: DBUCharacterSheet._onAttuneGear,
       snackGear: DBUCharacterSheet._onSnackGear,
       poisonGear: DBUCharacterSheet._onPoisonGear,
+      crystalBall: DBUCharacterSheet._onCrystalBall,
       chargeGear: DBUCharacterSheet._onChargeGear,
       flexGear: DBUCharacterSheet._onFlexGear,
       resizeGear: DBUCharacterSheet._onResizeGear,
@@ -1159,6 +1160,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         chargesLabel: (item.system.chargesDice || item.system.storesDrain
           || item.system.chargesPerBaseTier)
           ? (item.system.chargesLabel || "charges") : "",
+        // A Crystal Ball, for one without Second Sight of their own: the Use Magic Check to see through it.
+        crystalBall: (item.system.gearId === "crystal-ball")
+          && !this.actor.items.some(each => each.system?.unique?.libraryId === "second-sight"),
         // A Poison Vial with a Drop left, and a Weapon to put it on.
         poisons: (item.system.gearId === "poison-vial") && ((item.system.charges ?? 0) > 0)
           && gearItems.some(other => other.system?.crafted?.kind === "weapon"),
@@ -4078,6 +4082,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       content: `<p>${Handlebars.escapeExpression(`${this.actor.name} uses 1 ${item.system.chargesLabel || "charge"} from `
         + `${item.name} (${left} left), and ${item.system.chargeUseNote}.`)}</p>`
     });
+  }
+
+  /** The Crystal Ball: a Use Magic Check (Expert), and Second Sight through it once passed. */
+  static async _onCrystalBall(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
+    const { postCrystalBall } = await import("../chat.mjs");
+    return postCrystalBall(this.actor, item);
   }
 
   static async _onPoisonGear(event, target) {

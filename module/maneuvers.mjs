@@ -1196,10 +1196,19 @@ export function sizedMovement(moved, by, squares) {
  * you are, increase the number of Squares until an Opponent is at Long Range by 2."
  */
 export function atLongRange(actor, target) {
+  // Second Sight: "If you are targeting a Character at Long Range, they are not considered to be at Long Range for your
+  // Attacking Maneuvers and effects."
+  if (secondSightOn(actor, target)) return false;
   const away = squaresAway(actor, target);
   // Unmeasurable is not far: out of combat there are no Squares, and a rule about them
   // cannot be enforced where there are none - the same answer the Melee Range gives.
   return (away === null) ? false : (away >= (LONG_RANGE_SQUARES + (2 * sizesAboveLarge(actor))));
+}
+
+/** Whether this character watches that one through Second Sight: its mark, on their own clock. */
+export function secondSightOn(actor, target) {
+  return Boolean(target) && (actor?.system?.timed ?? []).some(entry => (entry?.kind === "condition")
+    && (entry.key === "second-sight-mark") && (entry.on === target.uuid));
 }
 
 /**

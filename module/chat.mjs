@@ -65,7 +65,8 @@ import {
   maxKiWager,
   refundManeuverCost,
   spendManeuverCost,
-  maneuverUsesLeft
+  maneuverUsesLeft,
+  secondSightOn
 } from "./maneuvers.mjs";
 import { appliedTraits, boughtTraits, evasionOf, uniqueDefinitionOf } from "./unique.mjs";
 
@@ -202,6 +203,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, PARA_FLAG, request.para);
     case "petrify": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PETRIFY_FLAG, request.petrify);
+    case "crystal": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, CRYSTAL_FLAG, request.crystal);
     case "sealing": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, SEAL_FLAG, request.sealing);
     case "punish": return game.messages.get(request.messageId)
@@ -2926,6 +2929,7 @@ function onRenderChatMessage(message, html) {
   renderPositionChange(message, html);
   renderPunisher(message, html);
   renderSealing(message, html);
+  renderCrystal(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -4310,7 +4314,8 @@ const CARD_SETTLERS = {
   get materialize() { return [MATERIALIZE_FLAG, unsettleMaterialize, settleMaterialize]; },
   get create() { return [CREATE_FLAG, unsettleCreate, settleCreate]; },
   get cook() { return [COOK_FLAG, unsettleCook, settleCook]; },
-  get gamble() { return [GAMBLE_FLAG, unsettleGamble, settleGamble]; }
+  get gamble() { return [GAMBLE_FLAG, unsettleGamble, settleGamble]; },
+  get crystal() { return [CRYSTAL_FLAG, unsettleCrystal, settleCrystal]; }
 };
 
 /** A card's Check its window was closed on: the Roll button it leaves, and what that rolls. */
@@ -10365,6 +10370,79 @@ function phantomEdgeDice(attacker, attack) {
   return [{ label: "Phantom Edge", formula: sealed?.system?.dice?.extra?.formula || "1d4" }];
 }
 
+/** Second Sight's Strike: "increase your Strike Rolls against that Character by 2(T) while they are targeted". */
+function secondSightBonus(attacker, target) {
+  return secondSightOn(attacker, target)
+    ? [{ label: "Second Sight", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : [];
+}
+
+/**
+ * Second Sight, used: "Target a Character on the Battlefield until the start of your next turn" - the Second Sight mark
+ * on them, on your clock. While it is, your Strike Rolls against them and their Long Range (maneuvers.mjs secondSightOn).
+ */
+export async function postSecondSight(actor, maneuver, target) {
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  const { lasting, EDGES, KINDS } = await import("./durations.mjs");
+  if (await gainCondition(target, "second-sight-mark", 1) === false) return null;
+  await lasting(actor, { kind: KINDS.CONDITION, key: "second-sight-mark", edge: EDGES.START, next: true, on: target.uuid,
+    source: maneuver.name });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(actor.name)}`
+      + ` watches ${Handlebars.escapeExpression(target.name)} until the start of their next turn.</div>` });
+}
+
+/** The Crystal Ball's card: its Use Magic Check, and Second Sight through it once passed. */
+const CRYSTAL_FLAG = "crystalBall";
+
+/**
+ * The Crystal Ball, without Second Sight of your own: "you can make an Use Magic Skill Check with a Difficulty Category of
+ * Expert. If you fail, nothing happens. If you pass, you may use the Second Sight Magical Ability through the Crystal Ball
+ * even if you don't have access to it."
+ */
+export async function postCrystalBall(actor, item) {
+  const message = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(item.name)}: Second Sight through it</p>`,
+    flags: { [SCOPE]: { [CRYSTAL_FLAG]: { actorUuid: actor.uuid, itemName: item.name, done: null, used: false } } } });
+  await cardRoll(message, { actorUuid: actor.uuid, type: "skill", key: "useMagic", against: "expert",
+    settles: { kind: "crystal", messageId: message.id } });
+  return message;
+}
+
+async function settleCrystal(message, crystal, made) {
+  await message.setFlag(SCOPE, CRYSTAL_FLAG, { ...crystal, done: { success: made } });
+}
+
+async function unsettleCrystal() {}
+
+/** Passed: a Second Sight button, once; failed: nothing happens. */
+function renderCrystal(message, html) {
+  const crystal = message.getFlag(SCOPE, CRYSTAL_FLAG);
+  if (!crystal?.done) return;
+  const container = html.querySelector(".message-content") ?? html;
+  if (!crystal.done.success) {
+    const note = document.createElement("div");
+    note.className = "dbu-settled-note";
+    note.textContent = "Nothing happens.";
+    return container.append(note);
+  }
+  const actor = fromUuidSync(crystal.actorUuid);
+  if (crystal.used || !actor?.isOwner) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Second Sight";
+  button.dataset.tooltip = "1 Action: your targeted Character, until the start of your next turn - Strike Rolls 2(T) against them, never at Long Range";
+  button.addEventListener("click", async () => {
+    const target = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
+    if (!target) return ui.notifications.warn("Target who you watch first.");
+    button.disabled = true;
+    if (!await spendActions(actor, 1, "standard")) return;
+    requestEdit(message, { type: "crystal", crystal: { ...crystal, used: true } });
+    await postSecondSight(actor, { name: `Second Sight (${crystal.itemName})` }, target);
+  });
+  container.append(button);
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -12928,7 +13006,8 @@ async function resolveAttack(message, attack) {
     // "Increase your Combat Rolls against Analyzed Opponents." Added here for the same
     // reason the Long Range penalty is taken here: one Strike Roll reaches several people
     // and what it is worth against each of them is not the same number.
-    const analysis = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target), ...mindReadBonus(attacker, target)]
+    const analysis = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target), ...mindReadBonus(attacker, target),
+      ...secondSightBonus(attacker, target)]
       .reduce((sum, p) => sum + p.value, 0);
     const against = Math.max(0, (strike.total + analysis) - longRange);
 

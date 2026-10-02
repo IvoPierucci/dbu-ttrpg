@@ -1877,6 +1877,7 @@ export function definitionOf(item) {
     positionChange: item.system.unique?.positionChange === true,
     punisherGuard: item.system.unique?.punisherGuard === true,
     seals: item.system.unique?.seals === true,
+    secondSight: item.system.unique?.secondSight === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -4774,6 +4775,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : maneuver.portals
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
+    : (maneuver.secondSight && targetActor)
+    ? await (await import("./chat.mjs")).postSecondSight(actor, maneuver, targetActor)
     : (maneuver.seals && targetActor)
     ? await (await import("./chat.mjs")).postSealing(actor, maneuver, targetActor)
     : (maneuver.punisherGuard && targetActor)

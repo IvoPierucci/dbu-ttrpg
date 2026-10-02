@@ -32,8 +32,10 @@ text: >
 # Magical Materialization lists it at Qualified, its `materializeDC`, in place of Expert - and
 # Materialization's own Category harder goes on top of that, as on every other Item.
 #
+# Without Second Sight of your own, its Gear row's Second Sight button: the Use Magic Check (Expert)
+# rolled on a card, and passed, Second Sight through it once - 1 Action (chat.mjs postCrystalBall).
+#
 # --- What is not built -------------------------------------------------------------------------
 #
-# Second Sight, projected or borrowed through the Use Magic Check: the Second Sight Unique Ability
-# is not in this system yet. Floating and riding it, and Use Magic for Clairvoyance while it is
-# held, are the table's.
+# Second Sight projected for everyone near, floating and riding it, and Use Magic for Clairvoyance
+# while it is held, are the table's.
