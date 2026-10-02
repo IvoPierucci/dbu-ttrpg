@@ -603,6 +603,10 @@ async function applyClash(messageId, clash) {
     else await settledNote(message, `${clash.defenderName} stays Hidden.`);
   }
 
+  if (clash.fakeDeath && clash.result && !clash.fakeDeath.applied) {
+    await settleFakeDeath(message, clash);
+  }
+
   if (clash.downBurst && clash.result && !clash.downBurst.applied) {
     await settleDownBurst(message, clash);
   }
@@ -2840,6 +2844,7 @@ function onRenderChatMessage(message, html) {
   renderGearScan(message, html);
   renderGearSpikes(message, html);
   renderArmsHit(message, html);
+  renderFakeDeath(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -7022,6 +7027,17 @@ function clashParts(kind, actor, clash, uuid) {
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : [])];
 }
 
+/**
+ * Dice one side of a Clash adds to its Dice Score - Like the Dead's "Increase your Dice Score for this Clash by 1d4" -
+ * beside the Tier's where a Combat Roll Clash has them.
+ */
+function clashOwnDice(kind, actor, clash, uuid) {
+  if ((uuid !== clash.challengerUuid) || !clash.challengerDice) return {};
+  const tier = kind.options?.(actor, clash, uuid)?.extraDice ?? "";
+  return { extraDice: [...(tier ? [{ label: "Extra dice", formula: tier }] : []),
+    { label: clash.challengerDiceLabel || "Dice", formula: clash.challengerDice }] };
+}
+
 /** The sheet's workings for the value a side rolls, for its window's hover - none for a value standing in for it. */
 function clashWorkingsKey(clash, uuid) {
   switch (clash.category ?? "skill") {
@@ -7934,7 +7950,9 @@ async function clashStage(message, actor) {
   // and Urgent here means what it means everywhere: it cannot be failed on purpose.
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
     { urgent: Boolean(opened.urgent), senses, formula: { base: DBUCharacterData.BASE_DIE,
-      dice: kind.options?.(actor, { ...opened, ...answer }, actor.uuid)?.combatRoll ? combatDiceGroups(actor) : [],
+      dice: [...(kind.options?.(actor, { ...opened, ...answer }, actor.uuid)?.combatRoll ? combatDiceGroups(actor) : []),
+        ...((actor.uuid === opened.challengerUuid) && opened.challengerDice
+          ? [{ label: opened.challengerDiceLabel || "Dice", formula: opened.challengerDice }] : [])],
       parts: windowParts(actor, clashParts(kind, actor, { ...opened, ...answer }, actor.uuid)
         .map((part, index) => (index ? part
           : { ...part, workingsKey: clashWorkingsKey({ ...opened, ...answer }, actor.uuid) }))) } });
@@ -7988,7 +8006,8 @@ async function resolveSkillClash(message, clash) {
     clashParts(kind, actor, clash, uuid),
     {
       criticalDice: kind.criticalDice(actor),
-      ...(kind.options ? kind.options(actor, clash, uuid) : {})
+      ...(kind.options ? kind.options(actor, clash, uuid) : {}),
+      ...clashOwnDice(kind, actor, clash, uuid)
     }
   );
 
@@ -8146,6 +8165,105 @@ export async function postDownBurst(actor, maneuver, uuids) {
     });
   }
   return card;
+}
+
+/** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
+export async function offerOutOfSequence(actor, offer) {
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
+}
+
+/** Fake Death's offers, on a card of the one struck: Fake Death itself, and Like the Dead. */
+const FAKE_DEATH_FLAG = "fakeDeath";
+
+/**
+ * Struck by an Opponent's attack. Fake Death: "After receiving Damage from an Opponent's Attacking Maneuver, you may
+ * choose to be knocked Prone" - while it has a use left. Like the Dead: "When struck by an attack while Hidden from an
+ * Opponent(s) through the effects of Fake Death by an Opponent who you are not Hidden from" - for 4(T) KP.
+ */
+async function offerFakeDeath(target, attacker, { damaged = false } = {}) {
+  const item = Array.from(target.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.fakesDeath);
+  if (!item) return;
+  const { fakeDeathEntries, isHiddenFrom } = await import("./hidden.mjs");
+  const faking = fakeDeathEntries(target).length > 0;
+  const fake = damaged && !faking && (maneuverUsesLeft(target, uniqueDefinitionOf(item)) > 0);
+  const like = faking && !isHiddenFrom(target, attacker)
+    && boughtTraits(item.system.unique, getTrait).find(trait => trait.likeTheDead === true);
+  if (!fake && !like) return;
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<p>${Handlebars.escapeExpression(item.name)}</p>`,
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [FAKE_DEATH_FLAG]: {
+      targetUuid: target.uuid, attackerUuid: attacker.uuid, attackerName: attacker.name, itemId: item.id,
+      fake, like: like ? { name: like.name, kiPerTier: Number(like.likeTheDeadKiPerTier) || 0 } : null, used: false
+    } } }
+  });
+}
+
+function renderFakeDeath(message, html) {
+  const offer = message.getFlag(SCOPE, FAKE_DEATH_FLAG);
+  if (!offer || offer.used) return;
+  const target = fromUuidSync(offer.targetUuid);
+  const item = target?.items?.get(offer.itemId);
+  if (!target?.isOwner || !item) return;
+  const container = html.querySelector(".message-content") ?? html;
+  const done = () => message.setFlag(SCOPE, FAKE_DEATH_FLAG, { ...offer, used: true });
+  if (offer.fake) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = item.name;
+    button.dataset.tooltip = "Prone, and a Clash (Bluff vs Intuition) against every Opponent - each won, Hidden from them";
+    button.addEventListener("click", async () => {
+      const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+      if (await useManeuver(target, definitionOf(item), { outOfSequence: true })) await done();
+    });
+    container.append(button);
+  }
+  if (offer.like) {
+    const ki = offer.like.kiPerTier * Math.max(1, target.system.tierOfPower ?? 1);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `${offer.like.name}: ${ki} KP`;
+    button.dataset.tooltip = `A Clash (Bluff vs Intuition) against ${offer.attackerName}, 1d4 more - won, Hidden from them`;
+    button.addEventListener("click", async () => {
+      const attacker = fromUuidSync(offer.attackerUuid);
+      if (!attacker) return;
+      if (!await spendManeuverCost(target, { ...uniqueDefinitionOf(item), name: offer.like.name }, ki)) return;
+      await done();
+      await postSkillClash(target, attacker, { name: offer.like.name, type: "outOfSequence",
+        clash: { skill: "bluff", defenderSkills: ["intuition"] } },
+        { fakeDeath: { applied: false }, challengerDice: "1d4", challengerDiceLabel: offer.like.name });
+    });
+    container.append(button);
+  }
+}
+
+/**
+ * Fake Death, used: "you may choose to be knocked Prone. If you do, make a Clash (Bluff vs Intuition) against all
+ * Opponents" - a card naming them, and a Clash each.
+ */
+export async function postFakeDeath(actor, maneuver, uuids) {
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "prone", Math.max(1, Number(actor.system.conditions?.prone) || 0));
+  const others = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: Prone - ${Handlebars.escapeExpression(
+      others.map(other => other.name).join(", "))}</p>` });
+  for (const other of others) {
+    await postSkillClash(actor, other, { name: maneuver.name, type: "outOfSequence",
+      clash: { skill: "bluff", defenderSkills: ["intuition"] } }, { fakeDeath: { applied: false } });
+  }
+  return card;
+}
+
+/** A Fake Death Clash - its own or Like the Dead's - won: "you become Hidden to" them, through Fake Death. */
+async function settleFakeDeath(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, fakeDeath: { ...clash.fakeDeath, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return;
+  const { hideFrom, FAKE_DEATH } = await import("./hidden.mjs");
+  await hideFrom(fromUuidSync(clash.challengerUuid), fromUuidSync(clash.defenderUuid), { via: FAKE_DEATH });
 }
 
 /** One of Down Burst's Clashes: won, "Hidden from that Opponent until the end of their next turn or until you hit them". */
@@ -8828,6 +8946,8 @@ async function takeOutOfSequence(message, actor, offer) {
     const { takeRapidMovement } = await import("./use-maneuver.mjs");
     await takeRapidMovement(actor);
   }
+  // "If you use the Movement Maneuver while Hidden through the effect of Fake Death, you stop being Hidden."
+  if (crossing) await (await import("./hidden.mjs")).endFakeDeath(actor, "used the Movement Maneuver");
 
   // Attack Absorption is not an attack, and posts no Maneuver card of its own: what it
   // does is written onto the attack it swallowed, and that card is what asks for the
@@ -8846,6 +8966,8 @@ async function takeOutOfSequence(message, actor, offer) {
       }).then(async card => {
         // Ki Deception: its Clash, at the one Opponent it targets.
         if (granted?.kiDeception && card && target) await kiDeceptionClash(actor, target, card);
+        // Surprise Strike: "After concluding that Attacking Maneuver, you stop being Hidden."
+        if (offer.fakeDeathEnds && card) await (await import("./hidden.mjs")).endFakeDeath(actor, "Surprise Strike");
         return card;
       })
     : postManeuver(actor, maneuver, {
@@ -14154,6 +14276,10 @@ async function applyAttackDamage(message, target, attack) {
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
   if (arms) await offerArmsHit(armsUser, target);
+  // Fake Death, on Damage from an Opponent's Attacking Maneuver; Like the Dead, struck while faking it.
+  if (armsUser && (armsUser.uuid !== target.uuid) && own.hit && !isAbsoluteMiss(own)) {
+    await offerFakeDeath(target, armsUser, { damaged: damage > 0 });
+  }
 
   // "Apparel loses 1 Break Value if you are knocked through a Health Threshold" - and a
   // Called Shot at it that hit takes 1 off it besides. The Top Layer's, both.

@@ -1847,6 +1847,7 @@ export function definitionOf(item) {
     kiPerAction: item.system.unique?.kiPerAction === true,
     explodes: item.system.unique?.explodes === true,
     waves: item.system.unique?.waves === true,
+    fakesDeath: item.system.unique?.fakesDeath === true,
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
     bluffs: item.system.unique?.bluffs === true,
@@ -2528,7 +2529,7 @@ function askBinding(actor, maneuver) {
  * of)." Who is an Opponent is asked - everyone in the Combat Encounter (or the targeted, outside one), ticked but for
  * whose Melee Range you stand in and whom you are already Hidden from. Null if nobody is picked.
  */
-async function askHide(actor, maneuver, { burst = false, area = "Minor Sphere" } = {}) {
+async function askHide(actor, maneuver, { burst = false, area = "Minor Sphere", all = false } = {}) {
   const { isHiddenFrom } = await import("./hidden.mjs");
   const pool = game.combat?.started
     ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
@@ -2551,7 +2552,8 @@ async function askHide(actor, maneuver, { burst = false, area = "Minor Sphere" }
         <input type="checkbox" name="${escape(other.uuid)}" ${near ? "checked" : ""}/>
         <span class="dbu-respond-name">${escape(other.name)}</span></label>`;
     }
-    const why = close ? "you are in their Melee Range" : already ? "already Hidden from them" : "";
+    // Fake Death's "all Opponents": the Melee Range is no exception there.
+    const why = (close && !all) ? "you are in their Melee Range" : already ? "already Hidden from them" : "";
     return `<label class="dbu-respond-option" ${why ? `data-tooltip="${escape(why)}"` : ""}>
       <input type="checkbox" name="${escape(other.uuid)}" ${why ? "disabled" : "checked"}/>
       <span class="dbu-respond-name">${escape(other.name)}</span>
@@ -3349,6 +3351,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let talking = null;
   let exploding = null;
   let waving = null;
+  let faking = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3600,6 +3603,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Fake Death: "a Clash (Bluff vs Intuition) against all Opponents" - who they are, asked.
+    if (maneuver.fakesDeath) {
+      faking = await askHide(actor, maneuver, { all: true });
+      if (!faking) return false;
+    }
+
     // Explosive Wave: who is within its Sphere - a Minor one, a Large one with Super Explosive Wave.
     if (maneuver.waves) {
       const { boughtTraits } = await import("./unique.mjs");
@@ -3994,6 +4003,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   // is in the file, as a passive reading the Resource - which is where a reader looks for
   // the rule.
   if (crossing?.rapid) await takeRapidMovement(actor);
+  // "If you use the Movement Maneuver while Hidden through the effect of Fake Death, you stop being Hidden."
+  if (crossing) await (await import("./hidden.mjs")).endFakeDeath(actor, "used the Movement Maneuver");
 
   // And the Profile it was made with, if this is the Maneuver that limit is about. Only
   // inside a Combat Round: there are no rounds outside an Encounter, so nothing would
@@ -4099,6 +4110,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postHide(actor, maneuver, hiding)
     : maneuver.gathers
     ? await postGathering(actor, maneuver, actionsSpent)
+    : (maneuver.fakesDeath && faking)
+    ? await (await import("./chat.mjs")).postFakeDeath(actor, maneuver, faking.uuids)
     : (maneuver.waves && waving)
     ? await (await import("./chat.mjs")).postWave(actor, maneuver, waving.uuids)
     : (maneuver.explodes && exploding)

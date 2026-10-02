@@ -1011,7 +1011,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       name: new fields.StringField({ required: true, blank: true, initial: "" }),
       attacks: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       // "until the end of their next turn" - Down Burst's: "turn", or blank for as long as the rules let it last.
-      until: new fields.StringField({ required: true, blank: true, initial: "" })
+      until: new fields.StringField({ required: true, blank: true, initial: "" }),
+      // What made you Hidden, where that matters to what ends it - "fake-death": the Movement Maneuver ends it.
+      via: new fields.StringField({ required: true, blank: true, initial: "" })
     }));
     schema.diminishingDefense = new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 });
 

@@ -1,0 +1,21 @@
+id: surprise-strike
+name: Surprise Strike
+advancement: true
+prerequisite: Insight Score 4+, Personality Score 6+
+tpCost: 7
+# "If an Oblivious Character ends their turn within your Melee Range while you are Hidden due to the effects of Fake
+# Death, you may use the Basic Attack Maneuver against that Opponent as an Out-of-Sequence Maneuver. After concluding
+# that Attacking Maneuver, you stop being Hidden." Offered as their turn ends (combat.mjs -> hidden.mjs
+# offerSurpriseStrikes); the Melee Range measured on the scene's tokens, offered where there are none.
+surpriseStrike: true
+source: Core Rule
+description: >
+  An Oblivious Opponent ending their turn in your Melee Range while you fake it: an Out-of-Sequence Basic Attack at
+  them, then you are Hidden no more.
+text: >
+  Surprise Strike: Your body lay so still that those fooled by your facade are perfectly open targets.
+  –Prerequisites: Insight Score 4+, Personality Score 6+
+  –TP Cost: 7
+  –Effect: If an Oblivious Character ends their turn within your Melee Range while you are Hidden due to the effects of
+  Fake Death, you may use the Basic Attack Maneuver against that Opponent as an Out-of-Sequence Maneuver. After
+  concluding that Attacking Maneuver, you stop being Hidden.

@@ -1,0 +1,36 @@
+id: fake-death
+name: Fake Death
+uaType: technical
+prerequisite: Personality Score 4+, 2+ Bluff Skill Ranks
+tpCost: 8
+type: outOfSequence
+actionCost: 0
+kiCostPerBaseTier: 4
+usageLimit: 1/encounter
+# "After receiving Damage from an Opponent's Attacking Maneuver, you may choose to be knocked Prone" - offered on a
+# card of its own when the Damage is dealt (chat.mjs offerFakeDeath). Taken: Prone, and a Clash (Bluff vs Intuition)
+# against each Opponent asked; each won, Hidden from them through Fake Death (hidden.mjs `via`). The Movement
+# Maneuver, used while so Hidden, ends every one of them.
+fakesDeath: true
+source: Core Rule
+description: >
+  Out-of-Sequence, once an Encounter, on taking Damage from an Opponent's attack: Prone, and a Clash (Bluff vs
+  Intuition) against every Opponent - each won, Hidden from them. The Movement Maneuver ends it.
+text: >
+  Fake Death: With a dramatic cry of defeat or a sudden stillness on the battlefield, you topple over pretending to
+  have died. Those around you must carefully consider whether or not you have actually fallen in battle or are
+  waiting for a specific moment in battle to take advantage of.
+  –Ability Type: Technical
+  –Prerequisites: Personality Score 4+, 2+ Bluff Skill Ranks
+  –TP Cost: 8
+  –KP Cost: 4(bT)
+  –Maneuver Type: Out-of-Sequence
+  –Action Cost: N/A
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: After receiving Damage from an Opponent’s Attacking Maneuver, you may choose to be knocked Prone. If you
+  do, make a Clash (Bluff vs Intuition) against all Opponents. If you win, you become Hidden to those Opponents.
+
+  If you use the Movement Maneuver while Hidden through the effect of Fake Death, you stop being Hidden.
+
+  You may only use this Unique Ability once per Combat Encounter.

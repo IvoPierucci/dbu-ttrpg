@@ -626,6 +626,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         sustained: new fields.BooleanField({ required: true, initial: false }),
         /** Kept for half its KP Cost at the start of each turn - Extra Arms'. */
         upkeepHalf: new fields.BooleanField({ required: true, initial: false }),
+        /** Prone and a Clash (Bluff vs Intuition) at every Opponent, won Hidden - Fake Death's (chat.mjs postFakeDeath). */
+        fakesDeath: new fields.BooleanField({ required: true, initial: false }),
         /** A Counter played once hit, before the Wound Roll - Barrier's (chat.mjs barrierStage). */
         barrier: new fields.BooleanField({ required: true, initial: false }),
         /** Its Effect Pins somebody and holds them - Binding's (chat.mjs postBinding); who, while it does. */

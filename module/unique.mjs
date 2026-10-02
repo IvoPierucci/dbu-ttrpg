@@ -122,7 +122,7 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
     "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills", "clashSaves", "clashDefenderSaves",
     "togglesState"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepHalf", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "downBurst", "gathers", "shiftsEnvironment", "kiPerAction", "explodes", "waves", "barrier", "binds", "bluffs", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepHalf", "fakesDeath", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "downBurst", "gathers", "shiftsEnvironment", "kiPerAction", "explodes", "waves", "barrier", "binds", "bluffs", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -191,6 +191,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         precognition: definition.foresees === true,
         sustained: definition.sustained === true,
         upkeepHalf: definition.upkeepHalf === true,
+        fakesDeath: definition.fakesDeath === true,
         upkeepKiPerTier: number(definition.upkeepKiPerTier),
         sphereMagnitude: String(definition.sphereMagnitude ?? ""),
         spendsAllActions: definition.spendsAllActions === true,

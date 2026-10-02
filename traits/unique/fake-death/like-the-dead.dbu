@@ -1,0 +1,22 @@
+id: like-the-dead
+name: Like the Dead
+advancement: true
+prerequisite: Tenacity Score 7+
+tpCost: 4
+# "When struck by an attack while Hidden from an Opponent(s) through the effects of Fake Death by an Opponent who you
+# are not Hidden from, you may spend 4(T) Ki Points to make a Clash (Bluff vs Intuition) against the attacking
+# Character. Increase your Dice Score for this Clash by 1d4. If you win, you become Hidden to that Character."
+# Offered on the same card as Fake Death's, when the hit lands (chat.mjs offerFakeDeath).
+likeTheDead: true
+likeTheDeadKiPerTier: 4
+source: Core Rule
+description: >
+  Struck, while you fake it, by an Opponent you are not Hidden from: 4(T) KP for a Clash (Bluff vs Intuition) at 1d4
+  more - won, Hidden from them too.
+text: >
+  Like the Dead: Your act is so good that even those not initially fooled start to believe otherwise.
+  –Prerequisites: Tenacity Score 7+
+  –TP Cost: 4
+  –Effect: When struck by an attack while Hidden from an Opponent(s) through the effects of Fake Death by an Opponent
+  who you are not Hidden from, you may spend 4(T) Ki Points to make a Clash (Bluff vs Intuition) against the attacking
+  Character. Increase your Dice Score for this Clash by 1d4. If you win, you become Hidden to that Character.

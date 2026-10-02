@@ -333,6 +333,9 @@ async function beginTurn(actor) {
   // pay the Ki Point Cost for this Unique Ability or stop applying its effects." A skipped turn is still yours.
   const { upkeepUniques } = await import("./chat.mjs");
   await upkeepUniques(actor);
+  // Stealth Crawl: a move, faking it still.
+  const { stealthCrawl } = await import("./hidden.mjs");
+  await stealthCrawl(actor);
 
   // "For each stack of DOT you possess, reduce your Life Points by 1(bT) at the start of
   // your turn." After the Moment rather than before it, so an effect that answers the
@@ -531,6 +534,9 @@ export function registerCombatHooks() {
       await revealAtTurnEnd(leaving);
       // And whoever was Hidden from them only until the end of their next turn - Down Burst.
       await expireHiddenAtTurnEnd(leaving, combat);
+      // Surprise Strike: whoever fakes it, with this Oblivious one ending their turn beside them.
+      const { offerSurpriseStrikes } = await import("./hidden.mjs");
+      await offerSurpriseStrikes(leaving, combat);
 
       // Dead Zone, open: its Might Clash against everyone, at the end of each of its user's turns.
       const { pullAtEndOfTurn } = await import("./chat.mjs");

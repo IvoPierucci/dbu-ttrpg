@@ -1,0 +1,19 @@
+id: stealth-crawl
+name: Stealth Crawl
+advancement: true
+prerequisite: 3+ Bluff Skill Ranks
+tpCost: 2
+# "At the start of your turn while Hidden through the effects of the Fake Death Unique Ability, you may move a number of
+# Squares up to your number of Skill Ranks in the Bluff Skill." Said at the start of the turn; the move is the
+# table's, and it is no Movement Maneuver, so it does not end the Hidden.
+stealthCrawl: true
+source: Core Rule
+description: >
+  At the start of your turn while you fake it: move up to your Bluff Ranks in Squares, still Hidden.
+text: >
+  Stealth Crawl: While everyone thinks you’re dead, you can take the opportunity to secure the perfect position to
+  capitalize on your ruse.
+  –Prerequisites: 3+ Bluff Skill Ranks.
+  –TP Cost: 2
+  –Effect: At the start of your turn while Hidden through the effects of the Fake Death Unique Ability, you may move a
+  number of Squares up to your number of Skill Ranks in the Bluff Skill.
