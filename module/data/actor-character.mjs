@@ -1918,6 +1918,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       this.baseTierOfPower + DBUCharacterData.BREAKTHROUGH_LIMIT,
       Math.max(1, this.baseTierOfPower + this.tierOfPowerModifier + slot(this, "tierOfPower"))
     );
+    // Multi-Form Technique: "While you have a Duplicate Minion ... reduce the Tier of Power of you ... by 1 (if already
+    // Tier of Power 1, reduce your/their Combat Rolls by 2 instead)" - the 2 read with the Thresholds' (chat.mjs).
+    const split = Array.from(this.parent?.items ?? []).some(item => (item.type === "maneuver")
+      && item.system?.unique?.multiForm && ((Number(item.system.unique.duplicates) || 0) > 0));
+    this.multiFormPenalty = 0;
+    if (split && (this.tierOfPower > 1)) this.tierOfPower -= 1;
+    else if (split) this.multiFormPenalty = 2;
 
     // --- Size ---
     // Its modifiers are written in (T), so they grow with the Tier of Power. `steps`

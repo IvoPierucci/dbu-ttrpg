@@ -1870,6 +1870,7 @@ export function definitionOf(item) {
     enhances: item.system.unique?.enhances === true,
     mindControl: item.system.unique?.mindControl === true,
     mindReading: item.system.unique?.mindReading === true,
+    multiForm: item.system.unique?.multiForm === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -2903,6 +2904,41 @@ async function askEnhance(actor, maneuver) {
   return { allyUuid: ally.uuid, extra: chosen.extra, unleash: chosen.unleash, moreActions, moreKi, unleashKi };
 }
 
+/**
+ * Multi-Form Technique: how many Duplicate Minions - "Instead of a single Duplicate Minion, you can create up to 3" with
+ * Mass Multi-Form, its KP Cost again for each after the first - held to "You can only possess 1" (3). Null if none may be.
+ */
+async function askMultiForm(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  const { boughtTraits } = await import("./unique.mjs");
+  const most = Math.max(Number(getTrait(unique.libraryId)?.multiFormMost) || 1,
+    ...boughtTraits(unique, getTrait).map(trait => Number(trait.multiFormMost) || 0));
+  const room = most - (Number(unique.duplicates) || 0);
+  if (room <= 0) {
+    ui.notifications.warn(`${actor.name} already has ${most} Duplicate Minion${(most === 1) ? "" : "s"}.`);
+    return null;
+  }
+  const each = maneuverKiCost(maneuver, null, actor);
+  let count = 1;
+  if (room > 1) {
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${actor.name} - ${maneuver.name}` }, content: "",
+      buttons: [...Array.from({ length: room }, (_, i) => ({ action: String(i + 1),
+        label: `${i + 1}${i ? ` (+${i * each} KP)` : ""}` })), { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    count = Number(picked) || 0;
+    if (!count) return null;
+  }
+  const extraKi = (count - 1) * each;
+  if ((Number(actor.system.ki?.value) || 0) < (each + extraKi)) {
+    ui.notifications.warn(`${actor.name} has not the Ki Points for that.`);
+    return null;
+  }
+  return { count, extraKi };
+}
+
 /** God Meteor: who is inside the Destructive Sphere around the Square it falls on - ticked by the player. */
 async function askMeteor(actor, maneuver) {
   const pool = game.combat?.started
@@ -3822,6 +3858,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let smashing = null;
   let lulling = null;
   let enhancing = null;
+  let forming = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -4091,6 +4128,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       && (actor.system.usedManeuvers ?? []).includes(`encounter:mind-control.${targetActor.uuid}`)) {
       ui.notifications.warn(`${maneuver.name} lost against ${targetActor.name} this Combat Encounter.`);
       return false;
+    }
+
+    // Multi-Form Technique: how many - one, or up to 3 with Mass Multi-Form - and never past what may be held.
+    if (maneuver.multiForm) {
+      forming = await askMultiForm(actor, maneuver);
+      if (!forming) return false;
     }
 
     // Magical Enhancement: the Ally, and what its Advancements add.
@@ -4678,6 +4721,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await (await import("./chat.mjs")).postMindReading(actor, maneuver, targetActor)
     : (maneuver.mindControl && targetActor)
     ? await (await import("./chat.mjs")).postMindControl(actor, maneuver, targetActor)
+    : (maneuver.multiForm && forming)
+    ? await (await import("./chat.mjs")).postMultiForm(actor, maneuver, forming)
     : (maneuver.enhances && enhancing)
     ? await (await import("./chat.mjs")).postEnhance(actor, maneuver, enhancing)
     : (maneuver.lullaby && lulling)

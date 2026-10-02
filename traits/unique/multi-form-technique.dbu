@@ -1,0 +1,42 @@
+id: multi-form-technique
+name: Multi-Form Technique
+uaType: magical
+prerequisite: N/A
+tpCost: 10
+type: standard
+actionCost: 2
+kiCostPerBaseTier: 8
+# "Create a Duplicate Minion" - made by the table, as every other sheet is (the user's ruling); counted on the Item.
+# "While you have a Duplicate Minion created through the Multi-Form Technique, reduce the Tier of Power of you ... by 1 (if
+# already Tier of Power 1, reduce your/their Combat Rolls by 2 instead)" - yours while the count is above none
+# (actor-character.mjs, chat.mjs thresholdPenalty); theirs, the table's. "If you fail a Steadfast Check ... those Minions
+# are Defeated" - the count to none, said. "As an Instant Maneuver during your turn, you can erase all of your Duplicate
+# Minions" - its row's Applied. "You can only possess 1 Duplicate Minion" - 3 with Mass Multi-Form.
+multiForm: true
+multiFormMost: 1
+instantRelease: true
+source: Core Rule
+description: >
+  A Duplicate Minion (the table's to make); while you have one, your Tier of Power 1 lower - or Combat Rolls 2 lower at
+  Tier 1. Defeated if you fail a Steadfast Check; erased as an Instant on your turn.
+text: >
+  Multi-Form Technique: You possess the ability to split yourself into multiple separate entities for a time, allowing
+  you to single-handedly outnumber an opponent.
+  –Ability Type: Magical
+  –Prerequisites: N/A
+  –TP Cost: 10
+  –KP Cost: 8(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 2 Actions
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: Create a Duplicate Minion. While you have a Duplicate Minion created through the Multi-Form Technique, reduce
+  the Tier of Power of you and any Duplicate Minions created through the Multi-Form Technique by 1 (if already Tier of
+  Power 1, reduce your/their Combat Rolls by 2 instead).
+
+  If you fail a Steadfast Check while you have Duplicate Minion(s) created by the Multi-Form Technique, those Minions are
+  Defeated.
+
+  As an Instant Maneuver during your turn, you can erase all of your Duplicate Minions created by this Unique Ability.
+
+  You can only possess 1 Duplicate Minion through the effects of Multi-Form Technique.

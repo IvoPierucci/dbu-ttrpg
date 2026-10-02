@@ -1674,7 +1674,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Given by an Active Buddy - the Oracle Fish's Precognition: used from here, not bought, not edited.
         grantedBy,
         // Applied until it is not paid for - the Atmospheric Bubble - and the Sphere it was applied in.
-        applied: Boolean(unique.sustained && unique.applied),
+        applied: Boolean((unique.sustained || unique.multiForm) && unique.applied),
         // A State it put you in: left by using it again, or by its upkeep's Stop - not from here.
         toggles: Boolean(item.system.togglesState),
         // Removed as an Instant - Cage of Light.
@@ -1888,6 +1888,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!item?.system?.unique?.applied || item.system.togglesState) return;
     // Binding: "You can also remove the effects of Binding as an Instant Maneuver." Cage of Light: "you can remove the
     // Cage as an Instant Action."
+    // Multi-Form Technique's erasing is "an Instant Maneuver during your turn".
+    if (item.system.unique.multiForm && game.combat?.started && !isTheirTurn(this.actor)) {
+      return ui.notifications.warn(`${this.actor.name}: only during your own turn.`);
+    }
     if (item.system.unique.binds || item.system.unique.instantRelease) {
       const { whyNotAnotherInstant, recordManeuverType } = await import("../maneuvers.mjs");
       const blocked = whyNotAnotherInstant(this.actor);

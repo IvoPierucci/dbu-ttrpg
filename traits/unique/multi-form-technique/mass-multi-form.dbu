@@ -1,0 +1,21 @@
+id: mass-multi-form
+name: Mass Multi-Form
+advancement: true
+prerequisite: N/A
+tpCost: 15
+# "Instead of a single Duplicate Minion, you can create up to 3 Duplicate Minions. For each Duplicate Minion added after
+# the first, pay the Ki Point Cost for Multi-Form Technique an additional time" - how many, asked. "You can possess up
+# to 3" - the count's ceiling.
+multiFormMost: 3
+source: Core Rule
+description: >
+  Up to 3 Duplicate Minions, its KP Cost again for each after the first; up to 3 held.
+text: >
+  Mass Multi-Form: You become adept in splitting yourself, allowing you to split yourself into more pieces at once.
+  –Prerequisites: N/A
+  –TP Cost: 15
+  –Effect: Instead of a single Duplicate Minion, you can create up to 3 Duplicate Minions. For each Duplicate Minion added
+  after the first, pay the Ki Point Cost for Multi-Form Technique an additional time.
+
+  Instead of 1, you can possess up to 3 Duplicate Minions created through the effects of the Multi-Form Technique. These
+  Minions do not count towards your maximum number of Minions.

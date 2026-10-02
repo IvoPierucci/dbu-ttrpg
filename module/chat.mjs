@@ -3674,6 +3674,8 @@ export async function upkeepUniques(actor) {
  */
 export async function endSustained(actor, item) {
   await leaveToggledState(actor, item);
+  // Multi-Form Technique: "erase all of your Duplicate Minions".
+  if (item.system?.unique?.multiForm) await endMultiForm(actor, item, "are erased");
   // Internal Assault: "or your Debilitated Opponent stops being Debilitated".
   if (item.system?.unique?.debilitates) await endDebilitation(actor, item);
   const floods = item.system?.unique?.floods;
@@ -9377,6 +9379,32 @@ function mindReadBonus(actor, opponent, { defending = false } = {}) {
   ];
 }
 
+/**
+ * Multi-Form Technique, used: "Create a Duplicate Minion" - Mass Multi-Form's more, its KP Cost again for each after the
+ * first - counted on the Item; the Minions themselves are the table's to make (the user's ruling).
+ */
+export async function postMultiForm(actor, maneuver, plan) {
+  const item = actor.items?.get(maneuver.itemId);
+  if (!item) return null;
+  if (plan.extraKi) {
+    await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - plan.extraKi),
+      "system.capacity.spent": actor.system.capacity.spent + plan.extraKi });
+  }
+  const now = (Number(item.system.unique.duplicates) || 0) + plan.count;
+  await item.update({ "system.unique.duplicates": now, "system.unique.applied": true });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${plan.count} Duplicate Minion${(plan.count === 1) ? "" : "s"}`
+      + ` (${now} held) - made on the table. Tier of Power 1 lower while they stand.</p>` });
+}
+
+/** The Duplicate Minions gone - Defeated by a failed Steadfast Check, or erased: the count to none. */
+export async function endMultiForm(actor, item, why) {
+  if (!((Number(item?.system?.unique?.duplicates) || 0) > 0)) return;
+  await item.update({ "system.unique.duplicates": 0, "system.unique.applied": false });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}'s Duplicate Minions ${why}.</div>` });
+}
+
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
 export async function offerOutOfSequence(actor, offer) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
@@ -13429,9 +13457,11 @@ function thresholdPenalty(actor) {
   // "Each failure costs 1(bT) on every Combat Roll", so what is written is the rule and
   // what is shown beside it is what that came to for this character.
   const failures = actor.system.threshold.failures ?? 0;
-  return penalty
-    ? [{ label: "Thresholds", written: `-${failures}(bT)`, value: -penalty }]
-    : [];
+  // Multi-Form Technique at Tier of Power 1: "reduce your/their Combat Rolls by 2 instead" - every Combat Roll too, so
+  // read where the Thresholds' is.
+  const split = Number(actor.system.multiFormPenalty) || 0;
+  return [...(penalty ? [{ label: "Thresholds", written: `-${failures}(bT)`, value: -penalty }] : []),
+    ...(split ? [{ label: "Multi-Form", value: -split }] : [])];
 }
 
 /**
@@ -16176,6 +16206,12 @@ export async function rollSteadfastCheck(actor) {
   const roll = new Roll(terms.join(" + "));
   await roll.evaluate();
   const passed = roll.total >= target;
+  // Multi-Form Technique: a Steadfast Check failed - the one rolled, or one failed automatically - Defeats them.
+  if (!passed || automatic.length) {
+    for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.multiForm)) {
+      await endMultiForm(actor, item, "are Defeated - a Steadfast Check failed");
+    }
+  }
   updates[`system.thresholdChecks.${rolled}`] = passed ? "pass" : "fail";
 
   await actor.update(updates);

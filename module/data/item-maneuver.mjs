@@ -660,6 +660,10 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         mindControl: new fields.BooleanField({ required: true, initial: false }),
         /** A Clash that reads its target, defending against them easier - Mind Reading's (chat.mjs postMindReading). */
         mindReading: new fields.BooleanField({ required: true, initial: false }),
+        /** Duplicate Minions, counted - Multi-Form Technique's (chat.mjs postMultiForm). The sheets are the table's. */
+        multiForm: new fields.BooleanField({ required: true, initial: false }),
+        /** How many Duplicate Minions it has made that stand. */
+        duplicates: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /** A State it may only be used in - God Meteor's God Ki. */
         requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */
