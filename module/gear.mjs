@@ -458,7 +458,8 @@ export function weightsPenaltyWaived(item, wearer, getTrait) {
 export function apparelSize(item, wearer, getTrait) {
   const crafted = item?.system?.crafted;
   const stretches = pieceSlots(crafted, { getTrait })["piece.sizeIsWearers"] === true;
-  if (stretches && wearer?.system?.size?.key) return wearer.system.size.key;
+  // The body's Size - a Ki Avatar is energy around it, not a larger body.
+  if (stretches && wearer?.system?.size?.key) return wearer.system.size.trueKey ?? wearer.system.size.key;
   return crafted?.size ?? "";
 }
 
@@ -1016,7 +1017,7 @@ export async function breakApparel(actor, getTrait, { amount = 1 } = {}) {
  * Size, so never. `sizes` is the Size Categories in order, smallest first.
  */
 export function outgrown(items, wearer, sizes, getTrait) {
-  const now = sizes.indexOf(wearer?.system?.size?.key ?? "");
+  const now = sizes.indexOf(wearer?.system?.size?.trueKey ?? wearer?.system?.size?.key ?? "");
   if (now < 0) return [];
   return apparelQualitiesInEffect(items).map(({ item }) => item).filter(item => {
     const made = sizes.indexOf(apparelSize(item, wearer, getTrait));
@@ -1070,7 +1071,7 @@ export function equipPlan(items, item, layer, { inCombat = false, wearer = null,
   if (left === 0) return refuse("Broken: repair it first.");
 
   // Made for one Size - or its wearer's, stretching.
-  const size = wearer?.system?.size?.key;
+  const size = wearer?.system?.size?.trueKey ?? wearer?.system?.size?.key;
   const made = apparelSize(item, wearer, getTrait);
   if (size && made && (made !== size)) {
     return refuse(`Made for a ${sizeLabel(made)} Character.`);

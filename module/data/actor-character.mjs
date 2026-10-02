@@ -1940,9 +1940,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const chosenAt = ((builtAt >= 0) && (shrunkAt >= 0) && (shrunkAt < builtAt))
       ? shrunkAt : builtAt;
     const sizeShift = Math.round(applySlot(this.effects?.slots, "size.steps", 0));
-    const sizeKey = (chosenAt < 0)
+    const trueKey = (chosenAt < 0)
       ? DBUCharacterData.DEFAULT_SIZE
       : sizeKeys[Math.min(sizeKeys.length - 1, Math.max(0, chosenAt + sizeShift))];
+    // Ki Avatar: "if your Size Category is smaller than Gigantic, your Size Category is considered Gigantic for
+    // calculating the benefits and penalties of Size ... and for all rules detailed on the Size page except Punching Up".
+    // The Size beneath it is kept as `trueKey`, which Punching Up and the Apparel on the body read.
+    const avatar = Array.from(this.parent?.items ?? []).find(item => (item.type === "maneuver")
+      && item.system?.unique?.applied && item.system.unique.avatarSize);
+    const avatarAt = avatar ? sizeKeys.indexOf(avatar.system.unique.avatarSize) : -1;
+    const sizeKey = (avatarAt > sizeKeys.indexOf(trueKey)) ? sizeKeys[avatarAt] : trueKey;
 
     const size = DBUCharacterData.SIZES[sizeKey] ?? DBUCharacterData.SIZES[DBUCharacterData.DEFAULT_SIZE];
 
@@ -1954,6 +1961,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       meleeRange: size.meleeRange,
       squares: size.squares,
       steps: sizeKeys.indexOf(sizeKey) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
+      // The Size beneath a Ki Avatar - the same as `key` without one.
+      trueKey,
+      trueSteps: sizeKeys.indexOf(trueKey) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
       defenseModifier: size.defensePerTier * this.tierOfPower,
       soakModifier: size.soakPerTier * this.tierOfPower,
       speedModifier: size.speed

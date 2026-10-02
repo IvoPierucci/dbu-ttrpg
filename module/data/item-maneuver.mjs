@@ -648,6 +648,10 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         debilitates: new fields.BooleanField({ required: true, initial: false }),
         /** A Counter answering a Physical Attack with your Strike Roll - Judo Toss's (chat.mjs playJudo). */
         judoToss: new fields.BooleanField({ required: true, initial: false }),
+        /** Kept for this much (bT) KP at the start of each turn - Ki Avatar's 4(bT). */
+        upkeepKiPerBaseTier: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        /** The Size it makes you count as while applied - Ki Avatar's Gigantic. */
+        avatarSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** A State it may only be used in - God Meteor's God Ki. */
         requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */

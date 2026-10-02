@@ -3604,8 +3604,11 @@ export async function upkeepUniques(actor) {
     }
     // Its own KP Cost again - or what the entry names for keeping it: Bound Battlefield's 6(T), Extra Arms' half.
     const perTier = Number(item.system.unique.upkeepKiPerTier) || 0;
+    // Or in (bT) - Ki Avatar's 4(bT).
+    const perBaseTier = Number(item.system.unique.upkeepKiPerBaseTier) || 0;
     const own = maneuverKiCost(definitionOf(item), null, actor);
     const cost = (perTier ? perTier * Math.max(1, actor.system.tierOfPower ?? 1)
+      : perBaseTier ? perBaseTier * Math.max(1, actor.system.baseTierOfPower ?? 1)
       : (item.system.unique.upkeepHalf ? Math.floor(own / 2) : own))
       + (Number(item.system.unique.upkeepKi) || 0);
     const { ki, capacity } = actor.system;
@@ -8989,7 +8992,9 @@ async function punchingDownRoll(attacker) {
  */
 function punchingUp(attacker, target, area, modifiers) {
   if (area || !(modifiers ?? []).some(entry => (entry.id ?? entry.modifier?.id) === "called-shot")) return 0;
-  const larger = target ? sizeDifference(target, attacker) : 0;
+  // "Except Punching Up": a Ki Avatar's Gigantic does not count for it - the Size beneath it does.
+  const trueSteps = actor => Number(actor?.system?.size?.trueSteps ?? actor?.system?.size?.steps) || 0;
+  const larger = target ? (trueSteps(target) - trueSteps(attacker)) : 0;
   return (larger >= 2) ? larger : 0;
 }
 
