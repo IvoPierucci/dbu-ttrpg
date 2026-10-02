@@ -3364,3 +3364,14 @@
   font-size: 0.9em;
   opacity: 0.8;
 }
+
+/* The roll as a formula in a roll window - each piece names itself on hover. */
+.dbu-dialog .dbu-formula {
+  font-size: 1.2em;
+  text-align: center;
+  margin: 6px 0 10px;
+}
+.dbu-dialog .dbu-formula-piece {
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+}

@@ -11203,6 +11203,68 @@ function isAbsoluteMiss(own) {
 }
 
 /**
+ * The window Combination's follow-up Strikes are rolled from: the roll as a formula - the Base Die, each group of Extra
+ * Dice, the bonus - every piece naming what it is on hover; the effects that may apply to them; Roll and Close.
+ *
+ * @returns {Promise<{withArms: boolean}|null>} null when it was closed without rolling
+ */
+async function askFollowUps(attack, attacker, { plan, beatable, longRange }) {
+  const escape = Handlebars.escapeExpression;
+  const count = plan.rolls + (Number(attack.technique?.followUpRolls) || 0);
+  const strike = attack.result?.strike ?? {};
+  // The same dice rollFollowUpStrikes rolls: the Tier of Power's Extra Dice and any Greater Dice on Combat Rolls.
+  const groups = [
+    { label: "Extra Dice (Tier of Power)",
+      formula: attacker.system.dice?.extra?.formula ?? "" },
+    ...(attacker.system.effects?.slots?.["combatRolls.dice"] ?? [])
+      .map(die => ({ label: die.source || "Greater Dice", formula: die.formula }))
+  ].filter(group => group.formula);
+  // The bonus is the first Strike's, so are its parts: each one that moved it, and where it came from.
+  const parts = (strike.lines ?? []).filter(entry => (entry.kind === "part") && !entry.outcome && entry.value)
+    .map(entry => `${entry.source}: ${(entry.value > 0) ? "+" : ""}${entry.value}`);
+  const piece = (text, tip) => `<span class="dbu-formula-piece" data-tooltip="${escape(tip)}">${escape(text)}</span>`;
+  const formula = [
+    piece(DBUCharacterData.BASE_DIE, "Base Die"),
+    ...groups.map(group => piece(group.formula, group.label)),
+    piece(String(strike.bonus ?? 0), parts.length ? parts.join("<br>") : "Bonus")
+  ].join(" + ") + (longRange ? ` - ${piece(String(longRange), "Long Range")}` : "");
+
+  // What may join these rolls. Multiple Arms is Triggered, so it is a box the player ticks or leaves.
+  const arms = armsCombinationOpen(attacker);
+  const deadLink = attack.technique?.linked?.strike === "low";
+  const effects = [
+    arms ? `<label class="dbu-respond-option"><input type="checkbox" name="arms"/>
+      <span class="dbu-respond-name">Multiple Arms</span>
+      <span class="dbu-respond-source">One more Strike Roll (1/Round)</span></label>` : "",
+    deadLink ? `<div class="dbu-respond-option"><span class="dbu-respond-name">Dead-Link</span>
+      <span class="dbu-respond-source">Each rolled twice, the lower kept</span></div>` : ""
+  ].filter(Boolean).join("");
+
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${attacker.name} - ${profileFor(attack)?.label ?? "Combination"}` },
+    content: `<div class="dbu-respond-dialog">
+      <p class="dbu-respond-hint"><span data-follow-count>${count}</span> additional Strikes${(beatable === null)
+        ? "" : `, each beating ${beatable}`}: +${plan.woundPerHitPerTier}(T) Wound each</p>
+      <p class="dbu-formula">${formula}</p>
+      ${effects || `<p class="dbu-respond-hint">No effects apply to these rolls.</p>`}
+    </div>`,
+    render: (event, dialog) => {
+      const box = dialog.element.querySelector('input[name="arms"]');
+      const shown = dialog.element.querySelector("[data-follow-count]");
+      box?.addEventListener("change", () => { if (shown) shown.textContent = String(count + (box.checked ? 1 : 0)); });
+    },
+    buttons: [
+      { action: "roll", label: "Roll", default: true, callback: (event, button, dialog) => ({
+        withArms: Boolean(dialog.element.querySelector('input[name="arms"]')?.checked) }) },
+      { action: "close", label: "Close" }
+    ],
+    rejectClose: false
+  });
+  return (chosen && (typeof chosen === "object")) ? chosen : null;
+}
+
+/**
  * Roll Combination's three follow-up Strikes and write down what they came to.
  *
  * "Roll your Strike Roll for this Attacking Maneuver against the Dice Score of their
@@ -11217,7 +11279,7 @@ function isAbsoluteMiss(own) {
  * rebuilding would silently drop it. Collected effects are not offered again, though -
  * these are three repetitions of one roll, not three more exchanges.
  */
-async function rollFollowUpStrikes(message, attack, attacker, { withArms = false } = {}) {
+async function rollFollowUpStrikes(message, attack, attacker) {
   const profile = profileFor(attack);
   const plan = profile?.followUps;
   if (!plan) return;
@@ -11241,6 +11303,11 @@ async function rollFollowUpStrikes(message, attack, attacker, { withArms = false
   const answer = line?.answer ?? null;
   const beatable = answer ? (answer.total ?? 0) : null;
   const longRange = line?.longRange ?? 0;
+
+  // The window first: what each Strike rolls, the effects that may join it, and Roll - or Close, to leave them for now.
+  const asked = await askFollowUps(attack, attacker, { plan, beatable, longRange });
+  if (!asked) return;
+  const withArms = asked.withArms;
 
   const rolls = [];
   // Alotta Lotta Attacks and Super Combination: "roll your Strike Roll an additional time for each
@@ -15309,18 +15376,9 @@ function renderAttack(message, html) {
     more.textContent = `Roll ${count} additional Strikes`;
     more.dataset.tooltip = "Each one that beats the defence they already made adds "
       + `${plan.woundPerHitPerTier}(T) to the Wound Roll.`;
+    // Opens the window they are rolled from - the formula, the effects that may join them (Multiple Arms), Roll.
     more.addEventListener("click", () => rollFollowUpStrikes(message, attack, attacker));
     container.append(more);
-    // Multiple Arms is Triggered - the player's to use or keep for later this Round - so it is a second button.
-    if (armsCombinationOpen(attacker)) {
-      const armed = document.createElement("button");
-      armed.type = "button";
-      armed.className = "dbu-clash-button";
-      armed.textContent = `Roll ${count + 1}: Multiple Arms`;
-      armed.dataset.tooltip = "One more Strike Roll - Multiple Arms, once a Combat Round.";
-      armed.addEventListener("click", () => rollFollowUpStrikes(message, attack, attacker, { withArms: true }));
-      container.append(armed);
-    }
     return;
   }
 
