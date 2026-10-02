@@ -5916,8 +5916,8 @@ async function respondDialog(message, respondable) {
     const dodge = (unresolved && !waiting)
       ? `<label class="dbu-respond-option dbu-respond-dodge">
            <input type="radio" name="counter-${actor.id}" value="dodge" checked/>
-           <span class="dbu-respond-name">Dodge</span>
-           <span class="dbu-respond-source">no maneuver, no action</span>
+           <span class="dbu-respond-name" data-tooltip="No Maneuver, no Action">Dodge</span>
+           <span class="dbu-respond-source dbu-formula">${defenceFormula(actor, "dodge", attack)}</span>
          </label>`
       : "";
 
@@ -12180,8 +12180,9 @@ const DEFENCES = {
   dodge: {
     label: "Dodge",
     // Diminishing Defense reduces Dodge Rolls, and only Dodge Rolls.
+    parts: (actor, attack) => dodgeBonus(actor, { attack }),
     answer: (actor, options, attack) =>
-      rollSide(actor, dodgeBonus(actor, { attack }), { ...options, slot: "dodge" }),
+      rollSide(actor, DEFENCES.dodge.parts(actor, attack), { ...options, slot: "dodge" }),
     // Named here so the two halves stay visible in the breakdown.
     // Dodging is not the Defend Maneuver, so it does not spare you the stacks.
     gainsDiminishingDefense: true,
@@ -12197,7 +12198,7 @@ const DEFENCES = {
     // A Parry rolls Strike, so that is the Slot an effect names to change it - plus
     // `parry`, which is the one that applies only when Strike is rolled defensively.
     // A charged attack is harder to turn aside: 1(bT) off for each Energy Charge on it.
-    answer: (actor, options, attack) => rollSide(actor, [
+    parts: (actor, attack) => [
       { label: "Strike", value: actor.system.combat.strike },
       { label: "Parry", value: actor.system.combat.parry ?? 0 },
       ...musclePenalty(actor),
@@ -12207,7 +12208,9 @@ const DEFENCES = {
       ...rideExploitBonus(actor, attack),
       // With a Weapon: its Size and the Weapon Penalty, chosen when the Parry was.
       ...(defenceFor(attack, actor.uuid)?.parryWith ?? [])
-    ], { ...options, slot: "strike" }),
+    ],
+    answer: (actor, options, attack) => rollSide(actor, DEFENCES.parry.parts(actor, attack),
+      { ...options, slot: "strike" }),
     soak: (soak) => soak,
     wound: (total) => total
   },
@@ -12246,8 +12249,9 @@ const DEFENCES = {
   crossCounterSignature: {
     label: "Cross Counter (Signature Technique)",
     counterAttacks: "signature",
+    parts: (actor, attack) => dodgeBonus(actor, { halved: false, attack }),
     answer: (actor, options, attack) =>
-      rollSide(actor, dodgeBonus(actor, { halved: false, attack }), { ...options, slot: "dodge" }),
+      rollSide(actor, DEFENCES.crossCounterSignature.parts(actor, attack), { ...options, slot: "dodge" }),
     soak: (soak) => soak,
     wound: (total) => total
   },
@@ -12257,9 +12261,9 @@ const DEFENCES = {
     // The clash happens as usual, but with the Defense Value halved. It is still a
     // Dodge Roll, so Diminishing Defense applies - to the roll, after the halving,
     // since what is halved is the Defense Value and not the result.
+    parts: (actor, attack) => dodgeBonus(actor, { halved: true, attack }),
     answer: (actor, options, attack) =>
-      rollSide(actor, dodgeBonus(actor, { halved: true, attack }),
-        { ...options, slot: "dodge" }),
+      rollSide(actor, DEFENCES.crossCounter.parts(actor, attack), { ...options, slot: "dodge" }),
     soak: (soak) => soak,
     wound: (total) => total
   },
@@ -12274,6 +12278,22 @@ const DEFENCES = {
     wound: (total) => Math.floor(total / 2)
   }
 };
+
+/** The sheet's workings behind a defence's parts, by the part's name, for the formula's hover. */
+const DEFENCE_WORKINGS = Object.freeze({ "Defense Value": "defenseValue", "Dodge bonus": "dodge", Strike: "strike",
+  Parry: "parry" });
+
+/**
+ * A defence's roll as a formula - Respond's Dodge, each of Defend's options - or "" for one that rolls nothing (Guard,
+ * Direct Hit, Power Flare): the dice of a Combat Roll and the parts it adds, each naming itself on hover.
+ */
+function defenceFormula(actor, key, attack) {
+  const parts = DEFENCES[key]?.parts?.(actor, attack);
+  if (!parts) return "";
+  return formulaHtml({ base: DBUCharacterData.BASE_DIE, dice: combatDiceGroups(actor),
+    parts: windowParts(actor, parts.map(part => (DEFENCE_WORKINGS[part.label]
+      ? { ...part, workingsKey: DEFENCE_WORKINGS[part.label] } : part))) });
+}
 
 /**
  * Take Life Points off a character directly.
@@ -14769,6 +14789,8 @@ async function defendAgainst(message, target, attack) {
           <span class="dbu-profile-cost">${cost} KP</span>
         </span>
         <span class="dbu-defend-summary">${Handlebars.escapeExpression(option.summary)}</span>
+        ${defenceFormula(target, key, attack)
+          ? `<span class="dbu-formula">${defenceFormula(target, key, attack)}</span>` : ""}
         ${wager}
       </span>
     </label>`;
