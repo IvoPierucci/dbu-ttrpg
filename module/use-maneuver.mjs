@@ -1878,6 +1878,7 @@ export function definitionOf(item) {
     punisherGuard: item.system.unique?.punisherGuard === true,
     seals: item.system.unique?.seals === true,
     secondSight: item.system.unique?.secondSight === true,
+    shapeshift: item.system.unique?.shapeshift === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -3876,6 +3877,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let exploding = null;
   let waving = null;
   let positioning = null;
+  let shaping = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4291,6 +4293,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     if (maneuver.binds) {
       binding = askBinding(actor, maneuver);
       if (!binding) return false;
+    }
+    else if (maneuver.shapeshift) {
+      shaping = await (await import("./chat.mjs")).askShapeshift(actor, maneuver, actionsSpent);
+      if (!shaping) return false;
     }
     else if (maneuver.sustained && !maneuver.togglesState && !maneuver.debilitates) {
       sustaining = await askSustain(actor, maneuver);
@@ -4775,6 +4781,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
     : maneuver.portals
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
+    : (maneuver.shapeshift && shaping)
+    ? await (await import("./chat.mjs")).postShapeshift(actor, maneuver, shaping)
     : (maneuver.secondSight && targetActor)
     ? await (await import("./chat.mjs")).postSecondSight(actor, maneuver, targetActor)
     : (maneuver.seals && targetActor)

@@ -1,0 +1,18 @@
+id: shapeshift-diploma
+name: Shapeshift Diploma
+advancement: true
+prerequisite: N/A
+tpCost: 5
+# "The effects of Shapeshift lose the 5 Combat Round limit. Additionally, reduce the Ki Point Cost of the Shapeshift
+# Unique Ability by 2(T)."
+noTurnLimit: true
+kiCostPerTierChange: -2
+source: Core Rule
+description: >
+  Shapeshift's effects without the 5-turn limit; its KP Cost 2(T) lower.
+text: >
+  Shapeshift Diploma: You have become exceptionally skilled in Shapeshifting; enjoy your graduation ceremony!
+  –Prerequisites: N/A
+  –TP Cost: 5
+  –Effect: The effects of Shapeshift lose the 5 Combat Round limit. Additionally, reduce the Ki Point Cost of the
+  Shapeshift Unique Ability by 2(T).

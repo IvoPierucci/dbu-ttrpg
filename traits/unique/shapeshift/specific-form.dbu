@@ -1,0 +1,18 @@
+id: specific-form
+name: Specific Form
+restriction: true
+reduction: 5
+locked: Vehicle Shift, Weapon Shift
+# Its Size chosen here, held to when Shapeshift is used; its 0~2 Bestial Traits are the table's.
+choices: nano, tiny, small, medium, large, enormous, gigantic
+shapeFixed: true
+source: Core Rule
+description: >
+  Shapeshift takes only one Size (chosen here) and its chosen Bestial Traits.
+text: >
+  Specific Form: You are only able to Shapeshift into a specific form.
+  –Locked Advancements: Vehicle Shift, Weapon Shift
+  –TP Cost: -5
+  –Effect: Select a specific Size Category and 0~2 specific Bestial Traits. When you use the Shapeshift Unique Ability,
+  you must select that Size Category and any chosen Bestial Traits. You cannot use the Shapeshift Unique Ability if you
+  cannot spend enough Actions to apply all of these chosen effects.

@@ -203,6 +203,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, PARA_FLAG, request.para);
     case "petrify": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PETRIFY_FLAG, request.petrify);
+    case "shapeshift": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, SHAPE_FLAG, request.shapeshift);
     case "crystal": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, CRYSTAL_FLAG, request.crystal);
     case "sealing": return game.messages.get(request.messageId)
@@ -2930,6 +2932,7 @@ function onRenderChatMessage(message, html) {
   renderPunisher(message, html);
   renderSealing(message, html);
   renderCrystal(message, html);
+  renderShapeshift(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -3655,6 +3658,15 @@ export async function upkeepUniques(actor) {
       await item.update({ "system.unique.applied": false });
       continue;
     }
+    // Shapeshift: "for 5 turns" - counted here, at the start of each; none with Shapeshift Diploma.
+    if (item.system.unique.shapeshift && (Number(item.system.unique.shapeLeft) || 0)) {
+      const left = (Number(item.system.unique.shapeLeft) || 0) - 1;
+      if (left <= 0) {
+        await endShapeshift(actor, "its 5 turns are over");
+        continue;
+      }
+      await item.update({ "system.unique.shapeLeft": left });
+    }
     // Its own KP Cost again - or what the entry names for keeping it: Bound Battlefield's 6(T), Extra Arms' half.
     const perTier = Number(item.system.unique.upkeepKiPerTier) || 0;
     // Or in (bT) - Ki Avatar's 4(bT).
@@ -3719,6 +3731,8 @@ export async function endSustained(actor, item) {
   if (item.system?.unique?.multiForm) await endMultiForm(actor, item, "are erased");
   // Internal Assault: "or your Debilitated Opponent stops being Debilitated".
   if (item.system?.unique?.debilitates) await endDebilitation(actor, item);
+  // Shapeshift, unpaid or stopped: "remove the effects of Shapeshift".
+  if (item.system?.unique?.shapeshift) await endShape(actor, item);
   const floods = item.system?.unique?.floods;
   if (!floods) return;
   const before = item.system.unique.floodedFrom || "";
@@ -10441,6 +10455,159 @@ function renderCrystal(message, html) {
     await postSecondSight(actor, { name: `Second Sight (${crystal.itemName})` }, target);
   });
   container.append(button);
+}
+
+/** Shapeshift's card: the shape taken, or put off with its Ki back and a Reshape. */
+const SHAPE_FLAG = "shapeshift";
+
+/** What Shapeshift's Advancements and Restriction make of it. */
+function shapeTraits(unique) {
+  const bought = unique ? boughtTraits(unique, getTrait) : [];
+  const applied = unique ? appliedTraits(unique, getTrait) : [];
+  const form = applied.find(trait => trait.shapeFixed === true);
+  return {
+    quick: bought.some(trait => trait.oneAction === true),
+    unlimited: bought.some(trait => trait.noTurnLimit === true),
+    vehicle: bought.some(trait => trait.shapeVehicle === true),
+    weapon: bought.some(trait => trait.shapeWeapon === true),
+    fixedSize: form ? String((unique.restrictions ?? []).find(entry => entry.key === form.id)?.choice ?? "") : ""
+  };
+}
+
+/** The Sizes it can take: "any other Size Category except Colossal". */
+function shapeSizes(actor) {
+  const now = actor.system.size?.bodyKey ?? actor.system.size?.trueKey ?? "";
+  return Object.entries(DBUCharacterData.SIZES).filter(([key]) => (key !== "colossal") && (key !== now));
+}
+
+/**
+ * "Gain a number of the following effects for 5 turns based on the number of Actions spent on this Maneuver (you may
+ * select the first effect multiple times)" - the Size once, Bestial Traits for the rest (the table's: Races are not in
+ * the system). Quick Shift's "as if you spent up to 3 Actions (you decide how many)"; Vehicle and Weapon Shift's form at
+ * 2+; Specific Form's Size, held to. Null if dropped.
+ */
+export async function askShapeshift(actor, maneuver, actionsSpent) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  if (unique.applied) return { mode: "remove", actions: actionsSpent };
+  return chooseShape(actor, unique, maneuver.name, actionsSpent);
+}
+
+async function chooseShape(actor, unique, name, actionsSpent) {
+  const can = shapeTraits(unique);
+  const most = can.quick ? 3 : Math.max(1, Number(actionsSpent) || 1);
+  const escape = Handlebars.escapeExpression;
+  const sizes = shapeSizes(actor).filter(([key]) => !can.fixedSize || (key === can.fixedSize));
+  const forms = [["shapes", "Effects"], ...((most >= 2) && can.vehicle ? [["vehicle", "A Vehicle"]] : []),
+    ...((most >= 2) && can.weapon ? [["weapon", "A Weapon"]] : [])];
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${name}` },
+    content: `${(forms.length > 1) ? `<label>Become <select name="form" class="dbu-gear-pick">${forms.map(([key, label]) =>
+        `<option value="${key}">${label}</option>`).join("")}</select></label>` : ""}
+      ${can.quick ? `<label>Effects <select name="count" class="dbu-gear-pick">${[1, 2, 3].map(n =>
+        `<option value="${n}" ${(n === 3) ? "selected" : ""}>${n}</option>`).join("")}</select></label>` : ""}
+      <label>Size <select name="size" class="dbu-gear-pick">${can.fixedSize ? "" : `<option value="">No change</option>`}${sizes.map(([key, size]) =>
+        `<option value="${key}">${escape(size.label)}</option>`).join("")}</select></label>
+      <p class="dbu-respond-note">The rest are Bestial Traits, each for a Body-Category Secondary Racial Trait.</p>`,
+    buttons: [{ action: "apply", label: "Shapeshift", default: true, callback: (event, button, dialog) => ({
+      form: dialog.element.querySelector('select[name="form"]')?.value ?? "shapes",
+      count: Number(dialog.element.querySelector('select[name="count"]')?.value) || most,
+      size: dialog.element.querySelector('select[name="size"]')?.value ?? "" }) },
+    { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!chosen || (chosen === "cancel")) return null;
+  if (chosen.form !== "shapes") return { mode: "apply", form: chosen.form, size: "", bestial: 0, actions: actionsSpent };
+  // Specific Form: "You cannot use the Shapeshift Unique Ability if you cannot spend enough Actions to apply all of these
+  // chosen effects" - its Size, at least.
+  if (can.fixedSize && !chosen.size) {
+    ui.notifications.warn(`${name}: Specific Form's Size must be taken.`);
+    return null;
+  }
+  const count = Math.min(most, Math.max(1, chosen.count));
+  return { mode: "apply", form: "", size: chosen.size, bestial: count - (chosen.size ? 1 : 0), actions: actionsSpent };
+}
+
+/** The shape, said: its Size, its Bestial Traits for the table, or the Vehicle or Weapon the table makes. */
+function shapeSaid(plan) {
+  if (plan.form === "vehicle") return "a Vehicle - its Craftsmanship Grade 1/2 your Tier of Power (rounded up)";
+  if (plan.form === "weapon") return "a Weapon - its Craftsmanship Grade 1/2 your Tier of Power (rounded up)";
+  const size = plan.size ? DBUCharacterData.SIZES[plan.size]?.label : "";
+  return [size ? `${size} Size` : "", plan.bestial
+    ? `${plan.bestial} Bestial Trait${(plan.bestial === 1) ? "" : "s"} for Body-Category Secondary Racial Traits` : ""]
+    .filter(Boolean).join(", ") || "no change";
+}
+
+/** The shape put on the Item - applied, kept up at half its KP Cost each turn (upkeepUniques), 5 turns without Diploma. */
+async function applyShape(actor, item, plan) {
+  const can = shapeTraits(item.system.unique);
+  await item.update({ "system.unique.applied": true, "system.unique.shapeSize": plan.size || "",
+    "system.unique.shapeBestial": plan.bestial || 0, "system.unique.shapeForm": plan.form || "",
+    "system.unique.shapeLeft": can.unlimited ? 0 : 5 });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(item.name)}: ${Handlebars.escapeExpression(shapeSaid(plan))}`
+      + `${can.unlimited ? "" : " - for 5 turns"}.</p>` });
+}
+
+/**
+ * Shapeshift, paid for. Applied: the shape. Already in one: "you remove those effects and regain 6(T) Ki Points instead
+ * of applying the effects again. You may spend 6(T) Ki Points to apply the effects of Shapeshift immediately after
+ * removing the effects" - the card's Reshape.
+ */
+export async function postShapeshift(actor, maneuver, plan) {
+  const item = actor.items?.get(maneuver.itemId);
+  if (!item) return null;
+  if (plan.mode !== "remove") return applyShape(actor, item, plan);
+  await endShape(actor, item);
+  const ki = 6 * Math.max(1, actor.system.tierOfPower ?? 1);
+  await actor.update({ "system.ki.value": Math.min(actor.system.ki.max, actor.system.ki.value + ki) });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(item.name)}: back to yourself - Ki Points regained.</p>`,
+    flags: { [SCOPE]: { [SHAPE_FLAG]: { actorUuid: actor.uuid, itemId: item.id, actions: plan.actions, ki, reshaped: false } } } });
+}
+
+/** Its effects off the Item: the Size given back with them. */
+async function endShape(actor, item) {
+  await item.update({ "system.unique.applied": false, "system.unique.shapeSize": "", "system.unique.shapeBestial": 0,
+    "system.unique.shapeForm": "", "system.unique.shapeLeft": 0 });
+}
+
+/**
+ * "If you are Defeated or fail a Steadfast Check, immediately stop applying the effects of the Shapeshift Unique Ability."
+ */
+export async function endShapeshift(actor, why) {
+  for (const item of Array.from(actor?.items ?? [])) {
+    if ((item.type !== "maneuver") || !item.system.unique?.shapeshift || !item.system.unique.applied) continue;
+    await endShape(actor, item);
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} ends - ${Handlebars.escapeExpression(why)}.</div>` });
+  }
+}
+
+/** Reshape: 6(T) Ki Points and the shape chosen again, at the Actions it was used with. */
+function renderShapeshift(message, html) {
+  const shape = message.getFlag(SCOPE, SHAPE_FLAG);
+  if (!shape || shape.reshaped) return;
+  const actor = fromUuidSync(shape.actorUuid);
+  const item = actor?.items?.get(shape.itemId);
+  if (!actor?.isOwner || !item || item.system.unique.applied) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Reshape";
+  button.dataset.tooltip = `${shape.ki} KP: its effects applied again at once`;
+  button.addEventListener("click", async () => {
+    const { ki, capacity } = actor.system;
+    if ((ki.value < shape.ki) || (shape.ki > capacity.remaining)) return ui.notifications.warn(`${actor.name} has not the Ki Points for that.`);
+    const plan = await chooseShape(actor, item.system.unique, item.name, shape.actions);
+    if (!plan) return;
+    button.disabled = true;
+    await actor.update({ "system.ki.value": ki.value - shape.ki, "system.capacity.spent": capacity.spent + shape.ki });
+    requestEdit(message, { type: "shapeshift", shapeshift: { ...shape, reshaped: true } });
+    await applyShape(actor, item, plan);
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
 }
 
 /** Whether an attack was declared a Called Shot. */
@@ -17254,6 +17421,7 @@ async function settleDefeat(message, card) {
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   await fireMoment(actor, "defeat-resolved");
   await petrifierDefeated(actor);
+  await endShapeshift(actor, "Defeated");
 
   requestEdit(message, {
     type: "moment",
@@ -17339,6 +17507,8 @@ export async function rollSteadfastCheck(actor) {
     for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.multiForm)) {
       await endMultiForm(actor, item, "are Defeated - a Steadfast Check failed");
     }
+    // Shapeshift: "If you ... fail a Steadfast Check, immediately stop applying the effects".
+    await endShapeshift(actor, "a Steadfast Check failed");
   }
   updates[`system.thresholdChecks.${rolled}`] = passed ? "pass" : "fail";
 

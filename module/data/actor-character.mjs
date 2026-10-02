@@ -1952,9 +1952,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const chosenAt = ((builtAt >= 0) && (shrunkAt >= 0) && (shrunkAt < builtAt))
       ? shrunkAt : builtAt;
     const sizeShift = Math.round(applySlot(this.effects?.slots, "size.steps", 0));
-    const trueKey = (chosenAt < 0)
+    const bodyKey = (chosenAt < 0)
       ? DBUCharacterData.DEFAULT_SIZE
       : sizeKeys[Math.min(sizeKeys.length - 1, Math.max(0, chosenAt + sizeShift))];
+    // Shapeshift: "Change your Size Category to any other Size Category except Colossal" - while it is applied.
+    const shaped = Array.from(this.parent?.items ?? []).find(item => (item.type === "maneuver")
+      && item.system?.unique?.applied && item.system.unique.shapeSize);
+    const trueKey = (shaped && sizeKeys.includes(shaped.system.unique.shapeSize)) ? shaped.system.unique.shapeSize : bodyKey;
     // Ki Avatar: "if your Size Category is smaller than Gigantic, your Size Category is considered Gigantic for
     // calculating the benefits and penalties of Size ... and for all rules detailed on the Size page except Punching Up".
     // The Size beneath it is kept as `trueKey`, which Punching Up and the Apparel on the body read.
@@ -1975,6 +1979,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       steps: sizeKeys.indexOf(sizeKey) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
       // The Size beneath a Ki Avatar - the same as `key` without one.
       trueKey,
+      // The Size beneath a Shapeshift - "this does not destroy any Apparel you have equipped" (gear.mjs outgrown).
+      bodyKey,
       trueSteps: sizeKeys.indexOf(trueKey) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
       defenseModifier: size.defensePerTier * this.tierOfPower,
       soakModifier: size.soakPerTier * this.tierOfPower,

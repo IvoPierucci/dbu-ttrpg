@@ -1017,7 +1017,7 @@ export async function breakApparel(actor, getTrait, { amount = 1 } = {}) {
  * Size, so never. `sizes` is the Size Categories in order, smallest first.
  */
 export function outgrown(items, wearer, sizes, getTrait) {
-  const now = sizes.indexOf(wearer?.system?.size?.trueKey ?? wearer?.system?.size?.key ?? "");
+  const now = sizes.indexOf(wearer?.system?.size?.bodyKey ?? wearer?.system?.size?.trueKey ?? wearer?.system?.size?.key ?? "");
   if (now < 0) return [];
   return apparelQualitiesInEffect(items).map(({ item }) => item).filter(item => {
     const made = sizes.indexOf(apparelSize(item, wearer, getTrait));

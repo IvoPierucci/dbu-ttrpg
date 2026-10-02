@@ -1,0 +1,24 @@
+id: weapon-shift
+name: Weapon Shift
+advancement: true
+prerequisite: N/A
+tpCost: 5
+# Offered at 2+ Actions instead of the effects; the Weapon and its rules are the table's.
+shapeWeapon: true
+source: Core Rule
+description: >
+  Shapeshift at 2+ Actions can make you a Weapon instead - the table's to run.
+text: >
+  Weapon Shift: You possess the unique capability to transform yourself into a weapon.
+  –Prerequisites: N/A
+  –TP Cost: 5
+  –Effect: If you spend 2+ Actions through Shapeshifting, instead of selecting effects, you may transform into a Weapon.
+  Upon doing so, create a Weapon with a Craftsmanship Grade equal to 1/2 (rounded up) of your Tier of Power. You become
+  that Weapon, following the below rules:
+
+  * You cannot use any Maneuver except the Movement Maneuver or Basic Attack Maneuver, but you can only use the Basic
+  Attack Maneuver if you use yourself as the Weapon for that Attacking Maneuver.
+  * You may be wielded as a Weapon with your consent, but if you are, then you cannot use the Movement Maneuver.
+  * Any Damage inflicted to yourself as a Weapon is instead inflicted directly to your Life Points.
+  * If an effect would destroy the Weapon except by inflicting Damage, you have your Life Points reduced to 1 Life Point
+  below your next Health Threshold and you forcefully stop benefiting from the effects of Shapeshift.

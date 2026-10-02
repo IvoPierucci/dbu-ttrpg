@@ -1,0 +1,17 @@
+id: quick-shift
+name: Quick Shift
+advancement: true
+prerequisite: Personality or Scholarship Score of 14+
+tpCost: 15
+# "The Action Cost is always 1 Standard Action and you treat the effects of the Shapeshift Maneuver as if you spent up to 3
+# Actions (you decide how many)" - asked with the effects.
+oneAction: true
+source: Core Rule
+description: >
+  Shapeshift always at 1 Action, as if up to 3 were spent.
+text: >
+  Quick Shift: You are able to change your form with a mere thought.
+  –Prerequisites: Personality or Scholarship Score of 14+
+  –TP Cost: 15
+  –Effect: When using the Shapeshift Maneuver, the Action Cost is always 1 Standard Action and you treat the effects of the
+  Shapeshift Maneuver as if you spent up to 3 Actions (you decide how many).

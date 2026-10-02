@@ -1,0 +1,25 @@
+id: vehicle-shift
+name: Vehicle Shift
+advancement: true
+prerequisite: N/A
+tpCost: 5
+# Offered at 2+ Actions instead of the effects; the Vehicle and its rules are the table's (Vehicles are not in the system).
+shapeVehicle: true
+source: Core Rule
+description: >
+  Shapeshift at 2+ Actions can make you a Vehicle instead - the table's to run.
+text: >
+  Vehicle Shift: You are able to turn into a vehicle to ferry others around.
+  –Prerequisites: N/A
+  –TP Cost: 5
+  –Effect: If you spend 2+ Actions through Shapeshifting, instead of selecting effects, you may transform into a Vehicle.
+  Upon doing so, create a Vehicle with a Craftsmanship Grade equal to 1/2 (rounded up) of your Tier of Power. You become
+  that Vehicle, following the below rules:
+
+  * You are considered to be Piloting yourself for any and all effects if you do not have a Pilot. While you have a
+  Pilot, you may still act as if you are the Pilot during your turn.
+  * You may be Piloted as a Vehicle with your consent.
+  * Do not calculate Life Points, Ki Points, or Capacity when turning into a Vehicle. You use your own values. A Pilot
+  will use your Ki Points and Capacity while Piloting, as they would a normal Vehicle.
+  * If an effect would destroy the Vehicle except by inflicting Damage, you have your Life Points reduced to 1 Life Point
+  below your next Health Threshold and you forcefully stop benefiting from the effects of Shapeshift.

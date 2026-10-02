@@ -1734,6 +1734,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Finish Sign: the Signature Technique declared, released as an Instant from here.
         finish: (unique.finishSign && unique.finishTechnique)
           ? { technique: this.actor.items.get(unique.finishTechnique)?.name ?? "" } : null,
+        // Shapeshift, applied: the shape and its turns left.
+        shape: (unique.shapeshift && unique.applied) ? [
+          unique.shapeForm ? `A ${unique.shapeForm.charAt(0).toUpperCase()}${unique.shapeForm.slice(1)}` : "",
+          unique.shapeSize ? (DBUCharacterData.SIZES[unique.shapeSize]?.label ?? "") : "",
+          unique.shapeBestial ? `${unique.shapeBestial} Bestial` : "",
+          unique.shapeLeft ? `${unique.shapeLeft} turn${(unique.shapeLeft === 1) ? "" : "s"} left` : ""
+        ].filter(Boolean).join(" · ") : "",
         // Portal Creation: the Portals held, dismissed as an Instant, and the next Maneuver through them.
         portals: (unique.portals && !grantedBy) ? { held: Number(unique.portalsHeld) || 0, max: portalsMaxOf(unique),
           through: Boolean(actor.getFlag?.("dbu-ttrpg", "throughPortal")) } : null,

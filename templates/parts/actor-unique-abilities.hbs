@@ -79,6 +79,11 @@
                     data-tooltip="Instant: lose every Finisher and stop declaring it">Release</button>
           </div>
           {{/if}}
+          {{#if row.shape}}
+          <div class="unique-resource">
+            <span data-tooltip="The shape taken - Bestial Traits are the table's">{{row.shape}}</span>
+          </div>
+          {{/if}}
           {{#if row.portals}}
           <div class="unique-resource">
             <span data-tooltip="Portals held, of the most you can possess">Portals {{row.portals.held}}/{{row.portals.max}}</span>

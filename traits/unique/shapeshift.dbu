@@ -1,0 +1,48 @@
+id: shapeshift
+name: Shapeshift
+uaType: magical
+prerequisite: Personality or Scholarship Score of 6+
+tpCost: 20
+type: standard
+actionCost: 1
+actionCostMax: 3
+kiCostPerBaseTier: 8
+# "Gain a number of the following effects for 5 turns based on the number of Actions spent" - asked as it is used: the
+# Size (any but Colossal, Apparel kept whole), the rest Bestial Traits said on the card for the table (Races are not in the
+# system). Applied on the Item, its Size read by the sheet; "you must pay 1/2 of the KP Cost for Shapeshift at the start
+# of each of your turns" - upkeepHalf - and 5 turns counted there; used again, put off with 6(T) Ki Points back and a
+# Reshape at 6(T); Defeated or a Steadfast Check failed, gone (chat.mjs postShapeshift).
+shapeshift: true
+sustained: true
+upkeepHalf: true
+source: Core Rule
+description: >
+  1~3 Actions: as many effects for 5 turns - another Size (not Colossal) once, Bestial Traits for the rest. Half its KP
+  each turn; used again, put off for 6(T) Ki Points back. Defeated or a Steadfast Check failed, it ends.
+text: >
+  Shapeshift: You possess the ability to change your body in many ways, allowing you to become someone or something else.
+  –Ability Type: Magical
+  –Prerequisites: Personality or Scholarship Score of 6+
+  –TP Cost: 20
+  –KP Cost: 8(bT)
+  –Maneuver Type: Standard
+  –Action Cost: Variable (1~3 Actions)
+  –Minions: N/A
+  –Passive Bonus: You gain access to the Morph Adventuring Maneuver.
+  –Effect: When you use this Unique Ability, gain a number of the following effects for 5 turns based on the number of
+  Actions spent on this Maneuver (you may select the first effect multiple times):
+
+  * Exchange one of your Body-Category Secondary Racial Traits for a Bestial Trait of your choice.
+  * Change your Size Category to any other Size Category except Colossal (this does not destroy any Apparel you have
+  equipped).
+
+  If you use the Shapeshift Unique Ability while benefiting from its effects, you remove those effects and regain 6(T) Ki
+  Points instead of applying the effects again. You may spend 6(T) Ki Points to apply the effects of Shapeshift
+  immediately after removing the effects.
+  If you are benefiting from the effects of Shapeshift, you must pay 1/2 of the KP Cost for Shapeshift at the start of
+  each of your turns. If you do not, remove the effects of Shapeshift.
+  If you are Defeated or fail a Steadfast Check, immediately stop applying the effects of the Shapeshift Unique Ability.
+
+---
+
+# "You gain access to the Morph Adventuring Maneuver" - not in the system yet (its text is pending).
