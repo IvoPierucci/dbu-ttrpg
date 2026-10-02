@@ -1,0 +1,19 @@
+id: deeper-enhanced
+name: Deeper Enhancement
+kind: conditions
+maxStacks: 2
+# Not a Combat Condition: Deeper Enhancement's part of Magically Enhanced, a stack for each additional Action spent, on
+# the same clock.
+combatCondition: no
+source: Core Rule
+description: >
+  Wound and Soak Value 1(T) higher for each stack, while Magically Enhanced.
+text: >
+  Deeper Enhancement: "For each additional Action spent, increase that Ally's Wound and Soak Value by an additional 1(T)
+  through the effects of Magical Enhancement."
+
+---
+
+[passive per stack]
+wound += 1(T);
+soakValue += 1(T);

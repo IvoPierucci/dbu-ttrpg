@@ -1867,6 +1867,7 @@ export function definitionOf(item) {
     smashes: item.system.unique?.smashes === true,
     debilitates: item.system.unique?.debilitates === true,
     lullaby: item.system.unique?.lullaby === true,
+    enhances: item.system.unique?.enhances === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -2824,6 +2825,82 @@ async function askLullaby(actor, maneuver) {
   return { uuids: targets.map(other => other.uuid) };
 }
 
+/** Unleash Dormant Power's four effects, as its window offers them. */
+const UNLEASH_EFFECTS = Object.freeze({
+  awakening: "Unlocked Potential: a Level 2 Temporary Awakening",
+  transformation: "The Transformation Maneuver, Out-of-Sequence",
+  enhancement: "An Enhancement (the ARC's approval)",
+  form: "A Form (the ARC's approval)"
+});
+
+/**
+ * Magical Enhancement: "Target an Ally within 8 Squares of you" - your targeted token, measured where there are tokens;
+ * Deeper Enhancement's Actions more and Unleash Dormant Power's effect, asked; what it all costs, checked before anything
+ * is paid. Null if it was dropped.
+ */
+async function askEnhance(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  const ally = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
+  if (!ally) {
+    ui.notifications.warn(`${maneuver.name}: target the Ally first.`);
+    return null;
+  }
+  const away = squaresAway(actor, ally);
+  if ((away !== null) && (away > 8)) {
+    ui.notifications.warn(`${ally.name} is more than 8 Squares away.`);
+    return null;
+  }
+  const { boughtTraits } = await import("./unique.mjs");
+  const bought = boughtTraits(unique, getTrait);
+  const deeper = Number(bought.find(trait => trait.enhanceDeeper)?.enhanceDeeper) || 0;
+  const unleash = bought.find(trait => trait.enhanceUnleash) ?? null;
+  const used = actor.system.usedManeuvers ?? [];
+  const unleashes = used.filter(entry => entry === "encounter:unleash").length;
+  const why = !unleash ? "" : (unleashes >= 2) ? "twice this Combat Encounter already"
+    : used.includes(`encounter:unleash.${ally.uuid}`) ? `already used on ${ally.name} this Encounter` : "";
+  const escape = Handlebars.escapeExpression;
+  const tier = Math.max(1, actor.system.tierOfPower ?? 1);
+  let chosen = { extra: 0, unleash: "" };
+  if (deeper || unleash) {
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${actor.name} - ${maneuver.name}` },
+      content: `<p class="dbu-respond-hint">${escape(ally.name)}</p>
+        ${deeper ? `<label class="dbu-wager"><span>Actions more</span><select name="extra">${[0, 1, 2].slice(0, deeper + 1)
+          .map(n => `<option value="${n}">${n}${n ? ` (+${n * tier} KP)` : ""}</option>`).join("")}</select></label>` : ""}
+        ${unleash ? `<label class="dbu-wager" ${why ? `data-tooltip="${escape(why)}"` : ""}><span>${escape(unleash.name)}</span>
+          <select name="unleash" ${why ? "disabled" : ""}><option value="">None</option>${Object.entries(UNLEASH_EFFECTS).map(([key, label]) =>
+            `<option value="${key}">${escape(label)}</option>`).join("")}</select></label>
+          <p class="dbu-respond-hint">2 Actions and ${Math.floor((Number(actor.system.ki?.max) || 0) / 2)} KP more${why ? ` - ${escape(why)}` : ""}</p>` : ""}`,
+      buttons: [
+        { action: "enhance", label: maneuver.name, default: true, callback: (event, button, dialog) => ({
+          extra: Number(dialog.element.querySelector('select[name="extra"]')?.value) || 0,
+          unleash: dialog.element.querySelector('select[name="unleash"]:not([disabled])')?.value ?? ""
+        }) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!picked || (typeof picked !== "object")) return null;
+    chosen = picked;
+  }
+  // What it all comes to: the Actions beside its own, the Ki beside its own - Unleash's half of the Maximum off the Ki
+  // alone, "this does not affect your Capacity".
+  const moreActions = chosen.extra + (chosen.unleash ? 2 : 0);
+  const moreKi = chosen.extra * tier;
+  const unleashKi = chosen.unleash ? Math.floor((Number(actor.system.ki?.max) || 0) / 2) : 0;
+  if (game.combat?.started && (actionsLeft(actor, "standard") < ((maneuver.actionCost ?? 1) + moreActions))) {
+    ui.notifications.warn(`${actor.name} has not the Actions for that.`);
+    return null;
+  }
+  if ((Number(actor.system.ki?.value) || 0) < (maneuverKiCost(maneuver, null, actor) + moreKi + unleashKi)) {
+    ui.notifications.warn(`${actor.name} has not the Ki Points for that.`);
+    return null;
+  }
+  return { allyUuid: ally.uuid, extra: chosen.extra, unleash: chosen.unleash, moreActions, moreKi, unleashKi };
+}
+
 /** God Meteor: who is inside the Destructive Sphere around the Square it falls on - ticked by the player. */
 async function askMeteor(actor, maneuver) {
   const pool = game.combat?.started
@@ -3742,6 +3819,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let illusioning = null;
   let smashing = null;
   let lulling = null;
+  let enhancing = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3993,6 +4071,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Magical Enhancement: the Ally, and what its Advancements add.
+    if (maneuver.enhances) {
+      enhancing = await askEnhance(actor, maneuver);
+      if (!enhancing) return false;
+    }
+
     // Lullaby Fist: your targeted tokens - one, or more with Multi-Sleep - none already lulled this Encounter.
     if (maneuver.lullaby) {
       lulling = await askLullaby(actor, maneuver);
@@ -4568,6 +4652,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.enhances && enhancing)
+    ? await (await import("./chat.mjs")).postEnhance(actor, maneuver, enhancing)
     : (maneuver.lullaby && lulling)
     ? await (await import("./chat.mjs")).postLullaby(actor, maneuver, lulling)
     : (maneuver.debilitates && targetActor)

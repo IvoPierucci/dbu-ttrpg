@@ -1,0 +1,17 @@
+id: magically-enhanced
+name: Magically Enhanced
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Magical Enhancement's own word, held as a mark with a clock - the end of its holder's turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Combat Rolls and Soak Value 1(T) higher, until the end of your turn.
+text: >
+  Magically Enhanced: "A Magically Enhanced Character increases their Combat Rolls and Soak Value by 1(T)."
+
+---
+
+[passive]
+combatRolls += 1(T);
+soakValue += 1(T);

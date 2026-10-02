@@ -1,0 +1,19 @@
+id: deeper-enhancement
+name: Deeper Enhancement
+advancement: true
+prerequisite: Magic Score of 10+, 3+ Skill Ranks in Use Magic
+tpCost: 5
+# "You may increase the Action Cost by up to 2 Actions and increase the Ki Point Cost by 1(T) for each additional Action.
+# For each additional Action spent, increase that Ally's Wound and Soak Value by an additional 1(T)" - a stack of the
+# Deeper Enhancement mark each, asked in its window.
+enhanceDeeper: 2
+source: Core Rule
+description: >
+  Up to 2 Actions more, 1(T) KP each: the Ally's Wound and Soak Value 1(T) higher for each.
+text: >
+  Deeper Enhancement: You enhance your comrades even further by investing more energy.
+  –Prerequisites: Magic Score of 10+, 3+ Skill Ranks in Use Magic
+  –TP Cost: 5 TP
+  –Effect: When you use Magical Enhancement, you may increase the Action Cost by up to 2 Actions and increase the Ki
+  Point Cost by 1(T) for each additional Action. For each additional Action spent, increase that Ally’s Wound and Soak
+  Value by an additional 1(T) through the effects of Magical Enhancement.

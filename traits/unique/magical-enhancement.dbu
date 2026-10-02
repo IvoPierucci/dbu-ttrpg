@@ -1,0 +1,27 @@
+id: magical-enhancement
+name: Magical Enhancement
+uaType: magical
+prerequisite: Magic Score of 6+, 2+ Skill Ranks in Use Magic
+tpCost: 10
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 2
+# "Target an Ally within 8 Squares of you. That Character becomes Magically Enhanced until the end of their turn" - the
+# Magically Enhanced mark on them, clocked to the end of their turn; Deeper Enhancement's and Unleash Dormant Power's
+# extras asked with it (use-maneuver.mjs askEnhance, chat.mjs postEnhance).
+enhances: true
+source: Core Rule
+description: >
+  An Ally within 8 Squares is Magically Enhanced until the end of their turn: Combat Rolls and Soak Value 1(T) higher.
+text: >
+  Magical Enhancement: You are able to share your power with others, increasing their strength in place of your own.
+  –Ability Type: Magical
+  –Prerequisites: Magic Score of 6+, 2+ Skill Ranks in Use Magic
+  –TP Cost: 10
+  –KP Cost: 2(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target an Ally within 8 Squares of you. That Character becomes Magically Enhanced until the end of their
+  turn. A Magically Enhanced Character increases their Combat Rolls and Soak Value by 1(T).

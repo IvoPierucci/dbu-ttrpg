@@ -1,0 +1,36 @@
+id: unleash-dormant-power
+name: Unleash Dormant Power
+advancement: true
+prerequisite: 5 Skill Ranks in Use Magic
+tpCost: 20
+# "You may choose to spend 2 additional Actions and Ki Points equal to 1/2 of your Maximum Ki Points (this does not affect
+# your Capacity) to apply one of the following effects" - which, asked in its window; paid and counted - "twice per
+# Combat Encounter and you cannot apply this effect twice to the same Ally". What each does is said on the card: the
+# Awakenings, the Transformation Maneuver, Enhancements and Forms are not in this system yet - the table's.
+enhanceUnleash: true
+source: Core Rule
+description: >
+  2 Actions and half your Maximum Ki more: an Awakening, an Out-of-Sequence Transformation, an Enhancement or a Form for
+  the Ally - twice an Encounter, once an Ally.
+text: >
+  Unleash Dormant Power: You can reach into others and draw out the power from deep within them.
+  –Prerequisites: 5 Skill Ranks in Use Magic
+  –TP Cost: 20 TP
+  –Effect: When you target a Character with the Magical Enhancement Unique Ability, you may choose to spend 2 additional
+  Actions and Ki Points equal to 1/2 of your Maximum Ki Points (this does not affect your Capacity) to apply one of the
+  following effects to your targeted Ally:
+
+  * Your targeted Ally gains a stack of the Unlocked Potential Awakening as a Level 2 Temporary Awakening.
+
+  * Your targeted Ally may use the Transformation Maneuver as an Out-of-Sequence Maneuver. If they do, increase their
+  Stress Bonus by ½ (rounded up) of your Tier of Power for the duration of this Transformation Maneuver and then until
+  they leave that Transformation if they succeed.
+
+  * With your ARC’s approval, your targeted Ally gains access to an Enhancement they meet the Racial Requirements,
+  Prerequisites, and Tier of Power Requirement of until the end of the Combat Encounter.
+
+  * With your ARC’s approval, your targeted Ally gains access to a Form they meet the Racial Requirements, Prerequisites,
+  and Tier of Power Requirement of until the end of the Combat Encounter.
+
+  You can only use the effect of Unleash Dormant Power twice per Combat Encounter and you cannot apply this effect twice
+  to the same Ally during a Combat Encounter.

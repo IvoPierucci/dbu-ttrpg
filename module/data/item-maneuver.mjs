@@ -654,6 +654,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         avatarSize: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** A Clash that puts its targets to sleep, each once an Encounter - Lullaby Fist's (chat.mjs postLullaby). */
         lullaby: new fields.BooleanField({ required: true, initial: false }),
+        /** An Ally Magically Enhanced until the end of their turn - Magical Enhancement's (chat.mjs postEnhance). */
+        enhances: new fields.BooleanField({ required: true, initial: false }),
         /** A State it may only be used in - God Meteor's God Ki. */
         requiresState: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** The one they had before, given back when it ends. */

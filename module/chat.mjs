@@ -9253,6 +9253,48 @@ async function settleLullaby(message, clash) {
   await setCondition(target, "sleeping", Math.max(1, Number(target.system.conditions?.sleeping) || 0));
 }
 
+/**
+ * Magical Enhancement, paid for: the extras paid beside it - Deeper Enhancement's Actions and 1(T) each, Unleash Dormant
+ * Power's 2 Actions and half the Maximum Ki off the Ki alone - and the Ally "Magically Enhanced until the end of their
+ * turn": the marks on them, on their own clock. Unleash's effect, said and counted.
+ */
+export async function postEnhance(actor, maneuver, plan) {
+  const ally = fromUuidSync(plan.allyUuid);
+  if (!ally) return null;
+  if (plan.moreActions) await spendActions(actor, plan.moreActions, "standard");
+  if (plan.moreKi || plan.unleashKi) {
+    await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - plan.moreKi - plan.unleashKi),
+      "system.capacity.spent": actor.system.capacity.spent + plan.moreKi });
+  }
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  const { lasting, EDGES, KINDS } = await import("./durations.mjs");
+  const marks = [["magically-enhanced", 1], ...(plan.extra ? [["deeper-enhanced", plan.extra]] : [])];
+  for (const [key, stacks] of marks) {
+    const before = Number(ally.system.conditions?.[key]) || 0;
+    if (before) await gainCondition(ally, key, -before);
+    if (await gainCondition(ally, key, stacks) === false) continue;
+    // "Until the end of their turn" - theirs, so the clock is theirs.
+    await lasting(ally, { kind: KINDS.CONDITION, key, edge: EDGES.END, source: maneuver.name });
+  }
+  const notes = [];
+  if (plan.unleash) {
+    await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), "encounter:unleash",
+      `encounter:unleash.${ally.uuid}`] });
+    const tier = Math.max(1, actor.system.tierOfPower ?? 1);
+    notes.push({
+      awakening: `${ally.name} gains a stack of the Unlocked Potential Awakening as a Level 2 Temporary Awakening.`,
+      transformation: `${ally.name} may use the Transformation Maneuver Out-of-Sequence: Stress Bonus +${Math.ceil(tier / 2)} for it, `
+        + "and while in that Transformation if it succeeds.",
+      enhancement: `With the ARC's approval, ${ally.name} gains access to an Enhancement they qualify for until the end of the Combat Encounter.`,
+      form: `With the ARC's approval, ${ally.name} gains access to a Form they qualify for until the end of the Combat Encounter.`
+    }[plan.unleash] ?? "");
+  }
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(ally.name)} is Magically Enhanced`
+      + `${plan.extra ? ` (+${plan.extra} Deeper)` : ""} until the end of their turn.</p>`
+      + notes.filter(Boolean).map(note => `<p class="dbu-respond-note">${Handlebars.escapeExpression(note)}</p>`).join("") });
+}
+
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
 export async function offerOutOfSequence(actor, offer) {
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
