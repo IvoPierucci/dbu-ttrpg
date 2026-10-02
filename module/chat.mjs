@@ -2830,6 +2830,7 @@ function onRenderChatMessage(message, html) {
   renderAdventuring(message, html);
   renderRegulated(message, html);
   renderCreate(message, html);
+  renderPendingRoll(message, html);
   renderUpkeep(message, html);
   renderBind(message, html);
   renderVolleyball(message, html);
@@ -3287,8 +3288,8 @@ export async function postGamble(actor, item) {
       actorUuid: actor.uuid, itemName: item.name, save, dc, note: item.system.consumeNote ?? "", applied: false
     } } }
   });
-  const total = await actor.sheet?.rollSaveAgainst?.(gamble.save, dc, { settles: { kind: "gamble", messageId: message.id } });
-  await settleGamble(message, message.getFlag(SCOPE, GAMBLE_FLAG), (typeof total === "number") && (total >= dc));
+  await cardRoll(message, { actorUuid: actor.uuid, type: "save", key: gamble.save, against: dc,
+    settles: { kind: "gamble", messageId: message.id } });
   return message;
 }
 
@@ -3504,9 +3505,8 @@ export async function postCook(actor, definition, { portions, cost, difficulty, 
     content: `<p>Cook: ${escape(definition.timeCost ?? "")}, ${cost} Ingredients (${escape(paid.join(", "))})</p>`,
     flags: { [SCOPE]: { [COOK_FLAG]: { actorUuid: actor.uuid, portions, applied: false } } }
   });
-  const total = await actor.sheet?.rollSkillAgainst?.("cooking", difficulty, { settles: { kind: "cook", messageId: message.id } });
-  const tn = DBUCharacterData.DIFFICULTIES[difficulty]?.tn ?? Infinity;
-  await settleCook(message, message.getFlag(SCOPE, COOK_FLAG), (typeof total === "number") && (total >= tn));
+  await cardRoll(message, { actorUuid: actor.uuid, type: "skill", key: "cooking", against: difficulty,
+    settles: { kind: "cook", messageId: message.id } });
   return message;
 }
 
@@ -4059,13 +4059,13 @@ export async function postCreate(actor, create) {
       + `${create.blueprint ? " (Blueprint)" : auto ? " (Auto-Succeed)" : ""}</p>`,
     flags: { [SCOPE]: { [CREATE_FLAG]: { actorUuid: actor.uuid, ...create, applied: false } } }
   });
-  let success = true;
-  if (!create.blueprint && !auto) {
-    const total = await actor.sheet?.rollSkillAgainst?.(create.skill, create.difficulty,
-      { minus: create.diceMinus, minusLabel: "One Category harder", settles: { kind: "create", messageId: message.id } });
-    success = (typeof total === "number") && (total >= (DBUCharacterData.DIFFICULTIES[create.difficulty]?.tn ?? Infinity));
+  // A Blueprint's and an Auto-Succeed's are made with no roll.
+  if (create.blueprint || auto) {
+    await settleCreate(message, message.getFlag(SCOPE, CREATE_FLAG), true);
+    return message;
   }
-  await settleCreate(message, message.getFlag(SCOPE, CREATE_FLAG), success);
+  await cardRoll(message, { actorUuid: actor.uuid, type: "skill", key: create.skill, against: create.difficulty,
+    minus: create.diceMinus, minusLabel: "One Category harder", settles: { kind: "create", messageId: message.id } });
   return message;
 }
 
@@ -4084,10 +4084,8 @@ export async function postMaterialize(actor, maneuver, plan) {
       + (plan.notes ?? []).map(note => `<p class="dbu-respond-note">${escape(note)}</p>`).join(""),
     flags: { [SCOPE]: { [MATERIALIZE_FLAG]: { actorUuid: actor.uuid, maneuverName: maneuver.name, ...plan, applied: false } } }
   });
-  const total = await actor.sheet?.rollSkillAgainst?.(plan.skill, plan.difficulty,
-    { minus: plan.diceMinus, minusLabel: "One Category harder", settles: { kind: "materialize", messageId: message.id } });
-  const tn = DBUCharacterData.DIFFICULTIES[plan.difficulty]?.tn ?? Infinity;
-  await settleMaterialize(message, message.getFlag(SCOPE, MATERIALIZE_FLAG), (typeof total === "number") && (total >= tn));
+  await cardRoll(message, { actorUuid: actor.uuid, type: "skill", key: plan.skill, against: plan.difficulty,
+    minus: plan.diceMinus, minusLabel: "One Category harder", settles: { kind: "materialize", messageId: message.id } });
   return message;
 }
 
@@ -4174,15 +4172,56 @@ async function unsettleMaterialize(made) {
  * A Check that settled something, changed afterwards - by its Critical Die or a Karmic Chance. Judged again against
  * its Difficulty; turned round, what it did is taken back and the other outcome given.
  */
+/** The cards that roll a Check and settle by it: their flag, and how each is unsettled and settled. */
+const CARD_SETTLERS = {
+  get materialize() { return [MATERIALIZE_FLAG, unsettleMaterialize, settleMaterialize]; },
+  get create() { return [CREATE_FLAG, unsettleCreate, settleCreate]; },
+  get cook() { return [COOK_FLAG, unsettleCook, settleCook]; },
+  get gamble() { return [GAMBLE_FLAG, unsettleGamble, settleGamble]; }
+};
+
+/** A card's Check its window was closed on: the Roll button it leaves, and what that rolls. */
+const PENDING_ROLL_FLAG = "pendingRoll";
+
+/**
+ * Roll a card's Check - a Skill against a Difficulty, or a Saving Throw against a DC - from its window, and settle the
+ * card by it. Closed without rolling, the card keeps a Roll button that opens the window again; nothing is settled
+ * until it is rolled. `roll`: { actorUuid, type: "skill"|"save", key, against (a Difficulty key, or the DC),
+ * minus, minusLabel, settles: { kind, messageId } }.
+ */
+async function cardRoll(message, roll) {
+  const actor = fromUuidSync(roll.actorUuid);
+  if (!actor?.sheet) return;
+  const total = (roll.type === "save")
+    ? await actor.sheet.rollSaveAgainst(roll.key, roll.against, { settles: roll.settles })
+    : await actor.sheet.rollSkillAgainst(roll.key, roll.against,
+      { minus: roll.minus ?? 0, minusLabel: roll.minusLabel ?? "", settles: roll.settles });
+  if (total === "closed") return message.setFlag(SCOPE, PENDING_ROLL_FLAG, roll);
+  if (message.getFlag(SCOPE, PENDING_ROLL_FLAG)) await message.unsetFlag(SCOPE, PENDING_ROLL_FLAG);
+  const tn = (roll.type === "save") ? Number(roll.against) : (DBUCharacterData.DIFFICULTIES[roll.against]?.tn ?? Infinity);
+  const [flag, , settle] = CARD_SETTLERS[roll.settles?.kind] ?? [];
+  if (!flag) return;
+  await settle(message, message.getFlag(SCOPE, flag), (typeof total === "number") && (total >= tn));
+}
+
+/** The Roll button of a card whose Check's window was closed. */
+function renderPendingRoll(message, html) {
+  const roll = message.getFlag(SCOPE, PENDING_ROLL_FLAG);
+  if (!roll) return;
+  const actor = fromUuidSync(roll.actorUuid);
+  if (!actor?.isOwner) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Roll";
+  button.addEventListener("click", () => cardRoll(message, roll));
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
 async function resettleCheck(settles, total, against) {
   if (!settles || !against) return;
   const message = game.messages.get(settles.messageId);
-  const [flag, unsettle, settle] = {
-    materialize: [MATERIALIZE_FLAG, unsettleMaterialize, settleMaterialize],
-    create: [CREATE_FLAG, unsettleCreate, settleCreate],
-    cook: [COOK_FLAG, unsettleCook, settleCook],
-    gamble: [GAMBLE_FLAG, unsettleGamble, settleGamble]
-  }[settles.kind] ?? [];
+  const [flag, unsettle, settle] = CARD_SETTLERS[settles.kind] ?? [];
   const made = flag ? message?.getFlag(SCOPE, flag) : null;
   // Tried again already: that Create is its own card now.
   if (!made?.done || made.done.retried) return;

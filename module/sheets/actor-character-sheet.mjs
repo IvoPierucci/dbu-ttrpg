@@ -5705,8 +5705,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * A Skill Check a rule rolls rather than the Skills list: no window, straight to its card, judged against the
-   * Difficulty given. What it came to - null for a willing failure, or a Required Skill with no Ranks.
+   * A Skill Check a rule rolls rather than the Skills list, from its window, judged against the Difficulty given. What
+   * it came to - null for a willing failure, or a Required Skill with no Ranks; "closed" when the window was closed
+   * without rolling, which leaves the card a Roll button of its own (chat.mjs cardRoll).
    */
   async rollSkillAgainst(key, difficulty, { minus = 0, minusLabel = "", settles = null } = {}) {
     const skill = this.actor.system.skills?.[key];
@@ -5716,6 +5717,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       return null;
     }
     const name = skill.specialization ? `${skill.label} (${skill.specialization})` : skill.label;
+    const against = DBUCharacterData.DIFFICULTIES[difficulty];
+    const ready = await prepareRoll(this.actor, [], `${name} Check`,
+      against ? `${Handlebars.escapeExpression(against.label)} (${against.tn})` : "", { formula: {
+        base: DBUCharacterData.BASE_DIE, parts: [
+          { label: name, value: skill.bonus, workings: workingsTable(this.actor.system, `skill.${key}.bonus`) },
+          { label: "Effects", value: skill.roll - skill.bonus,
+            workings: (skill.roll !== skill.bonus) ? workingsTable(this.actor.system, `skill.${key}`) : "" },
+          ...(minus ? [{ label: minusLabel, value: -minus }] : [])
+        ] } });
+    if (!ready) return "closed";
     const total = await this.#rollCheck({
       parts: [
         { label: name, value: skill.bonus },
@@ -5733,12 +5744,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * A Saving Throw a rule rolls - the Ultra Divine Water's - against a DC of its own: no window, straight to its
-   * card. What it came to, or null for a willing failure.
+   * A Saving Throw a rule rolls - the Ultra Divine Water's - against a DC of its own, from its window. What it came
+   * to, null for a willing failure, or "closed" when the window was closed without rolling.
    */
   async rollSaveAgainst(key, dc, { settles = null } = {}) {
     const save = this.actor.system.savingThrows?.[key];
     if (!save) return null;
+    const ready = await prepareRoll(this.actor, [], `${save.label} Saving Throw`, `DC ${dc}`, { formula: {
+      base: DBUCharacterData.BASE_DIE,
+      parts: [{ label: save.label, value: save.value, workings: workingsTable(this.actor.system, `save.${key}`) }] } });
+    if (!ready) return "closed";
     const total = await this.#rollCheck({
       parts: [{ label: save.label, value: save.value }],
       flavor: `${save.label} Saving Throw`,
