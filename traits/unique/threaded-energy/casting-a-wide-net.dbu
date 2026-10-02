@@ -1,0 +1,15 @@
+id: casting-a-wide-net
+name: Casting a Wide Net
+advancement: true
+prerequisite: Force or Magic Score of 12+
+tpCost: 7
+# "Increase the Magnitude of your Explosive Web to Destructive."
+sphereMagnitude: destructive
+source: Core Rule
+description: >
+  The Explosive Web a Destructive Sphere.
+text: >
+  Casting a Wide Net: Your energy web is even larger than usual.
+  –Prerequisites: Force or Magic Score of 12+
+  –TP Cost: 7
+  –Effect: Increase the Magnitude of your Explosive Web to Destructive.

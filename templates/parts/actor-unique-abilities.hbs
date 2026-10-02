@@ -79,6 +79,16 @@
                     data-tooltip="Instant: lose every Finisher and stop declaring it">Release</button>
           </div>
           {{/if}}
+          {{#if row.web}}
+          <div class="unique-resource">
+            <button type="button" class="dbu-clash-button" data-action="webStrike" data-item-id="{{row.itemId}}"
+                    data-tooltip="The token you target moved into or through it: a Simple (Energy) Basic Attack out of sequence - once each a Round">Strike</button>
+            {{#if row.web.save}}
+            <button type="button" class="dbu-clash-button" data-action="webSave" data-item-id="{{row.itemId}}"
+                    data-tooltip="Instant: a willing Ally on the web to any other Square of it">Web Save</button>
+            {{/if}}
+          </div>
+          {{/if}}
           {{#if row.blocks}}
           <div class="unique-resource">
             <label data-tooltip="The Signature Technique it answers - its name exactly as it is written">Technique

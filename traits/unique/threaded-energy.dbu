@@ -1,0 +1,42 @@
+id: threaded-energy
+name: Threaded Energy
+uaType: technical
+prerequisite: Energy Web Advancement
+tpCost: 12
+type: standard
+actionCost: 1
+kiCostPerTier: 6
+# "The Squares within a Large Sphere AoE (centered on you) become your Explosive Web" - applied, the Sphere said; which
+# Squares, the table's. "You cannot use this Unique Ability while you possess an Explosive Web, and must pay the Ki Point
+# Cost of this Unique Ability at the start of each of your turns or remove your Explosive Web. You may remove your
+# Explosive Web as an Instant Maneuver" - sustained at its own KP, its row's Applied an Instant. "If an Opponent moves into
+# or through these Squares, you may use the Basic Attack Maneuver against them as an Out-of-Sequence Maneuver ... Simple
+# Profile (Energy Foundation). You can only target each Opponent with this effect once per Combat Round" - its body's
+# Strike button at the token targeted (chat.mjs webStrike).
+explosiveWeb: true
+sustained: true
+instantRelease: true
+sphereMagnitude: large
+source: Core Rule
+description: >
+  A Large Sphere of Explosive Web around you, kept at its KP each turn: an Opponent moving into or through it takes a
+  Simple (Energy) Basic Attack out of sequence, once each a Round.
+text: >
+  Threaded Energy: You can create a minefield of energy, attacking anyone within the range of energy you created.
+  –Ability Type: Technical
+  –Prerequisites: Energy Web Advancement
+  –TP Cost: 12
+  –KP Cost: 6(T)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: The Squares within a Large Sphere AoE (centered on you) become your Explosive Web. If an Opponent moves into or
+  through these Squares, you may use the Basic Attack Maneuver against them as an Out-of-Sequence Maneuver, but the
+  Attacking Maneuver must be of the Simple Profile (Energy Foundation).
+
+  You can only target each Opponent with this effect once per Combat Round.
+
+  You cannot use this Unique Ability while you possess an Explosive Web, and must pay the Ki Point Cost of this Unique
+  Ability at the start of each of your turns or remove your Explosive Web. You may remove your Explosive Web as an Instant
+  Maneuver.

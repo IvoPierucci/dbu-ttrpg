@@ -11189,6 +11189,42 @@ function telepathyBonus(actor) {
   return near ? [{ label: "Telepathy", written: "+1(bT)", value: Math.max(1, Number(actor.system.baseTierOfPower) || 1) }] : [];
 }
 
+/**
+ * Threaded Energy's Explosive Web: "If an Opponent moves into or through these Squares, you may use the Basic Attack
+ * Maneuver against them as an Out-of-Sequence Maneuver, but the Attacking Maneuver must be of the Simple Profile (Energy
+ * Foundation). You can only target each Opponent with this effect once per Combat Round." At the token targeted - that
+ * they moved through it, the table's.
+ */
+export async function webStrike(actor, item) {
+  if (!item?.system?.unique?.applied) return;
+  const target = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
+  if (!target) return ui.notifications.warn("Target who moved through the Explosive Web first.");
+  const mark = `round:web.${target.uuid}`;
+  if ((actor.system.usedManeuvers ?? []).includes(mark)) {
+    return ui.notifications.warn(`${target.name} has met the Explosive Web already this Combat Round.`);
+  }
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    targetUuid: target.uuid, reason: `${item.name} - the Explosive Web`,
+    grants: { profile: "simple", profileFoundation: { simple: "energy" } } };
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
+  const made = await takeOutOfSequence(card, actor, offer);
+  if (made) await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), mark] });
+  return made;
+}
+
+/** Web Save: "As an Instant Maneuver, if a willing Ally is in the AoE of your Explosive Web, you may move them" - the table moves them. */
+export async function webSave(actor, item) {
+  const { whyNotAnotherInstant, recordManeuverType } = await import("./maneuvers.mjs");
+  const blocked = whyNotAnotherInstant(actor);
+  if (blocked) return ui.notifications.warn(`${actor.name}: ${blocked}`);
+  const ally = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
+  await recordManeuverType(actor, "instant");
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">Web Save: ${Handlebars.escapeExpression(ally?.name ?? "a willing Ally")} moves to `
+      + "any other Square of the Explosive Web.</div>" });
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -11774,6 +11810,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (!maneuver) return;
   // A Profile the offer names - Volleyball Time!'s "Basic Attack Maneuver of the Launching Profile".
   if (offer.grants?.profile) maneuver = { ...maneuver, profile: offer.grants.profile };
+  // And its Foundation - Threaded Energy's "Simple Profile (Energy Foundation)".
+  if (offer.grants?.profileFoundation) maneuver = { ...maneuver, profileFoundation: offer.grants.profileFoundation };
 
   // "You cannot use any Special Maneuvers until you have gained access to them." Asked
   // here as well as at the sheet's door, because being handed a chance to use one is not

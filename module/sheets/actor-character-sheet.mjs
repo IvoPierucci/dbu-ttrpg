@@ -395,6 +395,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       destroyMoon: DBUCharacterSheet._onDestroyMoon,
       dismissPortals: DBUCharacterSheet._onDismissPortals,
       explodeGhost: DBUCharacterSheet._onExplodeGhost,
+      webStrike: DBUCharacterSheet._onWebStrike,
+      webSave: DBUCharacterSheet._onWebSave,
       ghostGone: DBUCharacterSheet._onGhostGone,
       throughPortal: DBUCharacterSheet._onThroughPortal,
       releaseFinish: DBUCharacterSheet._onReleaseFinish,
@@ -1745,6 +1747,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Finish Sign: the Signature Technique declared, released as an Instant from here.
         finish: (unique.finishSign && unique.finishTechnique)
           ? { technique: this.actor.items.get(unique.finishTechnique)?.name ?? "" } : null,
+        // Threaded Energy, applied: its Explosive Web's strike, and Web Save's Instant.
+        web: (unique.explosiveWeb && unique.applied) ? { save: boughtTraits(unique, getTrait).some(trait => trait.webSave === true) } : null,
         // Technique Block: the Signature Technique it answers, written as it is named.
         blocks: unique.techniqueBlock ? { name: unique.blockedName ?? "" } : null,
         // Super Ghost Kamikaze Attack: the Ghosts standing, each to Explode from here.
@@ -1920,6 +1924,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Fake Moon: the False Moon destroyed - "you apply the effects as if it disappeared". */
+  /** Threaded Energy: an Opponent through the Explosive Web - its Basic Attack, out of sequence. */
+  static async _onWebStrike(event, target) {
+    const { webStrike } = await import("../chat.mjs");
+    return webStrike(this.actor, this.actor.items.get(target.dataset.itemId));
+  }
+
+  /** Web Save: a willing Ally moved along the web, as an Instant. */
+  static async _onWebSave(event, target) {
+    const { webSave } = await import("../chat.mjs");
+    return webSave(this.actor, this.actor.items.get(target.dataset.itemId));
+  }
+
   /** A Kamikaze Ghost goes off: its Basic Attack, out of sequence, and it is Defeated. */
   static async _onExplodeGhost(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);

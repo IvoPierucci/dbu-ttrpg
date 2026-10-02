@@ -1,0 +1,16 @@
+id: web-save
+name: Web Save
+advancement: true
+prerequisite: N/A
+tpCost: 6
+# An Instant from the body, the Ally moved by the table.
+webSave: true
+source: Core Rule
+description: >
+  An Instant: a willing Ally on your Explosive Web moved to any other Square of it.
+text: >
+  Web Save: You may move your allies freely along your energy web.
+  –Prerequisites: N/A
+  –TP Cost: 6
+  –Effect: As an Instant Maneuver, if a willing Ally is in the AoE of your Explosive Web, you may move them to any other
+  Square on your Explosive Web.

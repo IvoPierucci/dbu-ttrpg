@@ -2484,6 +2484,9 @@ async function askSustain(actor, maneuver) {
   const { boughtTraits } = await import("./unique.mjs");
   const bought = boughtTraits(unique, getTrait);
   const label = key => key.charAt(0).toUpperCase() + key.slice(1);
+  // An Advancement's Sphere in place of its own - Casting a Wide Net's Destructive.
+  const grown = bought.find(trait => trait.sphereMagnitude)?.sphereMagnitude;
+  if (grown && !bought.some(trait => trait.variableMagnitude === true)) return { extraKi: 0, area: label(String(grown)) };
   // Bound Battlefield's Destructive Sphere - and, with Variable Battlefield, "any Magnitude between Standard and
   // Destructive", asked.
   const named = String(unique.sphereMagnitude ?? "");
