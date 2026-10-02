@@ -6146,6 +6146,12 @@ async function respondDialog(message, respondable) {
       ownCounters.push({ ...uniqueDefinitionOf(item), id: `judo:${item.id}`, judo: true,
         source: `Unique Ability - ${maneuverKiCost(uniqueDefinitionOf(item), null, actor)} KP` });
     }
+    // Stardust Barrier: "If you are targeted by an Opponent's Energy or Magic Attack" - its KP with this attack's Charges.
+    for (const item of actor.items ?? []) {
+      if ((item.type !== "maneuver") || !item.system.unique?.stardust) continue;
+      ownCounters.push({ ...uniqueDefinitionOf(item), id: `stardust:${item.id}`, stardust: true,
+        source: `Unique Ability - ${stardustKi(actor, item, attack)} KP` });
+    }
     // Copy Clone with Mirrored Attack: "you may use the effects of Copy Clone as a Counter Maneuver with an Action Cost
     // of 1 Counter Action" - a Duplicate of the attacker that Duels them.
     for (const item of actor.items ?? []) {
@@ -6172,6 +6178,12 @@ async function respondDialog(message, respondable) {
         reason = attack?.duel ? "a Duel is already on this attack"
           : whyNotDuel(actor, attack, { counterLeft: game.combat?.started ? actionsWithin(actor, "counter") : 1 });
         blocked = Boolean(reason);
+      }
+
+      // Stardust Barrier: an Energy or Magic Attack.
+      if (maneuver.stardust && unresolved && !waiting && !["energy", "magic"].includes(attack?.foundation)) {
+        reason = "only against an Energy or Magic Attack";
+        blocked = true;
       }
 
       // Judo Toss: a Physical Attack, from within your Melee Range.
@@ -6554,6 +6566,8 @@ async function playCounter(message, actor, answer, attack) {
   if (String(answer).startsWith("mirror:")) return playMirror(message, actor, String(answer).slice(7));
   // Judo Toss.
   if (String(answer).startsWith("judo:")) return playJudo(message, actor, String(answer).slice(5));
+  // Stardust Barrier.
+  if (String(answer).startsWith("stardust:")) return playStardust(message, actor, String(answer).slice(9));
 
   const maneuver = getManeuver(answer);
   if (!maneuver) return;
@@ -9249,6 +9263,39 @@ async function playJudo(message, actor, itemId) {
     defences: [...others, { uuid: actor.uuid, defence: "judoToss", wager: 0, foundation: "energy", parryWith: [],
       judo: { itemId } }],
     ready: [...new Set([...(attack.ready ?? []), actor.uuid])]
+  });
+}
+
+/** Stardust Barrier's KP against this attack: its 2(bT), "increase the Ki Point cost ... by 1(bT)" for each Energy Charge or rank of Power Shot. */
+function stardustKi(actor, item, attack) {
+  const count = (Number(attack?.energyCharges) || 0) + (Number(attack?.powerShotRanks) || 0);
+  return maneuverKiCost(uniqueDefinitionOf(item), null, actor) + count * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+}
+
+/** Stardust Barrier, played from Respond: its KP and Counter Action paid, and this attack answered with Strike. */
+async function playStardust(message, actor, itemId) {
+  const item = actor.items?.get(itemId);
+  if (!item?.system?.unique?.stardust) return;
+  const maneuver = uniqueDefinitionOf(item);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) {
+    ui.notifications.warn(`${item.name} is once per Combat Round.`);
+    return;
+  }
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || endedByDuel(attack)) return;
+  if (!await spendManeuverCost(actor, maneuver, stardustKi(actor, item, attack))) return;
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+    await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const others = (fresh.defences ?? []).filter(entry => entry.uuid !== actor.uuid);
+  return settleAttack(message, {
+    ...fresh,
+    defences: [...others, { uuid: actor.uuid, defence: "stardust", wager: 0, foundation: "energy", parryWith: [] }],
+    ready: [...new Set([...(fresh.ready ?? []), actor.uuid])]
   });
 }
 
@@ -13493,10 +13540,13 @@ async function resolveAttack(message, attack) {
   // and there is nothing in your hands to throw.
   for (const { uuid, actor: target } of targets) {
     const own = branches.find(entry => entry.uuid === uuid);
-    if ((own?.defense !== "parry") || own.hit) continue;
-    offerReflect(message, attack, target, "Reflect - your Parry turned it aside");
+    if (!["parry", "stardust"].includes(own?.defense) || own.hit) continue;
+    offerReflect(message, attack, target, (own.defense === "stardust")
+      ? "Reflect - your Stardust Barrier turned it aside" : "Reflect - your Parry turned it aside");
     // The other thing that can be done with a caught attack, from the same moment. Both
     // are offered and one may be taken, which is the whole of the exclusion between them.
+    // Attack Absorption names the Parry alone.
+    if (own.defense !== "parry") continue;
     offerAbsorb(message, attack, target, "Attack Absorption - your Parry turned it aside");
   }
 }
@@ -15141,6 +15191,21 @@ const DEFENCES = {
   // Counter's: the whole Defense Value, and a Signature Technique to strike back with.
   // Judo Toss: "your Physical Strike Roll instead of your Dodge Roll against that Attacking Maneuver's Strike Roll" -
   // a Strike, so no Diminishing Defense on it or from it.
+  // Stardust Barrier: "your Physical or Energy Strike Roll instead of your Dodge Roll against that Attacking Maneuver's
+  // Strike Roll" - and won, avoided, Reflect offered as for a Parry.
+  stardust: {
+    label: "Stardust Barrier",
+    parts: (actor, attack) => [
+      { label: "Strike", value: actor.system.combat.strike },
+      ...musclePenalty(actor),
+      ...thresholdPenalty(actor),
+      ...openedAgainst(actor)
+    ],
+    answer: (actor, options, attack) => rollSide(actor, DEFENCES.stardust.parts(actor, attack), { ...options, slot: "strike" }),
+    soak: (soak) => soak,
+    wound: (total) => total
+  },
+
   judoToss: {
     label: "Judo Toss",
     parts: (actor, attack) => [

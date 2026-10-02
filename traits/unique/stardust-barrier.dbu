@@ -1,0 +1,34 @@
+id: stardust-barrier
+name: Stardust Barrier
+uaType: technical
+prerequisite: Insight Score of 4+, Force Score of 8+
+tpCost: 15
+type: counter
+actionCost: 1
+kiCostPerBaseTier: 2
+# Answered from Respond, as Judo Toss is: "If you are targeted by an Opponent's Energy or Magic Attack, you may use your
+# Physical or Energy Strike Roll instead of your Dodge Roll" (DEFENCES.stardust - one Strike in this system, whichever it
+# is called); "For every Energy Charge or rank of Power Shot applied to that Attacking Maneuver, increase the Ki Point cost
+# of this Maneuver by 1(bT)" (stardustKi). Won: avoided, and Reflect offered as a Parry's is.
+stardust: true
+source: Core Rule
+description: >
+  A Counter against an Energy or Magic Attack: your Strike instead of your Dodge, 1(bT) more KP for each Energy Charge or
+  rank of Power Shot on it; won, avoided, and Reflect as after a Parry.
+text: >
+  Stardust Barrier: You redirect an enemy’s attack away from you with the energy you project, protecting yourself from
+  harm.
+  –Ability Type: Technical
+  –Prerequisites: Insight Score of 4+, Force Score of 8+
+  –TP Cost: 15
+  –KP Cost: 2(bT)
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –Minions: Free
+  –Passive Bonus: N/A
+  –Effect: If you are targeted by an Opponent’s Energy or Magic Attack, you may use your Physical or Energy Strike Roll
+  instead of your Dodge Roll against that Attacking Maneuver’s Strike Roll. For every Energy Charge or rank of Power Shot
+  applied to that Attacking Maneuver, increase the Ki Point cost of this Maneuver by 1(bT).
+
+  If you win, you successfully avoid the Attacking Maneuver and may use the Reflect Modifier Maneuver as if this Maneuver
+  was the Parry Maneuver.
