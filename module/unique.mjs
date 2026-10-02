@@ -122,7 +122,7 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
     "requiresTarget", "usageLimit", "source", "text", "script", "clashSkill", "clashDefenderSkills", "clashSaves", "clashDefenderSaves",
     "togglesState", "exploitable"]) system[key] = fresh[key];
   system.tags = [...new Set([...(system.tags ?? []), ...fresh.tags])];
-  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepHalf", "fakesDeath", "fakeMoon", "moonRounds", "finishSign", "floods", "meteor", "requiresState", "heals", "selfShock", "illusion", "smashes", "debilitates", "judoToss", "upkeepKiPerBaseTier", "avatarSize", "lullaby", "enhances", "mindControl", "mindReading", "multiForm", "paraPara", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "downBurst", "gathers", "shiftsEnvironment", "kiPerAction", "explodes", "waves", "barrier", "binds", "bluffs", "evade"]) {
+  for (const key of ["uaType", "tpCost", "prerequisite", "materialize", "precognition", "sustained", "upkeepHalf", "fakesDeath", "fakeMoon", "moonRounds", "finishSign", "floods", "meteor", "requiresState", "heals", "selfShock", "illusion", "smashes", "debilitates", "judoToss", "upkeepKiPerBaseTier", "avatarSize", "lullaby", "enhances", "mindControl", "mindReading", "multiForm", "paraPara", "petrifies", "upkeepKiPerTier", "sphereMagnitude", "spendsAllActions", "upkeepAllActions", "instantRelease", "cage", "keepsPools", "cyclone", "upkeepActions", "pullsAtEnd", "dodgesExploits", "devilmite", "dashes", "downBurst", "gathers", "shiftsEnvironment", "kiPerAction", "explodes", "waves", "barrier", "binds", "bluffs", "evade"]) {
     unique[key] = fresh.unique[key];
   }
   const merge = (stored, files, kept, held) => {
@@ -138,6 +138,11 @@ export function withLibrary(system, { getTrait, traitsOfKind } = {}) {
   // What its bought Advancements do to its Ki Point Cost - Efficient Barrier's "by 2(T)" (maneuverKiCost).
   unique.kiCostPerTierChange = boughtTraits(unique, getTrait)
     .reduce((sum, trait) => sum + (Number(trait.kiCostPerTierChange) || 0), 0);
+  // And to its uses: Petrification Barrage's "an additional time per each Combat Round", once for each time bought.
+  const extraUses = boughtTraits(unique, getTrait).reduce((sum, trait) => sum + (Number(trait.extraUses) || 0), 0);
+  if (extraUses) {
+    system.usageLimit = String(system.usageLimit ?? "").replace(/^(\d+)/, held => String(Number(held) + extraUses));
+  }
   return true;
 }
 
@@ -212,6 +217,7 @@ export function uniqueItemFrom(definition, children = [], { chosenType = "", app
         mindReading: definition.mindReading === true,
         multiForm: definition.multiForm === true,
         paraPara: definition.paraPara === true,
+        petrifies: definition.petrifies === true,
         requiresState: String(definition.requiresState ?? ""),
         moonRounds: number(definition.moonRounds),
         upkeepKiPerTier: number(definition.upkeepKiPerTier),

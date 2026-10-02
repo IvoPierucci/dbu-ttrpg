@@ -8,7 +8,7 @@ import { reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { actionsLeft, actionsWithin, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
-import { activeBuddy, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
+import { activeBuddy, apparelQualitiesInEffect, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
   recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
@@ -200,6 +200,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, ILLUSION_FLAG, request.illusion);
     case "paraPara": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PARA_FLAG, request.para);
+    case "petrify": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, PETRIFY_FLAG, request.petrify);
     case "armsHit": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
@@ -568,6 +570,10 @@ async function applyClash(messageId, clash) {
 
   if (clash.snare && clash.result && !clash.snare.applied) {
     await settleSnare(message, clash);
+  }
+
+  if (clash.petrify && clash.result && !clash.petrify.applied) {
+    await settlePetrify(message, clash);
   }
 
   if (clash.bind && clash.result && !clash.bind.applied) {
@@ -2896,6 +2902,7 @@ function onRenderChatMessage(message, html) {
   renderIllusion(message, html);
   renderDebilitated(message, html);
   renderParaPara(message, html);
+  renderPetrify(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -9529,6 +9536,154 @@ export async function paraParaTurnStart(actor) {
   if (taken) await spendActions(actor, taken, "standard");
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)} loses ${taken} Action${(taken === 1) ? "" : "s"} - Para Para Dance.</div>` });
+}
+
+/** Petrification's cards: the second Clash offered to its user, then the shedding offered to its target. */
+const PETRIFY_FLAG = "petrify";
+
+/** Petrification, used: "Make a Clash (Strike vs Strike/Dodge) against that Opponent." */
+export async function postPetrification(actor, maneuver, target) {
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: "",
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [CLASH_FLAG]: {
+      category: "strike",
+      clashLabel: "Clash (Strike vs Strike/Dodge)",
+      maneuverName: maneuver.name,
+      reason: `Win and ${target.name} is Guard Down until the end of this turn.`,
+      challengerUuid: actor.uuid,
+      challengerName: actor.name,
+      defenderUuid: target.uuid,
+      defenderName: target.name,
+      defenderRoll: "",
+      petrify: { stage: "strike", applied: false },
+      ready: [],
+      result: null
+    } } }
+  });
+}
+
+/**
+ * Its Clashes, settled. The first won: "they gain the Guard Down Combat Condition until the end of the current turn" -
+ * on the clock of whoever's turn it is - and "Then, you may make a Clash (Cognitive vs Cognitive/Corporeal/Impulsive)",
+ * a button for its user. The second won: "a stack of the Slowed Combat Condition until the end of the Combat Encounter",
+ * ended too by its user's Defeat (petrifierDefeated); and a card for the target to shed it.
+ */
+async function settlePetrify(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, petrify: { ...clash.petrify, applied: true } });
+  const caster = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!caster || !target || (whoWonClash(clash.result) !== "challenger")) return;
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  const { lasting, EDGES, KINDS } = await import("./durations.mjs");
+  if (clash.petrify.stage === "strike") {
+    const before = Number(target.system.conditions?.["guard-down"]) || 0;
+    if ((await gainCondition(target, "guard-down", 1) !== false) && !before) {
+      await lasting(game.combat?.combatant?.actor ?? caster, { kind: KINDS.CONDITION, key: "guard-down",
+        edge: EDGES.END, on: target.uuid, source: clash.maneuverName });
+    }
+    return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: caster }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(target.name)} is Guard Down until the end of this turn.</div>`,
+      flags: { [SCOPE]: { [PETRIFY_FLAG]: { stage: "offer", casterUuid: caster.uuid, targetUuid: target.uuid,
+        name: clash.maneuverName, used: false } } } });
+  }
+  const before = Number(target.system.conditions?.slowed) || 0;
+  if (await gainCondition(target, "slowed", 1) === false) return;
+  if (before < 3) {
+    await lasting(target, { kind: KINDS.CONDITION, key: "slowed", edge: EDGES.ENCOUNTER,
+      until: `petrified:${caster.uuid}`, source: clash.maneuverName });
+  }
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(target.name)} turns to stone: a stack of Slowed until the end of the Combat Encounter.</div>`,
+    flags: { [SCOPE]: { [PETRIFY_FLAG]: { stage: "shed", casterUuid: caster.uuid, targetUuid: target.uuid,
+      name: clash.maneuverName } } } });
+}
+
+/** The stacks of Slowed a Petrification user put on this character, still on its clock. */
+function petrifiedStacks(target, casterUuid) {
+  return (target?.system?.timed ?? []).filter(entry => (entry.until === `petrified:${casterUuid}`)
+    && (entry.key === "slowed") && ((entry.on || target.uuid) === target.uuid));
+}
+
+/** Its buttons: the second Clash, its user's; shedding a stack, its target's. */
+function renderPetrify(message, html) {
+  const petrify = message.getFlag(SCOPE, PETRIFY_FLAG);
+  if (!petrify) return;
+  const container = html.querySelector(".message-content") ?? html;
+  const caster = fromUuidSync(petrify.casterUuid);
+  const target = fromUuidSync(petrify.targetUuid);
+  if (!caster || !target) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  if (petrify.stage === "offer") {
+    if (petrify.used || !caster.isOwner) return;
+    button.textContent = "Petrify";
+    button.dataset.tooltip = "Clash (Cognitive vs Cognitive/Corporeal/Impulsive): win and they gain a stack of Slowed until the end of the Combat Encounter";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      requestEdit(message, { type: "petrify", petrify: { ...petrify, used: true } });
+      await postSaveClash(caster, target, {
+        maneuverName: petrify.name,
+        reason: `Win and ${target.name} gains a stack of Slowed until the end of the Combat Encounter.`,
+        saves: ["cognitive"],
+        defenderSaves: ["cognitive", "corporeal", "impulsive"],
+        petrify: { stage: "save", applied: false }
+      });
+    });
+  } else {
+    if (!target.isOwner || !petrifiedStacks(target, caster.uuid).length) return;
+    button.textContent = "Shed";
+    button.dataset.tooltip = "Drop a wielded Weapon or take off a piece of Apparel - it crumbles to dust and is destroyed - and lose a stack of this Slowed";
+    button.addEventListener("click", () => shedPetrification(target, caster));
+  }
+  container.append(button);
+}
+
+/**
+ * "They can remove a stack of this Combat Condition by dropping a carried Weapon or removing a layer of Apparel. Whatever
+ * is dropped crumbles to dust and is destroyed."
+ */
+async function shedPetrification(target, caster) {
+  const stacks = petrifiedStacks(target, caster.uuid);
+  if (!stacks.length) return;
+  const items = Array.from(target.items ?? []);
+  const pieces = [...wieldedWeapons(items), ...apparelQualitiesInEffect(items).map(({ item }) => item)];
+  if (!pieces.length) return ui.notifications.warn(`${target.name} has no Weapon or Apparel to drop.`);
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: "Shed" },
+    content: "<p>It crumbles to dust and is destroyed.</p>",
+    buttons: [...pieces.map(item => ({ action: item.id, label: item.name })), { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  const item = (chosen && (chosen !== "cancel")) ? target.items.get(chosen) : null;
+  if (!item) return;
+  await item.update({ "system.crafted.destroyed": true, "system.equipped": false, "system.layer": "" });
+  const held = target.system.timed ?? [];
+  const gone = stacks[0];
+  await target.update({ "system.timed": held.filter(entry => entry !== gone) });
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "slowed", Math.max(0, (Number(target.system.conditions?.slowed) || 0) - 1));
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)} crumbles to dust: a stack of Slowed gone.</div>` });
+}
+
+/**
+ * "If the user of this Unique Ability is Defeated, all Characters suffering from the Slowed Combat Condition due to this
+ * character's uses of Petrification stop suffering from those stack(s)."
+ */
+export async function petrifierDefeated(actor) {
+  if (!actor) return;
+  const { setCondition } = await import("./conditions.mjs");
+  const scene = (canvas?.tokens?.placeables ?? []).map(token => token.actor).filter(Boolean);
+  for (const other of new Map(scene.map(entry => [entry.uuid, entry])).values()) {
+    const done = petrifiedStacks(other, actor.uuid);
+    if (!done.length) continue;
+    const held = Number(other.system.conditions?.slowed) || 0;
+    await requestActorUpdate(other, { "system.timed": (other.system.timed ?? []).filter(entry => !done.includes(entry)) });
+    await setCondition(other, "slowed", Math.max(0, held - done.length));
+  }
 }
 
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */
@@ -16262,6 +16417,7 @@ async function settleDefeat(message, card) {
 
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   await fireMoment(actor, "defeat-resolved");
+  await petrifierDefeated(actor);
 
   requestEdit(message, {
     type: "moment",

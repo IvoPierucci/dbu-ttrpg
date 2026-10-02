@@ -1,0 +1,39 @@
+id: petrification
+name: Petrification
+uaType: magical
+prerequisite: Magic Score of 8+
+tpCost: 20
+type: standard
+actionCost: 1
+kiCostPerTier: 10
+requiresTarget: true
+# "Target an Opponent who is not at Long Range" - refused before it is paid. "Make a Clash (Strike vs Strike/Dodge)";
+# won, Guard Down to the end of the current turn, and a button for the second Clash, "you may" - (Cognitive vs
+# Cognitive/Corporeal/Impulsive); won, a stack of Slowed to the end of the Combat Encounter, shed from the target's own
+# card by destroying a wielded Weapon or a worn piece of Apparel, and gone if its user is Defeated (chat.mjs
+# postPetrification).
+petrifies: true
+source: Core Rule
+description: >
+  A Strike Clash at an Opponent not at Long Range: won, Guard Down this turn, and you may Clash (Cognitive vs
+  Cognitive/Corporeal/Impulsive) - won, a stack of Slowed for the Encounter, shed by losing a Weapon or a piece of
+  Apparel to dust; gone if you are Defeated.
+text: >
+  Petrification: You possess the capability of turning your opponents into inanimate objects, preventing them from
+  fighting.
+  –Ability Type: Magical
+  –Prerequisites: Magic Score of 8+
+  –TP Cost: 20
+  –KP Cost: 10(T)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target an Opponent who is not at Long Range. Make a Clash (Strike vs Strike/Dodge) against that Opponent. If
+  you win, they gain the Guard Down Combat Condition until the end of the current turn. Then, you may make a Clash
+  (Cognitive vs Cognitive/Corporeal/Impulsive) against them. If you win this second Clash, they gain a stack of the
+  Slowed Combat Condition until the end of the Combat Encounter. They can remove a stack of this Combat Condition by
+  dropping a carried Weapon or removing a layer of Apparel. Whatever is dropped crumbles to dust and is destroyed.
+
+  If the user of this Unique Ability is Defeated, all Characters suffering from the Slowed Combat Condition due to this
+  character’s uses of Petrification stop suffering from those stack(s) of this Combat Condition.

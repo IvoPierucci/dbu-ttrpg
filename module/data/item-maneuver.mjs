@@ -664,6 +664,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         multiForm: new fields.BooleanField({ required: true, initial: false }),
         /** A dance that provokes Exploits, then Clashes for Actions - Para Para Dance's (chat.mjs postParaPara). */
         paraPara: new fields.BooleanField({ required: true, initial: false }),
+        /** A Strike Clash, then a Saving Throw Clash for Slowed - Petrification's (chat.mjs postPetrification). */
+        petrifies: new fields.BooleanField({ required: true, initial: false }),
         /** How many Duplicate Minions it has made that stand. */
         duplicates: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         /** A State it may only be used in - God Meteor's God Ki. */

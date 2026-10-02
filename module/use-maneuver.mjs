@@ -1872,6 +1872,7 @@ export function definitionOf(item) {
     mindReading: item.system.unique?.mindReading === true,
     multiForm: item.system.unique?.multiForm === true,
     paraPara: item.system.unique?.paraPara === true,
+    petrifies: item.system.unique?.petrifies === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -4124,6 +4125,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
       }
     }
 
+    // Petrification: "Target an Opponent who is not at Long Range."
+    if (maneuver.petrifies && targetActor && atLongRange(actor, targetActor)) {
+      ui.notifications.warn(`${targetActor.name} is at Long Range.`);
+      return false;
+    }
+
     // Mind Control: "If you lose, you can't target this Character again ... for the rest of the Combat Encounter."
     if (maneuver.mindControl && targetActor
       && (actor.system.usedManeuvers ?? []).includes(`encounter:mind-control.${targetActor.uuid}`)) {
@@ -4724,6 +4731,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await (await import("./chat.mjs")).postMindControl(actor, maneuver, targetActor)
     : maneuver.paraPara
     ? await (await import("./chat.mjs")).postParaPara(actor, maneuver, actionsSpent)
+    : (maneuver.petrifies && targetActor)
+    ? await (await import("./chat.mjs")).postPetrification(actor, maneuver, targetActor)
     : (maneuver.multiForm && forming)
     ? await (await import("./chat.mjs")).postMultiForm(actor, maneuver, forming)
     : (maneuver.enhances && enhancing)

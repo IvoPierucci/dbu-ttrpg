@@ -880,6 +880,9 @@ export async function beginDefeat(actor, { silenced = false } = {}) {
 
     if (!pending) {
       await fireMoment(actor, "defeat-resolved");
+      // Petrification's Slowed, from this character's uses of it, gone with their Defeat.
+      const { petrifierDefeated } = await import("./chat.mjs");
+      await petrifierDefeated(actor);
     }
 
     await announce("defeated", {

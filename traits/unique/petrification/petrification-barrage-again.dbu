@@ -1,0 +1,16 @@
+id: petrification-barrage-again
+name: Petrification Barrage (Second)
+advancement: true
+prerequisite: Tier of Power 4+, Petrification Barrage
+tpCost: 10
+# "You can gain this Advancement twice" - its second time, another use more.
+extraUses: 1
+source: Core Rule
+description: >
+  Petrification Barrage gained a second time: once more again each Combat Round.
+text: >
+  Petrification Barrage: You are capable of petrifying others more quickly.
+  –Prerequisites: Tier of Power 4+
+  –TP Cost: 10
+  –Effect: You may use this Unique Ability an additional time per each Combat Round. You can gain this Advancement
+  twice.

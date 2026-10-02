@@ -1,0 +1,15 @@
+id: practiced-petrification
+name: Practiced Petrification
+advancement: true
+prerequisite: Tier of Power 4+, Magic Score of 12+
+tpCost: 10
+# "Reduce the Ki Point Cost of Petrification by 2(T)."
+kiCostPerTierChange: -2
+source: Core Rule
+description: >
+  Petrification's KP Cost 2(T) lower.
+text: >
+  Practiced Petrification: You have gotten extremely efficient with your attempts to petrify others.
+  –Prerequisites: Tier of Power 4+, Magic Score of 12+
+  –TP Cost: 10
+  –Effect: Reduce the Ki Point Cost of Petrification by 2(T).
