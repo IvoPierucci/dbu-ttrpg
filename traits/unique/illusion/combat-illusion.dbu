@@ -1,0 +1,18 @@
+id: combat-illusion
+name: Combat Illusion
+advancement: true
+prerequisite: 4+ Bluff Skill Ranks
+tpCost: 6
+# "Any Opponent who loses the Clash for the effects of Illusion also gains the Guard Down Combat Condition for the
+# duration of its effects" - beside the 1d4's, until the end of your next turn.
+illusionGuardDown: true
+source: Core Rule
+description: >
+  Every Opponent who loses Illusion's Clash is also Guard Down for as long.
+text: >
+  Combat Illusion: Your illusions are incredibly realistic and your opponent is easily duped by them making any kind of
+  aggressive motion!
+  –Prerequisites: 4+ Bluff Skill Ranks
+  –TP Cost: 6
+  –Effect: Any Opponent who loses the Clash for the effects of Illusion also gains the Guard Down Combat Condition for
+  the duration of its effects.

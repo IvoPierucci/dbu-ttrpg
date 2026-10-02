@@ -1862,6 +1862,7 @@ export function definitionOf(item) {
     meteor: item.system.unique?.meteor === true,
     heals: item.system.unique?.heals === true,
     selfShock: item.system.unique?.selfShock === true,
+    illusion: item.system.unique?.illusion === true,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
     spendsAllActions: item.system.unique?.spendsAllActions === true,
@@ -2675,6 +2676,54 @@ async function askHeal(actor, maneuver) {
 
   return { uuids, dice: [dice, moreDice].filter(Boolean).join(" + "), modifier,
     mightKi: chosen.might ? mightKi : 0, desperateKi, desperateFor, patch: chosen.patch };
+}
+
+/**
+ * Illusion: "Target a Square within 8 Squares of you. Create a Sphere AoE centered on that Square" - Destructive with
+ * Expanded Illusion, on you with Close Range Illusions - who is inside it, ticked, and which of Use Magic or Bluff is
+ * rolled. Null if it was dropped.
+ */
+async function askIllusion(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  const { boughtTraits, appliedTraits } = await import("./unique.mjs");
+  const magnitude = boughtTraits(unique, getTrait).find(trait => trait.illusionMagnitude)?.illusionMagnitude
+    ?? getTrait(unique.libraryId)?.illusionMagnitude ?? "standard";
+  const onSelf = appliedTraits(unique, getTrait).some(trait => trait.illusionOnSelf);
+  const pool = game.combat?.started
+    ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
+    : Array.from(game.user.targets ?? []).map(token => token.actor);
+  const others = [...new Map(pool.filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .map(other => [other.uuid, other])).values()];
+  if (!others.length) {
+    ui.notifications.warn(`${maneuver.name}: nobody to deceive${game.combat?.started ? "" : " - target them first"}.`);
+    return null;
+  }
+  const escape = Handlebars.escapeExpression;
+  const label = `${magnitude.charAt(0).toUpperCase()}${magnitude.slice(1)} Sphere`;
+  const skills = ["useMagic", "bluff"].map(key => ({ key, label: actor.system.skills?.[key]?.label ?? key,
+    roll: actor.system.skills?.[key]?.roll ?? 0 }));
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<label class="dbu-wager"><span>Roll</span><select name="skill">${skills.map(skill =>
+        `<option value="${skill.key}">${escape(skill.label)} ${skill.roll}</option>`).join("")}</select></label>
+      <p class="dbu-respond-hint">${onSelf ? `Your Opponents in a ${escape(label)} around you`
+        : `Your Opponents in a ${escape(label)} on a Square within 8 Squares`}</p>${others.map(other =>
+        `<label class="dbu-respond-option"><input type="checkbox" name="${escape(other.uuid)}"/>
+          <span class="dbu-respond-name">${escape(other.name)}</span></label>`).join("")}`,
+    buttons: [
+      { action: "cast", label: maneuver.name, default: true, callback: (event, button, dialog) => ({
+        skill: dialog.element.querySelector('select[name="skill"]')?.value ?? "useMagic",
+        uuids: others.filter(other => dialog.element.querySelector(`input[name="${CSS.escape(other.uuid)}"]`)?.checked)
+          .map(other => other.uuid)
+      }) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!chosen || (typeof chosen !== "object") || !chosen.uuids.length) return null;
+  return { ...chosen, area: label };
 }
 
 /** God Meteor: who is inside the Destructive Sphere around the Square it falls on - ticked by the player. */
@@ -3585,6 +3634,7 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
   let meteorTargets = null;
   let healing = null;
   let shocking = null;
+  let illusioning = null;
   // Which rank a Soar is taking them to, or `false` for staying put. `null` is the
   // question closed, which is not an answer and stops the Maneuver.
   let soarTo = false;
@@ -3836,6 +3886,12 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     }
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
+    // Illusion: who is inside its Sphere, and which Skill is rolled.
+    if (maneuver.illusion) {
+      illusioning = await askIllusion(actor, maneuver);
+      if (!illusioning) return false;
+    }
+
     // Holstein Shock: the Foundation, and its Wound Roll's window.
     if (maneuver.selfShock) {
       shocking = await (await import("./chat.mjs")).askShock(actor, maneuver);
@@ -4379,6 +4435,8 @@ export async function useManeuver(actor, maneuver, { atFeature = false, techniqu
     ? await postGathering(actor, maneuver, actionsSpent)
     : maneuver.fakeMoon
     ? await (await import("./chat.mjs")).postFakeMoon(actor, maneuver)
+    : (maneuver.illusion && illusioning)
+    ? await (await import("./chat.mjs")).postIllusion(actor, maneuver, illusioning)
     : (maneuver.selfShock && shocking)
     ? await (await import("./chat.mjs")).postShock(actor, maneuver, shocking)
     : (maneuver.heals && healing)

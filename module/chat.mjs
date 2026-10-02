@@ -193,6 +193,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, SPIKE_FLAG, request.spikes);
     case "meteor": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, METEOR_FLAG, request.meteor);
+    case "illusion": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, ILLUSION_FLAG, request.illusion);
     case "armsHit": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, ARMS_HIT_FLAG, request.offer);
     case "actor": return applyActorUpdate(request.actorUuid, request.changes);
@@ -603,6 +605,10 @@ async function applyClash(messageId, clash) {
       await revealTo(fromUuidSync(clash.defenderUuid), fromUuidSync(clash.challengerUuid), "found by a Search");
     }
     else await settledNote(message, `${clash.defenderName} stays Hidden.`);
+  }
+
+  if (clash.illusion && clash.result && !clash.illusion.applied) {
+    await settleIllusion(message, clash);
   }
 
   if (clash.fakeDeath && clash.result && !clash.fakeDeath.applied) {
@@ -2853,6 +2859,7 @@ function onRenderChatMessage(message, html) {
   renderLoss(message, html);
   renderHealing(message, html);
   renderShock(message, html);
+  renderIllusion(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -8683,6 +8690,122 @@ export async function reducedMomentum(actor) {
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">Reduced Momentum: ${Handlebars.escapeExpression(actor.name)} has a Standard `
       + "Action fewer next Combat Round.</div>" });
+}
+
+/** Illusion's card: whom it was cast at, how each Clash went, and the Combat Condition the losers take. */
+const ILLUSION_FLAG = "illusion";
+
+/** "1) Blinded, 2) Shaken, 3) Impediment, 4) Compelled." */
+const ILLUSION_CONDITIONS = ["blinded", "shaken", "impediment", "compelled"];
+
+/** Illusion, used: a card, and "a Clash (Use Magic/Bluff vs Use Magic/Intuition/Clairvoyance)" against each. */
+export async function postIllusion(actor, maneuver, plan) {
+  const others = plan.uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  const guardDown = unique ? boughtTraits(unique, getTrait).some(trait => trait.illusionGuardDown === true) : false;
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(plan.area)} - `
+      + `${Handlebars.escapeExpression(others.map(other => other.name).join(", "))}</p>`,
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [ILLUSION_FLAG]: { actorUuid: actor.uuid, name: maneuver.name,
+      uuids: others.map(other => other.uuid), results: {}, guardDown, condition: "" } } } });
+  for (const other of others) {
+    await postSkillClash(actor, other, { name: maneuver.name, type: "outOfSequence",
+      clash: { skill: plan.skill, defenderSkills: ["useMagic", "intuition", "clairvoyance"] } },
+      { illusion: { applied: false, cardId: card.id } });
+  }
+  return card;
+}
+
+/** One of Illusion's Clashes, settled: written to its card. */
+async function settleIllusion(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, illusion: { ...clash.illusion, applied: true } });
+  const card = game.messages.get(clash.illusion.cardId);
+  const illusion = card?.getFlag(SCOPE, ILLUSION_FLAG);
+  if (!illusion) return;
+  requestEdit(card, { type: "illusion", illusion: { ...illusion,
+    results: { ...(illusion.results ?? {}), [clash.defenderUuid]: whoWonClash(clash.result) === "challenger" } } });
+}
+
+/**
+ * Its card, once every Clash is in and one was won: "roll a 1d4" - its caster's button; "your ARC may choose" - the GM's
+ * four; "They may allow you to spend a Karma Point to choose" - the caster's, the table's word being the GM's.
+ */
+function renderIllusion(message, html) {
+  const illusion = message.getFlag(SCOPE, ILLUSION_FLAG);
+  if (!illusion) return;
+  const container = html.querySelector(".message-content") ?? html;
+  const losers = Object.entries(illusion.results ?? {}).filter(([, won]) => won).map(([uuid]) => uuid);
+  const done = illusion.uuids.every(uuid => uuid in (illusion.results ?? {}));
+  if (illusion.condition) {
+    const said = document.createElement("div");
+    said.className = "dbu-settled-note";
+    said.textContent = `${conditionLabel(illusion.condition)}${illusion.guardDown ? " and Guard Down" : ""} until the end of `
+      + `the next turn of whoever cast it${(illusion.condition === "compelled")
+        ? " - Compelled toward another Character within the Illusion's AoE (the table's)" : ""}.`;
+    container.append(said);
+    return;
+  }
+  if (!done || !losers.length) return;
+  const caster = fromUuidSync(illusion.actorUuid);
+  const button = (label, act, tip = "") => {
+    const each = document.createElement("button");
+    each.type = "button";
+    each.className = "dbu-clash-button";
+    each.textContent = label;
+    if (tip) each.dataset.tooltip = tip;
+    each.addEventListener("click", () => {
+      each.disabled = true;
+      return act();
+    });
+    container.append(each);
+  };
+  if (caster?.isOwner) {
+    button("Roll 1d4", async () => {
+      const roll = new Roll("1d4");
+      await roll.evaluate();
+      await applyIllusion(message, ILLUSION_CONDITIONS[roll.total - 1], `rolled ${roll.total}`);
+    }, "1 Blinded, 2 Shaken, 3 Impediment, 4 Compelled");
+    if ((caster.system.karma ?? 0) > 0) {
+      button("Choose: 1 Karma Point", async () => {
+        const picked = await pick(`${illusion.name} - Karma`, "Which Combat Condition?",
+          ILLUSION_CONDITIONS.map(key => ({ action: key, label: conditionLabel(key) })));
+        if (!picked) return;
+        const { spendKarma } = await import("./karma.mjs");
+        if (!await spendKarma(caster, { name: illusion.name, cost: 1 })) return;
+        await applyIllusion(message, picked, "chosen for a Karma Point");
+      }, "If the ARC allows it");
+    }
+  }
+  if (game.user.isGM) {
+    for (const key of ILLUSION_CONDITIONS) {
+      button(`ARC: ${conditionLabel(key)}`, () => applyIllusion(message, key, "the ARC's choice"));
+    }
+  }
+}
+
+/** A Combat Condition's name, from its file. */
+function conditionLabel(key) {
+  return getTrait(key)?.name ?? key;
+}
+
+/**
+ * "Apply one of the following Combat Conditions to all losing Opponents until the end of your next turn" - and Combat
+ * Illusion's Guard Down for as long.
+ */
+async function applyIllusion(message, condition, how) {
+  const illusion = message.getFlag(SCOPE, ILLUSION_FLAG);
+  if (!illusion || illusion.condition || !condition) return;
+  requestEdit(message, { type: "illusion", illusion: { ...illusion, condition } });
+  const caster = fromUuidSync(illusion.actorUuid);
+  if (!caster) return;
+  for (const [uuid, won] of Object.entries(illusion.results ?? {})) {
+    if (!won) continue;
+    const loser = fromUuidSync(uuid);
+    if (!loser) continue;
+    await markUntilNextTurn(caster, loser, condition, 1, "end", illusion.name);
+    if (illusion.guardDown) await markUntilNextTurn(caster, loser, "guard-down", 1, "end", illusion.name);
+  }
+  await settledNote(message, `${illusion.name}: ${conditionLabel(condition)} - ${how}.`);
 }
 
 /** An Out-of-Sequence Maneuver offered on a card of its own - Surprise Strike's. */

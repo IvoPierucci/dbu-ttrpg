@@ -1,0 +1,14 @@
+id: close-range-illusions
+name: Close Range Illusions
+restriction: true
+reduction: 4
+# "You must select yourself for the Target Square of this Unique Ability's AoE" - said where who is inside is asked.
+illusionOnSelf: true
+source: Core Rule
+description: >
+  Illusion's Sphere is centred on you.
+text: >
+  Close Range Illusions: You can only create convincing illusions if they remain close to you.
+  –Locked Advancements: N/A
+  –TP Cost: -4
+  –Effect: You must select yourself for the Target Square of this Unique Ability’s AoE.

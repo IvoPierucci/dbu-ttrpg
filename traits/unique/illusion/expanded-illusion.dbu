@@ -1,0 +1,15 @@
+id: expanded-illusion
+name: Expanded Illusion
+advancement: true
+prerequisite: 4+ Use Magic Skill Ranks
+tpCost: 10
+# "Increase the Magnitude of the AoE for the effects of Illusion to Destructive."
+illusionMagnitude: destructive
+source: Core Rule
+description: >
+  Illusion's Sphere is Destructive.
+text: >
+  Expanded Illusion: Your illusion grows in size.
+  –Prerequisites: 4+ Use Magic Skill Ranks
+  –TP Cost: 10
+  –Effect: Increase the Magnitude of the AoE for the effects of Illusion to Destructive.

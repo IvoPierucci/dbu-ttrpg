@@ -1,0 +1,50 @@
+id: illusion
+name: Illusion
+uaType: magical
+prerequisite: Magic Score of 4+, 2+ Use Magic Skill Ranks, 2+ Bluff Skill Ranks
+tpCost: 14
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 4
+# Its Square and who is inside the Sphere asked, with which Skill you roll (use-maneuver.mjs askIllusion); a Clash (Use
+# Magic/Bluff vs Use Magic/Intuition/Clairvoyance) each, tallied on its card (chat.mjs postIllusion). Won against any:
+# the 1d4 rolled there - or chosen by the ARC, or for a Karma Point - and that Combat Condition on every one who lost,
+# until the end of your next turn.
+illusion: true
+illusionMagnitude: standard
+source: Core Rule
+description: >
+  A Sphere within 8 Squares: a Clash (Use Magic/Bluff vs Use Magic/Intuition/Clairvoyance) against every Opponent inside -
+  won, 1d4 picks Blinded, Shaken, Impediment or Compelled for all who lost, until the end of your next turn. Passive: Bluff
+  Skill Checks 1 higher.
+text: >
+  Illusion: You are capable of creating a combat illusion, deceiving your enemies.
+  –Ability Type: Magical
+  –Prerequisites: Magic Score of 4+, 2+ Use Magic Skill Ranks, 2+ Bluff Skill Ranks
+  –TP Cost: 14
+  –KP Cost: 4(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –Passive Bonus: Increase your Bluff Skill Checks by 1.
+  –Effect: Target a Square within 8 Squares of you. Create a Sphere AoE centered on that Square. Make a Clash (Use
+  Magic/Bluff vs Use Magic/Intuition/Clairvoyance) against all Opponents within that AoE. If you win, roll a 1d4.
+  Depending on the result, apply one of the following Combat Conditions to all losing Opponents until the end of your
+  next turn:
+
+  * 1) Blinded,
+
+  * 2) Shaken,
+
+  * 3) Impediment,
+
+  * 4) Compelled (the target must be another Character within the initial AoE created by this Unique Ability).
+
+  Rather than roll, your ARC may choose an effect that seems fitting depending on your description for the Illusion you
+  created through this Unique Ability. They may allow you to spend a Karma Point to choose.
+
+---
+
+# "Increase your Bluff Skill Checks by 1" - flat.
+[passive]
+skill.bluff.bonus += 1;
