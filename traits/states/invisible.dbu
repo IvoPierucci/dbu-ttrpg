@@ -1,0 +1,30 @@
+id: invisible
+name: Invisible
+kind: state
+# A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
+specialState: true
+description: >
+  Unseen: Hidden from every Opponent as you enter it and at the start of each turn, and kept Hidden though you end your
+  turn beside them or hit them.
+text: >
+  (1)-[Automatic/Invisible, Automatic/Start of Turn]: You become Hidden to all Opponents.
+
+  (2)-[Passive]: You remain Hidden to a Character even if you end your turn within their Melee Range or hit them with an
+  Attacking Maneuver.
+
+  (3)-[Automatic]: If you hit an Opponent with an Attacking Maneuver, increase the Natural Result of their next Skill
+  Check to find you as part of the Search Maneuver by 1.
+
+  (4)-[Automatic]: If an Oblivious Opponent hits you with an Attacking Maneuver while you are Invisible, increase its
+  Damage Category by 1 Category.
+
+---
+
+# All four are read in code, not here:
+#   (1) hidden.mjs hideFromOpponents - on entering (conditions.mjs, the states-entered hook) and at the start of each
+#       turn (combat.mjs). "All Opponents": the scene's tokens of another disposition than yours.
+#   (2) hidden.mjs revealAtTurnEnd and revealOnHit leave an Invisible hider Hidden. The second attack at them still ends
+#       it, as the rule says nothing of that one.
+#   (3) chat.mjs, where a hit is known: a mark on them, read by their next Search Clash against you (+1 Natural Result
+#       each) and spent by it.
+#   (4) chat.mjs, where the Damage Category is summed for each target: one step harder from one Oblivious of you.

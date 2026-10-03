@@ -346,6 +346,8 @@ async function beginTurn(actor) {
   // Tornado Attack: the Thrust owed before the Spinning stops, or the stop itself.
   const { tornadoTurnStart } = await import("./chat.mjs");
   await tornadoTurnStart(actor);
+  // Invisible: "[Automatic/Start of Turn]: You become Hidden to all Opponents."
+  await (await import("./hidden.mjs")).hideFromOpponents(actor);
   // Para Para Dance: the Actions it took, at the start of this turn.
   const { paraParaTurnStart } = await import("./chat.mjs");
   await paraParaTurnStart(actor);

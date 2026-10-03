@@ -87,9 +87,33 @@ export async function countHiddenAttack(attacker, target) {
   return write(attacker, entries.map(each => (each.uuid === target.uuid) ? { ...each, attacks } : each));
 }
 
-/** An attack that hit someone you are Hidden from ends it. */
+/** An attack that hit someone you are Hidden from ends it - not an Invisible attacker's: "You remain Hidden". */
 export async function revealOnHit(attacker, target) {
+  if (isInvisible(attacker)) return;
   return revealTo(attacker, target, "hit by an attack");
+}
+
+/** Whether this character is in the Invisible Special State. */
+export function isInvisible(actor) {
+  return (Number(actor?.system?.states?.invisible) || 0) > 0;
+}
+
+/**
+ * Invisible's "(1)-[Automatic/Invisible, Automatic/Start of Turn]: You become Hidden to all Opponents" - every token on the
+ * scene of another disposition than theirs.
+ */
+export async function hideFromOpponents(actor) {
+  if (!isInvisible(actor)) return;
+  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const others = new Map();
+  for (const token of globalThis.canvas?.tokens?.placeables ?? []) {
+    const other = token.actor;
+    if (!other || (other.uuid === actor.uuid) || (other.type !== "character")) continue;
+    if ((own !== undefined) && (token.document?.disposition === own)) continue;
+    others.set(other.uuid, other);
+  }
+  for (const other of others.values()) await hideFrom(actor, other, { quiet: true });
+  if (others.size) await say(actor, `${actor.name} is Invisible - Hidden from ${[...others.values()].map(other => other.name).join(", ")}.`);
 }
 
 /**
@@ -97,6 +121,8 @@ export async function revealOnHit(attacker, target) {
  * tokens; where either has none, nothing is measured and nothing ends.
  */
 export async function revealAtTurnEnd(actor) {
+  // Invisible: "You remain Hidden to a Character even if you end your turn within their Melee Range".
+  if (isInvisible(actor)) return;
   for (const entry of hiddenEntries(actor)) {
     const seeker = globalThis.fromUuidSync?.(entry.uuid);
     if (!seeker) continue;

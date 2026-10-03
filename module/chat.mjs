@@ -660,6 +660,12 @@ async function applyClash(messageId, clash) {
 
   if (clash.search && clash.result && !clash.search.applied) {
     await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, search: { ...clash.search, applied: true } });
+    // Invisible's mark on the Searcher, spent: "their next Skill Check to find you".
+    const searcher = fromUuidSync(clash.challengerUuid);
+    const marks = Array.from(searcher?.getFlag?.(SCOPE, "findBonus") ?? []);
+    if (marks.some(entry => entry.uuid === clash.defenderUuid)) {
+      await requestActorUpdate(searcher, { [`flags.${SCOPE}.findBonus`]: marks.filter(entry => entry.uuid !== clash.defenderUuid) });
+    }
     // Search: "If you win, you are no longer Oblivious of them."
     if (whoWonClash(clash.result) === "challenger") {
       const { revealTo } = await import("./hidden.mjs");
@@ -7337,6 +7343,10 @@ const CLASH_ROLLS = ({
       naturalAdd: skillNatural(actor, skillPicked(clash, uuid),
         Object.entries(clash.sensesBy ?? {})
           .filter(([, who]) => (who ?? []).includes(uuid)).map(([sense]) => sense))
+        // Invisible's hits: the Searcher's Natural Result 1 higher for each, against the one Invisible.
+        + ((clash.search && (uuid === clash.challengerUuid))
+          ? (Number(Array.from(actor.getFlag?.(SCOPE, "findBonus") ?? []).find(entry => entry.uuid === clash.defenderUuid)?.n) || 0)
+          : 0)
     }),
 
     prompt: (actor, clash, uuid) => ((uuid === clash.defenderUuid)
@@ -14642,6 +14652,15 @@ async function resolveAttack(message, attack) {
     const incoming = hit ? atMoment(target, "being-hit", { attack: 1, attacker: 1 }) : null;
     // Hidden from them: "hit an enemy with 1 attack" ends it.
     if (hit && attacker) (await import("./hidden.mjs")).revealOnHit(attacker, target);
+    // Invisible: "If you hit an Opponent with an Attacking Maneuver, increase the Natural Result of their next Skill
+    // Check to find you as part of the Search Maneuver by 1" - kept on them, spent by their Search against you.
+    if (hit && attacker && (attacker.uuid !== target.uuid) && ((Number(attacker.system.states?.invisible) || 0) > 0)) {
+      const held = Array.from(target.getFlag?.(SCOPE, "findBonus") ?? []);
+      const mine = held.find(entry => entry.uuid === attacker.uuid);
+      await requestActorUpdate(target, { [`flags.${SCOPE}.findBonus`]: mine
+        ? held.map(entry => (entry.uuid === attacker.uuid) ? { ...entry, n: (Number(entry.n) || 0) + 1 } : entry)
+        : [...held, { uuid: attacker.uuid, n: 1 }] });
+    }
 
     // "Or until they are hit by an Attacking Maneuver (whichever comes first)." The other
     // half of a whichever: the turn edge goes on counting and this ends it early.
@@ -14683,6 +14702,10 @@ async function resolveAttack(message, attack) {
       // Karmic: "Increase the Damage Category by 1 Category against Characters who have an opposing
       // Z-Soul. If that Opponent's Z-Soul Alignment is 'Pure', apply this bonus twice."
       + karmicSteps(attacker, attack, target)
+      // Invisible: "If an Oblivious Opponent hits you with an Attacking Maneuver while you are Invisible, increase its
+      // Damage Category by 1 Category."
+      + ((((Number(target.system.states?.invisible) || 0) > 0)
+        && Array.from(target.system.hiddenFrom ?? []).some(entry => entry?.uuid === attacker?.uuid)) ? 1 : 0)
       + (incoming?.slots?.["incoming.damage.category.shift"]?.add ?? 0);
 
     // Gained after the Attacking Maneuver, so it never touches the roll just made. The

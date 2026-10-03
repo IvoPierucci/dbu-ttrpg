@@ -348,6 +348,8 @@ export function registerConditionHooks() {
     for (const key of Object.keys(now)) {
       if (!((Number(options.dbuStatesBefore[key]) || 0) > 0) && ((Number(now[key]) || 0) > 0)) {
         await offerStatesOnEntering(actor, key);
+        // Invisible: "[Automatic/Invisible]: You become Hidden to all Opponents."
+        if (key === "invisible") await (await import("./hidden.mjs")).hideFromOpponents(actor);
       }
     }
   });
