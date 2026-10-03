@@ -1,0 +1,14 @@
+id: massive-tornado
+name: Massive Tornado
+advancement: true
+prerequisite: Insight Score of 6+
+tpCost: 4
+massiveTornado: true
+source: Core Rule
+description: >
+  Spinning: Melee Range 2 more, the Sweeping Profile's AoE a Magnitude larger.
+text: >
+  Massive Tornado: The cyclone surrounding you extends out beyond your physical reach, striking enemies with the force of the wind alone.
+  –Prerequisites: Insight Score of 6+
+  –TP Cost: 4
+  –Effect: While you are Spinning, increase your Melee Range by 2 and the AoE of the Sweeping Profile by 1 Magnitude.

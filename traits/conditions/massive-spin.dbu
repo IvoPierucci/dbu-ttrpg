@@ -1,0 +1,18 @@
+id: massive-spin
+name: Massive Spin
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Massive Tornado's beside the Spinning mark, on the same clock. The Sweeping Profile's Magnitude
+# is read where an attack's Area is (use-maneuver.mjs).
+combatCondition: no
+source: Core Rule
+description: >
+  Spinning, wider: Melee Range 2 more.
+text: >
+  Massive Tornado: "While you are Spinning, increase your Melee Range by 2 and the AoE of the Sweeping Profile by 1
+  Magnitude."
+
+---
+
+[passive]
+meleeRange += 2;

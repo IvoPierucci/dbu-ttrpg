@@ -79,6 +79,12 @@
                     data-tooltip="Instant: lose every Finisher and stop declaring it">Release</button>
           </div>
           {{/if}}
+          {{#if row.spinToWin}}
+          <div class="unique-resource">
+            <button type="button" class="dbu-clash-button" data-action="spinToWin" data-item-id="{{row.itemId}}"
+                    data-tooltip="Your Movement ended beside the Opponent you target: the Thrust out of sequence">Spin to Win</button>
+          </div>
+          {{/if}}
           {{#if row.web}}
           <div class="unique-resource">
             <button type="button" class="dbu-clash-button" data-action="webStrike" data-item-id="{{row.itemId}}"

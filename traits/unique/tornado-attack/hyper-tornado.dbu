@@ -1,0 +1,15 @@
+id: hyper-tornado
+name: Hyper Tornado
+advancement: true
+prerequisite: Agility Score of 10+
+tpCost: 6
+hyperTornado: true
+source: Core Rule
+description: >
+  Spinning, a Thrust's Clash won: their Life Points down by 1/2 your Agility Modifier.
+text: >
+  Hyper Tornado: The force of the winds you generate slams into your enemies like a slab of concrete.
+  –Prerequisites: Agility Score of 10+
+  –TP Cost: 6
+  –Effect: While you are Spinning, if you win the Clash for the effects of the Thrust Maneuver against an Opponent, reduce
+  that Opponent’s Life Points by 1/2 of your Agility Modifier.

@@ -1,0 +1,14 @@
+id: dizziness
+name: Dizziness
+restriction: true
+reduction: 4
+locked: Hyper Tornado, Tornado Chaser
+dizziness: true
+source: Core Rule
+description: >
+  Spinning stopped: Prone and Impediment until the start of your next turn.
+text: >
+  Dizziness: When you finish spinning around, you’re left disoriented.
+  –Locked Advancements: Hyper Tornado, Tornado Chaser
+  –TP Cost: -4
+  –Effect: When you stop Spinning, gain the Prone and Impediment Combat Conditions until the start of your next turn.

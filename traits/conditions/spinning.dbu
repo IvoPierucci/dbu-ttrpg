@@ -1,0 +1,18 @@
+id: spinning
+name: Spinning
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Tornado Attack's mark, on its user's clock to the start of their next turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Spinning: Dodge Rolls 1(T) higher, Damage taken lower by your Agility Modifier.
+text: >
+  Spinning: "While you are Spinning, increase your Dodge Rolls by 1(T) and reduce all Damage you take by your Agility
+  Modifier."
+
+---
+
+[passive]
+dodge += 1(T);
+damageReduction += agility.mod;

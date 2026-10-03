@@ -396,6 +396,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       dismissPortals: DBUCharacterSheet._onDismissPortals,
       explodeGhost: DBUCharacterSheet._onExplodeGhost,
       webStrike: DBUCharacterSheet._onWebStrike,
+      spinToWin: DBUCharacterSheet._onSpinToWin,
       webSave: DBUCharacterSheet._onWebSave,
       ghostGone: DBUCharacterSheet._onGhostGone,
       throughPortal: DBUCharacterSheet._onThroughPortal,
@@ -1747,6 +1748,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Finish Sign: the Signature Technique declared, released as an Instant from here.
         finish: (unique.finishSign && unique.finishTechnique)
           ? { technique: this.actor.items.get(unique.finishTechnique)?.name ?? "" } : null,
+        // Tornado Attack: Spin to Win's Thrust, while Spinning.
+        spinToWin: unique.tornado && Boolean(actor.getFlag?.("dbu-ttrpg", "spinning")?.spinToWin)
+          && !actor.getFlag("dbu-ttrpg", "spinning").ending,
         // Threaded Energy, applied: its Explosive Web's strike, and Web Save's Instant.
         web: (unique.explosiveWeb && unique.applied) ? { save: boughtTraits(unique, getTrait).some(trait => trait.webSave === true) } : null,
         // Technique Block: the Signature Technique it answers, written as it is named.
@@ -1924,6 +1928,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Fake Moon: the False Moon destroyed - "you apply the effects as if it disappeared". */
+  /** Spin to Win: the Movement ended beside an Opponent while Spinning - the Thrust, out of sequence. */
+  static async _onSpinToWin() {
+    const { spinToWin } = await import("../chat.mjs");
+    return spinToWin(this.actor);
+  }
+
   /** Threaded Energy: an Opponent through the Explosive Web - its Basic Attack, out of sequence. */
   static async _onWebStrike(event, target) {
     const { webStrike } = await import("../chat.mjs");

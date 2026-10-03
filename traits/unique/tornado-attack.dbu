@@ -1,0 +1,36 @@
+id: tornado-attack
+name: Tornado Attack
+uaType: technical
+prerequisite: Agility Score of 6+
+tpCost: 12
+type: standard
+actionCost: 2
+kiCostPerTier: 4
+# "You begin Spinning until the start of your next turn" - the Spinning mark on your clock (Dodge 1(T), Damage
+# Reduction your Agility Modifier); missed or dealt 0 Damage by an Opponent's attack, a Basic Attack at them out of
+# sequence offered on its card (Launching, Sweeping or Elemental (Wind)); starting your next turn with Opponents in your
+# Melee Range, a card with the Thrust out of sequence at one of them before it stops (chat.mjs postTornado,
+# tornadoTurnStart).
+tornado: true
+source: Core Rule
+description: >
+  Spinning until the start of your next turn: Dodge 1(T) higher, Damage taken lower by your Agility Modifier; missed or
+  unharmed by an attack, a Basic Attack back; your next turn begins with a Thrust at an Opponent in reach.
+text: >
+  Tornado Attack: You spin in place, generating a cyclone of wind around you.
+  –Ability Type: Technical
+  –Prerequisites: Agility Score of 6+
+  –TP Cost: 12
+  –KP Cost: 4(T)
+  –Maneuver Type: Standard
+  –Action Cost: 2 Actions
+  –Minions: N/A
+  –Passive Bonus: N/A
+  –Effect: You begin Spinning until the start of your next turn. While you are Spinning, increase your Dodge Rolls by
+  1(T) and reduce all Damage you take by your Agility Modifier. If an Opponent misses you with an Attacking Maneuver or
+  deals 0 Damage to you with an Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+  If you do, you must target that Opponent with that Attacking Maneuver and you must select either the Launching,
+  Sweeping, or Elemental (Wind) Profile for that Attacking Maneuver.
+
+  If you start your next turn while Spinning with an Opponent within your Melee Range, before you stop Spinning, use the
+  Thrust Maneuver against that Opponent as an Out-of-Sequence Maneuver.

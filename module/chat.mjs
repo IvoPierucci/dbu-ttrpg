@@ -203,6 +203,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, PARA_FLAG, request.para);
     case "petrify": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PETRIFY_FLAG, request.petrify);
+    case "tornado": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, TORNADO_FLAG, request.tornado);
     case "timeFreeze": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, FREEZE_FLAG, request.freeze);
     case "psychicBack": return game.messages.get(request.messageId)
@@ -2401,6 +2403,11 @@ async function settleThrust(message, clash) {
 
   await settledNote(message,
     `${thruster.name} wins, and chooses what it buys.`);
+  // Hyper Tornado: "reduce that Opponent's Life Points by 1/2 of your Agility Modifier".
+  if (clash.tornadoHyper) {
+    await reduceLifePoints(target, Math.floor((Number(thruster.system.attributes?.agility?.mod) || 0) / 2),
+      { reason: "Hyper Tornado" });
+  }
 }
 
 /**
@@ -2959,6 +2966,7 @@ function onRenderChatMessage(message, html) {
   renderPsychicCounter(message, html);
   renderPsychicBack(message, html);
   renderTimeFreeze(message, html);
+  renderTornado(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -7785,6 +7793,8 @@ export async function postThrust(actor, target, maneuver, { pushOnly = false } =
           collision: null,
           collisionApplied: false,
           thrust: { stage: "strike", applied: false, chosen: "", ...(pushOnly ? { pushOnly: true } : {}) },
+          // Hyper Tornado's, while Spinning.
+          ...(hyperTornado(actor) ? { tornadoHyper: true } : {}),
           ready: [],
           result: null
         }
@@ -11319,6 +11329,133 @@ function renderTimeFreeze(message, html) {
   (html.querySelector(".message-content") ?? html).append(button);
 }
 
+/** Tornado Attack's turn-start card: the Thrust it owes, out of sequence, at an Opponent in your Melee Range. */
+const TORNADO_FLAG = "tornado";
+
+/** What Tornado Attack's Advancements and Restriction make of it. */
+function tornadoTraits(actor, itemId) {
+  const unique = actor?.items?.get(itemId)?.system?.unique;
+  const bought = unique ? boughtTraits(unique, getTrait) : [];
+  const applied = unique ? appliedTraits(unique, getTrait) : [];
+  const has = key => bought.some(trait => trait[key] === true);
+  return { spinToWin: has("spinToWin"), chaser: has("tornadoChaser"), massive: has("massiveTornado"), hyper: has("hyperTornado"),
+    dizzy: applied.some(trait => trait.dizziness === true) };
+}
+
+/** Whether this character is Spinning - Tornado Attack's - and still answering misses with it. */
+function spinningOf(actor) {
+  const spin = actor?.getFlag?.(SCOPE, "spinning");
+  return (spin && !spin.ending) ? spin : null;
+}
+
+/**
+ * Tornado Attack, used: "You begin Spinning until the start of your next turn. While you are Spinning, increase your Dodge
+ * Rolls by 1(T) and reduce all Damage you take by your Agility Modifier" - the Spinning mark, on your clock; Massive
+ * Tornado's Melee Range beside it; Tornado Chaser's Movement out of sequence offered.
+ */
+export async function postTornado(actor, maneuver) {
+  const can = tornadoTraits(actor, maneuver.itemId);
+  await actor.setFlag(SCOPE, "spinning", { itemId: maneuver.itemId, name: maneuver.name, ...can, ending: false });
+  await markUntilNextTurn(actor, actor, "spinning", 1, "start", maneuver.name);
+  if (can.massive) await markUntilNextTurn(actor, actor, "massive-spin", 1, "start", maneuver.name);
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(actor.name)} is Spinning until the start of their next turn.</p>`,
+    flags: { [SCOPE]: can.chaser ? { [OOS_OFFERS_FLAG]: [{ actorUuid: actor.uuid, actorName: actor.name,
+      maneuverId: "movement", maneuverName: "Movement", reason: "Tornado Chaser" }] } : {} } });
+}
+
+/**
+ * "If an Opponent misses you with an Attacking Maneuver or deals 0 Damage to you with an Attacking Maneuver, you may use
+ * the Basic Attack Maneuver as an Out-of-Sequence Maneuver ... target that Opponent ... Launching, Sweeping, or Elemental
+ * (Wind) Profile" - offered on their attack's card.
+ */
+function offerTornadoStrike(message, attack, spinner, why) {
+  if (!spinningOf(spinner) || (attack.attackerUuid === spinner.uuid)) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: spinner.uuid, actorName: spinner.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", targetUuid: attack.attackerUuid, reason: `${spinningOf(spinner).name} - ${why}`,
+    grants: { profileChoices: ["launching", "sweeping", "elementalWind"] } } });
+}
+
+/**
+ * The start of the Spinner's next turn: "If you start your next turn while Spinning with an Opponent within your Melee
+ * Range, before you stop Spinning, use the Thrust Maneuver against that Opponent as an Out-of-Sequence Maneuver" - a card
+ * naming those within reach, its Thrust from there; with none, the Spinning stops at once.
+ */
+export async function tornadoTurnStart(actor) {
+  const spin = actor?.getFlag?.(SCOPE, "spinning");
+  if (!spin) return;
+  const near = (canvas?.tokens?.placeables ?? []).map(token => token.actor)
+    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid) && !other.system.defeated
+      && !whyNotWithinMelee(actor, other, ""));
+  const within = [...new Map(near.map(other => [other.uuid, other])).values()];
+  if (!within.length) return stopSpinning(actor);
+  await actor.setFlag(SCOPE, "spinning", { ...spin, ending: true });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(spin.name)}: a Thrust before the Spinning stops.</p>`,
+    flags: { [SCOPE]: { [TORNADO_FLAG]: { actorUuid: actor.uuid, uuids: within.map(other => other.uuid), used: false } } } });
+}
+
+/** Spinning stopped: Dizziness's "gain the Prone and Impediment Combat Conditions until the start of your next turn". */
+export async function stopSpinning(actor) {
+  const spin = actor?.getFlag?.(SCOPE, "spinning");
+  if (!spin) return;
+  await actor.unsetFlag(SCOPE, "spinning");
+  if (spin.dizzy) {
+    await markUntilNextTurn(actor, actor, "prone", 1, "start", "Dizziness");
+    await markUntilNextTurn(actor, actor, "impediment", 1, "start", "Dizziness");
+  }
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)} stops Spinning`
+      + `${spin.dizzy ? " - Prone and Impeded until the start of their next turn (Dizziness)" : ""}.</div>` });
+}
+
+/** A Thrust out of sequence while Spinning - the turn-start one, or Spin to Win's. */
+async function spinThrust(actor, targetUuid) {
+  const thrust = getManeuver("thrust");
+  if (!thrust) return null;
+  const { useManeuver } = await import("./use-maneuver.mjs");
+  return useManeuver(actor, thrust, { outOfSequence: true, targetUuid });
+}
+
+/** The turn-start card: a Thrust button for each Opponent within reach; one taken, the Spinning stops. */
+function renderTornado(message, html) {
+  const tornado = message.getFlag(SCOPE, TORNADO_FLAG);
+  if (!tornado || tornado.used) return;
+  const actor = fromUuidSync(tornado.actorUuid);
+  if (!actor?.isOwner) return;
+  const container = html.querySelector(".message-content") ?? html;
+  for (const uuid of tornado.uuids ?? []) {
+    const other = fromUuidSync(uuid);
+    if (!other) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-oos-button";
+    button.textContent = `Thrust ${other.name}`;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      const used = await spinThrust(actor, uuid);
+      if (!used) return;
+      requestEdit(message, { type: "tornado", tornado: { ...tornado, used: true } });
+      await stopSpinning(actor);
+    });
+    container.append(button);
+  }
+}
+
+/** Spin to Win: "While Spinning, if you end your use of the Movement Maneuver with an adjacent Opponent, you may use the Thrust Maneuver as an Out-of-Sequence Maneuver." */
+export async function spinToWin(actor) {
+  if (!spinningOf(actor)?.spinToWin) return;
+  const target = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
+  if (!target) return ui.notifications.warn("Target the adjacent Opponent first.");
+  return spinThrust(actor, target.uuid);
+}
+
+/** Hyper Tornado: "While you are Spinning, if you win the Clash for the effects of the Thrust Maneuver against an Opponent, reduce that Opponent's Life Points by 1/2 of your Agility Modifier." */
+function hyperTornado(actor) {
+  const spin = actor?.getFlag?.(SCOPE, "spinning");
+  return Boolean(spin?.hyper);
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -11911,6 +12048,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.profile) maneuver = { ...maneuver, profile: offer.grants.profile };
   // And its Foundation - Threaded Energy's "Simple Profile (Energy Foundation)".
   if (offer.grants?.profileFoundation) maneuver = { ...maneuver, profileFoundation: offer.grants.profileFoundation };
+  // Or a few of them - Tornado Attack's "Launching, Sweeping, or Elemental (Wind)".
+  if (offer.grants?.profileChoices) maneuver = { ...maneuver, profileChoices: offer.grants.profileChoices };
 
   // "You cannot use any Special Maneuvers until you have gained access to them." Asked
   // here as well as at the sheet's door, because being handed a chance to use one is not
@@ -14051,6 +14190,12 @@ async function resolveAttack(message, attack) {
   if (attack.provokedBy?.messageId) await paraParaHit(attack, branches);
   // Punisher Guard's Basic Attack: missed, the Exploit it answers goes on.
   if (attack.punish) await punishResolved(attack, branches);
+  // Tornado Attack: an Opponent's attack that missed the one Spinning - their Basic Attack back, offered.
+  for (const entry of branches) {
+    if (entry.hit && !isAbsoluteMiss(entry)) continue;
+    const spinner = fromUuidSync(entry.uuid);
+    if (spinner) offerTornadoStrike(message, attack, spinner, "missed");
+  }
 
   // Cross Counter strikes back the moment the clash is settled. It is offered rather
   // than fired so the defender still chooses when to take it, like any other
@@ -17643,6 +17788,8 @@ async function applyAttackDamage(message, target, attack) {
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
   if (arms) await offerArmsHit(armsUser, target);
+  // Tornado Attack: hit, and dealt 0 Damage - the Basic Attack back, offered.
+  if (own.hit && !isAbsoluteMiss(own) && (damage <= 0)) offerTornadoStrike(message, attack, target, "no Damage");
   if (attack.spiritSword && armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) {
     await spiritSwordLanded(message, attack, armsUser, target, knockedThrough);
   }

@@ -1,0 +1,15 @@
+id: spin-to-win
+name: Spin to Win
+advancement: true
+prerequisite: N/A
+tpCost: 4
+spinToWin: true
+source: Core Rule
+description: >
+  Spinning, the Movement ended beside an Opponent: the Thrust out of sequence (its body's button).
+text: >
+  Spin to Win: While spinning like a top, you collide with an enemy, sending them flying.
+  –Prerequisites: N/A
+  –TP Cost: 4
+  –Effect: While Spinning, if you end your use of the Movement Maneuver with an adjacent Opponent, you may use the Thrust
+  Maneuver as an Out-of-Sequence Maneuver.

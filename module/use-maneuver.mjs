@@ -1910,6 +1910,7 @@ export function definitionOf(item) {
     telekinesis: item.system.unique?.telekinesis === true,
     telepathy: item.system.unique?.telepathy === true,
     timeFreeze: item.system.unique?.timeFreeze === true,
+    tornado: item.system.unique?.tornado === true,
     kiCostPerBaseTierChange: Number(item.system.unique?.kiCostPerBaseTierChange) || 0,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
@@ -4619,6 +4620,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     }
   }
 
+  // Massive Tornado: "While you are Spinning, increase ... the AoE of the Sweeping Profile by 1 Magnitude."
+  if ((String(declared?.profile ?? "") === "sweeping") && actor.getFlag?.("dbu-ttrpg", "spinning")?.massive) {
+    const area = declared.area ?? PROFILES.sweeping?.area ?? null;
+    if (area) declared = { ...declared, area: { ...area, magnitudeSteps: (Number(area.magnitudeSteps) || 0) + 1 } };
+  }
+
   if (declared?.weapon) {
     // Its Area, however many Magnitudes larger the Weapon makes it.
     const area = declared.area ?? PROFILES[declared.profile]?.area ?? null;
@@ -4878,6 +4885,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postPortals(actor, maneuver)
     : maneuver.timeFreeze
     ? await (await import("./chat.mjs")).postTimeFreeze(actor, maneuver)
+    : maneuver.tornado
+    ? await (await import("./chat.mjs")).postTornado(actor, maneuver)
     : (maneuver.telepathy && linking)
     ? await (await import("./chat.mjs")).postTelepathy(actor, maneuver, linking)
     : (maneuver.telekinesis && lifting)

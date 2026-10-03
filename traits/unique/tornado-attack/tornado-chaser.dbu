@@ -1,0 +1,14 @@
+id: tornado-chaser
+name: Tornado Chaser
+advancement: true
+prerequisite: Spin to Win
+tpCost: 4
+tornadoChaser: true
+source: Core Rule
+description: >
+  Spinning begun: the Movement out of sequence.
+text: >
+  Tornado Chaser: When you start spinning, you dart in the direction of your opponent.
+  –Prerequisites: Spin to Win
+  –TP Cost: 4
+  –Effect: Once you begin Spinning, you may use the Movement Maneuver as an Out-of-Sequence Maneuver.

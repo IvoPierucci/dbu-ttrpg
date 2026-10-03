@@ -343,6 +343,9 @@ async function beginTurn(actor) {
   // pay the Ki Point Cost for this Unique Ability or stop applying its effects." A skipped turn is still yours.
   const { upkeepUniques } = await import("./chat.mjs");
   await upkeepUniques(actor);
+  // Tornado Attack: the Thrust owed before the Spinning stops, or the stop itself.
+  const { tornadoTurnStart } = await import("./chat.mjs");
+  await tornadoTurnStart(actor);
   // Para Para Dance: the Actions it took, at the start of this turn.
   const { paraParaTurnStart } = await import("./chat.mjs");
   await paraParaTurnStart(actor);
@@ -561,6 +564,11 @@ export function registerCombatHooks() {
       // Super Spirit Sword's use again: "during this turn" - unused, gone with it.
       const { swordAgainExpires } = await import("./chat.mjs");
       await swordAgainExpires(leaving);
+      // Tornado Attack's turn-start Thrust not taken by the end of that turn: the Spinning stops anyway.
+      if (leaving.getFlag?.("dbu-ttrpg", "spinning")?.ending) {
+        const { stopSpinning } = await import("./chat.mjs");
+        await stopSpinning(leaving);
+      }
 
       // After the Moment, not before it. "Until the end of your turn" lasts for the whole
       // of your turn, and the end of your turn is part of your turn - so whatever answers
