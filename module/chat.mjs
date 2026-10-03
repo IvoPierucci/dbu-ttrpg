@@ -4,7 +4,7 @@ import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelPar
   woundResourceStacks, woundResources } from "./duel.mjs";
 import { featureDef } from "./technique.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
-import { reactiveFor, usesLeft } from "./effects/registry.mjs";
+import { chosenAsItHappens, reactiveFor, usesLeft } from "./effects/registry.mjs";
 import { evaluate as evaluateCondition } from "./effects/conditions.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spendActions, strikeLightning, weatherToRoll }
@@ -19543,9 +19543,12 @@ function momentTriggers(actor, card) {
     const requires = entry.program.blocks?.[0]?.requires;
     return !requires || evaluateCondition(requires, { data: actor.system, context: {}, errors: [] });
   };
-  const own = triggersFor(actor, [card.moment]).filter(holds);
-  if ((card.moment !== "start-of-round") || ((game.combat?.round ?? 0) < 2)) return own;
+  // Nor what is set Automatic: it answered this by itself already - Warrior's Pride's Battle Born at the Encounter's start
+  // is not offered again on its card (the user's).
   const automatic = new Set(actor?.getFlag?.(SCOPE, "automatic") ?? []);
+  const own = triggersFor(actor, [card.moment]).filter(holds)
+    .filter(entry => !automatic.has(entry.blockId) || chosenAsItHappens(entry.program.blocks?.[0]));
+  if ((card.moment !== "start-of-round") || ((game.combat?.round ?? 0) < 2)) return own;
   return [...own, ...triggersFor(actor, ["end-of-round"]).filter(entry => !automatic.has(entry.blockId) && !entry.armed)];
 }
 
@@ -19796,7 +19799,9 @@ async function answerMoment(message, card, actor) {
     return;
   }
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
-  await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold } : (defeated ? { damage: 0 } : {}));
+  // What was ticked alone: what is Automatic answered the Moment when it happened, and is not answered twice.
+  await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold } : (defeated ? { damage: 0 } : {}),
+    { blocks: chosen.map(entry => entry.blockId) });
   // Caught: the rescue counts against the one allowed per Encounter, as one answered by itself does (combat.mjs) - and the
   // card says they are up. Not caught, and nobody else holding anything for it: the defeat stands.
   if (defeated) {
@@ -19810,9 +19815,7 @@ async function answerMoment(message, card, actor) {
   }
   // The end of the Round before, answered now - from each Trait whose effect was ticked for it.
   const late = chosen.filter(entry => String(entry.program.blocks?.[0]?.moment ?? "") === "end-of-round");
-  for (const sourceId of new Set(late.map(entry => entry.sourceId))) {
-    await fireMoment(actor, "end-of-round", {}, { only: sourceId });
-  }
+  if (late.length) await fireMoment(actor, "end-of-round", {}, { blocks: late.map(entry => entry.blockId) });
 }
 
 /**
@@ -19865,9 +19868,16 @@ export async function enterEncounter(actor) {
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   await fireMoment(actor, "start-of-encounter");
 
-  const triggers = triggersFor(actor, ["start-of-encounter"]);
+  // What is the player's, offered - not what answered it by itself just now - and what they tick answers it then.
+  const automatic = new Set(actor.getFlag?.(SCOPE, "automatic") ?? []);
+  const triggers = triggersFor(actor, ["start-of-encounter"])
+    .filter(entry => !automatic.has(entry.blockId) || chosenAsItHappens(entry.program.blocks?.[0]));
   if (triggers.length) {
-    await prepareRoll(actor, triggers, "Start of the Combat Encounter", "", { rolling: false });
+    const before = new Set(actor.system.armedTalents ?? []);
+    const applied = await prepareRoll(actor, triggers, "Start of the Combat Encounter", "", { rolling: false });
+    const chosen = (applied === false) ? [] : triggers.filter(entry => !before.has(entry.blockId)
+      && (actor.system.armedTalents ?? []).includes(entry.blockId));
+    if (chosen.length) await fireMoment(actor, "start-of-encounter", {}, { blocks: chosen.map(entry => entry.blockId) });
   }
 
   await actor.update({ "system.enteredEncounter": true });

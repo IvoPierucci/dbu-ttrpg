@@ -61,7 +61,7 @@ const STATEFUL = {
  *   verb - Prone standing you up - changes no Slot at all, and judging it by the Slots
  *   alone reads as nothing having happened.
  */
-export async function fireMoment(actor, moment, context = {}, { only = null, stacks = null, quiet = false } = {}) {
+export async function fireMoment(actor, moment, context = {}, { only = null, stacks = null, quiet = false, blocks = null } = {}) {
   if (!actor) return {};
 
   const nothing = { slots: {}, fired: 0 };
@@ -83,6 +83,12 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
   // happens to be carrying, so a Moment can be narrowed to one source.
   if (only) entries = entries.filter(entry => entry.sourceId === only);
 
+  // Answering a Moment that has already happened - what was ticked on its card: those blocks alone, and nothing that
+  // answered it by itself the first time (Born for Battle's Battle Born at an even Round, gained once). What only comes
+  // into reach as they run - a State they enter - still answers.
+  const answered = blocks ? new Set(entries.filter(entry => !blocks.includes(entry.blockId)).map(entry => entry.blockId)) : null;
+  if (blocks) entries = entries.filter(entry => blocks.includes(entry.blockId));
+
   // And how many stacks it is about can differ from how many are held: what an effect
   // does on being applied is done for the stacks just gained.
   if (stacks !== null) entries = entries.map(entry => ({ ...entry, stacks }));
@@ -103,7 +109,7 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
   // whether it applies at all.
   const chosen = await runPass(actor, moment, definition, entries, context, "triggered", quiet);
   const byItself = await runPass(actor, moment, definition,
-    reactiveAgain(actor, entries, { only, stacks }), context, "automatic", quiet);
+    reactiveAgain(actor, entries, { only, stacks, answered }), context, "automatic", quiet);
 
   const fired = chosen.fired + byItself.fired;
   if (!fired) return nothing;
@@ -118,9 +124,10 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
  * taken a Condition off - and an entry list gathered before that is a list of things
  * that were true a moment ago.
  */
-function reactiveAgain(actor, before, { only = null, stacks = null }) {
+function reactiveAgain(actor, before, { only = null, stacks = null, answered = null }) {
   let entries = reactiveFor(actor).filter(entry => entry.available && entry.armed);
   if (only) entries = entries.filter(entry => entry.sourceId === only);
+  if (answered) entries = entries.filter(entry => !answered.has(entry.blockId));
   if (stacks !== null) entries = entries.map(entry => ({ ...entry, stacks }));
   return entries;
 }
