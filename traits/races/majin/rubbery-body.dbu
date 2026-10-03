@@ -1,0 +1,48 @@
+id: rubbery-body
+name: Rubbery Body
+order: 1
+category: body
+importance: primary
+description: >
+  Stretchy and elastic, Majins are more durable than most and can easily put themselves back together.
+text: >
+  Rubbery Body (Body): Stretchy and elastic, Majins are more durable than most and can easily put themselves back together.
+  (1)-[Passive]: You are Unnatural.
+  (2)-[Passive]: Increase your Soak Value and Defense Value by 1(T).
+  (3)-[Passive]: Increase your Grapple Checks as the Grappled by 1(bT) and increase the Dice Score of your Might Clash when targeted by the Pin Maneuver by 2(bT).
+  (4)-[Passive]: Halve the Ki Point Cost of the Reflect Maneuver.
+  (5)-[Passive]: Halve any Collision Damage you receive.
+  (6)-[Passive]: Increase the Damage you receive from an Attacking Maneuver that has a Damage Category of Direct or higher by 5(bT).
+  (7)-[Triggered]: When making any type of Physical Attacking Maneuver or Grapple Maneuver, you may increase your Melee Range by 3 Squares for the duration of that Maneuver.
+  (8)-[Triggered, 1/Round]: Upon hitting an Opponent with a Physical Attacking Maneuver or initiating a Grapple, you may move that Character any number of Squares up to your current Melee Range in any direction – ignoring the usual rules for Movement in a Grapple if you initiated a Grapple.
+
+---
+
+[passive]
+# (1) Unnatural: what this system reads of it - no Suffocating Combat Condition (breath.mjs canSuffocate).
+forbid condition.suffocating;
+
+# (2)
+soakValue += 1(T);
+defenseValue += 1(T);
+
+# (3) A Grapple Check made as the Grappled; and the Pin's Might Clash, held down (chat.mjs settleGrapple).
+grapple.defending += 1(bT);
+might.againstPin += 2(bT);
+
+# (4) Rounded down, as every halving.
+reflect.kiCost *= 0.5;
+
+# (5) Every Collision Damage taken - a Feature's, the ground's, a thrown thing's (chat.mjs).
+allow collision.halved;
+
+# (6) Damage there already is, from an attack of Direct or Lethal (chat.mjs, where the Damage is worked out).
+incoming.damage.directOrHigher += 5(bT);
+
+# (7) Asked only where it matters: a Physical Attack or a Grapple aimed past your Melee Range and within 3 more -
+# "Melee Range +3 for this Maneuver?" (maneuvers.mjs stretchReach).
+meleeRange.stretch += 3;
+
+# (8) Hit an Opponent with a Physical Attack, or put one in a Grapple: on that card, moving them up to your Melee Range -
+# the stretch with it, where it was taken - once a Round, counted when taken. Where to is the map's, and the table's.
+allow rubbery.move;

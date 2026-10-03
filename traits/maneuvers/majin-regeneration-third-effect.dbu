@@ -1,0 +1,22 @@
+id: majin-regeneration-third-effect
+name: 3rd effect of Majin Regeneration
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+surge: true
+surgeKind: healing
+fromTrait: majin-regeneration
+fromEffect: 3
+source: Core Rule
+description: >
+  Majin Regeneration's third effect, as a Maneuver: a Healing Surge for 1 Action, once a Combat Round.
+text: >
+  (3)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action, use a Healing Surge.
+
+---
+
+# The Liquid State's sixth effect's shape (liquid-sixth-effect.dbu): owned by every character, in the list only while
+# Majin Regeneration is had (`fromTrait`), so a name given to it is kept.

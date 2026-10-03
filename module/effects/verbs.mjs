@@ -62,9 +62,10 @@ export const VERBS = Object.freeze({
        + "to either Strike, Dodge, or Wound (you decide)\". One already at its ceiling is not offered."
   },
   surge: {
-    args: [0, 1],
+    args: [0, 2],
     names: [0],
-    doc: "Take a Surge. Name \"healing\" or \"ki\" to force which, or neither to be asked."
+    doc: "Take a Surge. Name \"healing\" or \"ki\" to force which, or neither to be asked. A number after it multiplies "
+       + "the Life Points a Healing Surge gives back - Majin Regeneration's \"double the amount\"."
   },
   leaveState: {
     args: [0, 1],

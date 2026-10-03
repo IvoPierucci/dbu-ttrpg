@@ -238,6 +238,11 @@ function applyRequest(request) {
     case "foresee": return applyForesee(request.combatId, request.combatantId, request.initiative);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
+    // Rubbery Body's move taken, of whom.
+    case "moveTaken": {
+      const card = game.messages.get(request.messageId);
+      return card?.setFlag(SCOPE, "movesTaken", [...new Set([...(card.getFlag(SCOPE, "movesTaken") ?? []), request.movedUuid])]);
+    }
     case "downBurst": return applyDownBurst(request.messageId, request.uuid, request.won);
     case "desperate": return game.messages.get(request.messageId)?.setFlag(SCOPE, DESPERATE_FLAG,
       { ...(game.messages.get(request.messageId)?.getFlag(SCOPE, DESPERATE_FLAG) ?? {}), [request.exploiterUuid]: request.state });
@@ -2592,11 +2597,14 @@ async function settleGrapple(message, clash) {
       `${grappler.name} wins, and closes for the hold.`);
 
     // The second Clash, carrying the Grapple so that it settles here too.
+    // Rubbery Body: "increase the Dice Score of your Might Clash when targeted by the Pin Maneuver by 2(bT)".
+    const heldDown = Number(grappled.system.effects?.slots?.["might.againstPin"]?.add) || 0;
     await postMightClash(grappler, grappled, {
       maneuverName: "Pin",
       reason: `${grappler.name} holds ${grappled.name} down. Win and they are Pinned; `
         + "lose and they escape the Grapple.",
-      grapple: { kind: "pin-hold", applied: false }
+      grapple: { kind: "pin-hold", applied: false },
+      ...(heldDown ? { rowsFor: { [grappled.uuid]: [{ label: "Against the Pin", value: heldDown }] } } : {})
     });
     return;
   }
@@ -2685,6 +2693,8 @@ async function settleGrapple(message, clash) {
   }
 
   await beginGrapple(grappler, grappled);
+  // Rubbery Body: a Grapple initiated, the one Grappled moved - "ignoring the usual rules for Movement in a Grapple".
+  offerRubberyMove(message, grappler, grappled, { grapple: true, stretched: Boolean(clash.grapple.stretched) });
   if (!clash.grapple.tailRestraint) {
     await settledNote(message, `${grappler.name} has ${grappled.name} in a Grapple.`);
     return;
@@ -3245,7 +3255,10 @@ async function landThrown(attack, thrower, target) {
     ? Number(thrown.value)
     : hardnessValue(thrown.rank, target.system.baseTierOfPower ?? 1);
   const escape = Handlebars.escapeExpression;
-  await reduceLifePoints(target, value, { reason: `${thrown.name} (Collision Damage)` });
+  // Rubbery Body: "Halve any Collision Damage you receive."
+  const rubbery = target.system.effects?.slots?.["collision.halved"] === true;
+  await reduceLifePoints(target, rubbery ? Math.floor(value / 2) : value,
+    { reason: `${thrown.name} (Collision Damage${rubbery ? ", halved" : ""})` });
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: thrower }),
     content: `<div class="dbu-settled-note">The ${escape(thrown.name)} hits ${escape(target.name)}: `
@@ -8046,7 +8059,7 @@ export async function postSkillClash(actor, target, maneuver, leaves = {}) {
  */
 export async function postGrappleCheck(grappler, grappled, {
   maneuverName = "Grapple", reason = "", kind = "start", earlierAttempts = 0, speaker = null,
-  maneuver = null, telekinetic = false, tailRestraint = false
+  maneuver = null, telekinetic = false, tailRestraint = false, stretched = false
 } = {}) {
   const tier = Math.max(1, grappled.system.tierOfPower ?? 1);
 
@@ -8084,7 +8097,8 @@ export async function postGrappleCheck(grappler, grappled, {
           // is the Launch Maneuver, which is a different thing with a similar name.
           collision: (kind === "launch") ? { doubles: false, doubledBy: "" } : null,
           collisionApplied: false,
-          grapple: { kind, applied: false, ...(tailRestraint ? { tailRestraint: true } : {}) },
+          grapple: { kind, applied: false, ...(tailRestraint ? { tailRestraint: true } : {}),
+            ...(stretched ? { stretched: true } : {}) },
           // Telekinesis's Launch: as if Grappling them, with no Grapple to end.
           ...(telekinetic ? { telekinetic: true } : {}),
           ready: [],
@@ -8671,8 +8685,29 @@ function renderOutOfSequence(message, html) {
     const list = document.createElement("ul");
     list.className = "dbu-oos-list";
 
+    const moved = message.getFlag(SCOPE, "movesTaken") ?? [];
     for (const offer of offers) {
       const item = document.createElement("li");
+      // Rubbery Body's move: not an Out-of-Sequence Maneuver, so its own record and button.
+      if (offer.move) {
+        item.innerHTML = `
+          <span class="dbu-oos-actor">${Handlebars.escapeExpression(offer.actorName)}</span>
+          <span class="dbu-oos-maneuver">${Handlebars.escapeExpression(offer.maneuverName)}</span>
+          <span class="dbu-oos-reason">${Handlebars.escapeExpression(moved.includes(offer.move.movedUuid)
+            ? `${offer.reason} - moved` : offer.reason)}</span>`;
+        const mover = fromUuidSync(offer.actorUuid);
+        if (!moved.includes(offer.move.movedUuid) && mover?.isOwner
+          && (mover.getFlag?.(SCOPE, "rubberyMoved") !== roundKey())) {
+          const use = document.createElement("button");
+          use.type = "button";
+          use.className = "dbu-oos-button";
+          use.textContent = "Use";
+          use.addEventListener("click", () => takeRubberyMove(message, mover, offer));
+          item.append(use);
+        }
+        list.append(item);
+        continue;
+      }
       item.innerHTML = `
         <span class="dbu-oos-actor">${Handlebars.escapeExpression(offer.actorName)}</span>
         <span class="dbu-oos-maneuver">${Handlebars.escapeExpression(offer.maneuverName)}</span>
@@ -12929,6 +12964,38 @@ function offerWatcherPowerUp(message, actor, why) {
 }
 
 /**
+ * Rubbery Body (8): "Upon hitting an Opponent with a Physical Attacking Maneuver or initiating a Grapple, you may move that
+ * Character any number of Squares up to your current Melee Range in any direction" - offered on that card, the stretch
+ * counted where it was taken. Not an Out-of-Sequence Maneuver: it takes no one's, and nothing here moves anybody - where
+ * to is the map's. Once a Round, counted when taken.
+ */
+function offerRubberyMove(message, mover, moved, { grapple = false, stretched = false } = {}) {
+  if (!mover || !moved || (mover.uuid === moved.uuid) || (mover.system?.effects?.slots?.["rubbery.move"] !== true)) return;
+  if (mover.getFlag?.(SCOPE, "rubberyMoved") === roundKey()) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.move && (offer.move.movedUuid === moved.uuid))) return;
+  const stretch = stretched ? (Number(mover.system.effects?.slots?.["meleeRange.stretch"]?.add) || 0) : 0;
+  const squares = Math.max(0, Number(mover.system.meleeRange) || 0) + stretch + 1;
+  requestEdit(message, { type: "offer", offer: { actorUuid: mover.uuid, actorName: mover.name, maneuverId: "",
+    maneuverName: `Move ${moved.name}`, reason: `Rubbery Body - up to ${squares} Squares${grapple
+      ? ", ignoring Movement in a Grapple" : ""}`, move: { movedUuid: moved.uuid, squares } } });
+}
+
+/** This Combat Round, as a key - a once-a-Round use recorded against it. */
+function roundKey() {
+  return `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+}
+
+/** Rubbery Body's move, taken: its once a Round spent, and the card says so. Where to is moved on the map. */
+async function takeRubberyMove(message, actor, offer) {
+  if (actor.getFlag?.(SCOPE, "rubberyMoved") === roundKey()) {
+    ui.notifications.warn(`${actor.name} has moved someone with Rubbery Body this Round already.`);
+    return;
+  }
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.rubberyMoved`]: roundKey() });
+  requestEdit(message, { type: "moveTaken", movedUuid: offer.move.movedUuid });
+}
+
+/**
  * Powerful Physique (4): "If you are hit by an Attacking Maneuver, after concluding that Attacking Maneuver, you may use
  * the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, increase the Wound Roll of that Attacking Maneuver
  * by your Force Modifier." Offered on the attack's card at the one who made it; counted, once per Encounter, when taken.
@@ -13448,8 +13515,16 @@ async function takeOutOfSequence(message, actor, offer) {
     // Melee Range, and an Out-of-Sequence Maneuver is no exception to it - the Weapon's reach
     // with it, where it has one.
     const unbounded = declared.weapon?.wholeBattlefield || declared.weapon?.telekinetic;
-    const outOfReach = target && !unbounded
+    let outOfReach = target && !unbounded
       && whyNotInReach(actor, target, declared, declared.weapon?.meleeRange ?? 0);
+    // Rubbery Body's stretch, out of sequence as in it.
+    if (outOfReach) {
+      const { stretchReach } = await import("./maneuvers.mjs");
+      const stretching = await stretchReach(actor, outOfReach,
+        more => whyNotInReach(actor, target, declared, (declared.weapon?.meleeRange ?? 0) + more), maneuver.name);
+      outOfReach = stretching.why;
+      if (stretching.stretched) declared = { ...declared, stretched: true };
+    }
     if (outOfReach) {
       ui.notifications.warn(outOfReach);
       return;
@@ -13712,7 +13787,7 @@ export async function postAttack(actor, target, maneuver,
                                    extraTargets = [], freeWager = 0, unitedWith = null,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
-                                   appliedProfiles = [] },
+                                   appliedProfiles = [], stretched = false },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -13824,6 +13899,8 @@ export async function postAttack(actor, target, maneuver,
           ...(genkiLifeforce ? { genkiLifeforce } : {}),
           // Illusion Smash: "treat them as if they were on a Square adjacent to you for this Attacking Maneuver".
           ...(portal ? { portal: true } : {}),
+          // Rubbery Body's stretch, taken for it: its Melee Range 3 more for the move it may buy.
+          ...(stretched ? { stretched: true } : {}),
           // A second Profile outside a Technique: Elemental Blade's Multi-Profile on an ordinary
           // attack. A Technique's is on its own block.
           secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
@@ -16794,6 +16871,12 @@ async function rollAttackWound(message, attack) {
     // What the Technique adds once there is Damage: Minion Destroyer, Shattering Blow, Complete
     // Annihilation against the Undying.
     const extra = techniqueDamageParts(attacker, attack, target, taken);
+    // Rubbery Body: "Increase the Damage you receive from an Attacking Maneuver that has a Damage Category of Direct or
+    // higher by 5(bT)" - Damage there already is.
+    const softer = Number(target.system.effects?.slots?.["incoming.damage.directOrHigher"]?.add) || 0;
+    if (softer && (taken > 0) && ((DAMAGE_CATEGORIES[own.damageCategory]?.value ?? 1) >= DAMAGE_CATEGORIES.direct.value)) {
+      extra.push({ label: `${DAMAGE_CATEGORIES[own.damageCategory].label} Damage`, value: softer });
+    }
     // Barrier: "Reduce the Damage you receive by the Dice Score."
     const dealt = Math.max(0, taken + extra.reduce((sum, part) => sum + part.value, 0) - (Number(own.barrier?.total) || 0));
     // Punching Down: "If you hit a Character with an Attacking Maneuver that is 2+ Size Categories smaller than you,
@@ -18169,9 +18252,13 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
   // What an effect adds on top of what the Feature is worth - Deadly Drop's "Increase the Collision
   // Damage they suffer by 1/2 of your Might multiplied by the rank of the High Environment".
   const total = amount + Math.max(0, Number(extra) || 0);
+  // Rubbery Body: "Halve any Collision Damage you receive" - all of it, what was added on top too.
+  const ownHalving = target.system.effects?.slots?.["collision.halved"] === true;
+  const received = ownHalving ? Math.floor(total / 2) : total;
   const changed = [
     doubled ? `doubled by ${doubledBy}` : "",
     halved ? `halved by ${halvedBy}` : "",
+    ownHalving ? "halved (Rubbery Body)" : "",
     ...applied.filter(quality => quality.collision.halves)
       .map(quality => `halved by ${quality.name}`),
     ...fromGround.map(quality =>
@@ -18182,7 +18269,7 @@ async function askCollisionDamage(target, { title = "Collision Damage", doubled 
     + (changed ? `, ${changed}` : "")
     + (extra ? `, +${extra} ${extraLabel}` : "");
 
-  await reduceLifePoints(target, total, { reason });
+  await reduceLifePoints(target, received, { reason });
 
   // What this Environment does to whoever lands on it. "If a Character collides with a
   // Square of this Battle Environment, they are knocked Prone" - a Square of it, which is
@@ -19193,6 +19280,10 @@ async function applyAttackDamage(message, target, attack) {
     await requestActorUpdate(target, { [`flags.${SCOPE}.damagedSinceTurn`]: true });
   }
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerFlowExploit(message, target, armsUser);
+  // Rubbery Body: hit with a Physical Attack, the one hit moved.
+  if (own.hit && !isAbsoluteMiss(own) && (attack.foundation === "physical")) {
+    offerRubberyMove(message, armsUser, target, { stretched: Boolean(attack.stretched) });
+  }
   // Powerful Physique: hit by it, the Basic Attack back once it is done.
   if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerPhysiqueStrike(message, target, armsUser);
   // Skill of the Watcher (5): Damage dealt through the Exploit Maneuver, or none taken from an attack Defended against.
@@ -20055,7 +20146,7 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
  * effects will reach the same two Surges by other routes, so this is kept apart from
  * whatever triggered it.
  */
-export async function takeSurge(actor, { source = "Surge", kind: forced = null, dicePerBaseTier = 0 } = {}) {
+export async function takeSurge(actor, { source = "Surge", kind: forced = null, dicePerBaseTier = 0, lifeMultiplier = 1 } = {}) {
   // An effect that names a Surge is not offering a choice between the two: "use a Ki
   // Surge as an Instant Maneuver" is one Surge, and asking which would be wrong.
   const kind = forced ?? await foundry.applications.api.DialogV2.wait({
@@ -20096,19 +20187,25 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     // character's data was prepared - "1d10(T)" is three d10s at Tier 3.
     const extra = actor.system.effects?.slots?.["surge.life.dice"] ?? [];
 
-    const formula = [`${dice}d10`, ...extra.map(d => d.formula), "@surgency"].join(" + ");
-    const roll = new Roll(formula, { surgency });
+    // Majin Regeneration's: Life Points for each Health Threshold below.
+    const below = Number(actor.system.threshold?.depth) || 0;
+    const regen = below * (Number(actor.system.effects?.slots?.["surge.life.perThreshold"]?.add) || 0);
+    const formula = [`${dice}d10`, ...extra.map(d => d.formula), "@surgency", ...(regen ? ["@regen[Health Thresholds]"] : [])]
+      .join(" + ");
+    const roll = new Roll(formula, { surgency, regen });
     await roll.evaluate();
 
+    // "Double the amount of Life Points you regain from this Healing Surge" - Majin Regeneration's at Defeated.
+    const multiplier = Math.max(1, Number(lifeMultiplier) || 1);
     const { value, max } = actor.system.life;
-    const restored = Math.min(max, value + roll.total) - value;
+    const restored = Math.min(max, value + (roll.total * multiplier)) - value;
     await actor.update({ "system.life.value": value + restored });
 
     // The Surge announces itself: a separate message for the Maneuver would say the
     // same thing twice.
     await roll.toMessage({
       speaker: ChatMessage.getSpeaker({ actor }),
-      flavor: `${source} - Healing Surge - ${restored} Life Points restored`
+      flavor: `${source} - Healing Surge${(multiplier > 1) ? ` x${multiplier}` : ""} - ${restored} Life Points restored`
     });
     return true;
   }

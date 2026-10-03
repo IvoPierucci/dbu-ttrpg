@@ -1278,6 +1278,27 @@ export function whyNotInReach(actor, target, { foundation, profile, advantages =
 }
 
 /**
+ * Rubbery Body's 7th: "When making any type of Physical Attacking Maneuver or Grapple Maneuver, you may increase your
+ * Melee Range by 3 Squares for the duration of that Maneuver." Asked only where it matters - the target past the Melee
+ * Range and within the stretch - so a yes is the player's choice and never a click for nothing.
+ *
+ * @param {string|null} refusal  why it does not reach as it is
+ * @param {(more: number) => string|null} recheck  the same question with `more` Squares on
+ * @returns {Promise<{why: string|null, stretched: boolean}>}
+ */
+export async function stretchReach(actor, refusal, recheck, what) {
+  if (!refusal) return { why: null, stretched: false };
+  const stretch = Number(actor?.system?.effects?.slots?.["meleeRange.stretch"]?.add) || 0;
+  if (!stretch || recheck(stretch)) return { why: refusal, stretched: false };
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: `${what} - Melee Range +${stretch}` },
+    content: `<p data-tooltip="${Handlebars.escapeExpression(refusal)}">Stretch: Melee Range +${stretch} for this Maneuver?</p>`,
+    rejectClose: false
+  });
+  return yes ? { why: null, stretched: true } : { why: refusal, stretched: false };
+}
+
+/**
  * Whether a target is within this character's Melee Range, and why not if not.
  *
  * The measurement on its own, without the question of which rule is asking it. A

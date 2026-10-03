@@ -317,7 +317,7 @@ async function runVerb(actor, call, context) {
       // The kind is forced when the effect names one: "use a Ki Surge" is not an offer
       // of either Surge.
       const { takeSurge } = await import("../chat.mjs");
-      return takeSurge(actor, { source: "an effect", kind: args[0] ?? null });
+      return takeSurge(actor, { source: "an effect", kind: args[0] ?? null, lifeMultiplier: Number(args[1]) || 1 });
     }
 
     case "leaveState":

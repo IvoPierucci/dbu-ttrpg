@@ -700,6 +700,17 @@ const PATTERNS = [
   { match: /^basicAttack\.afterHit$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
     doc: "Hit by an Opponent's Attacking Maneuver, the Basic Attack offered on its card once it is done, the Force "
        + "Modifier on its Wound Roll - once per Encounter." },
+  // Rubbery Body's: the Pin's Might Clash, held down; Damage taken from a Direct or Lethal attack; the stretch a Physical
+  // Attack or a Grapple may take; and Majin Regeneration's Life Points per Threshold on a Healing Surge.
+  { match: /^(might\.againstPin|incoming\.damage\.directOrHigher|meleeRange\.stretch|surge\.life\.perThreshold)$/,
+    phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "The Dice Score of a Might Clash when targeted by the Pin Maneuver; Damage received from an Attacking Maneuver "
+       + "of Direct or higher; Squares a Physical Attack or Grapple may reach past the Melee Range, asked; Life Points a "
+       + "Healing Surge gives back for each Health Threshold below." },
+  { match: /^(collision\.halved|rubbery\.move)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    valid: () => true,
+    doc: "Every Collision Damage received halved; moving one hit with a Physical Attack or put in a Grapple, once a Round "
+       + "(Rubbery Body's)." },
   // "Apply your Racial Saving Throw Bonus to Cognitive as well as Corporeal" (Warrior's Pride's).
   { match: /^save\.racial\.(\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
     doc: "That Saving Throw gets the Racial Saving Throw Bonus too: 1(T), and its Critical Target 1 lower." },

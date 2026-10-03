@@ -4071,6 +4071,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let snatching = null;
   let talking = null;
   let tailRestraint = false;
+  let grappleStretched = false;
   let exploding = null;
   let waving = null;
   let roaring = null;
@@ -4291,8 +4292,16 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       return false;
     }
     const unbounded = declared?.weapon?.wholeBattlefield || declared?.weapon?.telekinetic;
-    const outOfReach = targetActor && !maneuver.throws && !unbounded
+    let outOfReach = targetActor && !maneuver.throws && !unbounded
       && whyNotInReach(actor, targetActor, declared ?? {}, declared?.weapon?.meleeRange ?? 0);
+    // Rubbery Body's stretch, asked where it is what reaches.
+    if (outOfReach) {
+      const { stretchReach } = await import("./maneuvers.mjs");
+      const stretching = await stretchReach(actor, outOfReach,
+        more => whyNotInReach(actor, targetActor, declared ?? {}, (declared?.weapon?.meleeRange ?? 0) + more), maneuver.name);
+      outOfReach = stretching.why;
+      if (stretching.stretched) declared = { ...(declared ?? {}), stretched: true };
+    }
     if (outOfReach) {
       ui.notifications.warn(outOfReach);
       return false;
@@ -4702,8 +4711,16 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       ui.notifications.warn(`${targetActor.name} is too large for ${actor.name} to ${maneuver.pin ? "Pin" : "Grapple"}.`);
       return false;
     }
-    const outOfGrasp = maneuver.grapple && targetActor
+    let outOfGrasp = maneuver.grapple && targetActor
       && whyNotWithinMelee(actor, targetActor, "The Grapple Maneuver");
+    // Rubbery Body's stretch, for the Grapple as for a Physical Attack.
+    if (outOfGrasp) {
+      const { stretchReach } = await import("./maneuvers.mjs");
+      const stretching = await stretchReach(actor, outOfGrasp,
+        more => whyNotWithinMelee(actor, targetActor, "The Grapple Maneuver", more), maneuver.name);
+      outOfGrasp = stretching.why;
+      grappleStretched = stretching.stretched;
+    }
     if (outOfGrasp) {
       ui.notifications.warn(outOfGrasp);
       return false;
@@ -5078,6 +5095,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         // The Maneuver itself, so the card knows whether an Instant can answer it.
         maneuver,
         tailRestraint,
+        stretched: grappleStretched,
         // Said where the table will be looking rather than refused: "Grappling a Grapple"
         // allows this, after a Might Clash against the Grappler, and that Clash is one of
         // the parts this system leaves to the table.

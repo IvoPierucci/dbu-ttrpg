@@ -1,0 +1,32 @@
+id: majin-regeneration
+name: Majin Regeneration
+order: 2
+category: body
+importance: primary
+description: >
+  The unique composition of the Majin race allows them to quickly regenerate from any and all forms of damage.
+text: >
+  Majin Regeneration (Body): The unique composition of the Majin race allows them to quickly regenerate from any and all forms of damage.
+  (1)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see — Surges).
+  (2)-[Passive]: For each Health Threshold you are below, increase the amount of Life Points you regain from Healing Surges by 2(bT).
+  (3)-[1/Round]: As a Standard Maneuver with an Action Cost of 1 Action, use a Healing Surge.
+  (4)-[Triggered/Threshold]: Use a Healing Surge as an Out-of-Sequence Maneuver.
+  (5)-[Triggered/Defeated]: Use a Healing Surge as an Out-of-Sequence Maneuver. If you do, double the amount of Life Points you regain from this Healing Surge.
+
+---
+
+[passive]
+# (1) The higher of the two, as Cosmic Efficiency's.
+allow surgency.magic;
+# (2) Counted as the Surge is taken (chat.mjs takeSurge).
+surge.life.perThreshold += 2(bT);
+
+# (3) A Maneuver of its own - maneuvers/majin-regeneration-third-effect.dbu, in the list while this is had.
+
+# (4) Knocked through a Health Threshold: chosen on the Threshold's card - one Out-of-Sequence Maneuver for one trigger.
+[triggered/threshold, outOfSequence, effect 4]
+surge(healing);
+
+# (5) Reduced to your minimum Life Points: chosen on the Defeated card, the Life Points it gives back doubled.
+[triggered/defeated, outOfSequence, effect 5]
+surge(healing, 2);
