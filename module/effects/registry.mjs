@@ -781,8 +781,28 @@ function coverPrograms(actor, report) {
 /** The Combat Conditions Plastered still feels. */
 const PLASTERED_SPARES = Object.freeze(["pinned", "suffocating", "stress-exhaustion", "transfigured"]);
 
+/**
+ * The Combat Conditions a Trait or Talent the character has lets them ignore - its file's `ignoresConditions`, while in
+ * the State its `ignoresConditionsWhile` names, if it names one: Warrior's Pride's Impaired and Fatigued in Superior.
+ */
+function conditionsIgnored(actor) {
+  const ignored = new Set();
+  const list = value => (Array.isArray(value) ? value : String(value ?? "").split(",")).map(each => String(each).trim())
+    .filter(Boolean);
+  for (const item of Array.from(actor.items ?? [])) {
+    if (!["racial", "talent"].includes(item.type)) continue;
+    const trait = getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+    if (!trait?.ignoresConditions) continue;
+    const state = String(trait.ignoresConditionsWhile ?? "").toLowerCase();
+    if (state && !((Number(actor.system?.states?.[state]) || 0) > 0)) continue;
+    for (const key of list(trait.ignoresConditions)) ignored.add(key.toLowerCase());
+  }
+  return ignored;
+}
+
 function conditionPrograms(actor, report) {
   const entries = [];
+  const ignored = conditionsIgnored(actor);
 
   for (const [key, stacks] of Object.entries(actor.system?.conditions ?? {})) {
     const count = Number(stacks) || 0;
@@ -799,6 +819,7 @@ function conditionPrograms(actor, report) {
     // Transfigured)" - a Combat Condition's, not a mark's (`combatCondition: no`).
     if (((Number(actor.system?.states?.drunk) || 0) >= 2) && (trait.combatCondition !== false)
       && !PLASTERED_SPARES.includes(key)) continue;
+    if (ignored.has(key)) continue;
 
     const { program, errors } = compile(
       `condition:${key}`,
@@ -860,21 +881,32 @@ export function reactiveFor(actor, options = {}) {
           // A Talent armed under the old per-Talent key still counts, so nothing a
           // player armed before this change quietly stops working.
           || armed.has(entry.sourceId),
-        uses: usesLeft(actor, entry.sourceId, b),
-        available: usesLeft(actor, entry.sourceId, b).available,
+        uses: usesLeft(actor, entry.sourceId, b, siblings(entry.program, b)),
+        available: usesLeft(actor, entry.sourceId, b, siblings(entry.program, b)).available,
         budget: b.budget
       }))
   );
 }
 
-/** What is left of one block's own limits. */
-export function usesLeft(actor, sourceId, b) {
+/**
+ * The other blocks of the same printed effect - `effect 3` on two of them - which share its limit: Warrior's Pride's
+ * "[Triggered/Raging, Triggered/Power, 1/Encounter]" is once between the two.
+ */
+function siblings(program, b) {
+  const number = b.modifiers?.effect;
+  if (!number) return [];
+  return (program.blocks ?? []).filter(other => (other.index !== b.index) && (other.modifiers?.effect === number))
+    .map(other => other.index);
+}
+
+/** What is left of one block's own limits - and of its printed effect's other blocks', `also`. */
+export function usesLeft(actor, sourceId, b, also = []) {
   const uses = actor.system?.effectUses ?? actor.system?.talentUses ?? { round: [], encounter: [] };
-  const id = `${sourceId}#${b.index}`;
+  const ids = [`${sourceId}#${b.index}`, ...also.map(index => `${sourceId}#${index}`)];
 
   // Counts recorded under the old per-Talent key still count against the block, so a
   // use spent before this change is not handed back.
-  const counts = list => (list ?? []).filter(x => (x === id) || (x === sourceId)).length;
+  const counts = list => (list ?? []).filter(x => ids.includes(x) || (x === sourceId)).length;
 
   const perRound = b.budget?.round ?? Infinity;
   const perEncounter = b.budget?.encounter ?? Infinity;

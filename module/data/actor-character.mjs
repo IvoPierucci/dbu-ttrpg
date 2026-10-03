@@ -2668,7 +2668,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.saveNatural = slot(this, "saves.natural");
     this.savingThrows = Object.fromEntries(
       Object.entries(DBUCharacterData.SAVING_THROWS).map(([save, attribute]) => {
-      const racial = racialSaves.includes(save);
+      // Or one an effect gives the bonus to as well - Warrior's Pride's Cognitive.
+      const racial = racialSaves.includes(save) || (this.effects?.slots?.[`save.racial.${save}`] === true);
       return [save, {
         label: save.charAt(0).toUpperCase() + save.slice(1),
         racial,

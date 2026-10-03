@@ -5976,7 +5976,7 @@ async function outcomeTurn(actor, kind) {
  * armed for it.
  */
 export async function offerTriggers(actor, moment) {
-  if (!triggersFor(actor, [moment]).length) return;
+  if (!unarmedTriggers(actor, moment).length) return;
   const player = playerOf(actor);
   let ids = [];
   if (player === game.user) ids = await showOutcomeWindow(actor, moment);
@@ -5986,6 +5986,16 @@ export async function offerTriggers(actor, moment) {
   }
   const armed = actor.system.armedTalents ?? [];
   if (ids.some(id => !armed.includes(id))) await actor.update({ "system.armedTalents": [...new Set([...armed, ...ids])] });
+}
+
+/**
+ * What answers this Moment, parameter and all (`state/raging`), and is not already set to answer it by itself - the
+ * player's to choose now.
+ */
+function unarmedTriggers(actor, moment) {
+  const bare = String(moment).split(/[(/]/)[0];
+  return triggersFor(actor, [bare]).filter(entry => !entry.armed
+    && ((bare === moment) || (String(entry.program.blocks?.[0]?.moment ?? "") === moment)));
 }
 
 /** Who answers for a character: an active player who owns it, or else the active GM. */
@@ -6027,7 +6037,7 @@ export const OUTCOME_QUERY = "dbu-ttrpg.outcomeTriggers";
 
 /** The window itself, on the player's client: what answers the Botch or Critical, ticked. The block ids taken. */
 export async function showOutcomeWindow(actor, kind) {
-  const triggers = triggersFor(actor, [kind]);
+  const triggers = ["botch", "critical"].includes(kind) ? triggersFor(actor, [kind]) : unarmedTriggers(actor, kind);
   if (!actor || !triggers.length) return [];
   const before = new Set(actor.system.armedTalents ?? []);
   const said = { botch: ["Botch", "A Botch on this Combat Roll."], critical: ["Critical", "A Critical on this Combat Roll."] }[kind]

@@ -424,7 +424,12 @@ async function announceChanges(actor, before, after, kind) {
       await fireMoment(actor, "on-applied", context, { only: source, stacks: now - was });
       // Entering a State is a Moment other effects can answer, unlike gaining a
       // Condition - the rulebook writes triggers as `triggered/raging`.
-      if ((kind === "state") && (was === 0)) await fireMoment(actor, `state/${key}`, context);
+      // What is the player's is asked of them in a window first - Warrior's Pride's Superior on entering Raging.
+      if ((kind === "state") && (was === 0)) {
+        const { offerTriggers } = await import("./chat.mjs");
+        await offerTriggers(actor, `state/${key}`);
+        await fireMoment(actor, `state/${key}`, context);
+      }
     }
     else if (now === 0) {
       await fireMoment(actor, "on-removed", context, { only: source, stacks: was });

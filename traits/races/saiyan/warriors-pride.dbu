@@ -1,0 +1,41 @@
+id: warriors-pride
+name: Warrior’s Pride
+order: 3
+category: mind
+importance: secondary
+# (2) "Ignore ... the effects of the Impaired and Fatigued Combat Conditions" while in the Superior State: still had, not
+# felt (registry.mjs conditionPrograms).
+ignoresConditions: impaired, fatigued
+ignoresConditionsWhile: superior
+description: >
+  A proud race of warriors, Saiyans often hold their reputation above all else, believing themselves superior to all others in the heat of battle.
+text: >
+  Warrior’s Pride (Mind): A proud race of warriors, Saiyans often hold their reputation above all else, believing themselves superior to all others in the heat of battle.
+  (1)-[Passive]: Apply your Racial Saving Throw Bonus to Cognitive as well as Corporeal.
+  (2)-[Passive]: While you are in the Superior State, ignore any Health Threshold Penalties and the effects of the Impaired and Fatigued Combat Conditions.
+  (3)-[Triggered/Raging, Triggered/Power, 1/Encounter]: Enter the Superior State until the end of your next turn.
+  (4)-[Triggered/Start of Combat Encounter]: Gain a stack of Battle Born.
+
+---
+
+# (1) Cognitive as well: 1(T) on it and its Critical Target 1 lower, as the race's own Saving Throw has.
+[passive]
+allow save.racial.cognitive;
+
+# (2) In the Superior State, no Health Threshold Penalties - and Impaired and Fatigued not felt (the header above).
+[passive]
+if (inState("superior")) {
+    threshold.penalty = 0;
+}
+
+# (3) On entering the Raging State, or on the Power Up Maneuver - asked in a window there and then - Superior until the
+# end of your next turn. Both are the one effect: once per Encounter between them.
+[triggered/state/raging, 1/encounter, effect 3]
+enterState(superior, 1, next-turn);
+
+[triggered/power, 1/encounter, effect 3]
+enterState(superior, 1, next-turn);
+
+# (4) The Combat Encounter beginning: a stack of Battle Born (Born for Battle's), put where you say.
+[triggered/start-of-encounter, effect 4]
+gainOneOf(battlebornstrike, battleborndodge, battlebornwound);

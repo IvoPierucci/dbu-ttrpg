@@ -687,6 +687,9 @@ const PATTERNS = [
     doc: "Sensing God Ki; the Power Up offered after an Exploit's Damage or a Defend's none; Surgency from the Magic "
        + "Modifier where higher (Cosmic Efficiency); the Exploit offered when an attack left you without Damage, and "
        + "Combat Recovery out of sequence at the start of a turn with none taken (Flow of Combat)." },
+  // "Apply your Racial Saving Throw Bonus to Cognitive as well as Corporeal" (Warrior's Pride's).
+  { match: /^save\.racial\.(\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
+    doc: "That Saving Throw gets the Racial Saving Throw Bonus too: 1(T), and its Critical Target 1 lower." },
   // "You automatically succeed all Steadfast Checks for the Bruised Health Threshold" (Saiyan Heritage's) - and never fail
   // one for it.
   { match: /^steadfast\.autoPass\.(\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
