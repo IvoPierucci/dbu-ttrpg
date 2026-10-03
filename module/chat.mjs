@@ -7084,9 +7084,12 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     ...standing.map(die => ({ label: die.source || "Greater dice", formula: die.formula }))
   ].filter(group => group.formula);
 
+  // What the character's own effects add to a Strike's or a Dodge's Natural Result - Drunk's L.
+  const ownNatural = ["strike", "dodge"].includes(slot)
+    ? applySlot(actor.system.effects?.slots, `${slot}.natural`, 0) : 0;
   const evaluated = await evaluateCheck(actor, bonus,
     groups.map(group => group.formula).join(" + "), baseDie,
-    { minimumNatural, criticalTarget, combatRoll: true, naturalAdd });
+    { minimumNatural, criticalTarget, combatRoll: true, naturalAdd: naturalAdd + ownNatural });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
 

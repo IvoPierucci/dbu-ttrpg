@@ -1,0 +1,30 @@
+id: drunk
+name: Drunk
+kind: state
+levels: 2
+# A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it (the Sake
+# Bottle's Drink).
+specialState: true
+description: >
+  Tipsy: Saving Throws and Combat Rolls L(T) lower, the Natural Result of Strike and Dodge L higher. Plastered: the
+  Combat Conditions do nothing (but Pinned, Suffocating, Stress Exhaustion and Transfigured).
+text: >
+  Tipsy (Level 1)
+  (1)-[Passive]: Reduce your Saving Throws and Combat Rolls by L(T).
+  (2)-[Passive]: Increase the Natural Result of your Strike and Dodge Rolls by L.
+
+  Plastered (Level 2)
+  (1)-[Passive]: Ignore the effects of all Combat Conditions (except Pinned, Suffocating, Stress Exhaustion, and
+  Transfigured).
+
+---
+
+# Everything accumulates upwards, as Raging's does: at Level 2 Tipsy's is still running, at L 2.
+# Plastered is read where the Combat Conditions' effects are gathered (effects/registry.mjs conditionPrograms): every
+# Combat Condition's script left out but those four. What code reads of a Condition outside its script is not touched.
+
+[passive from 1]
+save.all -= L(T);
+combatRolls -= L(T);
+strike.natural += L;
+dodge.natural += L;

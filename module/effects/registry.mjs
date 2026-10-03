@@ -810,6 +810,9 @@ function coverPrograms(actor, report) {
   }];
 }
 
+/** The Combat Conditions Plastered still feels. */
+const PLASTERED_SPARES = Object.freeze(["pinned", "suffocating", "stress-exhaustion", "transfigured"]);
+
 function conditionPrograms(actor, report) {
   const entries = [];
 
@@ -824,6 +827,10 @@ function conditionPrograms(actor, report) {
       report(`"${key}" is not a Combat Condition this system knows.`);
       continue;
     }
+    // Drunk at Plastered: "Ignore the effects of all Combat Conditions (except Pinned, Suffocating, Stress Exhaustion, and
+    // Transfigured)" - a Combat Condition's, not a mark's (`combatCondition: no`).
+    if (((Number(actor.system?.states?.drunk) || 0) >= 2) && (trait.combatCondition !== false)
+      && !PLASTERED_SPARES.includes(key)) continue;
 
     const { program, errors } = compile(
       `condition:${key}`,

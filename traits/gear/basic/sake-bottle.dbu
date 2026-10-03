@@ -9,7 +9,7 @@ details: food
 chargesDice: 4
 chargesLabel: Alcohol
 # "You can spend 1 Action and 1 Alcohol from the Sake Bottle to enter the Drunk Special State until
-# the start of your next turn." The Drunk Special State is not here yet: the card says it.
+# the start of your next turn." The card says it; Drunk is a Special State now (states/drunk.dbu), its Level set on the sheet.
 placeCost: 1
 chargeUseLabel: Drink
 chargeUseNote: enters the Drunk Special State until the start of their next turn
