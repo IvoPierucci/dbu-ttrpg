@@ -1,0 +1,23 @@
+id: toss
+name: Toss
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/round
+# What is tossed asked, at the token targeted; its catcher's Perception Check (Apprentice) from the card's Catch button -
+# made, theirs; failed, lost, a Found button for the GM when somebody finds it (chat.mjs askToss, postToss).
+toss: true
+source: Core Rule
+description: >
+  Toss an Item you possess to another Character: an Apprentice Perception Check catches it; failed, it is lost.
+text: >
+  Toss Maneuver [1/Round]: Give an item to a friend or ally.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Effect: Give a Basic Item, Accessory, Weapon, or piece of Apparel you possess to another Character. That Character must
+  make an Apprentice Perception Skill Check. If they succeed, they gain the item. If they fail, it continues sailing past
+  them and becomes lost, requiring a Perception Skill Check to find again (with the Difficulty Category decided by the
+  ARC depending on the terrain).

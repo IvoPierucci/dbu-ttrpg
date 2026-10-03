@@ -66,7 +66,9 @@ import {
   refundManeuverCost,
   spendManeuverCost,
   maneuverUsesLeft,
-  secondSightOn
+  secondSightOn,
+  favoredElement,
+  favoredDamage
 } from "./maneuvers.mjs";
 import { appliedTraits, boughtTraits, evasionOf, uniqueDefinitionOf } from "./unique.mjs";
 
@@ -2980,6 +2982,7 @@ function onRenderChatMessage(message, html) {
   renderWeatherSummon(message, html);
   renderForge(message, html);
   renderTerrainLift(message, html);
+  renderToss(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -4381,7 +4384,8 @@ const CARD_SETTLERS = {
   get cook() { return [COOK_FLAG, unsettleCook, settleCook]; },
   get gamble() { return [GAMBLE_FLAG, unsettleGamble, settleGamble]; },
   get crystal() { return [CRYSTAL_FLAG, unsettleCrystal, settleCrystal]; },
-  get forge() { return [FORGE_FLAG, unsettleForge, settleForge]; }
+  get forge() { return [FORGE_FLAG, unsettleForge, settleForge]; },
+  get toss() { return [TOSS_FLAG, unsettleToss, settleToss]; }
 };
 
 /** A card's Check its window was closed on: the Roll button it leaves, and what that rolls. */
@@ -11035,8 +11039,18 @@ export async function askTelekinesis(actor, maneuver, given = null) {
   const mode = await pick(maneuver.name, "Telekinesis at what?", [
     { action: "throw", label: `Throw an Item or a Feature at ${first.name}` },
     { action: "take", label: `Take an unequipped Item from ${first.name}` },
+    { action: "toss", label: `Toss an unequipped Item of ${first.name}'s to another you target` },
     { action: "launch", label: `Launch ${first.name}` }]);
   if (!mode) return null;
+  // "You may use the Throw Maneuver or Toss Maneuver as an Out-of-Sequence Maneuver as if you were holding that Item."
+  if (mode === "toss") {
+    if (await beyondTelekinesis(actor, first)) {
+      ui.notifications.warn(`${first.name} is more than 8 Squares away.`);
+      return null;
+    }
+    const toss = await askToss(actor, { name: maneuver.name }, { from: first });
+    return toss ? { mode, uuids: [first.uuid], toss } : null;
+  }
   if ((mode !== "throw") && await beyondTelekinesis(actor, first)) {
     ui.notifications.warn(`${first.name} is more than 8 Squares away.`);
     return null;
@@ -11060,6 +11074,7 @@ export async function postTelekinesis(actor, maneuver, plan) {
     return useManeuver(actor, thrower, { outOfSequence: true, targetUuid: target.uuid,
       extraTargets: rest.map(other => ({ uuid: other.uuid, name: other.name })) });
   }
+  if (plan.mode === "toss") return postToss(actor, { name: `${maneuver.name} - Toss` }, plan.toss);
   if (plan.mode === "launch") {
     // "You may use the Launch Maneuver as an Out-of-Sequence Maneuver as if you were Grappling with that Character as the
     // Grappler" - its Grapple Check, with no Grapple to end.
@@ -11912,6 +11927,100 @@ function renderTerrainLift(message, html) {
   (html.querySelector(".message-content") ?? html).append(button);
 }
 
+/** The Toss's card: the Item in the air, the Catch its catcher rolls, and - lost - its finding. */
+const TOSS_FLAG = "toss";
+
+/**
+ * The Toss: "Give a Basic Item, Accessory, Weapon, or piece of Apparel you possess to another Character" - asked which,
+ * at the token targeted. Telekinesis hands over another's unequipped Item, `from` them.
+ */
+export async function askToss(actor, maneuver, { from = null } = {}) {
+  const holder = from ?? actor;
+  const catcher = Array.from(game.user.targets ?? []).map(token => token.actor)
+    .find(other => other && (other.uuid !== actor.uuid) && (other.uuid !== holder.uuid));
+  if (!catcher) {
+    ui.notifications.warn(`${maneuver.name}: target who it is tossed to first.`);
+    return null;
+  }
+  const items = Array.from(holder.items ?? []).filter(item => (item.type === "gear") && (!from || !item.system.equipped));
+  if (!items.length) {
+    ui.notifications.warn(`${holder.name} has nothing to toss.`);
+    return null;
+  }
+  const chosen = await pick(maneuver.name, `Toss which, to ${catcher.name}?`, items.map(item => ({ action: item.id, label: item.name })));
+  return chosen ? { itemId: chosen, holderUuid: holder.uuid, catcherUuid: catcher.uuid } : null;
+}
+
+/** Tossed: "That Character must make an Apprentice Perception Skill Check" - its Catch button, for them. */
+export async function postToss(actor, maneuver, plan) {
+  const holder = fromUuidSync(plan.holderUuid);
+  const catcher = fromUuidSync(plan.catcherUuid);
+  const item = holder?.items?.get(plan.itemId);
+  if (!item || !catcher) return null;
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(item.name)} to `
+      + `${Handlebars.escapeExpression(catcher.name)} - a Perception Check (Apprentice) to catch it.</p>`,
+    flags: { [SCOPE]: { [TOSS_FLAG]: { holderUuid: holder.uuid, catcherUuid: catcher.uuid, itemId: item.id,
+      itemName: item.name, done: null } } } });
+}
+
+/** Its Catch button, for the catcher's owner, until rolled; lost, a Found button for whoever finds it. */
+function renderToss(message, html) {
+  const toss = message.getFlag(SCOPE, TOSS_FLAG);
+  if (!toss) return;
+  const container = html.querySelector(".message-content") ?? html;
+  const add = (label, tip, act) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = label;
+    button.dataset.tooltip = tip;
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return act();
+    });
+    container.append(button);
+  };
+  if (!toss.done) {
+    const catcher = fromUuidSync(toss.catcherUuid);
+    if (!catcher?.isOwner) return;
+    return add("Catch", "Perception Check (Apprentice)", () => cardRoll(message, { actorUuid: catcher.uuid, type: "skill",
+      key: "perception", against: "apprentice", settles: { kind: "toss", messageId: message.id } }));
+  }
+  if (toss.done.lost && !toss.done.found && game.user.isGM) {
+    add("Found", "Someone found it - given to the token you target", () => foundToss(message));
+  }
+}
+
+/** "If they succeed, they gain the item. If they fail, it continues sailing past them and becomes lost." */
+async function settleToss(message, toss, made) {
+  if (toss.done) return;
+  const holder = fromUuidSync(toss.holderUuid);
+  const catcher = fromUuidSync(toss.catcherUuid);
+  const item = holder?.items?.get(toss.itemId);
+  if (!item) return;
+  const data = item.toObject();
+  delete data._id;
+  if (data.system) data.system.equipped = false;
+  if (made && catcher) await requestCreateItem(catcher, data);
+  await requestDeleteItem(holder, item.id);
+  await message.setFlag(SCOPE, TOSS_FLAG, { ...toss, done: { success: made, lost: !made, data: made ? null : data } });
+  await settledNote(message, made ? `${catcher?.name ?? "They"} catches ${item.name}.`
+    : `${item.name} sails past and is lost - a Perception Check to find it, its Difficulty the ARC's.`);
+}
+
+async function unsettleToss() {}
+
+/** Lost and found: the Item given to the token the GM targets. */
+async function foundToss(message) {
+  const toss = message.getFlag(SCOPE, TOSS_FLAG);
+  const finder = Array.from(game.user.targets ?? []).map(token => token.actor).find(Boolean);
+  if (!toss?.done?.data || !finder) return ui.notifications.warn("Target who found it first.");
+  await requestCreateItem(finder, toss.done.data);
+  await message.setFlag(SCOPE, TOSS_FLAG, { ...toss, done: { ...toss.done, found: finder.uuid } });
+  await settledNote(message, `${finder.name} finds ${toss.itemName}.`);
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -12635,7 +12744,7 @@ async function takeOutOfSequence(message, actor, offer) {
 
     // The Foundation's own demand of the attacker. No exception out of sequence, as
     // with the Melee Range above.
-    const wrongFoundation = whyNotThisFoundation(actor, declared.foundation,
+    const wrongFoundation = !favoredElement(actor, declared.profile) && whyNotThisFoundation(actor, declared.foundation,
       DBUCharacterData.FOUNDATIONS[declared.foundation]?.label);
     if (wrongFoundation) {
       ui.notifications.warn(wrongFoundation);
@@ -12650,6 +12759,8 @@ async function takeOutOfSequence(message, actor, offer) {
     // Illusion Smash: as if beside you; Smash Barrage's others aimed at with it.
     if (granted?.portal) declared = { ...declared, portal: true };
     if (granted?.extraTargets?.length) declared = { ...declared, extraTargets: granted.extraTargets };
+    // A Favored Element's Force Modifier, where it is the higher.
+    declared = favoredDamage(actor, declared);
     // A Kamikaze Ghost's: Small Scale Blast's Minor Sphere, and "may use the Magic Modifier as its Damage Attribute".
     if (granted?.area) declared = { ...declared, area: granted.area };
     if (granted?.damageAttribute) declared = { ...declared, damageAttribute: granted.damageAttribute };
@@ -14353,9 +14464,17 @@ function profileStrikeParts(attacker, attack) {
  * Offense blunts every Attacking Maneuver once the round's free attacks are spent. `workingsKey` names the sheet's
  * workings for a part that has them, for that window's hover.
  */
+/** A Favored Element's: "You increase your Strike and Wound Rolls by 1(T) and 2(T) respectively". */
+function favoredParts(attacker, attack, roll) {
+  if (!favoredElement(attacker, attack?.profile)) return [];
+  const per = (roll === "strike") ? 1 : 2;
+  return [{ label: "Favored Element", written: `+${per}(T)`, value: per * Math.max(1, attacker.system.tierOfPower ?? 1) }];
+}
+
 function strikeParts(attacker, attack) {
   return [
     strikeOf(attacker, attack?.foundation),
+    ...favoredParts(attacker, attack, "strike"),
     ...profileStrikeParts(attacker, attack),
     ...modifierStrikeParts(attacker, attack),
     ...(attack.weapon?.strike ?? []),
@@ -15205,6 +15324,7 @@ function woundParts(attacker, attack) {
     ...(up ? [{ label: "Punching Up", written: `+${up}(T)`, value: up * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...combinationFollowUps(attacker, attack),
     { ...woundBase(attacker, attack), workingsKey: `wound.${attack.foundation}` },
+    ...favoredParts(attacker, attack, "wound"),
     ...profileWoundParts(attacker, attack),
     ...advantageWoundParts(attacker, attack),
     ...techniqueWoundParts(attacker, attack),

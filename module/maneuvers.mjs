@@ -1071,6 +1071,29 @@ export const FOUNDATION_RULES = Object.freeze({
  *
  * @returns {null|string} null if they may, otherwise why they may not
  */
+/**
+ * Whether a Profile is one of this character's Favored Elements - "a selected Profile with 'Elemental' in the name gained
+ * through an effect", written `favored.<profile> = true`.
+ */
+export function favoredElement(actor, profile) {
+  return Boolean(profile) && /^elemental/.test(String(profile))
+    && (actor?.system?.effects?.slots?.[`favored.${profile}`] === true);
+}
+
+/**
+ * A Favored Element's Damage Attribute: "You may use your Force Modifier as the Damage Attribute for your Favored
+ * Element(s)" - taken where it is the higher, nothing else having named one.
+ */
+export function favoredDamage(actor, declared) {
+  if (!declared || declared.damageAttribute || !favoredElement(actor, declared.profile)) return declared;
+  const force = Number(actor?.system?.attributes?.force?.mod) || 0;
+  const own = Number(actor?.system?.attributes?.[FOUNDATION_ATTRIBUTE[declared.foundation] ?? "magic"]?.mod) || 0;
+  return (force > own) ? { ...declared, damageAttribute: { label: "Force Modifier (Favored Element)", value: force } } : declared;
+}
+
+/** Which Attribute each Foundation's Damage is, for the one comparison above. */
+const FOUNDATION_ATTRIBUTE = Object.freeze({ physical: "force", energy: "force", magic: "magic" });
+
 export function whyNotThisFoundation(actor, foundation, name = foundation) {
   const required = FOUNDATION_RULES[foundation]?.minimum;
   if (!required) return null;
@@ -2046,7 +2069,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
         available.map(key => ({
           action: key,
           label: foundations[key].label,
-          disabled: Boolean(shut[key])
+          disabled: Boolean(shut[key]) && !favoredElement(actor, profile)
         }))
       );
   if (!foundation) return null;
@@ -2159,15 +2182,16 @@ export async function pickProfileOnly(maneuver, foundations, hint = "", actor = 
   const sections = groups.map(group => {
     if (!group.profiles.length) return "";
     // Nothing under a shut Foundation is drawn, so nothing under one can be selected -
-    // and the first Profile that starts selected is never one of them.
-    if (shut[group.key]) return profileSection(group, "", shut);
+    // and the first Profile that starts selected is never one of them. Its Favored Elements but.
+    const open = shut[group.key] ? group.profiles.filter(profile => favoredElement(actor, profile.id)) : group.profiles;
+    if (!open.length) return profileSection(group, "", shut);
 
-    const items = group.profiles.map(profile => profileOption(profile, maneuver, actor, {
+    const items = open.map(profile => profileOption(profile, maneuver, actor, {
       first: !checked,
       onFirst: () => { checked = true; }
     })).join("");
 
-    return profileSection(group, items, shut);
+    return profileSection(group, items, shut[group.key] ? { ...shut, [group.key]: "" } : shut);
   }).join("");
 
   const chosen = await foundry.applications.api.DialogV2.wait({
@@ -2516,17 +2540,19 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   const shut = shutFoundations(actor, foundations);
 
   const sections = groups.map(group => {
-    if (!group.profiles.length || shut[group.key]) return profileSection(group, "", shut);
+    // A shut Foundation still offers its Favored Elements.
+    const open = shut[group.key] ? group.profiles.filter(profile => favoredElement(actor, profile.id)) : group.profiles;
+    if (!open.length) return profileSection(group, "", shut);
 
     // The first Profile that can actually be chosen starts selected, so confirming
     // straight away is always a valid choice - and never lands on a spent one.
-    const items = group.profiles.map(profile => profileOption(profile, maneuver, actor, {
+    const items = open.map(profile => profileOption(profile, maneuver, actor, {
       first: !checked,
       onFirst: () => { checked = true; }
     }, limits)).join("");
 
     // Groups that hold something open by default; empty and shut ones do not open.
-    return profileSection(group, items, shut);
+    return profileSection(group, items, shut[group.key] ? { ...shut, [group.key]: "" } : shut);
   }).join("");
 
   const body = noProfile

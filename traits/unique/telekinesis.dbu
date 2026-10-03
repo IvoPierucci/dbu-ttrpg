@@ -10,7 +10,8 @@ requiresTarget: true
 # "Target a Feature, Opponent, or an unequipped Item within 8 Squares of you" - asked as it is used, at your targeted token:
 # the Throw out of sequence (an Item or a Feature, asked by the Throw); one of their unequipped Items taken, a Weapon
 # equipped; or the Launch out of sequence "as if you were Grappling with that Character as the Grappler" - its Grapple
-# Check, no Grapple to end (chat.mjs askTelekinesis, postTelekinesis). The Toss Maneuver is not in the system yet.
+# Check, no Grapple to end; or the Toss out of sequence, their Item to another targeted (chat.mjs askTelekinesis,
+# postTelekinesis).
 telekinesis: true
 source: Core Rule
 description: >
@@ -39,5 +40,9 @@ text: >
 
 ---
 
-# The Passive's Terrain Lift is read where that Maneuver lifts (chat.mjs askTerrainLift); Favored Elements and the Toss
-# Maneuver are not in the system yet. Telekinetic Weapons already read this Unique Ability by its name (gear.mjs telekinetic).
+# The Passive's Terrain Lift is read where that Maneuver lifts (chat.mjs askTerrainLift). Telekinetic Weapons already read
+# this Unique Ability by its name (gear.mjs telekinetic).
+
+# "Additionally, Elemental (Earth) becomes a Favored Element."
+[passive]
+favored.elementalEarth = true;

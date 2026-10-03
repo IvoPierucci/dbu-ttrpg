@@ -578,6 +578,11 @@ const TABLE = [
  * list, so a Skill added to the data model needs no change here.
  */
 const PATTERNS = [
+  // "Some effects may designate a Profile as a Favored Element" - `favored.elementalEarth = true;`, Telekinesis's.
+  { match: /^favored\.(elemental\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    valid: () => true,
+    doc: "That Elemental Profile is a Favored Element: usable below Magic 3, the Force Modifier as its Damage Attribute, "
+       + "Strike 1(T) and Wound 2(T) with it." },
   // One Foundation's: "your Energy Strike", "your Physical Wound Rolls" - on top of the Strike or Wound every Foundation
   // shares, read where an attack, a Parry or a Clash names that Foundation.
   { match: /^strike\.(physical|energy|magic)$/, phase: PHASES.LATE, kind: N, ops: NUMERIC,

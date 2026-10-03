@@ -80,7 +80,8 @@ import * as soarNames from "./environments.mjs";
 import { featureDef as signatureFeature, requirementHolds, superProfileKiPerTier } from "./technique.mjs";
 import { withGranted } from "./signature.mjs";
 import * as gearReadingModule from "./gear.mjs";
-import { SUPER_PROFILES, askFeatures, forcedFullWager, maxKiWager, maxLifeWager, minimumKiWager } from "./maneuvers.mjs";
+import { SUPER_PROFILES, askFeatures, favoredDamage, favoredElement, forcedFullWager, maxKiWager, maxLifeWager,
+  minimumKiWager } from "./maneuvers.mjs";
 import { askUnitedPartner } from "./united-attack.mjs";
 
 /**
@@ -1827,6 +1828,7 @@ export function definitionOf(item) {
     grapple: item.system.grapple,
     launch: item.system.launch,
     terrainLift: item.system.terrainLift,
+    toss: item.system.toss,
     movement: item.system.movement,
     pin: item.system.pin,
     powerUp: item.system.powerUp,
@@ -3934,6 +3936,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let summoning = null;
   let forging = null;
   let lifted = null;
+  let tossing = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4129,6 +4132,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Not a thrown one: "any number of Squares ... despite its different range".
     // Not with a Weapon whose reach is the whole Battlefield - Elongation - or one held by the
     // mind, whose attack may come from anywhere around its wielder: which Square, the table's.
+    // A Favored Element's Force Modifier as its Damage Attribute, where it is the higher.
+    declared = favoredDamage(actor, declared);
     // A Frozen Turn: "cannot Ki Wager".
     if (frozenTurnOf(actor) && ((Number(declared?.kiWager) || 0) > 0)) {
       ui.notifications.warn(`${actor.name}'s Frozen Turn: no Ki Wager.`);
@@ -4145,7 +4150,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // What the Foundation asks of the attacker, which is a different question from where
     // the target is standing: an Energy Attack needs a Force Score of 3 whoever it is
     // aimed at, and whether it is aimed at anybody.
-    const wrongFoundation = declared && whyNotThisFoundation(actor, declared.foundation,
+    // Unless it is a Favored Element: "You may use your Favored Element even if your Magic Score is below 3."
+    const wrongFoundation = declared && !favoredElement(actor, declared.profile) && whyNotThisFoundation(actor, declared.foundation,
       DBUCharacterData.FOUNDATIONS[declared.foundation]?.label);
     if (wrongFoundation) {
       ui.notifications.warn(wrongFoundation);
@@ -4334,6 +4340,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const size = larger || unique?.sphereMagnitude || "minor";
       waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
       if (!waving) return false;
+    }
+
+    // The Toss: which Item, to whom.
+    if (maneuver.toss) {
+      tossing = await (await import("./chat.mjs")).askToss(actor, maneuver);
+      if (!tossing) return false;
     }
 
     // Terrain Lift: what it lifts, and whether it can.
@@ -4920,6 +4932,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postTimeFreeze(actor, maneuver)
     : maneuver.tornado
     ? await (await import("./chat.mjs")).postTornado(actor, maneuver)
+    : (maneuver.toss && tossing)
+    ? await (await import("./chat.mjs")).postToss(actor, maneuver, tossing)
     : (maneuver.terrainLift && lifted)
     ? await (await import("./chat.mjs")).postTerrainLift(actor, maneuver, lifted)
     : (maneuver.worldForging && forging)
@@ -5582,6 +5596,7 @@ export function maneuverItemFrom(definition) {
       grapple: Boolean(definition.grapple),
       launch: Boolean(definition.launch),
       terrainLift: Boolean(definition.terrainLift),
+      toss: Boolean(definition.toss),
       movement: Boolean(definition.movement),
       pin: Boolean(definition.pin),
       powerUp: Boolean(definition.powerUp),
