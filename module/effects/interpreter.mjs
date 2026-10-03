@@ -290,7 +290,10 @@ function resolveNumber(entries, scope) {
     // is still a contribution somebody made, and saying so is more use than silently
     // dropping it.
     parts: entries.map(e => ({ op: e.op, value: e.value, source: e.source ?? "" })),
-    add: entries.filter(e => e.op === "add").reduce((total, e) => total + e.value, 0),
+    // Dice rolled onto a number - Combat Recovery's `life.value += 1d10(bT)` - are added as what they rolled; a dice Slot
+    // keeps its dice as dice (its value is not a number), and is left to whatever rolls them.
+    add: entries.filter(e => (e.op === "add") || ((e.op === "add-dice") && (typeof e.value === "number")))
+      .reduce((total, e) => total + e.value, 0),
     // Multiplications are kept apart rather than folded in, because they have to land
     // on the finished value: "when an effect multiplies or divides a value, that is
     // applied after all other modifications to said value". Halving a Soak Value means

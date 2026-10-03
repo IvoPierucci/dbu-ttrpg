@@ -5015,23 +5015,26 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Maneuver and who it is aimed at.
   // What answers it offered in a window first - God of Judgment's (chat.mjs answerDeclare).
   await (await import("./chat.mjs")).answerDeclare(actor, { maneuver, targets: targetActor ? [targetActor] : [] });
+  // What its effects give back is said on its own card, each source on hover (chat.mjs gainsHtml) - not on cards of their own.
+  const poolsBefore = { life: Number(actor.system.life?.value) || 0, ki: Number(actor.system.ki?.value) || 0 };
   const declaring = await fireMoment(actor, "declare-maneuver", {
     maneuver,
     targets: targetActor ? [targetActor] : []
-  });
+  }, { quiet: true });
   // What answering it put on the attack - God of Judgment's Energy Charge - within the Profile's ceiling, as any Charge.
   const momentCharges = declared ? Math.max(0, Number(declaring?.slots?.["attack.energyCharges"]?.add) || 0) : 0;
 
   // And what this Maneuver itself does, which is a different question: `declare-maneuver`
   // is heard by everything the character holds, and this is heard only by the Maneuver
   // being used. Scoped by the Item's own id, which is what `only` is for.
-  await fireMoment(actor, "on-used", {
+  const usedMoment = await fireMoment(actor, "on-used", {
     maneuver,
     // What the player gave it, for a Maneuver that asked. Readable in its own script as
     // `actionsSpent`, and one everywhere else.
     actionsSpent,
     targets: targetActor ? [targetActor] : []
-  }, { only: maneuver.itemId });
+  }, { only: maneuver.itemId, quiet: true });
+  const gains = (await import("./chat.mjs")).gainsHtml(actor, poolsBefore, [usedMoment?.slots, declaring?.slots]);
 
   // A Launch aims itself: the Character being thrown is the one already being held, and
   // asking for a target would be asking a question with one answer. Known to be there,
@@ -5251,6 +5254,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
                soarNote(maneuver, soarTo), powerUpBreaks(actor, maneuver),
                moving.store ? `${moving.fromStore} Ki from the ${moving.store.name}.` : ""]
           .filter(Boolean).join(" "),
+        gains,
         // The character's Ki and the Item's apart, so a Blockade that wins hands each back
         // to where it came from.
         spent: {

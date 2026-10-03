@@ -5457,9 +5457,29 @@ function beingMovedOn(message, actor) {
   return clash;
 }
 
+/**
+ * The Life and Ki Points a Maneuver's effects gave as it was used - Combat Recovery's dice, Cosmic Efficiency's 1d6(T) -
+ * written on its own card rather than on cards of their own (the user's), each source's share on hover as an attack's
+ * roll shows its parts. `before` is what the character had before the effects ran; `slotsList`, what they collected.
+ */
+export function gainsHtml(actor, before, slotsList) {
+  const escape = Handlebars.escapeExpression;
+  const pools = [["life.value", "Life Points", (Number(actor.system.life?.value) || 0) - before.life],
+    ["ki.value", "Ki Points", (Number(actor.system.ki?.value) || 0) - before.ki]];
+  return pools.map(([key, label, gained]) => {
+    const parts = slotsList.flatMap(slots => slots?.[key]?.parts ?? [])
+      .filter(part => ["add", "add-dice"].includes(part.op) && (typeof part.value === "number"));
+    if (!parts.length) return "";
+    const bySource = new Map();
+    for (const part of parts) bySource.set(part.source, [...(bySource.get(part.source) ?? []), part.value]);
+    const tip = [...bySource].map(([source, values]) => `${escape(source)}: ${values.join(" + ")}`).join("<br>");
+    return `<span data-tooltip="${escape(tip)}">+${gained} ${label}</span>`;
+  }).filter(Boolean).join(" &middot; ");
+}
+
 export async function postManeuver(actor, maneuver,
                                    { asOutOfSequence = false, foundation = null,
-                                     rapidMovement = false, spent = null, note = "",
+                                     rapidMovement = false, spent = null, note = "", gains = "",
                                      curePoison = null, ride = null, repair = null, noExploit = false } = {}) {
   const type = MANEUVER_TYPES[maneuver.type];
   const label = asOutOfSequence ? MANEUVER_TYPES.outOfSequence.label : type.label;
@@ -5477,6 +5497,7 @@ export async function postManeuver(actor, maneuver,
         <div class="dbu-maneuver-name">${Handlebars.escapeExpression(maneuver.name)}</div>
         <div class="dbu-maneuver-meta">${label} &middot; ${cost} &middot; ${maneuver.kiCost} KP</div>
         ${note ? `<div class="dbu-maneuver-note">${Handlebars.escapeExpression(note)}</div>` : ""}
+        ${gains ? `<div class="dbu-maneuver-note">${gains}</div>` : ""}
         ${attackLine(actor, maneuver, foundation)}
         ${exploitLine(maneuver)}
       </div>`,
@@ -13448,19 +13469,24 @@ async function takeOutOfSequence(message, actor, offer) {
   // of theirs to run, and firing this unscoped would run every `on used` they own.
   const own = actor.items?.find(item =>
     (item.type === "maneuver") && ((item.system.maneuverId || item.id) === maneuver.id));
+  // What its effects give back, said on its own card (gainsHtml) - not on cards of their own.
+  const poolsBefore = { life: Number(actor.system.life?.value) || 0, ki: Number(actor.system.ki?.value) || 0 };
+  let gainedSlots = [];
   if (own) {
     const { fireMoment } = await import("./effects/moments-runtime.mjs");
     // Declared, as in sequence - what answers a Maneuver being used hears this one too (Cosmic Efficiency's Combat
     // Recovery).
-    await fireMoment(actor, "declare-maneuver", { maneuver, targets: target ? [target] : [] });
-    await fireMoment(actor, "on-used", {
+    const declaredSlots = (await fireMoment(actor, "declare-maneuver", { maneuver, targets: target ? [target] : [] },
+      { quiet: true }))?.slots;
+    const usedSlots = (await fireMoment(actor, "on-used", {
       maneuver: { ...maneuver, itemId: own.id },
       // What the player paid, which out of sequence is nothing - unless this is a Maneuver
       // they held, where it is what they paid to hold it. Or what the offer says it was used for - Flow of Combat's
       // Combat Recovery "as if you spent 1 Action".
       actionsSpent: Number(granted?.actionsSpent) || heldActions,
       targets: target ? [target] : []
-    }, { only: own.id });
+    }, { only: own.id, quiet: true }))?.slots;
+    gainedSlots = [usedSlots, declaredSlots];
     // Flow of Combat: "ignore the reduction to your Defense Value from the effects of Combat Recovery" - its stacks given back.
     if (granted?.noDefensePenalty) {
       const held = { ...(actor.system.resources ?? {}) };
@@ -13540,7 +13566,8 @@ async function takeOutOfSequence(message, actor, offer) {
         // No Action was spent, which is what out of sequence means. The Ki was, and a
         // Blockade that wins hands it back.
         spent: { actions: 0, kind: "standard", ki: price },
-        noExploit: Boolean(offer.noExploit)
+        noExploit: Boolean(offer.noExploit),
+        gains: gainsHtml(actor, poolsBefore, gainedSlots)
       }).then(async card => {
         // Afterimage Strike: "If you use the Movement Maneuver through the effects of the Afterimage Technique,
         // make a Clash (Impulsive vs Cognitive) against the Opponent who targeted you."

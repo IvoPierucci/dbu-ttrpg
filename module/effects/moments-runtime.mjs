@@ -61,7 +61,7 @@ const STATEFUL = {
  *   verb - Prone standing you up - changes no Slot at all, and judging it by the Slots
  *   alone reads as nothing having happened.
  */
-export async function fireMoment(actor, moment, context = {}, { only = null, stacks = null } = {}) {
+export async function fireMoment(actor, moment, context = {}, { only = null, stacks = null, quiet = false } = {}) {
   if (!actor) return {};
 
   const nothing = { slots: {}, fired: 0 };
@@ -101,9 +101,9 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
   // So the character is re-read between the two. Anything the first pass did - a State
   // left, a Condition gone, a number changed - is true before the second pass decides
   // whether it applies at all.
-  const chosen = await runPass(actor, moment, definition, entries, context, "triggered");
+  const chosen = await runPass(actor, moment, definition, entries, context, "triggered", quiet);
   const byItself = await runPass(actor, moment, definition,
-    reactiveAgain(actor, entries, { only, stacks }), context, "automatic");
+    reactiveAgain(actor, entries, { only, stacks }), context, "automatic", quiet);
 
   const fired = chosen.fired + byItself.fired;
   if (!fired) return nothing;
@@ -126,7 +126,7 @@ function reactiveAgain(actor, before, { only = null, stacks = null }) {
 }
 
 /** One half of a Moment: everything of one kind that answers it. */
-async function runPass(actor, moment, definition, entries, context, mode) {
+async function runPass(actor, moment, definition, entries, context, mode, quiet = false) {
   const nothing = { slots: {}, fired: 0 };
   if (!entries.length) return nothing;
 
@@ -142,7 +142,8 @@ async function runPass(actor, moment, definition, entries, context, mode) {
   for (const call of scope.queue) await runVerb(actor, call, context);
 
   await recordUses(actor, spent, definition, context);
-  await announce(actor, entries, spent, moment);
+  // Quiet where the caller says what it did on a card of its own - a Maneuver's Life and Ki, by source (chat.mjs gainsHtml).
+  if (!quiet) await announce(actor, entries, spent, moment);
 
   return { slots, fired: spent.length };
 }
