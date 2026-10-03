@@ -1,10 +1,10 @@
 id: god-of-survival
 name: God of Survival
 optionOf: divine-magic
-description: Steadfast Checks 2 higher, and Surgency half your Insight Modifier higher.
+description: >
+  Increase the Dice Score of your Steadfast Checks by 2 and increase your Surgency by 1/2 (rounded up) of your Insight Modifier.
 text: >
-  God of Survival [Passive]: Increase the Dice Score of your Steadfast Checks by 2 and increase your Surgency by 1/2
-  (rounded up) of your Insight Modifier.
+  God of Survival [Passive]: Increase the Dice Score of your Steadfast Checks by 2 and increase your Surgency by 1/2 (rounded up) of your Insight Modifier.
 
 ---
 

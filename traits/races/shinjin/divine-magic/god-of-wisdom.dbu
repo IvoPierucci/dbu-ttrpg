@@ -1,10 +1,10 @@
 id: god-of-wisdom
 name: God of Wisdom
 optionOf: divine-magic
-description: Combat and Initiative Rolls 1(bT) higher while Scholarship or Personality is your highest Attribute Score.
+description: >
+  If Scholarship and/or Personality have the highest Attribute Score among your Attributes, increase all of your Combat Rolls and Initiative Rolls by 1(bT).
 text: >
-  God of Wisdom [Passive]: If Scholarship and/or Personality have the highest Attribute Score among your Attributes,
-  increase all of your Combat Rolls and Initiative Rolls by 1(bT).
+  God of Wisdom [Passive]: If Scholarship and/or Personality have the highest Attribute Score among your Attributes, increase all of your Combat Rolls and Initiative Rolls by 1(bT).
 
 ---
 

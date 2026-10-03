@@ -1,10 +1,10 @@
 id: god-of-magic
 name: God of Magic
 optionOf: divine-magic
-description: Magical Unique Abilities 3 TP and 2(T) KP cheaper.
+description: >
+  Reduce the TP Cost of all Magical Unique Abilities by 3 TP and reduce the KP Cost of your Magical Unique Abilities by 2(T).
 text: >
-  God of Magic [Passive]: Reduce the TP Cost of all Magical Unique Abilities by 3 TP and reduce the KP Cost of your
-  Magical Unique Abilities by 2(T).
+  God of Magic [Passive]: Reduce the TP Cost of all Magical Unique Abilities by 3 TP and reduce the KP Cost of your Magical Unique Abilities by 2(T).
 
 ---
 

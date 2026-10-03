@@ -3,10 +3,10 @@ name: God of an Element
 optionOf: divine-magic
 # "Select a Profile with 'Elemental' in the name" - asked when it is added, `$choice`.
 choose: elementalProfile
-description: An Elemental Profile of your choice becomes a Favored Element.
+description: >
+  Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
 text: >
-  God of an Element [Passive]: Upon gaining this effect, select a Profile with 'Elemental' in the name - it becomes a
-  Favored Element (see - Favored Element).
+  God of an Element [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
 
 ---
 

@@ -3,13 +3,11 @@ name: Celestial Potential
 category: body
 importance: secondary
 description: >
-  As divine entities entrusted to watch over the fledgling universe, Shinjin have seen the best ways to mitigate their
-  mistakes and capitalize on their successes.
+  As divine entities entrusted to watch over the fledgling universe, Shinjin have seen the best ways to mitigate their mistakes and capitalize on their successes.
 text: >
-  (1)-[Triggered, 1/Round]: When you score a Botch Result on a Combat Roll, increase your Dice Score by 2(T) instead of
-  suffering the penalty.
-  (2)-[Triggered, 1/Round]: When you score a Critical Dice Result on a Combat Roll, increase your Dice Score by an
-  additional 2(T).
+  Celestial Potential (Body): As divine entities entrusted to watch over the fledgling universe, Shinjin have seen the best ways to mitigate their mistakes and capitalize on their successes.
+  (1)-[Triggered, 1/Round]: When you score a Botch Result on a Combat Roll, increase your Dice Score by 2(T) instead of suffering the penalty.
+  (2)-[Triggered, 1/Round]: When you score a Critical Dice Result on a Combat Roll, increase your Dice Score by an additional 2(T).
   (3)-[Triggered/Power, 1/Encounter]: You may convert up to 2 of your Counter Actions into Actions.
 
 ---

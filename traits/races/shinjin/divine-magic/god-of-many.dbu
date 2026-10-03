@@ -3,10 +3,10 @@ name: God of Many
 optionOf: divine-magic
 # "You gain the Master of Minions Talent" - given with it when it is written.
 grantsTalent: master-of-minions
-description: The Master of Minions Talent, and your Minions' Combat Rolls 1(T) higher while you are a Spectator.
+description: >
+  You gain the Master of Minions Talent, and your Minions have their Combat Rolls increased by 1(T) while you are in the Spectator State.
 text: >
-  God of Many [Passive]: You gain the Master of Minions Talent, and your Minions have their Combat Rolls increased by
-  1(T) while you are in the Spectator State.
+  God of Many [Passive]: You gain the Master of Minions Talent, and your Minions have their Combat Rolls increased by 1(T) while you are in the Spectator State.
 
 ---
 

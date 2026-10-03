@@ -3,16 +3,14 @@ name: Skill of the Watcher
 category: mind
 importance: primary
 description: >
-  You are a divine being meant to watch over the universe or rule over it. The patience to observe others leads to you
-  gaining critical information.
+  You are a divine being meant to watch over the universe or rule over it. The patience to observe others leads to you gaining critical information.
 text: >
+  Skill of the Watcher (Mind): You are a divine being meant to watch over the universe or rule over it. The patience to observe others leads to you gaining critical information.
   (1)-[Passive]: You can sense God Ki.
   (2)-[Passive]: Your minimum Action Cost for Combat Recovery is 1 Action.
   (3)-[Triggered]: Increase your Combat Rolls and Soak Value by 1(T) for the duration of any of your Counter Maneuvers.
   (4)-[Triggered]: At the end of the Combat Round, regain 2(bT) Life and Ki Points for each Counter Action you possess.
-  (5)-[Triggered, 1/Round]: If you deal Damage with an Attacking Maneuver made through the Exploit Maneuver, or do not
-  receive Damage from an Attacking Maneuver that you used the Defend Maneuver in response to, you may use the Power Up
-  Maneuver as an Out-of-Sequence Maneuver.
+  (5)-[Triggered, 1/Round]: If you deal Damage with an Attacking Maneuver made through the Exploit Maneuver, or do not receive Damage from an Attacking Maneuver that you used the Defend Maneuver in response to, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
   (6)-[Triggered/Start of Combat Round]: You may spend 1 Action to gain 2 Counter Actions.
 
 ---

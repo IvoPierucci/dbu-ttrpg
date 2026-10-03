@@ -3,16 +3,12 @@ name: Flow of Combat
 category: mind
 importance: secondary
 description: >
-  You are as serene and peaceful in combat as you are at a tea party, graceful and poised even in the midst of
-  battlefield chaos.
+  You are as serene and peaceful in combat as you are at a tea party, graceful and poised even in the midst of battlefield chaos.
 text: >
-  (1)-[Triggered]: If you suffer no Damage from an Opponent's Attacking Maneuver that targets you, this triggers your
-  Exploit Maneuver.
-  (2)-[Triggered/Start of Turn]: If you have taken no Damage since the end of your last turn, you may use Combat Recovery
-  as if you spent 1 Action as an Out-of-Sequence Maneuver. If you do, ignore the reduction to your Defense Value from
-  the effects of Combat Recovery.
-  (3)-[Triggered, 1/Encounter]: If you are targeted by an Opponent's Attacking Maneuver, you may use the Defend Maneuver
-  without spending a Counter Action.
+  Flow of Combat (Mind): You are as serene and peaceful in combat as you are at a tea party, graceful and poised even in the midst of battlefield chaos.
+  (1)-[Triggered]: If you suffer no Damage from an Opponent’s Attacking Maneuver that targets you, this triggers your Exploit Maneuver.
+  (2)-[Triggered/Start of Turn]: If you have taken no Damage since the end of your last turn, you may use Combat Recovery as if you spent 1 Action as an Out-of-Sequence Maneuver. If you do, ignore the reduction to your Defense Value from the effects of Combat Recovery.
+  (3)-[Triggered, 1/Encounter]: If you are targeted by an Opponent’s Attacking Maneuver, you may use the Defend Maneuver without spending a Counter Action.
 
 ---
 

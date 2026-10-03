@@ -12,12 +12,20 @@ options: 1
 description: >
   With the pure magical energies born from their divine nature, Shinjin possess various abilities.
 text: >
-  (1)-[Passive]: You gain access to the Magical Materialization, Telepathy, Telekinesis, and Second Sight Unique
-  Abilities.
-  (2)-[Passive]: At Character Creation, gain a Skill Rank in each of the following skills: Knowledge (any - you decide),
-  Creature Handling, Clairvoyance, Perception, Use Magic and Investigation.
-  (3)-[Option]: At Character Creation, choose one of the following effects: God of Peace, God of Judgment, God of Power,
-  God of Survival, God of Wisdom, God of War, God of Magic, God of Many, God of Time or God of an Element.
+  Divine Magic (Mind): With the pure magical energies born from their divine nature, Shinjin possess various abilities.
+  (1)-[Passive]: You gain access to the Magical Materialization, Telepathy, Telekinesis, and Second Sight Unique Abilities.
+  (2)-[Passive]: At Character Creation, gain a Skill Rank in each of the following skills: Knowledge (any – you decide), Creature Handling, Clairvoyance, Perception, Use Magic and Investigation.
+  (3)-[Option]: At Character Creation, choose one of the following effects:
+  * God of Peace [Triggered/Power, 1/Round]: Enter the Mindful State until the start of your next turn.
+  * God of Judgment [Triggered, 1/Round]: If you use the Signature Technique Maneuver, apply an Energy Charge to that Attacking Maneuver.
+  * God of Power [Passive]: You gain the Muscular Warrior Talent. Additionally, increase your Force Modifier by 1(T) while in a Form or an Enhancement.
+  * God of Survival [Passive]: Increase the Dice Score of your Steadfast Checks by 2 and increase your Surgency by 1/2 (rounded up) of your Insight Modifier.
+  * God of Wisdom [Passive]: If Scholarship and/or Personality have the highest Attribute Score among your Attributes, increase all of your Combat Rolls and Initiative Rolls by 1(bT).
+  * God of War [Passive]: You gain the Weapon Specialist Talent, and when creating any type of Signature Technique, you may add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points.
+  * God of Magic [Passive]: Reduce the TP Cost of all Magical Unique Abilities by 3 TP and reduce the KP Cost of your Magical Unique Abilities by 2(T).
+  * God of Many [Passive]: You gain the Master of Minions Talent, and your Minions have their Combat Rolls increased by 1(T) while you are in the Spectator State.
+  * God of Time [Passive]: Gain access to the Time Freeze Unique Ability with the Straining Time Freeze and Difficult Time Freeze Restrictions. Increase your Wound Rolls by 2(T) during Frozen Turns.
+  * God of an Element [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
 
 ---
 

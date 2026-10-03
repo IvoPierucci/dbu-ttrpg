@@ -8,7 +8,7 @@ import { addRacialTrait, ownedRacialTraits, racialTraitKind, racialTraitRace, ra
   from "../racial.mjs";
 import { reactiveFor } from "../effects/registry.mjs";
 import { grantedUniques } from "../unique.mjs";
-import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
+import { getTrait, printedLines, resourceCeiling, resourceDefinitions, traitsOfKind }
   from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
@@ -4761,6 +4761,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       item,
       kind: racialTraitKind(item.system),
       race: racialTraitRace(item.system.race, item.system.subrace),
+      // Unfolded as a Unique Ability's row is, to its text as printed - and what was chosen for it.
+      open: Boolean(this.#openSections[`maneuver-${item.id}`]),
+      lines: printedLines(item.system.text || "").map(line => ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line })),
+      chosenLines: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean),
       chosen: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean).join(" \u00b7 "),
       // Every Triggered one - with a limit or not - but what costs Actions, which the moment's own card takes and pays.
       triggered: triggered
