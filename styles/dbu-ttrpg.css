@@ -1516,16 +1516,6 @@
   margin-bottom: 2px;
 }
 
-/* Add Racial Trait: every race's, under its race's name. */
-.dbu-racial-picker {
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-.dbu-racial-picker h4 {
-  margin: 8px 0 2px;
-}
-
 /* --- Skills ---------------------------------------------------------------- */
 
 .dbu-ttrpg .skill-group {

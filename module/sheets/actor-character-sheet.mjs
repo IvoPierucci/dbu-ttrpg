@@ -4786,44 +4786,57 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * Add Racial Traits: every one there is - this character's race first, then the rest by race name - ticked to add,
-   * the ones already had shown ticked and closed.
+   * Add Racial Trait, in the Unique Abilities' window (the user's): a search over every Racial Trait there is - this
+   * character's race's first, then every other race's by the race's name - its race beside it, the ones already had
+   * named and not offered twice. One at a time.
    */
   static async _onAddRacialTrait() {
     if (!this.isEditable) return;
     const had = new Set(this.actor.system.racialTraits ?? []);
     const traits = DBUCharacterSheet.racialTraitsInOrder(this.actor.system.race);
     if (!traits.length) {
-      ui.notifications.warn("No Racial Traits are written yet.");
+      ui.notifications.info("There are no Racial Traits to add yet.");
       return;
     }
     const escape = Handlebars.escapeExpression;
-    let race = null;
-    const rows = traits.map(trait => {
-      const head = (trait.owner !== race)
-        ? `<h4 class="dbu-respond-hint">${escape(getRace(trait.owner)?.name ?? trait.owner ?? "")}</h4>` : "";
-      race = trait.owner;
-      const kind = DBUCharacterSheet.racialTraitKind(trait);
-      const subrace = trait.subrace ? subraceName(trait.owner, trait.subrace) || trait.subrace : "";
-      return `${head}<label class="dbu-respond-option" data-tooltip="${escape(trait.text || trait.description || "")}">
-        <input type="checkbox" name="${escape(trait.id)}" ${had.has(trait.id) ? "checked disabled" : ""}/>
-        <span class="dbu-respond-name">${escape(trait.name)}</span>
-        <span class="dbu-respond-source">${escape([kind, subrace].filter(Boolean).join(" \u00b7 "))}</span></label>`;
-    }).join("");
-    const chosen = await foundry.applications.api.DialogV2.wait({
-      classes: ["dbu-dialog"],
+    const { pickedName, wireNameSearch } = await import("../search.mjs");
+    const raceOf = trait => [getRace(trait.owner)?.name ?? trait.owner ?? "",
+      trait.subrace ? subraceName(trait.owner, trait.subrace) || trait.subrace : ""].filter(Boolean).join(" - ");
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog", "dbu-ua-search"],
       window: { title: `${this.actor.name} - Add Racial Trait` },
-      content: `<div class="dbu-racial-picker">${rows}</div>`,
+      position: { width: 420 },
+      content: `<div class="gear-add-quality">
+        <input type="text" class="gear-quality-search" data-feature-search autocomplete="off" autofocus
+               placeholder="Type a Racial Trait"/>
+        <ol class="gear-quality-list" data-feature-list>
+          ${traits.map(trait => `<li class="gear-quality-option${had.has(trait.id) ? " blocked" : ""}"
+            data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
+            data-tooltip="${escape(had.has(trait.id) ? "Already had"
+              : [DBUCharacterSheet.racialTraitKind(trait), trait.description ?? ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
+            <span class="gear-quality-cost">${escape(raceOf(trait))}</span></li>`).join("")}
+          <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
+        </ol></div>`,
       buttons: [
-        { action: "add", label: "Add", default: true, callback: (event, button, dialog) =>
-          traits.filter(trait => !had.has(trait.id)
-            && dialog.element.querySelector(`input[name="${CSS.escape(trait.id)}"]`)?.checked).map(trait => trait.id) },
+        { action: "add", label: "Add", default: true, callback: (ev, button, dialog) =>
+          pickedName(dialog.element.querySelector("[data-feature-search]"), dialog.element.querySelector("[data-feature-list]"))
+            || null },
         { action: "cancel", label: "Cancel" }
       ],
+      render: (event, dialog) => {
+        const root = dialog.element;
+        wireNameSearch(root.querySelector("[data-feature-search]"), root.querySelector("[data-feature-list]"), {
+          alwaysOpen: true, onSubmit: () => root.querySelector('button[data-action="add"]')?.click() });
+      },
       rejectClose: false
     });
-    if (!Array.isArray(chosen) || !chosen.length) return;
-    return this.actor.update({ "system.racialTraits": [...had, ...chosen] });
+    const trait = traits.find(entry => entry.id === picked);
+    if (!trait) return;
+    if (had.has(trait.id)) {
+      ui.notifications.warn(`${this.actor.name} already has ${trait.name}.`);
+      return;
+    }
+    return this.actor.update({ "system.racialTraits": [...had, trait.id] });
   }
 
   /** A Racial Trait taken off: "If you lose a Racial Trait, through any means, you no longer benefit from its effects." */
