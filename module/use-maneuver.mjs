@@ -4302,10 +4302,19 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       outOfReach = stretching.why;
       if (stretching.stretched) declared = { ...(declared ?? {}), stretched: true };
     }
+    // Burrowed Strike, through the ground, where the stretch was not enough.
+    if (outOfReach) {
+      const { burrowReach } = await import("./maneuvers.mjs");
+      const burrowing = await burrowReach(actor, targetActor, outOfReach, maneuver.name);
+      outOfReach = burrowing.why;
+      if (burrowing.burrowed) declared = { ...(declared ?? {}), burrowed: true };
+    }
     if (outOfReach) {
       ui.notifications.warn(outOfReach);
       return false;
     }
+    // Burrowed Strike's doubled Diminishing Defense, on a Simple attack.
+    if (declared) declared = await (await import("./maneuvers.mjs")).askBurrowedDiminishing(actor, declared);
 
     // What the Foundation asks of the attacker, which is a different question from where
     // the target is standing: an Energy Attack needs a Force Score of 3 whoever it is

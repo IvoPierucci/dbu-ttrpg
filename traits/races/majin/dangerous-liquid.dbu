@@ -1,0 +1,19 @@
+id: dangerous-liquid
+name: Dangerous Liquid
+order: 5
+category: body
+importance: secondary
+description: >
+  Able to shift your body into a liquid form, you can enter another’s body and destroy them from within.
+text: >
+  Dangerous Liquid (Body): Able to shift your body into a liquid form, you can enter another’s body and destroy them from within.
+  (1)-[Passive]: You gain access to the Liquid Form Special Maneuver (see — Special Maneuvers). While in the Liquid Form, you gain access to the Internal Attack Special Maneuver (see — Special Maneuvers).
+
+---
+
+# The Liquid Form is the Liquid State it puts you in.
+[passive]
+allow maneuver.liquid-form;
+if (inState("liquid")) {
+    allow maneuver.internal-attack;
+}

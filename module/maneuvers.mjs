@@ -1299,6 +1299,47 @@ export async function stretchReach(actor, refusal, recheck, what) {
 }
 
 /**
+ * Burrowed Strike's 1st: "When making a Physical Attack, you may target any Opponent within the Standard Environment who
+ * is not at Long Range for that Attacking Maneuver, ignoring Cover." Asked only where it is what reaches: past the Melee
+ * Range, the target on the ground of the Standard Environment, not at Long Range.
+ *
+ * @returns {Promise<{why: string|null, burrowed: boolean}>}
+ */
+export async function burrowReach(actor, target, refusal, what) {
+  if (!refusal || !target || (actor?.system?.effects?.slots?.["burrowed.strike"] !== true)) return { why: refusal, burrowed: false };
+  const { environmentIdOf, isAirborne, STANDARD_ENVIRONMENT } = await import("./environments.mjs");
+  const { getTrait } = await import("./effects/traits.mjs");
+  if ((environmentIdOf(target.system, getTrait) !== STANDARD_ENVIRONMENT) || isAirborne(target.system)
+    || atLongRange(actor, target)) return { why: refusal, burrowed: false };
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: `${what} - Burrowed Strike` },
+    content: `<p data-tooltip="Their Cover is not counted. The Opponents on a Square adjacent to you may Exploit it.">`
+      + `Through the ground at ${Handlebars.escapeExpression(target.name)}?</p>`,
+    rejectClose: false
+  });
+  return yes ? { why: null, burrowed: true } : { why: refusal, burrowed: false };
+}
+
+/**
+ * Burrowed Strike's 2nd: "When making an Attacking Maneuver of the Simple Profile, you may spend 2(bT) Ki Points to double
+ * the amount of Diminishing Defense your Opponent suffers from that Attacking Maneuver" - asked, paid with the attack
+ * (`kiSurcharge`), once a Round. The declaration as it then stands.
+ */
+export async function askBurrowedDiminishing(actor, declared) {
+  if (!declared || (declared.profile !== "simple") || (actor?.system?.effects?.slots?.["burrowed.diminishing"] !== true)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "burrowedDoubled") === round) return declared;
+  const ki = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Burrowed Strike" },
+    content: `<p>${ki} Ki: double the Diminishing Defense this gives?</p>`, rejectClose: false
+  });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "burrowedDoubled", round);
+  return { ...declared, kiSurcharge: (Number(declared.kiSurcharge) || 0) + ki, doublesDiminishing: true };
+}
+
+/**
  * Whether a target is within this character's Melee Range, and why not if not.
  *
  * The measurement on its own, without the question of which rule is asking it. A

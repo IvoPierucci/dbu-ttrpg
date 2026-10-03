@@ -709,10 +709,14 @@ const PATTERNS = [
     doc: "The Dice Score of a Might Clash when targeted by the Pin Maneuver; Damage received from an Attacking Maneuver "
        + "of Direct or higher; Squares a Physical Attack or Grapple may reach past the Melee Range, asked; Life Points a "
        + "Healing Surge gives back for each Health Threshold below." },
-  { match: /^(collision\.halved|rubbery\.move)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "Every Collision Damage received halved; moving one hit with a Physical Attack or put in a Grapple, once a Round "
-       + "(Rubbery Body's)." },
+       + "(Rubbery Body's); moving away when hit, and the Movement after Collision Damage (Bouncy Physique's); a Physical "
+       + "Attack through the ground, and 2(bT) Ki to double Diminishing Defense on a Simple one (Burrowed Strike's)." },
+  // Bouncy Physique's "Increase your Strike Rolls by 2(T) when using the Reflect Maneuver": one Maneuver's Strike Roll.
+  { match: /^([a-z][\w-]*)\.strike$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "The Strike Roll of an Attacking Maneuver made with that Maneuver, by its id - `reflect.strike`." },
   // "Apply your Racial Saving Throw Bonus to Cognitive as well as Corporeal" (Warrior's Pride's).
   { match: /^save\.racial\.(\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
     doc: "That Saving Throw gets the Racial Saving Throw Bonus too: 1(T), and its Critical Target 1 lower." },

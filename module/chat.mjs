@@ -241,7 +241,7 @@ function applyRequest(request) {
     // Rubbery Body's move taken, of whom.
     case "moveTaken": {
       const card = game.messages.get(request.messageId);
-      return card?.setFlag(SCOPE, "movesTaken", [...new Set([...(card.getFlag(SCOPE, "movesTaken") ?? []), request.movedUuid])]);
+      return card?.setFlag(SCOPE, "movesTaken", [...new Set([...(card.getFlag(SCOPE, "movesTaken") ?? []), request.key])]);
     }
     case "downBurst": return applyDownBurst(request.messageId, request.uuid, request.won);
     case "desperate": return game.messages.get(request.messageId)?.setFlag(SCOPE, DESPERATE_FLAG,
@@ -3259,8 +3259,11 @@ async function landThrown(attack, thrower, target) {
   const rubbery = target.system.effects?.slots?.["collision.halved"] === true;
   await reduceLifePoints(target, rubbery ? Math.floor(value / 2) : value,
     { reason: `${thrown.name} (Collision Damage${rubbery ? ", halved" : ""})` });
+  // Bouncy Physique: Collision Damage received - the Movement, out of sequence, on this note.
+  const bounce = bouncyMovementOffer(target);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: thrower }),
+    ...(bounce ? { flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [bounce] } } } : {}),
     content: `<div class="dbu-settled-note">The ${escape(thrown.name)} hits ${escape(target.name)}: `
       + `Collision Damage ${value}${(thrown.value === null) ? ` (Hardness Rank ${thrown.rank})` : ""}. `
       + `It lands on a Square beside them, ${escape(thrower.name)}'s choice.</div>`
@@ -7228,9 +7231,9 @@ const SPIKE_FLAG = "gearSpikes";
  * The engine is asked rather than any particular Trait, so a Talent, a Racial Trait and
  * a Combat Condition all reach a roll through the same door.
  */
-function atMoment(actor, moment, context = {}) {
+function atMoment(actor, moment, context = {}, { skip = [] } = {}) {
   const scope = { data: actor.system, errors: [], context, queue: [] };
-  const collected = collectReactive(reactiveFor(actor), moment, scope);
+  const collected = collectReactive(reactiveFor(actor).filter(entry => !skip.includes(entry.sourceId)), moment, scope);
   // The queue travels with the result: a verb is an act the caller has to carry out,
   // and one collected into a scope nobody reads is an effect that does nothing.
   return { ...collected, queue: scope.queue, errors: scope.errors };
@@ -8688,21 +8691,21 @@ function renderOutOfSequence(message, html) {
     const moved = message.getFlag(SCOPE, "movesTaken") ?? [];
     for (const offer of offers) {
       const item = document.createElement("li");
-      // Rubbery Body's move: not an Out-of-Sequence Maneuver, so its own record and button.
+      // Rubbery Body's, Bouncy Physique's move: not an Out-of-Sequence Maneuver, so its own record and button.
       if (offer.move) {
         item.innerHTML = `
           <span class="dbu-oos-actor">${Handlebars.escapeExpression(offer.actorName)}</span>
           <span class="dbu-oos-maneuver">${Handlebars.escapeExpression(offer.maneuverName)}</span>
-          <span class="dbu-oos-reason">${Handlebars.escapeExpression(moved.includes(offer.move.movedUuid)
+          <span class="dbu-oos-reason">${Handlebars.escapeExpression(moved.includes(offer.move.key)
             ? `${offer.reason} - moved` : offer.reason)}</span>`;
         const mover = fromUuidSync(offer.actorUuid);
-        if (!moved.includes(offer.move.movedUuid) && mover?.isOwner
-          && (mover.getFlag?.(SCOPE, "rubberyMoved") !== roundKey())) {
+        if (!moved.includes(offer.move.key) && mover?.isOwner
+          && (mover.getFlag?.(SCOPE, offer.move.flag) !== roundKey())) {
           const use = document.createElement("button");
           use.type = "button";
           use.className = "dbu-oos-button";
           use.textContent = "Use";
-          use.addEventListener("click", () => takeRubberyMove(message, mover, offer));
+          use.addEventListener("click", () => takeMoveOffer(message, mover, offer));
           item.append(use);
         }
         list.append(item);
@@ -12971,13 +12974,46 @@ function offerWatcherPowerUp(message, actor, why) {
  */
 function offerRubberyMove(message, mover, moved, { grapple = false, stretched = false } = {}) {
   if (!mover || !moved || (mover.uuid === moved.uuid) || (mover.system?.effects?.slots?.["rubbery.move"] !== true)) return;
-  if (mover.getFlag?.(SCOPE, "rubberyMoved") === roundKey()) return;
-  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.move && (offer.move.movedUuid === moved.uuid))) return;
   const stretch = stretched ? (Number(mover.system.effects?.slots?.["meleeRange.stretch"]?.add) || 0) : 0;
   const squares = Math.max(0, Number(mover.system.meleeRange) || 0) + stretch + 1;
+  offerMove(message, mover, { key: `rubbery:${moved.uuid}`, flag: "rubberyMoved", name: `Move ${moved.name}`,
+    reason: `Rubbery Body - up to ${squares} Squares${grapple ? ", ignoring Movement in a Grapple" : ""}` });
+}
+
+/**
+ * Bouncy Physique (2): "If you are hit by an Attacking Maneuver, after calculating Damage, you may move any number of
+ * Squares away from your Opponent in a straight line up to your Might. This movement does not provoke the Exploit
+ * Maneuver" - offered on the attack's card, once a Round, counted when taken.
+ */
+function offerBouncyMove(message, actor, attacker) {
+  if (!actor || !attacker || (actor.uuid === attacker.uuid) || actor.system?.defeated
+    || (actor.system?.effects?.slots?.["bouncy.moveAway"] !== true)) return;
+  const squares = Math.max(0, Number(actor.system.might) || 0);
+  if (!squares) return;
+  offerMove(message, actor, { key: `bouncy:${actor.uuid}`, flag: "bouncyMoved", name: "Move away",
+    reason: `Bouncy Physique - up to ${squares} Squares straight away from ${attacker.name}, no Exploit` });
+}
+
+/**
+ * A move an effect hands over - not an Out-of-Sequence Maneuver, so it takes no one's, and nothing here moves anybody:
+ * where to is the map's. Once a Round by the mover's `flag`, counted when taken; `key` tells one from another on a card.
+ */
+function offerMove(message, mover, { key, flag, name, reason }) {
+  if (mover.getFlag?.(SCOPE, flag) === roundKey()) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.move?.key === key)) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: mover.uuid, actorName: mover.name, maneuverId: "",
-    maneuverName: `Move ${moved.name}`, reason: `Rubbery Body - up to ${squares} Squares${grapple
-      ? ", ignoring Movement in a Grapple" : ""}`, move: { movedUuid: moved.uuid, squares } } });
+    maneuverName: name, reason, move: { key, flag } } });
+}
+
+/**
+ * Bouncy Physique (3): "If you receive Collision Damage, you may end any movement you would normally suffer and
+ * immediately use the Movement Maneuver as an Out-of-Sequence Maneuver." The offer, where it may be made - null otherwise.
+ */
+function bouncyMovementOffer(actor) {
+  if (!actor || actor.system?.defeated || (actor.system?.effects?.slots?.["bouncy.afterCollision"] !== true)) return null;
+  if (actor.getFlag?.(SCOPE, "bouncyCollided") === roundKey()) return null;
+  return { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "movement", maneuverName: "Movement",
+    reason: "Bouncy Physique - Collision Damage: the movement ends", grants: { bouncy: true } };
 }
 
 /** This Combat Round, as a key - a once-a-Round use recorded against it. */
@@ -12986,13 +13022,13 @@ function roundKey() {
 }
 
 /** Rubbery Body's move, taken: its once a Round spent, and the card says so. Where to is moved on the map. */
-async function takeRubberyMove(message, actor, offer) {
-  if (actor.getFlag?.(SCOPE, "rubberyMoved") === roundKey()) {
-    ui.notifications.warn(`${actor.name} has moved someone with Rubbery Body this Round already.`);
+async function takeMoveOffer(message, actor, offer) {
+  if (actor.getFlag?.(SCOPE, offer.move.flag) === roundKey()) {
+    ui.notifications.warn(`${actor.name} has used ${offer.reason.split(" - ")[0]} this Round already.`);
     return;
   }
-  await requestActorUpdate(actor, { [`flags.${SCOPE}.rubberyMoved`]: roundKey() });
-  requestEdit(message, { type: "moveTaken", movedUuid: offer.move.movedUuid });
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.move.flag}`]: roundKey() });
+  requestEdit(message, { type: "moveTaken", key: offer.move.key });
 }
 
 /**
@@ -13526,9 +13562,16 @@ async function takeOutOfSequence(message, actor, offer) {
       if (stretching.stretched) declared = { ...declared, stretched: true };
     }
     if (outOfReach) {
+      const { burrowReach } = await import("./maneuvers.mjs");
+      const burrowing = await burrowReach(actor, target, outOfReach, maneuver.name);
+      outOfReach = burrowing.why;
+      if (burrowing.burrowed) declared = { ...declared, burrowed: true };
+    }
+    if (outOfReach) {
       ui.notifications.warn(outOfReach);
       return;
     }
+    declared = await (await import("./maneuvers.mjs")).askBurrowedDiminishing(actor, declared);
 
     // Two a Combat Round, whichever way the attack is reached - out of sequence is no
     // exception, exactly as it is none to the Melee Range above.
@@ -13619,6 +13662,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.volleyball) await requestActorUpdate(actor, { [`flags.${SCOPE}.volleyballUsed`]: game.combat?.id ?? "none" });
   // Powerful Physique's, once per Encounter.
   if (offer.grants?.physique) await requestActorUpdate(actor, { [`flags.${SCOPE}.physiqueUsed`]: game.combat?.id ?? "none" });
+  // Bouncy Physique's Movement after a collision, once a Round.
+  if (offer.grants?.bouncy) await requestActorUpdate(actor, { [`flags.${SCOPE}.bouncyCollided`]: roundKey() });
   // Dragon Dash's Movement taken: what follows it, where an Advancement says so.
   if (offer.dash?.follow) await dashFollowUp(actor, offer.dash);
 
@@ -13787,7 +13832,7 @@ export async function postAttack(actor, target, maneuver,
                                    extraTargets = [], freeWager = 0, unitedWith = null,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
-                                   appliedProfiles = [], stretched = false },
+                                   appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -13901,6 +13946,9 @@ export async function postAttack(actor, target, maneuver,
           ...(portal ? { portal: true } : {}),
           // Rubbery Body's stretch, taken for it: its Melee Range 3 more for the move it may buy.
           ...(stretched ? { stretched: true } : {}),
+          // Burrowed Strike's: through the ground - no Cover counted; and Diminishing Defense doubled.
+          ...(burrowed ? { burrowed: true } : {}),
+          ...(doublesDiminishing ? { doublesDiminishing: true } : {}),
           // A second Profile outside a Technique: Elemental Blade's Multi-Profile on an ordinary
           // attack. A Technique's is on its own block.
           secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
@@ -14060,7 +14108,9 @@ export async function postAttack(actor, target, maneuver,
     }
   });
 
-  offerExploits(card, actor, maneuver);
+  // Burrowed Strike: "This Attacking Maneuver triggers the Exploit Maneuver for any Opponent on an adjacent Square to you."
+  offerExploits(card, actor, burrowed ? { ...maneuver, exploitable: [maneuver.exploitable,
+    "Opponents on a Square adjacent to the attacker (Burrowed Strike)"].filter(Boolean).join("; ") } : maneuver);
   return card;
 }
 
@@ -15330,6 +15380,13 @@ function favoredParts(attacker, attack, roll) {
   return [{ label: "Favored Element", written: `+${per}(T)`, value: per * Math.max(1, attacker.system.tierOfPower ?? 1) }];
 }
 
+/** What effects add to the Strike Roll of one Maneuver by its id (`reflect.strike`), each by what gave it. */
+function maneuverStrikeParts(attacker, attack) {
+  const slot = attack?.maneuverId ? attacker.system.effects?.slots?.[`${attack.maneuverId}.strike`] : null;
+  return (slot?.parts ?? []).filter(part => part.op === "add" && Number(part.value))
+    .map(part => ({ label: part.source || "Effects", value: Number(part.value) }));
+}
+
 function strikeParts(attacker, attack) {
   return [
     strikeOf(attacker, attack?.foundation),
@@ -15337,6 +15394,8 @@ function strikeParts(attacker, attack) {
     ...profileStrikeParts(attacker, attack),
     ...modifierStrikeParts(attacker, attack),
     ...(attack.weapon?.strike ?? []),
+    // One Maneuver's own Strike Roll - Bouncy Physique's 2(T) on the Reflect.
+    ...maneuverStrikeParts(attacker, attack),
     ...techniqueStrikeParts(attacker, attack),
     // Power Burst: "ignoring the penalties to your Strike Roll from the Muscle Penalty".
     ...(attack.technique?.noMusclePenalty ? [] : musclePenalty(attacker)),
@@ -15586,7 +15645,7 @@ async function resolveAttack(message, attack) {
       await requestActorUpdate(target, {
         "system.diminishingDefense":
           target.system.diminishingDefense + (target.system.diminishing.defense.perAttack
-            * (attack.technique?.diminishingDefenseTimes ?? 1))
+            * (attack.technique?.diminishingDefenseTimes ?? 1) * (attack.doublesDiminishing ? 2 : 1))
       });
     }
 
@@ -16861,7 +16920,9 @@ async function rollAttackWound(message, attack) {
     // whole Wound Roll: there is no Damage then, so there is nothing to answer about.
     // Asked anyway, a one-shot effect armed for this would be spent raising nothing.
     const beforeWound = (raw > 0)
-      ? atMoment(target, "before-wound", { attack: 1, damageCategory: 1 })
+      ? atMoment(target, "before-wound", { attack: 1, damageCategory: 1 },
+        // Burrowed Strike: the Cover's Damage reduction not counted either.
+        attack.burrowed ? { skip: ["battlefield:cover"] } : {})
       : null;
     if (beforeWound) spendChosen(target, beforeWound);
 
@@ -16956,6 +17017,10 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
       value: -actor.system.diminishing.defense.perAttack });
   }
   parts.push(...thresholdPenalty(actor));
+  // Burrowed Strike: "ignoring Cover" - its 2(T) on the Dodge taken back off.
+  if (attack?.burrowed && actor.system.battlefield?.cover?.active) {
+    parts.push({ label: "Cover (Burrowed Strike)", written: "-2(T)", value: -2 * Math.max(1, actor.system.tierOfPower ?? 1) });
+  }
   parts.push(...rapidMovementDodge(actor, attack));
   // The Afterimage Technique's Defense Value, for the attack it answered.
   const evaded = (attack?.defences ?? []).find(entry => entry.uuid === actor.uuid)?.evade ?? null;
@@ -18345,6 +18410,9 @@ async function applyCollisionDamage(message, clash) {
     groundFirst: Boolean(clash.collision?.groundFirst)
   });
   if (!settled) return;
+  // Bouncy Physique: Collision Damage received - the Movement, out of sequence, on this card.
+  const bounce = bouncyMovementOffer(target);
+  if (bounce) requestEdit(message, { type: "offer", offer: bounce });
 
   // Marked on the Clash that allowed it, so one win buys one collision. Another character
   // thrown by the same Maneuver has a Clash of their own, and is asked their own question.
@@ -19284,6 +19352,8 @@ async function applyAttackDamage(message, target, attack) {
   if (own.hit && !isAbsoluteMiss(own) && (attack.foundation === "physical")) {
     offerRubberyMove(message, armsUser, target, { stretched: Boolean(attack.stretched) });
   }
+  // Bouncy Physique: hit, the Damage worked out - moving away.
+  if (own.hit && !isAbsoluteMiss(own)) offerBouncyMove(message, target, armsUser);
   // Powerful Physique: hit by it, the Basic Attack back once it is done.
   if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerPhysiqueStrike(message, target, armsUser);
   // Skill of the Watcher (5): Damage dealt through the Exploit Maneuver, or none taken from an attack Defended against.

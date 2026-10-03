@@ -1,0 +1,26 @@
+id: bouncy-physique
+name: Bouncy Physique
+order: 3
+category: body
+importance: secondary
+description: >
+  With your body’s unique composition, you are able to bounce around the battlefield like a rubber ball.
+text: >
+  Bouncy Physique (Body): With your body’s unique composition, you are able to bounce around the battlefield like a rubber ball.
+  (1)-[Passive]: Increase your Strike Rolls by 2(T) when using the Reflect Maneuver.
+  (2)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver, after calculating Damage, you may move any number of Squares away from your Opponent in a straight line up to your Might. This movement does not provoke the Exploit Maneuver, even if you leave their Melee Range.
+  (3)-[Triggered, 1/Round]: If you receive Collision Damage, you may end any movement you would normally suffer and immediately use the Movement Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) The Reflect's own Strike Roll (chat.mjs strikeParts, `<Maneuver>.strike`).
+reflect.strike += 2(T);
+
+# (2) Hit, once the Damage is worked out: moving away offered on the attack's card - up to the Might, in a straight line,
+# no Exploit; once a Round, counted when taken. Where to is the map's.
+allow bouncy.moveAway;
+
+# (3) Collision Damage taken - off a Knockback's Clash, or a thrown thing: the Movement Maneuver offered on that card, out
+# of sequence; once a Round, counted when taken. Whatever movement they were suffering ends there (the table's, on the map).
+allow bouncy.afterCollision;

@@ -1,0 +1,22 @@
+id: burrowed-strike
+name: Burrowed Strike
+order: 4
+category: body
+importance: secondary
+description: >
+  Your erratic, unpredictable strikes can burrow through the earth to hit opponents who can’t see it coming.
+text: >
+  Burrowed Strike (Body): Your erratic, unpredictable strikes can burrow through the earth to hit opponents who can’t see it coming.
+  (1)-[Triggered]: When making a Physical Attack, you may target any Opponent within the Standard Environment who is not at Long Range for that Attacking Maneuver, ignoring Cover. This Attacking Maneuver triggers the Exploit Maneuver for any Opponent on an adjacent Square to you.
+  (2)-[Triggered, 1/Round]: When making an Attacking Maneuver of the Simple Profile, you may spend 2(bT) Ki Points to double the amount of Diminishing Defense your Opponent suffers from that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) A Physical Attack past the Melee Range, at one in the Standard Environment (not up in a High one) and not at Long
+# Range, asks "Burrowed Strike: through the ground?" - taken, their Cover is not counted (its Dodge and its Damage), and
+# the Exploit is offered to the Opponents on a Square adjacent to you (maneuvers.mjs burrowReach, chat.mjs).
+allow burrowed.strike;
+
+# (2) An attack of the Simple Profile asks "2(bT) Ki: double Diminishing Defense?" - paid with the attack, once a Round.
+allow burrowed.diminishing;
