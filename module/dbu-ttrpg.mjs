@@ -44,6 +44,12 @@ Hooks.once("init", () => {
     return showOutcomeWindow(fromUuidSync(actorUuid), kind);
   };
 
+  // A choice an effect asks for, of the player whose character it is - Born for Battle's Strike, Dodge or Wound.
+  CONFIG.queries["dbu-ttrpg.choose"] = async (data) => {
+    const { showChoice } = await import("./chat.mjs");
+    return showChoice(data);
+  };
+
   CONFIG.Combat.initiative = {
     formula: `${DBUCharacterData.BASE_DIE} + @initiativeBonus`,
     decimals: 0

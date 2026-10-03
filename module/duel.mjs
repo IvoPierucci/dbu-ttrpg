@@ -177,9 +177,14 @@ function raisesWound(statements) {
 /** Resource names whose passive raises the Wound Roll, read off the Traits that declare them. */
 export function woundResources() {
   const found = [];
-  for (const [name, definition] of Object.entries(resourceDefinitions())) {
+  const definitions = resourceDefinitions();
+  for (const [name, definition] of Object.entries(definitions)) {
     const trait = getTrait(definition.id);
     if (!trait?.script) continue;
+    // One of several from one file - Born for Battle's Battle Born, one for each Combat Roll: only the one its passive
+    // puts on the Wound.
+    const shared = Object.values(definitions).filter(each => each.id === definition.id).length > 1;
+    if (shared && !new RegExp(`wound\\s*\\+=\\s*${name}\\.stacks`).test(trait.script)) continue;
     const { program } = compile(trait.script);
     if ((program?.blocks ?? []).some(block => (block.mode === "passive") && raisesWound(block.statements))) {
       found.push(name);

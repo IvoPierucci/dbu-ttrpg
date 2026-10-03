@@ -473,7 +473,9 @@ const PREDICATE_NAMES = new Set([
 const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "intendedForYou", "wieldingWeapon", "adventuring",
   // A Signature Technique being declared (God of Judgment's); your own Frozen Turn (God of Time's).
-  "signatureTechnique", "frozenTurn"]);
+  "signatureTechnique", "frozenTurn",
+  // An even-numbered Combat Round (Born for Battle's).
+  "evenRound"]);
 
 /**
  * Dice the character already has, named rather than written out.

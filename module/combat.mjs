@@ -1021,7 +1021,8 @@ async function announceThreshold(actor, before) {
     subjectUuid: actor.uuid,
     subjectName: actor.name,
     subjects: witnesses(actor),
-    detail: `${THRESHOLDS[before].label} to ${THRESHOLDS[now].label}`
+    detail: `${THRESHOLDS[before].label} to ${THRESHOLDS[now].label}`,
+    threshold: now
   });
 }
 

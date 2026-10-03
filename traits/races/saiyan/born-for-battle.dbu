@@ -1,0 +1,45 @@
+id: born-for-battle
+name: Born for Battle
+order: 1
+category: body
+importance: primary
+# Battle Born, one Resource for each Combat Roll it may go on - "you can only have up to 2 stacks of Battle Born on a single
+# Combat Roll" - lost when the Combat Encounter ends, as every Resource is.
+resource: battlebornstrike, battleborndodge, battlebornwound
+resourceLabel: Battle Born (Strike), Battle Born (Dodge), Battle Born (Wound)
+resourceMax: 2
+description: >
+  A warrior race evolved for eternal combat, Saiyans adapt as battle wears on, allowing them to adjust to the fight before them and grow stronger the longer they fight for.
+text: >
+  Born for Battle (Body): A warrior race evolved for eternal combat, Saiyans adapt as battle wears on, allowing them to adjust to the fight before them and grow stronger the longer they fight for.
+  (1)-[Triggered, Resource]: At the start of every even-numbered Combat Round, you gain 1 stack of Battle Born. Whenever you gain a stack of Battle Born, you must apply it to either Strike, Dodge, or Wound (you decide). You can only have up to 2 stacks of Battle Born on a single Combat Roll. Each stack of Battle Born increases the corresponding Combat Roll by 1(T).
+  (2)-[Triggered/Threshold]: Use a Ki Surge as an Out-of-Sequence Maneuver. If you do, gain a stack of Battle Born.
+  (3)-[Triggered, 1/Encounter]: If you trigger the 2nd effect of Saiyan Heritage, set the number of Battle Born stacks on each Combat Roll to 3, regardless of the limit. This effect cannot decrease the number of Battle Born stacks on any Combat Roll.
+  (4)-[Triggered, 1/Encounter]: If you are knocked through the Critical Health Threshold, or trigger an effect with the Triggered/Defeated Keyword, gain a stack of the Zenkai Awakening as a Level 1 Temporary Awakening.
+
+---
+
+# (1) What the stacks are worth: 1(T) each on the Combat Roll they were put on.
+[passive]
+if (hasResource("battlebornstrike")) {
+    strike += battlebornstrike.stacks * 1(T);
+}
+if (hasResource("battleborndodge")) {
+    dodge += battleborndodge.stacks * 1(T);
+}
+if (hasResource("battlebornwound")) {
+    wound += battlebornwound.stacks * 1(T);
+}
+
+# (1) At the start of every even-numbered Combat Round, a stack - put on whichever Combat Roll you say (gainOneOf asks you).
+[triggered/start-of-round, effect 1]
+requires evenRound;
+gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
+
+# (2) Knocked through a Health Threshold: a Ki Surge, and a stack.
+[triggered/threshold, effect 2]
+surge(ki);
+gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
+
+# (3) Waits on Saiyan Heritage's 2nd effect, not written yet. (4) Waits on Awakenings - Zenkai - not built yet: the table
+# gives it.

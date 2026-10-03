@@ -109,6 +109,12 @@ const PREDICATES = {
   /** Is the Maneuver being declared that one, by its id - Cosmic Efficiency's Combat Recovery. */
   using: (scope, id) => (scope.context?.maneuver?.id ?? "") === String(id).trim(),
 
+  /** Is this an even-numbered Combat Round - Born for Battle's. */
+  evenRound: () => {
+    const round = Number(globalThis.game?.combat?.started ? globalThis.game.combat.round : 0) || 0;
+    return (round > 0) && ((round % 2) === 0);
+  },
+
   /** Is this character a Minion. */
   isMinion: scope => Boolean(scope.data?.minion),
 

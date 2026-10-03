@@ -5,6 +5,7 @@ import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelPar
 import { featureDef } from "./technique.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import { reactiveFor, usesLeft } from "./effects/registry.mjs";
+import { evaluate as evaluateCondition } from "./effects/conditions.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
@@ -5973,6 +5974,34 @@ async function outcomeTurn(actor, kind) {
 function playerOf(actor) {
   return game.users.find(user => user.active && !user.isGM && actor.testUserPermission?.(user, "OWNER"))
     ?? game.users.activeGM ?? null;
+}
+
+/** The query a choice an effect asks for is put through, of the player's own client. */
+export const CHOICE_QUERY = "dbu-ttrpg.choose";
+
+/**
+ * A choice an effect asks the character's player for - Born for Battle's "Strike, Dodge, or Wound (you decide)" - asked of
+ * them wherever the effect runs (a Round turning over runs on the GM's client). The value chosen, or null.
+ */
+export async function askPlayerChoice(actor, title, options) {
+  const player = playerOf(actor);
+  if (!player) return null;
+  if (player === game.user) return showChoice({ title, options });
+  try { return await player.query(CHOICE_QUERY, { title, options }, { timeout: 120000 }); }
+  catch (error) {
+    console.warn(`DBU TTRPG | ${actor.name}'s choice could not be asked`, error);
+    return null;
+  }
+}
+
+/** The choice itself, on the player's client: one button each. */
+export async function showChoice({ title, options }) {
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title }, content: "",
+    buttons: options.map(option => ({ action: option.value, label: option.label })),
+    rejectClose: false
+  });
+  return options.some(option => option.value === chosen) ? chosen : null;
 }
 
 /** The query a Botch or Critical window is asked through, of the player's own client. */
@@ -19380,7 +19409,7 @@ async function applyInterventionDamage(message, attack, entry) {
  * appears once rather than once per connected player.
  */
 export async function postMoment(moment, {
-  title, subjectUuid = "", subjectName = "", subjects = [], pending = false, detail = ""
+  title, subjectUuid = "", subjectName = "", subjects = [], pending = false, detail = "", threshold = ""
 } = {}) {
   return ChatMessage.create({
     speaker: subjectUuid
@@ -19393,6 +19422,8 @@ export async function postMoment(moment, {
         [RESPONDABLE_FLAG]: false,
         [MOMENT_FLAG]: {
           moment, title, subjectUuid, subjectName, subjects, pending, detail,
+          // Which Health Threshold, on a Threshold's card - what answering it is answering.
+          ...(threshold ? { threshold } : {}),
           // Who has answered it. The card keeps offering until they have, so a player
           // who was away when it was posted still finds it waiting.
           applied: [],
@@ -19411,7 +19442,12 @@ export async function postMoment(moment, {
  * Counter Actions left unused then, not now).
  */
 function momentTriggers(actor, card) {
-  const own = triggersFor(actor, [card.moment]);
+  // Only what may answer it now - Born for Battle's "every even-numbered Combat Round".
+  const holds = entry => {
+    const requires = entry.program.blocks?.[0]?.requires;
+    return !requires || evaluateCondition(requires, { data: actor.system, context: {}, errors: [] });
+  };
+  const own = triggersFor(actor, [card.moment]).filter(holds);
   if ((card.moment !== "start-of-round") || ((game.combat?.round ?? 0) < 2)) return own;
   const automatic = new Set(actor?.getFlag?.(SCOPE, "automatic") ?? []);
   return [...own, ...triggersFor(actor, ["end-of-round"]).filter(entry => !automatic.has(entry.blockId) && !entry.armed)];
@@ -19637,7 +19673,9 @@ async function answerMoment(message, card, actor) {
 
   // A Round's or a turn's beginning has already happened, so what was ticked for it answers it now - armed, it would only
   // wait for the next one - its Actions paid first (Skill of the Watcher's "spend 1 Action to gain 2 Counter Actions").
-  if (!["start-of-round", "start-of-turn", "start-of-encounter"].includes(card.moment)) return;
+  // And being knocked through a Health Threshold, for whoever was - Born for Battle's Ki Surge.
+  const threshold = (card.moment === "threshold") && (card.subjectUuid === actor.uuid);
+  if (!threshold && !["start-of-round", "start-of-turn", "start-of-encounter"].includes(card.moment)) return;
   const chosen = triggers.filter(entry => !before.has(entry.blockId)
     && (actor.system.armedTalents ?? []).includes(entry.blockId));
   if (!chosen.length) return;
@@ -19648,7 +19686,7 @@ async function answerMoment(message, card, actor) {
     return;
   }
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
-  await fireMoment(actor, card.moment);
+  await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold } : {});
   // The end of the Round before, answered now - from each Trait whose effect was ticked for it.
   const late = chosen.filter(entry => String(entry.program.blocks?.[0]?.moment ?? "") === "end-of-round");
   for (const sourceId of new Set(late.map(entry => entry.sourceId))) {

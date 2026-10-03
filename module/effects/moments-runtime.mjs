@@ -255,6 +255,24 @@ async function runVerb(actor, call, context) {
     case "gain":
       return gainCondition(actor, args[0], args[1] ?? 1);
 
+    case "gainOneOf": {
+      // "You must apply it to either Strike, Dodge, or Wound (you decide)" - asked of whoever plays the character.
+      const { resourceDefinitions } = await import("./traits.mjs");
+      const definitions = resourceDefinitions();
+      const held = actor.system.resources ?? {};
+      const open = args.map(name => String(name).toLowerCase())
+        .filter(name => definitions[name] && ((Number(held[name]?.stacks) || 0) < (definitions[name].max || Infinity)));
+      if (!open.length) return;
+      const { askPlayerChoice } = await import("../chat.mjs");
+      const chosen = (open.length === 1) ? open[0] : await askPlayerChoice(actor,
+        `${actor.name}: ${definitions[open[0]].source || "a stack"}`,
+        open.map(name => ({ value: name, label: definitions[name].label })));
+      if (!chosen) return;
+      const next = { ...held, [chosen]: { stacks: (Number(held[chosen]?.stacks) || 0) + 1, max: definitions[chosen].max } };
+      const { replaceObject } = await import("../conditions.mjs");
+      return actor.update({ "system.resources": replaceObject(next) });
+    }
+
     case "surge": {
       // The kind is forced when the effect names one: "use a Ki Surge" is not an offer
       // of either Surge.

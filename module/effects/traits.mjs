@@ -155,17 +155,23 @@ export function resourceDefinitions() {
   const found = {};
   for (const trait of traits.values()) {
     if (!trait.resource) continue;
-    const name = String(trait.resource).toLowerCase();
+    // One, or several from one file - Born for Battle's Battle Born, one for each Combat Roll - their labels and their
+    // ceilings in the same order, or one ceiling for all of them.
+    const labels = [].concat(trait.resourceLabel ?? []);
+    const maxima = [].concat(trait.resourceMax ?? []);
+    [].concat(trait.resource).forEach((each, index) => {
+    const name = String(each).trim().toLowerCase();
+    if (!name) return;
     found[name] = {
       // The Trait's id, not only its name: the name is for a reader and this is what
       // answers "does this character have the thing that hands this out".
       id: trait.id ?? "",
-      max: Math.max(0, Number(trait.resourceMax) || 0),
+      max: Math.max(0, Number(maxima[index] ?? maxima[0]) || 0),
       // Where the ceiling is a value about the character rather than a number the rule
       // states. Blank on every Resource whose limit is simply written down.
       maxFrom: trait.resourceMaxFrom ?? "",
       maxTimes: Number(trait.resourceMaxTimes) || 1,
-      label: trait.resourceLabel || (name.charAt(0).toUpperCase() + name.slice(1)),
+      label: String(labels[index] ?? "").trim() || (name.charAt(0).toUpperCase() + name.slice(1)),
       source: trait.name ?? "",
       description: trait.description ?? "",
       // Whether this is a Resource the rules name, or one this system keeps because an
@@ -178,6 +184,7 @@ export function resourceDefinitions() {
       // Set from the sheet, its stacks the table's to give and take - Unfamiliar's.
       manual: Boolean(trait.resourceManual)
     };
+    });
   }
   return found;
 }
