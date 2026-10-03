@@ -30,13 +30,14 @@ surgency.perThreshold += 1(T);
 surgency *= 2;
 
 # (3) At the start of your turn, with 6+ Battle Born between the three Combat Rolls or below the Injured Health Threshold
-# (Injured or Critical): Tier of Power +1 until the end of the turn - Breakthrough's cap still over it.
+# (Injured or Critical): Tier of Power +1 until the end of the turn - Breakthrough's cap still over it. Chosen on the
+# turn's card (Apply effects), never Automatic: once an Encounter, and the player picks which turn (the user's).
 [passive]
 if (hasResource("warriorsblood")) {
     tierOfPower += 1;
 }
 
-[triggered/start-of-turn, 1/encounter, effect 3]
+[triggered/start-of-turn, 1/encounter, chosen, effect 3]
 requires stacksAtLeast(6, "battlebornstrike", "battleborndodge", "battlebornwound") || belowThreshold("injured");
 warriorsblood.stacks += 1;
 expires(warriorsblood, turn);

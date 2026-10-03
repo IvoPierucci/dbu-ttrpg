@@ -44,6 +44,8 @@ surge(ki);
 gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
 
 # (3) Saiyan Heritage's 2nd effect triggered: every Combat Roll's Battle Born to 3, past the limit, never lowered.
+# Automatic by default, kept so (the user's: two once-an-Encounter effects that chain); set Triggered, it is asked in a
+# window as Saiyan Heritage's 2nd effect is used (moments-runtime.mjs trigger, chat.mjs offerTriggers).
 [triggered/heritage, 1/encounter, effect 3]
 raiseTo(3, battlebornstrike, battleborndodge, battlebornwound);
 
