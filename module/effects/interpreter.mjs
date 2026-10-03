@@ -247,7 +247,9 @@ function gather(contributions, slot, op, value, kind, entry, b, phase, scope) {
   // them it reads.
   if ((phase !== PHASES.REACTIVE) && slot.phase && (slot.phase !== phase)) return;
 
-  const targets = slot.fanOut?.length ? slot.fanOut : [slot.key];
+  // A Slot that is a fact of its own as well as what it fans out to - `unnatural`, which Natural Healing Hands asks by
+  // name - lands on itself too.
+  const targets = slot.fanOut?.length ? [...(slot.keepsSelf ? [slot.key] : []), ...slot.fanOut] : [slot.key];
   for (const key of targets) {
     if (!contributions.has(key)) contributions.set(key, { kind, entries: [] });
     contributions.get(key).entries.push({

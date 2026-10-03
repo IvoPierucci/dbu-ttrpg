@@ -431,6 +431,8 @@ const TABLE = [
     // them rather than being a third thing to read: `forbid unnatural` and everything
     // that already respects an immunity respects this one.
     fanOut: ["condition.suffocating", "condition.poisoned"],
+    // And a fact of its own: Natural Healing Hands' "you cannot target Unnatural characters" asks it by name.
+    keepsSelf: true,
     doc: "Unnatural biology. Forbidding it makes the character immune to Suffocating and "
        + "Poisoned at once - which is the whole of what being Unnatural is." },
 

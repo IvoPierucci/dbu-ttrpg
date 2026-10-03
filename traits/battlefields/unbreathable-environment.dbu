@@ -61,4 +61,4 @@ text: >
 # `condition.suffocating` and `condition.poisoned`, so an effect writing `forbid unnatural`
 # is immune to both - and nothing here has to know which of the two reasons it was.
 #
-# Nothing grants it yet. It belongs to a race, and there are no races in this system.
+# Granted by a race's Racial Trait - Majin's Rubbery Body.

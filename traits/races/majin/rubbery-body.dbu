@@ -19,8 +19,9 @@ text: >
 ---
 
 [passive]
-# (1) Unnatural: what this system reads of it - no Suffocating Combat Condition (breath.mjs canSuffocate).
-forbid condition.suffocating;
+# (1) "A Character that is Unnatural cannot gain the Suffocating or Poisoned Combat Conditions" - and no Survival Check
+# for Held Breath in an Unbreathable Environment; Natural Healing Hands cannot target them (`unnatural` forbidden).
+forbid unnatural;
 
 # (2)
 soakValue += 1(T);
