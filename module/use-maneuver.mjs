@@ -227,6 +227,12 @@ function permitted(actor, maneuver) {
     return false;
   }
 
+  // God Maneuvers: "only available to those with access to Divine Ki Points" - in the God Ki State.
+  if (maneuver.godManeuver && !actor.system.divineKi?.active) {
+    ui.notifications.warn(`${maneuver.name} is a God Maneuver: only in the God Ki State.`);
+    return false;
+  }
+
   // Time Freeze. Its user's Frozen Turn: "you can only use Standard Maneuvers and cannot ... use Instant or Out-of-Sequence
   // Maneuvers, use Combat Recovery, use the Power Up Maneuver, the Energy Charge Maneuver, ... use any Special Maneuvers that
   // target another Character, or use any Unique Abilities" - Limited and Difficult Time Freeze's Attacking Maneuvers.
@@ -1828,6 +1834,7 @@ export function definitionOf(item) {
     grapple: item.system.grapple,
     launch: item.system.launch,
     terrainLift: item.system.terrainLift,
+    godManeuver: item.system.godManeuver,
     toss: item.system.toss,
     movement: item.system.movement,
     pin: item.system.pin,
@@ -5596,6 +5603,7 @@ export function maneuverItemFrom(definition) {
       grapple: Boolean(definition.grapple),
       launch: Boolean(definition.launch),
       terrainLift: Boolean(definition.terrainLift),
+      godManeuver: Boolean(definition.godManeuver),
       toss: Boolean(definition.toss),
       movement: Boolean(definition.movement),
       pin: Boolean(definition.pin),

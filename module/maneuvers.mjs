@@ -1670,7 +1670,12 @@ export async function spendManeuverCost(actor, maneuver, costOverride = null) {
   // cannot also contribute to that instance of paying Ki using normal Ki Points"), at "1/2 (rounded up) of the Capacity
   // Rate", while the sheet's Spend Divine Ki is on and there is enough of it.
   const divine = actor.system.divineKi;
-  if (divine?.active && divine.use && ((Number(divine.value) || 0) >= cost)) {
+  // A God Maneuver: "spend Divine Ki Points to use" - always, and only them.
+  if (maneuver?.godManeuver && (!divine?.active || ((Number(divine.value) || 0) < cost))) {
+    ui.notifications.warn(`${actor.name} needs ${cost} Divine Ki Points for ${maneuver.name} and has ${Number(divine?.value) || 0}.`);
+    return false;
+  }
+  if (divine?.active && (divine.use || maneuver?.godManeuver) && ((Number(divine.value) || 0) >= cost)) {
     const halved = Math.ceil(fromCapacity / 2);
     if (halved > capacity.remaining) {
       ui.notifications.warn(`${actor.name} has ${capacity.remaining} Capacity left this round and ${maneuver.name} costs ${halved} in Divine Ki.`);

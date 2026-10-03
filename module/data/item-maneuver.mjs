@@ -104,6 +104,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       launch: new fields.BooleanField({ required: true, initial: false }),
       /** Lifts a Square or a Feature and holds it - the Terrain Lift Maneuver (chat.mjs askTerrainLift). */
       terrainLift: new fields.BooleanField({ required: true, initial: false }),
+      /** A God Maneuver: "only available to those with access to Divine Ki Points ... spend Divine Ki Points to use". */
+      godManeuver: new fields.BooleanField({ required: true, initial: false }),
       /** Hands an Item over to be caught - the Toss Maneuver (chat.mjs askToss). */
       toss: new fields.BooleanField({ required: true, initial: false }),
       /**
