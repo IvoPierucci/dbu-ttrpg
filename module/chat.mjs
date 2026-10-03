@@ -19090,7 +19090,7 @@ export async function rollSteadfastCheck(actor) {
  * effects will reach the same two Surges by other routes, so this is kept apart from
  * whatever triggered it.
  */
-export async function takeSurge(actor, { source = "Surge", kind: forced = null } = {}) {
+export async function takeSurge(actor, { source = "Surge", kind: forced = null, dicePerBaseTier = 0 } = {}) {
   // An effect that names a Surge is not offering a choice between the two: "use a Ki
   // Surge as an Instant Maneuver" is one Surge, and asking which would be wrong.
   const kind = forced ?? await foundry.applications.api.DialogV2.wait({
@@ -19114,7 +19114,11 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null }
   const surgency = actor.system.surgency;
 
   if (kind === "healing") {
-    const dice = DBUCharacterData.HEALING_SURGE_DICE_PER_TIER * actor.system.tierOfPower;
+    // A Healing Surge of its own size where an effect names one - Divine Breathing's "5d10(bT)", still "a Healing Surge
+    // for effects" with Surgency, so what adds to one adds to it.
+    const dice = (dicePerBaseTier > 0)
+      ? dicePerBaseTier * actor.system.baseTierOfPower
+      : DBUCharacterData.HEALING_SURGE_DICE_PER_TIER * actor.system.tierOfPower;
 
     // Dice an effect adds, already resolved against the Tier of Power when the
     // character's data was prepared - "1d10(T)" is three d10s at Tier 3.

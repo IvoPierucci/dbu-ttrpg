@@ -28,6 +28,7 @@ import {
   recordManeuverType,
   recordManeuverUse,
   spendManeuverCost,
+  refundManeuverCost,
   squaresAway,
   whyNotAnotherAbsolute,
   whyNotAnotherGrapple,
@@ -1854,6 +1855,7 @@ export function definitionOf(item) {
     fromTrait: item.system.fromTrait,
     fromEffect: item.system.fromEffect,
     surgeKind: item.system.surgeKind,
+    surgeDicePerBaseTier: item.system.surgeDicePerBaseTier,
     magicTrick: item.system.magicTrick,
     exploitOnLoss: item.system.exploitOnLoss,
     clashSaves: [...(item.system.clashSaves ?? [])],
@@ -3816,10 +3818,17 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // A Maneuver that names its Surge is not offering a choice between the two: the
     // Liquid State's sixth effect is a Healing Surge and nothing else, and asking which
     // would be asking a question the rule already answered.
+    // A Surge with a price - Divine Breathing's 5(bT), in Divine Ki - paid first, and given back if it is not taken.
+    const surgeCost = maneuverKiCost(maneuver, null, actor);
+    if ((surgeCost > 0) && !await spendManeuverCost(actor, maneuver, surgeCost)) return false;
     if (!await takeSurge(actor, {
       source: maneuver.name,
-      kind: maneuver.surgeKind || null
-    })) return false;
+      kind: maneuver.surgeKind || null,
+      dicePerBaseTier: Number(maneuver.surgeDicePerBaseTier) || 0
+    })) {
+      if (surgeCost > 0) await refundManeuverCost(actor, maneuver);
+      return false;
+    }
     await payActions(actor, maneuver);
     await recordManeuverUse(actor, maneuver);
     await recordManeuverType(actor, maneuver.type);
@@ -5623,6 +5632,7 @@ export function maneuverItemFrom(definition) {
       fromTrait: definition.fromTrait ?? "",
       fromEffect: definition.fromEffect ?? 0,
       surgeKind: definition.surgeKind ?? "",
+      surgeDicePerBaseTier: Number(definition.surgeDicePerBaseTier) || 0,
       magicTrick: Boolean(definition.magicTrick),
       exploitOnLoss: Boolean(definition.exploitOnLoss),
       clashSaves: [].concat(definition.clashSaves ?? []),

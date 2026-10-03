@@ -1,0 +1,25 @@
+id: divine-breathing
+name: Divine Breathing
+type: instant
+actionCost: 0
+kiCostPerBaseTier: 5
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+surge: true
+surgeKind: healing
+surgeDicePerBaseTier: 5
+# A God Maneuver: open where an effect grants it, only in God Ki, its 5(bT) paid in Divine Ki Points (maneuvers.mjs
+# whyNotGod, spendManeuverCost). "Regain 5d10(bT) Life Points. This is considered a Healing Surge for effects, and applies
+# Surgency" - a Healing Surge (chat.mjs takeSurge) of 5d10 per Base Tier in place of its own 2d10 per Tier: what adds to a
+# Healing Surge adds to it, and Surgency with it.
+godManeuver: true
+source: Core Rule
+description: >
+  A God Maneuver: regain 5d10(bT) Life Points, a Healing Surge for effects, with Surgency.
+text: >
+  Divine Breathing [1/Encounter]: You recover health with your godly energy.
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –DKP Cost: 5(bT)
+  –Effect: Regain 5d10(bT) Life Points. This is considered a Healing Surge for effects, and applies Surgency.

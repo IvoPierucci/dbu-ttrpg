@@ -303,6 +303,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * wrong. Blank means ask, which is what the Surge Maneuver does.
        */
       surgeKind: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** A Healing Surge of its own size: Divine Breathing's "Regain 5d10(bT) Life Points". 0 is the Surge's own. */
+      surgeDicePerBaseTier: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       /**
        * Three effects to pick between, chosen before anything is paid for.
        *
