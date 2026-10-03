@@ -94,8 +94,16 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
     // A Trait that does not compile is skipped and named, never applied half-way.
     if (errors.length) continue;
 
+    // What was ticked as a Counter Maneuver was used holds as a passive for its duration - Skill of the Watcher's
+    // (chat.mjs answerCounter).
+    const boosted = new Set(actor.getFlag?.("dbu-ttrpg", "counterBoost")?.blocks ?? []);
+    const held = boosted.size && program.blocks.some(b => boosted.has(`${item.id}#${b.index}`))
+      ? { ...program, blocks: program.blocks.map(b => boosted.has(`${item.id}#${b.index}`)
+        ? { ...b, mode: "passive", moment: null } : b) }
+      : program;
+
     entries.push({
-      program,
+      program: held,
       // A Racial Trait - the character's own Item, edited as a Talent is - on its own rung, above a Talent.
       priority: (item.type === "racial") ? PRIORITY.racial : PRIORITY.talent,
       sourceId: item.id,

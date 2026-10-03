@@ -3631,6 +3631,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
                                                     portal = false, combo = false, spiritSword = null,
                                                     extraTargets = [] } = {}) {
   if (!actor || !maneuver) return false;
+  // A Maneuver of your own in sequence: a Counter Maneuver used before has run its course.
+  if (!outOfSequence) await (await import("./chat.mjs")).endCounterBoost(actor);
   // Time Freeze: no Out-of-Sequence Maneuver in a Frozen Turn - your own, or another's but a Surge.
   if (outOfSequence && (frozenTurnOf(actor) || (frozenBy(actor) && !maneuver.surge))) {
     ui.notifications.warn("Time is frozen: no Out-of-Sequence Maneuvers.");

@@ -5890,6 +5890,37 @@ export async function answerPower(actor) {
   await fireMoment(actor, "power");
 }
 
+/**
+ * A Counter Maneuver used - any of them: "[Triggered]: ... for the duration of any of your Counter Maneuvers" (Skill of
+ * the Watcher's). What answers `counter-maneuver` is offered in a window there and then, as the Power Up's is; ticked, it
+ * holds as a passive for that Counter's duration - its rolls, its Damage, and the Out-of-Sequence Maneuver it hands over
+ * (an Exploit's or a Cross Counter's Basic Attack), which is made in the middle of it (the user's). Over at endCounterBoost.
+ */
+export async function answerCounter(actor) {
+  if (!actor?.isOwner) return;
+  const triggers = triggersFor(actor, ["counter-maneuver"]);
+  if (!triggers.length) return;
+  const before = new Set(actor.system.armedTalents ?? []);
+  const applied = await prepareRoll(actor, triggers, "Counter Maneuver", "", { rolling: false });
+  if (applied === false) return;
+  const armed = actor.system.armedTalents ?? [];
+  const chosen = triggers.filter(entry => !before.has(entry.blockId) && armed.includes(entry.blockId));
+  if (!chosen.length) return;
+  const ids = chosen.map(entry => entry.blockId);
+  await actor.update({
+    "system.armedTalents": armed.filter(id => !ids.includes(id)),
+    "system.talentUses.round": [...(actor.system.talentUses?.round ?? []), ...ids],
+    "system.talentUses.encounter": [...(actor.system.talentUses?.encounter ?? []), ...ids],
+    [`flags.${SCOPE}.counterBoost`]: { blocks: ids }
+  });
+}
+
+/** A Counter Maneuver's duration over: what was ticked for it stops holding. */
+export async function endCounterBoost(actor) {
+  if (!actor?.getFlag?.(SCOPE, "counterBoost")) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.counterBoost`]: null });
+}
+
 function relevantTriggers(actor, message, stage) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack) return [];
@@ -6532,6 +6563,8 @@ async function respondDialog(message, respondable) {
 /** Carry out everything the reader chose, for every character they chose it for. */
 async function applyResponses(message, chosen, attack) {
   for (const choice of chosen) {
+    // Another attack answered: a Counter Maneuver used before has run its course.
+    await endCounterBoost(choice.actor);
     // Arming comes first: a Counter resolves the exchange, and anything meant to shape
     // that roll has to be in place before it is made.
     // Null means the dialog never asked - this character rolls nothing here - so

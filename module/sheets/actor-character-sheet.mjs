@@ -1299,8 +1299,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       item,
       triggered: triggered
         .filter(entry => (entry.sourceId === item.id) && entry.budget
-          // What the Power Up Maneuver's own window offers is not Armed beforehand.
-          && (String(entry.program.blocks[0]?.moment ?? "").split(/[(/]/)[0] !== "power"))
+          // What a window offers as it happens - the Power Up's, a Counter Maneuver's - is not Armed beforehand.
+          && !["power", "counter-maneuver"].includes(String(entry.program.blocks[0]?.moment ?? "").split(/[(/]/)[0]))
         .map(entry => ({
           id: entry.blockId,
           armed: entry.armed,
@@ -4782,8 +4782,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       triggered: triggered
         .filter(entry => (entry.sourceId === item.id) && (entry.program.blocks[0]?.mode === "triggered")
           && !entry.program.blocks[0]?.budget?.actions
-          // Nor what the Power Up Maneuver's own window offers when it is used.
-          && (String(entry.program.blocks[0]?.moment ?? "").split(/[(/]/)[0] !== "power"))
+          // Nor what a window offers as it happens - the Power Up Maneuver's, a Counter Maneuver's.
+          && !["power", "counter-maneuver"].includes(String(entry.program.blocks[0]?.moment ?? "").split(/[(/]/)[0]))
         .map(entry => ({
           id: entry.blockId,
           armed: entry.armed,

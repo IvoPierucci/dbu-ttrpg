@@ -575,8 +575,10 @@ export function registerCombatHooks() {
       await releaseFinalChance(leaving);
 
       // Weather Summoning: "until the end of your next turn".
-      const { weatherTurnEnd } = await import("./chat.mjs");
+      const { weatherTurnEnd, endCounterBoost } = await import("./chat.mjs");
       await weatherTurnEnd(leaving);
+      // A turn passed: whatever Counter Maneuver anyone used in it has run its course.
+      for (const each of combatants(combat)) await endCounterBoost(each);
       // "Since the end of your last turn" - Flow of Combat's count of Damage starts again.
       if (leaving.getFlag?.("dbu-ttrpg", "damagedSinceTurn")) await leaving.unsetFlag("dbu-ttrpg", "damagedSinceTurn");
       // Super Spirit Sword's use again: "during this turn" - unused, gone with it.

@@ -2441,6 +2441,13 @@ export async function recordManeuverType(actor, type, { messageId = "", maneuver
     return;
   }
 
+  // A Counter Maneuver used: what answers it is offered there and then - Skill of the Watcher's 1(T), held for its
+  // duration (chat.mjs answerCounter).
+  if ((type === "counter") && actor?.isOwner) {
+    const { answerCounter } = await import("./chat.mjs");
+    await answerCounter(actor);
+  }
+
   // Debilitated: "loses Life Points equal to 1/4 (rounded up) of your Magic Modifier each time they use a Maneuver".
   if (actor?.getFlag?.("dbu-ttrpg", "debilitatedBy")) {
     const { debilitatedUse } = await import("./chat.mjs");
