@@ -5921,6 +5921,65 @@ export async function endCounterBoost(actor) {
   await requestActorUpdate(actor, { [`flags.${SCOPE}.counterBoost`]: null });
 }
 
+/**
+ * A Botch or a Critical on a Combat Roll: "[Triggered]: When you score a Botch Result ..." (Celestial Potential's).
+ * Whatever answers it is offered in a window to the character's own player the moment the Natural Result is read - before
+ * the Clash is settled, so it is a choice made on the roll alone, never a safety net taken knowing the other side's
+ * (the user's). Asked of whoever plays the character, wherever the roll is being made (User#query); what they tick is
+ * applied to this roll and spent.
+ * @returns {Promise<number>} what it adds to the Dice Score
+ */
+async function outcomeTurn(actor, kind) {
+  if (!triggersFor(actor, [kind]).length) return 0;
+  const player = playerOf(actor);
+  let ids = [];
+  if (player === game.user) ids = await showOutcomeWindow(actor, kind);
+  else if (player) {
+    try { ids = await player.query(OUTCOME_QUERY, { actorUuid: actor.uuid, kind }, { timeout: 120000 }) ?? []; }
+    catch (error) { console.warn(`DBU TTRPG | ${actor.name}'s ${kind} could not be asked`, error); }
+  }
+  const chosen = reactiveFor(actor).filter(entry => ids.includes(entry.blockId)).map(entry => ({ ...entry, armed: true }));
+  if (!chosen.length) return 0;
+  const { slots, spent } = collectReactive(chosen, kind, { data: actor.system, errors: [], context: { roll: true }, queue: [] });
+  for (const use of spent) await spendTriggeredEffect(actor, `${use.sourceId}#${use.block}`);
+  return applySlot(slots, "roll.total", 0);
+}
+
+/** Who answers for a character: an active player who owns it, or else the active GM. */
+function playerOf(actor) {
+  return game.users.find(user => user.active && !user.isGM && actor.testUserPermission?.(user, "OWNER"))
+    ?? game.users.activeGM ?? null;
+}
+
+/** The query a Botch or Critical window is asked through, of the player's own client. */
+export const OUTCOME_QUERY = "dbu-ttrpg.outcomeTriggers";
+
+/** The window itself, on the player's client: what answers the Botch or Critical, ticked. The block ids taken. */
+export async function showOutcomeWindow(actor, kind) {
+  const triggers = triggersFor(actor, [kind]);
+  if (!actor || !triggers.length) return [];
+  const before = new Set(actor.system.armedTalents ?? []);
+  const applied = await prepareRoll(actor, triggers, `${actor.name}: ${(kind === "botch") ? "Botch" : "Critical"}`,
+    (kind === "botch") ? "A Botch on this Combat Roll." : "A Critical on this Combat Roll.", { rolling: false });
+  if (applied === false) return [];
+  const armed = actor.system.armedTalents ?? [];
+  return triggers.map(entry => entry.blockId).filter(id => !before.has(id) && armed.includes(id));
+}
+
+/**
+ * A Maneuver declared: what answers it is offered in a window first - God of Judgment's Energy Charge on a Signature
+ * Technique - only what its own `requires` lets apply to this one. Ticked, it fires with the moment.
+ */
+export async function answerDeclare(actor, context) {
+  if (!actor?.isOwner) return;
+  const { evaluate } = await import("./effects/conditions.mjs");
+  const triggers = triggersFor(actor, ["declare-maneuver"]).filter(entry => {
+    const requires = entry.program.blocks?.[0]?.requires;
+    return !requires || evaluate(requires, { data: actor.system, context, errors: [] });
+  });
+  if (triggers.length) await prepareRoll(actor, triggers, context?.maneuver?.name ?? "Maneuver", "", { rolling: false });
+}
+
 function relevantTriggers(actor, message, stage) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack) return [];
@@ -7303,10 +7362,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 
   // What answers the Natural Result once it is read - Celestial Potential's, Armed: a Botch's penalty turned into 2(T)
   // more, a Critical's 2(T) more again. A Combat Roll's, once - not again on a measurement of the same roll.
-  const turnedBy = (combatRoll && collect && (botch || critical))
-    ? atMoment(actor, botch ? "botch" : "critical", { roll: true }) : null;
-  const turned = turnedBy ? applySlot(turnedBy.slots, "roll.total", 0) : 0;
-  if (turned) spendChosen(actor, turnedBy);
+  // Asked there and then - before anybody knows how the Clash ends, which is not theirs to wait for (the user's).
+  const turned = (combatRoll && collect && (botch || critical)) ? await outcomeTurn(actor, botch ? "botch" : "critical") : 0;
 
   if (botch && turned) {
     total += turned;

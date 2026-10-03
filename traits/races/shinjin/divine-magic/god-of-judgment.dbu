@@ -9,7 +9,7 @@ text: >
 
 ---
 
-# Armed from the Traits tab: the next Signature Technique declared gets its Energy Charge.
+# Offered in a window as a Signature Technique is declared (chat.mjs answerDeclare).
 [triggered/declare-maneuver, 1/round]
 requires signatureTechnique;
 attack.energyCharges += 1;

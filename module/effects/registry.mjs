@@ -829,6 +829,17 @@ function conditionPrograms(actor, report) {
  * be impossible to arm separately, because both the armed list and the use counters
  * were keyed on the Talent's id.
  */
+/**
+ * The moments whose Triggered effects are offered in a window as they happen - the Power Up's, a Counter Maneuver's, a
+ * Maneuver declared, a Botch or a Critical on a Combat Roll - and so never Armed or set Automatic beforehand (the user's).
+ */
+export const WINDOW_MOMENTS = Object.freeze(["power", "counter-maneuver", "declare-maneuver", "botch", "critical"]);
+
+/** A block's moment, without its parameter. */
+export function momentOf(block) {
+  return String(block?.moment ?? "").split(/[(/]/)[0];
+}
+
 export function reactiveFor(actor, options = {}) {
   const armed = new Set(actor.system?.armedEffects ?? actor.system?.armedTalents ?? []);
   // What the player set to Automatic on a Racial Trait (the user's): answers its moment each time, never spent off.
@@ -842,7 +853,7 @@ export function reactiveFor(actor, options = {}) {
         program: { ...entry.program, blocks: [b] },
         blockId: `${entry.sourceId}#${b.index}`,
         armed: (b.mode === "automatic") || armed.has(`${entry.sourceId}#${b.index}`)
-          || automatic.has(`${entry.sourceId}#${b.index}`)
+          || (automatic.has(`${entry.sourceId}#${b.index}`) && !WINDOW_MOMENTS.includes(momentOf(b)))
           // A Talent armed under the old per-Talent key still counts, so nothing a
           // player armed before this change quietly stops working.
           || armed.has(entry.sourceId),

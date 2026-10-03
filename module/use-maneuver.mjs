@@ -5013,6 +5013,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
   // Declared, now that it is certain to happen. An effect answering this reads the
   // Maneuver and who it is aimed at.
+  // What answers it offered in a window first - God of Judgment's (chat.mjs answerDeclare).
+  await (await import("./chat.mjs")).answerDeclare(actor, { maneuver, targets: targetActor ? [targetActor] : [] });
   const declaring = await fireMoment(actor, "declare-maneuver", {
     maneuver,
     targets: targetActor ? [targetActor] : []

@@ -13,12 +13,13 @@ text: >
 
 ---
 
-# (1) Armed from the Traits tab: the next Botch on a Combat Roll - its penalty not taken, 2(T) added instead (chat.mjs
-# rollSide).
+# (1) Offered in a window the moment a Combat Roll Botches - before the Clash is settled - its penalty not taken, 2(T)
+# added instead (chat.mjs outcomeTurn).
 [triggered/botch, 1/round]
 roll.total += 2(T);
 
-# (2) Armed: the next Critical on a Combat Roll - 2(T) more on top of its Critical Extra Dice.
+# (2) Offered in a window the moment a Combat Roll Crits - before the Clash is settled - 2(T) more on top of its Critical
+# Extra Dice.
 [triggered/critical, 1/round]
 roll.total += 2(T);
 
