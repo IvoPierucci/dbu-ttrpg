@@ -2076,7 +2076,7 @@ export function techniqueDefinition(item) {
     profileFoundation: sig.foundation ? { [sig.profile]: sig.foundation } : {},
     kiCost: 0,
     kiCostPerBaseTier: 0,
-    kiCostPerTier: techniqueKiPerTier(sig),
+    kiCostPerTier: techniqueKiPerTier(sig, item.actor?.system?.effects?.slots),
     level: sig.level,
     ultimate,
     superProfile: sig.superProfile,

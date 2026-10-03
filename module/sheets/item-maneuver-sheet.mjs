@@ -270,16 +270,18 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       .map(([value, profile]) => ({ value, label: `${profile.label} (${profile.kiCostPerTier ?? 0}(T))`,
         chosen: multi && (value === sig.secondProfile) }));
 
-    const tp = techniqueTP(sig);
+    // What an effect gives it left out - free, and not the Technique's (the user's).
+    const slots = this.item.actor?.system?.effects?.slots;
+    const tp = techniqueTP(sig, slots);
     const cap = tierTpCap(baseTier);
-    const kiPerTier = techniqueKiPerTier(sig);
+    const kiPerTier = techniqueKiPerTier(sig, slots);
     const profileKi = profileKiPerTier(sig.profile);
     const superKi = sig.superProfile ? superProfileKiPerTier(sig.superProfile, sig.secondProfile) : 0;
 
     const reading = {
       tp,
       free: sig.freeTP,
-      charged: techniqueTPCharged(sig, this.item.actor?.system?.effects?.slots),
+      charged: techniqueTPCharged(sig, slots),
       cap,
       over: tp > cap ? `Over the ${cap} TP a Technique may be worth at base Tier ${baseTier}.` : "",
       profileKi,

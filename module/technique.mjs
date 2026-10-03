@@ -123,25 +123,30 @@ export function techniqueStartTP(sig) {
   return Number.isFinite(start) ? start : BASE_TP;
 }
 
-export function techniqueTP(sig) {
-  const features = (sig.features ?? []).reduce((sum, entry) =>
+export function techniqueTP(sig, slots = null) {
+  // What an effect gives it is free and not the Technique's: no TP for it, and none counted towards its KP or its cap (the
+  // user's) - God of War's Weapon Assisted. An Advantage or a Disadvantage alike.
+  const features = (sig.features ?? []).filter(entry => !givenFree(entry, slots)).reduce((sum, entry) =>
     sum + featureTP(featureDef(entry.id), entry.ranks), 0);
   const start = techniqueStartTP(sig);
   const built = Math.max(Math.min(MINIMUM_TP, start), start + features);
   return built + (isUltimate(sig.level) ? ULTIMATE_TP : 0);
 }
 
+/** A feature an effect gives - God of War's Weapon Assisted, "without spending Technique Points". */
+function givenFree(entry, slots) {
+  return slots?.[`technique.free.${entry.id}`] === true;
+}
+
 /**
- * What the Technique takes from the character's TP: its TP, less whatever was given for it free -
- * never below nothing. Its TP is still its TP for the cap and the KP (the user's ruling).
+ * What the Technique takes from the character's TP: its TP - what effects give it already left out - less the Free TP,
+ * never below nothing. The Free TP is still the Technique's for the cap and the KP (the user's ruling); what an effect gives
+ * is not the Technique's at all (the user's).
  */
 export function techniqueTPCharged(sig, slots = null) {
   // God Finisher's: "you do not spend any Technique Points".
   if (sig?.godFinisher) return 0;
-  // A feature an effect makes free - God of War's Weapon Assisted, "without spending Technique Points".
-  const free = (sig?.features ?? []).filter(entry => slots?.[`technique.free.${entry.id}`] === true)
-    .reduce((sum, entry) => sum + Math.max(0, featureTP(featureDef(entry.id), entry.ranks)), 0);
-  return Math.max(0, techniqueTP(sig) - free - Math.max(0, Number(sig.freeTP) || 0));
+  return Math.max(0, techniqueTP(sig, slots) - Math.max(0, Number(sig.freeTP) || 0));
 }
 
 /** God Finisher's Technique: "a total TP Cost of 50 or less". */
@@ -196,8 +201,8 @@ export function superProfileKiPerTier(superId, secondProfile = "") {
  * Back Flip's 1(T) is not here: it is a discount on each use, and the user ruled it may go
  * under the Profile.
  */
-export function techniqueKiPerTier(sig) {
-  const x = Math.ceil(techniqueTP(sig) / 5);
+export function techniqueKiPerTier(sig, slots = null) {
+  const x = Math.ceil(techniqueTP(sig, slots) / 5);
   const own = Math.max(0, x - (4 * ranksOf(sig, "efficiency")) + (4 * ranksOf(sig, "inefficiency")));
   return own + (sig.superProfile ? superProfileKiPerTier(sig.superProfile, sig.secondProfile) : 0);
 }
