@@ -4,11 +4,11 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
-import { addRacialTrait, ownedRacialTraits, racialTraitKind, racialTraitRace, racialTraitsInOrder, removeRacialTrait }
-  from "../racial.mjs";
+import { addRacialTrait, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace, racialTraitsInOrder,
+  removeRacialTrait } from "../racial.mjs";
 import { reactiveFor } from "../effects/registry.mjs";
 import { grantedUniques } from "../unique.mjs";
-import { getTrait, printedLines, resourceCeiling, resourceDefinitions, traitsOfKind }
+import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
   from "../effects/traits.mjs";
 import { EDGES, KINDS } from "../durations.mjs";
 import { COLLISION_DAMAGE, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue } from "../features.mjs";
@@ -381,6 +381,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleSpecialty: DBUCharacterSheet._onToggleSpecialty,
       rollSave: DBUCharacterSheet._onSaveRoll,
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
+      toggleTrait: DBUCharacterSheet._onToggleTrait,
       addRacialTrait: DBUCharacterSheet._onAddRacialTrait,
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
@@ -4688,6 +4689,15 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * re-rendering a whole sheet to remember that somebody opened a row is the same
    * mistake the collapsible sections already avoid.
    */
+  /** A Racial Trait's row on the Traits tab, unfolded or folded - remembered as a Maneuver's is. */
+  static _onToggleTrait(event, target) {
+    const row = target.closest(".trait");
+    if (!row) return;
+    const open = !row.classList.contains("trait-open");
+    row.classList.toggle("trait-open", open);
+    this.#openSections[`trait-${row.dataset.itemId}`] = open;
+  }
+
   static _onToggleManeuver(event, target) {
     const row = target.closest(".maneuver");
     if (!row) return;
@@ -4761,10 +4771,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       item,
       kind: racialTraitKind(item.system),
       race: racialTraitRace(item.system.race, item.system.subrace),
-      // Unfolded as a Unique Ability's row is, to its text as printed - and what was chosen for it.
-      open: Boolean(this.#openSections[`maneuver-${item.id}`]),
-      lines: printedLines(item.system.text || "").map(line => ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line })),
-      chosenLines: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean),
+      // Unfolded to its text as printed - an Option effect showing only what was chosen - and the choices made for it.
+      open: Boolean(this.#openSections[`trait-${item.id}`]),
+      lines: racialTraitLines(item),
+      chosenLines: (item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label).filter(Boolean),
       chosen: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean).join(" \u00b7 "),
       // Every Triggered one - with a limit or not - but what costs Actions, which the moment's own card takes and pays.
       triggered: triggered

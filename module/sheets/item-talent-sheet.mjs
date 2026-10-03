@@ -54,11 +54,17 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
     context.tabs = this._getTabs();
     // A Racial Trait: its race and what the rules call it in place of Prerequisites, and what was chosen for it.
     if (this.item.type === "racial") {
-      const { racialTraitKind, racialTraitRace } = await import("../racial.mjs");
+      const { racialOptionOf, racialOptionsOf, racialTraitKind, racialTraitRace } = await import("../racial.mjs");
+      const current = racialOptionOf(this.item);
+      // Its Options, where it has an Option effect - the one chosen picked, and the rest there to change to.
+      const options = racialOptionsOf(this.item.flags?.["dbu-ttrpg"]?.sourceId ?? "")
+        .map(option => ({ value: option.id, label: option.name, selected: option.id === current }));
       context.racial = {
         race: racialTraitRace(this.item.system.race, this.item.system.subrace),
         kind: racialTraitKind(this.item.system),
-        chosen: (this.item.system.chosen ?? []).map(entry => entry.label).filter(Boolean).join(" \u00b7 ")
+        chosen: (this.item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label)
+          .filter(Boolean).join(" \u00b7 "),
+        options: options.length ? options : null
       };
     }
 
@@ -72,6 +78,19 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
     context.resolved = (owner && !errors.length) ? describeFor(program, owner) : [];
 
     return context;
+  }
+
+  /** A Racial Trait's Option changed from its dropdown: its script, choice and what it gives changed with it. */
+  _onRender(context, options) {
+    super._onRender?.(context, options);
+    const select = this.element.querySelector("select[data-racial-option]");
+    if (!select) return;
+    select.addEventListener("change", async event => {
+      event.stopPropagation();
+      const { changeRacialOption } = await import("../racial.mjs");
+      const changed = await changeRacialOption(this.item, event.target.value);
+      if (!changed) this.render();
+    });
   }
 
   /** Build the tab configuration used by the shared tabs template. */

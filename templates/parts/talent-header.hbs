@@ -4,6 +4,16 @@
     <input type="text" name="name" value="{{item.name}}" placeholder="Talent Name"/>
     {{#if racial}}
     <span class="trait-prereq" data-tooltip="Racial Trait">{{racial.race}}{{#if racial.kind}} &middot; {{racial.kind}}{{/if}}{{#if racial.chosen}} &middot; {{racial.chosen}}{{/if}}</span>
+    {{#if racial.options}}
+    {{! Its Option effect: the one chosen, and changeable - its script and what it gives change with it. }}
+    <label>Option
+      <select data-racial-option>
+        {{#each racial.options as |option|}}
+        <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
+        {{/each}}
+      </select>
+    </label>
+    {{/if}}
     {{else}}
     <label>Prerequisites
       <input type="text" name="system.prerequisites" value="{{system.prerequisites}}" placeholder="N/A"/>

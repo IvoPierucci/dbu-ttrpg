@@ -22,11 +22,51 @@
  * script is added to the Trait's between `#@ option` markers, and it may say `choose`, `grantsUnique`, `grantsTalent`.
  */
 
-import { getTrait, traitsOfKind } from "./effects/traits.mjs";
+import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
 import { getRace, subraceName } from "./races.mjs";
 
 /** The Item type a Racial Trait is. */
 export const RACIAL_TYPE = "racial";
+
+/** A link written in a Trait's text as `[label](url)`. */
+const LINK = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
+
+/** A Trait's text with its links as their labels - for a tooltip, which shows no link. */
+export function plainText(text) {
+  return String(text ?? "").replace(LINK, "$1");
+}
+
+/** One printed line as HTML: escaped, its links made links. */
+function lineHtml(text) {
+  return Handlebars.escapeExpression(text).replace(LINK, (whole, label, url) =>
+    `<a href="${url}" target="_blank" rel="noopener">${label}</a>`);
+}
+
+/**
+ * A Racial Trait Item's text as shown on the Traits tab: its printed lines, and where it has an Option effect, that line
+ * with only what was chosen under it - "(3)-[Option]:" and the Option's own line - not the whole list (the user's).
+ */
+export function racialTraitLines(item) {
+  const picked = (item?.system?.chosen ?? []).filter(entry => entry.key === "option")
+    .map(entry => getTrait(entry.value)).filter(Boolean);
+  const lines = printedLines(item?.system?.text || "");
+  const out = [];
+  for (let at = 0; at < lines.length; at++) {
+    const line = lines[at];
+    const option = picked.length && /^(\(\d+\)-\[Option\]):/.exec(line);
+    if (!option) {
+      out.push({ html: lineHtml(line), bullet: /^[*\u2022]/.test(line), gap: !line });
+      continue;
+    }
+    out.push({ html: lineHtml(`${option[1]}:`), bullet: false, gap: false });
+    for (const chosen of picked) {
+      out.push({ html: lineHtml(`*${printedLines(chosen.text).join(" ")}`), bullet: true, gap: false });
+    }
+    // The list it was chosen from is left out.
+    while ((at + 1 < lines.length) && /^[*\u2022]/.test(lines[at + 1])) at++;
+  }
+  return out;
+}
 
 /** A list header - `a, b` or a single value - as a list. */
 const listOf = raw => [].concat(raw ?? []).flatMap(entry => String(entry).split(",")).map(id => id.trim()).filter(Boolean);
@@ -127,10 +167,10 @@ async function askOptions(trait, options) {
     window: { title: `${trait.name} - Option` },
     position: { width: 460 },
     content: `<p class="dbu-respond-hint">Choose ${count}.</p>${options.map((option, index) => `
-      <label class="dbu-respond-option" data-tooltip="${escape(option.text ?? option.description ?? "")}">
+      <label class="dbu-respond-option" data-tooltip="${escape(plainText(option.text ?? option.description ?? ""))}">
         <input type="${type}" name="option" value="${escape(option.id)}" ${(index === 0) && (count === 1) ? "checked" : ""}/>
         <span class="dbu-respond-name">${escape(option.name)}</span>
-        <span class="dbu-respond-source">${escape(option.description ?? "")}</span></label>`).join("")}`,
+        <span class="dbu-respond-source">${escape(plainText(option.description ?? ""))}</span></label>`).join("")}`,
     buttons: [
       { action: "confirm", label: "Choose", default: true, callback: (event, button, dialog) =>
         [...dialog.element.querySelectorAll('input[name="option"]:checked')].map(input => input.value) },
@@ -182,7 +222,8 @@ export async function racialItemFrom(trait) {
       if (script === null) return null;
       scripts.push(`#@ option ${option.id} | ${option.name}\n${script}\n#@ end`);
       texts.push(`${option.name}: ${String(option.text ?? "").trim()}`);
-      unique.push(...listOf(option.grantsUnique).map(each => ({ id: each, restrictions: listOf(option.uniqueRestrictions) })));
+      unique.push(...listOf(option.grantsUnique).map(each => ({ id: each, restrictions: listOf(option.uniqueRestrictions),
+        option: option.id })));
       talents.push(...listOf(option.grantsTalent));
     }
   }
@@ -219,14 +260,22 @@ export async function addRacialTrait(actor, trait) {
   if (!made) return null;
   const [item] = await actor.createEmbeddedDocuments("Item", [made.data]);
   if (!item) return null;
+  await giveGrants(actor, item, made.grants, trait.name);
+  return item;
+}
 
+/**
+ * What a Racial Trait gives, made on the character: each Unique Ability free and without its Requirements, marked as given
+ * by it (and by which Option, where one gave it); each Talent, kept if the Trait is ever lost.
+ */
+async function giveGrants(actor, item, grants, name) {
   const { uniqueItemFrom, isUniqueAbility } = await import("./unique.mjs");
   const held = new Set(Array.from(actor.items).filter(isUniqueAbility).map(each => each.system.unique?.libraryId));
   const created = [];
-  for (const grant of made.grants.unique) {
+  for (const grant of grants.unique) {
     const definition = getTrait(grant.id);
     if (!definition || (definition.kind !== "unique") || definition.owner) {
-      ui.notifications.warn(`${trait.name}: the ${grant.id} Unique Ability is not written yet.`);
+      ui.notifications.warn(`${name}: the ${grant.id} Unique Ability is not written yet.`);
       continue;
     }
     if (held.has(definition.id)) {
@@ -247,7 +296,8 @@ export async function addRacialTrait(actor, trait) {
     const data = uniqueItemFrom(definition, traitsOfKind("unique", definition.id),
       { chosenType, applied: grant.restrictions, choices: {} });
     data.system.unique.free = true;
-    data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), grantedBy: item.id } };
+    data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), grantedBy: item.id,
+      ...(grant.option ? { grantedByOption: grant.option } : {}) } };
     created.push(data);
     held.add(definition.id);
   }
@@ -255,17 +305,56 @@ export async function addRacialTrait(actor, trait) {
   const { talentItemFrom } = await import("./talents.mjs");
   const talentsHeld = new Set(Array.from(actor.items).filter(each => each.type === "talent")
     .map(each => each.flags?.["dbu-ttrpg"]?.sourceId));
-  for (const id of made.grants.talents) {
+  for (const id of grants.talents) {
     const talent = getTrait(id);
     if (!talent || (talent.kind !== "talents")) {
-      ui.notifications.warn(`${trait.name}: the ${id} Talent is not written yet - add it by hand once it is.`);
+      ui.notifications.warn(`${name}: the ${id} Talent is not written yet - add it by hand once it is.`);
       continue;
     }
     if (talentsHeld.has(id)) continue;
     created.push(talentItemFrom(talent));
   }
   if (created.length) await actor.createEmbeddedDocuments("Item", created);
-  return item;
+}
+
+/** The Option chosen on a Racial Trait Item, where it has an Option effect of one - its id, or "". */
+export function racialOptionOf(item) {
+  return (item?.system?.chosen ?? []).find(entry => entry.key === "option")?.value ?? "";
+}
+
+/**
+ * Another Option for a Racial Trait already had (the user's: "que igual te permita cambiarlo"): its script in place of the
+ * old one's between the `#@ option` markers, its choice asked, what was recorded and its wording changed with it; the
+ * Unique Abilities the old Option gave go, the new one's are given - Talents given are kept, as on losing the Trait.
+ */
+export async function changeRacialOption(item, optionId) {
+  const actor = item?.actor;
+  const sourceId = item?.flags?.["dbu-ttrpg"]?.sourceId ?? "";
+  const options = racialOptionsOf(sourceId);
+  const option = options.find(entry => entry.id === optionId);
+  if (!option || (racialOptionOf(item) === optionId)) return false;
+
+  const extra = [];
+  const script = await answered(option, extra);
+  if (script === null) return false;
+  const chosen = [...(item.system.chosen ?? []).filter(entry => (entry.key !== "option")
+    && !options.some(each => each.id === entry.key)), { key: "option", value: option.id, label: option.name }, ...extra];
+  const kept = String(item.system.script ?? "").replace(/\n*#@ option [^\n]*\n[\s\S]*?\n#@ end/g, "").trimEnd();
+  await item.update({
+    "system.script": `${kept}\n\n#@ option ${option.id} | ${option.name}\n${script}\n#@ end`,
+    "system.chosen": chosen,
+    "system.addendum": `${option.name}: ${String(option.text ?? "").trim()}`
+  });
+
+  if (!actor) return true;
+  const old = Array.from(actor.items).filter(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
+    && each.flags?.["dbu-ttrpg"]?.grantedByOption).map(each => each.id);
+  if (old.length) await actor.deleteEmbeddedDocuments("Item", old);
+  await giveGrants(actor, item, {
+    unique: listOf(option.grantsUnique).map(id => ({ id, restrictions: listOf(option.uniqueRestrictions), option: option.id })),
+    talents: listOf(option.grantsTalent)
+  }, option.name);
+  return true;
 }
 
 /**

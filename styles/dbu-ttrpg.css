@@ -1516,6 +1516,31 @@
   margin-bottom: 2px;
 }
 
+/* A Racial Trait's row: its head opens it, as a Maneuver's does, the arrow turning with it. */
+.dbu-ttrpg .trait-fold {
+  cursor: pointer;
+  justify-content: flex-start;
+}
+
+.dbu-ttrpg .trait-fold .trait-prereq {
+  margin-right: auto;
+}
+
+.dbu-ttrpg .trait-open > .trait-head .maneuver-mark {
+  transform: rotate(90deg);
+}
+
+.dbu-ttrpg .trait > .trait-body {
+  display: none;
+}
+
+.dbu-ttrpg .trait-open > .trait-body {
+  display: block;
+  padding: 4px 4px 2px 20px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 /* --- Skills ---------------------------------------------------------------- */
 
 .dbu-ttrpg .skill-group {

@@ -11,14 +11,15 @@
     </summary>
 
     {{#if racialTraits.length}}
-    {{! As the Unique Abilities' rows: a click unfolds one to its text as printed, and what was chosen for it. }}
-    <ul class="maneuver-list technique-list">
+    {{! The bordered list it always had; a click on a Trait unfolds it to its text and what was chosen for it. }}
+    <ul class="trait-list">
       {{#each racialTraits as |entry|}}
-      <li class="maneuver{{#if entry.open}} maneuver-open{{/if}}" data-item-id="{{entry.item.id}}">
-        <div class="maneuver-head" data-action="toggleManeuver">
+      <li class="trait{{#if entry.open}} trait-open{{/if}}" data-item-id="{{entry.item.id}}">
+        <div class="trait-head trait-fold" data-action="toggleTrait">
           <span class="maneuver-mark" aria-hidden="true"></span>
-          <span class="maneuver-name">{{entry.item.name}}</span>
-          <span class="maneuver-uses">{{entry.race}}{{#if entry.kind}} &middot; {{entry.kind}}{{/if}}</span>
+          <img class="trait-img" src="{{entry.item.img}}" height="20" width="20"/>
+          <span class="trait-name">{{entry.item.name}}</span>
+          <span class="trait-prereq">{{entry.race}}{{#if entry.kind}} &middot; {{entry.kind}}{{/if}}</span>
           {{#each entry.triggered as |trigger|}}
           <button type="button" class="trait-arm {{#if trigger.armed}}active{{/if}}"
                   data-action="armTalent" data-effect-id="{{trigger.id}}"
@@ -27,15 +28,15 @@
             {{#if trigger.armed}}Armed{{else}}Arm{{/if}}
           </button>
           {{/each}}
-          <button type="button" class="maneuver-control" data-action="editItem" data-item-id="{{entry.item.id}}"
+          <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
                   data-tooltip="Edit this Racial Trait - its Effect is what it does on this character">&#9998;</button>
-          <button type="button" class="maneuver-control" data-action="toggleRacialTrait" data-item-id="{{entry.item.id}}"
-                  data-tooltip="Remove this Racial Trait">&#10005;</button>
+          <button type="button" class="trait-control" data-action="toggleRacialTrait" data-item-id="{{entry.item.id}}"
+                  data-tooltip="Remove this Racial Trait">&times;</button>
         </div>
-        <div class="maneuver-body">
+        <div class="trait-body">
           {{#each entry.lines as |line|}}
           {{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}
-          <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>{{/if}}
+          <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{{line.html}}}</div>{{/if}}
           {{/each}}
           {{#each entry.chosenLines as |chosen|}}
           <div class="dbu-profile-line technique-advantage" data-tooltip="Chosen when it was added">{{chosen}}</div>

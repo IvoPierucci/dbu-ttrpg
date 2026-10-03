@@ -4,9 +4,9 @@ optionOf: divine-magic
 # "Select a Profile with 'Elemental' in the name" - asked when it is added, `$choice`.
 choose: elementalProfile
 description: >
-  Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+  Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — [Favored Element](https://dbu-rpg.com/foundations-profiles/#favored-element)).
 text: >
-  God of an Element [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+  God of an Element [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — [Favored Element](https://dbu-rpg.com/foundations-profiles/#favored-element)).
 
 ---
 
