@@ -4762,15 +4762,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       kind: racialTraitKind(item.system),
       race: racialTraitRace(item.system.race, item.system.subrace),
       chosen: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean).join(" \u00b7 "),
+      // Every Triggered one - with a limit or not - but what costs Actions, which the moment's own card takes and pays.
       triggered: triggered
-        .filter(entry => (entry.sourceId === item.id) && entry.budget)
+        .filter(entry => (entry.sourceId === item.id) && (entry.program.blocks[0]?.mode === "triggered")
+          && !entry.program.blocks[0]?.budget?.actions)
         .map(entry => ({
           id: entry.blockId,
           armed: entry.armed,
           available: entry.available,
-          round: entry.uses.round,
-          encounter: entry.uses.encounter,
-          text: entry.program.blocks[0]?.text ?? ""
+          text: entry.program.blocks[0]?.text ?? "",
+          moment: entry.program.blocks[0]?.moment ?? "",
+          limits: [Number.isFinite(entry.uses.round) ? `${entry.uses.round} left this round` : "",
+            Number.isFinite(entry.uses.encounter) ? `${entry.uses.encounter} this encounter` : ""].filter(Boolean).join(", ")
         }))
     }));
   }

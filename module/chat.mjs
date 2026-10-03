@@ -8408,8 +8408,10 @@ async function resolveSkillClash(message, clash) {
   // God Ki: "You automatically succeed at Concealment Skill Clashes initiated by those who cannot sense God Ki" - one in
   // God Ki answering with Concealment, at one who is not.
   const divine = who => (Number(who?.system?.states?.["god-ki"]) || 0) > 0;
+  // "Unless specified otherwise, no one can sense God Ki" - Skill of the Watcher specifies otherwise.
+  const senses = who => divine(who) || (who?.system?.effects?.slots?.["sense.godKi"] === true);
   const hidden = (clash.category === "skill") && (skillPicked(clash, clash.defenderUuid) === "concealment")
-    && divine(defender) && !divine(challenger);
+    && divine(defender) && !senses(challenger);
   const defenderSide = hidden
     ? { ...rolledDefence, succeeded: true, lines: [...(rolledDefence.lines ?? []), noteLine("God Ki - it cannot be sensed")] }
     : rolledDefence;
@@ -12682,6 +12684,22 @@ async function settleWave(message, clash) {
   }
 }
 
+/**
+ * Skill of the Watcher (5): "If you deal Damage with an Attacking Maneuver made through the Exploit Maneuver, or do not
+ * receive Damage from an Attacking Maneuver that you used the Defend Maneuver in response to, you may use the Power Up
+ * Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card - theirs to take - once a Combat Round.
+ */
+function offerWatcherPowerUp(message, actor, why) {
+  if (!actor || (actor.system?.effects?.slots?.["powerUp.afterExploitOrDefend"] !== true)) return;
+  if ((actor.system.usedManeuvers ?? []).includes(WATCHER_POWER_UP)) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.watcherRound && (offer.actorUuid === actor.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "power-up",
+    maneuverName: "Power Up", reason: `Skill of the Watcher - ${why}`, grants: { watcherRound: true } } });
+}
+
+/** Skill of the Watcher's Power Up taken this Combat Round. */
+const WATCHER_POWER_UP = "round:skill-of-the-watcher.power-up";
+
 /** Divine Roar: a card naming them, and "a Might Clash against all Characters within a Destructive Sphere AoE". */
 export async function postDivineRoar(actor, maneuver, uuids) {
   const targets = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
@@ -13287,6 +13305,15 @@ async function takeOutOfSequence(message, actor, offer) {
   // use but pay the Action Cost and KP Cost immediately" was the use, and it was counted
   // then - `free` is what marks an offer that has already been paid for.
   if (!offer.free) await recordManeuverUse(actor, maneuver);
+  // Skill of the Watcher's Power Up: once a Combat Round.
+  if (granted?.watcherRound) {
+    await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), WATCHER_POWER_UP] });
+  }
+  // "When you use the Power Up Maneuver" - out of sequence too: what is Armed for it (God of Peace).
+  if (maneuver.powerUp) {
+    const { fireMoment } = await import("./effects/moments-runtime.mjs");
+    await fireMoment(actor, "power");
+  }
 
   // The Exploit's recursion spreads the offer, so what provoked it has come all this way
   // untouched and goes onto the attack itself.
@@ -15233,6 +15260,12 @@ async function resolveAttack(message, attack) {
   if (attack.punish) await punishResolved(attack, branches);
   // Divine Counter's Basic Attack: missed, the attack it answers goes on.
   if (attack.divineCounter) await divineCounterResolved(attack, branches);
+  // Skill of the Watcher (5): an attack answered with the Defend Maneuver that missed you - no Damage from it.
+  for (const entry of branches) {
+    if (!entry.hit && Object.keys(DEFEND_OPTIONS).includes(entry.defense)) {
+      offerWatcherPowerUp(message, fromUuidSync(entry.uuid), "no Damage from an attack you Defended against");
+    }
+  }
   // Trap Attack: its Guard Down, "for the duration of that Attacking Maneuver" - rolled, and gone.
   if ([attack.trapGuardOn ?? []].flat().length) await trapGuardOff(attack);
   // Tornado Attack: an Opponent's attack that missed the one Spinning - their Basic Attack back, offered.
@@ -18844,6 +18877,13 @@ async function applyAttackDamage(message, target, attack) {
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
   if (arms) await offerArmsHit(armsUser, target);
+  // Skill of the Watcher (5): Damage dealt through the Exploit Maneuver, or none taken from an attack Defended against.
+  if (armsUser && (armsUser.uuid !== target.uuid) && attack.provokedBy && (damage > 0) && !isAbsoluteMiss(own)) {
+    offerWatcherPowerUp(message, armsUser, "Damage dealt through the Exploit Maneuver");
+  }
+  if (own.hit && (damage <= 0) && Object.keys(DEFEND_OPTIONS).includes(own.defense)) {
+    offerWatcherPowerUp(message, target, "no Damage from an attack you Defended against");
+  }
   // Divine Flex: 0 Damage from it, and nothing else took it - an Intervene, a Weapon or a Buddy it landed on.
   const flexed = defenceFor(attack, target.uuid)?.divineFlex;
   if (flexed && armsUser && (armsUser.uuid !== target.uuid) && (damage <= 0)
@@ -19370,6 +19410,7 @@ async function answerMoment(message, card, actor) {
   const triggers = triggersFor(actor, [card.moment]);
   if (!triggers.length) return;
 
+  const before = new Set(actor.system.armedTalents ?? []);
   const applied = await prepareRoll(actor, triggers, card.title, "", { rolling: false });
   if (applied === false) return;
 
@@ -19377,6 +19418,21 @@ async function answerMoment(message, card, actor) {
     type: "moment",
     moment: { ...card, applied: [...new Set([...(card.applied ?? []), actor.uuid])] }
   });
+
+  // A Round's or a turn's beginning has already happened, so what was ticked for it answers it now - armed, it would only
+  // wait for the next one - its Actions paid first (Skill of the Watcher's "spend 1 Action to gain 2 Counter Actions").
+  if (!["start-of-round", "start-of-turn", "start-of-encounter"].includes(card.moment)) return;
+  const chosen = triggers.filter(entry => !before.has(entry.blockId)
+    && (actor.system.armedTalents ?? []).includes(entry.blockId));
+  if (!chosen.length) return;
+  const cost = chosen.reduce((sum, entry) => sum + (Number(entry.program.blocks?.[0]?.budget?.actions) || 0), 0);
+  if (cost && !await spendActions(actor, cost, "standard")) {
+    await actor.update({ "system.armedTalents": (actor.system.armedTalents ?? [])
+      .filter(id => !chosen.some(entry => entry.blockId === id)) });
+    return;
+  }
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  await fireMoment(actor, card.moment);
 }
 
 /**

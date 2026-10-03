@@ -23,7 +23,7 @@
           <button type="button" class="trait-arm {{#if trigger.armed}}active{{/if}}"
                   data-action="armTalent" data-effect-id="{{trigger.id}}"
                   {{#unless trigger.available}}disabled{{/unless}}
-                  data-tooltip="{{trigger.text}} — {{trigger.round}} left this round, {{trigger.encounter}} this encounter.">
+                  data-tooltip="{{#if trigger.text}}{{trigger.text}} - {{/if}}{{trigger.moment}}{{#if trigger.limits}} - {{trigger.limits}}{{/if}}">
             {{#if trigger.armed}}Armed{{else}}Arm{{/if}}
           </button>
           {{/each}}

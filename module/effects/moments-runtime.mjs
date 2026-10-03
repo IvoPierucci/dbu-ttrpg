@@ -25,8 +25,12 @@ import { getMoment } from "./moments.mjs";
  * next preparation puts them straight back.
  */
 const STATEFUL = {
-  "life.value": { path: "system.life.value", read: a => a.system.life.value },
-  "ki.value": { path: "system.ki.value", read: a => a.system.ki.value },
+  // Regained never past the most there may be - Skill of the Watcher's 2(bT) a Counter Action.
+  "life.value": { path: "system.life.value", read: a => a.system.life.value, cap: a => a.system.life.max },
+  "ki.value": { path: "system.ki.value", read: a => a.system.ki.value, cap: a => a.system.ki.max },
+  // Counter Actions gained this Round, held as the converted ones are - the Round's own allowance is the rest.
+  "actions.counterGained": { path: "system.actionsSpent.converted",
+    read: a => Number(a.system.actionsSpent?.converted) || 0 },
   "capacity.spent": { path: "system.capacity.spent", read: a => a.system.capacity.spent },
 
   // Actions left, which is not a number the character holds: what is held is how many
@@ -202,10 +206,13 @@ async function writeStateful(actor, slots) {
     updates["system.resources"] = replaceObject(resources);
   }
 
-  for (const [key, { path, read, write }] of Object.entries(STATEFUL)) {
+  for (const [key, { path, read, write, cap }] of Object.entries(STATEFUL)) {
     if (!(key in slots)) continue;
 
-    const settled = applySlot(slots, key, read(actor));
+    const before = read(actor);
+    const raised = applySlot(slots, key, before);
+    // Raised no further than the most there may be; what was already above it is left.
+    const settled = (cap && (raised > before)) ? Math.min(raised, Math.max(before, cap(actor))) : raised;
     if (write) {
       updates[path] = Math.max(0, Math.round(write(actor, settled)));
       continue;

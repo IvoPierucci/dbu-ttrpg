@@ -1,0 +1,44 @@
+id: skill-of-the-watcher
+name: Skill of the Watcher
+category: mind
+importance: primary
+description: >
+  You are a divine being meant to watch over the universe or rule over it. The patience to observe others leads to you
+  gaining critical information.
+text: >
+  (1)-[Passive]: You can sense God Ki.
+  (2)-[Passive]: Your minimum Action Cost for Combat Recovery is 1 Action.
+  (3)-[Triggered]: Increase your Combat Rolls and Soak Value by 1(T) for the duration of any of your Counter Maneuvers.
+  (4)-[Triggered]: At the end of the Combat Round, regain 2(bT) Life and Ki Points for each Counter Action you possess.
+  (5)-[Triggered, 1/Round]: If you deal Damage with an Attacking Maneuver made through the Exploit Maneuver, or do not
+  receive Damage from an Attacking Maneuver that you used the Defend Maneuver in response to, you may use the Power Up
+  Maneuver as an Out-of-Sequence Maneuver.
+  (6)-[Triggered/Start of Combat Round]: You may spend 1 Action to gain 2 Counter Actions.
+
+---
+
+# (1) God Ki "cannot be sensed": a Concealment Clash from one who senses it is not won outright (chat.mjs).
+# (2) Combat Recovery's 2~3 Actions become 1~3.
+# (5) Offered on the attack's card, to take or leave, once a Combat Round (chat.mjs offerWatcherPowerUp).
+[passive]
+allow sense.godKi;
+combat-recovery.actionCost.minimum = 1;
+allow powerUp.afterExploitOrDefend;
+
+# (3) Ticked in Respond as you answer an attack with a Counter Maneuver: the roll you meet it with - never your own
+# attack's - and the Soak Value against it (the Defend Maneuver's options).
+[triggered/combat-roll]
+requires !attackingManeuver;
+combatRolls += 1(T);
+
+[triggered/defending]
+soakValue.base += 1(T);
+
+# (4) Armed from the Traits tab: as each Combat Round ends, before the Counter Actions come back.
+[triggered/end-of-round]
+life.value += 2(bT) * actions.counterLeft;
+ki.value += 2(bT) * actions.counterLeft;
+
+# (6) From the Combat Round's own card, its Action paid as it is taken.
+[triggered/start-of-round, costs 1 action]
+actions.counterGained += 2;

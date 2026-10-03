@@ -2185,6 +2185,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // And every Standard Action converted into one this Round.
         + (Number(this.actionsSpent?.converted) || 0))
     };
+    // The Counter Actions still held - Skill of the Watcher's "for each Counter Action you possess".
+    this.actions.counterLeft = Math.max(0, this.actions.counter - (Number(this.actionsSpent?.counter) || 0));
 
     // Haste: 1/2 Agility Modifier, added to Strike Rolls.
     this.haste = withEffects(this, "haste", Math.floor(atts.agility.mod / 2), {

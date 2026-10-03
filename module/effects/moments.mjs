@@ -68,6 +68,8 @@ const TABLE = [
   { key: "start-of-encounter", label: "The Combat Encounter begins", provides: [],
     doc: "Fires when you enter the Encounter, so joining late still earns it." },
   { key: "start-of-round", label: "The Combat Round begins", provides: [] },
+  { key: "end-of-round", label: "The Combat Round ends", provides: [],
+    doc: "Before the next one begins and anything comes back - Skill of the Watcher's Counter Actions still held." },
   { key: "start-of-turn", label: "Your turn begins", provides: [],
     doc: "Fires even when the turn is then skipped - for being Defeated, for Slowed at "
        + "three stacks, for anything answering this that takes the turn away. A skipped "

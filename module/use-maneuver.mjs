@@ -63,7 +63,7 @@ import {
   takeSurge
 } from "./chat.mjs";
 import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, isTheirTurn, spendActions, NOT_CHARGING, stopCharging } from "./combat.mjs";
-import { granted, permits } from "./effects/interpreter.mjs";
+import { applySlot, granted, permits } from "./effects/interpreter.mjs";
 import { refundActions } from "./combat.mjs";
 import { fireMoment } from "./effects/moments-runtime.mjs";
 import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
@@ -3718,6 +3718,14 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (maneuver.finishSign) {
     const { tauntsNow } = await import("./chat.mjs");
     if (tauntsNow(actor, maneuver)) maneuver = { ...maneuver, actionCost: 1 };
+  }
+
+  // The least it may be given, where an effect lowers it - Skill of the Watcher's "minimum Action Cost for Combat
+  // Recovery is 1 Action".
+  const leastKey = `${maneuver.id}.actionCost.minimum`;
+  if (actor.system.effects?.slots?.[leastKey] && maneuver.actionCost) {
+    maneuver = { ...maneuver, actionCost: Math.max(0, Math.min(maneuver.actionCost,
+      applySlot(actor.system.effects.slots, leastKey, maneuver.actionCost))) };
   }
 
   if (!outOfSequence && !canAffordActions(actor, maneuver)) return false;

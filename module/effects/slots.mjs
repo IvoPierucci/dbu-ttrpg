@@ -296,6 +296,9 @@ const TABLE = [
     doc: "The least you may Ki Wager on an Attacking Maneuver. Compelled forces one." },
   { key: "actions.standard", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Standard Actions." },
   { key: "actions.counter", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Counter Actions." },
+  // "Gain 2 Counter Actions" - this Combat Round's, at a moment (Skill of the Watcher's), never past six.
+  { key: "actions.counterGained", phase: PHASES.REACTIVE, kind: N, ops: NUMERIC,
+    doc: "Counter Actions gained this Combat Round, at a moment." },
   { key: "actions.perRound", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Actions gained each Combat Round." },
   { key: "actions.remaining", phase: PHASES.REACTIVE, kind: N, ops: NUMERIC,
@@ -673,6 +676,14 @@ const PATTERNS = [
   // skills" - counted with the Progression tab's.
   { match: /^skill\.(\w+)\.ranks$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
     doc: "Skill Ranks an effect gives in that Skill, counted with the ones picked." },
+  // Something granted rather than permitted - set true by `allow`, read as granted: "You can sense God Ki" (God Ki's
+  // Concealment cannot win outright against it), and Skill of the Watcher's (5) Power Up out of sequence, offered after
+  // an Exploit's Damage or a Defend's none.
+  { match: /^(sense\.godKi|powerUp\.afterExploitOrDefend)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    valid: () => true, doc: "Sensing God Ki; the Power Up offered after an Exploit's Damage or a Defend's none." },
+  // "Your minimum Action Cost for Combat Recovery is 1 Action" - the least a Maneuver priced in a range may be given.
+  { match: /^(\w[\w-]*)\.actionCost\.minimum$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
+    doc: "The least Action Cost that Maneuver may be given." },
   // God of War's "add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points".
   { match: /^technique\.free\.([\w-]+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
     doc: "A Signature Technique feature whose TP the character does not pay - its TP still the Technique's." },
