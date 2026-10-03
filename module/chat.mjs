@@ -203,6 +203,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, PARA_FLAG, request.para);
     case "petrify": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PETRIFY_FLAG, request.petrify);
+    case "weatherSummon": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, SUMMON_FLAG, request.summon);
     case "tornado": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, TORNADO_FLAG, request.tornado);
     case "timeFreeze": return game.messages.get(request.messageId)
@@ -2975,6 +2977,7 @@ function onRenderChatMessage(message, html) {
   renderPsychicBack(message, html);
   renderTimeFreeze(message, html);
   renderTornado(message, html);
+  renderWeatherSummon(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -3773,6 +3776,8 @@ export async function endSustained(actor, item) {
   if (item.system?.unique?.multiForm) await endMultiForm(actor, item, "are erased");
   // Internal Assault: "or your Debilitated Opponent stops being Debilitated".
   if (item.system?.unique?.debilitates) await endDebilitation(actor, item);
+  // Lasting Weather, unpaid or stopped: "If you do not, the Battle Weather is removed."
+  if (item.system?.unique?.summonsWeather) await restoreWeather(item);
   // Shapeshift, unpaid or stopped: "remove the effects of Shapeshift".
   if (item.system?.unique?.shapeshift) await endShape(actor, item);
   const floods = item.system?.unique?.floods;
@@ -11587,6 +11592,147 @@ async function settleWarped(message, clash) {
   await reduceLifePoints(target, now - Math.floor(now / 2), { reason: clash.maneuverName });
   await settledNote(message, `${target.name} warps: Life Points halved, and the Dark Evolution Awakening theirs as a Level 2 `
     + "Temporary Awakening (Awakenings are the table's for now).");
+}
+
+/** Weather Summoning's card, after a Power Up: its button. */
+const SUMMON_FLAG = "weatherSummon";
+
+/** The Battle Weathers, by their files. */
+function battleWeathers() {
+  return traitsOfKind("battlefield").filter(trait => trait.weather === true)
+    .map(trait => ({ id: trait.id, name: trait.name }));
+}
+
+/** "When you use the Power Up Maneuver" - its card, offering Weather Summoning out of sequence. */
+export async function offerWeatherSummoning(actor) {
+  const item = Array.from(actor?.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.summonsWeather);
+  if (!item) return;
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [SUMMON_FLAG]: { actorUuid: actor.uuid, itemId: item.id, used: false } } } });
+}
+
+function renderWeatherSummon(message, html) {
+  const summon = message.getFlag(SCOPE, SUMMON_FLAG);
+  if (!summon || summon.used) return;
+  const actor = fromUuidSync(summon.actorUuid);
+  const item = actor?.items?.get(summon.itemId);
+  if (!actor?.isOwner || !item) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-oos-button";
+  button.textContent = item.name;
+  button.dataset.tooltip = "Out of sequence: a Battle Weather over the whole Battlefield until the end of your next turn - not on you";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+    const used = await useManeuver(actor, definitionOf(item), { outOfSequence: true });
+    if (used) requestEdit(message, { type: "weatherSummon", summon: { ...summon, used: true } });
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
+}
+
+/**
+ * Weather Summoning, before it is paid: "the Storm or Tornado Battle Weather of the Natural Weather Tier" - Magical
+ * Weather's "any type", Specific Weather Summoning's one; Empowered Weather's Unnatural for 2(bT) more, Destructive
+ * Weather's Cataclysmic for 4(bT) more.
+ */
+export async function askWeatherSummon(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  if (!unique) return null;
+  const bought = boughtTraits(unique, getTrait);
+  const has = key => bought.some(trait => trait[key] === true);
+  const specific = (unique.restrictions ?? []).find(entry => entry.applied && getTrait(entry.key)?.weatherFixed === true);
+  const all = battleWeathers();
+  const kinds = specific?.choice ? all.filter(entry => entry.id === specific.choice)
+    : has("anyWeather") ? all : all.filter(entry => ["storm-weather", "tornado-weather"].includes(entry.id));
+  if (!kinds.length) {
+    ui.notifications.warn(`${maneuver.name}: no Battle Weather it can summon.`);
+    return null;
+  }
+  const bT = Math.max(1, actor.system.baseTierOfPower ?? 1);
+  const tiers = [{ tier: 1, label: "Natural", ki: 0 },
+    ...(has("weatherUnnatural") ? [{ tier: 2, label: `Unnatural (+${2 * bT} KP)`, ki: 2 * bT }] : []),
+    ...(has("weatherCataclysmic") ? [{ tier: 3, label: `Cataclysmic (+${4 * bT} KP)`, ki: 4 * bT }] : [])];
+  const escape = Handlebars.escapeExpression;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<label>Battle Weather <select name="weather" class="dbu-gear-pick">${kinds.map(entry =>
+        `<option value="${entry.id}">${escape(entry.name)}</option>`).join("")}</select></label>
+      <label>Weather Tier <select name="tier" class="dbu-gear-pick">${tiers.map(entry =>
+        `<option value="${entry.tier}">${escape(entry.label)}</option>`).join("")}</select></label>`,
+    buttons: [{ action: "go", label: "Summon", default: true, callback: (event, button, dialog) => ({
+      weather: dialog.element.querySelector('select[name="weather"]')?.value ?? "",
+      tier: Number(dialog.element.querySelector('select[name="tier"]')?.value) || 1 }) },
+    { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!chosen || (chosen === "cancel") || !chosen.weather) return null;
+  const extraKi = tiers.find(entry => entry.tier === chosen.tier)?.ki ?? 0;
+  if (extraKi && ((Number(actor.system.ki?.value) || 0) < maneuverKiCost(maneuver, null, actor) + extraKi)) {
+    ui.notifications.warn(`${actor.name} has not the Ki Points for that.`);
+    return null;
+  }
+  return { weather: chosen.weather, tier: chosen.tier, extraKi, lasting: has("weatherLasting") };
+}
+
+/**
+ * Paid for: "change the Battle Weather affecting the entire Battlefield ... until the end of your next turn" - set on
+ * everyone in the scene, what each had kept to give back; "You are not affected by the effects of any Battle Weather that
+ * you create" - not on its user. Lasting Weather's: kept, its KP paid at the start of each turn (upkeepUniques).
+ */
+export async function postWeatherSummon(actor, maneuver, plan) {
+  const item = actor.items?.get(maneuver.itemId);
+  if (!item) return null;
+  if (item.system.unique.weatherSet) await restoreWeather(item);
+  if (plan.extraKi) {
+    await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - plan.extraKi),
+      "system.capacity.spent": actor.system.capacity.spent + plan.extraKi });
+  }
+  const others = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
+    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .map(other => [other.uuid, other])).values()];
+  const before = others.map(other => ({ uuid: other.uuid, id: other.system.battlefield?.weather?.id ?? "",
+    tier: Number(other.system.battlefield?.weather?.tier) || 1 }));
+  for (const other of others) {
+    await requestActorUpdate(other, { "system.battlefield.weather.id": plan.weather, "system.battlefield.weather.tier": plan.tier });
+  }
+  const { isTheirTurn } = await import("./combat.mjs");
+  await item.update({ "system.unique.weatherSet": plan.weather, "system.unique.weatherTier": plan.tier,
+    "system.unique.weatherBefore": before, "system.unique.weatherEnds": plan.lasting ? 0 : (isTheirTurn(actor) ? 2 : 1),
+    ...(plan.lasting ? { "system.unique.applied": true, "system.unique.upkeepKi": plan.extraKi } : {}) });
+  const name = getTrait(plan.weather)?.name ?? plan.weather;
+  const tier = ["", "Natural", "Unnatural", "Cataclysmic"][plan.tier] ?? "";
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(name)} (${tier}) over the Battlefield`
+      + `${plan.lasting ? "" : " until the end of your next turn"} - not on ${Handlebars.escapeExpression(actor.name)}.</p>` });
+}
+
+/** The summoned Battle Weather gone: each one's own given back, where it is still the one summoned. */
+async function restoreWeather(item) {
+  const unique = item?.system?.unique;
+  if (!unique?.weatherSet) return;
+  for (const entry of unique.weatherBefore ?? []) {
+    const other = fromUuidSync(entry.uuid);
+    if (!other || (other.system.battlefield?.weather?.id !== unique.weatherSet)) continue;
+    await requestActorUpdate(other, { "system.battlefield.weather.id": entry.id, "system.battlefield.weather.tier": entry.tier || 1 });
+  }
+  await item.update({ "system.unique.weatherSet": "", "system.unique.weatherBefore": [], "system.unique.weatherEnds": 0 });
+}
+
+/** The end of its user's turn: "until the end of your next turn" counted down, and gone at it. */
+export async function weatherTurnEnd(actor) {
+  for (const item of Array.from(actor?.items ?? [])) {
+    const unique = item.system?.unique;
+    if ((item.type !== "maneuver") || !unique?.summonsWeather || !unique.weatherSet || !unique.weatherEnds) continue;
+    const left = unique.weatherEnds - 1;
+    if (left > 0) await item.update({ "system.unique.weatherEnds": left });
+    else {
+      await restoreWeather(item);
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+        content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)}: the Battle Weather passes.</div>` });
+    }
+  }
 }
 
 /** Whether an attack was declared a Called Shot. */

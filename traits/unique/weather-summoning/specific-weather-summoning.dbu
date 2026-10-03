@@ -1,0 +1,17 @@
+id: specific-weather-summoning
+name: Specific Weather Summoning
+restriction: true
+reduction: 2
+locked:
+# Its Battle Weather chosen here; the only one Weather Summoning makes.
+choices: cold-weather, earthquake-weather, hot-weather, storm-weather, tornado-weather, vile-weather
+weatherFixed: true
+source: Core Rule
+description: >
+  Weather Summoning makes only the Battle Weather chosen here.
+text: >
+  Specific Weather Summoning: Your magic can only produce a specific kind of weather.
+  –Locked Advancements: N/A
+  –TP Cost: -2
+  –Effect: Select a Battle Weather. You can only apply your chosen Battle Weather through the effects of Weather
+  Summoning.

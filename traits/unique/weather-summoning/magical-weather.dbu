@@ -1,0 +1,14 @@
+id: magical-weather
+name: Magical Weather
+advancement: true
+prerequisite: 2+ Skill Ranks in Use Magic
+tpCost: 5
+anyWeather: true
+source: Core Rule
+description: >
+  Weather Summoning makes any Battle Weather.
+text: >
+  Magical Weather: You are able to materialize environmental effects that aren’t already present.
+  –Prerequisites: 2+ Skill Ranks in Use Magic
+  –TP Cost: 5
+  –Effect: You may create any type of Battle Weather through the effects of Weather Summoning.

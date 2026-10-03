@@ -1913,6 +1913,7 @@ export function definitionOf(item) {
     tornado: item.system.unique?.tornado === true,
     trapAttack: item.system.unique?.trapAttack === true,
     warpedEvolution: item.system.unique?.warpedEvolution === true,
+    summonsWeather: item.system.unique?.summonsWeather === true,
     kiCostPerBaseTierChange: Number(item.system.unique?.kiCostPerBaseTierChange) || 0,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
@@ -3928,6 +3929,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let lifting = null;
   let linking = null;
   let trapping = null;
+  let summoning = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4330,6 +4332,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       if (!waving) return false;
     }
 
+    // Weather Summoning: which Battle Weather, at which Tier.
+    if (maneuver.summonsWeather) {
+      summoning = await (await import("./chat.mjs")).askWeatherSummon(actor, maneuver);
+      if (!summoning) return false;
+    }
+
     // Trap Attack: which Signature Technique - one Trap Square at a time.
     if (maneuver.trapAttack) {
       trapping = await (await import("./chat.mjs")).askTrap(actor, maneuver);
@@ -4403,7 +4411,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       shaping = await (await import("./chat.mjs")).askShapeshift(actor, maneuver, actionsSpent);
       if (!shaping) return false;
     }
-    else if (maneuver.sustained && !maneuver.togglesState && !maneuver.debilitates) {
+    else if (maneuver.sustained && !maneuver.togglesState && !maneuver.debilitates && !maneuver.summonsWeather) {
       sustaining = await askSustain(actor, maneuver);
       if (!sustaining) return false;
     }
@@ -4896,6 +4904,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postTimeFreeze(actor, maneuver)
     : maneuver.tornado
     ? await (await import("./chat.mjs")).postTornado(actor, maneuver)
+    : (maneuver.summonsWeather && summoning)
+    ? await (await import("./chat.mjs")).postWeatherSummon(actor, maneuver, summoning)
     : (maneuver.warpedEvolution && targetActor)
     ? await (await import("./chat.mjs")).postWarpedEvolution(actor, maneuver, targetActor)
     : (maneuver.trapAttack && trapping)
@@ -5043,6 +5053,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && (actor.getFlag?.("dbu-ttrpg", "finalChance") === "pending")) {
     await actor.setFlag("dbu-ttrpg", "finalChance", card.id);
   }
+  // Weather Summoning: "When you use the Power Up Maneuver" - offered on a card of its own.
+  if (card && maneuver.powerUp) await (await import("./chat.mjs")).offerWeatherSummoning(actor);
   // Karmic Assault's Karma: the attack has been made, so now it is paid.
   if (card) await payKarmicAssault(actor, maneuver, declared);
 

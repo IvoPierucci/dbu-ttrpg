@@ -561,6 +561,9 @@ export function registerCombatHooks() {
       // Final Chance's held Defeat, at the end of the turn at the latest.
       await releaseFinalChance(leaving);
 
+      // Weather Summoning: "until the end of your next turn".
+      const { weatherTurnEnd } = await import("./chat.mjs");
+      await weatherTurnEnd(leaving);
       // Super Spirit Sword's use again: "during this turn" - unused, gone with it.
       const { swordAgainExpires } = await import("./chat.mjs");
       await swordAgainExpires(leaving);

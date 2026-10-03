@@ -1,0 +1,15 @@
+id: empowered-weather
+name: Empowered Weather
+advancement: true
+prerequisite: Tier of Power 3+
+tpCost: 10
+weatherUnnatural: true
+source: Core Rule
+description: >
+  Weather Summoning at the Unnatural Tier for 2(bT) more.
+text: >
+  Empowered Weather: The impact of your summoned storms is greater than normal.
+  –Prerequisites: Tier of Power 3+
+  –TP Cost: 10
+  –Effect: You may increase the Ki Point Cost of this Unique Ability by 2(bT) upon using it so your Battle Weather’s
+  Weather Tier is Unnatural.

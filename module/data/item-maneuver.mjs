@@ -706,6 +706,17 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         trapAttack: new fields.BooleanField({ required: true, initial: false }),
         /** A Clash at an Ally for an Awakening - Warped Evolution's (chat.mjs postWarpedEvolution). */
         warpedEvolution: new fields.BooleanField({ required: true, initial: false }),
+        /** A Battle Weather over the Battlefield - Weather Summoning's (chat.mjs postWeatherSummon): which, at what Tier,
+         *  what each character had before it, and how many of its user's turn ends are left (0 is kept, Lasting Weather). */
+        summonsWeather: new fields.BooleanField({ required: true, initial: false }),
+        weatherSet: new fields.StringField({ required: true, blank: true, initial: "" }),
+        weatherTier: new fields.NumberField({ required: true, integer: true, initial: 1, min: 1 }),
+        weatherBefore: new fields.ArrayField(new fields.SchemaField({
+          uuid: new fields.StringField({ required: true, blank: true, initial: "" }),
+          id: new fields.StringField({ required: true, blank: true, initial: "" }),
+          tier: new fields.NumberField({ required: true, integer: true, initial: 1, min: 1 })
+        }), { required: true, initial: () => [] }),
+        weatherEnds: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         trapTechnique: new fields.StringField({ required: true, blank: true, initial: "" }),
         trapName: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeSize: new fields.StringField({ required: true, blank: true, initial: "" }),

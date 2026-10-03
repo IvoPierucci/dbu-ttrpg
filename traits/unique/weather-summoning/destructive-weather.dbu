@@ -1,0 +1,15 @@
+id: destructive-weather
+name: Destructive Weather
+advancement: true
+prerequisite: Tier of Power 4+
+tpCost: 10
+weatherCataclysmic: true
+source: Core Rule
+description: >
+  Weather Summoning at the Cataclysmic Tier for 4(bT) more.
+text: >
+  Destructive Weather: When you create foul weather, the effects are apocalyptic.
+  –Prerequisites: Tier of Power 4+
+  –TP Cost: 10
+  –Effect: You may increase the Ki Point Cost of this Unique Ability by 4(bT) upon using it so your Battle Weather’s
+  Weather Tier is Cataclysmic.

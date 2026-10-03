@@ -1,0 +1,16 @@
+id: lasting-weather
+name: Lasting Weather
+advancement: true
+prerequisite: 2+ Skill Ranks in Survival
+tpCost: 10
+weatherLasting: true
+source: Core Rule
+description: >
+  The summoned Battle Weather stays, its KP paid at the start of each of your turns.
+text: >
+  Lasting Weather: The supernatural storms you create remain until dismissed.
+  –Prerequisites: 2+ Skill Ranks in Survival
+  –TP Cost: 10
+  –Effect: Instead of until the end of your next turn, the Battle Weather remains in effect indefinitely.
+  At the start of each of your turns, you may pay the Ki Point Cost of this Unique Ability to maintain the Battle
+  Weather. If you do not, the Battle Weather is removed.

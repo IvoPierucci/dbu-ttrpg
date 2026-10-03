@@ -1,0 +1,32 @@
+id: weather-summoning
+name: Weather Summoning
+uaType: both
+prerequisite: Tier of Power 2+
+tpCost: 10
+type: outOfSequence
+actionCost: 0
+kiCostPerBaseTier: 5
+# "When you use the Power Up Maneuver, you may change the Battle Weather affecting the entire Battlefield to the Storm or
+# Tornado Battle Weather of the Natural Weather Tier until the end of your next turn" - offered on a card after each Power
+# Up, out of sequence; set on every character in the scene but you ("You are not affected by the effects of any Battle
+# Weather that you create through this effect"), what each had given back at the end of your next turn (chat.mjs
+# offerWeatherSummoning, postWeatherSummon, weatherTurnEnd).
+summonsWeather: true
+source: Core Rule
+description: >
+  After a Power Up, out of sequence: Storm or Tornado (Natural) over the whole Battlefield until the end of your next
+  turn - not on you.
+text: >
+  Weather Summoning: You summon dangerous and destructive weather to do your bidding.
+  –Ability Type: Technical/Magical
+  –Prerequisites: Tier of Power 2+
+  –TP Cost: 10
+  –KP Cost: 5(bT)
+  –Maneuver Type: Out-of-Sequence
+  –Action Cost: N/A
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: When you use the Power Up Maneuver, you may change the Battle Weather affecting the entire Battlefield to the
+  Storm or Tornado Battle Weather of the Natural Weather Tier until the end of your next turn.
+
+  You are not affected by the effects of any Battle Weather that you create through this effect.
