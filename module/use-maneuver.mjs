@@ -31,6 +31,7 @@ import {
   refundManeuverCost,
   poolSnapshot,
   paidSince,
+  godStrikeCost,
   squaresAway,
   whyNotAnotherAbsolute,
   whyNotAnotherGrapple,
@@ -1949,10 +1950,10 @@ export function definitionOf(item) {
     // for one of them. Derived here so every reader gets them - the row on the sheet that
     // prices it, the picker, and the payment - rather than only the path that asks.
     ...(item.system.tailAttack ? tailProfiles(item.system.tailVariant ?? "") : {}),
-    // God Strike: the Profile selected, the only one it offers.
+    // God Strike: the Profile selected, applied on top of the one the Basic Attack is made with.
     godStrike: item.system.godStrike,
     godStrikeProfile: item.system.godStrikeProfile ?? "",
-    ...(item.system.godStrikeProfile ? { profileChoices: [item.system.godStrikeProfile] } : {}),
+    ...(item.system.godStrikeProfile ? { appliedProfiles: [item.system.godStrikeProfile] } : {}),
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -3956,7 +3957,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const profile = await askGodStrikeProfile(maneuver);
     if (!profile) return false;
     await actor.items.get(maneuver.itemId)?.update({ "system.godStrikeProfile": profile });
-    maneuver = { ...maneuver, godStrikeProfile: profile, profileChoices: [profile] };
+    maneuver = { ...maneuver, godStrikeProfile: profile, appliedProfiles: [profile] };
   }
 
   if (maneuver.tailAttack && !maneuver.tailVariant) {
@@ -4085,6 +4086,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await declareAttack(locked, foundationsOffered, actor,
       maneuver.throws ? { wagerCap: Math.ceil((actor.system.ki?.value ?? 0) / 4) } : {});
     if (!declared) return false;
+    // God Strike: "Apply the selected Profile to that Attacking Maneuver" - carried onto the attack.
+    if (maneuver.appliedProfiles?.length) declared = { ...declared, appliedProfiles: [...maneuver.appliedProfiles] };
     // What is thrown travels with the attack, and what it brings of its own - the Grenade's
     // Sphere and recorded Damage Attribute - stands in for what the Simple Profile has.
     if (thrown) {
@@ -4816,7 +4819,16 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     && (declared?.advantages ?? []).includes("perfect-strike");
   const wagered = (declared?.wagerFromLife || declared?.wagerFromDivine) ? 0 : (Number(declared?.kiWager) || 0);
   if (perfect) maneuver = { ...maneuver, capacityCost: moving.fromSelf - Math.ceil((moving.fromSelf - wagered) / 2) };
+  // God Strike: the Basic Attack it makes pays as any - in Ki Points, or in Divine Ki as the sheet says.
+  if (maneuver.godStrike) maneuver = { ...maneuver, godManeuver: false };
   if (!fromStore && !await spendManeuverCost(actor, maneuver, moving.fromSelf)) return false;
+  // And God Strike its own price apart: 1/4 of the Profile it applies, in Divine Ki - the attack's given back without it.
+  const godPart = crossing ? 0 : godStrikeCost(maneuver, actor);
+  if (godPart && !await spendManeuverCost(actor, { id: `${maneuver.id}.applied`, name: maneuver.name, godManeuver: true },
+    godPart)) {
+    if (!fromStore) await refundManeuverCost(actor, { ...maneuver, kiCost: moving.fromSelf });
+    return false;
+  }
   if (moving.store) {
     await moving.store.update({
       "system.charges": (Number(moving.store.system.charges) || 0) - moving.fromStore });

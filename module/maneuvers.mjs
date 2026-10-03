@@ -2082,8 +2082,10 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   // with it already in the list - so the two routes meet and neither is special.
   // Multi-Profile's second Profile hands out its own the same way: the attack "is considered to be
   // of that Profile".
-  const advantages = withGranted(withGranted(maneuver.advantages, PROFILES[profile]?.grantsAdvantage),
-    PROFILES[maneuver.secondProfile ?? ""]?.grantsAdvantage);
+  // And a Profile applied on top of it - God Strike's - hands out its own the same way.
+  const advantages = (maneuver.appliedProfiles ?? []).reduce((list, id) => withGranted(list, PROFILES[id]?.grantsAdvantage),
+    withGranted(withGranted(maneuver.advantages, PROFILES[profile]?.grantsAdvantage),
+      PROFILES[maneuver.secondProfile ?? ""]?.grantsAdvantage));
 
   const answers = await askFeatures(maneuver, actor, advantages);
   if (!answers) return null;
@@ -2665,8 +2667,10 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   // wherever a Profile on offer allows it, and honoured only if that is the one chosen.
   // The ceiling is the same rule against a different pool.
   const offered = fixed ? [fixed] : groups.flatMap(group => group.profiles);
-  // A Multi-Profile Technique's second Profile counts too - Elemental (Dark) on either side.
-  const second = PROFILES[maneuver.secondProfile ?? ""] ?? null;
+  // A Multi-Profile Technique's second Profile counts too - Elemental (Dark) on either side - and one applied on top,
+  // God Strike's.
+  const extras = [maneuver.secondProfile, ...(maneuver.appliedProfiles ?? [])].map(id => PROFILES[id ?? ""]).filter(Boolean);
+  const second = extras.find(profile => profile.wagerFromLife) ?? extras[0] ?? null;
   const lifeWager = offered.some(profile => profile.wagerFromLife) || Boolean(second?.wagerFromLife);
   const capped = amount => Math.min(amount,
     Number.isFinite(limits.wagerCap) ? limits.wagerCap : Number.POSITIVE_INFINITY);
@@ -2675,9 +2679,10 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
   // And what the Profile picked grants. Elemental (Light) "gains the Full Wager Advantage
   // for free", and it is picked in this same dialog - so the ceiling is settled once the
   // choice is known, against the Technique's Advantages and the Profile's together.
-  const withProfile = id => [...features, PROFILES[id]?.grantsAdvantage, second?.grantsAdvantage].filter(Boolean);
+  const withProfile = id => [...features, PROFILES[id]?.grantsAdvantage, ...extras.map(extra => extra.grantsAdvantage)]
+    .filter(Boolean);
   const fullOffered = !features.includes("full-wager")
-    && [...offered, second].some(profile => profile?.grantsAdvantage === "full-wager");
+    && [...offered, ...extras].some(profile => profile?.grantsAdvantage === "full-wager");
   const fullMax = fullOffered ? capped(maxKiWager(actor, [...features, "full-wager"])) : 0;
   const fullLifeMax = (fullOffered && lifeWager)
     ? capped(maxLifeWager(actor, [...features, "full-wager"]))
@@ -2946,6 +2951,15 @@ export function minimumAttackKiCost(profileId, actor) {
 }
 
 /** What a Maneuver costs in Ki once its declared Profile is taken into account. */
+/**
+ * God Strike's own price: "The DKP Cost of this Maneuver equals 1/4 (rounded up) of the KP Cost of that Profile" - the
+ * Profile it applies. Apart from the Basic Attack's, which pays its own Profile as ever.
+ */
+export function godStrikeCost(maneuver, actor) {
+  const applied = maneuver?.godStrikeProfile ?? "";
+  return (maneuver?.godStrike && PROFILES[applied]) ? Math.ceil(profileKiCost(applied, maneuver, actor) / 4) : 0;
+}
+
 export function maneuverKiCost(maneuver, declared, actor) {
   // One path whether or not a Profile has been declared. It used to fork, and the
   // branch that answers "what does this cost" for the sheet had quietly lost the
@@ -2960,14 +2974,9 @@ export function maneuverKiCost(maneuver, declared, actor) {
     ? profileKiCost(declared.profile, maneuver, actor)
     : 0;
 
-  // God Strike: "1/4 (rounded up) of the KP Cost of that Profile" - the one selected.
-  const godStrike = maneuver.godStrike && (declared?.profile || maneuver.godStrikeProfile)
-    ? Math.ceil(profileKiCost(declared?.profile || maneuver.godStrikeProfile, maneuver, actor) / 4)
-    : 0;
-
   const base = baseKiCost(maneuver, actor)
     + surchargeKiCost(maneuver, declared?.profile, actor)
-    + forProfile + godStrike;
+    + forProfile;
 
   const slots = actor?.system?.effects?.slots;
 

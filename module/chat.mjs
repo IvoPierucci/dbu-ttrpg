@@ -13381,7 +13381,8 @@ export async function postAttack(actor, target, maneuver,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
                                    extraTargets = [], freeWager = 0, unitedWith = null,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
-                                   genkiLifeforce = 0, portal = false, spiritSword = null, paid = null },
+                                   genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
+                                   appliedProfiles = [] },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -13496,6 +13497,8 @@ export async function postAttack(actor, target, maneuver,
           // A second Profile outside a Technique: Elemental Blade's Multi-Profile on an ordinary
           // attack. A Technique's is on its own block.
           secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
+          // Profiles applied on top of it - God Strike's. Not a reflected attack's.
+          appliedProfiles: reflecting ? [] : [...(appliedProfiles ?? [])],
           // Which Profile's Square effect it leaves, where two would (the player's pick), and whether
           // Compressed Element came with a Weapon rather than the Technique.
           markFrom,
@@ -13523,7 +13526,8 @@ export async function postAttack(actor, target, maneuver,
           // Carried on the attack rather than looked up later: a Profile's Damage
           // Category is part of what was declared.
           damageCategory: profileFor({ profile, technique,
-            secondProfile: technique ? "" : (maneuver.secondProfile ?? "") }).damageCategory,
+            secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
+            appliedProfiles: reflecting ? [] : (appliedProfiles ?? []) }).damageCategory,
           // Steps applied by the attacker's own effects, summed with the defender's
           // before anything is clamped. Mega Flare is the first thing to write here:
           // "if the number of Energy Charges applied is 7+, increase the Damage
@@ -14174,17 +14178,29 @@ function energyChargeDice(attacker, attack) {
  */
 function profileFor(attack) {
   const main = PROFILES[attack?.profile];
-  const second = PROFILES[secondProfileOf(attack)];
-  if (!main || !second) return main;
+  if (!main) return main;
+  // And every other one on it: Multi-Profile's second, and those applied on top - God Strike's.
   const order = Object.keys(DAMAGE_CATEGORIES);
-  const higher = (order.indexOf(second.damageCategory) > order.indexOf(main.damageCategory))
-    ? second.damageCategory : main.damageCategory;
-  return { ...second, ...main, damageCategory: higher, label: `${main.label} + ${second.label}` };
+  return extraProfilesOf(attack).map(id => PROFILES[id]).filter(Boolean).reduce((merged, other) => ({
+    ...other, ...merged,
+    damageCategory: (order.indexOf(other.damageCategory) > order.indexOf(merged.damageCategory))
+      ? other.damageCategory : merged.damageCategory,
+    label: `${merged.label} + ${other.label}`
+  }), main);
 }
 
 /** The attack's second Profile: a Technique's Multi-Profile, or an Elemental Blade's on any attack. */
 function secondProfileOf(attack) {
   return attack?.technique?.secondProfile || attack?.secondProfile || "";
+}
+
+/**
+ * Every Profile on the attack but its main one: the second (Multi-Profile) and those applied on top of it - God
+ * Strike's "Apply the selected Profile to that Attacking Maneuver", which stacks with Multi-Profile (the user's ruling).
+ */
+function extraProfilesOf(attack) {
+  return [...new Set([secondProfileOf(attack), ...(attack?.appliedProfiles ?? [])])]
+    .filter(id => id && (id !== attack?.profile) && PROFILES[id]);
 }
 
 /** Compressed Element on this attack, from the Technique or from an Elemental Blade. */
@@ -14199,7 +14215,7 @@ function compressedOn(attack) {
  */
 function squareRider(attack) {
   if (compressedOn(attack)) return null;
-  const ids = [attack?.profile, secondProfileOf(attack)].filter(Boolean);
+  const ids = [attack?.profile, ...extraProfilesOf(attack)].filter(Boolean);
   const marks = id => PROFILES[id]?.squareMark || PROFILES[id]?.squareQuality;
   const id = (attack?.markFrom && ids.includes(attack.markFrom) && marks(attack.markFrom))
     ? attack.markFrom : ids.find(marks);
@@ -18962,7 +18978,7 @@ async function applyAttackDamage(message, target, attack) {
         riders.squareMark.stacks, "start", riders.label);
     }
     if (riders.squareQuality && !attackArea(attack)) await applySquareQuality(target, riders.squareQuality);
-    for (const id of [...new Set([attack.profile, secondProfileOf(attack)].filter(Boolean))]) {
+    for (const id of [...new Set([attack.profile, ...extraProfilesOf(attack)].filter(Boolean))]) {
       const onThreshold = PROFILES[id]?.onThreshold;
       if (onThreshold && knockedThrough) {
         await markUntilNextTurn(attacker, target, onThreshold.condition,

@@ -7,19 +7,21 @@ attacking: true
 requiresTarget: true
 profile: any
 usageLimit: 1/round
-# A God Maneuver: open where an effect grants it, only in God Ki, paid in Divine Ki Points (maneuvers.mjs whyNotGod,
-# spendManeuverCost). "Upon gaining access to this God Maneuver, select a Profile" - asked at its first use and kept on
-# the Maneuver (godStrikeProfile), changeable on its sheet as the Tail Attack's tail is; the only Profile it offers.
-# "The DKP Cost of this Maneuver equals 1/4 (rounded up) of the KP Cost of that Profile" - and that is the whole price:
-# the Basic Attack it makes pays no KP Cost of its own (the user's ruling), only a Ki Wager if one is made. "Use the
-# Basic Attack Maneuver as an Out-of-Sequence Maneuver" - the attack, on a card marked out of sequence.
+# A God Maneuver: open where an effect grants it, only in God Ki (maneuvers.mjs whyNotGod). "Upon gaining access to this
+# God Maneuver, select a Profile" - asked at its first use and kept on the Maneuver (godStrikeProfile), changeable on
+# its sheet as the Tail Attack's tail is. "Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. Apply the
+# selected Profile to that Attacking Maneuver" - the Basic Attack made with any Profile, as ever, and the selected one
+# applied on top of it (the user's ruling): an applied Profile, as Multi-Profile's second is but not one - it stacks
+# with Multi-Profile and a Super Profile, and from any Foundation, the attack's still the main Profile's
+# (`appliedProfiles`, read with the second through chat.mjs extraProfilesOf). Paid twice, apart: the Basic Attack its
+# own Profile's KP Cost as ever, and God Strike "1/4 (rounded up) of the KP Cost of that Profile" in Divine Ki Points
+# (maneuvers.mjs godStrikeCost; the user's ruling).
 godManeuver: true
 godStrike: true
-kiCostCoversProfile: true
 source: Core Rule
 description: >
-  A God Maneuver: a Basic Attack out of sequence with the Profile you selected, for 1/4 (rounded up) of its KP Cost in
-  Divine Ki Points.
+  A God Maneuver: a Basic Attack out of sequence with the Profile you selected applied on top, for 1/4 (rounded up) of
+  that Profile's KP Cost in Divine Ki Points.
 text: >
   God Strike [1/Round]: Infuse your attacks with extra power thanks to your godly skill.
   –Maneuver Type: Standard
