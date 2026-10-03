@@ -1,0 +1,29 @@
+id: celestial-potential
+name: Celestial Potential
+category: body
+importance: secondary
+description: >
+  As divine entities entrusted to watch over the fledgling universe, Shinjin have seen the best ways to mitigate their
+  mistakes and capitalize on their successes.
+text: >
+  (1)-[Triggered, 1/Round]: When you score a Botch Result on a Combat Roll, increase your Dice Score by 2(T) instead of
+  suffering the penalty.
+  (2)-[Triggered, 1/Round]: When you score a Critical Dice Result on a Combat Roll, increase your Dice Score by an
+  additional 2(T).
+  (3)-[Triggered/Power, 1/Encounter]: You may convert up to 2 of your Counter Actions into Actions.
+
+---
+
+# (1) Armed from the Traits tab: the next Botch on a Combat Roll - its penalty not taken, 2(T) added instead (chat.mjs
+# rollSide).
+[triggered/botch, 1/round]
+roll.total += 2(T);
+
+# (2) Armed: the next Critical on a Combat Roll - 2(T) more on top of its Critical Extra Dice.
+[triggered/critical, 1/round]
+roll.total += 2(T);
+
+# (3) Armed: the next Power Up Maneuver - as many of your Counter Actions as are left, up to 2, become Actions this
+# Combat Round.
+[triggered/power, 1/encounter]
+actions.fromCounter += min(2, actions.counterLeft);

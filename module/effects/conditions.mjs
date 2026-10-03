@@ -106,6 +106,9 @@ const PREDICATES = {
   /** Is this character in their own Frozen Turn - Time Freeze's (God of Time's "during Frozen Turns"). */
   frozenTurn: scope => Boolean(scope.data?.parent?.getFlag?.("dbu-ttrpg", "frozenTurn")),
 
+  /** Is the Maneuver being declared that one, by its id - Cosmic Efficiency's Combat Recovery. */
+  using: (scope, id) => (scope.context?.maneuver?.id ?? "") === String(id).trim(),
+
   /** Is this character a Minion. */
   isMinion: scope => Boolean(scope.data?.minion),
 

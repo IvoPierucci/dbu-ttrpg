@@ -1119,7 +1119,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       counter: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       // "You can convert a Standard Action you possess into a Counter Action at any point during a Combat Round" - how
       // many this Round: each a Standard Action spent above and a Counter Action more in the pool (combat.mjs).
-      converted: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      converted: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      // Counter Actions made Actions this Round - Celestial Potential's "convert up to 2 of your Counter Actions into
+      // Actions": that many more Standard, that many fewer Counter.
+      fromCounter: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
     });
 
     // --- Combat Conditions ---
@@ -2176,14 +2179,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       standard: Math.max(0, withEffects(this, "actions.standard",
         DBUCharacterData.BASE_STANDARD_ACTIONS + this.actionModifiers.standard)
         // Bonus Momentum's Standard Action more, Reduced Momentum's one fewer - this Combat Round's.
-        + (Number(this.momentum?.bonus) || 0) - (Number(this.momentum?.reduced) || 0)),
+        + (Number(this.momentum?.bonus) || 0) - (Number(this.momentum?.reduced) || 0)
+        // Celestial Potential's Counter Actions made Actions.
+        + (Number(this.actionsSpent?.fromCounter) || 0)),
       // "You cannot gain more than 6 Counter Actions in a single Combat Round."
       counter: Math.min(DBUCharacterData.MAX_COUNTER_ACTIONS, Math.max(0, withEffects(this, "actions.counter",
         DBUCharacterData.BASE_COUNTER_ACTIONS + this.actionModifiers.counter))
         // Precognition: "you gain 1 Counter Action to use during their turn".
         + (this.foresight?.active ? 1 : 0)
-        // And every Standard Action converted into one this Round.
-        + (Number(this.actionsSpent?.converted) || 0))
+        // And every Standard Action converted into one this Round - less those made Actions.
+        + (Number(this.actionsSpent?.converted) || 0) - (Number(this.actionsSpent?.fromCounter) || 0))
     };
     // The Counter Actions still held - Skill of the Watcher's "for each Counter Action you possess".
     this.actions.counterLeft = Math.max(0, this.actions.counter - (Number(this.actionsSpent?.counter) || 0));
@@ -2315,9 +2320,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // point of Soak, and nothing grants it by default.
     this.damageReduction = Math.max(0, withEffects(this, "damageReduction", 0));
 
-    // Surgency: increases the Life/Ki Points regained through a Surge.
-    this.surgency = withEffects(this, "surgency", atts.force.mod, {
-      parts: [{ label: "Force Modifier", value: atts.force.mod }]
+    // Surgency: increases the Life/Ki Points regained through a Surge. Cosmic Efficiency's "You may use your Magic
+    // Modifier instead of your Force Modifier" - the higher of the two.
+    const surgingMagic = (this.effects?.slots?.["surgency.magic"] === true) && (atts.magic.mod > atts.force.mod);
+    this.surgency = withEffects(this, "surgency", surgingMagic ? atts.magic.mod : atts.force.mod, {
+      parts: [surgingMagic ? { label: "Magic Modifier", value: atts.magic.mod } : { label: "Force Modifier", value: atts.force.mod }]
     });
 
     // Awareness: Insight Modifier, added to Strike Rolls.

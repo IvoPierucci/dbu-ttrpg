@@ -7255,7 +7255,19 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     lines.push(fromOutcome(noteLine("Anything short of a Critical Result is a Botch")));
   }
 
-  if (botch) {
+  // What answers the Natural Result once it is read - Celestial Potential's, Armed: a Botch's penalty turned into 2(T)
+  // more, a Critical's 2(T) more again. A Combat Roll's, once - not again on a measurement of the same roll.
+  const turnedBy = (combatRoll && collect && (botch || critical))
+    ? atMoment(actor, botch ? "botch" : "critical", { roll: true }) : null;
+  const turned = turnedBy ? applySlot(turnedBy.slots, "roll.total", 0) : 0;
+  if (turned) spendChosen(actor, turnedBy);
+
+  if (botch && turned) {
+    total += turned;
+    outcome = "botch";
+    lines.push(fromOutcome(partLine({ label: "Botch, turned", value: turned, rank: "botch" })));
+  }
+  else if (botch) {
     // A Skill roll loses 2 flat; every other roll loses 2(bT). One flat constant was
     // right only while the Base Tier was 1, so from Power Level 5 a botched Combat Roll
     // was costing half of what it should.
@@ -7281,6 +7293,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     // Extra Dice like any other, and shown with them: a player counting what they threw
     // does not care which rule put each die in their hand.
     criticalTerms = extra.dice;
+    if (turned) {
+      total += turned;
+      lines.push(partLine({ label: "Critical, more", value: turned }));
+    }
   }
 
   // Drawn now rather than first, so the Critical Extra Dice are among them.
@@ -12697,6 +12713,39 @@ function offerWatcherPowerUp(message, actor, why) {
     maneuverName: "Power Up", reason: `Skill of the Watcher - ${why}`, grants: { watcherRound: true } } });
 }
 
+/**
+ * Flow of Combat (1): "If you suffer no Damage from an Opponent's Attacking Maneuver that targets you, this triggers your
+ * Exploit Maneuver" - offered on the attack's card at the one who made it, for them to take or leave.
+ */
+function offerFlowExploit(message, actor, attacker) {
+  if (!actor || !attacker || (actor.system?.effects?.slots?.["exploit.onNoDamage"] !== true)) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.maneuverId === "exploit")
+    && (offer.actorUuid === actor.uuid))) return;
+  if (!actor.items?.some(item => (item.type === "maneuver") && item.system.exploit)) return;
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "exploit",
+    maneuverName: "Exploit", targetUuid: attacker.uuid, reason: "Flow of Combat - no Damage taken",
+    provokedBy: { maneuverId: attack?.maneuverId ?? "", maneuverName: attack?.maneuverName ?? "", messageId: message.id } } });
+}
+
+/**
+ * Flow of Combat (2): "If you have taken no Damage since the end of your last turn, you may use Combat Recovery as if you
+ * spent 1 Action as an Out-of-Sequence Maneuver. If you do, ignore the reduction to your Defense Value from the effects of
+ * Combat Recovery." Offered on a card at the start of the turn, while Combat Recovery has a use left this Round.
+ */
+export async function flowOfCombatTurnStart(actor) {
+  if (!actor || (actor.system?.effects?.slots?.["combatRecovery.flowOfCombat"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "damagedSinceTurn")) return;
+  const recovery = actor.items?.find(item => (item.type === "maneuver") && ((item.system.maneuverId || "") === "combat-recovery"));
+  if (!recovery) return;
+  const { definitionOf } = await import("./use-maneuver.mjs");
+  if (maneuverUsesLeft(actor, definitionOf(recovery)) <= 0) return;
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [{ actorUuid: actor.uuid, actorName: actor.name, maneuverId: "combat-recovery",
+      maneuverName: recovery.name, reason: "Flow of Combat - as if for 1 Action, no Defense Value lost",
+      grants: { actionsSpent: 1, noDefensePenalty: true } }] } } });
+}
+
 /** Skill of the Watcher's Power Up taken this Combat Round. */
 const WATCHER_POWER_UP = "round:skill-of-the-watcher.power-up";
 
@@ -13292,13 +13341,26 @@ async function takeOutOfSequence(message, actor, offer) {
     (item.type === "maneuver") && ((item.system.maneuverId || item.id) === maneuver.id));
   if (own) {
     const { fireMoment } = await import("./effects/moments-runtime.mjs");
+    // Declared, as in sequence - what answers a Maneuver being used hears this one too (Cosmic Efficiency's Combat
+    // Recovery).
+    await fireMoment(actor, "declare-maneuver", { maneuver, targets: target ? [target] : [] });
     await fireMoment(actor, "on-used", {
       maneuver: { ...maneuver, itemId: own.id },
       // What the player paid, which out of sequence is nothing - unless this is a Maneuver
-      // they held, where it is what they paid to hold it.
-      actionsSpent: heldActions,
+      // they held, where it is what they paid to hold it. Or what the offer says it was used for - Flow of Combat's
+      // Combat Recovery "as if you spent 1 Action".
+      actionsSpent: Number(granted?.actionsSpent) || heldActions,
       targets: target ? [target] : []
     }, { only: own.id });
+    // Flow of Combat: "ignore the reduction to your Defense Value from the effects of Combat Recovery" - its stacks given back.
+    if (granted?.noDefensePenalty) {
+      const held = { ...(actor.system.resources ?? {}) };
+      const left = Math.max(0, (Number(held.recovery?.stacks) || 0) - (Number(granted.actionsSpent) || 1));
+      if (left > 0) held.recovery = { ...held.recovery, stacks: left };
+      else delete held.recovery;
+      const { replaceObject } = await import("./conditions.mjs");
+      await actor.update({ "system.resources": replaceObject(held) });
+    }
   }
 
   // The tally, for a Maneuver with a limit written on it. Not for a held one: "delay its
@@ -15260,6 +15322,10 @@ async function resolveAttack(message, attack) {
   if (attack.punish) await punishResolved(attack, branches);
   // Divine Counter's Basic Attack: missed, the attack it answers goes on.
   if (attack.divineCounter) await divineCounterResolved(attack, branches);
+  // Flow of Combat: an attack that missed you - no Damage from it - and the Exploit at who made it.
+  for (const entry of branches) {
+    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFlowExploit(message, fromUuidSync(entry.uuid), attacker);
+  }
   // Skill of the Watcher (5): an attack answered with the Defend Maneuver that missed you - no Damage from it.
   for (const entry of branches) {
     if (!entry.hit && Object.keys(DEFEND_OPTIONS).includes(entry.defense)) {
@@ -18877,6 +18943,11 @@ async function applyAttackDamage(message, target, attack) {
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
   if (arms) await offerArmsHit(armsUser, target);
+  // Flow of Combat: Damage taken - "since the end of your last turn" - and none taken, the Exploit at who made it.
+  if ((damage > 0) && !isAbsoluteMiss(own) && !target.getFlag?.(SCOPE, "damagedSinceTurn")) {
+    await requestActorUpdate(target, { [`flags.${SCOPE}.damagedSinceTurn`]: true });
+  }
+  if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerFlowExploit(message, target, armsUser);
   // Skill of the Watcher (5): Damage dealt through the Exploit Maneuver, or none taken from an attack Defended against.
   if (armsUser && (armsUser.uuid !== target.uuid) && attack.provokedBy && (damage > 0) && !isAbsoluteMiss(own)) {
     offerWatcherPowerUp(message, armsUser, "Damage dealt through the Exploit Maneuver");

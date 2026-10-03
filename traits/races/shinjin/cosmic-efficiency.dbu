@@ -1,0 +1,26 @@
+id: cosmic-efficiency
+name: Cosmic Efficiency
+category: body
+importance: secondary
+description: >
+  You have absolute control of the flow of Ki throughout your body. This natural affinity allows you to use your Ki in
+  the most effective and efficient way.
+text: >
+  (1)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see -
+  Surges).
+  (2)-[Passive]: Reduce the Ki Point Cost of all your Attacking Maneuvers by 2(T).
+  (3)-[Passive]: Increase the Dice Score of your Combat Recovery by 1d6(T).
+
+---
+
+# (1) The higher of the two - "you may use" is never a reason to take the lower one.
+[passive]
+allow surgency.magic;
+attack.kiCost -= 2(T);
+
+# (3) Combat Recovery's Life and Ki Points, 1d6(T) more each use - out of sequence too.
+[automatic/declare-maneuver]
+if (using("combat-recovery")) {
+    life.value += 1d6(T);
+    ki.value += 1d6(T);
+}

@@ -296,6 +296,9 @@ const TABLE = [
     doc: "The least you may Ki Wager on an Attacking Maneuver. Compelled forces one." },
   { key: "actions.standard", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Standard Actions." },
   { key: "actions.counter", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Counter Actions." },
+  // "Convert up to 2 of your Counter Actions into Actions" - this Combat Round's, at a moment (Celestial Potential's).
+  { key: "actions.fromCounter", phase: PHASES.REACTIVE, kind: N, ops: NUMERIC,
+    doc: "Counter Actions turned into Actions this Combat Round, at a moment." },
   // "Gain 2 Counter Actions" - this Combat Round's, at a moment (Skill of the Watcher's), never past six.
   { key: "actions.counterGained", phase: PHASES.REACTIVE, kind: N, ops: NUMERIC,
     doc: "Counter Actions gained this Combat Round, at a moment." },
@@ -679,8 +682,11 @@ const PATTERNS = [
   // Something granted rather than permitted - set true by `allow`, read as granted: "You can sense God Ki" (God Ki's
   // Concealment cannot win outright against it), and Skill of the Watcher's (5) Power Up out of sequence, offered after
   // an Exploit's Damage or a Defend's none.
-  { match: /^(sense\.godKi|powerUp\.afterExploitOrDefend)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
-    valid: () => true, doc: "Sensing God Ki; the Power Up offered after an Exploit's Damage or a Defend's none." },
+  { match: /^(sense\.godKi|powerUp\.afterExploitOrDefend|surgency\.magic|exploit\.onNoDamage|combatRecovery\.flowOfCombat)$/,
+    phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
+    doc: "Sensing God Ki; the Power Up offered after an Exploit's Damage or a Defend's none; Surgency from the Magic "
+       + "Modifier where higher (Cosmic Efficiency); the Exploit offered when an attack left you without Damage, and "
+       + "Combat Recovery out of sequence at the start of a turn with none taken (Flow of Combat)." },
   // "Your minimum Action Cost for Combat Recovery is 1 Action" - the least a Maneuver priced in a range may be given.
   { match: /^(\w[\w-]*)\.actionCost\.minimum$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
     doc: "The least Action Cost that Maneuver may be given." },

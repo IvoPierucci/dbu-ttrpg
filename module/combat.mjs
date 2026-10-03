@@ -187,6 +187,7 @@ export function newRoundFor(actor) {
     "system.actionsSpent.standard": 0,
     "system.actionsSpent.counter": 0,
     "system.actionsSpent.converted": 0,
+    "system.actionsSpent.fromCounter": 0,
     // Bonus Momentum lasts the Round it was gained in; Reduced Momentum, owed, is this Round's.
     "system.momentum.bonus": 0,
     "system.momentum.reduced": (Number(actor.system.momentum?.pending) || 0) > 0 ? 1 : 0,
@@ -359,6 +360,8 @@ async function beginTurn(actor) {
   await paraParaTurnStart(actor);
   // God Bind: "You must spend 2 Actions at the start of each of your turns to maintain the God Bind".
   await (await import("./chat.mjs")).godBindTurnStart(actor);
+  // Flow of Combat: Combat Recovery offered, with no Damage taken since the end of the last turn.
+  await (await import("./chat.mjs")).flowOfCombatTurnStart(actor);
   // Stealth Crawl: a move, faking it still.
   const { stealthCrawl } = await import("./hidden.mjs");
   await stealthCrawl(actor);
@@ -574,6 +577,8 @@ export function registerCombatHooks() {
       // Weather Summoning: "until the end of your next turn".
       const { weatherTurnEnd } = await import("./chat.mjs");
       await weatherTurnEnd(leaving);
+      // "Since the end of your last turn" - Flow of Combat's count of Damage starts again.
+      if (leaving.getFlag?.("dbu-ttrpg", "damagedSinceTurn")) await leaving.unsetFlag("dbu-ttrpg", "damagedSinceTurn");
       // Super Spirit Sword's use again: "during this turn" - unused, gone with it.
       const { swordAgainExpires } = await import("./chat.mjs");
       await swordAgainExpires(leaving);

@@ -28,6 +28,9 @@ const STATEFUL = {
   // Regained never past the most there may be - Skill of the Watcher's 2(bT) a Counter Action.
   "life.value": { path: "system.life.value", read: a => a.system.life.value, cap: a => a.system.life.max },
   "ki.value": { path: "system.ki.value", read: a => a.system.ki.value, cap: a => a.system.ki.max },
+  // Counter Actions turned into Actions this Round - Celestial Potential's.
+  "actions.fromCounter": { path: "system.actionsSpent.fromCounter",
+    read: a => Number(a.system.actionsSpent?.fromCounter) || 0 },
   // Counter Actions gained this Round, held as the converted ones are - the Round's own allowance is the rest.
   "actions.counterGained": { path: "system.actionsSpent.converted",
     read: a => Number(a.system.actionsSpent?.converted) || 0 },
