@@ -861,6 +861,14 @@ export const WINDOW_MOMENTS = Object.freeze(["power", "declare-maneuver", "botch
   // A Healing Surge about to be used - Blood of the Warrior's doubled Surgency.
   "healing-surge"]);
 
+/**
+ * Chosen as it happens, never set beforehand and never Automatic: what a window offers (WINDOW_MOMENTS), and what hands
+ * over an Out-of-Sequence Maneuver (`outOfSequence`) - Born for Battle's Ki Surge, offered on the Threshold's card.
+ */
+export function chosenAsItHappens(block) {
+  return WINDOW_MOMENTS.includes(momentOf(block)) || Boolean(block?.modifiers?.outOfSequence);
+}
+
 /** A block's moment, without its parameter. */
 export function momentOf(block) {
   return String(block?.moment ?? "").split(/[(/]/)[0];
@@ -879,7 +887,7 @@ export function reactiveFor(actor, options = {}) {
         program: { ...entry.program, blocks: [b] },
         blockId: `${entry.sourceId}#${b.index}`,
         armed: (b.mode === "automatic") || armed.has(`${entry.sourceId}#${b.index}`)
-          || (automatic.has(`${entry.sourceId}#${b.index}`) && !WINDOW_MOMENTS.includes(momentOf(b)))
+          || (automatic.has(`${entry.sourceId}#${b.index}`) && !chosenAsItHappens(b))
           // A Talent armed under the old per-Talent key still counts, so nothing a
           // player armed before this change quietly stops working.
           || armed.has(entry.sourceId),

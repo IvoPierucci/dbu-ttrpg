@@ -36,8 +36,10 @@ if (hasResource("battlebornwound")) {
 requires evenRound;
 gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
 
-# (2) Knocked through a Health Threshold: a Ki Surge, and a stack.
-[triggered/threshold, effect 2]
+# (2) Knocked through a Health Threshold: a Ki Surge, and a stack - chosen on the Threshold's card, never Automatic: at full
+# Ki and full Battle Born it would spend the Threshold on nothing, and it takes the one Out-of-Sequence Maneuver that
+# trigger allows (the user's).
+[triggered/threshold, outOfSequence, effect 2]
 surge(ki);
 gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
 

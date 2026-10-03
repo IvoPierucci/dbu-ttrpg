@@ -19750,6 +19750,13 @@ async function answerMoment(message, card, actor) {
   const before = new Set(actor.system.armedTalents ?? []);
   const applied = await prepareRoll(actor, triggers, card.title, "", { rolling: false });
   if (applied === false) return;
+  // One Out-of-Sequence Maneuver for one trigger (the user's) - two ticked, neither taken, and the card still open.
+  const ticked = triggers.filter(entry => !before.has(entry.blockId) && (actor.system.armedTalents ?? []).includes(entry.blockId));
+  if (ticked.filter(entry => entry.program.blocks?.[0]?.modifiers?.outOfSequence).length > 1) {
+    await actor.update({ "system.armedTalents": (actor.system.armedTalents ?? []).filter(id => !ticked.some(entry => entry.blockId === id)) });
+    ui.notifications.warn("Only one Out-of-Sequence Maneuver for one trigger: choose one.");
+    return;
+  }
 
   requestEdit(message, {
     type: "moment",

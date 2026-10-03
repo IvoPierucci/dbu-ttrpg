@@ -346,9 +346,9 @@ async function giveGrants(actor, item, grants, name) {
  */
 export async function toggledBlocks(item) {
   const { compile } = await import("./effects/parser.mjs");
-  const { WINDOW_MOMENTS, momentOf } = await import("./effects/registry.mjs");
+  const { chosenAsItHappens } = await import("./effects/registry.mjs");
   return (compile(item?.system?.script ?? "").program?.blocks ?? [])
-    .filter(block => (block.mode === "triggered") && !block.budget?.actions && !WINDOW_MOMENTS.includes(momentOf(block)))
+    .filter(block => (block.mode === "triggered") && !block.budget?.actions && !chosenAsItHappens(block))
     .map(block => `${item.id}#${block.index}`);
 }
 

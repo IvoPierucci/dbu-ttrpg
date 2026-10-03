@@ -6,7 +6,7 @@ import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
 import { addRacialTrait, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace, racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
-import { reactiveFor, WINDOW_MOMENTS, momentOf } from "../effects/registry.mjs";
+import { reactiveFor, chosenAsItHappens } from "../effects/registry.mjs";
 import { grantedUniques } from "../unique.mjs";
 import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
   from "../effects/traits.mjs";
@@ -1307,8 +1307,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       item,
       triggered: triggered
         .filter(entry => (entry.sourceId === item.id) && entry.budget
-          // What a window offers as it happens is not Armed beforehand (WINDOW_MOMENTS).
-          && !WINDOW_MOMENTS.includes(momentOf(entry.program.blocks[0])))
+          // What a window offers as it happens is not Armed beforehand (WINDOW_MOMENTS), nor what hands over an
+          // Out-of-Sequence Maneuver.
+          && !chosenAsItHappens(entry.program.blocks[0]))
         .map(entry => ({
           id: entry.blockId,
           armed: entry.armed,
@@ -4804,8 +4805,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         .filter(entry => (entry.sourceId === item.id) && (entry.program.blocks[0]?.mode === "triggered")
           && !entry.program.blocks[0]?.budget?.actions
           // Nor what a window offers as it happens - the Power Up's, a Counter Maneuver's, a Maneuver declared, a Botch or a
-          // Critical (WINDOW_MOMENTS).
-          && !WINDOW_MOMENTS.includes(momentOf(entry.program.blocks[0])))
+          // Critical (WINDOW_MOMENTS) - nor what hands over an Out-of-Sequence Maneuver, chosen on its card as it happens.
+          && !chosenAsItHappens(entry.program.blocks[0]))
         .map(entry => ({
           id: entry.blockId,
           automatic: (this.actor.getFlag("dbu-ttrpg", "automatic") ?? []).includes(entry.blockId),
