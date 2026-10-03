@@ -30,6 +30,8 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
       template: "systems/dbu-ttrpg/templates/parts/talent-description.hbs",
       scrollable: [""]
     },
+    // A Racial Trait's Options, between its Description and its Passives (the user's) - a Talent has none.
+    options: { template: "systems/dbu-ttrpg/templates/parts/talent-options.hbs", scrollable: [""] },
     passives: { template: "systems/dbu-ttrpg/templates/parts/talent-passives.hbs", scrollable: [""] }
   };
 
@@ -37,6 +39,7 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
 
   static TABS = {
     description: { id: "description", group: "primary", label: "Description" },
+    options: { id: "options", group: "primary", label: "Options" },
     passives: { id: "passives", group: "primary", label: "Passives" }
   };
 
@@ -99,7 +102,9 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
 
   /** Build the tab configuration used by the shared tabs template. */
   _getTabs() {
-    return Object.fromEntries(Object.entries(this.constructor.TABS).map(([key, tab]) => [key, {
+    // The Options tab is a Racial Trait's alone - shown on every one, empty where it has none.
+    return Object.fromEntries(Object.entries(this.constructor.TABS)
+      .filter(([key]) => (key !== "options") || (this.item.type === "racial")).map(([key, tab]) => [key, {
       ...tab,
       cssClass: this.tabGroups[tab.group] === key ? "active" : ""
     }]));
