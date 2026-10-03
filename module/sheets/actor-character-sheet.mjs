@@ -1617,7 +1617,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           || (built ? "" : "Not built yet"),
         tp: built ? techniqueTPOf(sig) : "-",
         // Free TP: shown, and left out of what the character has spent.
-        freeTip: (built && sig.freeTP) ? `${techniqueTPChargedOf(sig)} TP from the character, ${Math.min(sig.freeTP, techniqueTPOf(sig))} free` : "",
+        freeTip: (built && sig.freeTP) ? `${techniqueTPChargedOf(sig, this.actor.system.effects?.slots)} TP from the character, ${Math.min(sig.freeTP, techniqueTPOf(sig))} free` : "",
         kp: built ? `${perTier * tier}` : `${maneuverKiCost(definition, null, actor)}`,
         kpTip: built ? `${perTier}(T)` : "",
         buddyOnly: buddyOnly.has(item.id),
@@ -1636,7 +1636,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const ultimates = counted.filter(sig => isUltimateLevel(sig.level)).length;
     const supers = counted.filter(sig => !isUltimateLevel(sig.level)).length;
     const dramatic = built.filter(sig => sig.level === "dramatic").length;
-    const spent = built.reduce((sum, sig) => sum + techniqueTPChargedOf(sig), 0);
+    const spent = built.reduce((sum, sig) => sum + techniqueTPChargedOf(sig, this.actor.system.effects?.slots), 0);
     const available = Number(actor.system.techniquePoints) || 0;
     const warnings = [
       (spent > available) ? `${spent} TP spent on Techniques, and ${available} TP to spend.` : "",
@@ -1705,7 +1705,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const items = actor.items.filter(isUniqueAbility).sort((a, b) => a.name.localeCompare(b.name));
     const rowOf = (item, grantedBy = "") => {
       const unique = item.system.unique;
-      const tp = grantedBy ? { total: 0 } : uniqueTPOf(unique);
+      const tp = grantedBy ? { total: 0 } : uniqueTPOf(unique, actor.system.effects?.slots);
       return {
         itemId: item.id,
         // Given by an Active Buddy - the Oracle Fish's Precognition: used from here, not bought, not edited.

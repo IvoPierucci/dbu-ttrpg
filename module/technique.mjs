@@ -135,10 +135,13 @@ export function techniqueTP(sig) {
  * What the Technique takes from the character's TP: its TP, less whatever was given for it free -
  * never below nothing. Its TP is still its TP for the cap and the KP (the user's ruling).
  */
-export function techniqueTPCharged(sig) {
+export function techniqueTPCharged(sig, slots = null) {
   // God Finisher's: "you do not spend any Technique Points".
   if (sig?.godFinisher) return 0;
-  return Math.max(0, techniqueTP(sig) - Math.max(0, Number(sig.freeTP) || 0));
+  // A feature an effect makes free - God of War's Weapon Assisted, "without spending Technique Points".
+  const free = (sig?.features ?? []).filter(entry => slots?.[`technique.free.${entry.id}`] === true)
+    .reduce((sum, entry) => sum + Math.max(0, featureTP(featureDef(entry.id), entry.ranks)), 0);
+  return Math.max(0, techniqueTP(sig) - free - Math.max(0, Number(sig.freeTP) || 0));
 }
 
 /** God Finisher's Technique: "a total TP Cost of 50 or less". */

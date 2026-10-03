@@ -1,0 +1,12 @@
+id: god-of-peace
+name: God of Peace
+optionOf: divine-magic
+description: Enter the Mindful State until the start of your next turn, when you Power Up.
+text: >
+  God of Peace [Triggered/Power, 1/Round]: Enter the Mindful State until the start of your next turn.
+
+---
+
+# Armed from the Traits tab, as every Triggered effect is: the next Power Up Maneuver sets it off.
+[triggered/power, 1/round]
+enterState("mindful", 1, "start-of-next-turn");

@@ -1,0 +1,19 @@
+id: god-of-time
+name: God of Time
+optionOf: divine-magic
+# "Gain access to the Time Freeze Unique Ability with the Straining Time Freeze and Difficult Time Freeze
+# Restrictions" - made with it, free and with both applied.
+grantsUnique: time-freeze
+uniqueRestrictions: straining-time-freeze, difficult-time-freeze
+description: Time Freeze, Straining and Difficult; Wound Rolls 2(T) higher in Frozen Turns.
+text: >
+  God of Time [Passive]: Gain access to the Time Freeze Unique Ability with the Straining Time Freeze and Difficult Time
+  Freeze Restrictions. Increase your Wound Rolls by 2(T) during Frozen Turns.
+
+---
+
+# Your own Frozen Turn - Time Freeze's.
+[passive]
+if (frozenTurn) {
+    wound += 2(T);
+}

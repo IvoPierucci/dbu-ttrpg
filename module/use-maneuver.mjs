@@ -1919,6 +1919,10 @@ export function definitionOf(item) {
     shiftsEnvironment: item.system.unique?.shiftsEnvironment === true,
     kiPerAction: (item.system.unique?.kiPerAction === true) || (item.system.kiPerAction === true),
     explodes: item.system.unique?.explodes === true,
+    // A Unique Ability's type, Technical or Magical - what God of Magic's "Magical Unique Abilities" reads.
+    uniqueType: (item.system.unique?.uaType === "both")
+      ? (["technical", "magical"].includes(item.system.unique?.chosenType) ? item.system.unique.chosenType : "")
+      : String(item.system.unique?.uaType ?? ""),
     waves: item.system.unique?.waves === true,
     fakesDeath: item.system.unique?.fakesDeath === true,
     fakeMoon: item.system.unique?.fakeMoon === true,
@@ -4999,10 +5003,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
   // Declared, now that it is certain to happen. An effect answering this reads the
   // Maneuver and who it is aimed at.
-  await fireMoment(actor, "declare-maneuver", {
+  const declaring = await fireMoment(actor, "declare-maneuver", {
     maneuver,
     targets: targetActor ? [targetActor] : []
   });
+  // What answering it put on the attack - God of Judgment's Energy Charge - within the Profile's ceiling, as any Charge.
+  const momentCharges = declared ? Math.max(0, Number(declaring?.slots?.["attack.energyCharges"]?.add) || 0) : 0;
 
   // And what this Maneuver itself does, which is a different question: `declare-maneuver`
   // is heard by everything the character holds, and this is heard only by the Maneuver
@@ -5213,7 +5219,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     : (atFeature && declared)
     ? await postFeatureAttack(actor, maneuver, declared, charges)
     : declared
-    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges, ...(volleyball ? { volleyball } : {}),
+    ? await postAttack(actor, targetActor, maneuver, { ...declared, charges: charges + momentCharges,
+        ...(volleyball ? { volleyball } : {}),
         ...(portal ? { portal: true } : {}), ...(spiritSword ? { spiritSword } : {}),
         ...(extraTargets.length ? { extraTargets: [...(declared.extraTargets ?? []), ...extraTargets] } : {}) },
         // God Strike: "use the Basic Attack Maneuver as an Out-of-Sequence Maneuver".
@@ -5256,6 +5263,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && thrown?.carried) await (await import("./chat.mjs")).dropCarried(actor);
   // Weather Summoning: "When you use the Power Up Maneuver" - offered on a card of its own.
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).offerWeatherSummoning(actor);
+  // "When you use the Power Up Maneuver" - what is Armed for it: God of Peace's.
+  if (card && maneuver.powerUp) await fireMoment(actor, "power");
   // Karmic Assault's Karma: the attack has been made, so now it is paid.
   if (card) await payKarmicAssault(actor, maneuver, declared);
 

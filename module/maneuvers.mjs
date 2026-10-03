@@ -2995,6 +2995,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // A named Maneuver can be discounted on its own; an Attacking one also takes whatever
   // applies to attacks in general.
   let cost = applySlot(slots, `${maneuver.id}.kiCost`, base);
+  // A Unique Ability's, by its type - God of Magic's 2(T) off every Magical one.
+  if (actor && maneuver.uniqueType) cost = applySlot(slots, `unique.${maneuver.uniqueType}.kiCost`, cost);
 
   if (actor && maneuver.attacking) {
     cost = applySlot(slots, "attack.kiCost", cost);

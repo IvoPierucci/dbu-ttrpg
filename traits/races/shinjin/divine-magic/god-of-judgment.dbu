@@ -1,0 +1,14 @@
+id: god-of-judgment
+name: God of Judgment
+optionOf: divine-magic
+description: An Energy Charge on the attack, when you use the Signature Technique Maneuver.
+text: >
+  God of Judgment [Triggered, 1/Round]: If you use the Signature Technique Maneuver, apply an Energy Charge to that
+  Attacking Maneuver.
+
+---
+
+# Armed from the Traits tab: the next Signature Technique declared gets its Energy Charge.
+[triggered/declare-maneuver, 1/round]
+requires signatureTechnique;
+attack.energyCharges += 1;

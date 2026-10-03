@@ -669,6 +669,16 @@ const PATTERNS = [
       && (sense in SENSES),
     doc: "Added to the Natural Result of that Skill's Checks made relying on that sense: "
        + "sight or hearing." },
+  // A Skill Rank an effect gives - Divine Magic's "At Character Creation, gain a Skill Rank in each of the following
+  // skills" - counted with the Progression tab's.
+  { match: /^skill\.(\w+)\.ranks$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
+    doc: "Skill Ranks an effect gives in that Skill, counted with the ones picked." },
+  // God of War's "add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points".
+  { match: /^technique\.free\.([\w-]+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
+    doc: "A Signature Technique feature whose TP the character does not pay - its TP still the Technique's." },
+  // God of Magic's "Reduce the TP Cost of all Magical Unique Abilities by 3 TP and ... the KP Cost ... by 2(T)".
+  { match: /^unique\.(technical|magical)\.(tpCost|kiCost)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
+    doc: "The TP or KP Cost of every Unique Ability of that type. The TP never below half the listed cost." },
   { match: /^skill\.(\w+)\.bonus$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "The Skill Bonus itself, as the sheet shows it." },

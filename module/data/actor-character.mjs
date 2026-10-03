@@ -2070,7 +2070,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const rankCap = DBUCharacterData.skillRankCap(this.tierOfPower);
 
     this.skills = Object.fromEntries(Object.entries(DBUCharacterData.SKILLS).map(([key, skill]) => {
-      const ranks = rankSlots.filter(slot => slot === key).length;
+      // And the Ranks an effect gives - Divine Magic's.
+      const ranks = rankSlots.filter(slot => slot === key).length + Math.max(0, slot(this, `skill.${key}.ranks`));
       // One step per Size Category away from Medium, in whichever direction the Skill
       // is affected.
       const sizeAdjustment = (DBUCharacterData.SIZE_SKILL_ADJUSTMENTS[key] ?? 0) * this.size.steps;

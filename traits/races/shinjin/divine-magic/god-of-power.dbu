@@ -1,0 +1,14 @@
+id: god-of-power
+name: God of Power
+optionOf: divine-magic
+# "You gain the Muscular Warrior Talent" - given with it when it is written.
+grantsTalent: muscular-warrior
+description: The Muscular Warrior Talent, and Force Modifier 1(T) higher in a Form or an Enhancement.
+text: >
+  God of Power [Passive]: You gain the Muscular Warrior Talent. Additionally, increase your Force Modifier by 1(T) while
+  in a Form or an Enhancement.
+
+---
+
+# "Increase your Force Modifier by 1(T) while in a Form or an Enhancement" - Forms and Enhancements are not built yet, so
+# nothing can tell whether you are in one: the table adds it while you are.

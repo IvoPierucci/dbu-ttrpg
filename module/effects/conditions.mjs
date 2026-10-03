@@ -100,6 +100,12 @@ const PREDICATES = {
       && Boolean(item.system?.equipped));
   },
 
+  /** Is the Maneuver being declared one made through the Signature Technique Maneuver - God of Judgment's. */
+  signatureTechnique: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique),
+
+  /** Is this character in their own Frozen Turn - Time Freeze's (God of Time's "during Frozen Turns"). */
+  frozenTurn: scope => Boolean(scope.data?.parent?.getFlag?.("dbu-ttrpg", "frozenTurn")),
+
   /** Is this character a Minion. */
   isMinion: scope => Boolean(scope.data?.minion),
 

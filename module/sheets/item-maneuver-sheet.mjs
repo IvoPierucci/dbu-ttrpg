@@ -186,7 +186,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       both: unique.uaType === "both",
       chosen: ["technical", "magical"].map(value => ({ value, label: UNIQUE_TYPES[value].label,
         selected: unique.chosenType === value })),
-      tp: uniqueTPOf(unique),
+      tp: uniqueTPOf(unique, this.item.actor?.system?.effects?.slots),
       // The Adv & Disadv tab's shape (the user's): the search offers what is not had yet - locked ones shown
       // and refused - and a card each for what is. Only what came from the game's files: nothing is made here
       // (the user's ruling), and one made before that is left out once it is not had.
@@ -279,7 +279,7 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
     const reading = {
       tp,
       free: sig.freeTP,
-      charged: techniqueTPCharged(sig),
+      charged: techniqueTPCharged(sig, this.item.actor?.system?.effects?.slots),
       cap,
       over: tp > cap ? `Over the ${cap} TP a Technique may be worth at base Tier ${baseTier}.` : "",
       profileKi,

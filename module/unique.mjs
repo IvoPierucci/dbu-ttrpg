@@ -50,9 +50,12 @@ export function lockedAdvancements(unique, getTrait = null) {
  * and each Advancement bought on top. Free, its own price is not charged; its Advancements still are - unless
  * an Advancement is Free itself (the user's rulings).
  */
-export function uniqueTPOf(unique) {
+export function uniqueTPOf(unique, slots = null) {
   const listed = Math.max(0, Number(unique?.tpCost) || 0);
-  const change = Math.trunc(Number(unique?.tpChange) || 0);
+  // And what an effect changes it by for its type - God of Magic's 3 TP off every Magical one - floored as any change.
+  const type = uniqueTypeOf(unique);
+  const change = Math.trunc(Number(unique?.tpChange) || 0)
+    + (type ? Math.trunc(Number(slots?.[`unique.${type}.tpCost`]?.add) || 0) : 0);
   const reduction = (unique?.restrictions ?? []).filter(entry => entry.applied)
     .reduce((sum, entry) => sum + Math.max(0, Number(entry.reduction) || 0), 0);
   // Never below half the listed cost: a half-point would be below it, so it is kept.

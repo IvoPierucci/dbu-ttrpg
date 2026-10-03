@@ -1,0 +1,14 @@
+id: god-of-magic
+name: God of Magic
+optionOf: divine-magic
+description: Magical Unique Abilities 3 TP and 2(T) KP cheaper.
+text: >
+  God of Magic [Passive]: Reduce the TP Cost of all Magical Unique Abilities by 3 TP and reduce the KP Cost of your
+  Magical Unique Abilities by 2(T).
+
+---
+
+# The TP never below half the listed cost, as any TP Cost Change (unique.mjs uniqueTPOf).
+[passive]
+unique.magical.tpCost -= 3;
+unique.magical.kiCost -= 2(T);

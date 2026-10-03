@@ -1,0 +1,31 @@
+id: divine-magic
+name: Divine Magic
+category: mind
+importance: primary
+# (1) "You gain access to the Magical Materialization, Telepathy, Telekinesis, and Second Sight Unique Abilities" - made
+# with it, free and without their Requirements (racial.mjs addRacialTrait), and gone with it.
+grantsUnique: magical-materialization, telepathy, telekinesis, second-sight
+# (2) "Knowledge (any - you decide)": which Knowledge, asked when it is added, is `$choice`.
+choose: knowledge
+# (3) "At Character Creation, choose one of the following effects" - its Options, the files in divine-magic/.
+options: 1
+description: >
+  With the pure magical energies born from their divine nature, Shinjin possess various abilities.
+text: >
+  (1)-[Passive]: You gain access to the Magical Materialization, Telepathy, Telekinesis, and Second Sight Unique
+  Abilities.
+  (2)-[Passive]: At Character Creation, gain a Skill Rank in each of the following skills: Knowledge (any - you decide),
+  Creature Handling, Clairvoyance, Perception, Use Magic and Investigation.
+  (3)-[Option]: At Character Creation, choose one of the following effects: God of Peace, God of Judgment, God of Power,
+  God of Survival, God of Wisdom, God of War, God of Magic, God of Many, God of Time or God of an Element.
+
+---
+
+# (2) A Skill Rank in each - counted with the Ranks the Progression tab gives.
+[passive]
+skill.$choice.ranks += 1;
+skill.creatureHandling.ranks += 1;
+skill.clairvoyance.ranks += 1;
+skill.perception.ranks += 1;
+skill.useMagic.ranks += 1;
+skill.investigation.ranks += 1;
