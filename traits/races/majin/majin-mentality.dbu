@@ -1,0 +1,23 @@
+id: majin-mentality
+name: Majin Mentality
+order: 11
+category: mind
+importance: secondary
+description: >
+  You’re smarter and/or friendlier than the average Majin.
+text: >
+  Majin Mentality (Mind): You’re smarter and/or friendlier than the average Majin.
+  (1)-[Passive]: While Personality and/or Scholarship is your Attribute with the highest Attribute Score, increase your Combat Rolls and Initiative by 1(bT).
+  (2)-[Triggered, 1/Round]: If you use a Signature Technique, increase the Wound Roll of that Attacking Maneuver by 1/2 (rounded up) of your Scholarship or Personality Modifier (whichever is higher).
+
+---
+
+# (1) The highest Score, or tied for it.
+[passive]
+if (max(personality.score, scholarship.score) >= max(agility.score, force.score, tenacity.score, insight.score, magic.score)) {
+    combatRolls += 1(bT);
+    initiative += 1(bT);
+}
+
+# (2) Asked with a Signature Technique's declaration, once a Round: the higher Modifier's half, rounded up, on its Wound.
+allow mentality.signature;

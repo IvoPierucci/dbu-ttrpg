@@ -621,6 +621,28 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       <span class="dbu-respond-name">Powerbomb: end the Grapple after this attack</span>
       <span class="dbu-respond-source">+1/2 Might Wound per rank; no Grapple until your next turn</span></label>`);
   }
+  // Majin Malice: "If you would use an Ultimate Signature Technique, you may apply up to 5 ranks of Backlash to that
+  // Signature Technique. For each rank of Backlash added, increase the Wound Roll of that Signature Technique by 2(T)."
+  // At most 5 between them and its own; once an Encounter.
+  const malice = technique.ultimate && (actor.system.effects?.slots?.["malice.backlash"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "maliceBacklash") !== (game.combat?.id ?? "none"));
+  const maliceMost = Math.max(0, 5 - ranks("backlash"));
+  if (malice && maliceMost) {
+    fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Majin Malice: Backlash ranks</span>
+      <input type="number" name="maliceBacklash" value="0" min="0" max="${maliceMost}"/>
+      <span class="dbu-respond-source">each +2(T) Wound, 2(bT) Life Points after</span></label>`);
+  }
+  // Majin Mentality: "If you use a Signature Technique, increase the Wound Roll of that Attacking Maneuver by 1/2 (rounded
+  // up) of your Scholarship or Personality Modifier (whichever is higher)." Once a Round.
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  const atts = actor.system.attributes ?? {};
+  const mentalityWound = Math.ceil(Math.max(Number(atts.scholarship?.mod) || 0, Number(atts.personality?.mod) || 0) / 2);
+  if ((actor.system.effects?.slots?.["mentality.signature"] === true) && (actor.getFlag?.("dbu-ttrpg", "mentalityRound") !== round)
+    && mentalityWound > 0) {
+    fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="mentality"/>
+      <span class="dbu-respond-name">Majin Mentality: +${mentalityWound} Wound</span>
+      <span class="dbu-respond-source">once a Round</span></label>`);
+  }
   const areaProfiles = [declared.profile, technique.secondProfile].filter(id => PROFILES[id]?.area);
   if (areaProfiles.length > 1) {
     fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Area of Effect</span>
@@ -652,6 +674,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           const num = name => Math.max(0, Number(form.querySelector(`[name="${name}"]`)?.value) || 0);
           const box = name => Boolean(form.querySelector(`[name="${name}"]`)?.checked);
           return { transformed: box("transformed"), finalChance: box("finalChance"),
+            maliceBacklash: Math.min(maliceMost, num("maliceBacklash")), mentality: box("mentality"),
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
             areaFrom: form.querySelector('[name="areaFrom"]')?.value ?? "" };
@@ -665,6 +688,20 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
 
   if (answers.finalChance) answers.finalChanceLife = life;
+  // What the two Majin Traits put on its Wound Roll, and their uses spent.
+  const woundExtra = [];
+  if (answers.maliceBacklash) {
+    await actor.setFlag("dbu-ttrpg", "maliceBacklash", game.combat?.id ?? "none");
+    woundExtra.push({ label: `Majin Malice (Backlash ${answers.maliceBacklash})`, written: `+${2 * answers.maliceBacklash}(T)`,
+      value: 2 * answers.maliceBacklash * tier });
+  }
+  else delete answers.maliceBacklash;
+  if (answers.mentality) {
+    await actor.setFlag("dbu-ttrpg", "mentalityRound", round);
+    woundExtra.push({ label: "Majin Mentality", value: mentalityWound });
+  }
+  delete answers.mentality;
+  if (woundExtra.length) answers.woundExtra = woundExtra;
   const extraActions = (answers.gigaFlare ?? 0) + (answers.superCombination ?? 0);
   if (extraActions) {
     answers.extraActions = extraActions;
@@ -5324,7 +5361,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Weather Summoning: "When you use the Power Up Maneuver" - offered on a card of its own.
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).offerWeatherSummoning(actor);
   // "When you use the Power Up Maneuver" - its Triggered effects offered in a window then and there (God of Peace's).
-  if (card && maneuver.powerUp) await (await import("./chat.mjs")).answerPower(actor);
+  if (card && maneuver.powerUp) await (await import("./chat.mjs")).answerPower(actor, card);
   // Karmic Assault's Karma: the attack has been made, so now it is paid.
   if (card) await payKarmicAssault(actor, maneuver, declared);
 

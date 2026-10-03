@@ -1,0 +1,40 @@
+id: majin-mass-shift
+name: Majin Mass-Shift
+order: 10
+category: body
+importance: secondary
+# (1) The Shapeshift Unique Ability, given free with the Trait. "You cannot swap this Racial Trait out through its
+# effects" - which Body-Category Secondary Racial Traits a Shapeshift exchanges is the table's (chat.mjs), so this one is
+# simply not among them.
+grantsUnique: shapeshift
+description: >
+  You have the ability to sculpt your body at will.
+text: >
+  Majin Mass-Shift (Body): You have the ability to sculpt your body at will.
+  (1)-[Passive]: You gain access to the Shapeshift Unique Ability. You cannot swap this Racial Trait out through its effects.
+  (2)-[Passive]: Increase the Dice Score of your Bluff, Persuasion, and Intimidation Skill Checks by 1.
+  (3)-[Passive]: Depending on your Size Category, apply the following effects:
+
+  * Smaller than Medium: Increase your Soak Value by 1(bT).
+  * Medium: Reduce the Ki Point Cost of your Unique Abilities by 2(T).
+  * Larger than Medium: Increase your Defense Value by 1(bT).
+
+---
+
+[passive]
+# (2)
+skill.bluff += 1;
+skill.persuasion += 1;
+skill.intimidation += 1;
+
+# (3) By the Size Category the character is at now - a Shapeshift's, a Ki Avatar's - counted from Medium.
+if (size.steps < 0) {
+    soakValue += 1(bT);
+}
+if (size.steps == 0) {
+    unique.technical.kiCost -= 2(T);
+    unique.magical.kiCost -= 2(T);
+}
+if (size.steps > 0) {
+    defenseValue += 1(bT);
+}

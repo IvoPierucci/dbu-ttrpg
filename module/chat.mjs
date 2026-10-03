@@ -5966,12 +5966,35 @@ function triggersFor(actor, moments) {
  * offered in a window there and then, ticked to use it (the user's: no Arming it beforehand) - God of Peace's Mindful,
  * Celestial Potential's Counter Actions made Actions. What fires by itself fires either way.
  */
-export async function answerPower(actor) {
+export async function answerPower(actor, card = null) {
   if (!actor) return;
   const triggers = triggersFor(actor, ["power"]);
   if (triggers.length) await prepareRoll(actor, triggers, "Power Up", "", { rolling: false });
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
-  await fireMoment(actor, "power");
+  const fired = await fireMoment(actor, "power");
+  if (fired?.slots?.["malice.outOfSequence"] === true) await maliceOutOfSequence(actor, card);
+}
+
+/**
+ * Majin Malice (3): "You may spend 5(bT) Life Points to use the Basic Attack Maneuver, Signature Technique Maneuver, or
+ * Energy Charge Maneuver as an Out-of-Sequence Maneuver." Which one asked, the Life Points paid, and it is taken.
+ */
+async function maliceOutOfSequence(actor, card) {
+  const cost = 5 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const choice = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `Majin Malice - ${cost} Life Points` }, content: "",
+    buttons: [{ action: "basic-attack", label: "Basic Attack" }, { action: "signature", label: "Signature Technique" },
+      { action: "energy-charge", label: "Energy Charge" }, { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!choice || (choice === "cancel") || !card) return;
+  await actor.update({ "system.life.value": (Number(actor.system.life.value) || 0) - cost });
+  const offer = (choice === "signature")
+    ? { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique", maneuverName: "Signature Technique",
+        reason: "Majin Malice", technique: { via: "", any: true } }
+    : { actorUuid: actor.uuid, actorName: actor.name, maneuverId: choice,
+        maneuverName: (choice === "energy-charge") ? "Energy Charge" : "Basic Attack", reason: "Majin Malice" };
+  return takeOutOfSequence(card, actor, offer);
 }
 
 /**
@@ -13959,7 +13982,7 @@ async function takeOutOfSequence(message, actor, offer) {
     await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), WATCHER_POWER_UP] });
   }
   // "When you use the Power Up Maneuver" - out of sequence too: its Triggered effects offered in a window.
-  if (maneuver.powerUp) await answerPower(actor);
+  if (maneuver.powerUp) await answerPower(actor, message);
 
   // The Exploit's recursion spreads the offer, so what provoked it has come all this way
   // untouched and goes onto the attack itself.
@@ -14060,7 +14083,8 @@ export async function postAttack(actor, target, maneuver,
                                    extraTargets = [], freeWager = 0, unitedWith = null,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
-                                   appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false },
+                                   appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
+                                   woundExtra = [], maliceBacklash = 0 },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -14177,6 +14201,9 @@ export async function postAttack(actor, target, maneuver,
           // Burrowed Strike's: through the ground - no Cover counted; and Diminishing Defense doubled.
           ...(burrowed ? { burrowed: true } : {}),
           ...(doublesDiminishing ? { doublesDiminishing: true } : {}),
+          // Majin Malice's and Majin Mentality's: rows on its Wound Roll, and Malice's Backlash after it.
+          ...(woundExtra.length ? { woundExtra } : {}),
+          ...(maliceBacklash ? { maliceBacklash } : {}),
           // A second Profile outside a Technique: Elemental Blade's Multi-Profile on an ordinary
           // attack. A Technique's is on its own block.
           secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
@@ -15284,9 +15311,11 @@ export async function techniqueAfterCard(actor, attack) {
   const baseTier = Math.max(1, actor.system.baseTierOfPower ?? 1);
   const said = [];
 
-  // Backlash: "Reduce your Life Points by 2(bT) for each rank of this Advantage after concluding".
-  if (ranks("backlash")) {
-    const amount = 2 * baseTier * ranks("backlash");
+  // Backlash: "Reduce your Life Points by 2(bT) for each rank of this Advantage after concluding" - Majin Malice's added
+  // ranks with its own.
+  const backlash = ranks("backlash") + (Number(attack.maliceBacklash) || 0);
+  if (backlash) {
+    const amount = 2 * baseTier * backlash;
     await reduceLifePoints(actor, amount, { reason: `${attack.maneuverName}, Backlash` });
   }
 
@@ -16542,6 +16571,8 @@ function woundParts(attacker, attack) {
     // A Kamikaze Ghost's: "Increase the Wound Roll of this Attacking Maneuver by the amount of Life Points the Kamikaze
     // Ghost possesses at that moment."
     ...(attack.ghostBlast ? [{ label: "Kamikaze Ghost's Life Points", value: Number(attack.ghostBlast.lp) || 0 }] : []),
+    // What was added to it as it was declared - Majin Malice's Backlash, Majin Mentality's Modifier.
+    ...(attack.woundExtra ?? []),
     // An Attribute Modifier an effect puts on it - Powerful Physique's Force Modifier.
     ...(attack.woundAttribute ? [{ label: attack.woundAttribute.label,
       value: Number(attacker.system.attributes?.[attack.woundAttribute.attribute]?.mod) || 0 }] : []),
@@ -20536,6 +20567,17 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
 
     // "Double the amount of Life Points you regain from this Healing Surge" - Majin Regeneration's at Defeated.
     const multiplier = Math.max(1, Number(lifeMultiplier) || 1);
+    // Majin Malice: "forgo gaining Life Points to instead regain an equal amount of Ki Points and Capacity instead. This
+    // can allow your Capacity to exceed your Max Capacity."
+    if (answered?.slots?.["surge.asKi"] === true) {
+      const amount = roll.total * multiplier;
+      const { ki, capacity } = actor.system;
+      const kiBack = Math.min(ki.max, ki.value + amount) - ki.value;
+      await actor.update({ "system.ki.value": ki.value + kiBack, "system.capacity.spent": capacity.spent - amount });
+      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
+        flavor: `${source} - Healing Surge as Ki (Majin Malice) - ${kiBack} Ki Points, ${amount} Capacity` });
+      return true;
+    }
     const { value, max } = actor.system.life;
     const restored = Math.min(max, value + (roll.total * multiplier)) - value;
     await actor.update({ "system.life.value": value + restored });
@@ -20555,7 +20597,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
 
   const kiRestored = Math.min(ki.max, ki.value + kiGain) - ki.value;
   // Capacity comes back by giving back what has been spent this round.
-  const capacityRestored = Math.min(capacity.spent, capacityGain);
+  const capacityRestored = Math.max(0, Math.min(capacity.spent, capacityGain));
 
   await actor.update({
     "system.ki.value": ki.value + kiRestored,

@@ -709,11 +709,15 @@ const PATTERNS = [
     doc: "The Dice Score of a Might Clash when targeted by the Pin Maneuver; Damage received from an Attacking Maneuver "
        + "of Direct or higher; Squares a Physical Attack or Grapple may reach past the Melee Range, asked; Life Points a "
        + "Healing Surge gives back for each Health Threshold below." },
-  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "Every Collision Damage received halved; moving one hit with a Physical Attack or put in a Grapple, once a Round "
        + "(Rubbery Body's); moving away when hit, and the Movement after Collision Damage (Bouncy Physique's); a Physical "
        + "Attack through the ground, and 2(bT) Ki to double Diminishing Defense on a Simple one (Burrowed Strike's)." },
+  // Majin Malice's: a Healing Surge given as Ki Points and Capacity; and the Power Up's Out-of-Sequence Maneuver.
+  { match: /^(surge\.asKi|malice\.outOfSequence)$/, phase: PHASES.REACTIVE, kind: F, ops: ["set"], valid: () => true,
+    doc: "A Healing Surge's Life Points given as Ki Points and Capacity instead, the Capacity past its Max; the Basic "
+       + "Attack, a Signature Technique or the Energy Charge out of sequence for 5(bT) Life Points." },
   // Elastic Tentacle's: this attack's Diminishing Defense doubled, ticked as it hits.
   { match: /^attack\.doublesDiminishing$/, phase: PHASES.REACTIVE, kind: F, ops: ["set"], valid: () => true,
     doc: "The Diminishing Defense this Attacking Maneuver gave the ones it hit, doubled - not on top of another increase." },

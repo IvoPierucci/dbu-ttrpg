@@ -993,7 +993,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // The most Ki a character may spend in a single Combat Round. Only what has been
     // spent is stored; the ceiling itself is derived from Power Level.
     schema.capacity = new fields.SchemaField({
-      spent: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      // No floor: Majin Malice's "This can allow your Capacity to exceed your Max Capacity" - spent below nothing.
+      spent: new fields.NumberField({ required: true, integer: true, initial: 0 })
     });
 
     // --- Instant Maneuver tracking ---
