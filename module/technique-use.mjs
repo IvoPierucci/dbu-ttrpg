@@ -101,21 +101,23 @@ export function whyNotTechnique(actor, technique, { via = "", ascended = false }
     return `${name} needs ${actor.name} at ${["Bruised", "Injured", "Critical"][Math.min(climax, 3) - 1]} or worse.`;
   }
 
-  // Restricted - Environment / State / Weather.
-  if (has(technique, "restricted-environment")) {
+  // Restricted - Environment / State / Weather. Majin See, Majin Do: ignored on a Technique from Quick Learner.
+  const unrestricted = technique.fromQuickLearner
+    && (actor.system?.effects?.slots?.["quickLearner.ignoreRestricted"] === true);
+  if (!unrestricted && has(technique, "restricted-environment")) {
     const wanted = choice(technique, "restricted-environment");
     const high = Number(actor.system?.battlefield?.highEnvironment) || 0;
     const ok = (wanted === "high") ? (high > 0)
       : (!high && (environmentIdOf(actor.system) === wanted));
     if (wanted && !ok) return `${name} is only used in its chosen Environment.`;
   }
-  if (has(technique, "restricted-state")) {
+  if (!unrestricted && has(technique, "restricted-state")) {
     const wanted = choice(technique, "restricted-state");
     if (wanted && !((Number(actor.system?.states?.[wanted]) || 0) > 0)) {
       return `${name} is only used in its chosen State.`;
     }
   }
-  if (has(technique, "restricted-weather")) {
+  if (!unrestricted && has(technique, "restricted-weather")) {
     const wanted = choice(technique, "restricted-weather");
     if (wanted && (actor.system?.battlefield?.weather?.id !== wanted)) {
       return `${name} is only used in its chosen Battle Weather.`;

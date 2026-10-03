@@ -13241,14 +13241,62 @@ async function disarmingSwap(message, attacker) {
 }
 
 /**
+ * Quick Learner (1): "When any Character uses a Signature Technique, you can declare that it is a 'Copied Technique'.
+ * You gain access to that Copied Technique for the duration of this Combat Encounter." Offered on its card to everyone
+ * on the scene with the Talent but its user, once a Round each, counted when taken.
+ */
+function offerCopies(card, user, maneuver) {
+  const item = user.items?.get(maneuver.itemId ?? "");
+  if (!item) return;
+  const seen = new Map();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const other = token.actor;
+    if (!other || (other.type !== "character") || (other.uuid === user.uuid)) continue;
+    if (other.system?.effects?.slots?.["quickLearner.copy"] !== true) continue;
+    seen.set(other.uuid, other);
+  }
+  for (const other of seen.values()) {
+    offerMove(card, other, { key: `copy:${other.uuid}`, flag: "quickLearnerRound", name: `Copy ${item.name}`,
+      reason: "Quick Learner - a Copied Technique for this Encounter", copyFrom: { actorUuid: user.uuid, itemId: item.id } });
+  }
+}
+
+/**
+ * The Technique copied: "You can only possess 1 Copied Technique at any one time ... you must choose to lose access to
+ * another" - asked. A Maneuver Item of the copier's, marked Copied and from Quick Learner, its TP not theirs. False if not.
+ */
+async function copyTechnique(actor, copyFrom) {
+  const source = fromUuidSync(copyFrom.actorUuid)?.items?.get(copyFrom.itemId);
+  if (!source) {
+    ui.notifications.warn("That Signature Technique is no longer there to copy.");
+    return false;
+  }
+  const held = Array.from(actor.items ?? []).filter(item => item.getFlag?.(SCOPE, "copied"));
+  if (held.length) {
+    const lose = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: "Quick Learner" },
+      content: `<p>Lose ${Handlebars.escapeExpression(held.map(item => item.name).join(", "))} to copy `
+        + `${Handlebars.escapeExpression(source.name)}?</p>`, rejectClose: false });
+    if (!lose) return false;
+    await actor.deleteEmbeddedDocuments("Item", held.map(item => item.id));
+  }
+  const data = source.toObject();
+  delete data._id;
+  data.name = `${source.name} (Copied)`;
+  data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}),
+    copied: { from: fromUuidSync(copyFrom.actorUuid)?.name ?? "", combat: game.combat?.id ?? "" }, fromQuickLearner: true } };
+  await actor.createEmbeddedDocuments("Item", [data]);
+  return true;
+}
+
+/**
  * A move an effect hands over - not an Out-of-Sequence Maneuver, so it takes no one's, and nothing here moves anybody:
  * where to is the map's. Once a Round by the mover's `flag`, counted when taken; `key` tells one from another on a card.
  */
-function offerMove(message, mover, { key, flag, name, reason, clashAt = "" }) {
+function offerMove(message, mover, { key, flag, name, reason, clashAt = "", copyFrom = null }) {
   if (mover.getFlag?.(SCOPE, flag) === roundKey()) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.move?.key === key)) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: mover.uuid, actorName: mover.name, maneuverId: "",
-    maneuverName: name, reason, move: { key, flag, ...(clashAt ? { clashAt } : {}) } } });
+    maneuverName: name, reason, move: { key, flag, ...(clashAt ? { clashAt } : {}), ...(copyFrom ? { copyFrom } : {}) } } });
 }
 
 /**
@@ -13273,6 +13321,8 @@ async function takeMoveOffer(message, actor, offer) {
     ui.notifications.warn(`${actor.name} has used ${offer.reason.split(" - ")[0]} this Round already.`);
     return;
   }
+  // Quick Learner's: copied first - a copy not made is no use spent.
+  if (offer.move.copyFrom && !await copyTechnique(actor, offer.move.copyFrom)) return;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.move.flag}`]: roundKey() });
   requestEdit(message, { type: "moveTaken", key: offer.move.key });
   // Disarming Demeanor's: the Clash itself.
@@ -14087,7 +14137,7 @@ export async function postAttack(actor, target, maneuver,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
-                                   woundExtra = [], maliceBacklash = 0 },
+                                   woundExtra = [], maliceBacklash = 0, moraleGuard = false },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -14207,6 +14257,8 @@ export async function postAttack(actor, target, maneuver,
           // Majin Malice's and Majin Mentality's: rows on its Wound Roll, and Malice's Backlash after it.
           ...(woundExtra.length ? { woundExtra } : {}),
           ...(maliceBacklash ? { maliceBacklash } : {}),
+          // Quick Learner's: made with a Copied Technique.
+          ...(maneuver.copied ? { copied: true } : {}),
           // A second Profile outside a Technique: Elemental Blade's Multi-Profile on an ordinary
           // attack. A Technique's is on its own block.
           secondProfile: technique ? "" : (maneuver.secondProfile ?? ""),
@@ -14365,6 +14417,24 @@ export async function postAttack(actor, target, maneuver,
       }
     }
   });
+
+  // Majin See, Majin Do: the Morale Clash against each it is aimed at, the attack held till they are settled - the Trap
+  // Attack's arrangement, Guard Down for this attack on a win.
+  if (moraleGuard && card) {
+    const aimed = attackTargets(card.getFlag(SCOPE, ATTACK_FLAG) ?? {}).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
+    const made = card.getFlag(SCOPE, ATTACK_FLAG);
+    if (made && aimed.length) {
+      await requestEdit(card, { type: "attack", attack: { ...made, trapHold: { pending: true, left: aimed.length,
+        name: "Majin See, Majin Do" } } });
+      for (const other of aimed) {
+        await postSaveClash(actor, other, { maneuverName: "Majin See, Majin Do",
+          reason: `Win and ${other.name} is Guard Down against this Attacking Maneuver.`,
+          saves: ["morale"], defenderSaves: ["morale"], trapGuard: { applied: false, attackMessageId: card.id } });
+      }
+    }
+  }
+  // Quick Learner: a Signature Technique used in a Combat Encounter - Copy, offered to whoever has the Talent.
+  if (card && maneuver.signature && !maneuver.signatureTechnique && game.combat?.started) offerCopies(card, actor, maneuver);
 
   // Disarming Demeanor (3): the attack in place of a cancelled one, answered by the Defend that one was answered with.
   const carried = actor.getFlag?.(SCOPE, "counterCarried");
@@ -16576,6 +16646,10 @@ function woundParts(attacker, attack) {
     ...(attack.ghostBlast ? [{ label: "Kamikaze Ghost's Life Points", value: Number(attack.ghostBlast.lp) || 0 }] : []),
     // What was added to it as it was declared - Majin Malice's Backlash, Majin Mentality's Modifier.
     ...(attack.woundExtra ?? []),
+    // Quick Learner: "If a Signature Technique is a Copied Technique, reduce your Wound Rolls by 2(T)" - not where Majin
+    // See, Majin Do ignores it.
+    ...((attack.copied && (attacker.system.effects?.slots?.["quickLearner.noPenalty"] !== true))
+      ? [{ label: "Copied Technique", written: "-2(T)", value: -2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     // An Attribute Modifier an effect puts on it - Powerful Physique's Force Modifier.
     ...(attack.woundAttribute ? [{ label: attack.woundAttribute.label,
       value: Number(attacker.system.attributes?.[attack.woundAttribute.attribute]?.mod) || 0 }] : []),

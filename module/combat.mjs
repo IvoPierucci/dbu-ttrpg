@@ -669,6 +669,17 @@ export function registerCombatHooks() {
       // Every clock stops here, not only the ones counting the Encounter: a turn edge
       // that never arrives is a duration that never ends, and there are no more turns.
       await encounterEnded(actor);
+      // Quick Learner: "At the end of the Combat Encounter, you can pay the TP Cost of any Copied Technique to gain access
+      // to it permanently. If you do, it stops being a Copied Technique." Asked of whoever plays them.
+      for (const item of Array.from(actor.items ?? []).filter(each => each.getFlag?.("dbu-ttrpg", "copied"))) {
+        const { askPlayerChoice } = await import("./chat.mjs");
+        const kept = await askPlayerChoice(actor, `${actor.name}: ${item.name}`,
+          [{ value: "keep", label: "Keep it (its TP Cost yours)" }, { value: "lose", label: "Let it go" }]);
+        if (kept === "keep") {
+          await item.update({ name: item.name.replace(/ \(Copied\)$/, ""), "flags.dbu-ttrpg.-=copied": null });
+        }
+        else await actor.deleteEmbeddedDocuments("Item", [item.id]);
+      }
       await firstRoundsEnd(actor);
       await regenerateWeapons(actor);
       // Delayed's records and Imminent marks, which only lasted for the Encounter.

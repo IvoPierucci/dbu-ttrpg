@@ -643,6 +643,14 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       <span class="dbu-respond-name">Majin Mentality: +${mentalityWound} Wound</span>
       <span class="dbu-respond-source">once a Round</span></label>`);
   }
+  // Majin See, Majin Do: "When you target an Opponent with a Copied Technique, make a Morale Clash against them. If you
+  // win, they have Guard Down against this Attacking Maneuver." Once an Encounter.
+  if (technique.copied && target && (actor.system.effects?.slots?.["quickLearner.moraleClash"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "moraleClashed") !== (game.combat?.id ?? "none"))) {
+    fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="moraleGuard"/>
+      <span class="dbu-respond-name">Majin See, Majin Do: Morale Clash</span>
+      <span class="dbu-respond-source">won, Guard Down against this attack</span></label>`);
+  }
   const areaProfiles = [declared.profile, technique.secondProfile].filter(id => PROFILES[id]?.area);
   if (areaProfiles.length > 1) {
     fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Area of Effect</span>
@@ -675,6 +683,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           const box = name => Boolean(form.querySelector(`[name="${name}"]`)?.checked);
           return { transformed: box("transformed"), finalChance: box("finalChance"),
             maliceBacklash: Math.min(maliceMost, num("maliceBacklash")), mentality: box("mentality"),
+            moraleGuard: box("moraleGuard"),
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
             areaFrom: form.querySelector('[name="areaFrom"]')?.value ?? "" };
@@ -688,6 +697,8 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
 
   if (answers.finalChance) answers.finalChanceLife = life;
+  if (answers.moraleGuard) await actor.setFlag("dbu-ttrpg", "moraleClashed", game.combat?.id ?? "none");
+  else delete answers.moraleGuard;
   // What the two Majin Traits put on its Wound Roll, and their uses spent.
   const woundExtra = [];
   if (answers.maliceBacklash) {
@@ -2016,6 +2027,9 @@ export function definitionOf(item) {
     godStrikeProfile: item.system.godStrikeProfile ?? "",
     // God Finisher, the door - not its Technique, whose mark is under `signature`.
     ...(item.system.godFinisher ? { godFinisher: true } : {}),
+    // Quick Learner's: a Copied Technique, and one that came from it at all (Copied, or kept for its TP).
+    ...(item.getFlag?.("dbu-ttrpg", "copied") ? { copied: true } : {}),
+    ...(item.getFlag?.("dbu-ttrpg", "fromQuickLearner") ? { fromQuickLearner: true } : {}),
     transforms: item.system.transforms,
     stressPerAction: Number(item.system.stressPerAction) || 0,
     noStressTest: item.system.noStressTest,
@@ -4314,8 +4328,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       declared = { ...declared, ...asked };
     }
 
+    // Majin See, Majin Do: "For Copied Techniques, you may use either your Force or Magic Modifier as the Damage
+    // Attribute" - whichever is not the Foundation's own.
+    const copiedAttribute = maneuver.copied && (actor.system.effects?.slots?.["quickLearner.copiedAttribute"] === true);
     const offers = [
       ...damageAttributeOffers(Array.from(actor.items ?? []), maneuver),
+      ...(copiedAttribute ? ["force", "magic"].filter(key => key !== DBUCharacterData.FOUNDATIONS[declared.foundation]?.attribute)
+        .map(attribute => ({ attribute, source: "Majin See, Majin Do" })) : []),
       // Brutal Blitz: "If you move a number of Squares equal to your Boosted Speed through the
       // effects of Charging Assault, you may use your Agility as the Damage Attribute."
       ...(((declared.advantages ?? []).includes("brutal-blitz")
@@ -4371,7 +4390,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // the target is standing: an Energy Attack needs a Force Score of 3 whoever it is
     // aimed at, and whether it is aimed at anybody.
     // Unless it is a Favored Element: "You may use your Favored Element even if your Magic Score is below 3."
-    const wrongFoundation = declared && !favoredElement(actor, declared.profile) && whyNotThisFoundation(actor, declared.foundation,
+    // Majin See, Majin Do: "ignore the Force Score prerequisite to use Energy Attacks" with a Copied Technique.
+    const copiedEnergy = maneuver.copied && (declared?.foundation === "energy")
+      && (actor.system.effects?.slots?.["quickLearner.copiedAttribute"] === true);
+    const wrongFoundation = declared && !copiedEnergy && !favoredElement(actor, declared.profile) && whyNotThisFoundation(actor, declared.foundation,
       DBUCharacterData.FOUNDATIONS[declared.foundation]?.label);
     if (wrongFoundation) {
       ui.notifications.warn(wrongFoundation);

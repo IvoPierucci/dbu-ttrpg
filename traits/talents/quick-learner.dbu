@@ -1,0 +1,22 @@
+id: quick-learner
+name: Quick Learner
+prerequisites: Scholarship or Personality Score of 4+
+description: >
+  You are able to pick up the techniques of others, just by seeing them in action.
+text: >
+  Quick Learner: You are able to pick up the techniques of others, just by seeing them in action.
+  –Prerequisites: Scholarship or Personality Score of 4+
+  (1)-[Triggered, 1/Round, Ruling]: When any Character uses a Signature Technique, you can declare that it is a ‘Copied Technique’. You gain access to that Copied Technique for the duration of this Combat Encounter.
+  (2)-[Automatic]: You can only possess 1 Copied Technique at any one time, if you attempt to gain an additional Copied Technique beyond the maximum you can possess, you must choose to lose access to another Copied Technique you possess.
+  (3)-[Passive]: If a Signature Technique is a Copied Technique, reduce your Wound Rolls by 2(T) when using that Signature Technique.
+  (4)-[Triggered]: At the end of the Combat Encounter, you can pay the TP Cost of any Copied Technique to gain access to it permanently. If you do, it stops being a Copied Technique.
+
+---
+
+# (1) A Signature Technique used by anyone in a Combat Encounter: "Copy" offered on its card, once a Round, counted when
+# taken - the Technique copied onto you as a Maneuver Item, marked Copied, its TP not yours.
+# (2) Holding one already: losing it is asked first, and copying the new one is the answer.
+# (3) Its Wound Roll 2(T) less (chat.mjs woundParts).
+# (4) As the Encounter ends: keep it - its TP yours from then on, no longer Copied - or let it go (combat.mjs).
+[passive]
+allow quickLearner.copy;

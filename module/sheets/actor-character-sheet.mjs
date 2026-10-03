@@ -1643,7 +1643,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       };
     });
 
-    const built = items.filter(isBuiltTechnique).map(signatureOfTechnique);
+    // Quick Learner's Copied Techniques are not the character's: none of their TP, and not counted among their own.
+    const built = items.filter(isBuiltTechnique).filter(item => !item.getFlag?.("dbu-ttrpg", "copied")).map(signatureOfTechnique);
     const counted = built.filter(sig => !sig.fromTransformation);
     const ultimates = counted.filter(sig => isUltimateLevel(sig.level)).length;
     const supers = counted.filter(sig => !isUltimateLevel(sig.level)).length;

@@ -18,6 +18,14 @@ text: >
 
 ---
 
-# Everything here is about the Quick Learner Talent and its Copied Techniques, neither of which is written yet: its 3rd
-# effect ignored, the Restricted Disadvantages ignored on what it gave, the Damage Attribute and the Force Score on a Copied
-# Technique, and the Morale Clash for Guard Down - all wait on the Talent's text.
+[passive]
+# (1) Quick Learner's 3rd effect ignored: no 2(T) off a Copied Technique's Wound Roll.
+allow quickLearner.noPenalty;
+# (2) Restricted - Environment, State and Weather not kept to, on a Technique from Quick Learner - Copied, or kept for its
+# TP (technique-use.mjs). Auras are not in this system yet.
+allow quickLearner.ignoreRestricted;
+# (3) A Copied Technique: Force or Magic Modifier as its Damage Attribute, asked; no Force Score 3 for an Energy one.
+allow quickLearner.copiedAttribute;
+# (4) A Copied Technique declared: the Morale Clash asked with it, once an Encounter - each target it is aimed at, the
+# attack held till they are settled; won, Guard Down against it (chat.mjs, as the Trap Attack's).
+allow quickLearner.moraleClash;
