@@ -1,0 +1,37 @@
+id: transformation
+name: Transformation
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+tags: transformation
+# Forms, Enhancements and their Aspects are not built yet (the user's ruling, 2026-10-03): the Transformation and its
+# Stress Test Requirement are asked, the Stress Test rolled from its window (1d10 + Stress Bonus) and settled on the card
+# (chat.mjs askTransformation / postTransformation). Failed: Stress Exhaustion, "as per the rules on Stress Tests".
+# Made: entering it - and what entering it does (Legend Realized, Burst Limit), leaving a Form or an Enhancement for it,
+# the Tier of Power Requirement - is the table's until Transformations exist. Tagged `transformation`, so Stress
+# Exhaustion's "you cannot enter any Enhancement or Form" refuses it. Exploitable only with the Long Transformation
+# Aspect - not built either, so none.
+transforms: true
+source: Core Rule
+description: >
+  Roll the Stress Test for a Form or Enhancement: made, you enter it; failed, Stress Exhaustion.
+text: >
+  Transformation Maneuver: Enter a Transformation!
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: N/A (Unless that Transformation has the Long Transformation Aspect — see Aspects).
+  –Effect: Roll the Stress Test for a Form or Enhancement you have access to and meet the Tier of Power Requirements
+  for. If you match or exceed the Stress Test Requirement, you enter the Transformation and apply any effects that
+  occur when entering that Transformation (such as Legend Realized and Burst Limit). If you fail, you suffer from Stress
+  Exhaustion as per the rules on Stress Tests (see: Failing a Stress Test, Transformation Rules).
+
+  If you are already in a Form, you may attempt to transform into another Form or Transcended Enhancement. Upon
+  succeeding, before you apply any effects or properly enter this Transformation, leave the Form you were in previously.
+
+  If you are already in an (Non-Transcended) Enhancement, you may attempt to transform into another (Non-Transcended)
+  Enhancement. If you do, and have reached the maximum number of Transformations you can use concurrently, upon
+  succeeding, before you apply any effects or properly enter this Transformation, leave an Enhancement you were in
+  previously.

@@ -117,6 +117,13 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       godStrikeProfile: new fields.StringField({ required: true, blank: true, initial: "" }),
       /** God Finisher: the Signature Technique Maneuver for its own Technique alone. */
       godFinisher: new fields.BooleanField({ required: true, initial: false }),
+      /**
+       * The Transformation Maneuver, and what functions as it: its Stress Test, `stressPerAction` off the Stress Bonus for
+       * each Action spent (Divine Pulse), or none to roll (Holy Transformation).
+       */
+      transforms: new fields.BooleanField({ required: true, initial: false }),
+      stressPerAction: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      noStressTest: new fields.BooleanField({ required: true, initial: false }),
       /** A second limit over the usage limit - Divine Movement's "[1/Round, 3/Encounter]". 0 is none. */
       encounterLimit: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       /** Its KP Cost "for each Action spent" - Divine Pulse's 1(bT). A Unique Ability's is under `unique`. */

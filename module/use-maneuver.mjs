@@ -1974,6 +1974,9 @@ export function definitionOf(item) {
     godStrikeProfile: item.system.godStrikeProfile ?? "",
     // God Finisher, the door - not its Technique, whose mark is under `signature`.
     ...(item.system.godFinisher ? { godFinisher: true } : {}),
+    transforms: item.system.transforms,
+    stressPerAction: Number(item.system.stressPerAction) || 0,
+    noStressTest: item.system.noStressTest,
     ...(item.system.godStrikeProfile ? { appliedProfiles: [item.system.godStrikeProfile] } : {}),
     kiCostPerTier: item.system.kiCostPerTier,
     /**
@@ -3887,6 +3890,22 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return true;
   }
 
+  // The Transformation Maneuver - and Divine Pulse and Holy Transformation, which function as it: which Transformation
+  // and its Stress Test asked and rolled before anything is paid, then the price, and the card settling it.
+  if (maneuver.transforms) {
+    const { askTransformation, postTransformation } = await import("./chat.mjs");
+    const into = await askTransformation(actor, maneuver, actionsSpent);
+    if (!into) return false;
+    const price = maneuverKiCost(maneuver, null, actor)
+      + (maneuver.kiPerAction ? (Math.max(1, Number(actionsSpent) || 1) - 1) * maneuverKiCost(maneuver, null, actor) : 0);
+    if ((price > 0) && !await spendManeuverCost(actor, maneuver, price)) return false;
+    await payActions(actor, maneuver, actionsSpent);
+    await recordManeuverUse(actor, maneuver);
+    await recordManeuverType(actor, maneuver.type,
+      { messageId: (await postTransformation(actor, maneuver, into, actionsSpent))?.id });
+    return true;
+  }
+
   // Divine Movement: its move announced, no Exploit, the Movement Maneuver for one's own effects.
   if (maneuver.divineMovement) {
     const { takeDivineMovement } = await import("./chat.mjs");
@@ -5748,6 +5767,9 @@ export function maneuverItemFrom(definition) {
       godBind: Boolean(definition.godBind),
       godStrike: Boolean(definition.godStrike),
       godFinisher: Boolean(definition.godFinisher),
+      transforms: Boolean(definition.transforms),
+      stressPerAction: Number(definition.stressPerAction) || 0,
+      noStressTest: Boolean(definition.noStressTest),
       encounterLimit: Number(definition.encounterLimit) || 0,
       kiPerAction: definition.kiPerAction === true,
       toss: Boolean(definition.toss),

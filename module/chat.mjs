@@ -2244,9 +2244,8 @@ async function chooseDirtyTrick(message, clash, choice) {
 /**
  * What the trick came to, said at the table.
  *
- * The rider is said rather than enforced, and could not be enforced anyway: there is no
- * Transformation Maneuver in this system, so half of the choice it demands does not exist
- * to be offered.
+ * The rider is said rather than enforced: which of the two they use on their next turn is
+ * theirs to say, and nothing here watches a next turn for a Maneuver that did not come.
  */
 function trickNote(trick, tricker, target, against, clash) {
   if (trick.condition === "blinded") {
@@ -19535,6 +19534,72 @@ export async function takeDivineMovement(actor, maneuver) {
       + "within their Boosted Speed. No Exploit.")}</div>` });
   await (await import("./hidden.mjs")).endFakeDeath(actor, "used the Movement Maneuver");
   return true;
+}
+
+/**
+ * The Transformation Maneuver, asked: which Transformation and its Stress Test Requirement (Forms and Enhancements are
+ * not built yet - the user's ruling), then its Stress Test from the roll window - 1d10 plus the Stress Bonus, less
+ * Divine Pulse's 1 for each Action spent. Holy Transformation rolls none. Closed anywhere, nothing is used.
+ */
+export async function askTransformation(actor, maneuver, actionsSpent = 1) {
+  const rolls = !maneuver.noStressTest;
+  const asked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Transformation</span>
+        <input type="text" name="name" autofocus/></label>
+      ${rolls ? `<label class="dbu-respond-option"><span class="dbu-respond-name">Stress Test Requirement</span>
+        <input type="number" name="requirement" min="0" step="1"/></label>` : ""}`,
+    buttons: [
+      { action: "confirm", label: maneuver.name, default: true, callback: (event, button, dialog) => ({
+        name: String(dialog.element.querySelector('input[name="name"]')?.value ?? "").trim(),
+        requirement: Number(dialog.element.querySelector('input[name="requirement"]')?.value) }) },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!asked || (typeof asked !== "object") || !asked.name) return null;
+  if (!rolls) return { name: asked.name, roll: false };
+  if (!Number.isFinite(asked.requirement)) {
+    ui.notifications.warn(`${maneuver.name}: its Stress Test Requirement is a number.`);
+    return null;
+  }
+  const minus = (Number(maneuver.stressPerAction) || 0) * Math.max(1, Number(actionsSpent) || 1);
+  const parts = [{ label: "Stress Bonus", value: Number(actor.system.stressBonus) || 0, workingsKey: "stressBonus" },
+    ...(minus ? [{ label: maneuver.name, value: -minus }] : [])];
+  const ready = await prepareRoll(actor, [], `${asked.name}: Stress Test`, "", {
+    offerWilling: false, formula: { base: DBUCharacterData.BASE_DIE, parts: windowParts(actor, parts) } });
+  if (!ready) return null;
+  return { name: asked.name, roll: true, requirement: asked.requirement, parts };
+}
+
+/**
+ * The Stress Test, rolled on the card: "If you match or exceed the Stress Test Requirement, you enter the
+ * Transformation ... If you fail, you suffer from Stress Exhaustion." Entering - and what entering does - is the
+ * table's until Transformations exist; Stress Exhaustion is applied. The roll itself only to who may see it.
+ */
+export async function postTransformation(actor, maneuver, into, actionsSpent = 1) {
+  const speaker = ChatMessage.getSpeaker({ actor });
+  const said = String(maneuver.says ?? "").trim()
+    .replace("1(T) higher for each Action spent", `${Math.max(1, Number(actionsSpent) || 1)}(T) higher`);
+  const enters = `${maneuver.name}: ${actor.name} enters ${into.name}.${said ? ` ${said}` : ""}`;
+  if (!into.roll) {
+    return ChatMessage.create({ speaker,
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(enters)}</div>` });
+  }
+  const formula = [DBUCharacterData.BASE_DIE, ...into.parts.map(part => `${part.value < 0 ? "-" : "+"} ${Math.abs(part.value)}`)]
+    .join(" ");
+  const roll = await new Roll(formula).evaluate();
+  await roll.toMessage({ speaker, whisper: whisperTo(actor),
+    flavor: `${into.name}: Stress Test - ${roll.total} against ${into.requirement}` });
+  if (roll.total >= into.requirement) {
+    return ChatMessage.create({ speaker,
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(enters)}</div>` });
+  }
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "stress-exhaustion", 1);
+  return ChatMessage.create({ speaker, content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+    `${maneuver.name}: ${actor.name} fails the Stress Test for ${into.name} - Stress Exhaustion.`)}</div>` });
 }
 
 /**

@@ -10,13 +10,15 @@ requiresTarget: false
 usageLimit: 1/round
 # A God Maneuver: open where an effect grants it, only in God Ki, 1(bT) Divine Ki Points for each of its 1-2 Actions
 # (maneuvers.mjs whyNotGod, spendManeuverCost; use-maneuver.mjs kiPerAction). "This Maneuver functions as the
-# Transformation Maneuver and gains its effects" - and there is no Transformation Maneuver yet: until Transformations are
-# built, its card says what it does and the table enters the Transformation, the Stress Bonus down and the Force/Magic
-# Modifier Bonus up by hand.
+# Transformation Maneuver and gains its effects" - its Stress Test, 1 off the Stress Bonus for each Action spent
+# (stressPerAction). The FO/MA Modifier Bonus "until you leave that Transformation" is said on the card: Transformations
+# are not built yet.
 godManeuver: true
+transforms: true
+stressPerAction: 1
+tags: transformation
 says: >
-  As the Transformation Maneuver. For each Action spent: Stress Bonus 1 lower for it, and that Transformation's Attribute
-  Modifier Bonus (FO/MA) 1(T) higher until you leave it.
+  That Transformation's Attribute Modifier Bonus (FO/MA) is 1(T) higher for each Action spent, until you leave it.
 source: Core Rule
 description: >
   A God Maneuver: the Transformation Maneuver, each Action spent on it 1 less Stress Bonus for it and 1(T) more FO/MA
