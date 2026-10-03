@@ -1,5 +1,34 @@
 <div class="tab {{tabs.traits.cssClass}}" data-group="primary" data-tab="traits">
 
+  {{! Every Racial Trait of the race is had - a Subrace's only for its own; one lost is kept, dimmed, to be had again. }}
+  <details class="trait-group" data-section="racialTraits"
+           {{#if openSections.racialTraits}}open{{/if}}>
+    <summary>
+      Racial Traits
+      <span class="trait-count">{{racialTraits.length}}</span>
+    </summary>
+
+    {{#if racialTraits.length}}
+    <ul class="trait-list">
+      {{#each racialTraits as |trait|}}
+      <li class="trait {{#unless trait.taken}}trait-lost{{/unless}}">
+        <div class="trait-head">
+          <span class="trait-name">{{trait.name}}</span>
+          {{#if trait.kind}}<span class="trait-prereq">{{trait.kind}}</span>{{/if}}
+          <button type="button" class="trait-control" data-action="toggleRacialTrait" data-trait="{{trait.id}}"
+                  data-tooltip="{{#if trait.taken}}Lose this Racial Trait{{else}}Lost - have it again{{/if}}">{{#if trait.taken}}&times;{{else}}&#8635;{{/if}}</button>
+        </div>
+        {{#if trait.description}}
+        <div class="trait-description">{{trait.description}}</div>
+        {{/if}}
+      </li>
+      {{/each}}
+    </ul>
+    {{else}}
+    <p class="tab-placeholder">{{#if hasRace}}No Racial Traits written for this race yet.{{else}}No race chosen yet.{{/if}}</p>
+    {{/if}}
+  </details>
+
   {{! Talents are Items the character owns: drag one here to grant it. }}
   <details class="trait-group" data-section="talents"
            {{#if openSections.talents}}open{{/if}}>

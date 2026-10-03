@@ -546,7 +546,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   // Anything not named here starts closed - States and Combat Conditions among them,
   // which is what keeps a long checklist from taking over the Combat tab. The Maneuver
   // groups default the other way, in _prepareManeuverGroups.
-  #openSections = { talents: true };
+  #openSections = { racialTraits: true, talents: true };
 
   /** ApplicationV2 does not wire drag and drop itself; each sheet binds its own. */
   #dragDrop = this.options.dragDrop.map(config => new foundry.applications.ux.DragDrop.implementation({
@@ -1268,6 +1268,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       chosen: (this.document.system.alignment ?? 0) === value }));
     context.alignmentNow = DBUCharacterData.ALIGNMENTS[this.document.system.alignment ?? 0];
     context.racialTraits = this.#racialTraitChoices();
+    context.hasRace = Boolean(this.actor.system.race);
 
     // What is being charged, if anything. Named rather than shown as an id, since the
     // point of saying it is that the reader knows which attack is waiting.
@@ -4768,6 +4769,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         return {
           id: trait.id,
           name: trait.name,
+          kind,
+          description: trait.text || trait.description || "",
           text: [kind, trait.text || trait.description || ""].filter(Boolean).join(" - "),
           taken: had.has(trait.id)
         };

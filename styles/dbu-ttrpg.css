@@ -1516,6 +1516,15 @@
   margin-bottom: 2px;
 }
 
+/* A Racial Trait lost: kept on the list, dimmed, to be had again. */
+.dbu-ttrpg .trait.trait-lost {
+  opacity: 0.5;
+}
+
+.dbu-ttrpg .trait.trait-lost .trait-name {
+  text-decoration: line-through;
+}
+
 /* --- Skills ---------------------------------------------------------------- */
 
 .dbu-ttrpg .skill-group {
