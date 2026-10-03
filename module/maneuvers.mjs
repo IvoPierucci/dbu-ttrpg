@@ -1711,6 +1711,19 @@ export async function spendManeuverCost(actor, maneuver, costOverride = null) {
 /** What was last paid in Divine Ki for a Maneuver, so taking it back gives back Divine Ki. */
 const DIVINE_PAID = new Map();
 
+/** The pools a price comes out of, as they stand - read again after paying, for what the paying took (paidSince). */
+export function poolSnapshot(actor) {
+  return { ki: Number(actor?.system?.ki?.value) || 0, capacity: Number(actor?.system?.capacity?.spent) || 0,
+    divine: Number(actor?.system?.divineKi?.value) || 0 };
+}
+
+/** What was paid since that snapshot: Ki Points, Capacity and Divine Ki Points - Divine Counter gives them back. */
+export function paidSince(actor, before) {
+  const now = poolSnapshot(actor);
+  return { ki: Math.max(0, before.ki - now.ki), capacity: Math.max(0, now.capacity - before.capacity),
+    divine: Math.max(0, before.divine - now.divine) };
+}
+
 export async function refundManeuverCost(actor, maneuver) {
   const divine = DIVINE_PAID.get(`${actor.uuid}:${maneuver.id ?? maneuver.name}`);
   if (divine) {

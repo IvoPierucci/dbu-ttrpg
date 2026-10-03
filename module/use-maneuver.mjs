@@ -29,6 +29,8 @@ import {
   recordManeuverUse,
   spendManeuverCost,
   refundManeuverCost,
+  poolSnapshot,
+  paidSince,
   squaresAway,
   whyNotAnotherAbsolute,
   whyNotAnotherGrapple,
@@ -4739,6 +4741,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
   // The Ki an Energy-Suction Device stores may pay for the whole of an Energy or Magic
   // attack instead, off the character's Capacity.
+  // What paying takes, kept on the attack - Divine Counter cancels one and gives it back.
+  const before = poolSnapshot(actor);
   const fromStore = crossing ? false : await payFromStore(actor, maneuver, declared, price);
   if (fromStore === null) return false;
 
@@ -4758,6 +4762,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       "system.charges": (Number(moving.store.system.charges) || 0) - moving.fromStore });
   }
   if (!crossing) await spendLifeWager(actor, declared);
+  if (!crossing && declared) declared = { ...declared, paid: paidSince(actor, before) };
   if (declared?.finalChanceLife) {
     await actor.update({ "system.life.value": 0 }, { dbuDefeatHeld: true });
     await actor.setFlag("dbu-ttrpg", "finalChance", "pending");

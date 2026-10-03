@@ -1,0 +1,28 @@
+id: divine-counter
+name: Divine Counter
+type: counter
+actionCost: 1
+kiCostPerTier: 2
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A God Maneuver: open where an effect grants it, only in God Ki, its 2(T) paid in Divine Ki Points (maneuvers.mjs
+# whyNotGod, spendManeuverCost). Taken in Respond against an attack at you (chat.mjs playDivineCounter): that attack held,
+# and a Basic Attack out of sequence at its maker offered on its card. Through a Health Threshold or Defeated by it, their
+# attack is cancelled - the Ki Points, Divine Ki Points and Capacity it took given back, its Actions not. Otherwise, or
+# let through, it goes on, answered with your Dodge.
+godManeuver: true
+divineCounter: true
+source: Core Rule
+description: >
+  A God Maneuver: against an attack at you, a Basic Attack at its maker out of sequence - through a Health Threshold or
+  Defeated, their attack is cancelled, its Ki Points and Capacity back.
+text: >
+  Divine Counter [1/Round]: Repel an enemy’s attack with holy power.
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –DKP Cost: 2(T)
+  –Effect: If you are targeted by an Opponent’s Attacking Maneuver, use the Basic Attack Maneuver against that Opponent as
+  an Out-of-Sequence Maneuver. If this Attacking Maneuver knocks your Opponent through a Health Threshold or Defeats them,
+  their Attacking Maneuver is canceled. They regain any Ki Points and Capacity Rate spent on that Attacking Maneuver, but
+  still lose the Action Cost.

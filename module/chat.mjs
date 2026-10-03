@@ -64,6 +64,8 @@ import {
   whyNotSpecial,
   maxKiWager,
   refundManeuverCost,
+  poolSnapshot,
+  paidSince,
   spendManeuverCost,
   maneuverUsesLeft,
   secondSightOn,
@@ -5781,6 +5783,11 @@ function instantManeuvers() {
   return allManeuvers().filter(maneuver => maneuver.type === "instant");
 }
 
+/** A God Maneuver is listed only where an effect grants it, as on the sheet; every other Maneuver always. */
+function godListed(actor, maneuver) {
+  return !maneuver.godManeuver || (actor?.system?.effects?.slots?.[`maneuver.${maneuver.id}`] === true);
+}
+
 function counterManeuvers() {
   return allManeuvers().filter(maneuver => maneuver.type === "counter");
 }
@@ -6226,7 +6233,7 @@ async function respondDialog(message, respondable) {
       ownCounters.push({ ...maneuver, id: `mirror:${item.id}`, type: "counter", actionCost: 1, mirror: true,
         name: `${item.name} (Mirrored Attack)`, source: `Unique Ability - ${maneuverKiCost(maneuver, null, actor)} KP` });
     }
-    const counters = [...counterManeuvers(), ...ownCounters].map(maneuver => {
+    const counters = [...counterManeuvers().filter(maneuver => godListed(actor, maneuver)), ...ownCounters].map(maneuver => {
       // A Counter Maneuver answers an Attacking Maneuver aimed at you, so a character
       // who is not the target is shown it but cannot take it.
       let blocked = !unresolved || waiting;
@@ -6288,6 +6295,16 @@ async function respondDialog(message, respondable) {
       if (!blocked && maneuver.itemId && (maneuverUsesLeft(actor, maneuver) <= 0)) {
         blocked = true;
         reason = "once per Combat Round";
+      }
+
+      // A God Maneuver: only in God Ki, and its own limit - Divine Counter's once per Combat Round.
+      if (!blocked && maneuver.godManeuver) {
+        reason = whyNotSpecial(actor, maneuver) ?? "";
+        blocked = Boolean(reason);
+        if (!blocked && (maneuverUsesLeft(actor, maneuver) <= 0)) {
+          blocked = true;
+          reason = "once per Combat Round";
+        }
       }
 
       // Energy Cancel needs a charge to let go of, whoever is looking at it.
@@ -6354,13 +6371,16 @@ async function respondDialog(message, respondable) {
       ? `<p class="dbu-respond-note">This maneuver cannot be answered with an Instant.</p>`
       : answered.has(actor.uuid)
       ? `<p class="dbu-respond-note">Already answered - cancel it on the card to play another.</p>`
-      : nothing("instant") + instantManeuvers().map(maneuver =>
+      : nothing("instant") + instantManeuvers().filter(maneuver => godListed(actor, maneuver)).map(maneuver =>
           // Instant Assault: "No Instant Maneuvers can be triggered in response to this Attacking
           // Maneuver."
           attack?.technique?.features?.includes("instant-assault")
             ? option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, true, "Instant Assault")
             : (!maneuver.surge && (frozenBy(actor) || frozenTurnOf(actor)))
             ? option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, true, "time is frozen")
+            // A God Maneuver - Divine Breathing - only in God Ki.
+            : (maneuver.godManeuver && whyNotSpecial(actor, maneuver))
+            ? option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, true, whyNotSpecial(actor, maneuver))
             : option(`instant-${actor.id}`, maneuver.id, maneuver.name, maneuver.source, false, "")
         ).join("");
 
@@ -6606,7 +6626,21 @@ function option(name, value, label, note, disabled, reason) {
 async function playInstant(message, actor, maneuverId) {
   const maneuver = getManeuver(maneuverId);
   if (!maneuver) return;
-  if (!await spendManeuverCost(actor, maneuver)) return;
+  // A Surge - the Surge Maneuver, Divine Breathing - is taken here, its limit and price with it.
+  if (maneuver.surge) {
+    const why = whyNotSpecial(actor, maneuver);
+    if (why) return ui.notifications.warn(why);
+    if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} has no uses left.`);
+    const cost = maneuverKiCost(maneuver, null, actor);
+    if ((cost > 0) && !await spendManeuverCost(actor, maneuver, cost)) return;
+    if (!await takeSurge(actor, { source: maneuver.name, kind: maneuver.surgeKind || null,
+      dicePerBaseTier: Number(maneuver.surgeDicePerBaseTier) || 0 })) {
+      if (cost > 0) await refundManeuverCost(actor, maneuver);
+      return;
+    }
+    await recordManeuverUse(actor, maneuver);
+  }
+  else if (!await spendManeuverCost(actor, maneuver)) return;
 
   // An Instant played into a card is an Instant played, and it was not recorded as one -
   // which is why the rule had to be inferred from the message log instead, and why
@@ -6653,6 +6687,7 @@ async function playCounter(message, actor, answer, attack) {
   const maneuver = getManeuver(answer);
   if (!maneuver) return;
   if (maneuver.duel) return enterDuel(message, actor);
+  if (maneuver.divineCounter) return playDivineCounter(message, actor, maneuver);
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
   await recordManeuverType(actor, "counter");
@@ -9424,6 +9459,87 @@ async function playTechniqueBlock(message, actor, itemId) {
     defences: [...others, { uuid: actor.uuid, defence: "dodge", wager: 0, foundation: "energy", parryWith: [] }],
     ready: [...new Set([...(fresh.ready ?? []), actor.uuid])]
   });
+}
+
+/**
+ * Divine Counter, played from Respond: "If you are targeted by an Opponent's Attacking Maneuver, use the Basic Attack
+ * Maneuver against that Opponent as an Out-of-Sequence Maneuver." Its DKP and Counter Action paid, its once per Combat
+ * Round counted; this attack held - answered with your Dodge once it goes on - and the Basic Attack offered on its card.
+ */
+async function playDivineCounter(message, actor, maneuver) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || endedByDuel(attack) || attack.divineHold) return;
+  const why = whyNotSpecial(actor, maneuver);
+  if (why) return ui.notifications.warn(why);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} is once per Combat Round.`);
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+    await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const others = (fresh.defences ?? []).filter(entry => entry.uuid !== actor.uuid);
+  await settleAttack(message, {
+    ...fresh,
+    divineHold: { pending: true, uuid: actor.uuid, name: actor.name, maneuverName: maneuver.name },
+    defences: [...others, { uuid: actor.uuid, defence: "dodge", wager: 0, foundation: "energy", parryWith: [] }],
+    ready: [...new Set([...(fresh.ready ?? []), actor.uuid])]
+  });
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", targetUuid: fresh.attackerUuid, reason: maneuver.name,
+    grants: { divineCounter: { cardId: message.id, attackerUuid: fresh.attackerUuid } } } });
+}
+
+/**
+ * Divine Counter's Basic Attack done with: "If this Attacking Maneuver knocks your Opponent through a Health Threshold or
+ * Defeats them, their Attacking Maneuver is canceled. They regain any Ki Points and Capacity Rate spent on that Attacking
+ * Maneuver, but still lose the Action Cost." Otherwise - or let through - their attack goes on.
+ */
+async function divineCounterRelease(cardId, cancel) {
+  const message = game.messages.get(cardId ?? "");
+  const attack = message?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.divineHold?.pending) return;
+  const released = { ...attack, divineHold: { ...attack.divineHold, pending: false } };
+  if (!cancel) return settleAttack(message, released);
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const paid = attack.paid ?? {};
+  const ki = Number(paid.ki) || 0;
+  const capacity = Number(paid.capacity) || 0;
+  const divine = Number(paid.divine) || 0;
+  if (attacker && (ki || capacity || divine)) {
+    const dkp = Number(attacker.system.divineKi?.value) || 0;
+    await requestActorUpdate(attacker, {
+      "system.ki.value": Math.min(attacker.system.ki.max, attacker.system.ki.value + ki),
+      "system.capacity.spent": Math.max(0, attacker.system.capacity.spent - capacity),
+      ...(divine ? { "system.divineKi.value": Math.min(Number(attacker.system.divineKi?.max) || (dkp + divine), dkp + divine) } : {})
+    });
+  }
+  return requestEdit(message, { type: "attack", attack: { ...released, divineCancelled: true } });
+}
+
+/** The Basic Attack, rolled: missed, nothing to cancel by; hit, settled once its Damage is applied. */
+async function divineCounterResolved(attack, branches) {
+  const own = branches.find(entry => entry.uuid === attack.divineCounter?.attackerUuid);
+  if (!own?.hit || isAbsoluteMiss(own)) await divineCounterRelease(attack.divineCounter.cardId, false);
+}
+
+/** The held attack's button, for the one countering: no Basic Attack after all, and it goes on. */
+function divineCounterButtons(message, html, attack) {
+  if (!attack.divineHold?.pending) return;
+  const counterer = fromUuidSync(attack.divineHold.uuid);
+  if (!counterer?.isOwner && !game.user.isGM) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Let it through";
+  button.dataset.tooltip = `No ${attack.divineHold.maneuverName} Basic Attack: this attack goes on`;
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    return divineCounterRelease(message.id, false);
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
 }
 
 /** Stardust Barrier's KP against this attack: its 2(bT), "increase the Ki Point cost ... by 1(bT)" for each Energy Charge or rank of Power Shot. */
@@ -12844,10 +12960,12 @@ async function takeOutOfSequence(message, actor, offer) {
   }
 
   const { payFromStore } = await import("./use-maneuver.mjs");
+  const before = poolSnapshot(actor);
   const fromStore = (paysLife && price) ? await payFromStore(actor, maneuver, declared, price) : false;
   if (fromStore === null) return;
   if (price && !fromStore && !await spendManeuverCost(actor, maneuver, price)) return;
   if (paysLife) await spendLifeWager(actor, declared);
+  if (declared) declared = { ...declared, paid: paidSince(actor, before) };
 
   // An Out-of-Sequence Maneuver counts as having used another kind - unless the thing
   // that offered it was the Instant still holding you, which is what the message id is
@@ -12938,6 +13056,11 @@ async function takeOutOfSequence(message, actor, offer) {
           if (made) requestEdit(card, { type: "attack", attack: { ...made, punish: granted.punish } });
         }
         if (card && offer.provokedBy?.messageId) await punisherExploited(card, actor, offer.provokedBy, fromStore ? 0 : price);
+        // Divine Counter's Basic Attack, marked: what it does to the one it answers may cancel their attack.
+        if (granted?.divineCounter && card) {
+          const made = card.getFlag(SCOPE, ATTACK_FLAG);
+          if (made) requestEdit(card, { type: "attack", attack: { ...made, divineCounter: granted.divineCounter } });
+        }
         // Ki Deception: its Clash, at the one Opponent it targets.
         if (granted?.kiDeception && card && target) await kiDeceptionClash(actor, target, card);
         // Surprise Strike: "After concluding that Attacking Maneuver, you stop being Hidden."
@@ -12990,7 +13113,7 @@ export async function postAttack(actor, target, maneuver,
                                    superCombination = 0, powerbomb = false, areaFrom = "",
                                    extraTargets = [], freeWager = 0, unitedWith = null,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
-                                   genkiLifeforce = 0, portal = false, spiritSword = null },
+                                   genkiLifeforce = 0, portal = false, spiritSword = null, paid = null },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -13159,6 +13282,8 @@ export async function postAttack(actor, target, maneuver,
             + (reflecting ? 0 : (Number(maneuver.damageCategoryShift) || 0)),
           // Genki's is added here: gathered from Empower, and neither paid again nor counted.
           kiWager: kiWager + (Number(freeWager) || 0),
+          // What making it took from its maker's pools - Divine Counter's cancelling gives it back.
+          paid,
           // Paid in Life Points rather than Ki. Added to the Wound Roll all the same - it
           // is a Ki Wager either way - and only the card's note says the difference.
           wagerFromLife: Boolean(wagerFromLife && kiWager),
@@ -14461,7 +14586,8 @@ async function settleAttack(message, attack) {
   // Sacrifice Play's Clash, still to be rolled: who the attack is at waits on it. Punisher Guard's Basic Attack: this
   // Exploit waits on it, and is cancelled by it.
   if (!attackIsReady(attack) || duelRunning(attack) || endedByDuel(attack) || attack.sacrifice?.pending
-    || attack.punisherHold?.pending || attack.punished || attack.trapHold?.pending) {
+    || attack.punisherHold?.pending || attack.punished || attack.trapHold?.pending
+    || attack.divineHold?.pending || attack.divineCancelled) {
     return requestEdit(message, { type: "attack", attack });
   }
   return resolveAttack(message, attack);
@@ -14819,6 +14945,8 @@ async function resolveAttack(message, attack) {
   if (attack.provokedBy?.messageId) await paraParaHit(attack, branches);
   // Punisher Guard's Basic Attack: missed, the Exploit it answers goes on.
   if (attack.punish) await punishResolved(attack, branches);
+  // Divine Counter's Basic Attack: missed, the attack it answers goes on.
+  if (attack.divineCounter) await divineCounterResolved(attack, branches);
   // Trap Attack: its Guard Down, "for the duration of that Attacking Maneuver" - rolled, and gone.
   if ([attack.trapGuardOn ?? []].flat().length) await trapGuardOff(attack);
   // Tornado Attack: an Opponent's attack that missed the one Spinning - their Basic Attack back, offered.
@@ -15197,6 +15325,7 @@ function awaitingWhom(attack) {
   if (attack.sacrifice?.pending) waiting.push(`${attack.sacrifice.casterName}'s Sacrifice Play`);
   if (attack.punisherHold?.pending) waiting.push(`${attack.punisherHold.punisherName}'s Punisher Guard`);
   if (attack.trapHold?.pending) waiting.push(`${attack.trapHold.name}'s Clash`);
+  if (attack.divineHold?.pending) waiting.push(`${attack.divineHold.name}'s ${attack.divineHold.maneuverName}`);
   return waiting.length ? `Waiting on ${waiting.map(name => Handlebars.escapeExpression(name)).join(", ")}` : "Rolling";
 }
 
@@ -18437,6 +18566,11 @@ async function applyAttackDamage(message, target, attack) {
   if (attack.punish && (attack.punish.exploiterUuid === target.uuid)) {
     await punishRelease(attack.punish.cardId, (knockedThrough || (floor <= 0)) && (damage > 0) && !isAbsoluteMiss(own));
   }
+  // Divine Counter's Basic Attack, landed: through a Health Threshold or Defeated, the attack it answers is cancelled.
+  if (attack.divineCounter && (attack.divineCounter.attackerUuid === target.uuid)) {
+    await divineCounterRelease(attack.divineCounter.cardId,
+      (knockedThrough || (floor <= 0)) && (damage > 0) && !isAbsoluteMiss(own));
+  }
   if (armsUser && (damage > 0) && !isAbsoluteMiss(own)) {
     if (armsUser.uuid === target.uuid) {
       if (knockedThrough) await reducedMomentum(target);
@@ -19676,14 +19810,17 @@ function renderAttack(message, html) {
         : `${attack.duel.initiatorName} won the Duel: the attack is over.`)
       : attack.punished
       ? "Punisher Guard: cancelled - its Ki Points are regained, its Counter Action is not."
+      : attack.divineCancelled
+      ? "Divine Counter: cancelled - its Ki Points and Capacity are regained, its Action Cost is not."
       : attack.unitedFailed
       ? `United Attack: ${Handlebars.escapeExpression(attack.unitedWith?.name ?? "")} did not join - `
         + `${Handlebars.escapeExpression(attack.maneuverName)} fails, and its Action and Ki are regained.`
       : result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
-  if (attack.unitedFailed || attack.punished) return;
+  if (attack.unitedFailed || attack.punished || attack.divineCancelled) return;
   dimensionalHoleButtons(message, html, attack);
   sacrificeButtons(message, html, attack);
+  divineCounterButtons(message, html, attack);
   if (endedByDuel(attack)) return;
 
   // An attack with an area reaches more than the one it was aimed at, and who it
