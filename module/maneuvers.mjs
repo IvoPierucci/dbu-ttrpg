@@ -2312,6 +2312,7 @@ export function whyNotModify(modifier, base) {
  * @returns {null|string} null if it may be used, otherwise why it may not
  */
 export function whyNotSpecial(actor, maneuver) {
+  if (maneuver?.godManeuver) return whyNotGod(actor, maneuver);
   if (!maneuver?.special) return null;
 
   const slots = actor?.system?.effects?.slots;
@@ -2356,6 +2357,23 @@ export function whyNotSpecial(actor, maneuver) {
  * a Power Drain's Ki when it is what gives the character Power Drain, and lets them choose
  * when they had it already.
  */
+/**
+ * A God Maneuver's access: "only available to those with access to Divine Ki Points" - the God Ki State - and gained from
+ * whatever grants that one, each in its own way: a Transformation's "select 3 God Maneuvers", Ultra Instinct "Sign"'s
+ * "while in Ultra Instinct 'Sign'", Divine Battle Born's "While you possess 1+ stacks". Every such effect writes
+ * `allow maneuver.<id>` - so, as a Special Maneuver an effect hands over, it is open while that effect says so. Read by
+ * the sheet (a closed one is not listed), the Maneuver's own door and out of sequence, as whyNotSpecial is.
+ */
+function whyNotGod(actor, maneuver) {
+  const slots = actor?.system?.effects?.slots;
+  if (!permits(slots, `maneuver.${maneuver.id}`)) return `Something is keeping ${actor.name} from using ${maneuver.name}.`;
+  if (!granted(slots, `maneuver.${maneuver.id}`)) {
+    return `${actor.name} has not been granted ${maneuver.name}. A God Maneuver is gained through an effect.`;
+  }
+  if (!actor?.system?.divineKi?.active) return `${maneuver.name} is a God Maneuver: only in the God Ki State.`;
+  return null;
+}
+
 export function openedWithoutGear(actor, maneuver) {
   if (granted(actor?.system?.effects?.slots, `maneuver.${maneuver.id}`)) return true;
   return Boolean((actor?.system?.specialManeuvers ?? [])
