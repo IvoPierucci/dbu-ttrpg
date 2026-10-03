@@ -1,0 +1,26 @@
+id: elastic-tentacle
+name: Elastic Tentacle
+order: 7
+category: body
+importance: secondary
+description: >
+  You don’t really have a tail, per se, but the tentacle(s) on your head sure put in work.
+text: >
+  Elastic Tentacle (Body): You don’t really have a tail, per se, but the tentacle(s) on your head sure put in work.
+  (1)-[Passive]: You gain access to the Tail Attack Special Maneuver (see — Special Maneuvers).
+  (2)-[Passive]: Increase the Strike Rolls of your Physical Attacks by 1(T).
+  (3)-[Triggered]: If you hit an Opponent with the Tail Attack Maneuver, double the amount of Diminishing Defense they suffer from that Attacking Maneuver. This effect does not stack with any other effect that would increase the amount of Diminishing Defense an Opponent may suffer from this Attacking Maneuver.
+
+---
+
+[passive]
+# (1)
+allow maneuver.tail-attack;
+# (2)
+strike.physical += 1(T);
+
+# (3) Hit with the Tail Attack: ticked in the On hitting window, the Diminishing Defense it gave them doubled - not on top of
+# another effect that already raised it (chat.mjs rollAttackWound).
+[triggered/hit, effect 3]
+requires using("tail-attack");
+attack.doublesDiminishing = true;

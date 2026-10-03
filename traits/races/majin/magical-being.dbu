@@ -1,0 +1,19 @@
+id: magical-being
+name: Magical Being
+order: 8
+category: body
+importance: secondary
+# (2) The three Unique Abilities, given free when the Trait is gained (racial.mjs giveGrants), and taken with it.
+grantsUnique: magical-materialization, healing-hands, telekinesis
+description: >
+  Your innate magical ability allows you to pick up on magic far easier than most other people.
+text: >
+  Magical Being (Body): Your innate magical ability allows you to pick up on magic far easier than most other people.
+  (1)-[Passive]: Reduce the TP Cost of all Magical Unique Abilities for you by 3.
+  (2)-[Passive]: You gain access to the Magical Materialization, Healing Hands, and Telekinesis Unique Abilities.
+
+---
+
+[passive]
+# (1) Never below half the listed cost (slots.mjs).
+unique.magical.tpCost -= 3;

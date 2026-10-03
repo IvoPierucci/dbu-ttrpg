@@ -373,7 +373,10 @@ export function hasTail(actor) {
 
 /** Grapple's Tail Restraint is open against them: access to the Tail Attack Maneuver, or a Saiyan with a Tail. */
 export function tailToGrab(actor) {
-  return hasTail(actor) || Array.from(actor?.items ?? []).some(item => (item.type === "maneuver") && item.system?.tailAttack);
+  // Access, not the Item: every character carries the Core Maneuvers, the Tail Attack among them, closed until something
+  // opens it - an effect (Elastic Tentacle's) or a Skill.
+  return hasTail(actor) || (actor?.system?.effects?.slots?.["maneuver.tail-attack"] === true)
+    || Boolean((actor?.system?.specialManeuvers ?? []).find(entry => entry.maneuver === "tail-attack")?.open);
 }
 
 /**

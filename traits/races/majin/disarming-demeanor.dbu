@@ -1,0 +1,21 @@
+id: disarming-demeanor
+name: Disarming Demeanor
+order: 6
+category: mind
+importance: secondary
+description: >
+  Your off-putting, bizarre anatomy and generally unnatural personality make you impossible to read for most normal beings, offering you the advantage in combat.
+text: >
+  Disarming Demeanor (Mind): Your off-putting, bizarre anatomy and generally unnatural personality make you impossible to read for most normal beings, offering you the advantage in combat.
+  (1)-[Triggered, 1/Round]: If you fail to hit an Opponent with an Attacking Maneuver, make a Clash (Bluff vs Perception/Intuition) against that Opponent. If you win, you may use the Basic Attack Maneuver against that Opponent as an Out-of-Sequence Maneuver.
+  (2)-[Triggered, 1/Round]: If you are hit by an Opponent’s Attacking Maneuver, make a Clash (Bluff vs Perception/Intuition) against that Opponent. If you win, instead of taking Damage, the Attacking Maneuver returns to Defense Declaration (see — Anatomy of an Attack) and you may attempt to dodge that Attacking Maneuver again or use a Counter Maneuver instead. If your Opponent’s Attacking Maneuver targeted multiple Characters, this effect only occurs for you – all other Characters targeted by that attack continue to Damage (see — Anatomy of an Attack) after it is decided if you are hit by the Attacking Maneuver or not.
+  (3)-[Triggered, 1/Encounter]: If an Opponent uses a Counter Maneuver in response to your Attacking Maneuver, you may choose to cancel your Attacking Maneuver (regaining any Ki Points spent and any effects applied to that Attacking Maneuver not counting towards any /Round or /Encounter Keywords) and use the Basic Attack Maneuver or Signature Technique Maneuver instead (against that Counter Maneuver). If you do, you may apply any Energy Charge(s) gained from the Energy Charge Maneuver to the new Attacking Maneuver, if you do not then you regain 2(T) Ki Points for each Energy Charge lost.
+
+---
+
+[passive]
+# (1) Missed an Opponent: the Clash offered on the attack's card, once a Round, counted when taken; won, the Basic
+# Attack at them out of sequence, on the Clash's card (chat.mjs offerDisarming, settleDisarming).
+allow disarming.onMiss;
+
+# (2) and (3) wait on the user's answer: how a hit goes back to Defense Declaration, and the cancelled attack's swap.

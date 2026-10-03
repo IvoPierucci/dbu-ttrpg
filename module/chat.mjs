@@ -740,6 +740,17 @@ async function applyClash(messageId, clash) {
     await settleKiDeception(message, clash);
   }
 
+  // Disarming Demeanor: won, the Basic Attack at them out of sequence.
+  if (clash.disarming && clash.result && !clash.disarming.applied) {
+    await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, disarming: { ...clash.disarming, applied: true } });
+    if (whoWonClash(clash.result) === "challenger") {
+      requestEdit(message, { type: "offer", offer: { actorUuid: clash.challengerUuid, actorName: clash.challengerName,
+        maneuverId: "basic-attack", maneuverName: "Basic Attack", targetUuid: clash.defenderUuid,
+        reason: "Disarming Demeanor - they bought it" } });
+    }
+    else await settledNote(message, `${clash.defenderName} is not taken in.`);
+  }
+
   if (clash.hides && clash.result && !clash.hides.applied) {
     await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, hides: { ...clash.hides, applied: true } });
     if (whoWonClash(clash.result) === "challenger") {
@@ -6112,7 +6123,17 @@ function relevantTriggers(actor, message, stage) {
   if (!attackParticipants(attack).includes(actor.uuid)) return [];
 
   const side = (actor.uuid === attack.attackerUuid) ? "attacker" : "target";
+  if (stage === "hit") return hitTriggers(actor, attack, side);
   return triggersFor(actor, TRIGGER_STAGES[stage]?.[side] ?? []);
+}
+
+/** On hitting, only what may answer this attack - Elastic Tentacle's `using("tail-attack")`. */
+function hitTriggers(actor, attack, side) {
+  const context = { maneuver: { id: attack.maneuverId } };
+  return triggersFor(actor, TRIGGER_STAGES.hit[side] ?? []).filter(entry => {
+    const requires = entry.program.blocks?.[0]?.requires;
+    return !requires || evaluateCondition(requires, { data: actor.system, context, errors: [] });
+  });
 }
 
 /**
@@ -12995,14 +13016,27 @@ function offerBouncyMove(message, actor, attacker) {
 }
 
 /**
+ * Disarming Demeanor (1): "If you fail to hit an Opponent with an Attacking Maneuver, make a Clash (Bluff vs
+ * Perception/Intuition) against that Opponent. If you win, you may use the Basic Attack Maneuver against that Opponent as
+ * an Out-of-Sequence Maneuver." The Clash offered on the attack's card, once a Round, counted when taken - not an
+ * Out-of-Sequence Maneuver itself.
+ */
+function offerDisarming(message, attacker, target) {
+  if (!attacker || !target || (attacker.uuid === target.uuid) || attacker.system?.defeated
+    || (attacker.system?.effects?.slots?.["disarming.onMiss"] !== true)) return;
+  offerMove(message, attacker, { key: `disarming:${target.uuid}`, flag: "disarmingMissed",
+    name: `Bluff ${target.name}`, reason: "Disarming Demeanor - Bluff vs Perception/Intuition", clashAt: target.uuid });
+}
+
+/**
  * A move an effect hands over - not an Out-of-Sequence Maneuver, so it takes no one's, and nothing here moves anybody:
  * where to is the map's. Once a Round by the mover's `flag`, counted when taken; `key` tells one from another on a card.
  */
-function offerMove(message, mover, { key, flag, name, reason }) {
+function offerMove(message, mover, { key, flag, name, reason, clashAt = "" }) {
   if (mover.getFlag?.(SCOPE, flag) === roundKey()) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.move?.key === key)) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: mover.uuid, actorName: mover.name, maneuverId: "",
-    maneuverName: name, reason, move: { key, flag } } });
+    maneuverName: name, reason, move: { key, flag, ...(clashAt ? { clashAt } : {}) } } });
 }
 
 /**
@@ -13029,6 +13063,12 @@ async function takeMoveOffer(message, actor, offer) {
   }
   await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.move.flag}`]: roundKey() });
   requestEdit(message, { type: "moveTaken", key: offer.move.key });
+  // Disarming Demeanor's: the Clash itself.
+  const at = offer.move.clashAt ? fromUuidSync(offer.move.clashAt) : null;
+  if (at) {
+    await postSkillClash(actor, at, { name: "Disarming Demeanor", type: "outOfSequence",
+      clash: { skill: "bluff", defenderSkills: ["perception", "intuition"] } }, { disarming: { applied: false } });
+  }
 }
 
 /**
@@ -15700,6 +15740,10 @@ async function resolveAttack(message, attack) {
   if (attack.punish) await punishResolved(attack, branches);
   // Divine Counter's Basic Attack: missed, the attack it answers goes on.
   if (attack.divineCounter) await divineCounterResolved(attack, branches);
+  // Disarming Demeanor: an Opponent missed - the Bluff at them.
+  for (const entry of branches) {
+    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerDisarming(message, attacker, fromUuidSync(entry.uuid));
+  }
   // Flow of Combat: an attack that missed you - no Damage from it - and the Exploit at who made it.
   for (const entry of branches) {
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFlowExploit(message, fromUuidSync(entry.uuid), attacker);
@@ -16737,6 +16781,19 @@ async function rollAttackWound(message, attack) {
   if (!attacker || !targets.length) {
     ui.notifications.warn("One of the actors in this attack no longer exists.");
     return;
+  }
+
+  // Elastic Tentacle: "double the amount of Diminishing Defense they suffer from that Attacking Maneuver" - ticked On
+  // hitting; "does not stack with any other effect that would increase" it, so not where another already did.
+  const onHit = atMoment(attacker, "hit", { maneuver: { id: attack.maneuverId } });
+  if (onHit.slots?.["attack.doublesDiminishing"] === true) {
+    spendWriting(attacker, onHit, "attack.doublesDiminishing");
+    const raised = attack.doublesDiminishing || ((attack.technique?.diminishingDefenseTimes ?? 1) > 1) || attack.homing;
+    for (const { actor: target, own } of targets) {
+      if (raised || !own.hit || own.forced || !DEFENCES[own.defense]?.gainsDiminishingDefense) continue;
+      await requestActorUpdate(target, { "system.diminishingDefense":
+        (Number(target.system.diminishingDefense) || 0) + (Number(target.system.diminishing?.defense?.perAttack) || 0) });
+    }
   }
 
   // One Wound Roll for the whole Maneuver, like the Strike. What differs between the
