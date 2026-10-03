@@ -348,7 +348,7 @@ async function beginTurn(actor) {
     || (actor.system.effects?.slots?.skipTurn === true)
     || (slots["turn.skip"] === true);
 
-  await announceTurn(actor, { skipped, ran });
+  const turnCard = await announceTurn(actor, { skipped, ran });
 
   // A Unique Ability applied until it is not paid for - the Atmospheric Bubble: "At the start of each of your turns,
   // pay the Ki Point Cost for this Unique Ability or stop applying its effects." A skipped turn is still yours.
@@ -365,7 +365,7 @@ async function beginTurn(actor) {
   // God Bind: "You must spend 2 Actions at the start of each of your turns to maintain the God Bind".
   await (await import("./chat.mjs")).godBindTurnStart(actor);
   // Flow of Combat: Combat Recovery offered, with no Damage taken since the end of the last turn.
-  await (await import("./chat.mjs")).flowOfCombatTurnStart(actor);
+  await (await import("./chat.mjs")).flowOfCombatTurnStart(actor, turnCard);
   // Stealth Crawl: a move, faking it still.
   const { stealthCrawl } = await import("./hidden.mjs");
   await stealthCrawl(actor);

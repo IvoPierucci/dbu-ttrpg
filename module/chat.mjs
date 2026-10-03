@@ -12839,17 +12839,20 @@ function offerFlowExploit(message, actor, attacker) {
  * spent 1 Action as an Out-of-Sequence Maneuver. If you do, ignore the reduction to your Defense Value from the effects of
  * Combat Recovery." Offered on a card at the start of the turn, while Combat Recovery has a use left this Round.
  */
-export async function flowOfCombatTurnStart(actor) {
+export async function flowOfCombatTurnStart(actor, turnCard = null) {
   if (!actor || (actor.system?.effects?.slots?.["combatRecovery.flowOfCombat"] !== true)) return;
   if (actor.getFlag?.(SCOPE, "damagedSinceTurn")) return;
   const recovery = actor.items?.find(item => (item.type === "maneuver") && ((item.system.maneuverId || "") === "combat-recovery"));
   if (!recovery) return;
   const { definitionOf } = await import("./use-maneuver.mjs");
   if (maneuverUsesLeft(actor, definitionOf(recovery)) <= 0) return;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "combat-recovery",
+    maneuverName: recovery.name, reason: "Flow of Combat - as if for 1 Action, no Defense Value lost",
+    grants: { actionsSpent: 1, noDefensePenalty: true } };
+  // On the turn's own card, as a Cross Counter's Basic Attack is on the attack's - not a card of its own (the user's).
+  if (turnCard) return requestEdit(turnCard, { type: "offer", offer });
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
-    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [{ actorUuid: actor.uuid, actorName: actor.name, maneuverId: "combat-recovery",
-      maneuverName: recovery.name, reason: "Flow of Combat - as if for 1 Action, no Defense Value lost",
-      grants: { actionsSpent: 1, noDefensePenalty: true } }] } } });
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
 }
 
 /** Skill of the Watcher's Power Up taken this Combat Round. */
