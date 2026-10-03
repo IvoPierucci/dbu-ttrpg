@@ -5441,7 +5441,7 @@ export async function useOwnedManeuver(actor, itemId, { atFeature = false } = {}
  */
 export async function useTechnique(actor, itemId, { atFeature = false, via = "", outOfSequence = false,
                                                   targetUuid = "", presetThrown = null, volleyball = null,
-                                                  meteor = "", spiritSword = null } = {}) {
+                                                  meteor = "", spiritSword = null, extraTargets = [] } = {}) {
   const door = actor?.items?.find(item => (item.type === "maneuver") && item.system.signatureTechnique);
   if (!door) {
     ui.notifications.warn(`${actor?.name ?? "This character"} has no Signature Technique Maneuver. `
@@ -5449,7 +5449,7 @@ export async function useTechnique(actor, itemId, { atFeature = false, via = "",
     return false;
   }
   return useManeuver(actor, definitionOf(door), { atFeature, techniqueId: itemId, via, outOfSequence,
-    targetUuid, presetThrown, volleyball, meteor, spiritSword });
+    targetUuid, presetThrown, volleyball, meteor, spiritSword, extraTargets });
 }
 
 /**

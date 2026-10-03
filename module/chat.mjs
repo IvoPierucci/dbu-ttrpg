@@ -11504,27 +11504,35 @@ export async function postTrap(actor, maneuver, plan) {
 export async function springTrap(actor, item, asInstant) {
   const unique = item?.system?.unique;
   if (!unique?.trapTechnique) return;
-  const target = Array.from(game.user.targets ?? []).map(token => token.actor).find(other => other && (other.uuid !== actor.uuid));
-  if (!target) return ui.notifications.warn("Target the Opponent it is sprung at first.");
+  // Everyone it is sprung at - the Sphere around the Trap Square, or the Technique's own AoE from it: the tokens targeted.
+  const caught = [...new Map(Array.from(game.user.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid)).map(other => [other.uuid, other])).values()];
+  const [target, ...rest] = caught;
+  if (!target) return ui.notifications.warn("Target the Opponents it is sprung at first.");
+  const extraTargets = rest.map(other => ({ uuid: other.uuid, name: other.name }));
   const { useManeuver, useTechnique, definitionOf } = await import("./use-maneuver.mjs");
   let card = null;
   if (asInstant) {
     const door = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && each.system.signatureTechnique);
     if (!door) return ui.notifications.warn(`${actor.name} has no Signature Technique Maneuver.`);
     card = await useManeuver(actor, { ...definitionOf(door), type: "instant" },
-      { techniqueId: unique.trapTechnique, via: "trap", targetUuid: target.uuid });
+      { techniqueId: unique.trapTechnique, via: "trap", targetUuid: target.uuid, extraTargets });
   }
-  else card = await useTechnique(actor, unique.trapTechnique, { via: "trap", outOfSequence: true, targetUuid: target.uuid });
+  else card = await useTechnique(actor, unique.trapTechnique, { via: "trap", outOfSequence: true, targetUuid: target.uuid, extraTargets });
   if (!card) return;
   await item.update({ "system.unique.trapTechnique": "", "system.unique.trapName": "" });
+  // "Make a Clash (Cognitive vs Impulsive) against your Opponent" - against each of them (the user's ruling), the attack
+  // held until every one is settled.
   const attack = card.getFlag?.(SCOPE, ATTACK_FLAG);
-  if (attack) requestEdit(card, { type: "attack", attack: { ...attack, trapHold: { pending: true, name: item.name } } });
-  await postSaveClash(actor, target, { maneuverName: item.name,
-    reason: `Win and ${target.name} is Guard Down for this Attacking Maneuver.`,
-    saves: ["cognitive"], defenderSaves: ["impulsive"], trapGuard: { applied: false, attackMessageId: card.id ?? "" } });
+  if (attack) requestEdit(card, { type: "attack", attack: { ...attack, trapHold: { pending: true, left: caught.length, name: item.name } } });
+  for (const other of caught) {
+    await postSaveClash(actor, other, { maneuverName: item.name,
+      reason: `Win and ${other.name} is Guard Down for this Attacking Maneuver.`,
+      saves: ["cognitive"], defenderSaves: ["impulsive"], trapGuard: { applied: false, attackMessageId: card.id ?? "" } });
+  }
 }
 
-/** Its Clash, settled: won, Guard Down on them for the attack; either way the attack goes on. */
+/** Each Clash, settled: won, Guard Down on them for the attack; the last of them lets the attack go on. */
 async function settleTrapGuard(message, clash) {
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, trapGuard: { ...clash.trapGuard, applied: true } });
   const target = fromUuidSync(clash.defenderUuid);
@@ -11541,15 +11549,19 @@ async function settleTrapGuard(message, clash) {
     await settledNote(message, `${target.name} is Guard Down for this Attacking Maneuver.`);
   }
   if (!attack) return;
-  return settleAttack(card, { ...attack, trapHold: { ...attack.trapHold, pending: false }, ...(added ? { trapGuardOn: added } : {}) });
+  const left = Math.max(0, (Number(attack.trapHold?.left) || 1) - 1);
+  const guarded = [...(attack.trapGuardOn ?? []), ...(added ? [added] : [])];
+  const next = { ...attack, trapHold: { ...attack.trapHold, left, pending: left > 0 }, trapGuardOn: guarded };
+  return left ? requestEdit(card, { type: "attack", attack: next }) : settleAttack(card, next);
 }
 
 /** The attack rolled: the Guard Down it lent, taken back - "for the duration of that Attacking Maneuver". */
 async function trapGuardOff(attack) {
-  const target = fromUuidSync(attack?.trapGuardOn ?? "");
-  if (!target || !((Number(target.system.conditions?.["guard-down"]) || 0) > 0)) return;
   const { setCondition } = await import("./conditions.mjs");
-  await setCondition(target, "guard-down", 0);
+  for (const uuid of [attack?.trapGuardOn ?? []].flat()) {
+    const target = fromUuidSync(uuid);
+    if (target && ((Number(target.system.conditions?.["guard-down"]) || 0) > 0)) await setCondition(target, "guard-down", 0);
+  }
 }
 
 /** Whether an attack was declared a Called Shot. */
@@ -14287,7 +14299,7 @@ async function resolveAttack(message, attack) {
   // Punisher Guard's Basic Attack: missed, the Exploit it answers goes on.
   if (attack.punish) await punishResolved(attack, branches);
   // Trap Attack: its Guard Down, "for the duration of that Attacking Maneuver" - rolled, and gone.
-  if (attack.trapGuardOn) await trapGuardOff(attack);
+  if ([attack.trapGuardOn ?? []].flat().length) await trapGuardOff(attack);
   // Tornado Attack: an Opponent's attack that missed the one Spinning - their Basic Attack back, offered.
   for (const entry of branches) {
     if (entry.hit && !isAbsoluteMiss(entry)) continue;
