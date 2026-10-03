@@ -13,6 +13,7 @@
  *   subrace: <subrace id>           a Subrace Trait (Primary)
  *   order: 1                        where it stands among its race's, as the race's page prints them (the user's)
  *   options: 1                      an Option effect: choose that many of its Options when it is added
+ *   optionEffect: 3                 which of its printed effects that Option effect is - "3rd effect" on the Item
  *   choose: knowledge               a choice its script reads as `$choice` - Knowledge (any) or an Elemental Profile
  *   grantsUnique: <ids>             Unique Abilities it gives - "You do not need to meet the Requirements to use these
  *                                   Unique Abilities and you do not need to spend any Technique Points to gain them"
@@ -86,6 +87,13 @@ export function racialOptionsOf(id) {
 /** A race's display name, from its id. */
 export function raceName(id) {
   return getRace(id)?.name ?? id ?? "";
+}
+
+/** 1st, 2nd, 3rd, 4th ... */
+export function ordinal(n) {
+  const tens = n % 100;
+  const suffix = ((tens >= 11) && (tens <= 13)) ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th");
+  return `${n}${suffix}`;
 }
 
 /** Where a Racial Trait stands among its race's - its `order:`, as the race's page prints them; unnumbered ones last. */

@@ -10,6 +10,7 @@ grantsUnique: magical-materialization, telepathy, telekinesis, second-sight
 choose: knowledge
 # (3) "At Character Creation, choose one of the following effects" - its Options, the files in divine-magic/.
 options: 1
+optionEffect: 3
 description: >
   With the pure magical energies born from their divine nature, Shinjin possess various abilities.
 text: >

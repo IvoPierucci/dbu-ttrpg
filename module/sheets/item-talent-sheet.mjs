@@ -54,7 +54,9 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
     context.tabs = this._getTabs();
     // A Racial Trait: its race and what the rules call it in place of Prerequisites, and what was chosen for it.
     if (this.item.type === "racial") {
-      const { racialOptionOf, racialOptionsOf, racialTraitKind, racialTraitRace } = await import("../racial.mjs");
+      const { ordinal, racialOptionOf, racialOptionsOf, racialTraitKind, racialTraitRace } = await import("../racial.mjs");
+      const { getTrait } = await import("../effects/traits.mjs");
+      const file = getTrait(this.item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
       const current = racialOptionOf(this.item);
       // Its Options, where it has an Option effect - the one chosen picked, and the rest there to change to.
       const options = racialOptionsOf(this.item.flags?.["dbu-ttrpg"]?.sourceId ?? "")
@@ -64,7 +66,9 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
         kind: racialTraitKind(this.item.system),
         chosen: (this.item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label)
           .filter(Boolean).join(" \u00b7 "),
-        options: options.length ? options : null
+        options: options.length ? options : null,
+        // Which printed effect asks for it - "3rd effect" (the user's).
+        optionLabel: Number(file?.optionEffect) ? `${ordinal(Number(file.optionEffect))} effect` : "Option"
       };
     }
 

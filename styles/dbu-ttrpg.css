@@ -1516,6 +1516,22 @@
   margin-bottom: 2px;
 }
 
+/* A Racial Trait Item's Options: "3rd effect" and the Option chosen beside it. */
+.dbu-ttrpg .racial-option-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dbu-ttrpg .racial-option-row > span {
+  flex: 0 0 auto;
+  font-weight: bold;
+}
+
+.dbu-ttrpg .racial-option-row > select {
+  flex: 1 1 auto;
+}
+
 /* A Racial Trait's row: its head opens it, as a Maneuver's does, the arrow turning with it. */
 .dbu-ttrpg .trait-fold {
   cursor: pointer;
