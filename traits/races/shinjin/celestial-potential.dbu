@@ -22,7 +22,7 @@ roll.total += 2(T);
 [triggered/critical, 1/round]
 roll.total += 2(T);
 
-# (3) Armed: the next Power Up Maneuver - as many of your Counter Actions as are left, up to 2, become Actions this
-# Combat Round.
+# (3) Offered in a window as the Power Up Maneuver is used: as many of your Counter Actions as are left, up to 2,
+# become Actions this Combat Round.
 [triggered/power, 1/encounter]
 actions.fromCounter += min(2, actions.counterLeft);

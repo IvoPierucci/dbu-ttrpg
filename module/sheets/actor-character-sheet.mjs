@@ -1298,7 +1298,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.talents = ownedTalents(this.actor).map(item => ({
       item,
       triggered: triggered
-        .filter(entry => (entry.sourceId === item.id) && entry.budget)
+        .filter(entry => (entry.sourceId === item.id) && entry.budget
+          // What the Power Up Maneuver's own window offers is not Armed beforehand.
+          && (String(entry.program.blocks[0]?.moment ?? "").split(/[(/]/)[0] !== "power"))
         .map(entry => ({
           id: entry.blockId,
           armed: entry.armed,
@@ -4779,7 +4781,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // Every Triggered one - with a limit or not - but what costs Actions, which the moment's own card takes and pays.
       triggered: triggered
         .filter(entry => (entry.sourceId === item.id) && (entry.program.blocks[0]?.mode === "triggered")
-          && !entry.program.blocks[0]?.budget?.actions)
+          && !entry.program.blocks[0]?.budget?.actions
+          // Nor what the Power Up Maneuver's own window offers when it is used.
+          && (String(entry.program.blocks[0]?.moment ?? "").split(/[(/]/)[0] !== "power"))
         .map(entry => ({
           id: entry.blockId,
           armed: entry.armed,

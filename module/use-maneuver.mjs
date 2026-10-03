@@ -5271,8 +5271,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && thrown?.carried) await (await import("./chat.mjs")).dropCarried(actor);
   // Weather Summoning: "When you use the Power Up Maneuver" - offered on a card of its own.
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).offerWeatherSummoning(actor);
-  // "When you use the Power Up Maneuver" - what is Armed for it: God of Peace's.
-  if (card && maneuver.powerUp) await fireMoment(actor, "power");
+  // "When you use the Power Up Maneuver" - its Triggered effects offered in a window then and there (God of Peace's).
+  if (card && maneuver.powerUp) await (await import("./chat.mjs")).answerPower(actor);
   // Karmic Assault's Karma: the attack has been made, so now it is paid.
   if (card) await payKarmicAssault(actor, maneuver, declared);
 

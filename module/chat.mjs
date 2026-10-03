@@ -5877,6 +5877,19 @@ function triggersFor(actor, moments) {
   );
 }
 
+/**
+ * The Power Up Maneuver used, in sequence or out of it: "[Triggered/Power]" - what the player holds that answers it is
+ * offered in a window there and then, ticked to use it (the user's: no Arming it beforehand) - God of Peace's Mindful,
+ * Celestial Potential's Counter Actions made Actions. What fires by itself fires either way.
+ */
+export async function answerPower(actor) {
+  if (!actor) return;
+  const triggers = triggersFor(actor, ["power"]);
+  if (triggers.length) await prepareRoll(actor, triggers, "Power Up", "", { rolling: false });
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  await fireMoment(actor, "power");
+}
+
 function relevantTriggers(actor, message, stage) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack) return [];
@@ -13371,11 +13384,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (granted?.watcherRound) {
     await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), WATCHER_POWER_UP] });
   }
-  // "When you use the Power Up Maneuver" - out of sequence too: what is Armed for it (God of Peace).
-  if (maneuver.powerUp) {
-    const { fireMoment } = await import("./effects/moments-runtime.mjs");
-    await fireMoment(actor, "power");
-  }
+  // "When you use the Power Up Maneuver" - out of sequence too: its Triggered effects offered in a window.
+  if (maneuver.powerUp) await answerPower(actor);
 
   // The Exploit's recursion spreads the offer, so what provoked it has come all this way
   // untouched and goes onto the attack itself.
