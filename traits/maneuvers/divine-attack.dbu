@@ -1,0 +1,27 @@
+id: divine-attack
+name: Divine Attack
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: true
+requiresTarget: true
+profile: any
+usageLimit: 1/round
+# A God Maneuver: open where an effect grants it, only in God Ki, paid in Divine Ki Points (maneuvers.mjs whyNotGod,
+# spendManeuverCost). "The DKP Cost is equal to the KP Cost of your chosen Profile, after applying any reductions from
+# effects, and is paid instead of it" - the Profile's price as it is worked out, in DKP. "This Attacking Maneuver has its
+# Damage Category increased by 1 category" - the Maneuver's own shift, carried on the attack.
+godManeuver: true
+damageCategoryShift: 1
+source: Core Rule
+description: >
+  A God Maneuver: an attack as the Basic Attack, its Profile's KP Cost paid in Divine Ki Points, its Damage Category one
+  higher.
+text: >
+  Divine Attack [1/Round]: You attack with divine might.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –DKP Cost: Variable
+  –Effect: Make an Attacking Maneuver as if this was the Basic Attack Maneuver. The DKP Cost is equal to the KP Cost of
+  your chosen Profile, after applying any reductions from effects, and is paid instead of it. This Attacking Maneuver has
+  its Damage Category increased by 1 category.

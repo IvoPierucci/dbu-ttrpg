@@ -13154,7 +13154,9 @@ export async function postAttack(actor, target, maneuver,
             ? (reflecting.damageCategoryShift ?? 0)
             : profileCategoryShift(profile, charges))
             + modifierCategoryShift(modifiers)
-            + (Number(weapon?.damageCategory) || 0),
+            + (Number(weapon?.damageCategory) || 0)
+            // The Maneuver's own - Divine Attack's "has its Damage Category increased by 1 category".
+            + (reflecting ? 0 : (Number(maneuver.damageCategoryShift) || 0)),
           // Genki's is added here: gathered from Empower, and neither paid again nor counted.
           kiWager: kiWager + (Number(freeWager) || 0),
           // Paid in Life Points rather than Ki. Added to the Wound Roll all the same - it

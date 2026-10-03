@@ -129,6 +129,7 @@
     "maneuvers/brace.dbu",
     "maneuvers/terrain-lift.dbu",
     "maneuvers/toss.dbu",
+    "maneuvers/divine-attack.dbu",
     "maneuvers/called-shot.dbu",
     "maneuvers/combat-recovery.dbu",
     "maneuvers/crouch.dbu",
