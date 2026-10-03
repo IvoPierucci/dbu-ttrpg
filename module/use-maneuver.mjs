@@ -1839,6 +1839,7 @@ export function definitionOf(item) {
     terrainLift: item.system.terrainLift,
     godManeuver: item.system.godManeuver,
     divineMovement: item.system.divineMovement,
+    divineRoar: item.system.divineRoar,
     encounterLimit: Number(item.system.encounterLimit) || 0,
     toss: item.system.toss,
     movement: item.system.movement,
@@ -3954,6 +3955,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let talking = null;
   let exploding = null;
   let waving = null;
+  let roaring = null;
   let positioning = null;
   let shaping = null;
   let flaring = null;
@@ -4369,6 +4371,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const size = larger || unique?.sphereMagnitude || "minor";
       waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
       if (!waving) return false;
+    }
+
+    // Divine Roar: "all Characters within a Destructive Sphere AoE (centered on you)".
+    if (maneuver.divineRoar) {
+      roaring = await askHide(actor, maneuver, { burst: true, area: "Destructive Sphere" });
+      if (!roaring) return false;
     }
 
     // The Toss: which Item, to whom.
@@ -5022,6 +5030,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postFakeDeath(actor, maneuver, faking.uuids)
     : (maneuver.waves && waving)
     ? await (await import("./chat.mjs")).postWave(actor, maneuver, waving.uuids)
+    : (maneuver.divineRoar && roaring)
+    ? await (await import("./chat.mjs")).postDivineRoar(actor, maneuver, roaring.uuids)
     : (maneuver.explodes && exploding)
     ? await (await import("./chat.mjs")).postExplosion(actor, maneuver, exploding.uuids)
     : ((maneuver.id === "talk") && talking)
@@ -5630,6 +5640,7 @@ export function maneuverItemFrom(definition) {
       terrainLift: Boolean(definition.terrainLift),
       godManeuver: Boolean(definition.godManeuver),
       divineMovement: Boolean(definition.divineMovement),
+      divineRoar: Boolean(definition.divineRoar),
       encounterLimit: Number(definition.encounterLimit) || 0,
       kiPerAction: definition.kiPerAction === true,
       toss: Boolean(definition.toss),

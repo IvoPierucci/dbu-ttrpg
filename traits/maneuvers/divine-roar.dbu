@@ -1,0 +1,27 @@
+id: divine-roar
+name: Divine Roar
+type: standard
+actionCost: 2
+kiCostPerBaseTier: 4
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# A God Maneuver: open where an effect grants it, only in God Ki, its 4(bT) paid in Divine Ki Points (maneuvers.mjs
+# whyNotGod, spendManeuverCost). Who is within its Destructive Sphere (centered on you) is asked, the ones beside you
+# ticked and the rest the table's (use-maneuver.mjs askHide); a Might Clash against each (chat.mjs postDivineRoar). Won:
+# Guard Down and Impediment until the end of your next turn - and a Minion is Defeated, unless a Special Minion, which the
+# system cannot tell apart, so the card says it.
+godManeuver: true
+divineRoar: true
+source: Core Rule
+description: >
+  A God Maneuver: a Might Clash against everyone in a Destructive Sphere around you - won, Guard Down and Impediment until
+  the end of your next turn, and a Minion Defeated.
+text: >
+  Divine Roar [1/Encounter]: You let out a holy war cry, bringing mortals to their knees in awe of your might.
+  –Maneuver Type: Standard
+  –Action Cost: 2 Actions
+  –DKP Cost: 4(bT)
+  –Effect: Make a Might Clash against all Characters within a Destructive Sphere AoE (centered on you). If you win, the
+  losing Character(s) gain the Guard Down and Impediment Combat Conditions until the end of your next turn. If that
+  Opponent is a Minion (except a Special Minion), they are Defeated.

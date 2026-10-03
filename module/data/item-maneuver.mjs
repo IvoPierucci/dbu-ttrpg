@@ -108,6 +108,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       godManeuver: new fields.BooleanField({ required: true, initial: false }),
       /** Divine Movement: "Move to any Square within range of your Boosted Speed", no Exploit. */
       divineMovement: new fields.BooleanField({ required: true, initial: false }),
+      /** Divine Roar: a Might Clash against everyone in a Destructive Sphere around you. */
+      divineRoar: new fields.BooleanField({ required: true, initial: false }),
       /** A second limit over the usage limit - Divine Movement's "[1/Round, 3/Encounter]". 0 is none. */
       encounterLimit: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       /** Its KP Cost "for each Action spent" - Divine Pulse's 1(bT). A Unique Ability's is under `unique`. */

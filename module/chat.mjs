@@ -656,6 +656,10 @@ async function applyClash(messageId, clash) {
     await settleExplosion(message, clash);
   }
 
+  if (clash.roar && clash.result && !clash.roar.applied) {
+    await settleRoar(message, clash);
+  }
+
   if (clash.talk && clash.result && !clash.talk.applied) {
     await settleTalk(message, clash);
   }
@@ -12645,6 +12649,39 @@ async function settleWave(message, clash) {
   }
   if (clash.wave.damage) {
     await reduceLifePoints(target, Math.floor((Number(user.system.might) || 0) / 2), { reason: clash.maneuverName });
+  }
+}
+
+/** Divine Roar: a card naming them, and "a Might Clash against all Characters within a Destructive Sphere AoE". */
+export async function postDivineRoar(actor, maneuver, uuids) {
+  const targets = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
+  const card = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(targets.map(t => t.name).join(", "))}</p>` });
+  for (const target of targets) {
+    await postMightClash(actor, target, {
+      maneuverName: maneuver.name,
+      reason: `Win and ${target.name} gains Guard Down and Impediment until the end of your next turn - a Minion is Defeated.`,
+      roar: { applied: false }
+    });
+  }
+  return card;
+}
+
+/**
+ * Divine Roar, won: "the losing Character(s) gain the Guard Down and Impediment Combat Conditions until the end of your
+ * next turn. If that Opponent is a Minion (except a Special Minion), they are Defeated." The system knows a Minion and
+ * not a Special one: the card says it.
+ */
+async function settleRoar(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, roar: { ...clash.roar, applied: true } });
+  const roarer = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!roarer || !target || (whoWonClash(clash.result) !== "challenger")) return;
+  await markUntilNextTurn(roarer, target, "guard-down", 1, "end", clash.maneuverName);
+  await markUntilNextTurn(roarer, target, "impediment", 1, "end", clash.maneuverName);
+  if (target.system?.minion) {
+    await reduceLifePoints(target, Math.max(0, Number(target.system.life?.value) || 0), { reason: `${clash.maneuverName}, a Minion` });
+    await settledNote(message, `${target.name} is Defeated - unless a Special Minion.`);
   }
 }
 
