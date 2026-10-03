@@ -39,5 +39,5 @@ text: >
 
 ---
 
-# The Passive waits on what it names: the Terrain Lift Maneuver and Favored Elements are not in the system yet (their
-# texts are pending). Telekinetic Weapons already read this Unique Ability by its name (gear.mjs telekinetic).
+# The Passive's Terrain Lift is read where that Maneuver lifts (chat.mjs askTerrainLift); Favored Elements and the Toss
+# Maneuver are not in the system yet. Telekinetic Weapons already read this Unique Ability by its name (gear.mjs telekinetic).

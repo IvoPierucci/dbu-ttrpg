@@ -102,6 +102,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * Character and the Grapple already knows which.
        */
       launch: new fields.BooleanField({ required: true, initial: false }),
+      /** Lifts a Square or a Feature and holds it - the Terrain Lift Maneuver (chat.mjs askTerrainLift). */
+      terrainLift: new fields.BooleanField({ required: true, initial: false }),
       /**
        * Crosses the battlefield, and asks how: Normal Speed for nothing or Boosted Speed
        * for 3(T), with Rapid Movement another 2(T) on top. The first Maneuver whose own

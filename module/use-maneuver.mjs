@@ -1826,6 +1826,7 @@ export function definitionOf(item) {
     empower: item.system.empower,
     grapple: item.system.grapple,
     launch: item.system.launch,
+    terrainLift: item.system.terrainLift,
     movement: item.system.movement,
     pin: item.system.pin,
     powerUp: item.system.powerUp,
@@ -3932,6 +3933,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let trapping = null;
   let summoning = null;
   let forging = null;
+  let lifted = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4332,6 +4334,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const size = larger || unique?.sphereMagnitude || "minor";
       waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
       if (!waving) return false;
+    }
+
+    // Terrain Lift: what it lifts, and whether it can.
+    if (maneuver.terrainLift) {
+      lifted = await (await import("./chat.mjs")).askTerrainLift(actor, maneuver);
+      if (!lifted) return false;
     }
 
     // World Forging: Mass Construction's how many.
@@ -4912,6 +4920,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postTimeFreeze(actor, maneuver)
     : maneuver.tornado
     ? await (await import("./chat.mjs")).postTornado(actor, maneuver)
+    : (maneuver.terrainLift && lifted)
+    ? await (await import("./chat.mjs")).postTerrainLift(actor, maneuver, lifted)
     : (maneuver.worldForging && forging)
     ? await (await import("./chat.mjs")).postWorldForging(actor, maneuver, forging)
     : (maneuver.summonsWeather && summoning)
@@ -5063,6 +5073,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && (actor.getFlag?.("dbu-ttrpg", "finalChance") === "pending")) {
     await actor.setFlag("dbu-ttrpg", "finalChance", card.id);
   }
+  // Terrain Lift's Feature, thrown: no longer held.
+  if (card && thrown?.carried) await (await import("./chat.mjs")).dropCarried(actor);
   // Weather Summoning: "When you use the Power Up Maneuver" - offered on a card of its own.
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).offerWeatherSummoning(actor);
   // Karmic Assault's Karma: the attack has been made, so now it is paid.
@@ -5281,12 +5293,19 @@ async function askThrown(actor, maneuver) {
   const ranks = HARDNESS_RANKS.filter(hardness => hardness.rank > 0).map(hardness =>
     `<option value="${hardness.rank}">Hardness Rank ${hardness.rank} - ${escape(hardness.material)}</option>`)
     .join("");
+  // The Feature Terrain Lift holds, first where there is one.
+  const held = actor.getFlag?.("dbu-ttrpg", "carrying");
+  const heldRow = held ? `
+      <label class="dbu-technique">
+        <input type="radio" name="thrown" value="held" checked/>
+        <span class="dbu-technique-name">The Feature you hold (Hardness Rank ${Number(held.rank) || 0})</span>
+      </label>` : "";
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: maneuver.name },
-    content: `<div class="dbu-technique-picker">${options}
+    content: `<div class="dbu-technique-picker">${heldRow}${options}
       <label class="dbu-technique">
-        <input type="radio" name="thrown" value="feature" ${items.length ? "" : "checked"}/>
+        <input type="radio" name="thrown" value="feature" ${(items.length || held) ? "" : "checked"}/>
         <span class="dbu-technique-name">A Feature</span>
         <select name="rank">${ranks}</select>
       </label></div>`,
@@ -5304,6 +5323,9 @@ async function askThrown(actor, maneuver) {
     rejectClose: false
   });
   if (!chosen?.pick) return null;
+  if (chosen.pick === "held") {
+    return { itemId: "", name: "Feature", rank: Math.max(1, Number(held.rank) || 1), value: null, mightClash: false, carried: true };
+  }
   if (chosen.pick === "feature") {
     return { itemId: "", name: "Feature", rank: chosen.rank, value: null, mightClash: false };
   }
@@ -5559,6 +5581,7 @@ export function maneuverItemFrom(definition) {
       empower: Boolean(definition.empower),
       grapple: Boolean(definition.grapple),
       launch: Boolean(definition.launch),
+      terrainLift: Boolean(definition.terrainLift),
       movement: Boolean(definition.movement),
       pin: Boolean(definition.pin),
       powerUp: Boolean(definition.powerUp),

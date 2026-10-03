@@ -1,0 +1,32 @@
+id: terrain-lift
+name: Terrain Lift
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+exploitable: All adjacent Opponents.
+# The Square or Feature asked - its Hardness Rank and Squares - and lifted where the Force Modifier exceeds 3x its
+# Hardness Value; held on the character, the Cover set to it while it is (Shielding), thrown by the Throw, put down from
+# its card as an Instant (Placing). Telekinesis's Passive read there: Magic for Force, any size (chat.mjs askTerrainLift).
+terrainLift: true
+source: Core Rule
+description: >
+  Lift an unoccupied Square or a Feature in your Melee Range, if your Force Modifier exceeds 3x its Hardness Value: held,
+  you are in Cover behind it; put it down as an Instant, or throw it.
+text: >
+  Terrain Lift Maneuver [1/Round]: Tear up the ground.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –KP Cost: N/A
+  –Exploitable: All adjacent Opponents.
+  –Effect: Target an unoccupied Square or a Feature within your Melee Range. If your Force Modifier exceeds 3x the
+  Hardness Value of that Square/Feature, you lift it up and hold onto it as a Feature (if it was a Square previously, it
+  is now a Feature of the same Hardness Rank that occupies 1 Square). You cannot lift a Feature if it occupies a number
+  of Squares equal to or greater than 4x the number of Squares you occupy, and you can only hold 1 Feature at a time.
+
+  * Shielding. If you are hit by an Attacking Maneuver while carrying a Feature, apply effects as if you were in Cover
+  (see — Battlefields) with that Feature.
+  * Placing. You can put down a Feature you are carrying in any unoccupied Square within your Melee Range as an Instant
+  Maneuver.

@@ -127,6 +127,7 @@
     "maneuvers/basic-attack.dbu",
     "maneuvers/blockade.dbu",
     "maneuvers/brace.dbu",
+    "maneuvers/terrain-lift.dbu",
     "maneuvers/called-shot.dbu",
     "maneuvers/combat-recovery.dbu",
     "maneuvers/crouch.dbu",

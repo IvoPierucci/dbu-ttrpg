@@ -2979,6 +2979,7 @@ function onRenderChatMessage(message, html) {
   renderTornado(message, html);
   renderWeatherSummon(message, html);
   renderForge(message, html);
+  renderTerrainLift(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -11809,6 +11810,106 @@ function renderForge(message, html) {
   note.className = "dbu-settled-note";
   note.textContent = forge.done.success ? (forge.done.said ?? "") : "Failed: nothing is made.";
   (html.querySelector(".message-content") ?? html).append(note);
+}
+
+/** Terrain Lift's card: the Feature held, and its Placing. */
+const LIFT_FLAG = "terrainLift";
+
+/** The Feature this character is holding - Terrain Lift's - or null. */
+export function carriedFeature(actor) {
+  return actor?.getFlag?.(SCOPE, "carrying") ?? null;
+}
+
+/**
+ * Terrain Lift, before it is used: "Target an unoccupied Square or a Feature within your Melee Range. If your Force
+ * Modifier exceeds 3x the Hardness Value of that Square/Feature, you lift it up ... You cannot lift a Feature if it
+ * occupies a number of Squares equal to or greater than 4x the number of Squares you occupy, and you can only hold 1
+ * Feature at a time." Its Hardness Rank and Squares, asked; where it is, the table's. Telekinesis's Passive: "you may
+ * use Magic instead of Force and you may lift any Feature regardless of the number of Squares it occupies ... target any
+ * Feature that is not at Long Range".
+ */
+export async function askTerrainLift(actor, maneuver) {
+  if (carriedFeature(actor)) {
+    ui.notifications.warn(`${actor.name} already holds a Feature.`);
+    return null;
+  }
+  const telekinetic = Array.from(actor.items ?? []).some(item => (item.type === "maneuver") && item.system.unique?.telekinesis);
+  const { HARDNESS_RANKS, hardnessValue } = await import("./features.mjs");
+  const escape = Handlebars.escapeExpression;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - ${maneuver.name}` },
+    content: `<label>Hardness Rank <select name="rank" class="dbu-gear-pick">${HARDNESS_RANKS.map(entry =>
+        `<option value="${entry.rank}">${entry.rank} - ${escape(entry.material)}</option>`).join("")}</select></label>
+      <label>Squares it occupies <input type="number" name="squares" min="1" step="1" value="1"/></label>`,
+    buttons: [{ action: "go", label: "Lift", default: true, callback: (event, button, dialog) => ({
+      rank: Math.max(0, +(dialog.element.querySelector('select[name="rank"]')?.value ?? 0) || 0),
+      squares: Math.max(1, Number(dialog.element.querySelector('input[name="squares"]')?.value) || 1) }) },
+    { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!chosen || (chosen === "cancel")) return null;
+  const value = hardnessValue(chosen.rank, actor.system.baseTierOfPower);
+  const force = Number(actor.system.attributes?.force?.mod) || 0;
+  const magic = Number(actor.system.attributes?.magic?.mod) || 0;
+  const strength = telekinetic ? Math.max(force, magic) : force;
+  if (strength <= 3 * value) {
+    ui.notifications.warn(`${telekinetic ? "Force or Magic" : "Force"} Modifier ${strength} does not exceed 3x its Hardness Value (${3 * value}).`);
+    return null;
+  }
+  const own = String(actor.system.size?.squares ?? "1").split("x").map(n => Number(n) || 1).reduce((a, b) => a * b, 1);
+  if (!telekinetic && (chosen.squares >= 4 * own)) {
+    ui.notifications.warn(`Too large to lift: ${chosen.squares} Squares against ${own} of yours.`);
+    return null;
+  }
+  return { rank: chosen.rank, squares: chosen.squares, telekinetic };
+}
+
+/**
+ * Lifted: "hold onto it as a Feature (if it was a Square previously, it is now a Feature of the same Hardness Rank that
+ * occupies 1 Square)"; "Shielding. If you are hit by an Attacking Maneuver while carrying a Feature, apply effects as if
+ * you were in Cover ... with that Feature" - the Cover set to it while it is held, what was there given back after.
+ */
+export async function postTerrainLift(actor, maneuver, plan) {
+  const cover = actor.system.battlefield?.cover ?? {};
+  await actor.update({ [`flags.${SCOPE}.carrying`]: { rank: plan.rank, squares: plan.squares,
+      coverBefore: { active: Boolean(cover.active), rank: Number(cover.rank) || 0 } },
+    "system.battlefield.cover.active": true, "system.battlefield.cover.rank": plan.rank });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(actor.name)} holds a Feature of Hardness `
+      + `Rank ${plan.rank}${plan.telekinetic ? " - by Telekinesis" : ""}: in Cover behind it, and thrown by the Throw.</p>`,
+    flags: { [SCOPE]: { [LIFT_FLAG]: { actorUuid: actor.uuid } } } });
+}
+
+/** The Feature let go of - placed, or thrown: the Cover as it was. */
+export async function dropCarried(actor) {
+  const held = carriedFeature(actor);
+  if (!held) return;
+  await actor.update({ [`flags.${SCOPE}.-=carrying`]: null,
+    "system.battlefield.cover.active": Boolean(held.coverBefore?.active),
+    "system.battlefield.cover.rank": Number(held.coverBefore?.rank) || 0 });
+}
+
+/** "Placing. You can put down a Feature you are carrying in any unoccupied Square within your Melee Range as an Instant Maneuver." */
+function renderTerrainLift(message, html) {
+  const lift = message.getFlag(SCOPE, LIFT_FLAG);
+  const actor = fromUuidSync(lift?.actorUuid ?? "");
+  if (!lift || !actor?.isOwner || !carriedFeature(actor)) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Place";
+  button.dataset.tooltip = "Instant: put it down on an unoccupied Square within your Melee Range";
+  button.addEventListener("click", async () => {
+    const { whyNotAnotherInstant, recordManeuverType } = await import("./maneuvers.mjs");
+    const blocked = whyNotAnotherInstant(actor) || (timeFrozen(actor) ? "time is frozen" : "");
+    if (blocked) return ui.notifications.warn(`${actor.name}: ${blocked}`);
+    button.disabled = true;
+    await dropCarried(actor);
+    await recordManeuverType(actor, "instant");
+    await settledNote(message, `${actor.name} puts the Feature down.`);
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
 }
 
 /** Whether an attack was declared a Called Shot. */
