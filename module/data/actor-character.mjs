@@ -3,7 +3,7 @@ const { fields } = foundry.data;
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
-import { getTrait, traitsOfKind } from "../effects/traits.mjs";
+import { getTrait } from "../effects/traits.mjs";
 import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
@@ -179,19 +179,6 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * given Power Level. Shared with the creation hook, which needs a Score before any
    * derived data exists.
    */
-  /**
-   * The Racial Traits a character has: "You gain access to all Primary & Secondary Racial Traits listed on your race" -
-   * and of a Subrace's, "you only gain the traits from your listed Subrace" - less any lost.
-   */
-  static racialTraitsHeld(race, subrace, lost = []) {
-    if (!race) return [];
-    const gone = new Set(lost ?? []);
-    return traitsOfKind("races", race)
-      .filter(trait => !trait.subrace || (trait.subrace === subrace))
-      .map(trait => trait.id)
-      .filter(id => !gone.has(id));
-  }
-
   /**
    * The total Attribute Score increase a character's race grants for one Attribute:
    * the race's fixed increases plus whatever the player picked for its choices.
@@ -1465,10 +1452,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     });
 
     // --- Racial Traits ---
-    // "You gain access to all Primary & Secondary Racial Traits listed on your race" - and of a Subrace's, only your
-    // own. So which are had is derived (prepareDerivedData, `racialTraits`), and what is stored is the exception:
-    // "If you lose a Racial Trait, through any means, you no longer benefit from its effects."
-    schema.lostRacialTraits = new fields.ArrayField(
+    // The ids of the Racial Traits this character has. Added by hand from the Traits tab - their own race's or any
+    // other's (the user's ruling) - and removed the same way: choosing a race grants none of them by itself.
+    schema.racialTraits = new fields.ArrayField(
       new fields.StringField({ required: true, blank: false }),
       { required: true, initial: () => [] }
     );
@@ -1810,10 +1796,6 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // The sheet clamps Power Level as it is edited, but a macro or module could still
     // write something out of range; keep everything derived from it sane regardless.
     this.powerLevel = Math.min(Math.max(this.powerLevel, 1), DBUCharacterData.MAX_POWER_LEVEL);
-
-    // The Racial Traits had: every one listed on the race, a Subrace's only for that Subrace, none lost. Read by the
-    // effects below, so set first.
-    this.racialTraits = DBUCharacterData.racialTraitsHeld(this.race, this.subrace, this.lostRacialTraits);
 
     // Racial Life Modifier, from whichever race is selected. An unknown or unset race
     // contributes nothing rather than breaking the Life calculation.

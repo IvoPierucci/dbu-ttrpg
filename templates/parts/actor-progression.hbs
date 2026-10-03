@@ -96,26 +96,6 @@
     </div>
     {{/if}}
 
-    {{#if racialTraits.length}}
-    {{! Every Racial Trait of the race is had - a Subrace's only for its own. Clicking one
-        marks it lost ("If you lose a Racial Trait, through any means"), and again, had. }}
-    <div class="racial-row">
-      <span class="racial-row-label">Racial Traits</span>
-      <div class="racial-slots racial-traits">
-        {{#each racialTraits as |trait|}}
-        <button type="button"
-                class="condition-toggle {{#if trait.taken}}racial-taken{{/if}}"
-                data-action="toggleRacialTrait" data-trait="{{trait.id}}"
-                data-tooltip="{{trait.text}}"
-                aria-pressed="{{#if trait.taken}}true{{else}}false{{/if}}">
-          <span class="condition-mark">{{#if trait.taken}}&#10003;{{/if}}</span>
-          <span class="condition-name">{{trait.name}}</span>
-        </button>
-        {{/each}}
-      </div>
-    </div>
-    {{/if}}
-
     <div class="racial-row">
       <span class="racial-row-label">Skill Ranks</span>
       <div class="racial-slots">

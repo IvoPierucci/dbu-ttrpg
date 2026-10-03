@@ -126,11 +126,8 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
 }
 
 /**
- * The Racial Traits this character has taken.
- *
- * Checked against the race as well as against the list, so a character whose race is
- * changed stops benefiting from the one they left behind - the id would still be sitting
- * in the array, and without this it would go on applying.
+ * The Racial Traits this character has - added by hand, their own race's or any other's (the user's ruling), so
+ * whichever race a Trait belongs to, it applies while it is on the list.
  */
 function racialPrograms(actor, report) {
   const entries = [];
@@ -142,7 +139,6 @@ function racialPrograms(actor, report) {
       report(`"${id}" is not a Racial Trait this system knows.`);
       continue;
     }
-    if (race && trait.owner && (trait.owner !== race)) continue;
 
     const { program, errors } = compile(
       `racial:${id}`,

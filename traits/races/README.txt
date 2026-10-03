@@ -37,10 +37,9 @@ Two things to remember:
 
   - Add the file to traits/index.json. A browser cannot list a directory, so
     nothing is found that is not named there.
-  - "You gain access to all Primary & Secondary Racial Traits listed on your
-    race": every file here is had by every character of that race - a Subrace's
-    only by that Subrace. The Progression tab lists them; clicking one marks it
-    lost ("If you lose a Racial Trait, through any means").
+  - A Racial Trait is added by hand, on the Traits tab's Add Racial Trait: the
+    character's own race's first, then every other race's by the race's name -
+    any of them may be taken (the user's ruling). Removed the same way.
 
 Still the table's: keeping a Talent or Technique Points a lost Trait gave, and a
 Signature Technique made with a Profile a lost Trait gave. A Trait that grants a

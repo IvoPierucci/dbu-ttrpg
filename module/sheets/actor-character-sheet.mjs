@@ -96,6 +96,7 @@ import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-
 import { gearKitIngenuity, isConsumable } from "../gear.mjs";
 import {
   exclusiveAttributeGroups,
+  getRace,
   raceOptions,
   raceSubraces,
   racialAttributeChoices,
@@ -379,6 +380,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleSpecialty: DBUCharacterSheet._onToggleSpecialty,
       rollSave: DBUCharacterSheet._onSaveRoll,
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
+      addRacialTrait: DBUCharacterSheet._onAddRacialTrait,
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
       basicAttackInstant: DBUCharacterSheet._onBasicAttackInstant,
@@ -4750,42 +4752,85 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * The Racial Traits of this character's race - every one of them had, a Subrace's only for its own Subrace - and
-   * which are lost. Its Category (Body/Mind) and whether it is Primary or Secondary on its hover: a Subrace Trait is
-   * Primary.
+   * Every Racial Trait there is, in the order the picker and the list show them: this character's race first, then
+   * every other race by the race's name (not the Trait's), each race's Traits by name.
    */
-  #racialTraitChoices() {
-    const { race, subrace } = this.actor.system;
-    if (!race) return [];
-
-    const had = new Set(this.actor.system.racialTraits ?? []);
-    return traitsOfKind("races", race)
-      .filter(trait => !trait.subrace || (trait.subrace === subrace))
-      .map(trait => {
-        const category = String(trait.category ?? "");
-        const importance = trait.subrace ? "primary" : String(trait.importance ?? "");
-        const kind = [category, importance].filter(Boolean)
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" \u00b7 ");
-        return {
-          id: trait.id,
-          name: trait.name,
-          kind,
-          description: trait.text || trait.description || "",
-          text: [kind, trait.text || trait.description || ""].filter(Boolean).join(" - "),
-          taken: had.has(trait.id)
-        };
-      });
+  static racialTraitsInOrder(race) {
+    const raceName = owner => getRace(owner)?.name ?? owner ?? "";
+    return traitsOfKind("races").slice().sort((a, b) =>
+      (Number(b.owner === race) - Number(a.owner === race))
+      || raceName(a.owner).localeCompare(raceName(b.owner))
+      || a.name.localeCompare(b.name));
   }
 
-  /** "If you lose a Racial Trait, through any means" - marked lost, or had again. */
+  /** What the rules call a Racial Trait: its Category (Body/Mind), and Primary or Secondary - a Subrace's is Primary. */
+  static racialTraitKind(trait) {
+    const importance = trait.subrace ? "primary" : String(trait.importance ?? "");
+    return [String(trait.category ?? ""), importance].filter(Boolean)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" \u00b7 ");
+  }
+
+  /** The Racial Traits this character has, in the picker's order, each with the race it comes from. */
+  #racialTraitChoices() {
+    const had = new Set(this.actor.system.racialTraits ?? []);
+    return DBUCharacterSheet.racialTraitsInOrder(this.actor.system.race)
+      .filter(trait => had.has(trait.id))
+      .map(trait => ({
+        id: trait.id,
+        name: trait.name,
+        kind: DBUCharacterSheet.racialTraitKind(trait),
+        race: [getRace(trait.owner)?.name ?? trait.owner ?? "",
+          trait.subrace ? subraceName(trait.owner, trait.subrace) || trait.subrace : ""].filter(Boolean).join(" - "),
+        description: trait.text || trait.description || ""
+      }));
+  }
+
+  /**
+   * Add Racial Traits: every one there is - this character's race first, then the rest by race name - ticked to add,
+   * the ones already had shown ticked and closed.
+   */
+  static async _onAddRacialTrait() {
+    if (!this.isEditable) return;
+    const had = new Set(this.actor.system.racialTraits ?? []);
+    const traits = DBUCharacterSheet.racialTraitsInOrder(this.actor.system.race);
+    if (!traits.length) {
+      ui.notifications.warn("No Racial Traits are written yet.");
+      return;
+    }
+    const escape = Handlebars.escapeExpression;
+    let race = null;
+    const rows = traits.map(trait => {
+      const head = (trait.owner !== race)
+        ? `<h4 class="dbu-respond-hint">${escape(getRace(trait.owner)?.name ?? trait.owner ?? "")}</h4>` : "";
+      race = trait.owner;
+      const kind = DBUCharacterSheet.racialTraitKind(trait);
+      const subrace = trait.subrace ? subraceName(trait.owner, trait.subrace) || trait.subrace : "";
+      return `${head}<label class="dbu-respond-option" data-tooltip="${escape(trait.text || trait.description || "")}">
+        <input type="checkbox" name="${escape(trait.id)}" ${had.has(trait.id) ? "checked disabled" : ""}/>
+        <span class="dbu-respond-name">${escape(trait.name)}</span>
+        <span class="dbu-respond-source">${escape([kind, subrace].filter(Boolean).join(" \u00b7 "))}</span></label>`;
+    }).join("");
+    const chosen = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `${this.actor.name} - Add Racial Trait` },
+      content: `<div class="dbu-racial-picker">${rows}</div>`,
+      buttons: [
+        { action: "add", label: "Add", default: true, callback: (event, button, dialog) =>
+          traits.filter(trait => !had.has(trait.id)
+            && dialog.element.querySelector(`input[name="${CSS.escape(trait.id)}"]`)?.checked).map(trait => trait.id) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    });
+    if (!Array.isArray(chosen) || !chosen.length) return;
+    return this.actor.update({ "system.racialTraits": [...had, ...chosen] });
+  }
+
+  /** A Racial Trait taken off: "If you lose a Racial Trait, through any means, you no longer benefit from its effects." */
   static async _onToggleRacialTrait(event, target) {
+    if (!this.isEditable) return;
     const id = target.dataset.trait;
-    const lost = new Set(this.actor.system.lostRacialTraits ?? []);
-
-    if (lost.has(id)) lost.delete(id);
-    else lost.add(id);
-
-    return this.actor.update({ "system.lostRacialTraits": [...lost] });
+    return this.actor.update({ "system.racialTraits": (this.actor.system.racialTraits ?? []).filter(each => each !== id) });
   }
 
   /** Enter or leave a State. */

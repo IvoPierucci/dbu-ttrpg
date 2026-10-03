@@ -1,22 +1,24 @@
 <div class="tab {{tabs.traits.cssClass}}" data-group="primary" data-tab="traits">
 
-  {{! Every Racial Trait of the race is had - a Subrace's only for its own; one lost is kept, dimmed, to be had again. }}
+  {{! Racial Traits are added by hand - this race's or any other's - and removed the same way. }}
   <details class="trait-group" data-section="racialTraits"
            {{#if openSections.racialTraits}}open{{/if}}>
     <summary>
       Racial Traits
       <span class="trait-count">{{racialTraits.length}}</span>
+      <button type="button" class="edit-toggle" data-action="addRacialTrait"
+              data-tooltip="Your race's first, then every other race's">Add Racial Trait</button>
     </summary>
 
     {{#if racialTraits.length}}
     <ul class="trait-list">
       {{#each racialTraits as |trait|}}
-      <li class="trait {{#unless trait.taken}}trait-lost{{/unless}}">
+      <li class="trait">
         <div class="trait-head">
           <span class="trait-name">{{trait.name}}</span>
-          {{#if trait.kind}}<span class="trait-prereq">{{trait.kind}}</span>{{/if}}
+          <span class="trait-prereq">{{trait.race}}{{#if trait.kind}} &middot; {{trait.kind}}{{/if}}</span>
           <button type="button" class="trait-control" data-action="toggleRacialTrait" data-trait="{{trait.id}}"
-                  data-tooltip="{{#if trait.taken}}Lose this Racial Trait{{else}}Lost - have it again{{/if}}">{{#if trait.taken}}&times;{{else}}&#8635;{{/if}}</button>
+                  data-tooltip="Remove this Racial Trait">&times;</button>
         </div>
         {{#if trait.description}}
         <div class="trait-description">{{trait.description}}</div>
@@ -25,7 +27,7 @@
       {{/each}}
     </ul>
     {{else}}
-    <p class="tab-placeholder">{{#if hasRace}}No Racial Traits written for this race yet.{{else}}No race chosen yet.{{/if}}</p>
+    <p class="tab-placeholder">No Racial Traits yet.</p>
     {{/if}}
   </details>
 

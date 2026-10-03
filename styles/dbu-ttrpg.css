@@ -1516,13 +1516,14 @@
   margin-bottom: 2px;
 }
 
-/* A Racial Trait lost: kept on the list, dimmed, to be had again. */
-.dbu-ttrpg .trait.trait-lost {
-  opacity: 0.5;
+/* Add Racial Trait: every race's, under its race's name. */
+.dbu-racial-picker {
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
-.dbu-ttrpg .trait.trait-lost .trait-name {
-  text-decoration: line-through;
+.dbu-racial-picker h4 {
+  margin: 8px 0 2px;
 }
 
 /* --- Skills ---------------------------------------------------------------- */
