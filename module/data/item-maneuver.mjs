@@ -709,6 +709,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         /** A Battle Weather over the Battlefield - Weather Summoning's (chat.mjs postWeatherSummon): which, at what Tier,
          *  what each character had before it, and how many of its user's turn ends are left (0 is kept, Lasting Weather). */
         summonsWeather: new fields.BooleanField({ required: true, initial: false }),
+        /** A Feature conjured on a Use Magic Check - World Forging's (chat.mjs postWorldForging). */
+        worldForging: new fields.BooleanField({ required: true, initial: false }),
         weatherSet: new fields.StringField({ required: true, blank: true, initial: "" }),
         weatherTier: new fields.NumberField({ required: true, integer: true, initial: 1, min: 1 }),
         weatherBefore: new fields.ArrayField(new fields.SchemaField({

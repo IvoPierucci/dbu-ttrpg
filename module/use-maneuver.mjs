@@ -1914,6 +1914,7 @@ export function definitionOf(item) {
     trapAttack: item.system.unique?.trapAttack === true,
     warpedEvolution: item.system.unique?.warpedEvolution === true,
     summonsWeather: item.system.unique?.summonsWeather === true,
+    worldForging: item.system.unique?.worldForging === true,
     kiCostPerBaseTierChange: Number(item.system.unique?.kiCostPerBaseTierChange) || 0,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
@@ -3930,6 +3931,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let linking = null;
   let trapping = null;
   let summoning = null;
+  let forging = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4330,6 +4332,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const size = larger || unique?.sphereMagnitude || "minor";
       waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
       if (!waving) return false;
+    }
+
+    // World Forging: Mass Construction's how many.
+    if (maneuver.worldForging) {
+      forging = await (await import("./chat.mjs")).askWorldForging(actor, maneuver);
+      if (!forging) return false;
     }
 
     // Weather Summoning: which Battle Weather, at which Tier.
@@ -4904,6 +4912,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postTimeFreeze(actor, maneuver)
     : maneuver.tornado
     ? await (await import("./chat.mjs")).postTornado(actor, maneuver)
+    : (maneuver.worldForging && forging)
+    ? await (await import("./chat.mjs")).postWorldForging(actor, maneuver, forging)
     : (maneuver.summonsWeather && summoning)
     ? await (await import("./chat.mjs")).postWeatherSummon(actor, maneuver, summoning)
     : (maneuver.warpedEvolution && targetActor)

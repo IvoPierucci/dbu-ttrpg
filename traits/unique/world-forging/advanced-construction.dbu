@@ -1,0 +1,17 @@
+id: advanced-construction
+name: Advanced Construction
+advancement: true
+prerequisite: 4+ Skill Ranks in Use Magic
+tpCost: 5
+# One Difficulty Category more than passed, past Grandmaster too; Hardness Rank 4 at most.
+forgeAdvanced: true
+source: Core Rule
+description: >
+  World Forging counts one Difficulty Category more than it passed, and reaches Hardness Rank 4.
+text: >
+  Advanced Construction: You create the strongest, sturdiest objects possible.
+  –Prerequisites: 4+ Skill Ranks in Use Magic
+  –TP Cost: 5
+  –Effect: Treat the number of Difficulty Categories beyond Qualified you exceed as 1 more than you exceeded for the
+  effects of World Forging (this effect can allow you to exceed Grandmaster). Additionally, increase the maximum Hardness
+  Rank of your created Features to 4.

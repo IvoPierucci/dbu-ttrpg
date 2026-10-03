@@ -1,0 +1,16 @@
+id: mass-construction
+name: Mass Construction
+advancement: true
+prerequisite: Force or Magic Score 8+
+tpCost: 3
+# How many Features, asked as it is used - 1(T) more KP for each after the first; their Squares said on the card.
+forgeMany: true
+source: Core Rule
+description: >
+  World Forging makes several Features, covering up to 1/2 your Might in Squares - 1(T) more KP for each after the first.
+text: >
+  Mass Construction: You can create multiple pieces of terrain at once.
+  –Prerequisites: Force or Magic Score 8+
+  –TP Cost: 3
+  –Effect: You can make Features that cover Squares up to 1/2 of your Might. For each Feature you make after the first,
+  increase the Ki Point Cost of World Forging by 1(T).

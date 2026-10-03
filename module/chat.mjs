@@ -2978,6 +2978,7 @@ function onRenderChatMessage(message, html) {
   renderTimeFreeze(message, html);
   renderTornado(message, html);
   renderWeatherSummon(message, html);
+  renderForge(message, html);
   renderTemperament(message, html);
   renderCheckKarma(message, html);
   hidePrivateBreakdowns(message, html);
@@ -4378,7 +4379,8 @@ const CARD_SETTLERS = {
   get create() { return [CREATE_FLAG, unsettleCreate, settleCreate]; },
   get cook() { return [COOK_FLAG, unsettleCook, settleCook]; },
   get gamble() { return [GAMBLE_FLAG, unsettleGamble, settleGamble]; },
-  get crystal() { return [CRYSTAL_FLAG, unsettleCrystal, settleCrystal]; }
+  get crystal() { return [CRYSTAL_FLAG, unsettleCrystal, settleCrystal]; },
+  get forge() { return [FORGE_FLAG, unsettleForge, settleForge]; }
 };
 
 /** A card's Check its window was closed on: the Roll button it leaves, and what that rolls. */
@@ -4402,7 +4404,7 @@ async function cardRoll(message, roll) {
   const tn = (roll.type === "save") ? Number(roll.against) : (DBUCharacterData.DIFFICULTIES[roll.against]?.tn ?? Infinity);
   const [flag, , settle] = CARD_SETTLERS[roll.settles?.kind] ?? [];
   if (!flag) return;
-  await settle(message, message.getFlag(SCOPE, flag), (typeof total === "number") && (total >= tn));
+  await settle(message, message.getFlag(SCOPE, flag), (typeof total === "number") && (total >= tn), total);
 }
 
 /** The Roll button of a card whose Check's window was closed. */
@@ -4427,9 +4429,10 @@ async function resettleCheck(settles, total, against) {
   // Tried again already: that Create is its own card now.
   if (!made?.done || made.done.retried) return;
   const success = total >= against.tn;
-  if (success === made.done.success) return;
+  // The same outcome, and - where the total itself is read, World Forging's Hardness - the same total: nothing to redo.
+  if ((success === made.done.success) && ((made.done.total === undefined) || (made.done.total === total))) return;
   await unsettle(made);
-  await settle(message, made, success);
+  await settle(message, made, success, total);
 }
 
 /** Create item, on a Basic Item made; Try again, on a Check failed - once. */
@@ -11733,6 +11736,79 @@ export async function weatherTurnEnd(actor) {
         content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(item.name)}: the Battle Weather passes.</div>` });
     }
   }
+}
+
+/** World Forging's card: its Use Magic Check, and the Feature it made. */
+const FORGE_FLAG = "worldForging";
+
+/** Mass Construction's "For each Feature you make after the first, increase the Ki Point Cost of World Forging by 1(T)" - how many, asked. */
+export async function askWorldForging(actor, maneuver) {
+  const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
+  const bought = unique ? boughtTraits(unique, getTrait) : [];
+  const many = bought.some(trait => trait.forgeMany === true);
+  const advanced = bought.some(trait => trait.forgeAdvanced === true);
+  if (!many) return { count: 1, extraKi: 0, advanced };
+  const tier = Math.max(1, actor.system.tierOfPower ?? 1);
+  const chosen = await pick(maneuver.name, "How many Features?", [1, 2, 3, 4, 5].map(n =>
+    ({ action: String(n), label: (n === 1) ? "1" : `${n} (+${(n - 1) * tier} KP)` })));
+  if (!chosen) return null;
+  const count = Number(chosen) || 1;
+  const extraKi = (count - 1) * tier;
+  if (extraKi && ((Number(actor.system.ki?.value) || 0) < maneuverKiCost(maneuver, null, actor) + extraKi)) {
+    ui.notifications.warn(`${actor.name} has not the Ki Points for that.`);
+    return null;
+  }
+  return { count, extraKi, advanced, many };
+}
+
+/** Paid for: "Make a Qualified Use Magic Skill Check" - on its card. */
+export async function postWorldForging(actor, maneuver, plan) {
+  if (plan.extraKi) {
+    await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - plan.extraKi),
+      "system.capacity.spent": actor.system.capacity.spent + plan.extraKi });
+  }
+  const message = await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${plan.count} Feature${(plan.count === 1) ? "" : "s"}</p>`,
+    flags: { [SCOPE]: { [FORGE_FLAG]: { actorUuid: actor.uuid, name: maneuver.name, ...plan, done: null } } } });
+  await cardRoll(message, { actorUuid: actor.uuid, type: "skill", key: "useMagic", against: "qualified",
+    settles: { kind: "forge", messageId: message.id } });
+  return message;
+}
+
+/**
+ * What the Check made: "Features created through World Forging have a default Hardness Rank of 0, and cover a number of
+ * Squares up to twice your ranks in Use Magic ... For every Difficulty Category you pass after Qualified, increase the
+ * maximum Hardness Rank ... up to a maximum Hardness Rank of 3" - Advanced Construction's one more, and 4.
+ */
+export function forgedHardness(total, advanced = false) {
+  const order = ["expert", "master", "grandmaster"];
+  const passed = order.filter(key => total >= (DBUCharacterData.DIFFICULTIES[key]?.tn ?? Infinity)).length;
+  return Math.min(advanced ? 4 : 3, passed + (advanced ? 1 : 0));
+}
+
+async function settleForge(message, forge, made, total) {
+  const actor = fromUuidSync(forge.actorUuid);
+  const done = { success: made, total: Number(total) || 0 };
+  await message.setFlag(SCOPE, FORGE_FLAG, { ...forge, done });
+  if (!made || !actor) return;
+  const ranks = Number(actor.system.skills?.useMagic?.ranks) || 0;
+  const squares = forge.many ? Math.floor((Number(actor.system.might) || 0) / 2) : 2 * ranks;
+  done.said = `${forge.count} Feature${(forge.count === 1) ? "" : "s"} within a Sphere around you - up to ${squares} `
+    + `Square${(squares === 1) ? "" : "s"}${(forge.count > 1) ? " each" : ""}, in any shape; Hardness Rank 0 to `
+    + `${forgedHardness(done.total, forge.advanced)}.`;
+  await message.setFlag(SCOPE, FORGE_FLAG, { ...forge, done });
+}
+
+async function unsettleForge() {}
+
+/** Its card: what was made, or nothing. */
+function renderForge(message, html) {
+  const forge = message.getFlag(SCOPE, FORGE_FLAG);
+  if (!forge?.done) return;
+  const note = document.createElement("div");
+  note.className = "dbu-settled-note";
+  note.textContent = forge.done.success ? (forge.done.said ?? "") : "Failed: nothing is made.";
+  (html.querySelector(".message-content") ?? html).append(note);
 }
 
 /** Whether an attack was declared a Called Shot. */
