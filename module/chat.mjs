@@ -19526,7 +19526,18 @@ export async function postMoment(moment, {
  * Round before too - whatever answers it that was not set to Automatic, read against that Round (Skill of the Watcher's
  * Counter Actions left unused then, not now).
  */
+/**
+ * A Defeated card nothing may answer any more: settled, or silenced - Complete Annihilation's "they cannot activate any
+ * effects with the Triggered/Defeated Keyword" - or this character's one Triggered/Defeated of the Encounter used.
+ */
+function defeatClosed(actor, card) {
+  if (card.moment !== "defeated") return false;
+  return !card.pending || Boolean(card.silenced)
+    || (actor?.system?.talentUses?.encounter ?? []).includes("moment:defeated");
+}
+
 function momentTriggers(actor, card) {
+  if (defeatClosed(actor, card)) return [];
   // Only what may answer it now - Born for Battle's "every even-numbered Combat Round".
   const holds = entry => {
     const requires = entry.program.blocks?.[0]?.requires;
@@ -19549,7 +19560,12 @@ function momentAnswerers(card) {
 
 /** Whether anybody at all could still answer this Moment, whoever they belong to. */
 export function anyoneAnswers(moment, uuids) {
-  return uuids.some(uuid => triggersFor(fromUuidSync(uuid), [moment]).length);
+  return uuids.some(uuid => {
+    const actor = fromUuidSync(uuid);
+    // Their one Triggered/Defeated of the Encounter already used: nothing of theirs answers another.
+    if ((moment === "defeated") && (actor?.system?.talentUses?.encounter ?? []).includes("moment:defeated")) return false;
+    return triggersFor(actor, [moment]).length;
+  });
 }
 
 function renderMoment(message, html) {
@@ -19781,9 +19797,16 @@ async function answerMoment(message, card, actor) {
   }
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold } : (defeated ? { damage: 0 } : {}));
-  // Caught: the rescue counts against the one allowed per Encounter, as one answered by itself does (combat.mjs).
-  if (defeated && !actor.system.defeated) {
-    await actor.update({ "system.defeatsEscaped": (actor.system.defeatsEscaped ?? 0) + 1 });
+  // Caught: the rescue counts against the one allowed per Encounter, as one answered by itself does (combat.mjs) - and the
+  // card says they are up. Not caught, and nobody else holding anything for it: the defeat stands.
+  if (defeated) {
+    const answered = { ...card, applied: [...new Set([...(card.applied ?? []), actor.uuid])] };
+    if (!actor.system.defeated) {
+      await actor.update({ "system.defeatsEscaped": (actor.system.defeatsEscaped ?? 0) + 1 });
+      requestEdit(message, { type: "moment",
+        moment: { ...answered, pending: false, title: `${actor.name} is back on their feet` } });
+    }
+    else if (!anyoneAnswers("defeated", answered.subjects ?? [])) await settleDefeat(message, answered);
   }
   // The end of the Round before, answered now - from each Trait whose effect was ticked for it.
   const late = chosen.filter(entry => String(entry.program.blocks?.[0]?.moment ?? "") === "end-of-round");

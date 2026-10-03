@@ -960,6 +960,8 @@ export async function beginDefeat(actor, { silenced = false } = {}) {
       subjectName: actor.name,
       subjects: who,
       pending,
+      // Complete Annihilation's: nothing may answer it, whatever is held.
+      ...(silenced ? { silenced: true } : {}),
       detail: pending
         ? "Not settled yet - something here can still answer it."
         : (silenced ? "Complete Annihilation: no Triggered/Defeated effect can answer it." : "")

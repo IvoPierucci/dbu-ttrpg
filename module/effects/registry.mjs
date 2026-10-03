@@ -866,7 +866,9 @@ export const WINDOW_MOMENTS = Object.freeze(["power", "declare-maneuver", "botch
  * over an Out-of-Sequence Maneuver (`outOfSequence`) - Born for Battle's Ki Surge, offered on the Threshold's card.
  */
 export function chosenAsItHappens(block) {
-  return WINDOW_MOMENTS.includes(momentOf(block)) || Boolean(block?.modifiers?.outOfSequence);
+  return WINDOW_MOMENTS.includes(momentOf(block)) || Boolean(block?.modifiers?.outOfSequence)
+    // Triggered/Defeated: one a Combat Encounter, and few - chosen on the Defeated card's Apply effects (the user's).
+    || ((block?.mode === "triggered") && (momentOf(block) === "defeated"));
 }
 
 /** A block's moment, without its parameter. */

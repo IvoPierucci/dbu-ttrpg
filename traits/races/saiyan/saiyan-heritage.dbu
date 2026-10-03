@@ -32,8 +32,10 @@ tail: true
 [passive]
 allow steadfast.autoPass.bruised;
 
-# (2) Reduced to your minimum Life Points: a Steadfast Check, 2 off its Dice Score - made, Undying until the end of your
-# next turn - and, made or not, it was triggered: what answers that (Born for Battle's 3rd effect) answers it.
+# (2) Reduced to your minimum Life Points: chosen on the Defeated card's Apply effects, never Automatic - one
+# Triggered/Defeated an Encounter (the user's); not at all against Complete Annihilation. A Steadfast Check, 2 off its Dice
+# Score - made, Undying until the end of your next turn - and, made or not, it was triggered: what answers that (Born for
+# Battle's 3rd effect) answers it.
 [triggered/defeated, effect 2]
 steadfastEnter(-2, undying, next-turn);
 trigger(heritage);
