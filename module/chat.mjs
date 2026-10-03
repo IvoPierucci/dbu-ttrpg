@@ -6688,6 +6688,7 @@ async function playCounter(message, actor, answer, attack) {
   if (!maneuver) return;
   if (maneuver.duel) return enterDuel(message, actor);
   if (maneuver.divineCounter) return playDivineCounter(message, actor, maneuver);
+  if (maneuver.divineFlex) return playDivineFlex(message, actor, maneuver);
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
   await recordManeuverType(actor, "counter");
@@ -9517,6 +9518,51 @@ async function divineCounterRelease(cardId, cancel) {
     });
   }
   return requestEdit(message, { type: "attack", attack: { ...released, divineCancelled: true } });
+}
+
+/**
+ * Divine Flex, played from Respond: "reduce the Damage Category of that Attacking Maneuver by 1 Category. This Maneuver is
+ * treated as the Direct Hit option of Defend Maneuver for any effects and gains its effects." Its DKP and Counter Action
+ * paid, its once per Combat Round counted, and this attack answered with a Direct Hit that carries it.
+ */
+async function playDivineFlex(message, actor, maneuver) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || attack.result || endedByDuel(attack)) return;
+  const why = whyNotSpecial(actor, maneuver);
+  if (why) return ui.notifications.warn(why);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} is once per Combat Round.`);
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
+  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) {
+    await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const others = (fresh.defences ?? []).filter(entry => entry.uuid !== actor.uuid);
+  return settleAttack(message, {
+    ...fresh,
+    defences: [...others, { uuid: actor.uuid, defence: "directHit", wager: 0, foundation: "energy", parryWith: [],
+      divineFlex: { name: maneuver.name } }],
+    ready: [...new Set([...(fresh.ready ?? []), actor.uuid])]
+  });
+}
+
+/**
+ * Divine Flex's other half: "If you receive 0 Damage from that Attacking Maneuver, while no other effect took the Damage
+ * ..., reduce that Opponent's Life Points by your Soak Value" - the sheet's Soak Value (the user's ruling). The number only
+ * to those who may see the flexer's rolls.
+ */
+async function divineFlexBack(actor, attacker, name) {
+  const soak = Math.max(0, Number(actor.system.soakValue) || 0);
+  if (!soak) return;
+  const settled = attacker.system.life.value - soak;
+  await requestActorUpdate(attacker, { "system.life.value":
+    attacker.system.effects?.slots?.["life.allowNegative"] ? settled : Math.max(0, settled) });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${name}: ${attacker.name} loses Life Points equal to ${actor.name}'s Soak Value.`)}</div>` });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${name}: ${soak} Life Points.`)}</div>` });
 }
 
 /** The Basic Attack, rolled: missed, nothing to cancel by; hit, settled once its Damage is applied. */
@@ -14856,6 +14902,8 @@ async function resolveAttack(message, attack) {
     const shift = (attack.damageCategoryShift ?? 0)
       + criticalStep
       + (defence.damageCategoryShift ?? 0)
+      // Divine Flex: "reduce the Damage Category of that Attacking Maneuver by 1 Category" - against the one who flexed.
+      + (defenceFor(attack, uuid)?.divineFlex ? -1 : 0)
       // Karmic: "Increase the Damage Category by 1 Category against Characters who have an opposing
       // Z-Soul. If that Opponent's Z-Soul Alignment is 'Pure', apply this bonus twice."
       + karmicSteps(attacker, attack, target)
@@ -18557,6 +18605,12 @@ async function applyAttackDamage(message, target, attack) {
   }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
     ? { dbuSilenced: true } : {});
   if (arms) await offerArmsHit(armsUser, target);
+  // Divine Flex: 0 Damage from it, and nothing else took it - an Intervene, a Weapon or a Buddy it landed on.
+  const flexed = defenceFor(attack, target.uuid)?.divineFlex;
+  if (flexed && armsUser && (armsUser.uuid !== target.uuid) && (damage <= 0)
+    && !own.shieldedBy && !own.weaponHit && !own.buddyHit) {
+    await divineFlexBack(target, armsUser, flexed.name);
+  }
   // Tornado Attack: hit, and dealt 0 Damage - the Basic Attack back, offered.
   if (own.hit && !isAbsoluteMiss(own) && (damage <= 0)) offerTornadoStrike(message, attack, target, "no Damage");
   if (attack.spiritSword && armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) {

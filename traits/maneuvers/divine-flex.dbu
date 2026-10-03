@@ -1,0 +1,31 @@
+id: divine-flex
+name: Divine Flex
+type: counter
+actionCost: 1
+kiCostPerBaseTier: 2
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A God Maneuver: open where an effect grants it, only in God Ki, its 2(bT) paid in Divine Ki Points (maneuvers.mjs
+# whyNotGod, spendManeuverCost). Taken in Respond against an attack at you (chat.mjs playDivineFlex): answered as the
+# Direct Hit option of the Defend Maneuver - its Soak Value half again, its Shaken, everything that reads a Direct Hit -
+# and the attack's Damage Category 1 lower against you. 0 Damage from it, with nothing else having taken it (an
+# Intervene, a Weapon or Buddy it landed on): its maker loses Life Points equal to your Soak Value, the sheet's (the
+# user's ruling).
+godManeuver: true
+divineFlex: true
+source: Core Rule
+description: >
+  A God Maneuver: against an attack at you, a Direct Hit with its Damage Category 1 lower - taking 0 Damage from it, its
+  maker loses your Soak Value in Life Points.
+text: >
+  Divine Flex [1/Round]: You can shrug off hits with heavenly grace.
+  –Maneuver Type: Counter
+  –Action Cost: 1 Counter Action
+  –DKP Cost: 2(bT)
+  –Effect: If you are targeted by an Opponent’s Attacking Maneuver, reduce the Damage Category of that Attacking Maneuver
+  by 1 Category. This Maneuver is treated as the Direct Hit option of Defend Maneuver for any effects and gains its
+  effects.
+
+  If you receive 0 Damage from that Attacking Maneuver, while no other effect took the Damage (such as the Barrier Bubble
+  Unique Ability or a Ki Entity/Refractive Dragon), reduce that Opponent’s Life Points by your Soak Value.
