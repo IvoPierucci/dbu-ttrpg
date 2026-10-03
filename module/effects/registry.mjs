@@ -833,7 +833,9 @@ function conditionPrograms(actor, report) {
  * The moments whose Triggered effects are offered in a window as they happen - the Power Up's, a Counter Maneuver's, a
  * Maneuver declared, a Botch or a Critical on a Combat Roll - and so never Armed or set Automatic beforehand (the user's).
  */
-export const WINDOW_MOMENTS = Object.freeze(["power", "counter-maneuver", "declare-maneuver", "botch", "critical"]);
+export const WINDOW_MOMENTS = Object.freeze(["power", "counter-maneuver", "declare-maneuver", "botch", "critical",
+  // And what Respond and a roll's own window already offer - Flow of Combat's (3) in Respond.
+  "defending", "combat-roll", "hit", "being-hit", "before-wound", "clash-resolved"]);
 
 /** A block's moment, without its parameter. */
 export function momentOf(block) {

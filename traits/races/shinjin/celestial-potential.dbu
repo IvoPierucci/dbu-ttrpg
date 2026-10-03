@@ -15,15 +15,15 @@ text: >
 
 # (1) Offered in a window the moment a Combat Roll Botches - before the Clash is settled - its penalty not taken, 2(T)
 # added instead (chat.mjs outcomeTurn).
-[triggered/botch, 1/round]
+[triggered/botch, 1/round, effect 1]
 roll.total += 2(T);
 
 # (2) Offered in a window the moment a Combat Roll Crits - before the Clash is settled - 2(T) more on top of its Critical
 # Extra Dice.
-[triggered/critical, 1/round]
+[triggered/critical, 1/round, effect 2]
 roll.total += 2(T);
 
 # (3) Offered in a window as the Power Up Maneuver is used: as many of your Counter Actions as are left, up to 2,
 # become Actions this Combat Round.
-[triggered/power, 1/encounter]
+[triggered/power, 1/encounter, effect 3]
 actions.fromCounter += min(2, actions.counterLeft);

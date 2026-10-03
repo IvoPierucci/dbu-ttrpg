@@ -30,6 +30,7 @@ function blockText(b) {
   if (b.modifiers?.grantsManeuver) header.push(`${b.modifiers.grantsManeuver} maneuver`);
   if (b.modifiers?.before) header.push("before");
   if (b.modifiers?.first) header.push("first");
+  if (b.modifiers?.effect) header.push(`effect ${b.modifiers.effect}`);
 
   const lines = [`[${header.join(", ")}]`];
   if (b.requires) lines.push(`requires ${conditionText(b.requires)};`);

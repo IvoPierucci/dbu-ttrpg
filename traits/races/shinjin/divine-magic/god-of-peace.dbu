@@ -10,5 +10,5 @@ text: >
 ---
 
 # Offered in a window as the Power Up Maneuver is used, to tick then and there (chat.mjs answerPower).
-[triggered/power, 1/round]
+[triggered/power, 1/round, effect 3]
 enterState("mindful", 1, "start-of-next-turn");

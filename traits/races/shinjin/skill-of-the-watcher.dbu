@@ -28,16 +28,16 @@ allow powerUp.afterExploitOrDefend;
 # Ability - and ticked, held for its duration (chat.mjs answerCounter): every roll and Damage of that exchange, the
 # Out-of-Sequence Basic Attack an Exploit or a Cross Counter hands you among them. Over once you answer another attack,
 # use a Maneuver of your own in sequence, or the turn passes.
-[triggered/counter-maneuver]
+[triggered/counter-maneuver, effect 3]
 combatRolls += 1(T);
 soakValue += 1(T);
 
 # (4) Automatic from the Traits tab: as each Combat Round ends. Not: offered on the next Round's card, from the second on
 # - for the Counter Actions left unused in the Round before, not this one's (the user's).
-[triggered/end-of-round]
+[triggered/end-of-round, effect 4]
 life.value += 2(bT) * actions.counterLeftLastRound;
 ki.value += 2(bT) * actions.counterLeftLastRound;
 
 # (6) From the Combat Round's own card, its Action paid as it is taken.
-[triggered/start-of-round, costs 1 action]
+[triggered/start-of-round, costs 1 action, effect 6]
 actions.counterGained += 2;

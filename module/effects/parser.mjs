@@ -177,6 +177,12 @@ class Parser {
             budget.encounter ??= 1;
             break;
           case "armed": budget.armed = true; break;
+          // `effect 4` - which of the Trait's printed effects, "(4)-[Triggered]", this block is: how it is named on the
+          // sheet (the user's).
+          case "effect":
+            modifiers.effect = Number(rest[0]?.value ?? 0);
+            took = 2;
+            break;
           case "per":
             if (rest[0]?.value === "stack") { modifiers.perStack = true; took = 2; }
             else this.fail('"per" is followed by "stack".', first);

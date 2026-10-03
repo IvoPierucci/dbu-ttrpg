@@ -10,6 +10,6 @@ text: >
 ---
 
 # Offered in a window as a Signature Technique is declared (chat.mjs answerDeclare).
-[triggered/declare-maneuver, 1/round]
+[triggered/declare-maneuver, 1/round, effect 3]
 requires signatureTechnique;
 attack.energyCharges += 1;

@@ -360,6 +360,13 @@ function skillCriticalTarget(actor, key) {
   return Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, (Number(actor.system.criticalTarget) || 10) + shift);
 }
 
+/** 1st, 2nd, 3rd, 4th ... */
+function ordinal(n) {
+  const tens = n % 100;
+  const suffix = ((tens >= 11) && (tens <= 13)) ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th");
+  return `${n}${suffix}`;
+}
+
 export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static DEFAULT_OPTIONS = {
@@ -4802,6 +4809,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         .map(entry => ({
           id: entry.blockId,
           automatic: (this.actor.getFlag("dbu-ttrpg", "automatic") ?? []).includes(entry.blockId),
+          // Named by which of the Trait's printed effects it is - "4th effect" (the user's).
+          label: entry.program.blocks[0]?.modifiers?.effect
+            ? `${ordinal(entry.program.blocks[0].modifiers.effect)} effect` : entry.sourceName,
           available: entry.available,
           text: entry.program.blocks[0]?.text ?? "",
           moment: entry.program.blocks[0]?.moment ?? "",
