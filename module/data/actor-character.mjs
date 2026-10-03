@@ -2192,6 +2192,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     };
     // The Counter Actions still held - Skill of the Watcher's "for each Counter Action you possess".
     this.actions.counterLeft = Math.max(0, this.actions.counter - (Number(this.actionsSpent?.counter) || 0));
+    // And those left unused when the last Combat Round ended - what its end answers, taken then or on the next Round's card.
+    this.actions.counterLeftLastRound = Math.max(0, Number(this.parent?.getFlag?.("dbu-ttrpg", "lastRoundCounterLeft")) || 0);
 
     // Haste: 1/2 Agility Modifier, added to Strike Rolls.
     this.haste = withEffects(this, "haste", Math.floor(atts.agility.mod / 2), {

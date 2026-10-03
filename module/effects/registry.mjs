@@ -831,6 +831,8 @@ function conditionPrograms(actor, report) {
  */
 export function reactiveFor(actor, options = {}) {
   const armed = new Set(actor.system?.armedEffects ?? actor.system?.armedTalents ?? []);
+  // What the player set to Automatic on a Racial Trait (the user's): answers its moment each time, never spent off.
+  const automatic = new Set(actor.getFlag?.("dbu-ttrpg", "automatic") ?? []);
 
   return programsFor(actor, options).flatMap(entry =>
     (entry.program.blocks ?? [])
@@ -840,6 +842,7 @@ export function reactiveFor(actor, options = {}) {
         program: { ...entry.program, blocks: [b] },
         blockId: `${entry.sourceId}#${b.index}`,
         armed: (b.mode === "automatic") || armed.has(`${entry.sourceId}#${b.index}`)
+          || automatic.has(`${entry.sourceId}#${b.index}`)
           // A Talent armed under the old per-Talent key still counts, so nothing a
           // player armed before this change quietly stops working.
           || armed.has(entry.sourceId),

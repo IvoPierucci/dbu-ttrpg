@@ -80,8 +80,12 @@ async function startRound(combat) {
     // the start of the next one is the end of the last from where this stands, since
     // nothing happens between them - and it has to end before the new Round can hand out
     // another one, or a second helping would come off with the first.
-    // The Round before this one ends first, with what was still held at its end - Skill of the Watcher's.
-    if ((combat.round ?? 0) > 1) await fireMoment(actor, "end-of-round");
+    // The Round before this one ends first, with what was still held at its end - Skill of the Watcher's: kept, so what
+    // answers it on the next Round's card reads the Round that ended, not the one beginning.
+    if ((combat.round ?? 0) > 1) {
+      await actor.setFlag("dbu-ttrpg", "lastRoundCounterLeft", Number(actor.system.actions?.counterLeft) || 0);
+      await fireMoment(actor, "end-of-round");
+    }
     await edgeReached(actor, EDGES.ROUND);
 
     await actor.update(newRoundFor(actor));

@@ -32,10 +32,11 @@ allow powerUp.afterExploitOrDefend;
 combatRolls += 1(T);
 soakValue += 1(T);
 
-# (4) Armed from the Traits tab: as each Combat Round ends, before the Counter Actions come back.
+# (4) Automatic from the Traits tab: as each Combat Round ends. Not: offered on the next Round's card, from the second on
+# - for the Counter Actions left unused in the Round before, not this one's (the user's).
 [triggered/end-of-round]
-life.value += 2(bT) * actions.counterLeft;
-ki.value += 2(bT) * actions.counterLeft;
+life.value += 2(bT) * actions.counterLeftLastRound;
+ki.value += 2(bT) * actions.counterLeftLastRound;
 
 # (6) From the Combat Round's own card, its Action paid as it is taken.
 [triggered/start-of-round, costs 1 action]

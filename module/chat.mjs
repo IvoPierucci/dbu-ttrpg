@@ -19315,13 +19315,25 @@ export async function postMoment(moment, {
   });
 }
 
+/**
+ * What a character may answer a Moment's card with. The Round's card, from the second Round on, carries the end of the
+ * Round before too - whatever answers it that was not set to Automatic, read against that Round (Skill of the Watcher's
+ * Counter Actions left unused then, not now).
+ */
+function momentTriggers(actor, card) {
+  const own = triggersFor(actor, [card.moment]);
+  if ((card.moment !== "start-of-round") || ((game.combat?.round ?? 0) < 2)) return own;
+  const automatic = new Set(actor?.getFlag?.(SCOPE, "automatic") ?? []);
+  return [...own, ...triggersFor(actor, ["end-of-round"]).filter(entry => !automatic.has(entry.blockId) && !entry.armed)];
+}
+
 /** Everyone on this card the reader plays who still holds something to answer it with. */
 function momentAnswerers(card) {
   return (card.subjects ?? [])
     .map(uuid => fromUuidSync(uuid))
     .filter(actor => actor?.isOwner
       && !(card.applied ?? []).includes(actor.uuid)
-      && triggersFor(actor, [card.moment]).length);
+      && momentTriggers(actor, card).length);
 }
 
 /** Whether anybody at all could still answer this Moment, whoever they belong to. */
@@ -19521,7 +19533,7 @@ async function rollWeatherFor(message, card, actor) {
 
 /** Apply what this character brings to a Moment, and note that they have. */
 async function answerMoment(message, card, actor) {
-  const triggers = triggersFor(actor, [card.moment]);
+  const triggers = momentTriggers(actor, card);
   if (!triggers.length) return;
 
   const before = new Set(actor.system.armedTalents ?? []);
@@ -19547,6 +19559,11 @@ async function answerMoment(message, card, actor) {
   }
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   await fireMoment(actor, card.moment);
+  // The end of the Round before, answered now - from each Trait whose effect was ticked for it.
+  const late = chosen.filter(entry => String(entry.program.blocks?.[0]?.moment ?? "") === "end-of-round");
+  for (const sourceId of new Set(late.map(entry => entry.sourceId))) {
+    await fireMoment(actor, "end-of-round", {}, { only: sourceId });
+  }
 }
 
 /**

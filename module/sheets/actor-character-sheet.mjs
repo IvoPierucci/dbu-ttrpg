@@ -461,6 +461,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       endMark: DBUCharacterSheet._onEndMark,
       throwGear: DBUCharacterSheet._onThrowGear,
       armTalent: DBUCharacterSheet._onArmTalent,
+      automateTrigger: DBUCharacterSheet._onAutomateTrigger,
       editItem: DBUCharacterSheet._onEditItem,
       toggleManeuver: DBUCharacterSheet._onToggleManeuver,
       releaseGrapple: DBUCharacterSheet._onReleaseGrapple,
@@ -4670,6 +4671,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * exchange is often not the one that owns the character rolling, so there is no
    * moment mid-roll at which the owner could be asked.
    */
+  /**
+   * A Racial Trait's Triggered effect set to Automatic, or back to Triggered (the user's): Automatic, it answers its moment
+   * each time by itself; Triggered, it is offered where its moment is - the Round's card, a window.
+   */
+  static async _onAutomateTrigger(event, target) {
+    if (!this.isEditable) return;
+    const id = target.dataset.effectId;
+    const held = new Set(this.actor.getFlag("dbu-ttrpg", "automatic") ?? []);
+    if (held.has(id)) held.delete(id);
+    else held.add(id);
+    return this.actor.setFlag("dbu-ttrpg", "automatic", [...held]);
+  }
+
   static async _onArmTalent(event, target) {
     // The id names one effect of one Talent, so two triggered effects on the same
     // Talent are armed independently.
@@ -4786,7 +4800,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           && !["power", "counter-maneuver"].includes(String(entry.program.blocks[0]?.moment ?? "").split(/[(/]/)[0]))
         .map(entry => ({
           id: entry.blockId,
-          armed: entry.armed,
+          automatic: (this.actor.getFlag("dbu-ttrpg", "automatic") ?? []).includes(entry.blockId),
           available: entry.available,
           text: entry.program.blocks[0]?.text ?? "",
           moment: entry.program.blocks[0]?.moment ?? "",

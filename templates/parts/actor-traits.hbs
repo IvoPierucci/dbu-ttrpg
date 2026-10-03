@@ -21,11 +21,11 @@
           <span class="trait-name">{{entry.item.name}}</span>
           <span class="trait-prereq">{{entry.race}}{{#if entry.kind}} &middot; {{entry.kind}}{{/if}}</span>
           {{#each entry.triggered as |trigger|}}
-          <button type="button" class="trait-arm {{#if trigger.armed}}active{{/if}}"
-                  data-action="armTalent" data-effect-id="{{trigger.id}}"
-                  {{#unless trigger.available}}disabled{{/unless}}
-                  data-tooltip="{{#if trigger.text}}{{trigger.text}} - {{/if}}{{trigger.moment}}{{#if trigger.limits}} - {{trigger.limits}}{{/if}}">
-            {{#if trigger.armed}}Armed{{else}}Arm{{/if}}
+          {{! Triggered: offered where its moment is, to take or leave. Automatic: it answers that moment by itself, every time. }}
+          <button type="button" class="trait-arm {{#if trigger.automatic}}active{{/if}}"
+                  data-action="automateTrigger" data-effect-id="{{trigger.id}}"
+                  data-tooltip="{{#if trigger.automatic}}Automatic: it answers {{trigger.moment}} by itself, every time{{else}}Triggered: offered at {{trigger.moment}}, yours to take{{/if}}{{#if trigger.limits}} - {{trigger.limits}}{{/if}}">
+            {{#if trigger.automatic}}Automatic{{else}}Triggered{{/if}}
           </button>
           {{/each}}
           <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
