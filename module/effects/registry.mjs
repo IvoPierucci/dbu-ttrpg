@@ -830,10 +830,11 @@ function conditionPrograms(actor, report) {
  * were keyed on the Talent's id.
  */
 /**
- * The moments whose Triggered effects are offered in a window as they happen - the Power Up's, a Counter Maneuver's, a
- * Maneuver declared, a Botch or a Critical on a Combat Roll - and so never Armed or set Automatic beforehand (the user's).
+ * The moments whose Triggered effects are offered in a window as they happen - the Power Up's, a Maneuver declared, a
+ * Botch or a Critical on a Combat Roll - and so never Armed or set Automatic beforehand (the user's). A Counter Maneuver's
+ * may be: Automatic, it holds without asking; Triggered, its window asks (chat.mjs answerCounter).
  */
-export const WINDOW_MOMENTS = Object.freeze(["power", "counter-maneuver", "declare-maneuver", "botch", "critical",
+export const WINDOW_MOMENTS = Object.freeze(["power", "declare-maneuver", "botch", "critical",
   // And what Respond and a roll's own window already offer - Flow of Combat's (3) in Respond.
   "defending", "combat-roll", "hit", "being-hit", "before-wound", "clash-resolved"]);
 

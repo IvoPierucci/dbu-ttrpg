@@ -272,6 +272,7 @@ export async function addRacialTrait(actor, trait) {
   const [item] = await actor.createEmbeddedDocuments("Item", [made.data]);
   if (!item) return null;
   await giveGrants(actor, item, made.grants, trait.name);
+  await automateAll(actor, item);
   return item;
 }
 
@@ -328,6 +329,25 @@ async function giveGrants(actor, item, grants, name) {
   if (created.length) await actor.createEmbeddedDocuments("Item", created);
 }
 
+/**
+ * The Triggered effects of a Racial Trait Item that the Traits tab toggles between Triggered and Automatic - not those a
+ * window offers as they happen, nor those that cost Actions (a moment's card takes and pays for them) - as block ids.
+ */
+export async function toggledBlocks(item) {
+  const { compile } = await import("./effects/parser.mjs");
+  const { WINDOW_MOMENTS, momentOf } = await import("./effects/registry.mjs");
+  return (compile(item?.system?.script ?? "").program?.blocks ?? [])
+    .filter(block => (block.mode === "triggered") && !block.budget?.actions && !WINDOW_MOMENTS.includes(momentOf(block)))
+    .map(block => `${item.id}#${block.index}`);
+}
+
+/** Gained - or its Option changed - its toggles start Automatic (the user's). */
+async function automateAll(actor, item) {
+  const ids = await toggledBlocks(item);
+  if (!actor || !ids.length) return;
+  await actor.setFlag("dbu-ttrpg", "automatic", [...new Set([...(actor.getFlag("dbu-ttrpg", "automatic") ?? []), ...ids])]);
+}
+
 /** The Option chosen on a Racial Trait Item, where it has an Option effect of one - its id, or "". */
 export function racialOptionOf(item) {
   return (item?.system?.chosen ?? []).find(entry => entry.key === "option")?.value ?? "";
@@ -358,6 +378,7 @@ export async function changeRacialOption(item, optionId) {
   });
 
   if (!actor) return true;
+  await automateAll(actor, item);
   const old = Array.from(actor.items).filter(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
     && each.flags?.["dbu-ttrpg"]?.grantedByOption).map(each => each.id);
   if (old.length) await actor.deleteEmbeddedDocuments("Item", old);
@@ -374,6 +395,11 @@ export async function changeRacialOption(item, optionId) {
  */
 export async function removeRacialTrait(actor, itemId) {
   const given = Array.from(actor.items).filter(each => each.flags?.["dbu-ttrpg"]?.grantedBy === itemId).map(each => each.id);
+  // Its toggles forgotten with it.
+  const automatic = actor.getFlag("dbu-ttrpg", "automatic") ?? [];
+  if (automatic.some(id => id.startsWith(`${itemId}#`))) {
+    await actor.setFlag("dbu-ttrpg", "automatic", automatic.filter(id => !id.startsWith(`${itemId}#`)));
+  }
   const ids = [itemId, ...given].filter(id => actor.items.get(id));
   if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids);
 }

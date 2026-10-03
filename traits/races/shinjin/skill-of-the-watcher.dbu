@@ -24,8 +24,8 @@ allow sense.godKi;
 combat-recovery.actionCost.minimum = 1;
 allow powerUp.afterExploitOrDefend;
 
-# (3) Offered in a window as you use any Counter Maneuver - the Defend, Exploit and Intervene Maneuvers, a Counter Unique
-# Ability - and ticked, held for its duration (chat.mjs answerCounter): every roll and Damage of that exchange, the
+# (3) As you use any Counter Maneuver - the Defend, Exploit and Intervene Maneuvers, a Counter Unique Ability - held for its
+# duration: Automatic on the Traits tab, without asking; Triggered, offered in a window (chat.mjs answerCounter): every roll and Damage of that exchange, the
 # Out-of-Sequence Basic Attack an Exploit or a Cross Counter hands you among them. Over once you answer another attack,
 # use a Maneuver of your own in sequence, or the turn passes.
 [triggered/counter-maneuver, effect 3]

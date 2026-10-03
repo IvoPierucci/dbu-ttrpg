@@ -5898,13 +5898,16 @@ export async function answerPower(actor) {
  */
 export async function answerCounter(actor) {
   if (!actor?.isOwner) return;
-  const triggers = triggersFor(actor, ["counter-maneuver"]);
-  if (!triggers.length) return;
+  const all = triggersFor(actor, ["counter-maneuver"]);
+  if (!all.length) return;
+  // Set Automatic on the Traits tab, it holds without asking (the user's); the rest are asked in the window.
+  const automatic = new Set(actor.getFlag?.(SCOPE, "automatic") ?? []);
+  const held = all.filter(entry => automatic.has(entry.blockId));
+  const triggers = all.filter(entry => !automatic.has(entry.blockId));
   const before = new Set(actor.system.armedTalents ?? []);
-  const applied = await prepareRoll(actor, triggers, "Counter Maneuver", "", { rolling: false });
-  if (applied === false) return;
+  const applied = triggers.length ? await prepareRoll(actor, triggers, "Counter Maneuver", "", { rolling: false }) : true;
   const armed = actor.system.armedTalents ?? [];
-  const chosen = triggers.filter(entry => !before.has(entry.blockId) && armed.includes(entry.blockId));
+  const chosen = [...held, ...((applied === false) ? [] : triggers.filter(entry => !before.has(entry.blockId) && armed.includes(entry.blockId)))];
   if (!chosen.length) return;
   const ids = chosen.map(entry => entry.blockId);
   await actor.update({
