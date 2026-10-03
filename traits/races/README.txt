@@ -32,6 +32,7 @@ Three header lines say what the rules call it:
     category: body          (or mind)
     importance: primary     (or secondary)
     subrace: <subrace id>   (only for a Subrace Trait - which is Primary)
+    order: 1                (where it stands among its race's, as printed)
 
 Two things to remember:
 

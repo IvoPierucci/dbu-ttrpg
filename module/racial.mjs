@@ -11,6 +11,7 @@
  *   category: body | mind           "split between the Body and Mind Categories"
  *   importance: primary | secondary "separated into Primary or Secondary Traits"
  *   subrace: <subrace id>           a Subrace Trait (Primary)
+ *   order: 1                        where it stands among its race's, as the race's page prints them (the user's)
  *   options: 1                      an Option effect: choose that many of its Options when it is added
  *   choose: knowledge               a choice its script reads as `$choice` - Knowledge (any) or an Elemental Profile
  *   grantsUnique: <ids>             Unique Abilities it gives - "You do not need to meet the Requirements to use these
@@ -86,14 +87,21 @@ export function raceName(id) {
   return getRace(id)?.name ?? id ?? "";
 }
 
+/** Where a Racial Trait stands among its race's - its `order:`, as the race's page prints them; unnumbered ones last. */
+function orderOf(trait) {
+  const order = Number(trait?.order);
+  return Number.isFinite(order) ? order : Number.MAX_SAFE_INTEGER;
+}
+
 /**
  * Every Racial Trait there is, in the order the picker and the list show them: this character's race first, then every
- * other race by the race's name (not the Trait's), each race's Traits by name.
+ * other race by the race's name (not the Trait's), each race's Traits in the order its page prints them (the user's).
  */
 export function racialTraitsInOrder(race, traits = racialTraitFiles()) {
   return traits.slice().sort((a, b) =>
     (Number(b.owner === race) - Number(a.owner === race))
     || raceName(a.owner).localeCompare(raceName(b.owner))
+    || (orderOf(a) - orderOf(b))
     || a.name.localeCompare(b.name));
 }
 
@@ -109,12 +117,14 @@ export function racialTraitRace(race, subrace = "") {
   return [raceName(race), subrace ? (subraceName(race, subrace) || subrace) : ""].filter(Boolean).join(" - ");
 }
 
-/** The Racial Trait Items a character has: own race's first, then by race name, then by name. */
+/** The Racial Trait Items a character has, in the picker's order: own race's first, then by race name, then as printed. */
 export function ownedRacialTraits(actor) {
   const race = actor?.system?.race;
+  const fileOf = item => getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   return Array.from(actor?.items ?? []).filter(item => item.type === RACIAL_TYPE).sort((a, b) =>
     (Number(b.system.race === race) - Number(a.system.race === race))
     || raceName(a.system.race).localeCompare(raceName(b.system.race))
+    || (orderOf(fileOf(a)) - orderOf(fileOf(b)))
     || a.name.localeCompare(b.name));
 }
 

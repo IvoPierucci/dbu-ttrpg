@@ -1,5 +1,6 @@
 id: skill-of-the-watcher
 name: Skill of the Watcher
+order: 2
 category: mind
 importance: primary
 description: >

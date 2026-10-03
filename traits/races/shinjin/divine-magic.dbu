@@ -1,5 +1,6 @@
 id: divine-magic
 name: Divine Magic
+order: 1
 category: mind
 importance: primary
 # (1) "You gain access to the Magical Materialization, Telepathy, Telekinesis, and Second Sight Unique Abilities" - made

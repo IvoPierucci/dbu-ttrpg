@@ -1,5 +1,6 @@
 id: flow-of-combat
 name: Flow of Combat
+order: 5
 category: mind
 importance: secondary
 description: >

@@ -1,5 +1,6 @@
 id: celestial-potential
 name: Celestial Potential
+order: 3
 category: body
 importance: secondary
 description: >
