@@ -8327,14 +8327,23 @@ async function resolveSkillClash(message, clash) {
     }
   );
 
-  const [challengerSide, defenderSide] = await Promise.all([
+  const [challengerSide, rolledDefence] = await Promise.all([
     side(challenger, clash.challengerUuid),
     side(defender, clash.defenderUuid)
   ]);
+  // God Ki: "You automatically succeed at Concealment Skill Clashes initiated by those who cannot sense God Ki" - one in
+  // God Ki answering with Concealment, at one who is not.
+  const divine = who => (Number(who?.system?.states?.["god-ki"]) || 0) > 0;
+  const hidden = (clash.category === "skill") && (skillPicked(clash, clash.defenderUuid) === "concealment")
+    && divine(defender) && !divine(challenger);
+  const defenderSide = hidden
+    ? { ...rolledDefence, succeeded: true, lines: [...(rolledDefence.lines ?? []), noteLine("God Ki - it cannot be sensed")] }
+    : rolledDefence;
 
   requestEdit(message, {
     type: "clash",
-    clash: { ...clash, result: { challenger: challengerSide, defender: defenderSide } }
+    clash: { ...clash, result: { challenger: hidden ? { ...challengerSide, succeeded: false } : challengerSide,
+      defender: defenderSide } }
   });
 }
 

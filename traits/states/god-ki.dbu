@@ -1,15 +1,56 @@
 id: god-ki
 name: God Ki
 kind: state
-# A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
+# A Special State (the user's terminology): entered for the whole of a Transformation with the God Ki Aspect, or through
+# another effect (the Divine Candidate Awakening). Transformations are not in this system yet: it is entered from the
+# sheet, or by an effect that gives it.
 specialState: true
 description: >
-  God Ki. Its own effects wait on its text; God Meteor asks for it.
+  Divine Ki: your Divine Ki Points to spend, Concealment Clashes won against those who cannot sense God Ki, Wound and
+  Soak 3(T) higher.
 text: >
-  God Ki: a Special State. Its rule text has not been given yet.
+  (1)-[Passive]: You gain access to your Divine Ki Points.
+
+  (2)-[Passive]: You automatically succeed at Concealment Skill Clashes initiated by those who cannot sense God Ki, even if
+  you do not have any Skill Ranks in Concealment. Unless specified otherwise, no one can sense God Ki, except those who
+  are in the God Ki State or have access to a Transformation with the God Ki Aspect.
+
+  (3)-[Passive]: Increase your Wound Rolls and Soak Value by 3(T).
+
+  Divine Ki Points (DKP) are a separate pool of Ki Points accessed by Characters in the God Ki Special State. A Character
+  in the God Ki Special State, or who has access to a Transformation with the God Ki Aspect, starts each Combat Encounter
+  with their maximum amount of DKP - an amount equal to 1/2 of their Maximum Ki Points (ignoring any increases from Ki
+  Multiplier). Whether you are in the God Ki Special State or not does not influence your amount of DKP, only if you are
+  able to use it. If a Character gains access to the God Ki Special State during a Combat Encounter, then they will
+  possess their DKP starting from that point forward, rather than from the start of the Combat Encounter (they still
+  start with their maximum amount of Divine Ki Points).
+
+  While in the God Ki Special State, you may use your Divine Ki Points as if they were normal Ki Points, but there are a
+  few important rules regarding the use of DKP:
+
+  * Divine Ki Points only use 1/2 (rounded up) of the Capacity Rate of normal Ki Points.
+  * If you would lose any Ki Points from the Draining Aspect while in the God Ki State, you also lose Divine Ki Points
+  equal to 1/2 the amount of Ki Points lost.
+  * If you use Divine Ki Points to pay the Ki Point Cost of a Maneuver, or to make a Ki Wager, you cannot also contribute
+  to that instance of paying Ki using normal Ki Points. However, you could use DKP to pay for the Ki Point Cost for an
+  Attacking Maneuver and then Ki Wager with your normal Ki Points, as they are two different instances of paying Ki
+  Points.
+  * When using the Empower Maneuver, if your targeted Ally is also in the God Ki State, you can transfer DKP to them,
+  instead of normal Ki Points.
+  * The No Energy condition for Leaving a Transformation depends on your Divine Ki Points rather than your Ki Points for
+  Transformations with the God Ki Aspect.
 
 ---
 
-# Made empty for now (the user's ruling, 2026-10-01) so God Meteor can ask whether you are in it - "access to the God Ki
-# Special State", "You can only use this Unique Ability while you are in the God Ki Special State", and its Passive.
-# Its own effects go here once its text arrives.
+# (1) The Divine Ki Points: their own pool (system.divineKi), half the Maximum Ki Points before any Ki Multiplier, filled
+#     when a Combat Encounter starts in this State or when this State is entered in one (combat.mjs, conditions.mjs).
+#     Spent in place of Ki Points where a Maneuver's price is paid, all of it or none, while the sheet's Spend Divine Ki
+#     is on - half its Capacity (maneuvers.mjs spendManeuverCost).
+# (2) Read where a Clash is rolled (chat.mjs): a Concealment answer from one in God Ki, at one who is not, succeeds.
+# (3) Below.
+# Not built: the Draining Aspect and Leaving a Transformation (Transformations are not in the system), and the Empower
+# Maneuver's transfer of DKP.
+
+[passive]
+wound += 3(T);
+soakValue += 3(T);

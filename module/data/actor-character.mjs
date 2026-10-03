@@ -937,6 +937,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       value: new fields.NumberField({ required: true, integer: true, initial: 50, min: 0 })
     });
 
+    // God Ki's Divine Ki Points: their own pool, what is left of it, whether the player is spending it in place of Ki,
+    // and which Combat Encounter last filled it.
+    schema.divineKi = new fields.SchemaField({
+      value: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      use: new fields.BooleanField({ required: true, initial: false }),
+      filled: new fields.StringField({ required: true, blank: true, initial: "" })
+    });
+
     // The Racial Life Modifier is not stored: it comes from the chosen race
     // (see prepareDerivedData and races.mjs).
 
@@ -2127,6 +2135,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       kiPerLevelBonus: this.transformationBonuses.kiPerLevel + slot(this, "ki.perLevel")
     });
     this.ki.max = Math.max(0, withEffects(this, "ki.max", this.ki.max));
+
+    // God Ki's Divine Ki Points: "an amount equal to 1/2 of their Maximum Ki Points (ignoring any increases from Ki
+    // Multiplier)" - read before the Multiplier below.
+    if (this.divineKi) {
+      this.divineKi.max = Math.floor(this.ki.max / 2);
+      this.divineKi.active = (Number(this.states?.["god-ki"]) || 0) > 0;
+    }
 
     // Doubled on the finished pool, for the same reason.
     if (this.debug.kiMultiplier) this.ki.max *= DBUCharacterData.KI_MULTIPLIER_KI;

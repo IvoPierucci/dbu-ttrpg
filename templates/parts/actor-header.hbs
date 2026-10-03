@@ -63,6 +63,17 @@
         </div>
         <div class="meter"><div class="meter-fill" style="width: {{kiPercent}}%"></div></div>
       </div>
+      {{#if system.divineKi.active}}
+      <div class="resource-card resource-ki resource-divine"
+           data-tooltip="God Ki's Divine Ki Points: spent in place of Ki Points while ticked - all of a price or none, at half its Capacity">
+        <label>Divine Ki <input type="checkbox" name="system.divineKi.use" {{checked system.divineKi.use}}/></label>
+        <div class="resource-values">
+          <input type="number" name="system.divineKi.value" value="{{system.divineKi.value}}" min="0"/>
+          <span class="resource-sep">/</span>
+          <span class="computed-value">{{system.divineKi.max}}</span>
+        </div>
+      </div>
+      {{/if}}
     </div>
   </div>
 </header>

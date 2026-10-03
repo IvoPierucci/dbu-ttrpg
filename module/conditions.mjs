@@ -350,6 +350,12 @@ export function registerConditionHooks() {
         await offerStatesOnEntering(actor, key);
         // Invisible: "[Automatic/Invisible]: You become Hidden to all Opponents."
         if (key === "invisible") await (await import("./hidden.mjs")).hideFromOpponents(actor);
+        // God Ki entered in a Combat Encounter: "they will possess their DKP starting from that point forward ... (they
+        // still start with their maximum amount of Divine Ki Points)" - once an Encounter.
+        if ((key === "god-ki") && (actor.system.divineKi?.filled !== (game.combat?.id ?? "outside"))) {
+          await actor.update({ "system.divineKi.value": actor.system.divineKi.max,
+            "system.divineKi.filled": game.combat?.id ?? "outside" });
+        }
       }
     }
   });

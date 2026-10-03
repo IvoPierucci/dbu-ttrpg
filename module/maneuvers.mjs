@@ -1666,6 +1666,21 @@ export async function spendManeuverCost(actor, maneuver, costOverride = null) {
   // Cost (you must still pay the full Ki Point Cost)".
   const fromCapacity = (capacityCost === null) ? cost : Math.max(0, capacityCost);
 
+  // God Ki: "you may use your Divine Ki Points as if they were normal Ki Points" - the whole price or none of it ("you
+  // cannot also contribute to that instance of paying Ki using normal Ki Points"), at "1/2 (rounded up) of the Capacity
+  // Rate", while the sheet's Spend Divine Ki is on and there is enough of it.
+  const divine = actor.system.divineKi;
+  if (divine?.active && divine.use && ((Number(divine.value) || 0) >= cost)) {
+    const halved = Math.ceil(fromCapacity / 2);
+    if (halved > capacity.remaining) {
+      ui.notifications.warn(`${actor.name} has ${capacity.remaining} Capacity left this round and ${maneuver.name} costs ${halved} in Divine Ki.`);
+      return false;
+    }
+    await actor.update({ "system.divineKi.value": divine.value - cost, "system.capacity.spent": capacity.spent + halved });
+    DIVINE_PAID.set(`${actor.uuid}:${maneuver.id ?? maneuver.name}`, { cost, capacity: halved });
+    return true;
+  }
+
   if (ki.value < cost) {
     ui.notifications.warn(`${actor.name} needs ${cost} Ki Points for ${maneuver.name} and has ${ki.value}.`);
     return false;
@@ -1688,7 +1703,18 @@ export async function spendManeuverCost(actor, maneuver, costOverride = null) {
 }
 
 /** Give back the Ki Points a Maneuver cost, when it is cancelled before resolving. */
+/** What was last paid in Divine Ki for a Maneuver, so taking it back gives back Divine Ki. */
+const DIVINE_PAID = new Map();
+
 export async function refundManeuverCost(actor, maneuver) {
+  const divine = DIVINE_PAID.get(`${actor.uuid}:${maneuver.id ?? maneuver.name}`);
+  if (divine) {
+    DIVINE_PAID.delete(`${actor.uuid}:${maneuver.id ?? maneuver.name}`);
+    return actor.update({
+      "system.divineKi.value": Math.min(actor.system.divineKi?.max ?? Infinity, (actor.system.divineKi?.value ?? 0) + divine.cost),
+      "system.capacity.spent": Math.max(0, actor.system.capacity.spent - divine.capacity)
+    });
+  }
   const cost = maneuver.kiCost ?? 0;
   if (cost <= 0) return;
 

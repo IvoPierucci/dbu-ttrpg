@@ -229,6 +229,10 @@ async function firstRoundsEnd(actor) {
 /** What entering a Combat Encounter clears, and what it announces. */
 async function startEncounter(combat) {
   for (const actor of combatants(combat)) {
+    // God Ki: "starts each Combat Encounter with their maximum amount of DKP".
+    if (actor.system.divineKi?.active) {
+      await actor.update({ "system.divineKi.value": actor.system.divineKi.max, "system.divineKi.filled": combat.id });
+    }
     // Power Regulation's "When entering a Combat Encounter, you choose if you maintain or lose these
     // stacks of Holding Back." Read before every Resource is cleared below, and asked on a card.
     const regulated = Number(actor.system.resources?.holdingback?.stacks) || 0;
