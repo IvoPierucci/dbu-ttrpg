@@ -79,6 +79,15 @@
                     data-tooltip="Instant: lose every Finisher and stop declaring it">Release</button>
           </div>
           {{/if}}
+          {{#if row.trap}}
+          <div class="unique-resource">
+            <span data-tooltip="The Signature Technique stored in your Trap Square">{{row.trap.name}}</span>
+            <button type="button" class="dbu-clash-button" data-action="springTrap" data-kind="oos" data-item-id="{{row.itemId}}"
+                    data-tooltip="An Opponent moved into or through the Trap Square: it at the token you target, out of sequence">Spring</button>
+            <button type="button" class="dbu-clash-button" data-action="springTrap" data-kind="instant" data-item-id="{{row.itemId}}"
+                    data-tooltip="As an Instant, at the token you target within a Sphere around the Trap Square">Instant</button>
+          </div>
+          {{/if}}
           {{#if row.spinToWin}}
           <div class="unique-resource">
             <button type="button" class="dbu-clash-button" data-action="spinToWin" data-item-id="{{row.itemId}}"

@@ -397,6 +397,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       explodeGhost: DBUCharacterSheet._onExplodeGhost,
       webStrike: DBUCharacterSheet._onWebStrike,
       spinToWin: DBUCharacterSheet._onSpinToWin,
+      springTrap: DBUCharacterSheet._onSpringTrap,
       webSave: DBUCharacterSheet._onWebSave,
       ghostGone: DBUCharacterSheet._onGhostGone,
       throughPortal: DBUCharacterSheet._onThroughPortal,
@@ -1748,6 +1749,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Finish Sign: the Signature Technique declared, released as an Instant from here.
         finish: (unique.finishSign && unique.finishTechnique)
           ? { technique: this.actor.items.get(unique.finishTechnique)?.name ?? "" } : null,
+        // Trap Attack: the Signature Technique stored, and its Spring buttons.
+        trap: unique.trapAttack && unique.trapTechnique ? { name: unique.trapName || "" } : null,
         // Tornado Attack: Spin to Win's Thrust, while Spinning.
         spinToWin: unique.tornado && Boolean(actor.getFlag?.("dbu-ttrpg", "spinning")?.spinToWin)
           && !actor.getFlag("dbu-ttrpg", "spinning").ending,
@@ -1928,6 +1931,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /** Fake Moon: the False Moon destroyed - "you apply the effects as if it disappeared". */
+  /** Trap Attack: its stored Technique sprung - out of sequence, or as an Instant. */
+  static async _onSpringTrap(event, target) {
+    const { springTrap } = await import("../chat.mjs");
+    return springTrap(this.actor, this.actor.items.get(target.dataset.itemId), target.dataset.kind === "instant");
+  }
+
   /** Spin to Win: the Movement ended beside an Opponent while Spinning - the Thrust, out of sequence. */
   static async _onSpinToWin() {
     const { spinToWin } = await import("../chat.mjs");

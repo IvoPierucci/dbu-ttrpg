@@ -1911,6 +1911,7 @@ export function definitionOf(item) {
     telepathy: item.system.unique?.telepathy === true,
     timeFreeze: item.system.unique?.timeFreeze === true,
     tornado: item.system.unique?.tornado === true,
+    trapAttack: item.system.unique?.trapAttack === true,
     kiCostPerBaseTierChange: Number(item.system.unique?.kiCostPerBaseTierChange) || 0,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
@@ -3925,6 +3926,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let haunting = null;
   let lifting = null;
   let linking = null;
+  let trapping = null;
   let faking = null;
   let finishing = null;
   let meteorTargets = null;
@@ -4325,6 +4327,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const size = larger || unique?.sphereMagnitude || "minor";
       waving = await askHide(actor, maneuver, { burst: true, area: `${size.charAt(0).toUpperCase()}${size.slice(1)} Sphere` });
       if (!waving) return false;
+    }
+
+    // Trap Attack: which Signature Technique - one Trap Square at a time.
+    if (maneuver.trapAttack) {
+      trapping = await (await import("./chat.mjs")).askTrap(actor, maneuver);
+      if (!trapping) return false;
     }
 
     // Telepathy: "up to your number of Clairvoyance Skill Ranks" - any number with Wide-Range Telepathy.
@@ -4887,6 +4895,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postTimeFreeze(actor, maneuver)
     : maneuver.tornado
     ? await (await import("./chat.mjs")).postTornado(actor, maneuver)
+    : (maneuver.trapAttack && trapping)
+    ? await (await import("./chat.mjs")).postTrap(actor, maneuver, trapping)
     : (maneuver.telepathy && linking)
     ? await (await import("./chat.mjs")).postTelepathy(actor, maneuver, linking)
     : (maneuver.telekinesis && lifting)

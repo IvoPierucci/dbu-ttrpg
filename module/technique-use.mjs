@@ -79,6 +79,13 @@ export function whyNotTechnique(actor, technique, { via = "", ascended = false }
     return `${actor.name} has used a Fake Out Technique this Round.`;
   }
 
+  // Trap Attack: "you cannot use the Signature Technique Maneuver to select that Signature Technique while that Trap Square
+  // exists" - but through the Trap Square, yes.
+  if ((via !== "trap") && Array.from(actor.items ?? []).some(item => (item.type === "maneuver")
+    && item.system?.unique?.trapTechnique && (item.system.unique.trapTechnique === technique.itemId))) {
+    return `${name} is stored in a Trap Square.`;
+  }
+
   // Required Counter: "You cannot use this Signature Technique Maneuver except through the effects
   // of the Counter Advantage."
   if (has(technique, "required-counter") && (via !== "counter")) {
