@@ -86,6 +86,9 @@ export function whyNotTechnique(actor, technique, { via = "", ascended = false }
     return `${name} is stored in a Trap Square.`;
   }
 
+  // God Finisher's: "You may only use this Signature Technique through the God Finisher Maneuver".
+  if (technique.godFinisher && (via !== "god-finisher")) return `${name} is only used through God Finisher.`;
+
   // Required Counter: "You cannot use this Signature Technique Maneuver except through the effects
   // of the Counter Advantage."
   if (has(technique, "required-counter") && (via !== "counter")) {

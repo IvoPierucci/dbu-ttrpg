@@ -115,6 +115,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       /** God Strike, and the Profile selected "upon gaining access" - asked at the first use, kept here. */
       godStrike: new fields.BooleanField({ required: true, initial: false }),
       godStrikeProfile: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** God Finisher: the Signature Technique Maneuver for its own Technique alone. */
+      godFinisher: new fields.BooleanField({ required: true, initial: false }),
       /** A second limit over the usage limit - Divine Movement's "[1/Round, 3/Encounter]". 0 is none. */
       encounterLimit: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       /** Its KP Cost "for each Action spent" - Divine Pulse's 1(bT). A Unique Ability's is under `unique`. */
@@ -594,6 +596,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         superProfile: new fields.StringField({ required: true, blank: true, initial: "" }),
         /** Gained from a Transformation Trait: left out of the Ultimate-to-Super count. */
         fromTransformation: new fields.BooleanField({ required: true, initial: false }),
+        /** God Finisher's own Technique: no TP spent on it, 50 TP at most, used only through God Finisher. */
+        godFinisher: new fields.BooleanField({ required: true, initial: false }),
         /**
          * TP this Technique does not take from the character - Power Level 1's "20 TP to spend on
          * one Signature Technique". Its TP, its cap and its KP are unchanged: only what the

@@ -9,7 +9,7 @@ import DBUCharacterData from "../data/actor-character.mjs";
 import {
   LEVELS, choiceLabel, composeTechniqueEffects, featureCatalogue, featureDef, featureProblem,
   featureTP, isUltimate, maxRanks, profileKiPerTier, signatureOf, superProfileKiPerTier,
-  superProfileProblem, techniqueKiPerTier, techniqueTP, techniqueTPCharged, tierTpCap
+  superProfileProblem, techniqueKiPerTier, techniqueTP, techniqueTPCharged, tierTpCap, godFinisherProblem
 } from "../technique.mjs";
 
 /**
@@ -289,6 +289,8 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       total: (profileKi + kiPerTier) * tier,
       tier,
       superProblem: sig.superProfile ? superProfileProblem(sig.superProfile, sig, { actor }) : "",
+      // God Finisher's own: 50 TP at most, Restricted - State (God Ki) on it.
+      godProblem: sig.godFinisher ? godFinisherProblem(sig).replace(/^its Signature Technique/, "God Finisher's Technique") : "",
       unbuilt: !sig.profile
     };
 

@@ -1669,6 +1669,18 @@ export async function spendManeuverCost(actor, maneuver, costOverride = null) {
   // God Ki: "you may use your Divine Ki Points as if they were normal Ki Points" - the whole price or none of it ("you
   // cannot also contribute to that instance of paying Ki using normal Ki Points"), at "1/2 (rounded up) of the Capacity
   // Rate", while the sheet's Spend Divine Ki is on and there is enough of it.
+  // A God Maneuver's Ki Wager in Ki Points: "you could use DKP to pay for the Ki Point Cost for an Attacking Maneuver and
+  // then Ki Wager with your normal Ki Points, as they are two different instances of paying" - paid apart, as any Ki
+  // Points (Divine Ki where the sheet says), and the rest as the God Maneuver's.
+  const apart = maneuver?.godManeuver ? Math.min(cost, Math.max(0, Number(maneuver.wagerApart) || 0)) : 0;
+  if (apart) {
+    const wager = { id: `${maneuver.id}.wager`, name: maneuver.name };
+    if (!await spendManeuverCost(actor, wager, apart)) return false;
+    if (await spendManeuverCost(actor, { ...maneuver, wagerApart: 0 }, cost - apart)) return true;
+    await refundManeuverCost(actor, { ...wager, kiCost: apart });
+    return false;
+  }
+
   const divine = actor.system.divineKi;
   // A God Maneuver: "spend Divine Ki Points to use" - always, and only them.
   if (maneuver?.godManeuver && (!divine?.active || ((Number(divine.value) || 0) < cost))) {

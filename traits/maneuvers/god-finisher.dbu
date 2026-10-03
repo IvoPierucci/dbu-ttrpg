@@ -1,0 +1,36 @@
+id: god-finisher
+name: God Finisher
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: true
+requiresTarget: true
+usageLimit: 1/encounter
+# A God Maneuver: open where an effect grants it, only in God Ki (maneuvers.mjs whyNotGod). "Upon gaining access to this
+# God Maneuver, create a Signature Technique" - at its first use, a new one is made on the character and its builder
+# opened: Restricted - State (God Ki) on it already (the system's name for "Required State"), marked as God Finisher's
+# (`signature.godFinisher`), and costing them no TP (technique.mjs techniqueTPCharged). Used once it is built: 50 TP or
+# less and that Disadvantage on it, or refused, saying which (technique.mjs godFinisherProblem).
+#
+# "You may only use this Signature Technique through the God Finisher Maneuver, and the God Finisher Maneuver can only
+# use that Signature Technique" (technique-use.mjs whyNotTechnique, via "god-finisher"). "Otherwise, acts exactly as the
+# Signature Technique Maneuver, and is considered the Signature Technique Maneuver for any effects" - its Technique
+# through it as through that door, God Finisher's Action and 1/Encounter kept. "The DKP Cost is equal to the KP Cost of
+# that Signature Technique, and is paid instead of it" - in Divine Ki Points, as every God Maneuver's.
+godManeuver: true
+godFinisher: true
+source: Core Rule
+description: >
+  A God Maneuver: the Signature Technique Maneuver for its own Signature Technique alone - 50 TP or less, Required State
+  (God Ki), no TP spent - its KP Cost paid in Divine Ki Points.
+text: >
+  God Finisher [1/Encounter]: Annihilate your enemies with a holy smite.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –DKP Cost: Varies
+  –Effect: Upon gaining access to this God Maneuver, create a Signature Technique with a total TP Cost of 50 or less (you
+  do not spend any Technique Points) and the Required State (God Ki) Disadvantage. You may only use this Signature
+  Technique through the God Finisher Maneuver, and the God Finisher Maneuver can only use that Signature Technique. The
+  God Finisher Maneuver, otherwise, acts exactly as the Signature Technique Maneuver, and is considered the Signature
+  Technique Maneuver for any effects. The DKP Cost is equal to the KP Cost of that Signature Technique, and is paid
+  instead of it.

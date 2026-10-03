@@ -55,6 +55,7 @@ export function signatureOf(item) {
     secondProfile: sig.secondProfile ?? "",
     superProfile: sig.superProfile ?? "",
     fromTransformation: Boolean(sig.fromTransformation),
+    godFinisher: Boolean(sig.godFinisher),
     freeTP: Math.max(0, Math.floor(Number(sig.freeTP) || 0)),
     features: Array.from(sig.features ?? []).map(entry => ({
       id: entry.id, ranks: Math.max(1, Number(entry.ranks) || 1), choice: entry.choice ?? ""
@@ -135,7 +136,25 @@ export function techniqueTP(sig) {
  * never below nothing. Its TP is still its TP for the cap and the KP (the user's ruling).
  */
 export function techniqueTPCharged(sig) {
+  // God Finisher's: "you do not spend any Technique Points".
+  if (sig?.godFinisher) return 0;
   return Math.max(0, techniqueTP(sig) - Math.max(0, Number(sig.freeTP) || 0));
+}
+
+/** God Finisher's Technique: "a total TP Cost of 50 or less". */
+export const GOD_FINISHER_TP = 50;
+
+/**
+ * What keeps God Finisher's Technique from being the one it asks for, or "": "a Signature Technique with a total TP Cost
+ * of 50 or less ... and the Required State (God Ki) Disadvantage" - Restricted - State, God Ki chosen.
+ */
+export function godFinisherProblem(sig) {
+  if (!sig?.profile) return "its Signature Technique is not built yet.";
+  if (techniqueTP(sig) > GOD_FINISHER_TP) return `its Signature Technique may be worth ${GOD_FINISHER_TP} TP at most.`;
+  if (!(sig.features ?? []).some(entry => (entry.id === "restricted-state") && (entry.choice === "god-ki"))) {
+    return "its Signature Technique needs Restricted - State (God Ki).";
+  }
+  return "";
 }
 
 /** How many ranks of one feature a build carries. */

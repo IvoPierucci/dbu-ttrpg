@@ -81,7 +81,8 @@ import { techniqueUseEntries, ultimatesUsed, whyNotTechnique, whyNotTechniqueAga
 // Imported as a bag rather than by name: `soarNote` is not async and cannot wait for a
 // dynamic import, and use-maneuver.mjs already imports enough at the top.
 import * as soarNames from "./environments.mjs";
-import { featureDef as signatureFeature, requirementHolds, superProfileKiPerTier } from "./technique.mjs";
+import { featureDef as signatureFeature, requirementHolds, superProfileKiPerTier, GOD_FINISHER_TP, godFinisherProblem }
+  from "./technique.mjs";
 import { withGranted } from "./signature.mjs";
 import * as gearReadingModule from "./gear.mjs";
 import { SUPER_PROFILES, askFeatures, favoredDamage, favoredElement, forcedFullWager, maxKiWager, maxLifeWager,
@@ -278,7 +279,7 @@ function permitted(actor, maneuver) {
   // rulebook writes it, and it is what the tags on a Maneuver are for.
   const refused = [
     [maneuver.attacking, "attackingManeuvers", "Attacking Maneuvers"],
-    [(maneuver.tags ?? []).includes("signature"), "signatureTechniques", "Signature Techniques"],
+    [(maneuver.tags ?? []).includes("signature") || Boolean(maneuver.godFinisher), "signatureTechniques", "Signature Techniques"],
     [(maneuver.tags ?? []).includes("uniqueAbility"), "uniqueAbilities", "Unique Abilities"],
     [(maneuver.tags ?? []).includes("transformation"), "transformations", "Transformations"]
   ].find(([applies, flag]) => applies && !permits(slots, flag));
@@ -873,6 +874,24 @@ async function pickSignatureTechnique(actor, maneuver) {
   return (typeof chosen === "string")
     ? techniques.find(technique => technique.itemId === chosen) ?? null
     : null;
+}
+
+/**
+ * God Finisher, gained: "create a Signature Technique with a total TP Cost of 50 or less (you do not spend any Technique
+ * Points) and the Required State (God Ki) Disadvantage." Made on the character with that Disadvantage on it, marked as
+ * God Finisher's, and its builder opened.
+ */
+async function createGodFinisherTechnique(actor, maneuver) {
+  const [item] = await actor.createEmbeddedDocuments("Item", [{
+    name: `${maneuver.name} Technique`,
+    type: "maneuver",
+    img: "icons/magic/lightning/bolt-strike-blue.webp",
+    system: { type: "standard", attacking: true, requiresTarget: true, tags: ["signature"],
+      signature: { level: "super", godFinisher: true,
+        features: [{ id: "restricted-state", ranks: 1, choice: "god-ki" }] } }
+  }]);
+  ui.notifications.info(`${maneuver.name}: build its Signature Technique - ${GOD_FINISHER_TP} TP or less, no Technique Points spent.`);
+  item?.sheet?.render(true);
 }
 
 /**
@@ -1953,6 +1972,8 @@ export function definitionOf(item) {
     // God Strike: the Profile selected, applied on top of the one the Basic Attack is made with.
     godStrike: item.system.godStrike,
     godStrikeProfile: item.system.godStrikeProfile ?? "",
+    // God Finisher, the door - not its Technique, whose mark is under `signature`.
+    ...(item.system.godFinisher ? { godFinisher: true } : {}),
     ...(item.system.godStrikeProfile ? { appliedProfiles: [item.system.godStrikeProfile] } : {}),
     kiCostPerTier: item.system.kiCostPerTier,
     /**
@@ -2018,6 +2039,7 @@ export function techniqueDefinition(item) {
     secondProfile: (sig.superProfile === "multi-profile") ? sig.secondProfile : "",
     featureChoices: choicesOf(sig),
     fromTransformation: sig.fromTransformation,
+    godFinisher: sig.godFinisher,
     ...(ultimate ? { usageLimit: { amount: 1, per: "encounter" } } : {})
   };
 }
@@ -3699,6 +3721,30 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   const actionsSpent = await askActionsSpent(actor, maneuver);
   if (actionsSpent === null) return false;
 
+  // God Finisher: "the God Finisher Maneuver can only use that Signature Technique" - its own, made at its first use -
+  // and "otherwise, acts exactly as the Signature Technique Maneuver": through it as through that door, God Finisher's
+  // Action and 1/Encounter kept, its KP Cost "paid instead of it" in Divine Ki as a God Maneuver's.
+  if (maneuver.godFinisher && !maneuver.signature) {
+    const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && item.system.signature?.godFinisher);
+    if (!own) {
+      await createGodFinisherTechnique(actor, maneuver);
+      return false;
+    }
+    const problem = godFinisherProblem(signatureOf(own));
+    if (problem) {
+      ui.notifications.warn(`${maneuver.name}: ${problem}`);
+      return false;
+    }
+    const technique = signatureTechniquesOf(actor).find(entry => entry.itemId === own.id) ?? null;
+    const refused = technique ? whyNotTechnique(actor, technique, { via: "god-finisher" }) : `${own.name} cannot be used.`;
+    if (refused) {
+      ui.notifications.warn(refused);
+      return false;
+    }
+    maneuver = { ...throughSignatureTechnique(maneuver, technique), godManeuver: true, godFinisher: true, via: "god-finisher" };
+    if (presetThrown) maneuver = { ...maneuver, throws: true };
+  }
+
   // "Make an Attacking Maneuver using a Signature Technique you have access to." Asked
   // here, after this Maneuver's own limits have been checked against it and before
   // anything is paid: the door is what costs an Action and what may be used once a
@@ -4821,6 +4867,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (perfect) maneuver = { ...maneuver, capacityCost: moving.fromSelf - Math.ceil((moving.fromSelf - wagered) / 2) };
   // God Strike: the Basic Attack it makes pays as any - in Ki Points, or in Divine Ki as the sheet says.
   if (maneuver.godStrike) maneuver = { ...maneuver, godManeuver: false };
+  // A God Maneuver's Ki Wager is "two different instances of paying": paid apart, as any Ki Points are (spendManeuverCost).
+  if (maneuver.godManeuver && wagered) maneuver = { ...maneuver, wagerApart: wagered };
   if (!fromStore && !await spendManeuverCost(actor, maneuver, moving.fromSelf)) return false;
   // And God Strike its own price apart: 1/4 of the Profile it applies, in Divine Ki - the attack's given back without it.
   const godPart = crossing ? 0 : godStrikeCost(maneuver, actor);
@@ -5699,6 +5747,7 @@ export function maneuverItemFrom(definition) {
       divineRoar: Boolean(definition.divineRoar),
       godBind: Boolean(definition.godBind),
       godStrike: Boolean(definition.godStrike),
+      godFinisher: Boolean(definition.godFinisher),
       encounterLimit: Number(definition.encounterLimit) || 0,
       kiPerAction: definition.kiPerAction === true,
       toss: Boolean(definition.toss),
