@@ -594,6 +594,10 @@ async function applyClash(messageId, clash) {
     await settlePsychic(message, clash);
   }
 
+  if (clash.warped && clash.result && !clash.warped.applied) {
+    await settleWarped(message, clash);
+  }
+
   if (clash.trapGuard && clash.result && !clash.trapGuard.applied) {
     await settleTrapGuard(message, clash);
   }
@@ -11562,6 +11566,27 @@ async function trapGuardOff(attack) {
     const target = fromUuidSync(uuid);
     if (target && ((Number(target.system.conditions?.["guard-down"]) || 0) > 0)) await setCondition(target, "guard-down", 0);
   }
+}
+
+/** Warped Evolution, used: "Target an Ally. Make a Clash (Cognitive) against that Ally." */
+export async function postWarpedEvolution(actor, maneuver, target) {
+  return postSaveClash(actor, target, { maneuverName: maneuver.name,
+    reason: `Win and ${target.name}'s Life Points are halved, and the Dark Evolution Awakening is theirs.`,
+    saves: ["cognitive"], warped: { applied: false } });
+}
+
+/**
+ * Its Clash, won: "halve that Ally's current Life Points, but they gain the Dark Evolution Awakening as a Level 2
+ * Temporary Awakening" - the Life Points taken, rounded down as every fraction here; the Awakening said, not yet built.
+ */
+async function settleWarped(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, warped: { ...clash.warped, applied: true } });
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target || (whoWonClash(clash.result) !== "challenger")) return;
+  const now = Math.max(0, Number(target.system.life?.value) || 0);
+  await reduceLifePoints(target, now - Math.floor(now / 2), { reason: clash.maneuverName });
+  await settledNote(message, `${target.name} warps: Life Points halved, and the Dark Evolution Awakening theirs as a Level 2 `
+    + "Temporary Awakening (Awakenings are the table's for now).");
 }
 
 /** Whether an attack was declared a Called Shot. */

@@ -1912,6 +1912,7 @@ export function definitionOf(item) {
     timeFreeze: item.system.unique?.timeFreeze === true,
     tornado: item.system.unique?.tornado === true,
     trapAttack: item.system.unique?.trapAttack === true,
+    warpedEvolution: item.system.unique?.warpedEvolution === true,
     kiCostPerBaseTierChange: Number(item.system.unique?.kiCostPerBaseTierChange) || 0,
     requiresState: item.system.unique?.requiresState ?? "",
     // "All of your remaining Actions (Min. 2)" - Cage of Light.
@@ -4895,6 +4896,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postTimeFreeze(actor, maneuver)
     : maneuver.tornado
     ? await (await import("./chat.mjs")).postTornado(actor, maneuver)
+    : (maneuver.warpedEvolution && targetActor)
+    ? await (await import("./chat.mjs")).postWarpedEvolution(actor, maneuver, targetActor)
     : (maneuver.trapAttack && trapping)
     ? await (await import("./chat.mjs")).postTrap(actor, maneuver, trapping)
     : (maneuver.telepathy && linking)

@@ -1,0 +1,33 @@
+id: warped-evolution
+name: Warped Evolution
+uaType: magical
+prerequisite: 2+ Skill Ranks in Use Magic, Demon Clansmen Factor
+tpCost: 20
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 8
+requiresTarget: true
+# "You can only use the Warped Evolution Unique Ability once per Combat Encounter."
+usageLimit: 1/encounter
+# "Target an Ally. Make a Clash (Cognitive) against that Ally. If you win, halve that Ally's current Life Points, but they
+# gain the Dark Evolution Awakening as a Level 2 Temporary Awakening" - the Life Points taken (rounded down), the
+# Awakening said on the card: Awakenings are not in the system yet (chat.mjs postWarpedEvolution).
+warpedEvolution: true
+source: Core Rule
+description: >
+  Once an Encounter, a Clash (Cognitive) against an Ally: won, their Life Points halved and the Dark Evolution Awakening
+  theirs as a Level 2 Temporary Awakening.
+text: >
+  Warped Evolution: You twist and warp and contort someone into a monstrous, grotesque version of themself.
+  –Ability Type: Magical
+  –Prerequisites: 2+ Skill Ranks in Use Magic, Demon Clansmen Factor
+  –TP Cost: 20
+  –KP Cost: 8(bT)
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –Minions: Non-Minion
+  –Passive Bonus: N/A
+  –Effect: Target an Ally. Make a Clash (Cognitive) against that Ally. If you win, halve that Ally’s current Life Points,
+  but they gain the Dark Evolution Awakening as a Level 2 Temporary Awakening.
+
+  You can only use the Warped Evolution Unique Ability once per Combat Encounter.

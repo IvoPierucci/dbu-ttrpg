@@ -704,6 +704,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
         tornado: new fields.BooleanField({ required: true, initial: false }),
         /** A Signature Technique stored in a Trap Square - Trap Attack's (chat.mjs springTrap): its Item, and its name. */
         trapAttack: new fields.BooleanField({ required: true, initial: false }),
+        /** A Clash at an Ally for an Awakening - Warped Evolution's (chat.mjs postWarpedEvolution). */
+        warpedEvolution: new fields.BooleanField({ required: true, initial: false }),
         trapTechnique: new fields.StringField({ required: true, blank: true, initial: "" }),
         trapName: new fields.StringField({ required: true, blank: true, initial: "" }),
         shapeSize: new fields.StringField({ required: true, blank: true, initial: "" }),
