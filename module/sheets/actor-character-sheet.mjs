@@ -4,6 +4,8 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
+import { addRacialTrait, ownedRacialTraits, racialTraitKind, racialTraitRace, racialTraitsInOrder, removeRacialTrait }
+  from "../racial.mjs";
 import { reactiveFor } from "../effects/registry.mjs";
 import { grantedUniques } from "../unique.mjs";
 import { getTrait, resourceCeiling, resourceDefinitions, traitsOfKind }
@@ -96,7 +98,6 @@ import { ultimatesUsed as ultimatesUsedBy, whyNotTechnique } from "../technique-
 import { gearKitIngenuity, isConsumable } from "../gear.mjs";
 import {
   exclusiveAttributeGroups,
-  getRace,
   raceOptions,
   raceSubraces,
   racialAttributeChoices,
@@ -1269,7 +1270,6 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     context.alignments = [2, 1, 0, -1, -2].map(value => ({ value, ...DBUCharacterData.ALIGNMENTS[value],
       chosen: (this.document.system.alignment ?? 0) === value }));
     context.alignmentNow = DBUCharacterData.ALIGNMENTS[this.document.system.alignment ?? 0];
-    context.racialTraits = this.#racialTraitChoices();
     context.hasRace = Boolean(this.actor.system.race);
 
     // What is being charged, if anything. Named rather than shown as an id, since the
@@ -1307,6 +1307,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           text: entry.program.blocks[0]?.text ?? ""
         }))
     }));
+    context.racialTraits = this.#racialTraitChoices(triggered);
     context.isGM = game.user.isGM;
 
     const { capacity } = this.actor.system;
@@ -4752,56 +4753,43 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * Every Racial Trait there is, in the order the picker and the list show them: this character's race first, then
-   * every other race by the race's name (not the Trait's), each race's Traits by name.
+   * The Racial Trait Items this character has, in the picker's order: each with the race it comes from, what the rules
+   * call it, what was chosen for it, and - as a Talent's are - its Triggered effects to Arm.
    */
-  static racialTraitsInOrder(race) {
-    const raceName = owner => getRace(owner)?.name ?? owner ?? "";
-    return traitsOfKind("races").slice().sort((a, b) =>
-      (Number(b.owner === race) - Number(a.owner === race))
-      || raceName(a.owner).localeCompare(raceName(b.owner))
-      || a.name.localeCompare(b.name));
-  }
-
-  /** What the rules call a Racial Trait: its Category (Body/Mind), and Primary or Secondary - a Subrace's is Primary. */
-  static racialTraitKind(trait) {
-    const importance = trait.subrace ? "primary" : String(trait.importance ?? "");
-    return [String(trait.category ?? ""), importance].filter(Boolean)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" \u00b7 ");
-  }
-
-  /** The Racial Traits this character has, in the picker's order, each with the race it comes from. */
-  #racialTraitChoices() {
-    const had = new Set(this.actor.system.racialTraits ?? []);
-    return DBUCharacterSheet.racialTraitsInOrder(this.actor.system.race)
-      .filter(trait => had.has(trait.id))
-      .map(trait => ({
-        id: trait.id,
-        name: trait.name,
-        kind: DBUCharacterSheet.racialTraitKind(trait),
-        race: [getRace(trait.owner)?.name ?? trait.owner ?? "",
-          trait.subrace ? subraceName(trait.owner, trait.subrace) || trait.subrace : ""].filter(Boolean).join(" - "),
-        description: trait.text || trait.description || ""
-      }));
+  #racialTraitChoices(triggered = []) {
+    return ownedRacialTraits(this.actor).map(item => ({
+      item,
+      kind: racialTraitKind(item.system),
+      race: racialTraitRace(item.system.race, item.system.subrace),
+      chosen: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean).join(" \u00b7 "),
+      triggered: triggered
+        .filter(entry => (entry.sourceId === item.id) && entry.budget)
+        .map(entry => ({
+          id: entry.blockId,
+          armed: entry.armed,
+          available: entry.available,
+          round: entry.uses.round,
+          encounter: entry.uses.encounter,
+          text: entry.program.blocks[0]?.text ?? ""
+        }))
+    }));
   }
 
   /**
    * Add Racial Trait, in the Unique Abilities' window (the user's): a search over every Racial Trait there is - this
    * character's race's first, then every other race's by the race's name - its race beside it, the ones already had
-   * named and not offered twice. One at a time.
+   * named and not offered twice. One at a time; taken, its Item is made (racial.mjs addRacialTrait).
    */
   static async _onAddRacialTrait() {
     if (!this.isEditable) return;
     const had = new Set(this.actor.system.racialTraits ?? []);
-    const traits = DBUCharacterSheet.racialTraitsInOrder(this.actor.system.race);
+    const traits = racialTraitsInOrder(this.actor.system.race);
     if (!traits.length) {
       ui.notifications.info("There are no Racial Traits to add yet.");
       return;
     }
     const escape = Handlebars.escapeExpression;
     const { pickedName, wireNameSearch } = await import("../search.mjs");
-    const raceOf = trait => [getRace(trait.owner)?.name ?? trait.owner ?? "",
-      trait.subrace ? subraceName(trait.owner, trait.subrace) || trait.subrace : ""].filter(Boolean).join(" - ");
     const picked = await foundry.applications.api.DialogV2.wait({
       classes: ["dbu-dialog", "dbu-ua-search"],
       window: { title: `${this.actor.name} - Add Racial Trait` },
@@ -4813,8 +4801,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           ${traits.map(trait => `<li class="gear-quality-option${had.has(trait.id) ? " blocked" : ""}"
             data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
             data-tooltip="${escape(had.has(trait.id) ? "Already had"
-              : [DBUCharacterSheet.racialTraitKind(trait), trait.description ?? ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
-            <span class="gear-quality-cost">${escape(raceOf(trait))}</span></li>`).join("")}
+              : [racialTraitKind(trait), trait.description ?? ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
+            <span class="gear-quality-cost">${escape(racialTraitRace(trait.owner, trait.subrace))}</span></li>`).join("")}
           <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
         </ol></div>`,
       buttons: [
@@ -4836,14 +4824,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       ui.notifications.warn(`${this.actor.name} already has ${trait.name}.`);
       return;
     }
-    return this.actor.update({ "system.racialTraits": [...had, trait.id] });
+    return addRacialTrait(this.actor, trait);
   }
 
-  /** A Racial Trait taken off: "If you lose a Racial Trait, through any means, you no longer benefit from its effects." */
+  /** A Racial Trait taken off - and the Unique Abilities it gave with it (racial.mjs removeRacialTrait). */
   static async _onToggleRacialTrait(event, target) {
     if (!this.isEditable) return;
-    const id = target.dataset.trait;
-    return this.actor.update({ "system.racialTraits": (this.actor.system.racialTraits ?? []).filter(each => each !== id) });
+    return removeRacialTrait(this.actor, target.dataset.itemId);
   }
 
   /** Enter or leave a State. */

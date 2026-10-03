@@ -57,6 +57,7 @@
     },
     "Item": {
       "talent": {},
+      "racial": {},
       "maneuver": {},
       "gear": {}
     }

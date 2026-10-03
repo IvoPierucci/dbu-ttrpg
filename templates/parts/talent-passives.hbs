@@ -37,6 +37,14 @@
               placeholder="The rulebook's own wording, shown to players.">{{system.text}}</textarea>
   </section>
 
+  {{#if racial}}
+  <section class="panel">
+    <h3 class="panel-title">Option chosen</h3>
+    <textarea class="effect-text" name="system.addendum" rows="3"
+              placeholder="The wording of the Option chosen, if it has one.">{{system.addendum}}</textarea>
+  </section>
+  {{/if}}
+
   {{#if system.effects.length}}
   <section class="panel">
     <h3 class="panel-title">Old data rows</h3>

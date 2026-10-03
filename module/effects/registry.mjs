@@ -81,7 +81,7 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
     // was written and nothing ever compiled it - so a Maneuver whose rules needed an
     // effect had to be given a header flag and a branch in the code instead, which is
     // why there are five of those.
-    if ((item.type !== "talent") && (item.type !== "maneuver")) continue;
+    if ((item.type !== "talent") && (item.type !== "maneuver") && (item.type !== "racial")) continue;
 
     // A Unique Ability's script is its own and each Advancement bought and Restriction applied.
     const script = (item.type === "maneuver") && (item.system?.tags ?? []).includes("uniqueAbility")
@@ -96,7 +96,8 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
 
     entries.push({
       program,
-      priority: PRIORITY.talent,
+      // A Racial Trait - the character's own Item, edited as a Talent is - on its own rung, above a Talent.
+      priority: (item.type === "racial") ? PRIORITY.racial : PRIORITY.talent,
       sourceId: item.id,
       sourceUuid: item.uuid,
       sourceName: item.name,
@@ -106,7 +107,6 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
     });
   }
 
-  entries.push(...racialPrograms(actor, report));
   entries.push(...accessoryPrograms(actor, report));
   entries.push(...apparelPrograms(actor, report));
   entries.push(...weaponPrograms(actor, report));
@@ -121,42 +121,6 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
   entries.push(...environmentPrograms(actor, report));
   entries.push(...qualityPrograms(actor, report));
   entries.push(...highPrograms(actor, report));
-
-  return entries;
-}
-
-/**
- * The Racial Traits this character has - added by hand, their own race's or any other's (the user's ruling), so
- * whichever race a Trait belongs to, it applies while it is on the list.
- */
-function racialPrograms(actor, report) {
-  const entries = [];
-  const race = actor.system?.race;
-
-  for (const id of actor.system?.racialTraits ?? []) {
-    const trait = getTrait(id);
-    if (!trait || (trait.kind !== "races")) {
-      report(`"${id}" is not a Racial Trait this system knows.`);
-      continue;
-    }
-
-    const { program, errors } = compile(
-      `racial:${id}`,
-      { script: trait.script },
-      message => report(`${trait.name}: ${message}`)
-    );
-    if (errors.length) continue;
-
-    entries.push({
-      program,
-      priority: PRIORITY.racial,
-      sourceId: `racial:${id}`,
-      sourceUuid: null,
-      sourceName: trait.name,
-      level: 0,
-      stacks: 1
-    });
-  }
 
   return entries;
 }

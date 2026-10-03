@@ -1452,12 +1452,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     });
 
     // --- Racial Traits ---
-    // The ids of the Racial Traits this character has. Added by hand from the Traits tab - their own race's or any
-    // other's (the user's ruling) - and removed the same way: choosing a race grants none of them by itself.
-    schema.racialTraits = new fields.ArrayField(
-      new fields.StringField({ required: true, blank: false }),
-      { required: true, initial: () => [] }
-    );
+    // Items of their own (type `racial`), added by hand from the Traits tab - their own race's or any other's (the
+    // user's ruling); `racialTraits` is derived from them (prepareDerivedData), the files they came from.
 
     // Whether this character is a Minion, which a few rules ask about.
     schema.minion = new fields.BooleanField({ required: true, initial: false });
@@ -1796,6 +1792,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // The sheet clamps Power Level as it is edited, but a macro or module could still
     // write something out of range; keep everything derived from it sane regardless.
     this.powerLevel = Math.min(Math.max(this.powerLevel, 1), DBUCharacterData.MAX_POWER_LEVEL);
+
+    // The Racial Traits had - the files their Items came from - for whatever asks for one by name (traitActive).
+    this.racialTraits = Array.from(this.parent?.items ?? []).filter(item => item.type === "racial")
+      .map(item => item.flags?.["dbu-ttrpg"]?.sourceId).filter(Boolean);
 
     // Racial Life Modifier, from whichever race is selected. An unknown or unset race
     // contributes nothing rather than breaking the Life calculation.

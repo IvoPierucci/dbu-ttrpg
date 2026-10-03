@@ -52,6 +52,15 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
       { relativeTo: this.item }
     );
     context.tabs = this._getTabs();
+    // A Racial Trait: its race and what the rules call it in place of Prerequisites, and what was chosen for it.
+    if (this.item.type === "racial") {
+      const { racialTraitKind, racialTraitRace } = await import("../racial.mjs");
+      context.racial = {
+        race: racialTraitRace(this.item.system.race, this.item.system.subrace),
+        kind: racialTraitKind(this.item.system),
+        chosen: (this.item.system.chosen ?? []).map(entry => entry.label).filter(Boolean).join(" \u00b7 ")
+      };
+    }
 
     // Compiled every time the sheet is drawn, so a mistake is reported as it is made.
     // The character is passed in when there is one, which is what lets a slot name be

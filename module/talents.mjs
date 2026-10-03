@@ -19,7 +19,11 @@ export function ownedTalents(actor) {
 /** Where the published Talents live once imported. */
 const PACK = "dbu-ttrpg.talents";
 
-/** What a Trait file becomes as an Item. */
+/** What a Trait file becomes as an Item - also a Talent a Racial Trait gives (racial.mjs). */
+export function talentItemFrom(trait) {
+  return itemFrom(trait);
+}
+
 function itemFrom(trait) {
   return {
     name: trait.name,

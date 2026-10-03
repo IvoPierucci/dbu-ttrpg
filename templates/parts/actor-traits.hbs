@@ -12,16 +12,33 @@
 
     {{#if racialTraits.length}}
     <ul class="trait-list">
-      {{#each racialTraits as |trait|}}
-      <li class="trait">
+      {{#each racialTraits as |entry|}}
+      <li class="trait" data-item-id="{{entry.item.id}}">
         <div class="trait-head">
-          <span class="trait-name">{{trait.name}}</span>
-          <span class="trait-prereq">{{trait.race}}{{#if trait.kind}} &middot; {{trait.kind}}{{/if}}</span>
-          <button type="button" class="trait-control" data-action="toggleRacialTrait" data-trait="{{trait.id}}"
+          <img class="trait-img" src="{{entry.item.img}}" height="20" width="20"/>
+          <span class="trait-name">{{entry.item.name}}</span>
+          <span class="trait-prereq">{{entry.race}}{{#if entry.kind}} &middot; {{entry.kind}}{{/if}}</span>
+
+          {{#each entry.triggered as |trigger|}}
+          <button type="button" class="trait-arm {{#if trigger.armed}}active{{/if}}"
+                  data-action="armTalent" data-effect-id="{{trigger.id}}"
+                  {{#unless trigger.available}}disabled{{/unless}}
+                  data-tooltip="{{trigger.text}} — {{trigger.round}} left this round, {{trigger.encounter}} this encounter.">
+            {{#if trigger.armed}}Armed{{else}}Arm{{/if}}
+          </button>
+          {{/each}}
+
+          <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
+                  data-tooltip="Edit this Racial Trait - its Effect is what it does on this character">&#9998;</button>
+          <button type="button" class="trait-control" data-action="toggleRacialTrait" data-item-id="{{entry.item.id}}"
                   data-tooltip="Remove this Racial Trait">&times;</button>
         </div>
-        {{#if trait.description}}
-        <div class="trait-description">{{trait.description}}</div>
+        {{#if entry.chosen}}<div class="trait-prereq">{{entry.chosen}}</div>{{/if}}
+        {{#if entry.item.system.text}}
+        <div class="trait-description">{{entry.item.system.text}}</div>
+        {{/if}}
+        {{#if entry.item.system.addendum}}
+        <div class="trait-description">{{entry.item.system.addendum}}</div>
         {{/if}}
       </li>
       {{/each}}

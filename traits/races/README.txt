@@ -40,6 +40,10 @@ Two things to remember:
   - A Racial Trait is added by hand, on the Traits tab's Add Racial Trait: the
     character's own race's first, then every other race's by the race's name -
     any of them may be taken (the user's ruling). Removed the same way.
+  - Added, it becomes the character's own Item: its Effect tab holds this
+    script, and editing it there changes that character alone. More header
+    lines (options, choose, grantsUnique, grantsTalent) are explained at the top
+    of module/racial.mjs.
 
 Still the table's: keeping a Talent or Technique Points a lost Trait gave, and a
 Signature Technique made with a Profile a lost Trait gave. A Trait that grants a

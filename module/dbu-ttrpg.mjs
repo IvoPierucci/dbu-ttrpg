@@ -1,6 +1,8 @@
 import DBUCharacterData from "./data/actor-character.mjs";
 import DBUCharacterSheet from "./sheets/actor-character-sheet.mjs";
 import DBUTalentData from "./data/item-talent.mjs";
+import DBURacialData from "./data/item-racial.mjs";
+import { registerRacialHooks } from "./racial.mjs";
 import DBUTalentSheet from "./sheets/item-talent-sheet.mjs";
 import DBUManeuverData from "./data/item-maneuver.mjs";
 import DBUManeuverSheet from "./sheets/item-maneuver-sheet.mjs";
@@ -23,6 +25,7 @@ Hooks.once("init", () => {
   // Register the character data model for the "character" Actor type
   CONFIG.Actor.dataModels.character = DBUCharacterData;
   CONFIG.Item.dataModels.talent = DBUTalentData;
+  CONFIG.Item.dataModels.racial = DBURacialData;
   CONFIG.Item.dataModels.maneuver = DBUManeuverData;
   CONFIG.Item.dataModels.gear = DBUGearData;
 
@@ -51,7 +54,8 @@ Hooks.once("init", () => {
 
   DocumentSheetConfig.unregisterSheet(foundry.documents.Item, "core", foundry.appv1.sheets.ItemSheet);
   DocumentSheetConfig.registerSheet(foundry.documents.Item, "dbu-ttrpg", DBUTalentSheet, {
-    types: ["talent"],
+    // A Racial Trait is written and edited as a Talent is: its Effect tab is the whole of what it does.
+    types: ["talent", "racial"],
     makeDefault: true,
     label: "DBU Talent Sheet"
   });
@@ -73,6 +77,7 @@ Hooks.once("init", () => {
   registerCombatHooks();
   registerDefeatHooks();
   registerRacialLifeHooks();
+  registerRacialHooks();
   registerBreathHooks();
   registerWornBreathHooks();
   registerConditionHooks();
