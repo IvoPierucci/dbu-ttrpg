@@ -77,9 +77,10 @@ export function racialTraitFiles() {
   return traitsOfKind("races").filter(trait => !trait.optionOf);
 }
 
-/** A Racial Trait's Options, in name order. */
+/** A Racial Trait's Options, in the order its text lists them (their `order:`), not by name (the user's). */
 export function racialOptionsOf(id) {
-  return traitsOfKind("races").filter(trait => trait.optionOf === id);
+  return traitsOfKind("races").filter(trait => trait.optionOf === id)
+    .sort((a, b) => (orderOf(a) - orderOf(b)) || a.name.localeCompare(b.name));
 }
 
 /** A race's display name, from its id. */

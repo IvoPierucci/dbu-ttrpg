@@ -1,5 +1,6 @@
 id: god-of-survival
 name: God of Survival
+order: 4
 optionOf: divine-magic
 description: >
   Increase the Dice Score of your Steadfast Checks by 2 and increase your Surgency by 1/2 (rounded up) of your Insight Modifier.

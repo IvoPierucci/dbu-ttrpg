@@ -1,5 +1,6 @@
 id: god-of-judgment
 name: God of Judgment
+order: 2
 optionOf: divine-magic
 description: >
   If you use the Signature Technique Maneuver, apply an Energy Charge to that Attacking Maneuver.

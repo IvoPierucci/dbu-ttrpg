@@ -1,5 +1,6 @@
 id: god-of-war
 name: God of War
+order: 6
 optionOf: divine-magic
 # "You gain the Weapon Specialist Talent" - given with it when it is written.
 grantsTalent: weapon-specialist

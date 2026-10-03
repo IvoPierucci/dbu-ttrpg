@@ -1,5 +1,6 @@
 id: god-of-many
 name: God of Many
+order: 8
 optionOf: divine-magic
 # "You gain the Master of Minions Talent" - given with it when it is written.
 grantsTalent: master-of-minions

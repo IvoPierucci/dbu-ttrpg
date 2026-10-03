@@ -1,5 +1,6 @@
 id: god-of-time
 name: God of Time
+order: 9
 optionOf: divine-magic
 # "Gain access to the Time Freeze Unique Ability with the Straining Time Freeze and Difficult Time Freeze
 # Restrictions" - made with it, free and with both applied.

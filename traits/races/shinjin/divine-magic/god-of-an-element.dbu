@@ -1,5 +1,6 @@
 id: god-of-an-element
 name: God of an Element
+order: 10
 optionOf: divine-magic
 # "Select a Profile with 'Elemental' in the name" - asked when it is added, `$choice`.
 choose: elementalProfile

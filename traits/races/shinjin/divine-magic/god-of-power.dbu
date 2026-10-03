@@ -1,5 +1,6 @@
 id: god-of-power
 name: God of Power
+order: 3
 optionOf: divine-magic
 # "You gain the Muscular Warrior Talent" - given with it when it is written.
 grantsTalent: muscular-warrior

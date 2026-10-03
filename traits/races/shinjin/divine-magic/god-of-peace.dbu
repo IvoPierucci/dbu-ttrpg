@@ -1,5 +1,6 @@
 id: god-of-peace
 name: God of Peace
+order: 1
 optionOf: divine-magic
 description: >
   Enter the Mindful State until the start of your next turn.

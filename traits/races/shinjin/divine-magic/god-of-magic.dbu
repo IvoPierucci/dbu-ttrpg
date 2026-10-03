@@ -1,5 +1,6 @@
 id: god-of-magic
 name: God of Magic
+order: 7
 optionOf: divine-magic
 description: >
   Reduce the TP Cost of all Magical Unique Abilities by 3 TP and reduce the KP Cost of your Magical Unique Abilities by 2(T).
