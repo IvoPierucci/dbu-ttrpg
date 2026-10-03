@@ -2685,8 +2685,23 @@ async function settleGrapple(message, clash) {
   }
 
   await beginGrapple(grappler, grappled);
-  await settledNote(message,
-    `${grappler.name} has ${grappled.name} in a Grapple.`);
+  if (!clash.grapple.tailRestraint) {
+    await settledNote(message, `${grappler.name} has ${grappled.name} in a Grapple.`);
+    return;
+  }
+  // Tail Restraint: no Tail Attack while in this Grapple. And a Saiyan's (Saiyan Heritage's 4th, while Tailed): "you are
+  // immediately knocked Prone and cannot remove the Prone Combat Condition until you escape the Grapple".
+  const { hasTail } = await import("./racial.mjs");
+  const saiyan = hasTail(grappled);
+  await requestActorUpdate(grappled, { [`flags.${SCOPE}.tailRestrained`]: true });
+  if (saiyan) {
+    // The hold first, as Tased's is: the Prone cannot come off while it is there.
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(grappled, "tail-held", 1);
+    await setCondition(grappled, "prone", 1);
+  }
+  await settledNote(message, `${grappler.name} has ${grappled.name} in a Grapple, by the Tail`
+    + (saiyan ? ` - ${grappled.name} is knocked Prone until they escape it.` : "."));
 }
 
 /**
@@ -2762,11 +2777,15 @@ export async function endGrapple(grappler, grappled) {
 
   for (const actor of [grappler, grappled]) {
     if (!actor) continue;
-    await requestActorUpdate(actor, { ...NOT_GRAPPLING });
+    // A Tail held goes with the Grapple holding it - the Tail Attack back, the Prone free to come off.
+    await requestActorUpdate(actor, { ...NOT_GRAPPLING,
+      ...(actor.getFlag?.(SCOPE, "tailRestrained") ? { [`flags.${SCOPE}.tailRestrained`]: false } : {}) });
   }
   // After they are out of it, or the refusal that holds it in place refuses this too.
   for (const actor of [grappler, grappled]) {
     if (actor) await setCondition(actor, "guard-down", 0);
+    // Saiyan Heritage's hold on the Prone, "until you escape the Grapple".
+    if (actor?.system?.conditions?.["tail-held"]) await setCondition(actor, "tail-held", 0);
   }
 
   // "They gain the Pinned Combat Condition while in this Grapple." Tied to the hold
@@ -7750,6 +7769,10 @@ const CLASH_ROLLS = ({
         : []),
       // "Make a Grapple Check against the Grappled with your Dice Score reduced by
       // 1(bT)." The Grappler's alone, and the only Grapple Check made at a penalty.
+      // Tail Restraint: "a penalty of 2(T) to your initial Grapple Check to attempt and grab their Tail".
+      ...(((uuid === clash.challengerUuid) && clash.grapple?.tailRestraint)
+        ? [{ label: "Tail Restraint", written: "-2(T)", value: -2 * Math.max(1, actor.system.tierOfPower ?? 1) }]
+        : []),
       ...(((uuid === clash.challengerUuid) && (clash.grapple?.kind === "pin"))
         ? [{ label: "Pinning", written: "-1(bT)",
              value: -Math.max(1, actor.system.baseTierOfPower ?? 1) }]
@@ -8023,7 +8046,7 @@ export async function postSkillClash(actor, target, maneuver, leaves = {}) {
  */
 export async function postGrappleCheck(grappler, grappled, {
   maneuverName = "Grapple", reason = "", kind = "start", earlierAttempts = 0, speaker = null,
-  maneuver = null, telekinetic = false
+  maneuver = null, telekinetic = false, tailRestraint = false
 } = {}) {
   const tier = Math.max(1, grappled.system.tierOfPower ?? 1);
 
@@ -8061,7 +8084,7 @@ export async function postGrappleCheck(grappler, grappled, {
           // is the Launch Maneuver, which is a different thing with a similar name.
           collision: (kind === "launch") ? { doubles: false, doubledBy: "" } : null,
           collisionApplied: false,
-          grapple: { kind, applied: false },
+          grapple: { kind, applied: false, ...(tailRestraint ? { tailRestraint: true } : {}) },
           // Telekinesis's Launch: as if Grappling them, with no Grapple to end.
           ...(telekinetic ? { telekinetic: true } : {}),
           ready: [],

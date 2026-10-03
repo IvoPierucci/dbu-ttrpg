@@ -4039,6 +4039,11 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     maneuver = { ...maneuver, godStrikeProfile: profile, appliedProfiles: [profile] };
   }
 
+  // Tail Restraint: "they cannot use the Tail Attack Maneuver while in this Grapple".
+  if (maneuver.tailAttack && actor.getFlag?.("dbu-ttrpg", "tailRestrained") && actor.system.grapple?.partner) {
+    ui.notifications.warn(`${actor.name}'s Tail is held in the Grapple: no Tail Attack while in it.`);
+    return false;
+  }
   if (maneuver.tailAttack && !maneuver.tailVariant) {
     const variant = await askTailVariant(actor, maneuver);
     if (!variant) return false;
@@ -4065,6 +4070,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let shifting = null;
   let snatching = null;
   let talking = null;
+  let tailRestraint = false;
   let exploding = null;
   let waving = null;
   let roaring = null;
@@ -4702,6 +4708,16 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       ui.notifications.warn(outOfGrasp);
       return false;
     }
+    // Tail Restraint: "you can take a penalty of 2(T) to your initial Grapple Check to attempt and grab their Tail" -
+    // against one with the Tail Attack Maneuver or a Saiyan with a Tail.
+    if (maneuver.grapple && targetActor && (await import("./racial.mjs")).tailToGrab(targetActor)) {
+      tailRestraint = Boolean(await foundry.applications.api.DialogV2.confirm({
+        classes: ["dbu-dialog"], window: { title: `${maneuver.name} - Tail Restraint` },
+        content: `<p data-tooltip="If you do, they cannot use the Tail Attack Maneuver while in this Grapple">Grab `
+          + `${Handlebars.escapeExpression(targetActor.name)}'s Tail, at -2(T) on the Grapple Check?</p>`,
+        rejectClose: false
+      }));
+    }
 
     // Talk: which of its two, and against whom.
     if ((maneuver.id === "talk") && targetActor) {
@@ -5061,6 +5077,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         maneuverName: maneuver.name,
         // The Maneuver itself, so the card knows whether an Instant can answer it.
         maneuver,
+        tailRestraint,
         // Said where the table will be looking rather than refused: "Grappling a Grapple"
         // allows this, after a Might Clash against the Grappler, and that Clash is one of
         // the parts this system leaves to the table.

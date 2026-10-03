@@ -364,6 +364,18 @@ export function racialOptionOf(item) {
   return (item?.system?.chosen ?? []).find(entry => entry.key === "option")?.value ?? "";
 }
 
+/** A Saiyan with a Tail: Saiyan Heritage's Tailed Option, the tail not lost (the Options tab's Tail lost box). */
+export function hasTail(actor) {
+  if (actor?.getFlag?.("dbu-ttrpg", "tailLost")) return false;
+  return Array.from(actor?.items ?? []).some(item => (item.type === "racial")
+    && (item.flags?.["dbu-ttrpg"]?.sourceId === "saiyan-heritage") && (racialOptionOf(item) === "tailed"));
+}
+
+/** Grapple's Tail Restraint is open against them: access to the Tail Attack Maneuver, or a Saiyan with a Tail. */
+export function tailToGrab(actor) {
+  return hasTail(actor) || Array.from(actor?.items ?? []).some(item => (item.type === "maneuver") && item.system?.tailAttack);
+}
+
 /**
  * Another Option for a Racial Trait already had (the user's: "que igual te permita cambiarlo"): its script in place of the
  * old one's between the `#@ option` markers, its choice asked, what was recorded and its wording changed with it; the

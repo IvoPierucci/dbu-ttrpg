@@ -158,10 +158,10 @@ text: >
 # Analysis, Hype, Brace, Flip, Holding Back and Sense files all say about their own Minion
 # lines.
 #
-# Having a tail. Nothing here knows whether a character has one - there are no Racial Trait
-# files in the library and no body parts anywhere - so what opens this is an effect
-# granting it, like every Special Maneuver no Skill opens. The Tail Restraint rule is on
-# the same list of things waiting for a tail to exist.
+# Having a tail opens nothing here: a Saiyan's Tail is Saiyan Heritage's Tailed (racial.mjs
+# hasTail), and what opens this is still an effect granting it, like every Special Maneuver no
+# Skill opens. Grabbed by the Tail - the Grapple Maneuver's Tail Restraint - no Tail Attack
+# while in that Grapple (use-maneuver.mjs).
 #
 # --- How it is gained ---------------------------------------------------------------------
 #

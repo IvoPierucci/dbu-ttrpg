@@ -96,9 +96,11 @@ text: >
 #   - Grappling a Grapple is the same shape with the same missing half, plus one piece
 #     that is buildable and would be half a rule on its own: a third character's Grapple
 #     Maneuver being made to wait on a Might Clash first.
-#   - Tail Restraint needs the Tail Attack Maneuver, which does not exist here yet, and
-#     a Saiyan's Tail, which is not a thing any character carries. A penalty of 2(T) for
-#     a benefit that cannot be checked is a penalty for nothing.
+#
+# Tail Restraint is built: asked as the Grapple is declared against one with the Tail Attack
+# Maneuver or a Saiyan with a Tail (racial.mjs tailToGrab), -2(T) on the Grappler's initial
+# Check, and won, no Tail Attack while in this Grapple - a Saiyan knocked Prone and held
+# there till it ends by the Tail Held mark (Saiyan Heritage's 4th; chat.mjs settleGrapple).
 #
 # All of it is in the entry above, which is what the row shows - so the table has the
 # wording even where the system has nothing to do with it.

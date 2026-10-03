@@ -1,0 +1,23 @@
+id: tail-held
+name: Tail Held
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: the entry names Prone, and this is only what keeps it on.
+combatCondition: no
+# The Combat Condition this mark keeps from being removed while it is held. Read by
+# `setCondition`, which names no mark.
+holds: prone
+source: Saiyan Heritage
+description: >
+  A Saiyan's Tail grabbed in a Grapple. You cannot get up from Prone until you escape it.
+text: >
+  Tail Held: Saiyan Heritage's 4th effect. "If you suffer from Tail Restraint during a Grapple while you are Tailed (see
+  the Option effect below), you are immediately knocked Prone and cannot remove the Prone Combat Condition until you
+  escape the Grapple."
+
+---
+
+# Gained with the Prone when the Grapple Maneuver's Tail Restraint lands on a Saiyan with a Tail, and taken off when the
+# Grapple ends, however it ends (chat.mjs settleGrapple, endGrapple) - the Prone then free to come off as any.
+#
+# No effects of its own.

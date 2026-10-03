@@ -38,5 +38,5 @@ allow steadfast.autoPass.bruised;
 steadfastEnter(-2, undying, next-turn);
 trigger(heritage);
 
-# (4) Tail Restraint is the Tail Attack's, and is not built yet: knocked Prone and kept there till the Grapple ends is the
-# table's for now.
+# (4) Grabbed by the Tail - the Grapple Maneuver's Tail Restraint - while Tailed: knocked Prone, and it cannot come off
+# until the Grapple ends - the Tail Held mark holding it, as Tased holds a Taser's (chat.mjs settleGrapple, endGrapple).
