@@ -355,6 +355,8 @@ async function beginTurn(actor) {
   // Para Para Dance: the Actions it took, at the start of this turn.
   const { paraParaTurnStart } = await import("./chat.mjs");
   await paraParaTurnStart(actor);
+  // God Bind: "You must spend 2 Actions at the start of each of your turns to maintain the God Bind".
+  await (await import("./chat.mjs")).godBindTurnStart(actor);
   // Stealth Crawl: a move, faking it still.
   const { stealthCrawl } = await import("./hidden.mjs");
   await stealthCrawl(actor);

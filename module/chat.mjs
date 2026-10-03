@@ -223,6 +223,8 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, SEAL_FLAG, request.sealing);
     case "punish": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, PUNISH_FLAG, request.punish);
+    case "godBind": return game.messages.get(request.messageId)
+      ?.setFlag(SCOPE, GOD_BIND_FLAG, request.godBind);
     case "positionChange": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, POSITION_FLAG, request.position);
     case "swapTokens": return swapTokens(request.aUuid, request.bUuid);
@@ -658,6 +660,18 @@ async function applyClash(messageId, clash) {
 
   if (clash.roar && clash.result && !clash.roar.applied) {
     await settleRoar(message, clash);
+  }
+
+  if (clash.godBind && clash.result && !clash.godBind.applied) {
+    await settleGodBind(message, clash);
+  }
+
+  if (clash.godBindEscape && clash.result && !clash.godBindEscape.applied) {
+    await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, godBindEscape: { ...clash.godBindEscape, applied: true } });
+    if (whoWonClash(clash.result) === "challenger") {
+      await godBindRelease(fromUuidSync(clash.defenderUuid), { said: false });
+      await settledNote(message, `${clash.challengerName} breaks free.`);
+    }
   }
 
   if (clash.talk && clash.result && !clash.talk.applied) {
@@ -2984,6 +2998,7 @@ function onRenderChatMessage(message, html) {
   renderRetreat(message, html);
   renderPositionChange(message, html);
   renderPunisher(message, html);
+  renderGodBind(message, html);
   renderSealing(message, html);
   renderCrystal(message, html);
   renderShapeshift(message, html);
@@ -6228,6 +6243,13 @@ async function respondDialog(message, respondable) {
       ownCounters.push({ ...uniqueDefinitionOf(item), id: `stardust:${item.id}`, stardust: true,
         source: `Unique Ability - ${stardustKi(actor, item, attack)} KP` });
     }
+    // God Bind: "If an Opponent targets you with an Attacking Maneuver while inside of your Melee Range, you may use the
+    // God Bind Maneuver, targeting them, as an Out-of-Sequence Maneuver by spending 1 Counter Action."
+    const godBinding = getManeuver("god-bind");
+    if (godBinding && godListed(actor, godBinding)) {
+      ownCounters.push({ ...godBinding, id: "godbind", godBindCounter: true, type: "counter", actionCost: 1,
+        source: `God Maneuver - ${maneuverKiCost(godBinding, null, actor)} DKP` });
+    }
     // Copy Clone with Mirrored Attack: "you may use the effects of Copy Clone as a Counter Maneuver with an Action Cost
     // of 1 Counter Action" - a Duplicate of the attacker that Duels them.
     for (const item of actor.items ?? []) {
@@ -6266,6 +6288,13 @@ async function respondDialog(message, respondable) {
       if (maneuver.stardust && unresolved && !waiting && !["energy", "magic"].includes(attack?.foundation)) {
         reason = "only against an Energy or Magic Attack";
         blocked = true;
+      }
+
+      // God Bind: from an Opponent inside your Melee Range.
+      if (maneuver.godBindCounter && unresolved && !waiting) {
+        const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+        reason = (attacker && whyNotWithinMelee(actor, attacker, "")) ? "only at an Opponent within your Melee Range" : "";
+        blocked = Boolean(reason);
       }
 
       // Judo Toss: a Physical Attack, from within your Melee Range.
@@ -6691,6 +6720,8 @@ async function playCounter(message, actor, answer, attack) {
   if (String(answer).startsWith("stardust:")) return playStardust(message, actor, String(answer).slice(9));
   // Technique Block.
   if (String(answer).startsWith("techblock:")) return playTechniqueBlock(message, actor, String(answer).slice(10));
+  // God Bind, out of sequence.
+  if (answer === "godbind") return playGodBindCounter(message, actor);
 
   const maneuver = getManeuver(answer);
   if (!maneuver) return;
@@ -12685,6 +12716,156 @@ async function settleRoar(message, clash) {
   }
 }
 
+/** God Bind's turn-start card: the 2 Actions that keep it, or letting them go. */
+const GOD_BIND_FLAG = "godBind";
+
+/** God Bind: "Make a Might Clash against that Opponent. If you win, they gain the Pinned Combat Condition." */
+export async function postGodBind(actor, maneuver, target) {
+  return postMightClash(actor, target, {
+    maneuverName: maneuver.name,
+    reason: `Win and ${target.name} is Pinned while you spend 2 Actions at the start of each of your turns.`,
+    godBind: { applied: false }
+  });
+}
+
+/**
+ * God Bind out of sequence, played from Respond: "If an Opponent targets you with an Attacking Maneuver while inside of
+ * your Melee Range, you may use the God Bind Maneuver, targeting them, as an Out-of-Sequence Maneuver by spending 1
+ * Counter Action." Its DKP and the Counter Action paid, its once per Combat Encounter counted; their attack held for the
+ * Might Clash - and answered with your Dodge, should it go on.
+ */
+async function playGodBindCounter(message, actor) {
+  const maneuver = getManeuver("god-bind");
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!maneuver || !attack || attack.result || endedByDuel(attack) || attack.godBindHold) return;
+  const attacker = fromUuidSync(attack.attackerUuid);
+  if (!attacker) return;
+  const why = whyNotSpecial(actor, maneuver) || whyNotWithinMelee(actor, attacker, maneuver.name);
+  if (why) return ui.notifications.warn(why);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} is once per Combat Encounter.`);
+  if (!await spendManeuverCost(actor, maneuver, maneuverKiCost(maneuver, null, actor))) return;
+  if (!await spendActions(actor, 1, "counter")) {
+    await refundManeuverCost(actor, maneuver);
+    return;
+  }
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  const others = (fresh.defences ?? []).filter(entry => entry.uuid !== actor.uuid);
+  await settleAttack(message, {
+    ...fresh,
+    godBindHold: { pending: true, uuid: actor.uuid, name: actor.name, maneuverName: maneuver.name },
+    defences: [...others, { uuid: actor.uuid, defence: "dodge", wager: 0, foundation: "energy", parryWith: [] }],
+    ready: [...new Set([...(fresh.ready ?? []), actor.uuid])]
+  });
+  return postMightClash(actor, attacker, {
+    maneuverName: maneuver.name,
+    reason: `Win and ${attacker.name} is Pinned, and their ${fresh.maneuverName} is canceled.`,
+    godBind: { applied: false, cardId: message.id }
+  });
+}
+
+/**
+ * God Bind's Might Clash, settled. Won: Pinned, and held - one at a time, so whoever it held before goes free. Out of
+ * sequence, the attack it answered: "If they lose the Might Clash, their Attacking Maneuver is canceled and they lose any
+ * Ki Points and Actions spent on it" - nothing given back; won by them, it goes on.
+ */
+async function settleGodBind(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, godBind: { ...clash.godBind, applied: true } });
+  const binder = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  const won = Boolean(binder && target) && (whoWonClash(clash.result) === "challenger");
+  if (won) {
+    await godBindRelease(binder);
+    const { setCondition } = await import("./conditions.mjs");
+    if (await setCondition(target, "pinned", 1) !== false) {
+      await requestActorUpdate(target, { [`flags.${SCOPE}.godBoundBy`]: { by: binder.uuid, name: clash.maneuverName } });
+      await requestActorUpdate(binder, { [`flags.${SCOPE}.godBind`]: { targetUuid: target.uuid, name: clash.maneuverName } });
+      await settledNote(message, `${target.name} is Pinned.`);
+    }
+  }
+  else await settledNote(message, `${clash.defenderName} slips free.`);
+  const card = game.messages.get(clash.godBind.cardId ?? "");
+  const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.godBindHold?.pending) return;
+  const released = { ...attack, godBindHold: { ...attack.godBindHold, pending: false } };
+  if (won) return requestEdit(card, { type: "attack", attack: { ...released, godBindCancelled: true } });
+  return settleAttack(card, released);
+}
+
+/** God Bind let go - not kept, chosen not to, or broken free of: the one it held is Pinned no longer. */
+export async function godBindRelease(binder, { said = true } = {}) {
+  const held = binder?.getFlag?.(SCOPE, "godBind");
+  if (!held) return;
+  await requestActorUpdate(binder, { [`flags.${SCOPE}.godBind`]: null });
+  const target = fromUuidSync(held.targetUuid ?? "");
+  if (!target || (target.getFlag?.(SCOPE, "godBoundBy")?.by !== binder.uuid)) return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.godBoundBy`]: null });
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "pinned", 0);
+  if (said) {
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: binder }),
+      content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${target.name} is freed from ${held.name}.`)}</div>` });
+  }
+}
+
+/**
+ * The start of the binder's turn: "You must spend 2 Actions at the start of each of your turns to maintain the God Bind,
+ * if you choose not to, then the Character Pinned due to the effects of God Bind is freed." Theirs to choose, on a card;
+ * with fewer than 2 Actions, there is no choosing. Freed some other way already: nothing to keep.
+ */
+export async function godBindTurnStart(actor) {
+  const held = actor?.getFlag?.(SCOPE, "godBind");
+  if (!held) return;
+  const target = fromUuidSync(held.targetUuid ?? "");
+  const holding = target && (target.getFlag?.(SCOPE, "godBoundBy")?.by === actor.uuid)
+    && ((Number(target.system.conditions?.pinned) || 0) > 0);
+  if (!holding) return requestActorUpdate(actor, { [`flags.${SCOPE}.godBind`]: null });
+  if (actionsLeft(actor, "standard") < 2) return godBindRelease(actor);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(`${held.name}: ${target.name}`)}</p>`,
+    flags: { [SCOPE]: { [GOD_BIND_FLAG]: { binderUuid: actor.uuid, targetUuid: target.uuid, name: held.name, settled: "" } } } });
+}
+
+/** Its buttons, for the binder: keep it for 2 Actions, or let them go. */
+function renderGodBind(message, html) {
+  const bind = message.getFlag(SCOPE, GOD_BIND_FLAG);
+  if (!bind) return;
+  const container = html.querySelector(".message-content") ?? html;
+  if (bind.settled) {
+    const note = document.createElement("div");
+    note.className = "dbu-settled-note";
+    note.textContent = (bind.settled === "kept") ? "Kept - 2 Actions." : "Let go.";
+    return container.append(note);
+  }
+  const binder = fromUuidSync(bind.binderUuid);
+  if (!binder?.isOwner) return;
+  const keep = document.createElement("button");
+  keep.type = "button";
+  keep.className = "dbu-clash-button";
+  keep.textContent = "Keep";
+  keep.dataset.tooltip = "Spend 2 Actions: they stay Pinned";
+  const go = document.createElement("button");
+  go.type = "button";
+  go.className = "dbu-clash-button";
+  go.textContent = "Let go";
+  go.dataset.tooltip = "They are freed";
+  keep.addEventListener("click", async () => {
+    keep.disabled = go.disabled = true;
+    if (!await spendActions(binder, 2, "standard")) {
+      keep.disabled = go.disabled = false;
+      return;
+    }
+    requestEdit(message, { type: "godBind", godBind: { ...bind, settled: "kept" } });
+  });
+  go.addEventListener("click", async () => {
+    keep.disabled = go.disabled = true;
+    await godBindRelease(binder);
+    requestEdit(message, { type: "godBind", godBind: { ...bind, settled: "released" } });
+  });
+  container.append(keep, go);
+}
+
 /** Explosion Sorcery: a card naming them, and "a Clash (Cognitive vs Cognitive/Impulsive/Corporeal)" against each. */
 export async function postExplosion(actor, maneuver, uuids) {
   const targets = uuids.map(uuid => fromUuidSync(uuid)).filter(Boolean);
@@ -14674,7 +14855,8 @@ async function settleAttack(message, attack) {
   // Exploit waits on it, and is cancelled by it.
   if (!attackIsReady(attack) || duelRunning(attack) || endedByDuel(attack) || attack.sacrifice?.pending
     || attack.punisherHold?.pending || attack.punished || attack.trapHold?.pending
-    || attack.divineHold?.pending || attack.divineCancelled) {
+    || attack.divineHold?.pending || attack.divineCancelled
+    || attack.godBindHold?.pending || attack.godBindCancelled) {
     return requestEdit(message, { type: "attack", attack });
   }
   return resolveAttack(message, attack);
@@ -15415,6 +15597,7 @@ function awaitingWhom(attack) {
   if (attack.punisherHold?.pending) waiting.push(`${attack.punisherHold.punisherName}'s Punisher Guard`);
   if (attack.trapHold?.pending) waiting.push(`${attack.trapHold.name}'s Clash`);
   if (attack.divineHold?.pending) waiting.push(`${attack.divineHold.name}'s ${attack.divineHold.maneuverName}`);
+  if (attack.godBindHold?.pending) waiting.push(`${attack.godBindHold.name}'s ${attack.godBindHold.maneuverName}`);
   return waiting.length ? `Waiting on ${waiting.map(name => Handlebars.escapeExpression(name)).join(", ")}` : "Rolling";
 }
 
@@ -19933,12 +20116,14 @@ function renderAttack(message, html) {
       ? "Punisher Guard: cancelled - its Ki Points are regained, its Counter Action is not."
       : attack.divineCancelled
       ? "Divine Counter: cancelled - its Ki Points and Capacity are regained, its Action Cost is not."
+      : attack.godBindCancelled
+      ? "God Bind: cancelled - its Ki Points and Actions are lost."
       : attack.unitedFailed
       ? `United Attack: ${Handlebars.escapeExpression(attack.unitedWith?.name ?? "")} did not join - `
         + `${Handlebars.escapeExpression(attack.maneuverName)} fails, and its Action and Ki are regained.`
       : result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
-  if (attack.unitedFailed || attack.punished || attack.divineCancelled) return;
+  if (attack.unitedFailed || attack.punished || attack.divineCancelled || attack.godBindCancelled) return;
   dimensionalHoleButtons(message, html, attack);
   sacrificeButtons(message, html, attack);
   divineCounterButtons(message, html, attack);

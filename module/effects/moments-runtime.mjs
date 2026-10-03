@@ -294,12 +294,16 @@ async function runVerb(actor, call, context) {
       const binding = bound && (bound.by === against.uuid) && (bound.condition === "pinned")
         && ((Number(actor.system?.conditions?.pinned) || 0) > 0);
       const turns = binding ? (Number(bound.turns) || 0) : 0;
+      // Held by their God Bind: won, freed.
+      const godBound = actor.getFlag?.("dbu-ttrpg", "godBoundBy");
+      const godBinding = godBound && (godBound.by === against.uuid) && ((Number(actor.system?.conditions?.pinned) || 0) > 0);
 
       const { postMightClash } = await import("../chat.mjs");
       return postMightClash(actor, against, {
         maneuverName: "Might Clash",
         reason: `${actor.name} against ${against.name}`,
         ...(binding ? { bindEscape: { applied: false, itemId: bound.itemId } } : {}),
+        ...(godBinding ? { godBindEscape: { applied: false } } : {}),
         ...(turns ? { rowsFor: { [actor.uuid]: [{ label: `${bound.itemName}, ${turns} turn${(turns === 1) ? "" : "s"} held`,
           value: turns * Math.max(1, actor.system.tierOfPower ?? 1) }] } } : {}),
         ...(netted

@@ -1,0 +1,35 @@
+id: god-bind
+name: God Bind
+type: standard
+actionCost: 1
+kiCostPerTier: 4
+attacking: false
+requiresTarget: true
+usageLimit: 1/encounter
+# A God Maneuver: open where an effect grants it, only in God Ki, its 4(T) paid in Divine Ki Points (maneuvers.mjs
+# whyNotGod, spendManeuverCost). At an Opponent within your Melee Range, a Might Clash (chat.mjs postGodBind); won,
+# Pinned, the one held marked `godBoundBy` and the binder `godBind`. At the start of each of your turns a card asks for
+# the 2 Actions that keep it, or lets them go (chat.mjs godBindTurnStart); with fewer than 2 left, they go. Their Pinned
+# Might Clash against you, won, frees them.
+#
+# Out of sequence: offered in Respond against an attack from an Opponent within your Melee Range, for 1 Counter Action
+# and its DKP (chat.mjs playGodBindCounter) - that attack held for the Might Clash; lost by them, it is cancelled, its Ki
+# Points and Actions gone; won by them, it goes on against your Dodge. Its 1/Encounter is the same one either way.
+godManeuver: true
+godBind: true
+source: Core Rule
+description: >
+  A God Maneuver: a Might Clash at an Opponent in your Melee Range - won, Pinned while you spend 2 Actions each turn. Out
+  of sequence for 1 Counter Action against their attack: lost by them, it is cancelled.
+text: >
+  God Bind [1/Encounter]: Restrain your enemies with divine force.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –DKP Cost: 4(T)
+  –Effect: Target an Opponent within your Melee Range. Make a Might Clash against that Opponent. If you win, they gain
+  the Pinned Combat Condition. You must spend 2 Actions at the start of each of your turns to maintain the God Bind, if
+  you choose not to, then the Character Pinned due to the effects of God Bind is freed.
+
+  If an Opponent targets you with an Attacking Maneuver while inside of your Melee Range, you may use the God Bind
+  Maneuver, targeting them, as an Out-of-Sequence Maneuver by spending 1 Counter Action. If they lose the Might Clash,
+  their Attacking Maneuver is canceled and they lose any Ki Points and Actions spent on it.

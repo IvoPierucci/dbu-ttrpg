@@ -1840,6 +1840,7 @@ export function definitionOf(item) {
     godManeuver: item.system.godManeuver,
     divineMovement: item.system.divineMovement,
     divineRoar: item.system.divineRoar,
+    godBind: item.system.godBind,
     encounterLimit: Number(item.system.encounterLimit) || 0,
     toss: item.system.toss,
     movement: item.system.movement,
@@ -4277,6 +4278,15 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       }
     }
 
+    // God Bind: "Target an Opponent within your Melee Range."
+    if (maneuver.godBind && targetActor) {
+      const far = whyNotWithinMelee(actor, targetActor, maneuver.name);
+      if (far) {
+        ui.notifications.warn(far);
+        return false;
+      }
+    }
+
     // Petrification, Punisher Guard and Sealing: "Target an Opponent who is not at Long Range."
     if ((maneuver.petrifies || maneuver.punisherGuard || maneuver.seals) && targetActor && atLongRange(actor, targetActor)) {
       ui.notifications.warn(`${targetActor.name} is at Long Range.`);
@@ -5002,6 +5012,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await (await import("./chat.mjs")).postSealing(actor, maneuver, targetActor)
     : (maneuver.punisherGuard && targetActor)
     ? await (await import("./chat.mjs")).postPunisherGuard(actor, maneuver, targetActor)
+    : (maneuver.godBind && targetActor)
+    ? await (await import("./chat.mjs")).postGodBind(actor, maneuver, targetActor)
     : (maneuver.positionChange && positioning)
     ? await (await import("./chat.mjs")).postPositionChange(actor, maneuver, positioning)
     : (maneuver.petrifies && targetActor)
@@ -5641,6 +5653,7 @@ export function maneuverItemFrom(definition) {
       godManeuver: Boolean(definition.godManeuver),
       divineMovement: Boolean(definition.divineMovement),
       divineRoar: Boolean(definition.divineRoar),
+      godBind: Boolean(definition.godBind),
       encounterLimit: Number(definition.encounterLimit) || 0,
       kiPerAction: definition.kiPerAction === true,
       toss: Boolean(definition.toss),
