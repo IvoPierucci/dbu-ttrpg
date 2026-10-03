@@ -18,4 +18,14 @@ text: >
 # Attack at them out of sequence, on the Clash's card (chat.mjs offerDisarming, settleDisarming).
 allow disarming.onMiss;
 
-# (2) and (3) wait on the user's answer: how a hit goes back to Defense Declaration, and the cancelled attack's swap.
+# (2) Hit by an Opponent - not hit automatically - the Wound Roll waits: on the attack's card, the Bluff vs
+# Perception/Intuition or taking it, once a Round. Won, back to Defense Declaration for you alone: Dodge again, or an
+# option of the Defend Maneuver (paid as any), against the same Strike Roll; everyone else waits, then the Wound (the
+# user's). Lost, the hit stands (chat.mjs disarmingButtons, settle on the Clash, redefend).
+allow disarming.onHit;
+
+# (3) An Opponent answers your attack with an option of the Defend Maneuver: the attack waits on you - go on, or cancel it
+# (its Ki, Capacity and Divine Ki back) for a Basic Attack or a Signature Technique at them, out of sequence; their
+# Defend answers the new one, not paid again (the user's). The Energy Charges carried to a Basic Attack, or 2(T) Ki each
+# regained. Once an Encounter. Other Counter Maneuvers than the Defend's options are the table's.
+allow disarming.onCounter;

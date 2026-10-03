@@ -740,6 +740,15 @@ async function applyClash(messageId, clash) {
     await settleKiDeception(message, clash);
   }
 
+  // Disarming Demeanor (2): won, back to Defense Declaration for them; lost, the hit stands.
+  if (clash.disarmingHit && clash.result && !clash.disarmingHit.applied) {
+    await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, disarmingHit: { ...clash.disarmingHit, applied: true } });
+    const card = game.messages.get(clash.disarmingHit.messageId ?? "");
+    const won = whoWonClash(clash.result) === "challenger";
+    if (card) await rewriteBranch(card, clash.disarmingHit.uuid, () => ({ disarming: won ? "redefend" : "lost" }));
+    await settledNote(message, won ? `${clash.challengerName} defends again.` : `${clash.defenderName} is not taken in.`);
+  }
+
   // Disarming Demeanor: won, the Basic Attack at them out of sequence.
   if (clash.disarming && clash.result && !clash.disarming.applied) {
     await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, disarming: { ...clash.disarming, applied: true } });
@@ -13028,6 +13037,183 @@ function offerDisarming(message, attacker, target) {
     name: `Bluff ${target.name}`, reason: "Disarming Demeanor - Bluff vs Perception/Intuition", clashAt: target.uuid });
 }
 
+/** Disarming Demeanor (2) open to the one hit: theirs, unspent this Round, at an Opponent. */
+function disarmingOpen(target, attacker) {
+  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated
+    && (target.system?.effects?.slots?.["disarming.onHit"] === true)
+    && (target.getFlag?.(SCOPE, "disarmingHit") !== roundKey()));
+}
+
+/** The Disarming Demeanor states that hold the Wound Roll back. */
+const DISARMING_WAITS = Object.freeze(["offered", "clash", "redefend"]);
+
+/** One branch of an attack's result rewritten - read fresh, written whole. */
+function rewriteBranch(message, uuid, change) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.result) return null;
+  return requestEdit(message, { type: "attack", attack: { ...attack, result: { ...attack.result,
+    targets: attack.result.targets.map(branch => (branch.uuid === uuid) ? { ...branch, ...change(branch) } : branch) } } });
+}
+
+/** The Bluff, tried: its once a Round spent, and the Clash at the one who hit them. */
+async function bluffBack(message, target) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attacker) return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.disarmingHit`]: roundKey() });
+  await rewriteBranch(message, target.uuid, () => ({ disarming: "clash" }));
+  await postSkillClash(target, attacker, { name: "Disarming Demeanor", type: "outOfSequence",
+    clash: { skill: "bluff", defenderSkills: ["perception", "intuition"] } },
+    { disarmingHit: { applied: false, messageId: message.id, uuid: target.uuid } });
+}
+
+/**
+ * Defense Declaration again, for them alone, against the Strike Roll they were hit with: the new defence's roll measured
+ * against what the Strike was worth against them, the Damage Category moved by it in place of the old one.
+ */
+async function redefendWith(message, target, defence, wager = 0, foundation = "energy", parryWith = []) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const branch = attack?.result?.targets?.find(entry => entry.uuid === target.uuid);
+  const chosen = DEFENCES[defence];
+  if (!branch || (branch.disarming !== "redefend") || !chosen) return;
+  const others = (attack.defences ?? []).filter(entry => entry.uuid !== target.uuid);
+  const withDefence = { ...attack, defences: [...others, { uuid: target.uuid, defence, wager, foundation, parryWith }] };
+  const answer = await chosen.answer(target, { extraDice: target.system.dice.extra.formula,
+    criticalDice: target.system.dice.critical.formula, combatRoll: true, urgent: Boolean(attack.urgentRolls) }, withDefence);
+  const hit = answer ? ((Number(branch.against) || 0) > answer.total) : true;
+  const shift = (Number(branch.categoryShift) || 0) - (DEFENCES[branch.defense]?.damageCategoryShift ?? 0)
+    + (chosen.damageCategoryShift ?? 0);
+  const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  await requestEdit(message, { type: "attack", attack: { ...fresh, defences: withDefence.defences,
+    result: { ...fresh.result, targets: fresh.result.targets.map(entry => (entry.uuid !== target.uuid) ? entry : {
+      ...entry, defense: defence, defenseLabel: chosen.label, defenceWager: wager, defenceFoundation: foundation, answer, hit,
+      categoryShift: shift, damageCategory: resolveDamageCategory(attack.damageCategory, shift), disarming: "done" }) } } });
+  // Cross Counter made again strikes back as the first would have.
+  if (chosen.counterAttacks === true) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: target.uuid, actorName: target.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack", targetUuid: attack.attackerUuid, reason: "Cross Counter" } });
+  }
+}
+
+/** Disarming Demeanor (2)'s buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
+function disarmingButtons(message, container, attack) {
+  const waiting = (attack.result?.targets ?? []).filter(branch => DISARMING_WAITS.includes(branch.disarming));
+  for (const branch of waiting) {
+    const target = fromUuidSync(branch.uuid);
+    if (!target?.isOwner) continue;
+    const add = (label, tooltip, act) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = label;
+      if (tooltip) button.dataset.tooltip = tooltip;
+      button.addEventListener("click", () => {
+        button.disabled = true;
+        return act();
+      });
+      container.append(button);
+    };
+    if (branch.disarming === "offered") {
+      add(`Disarming Demeanor - ${target.name}`, "Bluff vs Perception/Intuition: won, defend again against this Strike",
+        () => bluffBack(message, target));
+      add(`Take the hit - ${target.name}`, "", () => rewriteBranch(message, target.uuid, () => ({ disarming: "declined" })));
+    }
+    if (branch.disarming === "redefend") {
+      add(`Dodge again - ${target.name}`, `Against a Strike of ${Number(branch.against) || 0}`,
+        () => redefendWith(message, target, "dodge"));
+      add(`Defend - ${target.name}`, "An option of the Defend Maneuver, paid as any",
+        () => defendAgainst(message, target, attack, redefendWith));
+    }
+  }
+  return waiting.length > 0;
+}
+
+/**
+ * Disarming Demeanor (3): "If an Opponent uses a Counter Maneuver in response to your Attacking Maneuver, you may choose
+ * to cancel your Attacking Maneuver ... and use the Basic Attack Maneuver or Signature Technique Maneuver instead (against
+ * that Counter Maneuver)." Open to the attacker, once an Encounter, against an option of the Defend Maneuver.
+ */
+function disarmingSwapOpen(attacker, attack) {
+  return Boolean(attacker && !attack.disarmingSwap && !attack.disarmingReplaces
+    && (attacker.system?.effects?.slots?.["disarming.onCounter"] === true)
+    && (attacker.getFlag?.(SCOPE, "disarmingSwapped") !== (game.combat?.id ?? "none")));
+}
+
+/** The held attack's buttons, for the attacker: go on, or swap. */
+function disarmingSwapButtons(message, html, attack) {
+  if (!attack.disarmingSwap?.pending) return;
+  const attacker = fromUuidSync(attack.attackerUuid);
+  if (!attacker?.isOwner) return;
+  const at = attack.disarmingSwap.name ?? "them";
+  for (const [label, tooltip, act] of [
+    ["Go on", `${at}'s Defend answers this attack`, () => disarmingRelease(message)],
+    ["Disarming Demeanor", `Cancel this attack - its Ki back - for a Basic Attack or a Signature Technique at ${at}`,
+      () => disarmingSwap(message, attacker)]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = label;
+    button.dataset.tooltip = tooltip;
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return act();
+    });
+    (html.querySelector(".message-content") ?? html).append(button);
+  }
+}
+
+/** Let the held attack go on. */
+async function disarmingRelease(message) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.disarmingSwap?.pending) return;
+  return settleAttack(message, { ...attack, disarmingSwap: { ...attack.disarmingSwap, pending: false } });
+}
+
+/**
+ * Cancelled for another: what it cost back, which new attack and what becomes of its Energy Charges asked - "apply any
+ * Energy Charge(s) ... to the new Attacking Maneuver, if you do not then you regain 2(T) Ki Points for each Energy Charge
+ * lost" - and the Defend they answered with carried to it, not paid again (the user's).
+ */
+async function disarmingSwap(message, attacker) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack?.disarmingSwap?.pending) return;
+  const charges = Math.max(0, Number(attack.energyCharges) || 0);
+  const perCharge = 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  const choice = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Disarming Demeanor" }, content: "",
+    buttons: [
+      ...(charges ? [{ action: "basicCarry", label: `Basic Attack (${charges} Energy Charge${(charges === 1) ? "" : "s"})` }] : []),
+      { action: "basic", label: charges ? `Basic Attack (+${charges * perCharge} KP)` : "Basic Attack" },
+      { action: "technique", label: charges ? `Signature Technique (+${charges * perCharge} KP)` : "Signature Technique" },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!choice || (choice === "cancel")) return;
+  const paid = attack.paid ?? {};
+  const regained = (choice === "basicCarry") ? 0 : charges * perCharge;
+  const dkp = Number(attacker.system.divineKi?.value) || 0;
+  const divine = Number(paid.divine) || 0;
+  await requestActorUpdate(attacker, {
+    "system.ki.value": Math.min(attacker.system.ki.max, attacker.system.ki.value + (Number(paid.ki) || 0) + regained),
+    "system.capacity.spent": Math.max(0, attacker.system.capacity.spent - (Number(paid.capacity) || 0)),
+    ...(divine ? { "system.divineKi.value": Math.min(Number(attacker.system.divineKi?.max) || (dkp + divine), dkp + divine) } : {}),
+    [`flags.${SCOPE}.disarmingSwapped`]: game.combat?.id ?? "none",
+    // The Defend it was answered with, for the attack that takes its place.
+    [`flags.${SCOPE}.counterCarried`]: { targetUuid: attack.disarmingSwap.uuid, entry: attack.disarmingSwap.entry }
+  });
+  await requestEdit(message, { type: "attack", attack: { ...attack,
+    disarmingSwap: { ...attack.disarmingSwap, pending: false }, disarmingSwapped: true } });
+  const offer = (choice === "technique")
+    ? { actorUuid: attacker.uuid, actorName: attacker.name, maneuverId: "signature-technique",
+        maneuverName: "Signature Technique", targetUuid: attack.disarmingSwap.uuid, reason: "Disarming Demeanor",
+        technique: { via: "", any: true } }
+    : { actorUuid: attacker.uuid, actorName: attacker.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+        targetUuid: attack.disarmingSwap.uuid, reason: "Disarming Demeanor",
+        grants: (choice === "basicCarry") ? { charges } : {} };
+  return takeOutOfSequence(message, attacker, offer);
+}
+
 /**
  * A move an effect hands over - not an Out-of-Sequence Maneuver, so it takes no one's, and nothing here moves anybody:
  * where to is the map's. Once a Round by the mover's `flag`, counted when taken; `key` tells one from another on a card.
@@ -13426,10 +13612,12 @@ function grantedLongShot(attacker, attack, target) {
  */
 async function takeTechniqueOffer(message, actor, offer) {
   const feature = offer.technique?.feature ?? "";
-  const techniques = actor.items.filter(item => (item.type === "maneuver")
-    && (item.system.advantages ?? []).includes(feature));
+  // Any of them where the offer names no Advantage - Disarming Demeanor's.
+  const techniques = actor.items.filter(item => (item.type === "maneuver") && (offer.technique?.any
+    ? Boolean(item.system.signature?.level) : (item.system.advantages ?? []).includes(feature)));
   if (!techniques.length) {
-    ui.notifications.warn(`${actor.name} has no Signature Technique with ${feature}.`);
+    ui.notifications.warn(offer.technique?.any ? `${actor.name} has no Signature Technique.`
+      : `${actor.name} has no Signature Technique with ${feature}.`);
     return;
   }
   let chosen = techniques[0];
@@ -14147,6 +14335,18 @@ export async function postAttack(actor, target, maneuver,
       }
     }
   });
+
+  // Disarming Demeanor (3): the attack in place of a cancelled one, answered by the Defend that one was answered with.
+  const carried = actor.getFlag?.(SCOPE, "counterCarried");
+  if (carried && (carried.targetUuid === (target?.uuid ?? ""))) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.counterCarried`]: null });
+    const made = card?.getFlag(SCOPE, ATTACK_FLAG);
+    if (made) {
+      await requestEdit(card, { type: "attack", attack: { ...made, disarmingReplaces: true,
+        defences: [...(made.defences ?? []).filter(entry => entry.uuid !== carried.targetUuid), carried.entry],
+        ready: [...new Set([...(made.ready ?? []), carried.targetUuid])] } });
+    }
+  }
 
   // Burrowed Strike: "This Attacking Maneuver triggers the Exploit Maneuver for any Opponent on an adjacent Square to you."
   offerExploits(card, actor, burrowed ? { ...maneuver, exploitable: [maneuver.exploitable,
@@ -15343,10 +15543,17 @@ function chooseDefence(message, target, defence, wager = 0, foundation = "energy
 
   // Replaced rather than merged in, so choosing again overwrites rather than piling up.
   const others = (attack.defences ?? []).filter(entry => entry.uuid !== target.uuid);
+  const entry = { uuid: target.uuid, defence, wager, foundation, parryWith };
+
+  // Disarming Demeanor (3): answered with the Defend Maneuver - the attack waits on its attacker.
+  const attacker = fromUuidSync(attack.attackerUuid);
+  const swap = (defence in DEFEND_OPTIONS) && disarmingSwapOpen(attacker, attack)
+    ? { disarmingSwap: { pending: true, uuid: target.uuid, name: target.name, entry } } : {};
 
   return settleAttack(message, {
     ...attack,
-    defences: [...others, { uuid: target.uuid, defence, wager, foundation, parryWith }],
+    ...swap,
+    defences: [...others, entry],
     ready: [...new Set([...(attack.ready ?? []), target.uuid])]
   });
 }
@@ -15369,7 +15576,8 @@ async function settleAttack(message, attack) {
   if (!attackIsReady(attack) || duelRunning(attack) || endedByDuel(attack) || attack.sacrifice?.pending
     || attack.punisherHold?.pending || attack.punished || attack.trapHold?.pending
     || attack.divineHold?.pending || attack.divineCancelled
-    || attack.godBindHold?.pending || attack.godBindCancelled) {
+    || attack.godBindHold?.pending || attack.godBindCancelled
+    || attack.disarmingSwap?.pending || attack.disarmingSwapped) {
     return requestEdit(message, { type: "attack", attack });
   }
   return resolveAttack(message, attack);
@@ -15713,10 +15921,14 @@ async function resolveAttack(message, attack) {
       // it or it looks like it was simply forgotten.
       forced,
       damageCategory: resolveDamageCategory(attack.damageCategory, shift),
+      // The steps the Category took here, kept so a defence made again can be put in place of this one.
+      categoryShift: shift,
       // Carried on the attack so the Wound Roll can apply it: the defender's client
       // worked it out, and the attacker's is as likely to be the one settling this.
       incomingDamage: incoming?.slots?.["incoming.damage"] ?? null,
       counterWound: null,
+      // Disarming Demeanor (2): hit, and the Bluff is theirs to try - the Wound Roll waits on it.
+      disarming: (hit && !automatic && disarmingOpen(target, attacker)) ? "offered" : null,
       applied: false
     });
   }
@@ -20367,7 +20579,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
  * A list rather than a row of buttons: each option needs its own explanation, and one
  * of them needs a field of its own.
  */
-async function defendAgainst(message, target, attack) {
+async function defendAgainst(message, target, attack, then = chooseDefence) {
   // Reached from Respond, where the Defend Maneuver is chosen; this asks which of its
   // effects is being used and what it costs.
 
@@ -20517,7 +20729,7 @@ async function defendAgainst(message, target, attack) {
   if (!free && !await spendActions(target, 1, "counter")) return;
   if (free) spendWriting(target, answered, "defend.free");
 
-  return chooseDefence(message, target, chosen.defence, chosen.kiWager, chosen.foundation, parryWith);
+  return then(message, target, chosen.defence, chosen.kiWager, chosen.foundation, parryWith);
 }
 
 /**
@@ -20877,12 +21089,19 @@ function renderAttack(message, html) {
       ? "Divine Counter: cancelled - its Ki Points and Capacity are regained, its Action Cost is not."
       : attack.godBindCancelled
       ? "God Bind: cancelled - its Ki Points and Actions are lost."
+      : attack.disarmingSwapped
+      ? "Disarming Demeanor: cancelled - its Ki Points are regained, another attack in its place."
+      : attack.disarmingSwap?.pending
+      ? `${Handlebars.escapeExpression(attack.disarmingSwap.name ?? "")} answers with the Defend Maneuver - `
+        + `${Handlebars.escapeExpression(attack.attackerName)} may cancel it for another (Disarming Demeanor).`
       : attack.unitedFailed
       ? `United Attack: ${Handlebars.escapeExpression(attack.unitedWith?.name ?? "")} did not join - `
         + `${Handlebars.escapeExpression(attack.maneuverName)} fails, and its Action and Ki are regained.`
       : result ? attackOutcome(attack) : awaitingWhom(attack)}</div>`;
   container.append(card);
-  if (attack.unitedFailed || attack.punished || attack.divineCancelled || attack.godBindCancelled) return;
+  if (attack.unitedFailed || attack.punished || attack.divineCancelled || attack.godBindCancelled
+    || attack.disarmingSwapped) return;
+  disarmingSwapButtons(message, html, attack);
   dimensionalHoleButtons(message, html, attack);
   sacrificeButtons(message, html, attack);
   divineCounterButtons(message, html, attack);
@@ -21142,6 +21361,9 @@ function renderAttack(message, html) {
     container.append(more);
     return;
   }
+
+  // Disarming Demeanor (2): somebody hit is still deciding, or defending again - everyone waits.
+  if (!result.wound && disarmingButtons(message, container, attack)) return;
 
   // Whoever owes the Wound Roll, which is the attacker on everything but a reflected
   // attack - there it is the Character whose attack was thrown back, and the button
