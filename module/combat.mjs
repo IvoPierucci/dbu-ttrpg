@@ -841,6 +841,37 @@ export function registerWornBreathHooks() {
   Hooks.on("deleteItem", (item, options) => settle(item, options));
 }
 
+/**
+ * "If your Racial Life Modifier increases or reduces during a Combat Encounter, regain or lose Life Points equal to the
+ * increase/decrease to your maximum Life Points. This cannot cause your Life Points to be reduced to their minimum value
+ * (they will always be 1 above it through this effect)." Whatever changed it - a State, a Condition, an Item - the
+ * Modifier is read before and after, and the GM's client settles the difference.
+ */
+export function registerRacialLifeHooks() {
+  const before = actor => ((actor?.type === "character") ? Number(actor.system?.racialLifeModifier) || 0 : null);
+  Hooks.on("preUpdateActor", (actor, changes, options) => { options.dbuRacialLife = before(actor); });
+  for (const kind of ["Create", "Update", "Delete"]) {
+    Hooks.on(`pre${kind}Item`, (item, ...rest) => {
+      const options = (kind === "Update") ? rest[1] : (kind === "Create") ? rest[1] : rest[0];
+      if (options && item.parent) options.dbuRacialLife = before(item.parent);
+    });
+  }
+  const settle = async (actor, options) => {
+    if ((options?.dbuRacialLife === null) || (options?.dbuRacialLife === undefined)) return;
+    if (!game.combat?.started || !game.users.activeGM || (game.users.activeGM !== game.user)) return;
+    const change = (Number(actor.system.racialLifeModifier) || 0) - options.dbuRacialLife;
+    if (!change) return;
+    const life = Number(actor.system.life?.value) || 0;
+    const delta = change * Math.max(1, Number(actor.system.powerLevel) || 1);
+    const next = (delta > 0) ? life + delta : Math.max(life + delta, Math.min(life, 1));
+    if (next !== life) await actor.update({ "system.life.value": next });
+  };
+  Hooks.on("updateActor", (actor, changes, options) => settle(actor, options));
+  Hooks.on("createItem", (item, options) => item.parent && settle(item.parent, options));
+  Hooks.on("updateItem", (item, changes, options) => item.parent && settle(item.parent, options));
+  Hooks.on("deleteItem", (item, options) => item.parent && settle(item.parent, options));
+}
+
 export function registerDefeatHooks() {
   Hooks.on("preUpdateActor", (actor, changes, options) => {
     if (actor.type !== "character") return;

@@ -75,6 +75,10 @@ const TABLE = [
     doc: "Current Tier of Power. Breakthrough still caps it at two above the Base Tier." },
   { key: "life.perLevel", phase: PHASES.TIER, kind: N, ops: NUMERIC,
     doc: "Life Points gained per Power Level." },
+  // "If any effect changes your Racial Life Modifier, it applies retroactively" - and in a Combat Encounter, the Life
+  // Points with it (combat.mjs registerRacialLifeHooks).
+  { key: "racialLifeModifier", phase: PHASES.TIER, kind: N, ops: NUMERIC,
+    doc: "The Racial Life Modifier, counted for every Power Level." },
   { key: "ki.perLevel", phase: PHASES.TIER, kind: N, ops: NUMERIC,
     doc: "Ki Points gained per Power Level." },
   // "Reduce your Size Category by 1." A number of Categories up or down the list from the

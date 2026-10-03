@@ -4749,34 +4749,40 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   }
 
   /**
-   * The Racial Traits this character's race offers, and which of them they have.
-   *
-   * Filtered by race rather than listing them all: a Saiyan has no business being
-   * offered an Android's. Empty until a race has Traits written for it, and the section
-   * says so rather than appearing as an empty box.
+   * The Racial Traits of this character's race - every one of them had, a Subrace's only for its own Subrace - and
+   * which are lost. Its Category (Body/Mind) and whether it is Primary or Secondary on its hover: a Subrace Trait is
+   * Primary.
    */
   #racialTraitChoices() {
-    const race = this.actor.system.race;
+    const { race, subrace } = this.actor.system;
     if (!race) return [];
 
-    const taken = new Set(this.actor.system.racialTraits ?? []);
-    return traitsOfKind("races", race).map(trait => ({
-      id: trait.id,
-      name: trait.name,
-      text: trait.text || trait.description || "",
-      taken: taken.has(trait.id)
-    }));
+    const had = new Set(this.actor.system.racialTraits ?? []);
+    return traitsOfKind("races", race)
+      .filter(trait => !trait.subrace || (trait.subrace === subrace))
+      .map(trait => {
+        const category = String(trait.category ?? "");
+        const importance = trait.subrace ? "primary" : String(trait.importance ?? "");
+        const kind = [category, importance].filter(Boolean)
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" \u00b7 ");
+        return {
+          id: trait.id,
+          name: trait.name,
+          text: [kind, trait.text || trait.description || ""].filter(Boolean).join(" - "),
+          taken: had.has(trait.id)
+        };
+      });
   }
 
-  /** Take a Racial Trait, or give it up. */
+  /** "If you lose a Racial Trait, through any means" - marked lost, or had again. */
   static async _onToggleRacialTrait(event, target) {
     const id = target.dataset.trait;
-    const taken = new Set(this.actor.system.racialTraits ?? []);
+    const lost = new Set(this.actor.system.lostRacialTraits ?? []);
 
-    if (taken.has(id)) taken.delete(id);
-    else taken.add(id);
+    if (lost.has(id)) lost.delete(id);
+    else lost.add(id);
 
-    return this.actor.update({ "system.racialTraits": [...taken] });
+    return this.actor.update({ "system.lostRacialTraits": [...lost] });
   }
 
   /** Enter or leave a State. */

@@ -3,7 +3,7 @@ const { fields } = foundry.data;
 import { applyPassives, applySlot, permits } from "../effects/interpreter.mjs";
 import { programsFor } from "../effects/registry.mjs";
 import { evaluate } from "../effects/conditions.mjs";
-import { getTrait } from "../effects/traits.mjs";
+import { getTrait, traitsOfKind } from "../effects/traits.mjs";
 import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
@@ -179,6 +179,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * given Power Level. Shared with the creation hook, which needs a Score before any
    * derived data exists.
    */
+  /**
+   * The Racial Traits a character has: "You gain access to all Primary & Secondary Racial Traits listed on your race" -
+   * and of a Subrace's, "you only gain the traits from your listed Subrace" - less any lost.
+   */
+  static racialTraitsHeld(race, subrace, lost = []) {
+    if (!race) return [];
+    const gone = new Set(lost ?? []);
+    return traitsOfKind("races", race)
+      .filter(trait => !trait.subrace || (trait.subrace === subrace))
+      .map(trait => trait.id)
+      .filter(id => !gone.has(id));
+  }
+
   /**
    * The total Attribute Score increase a character's race grants for one Attribute:
    * the race's fixed increases plus whatever the player picked for its choices.
@@ -1452,10 +1465,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     });
 
     // --- Racial Traits ---
-    // The ids of the Traits taken from this character's race. Stored rather than
-    // derived because a race offers more than a character ends up with, and which ones
-    // were taken is a choice made at creation, not something the numbers imply.
-    schema.racialTraits = new fields.ArrayField(
+    // "You gain access to all Primary & Secondary Racial Traits listed on your race" - and of a Subrace's, only your
+    // own. So which are had is derived (prepareDerivedData, `racialTraits`), and what is stored is the exception:
+    // "If you lose a Racial Trait, through any means, you no longer benefit from its effects."
+    schema.lostRacialTraits = new fields.ArrayField(
       new fields.StringField({ required: true, blank: false }),
       { required: true, initial: () => [] }
     );
@@ -1798,6 +1811,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // write something out of range; keep everything derived from it sane regardless.
     this.powerLevel = Math.min(Math.max(this.powerLevel, 1), DBUCharacterData.MAX_POWER_LEVEL);
 
+    // The Racial Traits had: every one listed on the race, a Subrace's only for that Subrace, none lost. Read by the
+    // effects below, so set first.
+    this.racialTraits = DBUCharacterData.racialTraitsHeld(this.race, this.subrace, this.lostRacialTraits);
+
     // Racial Life Modifier, from whichever race is selected. An unknown or unset race
     // contributes nothing rather than breaking the Life calculation.
     this.racialLifeModifier = racialLifeModifier(this.race);
@@ -2121,6 +2138,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     }));
 
     this.skillRankCap = rankCap;
+
+    // "If any effect changes your Racial Life Modifier, it applies retroactively" - it is counted for every Power Level.
+    this.racialLifeModifier = withEffects(this, "racialLifeModifier", this.racialLifeModifier);
 
     this.life.max = DBUCharacterData.maxLife({
       powerLevel: this.powerLevel,
@@ -2645,8 +2665,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       }, {}));
 
     // Saving Throws: tied to Attribute Score (not Modifier) per the rules. The race's
-    // focused Saving Throw gains +1(bT) - which does not grow with a Breakthrough,
-    // unlike a (T) bonus - and crits one point more easily.
+    // focused Saving Throw: "Increase the listed Saving Throw by 1(T) and reduce its Critical Target by 1."
     const racialSaves = racialSavingThrows(this.race);
 
     // What moves the die of every Saving Throw - Legacy's 2. Rolled with it wherever one is.
@@ -2665,7 +2684,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // finished Throw, which is what Calculation Priority asks.
         value: withEffects(this, "save.all",
           withEffects(this, `save.${save}`,
-            atts[attribute].score + (racial ? this.perBaseTier(1) : 0)),
+            atts[attribute].score + (racial ? this.perTier(1) : 0)),
           { as: `save.${save}`, wraps: true }),
         criticalTarget: racial
           ? Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, this.criticalTarget - 1)
