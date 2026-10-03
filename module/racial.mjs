@@ -19,6 +19,8 @@
  *                                   Unique Abilities and you do not need to spend any Technique Points to gain them"
  *   uniqueRestrictions: <ids>       Restrictions those come with - God of Time's Straining and Difficult Time Freeze
  *   grantsTalent: <ids>             Talents it gives - kept if the Trait is lost ("you do not lose that Talent")
+ *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
+ *   tail: true                      a tail it may lose - the Options tab's Tail lost box (the `tailed` question)
  *
  * An Option is a file of its own beside it, `traits/races/<race>/<trait>/<option>.dbu`, marked `optionOf: <trait>`; its
  * script is added to the Trait's between `#@ option` markers, and it may say `choose`, `grantsUnique`, `grantsTalent`.
@@ -256,7 +258,8 @@ export async function racialItemFrom(trait) {
       system: {
         description: trait.description ?? "",
         text: trait.text ?? "",
-        addendum: texts.join("\n"),
+        // Its Addendum effect's text box, as written - shown in the Item's Options tab (the user's).
+        addendum: String(trait.addendum ?? "").trim(),
         script: scripts.filter(Boolean).join("\n\n"),
         race: trait.owner ?? "",
         category: String(trait.category ?? ""),
@@ -381,8 +384,7 @@ export async function changeRacialOption(item, optionId) {
   const kept = String(item.system.script ?? "").replace(/\n*#@ option [^\n]*\n[\s\S]*?\n#@ end/g, "").trimEnd();
   await item.update({
     "system.script": `${kept}\n\n#@ option ${option.id} | ${option.name}\n${script}\n#@ end`,
-    "system.chosen": chosen,
-    "system.addendum": `${option.name}: ${String(option.text ?? "").trim()}`
+    "system.chosen": chosen
   });
 
   if (!actor) return true;

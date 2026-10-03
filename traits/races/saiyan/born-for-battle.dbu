@@ -41,5 +41,8 @@ gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
 surge(ki);
 gainOneOf(battlebornstrike, battleborndodge, battlebornwound);
 
-# (3) Waits on Saiyan Heritage's 2nd effect, not written yet. (4) Waits on Awakenings - Zenkai - not built yet: the table
-# gives it.
+# (3) Saiyan Heritage's 2nd effect triggered: every Combat Roll's Battle Born to 3, past the limit, never lowered.
+[triggered/heritage, 1/encounter, effect 3]
+raiseTo(3, battlebornstrike, battleborndodge, battlebornwound);
+
+# (4) Waits on Awakenings - Zenkai - not built yet: the table gives it.

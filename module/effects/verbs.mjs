@@ -37,6 +37,24 @@ export const VERBS = Object.freeze({
        + "already held, which is what gaining one means - the Condition's own maximum "
        + "still caps it."
   },
+  steadfastEnter: {
+    args: [2, 3],
+    names: [1, 2],
+    doc: "Make a Steadfast Check, the amount added to its Dice Score (-2 takes 2 off); passed, enter the named State, for "
+       + "the duration named after it - Saiyan Heritage's Undying \"until the end of your next turn\" (next-turn)."
+  },
+  trigger: {
+    args: [1, 1],
+    names: [0],
+    doc: "Fire a Moment: what answers the named one answers it now - Saiyan Heritage's 2nd effect firing heritage, which "
+       + "Born for Battle's 3rd answers."
+  },
+  raiseTo: {
+    args: [2, 6],
+    names: [1, 2, 3, 4, 5],
+    doc: "Set each named Resource to at least this many stacks, past its ceiling, never lowering one - Born for Battle's "
+       + "\"set the number of Battle Born stacks on each Combat Roll to 3, regardless of the limit\"."
+  },
   gainOneOf: {
     args: [2, 6],
     names: [0, 1, 2, 3, 4, 5],

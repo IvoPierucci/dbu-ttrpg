@@ -13,4 +13,22 @@
     </label>
   </section>
   {{/if}}
+  {{#if racial.tail}}
+  <section class="panel racial-options">
+    <label class="racial-option-row" data-tooltip="Lost to a Called Shot: not Tailed, or benefiting from it, until it regrows">
+      <span>Tail lost</span>
+      <input type="checkbox" data-tail-lost {{#if racial.tailLost}}checked{{/if}}/>
+    </label>
+  </section>
+  {{/if}}
+  {{#if racial.addendum}}
+  {{! Its Addendum effect's text box, as written. }}
+  <section class="panel racial-addendum">
+    <h3 class="panel-title">{{racial.addendumTitle}}</h3>
+    {{#each racial.addendum as |line|}}
+    {{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}
+    <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>{{/if}}
+    {{/each}}
+  </section>
+  {{/if}}
 </div>

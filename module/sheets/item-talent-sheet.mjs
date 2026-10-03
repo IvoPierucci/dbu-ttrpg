@@ -58,7 +58,7 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
     // A Racial Trait: its race and what the rules call it in place of Prerequisites, and what was chosen for it.
     if (this.item.type === "racial") {
       const { ordinal, racialOptionOf, racialOptionsOf, racialTraitKind, racialTraitRace } = await import("../racial.mjs");
-      const { getTrait } = await import("../effects/traits.mjs");
+      const { getTrait, printedLines } = await import("../effects/traits.mjs");
       const file = getTrait(this.item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
       const current = racialOptionOf(this.item);
       // Its Options, where it has an Option effect - the one chosen picked, and the rest there to change to.
@@ -71,7 +71,15 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
           .filter(Boolean).join(" \u00b7 "),
         options: options.length ? options : null,
         // Which printed effect asks for it - "3rd effect" (the user's).
-        optionLabel: Number(file?.optionEffect) ? `${ordinal(Number(file.optionEffect))} effect` : "Option"
+        optionLabel: Number(file?.optionEffect) ? `${ordinal(Number(file.optionEffect))} effect` : "Option",
+        // Its Addendum, as written - for whoever is choosing to read before they choose.
+        addendum: String(file?.addendum ?? "").trim()
+          ? printedLines(String(file.addendum)).map(line => ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line }))
+          : null,
+        addendumTitle: String(file?.addendumTitle ?? "Addendum"),
+        // A tail it may lose: kept on the character, the Tailed Option's `tailed`.
+        tail: file?.tail === true,
+        tailLost: Boolean(this.item.actor?.getFlag?.("dbu-ttrpg", "tailLost"))
       };
     }
 
@@ -90,6 +98,11 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
   /** A Racial Trait's Option changed from its dropdown: its script, choice and what it gives changed with it. */
   _onRender(context, options) {
     super._onRender?.(context, options);
+    // A tail lost, or regrown: on the character, what Tailed asks.
+    this.element.querySelector("input[data-tail-lost]")?.addEventListener("change", async event => {
+      event.stopPropagation();
+      await this.item.actor?.setFlag("dbu-ttrpg", "tailLost", event.target.checked);
+    });
     const select = this.element.querySelector("select[data-racial-option]");
     if (!select) return;
     select.addEventListener("change", async event => {

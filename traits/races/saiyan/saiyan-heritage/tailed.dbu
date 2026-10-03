@@ -1,0 +1,19 @@
+id: tailed
+name: Tailed
+order: 1
+optionOf: saiyan-heritage
+description: >
+  You possess a tail. While you possess that tail, you have access to the Oozaru Alternate Form and increase your Stress Bonus by 1. When your base Tier of Power is 5+, double this bonus.
+text: >
+  Tailed [Passive]: You possess a tail. While you possess that tail, you have access to the Oozaru Alternate Form and increase your Stress Bonus by 1. When your base Tier of Power is 5+, double this bonus.
+
+---
+
+# While the tail is had - not lost (`tailed`). The Oozaru Alternate Form waits on Forms, not built yet.
+[passive]
+if (tailed && baseTierOfPower >= 5) {
+    stressBonus += 2;
+}
+if (tailed && baseTierOfPower < 5) {
+    stressBonus += 1;
+}

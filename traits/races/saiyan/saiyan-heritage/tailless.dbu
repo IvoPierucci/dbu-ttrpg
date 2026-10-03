@@ -1,0 +1,12 @@
+id: tailless
+name: Tailless
+order: 2
+optionOf: saiyan-heritage
+description: >
+  Increase your Wound Rolls and Soak Value by 1(T) while in a Form and/or Enhancement.
+text: >
+  Tailless [Passive]: Increase your Wound Rolls and Soak Value by 1(T) while in a Form and/or Enhancement.
+
+---
+
+# "While in a Form and/or Enhancement" - Forms and Enhancements are not built yet: the table adds it while in one.

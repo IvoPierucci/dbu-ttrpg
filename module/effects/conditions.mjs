@@ -109,6 +109,9 @@ const PREDICATES = {
   /** Is the Maneuver being declared that one, by its id - Cosmic Efficiency's Combat Recovery. */
   using: (scope, id) => (scope.context?.maneuver?.id ?? "") === String(id).trim(),
 
+  /** Does this character still have their tail - Saiyan Heritage's Tailed, not lost (the Options tab's Tail lost box). */
+  tailed: scope => !scope.data?.parent?.getFlag?.("dbu-ttrpg", "tailLost"),
+
   /** Is this an even-numbered Combat Round - Born for Battle's. */
   evenRound: () => {
     const round = Number(globalThis.game?.combat?.started ? globalThis.game.combat.round : 0) || 0;

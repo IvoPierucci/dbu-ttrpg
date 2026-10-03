@@ -2473,7 +2473,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const reached = keys
       .filter((key, index) => (index <= currentIndex) && DBUCharacterData.THRESHOLDS[key].counts);
 
-    const failures = reached.filter(key => this.thresholdChecks[key] === "fail").length;
+    // One an effect passes - Saiyan Heritage's Bruised - is passed, and no failure for it counts.
+    const passes = key => this.effects?.slots?.[`steadfast.autoPass.${key}`] === true;
+    const failures = reached.filter(key => !passes(key) && (this.thresholdChecks[key] === "fail")).length;
 
     this.threshold = {
       key: current,
@@ -2485,7 +2487,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       penalty: failures * this.baseTierOfPower,
       // Thresholds reached but not yet checked. Crossing several at once auto-fails
       // all but the lowest, which is the only one still rolled for.
-      pending: reached.filter(key => !this.thresholdChecks[key])
+      pending: reached.filter(key => !passes(key) && !this.thresholdChecks[key])
     };
 
     // The last phase. It waits for the Thresholds, because Stress Bonus counts their

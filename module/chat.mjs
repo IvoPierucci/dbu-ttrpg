@@ -5970,6 +5970,24 @@ async function outcomeTurn(actor, kind) {
   return applySlot(slots, "roll.total", 0);
 }
 
+/**
+ * A Moment an effect fires itself - Saiyan Heritage's 2nd effect, which Born for Battle's 3rd answers: what answers it
+ * and is left to the player is offered in a window on their own client, wherever the effect runs, and what they tick is
+ * armed for it.
+ */
+export async function offerTriggers(actor, moment) {
+  if (!triggersFor(actor, [moment]).length) return;
+  const player = playerOf(actor);
+  let ids = [];
+  if (player === game.user) ids = await showOutcomeWindow(actor, moment);
+  else if (player) {
+    try { ids = await player.query(OUTCOME_QUERY, { actorUuid: actor.uuid, kind: moment }, { timeout: 120000 }) ?? []; }
+    catch (error) { console.warn(`DBU TTRPG | ${actor.name}'s ${moment} could not be asked`, error); }
+  }
+  const armed = actor.system.armedTalents ?? [];
+  if (ids.some(id => !armed.includes(id))) await actor.update({ "system.armedTalents": [...new Set([...armed, ...ids])] });
+}
+
 /** Who answers for a character: an active player who owns it, or else the active GM. */
 function playerOf(actor) {
   return game.users.find(user => user.active && !user.isGM && actor.testUserPermission?.(user, "OWNER"))
@@ -6012,8 +6030,9 @@ export async function showOutcomeWindow(actor, kind) {
   const triggers = triggersFor(actor, [kind]);
   if (!actor || !triggers.length) return [];
   const before = new Set(actor.system.armedTalents ?? []);
-  const applied = await prepareRoll(actor, triggers, `${actor.name}: ${(kind === "botch") ? "Botch" : "Critical"}`,
-    (kind === "botch") ? "A Botch on this Combat Roll." : "A Critical on this Combat Roll.", { rolling: false });
+  const said = { botch: ["Botch", "A Botch on this Combat Roll."], critical: ["Critical", "A Critical on this Combat Roll."] }[kind]
+    ?? [(await import("./effects/moments.mjs")).getMoment(kind)?.label ?? kind, ""];
+  const applied = await prepareRoll(actor, triggers, `${actor.name}: ${said[0]}`, said[1], { rolling: false });
   if (applied === false) return [];
   const armed = actor.system.armedTalents ?? [];
   return triggers.map(entry => entry.blockId).filter(id => !before.has(id) && armed.includes(id));
@@ -19673,9 +19692,11 @@ async function answerMoment(message, card, actor) {
 
   // A Round's or a turn's beginning has already happened, so what was ticked for it answers it now - armed, it would only
   // wait for the next one - its Actions paid first (Skill of the Watcher's "spend 1 Action to gain 2 Counter Actions").
-  // And being knocked through a Health Threshold, for whoever was - Born for Battle's Ki Surge.
+  // And being knocked through a Health Threshold, for whoever was - Born for Battle's Ki Surge - or Defeated, for whoever
+  // is: Saiyan Heritage's Steadfast Check for the Undying State.
   const threshold = (card.moment === "threshold") && (card.subjectUuid === actor.uuid);
-  if (!threshold && !["start-of-round", "start-of-turn", "start-of-encounter"].includes(card.moment)) return;
+  const defeated = (card.moment === "defeated") && (card.subjectUuid === actor.uuid);
+  if (!threshold && !defeated && !["start-of-round", "start-of-turn", "start-of-encounter"].includes(card.moment)) return;
   const chosen = triggers.filter(entry => !before.has(entry.blockId)
     && (actor.system.armedTalents ?? []).includes(entry.blockId));
   if (!chosen.length) return;
@@ -19686,7 +19707,11 @@ async function answerMoment(message, card, actor) {
     return;
   }
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
-  await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold } : {});
+  await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold } : (defeated ? { damage: 0 } : {}));
+  // Caught: the rescue counts against the one allowed per Encounter, as one answered by itself does (combat.mjs).
+  if (defeated && !actor.system.defeated) {
+    await actor.update({ "system.defeatsEscaped": (actor.system.defeatsEscaped ?? 0) + 1 });
+  }
   // The end of the Round before, answered now - from each Trait whose effect was ticked for it.
   const late = chosen.filter(entry => String(entry.program.blocks?.[0]?.moment ?? "") === "end-of-round");
   for (const sourceId of new Set(late.map(entry => entry.sourceId))) {

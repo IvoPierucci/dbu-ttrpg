@@ -687,6 +687,10 @@ const PATTERNS = [
     doc: "Sensing God Ki; the Power Up offered after an Exploit's Damage or a Defend's none; Surgency from the Magic "
        + "Modifier where higher (Cosmic Efficiency); the Exploit offered when an attack left you without Damage, and "
        + "Combat Recovery out of sequence at the start of a turn with none taken (Flow of Combat)." },
+  // "You automatically succeed all Steadfast Checks for the Bruised Health Threshold" (Saiyan Heritage's) - and never fail
+  // one for it.
+  { match: /^steadfast\.autoPass\.(\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
+    doc: "That Health Threshold's Steadfast Check passed, and never failed - whatever would fail it." },
   // "Your minimum Action Cost for Combat Recovery is 1 Action" - the least a Maneuver priced in a range may be given.
   { match: /^(\w[\w-]*)\.actionCost\.minimum$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
     doc: "The least Action Cost that Maneuver may be given." },

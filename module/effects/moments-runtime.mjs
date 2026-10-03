@@ -255,6 +255,39 @@ async function runVerb(actor, call, context) {
     case "gain":
       return gainCondition(actor, args[0], args[1] ?? 1);
 
+    case "steadfastEnter": {
+      // A Steadfast Check with this added to its Dice Score; made, the State, for the duration.
+      const { die, bonus = 0, target, natural = 0 } = actor.system.steadfast ?? {};
+      const modifier = Number(args[0]) || 0;
+      const roll = await new Roll([die, natural ? `${natural}` : "", bonus ? `${bonus}` : "", modifier ? `${modifier}` : ""]
+        .filter(Boolean).join(" + ").replace("+ -", "- ")).evaluate();
+      const passed = roll.total >= target;
+      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
+        flavor: `Steadfast Check - needing ${target} - ${passed ? "passed" : "failed"}` });
+      if (passed && args[1]) return enterState(actor, args[1], 1, args[2] ?? null);
+      return;
+    }
+
+    case "trigger": {
+      // What answers it and is left to the player (Triggered) is offered in a window on their client first.
+      const moment = String(args[0] ?? "");
+      const { offerTriggers } = await import("../chat.mjs");
+      await offerTriggers(actor, moment);
+      return fireMoment(actor, moment, context);
+    }
+
+    case "raiseTo": {
+      // To at least this many, past any ceiling, never lower - Born for Battle's 3.
+      const floor = Math.max(0, Number(args[0]) || 0);
+      const held = { ...(actor.system.resources ?? {}) };
+      for (const name of args.slice(1).map(each => String(each).toLowerCase())) {
+        held[name] = { ...(held[name] ?? {}), stacks: Math.max(Number(held[name]?.stacks) || 0, floor),
+          max: Math.max(Number(held[name]?.max) || 0, floor) };
+      }
+      const { replaceObject } = await import("../conditions.mjs");
+      return actor.update({ "system.resources": replaceObject(held) });
+    }
+
     case "gainOneOf": {
       // "You must apply it to either Strike, Dodge, or Wound (you decide)" - asked of whoever plays the character.
       const { resourceDefinitions } = await import("./traits.mjs");

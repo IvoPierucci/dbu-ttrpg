@@ -68,6 +68,8 @@ const TABLE = [
   { key: "start-of-encounter", label: "The Combat Encounter begins", provides: [],
     doc: "Fires when you enter the Encounter, so joining late still earns it." },
   { key: "start-of-round", label: "The Combat Round begins", provides: [] },
+  { key: "heritage", label: "You trigger Saiyan Heritage's 2nd effect", provides: [],
+    doc: "Fired by the effect itself (trigger(heritage)) - what Born for Battle's 3rd effect answers." },
   { key: "end-of-round", label: "The Combat Round ends", provides: [],
     doc: "Before the next one begins and anything comes back - Skill of the Watcher's Counter Actions still held." },
   { key: "start-of-turn", label: "Your turn begins", provides: [],

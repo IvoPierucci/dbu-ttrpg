@@ -1,0 +1,42 @@
+id: saiyan-heritage
+name: Saiyan Heritage
+order: 2
+category: body
+importance: primary
+options: 1
+optionEffect: 5
+description: >
+  A warrior race evolved with a monkey-like tail which, in the light of the full moon, allows them to transform into the mighty Oozaru, Saiyans are extremely hard to kill.
+text: >
+  Saiyan Heritage (Body): A warrior race evolved with a monkey-like tail which, in the light of the full moon, allows them to transform into the mighty Oozaru, Saiyans are extremely hard to kill.
+  (1)-[Passive]: You automatically succeed all Steadfast Checks for the Bruised Health Threshold. You also cannot gain any failures for the Bruised Health Threshold due to any rules like Massive Damage (see — Thresholds & Conditions).
+  (2)-[Triggered/Defeated]: You may make a Steadfast Check (if you do, reduce your Dice Score by 2). If you succeed, you enter the Undying State until the end of your next turn.
+  (3)-[Addendum]: Please refer to the ‘Saiyan Tail’ text box below.
+  (4)-[Automatic]: If you suffer from Tail Restraint during a Grapple while you are Tailed (see the Option effect below), you are immediately knocked Prone and cannot remove the Prone Combat Condition until you escape the Grapple.
+  (5)-[Option]: At Character Creation, choose one of the following effects:
+  * Tailed [Passive]: You possess a tail. While you possess that tail, you have access to the Oozaru Alternate Form and increase your Stress Bonus by 1. When your base Tier of Power is 5+, double this bonus.
+  * Tailless [Passive]: Increase your Wound Rolls and Soak Value by 1(T) while in a Form and/or Enhancement.
+addendumTitle: Saiyan Tail
+addendum: >
+  Tailed Saiyans can lose their tail through the Called Shot Maneuver. If their tail is targeted and hit by a Called Shot of the Lethal Damage Category, or one that is made with a Weapon of the Slashing Weapon Category and deals Damage equal to or exceeding 1/4 (rounded up) of the Saiyan’s Maximum Life Points, their tail is removed and they are not treated as Tailed (or benefiting from its effects) until they regrow their tail.
+
+  Upon losing a tail, a Saiyan may select either of the following choices:
+  * Regrow. If a Saiyan chooses to regrow their tail, they must roll a 1d4+1. The result is the number of Combat Encounters they must complete until their tail grows back – an ARC may instead require you to wait a period of time depending on your roll (be it days, weeks, or months depending on them and the stakes of their campaign). During the final Combat Encounter, if you are below the Injured Health Threshold, you may spend a Karma Point as an Instant Maneuver to instantly regrow your tail.
+  * Accept. If you accept the loss of your Tail, your choice for the Option effect of Saiyan Heritage becomes Tailless.
+# The tail kept or lost - the Item's Options tab's Tail lost box (`tailed`); losing it to a Called Shot is the table's call.
+tail: true
+
+---
+
+# (1) The Bruised Health Threshold's Steadfast Check passed, and never a failure for it (actor-character.mjs).
+[passive]
+allow steadfast.autoPass.bruised;
+
+# (2) Reduced to your minimum Life Points: a Steadfast Check, 2 off its Dice Score - made, Undying until the end of your
+# next turn - and, made or not, it was triggered: what answers that (Born for Battle's 3rd effect) answers it.
+[triggered/defeated, effect 2]
+steadfastEnter(-2, undying, next-turn);
+trigger(heritage);
+
+# (4) Tail Restraint is the Tail Attack's, and is not built yet: knocked Prone and kept there till the Grapple ends is the
+# table's for now.
