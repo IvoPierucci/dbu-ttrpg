@@ -45,7 +45,8 @@ text: >
 # (1) The Divine Ki Points: their own pool (system.divineKi), half the Maximum Ki Points before any Ki Multiplier, filled
 #     when a Combat Encounter starts in this State or when this State is entered in one (combat.mjs, conditions.mjs).
 #     Spent in place of Ki Points where a Maneuver's price is paid, all of it or none, while the sheet's Spend Divine Ki
-#     is on - half its Capacity (maneuvers.mjs spendManeuverCost).
+#     is on - half its Capacity (maneuvers.mjs spendManeuverCost). A Ki Wager is its own instance: the wager dialog's
+#     Wager Divine Ki pays it apart (spendLifeWager).
 # (2) Read where a Clash is rolled (chat.mjs): a Concealment answer from one in God Ki, at one who is not, succeeds.
 # (3) Below.
 # Not built: the Draining Aspect and Leaving a Transformation (Transformations are not in the system), and the Empower

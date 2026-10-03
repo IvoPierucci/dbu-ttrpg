@@ -4741,7 +4741,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Perfect Strike: the full Ki Cost is paid, and Capacity takes half of it - the wager as usual.
   const perfect = !crossing && maneuver.ultimate && ["simple"].includes(declared?.profile)
     && (declared?.advantages ?? []).includes("perfect-strike");
-  const wagered = declared?.wagerFromLife ? 0 : (Number(declared?.kiWager) || 0);
+  const wagered = (declared?.wagerFromLife || declared?.wagerFromDivine) ? 0 : (Number(declared?.kiWager) || 0);
   if (perfect) maneuver = { ...maneuver, capacityCost: moving.fromSelf - Math.ceil((moving.fromSelf - wagered) / 2) };
   if (!fromStore && !await spendManeuverCost(actor, maneuver, moving.fromSelf)) return false;
   if (moving.store) {

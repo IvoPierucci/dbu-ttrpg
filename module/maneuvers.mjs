@@ -2061,7 +2061,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   const declared = await pickProfile(maneuver, foundations, actor, limits);
   if (!declared) return null;
 
-  const { profile, kiWager, wagerFromLife = false } = declared;
+  const { profile, kiWager, wagerFromLife = false, wagerFromDivine = false } = declared;
 
   // What this attack carries from the Signature Technique side: whatever the Maneuver
   // was built with, plus whatever the Profile hands out. Blitz grants Charging Assault
@@ -2105,7 +2105,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
       );
   if (!foundation) return null;
 
-  return { profile, foundation, kiWager, wagerFromLife, advantages, ...answers };
+  return { profile, foundation, kiWager, wagerFromLife, wagerFromDivine, advantages, ...answers };
 }
 
 /**
@@ -2507,6 +2507,17 @@ export function maxLifeWager(actor, advantages = []) {
  * for the wager would leave half an attack paid for.
  */
 export function lifeWagerProblem(actor, declared, price = 0) {
+  // God Ki: a wager in Divine Ki Points - there enough of them, and half its Capacity.
+  const divine = declared?.wagerFromDivine ? (declared.kiWager ?? 0) : 0;
+  if (divine > 0) {
+    const left = Number(actor.system.divineKi?.value) || 0;
+    if (left < divine) return `${actor.name} would wager ${divine} Divine Ki Points and has ${left}.`;
+    if ((price + Math.ceil(divine / 2)) > actor.system.capacity.remaining) {
+      return `${actor.name} has ${actor.system.capacity.remaining} Capacity left this round, and this attack needs `
+        + `${price + Math.ceil(divine / 2)}.`;
+    }
+    return null;
+  }
   const wager = declared?.wagerFromLife ? (declared.kiWager ?? 0) : 0;
   if (wager <= 0) return null;
 
@@ -2523,6 +2534,15 @@ export function lifeWagerProblem(actor, declared, price = 0) {
 
 /** Pay a Life Point wager: out of the Life Points, and out of Capacity as Ki would be. */
 export async function spendLifeWager(actor, declared) {
+  // God Ki: "you could use DKP to pay for the Ki Point Cost for an Attacking Maneuver and then Ki Wager with your normal
+  // Ki Points, as they are two different instances of paying Ki Points" - and the other way round: the wager on its own,
+  // in Divine Ki, at "1/2 (rounded up) of the Capacity Rate".
+  const divine = declared?.wagerFromDivine ? (declared.kiWager ?? 0) : 0;
+  if (divine > 0) {
+    await actor.update({ "system.divineKi.value": Math.max(0, (Number(actor.system.divineKi?.value) || 0) - divine),
+      "system.capacity.spent": actor.system.capacity.spent + Math.ceil(divine / 2) });
+    return;
+  }
   const wager = declared?.wagerFromLife ? (declared.kiWager ?? 0) : 0;
   if (wager <= 0) return;
   const { capacity, life } = actor.system;
@@ -2660,6 +2680,10 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
     <label class="dbu-wager" data-tooltip="Spend Life Points instead of Ki Points. It still comes out of your Capacity. Max ${lifeMax}.">
       <input type="checkbox" name="wagerFromLife"/>
       <span>Wager Life Points</span>
+    </label>` : ""}${actor?.system?.divineKi?.active ? `
+    <label class="dbu-wager" data-tooltip="God Ki: the wager paid in Divine Ki Points (${Number(actor.system.divineKi.value) || 0} left), at half its Capacity - its own instance of paying, whatever pays the KP Cost.">
+      <input type="checkbox" name="wagerFromDivine"/>
+      <span>Wager Divine Ki</span>
     </label>` : ""}`;
 
   const chosen = await foundry.applications.api.DialogV2.wait({
@@ -2684,8 +2708,12 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
           // drawn for the whole list, and ticking it under another Profile means nothing.
           const wagerFromLife = Boolean((PROFILES[profile]?.wagerFromLife || second?.wagerFromLife)
             && dialog.element.querySelector('input[name="wagerFromLife"]')?.checked);
+          // Or in Divine Ki, where it is not Life: no more than there is of it.
+          const wagerFromDivine = !wagerFromLife && Boolean(actor?.system?.divineKi?.active)
+            && Boolean(dialog.element.querySelector('input[name="wagerFromDivine"]')?.checked);
           const own = withProfile(profile);
-          const ceiling = capped(wagerFromLife ? maxLifeWager(actor, own) : maxKiWager(actor, own));
+          const ceiling = Math.min(capped(wagerFromLife ? maxLifeWager(actor, own) : maxKiWager(actor, own)),
+            wagerFromDivine ? (Number(actor.system.divineKi.value) || 0) : Number.POSITIVE_INFINITY);
           // All or Nothing pins the floor to whatever the ceiling turned out to be.
           const floor = forcedFullWager(features) ? ceiling : Math.min(wagerMin, ceiling);
 
@@ -2693,7 +2721,7 @@ async function pickProfile(maneuver, foundations, actor, limits = {}) {
           const kiWager = Number.isFinite(typed)
             ? Math.min(Math.max(typed, floor), ceiling)
             : floor;
-          return { profile, kiWager, wagerFromLife };
+          return { profile, kiWager, wagerFromLife, wagerFromDivine };
         }
       },
       { action: "cancel", label: "Cancel" }
@@ -2976,7 +3004,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // Life Points instead, through `spendLifeWager`.
   // Straining Time Freeze: "Increase the Ki Point Cost of all Maneuvers during your Frozen Turn by 2(T)."
   if (actor?.getFlag?.("dbu-ttrpg", "frozenTurn")?.straining) cost += 2 * Math.max(1, actor.system?.tierOfPower ?? 1);
-  return Math.max(0, cost) + (declared?.wagerFromLife ? 0 : (declared?.kiWager ?? 0));
+  // A wager in Life or in Divine Ki is paid on its own (spendLifeWager), not with the cost.
+  return Math.max(0, cost) + ((declared?.wagerFromLife || declared?.wagerFromDivine) ? 0 : (declared?.kiWager ?? 0));
 }
 
 /**
