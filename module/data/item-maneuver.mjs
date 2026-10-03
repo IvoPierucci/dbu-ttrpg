@@ -110,6 +110,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       divineMovement: new fields.BooleanField({ required: true, initial: false }),
       /** A second limit over the usage limit - Divine Movement's "[1/Round, 3/Encounter]". 0 is none. */
       encounterLimit: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      /** Its KP Cost "for each Action spent" - Divine Pulse's 1(bT). A Unique Ability's is under `unique`. */
+      kiPerAction: new fields.BooleanField({ required: true, initial: false }),
       /** Hands an Item over to be caught - the Toss Maneuver (chat.mjs askToss). */
       toss: new fields.BooleanField({ required: true, initial: false }),
       /**

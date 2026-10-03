@@ -1,0 +1,31 @@
+id: divine-pulse
+name: Divine Pulse
+type: standard
+actionCost: 1
+actionCostMax: 2
+kiCostPerBaseTier: 1
+kiPerAction: true
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+# A God Maneuver: open where an effect grants it, only in God Ki, 1(bT) Divine Ki Points for each of its 1-2 Actions
+# (maneuvers.mjs whyNotGod, spendManeuverCost; use-maneuver.mjs kiPerAction). "This Maneuver functions as the
+# Transformation Maneuver and gains its effects" - and there is no Transformation Maneuver yet: until Transformations are
+# built, its card says what it does and the table enters the Transformation, the Stress Bonus down and the Force/Magic
+# Modifier Bonus up by hand.
+godManeuver: true
+says: >
+  As the Transformation Maneuver. For each Action spent: Stress Bonus 1 lower for it, and that Transformation's Attribute
+  Modifier Bonus (FO/MA) 1(T) higher until you leave it.
+source: Core Rule
+description: >
+  A God Maneuver: the Transformation Maneuver, each Action spent on it 1 less Stress Bonus for it and 1(T) more FO/MA
+  Modifier Bonus in that Transformation.
+text: >
+  Divine Pulse [1/Round]: Give your Transformations a spark of godly might.
+  –Maneuver Type: Standard
+  –Action Cost: Variable (1~2 Actions)
+  –DKP Cost: 1(bT) for each Action Spent
+  –Effect: This Maneuver functions as the Transformation Maneuver and gains its effects. For each Action spent on this
+  Maneuver, reduce your Stress Bonus by 1 for the duration of this Maneuver, but increase the Attribute Modifier Bonus
+  (FO/MA) for the Transformation you are attempting to enter by 1(T) until you leave that Transformation.
