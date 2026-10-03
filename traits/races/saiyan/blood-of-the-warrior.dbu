@@ -1,0 +1,42 @@
+id: blood-of-the-warrior
+name: Blood of the Warrior
+order: 4
+category: body
+importance: secondary
+# The 3rd effect's Tier of Power +1, held until the end of the turn - bookkeeping, not a Resource the rules name, so
+# kept off the sheet's Resources list (the Tier of Power's workings say it).
+resource: warriorsblood
+resourceInternal: true
+resourceLabel: Blood of the Warrior
+resourceMax: 1
+description: >
+  With their constant fighting, Saiyans evolved to grow stronger the more damage they take, allowing them to survive battles they would otherwise have lost.
+text: >
+  Blood of the Warrior (Body): With their constant fighting, Saiyans evolved to grow stronger the more damage they take, allowing them to survive battles they would otherwise have lost.
+  (1)-[Passive]: For each Health Threshold you are below, increase your Wound Rolls, Soak Value and Surgency by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you would use a Healing Surge, double your Surgency for the duration of that Surge.
+  (3)-[Triggered/Start of Turn, 1/Encounter]: If you have 6+ stacks of Battle Born, or you are below the Injured Health Threshold, you may increase your Tier of Power by +1 (see – Breakthrough) until the end of your turn.
+
+---
+
+# (1) 1(T) for each Health Threshold below - counted where each is worked out, from the Life Points then (perThreshold).
+[passive]
+wound.perThreshold += 1(T);
+soakValue.perThreshold += 1(T);
+surgency.perThreshold += 1(T);
+
+# (2) A Healing Surge about to be used: asked in a window there and then, its Surgency doubled for it.
+[triggered/healing-surge, 1/encounter, effect 2]
+surgency *= 2;
+
+# (3) At the start of your turn, with 6+ Battle Born between the three Combat Rolls or below the Injured Health Threshold
+# (Injured or Critical): Tier of Power +1 until the end of the turn - Breakthrough's cap still over it.
+[passive]
+if (hasResource("warriorsblood")) {
+    tierOfPower += 1;
+}
+
+[triggered/start-of-turn, 1/encounter, effect 3]
+requires stacksAtLeast(6, "battlebornstrike", "battleborndodge", "battlebornwound") || belowThreshold("injured");
+warriorsblood.stacks += 1;
+expires(warriorsblood, turn);

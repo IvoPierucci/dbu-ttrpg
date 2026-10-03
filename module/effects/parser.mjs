@@ -466,7 +466,9 @@ const PREDICATE_NAMES = new Set([
   "benefiting", "hasResource", "inState", "hasCondition", "targets", "aoeHits", "attacking",
   "wearing", "inEnvironment",
   // Is the Maneuver being declared that one - Cosmic Efficiency's Combat Recovery.
-  "using"
+  "using",
+  // Resources' stacks between them, and a Health Threshold reached - Blood of the Warrior's.
+  "stacksAtLeast", "belowThreshold"
 ]);
 
 /** The ones written without brackets, because they take nothing. */

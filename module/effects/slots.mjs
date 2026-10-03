@@ -17,6 +17,11 @@ import { SENSES } from "../senses.mjs";
 export const PHASES = Object.freeze({
   /** Before the Tiers are known. Amounts may use (bT) but never (T). */
   TIER: "tier",
+  /**
+   * The Attribute Modifiers, ahead of the bulk so that what reads one there - Powerful Physique's "1/4 of your Force
+   * Modifier", Spinning's Agility Modifier - reads it finished. Conditions may read Scores and the Tiers.
+   */
+  MODS: "mods",
   /** The bulk of the pipeline. Everything is available. */
   CORE: "core",
   /** After Might, Wound and the Thresholds are settled. */
@@ -638,7 +643,7 @@ const PATTERNS = [
   { match: /^(\w+)\.score$/, phase: PHASES.TIER, kind: N, ops: ["add"],
     valid: (data, [k]) => k in (data.attributes ?? {}),
     doc: "An Attribute Score." },
-  { match: /^(\w+)\.mod$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
+  { match: /^(\w+)\.mod$/, phase: PHASES.MODS, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.attributes ?? {}),
     doc: "An Attribute Modifier." },
   { match: /^skill\.(\w+)$/, phase: PHASES.LATE, kind: N, ops: NUMERIC,
@@ -687,6 +692,14 @@ const PATTERNS = [
     doc: "Sensing God Ki; the Power Up offered after an Exploit's Damage or a Defend's none; Surgency from the Magic "
        + "Modifier where higher (Cosmic Efficiency); the Exploit offered when an attack left you without Damage, and "
        + "Combat Recovery out of sequence at the start of a turn with none taken (Flow of Combat)." },
+  // "For each Health Threshold you are below, increase your Wound Rolls, Soak Value and Surgency by 1(T)" (Blood of the
+  // Warrior's): written once, counted where each is worked out.
+  { match: /^(wound|soakValue|surgency)\.perThreshold$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "Added to it once for each Health Threshold the character is below." },
+  // Powerful Physique's 4th: hit by an Attacking Maneuver, the Basic Attack back once it is done.
+  { match: /^basicAttack\.afterHit$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
+    doc: "Hit by an Opponent's Attacking Maneuver, the Basic Attack offered on its card once it is done, the Force "
+       + "Modifier on its Wound Roll - once per Encounter." },
   // "Apply your Racial Saving Throw Bonus to Cognitive as well as Corporeal" (Warrior's Pride's).
   { match: /^save\.racial\.(\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
     doc: "That Saving Throw gets the Racial Saving Throw Bonus too: 1(T), and its Critical Target 1 lower." },

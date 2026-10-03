@@ -159,6 +159,9 @@ function run(statements, scope) {
           scope.errors?.push(`Unknown slot "${s.slot}".`);
           break;
         }
+        // Not worked out in a phase it cannot land in: what it reads may not be settled yet there - Powerful Physique's
+        // Force Modifier read before the Modifiers are, and reported as missing.
+        if (!reachesPhase([s], scope)) break;
         const value = (slot.kind === KINDS.DICE)
           ? resolveDice(s.amount, scope)
           : resolveAmount(s.amount, scope);

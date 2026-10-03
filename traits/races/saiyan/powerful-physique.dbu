@@ -1,0 +1,36 @@
+id: powerful-physique
+name: Powerful Physique
+order: 5
+category: body
+importance: secondary
+description: >
+  With strong bodies built for battle, Saiyans can endure massive blows and continue to dish out great amounts of damage.
+text: >
+  Powerful Physique (Body): With strong bodies built for battle, Saiyans can endure massive blows and continue to dish out great amounts of damage.
+  (1)-[Passive]: Increase your Soak Value by 1/4 of your Force Modifier (rounded up).
+  (2)-[Passive]: While you possess 2+ stacks of Power, increase your Force Modifier by 1(T).
+  (3)-[Triggered, 1/Round]: If you use the Defend Maneuver, double the bonus to your Soak Value from the first effect of Powerful Physique for the duration of that Maneuver.
+  (4)-[Triggered, 1/Encounter]: If you are hit by an Attacking Maneuver, after concluding that Attacking Maneuver, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, increase the Wound Roll of that Attacking Maneuver by your Force Modifier.
+
+---
+
+# (1) A quarter of the Force Modifier, rounded up - the Modifier with (2) in it.
+[passive]
+soakValue += ceil(force.mod / 4);
+
+# (2) 2+ stacks of Power (the Power Up's).
+[passive]
+if (hasResource("power")) {
+    if (power.stacks >= 2) {
+        force.mod += 1(T);
+    }
+}
+
+# (3) Ticked in Respond as you Defend: the first effect's bonus once more, for that Defend.
+[triggered/defending, 1/round, effect 3]
+soakValue.base += ceil(force.mod / 4);
+
+# (4) Hit by an Opponent's Attacking Maneuver: once it is done, the Basic Attack offered on its card, at who made it, the
+# Force Modifier on its Wound Roll - once per Encounter, counted when taken (chat.mjs offerPhysiqueStrike).
+[passive]
+allow basicAttack.afterHit;

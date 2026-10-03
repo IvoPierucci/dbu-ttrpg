@@ -4947,6 +4947,13 @@ function whyNot(effect, situation) {
  * included - and an Automatic effect is not consumed by applying, it simply applies.
  * Only the armed ones were a decision, so only those are marked used.
  */
+/** Only the chosen effects that wrote this Slot spent - one Respond's window answering several things. */
+function spendWriting(actor, answered, key) {
+  const blocks = new Map(reactiveFor(actor).map(entry => [entry.blockId, entry.program.blocks?.[0]]));
+  return spendChosen(actor, { spent: (answered?.spent ?? []).filter(use =>
+    JSON.stringify(blocks.get(`${use.sourceId}#${use.block}`) ?? {}).includes(`"${key}"`)) });
+}
+
 function spendChosen(actor, answered) {
   const armed = new Set(actor.system.armedTalents ?? []);
   for (const use of answered.spent) {
@@ -12899,6 +12906,20 @@ function offerWatcherPowerUp(message, actor, why) {
 }
 
 /**
+ * Powerful Physique (4): "If you are hit by an Attacking Maneuver, after concluding that Attacking Maneuver, you may use
+ * the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, increase the Wound Roll of that Attacking Maneuver
+ * by your Force Modifier." Offered on the attack's card at the one who made it; counted, once per Encounter, when taken.
+ */
+function offerPhysiqueStrike(message, actor, attacker) {
+  if (!actor || !attacker || actor.system?.defeated || (actor.system?.effects?.slots?.["basicAttack.afterHit"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "physiqueUsed") === (game.combat?.id ?? "none")) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.physique && (offer.actorUuid === actor.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: "Powerful Physique - hit",
+    grants: { physique: true, woundAttribute: { label: "Powerful Physique (Force Modifier)", attribute: "force" } } } });
+}
+
+/**
  * Flow of Combat (1): "If you suffer no Damage from an Opponent's Attacking Maneuver that targets you, this triggers your
  * Exploit Maneuver" - offered on the attack's card at the one who made it, for them to take or leave.
  */
@@ -13498,6 +13519,8 @@ async function takeOutOfSequence(message, actor, offer) {
   // "Each Character can only use the Basic Attack Maneuver through the effects of Binding Volleyball once during
   // each Combat Encounter."
   if (offer.volleyball) await requestActorUpdate(actor, { [`flags.${SCOPE}.volleyballUsed`]: game.combat?.id ?? "none" });
+  // Powerful Physique's, once per Encounter.
+  if (offer.grants?.physique) await requestActorUpdate(actor, { [`flags.${SCOPE}.physiqueUsed`]: game.combat?.id ?? "none" });
   // Dragon Dash's Movement taken: what follows it, where an Advancement says so.
   if (offer.dash?.follow) await dashFollowUp(actor, offer.dash);
 
@@ -13611,6 +13634,11 @@ async function takeOutOfSequence(message, actor, offer) {
         if (granted?.kiDeception && card && target) await kiDeceptionClash(actor, target, card);
         // Surprise Strike: "After concluding that Attacking Maneuver, you stop being Hidden."
         // A Kamikaze Ghost's: its Life Points on the Wound Roll.
+        // Powerful Physique's: the Force Modifier on its Wound Roll.
+        if (granted?.woundAttribute && card) {
+          const made = card.getFlag(SCOPE, ATTACK_FLAG);
+          if (made) requestEdit(card, { type: "attack", attack: { ...made, woundAttribute: granted.woundAttribute } });
+        }
         if (granted?.ghostBlast && card) {
           const blast = card.getFlag(SCOPE, ATTACK_FLAG);
           if (blast) requestEdit(card, { type: "attack", attack: { ...blast, ghostBlast: granted.ghostBlast } });
@@ -16099,6 +16127,9 @@ function woundParts(attacker, attack) {
     // A Kamikaze Ghost's: "Increase the Wound Roll of this Attacking Maneuver by the amount of Life Points the Kamikaze
     // Ghost possesses at that moment."
     ...(attack.ghostBlast ? [{ label: "Kamikaze Ghost's Life Points", value: Number(attack.ghostBlast.lp) || 0 }] : []),
+    // An Attribute Modifier an effect puts on it - Powerful Physique's Force Modifier.
+    ...(attack.woundAttribute ? [{ label: attack.woundAttribute.label,
+      value: Number(attacker.system.attributes?.[attack.woundAttribute.attribute]?.mod) || 0 }] : []),
     ...(attack.weapon?.wound ?? []),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))
@@ -16651,10 +16682,10 @@ async function rollAttackWound(message, attack) {
     // calculations", so it lands on the base value - ahead of the Damage Category and
     // ahead of whatever the defence itself does to it.
     const defended = own.defense !== "dodge";
-    const soakBonus = defended
-      ? (atMoment(target, "defending", { defending: true, attack, attacker })
-          .slots["soakValue.base"]?.add ?? 0)
-      : 0;
+    const defending = defended ? atMoment(target, "defending", { defending: true, attack, attacker }) : null;
+    const soakBonus = defending?.slots["soakValue.base"]?.add ?? 0;
+    // Used, and so spent - Powerful Physique's "1/Round".
+    if (soakBonus) spendWriting(target, defending, "soakValue.base");
 
     // Only what the Damage Category leaves of the Soak Value counts, and the defence
     // adjusts what survives that.
@@ -19139,6 +19170,8 @@ async function applyAttackDamage(message, target, attack) {
     await requestActorUpdate(target, { [`flags.${SCOPE}.damagedSinceTurn`]: true });
   }
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerFlowExploit(message, target, armsUser);
+  // Powerful Physique: hit by it, the Basic Attack back once it is done.
+  if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerPhysiqueStrike(message, target, armsUser);
   // Skill of the Watcher (5): Damage dealt through the Exploit Maneuver, or none taken from an attack Defended against.
   if (armsUser && (armsUser.uuid !== target.uuid) && attack.provokedBy && (damage > 0) && !isAbsoluteMiss(own)) {
     offerWatcherPowerUp(message, armsUser, "Damage dealt through the Exploit Maneuver");
@@ -19980,9 +20013,16 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
 
   // Surgency adds the Force Modifier to the Life and Ki regained - but not to the
   // Capacity, which the rule does not mention.
-  const surgency = actor.system.surgency;
+  let surgency = actor.system.surgency;
 
   if (kind === "healing") {
+    // "If you would use a Healing Surge" - what answers it is the player's, asked in a window first: Blood of the
+    // Warrior's Surgency doubled for it.
+    await offerTriggers(actor, "healing-surge");
+    const { fireMoment } = await import("./effects/moments-runtime.mjs");
+    const answered = await fireMoment(actor, "healing-surge", {}, { quiet: true });
+    if (answered?.slots?.surgency) surgency = applySlot(answered.slots, "surgency", surgency);
+
     // A Healing Surge of its own size where an effect names one - Divine Breathing's "5d10(bT)", still "a Healing Surge
     // for effects" with Surgency, so what adds to one adds to it.
     const dice = (dicePerBaseTier > 0)
@@ -20180,6 +20220,7 @@ async function defendAgainst(message, target, attack) {
   // is the one thing that waives it, and it would have had nothing to waive.
   const answered = atMoment(target, "defending", { attack: true, attacker: true });
   const free = answered.slots?.["defend.free"] === true;
+  // Only what made it free is spent here: what else was ticked - Powerful Physique's Soak - is for the Defend itself.
 
   // A Parry made with a Weapon in hand counts as made with it, by the table's ruling: its Size and
   // the Weapon Penalty on the Strike. Which one, asked where there is one.
@@ -20187,7 +20228,7 @@ async function defendAgainst(message, target, attack) {
   if (parryWith === null) return;
 
   if (!free && !await spendActions(target, 1, "counter")) return;
-  if (free) spendChosen(target, answered);
+  if (free) spendWriting(target, answered, "defend.free");
 
   return chooseDefence(message, target, chosen.defence, chosen.kiWager, chosen.foundation, parryWith);
 }

@@ -95,6 +95,21 @@ function withEffects(data, key, base, { min = 0, parts = null, as = "", wraps = 
 }
 
 /**
+ * "For each Health Threshold you are below" (Blood of the Warrior's): what `<key>.perThreshold` adds, times how many the
+ * Life Points are below now - as a part of its own, named for what gave it.
+ */
+function perThreshold(data, key) {
+  const per = data.effects?.slots?.[`${key}.perThreshold`];
+  if (!per?.add) return { value: 0, parts: [] };
+  const keys = Object.keys(DBUCharacterData.THRESHOLDS);
+  const at = keys.indexOf(DBUCharacterData.thresholdKey(data.life.value, data.life.max));
+  const below = keys.filter((each, index) => (index <= at) && DBUCharacterData.THRESHOLDS[each].counts).length;
+  const value = per.add * below;
+  const source = (per.parts ?? []).map(part => part.source).find(Boolean) ?? "Effects";
+  return { value, parts: value ? [{ label: `${source} (${below} Threshold${below === 1 ? "" : "s"})`, value }] : [] };
+}
+
+/**
  * A Foundation's own Strike or Wound - `strike.energy`, `wound.physical` - on top of the shared one, where something raises
  * that Foundation's alone; the shared one, and its workings left where they were, where nothing does.
  */
@@ -2039,9 +2054,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // except where a Talent is explicitly bounded by it.
     this.attributeScoreCap = withEffects(this, "attributeScoreCap", 8 + (this.tierOfPower - 1) * 3);
 
-    // The bulk of the pass. Everything an amount could read is settled by now, so this
-    // is where most effects land.
-    runPhase(this, "core");
+    // The Attribute Modifiers first, so the bulk of the pass reads them finished - Powerful Physique's "1/4 of your Force
+    // Modifier" with its own 1(T) in it. They were worked out after it, and read there as nothing.
+    runPhase(this, "mods");
 
     for (const key of Object.keys(atts)) {
       // Modifier defaults to the Score, adjusted by any Bonus from effects/Transformations.
@@ -2052,6 +2067,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         ]
       });
     }
+
+    // The bulk of the pass. Everything an amount could read is settled by now, so this
+    // is where most effects land.
+    runPhase(this, "core");
 
     // Ingenuity, a rule of Scholarship: "It is a unique Aptitude that is equal to your Scholarship
     // Modifier at the time of creating/modifying an Item (ignoring any bonuses from Enhancements and
@@ -2303,11 +2322,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Solid Bulk goes in as part of your own Soak - inside the Slot rather than after
     // it, so that anything multiplying your Soak Value multiplies this with it, which
     // is what Calculation Priority asks of a multiplier on a finished value.
+    const soakBelow = perThreshold(this, "soakValue");
     const beforeFloor = withEffects(this, "soakValue.external",
-      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk, {
+      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk + soakBelow.value, {
         parts: [
           { label: "Own Soak", value: ownSoak },
-          { label: "Solid Bulk", value: this.superStack.solidBulk }
+          { label: "Solid Bulk", value: this.superStack.solidBulk },
+          ...soakBelow.parts
         ]
       })
         + this.externalModifiers.soak,
@@ -2325,8 +2346,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Surgency: increases the Life/Ki Points regained through a Surge. Cosmic Efficiency's "You may use your Magic
     // Modifier instead of your Force Modifier" - the higher of the two.
     const surgingMagic = (this.effects?.slots?.["surgency.magic"] === true) && (atts.magic.mod > atts.force.mod);
-    this.surgency = withEffects(this, "surgency", surgingMagic ? atts.magic.mod : atts.force.mod, {
-      parts: [surgingMagic ? { label: "Magic Modifier", value: atts.magic.mod } : { label: "Force Modifier", value: atts.force.mod }]
+    const surgencyBelow = perThreshold(this, "surgency");
+    this.surgency = withEffects(this, "surgency", (surgingMagic ? atts.magic.mod : atts.force.mod) + surgencyBelow.value, {
+      parts: [surgingMagic ? { label: "Magic Modifier", value: atts.magic.mod } : { label: "Force Modifier", value: atts.force.mod },
+        ...surgencyBelow.parts]
     });
 
     // Awareness: Insight Modifier, added to Strike Rolls.
@@ -2611,9 +2634,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       wound: Object.fromEntries(
         Object.entries(DBUCharacterData.FOUNDATIONS)
           .map(([key, foundation]) =>
-            [key, ownFoundation(this, `wound.${key}`, withEffects(this, "wound", atts[foundation.attribute].mod, {
+            [key, ownFoundation(this, `wound.${key}`, withEffects(this, "wound", atts[foundation.attribute].mod
+              + perThreshold(this, "wound").value, {
               as: `wound.${key}`,
-              parts: [{
+              parts: [...perThreshold(this, "wound").parts, {
                 // The Damage Attribute this Foundation names, by name: a Wound Roll of
                 // 7 says nothing about which Attribute it came from, and that is the
                 // first thing anybody asks of it.

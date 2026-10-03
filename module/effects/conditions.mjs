@@ -112,6 +112,21 @@ const PREDICATES = {
   /** Does this character still have their tail - Saiyan Heritage's Tailed, not lost (the Options tab's Tail lost box). */
   tailed: scope => !scope.data?.parent?.getFlag?.("dbu-ttrpg", "tailLost"),
 
+  /** Do these Resources come to at least this many stacks between them - Blood of the Warrior's "6+ stacks of Battle Born". */
+  stacksAtLeast: (scope, amount, ...names) => names
+    .reduce((sum, name) => sum + (Number(scope.data?.resources?.[String(name).toLowerCase()]?.stacks) || 0), 0)
+    >= (Number(amount) || 0),
+
+  /**
+   * Is this character below that Health Threshold - in it or a lower one, as Final Chance and All Out read "below the
+   * Injured Health Threshold" (Blood of the Warrior's).
+   */
+  belowThreshold: (scope, name) => {
+    const keys = ["healthy", "bruised", "injured", "critical"];
+    const wanted = keys.indexOf(String(name).toLowerCase());
+    return (wanted > 0) && (keys.indexOf(scope.data?.threshold?.key ?? "healthy") >= wanted);
+  },
+
   /** Is this an even-numbered Combat Round - Born for Battle's. */
   evenRound: () => {
     const round = Number(globalThis.game?.combat?.started ? globalThis.game.combat.round : 0) || 0;

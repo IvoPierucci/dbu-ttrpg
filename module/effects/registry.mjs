@@ -857,7 +857,9 @@ function conditionPrograms(actor, report) {
  */
 export const WINDOW_MOMENTS = Object.freeze(["power", "declare-maneuver", "botch", "critical",
   // And what Respond and a roll's own window already offer - Flow of Combat's (3) in Respond.
-  "defending", "combat-roll", "hit", "being-hit", "before-wound", "clash-resolved"]);
+  "defending", "combat-roll", "hit", "being-hit", "before-wound", "clash-resolved",
+  // A Healing Surge about to be used - Blood of the Warrior's doubled Surgency.
+  "healing-surge"]);
 
 /** A block's moment, without its parameter. */
 export function momentOf(block) {
