@@ -1,0 +1,30 @@
+id: majin-style
+name: Majin Style
+order: 13
+category: body
+importance: secondary
+# (1) Gained, a piece of Apparel picked as the Default Costume - one already had, or a new one of Grade 2 with no Apparel
+# Qualities (racial.mjs askDefaultCostume). Its Equipment Points, Qualities and Special Quality are the player's and the
+# table's, made on the Item by hand (the user's); the system only knows which one it is, for the effects below.
+defaultCostume: true
+description: >
+  Your clothes are clearly part of your body, allowing them to reform with you and grow in power as you do.
+text: >
+  Majin Style (Body): Your clothes are clearly part of your body, allowing them to reform with you and grow in power as you do.
+  (1)-[Passive, Ruling]: Upon gaining access to this Racial Trait, create a piece of Apparel with a Craftsmanship Grade of 2 and no Apparel Qualities, known as your “Default Costume”. You cannot improve your Default Costume with Equipment Points, except through the 2nd effect of Majin Style. If you lose access to this Trait through any means, you lose your Default Costume, but you will regain it if you regain this Trait.
+  (2)-[Passive]: Each time you reach a new base Tier of Power after the first, gain 1 Equipment Point (see: Gear) to spend on improving your Default Costume. If you gain this Trait while your base Tier of Power is higher than 1, apply its effects as if you had just reached those Tiers of Power. If you lose access to this Trait, your Default Costume loses all benefits it gained from this effect.
+  (3)-[Adventurous]: You may spend 5 minutes to fully repair your Default Costume.
+  (4)-[1/Character]: If your base Tier of Power is 5+, upon gaining an Equipment Point through the 2nd effect of Majin Style, you may spend that Equipment Point to gain an applicable Special Apparel Quality of your choice on your Default Costume. Even if you lose access to this Trait, your Default Costume will retain this Special Apparel Quality, so if you regain access to this Trait, it will still possess it.
+  (5)-[Triggered, 1/Round]: If you use a Healing Surge while wearing your Default Costume, that piece of Apparel regains 1 Break Value. If the piece of Apparel was broken, it stops being broken (Break Value goes from 0 to 1).
+  (6)-[Triggered, 1/Encounter]: At the end of each Combat Encounter, your Default Costume is fully repaired.
+
+---
+
+# (2) and (4): the Equipment Points and the Special Apparel Quality are spent on the Item by hand (the user's).
+# (3) and (6): the Gear tab's Repair on the Default Costume, out of a Combat Encounter - 5 minutes, or as the Encounter ends.
+
+# (5) A Healing Surge about to be used - asked in its window while the Default Costume is worn or broken and has Break
+# Value to get back: 1 of it back (chat.mjs takeSurge).
+[triggered/healing-surge, 1/round, effect 5]
+requires costumeMendable;
+costume.mend = true;

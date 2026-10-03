@@ -1,0 +1,46 @@
+id: quick-sleep
+name: Quick Sleep
+order: 14
+category: body
+importance: secondary
+# The 3rd effect's nap, held from the end of the turn to the start of the next - bookkeeping, not a Resource the rules
+# name.
+resource: quicksleep
+resourceLabel: Quick Sleep
+resourceMax: 1
+resourceInternal: true
+description: >
+  You don’t need to sleep, but a quick nap never hurts.
+text: >
+  Quick Sleep (Body): You don’t need to sleep, but a quick nap never hurts.
+  (1)-[Passive]: Your Defense Value is not reduced by the effects of the Combat Recovery Maneuver.
+  (2)-[Triggered, 2/Encounter]: When using the Combat Recovery Maneuver, reduce the Action Cost by 1.
+  (3)-[Triggered, 1/Encounter]: At the end of your turn, you may gain the Sleeping Combat Condition until the start of your next turn. At the start of your next turn, if you lose the Sleeping Combat Condition through this effect, regain 1/4 of your Maximum Life Points and 1/4 of your Maximum Ki Points.
+
+---
+
+# (1) What Combat Recovery takes off the Defense Value, put back.
+[passive]
+if (hasResource("recovery")) {
+    defenseValue += recovery.stacks * tierOfPower;
+}
+
+# (2) Combat Recovery used: asked as its Actions are chosen, twice an Encounter - 1 Action less paid, the effect still the
+# Actions chosen (the user's) (use-maneuver.mjs).
+allow quickSleep.recovery;
+
+# (3) The end of your turn: chosen on its card. Asleep till the start of the next.
+[triggered/end-of-turn, 1/encounter, chosen, effect 3]
+gain(sleeping);
+quicksleep.stacks += 1;
+
+# Woken by it at the start of the next turn - still Sleeping from it - a quarter of each back; woken earlier, nothing.
+[automatic/start-of-turn]
+if (hasResource("quicksleep") && hasCondition("sleeping")) {
+    life.value += floor(life.max / 4);
+    ki.value += floor(ki.max / 4);
+    remove(sleeping);
+}
+if (hasResource("quicksleep")) {
+    quicksleep.stacks -= 1;
+}

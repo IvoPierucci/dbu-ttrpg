@@ -284,7 +284,38 @@ export async function addRacialTrait(actor, trait) {
   if (!item) return null;
   await giveGrants(actor, item, made.grants, trait.name);
   await automateAll(actor, item);
+  if (trait.defaultCostume) await askDefaultCostume(actor);
   return item;
+}
+
+/**
+ * Majin Style's Default Costume: "create a piece of Apparel with a Craftsmanship Grade of 2 and no Apparel Qualities" - or,
+ * the user's, one of the Apparel already had picked to be it. Marked, and nothing else: what is spent on it is the
+ * player's, by hand.
+ */
+async function askDefaultCostume(actor) {
+  const apparel = Array.from(actor.items ?? []).filter(item => (item.type === "gear") && (item.system?.crafted?.kind === "apparel"));
+  const marked = apparel.find(item => item.getFlag?.("dbu-ttrpg", "defaultCostume"));
+  if (marked) return marked;
+  const choice = apparel.length ? await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Majin Style - Default Costume" }, content: "",
+    buttons: [...apparel.map(item => ({ action: item.id, label: item.name })), { action: "new", label: "A new one (Grade 2)" }],
+    rejectClose: false
+  }) : "new";
+  if (!choice) return null;
+  if (choice !== "new") {
+    const picked = actor.items.get(choice);
+    await picked?.setFlag("dbu-ttrpg", "defaultCostume", true);
+    return picked;
+  }
+  const { craftedItemFrom } = await import("./gear.mjs");
+  const data = craftedItemFrom("apparel", actor, getTrait);
+  if (!data) return null;
+  data.name = "Default Costume";
+  data.system.crafted.grade = 2;
+  data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), defaultCostume: true } };
+  const [costume] = await actor.createEmbeddedDocuments("Item", [data]);
+  return costume;
 }
 
 /**

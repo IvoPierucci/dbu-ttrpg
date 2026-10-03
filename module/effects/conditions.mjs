@@ -127,6 +127,14 @@ const PREDICATES = {
     return (wanted > 0) && (keys.indexOf(scope.data?.threshold?.key ?? "healthy") >= wanted);
   },
 
+  /**
+   * Majin Style's Default Costume, worn or broken, with Break Value to get back - "while wearing your Default Costume ...
+   * If the piece of Apparel was broken, it stops being broken".
+   */
+  costumeMendable: scope => Array.from(scope.data?.parent?.items ?? []).some(item => item.getFlag?.("dbu-ttrpg", "defaultCostume")
+    && ((Number(item.system?.crafted?.breakLost) || 0) > 0) && !item.system?.crafted?.destroyed
+    && (item.system?.equipped || !String(item.system?.layer ?? ""))),
+
   /** Is this an even-numbered Combat Round - Born for Battle's. */
   evenRound: () => {
     const round = Number(globalThis.game?.combat?.started ? globalThis.game.combat.round : 0) || 0;

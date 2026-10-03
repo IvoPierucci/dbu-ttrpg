@@ -482,8 +482,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "intendedForYou", "wieldingWeapon", "adventuring",
   // A Signature Technique being declared (God of Judgment's); your own Frozen Turn (God of Time's).
   "signatureTechnique", "frozenTurn",
-  // An even-numbered Combat Round (Born for Battle's); the tail still had (Saiyan Heritage's Tailed).
-  "evenRound", "tailed"]);
+  // An even-numbered Combat Round (Born for Battle's); the tail still had (Saiyan Heritage's Tailed); the Default Costume
+  // to mend (Majin Style's).
+  "evenRound", "tailed", "costumeMendable"]);
 
 /**
  * Dice the character already has, named rather than written out.

@@ -2972,7 +2972,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
     if (crafted?.kind) {
       const name = getTrait(crafted.category)?.name ?? crafted.category;
-      return `${name} · Grade ${crafted.grade}`;
+      // Majin Style's: repaired by its Repair in 5 minutes, or as a Combat Encounter ends.
+      return `${name} · Grade ${crafted.grade}${item.getFlag?.("dbu-ttrpg", "defaultCostume") ? " · Default Costume" : ""}`;
     }
     return item.system.special ? `Special ${type.label}` : type.label;
   }

@@ -1,0 +1,23 @@
+id: majin-see-majin-do
+# Folded: a header value with a comma in it is read as a list.
+name: >
+  Majin See, Majin Do
+order: 12
+category: mind
+importance: secondary
+# (1) The Quick Learner Talent, given with the Trait and kept if it is lost - not written yet, so named when gained.
+grantsTalent: quick-learner
+description: >
+  Known for your childlike innocence and demeanor, you are able to pick things up much faster than others, just like a child.
+text: >
+  Majin See, Majin Do (Mind): Known for your childlike innocence and demeanor, you are able to pick things up much faster than others, just like a child.
+  (1)-[Passive]: Gain the Quick Learner Talent (even if you do not meet the Prerequisites), but ignore the 3rd effect of that Talent.
+  (2)-[Passive]: You may ignore the effects of any Disadvantage with ‘Restricted’ in its name on any Signature Technique or Aura you have gained through the effects of Quick Learner (either as Copied Techniques or those you have gained through the second effect of Quick Learner).
+  (3)-[Passive]: For Copied Techniques, you may use either your Force or Magic Modifier as the Damage Attribute and ignore the Force Score prerequisite to use Energy Attacks.
+  (4)-[Triggered, 1/Encounter]: When you target an Opponent with a Copied Technique, make a Morale Clash against them. If you win, they have Guard Down against this Attacking Maneuver.
+
+---
+
+# Everything here is about the Quick Learner Talent and its Copied Techniques, neither of which is written yet: its 3rd
+# effect ignored, the Restricted Disadvantages ignored on what it gave, the Damage Attribute and the Force Score on a Copied
+# Technique, and the Morale Clash for Guard Down - all wait on the Talent's text.

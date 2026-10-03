@@ -6080,7 +6080,10 @@ export async function offerTriggers(actor, moment) {
 function unarmedTriggers(actor, moment) {
   const bare = String(moment).split(/[(/]/)[0];
   return triggersFor(actor, [bare]).filter(entry => !entry.armed
-    && ((bare === moment) || (String(entry.program.blocks?.[0]?.moment ?? "") === moment)));
+    && ((bare === moment) || (String(entry.program.blocks?.[0]?.moment ?? "") === moment))
+    // Only what may answer it now - Majin Style's, with a Default Costume to mend.
+    && (!entry.program.blocks?.[0]?.requires
+      || evaluateCondition(entry.program.blocks[0].requires, { data: actor.system, context: {}, errors: [] })));
 }
 
 /** Who answers for a character: an active player who owns it, or else the active GM. */
@@ -20249,7 +20252,8 @@ async function answerMoment(message, card, actor) {
   // is: Saiyan Heritage's Steadfast Check for the Undying State.
   const threshold = (card.moment === "threshold") && (card.subjectUuid === actor.uuid);
   const defeated = (card.moment === "defeated") && (card.subjectUuid === actor.uuid);
-  if (!threshold && !defeated && !["start-of-round", "start-of-turn", "start-of-encounter"].includes(card.moment)) return;
+  if (!threshold && !defeated && !["start-of-round", "start-of-turn", "start-of-encounter", "end-of-turn"]
+    .includes(card.moment)) return;
   const chosen = triggers.filter(entry => !before.has(entry.blockId)
     && (actor.system.armedTalents ?? []).includes(entry.blockId));
   if (!chosen.length) return;
@@ -20567,6 +20571,12 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
 
     // "Double the amount of Life Points you regain from this Healing Surge" - Majin Regeneration's at Defeated.
     const multiplier = Math.max(1, Number(lifeMultiplier) || 1);
+    // Majin Style: "that piece of Apparel regains 1 Break Value. If the piece of Apparel was broken, it stops being broken".
+    if (answered?.slots?.["costume.mend"] === true) {
+      const costume = Array.from(actor.items ?? []).find(item => item.getFlag?.(SCOPE, "defaultCostume"));
+      const lost = Number(costume?.system?.crafted?.breakLost) || 0;
+      if (lost > 0) await costume.update({ "system.crafted.breakLost": lost - 1 });
+    }
     // Majin Malice: "forgo gaining Life Points to instead regain an equal amount of Ki Points and Capacity instead. This
     // can allow your Capacity to exceed your Max Capacity."
     if (answered?.slots?.["surge.asKi"] === true) {

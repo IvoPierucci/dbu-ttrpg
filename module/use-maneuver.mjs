@@ -1860,7 +1860,8 @@ export async function takeRapidMovement(actor) {
 /** Take the Actions, once the Maneuver has actually committed. */
 async function payActions(actor, maneuver, spent = null) {
   const { kind, amount } = actionCostOf(maneuver, spent);
-  await spendActions(actor, amount, kind);
+  // Quick Sleep's: "reduce the Action Cost by 1" - the Actions chosen still what the Maneuver does with (the user's).
+  await spendActions(actor, Math.max(0, amount - (Number(maneuver.actionDiscount) || 0)), kind);
 }
 
 /**
@@ -3774,6 +3775,19 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // what it costs, which is every other one.
   const actionsSpent = await askActionsSpent(actor, maneuver);
   if (actionsSpent === null) return false;
+  // Quick Sleep: "When using the Combat Recovery Maneuver, reduce the Action Cost by 1" - asked, twice an Encounter.
+  if (!outOfSequence && (maneuver.id === "combat-recovery")
+    && (actor.system.effects?.slots?.["quickSleep.recovery"] === true)) {
+    const combatId = game.combat?.id ?? "none";
+    const held = actor.getFlag?.("dbu-ttrpg", "quickSleepUses");
+    const used = (held?.combat === combatId) ? (Number(held.count) || 0) : 0;
+    if ((used < 2) && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+      window: { title: `${maneuver.name} - Quick Sleep` },
+      content: `<p data-tooltip="Twice an Encounter">1 Action less for ${actionsSpent} Actions' worth?</p>`, rejectClose: false })) {
+      await actor.setFlag("dbu-ttrpg", "quickSleepUses", { combat: combatId, count: used + 1 });
+      maneuver = { ...maneuver, actionDiscount: 1 };
+    }
+  }
 
   // God Finisher: "the God Finisher Maneuver can only use that Signature Technique" - its own, made at its first use -
   // and "otherwise, acts exactly as the Signature Technique Maneuver": through it as through that door, God Finisher's
