@@ -180,6 +180,9 @@ class Parser {
           // `outOfSequence` - it hands over an Out-of-Sequence Maneuver: never Automatic (the user's: it would spend the
           // trigger on a Surge that gives nothing, and take the one Out-of-Sequence Maneuver that trigger allows).
           case "outOfSequence": modifiers.outOfSequence = true; break;
+          // `chosen` - asked as it happens, never Automatic: the player picks the moment (the user's: Warrior's Pride's
+          // Superior, once an Encounter, is not always wanted the first time it could be).
+          case "chosen": modifiers.chosen = true; break;
           // `effect 4` - which of the Trait's printed effects, "(4)-[Triggered]", this block is: how it is named on the
           // sheet (the user's).
           case "effect":

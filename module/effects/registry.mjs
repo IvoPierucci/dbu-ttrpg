@@ -867,6 +867,8 @@ export const WINDOW_MOMENTS = Object.freeze(["power", "declare-maneuver", "botch
  */
 export function chosenAsItHappens(block) {
   return WINDOW_MOMENTS.includes(momentOf(block)) || Boolean(block?.modifiers?.outOfSequence)
+    // And what its file says is the player's to time - `chosen`: Warrior's Pride's Superior on entering Raging.
+    || Boolean(block?.modifiers?.chosen)
     // Triggered/Defeated: one a Combat Encounter, and few - chosen on the Defeated card's Apply effects (the user's).
     || ((block?.mode === "triggered") && (momentOf(block) === "defeated"));
 }

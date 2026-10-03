@@ -28,9 +28,10 @@ if (inState("superior")) {
     threshold.penalty = 0;
 }
 
-# (3) On entering the Raging State, or on the Power Up Maneuver - asked in a window there and then - Superior until the
-# end of your next turn. Both are the one effect: once per Encounter between them.
-[triggered/state/raging, 1/encounter, effect 3]
+# (3) On entering the Raging State, or on the Power Up Maneuver - asked in a window there and then, never Automatic: once
+# an Encounter, and the player may want to wait for a later one (the user's) - Superior until the end of your next turn.
+# Both are the one effect: once per Encounter between them.
+[triggered/state/raging, 1/encounter, chosen, effect 3]
 enterState(superior, 1, next-turn);
 
 [triggered/power, 1/encounter, effect 3]

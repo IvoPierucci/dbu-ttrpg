@@ -31,6 +31,7 @@ function blockText(b) {
   if (b.modifiers?.before) header.push("before");
   if (b.modifiers?.first) header.push("first");
   if (b.modifiers?.outOfSequence) header.push("outOfSequence");
+  if (b.modifiers?.chosen) header.push("chosen");
   if (b.modifiers?.effect) header.push(`effect ${b.modifiers.effect}`);
 
   const lines = [`[${header.join(", ")}]`];
