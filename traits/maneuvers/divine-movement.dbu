@@ -1,0 +1,26 @@
+id: divine-movement
+name: Divine Movement
+type: instant
+actionCost: 0
+kiCostPerBaseTier: 4
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+encounterLimit: 3
+# A God Maneuver: open where an effect grants it, only in God Ki, its 4(bT) paid in Divine Ki Points (maneuvers.mjs
+# whyNotGod, spendManeuverCost). Its own Maneuver rather than the Movement Maneuver (chat.mjs takeDivineMovement): no
+# card an Opponent's Blockade or Exploit answers - "does not trigger the Exploit Maneuver", and the Movement Maneuver only
+# "for any of your effects" - so Fake Death's Hidden ends by it. The Square is moved to on the map, as every Movement is.
+# "[1/Round, 3/Encounter]": both limits, the second counted on its own (encounterLimit).
+godManeuver: true
+divineMovement: true
+source: Core Rule
+description: >
+  A God Maneuver: move to any Square within your Boosted Speed - no Exploit, and the Movement Maneuver for your effects.
+text: >
+  Divine Movement [1/Round, 3/Encounter]: Dart across the battlefield with divine speed.
+  –Maneuver Type: Instant
+  –Action Cost: N/A
+  –DKP Cost: 4(bT)
+  –Effect: Move to any Square within range of your Boosted Speed. This Movement does not trigger the Exploit Maneuver and
+  is considered the Movement Maneuver for any of your effects.

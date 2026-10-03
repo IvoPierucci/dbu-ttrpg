@@ -1838,6 +1838,8 @@ export function definitionOf(item) {
     launch: item.system.launch,
     terrainLift: item.system.terrainLift,
     godManeuver: item.system.godManeuver,
+    divineMovement: item.system.divineMovement,
+    encounterLimit: Number(item.system.encounterLimit) || 0,
     toss: item.system.toss,
     movement: item.system.movement,
     pin: item.system.pin,
@@ -3813,6 +3815,15 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     return true;
   }
 
+  // Divine Movement: its move announced, no Exploit, the Movement Maneuver for one's own effects.
+  if (maneuver.divineMovement) {
+    const { takeDivineMovement } = await import("./chat.mjs");
+    if (!await takeDivineMovement(actor, maneuver)) return false;
+    await payActions(actor, maneuver);
+    await recordManeuverType(actor, maneuver.type);
+    return true;
+  }
+
   if (maneuver.surge) {
     // takeSurge announces the outcome itself, naming the Maneuver; announcing the
     // Maneuver separately would put the same event in chat twice.
@@ -5618,6 +5629,8 @@ export function maneuverItemFrom(definition) {
       launch: Boolean(definition.launch),
       terrainLift: Boolean(definition.terrainLift),
       godManeuver: Boolean(definition.godManeuver),
+      divineMovement: Boolean(definition.divineMovement),
+      encounterLimit: Number(definition.encounterLimit) || 0,
       toss: Boolean(definition.toss),
       movement: Boolean(definition.movement),
       pin: Boolean(definition.pin),

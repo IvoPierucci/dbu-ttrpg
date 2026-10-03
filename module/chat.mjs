@@ -6626,8 +6626,12 @@ function option(name, value, label, note, disabled, reason) {
 async function playInstant(message, actor, maneuverId) {
   const maneuver = getManeuver(maneuverId);
   if (!maneuver) return;
+  // Divine Movement, as a Surge is: taken here, not only paid for.
+  if (maneuver.divineMovement) {
+    if (!await takeDivineMovement(actor, maneuver)) return;
+  }
   // A Surge - the Surge Maneuver, Divine Breathing - is taken here, its limit and price with it.
-  if (maneuver.surge) {
+  else if (maneuver.surge) {
     const why = whyNotSpecial(actor, maneuver);
     if (why) return ui.notifications.warn(why);
     if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${maneuver.name} has no uses left.`);
@@ -19269,6 +19273,32 @@ export async function rollSteadfastCheck(actor) {
   });
 
   return passed;
+}
+
+/**
+ * Divine Movement: "Move to any Square within range of your Boosted Speed. This Movement does not trigger the Exploit
+ * Maneuver and is considered the Movement Maneuver for any of your effects." Its limits and Divine Ki paid; a card of its
+ * own, with no Movement on it for an Opponent's Blockade or Exploit to answer; the Square moved to on the map. As the
+ * Movement Maneuver for your own effects: Fake Death's Hidden ends.
+ */
+export async function takeDivineMovement(actor, maneuver) {
+  const why = whyNotSpecial(actor, maneuver);
+  if (why) {
+    ui.notifications.warn(why);
+    return false;
+  }
+  if (maneuverUsesLeft(actor, maneuver) <= 0) {
+    ui.notifications.warn(`${maneuver.name} has no uses left.`);
+    return false;
+  }
+  const cost = maneuverKiCost(maneuver, null, actor);
+  if ((cost > 0) && !await spendManeuverCost(actor, maneuver, cost)) return false;
+  await recordManeuverUse(actor, maneuver);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${maneuver.name}: ${actor.name} moves to a Square `
+      + "within their Boosted Speed. No Exploit.")}</div>` });
+  await (await import("./hidden.mjs")).endFakeDeath(actor, "used the Movement Maneuver");
+  return true;
 }
 
 /**

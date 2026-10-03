@@ -3031,7 +3031,11 @@ export function maneuverUsesLeft(actor, maneuver) {
   const spent = (actor.system.usedManeuvers ?? []).filter(entry => usedIs(entry, maneuver)).length;
   // And what an effect adds to it - Energizing Training's Surge "an additional time".
   const more = Math.max(0, applySlot(actor.system.effects?.slots, `${maneuver.id}.uses`, 0));
-  return Math.max(0, maneuver.usageLimit.amount + more - spent);
+  const left = Math.max(0, maneuver.usageLimit.amount + more - spent);
+  // A second limit over the first - Divine Movement's "[1/Round, 3/Encounter]" - counted on its own.
+  return maneuver.encounterLimit
+    ? Math.min(left, effectUsesLeft(actor, maneuver, "encounter", { amount: maneuver.encounterLimit }))
+    : left;
 }
 
 /**
@@ -3056,7 +3060,8 @@ function usedIs(entry, maneuver) {
 export async function recordManeuverUse(actor, maneuver) {
   if (!maneuver.usageLimit) return;
   const entry = `${maneuver.usageLimit.per}:${maneuver.id}`;
-  await actor.update({ "system.usedManeuvers": [...actor.system.usedManeuvers, entry] });
+  await actor.update({ "system.usedManeuvers": [...actor.system.usedManeuvers, entry,
+    ...(maneuver.encounterLimit ? [`encounter:${maneuver.id}.encounter`] : [])] });
 }
 
 /**
@@ -3085,7 +3090,8 @@ export async function recordEffectUse(actor, maneuver, effect, { per = "encounte
 export function usageLimitLabel(maneuver) {
   if (!maneuver.usageLimit) return "";
   const { amount, per } = maneuver.usageLimit;
-  return `${amount}/${per.charAt(0).toUpperCase()}${per.slice(1)}`;
+  return `${amount}/${per.charAt(0).toUpperCase()}${per.slice(1)}`
+    + (maneuver.encounterLimit ? `, ${maneuver.encounterLimit}/Encounter` : "");
 }
 
 

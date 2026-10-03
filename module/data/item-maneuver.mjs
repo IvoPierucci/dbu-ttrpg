@@ -106,6 +106,10 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       terrainLift: new fields.BooleanField({ required: true, initial: false }),
       /** A God Maneuver: "only available to those with access to Divine Ki Points ... spend Divine Ki Points to use". */
       godManeuver: new fields.BooleanField({ required: true, initial: false }),
+      /** Divine Movement: "Move to any Square within range of your Boosted Speed", no Exploit. */
+      divineMovement: new fields.BooleanField({ required: true, initial: false }),
+      /** A second limit over the usage limit - Divine Movement's "[1/Round, 3/Encounter]". 0 is none. */
+      encounterLimit: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       /** Hands an Item over to be caught - the Toss Maneuver (chat.mjs askToss). */
       toss: new fields.BooleanField({ required: true, initial: false }),
       /**
