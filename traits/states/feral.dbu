@@ -1,0 +1,34 @@
+id: feral
+name: Feral
+kind: state
+levels: 2
+# A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
+specialState: true
+description: >
+  Wild: no Signature Techniques or Unique Abilities, Attacking Maneuvers L(T) cheaper, the Natural Result of Strike,
+  Wound, Intimidation and Survival L higher. Unhinged: a Critical Strike or Wound Roll may raise the Damage Category by 1.
+text: >
+  Wild (Level 1)
+  (1)-[Passive]: You cannot use the Signature Technique Maneuver, or any Unique Abilities.
+  (2)-[Passive]: Reduce the Ki Point Cost of all your Attacking Maneuvers by L(T).
+  (3)-[Passive]: Increase the Natural Result of your Strike and Wound Rolls, as well as your Intimidation and Survival
+  Skill Checks, by L.
+
+  Unhinged (Level 2)
+  (1)-[Triggered]: If you score a Critical Result on your Strike or Wound Roll for an Attacking Maneuver, increase the
+  Damage Category of that Attacking Maneuver by 1 Category (this effect does not stack if you scored a Critical Result on
+  both Combat Rolls).
+
+---
+
+# Everything accumulates upwards, as Raging's does. Unhinged is Triggered - the player's to take - so it is asked once the
+# Wound Roll is made, where either Critical is known, once whichever it was (chat.mjs askUnhinged).
+
+[passive from 1]
+forbid signatureTechniques;
+forbid uniqueAbilities;
+attack.kiCost -= L(T);
+strike.natural += L;
+wound.natural += L;
+skill.intimidation.natural += L;
+skill.survival.natural += L;

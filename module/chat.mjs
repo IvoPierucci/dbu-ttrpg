@@ -7085,7 +7085,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   ].filter(group => group.formula);
 
   // What the character's own effects add to a Strike's or a Dodge's Natural Result - Drunk's L.
-  const ownNatural = ["strike", "dodge"].includes(slot)
+  const ownNatural = ["strike", "dodge", "wound"].includes(slot)
     ? applySlot(actor.system.effects?.slots, `${slot}.natural`, 0) : 0;
   const evaluated = await evaluateCheck(actor, bonus,
     groups.map(group => group.formula).join(" + "), baseDie,
@@ -12034,6 +12034,23 @@ async function foundToss(message) {
   await settledNote(message, `${finder.name} finds ${toss.itemName}.`);
 }
 
+/**
+ * Feral at Unhinged: "[Triggered]: If you score a Critical Result on your Strike or Wound Roll for an Attacking Maneuver,
+ * increase the Damage Category of that Attacking Maneuver by 1 Category (this effect does not stack if you scored a
+ * Critical Result on both Combat Rolls)" - asked of its user once the Wound Roll is made.
+ */
+async function askUnhinged(attacker, attack, wound) {
+  if (!attacker?.isOwner || ((Number(attacker.system.states?.feral) || 0) < 2)) return false;
+  const critical = (attack.result?.strike?.outcome === "critical") || (wound?.outcome === "critical");
+  if (!critical) return false;
+  return foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"],
+    window: { title: "Unhinged" },
+    content: "<p>A Critical Result: raise this attack's Damage Category by 1?</p>",
+    rejectClose: false
+  });
+}
+
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
@@ -15852,12 +15869,19 @@ async function rollAttackWound(message, attack) {
 
   const settledTargets = [];
 
+  // Feral at Unhinged: the Damage Category 1 higher for everyone it reached, where its user takes it.
+  const unhinged = await askUnhinged(attacker, attack, wound);
+  const reached = unhinged
+    ? targets.map(entry => ({ ...entry, own: entry.own?.hit
+      ? { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, 1) } : entry.own }))
+    : targets;
+
   // Whoever stepped in front of somebody takes the Wound Roll in their place. Settled
   // before the loop, because it changes two lines at once: the Ally takes nothing and
   // the one who stepped in takes what the Ally would have.
   const shields = interventions(attack).filter(takesWoundFor);
   const shielded = new Set(shields.map(entry => entry.allyUuid));
-  for (const { uuid, actor: target, own } of targets) {
+  for (const { uuid, actor: target, own } of reached) {
     // Somebody stood in front of them. They take nothing from this attack - what
     // becomes of what was aimed at them is worked out on the intervention below.
     if (shielded.has(uuid)) {

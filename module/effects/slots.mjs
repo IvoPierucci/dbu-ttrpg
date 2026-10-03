@@ -432,6 +432,9 @@ const TABLE = [
     doc: "Added to the Natural Result of every Strike Roll you make - attacking, Parrying, or in a Clash." },
   { key: "dodge.natural", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Natural Result of every Dodge Roll you make." },
+  // Feral's "Increase the Natural Result of your Strike and Wound Rolls ... by L".
+  { key: "wound.natural", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to the Natural Result of every Wound Roll you make." },
   { key: "steadfast.dice", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "What is added to the Dice Score of your Steadfast Checks. Hot Weather takes "
        + "1(WT) off it." },
