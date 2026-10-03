@@ -1,0 +1,27 @@
+id: holy-transformation
+name: Holy Transformation
+type: standard
+actionCost: 1
+kiCostPerTier: 2
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+# A God Maneuver: open where an effect grants it, only in God Ki, its 2(T) paid in Divine Ki Points (maneuvers.mjs
+# whyNotGod, spendManeuverCost). "Enter a Transformation with the God Ki Aspect ... considered the Transformation
+# Maneuver for any effects" - and there is no Transformation Maneuver yet: until Transformations are built, its card
+# says what it does and the table enters the Transformation, with no Stress Test for entering it.
+godManeuver: true
+says: >
+  As the Transformation Maneuver: enter a Transformation with the God Ki Aspect, with no Stress Test for entering it -
+  later ones as usual.
+source: Core Rule
+description: >
+  A God Maneuver: enter a Transformation with the God Ki Aspect, no Stress Test for entering it.
+text: >
+  Holy Transformation [1/Encounter]: Transform with divine ease.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –DKP Cost: 2(T)
+  –Effect: Enter a Transformation with the God Ki Aspect. You do not roll a Stress Test for entering the Transformation,
+  but any subsequent Stress Tests are rolled as usual. This Maneuver is considered the Transformation Maneuver for any
+  effects.
