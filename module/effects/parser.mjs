@@ -464,12 +464,16 @@ class Parser {
 /** Questions the engine answers, as opposed to arithmetic it works out. */
 const PREDICATE_NAMES = new Set([
   "benefiting", "hasResource", "inState", "hasCondition", "targets", "aoeHits", "attacking",
-  "wearing", "inEnvironment"
+  "wearing", "inEnvironment",
+  // Is the Maneuver being declared that one - Cosmic Efficiency's Combat Recovery.
+  "using"
 ]);
 
 /** The ones written without brackets, because they take nothing. */
 const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
-  "intendedForYou", "wieldingWeapon", "adventuring"]);
+  "intendedForYou", "wieldingWeapon", "adventuring",
+  // A Signature Technique being declared (God of Judgment's); your own Frozen Turn (God of Time's).
+  "signatureTechnique", "frozenTurn"]);
 
 /**
  * Dice the character already has, named rather than written out.

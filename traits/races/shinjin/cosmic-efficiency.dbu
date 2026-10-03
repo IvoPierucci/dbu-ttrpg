@@ -19,8 +19,8 @@ allow surgency.magic;
 attack.kiCost -= 2(T);
 
 # (3) Combat Recovery's Life and Ki Points, 1d6(T) more each use - out of sequence too.
+# Only Combat Recovery answers it - `requires`, not an `if`, or every Maneuver declared would count as it answering.
 [automatic/declare-maneuver, effect 3]
-if (using("combat-recovery")) {
-    life.value += 1d6(T);
-    ki.value += 1d6(T);
-}
+requires using("combat-recovery");
+life.value += 1d6(T);
+ki.value += 1d6(T);
