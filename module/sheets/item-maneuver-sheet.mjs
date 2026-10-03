@@ -153,6 +153,12 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
         ]
       : null;
 
+    // God Strike's Profile, selected "upon gaining access" - shown and changeable as the tail is.
+    context.godStrikeProfiles = this.item.system.godStrike
+      ? [{ value: "", label: "Not selected yet" },
+         ...Object.entries(PROFILES).map(([value, profile]) => ({ value, label: profile.label ?? value }))]
+      : null;
+
     context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation
       .enrichHTML(this.item.system.description, { relativeTo: this.item });
 

@@ -112,6 +112,9 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       divineRoar: new fields.BooleanField({ required: true, initial: false }),
       /** God Bind: a Might Clash at an Opponent in your Melee Range; won, Pinned while kept. */
       godBind: new fields.BooleanField({ required: true, initial: false }),
+      /** God Strike, and the Profile selected "upon gaining access" - asked at the first use, kept here. */
+      godStrike: new fields.BooleanField({ required: true, initial: false }),
+      godStrikeProfile: new fields.StringField({ required: true, blank: true, initial: "" }),
       /** A second limit over the usage limit - Divine Movement's "[1/Round, 3/Encounter]". 0 is none. */
       encounterLimit: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       /** Its KP Cost "for each Action spent" - Divine Pulse's 1(bT). A Unique Ability's is under `unique`. */

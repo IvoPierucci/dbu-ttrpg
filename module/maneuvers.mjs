@@ -2960,9 +2960,14 @@ export function maneuverKiCost(maneuver, declared, actor) {
     ? profileKiCost(declared.profile, maneuver, actor)
     : 0;
 
+  // God Strike: "1/4 (rounded up) of the KP Cost of that Profile" - the one selected.
+  const godStrike = maneuver.godStrike && (declared?.profile || maneuver.godStrikeProfile)
+    ? Math.ceil(profileKiCost(declared?.profile || maneuver.godStrikeProfile, maneuver, actor) / 4)
+    : 0;
+
   const base = baseKiCost(maneuver, actor)
     + surchargeKiCost(maneuver, declared?.profile, actor)
-    + forProfile;
+    + forProfile + godStrike;
 
   const slots = actor?.system?.effects?.slots;
 

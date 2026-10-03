@@ -1949,6 +1949,10 @@ export function definitionOf(item) {
     // for one of them. Derived here so every reader gets them - the row on the sheet that
     // prices it, the picker, and the payment - rather than only the path that asks.
     ...(item.system.tailAttack ? tailProfiles(item.system.tailVariant ?? "") : {}),
+    // God Strike: the Profile selected, the only one it offers.
+    godStrike: item.system.godStrike,
+    godStrikeProfile: item.system.godStrikeProfile ?? "",
+    ...(item.system.godStrikeProfile ? { profileChoices: [item.system.godStrikeProfile] } : {}),
     kiCostPerTier: item.system.kiCostPerTier,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
@@ -2300,6 +2304,25 @@ async function askTailVariant(actor, maneuver) {
 
   if ((typeof chosen !== "string") || !chosen || (chosen === "cancel")) return "";
   return chosen;
+}
+
+/** God Strike's Profile, selected once: any Profile, kept for as long as the Maneuver is had. */
+async function askGodStrikeProfile(maneuver) {
+  const options = Object.entries(PROFILES).map(([key, profile]) =>
+    `<option value="${key}">${Handlebars.escapeExpression(profile.label ?? key)}</option>`).join("");
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${maneuver.name} - select a Profile` },
+    content: `<p class="dbu-respond-hint" data-tooltip="Kept - change it on the Maneuver's sheet.">Its DKP Cost is 1/4 of that Profile's KP Cost.</p>
+      <select name="profile">${options}</select>`,
+    buttons: [
+      { action: "confirm", label: "Select", default: true,
+        callback: (event, button, dialog) => dialog.element.querySelector('select[name="profile"]')?.value ?? "" },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  return ((typeof chosen === "string") && PROFILES[chosen]) ? chosen : "";
 }
 
 /**
@@ -3928,6 +3951,14 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // used IS the one with that variant on it, and everything below - the picker, the price,
   // the card - has to be looking at the same one. Threading a second name through all of
   // them is how two copies of one Maneuver come to disagree.
+  // God Strike: "Upon gaining access to this God Maneuver, select a Profile" - at its first use, kept on the Maneuver.
+  if (maneuver.godStrike && !maneuver.godStrikeProfile) {
+    const profile = await askGodStrikeProfile(maneuver);
+    if (!profile) return false;
+    await actor.items.get(maneuver.itemId)?.update({ "system.godStrikeProfile": profile });
+    maneuver = { ...maneuver, godStrikeProfile: profile, profileChoices: [profile] };
+  }
+
   if (maneuver.tailAttack && !maneuver.tailVariant) {
     const variant = await askTailVariant(actor, maneuver);
     if (!variant) return false;
@@ -5106,7 +5137,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await postAttack(actor, targetActor, maneuver, { ...declared, charges, ...(volleyball ? { volleyball } : {}),
         ...(portal ? { portal: true } : {}), ...(spiritSword ? { spiritSword } : {}),
         ...(extraTargets.length ? { extraTargets: [...(declared.extraTargets ?? []), ...extraTargets] } : {}) },
-        { modifiers: [...appliedModifiers(modifiers), ...drawn.rows], asOutOfSequence: outOfSequence })
+        // God Strike: "use the Basic Attack Maneuver as an Out-of-Sequence Maneuver".
+        { modifiers: [...appliedModifiers(modifiers), ...drawn.rows], asOutOfSequence: outOfSequence || Boolean(maneuver.godStrike) })
     // A Movement card carries whether Rapid Movement was paid for, because the Dodge
     // bonus it buys is against "an Exploit Maneuver provoked by this instance" - and this
     // card is that instance. It carries what was paid for the same reason: a Blockade
@@ -5654,6 +5686,7 @@ export function maneuverItemFrom(definition) {
       divineMovement: Boolean(definition.divineMovement),
       divineRoar: Boolean(definition.divineRoar),
       godBind: Boolean(definition.godBind),
+      godStrike: Boolean(definition.godStrike),
       encounterLimit: Number(definition.encounterLimit) || 0,
       kiPerAction: definition.kiPerAction === true,
       toss: Boolean(definition.toss),

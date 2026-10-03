@@ -1,0 +1,30 @@
+id: god-strike
+name: God Strike
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: true
+requiresTarget: true
+profile: any
+usageLimit: 1/round
+# A God Maneuver: open where an effect grants it, only in God Ki, paid in Divine Ki Points (maneuvers.mjs whyNotGod,
+# spendManeuverCost). "Upon gaining access to this God Maneuver, select a Profile" - asked at its first use and kept on
+# the Maneuver (godStrikeProfile), changeable on its sheet as the Tail Attack's tail is; the only Profile it offers.
+# "The DKP Cost of this Maneuver equals 1/4 (rounded up) of the KP Cost of that Profile" - and that is the whole price:
+# the Basic Attack it makes pays no KP Cost of its own (the user's ruling), only a Ki Wager if one is made. "Use the
+# Basic Attack Maneuver as an Out-of-Sequence Maneuver" - the attack, on a card marked out of sequence.
+godManeuver: true
+godStrike: true
+kiCostCoversProfile: true
+source: Core Rule
+description: >
+  A God Maneuver: a Basic Attack out of sequence with the Profile you selected, for 1/4 (rounded up) of its KP Cost in
+  Divine Ki Points.
+text: >
+  God Strike [1/Round]: Infuse your attacks with extra power thanks to your godly skill.
+  –Maneuver Type: Standard
+  –Action Cost: 1 Action
+  –DKP Cost: Varies
+  –Effect: Upon gaining access to this God Maneuver, select a Profile. The DKP Cost of this Maneuver equals 1/4 (rounded
+  up) of the KP Cost of that Profile. When using this Maneuver, use the Basic Attack Maneuver as an Out-of-Sequence
+  Maneuver. Apply the selected Profile to that Attacking Maneuver.

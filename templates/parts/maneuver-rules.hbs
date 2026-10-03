@@ -88,6 +88,16 @@
         </select>
       </div>
       {{/if}}
+      {{#if godStrikeProfiles}}
+      <div class="stat" data-tooltip="The Profile selected when you gained access to God Strike. Its DKP Cost is 1/4 (rounded up) of this Profile's KP Cost.">
+        <em>Profile</em>
+        <select name="system.godStrikeProfile">
+          {{#each godStrikeProfiles as |profile|}}
+          <option value="{{profile.value}}" {{#if (eq profile.value ../system.godStrikeProfile)}}selected{{/if}}>{{profile.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{/if}}
       <div class="stat" data-tooltip="If this is a Skill Clash, which Skill both sides roll.">
         <em>Clash Skill</em>
         <input type="text" name="system.clashSkill" value="{{system.clashSkill}}"/>
