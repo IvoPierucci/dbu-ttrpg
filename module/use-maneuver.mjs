@@ -2466,7 +2466,7 @@ async function askMaterialize(actor, maneuver) {
   const unique = item?.system?.unique;
   if (!unique) return null;
   const { boughtTraits, materializable, materializeHarder, harderBy1 } = await import("./unique.mjs");
-  const { gearOfList, gearItemFrom, tagsOf, typeOf } = await import("./gear.mjs");
+  const { gearOfList, gearItemFrom, tagsOf, typeOf, CRAFTED } = await import("./gear.mjs");
   const { traitsOfKind } = await import("./effects/traits.mjs");
   const escape = Handlebars.escapeExpression;
   const labels = DBUCharacterData.DIFFICULTIES;
@@ -2487,9 +2487,46 @@ async function askMaterialize(actor, maneuver) {
     .map(each => ({ owner, item: each }));
   const demats = has("dematerialize") ? [...materialized(actor), ...(target ? materialized(target) : [])] : [];
 
+  // The Craft DC, by what is made (the user's): a Basic Item's is its own - or one of its few, where its entry gives a
+  // choice - and a Weapon's or Apparel's is chosen, each saying what it makes: its Craftsmanship Grade, its Quality Slots,
+  // Apparel's Apparel Bonus.
+  const baseTier = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const basicDC = Object.fromEntries(basics.map(def => {
+    const choices = gearItemFrom(def, actor).system.craftDCChoices ?? [];
+    return [`basic:${def.id}`, choices.length ? choices : [keyOf(def.materializeDC || def.craftDC)].filter(Boolean)];
+  }));
+  const slotsSaid = slots => `${slots} Quality Slot${(slots === 1) ? "" : "s"}`;
+  const gradeOptions = kind => Object.entries(CRAFTED[kind].grades).map(([grade, entry]) => {
+    const bonus = (kind === "apparel") ? CRAFTED.apparel.bonus[entry.grade] : null;
+    const meaning = [`Grade ${grade}`,
+      ...(bonus ? [`${bonus.label} Apparel Bonus ${bonus.perBaseTier}(bT) = ${bonus.perBaseTier * baseTier}`] : []),
+      slotsSaid(entry.slots)].join(", ");
+    return `<option value="${entry.craftDC}">${escape(labels[entry.craftDC]?.label ?? entry.craftDC)} - ${escape(meaning)}</option>`;
+  }).join("");
+  const dcFor = what => (what.startsWith("basic:")
+    ? ((basicDC[what] ?? []).length > 1)
+      ? `<select name="difficulty">${basicDC[what].map(key =>
+        `<option value="${key}">${escape(labels[key]?.label ?? key)}</option>`).join("")}</select>`
+      : `<strong data-tooltip="A Basic Item's Craft DC is its own">${escape(labels[basicDC[what]?.[0]]?.label ?? "")}</strong>`
+    : ["apparel", "weights"].includes(what) ? `<select name="difficulty">${gradeOptions("apparel")}</select>`
+    : (what === "weapon") ? `<select name="difficulty">${gradeOptions("weapon")}</select>`
+    : "");
+
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${actor.name} - ${maneuver.name}` },
+    render: (event, dialog) => {
+      const what = dialog.element.querySelector('select[name="what"]');
+      const area = dialog.element.querySelector("[data-dc]");
+      const redraw = () => {
+        if (!area || !what) return;
+        const shown = dcFor(what.value);
+        area.innerHTML = shown;
+        area.closest("label").hidden = !shown;
+      };
+      what?.addEventListener("change", redraw);
+      redraw();
+    },
     content: `<label class="dbu-wager"><span>Make</span><select name="what" class="dbu-gear-pick">
         ${basics.length ? `<optgroup label="Basic Items">${basics.map(def =>
           `<option value="basic:${escape(def.id)}">${escape(def.name)} (${escape(def.materializeDC || def.craftDC)})</option>`).join("")}</optgroup>` : ""}
@@ -2499,15 +2536,14 @@ async function askMaterialize(actor, maneuver) {
         ${demats.length ? `<optgroup label="Dematerialize">${demats.map(({ owner, item: made }) =>
           `<option value="demat:${escape(owner.uuid)}|${escape(made.id)}">${escape(made.name)} (${escape(owner.name)})</option>`).join("")}</optgroup>` : ""}
       </select></label>
-      <label class="dbu-wager"><span>Craft DC</span><select name="difficulty">${order.map(key =>
-        `<option value="${key}">${escape(labels[key]?.label ?? key)}</option>`).join("")}</select>
-        <em>A Weapon's, Apparel's or Weights' - or a Variable one; one Category harder is added</em></label>
+      <label class="dbu-wager" data-tooltip="One Category harder is added to the Check"><span>Craft DC</span>
+        <span data-dc></span></label>
       ${(has("projectile") && target) ? `<label class="dbu-respond-option"><input type="checkbox" name="projectile"/>
         <span class="dbu-respond-name">Into ${escape(target.name)}'s hands (Projectile Materialization)</span></label>` : ""}`,
     buttons: [
       { action: "make", label: "Materialize", default: true, callback: (event, button, dialog) => ({
         what: dialog.element.querySelector('select[name="what"]')?.value ?? "",
-        difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "apprentice",
+        difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "",
         projectile: Boolean(dialog.element.querySelector('input[name="projectile"]')?.checked)
       }) },
       { action: "cancel", label: "Cancel" }
@@ -2527,14 +2563,18 @@ async function askMaterialize(actor, maneuver) {
   const basic = chosen.what.startsWith("basic:") ? basics.find(def => `basic:${def.id}` === chosen.what) : null;
   const kind = basic ? "basic" : chosen.what;
   const tags = basic ? tagsOf(basic) : [];
-  let difficulty = chosen.difficulty;
+  let difficulty = chosen.difficulty || "apprentice";
   if (basic) {
     const choices = gearItemFrom(basic, actor).system.craftDCChoices ?? [];
     // The Crystal Ball's: "If attempted to be created through Magical Materialization, the Craft DC for this item is
-    // Qualified."
+    // Qualified." Its own, whatever was sent.
     difficulty = choices.length ? (choices.includes(chosen.difficulty) ? chosen.difficulty : choices[0])
       : keyOf(basic.materializeDC || basic.craftDC);
   }
+  // A Weapon's or Apparel's Craftsmanship Grade, the one that Craft DC makes - said with what is made.
+  const craftedKind = (kind === "weapon") ? "weapon" : ["apparel", "weights"].includes(kind) ? "apparel" : "";
+  const grade = craftedKind
+    ? Object.entries(CRAFTED[craftedKind].grades).find(([, entry]) => entry.craftDC === difficulty)?.[0] ?? "" : "";
   // "Increase the Difficulty Category by 1" - unless Magic Crafter, or Tech or Food Materialization with 4+ Ranks.
   const harder = materializeHarder(tags, bought, actor.system) ? harderBy1(difficulty) : { difficulty, diceMinus: 0 };
   // The Check: Use Magic in place of Craft; a [Med] Basic Item's Medicine and a [Food] one's Cooking stay theirs
@@ -2552,7 +2592,8 @@ async function askMaterialize(actor, maneuver) {
   const accessory = basic && (typeOf(basic) === "accessory");
   const recipient = ((kind === "weights") || (chosen.projectile && (accessory || ["weapon", "apparel"].includes(kind)))) ? target : null;
   return {
-    kind, id: basic?.id ?? "", name: basic?.name ?? { weapon: "a Weapon", apparel: "a piece of Apparel", weights: "Weights" }[kind],
+    kind, id: basic?.id ?? "", name: basic?.name ?? `${{ weapon: "a Weapon", apparel: "a piece of Apparel", weights: "Weights" }[kind]}`
+      + (grade ? ` (Grade ${grade})` : ""),
     difficulty: harder.difficulty, diceMinus: harder.diceMinus, skill, notes,
     recipientUuid: recipient?.uuid ?? "", recipientName: recipient?.name ?? ""
   };
