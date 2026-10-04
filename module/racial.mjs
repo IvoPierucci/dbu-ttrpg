@@ -126,7 +126,8 @@ export function factorSummary(id) {
   return [plainText(factor.description ?? "").trim(),
     said(factor.requirement) ? `Racial Requirement: ${said(factor.requirement)}` : "",
     said(factor.maximumFactor) ? `Maximum Factor: ${said(factor.maximumFactor)}` : "",
-    said(factor.prerequisites) ? `Prerequisite(s): ${said(factor.prerequisites)}` : ""].filter(Boolean).join(" \u00b7 ");
+    said(factor.prerequisites) ? `Prerequisite(s): ${said(factor.prerequisites)}` : "",
+    plainText(said(factor.note))].filter(Boolean).join(" \u00b7 ");
 }
 
 /** The Factor a Trait's file or Item is a Factor Trait of, or "". */

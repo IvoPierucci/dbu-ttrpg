@@ -148,7 +148,9 @@ function givenFree(entry, slots) {
 export function techniqueTPCharged(sig, slots = null) {
   // God Finisher's: "you do not spend any Technique Points" - and Inherited Creativity's, for the Encounter alone.
   if (sig?.godFinisher || sig?.encounterOnly) return 0;
-  return Math.max(0, techniqueTP(sig, slots) - Math.max(0, Number(sig.freeTP) || 0));
+  // Earthling-Raised's "Reduce the Technique Point Cost to create a Signature Technique by 2 after all other calculations".
+  const after = Number(slots?.["signature.tpCost"]?.add) || 0;
+  return Math.max(0, techniqueTP(sig, slots) - Math.max(0, Number(sig.freeTP) || 0) + after);
 }
 
 /** God Finisher's Technique: "a total TP Cost of 50 or less". */

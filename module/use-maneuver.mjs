@@ -656,6 +656,21 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       <span class="dbu-respond-name">Majin See, Majin Do: Morale Clash</span>
       <span class="dbu-respond-source">won, Guard Down against this attack</span></label>`);
   }
+  // Earthling-Raised: "When you use the Signature Technique Maneuver, for this instance of using your chosen Signature
+  // Technique, you may either: Apply an Energy Charge to that Attacking Maneuver. Add a single Advantage with a TP cost of
+  // up to 10 TP to your chosen Signature Technique." Every time; one with a choice of its own is not offered.
+  let earthlingOffered = [];
+  if (actor.system.effects?.slots?.["signature.earthlingRaised"] === true) {
+    const { featureCatalogue, featureTP } = await import("./technique.mjs");
+    earthlingOffered = featureCatalogue().advantages.filter(def => !def.choose && !has(def.id)
+      && (featureTP(def, 1) > 0) && (featureTP(def, 1) <= 10));
+    const escape = Handlebars.escapeExpression;
+    fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Earthling-Raised</span>
+      <select name="earthling"><option value="">-</option><option value="charge">An Energy Charge</option>
+        <optgroup label="An Advantage (10 TP or less)">${earthlingOffered.map(def =>
+          `<option value="${escape(def.id)}">${escape(`${def.name} (${featureTP(def, 1)} TP)`)}</option>`).join("")}</optgroup>
+      </select></label>`);
+  }
   const areaProfiles = [declared.profile, technique.secondProfile].filter(id => PROFILES[id]?.area);
   if (areaProfiles.length > 1) {
     fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Area of Effect</span>
@@ -689,6 +704,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           return { transformed: box("transformed"), finalChance: box("finalChance"),
             maliceBacklash: Math.min(maliceMost, num("maliceBacklash")), mentality: box("mentality"),
             moraleGuard: box("moraleGuard"),
+            earthling: form.querySelector('[name="earthling"]')?.value ?? "",
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
             areaFrom: form.querySelector('[name="areaFrom"]')?.value ?? "" };
@@ -702,6 +718,12 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
 
   if (answers.finalChance) answers.finalChanceLife = life;
+  // Earthling-Raised's, for this use alone: the Energy Charge, or the Advantage on it.
+  if (answers.earthling === "charge") answers.earthlingCharge = true;
+  else if (earthlingOffered.some(def => def.id === answers.earthling)) {
+    answers.advantages = [...(declared.advantages ?? []), answers.earthling];
+  }
+  delete answers.earthling;
   if (answers.moraleGuard) await actor.setFlag("dbu-ttrpg", "moraleClashed", game.combat?.id ?? "none");
   else delete answers.moraleGuard;
   // What the two Majin Traits put on its Wound Roll, and their uses spent.

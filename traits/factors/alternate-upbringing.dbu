@@ -1,0 +1,16 @@
+id: alternate-upbringing
+name: Alternate Upbringing
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Traits are
+# the files in the folder of its name, `order:` as its page lists them: Angel-Raised 1, Arcosian-Raised 2,
+# Cerealian-Raised 3, Demon-Raised 4, Earthling-Raised 5, Glass Tribe-Raised 6, Heran-Raised 7, Konatsian-Raised 8,
+# Majin-Raised 9, Namekian-Raised 10, Neko Majin-Raised 11, Neo-Tuffle-Raised 12, Oni-Raised 13, Other-Raised 14,
+# Saiyan-Raised 15, Shadow Dragon-Raised 16, Shinjin-Raised 17, Tuffle-Raised 18, Wild Child 19, Yardrat-Raised 20,
+# Zooner-Raised 21 - all Mind.
+requirement: >
+  Any (Except Android, Robot, or Bio-Android)
+maximumFactor: 1
+prerequisites: This Factor Trait can only be gained at Character Creation.
+note: >
+  You cannot select a Factor Trait for Alternate Upbringing if your Race is in the name of that Factor Trait.
+description: >
+  The circumstances of your birth and early life are largely forgotten; instead, your parents- the ones who raised you, anyways- are of a different race than you. Perhaps you were born on one world and raised on another, or perhaps you were placed in the care of a trusted friend, but regardless, you’ve come to see the universe through another race’s eyes.

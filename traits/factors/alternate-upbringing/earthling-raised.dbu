@@ -1,0 +1,28 @@
+id: earthling-raised
+name: Earthling-Raised
+order: 5
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Under the skilled guidance of Earthlings, you have absorbed their tenacious tendency to adapt to any situation.
+text: >
+  Earthling-Raised (Mind): Under the skilled guidance of Earthlings, you have absorbed their tenacious tendency to adapt to any situation.
+  (1)-[Passive]: Increase the amount of Technique Points you gain from Skill Improvement by 3.
+  (2)-[Passive]: Reduce the Technique Point Cost to create a Signature Technique by 2 after all other calculations.
+  (3)-[Triggered]: When you use the Signature Technique Maneuver, for this instance of using your chosen Signature Technique, you may either:
+
+  * Apply an Energy Charge to that Attacking Maneuver.
+  * Add a single Advantage with a TP cost of up to 10 TP to your chosen Signature Technique.
+
+---
+
+# (1) On every Skill Improvement row, as Gifted Student's. (2) Off what each Signature Technique takes from the
+# character, after everything else - the 8 TP least included (technique.mjs techniqueTPCharged).
+[passive]
+techniquePoints.perSkillImprovement += 3;
+signature.tpCost -= 2;
+
+# (3) Asked as a Signature Technique is declared, every time: an Energy Charge, or one Advantage of 10 TP or less, for
+# that use alone (use-maneuver.mjs askTechniqueDeclaration).
+allow signature.earthlingRaised;
