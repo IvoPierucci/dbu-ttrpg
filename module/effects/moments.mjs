@@ -68,6 +68,9 @@ const TABLE = [
   { key: "start-of-encounter", label: "The Combat Encounter begins", provides: [],
     doc: "Fires when you enter the Encounter, so joining late still earns it." },
   { key: "start-of-round", label: "The Combat Round begins", provides: [] },
+  { key: "stretch", label: "A Physical Attack or Grapple reaches past your Melee Range", provides: [],
+    doc: "Never fired: what a Triggered/Automatic toggle needs to stand on - Rubbery Body's stretch, asked or taken as "
+       + "the attack is aimed (maneuvers.mjs stretchReach)." },
   { key: "heritage", label: "You trigger Saiyan Heritage's 2nd effect", provides: [],
     doc: "Fired by the effect itself (trigger(heritage)) - what Born for Battle's 3rd effect answers." },
   { key: "end-of-round", label: "The Combat Round ends", provides: [],

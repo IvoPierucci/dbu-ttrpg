@@ -1290,6 +1290,11 @@ export async function stretchReach(actor, refusal, recheck, what) {
   if (!refusal) return { why: null, stretched: false };
   const stretch = Number(actor?.system?.effects?.slots?.["meleeRange.stretch"]?.add) || 0;
   if (!stretch || recheck(stretch)) return { why: refusal, stretched: false };
+  // Set Automatic on its Trait (Rubbery Body's 7th effect): taken without asking.
+  const { reactiveFor, momentOf } = await import("./effects/registry.mjs");
+  if (reactiveFor(actor).some(entry => (momentOf(entry.program.blocks?.[0]) === "stretch") && entry.armed)) {
+    return { why: null, stretched: true };
+  }
   const yes = await foundry.applications.api.DialogV2.confirm({
     classes: ["dbu-dialog"], window: { title: `${what} - Melee Range +${stretch}` },
     content: `<p data-tooltip="${Handlebars.escapeExpression(refusal)}">Stretch: Melee Range +${stretch} for this Maneuver?</p>`,

@@ -40,10 +40,14 @@ allow collision.halved;
 # (6) Damage there already is, from an attack of Direct or Lethal (chat.mjs, where the Damage is worked out).
 incoming.damage.directOrHigher += 5(bT);
 
-# (7) Asked only where it matters: a Physical Attack or a Grapple aimed past your Melee Range and within 3 more -
-# "Melee Range +3 for this Maneuver?" (maneuvers.mjs stretchReach).
+# (7) Only where it matters: a Physical Attack or a Grapple aimed past your Melee Range and within 3 more. Triggered, it
+# asks "Melee Range +3 for this Maneuver?"; Automatic - the toggle below, on by default - it is taken without asking (the
+# user's) (maneuvers.mjs stretchReach).
 meleeRange.stretch += 3;
 
 # (8) Hit an Opponent with a Physical Attack, or put one in a Grapple: on that card, moving them up to your Melee Range -
 # the stretch with it, where it was taken - once a Round, counted when taken. Where to is the map's, and the table's.
 allow rubbery.move;
+
+# (7)'s Triggered/Automatic toggle: nothing of its own to do - the stretch above reads whether it is set Automatic.
+[triggered/stretch, effect 7]
