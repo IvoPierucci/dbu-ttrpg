@@ -1,0 +1,9 @@
+id: ancient-saiyan
+name: Ancient Saiyan
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's: the system does not
+# control which Racial Traits a character has). Its Factor Traits are the files in the folder of its name.
+requirement: Saiyan
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  The blood of the ancestors runs through your vein, bringing you as close as possible to the primordial Saiyan beginnings. Whether you are from those ancient times yourself or merely inherited their genetic blessings, you are undoubtedly a force to be reckoned with.

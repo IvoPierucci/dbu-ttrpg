@@ -20644,7 +20644,9 @@ export async function rollSteadfastCheck(actor) {
     .filter(Boolean);
   const roll = new Roll(terms.join(" + "));
   await roll.evaluate();
-  const passed = roll.total >= target;
+  // Failed, what may pass it instead is asked first - before anything that failing does.
+  const rescued = (roll.total >= target) ? "" : await rescueSteadfast(actor, roll.total, target);
+  const passed = (roll.total >= target) || Boolean(rescued);
   // Multi-Form Technique: a Steadfast Check failed - the one rolled, or one failed automatically - Defeats them.
   if (!passed || automatic.length) {
     for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.multiForm)) {
@@ -20664,10 +20666,29 @@ export async function rollSteadfastCheck(actor) {
   await roll.toMessage({
     speaker: ChatMessage.getSpeaker({ actor }),
     flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - needing ${target} - ${
-      passed ? "passed" : "failed"}${carried}`
+      rescued ? `failed, passed by ${rescued}` : (passed ? "passed" : "failed")}${carried}`
   });
 
   return passed;
+}
+
+/**
+ * A Steadfast Check just failed: what may pass it instead - Primitive Durability's "If you fail a Steadfast Check, you can
+ * instead choose to pass it automatically" - always asked of whoever plays them (the user's), as it fails: the Undying
+ * Saiyan Heritage's Check would give must come before the Defeat stands. What passed it, by name, or "".
+ */
+export async function rescueSteadfast(actor, total, target) {
+  const entries = triggersFor(actor, ["steadfast-failed"]);
+  if (!entries.length) return "";
+  const picked = await askPlayerChoice(actor, `${actor.name}: Steadfast Check failed - ${total} against ${target}`, [
+    ...entries.map(entry => ({ value: entry.blockId, label: `Pass it - ${entry.sourceName}` })),
+    { value: "fail", label: "Leave it failed" }]);
+  const entry = entries.find(each => each.blockId === picked);
+  if (!entry) return "";
+  await actor.update({ "system.armedTalents": [...new Set([...(actor.system.armedTalents ?? []), entry.blockId])] });
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  const fired = await fireMoment(actor, "steadfast-failed", {}, { blocks: [entry.blockId] });
+  return fired?.fired ? entry.sourceName : "";
 }
 
 /**

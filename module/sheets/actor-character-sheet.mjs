@@ -4,7 +4,8 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
-import { addRacialTrait, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace, racialTraitsInOrder,
+import { addRacialTrait, factorSummary, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+  racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens } from "../effects/registry.mjs";
 import { grantedUniques } from "../unique.mjs";
@@ -4814,7 +4815,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     return ownedRacialTraits(this.actor).map(item => ({
       item,
       kind: racialTraitKind(item.system),
-      race: racialTraitRace(item.system.race, item.system.subrace),
+      race: racialTraitRace(item.system.race, item.system.subrace, item.system.factor),
+      // A Factor Trait's: what its Racial Factor asks for, shown and never enforced.
+      factorTip: factorSummary(item.system.factor),
       // Unfolded to its text as printed - an Option effect showing only what was chosen - and the choices made for it.
       open: Boolean(this.#openSections[`trait-${item.id}`]),
       lines: racialTraitLines(item),
@@ -4881,8 +4884,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           ${traits.map(trait => `<li class="gear-quality-option${had.has(trait.id) ? " blocked" : ""}"
             data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
             data-tooltip="${escape(had.has(trait.id) ? "Already had"
-              : [racialTraitKind(trait), trait.description ?? ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
-            <span class="gear-quality-cost">${escape(racialTraitRace(trait.owner, trait.subrace))}</span></li>`).join("")}
+              : [racialTraitKind(trait), trait.description ?? "",
+                (trait.kind === "factors") ? factorSummary(trait.owner) : ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
+            <span class="gear-quality-cost">${escape((trait.kind === "factors") ? racialTraitRace("", "", trait.owner)
+              : racialTraitRace(trait.owner, trait.subrace))}</span></li>`).join("")}
           <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
         </ol></div>`,
       buttons: [

@@ -66,6 +66,12 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "Gain a Basic Item, by its file's id - Snack Fiend's Snack, on the Gear tab."
   },
+  steadfastPass: {
+    args: [0, 0],
+    names: [],
+    doc: "The failed Steadfast Check this answers, passed instead - Primitive Durability's \"you can instead choose to pass "
+       + "it automatically\" - asked as it fails (steadfast-failed)."
+  },
   steamCloud: {
     args: [0, 0],
     names: [],

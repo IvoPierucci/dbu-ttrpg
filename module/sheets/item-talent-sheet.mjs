@@ -60,7 +60,7 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
     context.textLines = racialTraitLines(this.item);
     // A Racial Trait: its race and what the rules call it in place of Prerequisites, and what was chosen for it.
     if (this.item.type === "racial") {
-      const { ordinal, racialOptionOf, racialOptionsOf, racialTraitKind, racialTraitRace } = await import("../racial.mjs");
+      const { factorSummary, ordinal, racialOptionOf, racialOptionsOf, racialTraitKind, racialTraitRace } = await import("../racial.mjs");
       const { getTrait, printedLines } = await import("../effects/traits.mjs");
       const file = getTrait(this.item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
       const current = racialOptionOf(this.item);
@@ -68,7 +68,9 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
       const options = racialOptionsOf(this.item.flags?.["dbu-ttrpg"]?.sourceId ?? "")
         .map(option => ({ value: option.id, label: option.name, selected: option.id === current }));
       context.racial = {
-        race: racialTraitRace(this.item.system.race, this.item.system.subrace),
+        race: racialTraitRace(this.item.system.race, this.item.system.subrace, this.item.system.factor),
+        // A Factor Trait's: what its Racial Factor asks for, shown and never enforced.
+        tip: this.item.system.factor ? factorSummary(this.item.system.factor) : "Racial Trait",
         kind: racialTraitKind(this.item.system),
         chosen: (this.item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label)
           .filter(Boolean).join(" \u00b7 "),

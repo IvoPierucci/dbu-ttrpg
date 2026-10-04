@@ -23,6 +23,9 @@ export const KINDS = Object.freeze({
   states: { label: "State", priority: PRIORITY.state },
   transformations: { label: "Transformation Trait", priority: PRIORITY.transformation },
   races: { label: "Racial Trait", priority: PRIORITY.racial },
+  // Racial Factors: "Factor Traits are considered Racial Traits" - their Priority, and taken from the same list.
+  // traits/factors/<factor>.dbu is the Factor; traits/factors/<factor>/... its Factor Traits.
+  factors: { label: "Factor Trait", priority: PRIORITY.racial },
   talents: { label: "Talent", priority: PRIORITY.talent },
   conditions: { label: "Combat Condition", priority: PRIORITY.condition },
   // What the ground you are standing on does to you. At base Priority, like a Karmic

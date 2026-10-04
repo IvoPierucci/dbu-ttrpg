@@ -1,0 +1,51 @@
+id: primitive-durability
+name: Primitive Durability
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+description: >
+  Built to take massive damage even from early on in their evolution, some Saiyans are capable of shrugging off hits that would take down even their modern counterparts.
+text: >
+  Primitive Durability (Body): Built to take massive damage even from early on in their evolution, some Saiyans are capable of shrugging off hits that would take down even their modern counterparts.
+  (1)-[Passive]: Increase your Racial Life Modifier by 2.
+  (2)-[Passive]: For every 3 stacks of Battle Born you possess, increase your Soak Value by 1(T) and the Dice Score of your Steadfast Checks by 1.
+  (3)-[Triggered, 1/Round]: If you gain a stack of Battle Born, regain Life Points equal to your Surgency.
+  (4)-[Triggered/Undying]: Use a Healing Surge as an Out-of-Sequence Maneuver.
+  (5)-[Triggered, 1/Encounter]: If you fail a Steadfast Check, you can instead choose to pass it automatically.
+
+---
+
+# (1) Gained during a Combat Encounter, the Life Points it adds come with it (combat.mjs registerRacialLifeHooks).
+[passive]
+racialLifeModifier += 2;
+
+# (2) Every 3 stacks between the three Combat Rolls - 6 at most by Born for Battle's limit, 9 past it by its 3rd effect.
+[passive]
+if (stacksAtLeast(3, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    soakValue += 1(T);
+    steadfast.dice += 1;
+}
+if (stacksAtLeast(6, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    soakValue += 1(T);
+    steadfast.dice += 1;
+}
+if (stacksAtLeast(9, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    soakValue += 1(T);
+    steadfast.dice += 1;
+}
+
+# (3) A stack of Battle Born gained - Born for Battle's, however it comes (moments-runtime.mjs gainOneOf, raiseTo).
+# Automatic by default; set Triggered, it is asked in a window as the stack is gained.
+[triggered/battle-born, 1/round, effect 3]
+life.value += surgency;
+
+# (4) Entering the Undying State (the user's reading of Triggered/Undying): asked in its window there and then, never
+# Automatic - an Out-of-Sequence Maneuver.
+[triggered/state/undying, outOfSequence, effect 4]
+surge(healing);
+
+# (5) A Steadfast Check failed: always asked, as it fails and before its card - "Pass it" (chat.mjs rescueSteadfast), never
+# Automatic (the user's).
+[triggered/steadfast-failed, 1/encounter, chosen, effect 5]
+steadfastPass();

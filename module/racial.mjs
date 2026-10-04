@@ -24,6 +24,12 @@
  *
  * An Option is a file of its own beside it, `traits/races/<race>/<trait>/<option>.dbu`, marked `optionOf: <trait>`; its
  * script is added to the Trait's between `#@ option` markers, and it may say `choose`, `grantsUnique`, `grantsTalent`.
+ *
+ * A Racial Factor's Factor Traits are Racial Traits ("Factor Traits are considered Racial Traits"), written the same way
+ * under `traits/factors/<factor>/`, and taken from the same list after every race's. The Factor itself is
+ * `traits/factors/<factor>.dbu`: its `requirement:`, `maximumFactor:` and `prerequisites:`, shown beside its Factor
+ * Traits and never enforced - nor which Trait one replaces (the user's: the system does not control which Racial Traits a
+ * character has).
  */
 
 import { getTrait, printedLines, traitsOfKind } from "./effects/traits.mjs";
@@ -75,15 +81,56 @@ export function racialTraitLines(item) {
 /** A list header - `a, b` or a single value - as a list. */
 const listOf = raw => [].concat(raw ?? []).flatMap(entry => String(entry).split(",")).map(id => id.trim()).filter(Boolean);
 
-/** Every Racial Trait there is to take - its Options are not. */
+/** Every Racial Trait there is to take, a Racial Factor's Factor Traits with them - their Options are not. */
 export function racialTraitFiles() {
-  return traitsOfKind("races").filter(trait => !trait.optionOf);
+  return [...traitsOfKind("races"), ...traitsOfKind("factors").filter(trait => trait.owner)]
+    .filter(trait => !trait.optionOf);
 }
 
 /** A Racial Trait's Options, in the order its text lists them (their `order:`), not by name (the user's). */
 export function racialOptionsOf(id) {
-  return traitsOfKind("races").filter(trait => trait.optionOf === id)
+  return [...traitsOfKind("races"), ...traitsOfKind("factors")].filter(trait => trait.optionOf === id)
     .sort((a, b) => (orderOf(a) - orderOf(b)) || a.name.localeCompare(b.name));
+}
+
+/** A Racial Factor, by its id - its own file, traits/factors/<factor>.dbu. */
+export function racialFactor(id) {
+  const factor = id ? getTrait(id) : null;
+  return ((factor?.kind === "factors") && !factor.owner) ? factor : null;
+}
+
+/** A Racial Factor's name, from its id. */
+export function factorName(id) {
+  return racialFactor(id)?.name ?? id ?? "";
+}
+
+/** What a Racial Factor asks for, as its page lists it - shown, never enforced. */
+export function factorSummary(id) {
+  const factor = racialFactor(id);
+  if (!factor) return "";
+  const said = value => [].concat(value ?? []).join(", ").trim();
+  return [plainText(factor.description ?? "").trim(),
+    said(factor.requirement) ? `Racial Requirement: ${said(factor.requirement)}` : "",
+    said(factor.maximumFactor) ? `Maximum Factor: ${said(factor.maximumFactor)}` : "",
+    said(factor.prerequisites) ? `Prerequisite(s): ${said(factor.prerequisites)}` : ""].filter(Boolean).join(" \u00b7 ");
+}
+
+/** The Factor a Trait's file or Item is a Factor Trait of, or "". */
+function factorOf(trait) {
+  if (trait?.system) return String(trait.system.factor ?? "");
+  return (trait?.kind === "factors") ? String(trait.owner ?? "") : "";
+}
+
+/** Where a Trait's group stands: this character's race, then every other race, then the Racial Factors. */
+function groupRank(trait, race) {
+  if (factorOf(trait)) return 2;
+  return (((trait?.system ? trait.system.race : trait?.owner) ?? "") === race) ? 0 : 1;
+}
+
+/** Its group's name, to order by: the race's, or the Racial Factor's. */
+function groupName(trait) {
+  const factor = factorOf(trait);
+  return factor ? factorName(factor) : raceName(trait?.system ? trait.system.race : trait?.owner);
 }
 
 /** A race's display name, from its id. */
@@ -106,12 +153,13 @@ function orderOf(trait) {
 
 /**
  * Every Racial Trait there is, in the order the picker and the list show them: this character's race first, then every
- * other race by the race's name (not the Trait's), each race's Traits in the order its page prints them (the user's).
+ * other race by the race's name (not the Trait's), each race's Traits in the order its page prints them (the user's) -
+ * then the Racial Factors' Factor Traits, by the Factor's name.
  */
 export function racialTraitsInOrder(race, traits = racialTraitFiles()) {
   return traits.slice().sort((a, b) =>
-    (Number(b.owner === race) - Number(a.owner === race))
-    || raceName(a.owner).localeCompare(raceName(b.owner))
+    (groupRank(a, race) - groupRank(b, race))
+    || groupName(a).localeCompare(groupName(b))
     || (orderOf(a) - orderOf(b))
     || a.name.localeCompare(b.name));
 }
@@ -123,8 +171,9 @@ export function racialTraitKind(trait) {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" · ");
 }
 
-/** The race (and Subrace) a Racial Trait belongs to, as read. */
-export function racialTraitRace(race, subrace = "") {
+/** The race (and Subrace) a Racial Trait belongs to, as read - a Factor Trait's Racial Factor, "Ancient Saiyan (Factor)". */
+export function racialTraitRace(race, subrace = "", factor = "") {
+  if (factor) return `${factorName(factor)} (Factor)`;
   return [raceName(race), subrace ? (subraceName(race, subrace) || subrace) : ""].filter(Boolean).join(" - ");
 }
 
@@ -133,8 +182,8 @@ export function ownedRacialTraits(actor) {
   const race = actor?.system?.race;
   const fileOf = item => getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   return Array.from(actor?.items ?? []).filter(item => item.type === RACIAL_TYPE).sort((a, b) =>
-    (Number(b.system.race === race) - Number(a.system.race === race))
-    || raceName(a.system.race).localeCompare(raceName(b.system.race))
+    (groupRank(a, race) - groupRank(b, race))
+    || groupName(a).localeCompare(groupName(b))
     || (orderOf(fileOf(a)) - orderOf(fileOf(b)))
     || a.name.localeCompare(b.name));
 }
@@ -261,10 +310,11 @@ export async function racialItemFrom(trait) {
         // Its Addendum effect's text box, as written - shown in the Item's Options tab (the user's).
         addendum: String(trait.addendum ?? "").trim(),
         script: scripts.filter(Boolean).join("\n\n"),
-        race: trait.owner ?? "",
+        race: factorOf(trait) ? "" : (trait.owner ?? ""),
         category: String(trait.category ?? ""),
         importance: trait.subrace ? "primary" : String(trait.importance ?? ""),
         subrace: String(trait.subrace ?? ""),
+        factor: factorOf(trait),
         chosen
       }
     },

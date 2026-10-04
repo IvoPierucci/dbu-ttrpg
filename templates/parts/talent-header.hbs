@@ -3,7 +3,7 @@
   <div class="talent-identity">
     <input type="text" name="name" value="{{item.name}}" placeholder="Talent Name"/>
     {{#if racial}}
-    <span class="trait-prereq" data-tooltip="Racial Trait">{{racial.race}}{{#if racial.kind}} &middot; {{racial.kind}}{{/if}}{{#if racial.chosen}} &middot; {{racial.chosen}}{{/if}}</span>
+    <span class="trait-prereq" data-tooltip="{{racial.tip}}">{{racial.race}}{{#if racial.kind}} &middot; {{racial.kind}}{{/if}}{{#if racial.chosen}} &middot; {{racial.chosen}}{{/if}}</span>
 
     {{else}}
     <label>Prerequisites

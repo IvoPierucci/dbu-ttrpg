@@ -243,6 +243,17 @@ async function writeStateful(actor, slots) {
  *
  * Adding one costs a case here and a line in the author's guide, and nothing else.
  */
+/**
+ * Stacks of these Resources just gained: Battle Born's - on any of its three Combat Rolls - is a Moment (`battle-born`),
+ * what is the player's asked in a window first (Primitive Durability's "If you gain a stack of Battle Born").
+ */
+export async function stacksGained(actor, names) {
+  if (!names.some(name => String(name).startsWith("battleborn"))) return;
+  const { offerTriggers } = await import("../chat.mjs");
+  await offerTriggers(actor, "battle-born");
+  return fireMoment(actor, "battle-born");
+}
+
 /** A character an effect named, by uuid or by name, or nothing. */
 function named(who) {
   if (!who) return null;
@@ -268,12 +279,19 @@ async function runVerb(actor, call, context) {
       const modifier = Number(args[0]) || 0;
       const roll = await new Roll([die, natural ? `${natural}` : "", bonus ? `${bonus}` : "", modifier ? `${modifier}` : ""]
         .filter(Boolean).join(" + ").replace("+ -", "- ")).evaluate();
-      const passed = roll.total >= target;
+      // Failed, what may pass it instead is asked first (chat.mjs rescueSteadfast) - Primitive Durability's.
+      const { rescueSteadfast } = await import("../chat.mjs");
+      const rescued = (roll.total >= target) ? "" : await rescueSteadfast(actor, roll.total, target);
+      const passed = (roll.total >= target) || Boolean(rescued);
       await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
-        flavor: `Steadfast Check - needing ${target} - ${passed ? "passed" : "failed"}` });
+        flavor: `Steadfast Check - needing ${target} - ${rescued ? `failed, passed by ${rescued}` : (passed ? "passed" : "failed")}` });
       if (passed && args[1]) return enterState(actor, args[1], 1, args[2] ?? null);
       return;
     }
+
+    case "steadfastPass":
+      // Nothing of its own: what asked for it (chat.mjs rescueSteadfast) passes the Check once it has answered.
+      return;
 
     case "trigger": {
       // What answers it and is left to the player (Triggered) is offered in a window on their client first.
@@ -287,12 +305,15 @@ async function runVerb(actor, call, context) {
       // To at least this many, past any ceiling, never lower - Born for Battle's 3.
       const floor = Math.max(0, Number(args[0]) || 0);
       const held = { ...(actor.system.resources ?? {}) };
+      const gained = [];
       for (const name of args.slice(1).map(each => String(each).toLowerCase())) {
+        if ((Number(held[name]?.stacks) || 0) < floor) gained.push(name);
         held[name] = { ...(held[name] ?? {}), stacks: Math.max(Number(held[name]?.stacks) || 0, floor),
           max: Math.max(Number(held[name]?.max) || 0, floor) };
       }
       const { replaceObject } = await import("../conditions.mjs");
-      return actor.update({ "system.resources": replaceObject(held) });
+      await actor.update({ "system.resources": replaceObject(held) });
+      return stacksGained(actor, gained);
     }
 
     case "gainOneOf": {
@@ -310,7 +331,8 @@ async function runVerb(actor, call, context) {
       if (!chosen) return;
       const next = { ...held, [chosen]: { stacks: (Number(held[chosen]?.stacks) || 0) + 1, max: definitions[chosen].max } };
       const { replaceObject } = await import("../conditions.mjs");
-      return actor.update({ "system.resources": replaceObject(next) });
+      await actor.update({ "system.resources": replaceObject(next) });
+      return stacksGained(actor, [chosen]);
     }
 
     case "surge": {

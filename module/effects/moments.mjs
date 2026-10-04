@@ -74,6 +74,12 @@ const TABLE = [
   { key: "burrow", label: "A Physical Attack could go through the ground", provides: [],
     doc: "Never fired: what Burrowed Strike's Triggered/Automatic toggle stands on - asked or taken as the attack is "
        + "aimed (maneuvers.mjs burrowReach)." },
+  { key: "battle-born", label: "You gain a stack of Battle Born", provides: [],
+    doc: "Fired as Born for Battle's stacks are gained (gainOneOf) or raised (raiseTo) - Primitive Durability's 3rd. What "
+       + "is the player's is asked in a window first." },
+  { key: "steadfast-failed", label: "You fail a Steadfast Check", provides: [],
+    doc: "Asked as the Check fails, before its card (chat.mjs rescueSteadfast): what turns it into a pass (steadfastPass) "
+       + "- Primitive Durability's 5th." },
   { key: "heritage", label: "You trigger Saiyan Heritage's 2nd effect", provides: [],
     doc: "Fired by the effect itself (trigger(heritage)) - what Born for Battle's 3rd effect answers." },
   { key: "end-of-round", label: "The Combat Round ends", provides: [],

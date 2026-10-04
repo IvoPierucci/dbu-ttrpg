@@ -136,6 +136,7 @@ export function traitActive(actor, id) {
     case "conditions":
       return (Number(actor.system?.conditions?.[id]) || 0) > 0;
     case "races":
+    case "factors":
       return (actor.system?.racialTraits ?? []).includes(id);
     case "talents":
       return (actor.items ?? []).some(item =>

@@ -26,6 +26,8 @@ export default class DBURacialData extends DBUTalentData {
       importance: new fields.StringField({ required: true, blank: true, initial: "" }),
       /** The Subrace it belongs to, for a Subrace Trait. */
       subrace: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /** The Racial Factor it is a Factor Trait of - its id - for one; its race is then "". */
+      factor: new fields.StringField({ required: true, blank: true, initial: "" }),
       /** What was chosen when it was added: its Option, and any choice its effects ask for. */
       chosen: new fields.ArrayField(new fields.SchemaField({
         key: new fields.StringField({ required: true, blank: true, initial: "" }),
