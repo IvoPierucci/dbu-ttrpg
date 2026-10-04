@@ -17127,6 +17127,10 @@ function combinationFollowUps(attacker, attack) {
  * be argued over before it becomes a number.
  */
 async function rollAttackWound(message, attack) {
+  // As it stands now: a Barrier raised while the window was open is on it (the user's report - it was not counted), and a
+  // Wound already rolled is not rolled again.
+  attack = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+  if (attack.result?.wound) return;
   // Whoever owes the Wound Roll, which is the one who made the Strike on every attack
   // but a reflected one. Everything below reads off them - their Wound, their Extra
   // Dice, their effects - because the roll is theirs.
@@ -18331,6 +18335,12 @@ async function barrierStage(message, attack, { user, item, covers, massive }) {
     rejectClose: false
   });
   if (!chosen || (typeof chosen !== "object")) return;
+  // "When you are hit" - and before the one who hit rolls the Wound Roll (the user's).
+  const tooLate = () => Boolean(message.getFlag(SCOPE, ATTACK_FLAG)?.result?.wound);
+  if (tooLate()) {
+    ui.notifications.warn(`${item.name}: the Wound Roll has been made.`);
+    return;
+  }
   const maneuver = uniqueDefinitionOf(item);
   const cost = maneuverKiCost(maneuver, null, user) + (chosen.all ? massiveKi : 0);
   if (!await spendManeuverCost(user, maneuver, cost)) return;
@@ -18349,20 +18359,23 @@ async function barrierStage(message, attack, { user, item, covers, massive }) {
     // Urgency does not reach it.
     slot: "wound"
   });
+  // Rolled after the Wound Roll was made - while this was being rolled: nothing taken off, and what it cost given back.
+  if (tooLate()) {
+    await refundManeuverCost(user, { ...maneuver, kiCost: cost });
+    const { refundActions } = await import("./combat.mjs");
+    await refundActions(user, maneuver.actionCost ?? 1, "counter");
+    ui.notifications.warn(`${item.name}: the Wound Roll was made first - its Ki and Counter Action given back.`);
+    return;
+  }
   const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
   const on = chosen.all
     ? targetResults(fresh).filter(({ own }) => own?.hit && !isAbsoluteMiss(own)).map(({ uuid }) => uuid)
     : [chosen.on];
-  const barrier = { name: item.name, byName: user.name, byUuid: user.uuid, total: roll.total };
+  // On the attack's own card, on each line it covers - no card of its own (the user's); its roll on the line's hover.
+  const barrier = { name: item.name, byName: user.name, byUuid: user.uuid, total: roll.total, breakdown: roll.breakdown ?? "" };
   let targets = fresh.result?.targets ?? [];
   for (const uuid of on) targets = targets.map(line => (line.uuid === uuid) ? { ...line, barrier } : line);
-  requestEdit(message, { type: "attack", attack: { ...fresh, result: { ...fresh.result, targets } } });
-  const names = on.map(uuid => attackTargets(fresh).find(entry => entry.uuid === uuid)?.name ?? "").filter(Boolean);
-  await ChatMessage.create({
-    speaker: ChatMessage.getSpeaker({ actor: user }),
-    content: `<div class="dbu-settled-note">${escape(item.name)}: ${roll.total}${
-      ((on.length > 1) || (on[0] !== user.uuid)) ? ` - ${escape(names.join(", "))}` : ""}</div>`
-  });
+  return requestEdit(message, { type: "attack", attack: { ...fresh, result: { ...fresh.result, targets } } });
 }
 
 function possibleBlockers(attack) {
@@ -21193,7 +21206,12 @@ function outcomeFor(attack, { own, uuid }) {
     return absoluteOutcomeText(attack, own, uuid);
   }
 
-  if (!attack.result.wound) return "hit";
+  // A Barrier raised: said on the line - its number to whoever may see its user's rolls.
+  if (!attack.result.wound) {
+    if (!own.barrier) return "hit";
+    const raiser = fromUuidSync(own.barrier.byUuid ?? "");
+    return `hit - ${own.barrier.name}${(raiser && maySeeRolls(raiser)) ? ` ${own.barrier.total}` : ""}`;
+  }
 
   const { wound } = attack.result;
   const { counterWound, soak, reduction, damage, effectiveWound, damageCategory } = own;
