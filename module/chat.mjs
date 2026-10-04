@@ -13261,6 +13261,31 @@ function disarmingSwapButtons(message, html, attack) {
   }
 }
 
+/**
+ * An attack still waiting on a target the Respond dialog cannot reach - their Actor named on it is not one on the scene's
+ * tokens, so nobody's dialog lists them (the user's report: a card stuck with no Dodge to give). Their owners and the GM
+ * get a Dodge for them here, in the name the attack knows them by.
+ */
+function unansweredDodges(message, html, attack) {
+  if (attack.result || endedByDuel(attack)) return;
+  const onScene = new Set((canvas?.tokens?.placeables ?? []).map(token => token.actor?.uuid).filter(Boolean));
+  for (const { uuid, name } of attackTargets(attack)) {
+    if ((attack.ready ?? []).includes(uuid) || onScene.has(uuid)) continue;
+    const target = fromUuidSync(uuid);
+    if (!target || !(game.user.isGM || target.isOwner)) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Dodge - ${name}`;
+    button.dataset.tooltip = "Not on the scene's tokens, so Respond cannot reach them: they Dodge";
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return chooseDefence(message, target, "dodge");
+    });
+    (html.querySelector(".message-content") ?? html).append(button);
+  }
+}
+
 /** Let the held attack go on. */
 async function disarmingRelease(message) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
@@ -13865,9 +13890,20 @@ async function takeOutOfSequence(message, actor, offer) {
   if (maneuver.requiresTarget) {
     // The effect that granted this may already name the opponent - Cross Counter
     // strikes back at the same one - and otherwise the player aims it themselves.
-    target = (offer.targetUuid ? fromUuidSync(offer.targetUuid) : null)
-      ?? game.user.targets.first()?.actor
-      ?? null;
+    // Named by the offer - Cross Counter's "against that same Opponent" - it is that one, whatever is targeted (the user's
+    // report: a Cross Counter thrown at whoever was targeted left its real target nothing to answer). Their token on
+    // the scene, where the name was of the Actor behind it.
+    if (offer.targetUuid) {
+      const named = fromUuidSync(offer.targetUuid);
+      target = (named && (canvas?.tokens?.placeables ?? []).find(token => token.actor?.uuid === named.uuid)?.actor)
+        ?? (named && (canvas?.tokens?.placeables ?? []).find(token => token.actor?.id === named.id)?.actor)
+        ?? named ?? null;
+      if (!target) {
+        ui.notifications.warn(`${maneuver.name}: the one it answers is no longer on the scene.`);
+        return;
+      }
+    }
+    else target = game.user.targets.first()?.actor ?? null;
 
     if (!target) {
       ui.notifications.warn(`${maneuver.name} needs a target. Target a token first.`);
@@ -21375,6 +21411,7 @@ function renderAttack(message, html) {
   if (attack.unitedFailed || attack.punished || attack.divineCancelled || attack.godBindCancelled
     || attack.disarmingSwapped) return;
   disarmingSwapButtons(message, html, attack);
+  unansweredDodges(message, html, attack);
   dimensionalHoleButtons(message, html, attack);
   sacrificeButtons(message, html, attack);
   divineCounterButtons(message, html, attack);
