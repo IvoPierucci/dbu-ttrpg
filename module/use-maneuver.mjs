@@ -658,17 +658,20 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
   // Earthling-Raised: "When you use the Signature Technique Maneuver, for this instance of using your chosen Signature
   // Technique, you may either: Apply an Energy Charge to that Attacking Maneuver. Add a single Advantage with a TP cost of
-  // up to 10 TP to your chosen Signature Technique." Every time; one with a choice of its own is not offered.
+  // up to 10 TP to your chosen Signature Technique." Every time; one with a choice of its own is not offered. One it has
+  // already, short of its last rank, is offered its next - at that rank's price (the user's).
   let earthlingOffered = [];
   if (actor.system.effects?.slots?.["signature.earthlingRaised"] === true) {
-    const { featureCatalogue, featureTP } = await import("./technique.mjs");
-    earthlingOffered = featureCatalogue().advantages.filter(def => !def.choose && !has(def.id)
-      && (featureTP(def, 1) > 0) && (featureTP(def, 1) <= 10));
+    const { featureCatalogue, featureTP, maxRanks } = await import("./technique.mjs");
+    earthlingOffered = featureCatalogue().advantages.filter(def => !def.choose && (ranks(def.id) < maxRanks(def)))
+      .map(def => ({ def, rank: ranks(def.id) + 1, tp: featureTP(def, ranks(def.id) + 1) - featureTP(def, ranks(def.id)) }))
+      .filter(entry => (entry.tp > 0) && (entry.tp <= 10));
     const escape = Handlebars.escapeExpression;
     fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Earthling-Raised</span>
       <select name="earthling"><option value="">-</option><option value="charge">An Energy Charge</option>
-        <optgroup label="An Advantage (10 TP or less)">${earthlingOffered.map(def =>
-          `<option value="${escape(def.id)}">${escape(`${def.name} (${featureTP(def, 1)} TP)`)}</option>`).join("")}</optgroup>
+        <optgroup label="An Advantage (10 TP or less)">${earthlingOffered.map(({ def, rank, tp }) =>
+          `<option value="${escape(def.id)}">${escape(`${def.name}${(rank > 1) ? ` (rank ${rank})` : ""} - ${tp} TP`)}</option>`)
+          .join("")}</optgroup>
       </select></label>`);
   }
   const areaProfiles = [declared.profile, technique.secondProfile].filter(id => PROFILES[id]?.area);
@@ -720,7 +723,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   if (answers.finalChance) answers.finalChanceLife = life;
   // Earthling-Raised's, for this use alone: the Energy Charge, or the Advantage on it.
   if (answers.earthling === "charge") answers.earthlingCharge = true;
-  else if (earthlingOffered.some(def => def.id === answers.earthling)) {
+  else if (earthlingOffered.some(entry => entry.def.id === answers.earthling)) {
     answers.advantages = [...(declared.advantages ?? []), answers.earthling];
   }
   delete answers.earthling;

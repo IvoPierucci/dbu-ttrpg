@@ -3081,6 +3081,21 @@
   color: var(--dbu-chat-dim);
 }
 
+/* A dialog's group headings - Earthling-Raised's "An Advantage (10 TP or less)" - as the Add Item list's: black behind,
+   the chat's yellow on top; the options under them in the dialog's own colours. */
+.application.dbu-dialog select optgroup {
+  background: #000000;
+  color: var(--dbu-chat-accent, #dfe288);
+  font-weight: bold;
+  font-style: normal;
+}
+
+.application.dbu-dialog select optgroup option {
+  background: var(--dbu-chat-bg);
+  color: var(--dbu-chat-text);
+  font-weight: normal;
+}
+
 /* A dialog sizes itself to its content, so one long line makes the whole window wide
    enough to hold it. Capping the content is what keeps a rules quotation from
    stretching the window off the screen; anything longer wraps instead. */
