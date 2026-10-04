@@ -184,9 +184,12 @@ export function racialTraitKind(trait) {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" · ");
 }
 
-/** The race (and Subrace) a Racial Trait belongs to, as read - a Factor Trait's Racial Factor, "Ancient Saiyan (Factor)". */
+/**
+ * The race (and Subrace) a Racial Trait belongs to, as read - a Factor Trait's Racial Factor, "Ancient Saiyan (Factor)",
+ * and the race it is for alone where it is: "Mutation (Factor) - Saiyan".
+ */
 export function racialTraitRace(race, subrace = "", factor = "") {
-  if (factor) return `${factorName(factor)} (Factor)`;
+  if (factor) return [`${factorName(factor)} (Factor)`, race ? raceName(race) : ""].filter(Boolean).join(" - ");
   return [raceName(race), subrace ? (subraceName(race, subrace) || subrace) : ""].filter(Boolean).join(" - ");
 }
 
@@ -323,7 +326,8 @@ export async function racialItemFrom(trait) {
         // Its Addendum effect's text box, as written - shown in the Item's Options tab (the user's).
         addendum: String(trait.addendum ?? "").trim(),
         script: scripts.filter(Boolean).join("\n\n"),
-        race: factorOf(trait) ? "" : (trait.owner ?? ""),
+        // A Factor Trait's: the race it is for alone ("Saiyan Factor Trait"), where it is for one.
+        race: factorOf(trait) ? String(trait.race ?? "") : (trait.owner ?? ""),
         category: String(trait.category ?? ""),
         importance: trait.subrace ? "primary" : String(trait.importance ?? ""),
         subrace: String(trait.subrace ?? ""),

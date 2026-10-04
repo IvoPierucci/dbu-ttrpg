@@ -1,0 +1,11 @@
+id: mutation
+name: Mutation
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Traits are
+# the files in the folder of its name, `order:` as its page lists them: Brute 1, Captain 2, Giant Gene 3, Psychic 4,
+# Speedster 5, Tactician 6, Technician 7; then those for one race alone (`race:`) - Emperor 8 (Arcosian), Tremendous
+# Lord 9 (Namekian), Legendary Saiyan 10 (Saiyan), Golden Fruit 11 (Shinjin).
+requirement: Any
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Amongst some species, there exist some individuals with rare and unusual abilities, warping their bodies and sometimes even their minds. Sometimes the changes are obvious, but sometimes they are subtle, making them all the more deadly.

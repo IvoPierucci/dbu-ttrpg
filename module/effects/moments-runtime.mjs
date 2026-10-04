@@ -331,18 +331,21 @@ async function runVerb(actor, call, context) {
 
     case "gainOneOf": {
       // "You must apply it to either Strike, Dodge, or Wound (you decide)" - asked of whoever plays the character.
-      const { resourceDefinitions } = await import("./traits.mjs");
+      const { resourceCeiling, resourceDefinitions } = await import("./traits.mjs");
       const definitions = resourceDefinitions();
       const held = actor.system.resources ?? {};
+      // Its ceiling as an effect leaves it - Legendary Saiyan's 4 on the Wound.
+      const ceiling = name => resourceCeiling(definitions[name], actor) || Infinity;
       const open = args.map(name => String(name).toLowerCase())
-        .filter(name => definitions[name] && ((Number(held[name]?.stacks) || 0) < (definitions[name].max || Infinity)));
+        .filter(name => definitions[name] && ((Number(held[name]?.stacks) || 0) < ceiling(name)));
       if (!open.length) return;
       const { askPlayerChoice } = await import("../chat.mjs");
       const chosen = (open.length === 1) ? open[0] : await askPlayerChoice(actor,
         `${actor.name}: ${definitions[open[0]].source || "a stack"}`,
         open.map(name => ({ value: name, label: definitions[name].label })));
       if (!chosen) return;
-      const next = { ...held, [chosen]: { stacks: (Number(held[chosen]?.stacks) || 0) + 1, max: definitions[chosen].max } };
+      const next = { ...held, [chosen]: { stacks: (Number(held[chosen]?.stacks) || 0) + 1,
+        max: Math.max(Number(held[chosen]?.max) || 0, resourceCeiling(definitions[chosen], actor)) } };
       const { replaceObject } = await import("../conditions.mjs");
       await actor.update({ "system.resources": replaceObject(next) });
       return stacksGained(actor, [chosen]);

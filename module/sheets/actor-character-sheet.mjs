@@ -4886,7 +4886,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             data-tooltip="${escape(had.has(trait.id) ? "Already had"
               : [racialTraitKind(trait), trait.description ?? "",
                 (trait.kind === "factors") ? factorSummary(trait.owner) : ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
-            <span class="gear-quality-cost">${escape((trait.kind === "factors") ? racialTraitRace("", "", trait.owner)
+            <span class="gear-quality-cost">${escape((trait.kind === "factors") ? racialTraitRace(String(trait.race ?? ""), "", trait.owner)
               : racialTraitRace(trait.owner, trait.subrace))}</span></li>`).join("")}
           <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
         </ol></div>`,

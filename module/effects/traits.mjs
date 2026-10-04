@@ -13,7 +13,7 @@
  * rather than maintained by hand.
  */
 
-import { PRIORITY } from "./interpreter.mjs";
+import { PRIORITY, applySlot } from "./interpreter.mjs";
 
 const ROOT = "systems/dbu-ttrpg/traits";
 
@@ -135,11 +135,18 @@ export function resourceLimits(actor = null) {
  * Floored at nothing and rounded down: a ceiling is a count of stacks.
  */
 export function resourceCeiling(definition, actor = null) {
-  if (!definition?.maxFrom) return definition?.max ?? 0;
+  // What an effect does to it - `<name>.max`: Legendary Saiyan's "Increase the maximum number of Battle Born stacks for
+  // your Wound Rolls by 2".
+  const raised = base => {
+    const slots = actor?.system?.effects?.slots;
+    if (!definition?.name || !slots?.[`${definition.name}.max`]) return base;
+    return Math.max(0, Math.floor(applySlot(slots, `${definition.name}.max`, base)));
+  };
+  if (!definition?.maxFrom) return raised(definition?.max ?? 0);
   if (!actor?.system) return 0;
   // And how many of it - Lifeforce's "3x your number of Skill Ranks in Clairvoyance".
-  return Math.max(0, Math.floor((Number(foundry.utils.getProperty(actor.system, definition.maxFrom)) || 0)
-    * (Number(definition.maxTimes) || 1)));
+  return raised(Math.max(0, Math.floor((Number(foundry.utils.getProperty(actor.system, definition.maxFrom)) || 0)
+    * (Number(definition.maxTimes) || 1))));
 }
 
 /**
@@ -166,6 +173,7 @@ export function resourceDefinitions() {
     const name = String(each).trim().toLowerCase();
     if (!name) return;
     found[name] = {
+      name,
       // The Trait's id, not only its name: the name is for a reader and this is what
       // answers "does this character have the thing that hands this out".
       id: trait.id ?? "",
