@@ -1297,7 +1297,8 @@ export async function stretchReach(actor, refusal, recheck, what) {
   }
   const yes = await foundry.applications.api.DialogV2.confirm({
     classes: ["dbu-dialog"], window: { title: `${what} - Melee Range +${stretch}` },
-    content: `<p data-tooltip="${Handlebars.escapeExpression(refusal)}">Stretch: Melee Range +${stretch} for this Maneuver?</p>`,
+    content: `<p data-tooltip="${Handlebars.escapeExpression((await import("./racial.mjs")).traitEffectLine(actor, "rubbery-body", 7)
+      || refusal)}">Stretch: Melee Range +${stretch} for this Maneuver?</p>`,
     rejectClose: false
   });
   return yes ? { why: null, stretched: true } : { why: refusal, stretched: false };
@@ -1323,7 +1324,8 @@ export async function burrowReach(actor, target, refusal, what) {
   }
   const yes = await foundry.applications.api.DialogV2.confirm({
     classes: ["dbu-dialog"], window: { title: `${what} - Burrowed Strike` },
-    content: `<p data-tooltip="Their Cover is not counted. The Opponents on a Square adjacent to you may Exploit it.">`
+    content: `<p data-tooltip="${Handlebars.escapeExpression((await import("./racial.mjs")).traitEffectLine(actor, "burrowed-strike", 1)
+      || "Their Cover is not counted. The Opponents on a Square adjacent to you may Exploit it.")}">`
       + `Through the ground at ${Handlebars.escapeExpression(target.name)}?</p>`,
     rejectClose: false
   });
@@ -1370,7 +1372,8 @@ export async function askBurrowedDiminishing(actor, declared) {
   const ki = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
   const yes = await foundry.applications.api.DialogV2.confirm({
     classes: ["dbu-dialog"], window: { title: "Burrowed Strike" },
-    content: `<p>${ki} Ki: double the Diminishing Defense this gives?</p>`, rejectClose: false
+    content: `<p data-tooltip="${Handlebars.escapeExpression((await import("./racial.mjs")).traitEffectLine(actor, "burrowed-strike", 2))}">${
+      ki} Ki: double the Diminishing Defense this gives?</p>`, rejectClose: false
   });
   if (!yes) return declared;
   await actor.setFlag("dbu-ttrpg", "burrowedDoubled", round);

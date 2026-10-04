@@ -4,7 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
-import { addRacialTrait, factorSummary, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { addRacialTrait, entryEffectLine, factorSummary, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens } from "../effects/registry.mjs";
@@ -4851,6 +4851,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             ? `${ordinal(entry.program.blocks[0].modifiers.effect)} effect` : entry.sourceName,
           available: entry.available,
           text: entry.program.blocks[0]?.text ?? "",
+          // Its printed effect line, on hover (the user's).
+          line: entryEffectLine(entry),
           moment: entry.program.blocks[0]?.moment ?? "",
           limits: [Number.isFinite(entry.uses.round) ? `${entry.uses.round} left this round` : "",
             Number.isFinite(entry.uses.encounter) ? `${entry.uses.encounter} this encounter` : ""].filter(Boolean).join(", ")

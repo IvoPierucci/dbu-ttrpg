@@ -1,4 +1,5 @@
 import { unitedPending, unitedWoundParts, withJoiner } from "./united-attack.mjs";
+import { entryEffectLine } from "./racial.mjs";
 import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
   duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
   woundResourceStacks, woundResources } from "./duel.mjs";
@@ -5991,6 +5992,12 @@ function triggerText(entry) {
   return entry.program?.blocks?.[0]?.text ?? "";
 }
 
+/** Its printed effect line, on hover (the user's): `data-tooltip`, or nothing where its text has none. */
+function triggerTip(entry) {
+  const line = entryEffectLine(entry);
+  return line ? ` data-tooltip="${Handlebars.escapeExpression(line)}"` : "";
+}
+
 /**
  * What this character holds that answers any of these Moments, and could still be used.
  *
@@ -6287,7 +6294,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
                                     combatRoll = false, attackingManeuver = false,
                                     difficulties = false, senses = [], formula = null, offerWilling = true } = {}) {
   const rows = effects.map(entry => `
-    <label class="dbu-respond-option">
+    <label class="dbu-respond-option"${triggerTip(entry)}>
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
       <span class="dbu-respond-name">${Handlebars.escapeExpression(entry.sourceName)}</span>
       <span class="dbu-respond-source">${Handlebars.escapeExpression(triggerText(entry))}</span>
@@ -6763,7 +6770,7 @@ async function respondDialog(message, respondable) {
     const triggers = relevantTriggers(actor, message, "response");
     const triggerRows = triggers.length
       ? triggers.map(effect => `
-          <label class="dbu-respond-option">
+          <label class="dbu-respond-option"${triggerTip(effect)}>
             <input type="checkbox" name="trigger-${actor.id}" value="${effect.blockId}"/>
             <span class="dbu-respond-name">${Handlebars.escapeExpression(effect.sourceName)}</span>
             <span class="dbu-respond-source">${Handlebars.escapeExpression(triggerText(effect))}</span>

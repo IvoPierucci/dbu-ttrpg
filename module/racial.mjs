@@ -92,6 +92,45 @@ export function racialTraitLines(item) {
   return out;
 }
 
+/**
+ * One printed effect of a Trait's (or Talent's) Item, as its text has it - "(4)-[Triggered, 1/Encounter]: When you target
+ * ..." - for the hover wherever that effect is chosen (the user's). An Option or Choice effect with what was chosen for
+ * it. "" where the text has no such line.
+ */
+export function effectLineOf(item, n) {
+  const number = Number(n);
+  if (!item || !number) return "";
+  const lines = printedLines(item.system?.text || "");
+  const at = lines.findIndex(line => line.startsWith(`(${number})-`));
+  if (at < 0) return "";
+  const line = lines[at];
+  const kind = /^(\(\d+\)-\[(Option|Choice)\]):/.exec(line);
+  const picked = (item.system?.chosen ?? []).filter(entry => entry.key === "option").map(entry => getTrait(entry.value))
+    .filter(Boolean);
+  if (!kind || !picked.length) return plainText(line);
+  if (kind[2] === "Option") return plainText(`${kind[1]}: ${picked.map(option => printedLines(option.text).join(" ")).join(" ")}`);
+  const bullets = lines.slice(at + 1).filter(each => /^[*\u2022]/.test(each))
+    .map(each => each.replace(/^[*\u2022]\s*/, ""))
+    .filter(each => picked.some(option => each.startsWith(`${option.name} [`)));
+  return plainText(`${kind[1]}: ${bullets.join(" ")}`);
+}
+
+/** A triggered effect's printed line, from the registry entry offering it - its Item and its `effect N`. */
+export function entryEffectLine(entry) {
+  const item = entry?.sourceUuid ? fromUuidSync(entry.sourceUuid) : null;
+  const n = entry?.program?.blocks?.[0]?.modifiers?.effect;
+  if (n) return effectLineOf(item, n);
+  // A text not written as numbered effects - an older Talent's, Power of the Z-Warrior's - is shown whole.
+  const lines = printedLines(item?.system?.text || "");
+  return lines.some(line => /^\(\d+\)-/.test(line)) ? "" : plainText(lines.join(" "));
+}
+
+/** A character's Trait's printed effect, by the Trait's id - its own Item's text, or the file's. */
+export function traitEffectLine(actor, traitId, n) {
+  const item = Array.from(actor?.items ?? []).find(each => each.flags?.["dbu-ttrpg"]?.sourceId === traitId);
+  return effectLineOf(item ?? { system: { text: getTrait(traitId)?.text ?? "" } }, n);
+}
+
 /** A list header - `a, b` or a single value - as a list. */
 const listOf = raw => [].concat(raw ?? []).flatMap(entry => String(entry).split(",")).map(id => id.trim()).filter(Boolean);
 

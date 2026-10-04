@@ -585,6 +585,12 @@ async function askDropPower(actor) {
  * @returns {Promise<?object>} the answers to add to the declaration, or null if cancelled
  */
 async function askTechniqueDeclaration(actor, technique, declared, target) {
+  // Each Trait's field with its printed effect on hover (the user's).
+  const { traitEffectLine } = await import("./racial.mjs");
+  const tip = (id, n) => {
+    const line = traitEffectLine(actor, id, n);
+    return line ? ` data-tooltip="${Handlebars.escapeExpression(line)}"` : "";
+  };
   const has = id => (declared.advantages ?? []).includes(id);
   const ranks = id => (declared.advantages ?? []).filter(entry => entry === id).length;
   const answers = {};
@@ -633,7 +639,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     && (actor.getFlag?.("dbu-ttrpg", "maliceBacklash") !== (game.combat?.id ?? "none"));
   const maliceMost = Math.max(0, 5 - ranks("backlash"));
   if (malice && maliceMost) {
-    fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Majin Malice: Backlash ranks</span>
+    fields.push(`<label class="dbu-respond-option"${tip("majin-malice", 2)}><span class="dbu-respond-name">Majin Malice: Backlash ranks</span>
       <input type="number" name="maliceBacklash" value="0" min="0" max="${maliceMost}"/>
       <span class="dbu-respond-source">each +2(T) Wound, 2(bT) Life Points after</span></label>`);
   }
@@ -644,7 +650,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   const mentalityWound = Math.ceil(Math.max(Number(atts.scholarship?.mod) || 0, Number(atts.personality?.mod) || 0) / 2);
   if ((actor.system.effects?.slots?.["mentality.signature"] === true) && (actor.getFlag?.("dbu-ttrpg", "mentalityRound") !== round)
     && mentalityWound > 0) {
-    fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="mentality"/>
+    fields.push(`<label class="dbu-respond-option"${tip("majin-mentality", 2)}><input type="checkbox" name="mentality"/>
       <span class="dbu-respond-name">Majin Mentality: +${mentalityWound} Wound</span>
       <span class="dbu-respond-source">once a Round</span></label>`);
   }
@@ -652,7 +658,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   // win, they have Guard Down against this Attacking Maneuver." Once an Encounter.
   if (technique.copied && target && (actor.system.effects?.slots?.["quickLearner.moraleClash"] === true)
     && (actor.getFlag?.("dbu-ttrpg", "moraleClashed") !== (game.combat?.id ?? "none"))) {
-    fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="moraleGuard"/>
+    fields.push(`<label class="dbu-respond-option"${tip("majin-see-majin-do", 4)}><input type="checkbox" name="moraleGuard"/>
       <span class="dbu-respond-name">Majin See, Majin Do: Morale Clash</span>
       <span class="dbu-respond-source">won, Guard Down against this attack</span></label>`);
   }
@@ -667,7 +673,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       .map(def => ({ def, rank: ranks(def.id) + 1, tp: featureTP(def, ranks(def.id) + 1) - featureTP(def, ranks(def.id)) }))
       .filter(entry => (entry.tp > 0) && (entry.tp <= 10));
     const escape = Handlebars.escapeExpression;
-    fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Earthling-Raised</span>
+    fields.push(`<label class="dbu-respond-option"${tip("earthling-raised", 3)}><span class="dbu-respond-name">Earthling-Raised</span>
       <select name="earthling"><option value="">-</option><option value="charge">An Energy Charge</option>
         <optgroup label="An Advantage (10 TP or less)">${earthlingOffered.map(({ def, rank, tp }) =>
           `<option value="${escape(def.id)}">${escape(`${def.name}${(rank > 1) ? ` (rank ${rank})` : ""} - ${tp} TP`)}</option>`)
@@ -3868,7 +3874,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const used = (held?.combat === combatId) ? (Number(held.count) || 0) : 0;
     if ((used < 2) && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
       window: { title: `${maneuver.name} - Quick Sleep` },
-      content: `<p data-tooltip="Twice an Encounter">1 Action less for ${actionsSpent} Actions' worth?</p>`, rejectClose: false })) {
+      content: `<p data-tooltip="${Handlebars.escapeExpression((await import("./racial.mjs")).traitEffectLine(actor, "quick-sleep", 2)
+        || "Twice an Encounter")}">1 Action less for ${actionsSpent} Actions' worth?</p>`, rejectClose: false })) {
       await actor.setFlag("dbu-ttrpg", "quickSleepUses", { combat: combatId, count: used + 1 });
       maneuver = { ...maneuver, actionDiscount: 1 };
     }
