@@ -1360,7 +1360,8 @@ export async function postTransfiguration(actor, target, maneuver, { urgent = fa
         [CLASH_FLAG]: {
           category: "strike",
           clashLabel: "Transfiguration",
-          strikeFoundations: ["physical"],
+          // Transfiguration Beam: "a Strike Roll as if making a Magic Attack instead" - the better of the two.
+          strikeFoundations: (actor.system.effects?.slots?.["transfiguration.beam"] === true) ? ["physical", "magic"] : ["physical"],
           maneuverName: maneuver.name,
           reason: aimedAtSelf
             ? `${actor.name} has their own Transfiguration turned back on them. Both rolls `
@@ -3188,6 +3189,19 @@ export async function burstGear(thrower, item, caught) {
         + `${edge} of ${escape(thrower.name)}'s next turn.`
       : ""}</p>`
   });
+}
+
+/**
+ * Steaming Fury (2): "All Squares within a Standard Sphere AoE (centered on you) gain the Obscured Environmental Quality
+ * until the end of your next turn." The Smoke Bomb's arrangement: the Smoked mark on you and whoever your player targets -
+ * which Squares, the table's.
+ */
+export async function steamCloud(actor) {
+  const player = game.users.find(user => user.active && !user.isGM && actor.testUserPermission?.(user, "OWNER"))
+    ?? game.users.activeGM ?? game.user;
+  const caught = [...new Map([actor, ...Array.from(player?.targets ?? []).map(token => token.actor)]
+    .filter(Boolean).map(each => [each.uuid, each])).values()];
+  for (const each of caught) await markUntilNextTurn(actor, each, "smoked", 1, "end", "Steaming Fury");
 }
 
 /**
@@ -5968,7 +5982,8 @@ function triggersFor(actor, moments) {
  */
 export async function answerPower(actor, card = null) {
   if (!actor) return;
-  const triggers = triggersFor(actor, ["power"]);
+  // Only what may answer it now - Snack Motivated's, after a Snack this Round.
+  const triggers = unarmedTriggers(actor, "power");
   if (triggers.length) await prepareRoll(actor, triggers, "Power Up", "", { rolling: false });
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const fired = await fireMoment(actor, "power");
@@ -14137,7 +14152,7 @@ export async function postAttack(actor, target, maneuver,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
-                                   woundExtra = [], maliceBacklash = 0, moraleGuard = false },
+                                   woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -14178,6 +14193,8 @@ export async function postAttack(actor, target, maneuver,
   // the same sentence is on the Strike Roll, further down.
   // Shoot and Pray: "counts as an additional number of Attacking Maneuvers equal to its number of
   // ranks for the effects of Diminishing Offense".
+  // Revenge Bomber's Self-Explosion, given to an attack that is no Technique: its Profile's Sphere centred on its user.
+  if (selfExplosion && !technique) area = selfExploded(area ?? PROFILES[profile]?.area ?? null, true);
   const counts = maneuver.outsideDiminishing ? 0 : (technique?.attacksCounted ?? 1);
 
   await actor.update({
@@ -14339,6 +14356,8 @@ export async function postAttack(actor, target, maneuver,
           // the one its features built.
           area: sizedArea(actor, target, technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null),
             { portal }),
+          // Revenge Bomber's: Self-Explosion given to it, free.
+          ...(selfExplosion ? { selfExplosion: true } : {}),
           // Punching Up, against the one it was aimed at.
           punchingUp: punchingUp(actor, target, sizedArea(actor, target,
             technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null), { portal }), modifiers),
@@ -15730,6 +15749,15 @@ function favoredParts(attacker, attack, roll) {
   return [{ label: "Favored Element", written: `+${per}(T)`, value: per * Math.max(1, attacker.system.tierOfPower ?? 1) }];
 }
 
+/** Self-Explosion given to an attack - Revenge Bomber's: its Sphere centred on its user. */
+function selfExploded(area, given) {
+  if (!given || (area?.shape !== "sphere")) return area;
+  const centred = { ...area, centredOnSelf: true };
+  delete centred.centredOnTarget;
+  delete centred.anySquare;
+  return centred;
+}
+
 /** What effects add to the Strike Roll of one Maneuver by its id (`reflect.strike`), each by what gave it. */
 function maneuverStrikeParts(attacker, attack) {
   const slot = attack?.maneuverId ? attacker.system.effects?.slots?.[`${attack.maneuverId}.strike`] : null;
@@ -15809,8 +15837,12 @@ async function resolveAttack(message, attack) {
   //
   // Diminishing Offense blunts the Strike Roll of every Attacking Maneuver made once
   // the round's free attacks are spent.
+  // Transfiguration Beam: the Strike Roll's Critical Target 1 lower for an Energy or Magic Attack.
+  const ownCritical = Number(attacker.system.effects?.slots?.[`criticalTarget.${attack.foundation}`]?.add) || 0;
   const strike = await rollSide(attacker, strikeParts(attacker, attack), {
     ...attackerOptions, slot: "strike", attackingManeuver: true,
+    ...(ownCritical ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN,
+      (Number(attacker.system.criticalTarget) || 10) + ownCritical) } : {}),
     // Clearing puts a floor under the Natural Result; Cutting makes anything short of a
     // Critical a Botch. Both belong to the Profile rather than to the character, so they
     // travel with the roll instead of being written to a Slot.
@@ -16646,6 +16678,11 @@ function woundParts(attacker, attack) {
     ...(attack.ghostBlast ? [{ label: "Kamikaze Ghost's Life Points", value: Number(attack.ghostBlast.lp) || 0 }] : []),
     // What was added to it as it was declared - Majin Malice's Backlash, Majin Mentality's Modifier.
     ...(attack.woundExtra ?? []),
+    // Revenge Bomber: "Increase the Wound Roll of any Attacking Maneuver of the Clearing Profile that possesses the
+    // Self-Explosion Disadvantage by 3(T)" - its own, or the one Revenge Bomber gave it.
+    ...(((attacker.system.effects?.slots?.["revenge.selfExplosion"] === true) && ["clearing"].includes(attack.profile)
+      && (attack.selfExplosion || (attack.technique?.features ?? []).includes("self-explosion")))
+      ? [{ label: "Revenge Bomber", written: "+3(T)", value: 3 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     // Quick Learner: "If a Signature Technique is a Copied Technique, reduce your Wound Rolls by 2(T)" - not where Majin
     // See, Majin Do ignores it.
     ...((attack.copied && (attacker.system.effects?.slots?.["quickLearner.noPenalty"] !== true))
@@ -17997,7 +18034,9 @@ export async function reduceLifePoints(target, amount, { reason = "Life Point re
     > thresholds.indexOf(DBUCharacterData.thresholdKey(target.system.life.value,
       target.system.life.max));
 
-  await requestActorUpdate(target, { "system.life.value": floor });
+  // Of their own doing, and to 0 or below - Revenge Bomber's "Defeated by one of your effects reducing your Life Points to
+  // 0". Written with the Life Points, so the defeat it begins already knows.
+  await requestActorUpdate(target, { "system.life.value": floor, "flags.dbu-ttrpg.ownDefeat": Boolean(own) && (floor <= 0) });
 
   // How many is theirs to see, and their watchers' (renderLoss): the number is the way to their Life Points.
   await ChatMessage.create({
@@ -19711,6 +19750,8 @@ async function applyAttackDamage(message, target, attack) {
   // read second may not have seen the first yet.
   await target.update({
     "system.life.value": floor,
+    // An attack's, not their own doing (Revenge Bomber's).
+    [`flags.${SCOPE}.ownDefeat`]: false,
     ...(doubled
       ? {
         "system.diminishingDefense":
@@ -20594,7 +20635,8 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
  * effects will reach the same two Surges by other routes, so this is kept apart from
  * whatever triggered it.
  */
-export async function takeSurge(actor, { source = "Surge", kind: forced = null, dicePerBaseTier = 0, lifeMultiplier = 1 } = {}) {
+export async function takeSurge(actor, { source = "Surge", kind: forced = null, dicePerBaseTier = 0, lifeMultiplier = 1,
+                                          extraDie = 0 } = {}) {
   // An effect that names a Surge is not offering a choice between the two: "use a Ki
   // Surge as an Instant Maneuver" is one Surge, and asking which would be wrong.
   const kind = forced ?? await foundry.applications.api.DialogV2.wait({
@@ -20638,8 +20680,10 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     // Majin Regeneration's: Life Points for each Health Threshold below.
     const below = Number(actor.system.threshold?.depth) || 0;
     const regen = below * (Number(actor.system.effects?.slots?.["surge.life.perThreshold"]?.add) || 0);
-    const formula = [`${dice}d10`, ...extra.map(d => d.formula), "@surgency", ...(regen ? ["@regen[Health Thresholds]"] : [])]
-      .join(" + ");
+    // Revenge Bomber's "increase the Dice Score by 1d6(T)".
+    const tierDie = extraDie ? `${Math.max(1, Number(actor.system.tierOfPower) || 1)}d${extraDie}` : "";
+    const formula = [`${dice}d10`, ...extra.map(d => d.formula), ...(tierDie ? [tierDie] : []), "@surgency",
+      ...(regen ? ["@regen[Health Thresholds]"] : [])].join(" + ");
     const roll = new Roll(formula, { surgency, regen });
     await roll.evaluate();
 

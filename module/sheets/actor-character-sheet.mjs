@@ -3768,6 +3768,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // Regained, and never past the maximum - which is what regaining is everywhere here.
     // Life, and Ki as well where the Item says so: a roll for each, the way Combat Recovery
     // rolls its "Life and Ki Points".
+    // Snack Motivated: "Double the amount of Life and Ki Points regained from the Snack Basic Item."
+    const snack = item.system.gearId === "snack";
+    const doubled = snack && (this.actor.system.effects?.slots?.["snack.double"] === true);
     if (heal) {
       const pools = item.system.heal.ki ? ["life", "ki"] : ["life"];
       const changes = {};
@@ -3776,10 +3779,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         await roll.toMessage({
           speaker: ChatMessage.getSpeaker({ actor: this.actor }),
           flavor: `${item.name} - ${item.system.heal.dice}(${item.system.heal.scale}) `
-            + `${pool === "ki" ? "Ki" : "Life"} Points`
+            + `${pool === "ki" ? "Ki" : "Life"} Points${doubled ? " x2 (Snack Motivated)" : ""}`
         });
         const now = this.actor.system[pool];
-        changes[`system.${pool}.value`] = Math.min(now.max, now.value + Math.max(0, roll.total));
+        changes[`system.${pool}.value`] = Math.min(now.max, now.value + Math.max(0, roll.total) * (doubled ? 2 : 1));
       }
       await this.actor.update(changes);
     }
@@ -3789,6 +3792,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         "system.usedManeuvers": [...(this.actor.system.usedManeuvers ?? []), encounterUseKey(item)]
       });
     }
+    // A Snack eaten this Combat Round - Snack Motivated's Power.
+    if (snack) await this.actor.setFlag("dbu-ttrpg", "snackRound", `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`);
 
     const { getTrait } = await import("../effects/traits.mjs");
     const names = held.map(key => getTrait(key)?.name ?? key);

@@ -1321,6 +1321,34 @@ export async function burrowReach(actor, target, refusal, what) {
 }
 
 /**
+ * Revenge Bomber's 2nd: "When using an Attacking Maneuver of the Clearing Profile, you may apply the Self-Explosion
+ * Disadvantage to that Attacking Maneuver to apply the Final Chance Advantage to that Attacking Maneuver (even if it is not
+ * an Ultimate Signature Technique)." Once an Encounter. Final Chance's own choice with it: below the Injured Health
+ * Threshold, Life Points to 0 for as much Ki Wager. Added free (the user's): no TP, no KP.
+ */
+export async function askRevengeBomber(actor, declared) {
+  if (!declared || (declared.profile !== "clearing") || declared.finalChanceLife
+    || (actor?.system?.effects?.slots?.["revenge.finalChance"] !== true)) return declared;
+  const combatId = game.combat?.id ?? "none";
+  if (actor.getFlag?.("dbu-ttrpg", "revengeBomber") === combatId) return declared;
+  const life = Math.max(0, Number(actor.system.life?.value) || 0);
+  const below = ["injured", "critical"].includes(actor.system.threshold?.key) && (life > 0);
+  const choice = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Revenge Bomber" },
+    content: `<p data-tooltip="Self-Explosion: the Sphere is centred on you. Once an Encounter.">Self-Explosion and Final Chance?</p>`,
+    buttons: [
+      ...(below ? [{ action: "all", label: `Yes - Life Points to 0, +${life} Ki Wager` }] : []),
+      { action: "yes", label: below ? "Yes - keep the Life Points" : "Yes" },
+      { action: "no", label: "No" }
+    ],
+    rejectClose: false
+  });
+  if (!["all", "yes"].includes(choice)) return declared;
+  await actor.setFlag("dbu-ttrpg", "revengeBomber", combatId);
+  return { ...declared, selfExplosion: true, ...((choice === "all") ? { finalChanceLife: life } : {}) };
+}
+
+/**
  * Burrowed Strike's 2nd: "When making an Attacking Maneuver of the Simple Profile, you may spend 2(bT) Ki Points to double
  * the amount of Diminishing Defense your Opponent suffers from that Attacking Maneuver" - asked, paid with the attack
  * (`kiSurcharge`), once a Round. The declaration as it then stands.

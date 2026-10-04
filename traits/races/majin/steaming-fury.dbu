@@ -1,0 +1,25 @@
+id: steaming-fury
+name: Steaming Fury
+order: 17
+category: body
+importance: secondary
+# (1) The Obscured Environmental Quality not felt (registry.mjs qualityPrograms).
+ignoresQualities: obscured
+description: >
+  With your hair-trigger temper, you can spout steam from your body whenever you get angry.
+text: >
+  Steaming Fury (Body): With your hair-trigger temper, you can spout steam from your body whenever you get angry.
+  (1)-[Passive]: Ignore the effects of the Obscured Environmental Quality.
+  (2)-[Triggered/Raging]: All Squares within a Standard Sphere AoE (centered on you) gain the Obscured Environmental Quality until the end of your next turn.
+  (3)-[Triggered/Power, 1/Round, 3/Encounter]: Enter the Raging State until the end of your next turn.
+
+---
+
+# (2) Entering the Raging State - asked in its window: you and whoever your player targets in the Sphere get the Smoked
+# mark, their Square Obscured, till the end of your next turn - the Smoke Bomb's arrangement. Which Squares, the table's.
+[triggered/state/raging, chosen, effect 2]
+steamCloud();
+
+# (3) The Power Up's window: Raging till the end of your next turn - and (2) asked as it is entered.
+[triggered/power, 1/round, 3/encounter, effect 3]
+enterState(raging, 1, next-turn);

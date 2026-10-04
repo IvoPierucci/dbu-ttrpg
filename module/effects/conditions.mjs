@@ -135,6 +135,13 @@ const PREDICATES = {
     && ((Number(item.system?.crafted?.breakLost) || 0) > 0) && !item.system?.crafted?.destroyed
     && (item.system?.equipped || !String(item.system?.layer ?? ""))),
 
+  /** Brought to 0 by their own effect - Revenge Bomber's. */
+  ownDefeat: scope => Boolean(scope.data?.parent?.getFlag?.("dbu-ttrpg", "ownDefeat")),
+
+  /** A Snack eaten this Combat Round - Snack Motivated's. */
+  snackThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "snackRound") ?? "")
+    === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
+
   /** Is this an even-numbered Combat Round - Born for Battle's. */
   evenRound: () => {
     const round = Number(globalThis.game?.combat?.started ? globalThis.game.combat.round : 0) || 0;

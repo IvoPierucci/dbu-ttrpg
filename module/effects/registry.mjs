@@ -590,7 +590,11 @@ function qualityPrograms(actor, report) {
   const standing = isAirborne(actor.system)
     ? null
     : getTrait(environmentIdOf(actor.system, getTrait));
-  const ids = qualitiesOf(actor.system, standing, getTrait);
+  // Steaming Fury's: a Trait or Talent whose file says it ignores one - `ignoresQualities`.
+  const ignoredQualities = new Set(Array.from(actor.items ?? []).filter(item => ["racial", "talent"].includes(item.type))
+    .flatMap(item => [getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.ignoresQualities ?? []].flat())
+    .map(each => String(each).trim().toLowerCase()).filter(Boolean));
+  const ids = qualitiesOf(actor.system, standing, getTrait).filter(id => !ignoredQualities.has(id));
   if (!ids.length) return [];
 
   const entries = [];

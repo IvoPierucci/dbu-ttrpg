@@ -709,7 +709,7 @@ const PATTERNS = [
     doc: "The Dice Score of a Might Clash when targeted by the Pin Maneuver; Damage received from an Attacking Maneuver "
        + "of Direct or higher; Squares a Physical Attack or Grapple may reach past the Melee Range, asked; Life Points a "
        + "Healing Surge gives back for each Health Threshold below." },
-  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "Every Collision Damage received halved; moving one hit with a Physical Attack or put in a Grapple, once a Round "
        + "(Rubbery Body's); moving away when hit, and the Movement after Collision Damage (Bouncy Physique's); a Physical "
@@ -721,6 +721,9 @@ const PATTERNS = [
   // Elastic Tentacle's: this attack's Diminishing Defense doubled, ticked as it hits.
   { match: /^attack\.doublesDiminishing$/, phase: PHASES.REACTIVE, kind: F, ops: ["set"], valid: () => true,
     doc: "The Diminishing Defense this Attacking Maneuver gave the ones it hit, doubled - not on top of another increase." },
+  // Transfiguration Beam's: the Strike Roll's Critical Target for an attack of that Foundation.
+  { match: /^criticalTarget\.(physical|energy|magic)$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "The Critical Target of the Strike Roll of an Attacking Maneuver of that Foundation - its own floor still under it." },
   // Bouncy Physique's "Increase your Strike Rolls by 2(T) when using the Reflect Maneuver": one Maneuver's Strike Roll.
   { match: /^([a-z][\w-]*)\.strike$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "The Strike Roll of an Attacking Maneuver made with that Maneuver, by its id - `reflect.strike`." },

@@ -484,7 +484,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "signatureTechnique", "frozenTurn",
   // An even-numbered Combat Round (Born for Battle's); the tail still had (Saiyan Heritage's Tailed); the Default Costume
   // to mend (Majin Style's).
-  "evenRound", "tailed", "costumeMendable"]);
+  "evenRound", "tailed", "costumeMendable",
+  // Brought to 0 by their own effect (Revenge Bomber's); a Snack eaten this Round (Snack Motivated's).
+  "ownDefeat", "snackThisRound"]);
 
 /**
  * Dice the character already has, named rather than written out.

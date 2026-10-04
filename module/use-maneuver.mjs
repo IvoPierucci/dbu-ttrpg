@@ -4385,6 +4385,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     }
     // Burrowed Strike's doubled Diminishing Defense, on a Simple attack.
     if (declared) declared = await (await import("./maneuvers.mjs")).askBurrowedDiminishing(actor, declared);
+    // Revenge Bomber's Self-Explosion and Final Chance, on a Clearing attack.
+    if (declared) declared = await (await import("./maneuvers.mjs")).askRevengeBomber(actor, declared);
 
     // What the Foundation asks of the attacker, which is a different question from where
     // the target is standing: an Energy Attack needs a Force Score of 3 whoever it is
@@ -4459,6 +4461,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
     // Applied until it is not paid for: not while it already is, and Big Bubble's Sphere asked.
     // Mind Reading: "a Character who is not at Long Range" - within your Melee Range with Limited Range Reading.
+    // Transfiguration Beam: "You can target any Opponent who is not at Long Range."
+    if (maneuver.transfiguration && targetActor && (actor.system.effects?.slots?.["transfiguration.beam"] === true)
+      && atLongRange(actor, targetActor)) {
+      ui.notifications.warn(`${targetActor.name} is at Long Range.`);
+      return false;
+    }
     if (maneuver.mindReading && targetActor) {
       const { appliedTraits } = await import("./unique.mjs");
       const unique = actor.items?.get(maneuver.itemId)?.system?.unique;
@@ -5032,7 +5040,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (!crossing) await spendLifeWager(actor, declared);
   if (!crossing && declared) declared = { ...declared, paid: paidSince(actor, before) };
   if (declared?.finalChanceLife) {
-    await actor.update({ "system.life.value": 0 }, { dbuDefeatHeld: true });
+    // Their own effect taking them to 0 - Revenge Bomber's (3).
+    await actor.update({ "system.life.value": 0, "flags.dbu-ttrpg.ownDefeat": true }, { dbuDefeatHeld: true });
     await actor.setFlag("dbu-ttrpg", "finalChance", "pending");
     declared = { ...declared, kiWager: (Number(declared.kiWager) || 0) + declared.finalChanceLife };
   }

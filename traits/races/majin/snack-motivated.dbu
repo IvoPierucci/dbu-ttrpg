@@ -1,0 +1,25 @@
+id: snack-motivated
+name: Snack Motivated
+order: 16
+category: mind
+importance: secondary
+# (1) The Snack Fiend Talent, given with the Trait and kept if it is lost - not written yet, so named when gained.
+grantsTalent: snack-fiend
+description: >
+  With a body powered by sugary sweets and a bottomless appetite, it turns out that you’ll do almost anything for a tasty treat.
+text: >
+  Snack Motivated (Mind): With a body powered by sugary sweets and a bottomless appetite, it turns out that you’ll do almost anything for a tasty treat.
+  (1)-[Passive]: Gain access to the Snack Fiend Talent.
+  (2)-[Passive]: Double the amount of Life and Ki Points regained from the Snack Basic Item.
+  (3)-[Triggered/Power, 1/Round]: If you’ve used the Snack Basic Item during this Combat Round, gain an additional stack of Power through this use of the Power Up Maneuver.
+
+---
+
+[passive]
+# (2) What a Snack's rolls give back, doubled (the Gear tab's consume).
+allow snack.double;
+
+# (3) The Power Up's window, after a Snack eaten this Combat Round: a stack of Power more.
+[triggered/power, 1/round, effect 3]
+requires snackThisRound;
+power.stacks += 1;

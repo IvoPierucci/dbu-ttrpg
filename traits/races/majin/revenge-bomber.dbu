@@ -1,0 +1,27 @@
+id: revenge-bomber
+name: Revenge Bomber
+order: 15
+category: body
+importance: secondary
+description: >
+  Able to blow yourself up to take out the competition, you’re well aware that you can put yourself back together after.
+text: >
+  Revenge Bomber (Body): Able to blow yourself up to take out the competition, you’re well aware that you can put yourself back together after.
+  (1)-[Passive]: Increase the Wound Roll of any Attacking Maneuver of the Clearing Profile that possesses the Self-Explosion Disadvantage by 3(T).
+  (2)-[Triggered, 1/Encounter]: When using an Attacking Maneuver of the Clearing Profile, you may apply the Self-Explosion Disadvantage to that Attacking Maneuver to apply the Final Chance Advantage to that Attacking Maneuver (even if it is not an Ultimate Signature Technique).
+  (3)-[Triggered/Defeated]: If you are Defeated by one of your effects reducing your Life Points to 0, immediately use a Healing Surge and increase the Dice Score by 1d6(T).
+
+---
+
+[passive]
+# (1) A Clearing attack with Self-Explosion - its own, or (2)'s (chat.mjs woundParts).
+allow revenge.selfExplosion;
+# (2) A Clearing attack declared asks, once an Encounter: Self-Explosion - the Sphere on you - and Final Chance with it,
+# its Life Points to 0 for the Ki Wager where below the Injured Health Threshold (maneuvers.mjs askRevengeBomber).
+allow revenge.finalChance;
+
+# (3) Brought to 0 by your own effect - a Life Point cost, Final Chance: chosen on the Defeated card, a Healing Surge with
+# 1d6(T) more on it.
+[triggered/defeated, effect 3]
+requires ownDefeat;
+surge(healing, 1, 6);

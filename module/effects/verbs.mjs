@@ -61,11 +61,18 @@ export const VERBS = Object.freeze({
     doc: "Gain a stack of one of these Resources, the character's player choosing which - Born for Battle's \"apply it "
        + "to either Strike, Dodge, or Wound (you decide)\". One already at its ceiling is not offered."
   },
+  steamCloud: {
+    args: [0, 0],
+    names: [],
+    doc: "Steaming Fury's: the Smoked mark - their Square Obscured - on you and whoever your player targets, till the end "
+       + "of your next turn."
+  },
   surge: {
-    args: [0, 2],
+    args: [0, 3],
     names: [0],
     doc: "Take a Surge. Name \"healing\" or \"ki\" to force which, or neither to be asked. A number after it multiplies "
-       + "the Life Points a Healing Surge gives back - Majin Regeneration's \"double the amount\"."
+       + "the Life Points a Healing Surge gives back - Majin Regeneration's \"double the amount\" - and a third, a die rolled "
+       + "once per Tier of Power on top - Revenge Bomber's 1d6(T) (6)."
   },
   leaveState: {
     args: [0, 1],

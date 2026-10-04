@@ -1,0 +1,25 @@
+id: transfiguration-beam
+name: Transfiguration Beam
+order: 18
+category: mind
+importance: secondary
+description: >
+  You can fire a magical beam that transforms characters into an object!
+text: >
+  Transfiguration Beam (Mind): You can fire a magical beam that transforms characters into an object!
+  (1)-[Passive]: Reduce the Critical Target of your Strike Rolls for your Energy and Magic Attacks by 1.
+  (2)-[Passive]: Gain access to the Transfiguration Special Maneuver (see — Special Maneuvers). For the Transfiguration Maneuver, you gain the following effects:
+
+  * You can target any Opponent who is not at Long Range.
+  * You can make a Strike Roll as if making a Magic Attack instead of a Physical Attack.
+
+---
+
+[passive]
+# (1) The Strike Roll's Critical Target, for an Energy or Magic Attack (chat.mjs resolveAttack).
+criticalTarget.energy -= 1;
+criticalTarget.magic -= 1;
+# (2) The Transfiguration Maneuver; refused at Long Range only, and its Clash made with the better of the Physical and
+# Magic Strike.
+allow maneuver.transfiguration;
+allow transfiguration.beam;
