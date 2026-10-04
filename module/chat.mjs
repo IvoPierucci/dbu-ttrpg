@@ -18243,14 +18243,30 @@ function struckWeapon(attack, uuid, own) {
  * Action answers one Maneuver", so a Dodge, which costs none, is the only answer it follows.
  */
 /**
+ * Whether this character already answered this attack with a Counter Maneuver - an option of the Defend Maneuver (Direct
+ * Hit, Guard, Parry, Power Flare, Cross Counter), the Afterimage Technique, Divine Counter, the Block or Barrier. "One
+ * Counter Action answers one Maneuver": a Dodge, which costs none, is the only answer another Counter may follow.
+ */
+function answeredWithCounter(attack, uuid) {
+  const entry = defenceFor(attack, uuid);
+  const own = targetResults(attack).find(result => result.uuid === uuid)?.own;
+  return Boolean(((entry?.defence ?? own?.defense ?? "dodge") !== "dodge") || entry?.evade || entry?.divineFlex
+    || (attack.divineHold?.uuid === uuid) || own?.block
+    || (own?.barrier && (own.barrier.byUuid === uuid))
+    || (targetResults(attack).some(result => result.own?.barrier?.byUuid === uuid)));
+}
+
+/**
  * Who may play Barrier here: hit, and the Wound Roll not yet made. On themselves - or, with Ally Barrier, on whoever
- * it hit that is not at Long Range from them. Once a Combat Round, a Counter Action, its Ki.
+ * it hit that is not at Long Range from them. Once a Combat Round, a Counter Action, its Ki - and not by one who already
+ * answered this attack with a Counter Maneuver (Direct Hit and Barrier on one attack were two).
  */
 function possibleBarriers(attack) {
   const hits = targetResults(attack).filter(({ own }) => own?.hit && !own.barrier && !isAbsoluteMiss(own));
   if (!hits.length) return [];
   const found = [];
   for (const user of ownedCharacters()) {
+    if (answeredWithCounter(attack, user.uuid)) continue;
     const item = Array.from(user.items ?? []).find(each => (each.type === "maneuver") && each.system.unique?.barrier);
     if (!item) continue;
     if ((game.combat?.started && (actionsWithin(user, "counter") < 1)) || timeFrozen(user)) continue;
@@ -18332,7 +18348,7 @@ async function barrierStage(message, attack, { user, item, covers, massive }) {
   const on = chosen.all
     ? targetResults(fresh).filter(({ own }) => own?.hit && !isAbsoluteMiss(own)).map(({ uuid }) => uuid)
     : [chosen.on];
-  const barrier = { name: item.name, byName: user.name, total: roll.total };
+  const barrier = { name: item.name, byName: user.name, byUuid: user.uuid, total: roll.total };
   let targets = fresh.result?.targets ?? [];
   for (const uuid of on) targets = targets.map(line => (line.uuid === uuid) ? { ...line, barrier } : line);
   requestEdit(message, { type: "attack", attack: { ...fresh, result: { ...fresh.result, targets } } });
@@ -18348,6 +18364,8 @@ function possibleBlockers(attack) {
   const found = [];
   for (const { uuid, own } of targetResults(attack)) {
     if (!own?.hit || own.block || isAbsoluteMiss(own) || ((own.defense ?? "dodge") !== "dodge")) continue;
+    // Nor after their own Barrier, or any other Counter they answered it with: one Counter Action answers one Maneuver.
+    if (answeredWithCounter(attack, uuid)) continue;
     const target = fromUuidSync(uuid);
     if (!target?.isOwner) continue;
     const shields = wieldedWeapons(Array.from(target.items ?? [])).filter(item =>
