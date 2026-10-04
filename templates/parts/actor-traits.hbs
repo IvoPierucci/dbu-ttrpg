@@ -41,6 +41,27 @@
           {{#each entry.chosenLines as |chosen|}}
           <div class="dbu-profile-line technique-advantage" data-tooltip="Chosen when it was added">{{chosen}}</div>
           {{/each}}
+          {{#if entry.maneuvers.length}}
+          {{! Its own effects that are Maneuvers - the same Items as on the Maneuvers tab: used from here, dragged to the hotbar. }}
+          <ul class="maneuver-list trait-maneuvers">
+            {{#each entry.maneuvers as |maneuver|}}
+            <li class="maneuver" data-item-id="{{maneuver.itemId}}" draggable="true">
+              <div class="maneuver-head">
+                <span class="maneuver-mark" aria-hidden="true"></span>
+                <button type="button" class="maneuver-name rollable" data-action="useManeuver"
+                        data-item-id="{{maneuver.itemId}}">{{maneuver.name}}</button>
+                <span class="maneuver-uses">{{#if maneuver.usageLabel}}{{maneuver.usageLabel}}
+                  &middot; {{maneuver.usesLeft}} left{{/if}}</span>
+                <span class="maneuver-cost">{{maneuver.actionLabel}}</span>
+                <span class="maneuver-cost">{{maneuver.kiCost}} KP</span>
+                <button type="button" class="maneuver-control" data-action="editItem"
+                        data-item-id="{{maneuver.itemId}}"
+                        data-tooltip="Edit this Maneuver: its name, its description, what it costs">&#9998;</button>
+              </div>
+            </li>
+            {{/each}}
+          </ul>
+          {{/if}}
         </div>
       </li>
       {{/each}}

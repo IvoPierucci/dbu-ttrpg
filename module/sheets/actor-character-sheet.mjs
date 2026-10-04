@@ -4816,6 +4816,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       open: Boolean(this.#openSections[`trait-${item.id}`]),
       lines: racialTraitLines(item),
       chosenLines: (item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label).filter(Boolean),
+      // The Maneuvers that are this Trait's own effects - Majin Regeneration's 3rd: the character's own Maneuver Item, shown
+      // here as well, used and dragged as it is on the Maneuvers tab (the user's). An Item holds no Item of its own.
+      maneuvers: this.#ownedManeuvers()
+        .filter(maneuver => maneuver.fromTrait && (maneuver.fromTrait === item.flags?.["dbu-ttrpg"]?.sourceId))
+        .map(maneuver => ({
+          itemId: maneuver.itemId,
+          name: maneuver.name,
+          kiCost: maneuverKiCost(maneuver, null, this.actor),
+          usageLabel: usageLimitLabel(maneuver),
+          usesLeft: maneuverUsesLeft(this.actor, maneuver),
+          actionLabel: MANEUVER_TYPES[maneuver.type]?.action
+            ? `${maneuver.actionCost} ${MANEUVER_TYPES[maneuver.type].action}` : "—"
+        })),
       chosen: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean).join(" \u00b7 "),
       // Every Triggered one - with a limit or not - but what costs Actions, which the moment's own card takes and pays.
       triggered: triggered
