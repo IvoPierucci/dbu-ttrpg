@@ -1,0 +1,22 @@
+id: inherited-freedom
+name: Inherited Freedom
+order: 4
+optionOf: warrior-of-two-worlds
+description: >
+  While you are below the Injured Health Threshold, increase your Boosted Speed and Defense Value by 1(bT).
+text: >
+  Inherited Freedom [Passive]: While you are below the Injured Health Threshold, increase your Boosted Speed and Defense Value by 1(bT).
+
+---
+
+# (3) Below the Injured Health Threshold - Injured or Critical.
+[passive]
+if (belowThreshold("injured")) {
+    speed.boosted += 1(bT);
+    defenseValue += 1(bT);
+}
+
+# (4) At the start of your turn, offered on the turn's card: 1 Counter Action for a Standard Maneuver of 1 Action, out of
+# sequence - taken, no Counter Maneuver until the start of your next turn (chat.mjs freedomTurnStart).
+[passive]
+allow freedom.turnStart;

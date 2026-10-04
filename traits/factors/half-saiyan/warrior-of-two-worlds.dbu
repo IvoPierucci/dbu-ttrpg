@@ -1,0 +1,48 @@
+id: warrior-of-two-worlds
+name: Warrior of Two Worlds
+order: 1
+category: body
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+options: 1
+optionEffect: 3
+description: >
+  Combining the best Saiyans have to offer with the blood of another race, you represent the combined strengths of both of your parent races.
+text: >
+  Warrior of Two Worlds (Body): Combining the best Saiyans have to offer with the blood of another race, you represent the combined strengths of both of your parent races.
+  (1)-[Passive]: While you possess 4+ stacks of Battle Born, increase your Wound Rolls by 2(T). Double this bonus for any Attacking Maneuver made through the Signature Technique Maneuver.
+  (2)-[Passive]: While you are below the Injured Health Threshold, increase your Strike and Wound Rolls by 1(T).
+  (3)-[Option]: At Character Creation, choose one of the following effects:
+
+  * Inherited Fury [Passive]: While you are in the Raging State, increase your Wound Rolls by 1(bT) for every Health Threshold you or the Ally with the lowest Health Threshold is below (whichever results in a higher bonus).
+  * Inherited Aggression [Passive]: For each Health Threshold an Opponent is below, increase your Wound Rolls against them by 1(bT).
+  * Inherited Creativity [Passive]: Increase the amount of Technique Points you gain from Skill Improvements by 3 and reduce the Ki Point Cost of your Signature Techniques by 1(T).
+  * Inherited Freedom [Passive]: While you are below the Injured Health Threshold, increase your Boosted Speed and Defense Value by 1(bT).
+  * Inherited Resolve [Passive]: While you are below the Injured Health Threshold, increase your Damage Reduction by 1(bT).
+
+  (4)-[Choice]: Depending on your choice for the Option effect of this Trait, gain the following effect:
+
+  * Inherited Fury [Triggered, 1/Encounter]: If you gain a stack of Battle Born, enter the Raging State until the end of your next turn. If you were already in the Raging State, you may enter the Surging State for this effect instead.
+  * Inherited Aggression [Triggered, 1/Encounter]: If you knock an Opponent through a Health Threshold, gain a stack of Battle Born.
+  * Inherited Creativity [Triggered/Start of Turn, 1/Encounter]: Create a Signature Technique with a TP Cost up to your maximum TP Cost for your base Tier of Power, you have access to that Signature Technique for the remainder of the Combat Encounter. That Signature Technique cannot possess any Disadvantages.
+  * Inherited Freedom [Triggered/Start of Turn]: You may spend 1 Counter Action to use a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver. If you do, you cannot use a Counter Maneuver until the start of your next turn.
+  * Inherited Resolve [Triggered/Start of Turn]: Regain x(bT) Life and Ki Points, where x is equal to twice the number of Health Thresholds you are below.
+
+---
+
+# (1) 4+ Battle Born between the three Combat Rolls: 2(T) on the Wound, and 2(T) more on an Attacking Maneuver made
+# through the Signature Technique Maneuver (chat.mjs woundParts, `wound.signature`).
+[passive]
+if (stacksAtLeast(4, "battlebornstrike", "battleborndodge", "battlebornwound")) {
+    wound += 2(T);
+    wound.signature += 2(T);
+}
+
+# (2) Below the Injured Health Threshold - Injured or Critical.
+[passive]
+if (belowThreshold("injured")) {
+    strike += 1(T);
+    wound += 1(T);
+}
+
+# (3) and (4): the Option chosen, its passive and its Choice effect together - one file each, beside this one.

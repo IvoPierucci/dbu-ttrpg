@@ -64,16 +64,29 @@ export function racialTraitLines(item) {
   for (let at = 0; at < lines.length; at++) {
     const line = lines[at];
     const option = picked.length && /^(\(\d+\)-\[Option\]):/.exec(line);
-    if (!option) {
+    // A Choice effect - "Depending on your choice for the Option effect of this Trait, gain the following effect" - shows
+    // the one that goes with the Option chosen (Warrior of Two Worlds').
+    const choice = picked.length && /^(\(\d+\)-\[Choice\]):/.exec(line);
+    if (!option && !choice) {
       out.push({ html: lineHtml(line), bullet: /^[*\u2022]/.test(line), gap: !line });
       continue;
     }
-    out.push({ html: lineHtml(`${option[1]}:`), bullet: false, gap: false });
-    for (const chosen of picked) {
-      out.push({ html: lineHtml(`*${printedLines(chosen.text).join(" ")}`), bullet: true, gap: false });
+    out.push({ html: lineHtml(`${(option || choice)[1]}:`), bullet: false, gap: false });
+    // The list after it - blank lines around it and all - read off, and left out but what was chosen.
+    const list = [];
+    while ((at + 1 < lines.length) && (/^[*\u2022]/.test(lines[at + 1]) || !lines[at + 1])) list.push(lines[++at]);
+    if (option) {
+      for (const chosen of picked) {
+        out.push({ html: lineHtml(`*${printedLines(chosen.text).join(" ")}`), bullet: true, gap: false });
+      }
     }
-    // The list it was chosen from is left out.
-    while ((at + 1 < lines.length) && /^[*\u2022]/.test(lines[at + 1])) at++;
+    else {
+      for (const entry of list.filter(each => picked.some(chosen =>
+        each.replace(/^[*\u2022]\s*/, "").startsWith(`${chosen.name} [`)))) {
+        out.push({ html: lineHtml(entry), bullet: true, gap: false });
+      }
+    }
+    if (list.length && !list[list.length - 1]) out.push({ html: "", bullet: false, gap: true });
   }
   return out;
 }

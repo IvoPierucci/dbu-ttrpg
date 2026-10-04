@@ -335,6 +335,8 @@ async function beginTurn(actor) {
   // through it, so by the time anything answers the start of the turn it is already
   // gone - an effect asking whether you are still Superior has to get the right answer.
   const ran = await edgeReached(actor, EDGES.START);
+  // Inherited Freedom's "you cannot use a Counter Maneuver until the start of your next turn" - this one.
+  if (actor.getFlag?.("dbu-ttrpg", "noCounterUntilTurn")) await actor.unsetFlag("dbu-ttrpg", "noCounterUntilTurn");
 
   // Fired before anything is decided, because something may skip the turn as it begins
   // rather than for as long as it lasts - the Determined State ends and costs you the
@@ -366,6 +368,8 @@ async function beginTurn(actor) {
   await (await import("./chat.mjs")).godBindTurnStart(actor);
   // Flow of Combat: Combat Recovery offered, with no Damage taken since the end of the last turn.
   await (await import("./chat.mjs")).flowOfCombatTurnStart(actor, turnCard);
+  // Inherited Freedom: a Standard Maneuver of 1 Action out of sequence, for a Counter Action.
+  await (await import("./chat.mjs")).freedomTurnStart(actor, turnCard);
   // Stealth Crawl: a move, faking it still.
   const { stealthCrawl } = await import("./hidden.mjs");
   await stealthCrawl(actor);
@@ -682,6 +686,9 @@ export function registerCombatHooks() {
         }
         else await actor.deleteEmbeddedDocuments("Item", [item.id]);
       }
+      // Inherited Creativity's Technique: "for the remainder of the Combat Encounter".
+      const made = Array.from(actor.items ?? []).filter(each => each.getFlag?.("dbu-ttrpg", "encounterTechnique")).map(each => each.id);
+      if (made.length) await actor.deleteEmbeddedDocuments("Item", made);
       await firstRoundsEnd(actor);
       await regenerateWeapons(actor);
       // Delayed's records and Imminent marks, which only lasted for the Encounter.
@@ -914,7 +921,7 @@ export function registerDefeatHooks() {
     if (options.dbuWasDefeated === undefined) return;
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
 
-    await announceThreshold(actor, options.dbuThreshold);
+    await announceThreshold(actor, options.dbuThreshold, options.dbuKnockedBy);
 
     const was = options.dbuWasDefeated;
     const now = actor.system.defeated;
@@ -1002,7 +1009,7 @@ export async function releaseFinalChance(actor) {
  * Only downward. Healing back up through a Threshold is not being knocked through one,
  * and it clears the Checks recorded below by itself.
  */
-async function announceThreshold(actor, before) {
+async function announceThreshold(actor, before, knockedBy = "") {
   if (!before) return;
 
   const { THRESHOLDS } = DBUCharacterData;
@@ -1030,6 +1037,13 @@ async function announceThreshold(actor, before) {
   // and this is that: Life Points are written when the Damage is applied, which is the
   // last step of the Maneuver and a deliberate one.
   await fireMoment(actor, "threshold", { threshold: now });
+  // And for whoever knocked them through - an Opponent's Attacking Maneuver's Damage: Inherited Aggression's Battle Born.
+  const knocker = knockedBy ? fromUuidSync(knockedBy) : null;
+  if (knocker && (knocker.uuid !== actor.uuid)) {
+    const { offerTriggers } = await import("./chat.mjs");
+    await offerTriggers(knocker, "knock-through");
+    await fireMoment(knocker, "knock-through");
+  }
 
   await announce("threshold", {
     title: `${actor.name} is knocked through a Health Threshold`,

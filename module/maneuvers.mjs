@@ -3104,6 +3104,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
   let cost = applySlot(slots, `${maneuver.id}.kiCost`, base);
   // A Unique Ability's, by its type - God of Magic's 2(T) off every Magical one.
   if (actor && maneuver.uniqueType) cost = applySlot(slots, `unique.${maneuver.uniqueType}.kiCost`, cost);
+  // A Signature Technique's, any of them - Inherited Creativity's 1(T) off.
+  if (actor && maneuver.signature && !maneuver.signatureTechnique) cost = applySlot(slots, "signature.kiCost", cost);
 
   if (actor && maneuver.attacking) {
     cost = applySlot(slots, "attack.kiCost", cost);

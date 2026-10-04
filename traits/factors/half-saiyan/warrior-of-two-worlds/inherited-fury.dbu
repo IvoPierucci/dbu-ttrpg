@@ -1,0 +1,26 @@
+id: inherited-fury
+name: Inherited Fury
+order: 1
+optionOf: warrior-of-two-worlds
+description: >
+  While you are in the Raging State, increase your Wound Rolls by 1(bT) for every Health Threshold you or the Ally with the lowest Health Threshold is below (whichever results in a higher bonus).
+text: >
+  Inherited Fury [Passive]: While you are in the Raging State, increase your Wound Rolls by 1(bT) for every Health Threshold you or the Ally with the lowest Health Threshold is below (whichever results in a higher bonus).
+
+---
+
+# (3) Raging: 1(bT) for each Health Threshold below - yours, or your lowest Ally's (on the scene, of your token's
+# disposition), whichever is more - counted as the Wound Roll is made (chat.mjs woundParts).
+[passive]
+if (inState("raging")) {
+    wound.perThresholdOrAlly += 1(bT);
+}
+
+# (4) A stack of Battle Born gained: Raging until the end of your next turn - Raging already, Surging instead.
+[triggered/battle-born, 1/encounter, effect 4]
+if (inState("raging")) {
+    enterState(surging, 1, next-turn);
+}
+if (!inState("raging")) {
+    enterState(raging, 1, next-turn);
+}

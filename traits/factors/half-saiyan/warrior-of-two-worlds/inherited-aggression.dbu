@@ -1,0 +1,18 @@
+id: inherited-aggression
+name: Inherited Aggression
+order: 2
+optionOf: warrior-of-two-worlds
+description: >
+  For each Health Threshold an Opponent is below, increase your Wound Rolls against them by 1(bT).
+text: >
+  Inherited Aggression [Passive]: For each Health Threshold an Opponent is below, increase your Wound Rolls against them by 1(bT).
+
+---
+
+# (3) Against each one it reaches, by their own Health Threshold - where the Wound is worked out per target (chat.mjs).
+[passive]
+wound.perTargetThreshold += 1(bT);
+
+# (4) An Opponent knocked through a Health Threshold by your Attacking Maneuver: a stack of Battle Born, yours to put.
+[triggered/knock-through, 1/encounter, effect 4]
+gainOneOf(battlebornstrike, battleborndodge, battlebornwound);

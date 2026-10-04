@@ -1,0 +1,9 @@
+id: half-saiyan
+name: Half-Saiyan
+# A Racial Factor: what it asks for, shown beside its Factor Traits and never enforced (the user's). Its Factor Traits are
+# the files in the folder of its name.
+requirement: Saiyan
+maximumFactor: 1
+prerequisites: N/A
+description: >
+  Through the combination of two races’ potential, your own soars to even greater heights. Thanks to having a Saiyan and a non-Saiyan parent, you possess all the combat potential of the Saiyans, enhanced by your other parent’s potential for growth.

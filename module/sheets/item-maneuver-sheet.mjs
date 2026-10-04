@@ -293,6 +293,9 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       superProblem: sig.superProfile ? superProfileProblem(sig.superProfile, sig, { actor }) : "",
       // God Finisher's own: 50 TP at most, Restricted - State (God Ki) on it.
       godProblem: sig.godFinisher ? godFinisherProblem(sig).replace(/^its Signature Technique/, "God Finisher's Technique") : "",
+      // Inherited Creativity's: "That Signature Technique cannot possess any Disadvantages."
+      encounterProblem: (sig.encounterOnly && sig.features.some(entry => featureDef(entry.id)?.owner === "disadvantages"))
+        ? "Inherited Creativity's Technique cannot possess any Disadvantages." : "",
       unbuilt: !sig.profile
     };
 

@@ -77,6 +77,9 @@ const TABLE = [
   { key: "battle-born", label: "You gain a stack of Battle Born", provides: [],
     doc: "Fired as Born for Battle's stacks are gained (gainOneOf) or raised (raiseTo) - Primitive Durability's 3rd. What "
        + "is the player's is asked in a window first." },
+  { key: "knock-through", label: "You knock an Opponent through a Health Threshold", provides: [],
+    doc: "Fired for whoever made the Attacking Maneuver whose Damage knocked them through (combat.mjs announceThreshold) - "
+       + "Inherited Aggression's. What is the player's is asked in a window first." },
   { key: "steadfast-failed", label: "You fail a Steadfast Check", provides: [],
     doc: "Asked as the Check fails, before its card (chat.mjs rescueSteadfast): what turns it into a pass (steadfastPass) "
        + "- Primitive Durability's 5th." },

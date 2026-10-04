@@ -289,6 +289,19 @@ async function runVerb(actor, call, context) {
       return;
     }
 
+    case "encounterTechnique": {
+      const { tierTpCap } = await import("../technique.mjs");
+      const cap = tierTpCap(actor.system.baseTierOfPower);
+      const [item] = await actor.createEmbeddedDocuments("Item", [{
+        name: "Inherited Creativity Technique", type: "maneuver", img: "icons/magic/lightning/bolt-strike-blue.webp",
+        flags: { "dbu-ttrpg": { encounterTechnique: true } },
+        system: { type: "standard", attacking: true, requiresTarget: true, tags: ["signature"], signature: { level: "super" } }
+      }]);
+      const { openForPlayer } = await import("../chat.mjs");
+      return openForPlayer(actor, item,
+        `Inherited Creativity: build its Signature Technique - up to ${cap} TP, no Disadvantages, no Technique Points spent.`);
+    }
+
     case "steadfastPass":
       // Nothing of its own: what asked for it (chat.mjs rescueSteadfast) passes the Check once it has answered.
       return;

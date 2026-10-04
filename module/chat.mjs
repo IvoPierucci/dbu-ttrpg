@@ -6672,6 +6672,11 @@ async function respondDialog(message, respondable) {
         blocked = true;
         reason = "Sacrifice Play: only your Dodge";
       }
+      // Inherited Freedom, taken: none until the start of their next turn.
+      if (!blocked && actor.getFlag?.(SCOPE, "noCounterUntilTurn")) {
+        blocked = true;
+        reason = "Inherited Freedom: no Counter Maneuver until your next turn";
+      }
 
       const note = maneuver.cancelCharge
         ? `${maneuver.source} - you still Dodge`
@@ -13481,6 +13486,60 @@ export async function flowOfCombatTurnStart(actor, turnCard = null) {
     flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
 }
 
+/**
+ * Inherited Freedom: "[Triggered/Start of Turn]: You may spend 1 Counter Action to use a Standard Maneuver with an Action
+ * Cost of 1 Action as an Out-of-Sequence Maneuver. If you do, you cannot use a Counter Maneuver until the start of your
+ * next turn." Offered on the turn's own card, as Flow of Combat's Combat Recovery is.
+ */
+export async function freedomTurnStart(actor, turnCard = null) {
+  if (!actor || (actor.system?.effects?.slots?.["freedom.turnStart"] !== true)) return;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "", maneuverName: "a Standard Maneuver (1 Action)",
+    reason: "Inherited Freedom - 1 Counter Action; no Counter Maneuver until your next turn", anyStandard: true,
+    counterCost: 1, noCounterAfter: true };
+  if (turnCard) return requestEdit(turnCard, { type: "offer", offer });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
+}
+
+/** Which of their Standard Maneuvers of 1 Action - Inherited Freedom's - or null. */
+async function pickStandardManeuver(actor, title) {
+  const { definitionOf } = await import("./use-maneuver.mjs");
+  const offered = Array.from(actor.items ?? []).filter(item => item.type === "maneuver").map(item => definitionOf(item))
+    .filter(maneuver => maneuver && (maneuver.type === "standard") && ((Number(maneuver.actionCost) || 0) === 1)
+      && !maneuver.actionCostOpen && !(maneuver.actionCostMax > 1) && getManeuver(maneuver.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (!offered.length) {
+    ui.notifications.warn(`${actor.name} has no Standard Maneuver of 1 Action to use.`);
+    return null;
+  }
+  const escape = Handlebars.escapeExpression;
+  const id = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: title || actor.name },
+    content: `<select name="maneuver">${offered.map(maneuver =>
+      `<option value="${escape(maneuver.id)}">${escape(maneuver.name)}</option>`).join("")}</select>`,
+    buttons: [{ action: "use", label: "Use", default: true,
+      callback: (event, button, dialog) => dialog.element.querySelector('select[name="maneuver"]')?.value ?? null },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  return offered.find(maneuver => maneuver.id === id) ?? null;
+}
+
+/**
+ * A sheet opened on the client of whoever plays the character - an Item an effect made on another (Inherited Creativity's
+ * Technique, at the start of a turn the GM's client runs) - with what to do with it said.
+ */
+export async function openForPlayer(actor, document, note = "") {
+  if (!document) return;
+  const player = playerOf(actor);
+  if (!player || (player === game.user)) {
+    if (note) ui.notifications.info(note);
+    return document.sheet?.render(true);
+  }
+  try { await player.query("dbu-ttrpg.openSheet", { uuid: document.uuid, note }, { timeout: 30000 }); }
+  catch (error) { console.warn(`DBU TTRPG | ${actor.name}'s ${document.name} could not be opened for them`, error); }
+}
+
 /** Skill of the Watcher's Power Up taken this Combat Round. */
 const WATCHER_POWER_UP = "round:skill-of-the-watcher.power-up";
 
@@ -13829,8 +13888,16 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.spike) return takeSpike(message, actor, offer);
   // A Search handed out by someone Hidden powering up: "even if they do not have access" to it.
   if (offer.search) return takeSearch(message, actor, offer);
+  // Any Standard Maneuver of 1 Action - Inherited Freedom's: which, asked first, before anything is paid.
+  if (offer.anyStandard) {
+    const picked = await pickStandardManeuver(actor, offer.reason);
+    if (!picked) return null;
+    return takeOutOfSequence(message, actor, { ...offer, anyStandard: false, maneuverId: picked.id, maneuverName: picked.name });
+  }
   // An offer that costs a Counter Action to take - Environment Shift's Movement.
   if (offer.counterCost && !await spendActions(actor, offer.counterCost, "counter")) return;
+  // Inherited Freedom's price as well: "If you do, you cannot use a Counter Maneuver until the start of your next turn."
+  if (offer.noCounterAfter) await actor.setFlag(SCOPE, "noCounterUntilTurn", true);
   // Energy Gathering's Energy Charge, for the Genki Dramatic Finisher.
   if (offer.genki) return takeGenkiCharge(message, actor, offer);
   let maneuver = getManeuver(offer.maneuverId);
@@ -16788,8 +16855,51 @@ function woundParts(attacker, attack) {
       value: Number(attacker.system.attributes?.[attack.woundAttribute.attribute]?.mod) || 0 }] : []),
     ...(attack.weapon?.wound ?? []),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
+    ...twoWorldsWoundParts(attacker, attack),
     ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))
   ];
+}
+
+/** How many Health Thresholds a character is below: Bruised 1, Injured 2, Critical 3. */
+function thresholdsBelow(actor) {
+  const keys = Object.keys(DBUCharacterData.THRESHOLDS);
+  const at = keys.indexOf(actor?.system?.threshold?.key ?? "healthy");
+  return keys.filter((key, index) => (index <= at) && DBUCharacterData.THRESHOLDS[key].counts).length;
+}
+
+/** Their Allies on the scene: the tokens of their own token's disposition, but theirs. */
+function alliesOnScene(actor) {
+  const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  if (own === undefined) return [];
+  return [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.document?.disposition === own) && (token.actor.uuid !== actor.uuid))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+}
+
+/**
+ * Warrior of Two Worlds: "Double this bonus for any Attacking Maneuver made through the Signature Technique Maneuver" -
+ * the 2(T) once more on a Technique's attack; Inherited Fury's 1(bT) "for every Health Threshold you or the Ally with the
+ * lowest Health Threshold is below (whichever results in a higher bonus)".
+ */
+function twoWorldsWoundParts(attacker, attack) {
+  const slots = attacker.system.effects?.slots ?? {};
+  const named = key => (slots[key]?.parts ?? []).map(part => part.source).find(Boolean) ?? "Effects";
+  const parts = [];
+  const signature = Number(slots["wound.signature"]?.add) || 0;
+  if (signature && attack.technique) parts.push({ label: `${named("wound.signature")} (Signature Technique)`, value: signature });
+  const fury = Number(slots["wound.perThresholdOrAlly"]?.add) || 0;
+  if (fury) {
+    const below = Math.max(thresholdsBelow(attacker), ...alliesOnScene(attacker).map(thresholdsBelow));
+    if (below) parts.push({ label: `${named("wound.perThresholdOrAlly")} (${below} Threshold${(below === 1) ? "" : "s"})`,
+      value: fury * below });
+  }
+  return parts;
+}
+
+/** Inherited Aggression: "For each Health Threshold an Opponent is below, increase your Wound Rolls against them by 1(bT)." */
+function aggressionAgainst(attacker, target) {
+  const per = Number(attacker?.system?.effects?.slots?.["wound.perTargetThreshold"]?.add) || 0;
+  return per ? per * thresholdsBelow(target) : 0;
 }
 
 /**
@@ -17374,6 +17484,7 @@ async function rollAttackWound(message, attack) {
     const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
       + mindReadBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
       + godMeteorPinned(attacker, target)
+      + aggressionAgainst(attacker, target)
       + grantedLongShot(attacker, attack, target)
       + techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),
           outsideMelee: !attack.portal && Boolean(whyNotWithinMelee(attacker, target, "")),
@@ -19892,8 +20003,11 @@ async function applyAttackDamage(message, target, attack) {
           target.system.diminishingDefense + target.system.diminishing.defense.perAttack
       }
       : {})
-  }, (attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)
-    ? { dbuSilenced: true } : {});
+  }, {
+    ...(((attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)) ? { dbuSilenced: true } : {}),
+    // Who knocked them through, if it does - for what answers having done it (Inherited Aggression's).
+    ...((armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) ? { dbuKnockedBy: armsUser.uuid } : {})
+  });
   if (arms) await offerArmsHit(armsUser, target);
   // Flow of Combat: Damage taken - "since the end of your last turn" - and none taken, the Exploit at who made it.
   if ((damage > 0) && !isAbsoluteMiss(own) && !target.getFlag?.(SCOPE, "damagedSinceTurn")) {

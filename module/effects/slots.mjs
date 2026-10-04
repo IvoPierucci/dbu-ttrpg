@@ -166,6 +166,18 @@ const TABLE = [
     doc: "Wound Rolls, which are the Damage Attribute the attack's Foundation names. "
        + "Raising Might does not raise this." },
   { key: "initiative", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Initiative Bonus." },
+  // Warrior of Two Worlds' - each read where the Wound Roll of an attack is worked out (chat.mjs woundParts).
+  { key: "wound.signature", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Added to the Wound Roll of an Attacking Maneuver made through the Signature Technique Maneuver alone." },
+  { key: "wound.perThresholdOrAlly", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Added to the Wound Roll once for each Health Threshold you, or the Ally deepest below, is below - whichever "
+       + "is more (Inherited Fury)." },
+  { key: "wound.perTargetThreshold", phase: PHASES.CORE, kind: N, ops: ["add"],
+    doc: "Added to the Wound against each target once for each Health Threshold they are below (Inherited Aggression)." },
+  { key: "techniquePoints.perSkillImprovement", phase: PHASES.TIER, kind: N, ops: ["add"],
+    doc: "Technique Points more from each Skill Improvement, as Gifted Student's (Inherited Creativity)." },
+  { key: "signature.kiCost", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "The Ki Point Cost of your Signature Techniques (Inherited Creativity's 1(T) off)." },
 
   // Writing here lands on all three, because those three are the Combat Rolls.
   // "Increase all of your Grapple Checks made as the Grappled by 1(T)." The Grappled is
@@ -689,11 +701,12 @@ const PATTERNS = [
   // Something granted rather than permitted - set true by `allow`, read as granted: "You can sense God Ki" (God Ki's
   // Concealment cannot win outright against it), and Skill of the Watcher's (5) Power Up out of sequence, offered after
   // an Exploit's Damage or a Defend's none.
-  { match: /^(sense\.godKi|powerUp\.afterExploitOrDefend|surgency\.magic|exploit\.onNoDamage|combatRecovery\.flowOfCombat)$/,
+  { match: /^(sense\.godKi|powerUp\.afterExploitOrDefend|surgency\.magic|exploit\.onNoDamage|combatRecovery\.flowOfCombat|freedom\.turnStart)$/,
     phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
     doc: "Sensing God Ki; the Power Up offered after an Exploit's Damage or a Defend's none; Surgency from the Magic "
        + "Modifier where higher (Cosmic Efficiency); the Exploit offered when an attack left you without Damage, and "
-       + "Combat Recovery out of sequence at the start of a turn with none taken (Flow of Combat)." },
+       + "Combat Recovery out of sequence at the start of a turn with none taken (Flow of Combat); a Standard Maneuver of 1 Action "
+       + "out of sequence for a Counter Action at the start of a turn (Inherited Freedom)." },
   // "For each Health Threshold you are below, increase your Wound Rolls, Soak Value and Surgency by 1(T)" (Blood of the
   // Warrior's): written once, counted where each is worked out.
   { match: /^(wound|soakValue|surgency)\.perThreshold$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,

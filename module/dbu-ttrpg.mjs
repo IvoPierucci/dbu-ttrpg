@@ -44,6 +44,12 @@ Hooks.once("init", () => {
     return showOutcomeWindow(fromUuidSync(actorUuid), kind);
   };
 
+  // A sheet opened for the player whose character it is - Inherited Creativity's Technique, made on the GM's client.
+  CONFIG.queries["dbu-ttrpg.openSheet"] = async ({ uuid, note }) => {
+    if (note) ui.notifications.info(note);
+    return fromUuidSync(uuid)?.sheet?.render(true);
+  };
+
   // A choice an effect asks for, of the player whose character it is - Born for Battle's Strike, Dodge or Wound.
   CONFIG.queries["dbu-ttrpg.choose"] = async (data) => {
     const { showChoice } = await import("./chat.mjs");

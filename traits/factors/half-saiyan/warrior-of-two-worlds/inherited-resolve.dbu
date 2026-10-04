@@ -1,0 +1,32 @@
+id: inherited-resolve
+name: Inherited Resolve
+order: 5
+optionOf: warrior-of-two-worlds
+description: >
+  While you are below the Injured Health Threshold, increase your Damage Reduction by 1(bT).
+text: >
+  Inherited Resolve [Passive]: While you are below the Injured Health Threshold, increase your Damage Reduction by 1(bT).
+
+---
+
+# (3) Below the Injured Health Threshold - Injured or Critical.
+[passive]
+if (belowThreshold("injured")) {
+    damageReduction += 1(bT);
+}
+
+# (4) At the start of your turn: 2(bT) Life and Ki Points for each Health Threshold below - Bruised 1, Injured 2,
+# Critical 3.
+[triggered/start-of-turn, effect 4]
+if (belowThreshold("bruised")) {
+    life.value += 2(bT);
+    ki.value += 2(bT);
+}
+if (belowThreshold("injured")) {
+    life.value += 2(bT);
+    ki.value += 2(bT);
+}
+if (belowThreshold("critical")) {
+    life.value += 2(bT);
+    ki.value += 2(bT);
+}

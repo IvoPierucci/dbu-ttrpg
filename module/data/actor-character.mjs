@@ -2039,7 +2039,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // The fixed Level 1 Improvement is worth 25 rather than 15 and takes the bonus
       // like any other: it is a Skill Improvement, and the rule names no exception.
       if (entry.choice === "Skill Improvement") {
-        entry.technique += this.giftedStudent.perSkillImprovement;
+        // And an effect's the same way - Inherited Creativity's 3.
+        entry.technique += this.giftedStudent.perSkillImprovement + slot(this, "techniquePoints.perSkillImprovement");
       }
     }
 

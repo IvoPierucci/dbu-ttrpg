@@ -56,6 +56,8 @@ export function signatureOf(item) {
     superProfile: sig.superProfile ?? "",
     fromTransformation: Boolean(sig.fromTransformation),
     godFinisher: Boolean(sig.godFinisher),
+    // Inherited Creativity's: made for the Combat Encounter alone - no Technique Points, no Disadvantages.
+    encounterOnly: Boolean(item?.flags?.["dbu-ttrpg"]?.encounterTechnique),
     freeTP: Math.max(0, Math.floor(Number(sig.freeTP) || 0)),
     features: Array.from(sig.features ?? []).map(entry => ({
       id: entry.id, ranks: Math.max(1, Number(entry.ranks) || 1), choice: entry.choice ?? ""
@@ -144,8 +146,8 @@ function givenFree(entry, slots) {
  * is not the Technique's at all (the user's).
  */
 export function techniqueTPCharged(sig, slots = null) {
-  // God Finisher's: "you do not spend any Technique Points".
-  if (sig?.godFinisher) return 0;
+  // God Finisher's: "you do not spend any Technique Points" - and Inherited Creativity's, for the Encounter alone.
+  if (sig?.godFinisher || sig?.encounterOnly) return 0;
   return Math.max(0, techniqueTP(sig, slots) - Math.max(0, Number(sig.freeTP) || 0));
 }
 

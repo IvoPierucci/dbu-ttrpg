@@ -66,6 +66,12 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "Gain a Basic Item, by its file's id - Snack Fiend's Snack, on the Gear tab."
   },
+  encounterTechnique: {
+    args: [0, 0],
+    names: [],
+    doc: "Inherited Creativity's: a Signature Technique made now - no Technique Points spent, up to the base Tier's TP cap, "
+       + "no Disadvantages - its builder opened for whoever plays them, gone at the end of the Combat Encounter."
+  },
   steadfastPass: {
     args: [0, 0],
     names: [],

@@ -258,6 +258,11 @@ function permitted(actor, maneuver) {
   }
   // Another's: "other Characters cannot use Counter Maneuvers, Instant Maneuvers, or Out-of-Sequence Maneuvers (except
   // Surges)".
+  // Inherited Freedom, taken: "you cannot use a Counter Maneuver until the start of your next turn".
+  if ((maneuver.type === "counter") && actor.getFlag?.("dbu-ttrpg", "noCounterUntilTurn")) {
+    ui.notifications.warn(`${actor.name} cannot use a Counter Maneuver until the start of their next turn (Inherited Freedom).`);
+    return false;
+  }
   if (["counter", "instant", "outOfSequence"].includes(maneuver.type) && !maneuver.surge && frozenBy(actor)) {
     ui.notifications.warn(`Time is frozen by ${frozenBy(actor).name}: no Counter, Instant or Out-of-Sequence Maneuvers.`);
     return false;

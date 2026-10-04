@@ -1,0 +1,20 @@
+id: inherited-creativity
+name: Inherited Creativity
+order: 3
+optionOf: warrior-of-two-worlds
+description: >
+  Increase the amount of Technique Points you gain from Skill Improvements by 3 and reduce the Ki Point Cost of your Signature Techniques by 1(T).
+text: >
+  Inherited Creativity [Passive]: Increase the amount of Technique Points you gain from Skill Improvements by 3 and reduce the Ki Point Cost of your Signature Techniques by 1(T).
+
+---
+
+# (3) On every Skill Improvement row, as Gifted Student's; and off every Signature Technique's Ki.
+[passive]
+techniquePoints.perSkillImprovement += 3;
+signature.kiCost -= 1(T);
+
+# (4) At the start of a turn: a Signature Technique made then - no Technique Points spent, its cap the base Tier's, no
+# Disadvantages - gone at the end of the Combat Encounter (moments-runtime.mjs encounterTechnique).
+[triggered/start-of-turn, 1/encounter, effect 4]
+encounterTechnique();
