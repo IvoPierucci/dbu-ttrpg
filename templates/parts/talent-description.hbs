@@ -3,4 +3,13 @@
       plain input - the book's wording carries emphasis and line breaks. }}
   {{formInput fields.description value=system.description enriched=enrichedDescription
               toggled=false editable=editable}}
+  {{#if textLines.length}}
+  {{! Its text as printed - edited on the Effect tab's Wording. }}
+  <section class="panel">
+    {{#each textLines as |line|}}
+    {{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}
+    <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{{line.html}}}</div>{{/if}}
+    {{/each}}
+  </section>
+  {{/if}}
 </div>

@@ -1305,6 +1305,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const triggered = reactiveFor(this.actor);
     context.talents = ownedTalents(this.actor).map(item => ({
       item,
+      // Unfolded to its text as printed, as a Racial Trait is (the user's: the text was nowhere to be seen).
+      open: Boolean(this.#openSections[`trait-${item.id}`]),
+      lines: racialTraitLines(item),
       triggered: triggered
         .filter(entry => (entry.sourceId === item.id) && entry.budget
           // What a window offers as it happens is not Armed beforehand (WINDOW_MOMENTS), nor what hands over an

@@ -55,6 +55,9 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
       { relativeTo: this.item }
     );
     context.tabs = this._getTabs();
+    // Its text as printed, under its description - a Talent's and a Racial Trait's (the user's).
+    const { racialTraitLines } = await import("../racial.mjs");
+    context.textLines = racialTraitLines(this.item);
     // A Racial Trait: its race and what the rules call it in place of Prerequisites, and what was chosen for it.
     if (this.item.type === "racial") {
       const { ordinal, racialOptionOf, racialOptionsOf, racialTraitKind, racialTraitRace } = await import("../racial.mjs");
