@@ -2099,6 +2099,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // One step per Size Category away from Medium, in whichever direction the Skill
       // is affected.
       const sizeAdjustment = (DBUCharacterData.SIZE_SKILL_ADJUSTMENTS[key] ?? 0) * this.size.steps;
+      // Another Attribute's Score where an effect allows it and it is the higher - Psychic's Insight for Use Magic.
+      const scoreFrom = Object.keys(atts).filter(attribute => this.effects?.slots?.[`skill.${key}.from.${attribute}`] === true)
+        .reduce((best, attribute) => ((atts[attribute].score > atts[best].score) ? attribute : best), skill.attribute);
 
       return [key, {
         ...skill,
@@ -2110,10 +2113,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // it. That last step had been missing: the Slot existed and was written by two
         // Conditions, and nothing here ever read it.
         bonus: withEffects(this, `skill.${key}.bonus`,
-          atts[skill.attribute].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment, {
+          atts[scoreFrom].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment, {
             parts: [
-              { label: `${skill.attribute.charAt(0).toUpperCase()}${skill.attribute.slice(1)} Score`,
-                value: atts[skill.attribute].score },
+              { label: `${scoreFrom.charAt(0).toUpperCase()}${scoreFrom.slice(1)} Score`,
+                value: atts[scoreFrom].score },
               { label: `${ranks} Rank${ranks === 1 ? "" : "s"}`,
                 value: DBUCharacterData.SKILL_RANK_BONUS * ranks },
               { label: "Size", value: sizeAdjustment }

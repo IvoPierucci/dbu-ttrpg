@@ -680,6 +680,11 @@ const PATTERNS = [
   // and a Botch are read off, which a bonus to the roll never reaches.
   // "Reduce the Critical Target of your Performance Skill Checks by 1" - Para Para Dance's. A move from the character's
   // own Critical Target, held to the same floor.
+  // "You may use your Insight Score instead of your Magic Score to calculate the Skill Bonus for the Use Magic Skill"
+  // (Psychic's) - `allow skill.useMagic.from.insight`: the higher of the two.
+  { match: /^skill\.(\w+)\.from\.(\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    valid: (data, [k, attribute]) => (k in (data.skills ?? data.constructor?.SKILLS ?? {})) && (attribute in (data.attributes ?? {})),
+    doc: "That Skill's Skill Bonus may be worked out from that Attribute's Score instead, where it is the higher." },
   { match: /^skill\.(\w+)\.criticalTarget$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
     valid: (data, [k]) => k in (data.skills ?? data.constructor?.SKILLS ?? {}),
     doc: "Added to the Critical Target of that Skill's Checks - negative is easier." },

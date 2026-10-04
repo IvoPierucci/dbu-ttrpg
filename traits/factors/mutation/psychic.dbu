@@ -1,0 +1,34 @@
+id: psychic
+name: Psychic
+order: 4
+category: mind
+# A Factor Trait replaces a Secondary Racial Trait - Secondary, then, unless it names a Primary one to replace.
+importance: secondary
+# (4) Telekinesis, given as a Trait gives a Unique Ability; already had, one of 20 TP or less chosen instead (racial.mjs).
+grantsUnique: telekinesis
+grantsUniqueInstead: 20
+description: >
+  Your unique mind allows you to utilize strange and unusual abilities.
+text: >
+  Psychic (Mind): Your unique mind allows you to utilize strange and unusual abilities.
+  (1)-[Passive]: You can choose to ignore the Ability Score Prerequisites of a Unique Ability or Advancement by increasing the Technique Point Cost by 4. Upon gaining a Power Level, if you would now meet the Prerequisites for a Unique Ability you gained through this effect, regain the additional 4 TP spent.
+  (2)-[Passive]: Increase your Insight Modifier and Cognitive Saving Throw by 1(T).
+  (3)-[Passive]: You may use your Insight Score instead of your Magic Score to calculate the Skill Bonus for the Use Magic Skill.
+  (4)-[Passive]: Gain access to the Telekinesis Unique Ability. If you already had access to that Unique Ability, you may instead gain access to a Unique Ability with a TP Cost of 20 or less that you meet the Prerequisites for.
+  (5)-[Triggered, 1/Round]: If you win a Clash for the effects of a Unique Ability against an Opponent, reduce that Opponent’s Life Points by your Insight Modifier.
+
+---
+
+# (1) The table's: a Unique Ability's Prerequisites are read by the table, not the system - the 4 TP go on its TP Cost
+# Change (or an Advancement's), and come off it the same way.
+
+# (2), (3) - the Use Magic Skill Bonus from the Insight Score where it is the higher.
+[passive]
+insight.mod += 1(T);
+save.cognitive += 1(T);
+allow skill.useMagic.from.insight;
+
+# (5) A Clash for a Unique Ability's effects won - yours or theirs (chat.mjs uniqueClashWon): the one who lost, their
+# Life Points less your Insight Modifier. Automatic by default; set Triggered, it is asked in a window.
+[triggered/unique-clash-won, 1/round, effect 5]
+reduceOpponentLife(insight);

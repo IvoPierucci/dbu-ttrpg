@@ -18,6 +18,7 @@
  *   grantsUnique: <ids>             Unique Abilities it gives - "You do not need to meet the Requirements to use these
  *                                   Unique Abilities and you do not need to spend any Technique Points to gain them"
  *   uniqueRestrictions: <ids>       Restrictions those come with - God of Time's Straining and Difficult Time Freeze
+ *   grantsUniqueInstead: 20         one already had, another of that TP Cost or less chosen instead - Psychic's
  *   grantsTalent: <ids>             Talents it gives - kept if the Trait is lost ("you do not lose that Talent")
  *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
  *   tail: true                      a tail it may lose - the Options tab's Tail lost box (the `tailed` question)
@@ -294,7 +295,8 @@ export async function racialItemFrom(trait) {
   if (own === null) return null;
   const scripts = [own];
   const texts = [];
-  const unique = listOf(trait.grantsUnique).map(id => ({ id, restrictions: listOf(trait.uniqueRestrictions) }));
+  const unique = listOf(trait.grantsUnique).map(id => ({ id, restrictions: listOf(trait.uniqueRestrictions),
+    insteadTp: Number(trait.grantsUniqueInstead) || 0 }));
   const talents = listOf(trait.grantsTalent);
 
   const options = racialOptionsOf(trait.id);
@@ -385,6 +387,34 @@ async function askDefaultCostume(actor) {
   return costume;
 }
 
+/** A Unique Ability given by a Racial Trait: free, marked as given by it. */
+function freeUnique(uniqueItemFrom, definition, item, { applied = [], chosenType = "" } = {}) {
+  const data = uniqueItemFrom(definition, traitsOfKind("unique", definition.id), { chosenType, applied, choices: {} });
+  data.system.unique.free = true;
+  data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), grantedBy: item.id } };
+  return data;
+}
+
+/** One Unique Ability of that TP Cost or less, not had, chosen in place of one already had - or null. */
+async function askUniqueInstead(actor, had, most, held) {
+  const offered = traitsOfKind("unique").filter(each => !each.owner && !held.has(each.id)
+    && ((Number(each.tpCost) || 0) <= most)).sort((a, b) => a.name.localeCompare(b.name));
+  if (!offered.length) return null;
+  const escape = Handlebars.escapeExpression;
+  const said = value => [].concat(value ?? []).join(", ");
+  const id = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} already has ${had.name}` },
+    content: `<p class="dbu-respond-hint">A Unique Ability of ${most} TP or less instead.</p>
+      <select name="unique">${offered.map(each => `<option value="${escape(each.id)}">${escape(`${each.name} - ${
+        Number(each.tpCost) || 0} TP${said(each.prerequisite) ? ` - ${said(each.prerequisite)}` : ""}`)}</option>`).join("")}</select>`,
+    buttons: [{ action: "take", label: "Take it", default: true,
+      callback: (event, button, dialog) => dialog.element.querySelector('select[name="unique"]')?.value ?? null },
+      { action: "cancel", label: "None" }],
+    rejectClose: false
+  });
+  return offered.find(each => each.id === id) ?? null;
+}
+
 /**
  * What a Racial Trait gives, made on the character: each Unique Ability free and without its Requirements, marked as given
  * by it (and by which Option, where one gave it); each Talent, kept if the Trait is ever lost.
@@ -400,7 +430,15 @@ async function giveGrants(actor, item, grants, name) {
       continue;
     }
     if (held.has(definition.id)) {
-      ui.notifications.info(`${actor.name} already has ${definition.name}.`);
+      // Psychic's: "If you already had access to that Unique Ability, you may instead gain access to a Unique Ability with a
+      // TP Cost of 20 or less that you meet the Prerequisites for" - which, asked; its Prerequisites shown, the table's.
+      const instead = grant.insteadTp ? await askUniqueInstead(actor, definition, grant.insteadTp, held) : null;
+      if (!instead) {
+        ui.notifications.info(`${actor.name} already has ${definition.name}.`);
+        continue;
+      }
+      created.push(freeUnique(uniqueItemFrom, instead, item, { applied: [] }));
+      held.add(instead.id);
       continue;
     }
     let chosenType = "";

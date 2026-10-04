@@ -289,6 +289,14 @@ async function runVerb(actor, call, context) {
       return;
     }
 
+    case "reduceOpponentLife": {
+      const opponent = context?.opponentUuid ? fromUuidSync(context.opponentUuid) : null;
+      const amount = Number(actor.system.attributes?.[String(args[0] ?? "")]?.mod) || 0;
+      if (!opponent || (amount <= 0)) return;
+      const { reduceLifePoints } = await import("../chat.mjs");
+      return reduceLifePoints(opponent, amount, { reason: actor.name });
+    }
+
     case "encounterTechnique": {
       const { tierTpCap } = await import("../technique.mjs");
       const cap = tierTpCap(actor.system.baseTierOfPower);

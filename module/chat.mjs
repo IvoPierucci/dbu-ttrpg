@@ -212,6 +212,10 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, SUMMON_FLAG, request.summon);
     case "tornado": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, TORNADO_FLAG, request.tornado);
+    case "uniqueClashWon": {
+      const message = game.messages.get(request.messageId);
+      return message ? uniqueClashWon(message) : null;
+    }
     case "timeFreeze": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, FREEZE_FLAG, request.freeze);
     case "psychicBack": return game.messages.get(request.messageId)
@@ -788,6 +792,43 @@ async function applyClash(messageId, clash) {
   if (clash.duelEscape && clash.result && !clash.duelEscape.applied) {
     await settleDuelEscape(message, clash);
   }
+  // Won for a Unique Ability's effects - Psychic's.
+  if (clash.result) await uniqueClashWon(message);
+}
+
+/**
+ * A Clash a Unique Ability called for, its challenger's: by the name the card carries - its own, or with what it was
+ * for after it ("Telekinesis - Launch").
+ */
+function uniqueClashOf(clash) {
+  const challenger = fromUuidSync(clash?.challengerUuid ?? "");
+  const name = String(clash?.maneuverName ?? "").trim();
+  if (!challenger || !name) return null;
+  return Array.from(challenger.items ?? []).find(item => (item.type === "maneuver")
+    && (item.system.tags ?? []).includes("uniqueAbility")
+    && ((name === item.name) || name.startsWith(`${item.name} `) || name.startsWith(`${item.name}:`))) ?? null;
+}
+
+/**
+ * Won, a Clash for the effects of a Unique Ability - the challenger's, whoever won: what answers it for the winner, with
+ * who lost (Psychic's "reduce that Opponent's Life Points by your Insight Modifier"). Once a Clash; on the GM's client
+ * where this one may not write to the winner.
+ */
+async function uniqueClashWon(message) {
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (!clash?.result || clash.uniqueWon || !uniqueClashOf(clash)) return;
+  const won = whoWonClash(clash.result);
+  const winner = fromUuidSync(won === "challenger" ? clash.challengerUuid : clash.defenderUuid);
+  const loser = won === "challenger" ? clash.defenderUuid : clash.challengerUuid;
+  if (!winner || (winner.uuid === loser)) return;
+  if (!winner.isOwner || !(message.isAuthor || game.user.isGM)) {
+    if (!game.user.isGM && game.users.activeGM) game.socket.emit(CHANNEL, { type: "uniqueClashWon", messageId: message.id });
+    return;
+  }
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, uniqueWon: true });
+  await offerTriggers(winner, "unique-clash-won");
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  await fireMoment(winner, "unique-clash-won", { opponentUuid: loser });
 }
 
 /**

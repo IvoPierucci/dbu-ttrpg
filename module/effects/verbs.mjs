@@ -66,6 +66,12 @@ export const VERBS = Object.freeze({
     names: [0],
     doc: "Gain a Basic Item, by its file's id - Snack Fiend's Snack, on the Gear tab."
   },
+  reduceOpponentLife: {
+    args: [1, 1],
+    names: [0],
+    doc: "The Opponent the Moment names - who lost the Clash - loses Life Points equal to the named Attribute's Modifier: "
+       + "Psychic's \"reduce that Opponent's Life Points by your Insight Modifier\"."
+  },
   encounterTechnique: {
     args: [0, 0],
     names: [],
