@@ -9836,7 +9836,7 @@ async function playTechniqueBlock(message, actor, itemId) {
   const others = (fresh.defences ?? []).filter(entry => entry.uuid !== actor.uuid);
   return settleAttack(message, {
     ...fresh,
-    techniqueBlocked: { byName: actor.name, itemName: item.name },
+    techniqueBlocked: { byName: actor.name, byUuid: actor.uuid, itemName: item.name },
     defences: [...others, { uuid: actor.uuid, defence: "dodge", wager: 0, foundation: "energy", parryWith: [] }],
     ready: [...new Set([...(fresh.ready ?? []), actor.uuid])]
   });
@@ -18244,14 +18244,19 @@ function struckWeapon(attack, uuid, own) {
  */
 /**
  * Whether this character already answered this attack with a Counter Maneuver - an option of the Defend Maneuver (Direct
- * Hit, Guard, Parry, Power Flare, Cross Counter), the Afterimage Technique, Divine Counter, the Block or Barrier. "One
- * Counter Action answers one Maneuver": a Dodge, which costs none, is the only answer another Counter may follow.
+ * Hit, Guard, Parry, Power Flare, Cross Counter), Stardust Barrier, the Afterimage Technique, Divine Counter, God Bind,
+ * Technique Block, the Block or Barrier. "One Counter Action answers one Maneuver": a Dodge, which costs none, is the only
+ * answer another Counter may follow.
  */
 function answeredWithCounter(attack, uuid) {
   const entry = defenceFor(attack, uuid);
   const own = targetResults(attack).find(result => result.uuid === uuid)?.own;
   return Boolean(((entry?.defence ?? own?.defense ?? "dodge") !== "dodge") || entry?.evade || entry?.divineFlex
-    || (attack.divineHold?.uuid === uuid) || own?.block
+    || (attack.divineHold?.uuid === uuid) || (attack.godBindHold?.uuid === uuid)
+    // Technique Block's, which leaves them Dodging: by whom, or - on an attack blocked before this was kept - by name.
+    || (attack.techniqueBlocked && ((attack.techniqueBlocked.byUuid === uuid)
+      || (!attack.techniqueBlocked.byUuid && (attack.techniqueBlocked.byName === fromUuidSync(uuid)?.name))))
+    || own?.block
     || (own?.barrier && (own.barrier.byUuid === uuid))
     || (targetResults(attack).some(result => result.own?.barrier?.byUuid === uuid)));
 }
