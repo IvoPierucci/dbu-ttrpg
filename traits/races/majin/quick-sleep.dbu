@@ -35,12 +35,12 @@ gain(sleeping);
 quicksleep.stacks += 1;
 
 # Woken by it at the start of the next turn - still Sleeping from it - a quarter of each back; woken earlier, nothing.
+# Only after the nap: it was answering every start of a turn, and saying so on a card each time (the user's).
 [automatic/start-of-turn]
-if (hasResource("quicksleep") && hasCondition("sleeping")) {
+requires hasResource("quicksleep");
+if (hasCondition("sleeping")) {
     life.value += floor(life.max / 4);
     ki.value += floor(ki.max / 4);
     remove(sleeping);
 }
-if (hasResource("quicksleep")) {
-    quicksleep.stacks -= 1;
-}
+quicksleep.stacks -= 1;

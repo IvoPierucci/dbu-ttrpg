@@ -116,13 +116,20 @@ export function collectReactive(entries, moment, scope, { mode = null } = {}) {
       const times = b.modifiers?.perStack ? (entry.stacks ?? 0) : 1;
       if (times <= 0) continue;
 
+      // Whether it did anything at all: an Automatic block whose every `if` failed changed nothing, and counting it as
+      // having answered put an "Automatic" card in chat for nothing - Quick Sleep's, at every start of a turn.
+      let did = false;
+      const queued = scope.queue?.length ?? 0;
       for (let i = 0; i < times; i++) {
         run(b.statements, {
           ...blockScope,
-          collect: (slot, op, value, kind) =>
-            gather(contributions, slot, op, value, kind, entry, b, PHASES.REACTIVE, scope)
+          collect: (slot, op, value, kind) => {
+            did = true;
+            gather(contributions, slot, op, value, kind, entry, b, PHASES.REACTIVE, scope);
+          }
         });
       }
+      if ((b.mode === "automatic") && !did && ((scope.queue?.length ?? 0) === queued)) continue;
 
       // The effect's own label carries into the roll's breakdown, so a player can see
       // which Trait moved the number without anyone building a UI for it.
