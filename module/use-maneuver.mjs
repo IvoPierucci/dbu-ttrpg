@@ -5409,6 +5409,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).answerPower(actor, card);
   // Karmic Assault's Karma: the attack has been made, so now it is paid.
   if (card) await payKarmicAssault(actor, maneuver, declared);
+  // Time Freeze: the Frozen Turn's last Maneuver made - closed now, or, an attack, once it is done (chat.mjs).
+  await (await import("./chat.mjs")).frozenTurnAfterManeuver(actor, card);
 
   // What the Technique does to its user once the card is done: Backlash, Exhaustive, Stat Drain,
   // Powerbomb, All Out.

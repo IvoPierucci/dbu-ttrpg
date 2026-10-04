@@ -669,6 +669,8 @@ export function registerCombatHooks() {
       // Every clock stops here, not only the ones counting the Encounter: a turn edge
       // that never arrives is a duration that never ends, and there are no more turns.
       await encounterEnded(actor);
+      // A Frozen Turn still open - its last attack never finished: time runs again with the Encounter's end.
+      if (actor.getFlag?.("dbu-ttrpg", "frozenTurn")) await (await import("./chat.mjs")).endFrozenTurn(actor);
       // Quick Learner: "At the end of the Combat Encounter, you can pay the TP Cost of any Copied Technique to gain access
       // to it permanently. If you do, it stops being a Copied Technique." Asked of whoever plays them.
       for (const item of Array.from(actor.items ?? []).filter(each => each.getFlag?.("dbu-ttrpg", "copied"))) {
@@ -1118,11 +1120,11 @@ export async function spendActions(actor, amount, kind = "standard") {
       ui.notifications.warn(`${actor.name} has no ${kind} Actions left in the Frozen Turn.`);
       return false;
     }
-    await actor.update({ "flags.dbu-ttrpg.frozenTurn.left": left - amount });
-    if (left - amount <= 0) {
-      const { endFrozenTurn } = await import("./chat.mjs");
-      await endFrozenTurn(actor);
-    }
+    // Both used: the Frozen Turn closes once the Maneuver they paid for is done - not as it is paid for, which ended it
+    // before that Maneuver happened: its end said first, and the last attack answered with time running again (the
+    // user's report). Closed after its card, or after its attack's Wound Roll (chat.mjs).
+    await actor.update({ "flags.dbu-ttrpg.frozenTurn.left": left - amount,
+      ...((left - amount <= 0) ? { "flags.dbu-ttrpg.frozenTurn.closing": true } : {}) });
     return true;
   }
 

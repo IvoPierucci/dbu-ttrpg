@@ -11907,6 +11907,22 @@ export async function endFrozenTurn(actor) {
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}'s Frozen Turn ends - time runs again.</div>` });
 }
 
+/**
+ * The Frozen Turn's last Maneuver done: closed after its card - or, for an attack, once it is answered and its Wound
+ * Roll made (or none is owed), so the last attack is still made with time frozen.
+ */
+export async function frozenTurnAfterManeuver(actor, card) {
+  if (!frozenTurnOf(actor)?.closing) return;
+  if (card?.getFlag?.(SCOPE, ATTACK_FLAG)) return;
+  return endFrozenTurn(actor);
+}
+
+/** An attack made in its user's closing Frozen Turn, done: the Frozen Turn with it. */
+async function frozenTurnAfterAttack(attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (frozenTurnOf(attacker)?.closing) await endFrozenTurn(attacker);
+}
+
 /** Its card: End Frozen Turn, for its user, while it lasts. */
 function renderTimeFreeze(message, html) {
   const freeze = message.getFlag(SCOPE, FREEZE_FLAG);
@@ -16100,6 +16116,8 @@ async function resolveAttack(message, attack) {
       offerWatcherPowerUp(message, fromUuidSync(entry.uuid), "no Damage from an attack you Defended against");
     }
   }
+  // Time Freeze: the Frozen Turn's last attack, answered and owing no Wound Roll - done.
+  if (!owesWound({ ...attack, result: { strike, targets: branches, wound: null } })) await frozenTurnAfterAttack(attack);
   // Trap Attack: its Guard Down, "for the duration of that Attacking Maneuver" - rolled, and gone.
   if ([attack.trapGuardOn ?? []].flat().length) await trapGuardOff(attack);
   // Tornado Attack: an Opponent's attack that missed the one Spinning - their Basic Attack back, offered.
@@ -17406,6 +17424,8 @@ async function rollAttackWound(message, attack) {
     const binder = fromUuidSync(attack.volleyball.binderUuid);
     if (binder) await endVolleyball(binder, { release: true });
   }
+  // Time Freeze: the Frozen Turn's last attack, done.
+  await frozenTurnAfterAttack(attack);
 }
 
 /**
