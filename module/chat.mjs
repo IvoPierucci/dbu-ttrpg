@@ -9098,11 +9098,34 @@ function renderMeteor(message, html) {
   const next = meteor.entries.find(entry => !entry.done);
   for (const entry of meteor.entries) {
     const row = document.createElement("li");
-    row.innerHTML = `<span class="dbu-oos-actor">${escape(entry.name)}</span>
-      <span class="dbu-oos-reason">${entry.choice === "defend" ? "Defends" : entry.choice === "attack" ? "Attacked"
-        : (entry === next) ? "" : "Waiting"}</span>`;
     const who = fromUuidSync(entry.uuid);
-    if ((entry === next) && !meteor.ended && (meteor.life > 0) && who?.isOwner) {
+    // What they did, said on their row - an Attack's Wound Roll to whoever may see their rolls, its workings on hover
+    // (the user's: all on this card).
+    const sees = maySeeRolls(who);
+    const said = (entry.choice === "defend") ? "Defends"
+      : (entry.choice === "attack") ? (entry.done
+        ? `Attacked${(sees && Number.isFinite(entry.wound)) ? ` - Wound ${entry.wound}` : ""}`
+        : `Attacking - ${entry.attack?.maneuverName ?? ""}`)
+      : (entry === next) ? "" : "Waiting";
+    row.innerHTML = `<span class="dbu-oos-actor">${escape(entry.name)}</span>
+      <span class="dbu-oos-reason">${escape(said)}</span>`;
+    if (sees && entry.done && (entry.lines ?? []).length) {
+      row.querySelector(".dbu-oos-reason").dataset.tooltipHtml = breakdownTable(entry.lines, entry.wound);
+    }
+    // Its Wound Roll, for the one attacking: on this row, its window first.
+    if ((entry.choice === "attack") && !entry.done && entry.attack && who?.isOwner && !meteor.ended) {
+      const woundButton = document.createElement("button");
+      woundButton.type = "button";
+      woundButton.className = "dbu-oos-button";
+      woundButton.textContent = "Roll Wound";
+      woundButton.dataset.tooltip = "It cannot miss: the Wound Roll, less the God Meteor's Damage Reduction";
+      woundButton.addEventListener("click", () => {
+        woundButton.disabled = true;
+        return rollMeteorWound(message, who, entry);
+      });
+      row.append(woundButton);
+    }
+    if ((entry === next) && !entry.choice && !meteor.ended && (meteor.life > 0) && who?.isOwner) {
       for (const [label, act, tip] of [["Defend", () => meteorDefend(message, entry.uuid), "Half of what falls on you"],
         ["Attack", () => meteorAttack(message, who), "Basic Attack or a Signature Technique at the Meteor: it cannot miss"]]) {
         const button = document.createElement("button");
@@ -9146,18 +9169,29 @@ function meteorDefend(message, uuid) {
  * which, asked; thrown at the Meteor as at a Feature, so no Character is aimed at and nothing can miss.
  */
 async function meteorAttack(message, actor) {
-  const { signatureTechniquesOf, useManeuver, useTechnique } = await import("./use-maneuver.mjs");
+  const { definitionOf, signatureTechniquesOf, useManeuver, useTechnique } = await import("./use-maneuver.mjs");
   const techniques = signatureTechniquesOf(actor);
-  const which = techniques.length ? await foundry.applications.api.DialogV2.wait({
+  const which = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title: `${actor.name} - God Meteor` }, content: "",
     buttons: [{ action: "basic", label: "Basic Attack" },
       ...techniques.map(entry => ({ action: entry.itemId, label: entry.name })), { action: "cancel", label: "Cancel" }],
     rejectClose: false
-  }) : "basic";
+  });
   if (!which || (which === "cancel")) return;
+  // Made as any attack is - its declaration, its windows, its effects - thrown at the Meteor as at a Feature, so nobody is
+  // aimed at and it cannot miss; it lands on this card's row (postMeteorAttack). Their own Basic Attack Item, as the
+  // sheet uses it, rather than the library's.
   const options = { atFeature: true, outOfSequence: true, meteor: message.id };
-  if (which === "basic") return useManeuver(actor, getManeuver("basic-attack"), options);
-  return useTechnique(actor, which, options);
+  try {
+    if (which !== "basic") return await useTechnique(actor, which, options);
+    const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver")
+      && ((item.system.maneuverId || "") === "basic-attack"));
+    return await useManeuver(actor, own ? definitionOf(own) : getManeuver("basic-attack"), options);
+  }
+  catch (error) {
+    console.error("DBU TTRPG | God Meteor attack", error);
+    ui.notifications.error(`God Meteor: the attack could not be made - ${error.message}`);
+  }
 }
 
 /**
@@ -9182,9 +9216,13 @@ export async function postMeteorAttack(actor, maneuver, declared, charges, messa
       + (PROFILES[profile]?.grantsUncappedEnergyCharge ?? 0),
     attackerUuid: actor.uuid, attackerName: actor.name
   };
-  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p>${Handlebars.escapeExpression(maneuver.name)} (Out-of-Sequence) at the God Meteor</p>`,
-    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [METEOR_HIT_FLAG]: { messageId, attack, rolled: false } } } });
+  // On the Meteor Phase's card, on their row - its Wound Roll waits there (the user's: all on one card).
+  const card = game.messages.get(messageId);
+  const meteor = card?.getFlag(SCOPE, METEOR_FLAG);
+  if (!meteor) return null;
+  await requestEdit(card, { type: "meteor", meteor: { ...meteor,
+    entries: meteor.entries.map(entry => (entry.uuid === actor.uuid) ? { ...entry, choice: "attack", attack } : entry) } });
+  return card;
 }
 
 /** Its Wound Roll button, for the one who threw it - the window first, as every roll. */
@@ -9206,28 +9244,32 @@ function renderMeteorHit(message, html) {
  * user's Might - and no Soak Value. What it comes to, off its Life Points on the Meteor Phase's card.
  */
 async function rollMeteorWound(message, actor, hit) {
-  const card = game.messages.get(hit.messageId);
+  // An older Meteor's own card (`hit.messageId`), or this Meteor Phase's row (`hit.attack` on its entry).
+  const card = hit.messageId ? game.messages.get(hit.messageId) : message;
   const meteor = card?.getFlag(SCOPE, METEOR_FLAG);
   if (!meteor) return;
   const attack = hit.attack;
-  const ready = await prepareRoll(actor, [], `${attack.maneuverName} - God Meteor`, `Damage Reduction ${meteor.dr}`,
+  // An Attacking Maneuver's Wound Roll: what answers hitting and the Wound offered in its window, as on any attack.
+  const triggers = triggersFor(actor, ["hit", "before-wound"]);
+  const ready = await prepareRoll(actor, triggers, `${attack.maneuverName} - God Meteor`, `Damage Reduction ${meteor.dr}`,
     { combatRoll: true, attackingManeuver: true, formula: { base: DBUCharacterData.BASE_DIE,
       dice: combatDiceGroups(actor, woundDice(actor, attack)), parts: windowParts(actor, woundParts(actor, attack)) } });
   if (!ready) return;
-  await message.setFlag(SCOPE, METEOR_HIT_FLAG, { ...hit, rolled: true });
+  if (hit.messageId) await message.setFlag(SCOPE, METEOR_HIT_FLAG, { ...hit, rolled: true });
   const wound = await rollSide(actor, woundParts(actor, attack), {
     extraDice: woundDice(actor, attack), criticalDice: actor.system.dice.critical.formula, combatRoll: true,
     slot: "wound", attackingManeuver: true, criticalTarget: profileFor(attack)?.woundCriticalTarget ?? null });
+  // What was ticked for it, answered.
+  const before = atMoment(actor, "before-wound", { attack: 1, damageCategory: 1 });
+  if (before) spendChosen(actor, before);
   const fresh = card.getFlag(SCOPE, METEOR_FLAG) ?? meteor;
+  // "A God Meteor takes Damage like a Character would", less its Damage Reduction - the user's Might.
   const damage = Math.max(0, (Number(wound.total) || 0) - fresh.dr);
   const life = Math.max(0, fresh.life - damage);
-  requestEdit(card, { type: "meteor", meteor: { ...fresh, life,
-    entries: fresh.entries.map(entry => (entry.uuid === actor.uuid) ? { ...entry, choice: "attack", done: true } : entry) } });
-  // Said on the card by what each reader may see (renderMeteorStrike): the roll is the attacker's, the Damage
-  // Reduction and what is left the Meteor's user's.
-  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
-    flags: { [SCOPE]: { [METEOR_STRIKE_FLAG]: { attackerUuid: actor.uuid, userUuid: fresh.userUuid, wound: wound.total,
-      lines: wound.lines ?? [], dr: fresh.dr, damage, life } } } });
+  // On their row: the Wound Roll, its workings, what it took off (renderMeteor says each to whoever may see it).
+  return requestEdit(card, { type: "meteor", meteor: { ...fresh, life,
+    entries: fresh.entries.map(entry => (entry.uuid === actor.uuid) ? { ...entry, choice: "attack", done: true,
+      wound: wound.total, lines: wound.lines ?? [], damage } : entry) } });
 }
 
 /**
