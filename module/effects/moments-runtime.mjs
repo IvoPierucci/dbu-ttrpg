@@ -321,6 +321,14 @@ async function runVerb(actor, call, context) {
         extraDie: Number(args[2]) || 0 });
     }
 
+    case "gainGear": {
+      const { getTrait } = await import("./traits.mjs");
+      const definition = getTrait(String(args[0] ?? ""));
+      if (!definition) return;
+      const { gearItemFrom } = await import("../gear.mjs");
+      return actor.createEmbeddedDocuments("Item", [gearItemFrom(definition, actor)]);
+    }
+
     case "steamCloud": {
       const { steamCloud } = await import("../chat.mjs");
       return steamCloud(actor);

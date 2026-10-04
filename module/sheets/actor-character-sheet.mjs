@@ -3794,6 +3794,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
     // A Snack eaten this Combat Round - Snack Motivated's Power.
     if (snack) await this.actor.setFlag("dbu-ttrpg", "snackRound", `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`);
+    // Snack Fiend: "After using the Snack Basic Item, enter the Superior State until the end of your turn." Asked, once an
+    // Encounter.
+    if (snack && game.combat?.started && (this.actor.system.effects?.slots?.["snackFiend.superior"] === true)
+      && (this.actor.getFlag("dbu-ttrpg", "snackFiendUsed") !== game.combat.id)
+      && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: "Snack Fiend" },
+        content: "<p>Superior until the end of your turn?</p>", rejectClose: false })) {
+      await this.actor.setFlag("dbu-ttrpg", "snackFiendUsed", game.combat.id);
+      const { enterState } = await import("../effects/moments-runtime.mjs");
+      await enterState(this.actor, "superior", 1, "turn", "Snack Fiend");
+    }
 
     const { getTrait } = await import("../effects/traits.mjs");
     const names = held.map(key => getTrait(key)?.name ?? key);

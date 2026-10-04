@@ -3,7 +3,7 @@ name: Snack Motivated
 order: 16
 category: mind
 importance: secondary
-# (1) The Snack Fiend Talent, given with the Trait and kept if it is lost - not written yet, so named when gained.
+# (1) The Snack Fiend Talent, given with the Trait and kept if it is lost.
 grantsTalent: snack-fiend
 description: >
   With a body powered by sugary sweets and a bottomless appetite, it turns out that you’ll do almost anything for a tasty treat.

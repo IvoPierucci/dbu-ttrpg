@@ -1,0 +1,21 @@
+id: snack-fiend
+name: Snack Fiend
+prerequisites: N/A
+description: >
+  You always have a snack on you, hidden away. No one, sometimes not even you, knows it’s there before you need it.
+text: >
+  Snack Fiend: You always have a snack on you, hidden away. No one, sometimes not even you, knows it’s there before you need it.
+  –Prerequisites: N/A
+  (1)-[Triggered/Start of Combat Encounter]: If you are not a Minion, gain a Snack Basic Item.
+  (2)-[Triggered, 1/Encounter]: After using the Snack Basic Item, enter the Superior State until the end of your turn.
+
+---
+
+# (1) The Combat Encounter beginning: chosen on its card (Apply effects) - a Snack on the Gear tab.
+[triggered/start-of-encounter, chosen, effect 1]
+requires !isMinion;
+gainGear(snack);
+
+# (2) A Snack eaten: asked then and there, once an Encounter - Superior till the end of your turn (the Gear tab's consume).
+[passive]
+allow snackFiend.superior;

@@ -61,6 +61,11 @@ export const VERBS = Object.freeze({
     doc: "Gain a stack of one of these Resources, the character's player choosing which - Born for Battle's \"apply it "
        + "to either Strike, Dodge, or Wound (you decide)\". One already at its ceiling is not offered."
   },
+  gainGear: {
+    args: [1, 1],
+    names: [0],
+    doc: "Gain a Basic Item, by its file's id - Snack Fiend's Snack, on the Gear tab."
+  },
   steamCloud: {
     args: [0, 0],
     names: [],
