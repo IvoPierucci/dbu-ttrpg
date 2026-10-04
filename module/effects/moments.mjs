@@ -71,6 +71,9 @@ const TABLE = [
   { key: "stretch", label: "A Physical Attack or Grapple reaches past your Melee Range", provides: [],
     doc: "Never fired: what a Triggered/Automatic toggle needs to stand on - Rubbery Body's stretch, asked or taken as "
        + "the attack is aimed (maneuvers.mjs stretchReach)." },
+  { key: "burrow", label: "A Physical Attack could go through the ground", provides: [],
+    doc: "Never fired: what Burrowed Strike's Triggered/Automatic toggle stands on - asked or taken as the attack is "
+       + "aimed (maneuvers.mjs burrowReach)." },
   { key: "heritage", label: "You trigger Saiyan Heritage's 2nd effect", provides: [],
     doc: "Fired by the effect itself (trigger(heritage)) - what Born for Battle's 3rd effect answers." },
   { key: "end-of-round", label: "The Combat Round ends", provides: [],

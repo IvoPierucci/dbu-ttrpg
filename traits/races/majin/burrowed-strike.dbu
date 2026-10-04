@@ -14,9 +14,13 @@ text: >
 
 [passive]
 # (1) A Physical Attack past the Melee Range, at one in the Standard Environment (not up in a High one) and not at Long
-# Range, asks "Burrowed Strike: through the ground?" - taken, their Cover is not counted (its Dodge and its Damage), and
-# the Exploit is offered to the Opponents on a Square adjacent to you (maneuvers.mjs burrowReach, chat.mjs).
+# Range: Triggered, it asks "Burrowed Strike: through the ground?"; Automatic - the toggle below, on by default - it goes
+# through without asking (the user's). Taken, their Cover is not counted (its Dodge and its Damage), and the Exploit is
+# offered to the Opponents on a Square adjacent to you (maneuvers.mjs burrowReach).
 allow burrowed.strike;
 
 # (2) An attack of the Simple Profile asks "2(bT) Ki: double Diminishing Defense?" - paid with the attack, once a Round.
 allow burrowed.diminishing;
+
+# (1)'s Triggered/Automatic toggle: nothing of its own to do - burrowReach reads whether it is set Automatic.
+[triggered/burrow, effect 1]

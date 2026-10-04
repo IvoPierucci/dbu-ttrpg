@@ -1316,6 +1316,11 @@ export async function burrowReach(actor, target, refusal, what) {
   const { getTrait } = await import("./effects/traits.mjs");
   if ((environmentIdOf(target.system, getTrait) !== STANDARD_ENVIRONMENT) || isAirborne(target.system)
     || atLongRange(actor, target)) return { why: refusal, burrowed: false };
+  // Set Automatic on its Trait (Burrowed Strike's 1st effect): through the ground without asking.
+  const { reactiveFor, momentOf } = await import("./effects/registry.mjs");
+  if (reactiveFor(actor).some(entry => (momentOf(entry.program.blocks?.[0]) === "burrow") && entry.armed)) {
+    return { why: null, burrowed: true };
+  }
   const yes = await foundry.applications.api.DialogV2.confirm({
     classes: ["dbu-dialog"], window: { title: `${what} - Burrowed Strike` },
     content: `<p data-tooltip="Their Cover is not counted. The Opponents on a Square adjacent to you may Exploit it.">`
