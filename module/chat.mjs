@@ -7516,13 +7516,6 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   const parts = [...((typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers),
     ...multiFormRow(actor, combatRoll)];
 
-  // Penalties cancel bonuses; they never drag a roll below the dice. A Strike with more
-  // taken off it than it had adds nothing rather than subtracting - so a roll always
-  // comes to at least what the dice said, which is why an opponent who forgoes their
-  // own roll can still be hit.
-  const netted = parts.reduce((sum, part) => sum + part.value, 0);
-  const bonus = Math.max(0, netted);
-
   // Asked before the dice are picked up, because an effect that sets the Base Die
   // replaces the roll rather than adjusting it: rolling a d10 and then throwing the
   // result away puts a number on the card that means nothing.
@@ -7533,7 +7526,12 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   const answered = (combatRoll && collect)
     ? atMoment(actor, "combat-roll", { roll: true, attackingManeuver })
     : null;
-  const baseDie = answered?.slots?.baseDie ?? null;
+  // Lingering Instincts (2): on a Strike or Dodge Roll, a Counter Action spent - or nothing, with none to spend - for a
+  // Natural Result of 9, no Critical and no Botch.
+  const lingering = (answered?.slots?.["lingering.nine"] === true) && ["strike", "dodge"].includes(slot)
+    && await spendActions(actor, 1, "counter");
+  const baseDie = lingering ? { ...(answered.slots.baseDie ?? {}), add: 0, multiply: 1, set: 9, min: null, max: null }
+    : (answered?.slots?.baseDie ?? null);
   const forcedNatural = baseDie?.set ?? null;
 
   // What a triggered effect adds to this roll. "1/Round: increase your Strike Rolls by
@@ -7546,6 +7544,20 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     const after = applySlot(answered.slots, slot, before);
     if (after !== before) parts.push({ label: "Effects", value: after - before });
   }
+  // "For each of your effects applied to this Combat Roll that would increase the Natural Result or reduce the Critical
+  // Target, increase your Dice Score for this Combat Roll by 1" - by source (the user's).
+  if (lingering) {
+    const raising = lingeringSources(actor, answered, slot, { naturalAdd, minimumNatural, criticalTarget });
+    if (raising) parts.push({ label: "Lingering Instincts", value: raising });
+  }
+
+  // Penalties cancel bonuses; they never drag a roll below the dice. A Strike with more
+  // taken off it than it had adds nothing rather than subtracting - so a roll always
+  // comes to at least what the dice said, which is why an opponent who forgoes their
+  // own roll can still be hit. Netted once every part is in - what a triggered effect adds above among them, which
+  // used to be shown on the card and left out of the total.
+  const netted = parts.reduce((sum, part) => sum + part.value, 0);
+  const bonus = Math.max(0, netted);
 
   // Dice an effect adds to every Combat Roll - the Superior State's Greater Dice are
   // the one thing in the rules that does this. Folded when the character was prepared,
@@ -7575,6 +7587,12 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     { minimumNatural, criticalTarget, combatRoll: true, naturalAdd: naturalAdd + ownNatural });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
+  // Lingering Instincts: "You cannot score a Critical Result or a Botch Result on this Combat Roll, regardless of all
+  // Effects."
+  if (lingering) {
+    botch = false;
+    critical = false;
+  }
 
   // Cutting: "if you do not score a Critical Result, then you score a Botch Result
   // regardless of the Natural Result." Every roll that is not the best is the worst, and
@@ -17659,7 +17677,8 @@ async function rollAttackWound(message, attack) {
     const counterWound = defence.answersWound
       ? await rollSide(target, [
           { label: "Wound", value: target.system.combat.wound[flareFoundation] ?? 0 },
-          { label: "Ki Wager", value: own.defenceWager ?? 0 }
+          { label: "Ki Wager", value: own.defenceWager ?? 0 },
+          ...respondingParts(target)
         ], {
           extraDice: target.system.dice.extra.formula,
           criticalDice: target.system.dice.critical.formula,
@@ -17878,6 +17897,7 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...rideExploitBonus(actor, attack));
   parts.push(...flyinDodge(actor, attack));
   parts.push(...openedAgainst(actor));
+  parts.push(...respondingParts(actor));
   // Your Dodge against somebody you Analyzed. The attacker is named on the attack, which
   // is what makes this answerable from the defender's side.
   parts.push(...analysisBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
@@ -18262,6 +18282,7 @@ const DEFENCES = {
       ...chargePenalty(actor, attack),
       ...thresholdPenalty(actor),
       ...openedAgainst(actor),
+      ...respondingParts(actor),
       ...rideExploitBonus(actor, attack),
       // With a Weapon: its Size and the Weapon Penalty, chosen when the Parry was.
       ...(defenceFor(attack, actor.uuid)?.parryWith ?? []),
@@ -18315,7 +18336,8 @@ const DEFENCES = {
       strikeOf(actor, defenceFor(attack, actor.uuid)?.foundation ?? "energy"),
       ...musclePenalty(actor),
       ...thresholdPenalty(actor),
-      ...openedAgainst(actor)
+      ...openedAgainst(actor),
+      ...respondingParts(actor)
     ],
     answer: (actor, options, attack) => rollSide(actor, DEFENCES.stardust.parts(actor, attack), { ...options, slot: "strike" }),
     soak: (soak) => soak,
@@ -18329,7 +18351,8 @@ const DEFENCES = {
       ...judoPenalty(actor, attack),
       ...musclePenalty(actor),
       ...thresholdPenalty(actor),
-      ...openedAgainst(actor)
+      ...openedAgainst(actor),
+      ...respondingParts(actor)
     ],
     answer: (actor, options, attack) => rollSide(actor, DEFENCES.judoToss.parts(actor, attack), { ...options, slot: "strike" }),
     soak: (soak) => soak,
@@ -18659,6 +18682,36 @@ async function askParryWeapon(actor) {
   if (!item) return [];
   const armed = weaponAttack(item, actor, { getTrait });
   return (armed?.strike ?? []).filter(part => part.label !== item.name);
+}
+
+/**
+ * Lingering Instincts (2)'s count: each effect of the character's on this roll that would raise its Natural Result or
+ * lower its Critical Target, once each however much it moves it (the user's) - the sheet's and what was ticked for it, the
+ * roll's own (a Profile's floor, a Foundation's Critical Target) one more apiece.
+ */
+function lingeringSources(actor, answered, slot, { naturalAdd = 0, minimumNatural = 0, criticalTarget = null } = {}) {
+  const own = actor?.system?.effects?.slots ?? {};
+  const sources = new Set();
+  const take = (entry, raises) => (entry?.parts ?? [])
+    .filter(part => (part.op === "add") && raises(Number(part.value) || 0))
+    .forEach(part => sources.add(part.source || `${slot}:${sources.size}`));
+  take(own[`${slot}.natural`], value => value > 0);
+  take(answered?.slots?.baseDie, value => value > 0);
+  take(own.criticalTarget, value => value < 0);
+  take(answered?.slots?.criticalTarget, value => value < 0);
+  const ownTarget = Number(actor?.system?.criticalTarget) || 10;
+  return sources.size + ((naturalAdd > 0) ? 1 : 0) + ((minimumNatural > 0) ? 1 : 0)
+    + ((Number.isFinite(criticalTarget) && (criticalTarget < ownTarget)) ? 1 : 0);
+}
+
+/**
+ * Lingering Instincts (1): "While you have no Counter Actions, all Combat Rolls you make in response to an Opponent's
+ * Attacking Maneuver have their Dice Score increased by 1(T)" - none left as the roll is made (the user's).
+ */
+function respondingParts(actor) {
+  const value = applySlot(actor?.system?.effects?.slots, "responding.noCounterActions", 0);
+  return (value && ((Number(actor.system.actions?.counterLeft) || 0) <= 0))
+    ? [{ label: "No Counter Actions", written: "+1(T)", value }] : [];
 }
 
 /**

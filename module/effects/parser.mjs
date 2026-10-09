@@ -493,8 +493,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "ownDefeat", "snackThisRound",
   // Ki Multiplier from elsewhere; no Ki regained by Surge or Combat Recovery (Power Battery's).
   "kiMultiplied", "kiLocked",
-  // The one Defeated, your Lock On Target.
-  "defeatedLockOn"]);
+  // The one Defeated, your Lock On Target; no Counter Action left (Lingering Instincts').
+  "defeatedLockOn", "noCounterActions"]);
 
 /**
  * Dice the character already has, named rather than written out.

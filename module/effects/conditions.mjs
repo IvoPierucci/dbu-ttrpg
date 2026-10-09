@@ -103,6 +103,9 @@ const PREDICATES = {
   /** Is the Maneuver being declared one made through the Signature Technique Maneuver - God of Judgment's. */
   signatureTechnique: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique),
 
+  /** No Counter Action left - Lingering Instincts' "while you possess no Counter Actions". */
+  noCounterActions: scope => (Number(scope.data?.actions?.counterLeft) || 0) <= 0,
+
   /** Is this character in their own Frozen Turn - Time Freeze's (God of Time's "during Frozen Turns"). */
   frozenTurn: scope => Boolean(scope.data?.parent?.getFlag?.("dbu-ttrpg", "frozenTurn")),
 

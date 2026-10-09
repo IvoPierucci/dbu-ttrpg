@@ -220,6 +220,15 @@ const TABLE = [
   { key: "clash.defending", phase: PHASES.LATE, kind: N, ops: NUMERIC,
     doc: "Added to your Dice Score in any Clash an Opponent opened - their attack against your "
        + "Dodge or Parry included." },
+  // Lingering Instincts (1): "While you have no Counter Actions, all Combat Rolls you make in response to an Opponent's
+  // Attacking Maneuver have their Dice Score increased by 1(T)" - whether none is left asked as the roll is made.
+  { key: "responding.noCounterActions", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to every Combat Roll made answering an Opponent's Attacking Maneuver - the Dodge, a Parry's or another "
+       + "defence's Strike, Power Flare's Wound - while no Counter Action is left (chat.mjs respondingParts)." },
+  // Lingering Instincts (2).
+  { key: "lingering.nine", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
+    doc: "This Strike or Dodge Roll: a Counter Action spent, its Natural Result 9, no Critical or Botch, and 1 more for "
+       + "each effect that would have raised its Natural Result or lowered its Critical Target (chat.mjs rollSide)." },
   { key: "defend.free", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
     doc: "The Defend Maneuver costs no Counter Action for this attack." },
 

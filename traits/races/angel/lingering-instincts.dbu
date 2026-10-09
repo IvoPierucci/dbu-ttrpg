@@ -1,0 +1,30 @@
+id: lingering-instincts
+name: Lingering Instincts
+order: 2
+category: mind
+importance: primary
+description: >
+  Your body has a tendency to move on its own in combat, without you needing to think about it.
+text: >
+  Lingering Instincts (Mind): Your body has a tendency to move on its own in combat, without you needing to think about it.
+  (1)-[Passive]: While you have no Counter Actions, all Combat Rolls you make in response to an Opponent’s Attacking Maneuver have their Dice Score increased by 1(T).
+  (2)-[Triggered]: When making a Strike or Dodge Roll, you may spend a Counter Action to set your Natural Result for that Combat Roll to 9. You cannot score a Critical Result or a Botch Result on this Combat Roll, regardless of all Effects. For each of your effects applied to this Combat Roll that would increase the Natural Result or reduce the Critical Target, increase your Dice Score for this Combat Roll by 1.
+  (3)-[Triggered, 1/Round]: If you are targeted by an Opponent’s Attacking Maneuver while you possess no Counter Actions and are above the Injured Health Threshold, you may use the Defend Maneuver without spending a Counter Action.
+
+---
+
+# (1) Read where an Opponent's Attacking Maneuver is answered - the Dodge, a Parry's or another defence's Strike, Power
+# Flare's Wound (chat.mjs respondingParts) - while no Counter Action is left as the roll is made (the user's).
+[passive]
+responding.noCounterActions += 1(T);
+
+# (2) Ticked in the window before a Strike or Dodge Roll: a Counter Action spent there, the Natural Result 9, no Critical
+# or Botch, and 1 more for each effect that would have raised that Natural Result or lowered its Critical Target - by
+# source, not by how much (the user's) - (chat.mjs rollSide). In a window as it happens: no Triggered/Automatic button.
+[triggered/combat-roll, effect 2]
+lingering.nine = true;
+
+# (3) Ticked in Respond as you Defend: no Counter Action for it - with none left, above Injured (Healthy or Bruised).
+[triggered/defending, 1/round, effect 3]
+requires noCounterActions && !belowThreshold("injured");
+defend.free = true;
