@@ -670,7 +670,9 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   if (actor.system.effects?.slots?.["signature.earthlingRaised"] === true) {
     const { featureCatalogue, featureTP, maxRanks } = await import("./technique.mjs");
     earthlingOffered = featureCatalogue().advantages.filter(def => !def.choose && (ranks(def.id) < maxRanks(def)))
-      .map(def => ({ def, rank: ranks(def.id) + 1, tp: featureTP(def, ranks(def.id) + 1) - featureTP(def, ranks(def.id)) }))
+      // The next rank's own price - featureTP reads 0 ranks as 1, so a first rank is priced on its own.
+      .map(def => ({ def, rank: ranks(def.id) + 1,
+        tp: ranks(def.id) ? featureTP(def, ranks(def.id) + 1) - featureTP(def, ranks(def.id)) : featureTP(def, 1) }))
       .filter(entry => (entry.tp > 0) && (entry.tp <= 10));
     const escape = Handlebars.escapeExpression;
     fields.push(`<label class="dbu-respond-option"${tip("earthling-raised", 3)}><span class="dbu-respond-name">Earthling-Raised</span>
