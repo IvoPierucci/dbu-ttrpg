@@ -324,7 +324,17 @@ export function ownedRacialTraits(actor) {
 const slug = label => String(label ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 /** What a `choose:` header offers, as [value, label] pairs. */
-async function choicesFor(kind, source = null) {
+async function choicesFor(kind, source = null, { actor = null, earlier = [] } = {}) {
+  // A Skill, any - or one the character has 2+ Skill Ranks in, the Rank just chosen counted (Functional Purpose's) - less
+  // what `chooseExcept:` names ("You cannot choose Perception for either choice").
+  if ((kind === "skill") || (kind === "skillRanked")) {
+    const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
+    const except = new Set(listOf(source?.chooseExcept).map(each => each.toLowerCase()));
+    const ranks = key => (Number(actor?.system?.skills?.[key]?.ranks) || 0) + earlier.filter(each => each === key).length;
+    return Object.entries(DBUCharacterData.SKILLS).filter(([key]) => !except.has(key.toLowerCase()))
+      .filter(([key]) => (kind === "skill") || (ranks(key) >= 2))
+      .map(([key, skill]) => [key, skill.label]);
+  }
   // Its own list, written beside it - `choices: Tiny, Enormous` (Alternate Scale Structure's).
   if (kind === "list") return listOf(source?.choices).map(label => [slug(label), label]);
   // "Select an additional Saving Throw to apply your Racial Saving Throw Bonus to" (Enhanced Organism's).
@@ -346,10 +356,10 @@ async function choicesFor(kind, source = null) {
 }
 
 /** Ask a `choose:` - one of its values, or null when backed out of. */
-async function askChoice(source) {
-  const offered = await choicesFor(source.choose, source);
+async function askChoice(source, kind = source.choose, context = {}) {
+  const offered = await choicesFor(kind, source, context);
   if (!offered.length) {
-    ui.notifications.warn(`${source.name}: nothing to choose for "${source.choose}".`);
+    ui.notifications.warn(`${source.name}: nothing to choose for "${kind}".`);
     return null;
   }
   const escape = Handlebars.escapeExpression;
@@ -398,12 +408,19 @@ async function askOptions(trait, options, count = Math.max(1, Number(trait.optio
 }
 
 /** A part's script with its `choose:` answered - `$choice` replaced - and the choice recorded. */
-async function answered(source, chosen) {
-  const script = String(source.script ?? "").trim();
+async function answered(source, chosen, actor = null) {
+  let script = String(source.script ?? "").trim();
   if (!source.choose) return script;
-  const choice = await askChoice(source);
+  const choice = await askChoice(source, source.choose, { actor });
   if (!choice) return null;
   chosen.push({ key: source.id, value: choice.value, label: `${source.name}: ${choice.label}` });
+  // A second choice after it - `choose2:`, `$choice2` - asked with the first known (Functional Purpose's).
+  if (source.choose2) {
+    const second = await askChoice(source, source.choose2, { actor, earlier: [choice.value] });
+    if (!second) return null;
+    chosen.push({ key: `${source.id}#2`, value: second.value, label: `${source.name}: ${second.label}` });
+    script = script.replaceAll("$choice2", second.value);
+  }
   // A list's: each of its values a number too - `$tiny` 1 where Tiny was chosen, 0 where it was not.
   const flags = (source.choose === "list") ? (await choicesFor("list", source)).map(([value]) => value)
     .sort((a, b) => b.length - a.length) : [];
@@ -417,9 +434,9 @@ async function answered(source, chosen) {
  *
  * @returns {Promise<?{data: object, grants: {unique: {id: string, restrictions: string[]}[], talents: string[]}}>}
  */
-export async function racialItemFrom(trait) {
+export async function racialItemFrom(trait, actor = null) {
   const chosen = [];
-  const own = await answered(trait, chosen);
+  const own = await answered(trait, chosen, actor);
   if (own === null) return null;
   const scripts = [own];
   const texts = [];
@@ -476,7 +493,7 @@ export async function racialItemFrom(trait) {
  * given twice; a Talent or Unique Ability not written yet is named.
  */
 export async function addRacialTrait(actor, trait) {
-  const made = await racialItemFrom(trait);
+  const made = await racialItemFrom(trait, actor);
   if (!made) return null;
   const [item] = await actor.createEmbeddedDocuments("Item", [made.data]);
   if (!item) return null;

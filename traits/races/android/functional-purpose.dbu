@@ -1,0 +1,33 @@
+id: functional-purpose
+name: Functional Purpose
+order: 5
+category: mind
+importance: secondary
+options: 1
+optionEffect: 2
+# (1)'s two choices, asked as it is gained: a Skill for the Rank, then one with 2+ Ranks for the Critical Target - neither
+# Perception (racial.mjs choicesFor).
+choose: skill
+choose2: skillRanked
+chooseExcept: perception
+description: >
+  Specialization allows the diversity of Android designs to truly shine, allowing each Android to excel far and above others in one specific area of expertise.
+text: >
+  Functional Purpose (Mind): Specialization allows the diversity of Android designs to truly shine, allowing each Android to excel far and above others in one specific area of expertise.
+  (1)-[Passive]: Upon gaining this Racial Trait, gain a Skill Rank in a Skill of your choice, then reduce the Critical Target for a Skill you have 2+ Skill Ranks in by 1. You cannot choose Perception for either choice.
+  (2)-[Option]: Upon gaining this Racial Trait, choose one of the following effects:
+
+  * Destroyer [Triggered, 1/Round]: If you use the Signature Technique Maneuver, you may spend 2(T) Ki Points to apply an Energy Charge to that Attacking Maneuver.
+  * Protector [Triggered, 1/Round]: If an Opponent hits one of your Allies with an Attacking Maneuver, you may use the Intervene Maneuver without spending a Counter Action as long as you are within 8 Squares of that Ally. If you do, increase your Damage Reduction by 2(T) for the duration of that Attacking Maneuver.
+  * Companion [Passive]: While Personality has the highest Attribute Score amongst your Attributes, increase your Combat Rolls and Initiative Rolls by 1(bT).
+  * Researcher [Passive]: While Scholarship has the highest Attribute Score amongst your Attributes, increase your Combat Rolls and Initiative Rolls by 1(bT).
+  * Leader [Passive]: Increase the Combat Rolls of all your Minions by 1(T) and increase their Maximum Life Points by 5(bT).
+
+---
+
+# (1) The Rank, counted with the Progression tab's; the Critical Target, 1 lower on that Skill's Checks.
+[passive]
+skill.$choice.ranks += 1;
+skill.$choice2.criticalTarget -= 1;
+
+# (2) The Option chosen, one file each beside this one.

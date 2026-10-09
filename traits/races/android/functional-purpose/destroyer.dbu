@@ -1,0 +1,17 @@
+id: destroyer
+name: Destroyer
+order: 1
+optionOf: functional-purpose
+optionEffect: 2
+description: >
+  If you use the Signature Technique Maneuver, you may spend 2(T) Ki Points to apply an Energy Charge to that Attacking Maneuver.
+text: >
+  Destroyer [Triggered, 1/Round]: If you use the Signature Technique Maneuver, you may spend 2(T) Ki Points to apply an Energy Charge to that Attacking Maneuver.
+
+---
+
+# Offered in a window as a Signature Technique is declared, as God of Judgment's - 2(T) Ki for the Energy Charge.
+[triggered/declare-maneuver, 1/round, effect 2]
+requires signatureTechnique && ki.value >= 2(T);
+ki.value -= 2(T);
+attack.energyCharges += 1;

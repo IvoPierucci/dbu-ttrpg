@@ -14774,7 +14774,7 @@ async function interventionOutcome(attack, entry, wound) {
 
   const soak = Math.max(0,
     Math.floor((base + bulwark) * DAMAGE_CATEGORIES[category].soakMultiplier));
-  const reduction = Math.max(0, actor.system.damageReduction ?? 0);
+  const reduction = Math.max(0, actor.system.damageReduction ?? 0) + (Number(entry.protector) || 0);
 
   // Their own Soak and Damage Reduction against the whole Wound Roll, and then their own
   // effects on what got through - the same two passes anybody hit takes, because taking a
@@ -15018,6 +15018,27 @@ async function openIntervene(message, attack) {
   return playIntervene(message, attack, chosen);
 }
 
+/**
+ * Protector's waiver, asked: theirs, unused this Round, the Ally within 8 Squares (unmeasured - no tokens - the table's).
+ * Taken, the Round's use noted. Whether it was.
+ */
+async function protectorWaives(actor, ally) {
+  if (actor?.system?.effects?.slots?.["protector.intervene"] !== true) return false;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.(SCOPE, "protectorRound") === round) return false;
+  const { squaresBetween } = await import("./maneuvers.mjs");
+  const away = squaresBetween(actor.getActiveTokens?.(false, true)?.[0], ally?.getActiveTokens?.(false, true)?.[0]);
+  if ((away !== null) && (away > 8)) return false;
+  const { traitEffectLine } = await import("./racial.mjs");
+  const line = traitEffectLine(actor, "functional-purpose", 2);
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - Protector` },
+    content: `<p data-tooltip="${Handlebars.escapeExpression(line)}">No Counter Action, Damage Reduction +2(T)?</p>`,
+    rejectClose: false });
+  if (yes) await actor.setFlag(SCOPE, "protectorRound", round);
+  return Boolean(yes);
+}
+
 /** Pay for an Intervene and write it onto the attack. */
 async function playIntervene(message, attack, { who, ally, effect }) {
   const actor = fromUuidSync(who);
@@ -15049,9 +15070,12 @@ async function playIntervene(message, attack, { who, ally, effect }) {
     if (!ready) return;
   }
 
+  // Protector: "you may use the Intervene Maneuver without spending a Counter Action as long as you are within 8 Squares of
+  // that Ally. If you do, increase your Damage Reduction by 2(T)" - asked, once a Round.
+  const protector = await protectorWaives(actor, allyActor);
   // A Counter Action and the chosen effect's Ki, in that order: the Action is the one
   // that can be short, and a refused Maneuver must cost nothing.
-  if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+  if (!protector && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
   if (!await spendManeuverCost(actor, maneuver, interveneOptionCost(effect, actor))) return;
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
@@ -15076,6 +15100,8 @@ async function playIntervene(message, attack, { who, ally, effect }) {
     clash: null,
     deflected: false,
     incomingDamage: incoming?.slots?.["incoming.damage"] ?? null,
+    // Protector's Damage Reduction, for this attack.
+    ...(protector ? { protector: 2 * Math.max(1, actor.system.tierOfPower ?? 1) } : {}),
     outcome: null
   };
 

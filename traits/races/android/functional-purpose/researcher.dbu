@@ -1,0 +1,19 @@
+id: researcher
+name: Researcher
+order: 4
+optionOf: functional-purpose
+optionEffect: 2
+description: >
+  While Scholarship has the highest Attribute Score amongst your Attributes, increase your Combat Rolls and Initiative Rolls by 1(bT).
+text: >
+  Researcher [Passive]: While Scholarship has the highest Attribute Score amongst your Attributes, increase your Combat Rolls and Initiative Rolls by 1(bT).
+
+---
+
+# The highest - tied counts (the user's): "has the highest Attribute Score".
+[passive]
+if (scholarship.score >= max(max(max(agility.score, force.score), max(tenacity.score, insight.score)),
+    max(magic.score, personality.score))) {
+    combatRolls += 1(bT);
+    initiative += 1(bT);
+}

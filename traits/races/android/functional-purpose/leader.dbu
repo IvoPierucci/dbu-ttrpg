@@ -1,0 +1,14 @@
+id: leader
+name: Leader
+order: 5
+optionOf: functional-purpose
+optionEffect: 2
+description: >
+  Increase the Combat Rolls of all your Minions by 1(T) and increase their Maximum Life Points by 5(bT).
+text: >
+  Leader [Passive]: Increase the Combat Rolls of all your Minions by 1(T) and increase their Maximum Life Points by 5(bT).
+
+---
+
+# A character's Minions are other characters, and nothing ties them to you yet - the table adds it to theirs, as God of
+# Many's.

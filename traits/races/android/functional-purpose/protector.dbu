@@ -1,0 +1,16 @@
+id: protector
+name: Protector
+order: 2
+optionOf: functional-purpose
+optionEffect: 2
+description: >
+  If an Opponent hits one of your Allies with an Attacking Maneuver, you may use the Intervene Maneuver without spending a Counter Action as long as you are within 8 Squares of that Ally. If you do, increase your Damage Reduction by 2(T) for the duration of that Attacking Maneuver.
+text: >
+  Protector [Triggered, 1/Round]: If an Opponent hits one of your Allies with an Attacking Maneuver, you may use the Intervene Maneuver without spending a Counter Action as long as you are within 8 Squares of that Ally. If you do, increase your Damage Reduction by 2(T) for the duration of that Attacking Maneuver.
+
+---
+
+# Asked as you Intervene for an Ally hit, within 8 Squares of them, once a Round: no Counter Action, and 2(T) more Damage
+# Reduction against that attack (chat.mjs playIntervene, interventionOutcome).
+[passive]
+allow protector.intervene;

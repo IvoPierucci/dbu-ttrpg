@@ -1,0 +1,19 @@
+id: companion
+name: Companion
+order: 3
+optionOf: functional-purpose
+optionEffect: 2
+description: >
+  While Personality has the highest Attribute Score amongst your Attributes, increase your Combat Rolls and Initiative Rolls by 1(bT).
+text: >
+  Companion [Passive]: While Personality has the highest Attribute Score amongst your Attributes, increase your Combat Rolls and Initiative Rolls by 1(bT).
+
+---
+
+# The highest - tied counts (the user's): "has the highest Attribute Score".
+[passive]
+if (personality.score >= max(max(max(agility.score, force.score), max(tenacity.score, insight.score)),
+    max(magic.score, scholarship.score))) {
+    combatRolls += 1(bT);
+    initiative += 1(bT);
+}
