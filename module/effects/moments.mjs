@@ -77,6 +77,12 @@ const TABLE = [
   { key: "battle-born", label: "You gain a stack of Battle Born", provides: [],
     doc: "Fired as Born for Battle's stacks are gained (gainOneOf) or raised (raiseTo) - Primitive Durability's 3rd. What "
        + "is the player's is asked in a window first." },
+  { key: "direct-hit", label: "You use the Direct Hit option of the Defend Maneuver", provides: [],
+    doc: "Read where the hit is settled (chat.mjs): what answers it changes the Damage Category for your Damage alone - "
+       + "Damage Inhibitor's 2nd. Automatic, or ticked in Respond." },
+  { key: "guard-or-direct-hit", label: "You use the Direct Hit or Guard options of the Defend Maneuver", provides: [],
+    doc: "Read where the Damage is settled (chat.mjs): the Damage Reduction it adds holds for that attack - Damage "
+       + "Inhibitor's 3rd. Automatic, or ticked in Respond." },
   { key: "defeat-opponent", label: "You Defeat an Opponent with an Attacking Maneuver", provides: [],
     doc: "Fired for whoever made the Attacking Maneuver whose Damage Defeated them (combat.mjs, as knock-through), with who "
        + "it was (`defeatedLockOn` asks whether they were your Lock On Target). Asked in a window first where Triggered." },

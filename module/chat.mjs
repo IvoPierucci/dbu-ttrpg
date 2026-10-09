@@ -5972,7 +5972,8 @@ const TRIGGER_STAGES = {
   // Answering the attack: the Strike, and whatever meets it.
   response: {
     attacker: ["combat-roll"],
-    target: ["combat-roll", "defending"]
+    // Damage Inhibitor's, Triggered: ticked here, read where the hit and its Damage are settled.
+    target: ["combat-roll", "defending", "direct-hit", "guard-or-direct-hit"]
   },
   // The attack has landed, and the Wound Roll has not been made yet - which is exactly
   // what these are there to change.
@@ -13614,6 +13615,19 @@ export async function askLockOn(actor) {
   if (target) await requestActorUpdate(actor, { [`flags.${SCOPE}.lockOn`]: { uuid: target.uuid, name: target.name } });
 }
 
+/**
+ * What answers a Moment read where it happens rather than fired - Damage Inhibitor's Direct Hit, Hyper Resilience's light
+ * Damage: its armed effects (Automatic, or ticked), collected, and spent as they are used.
+ */
+function heldAt(actor, moment) {
+  const held = reactiveFor(actor).filter(entry => entry.available && entry.armed
+    && (String(entry.program.blocks?.[0]?.moment ?? "") === moment));
+  if (!held.length) return null;
+  const answered = atMoment(actor, moment, {});
+  for (const entry of held) spendTriggeredEffect(actor, entry.blockId);
+  return answered;
+}
+
 /** Lock On's "Increase your Strike and Wound Rolls against your Target by 2(T)". */
 function lockOnParts(attacker, target) {
   const locked = attacker?.getFlag?.(SCOPE, "lockOn");
@@ -16192,6 +16206,9 @@ async function resolveAttack(message, attack) {
     // What this defender's own effects do about being hit - Superior taking more
     // Damage, Prone taking it a category harder. Collected once, used at the Wound Roll.
     const incoming = hit ? atMoment(target, "being-hit", { attack: 1, attacker: 1 }) : null;
+    // Damage Inhibitor: "If you use the Direct Hit option of the Defend Maneuver, reduce the Damage Category of that
+    // Attacking Maneuver by 1 Category for the sake of your Damage calculation."
+    const inhibited = (hit && (defense === "directHit")) ? heldAt(target, "direct-hit") : null;
     // Hidden from them: "hit an enemy with 1 attack" ends it.
     if (hit && attacker) (await import("./hidden.mjs")).revealOnHit(attacker, target);
     // Invisible: "If you hit an Opponent with an Attacking Maneuver, increase the Natural Result of their next Skill
@@ -16250,7 +16267,8 @@ async function resolveAttack(message, attack) {
       // Damage Category by 1 Category."
       + ((((Number(target.system.states?.invisible) || 0) > 0)
         && Array.from(target.system.hiddenFrom ?? []).some(entry => entry?.uuid === attacker?.uuid)) ? 1 : 0)
-      + (incoming?.slots?.["incoming.damage.category.shift"]?.add ?? 0);
+      + (incoming?.slots?.["incoming.damage.category.shift"]?.add ?? 0)
+      + (inhibited?.slots?.["incoming.damage.category.shift"]?.add ?? 0);
 
     // Gained after the Attacking Maneuver, so it never touches the roll just made. The
     // Defend Maneuver spares you these entirely, whichever option it was used for.
@@ -17622,7 +17640,10 @@ async function rollAttackWound(message, attack) {
     const halved = (profileFor(attack)?.ignoresHalfDamageReduction
       ? Math.floor(afterPierce / 2)
       : 0) + Math.floor(afterPierce * (Number(attack.weapon?.damageReductionIgnored) || 0));
-    const reduction = Math.max(0, afterPierce - halved);
+    // Damage Inhibitor: "If you use the Direct Hit or Guard options of the Defend Maneuver, increase your Damage Reduction
+    // by 2(T) for the duration of that Maneuver."
+    const braced = ["directHit", "guard"].includes(own.defense) ? heldAt(target, "guard-or-direct-hit") : null;
+    const reduction = Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0);
 
     const negated = counterWound && (counterWound.total > wound.total);
     const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);

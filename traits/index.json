@@ -142,6 +142,7 @@
     "maneuvers/god-finisher.dbu",
     "maneuvers/holy-transformation.dbu",
     "maneuvers/transformation.dbu",
+    "races/android/damage-inhibitor.dbu",
     "races/android/energy-core.dbu",
     "races/android/energy-core/infinite-energy.dbu",
     "races/android/energy-core/power-battery.dbu",
