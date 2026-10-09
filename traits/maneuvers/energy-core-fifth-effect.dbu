@@ -1,0 +1,22 @@
+id: energy-core-fifth-effect
+name: 5th effect of Energy Core
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+surge: true
+surgeKind: ki
+fromTrait: infinite-energy
+fromEffect: 5
+source: Core Rule
+description: >
+  Energy Core's fifth effect, with Infinite Energy, as a Maneuver: a Ki Surge for 1 Action, once a Combat Round.
+text: >
+  (5)-[Choice]: Infinite Energy [1/Round]: As a Standard Action with an Action Cost of 1 Action, you may use a Ki Surge.
+
+---
+
+# Majin Regeneration's third effect's shape: owned by every character, in the list only while Energy Core's Infinite
+# Energy Option is had (`fromTrait` naming the Option).

@@ -1,0 +1,35 @@
+id: energy-core
+name: Energy Core
+order: 2
+category: body
+importance: primary
+options: 1
+optionEffect: 4
+description: >
+  Powered by an internal core of some variety, Androids’ bodies are fueled by an inorganic energy source that grants them special abilities.
+text: >
+  Energy Core (Body): Powered by an internal core of some variety, Androids’ bodies are fueled by an inorganic energy source that grants them special abilities.
+  (1)-[Passive]: Any Traits, Maneuvers, or effects used by other Characters cannot reduce your Ki Points.
+  (2)-[Passive]: You automatically succeed any Concealment Skill Clashes initiated by another Character, even if you have no Skill Ranks in Concealment.
+  (3)-[Passive]: If you’ve already used the Energy Charge Maneuver once during this Combat Round, reduce the Ki Point Cost for the Energy Charge Maneuver by 1(T).
+  (4)-[Option]: Upon gaining access to this Trait, choose one of the following effects:
+
+  * Infinite Energy [Triggered/Start of Combat Round]: Regain 4(bT) Ki Points.
+  * Power Battery [Passive]: Reduce the Ki Point Cost of all Attacking Maneuvers by 2(T) and you always benefit from Ki Multiplier (see — Forms) even when you are not in a Form, but you cannot regain Ki Points through Ki Surges or Combat Recovery. If you would gain Ki Multiplier from another source, increase your Combat Rolls by 1(bT) instead.
+
+  (5)-[Choice]: Depending on your choice for the Option effect, gain the following effects:
+
+  * Infinite Energy [1/Round]: As a Standard Action with an Action Cost of 1 Action, you may use a Ki Surge.
+  * Power Battery [Passive]: While your Ki Points exceed your Max Capacity, increase your Soak Value and Combat Rolls by 1(bT).
+
+---
+
+# (1) What another's drains take - Power Drain's, Psycho Thread's - comes to nothing (chat.mjs reduceKiPoints).
+# (2) A Concealment Skill Clash someone else opened, answered with Concealment: won (chat.mjs resolveSkillClash).
+# (3) The Energy Charge Maneuver used once this Combat Round already: the next 1(T) cheaper (maneuvers.mjs maneuverKiCost).
+[passive]
+allow ki.protected;
+allow concealment.autoSucceed;
+energyCharge.again.kiCost -= 1(T);
+
+# (4) and (5): the Option chosen, its effect and its Choice effect together - one file each, beside this one.

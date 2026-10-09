@@ -2176,7 +2176,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     }
 
     // Doubled on the finished pool, for the same reason.
-    if (this.debug.kiMultiplier) this.ki.max *= DBUCharacterData.KI_MULTIPLIER_KI;
+    // Or always, Power Battery's: "you always benefit from Ki Multiplier ... even when you are not in a Form".
+    const kiMultiplied = this.debug.kiMultiplier || (this.effects?.slots?.["kiMultiplier.always"] === true);
+    if (kiMultiplied) this.ki.max *= DBUCharacterData.KI_MULTIPLIER_KI;
 
     // Capacity: the ceiling on Ki spent within one Combat Round. Flat bonuses land
     // before the multiplier, so a doubling effect doubles them too.
@@ -2194,7 +2196,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const capacityMultiplier = this.capacityModifiers.multiplier
       * (this.effects.slots["capacity.multiplier"]?.multiply ?? 1)
       * (1 + capacityFraction)
-      * (this.debug.kiMultiplier ? DBUCharacterData.KI_MULTIPLIER_CAPACITY : 1);
+      * (kiMultiplied ? DBUCharacterData.KI_MULTIPLIER_CAPACITY : 1);
 
     this.capacity.max = Math.max(0, Math.floor(baseCapacity * capacityMultiplier));
     this.capacity.remaining = Math.max(0, this.capacity.max - this.capacity.spent);
@@ -2330,12 +2332,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // it, so that anything multiplying your Soak Value multiplies this with it, which
     // is what Calculation Priority asks of a multiplier on a finished value.
     const soakBelow = perThreshold(this, "soakValue");
+    // Power Battery: "While your Ki Points exceed your Max Capacity, increase your Soak Value ... by 1(bT)" - read here,
+    // where the Capacity is known.
+    const battery = ((this.effects?.slots?.["powerBattery.overCapacity"] === true)
+      && ((Number(this.ki?.value) || 0) > (Number(this.capacity?.max) || 0))) ? this.baseTierOfPower : 0;
     const beforeFloor = withEffects(this, "soakValue.external",
-      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk + soakBelow.value, {
+      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk + soakBelow.value + battery, {
         parts: [
           { label: "Own Soak", value: ownSoak },
           { label: "Solid Bulk", value: this.superStack.solidBulk },
-          ...soakBelow.parts
+          ...soakBelow.parts,
+          ...(battery ? [{ label: "Power Battery", value: battery }] : [])
         ]
       })
         + this.externalModifiers.soak,

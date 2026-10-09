@@ -137,7 +137,10 @@ export function traitActive(actor, id) {
       return (Number(actor.system?.conditions?.[id]) || 0) > 0;
     case "races":
     case "factors":
-      return (actor.system?.racialTraits ?? []).includes(id);
+      // An Option chosen on one counts as had - Infinite Energy's Maneuver (Energy Core's).
+      return (actor.system?.racialTraits ?? []).includes(id) || (trait.optionOf
+        && Array.from(actor.items ?? []).some(item => (item.type === "racial")
+          && (item.system?.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === id))));
     case "talents":
       return (actor.items ?? []).some(item =>
         (item.type === "talent") && (item.flags?.["dbu-ttrpg"]?.sourceId === id));

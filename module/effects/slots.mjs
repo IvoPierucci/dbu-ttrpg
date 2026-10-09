@@ -181,6 +181,8 @@ const TABLE = [
     doc: "Technique Points more from each Skill Improvement, as Gifted Student's (Inherited Creativity)." },
   { key: "signature.tpCost", phase: PHASES.CORE, kind: N, ops: ["add"],
     doc: "Added to what each Signature Technique takes from the character, after all else (Earthling-Raised's 2 off)." },
+  { key: "energyCharge.again.kiCost", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "The Energy Charge Maneuver's Ki Point Cost once it has been used this Combat Round (Energy Core's 1(T) off)." },
   { key: "signature.kiCost", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "The Ki Point Cost of your Signature Techniques (Inherited Creativity's 1(T) off)." },
 
@@ -732,7 +734,7 @@ const PATTERNS = [
     doc: "The Dice Score of a Might Clash when targeted by the Pin Maneuver; Damage received from an Attacking Maneuver "
        + "of Direct or higher; Squares a Physical Attack or Grapple may reach past the Melee Range, asked; Life Points a "
        + "Healing Surge gives back for each Health Threshold below." },
-  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam|snackFiend\.superior|signature\.earthlingRaised)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam|snackFiend\.superior|signature\.earthlingRaised|ki\.protected|concealment\.autoSucceed|kiMultiplier\.always|ki\.noRegain|powerBattery\.overCapacity)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "Every Collision Damage received halved; moving one hit with a Physical Attack or put in a Grapple, once a Round "
        + "(Rubbery Body's); moving away when hit, and the Movement after Collision Damage (Bouncy Physique's); a Physical "

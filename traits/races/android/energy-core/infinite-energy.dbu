@@ -1,0 +1,18 @@
+id: infinite-energy
+name: Infinite Energy
+order: 1
+optionOf: energy-core
+optionEffect: 4
+description: >
+  Regain 4(bT) Ki Points.
+text: >
+  Infinite Energy [Triggered/Start of Combat Round]: Regain 4(bT) Ki Points.
+
+---
+
+# (4) At the start of every Combat Round. Automatic by default; set Triggered, chosen on the Round's card.
+[triggered/start-of-round, effect 4]
+ki.value += 4(bT);
+
+# (5) "As a Standard Action with an Action Cost of 1 Action, you may use a Ki Surge" - a Maneuver of its own,
+# maneuvers/energy-core-fifth-effect.dbu, in the list while this Option is had.

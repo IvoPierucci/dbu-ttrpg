@@ -4825,7 +4825,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // The Maneuvers that are this Trait's own effects - Majin Regeneration's 3rd: the character's own Maneuver Item, shown
       // here as well, used and dragged as it is on the Maneuvers tab (the user's). An Item holds no Item of its own.
       maneuvers: this.#ownedManeuvers()
-        .filter(maneuver => maneuver.fromTrait && (maneuver.fromTrait === item.flags?.["dbu-ttrpg"]?.sourceId))
+        .filter(maneuver => maneuver.fromTrait && ((maneuver.fromTrait === item.flags?.["dbu-ttrpg"]?.sourceId)
+          // Or one of its Options' - Infinite Energy's, in Energy Core's fold.
+          || (item.system.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === maneuver.fromTrait))))
         .map(maneuver => ({
           itemId: maneuver.itemId,
           name: maneuver.name,

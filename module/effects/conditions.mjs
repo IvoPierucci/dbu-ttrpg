@@ -109,6 +109,12 @@ const PREDICATES = {
   /** Is the Maneuver being declared that one, by its id - Cosmic Efficiency's Combat Recovery. */
   using: (scope, id) => (scope.context?.maneuver?.id ?? "") === String(id).trim(),
 
+  /** Ki Multiplier from somewhere else than an effect that always gives it - the sheet's box, until Forms (Power Battery). */
+  kiMultiplied: scope => scope.data?.debug?.kiMultiplier === true,
+
+  /** No Ki Points regained through a Ki Surge or Combat Recovery (Power Battery's). */
+  kiLocked: scope => scope.data?.effects?.slots?.["ki.noRegain"] === true,
+
   /** Does this character still have their tail - Saiyan Heritage's Tailed, not lost (the Options tab's Tail lost box). */
   tailed: scope => !scope.data?.parent?.getFlag?.("dbu-ttrpg", "tailLost"),
 

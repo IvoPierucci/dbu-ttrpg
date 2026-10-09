@@ -4011,6 +4011,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     }
 
     await recordManeuverUse(actor, maneuver);
+    await (await import("./maneuvers.mjs")).noteEnergyCharge(actor);
     await recordManeuverType(actor, maneuver.type,
       { messageId: (await postManeuver(actor, maneuver, { foundation: null }))?.id, maneuverId: maneuver.id });
     return true;

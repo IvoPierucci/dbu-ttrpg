@@ -486,7 +486,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // to mend (Majin Style's).
   "evenRound", "tailed", "costumeMendable",
   // Brought to 0 by their own effect (Revenge Bomber's); a Snack eaten this Round (Snack Motivated's).
-  "ownDefeat", "snackThisRound"]);
+  "ownDefeat", "snackThisRound",
+  // Ki Multiplier from elsewhere; no Ki regained by Surge or Combat Recovery (Power Battery's).
+  "kiMultiplied", "kiLocked"]);
 
 /**
  * Dice the character already has, named rather than written out.

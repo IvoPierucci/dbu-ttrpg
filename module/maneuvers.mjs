@@ -3107,6 +3107,10 @@ export function maneuverKiCost(maneuver, declared, actor) {
   let cost = applySlot(slots, `${maneuver.id}.kiCost`, base);
   // A Unique Ability's, by its type - God of Magic's 2(T) off every Magical one.
   if (actor && maneuver.uniqueType) cost = applySlot(slots, `unique.${maneuver.uniqueType}.kiCost`, cost);
+  // The Energy Charge Maneuver, used once already this Combat Round - Energy Core's 1(T) off the next.
+  if (actor && maneuver.charge && (actor.getFlag?.("dbu-ttrpg", "energyChargeRound") === roundNow())) {
+    cost = applySlot(slots, "energyCharge.again.kiCost", cost);
+  }
   // A Signature Technique's, any of them - Inherited Creativity's 1(T) off.
   if (actor && maneuver.signature && !maneuver.signatureTechnique) cost = applySlot(slots, "signature.kiCost", cost);
 
@@ -3197,6 +3201,16 @@ function usedIs(entry, maneuver) {
  * back. Without it every use looked alike, the Round could not tell them apart, and a
  * Maneuver limited to once per Round was in practice once per Encounter.
  */
+/** This Combat Round's, for what reads whether one was had in it. */
+function roundNow() {
+  return `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+}
+
+/** The Energy Charge Maneuver used this Combat Round - Energy Core's "If you've already used ... once". */
+export async function noteEnergyCharge(actor) {
+  if (actor?.getFlag?.("dbu-ttrpg", "energyChargeRound") !== roundNow()) await actor?.setFlag?.("dbu-ttrpg", "energyChargeRound", roundNow());
+}
+
 export async function recordManeuverUse(actor, maneuver) {
   if (!maneuver.usageLimit) return;
   const entry = `${maneuver.usageLimit.per}:${maneuver.id}`;

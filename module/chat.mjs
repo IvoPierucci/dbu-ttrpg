@@ -4157,7 +4157,8 @@ async function squeeze(message, { ki, life, volley }) {
   await binder.update({ "system.ki.value": pool.value - ki, "system.capacity.spent": capacity.spent + ki });
   const { taken } = await reduceLifePoints(target, life, { reason: item.name });
   // Psycho Thread: "they lose Ki Points equal to 1/2 of the amount of Life Points lost."
-  if (taken && boughtTraits(item.system.unique, getTrait).some(trait => trait.drainsKi)) {
+  if (taken && boughtTraits(item.system.unique, getTrait).some(trait => trait.drainsKi)
+    && (target.system.effects?.slots?.["ki.protected"] !== true)) {
     const drained = Math.min(Number(target.system.ki.value) || 0, Math.floor(taken / 2));
     if (drained) {
       await requestActorUpdate(target, { "system.ki.value": target.system.ki.value - drained });
@@ -4370,6 +4371,7 @@ async function cycloneStage(message, actor, item) {
   await spendManeuverCost(actor, charge, chargeCost);
   await recordManeuverUse(actor, maneuver);
   await recordManeuverUse(actor, charge);
+  await (await import("./maneuvers.mjs")).noteEnergyCharge(actor);
   requestEdit(message, { type: "attack", attack: { ...attack, cycloned: true } });
   const { maxEnergyCharges } = await import("./maneuvers.mjs");
   const charging = actor.system.charging ?? {};
@@ -8786,10 +8788,14 @@ async function resolveSkillClash(message, clash) {
   const divine = who => (Number(who?.system?.states?.["god-ki"]) || 0) > 0;
   // "Unless specified otherwise, no one can sense God Ki" - Skill of the Watcher specifies otherwise.
   const senses = who => divine(who) || (who?.system?.effects?.slots?.["sense.godKi"] === true);
+  // Energy Core: "You automatically succeed any Concealment Skill Clashes initiated by another Character, even if you
+  // have no Skill Ranks in Concealment."
   const hidden = (clash.category === "skill") && (skillPicked(clash, clash.defenderUuid) === "concealment")
-    && divine(defender) && !senses(challenger);
+    && ((divine(defender) && !senses(challenger))
+      || (defender.system.effects?.slots?.["concealment.autoSucceed"] === true));
   const defenderSide = hidden
-    ? { ...rolledDefence, succeeded: true, lines: [...(rolledDefence.lines ?? []), noteLine("God Ki - it cannot be sensed")] }
+    ? { ...rolledDefence, succeeded: true, lines: [...(rolledDefence.lines ?? []), noteLine(
+      (defender.system.effects?.slots?.["concealment.autoSucceed"] === true) ? "Energy Core" : "God Ki - it cannot be sensed")] }
     : rolledDefence;
 
   requestEdit(message, {
@@ -18252,6 +18258,11 @@ function defenceFormula(actor, key, attack) {
 export async function reduceKiPoints(target, amount, { reason = "Ki Point reduction" } = {}) {
   const wanted = Math.max(0, Math.floor(amount));
   if (!wanted) return 0;
+  // Energy Core: "Any Traits, Maneuvers, or effects used by other Characters cannot reduce your Ki Points."
+  if (target.system.effects?.slots?.["ki.protected"] === true) {
+    ui.notifications.info(`${target.name}'s Ki Points cannot be reduced by another (${reason}).`);
+    return 0;
+  }
 
   const { value } = target.system.ki;
   const taken = Math.min(wanted, Math.max(0, value));
@@ -21056,7 +21067,9 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
   }
 
   const { ki, capacity } = actor.system;
-  const kiGain = Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency;
+  // Power Battery: "you cannot regain Ki Points through Ki Surges" - the Capacity still comes back.
+  const kiGain = (actor.system.effects?.slots?.["ki.noRegain"] === true) ? 0
+    : Math.floor(ki.max / DBUCharacterData.KI_SURGE_FRACTION) + surgency;
   const capacityGain = Math.floor(capacity.max / DBUCharacterData.KI_SURGE_FRACTION);
 
   const kiRestored = Math.min(ki.max, ki.value + kiGain) - ki.value;

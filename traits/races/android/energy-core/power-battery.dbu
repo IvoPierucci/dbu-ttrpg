@@ -1,0 +1,28 @@
+id: power-battery
+name: Power Battery
+order: 2
+optionOf: energy-core
+optionEffect: 4
+description: >
+  Reduce the Ki Point Cost of all Attacking Maneuvers by 2(T) and you always benefit from Ki Multiplier (see — Forms) even when you are not in a Form, but you cannot regain Ki Points through Ki Surges or Combat Recovery. If you would gain Ki Multiplier from another source, increase your Combat Rolls by 1(bT) instead.
+text: >
+  Power Battery [Passive]: Reduce the Ki Point Cost of all Attacking Maneuvers by 2(T) and you always benefit from Ki Multiplier (see — Forms) even when you are not in a Form, but you cannot regain Ki Points through Ki Surges or Combat Recovery. If you would gain Ki Multiplier from another source, increase your Combat Rolls by 1(bT) instead.
+
+---
+
+# (4) Ki Multiplier always (actor-character.mjs); none regained through a Ki Surge or Combat Recovery (`kiLocked`). Ki
+# Multiplier from another source - the sheet's own box, until Forms are built - Combat Rolls +1(bT) instead.
+[passive]
+attack.kiCost -= 2(T);
+allow kiMultiplier.always;
+allow ki.noRegain;
+if (kiMultiplied) {
+    combatRolls += 1(bT);
+}
+
+# (5) Ki Points over the Max Capacity: Soak Value +1(bT) (actor-character.mjs, once the Capacity is known) and Combat
+# Rolls +1(bT).
+allow powerBattery.overCapacity;
+if (ki.value > capacity.max) {
+    combatRolls += 1(bT);
+}
