@@ -3570,7 +3570,7 @@ async function treatAlly(actor, ally, maneuver) {
  * and the Base Tier, so a Transformation does not make a doctor better at medicine.
  *
  * The Skill Bonus and not a roll of it, so an untrained Medicine still adds something: the
- * Bonus is the governing Score plus 2 a Rank, and no Ranks leaves the Score.
+ * Bonus is half the governing Score plus 2 a Rank, and no Ranks leaves the half Score.
  *
  * Halved when the poison is being gone after. Rounded down, which the entry does not say -
  * the halvings here that round up say so.
