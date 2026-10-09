@@ -668,12 +668,13 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
   // Earthling-Raised: "When you use the Signature Technique Maneuver, for this instance of using your chosen Signature
   // Technique, you may either: Apply an Energy Charge to that Attacking Maneuver. Add a single Advantage with a TP cost of
-  // up to 10 TP to your chosen Signature Technique." Every time; one with a choice of its own is not offered. One it has
-  // already, short of its last rank, is offered its next - at that rank's price (the user's).
+  // up to 10 TP to your chosen Signature Technique." Every time; one with a choice of its own - Trick Attack's Skill - has
+  // it asked once picked (the user's). One it has already, short of its last rank, is offered its next - at that rank's
+  // price (the user's).
   let earthlingOffered = [];
   if (actor.system.effects?.slots?.["signature.earthlingRaised"] === true) {
     const { featureCatalogue, featureTP, maxRanks } = await import("./technique.mjs");
-    earthlingOffered = featureCatalogue().advantages.filter(def => !def.choose && (ranks(def.id) < maxRanks(def)))
+    earthlingOffered = featureCatalogue().advantages.filter(def => (def.choose !== "text") && (ranks(def.id) < maxRanks(def)))
       // The next rank's own price - featureTP reads 0 ranks as 1, so a first rank is priced on its own.
       .map(def => ({ def, rank: ranks(def.id) + 1,
         tp: ranks(def.id) ? featureTP(def, ranks(def.id) + 1) - featureTP(def, ranks(def.id)) : featureTP(def, 1) }))
@@ -736,6 +737,20 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   // Earthling-Raised's, for this use alone: the Energy Charge, or the Advantage on it.
   if (answers.earthling === "charge") answers.earthlingCharge = true;
   else if (earthlingOffered.some(entry => entry.def.id === answers.earthling)) {
+    const def = earthlingOffered.find(entry => entry.def.id === answers.earthling).def;
+    // Its choice, where it asks one and the Technique has not made it already.
+    if (def.choose && !(technique.featureChoices ?? {})[def.id]) {
+      const { featureChoiceOptions } = await import("./technique.mjs");
+      const offered = featureChoiceOptions(def, { ranks: 1, actor,
+        sig: { foundation: declared.foundation ?? "", features: (declared.advantages ?? []).map(id => ({ id })) } });
+      const picked = offered.length ? await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: `Earthling-Raised - ${def.name}` }, content: "",
+        buttons: [...offered.map(([value, label]) => ({ action: value, label })), { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      }) : null;
+      if (!offered.some(([value]) => value === picked)) return null;
+      answers.featureChoices = { ...(declared.featureChoices ?? {}), [def.id]: picked };
+    }
     answers.advantages = [...(declared.advantages ?? []), answers.earthling];
   }
   delete answers.earthling;

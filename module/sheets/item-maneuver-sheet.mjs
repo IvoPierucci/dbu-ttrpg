@@ -7,7 +7,7 @@ import { MANEUVER_TYPES, PROFILES, SUPER_PROFILES, TAIL_VARIANTS, getManeuver } 
 import { pickedName, wireNameSearch } from "../search.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import {
-  LEVELS, choiceLabel, composeTechniqueEffects, featureCatalogue, featureDef, featureProblem,
+  LEVELS, choiceLabel, composeTechniqueEffects, featureCatalogue, featureChoiceOptions, featureDef, featureProblem,
   featureTP, isUltimate, maxRanks, profileKiPerTier, signatureOf, superProfileKiPerTier,
   superProfileProblem, techniqueKiPerTier, techniqueTP, techniqueTPCharged, tierTpCap, godFinisherProblem
 } from "../technique.mjs";
@@ -496,41 +496,8 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
 
   /** What a feature may choose, as [value, label] pairs. */
   #choiceOptions(def, ranks, sig) {
-    const list = [].concat(def.choices ?? []).map(String);
-    const byTrait = traits => traits.map(trait => [trait.id, trait.name]);
-    switch (def.choose) {
-      case "shape": case "skill": case "roll":
-        return list.map(value => [value, choiceLabel(def, value)]);
-      case "condition":
-        return list.map(value => [value, getTrait(value)?.name ?? value]);
-      case "feature":
-        return list.filter(id => sig.features.some(entry => entry.id === id))
-          .map(id => [id, featureDef(id)?.name ?? id]);
-      case "environment":
-        return [["high", "High Environment (any)"],
-          ...byTrait(traitsOfKind("battlefields").filter(t => (t.environment === true) && (t.id !== "standard-environment")))];
-      case "state":
-        return byTrait(traitsOfKind("states"));
-      case "weather":
-        return byTrait(traitsOfKind("battlefields").filter(t => t.weather === true));
-      case "profile":
-        return Object.entries(PROFILES).map(([id, profile]) => [id, profile.label]);
-      case "maneuver":
-        return Array.from(this.item.actor?.items ?? [])
-          .filter(item => (item.type === "maneuver") && item.system.special && (item.system.actionCost === 1))
-          .map(item => [item.system.maneuverId || item.id, item.name]);
-      case "weapon":
-        if (ranks >= 2) {
-          return Array.from(this.item.actor?.items ?? [])
-            .filter(item => (item.system?.crafted?.kind === "weapon"))
-            .map(item => [item.id, item.name]);
-        }
-        return traitsOfKind("crafting", "weapon-categories")
-          .filter(t => !sig.foundation || (t.weaponType === sig.foundation))
-          .map(t => [t.id, t.name]);
-      default:
-        return [];
-    }
+    // The one list, shared with what a Technique is given for a single use (Earthling-Raised's).
+    return featureChoiceOptions(def, { ranks, sig, actor: this.item.actor });
   }
 
   /** Ask for a feature's choice. Null when it was cancelled. */

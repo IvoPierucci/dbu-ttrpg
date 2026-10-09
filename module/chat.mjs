@@ -9264,10 +9264,10 @@ async function meteorAttack(message, actor) {
  */
 export async function postMeteorAttack(actor, maneuver, declared, charges, messageId) {
   const { profile, foundation, kiWager = 0, advantages = [], weapon = null, damageAttribute = null,
-    transformed = false, gigaFlare = 0, superCombination = 0, earthlingCharge = false } = declared ?? {};
+    transformed = false, gigaFlare = 0, superCombination = 0, earthlingCharge = false, featureChoices = null } = declared ?? {};
   const technique = (maneuver.signature && !maneuver.signatureTechnique)
     ? techniqueAttack(actor, maneuver, { profile, foundation, advantages, weapon, charges, transformed, gigaFlare,
-      superCombination, earthlingCharge }, { targets: [], shaken: [] })
+      superCombination, earthlingCharge, featureChoices }, { targets: [], shaken: [] })
     : null;
   const attack = {
     maneuverName: maneuver.name, profile, foundation, kiWager, advantages, weapon, damageAttribute, technique,
@@ -14416,7 +14416,7 @@ export async function postAttack(actor, target, maneuver,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
-                                   earthlingCharge = false },
+                                   earthlingCharge = false, featureChoices = null },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -14442,8 +14442,9 @@ export async function postAttack(actor, target, maneuver,
     : ((maneuver.signature && !maneuver.signatureTechnique)
       ? techniqueAttack(actor, maneuver, { profile, foundation, advantages, weapon, thrown, charges,
           squaresCharged, transformed, gigaFlare, superCombination, powerbomb, areaFrom, volleyball,
-          // Earthling-Raised's, asked at declaration - it was dropped here, so its Energy Charge never landed.
-          earthlingCharge },
+          // Earthling-Raised's, asked at declaration - it was dropped here, so its Energy Charge never landed - and the choice
+          // of an Advantage it added.
+          earthlingCharge, featureChoices },
         { targets: everyone, shaken: everyone.filter(who => (Number(who?.system?.conditions?.shaken) || 0) > 0) })
       : null);
 

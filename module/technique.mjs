@@ -572,6 +572,48 @@ export function composeTechniqueEffects(sig, previous = "") {
 }
 
 /** The trait a choice names, for a label: a Condition, a State, a Weather. */
+/**
+ * What a feature's `choose:` offers, as [value, label] pairs - its own list, a Condition, a State, a Profile, a Weapon...
+ * `sig` the Technique's build (a `feature` choice is among its features), `actor` its owner, `ranks` the feature's.
+ */
+export function featureChoiceOptions(def, { ranks = 1, sig = null, actor = null } = {}) {
+  const list = [].concat(def?.choices ?? []).flatMap(value => String(value).split(",")).map(value => value.trim())
+    .filter(Boolean);
+  const byTrait = traits => traits.map(trait => [trait.id, trait.name]);
+  switch (def?.choose) {
+    case "shape": case "skill": case "roll":
+      return list.map(value => [value, choiceLabel(def, value)]);
+    case "condition":
+      return list.map(value => [value, getTrait(value)?.name ?? value]);
+    case "feature":
+      return list.filter(id => (sig?.features ?? []).some(entry => entry.id === id))
+        .map(id => [id, featureDef(id)?.name ?? id]);
+    case "environment":
+      return [["high", "High Environment (any)"],
+        ...byTrait(traitsOfKind("battlefields").filter(t => (t.environment === true) && (t.id !== "standard-environment")))];
+    case "state":
+      return byTrait(traitsOfKind("states"));
+    case "weather":
+      return byTrait(traitsOfKind("battlefields").filter(t => t.weather === true));
+    case "profile":
+      return Object.entries(PROFILES).map(([id, profile]) => [id, profile.label]);
+    case "maneuver":
+      return Array.from(actor?.items ?? [])
+        .filter(item => (item.type === "maneuver") && item.system.special && (item.system.actionCost === 1))
+        .map(item => [item.system.maneuverId || item.id, item.name]);
+    case "weapon":
+      if (ranks >= 2) {
+        return Array.from(actor?.items ?? []).filter(item => (item.system?.crafted?.kind === "weapon"))
+          .map(item => [item.id, item.name]);
+      }
+      return traitsOfKind("crafting", "weapon-categories")
+        .filter(t => !sig?.foundation || (t.weaponType === sig.foundation))
+        .map(t => [t.id, t.name]);
+    default:
+      return [];
+  }
+}
+
 export function choiceLabel(def, choice) {
   if (!choice) return "";
   const kind = def?.choose ?? "";

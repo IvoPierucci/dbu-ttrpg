@@ -35,7 +35,8 @@ export function thresholdsBelow(actor) {
  */
 export function techniqueAttack(actor, maneuver, declared, { targets = [], shaken = [] } = {}) {
   const advantages = [...(declared.advantages ?? maneuver.advantages ?? [])];
-  const choices = maneuver.featureChoices ?? {};
+  // And what was chosen for this use alone - an Advantage Earthling-Raised added, its Skill.
+  const choices = { ...(maneuver.featureChoices ?? {}), ...(declared.featureChoices ?? {}) };
   const ultimate = Boolean(maneuver.ultimate);
   const profiles = [declared.profile, maneuver.secondProfile].filter(Boolean);
   const superId = maneuver.superProfile ?? "";
