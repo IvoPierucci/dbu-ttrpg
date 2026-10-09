@@ -77,6 +77,9 @@ const TABLE = [
   { key: "battle-born", label: "You gain a stack of Battle Born", provides: [],
     doc: "Fired as Born for Battle's stacks are gained (gainOneOf) or raised (raiseTo) - Primitive Durability's 3rd. What "
        + "is the player's is asked in a window first." },
+  { key: "defeat-opponent", label: "You Defeat an Opponent with an Attacking Maneuver", provides: [],
+    doc: "Fired for whoever made the Attacking Maneuver whose Damage Defeated them (combat.mjs, as knock-through), with who "
+       + "it was (`defeatedLockOn` asks whether they were your Lock On Target). Asked in a window first where Triggered." },
   { key: "light-damage", label: "You would take less Damage than 1/2 your Soak Value from an Attacking Maneuver", provides: [],
     doc: "Read where an attack's Damage on you is settled (chat.mjs): what answers it - Hyper Resilience's - takes it all "
        + "away. Automatic, or ticked in the On being hit window." },

@@ -337,6 +337,8 @@ async function beginTurn(actor) {
   const ran = await edgeReached(actor, EDGES.START);
   // Inherited Freedom's "you cannot use a Counter Maneuver until the start of your next turn" - this one.
   if (actor.getFlag?.("dbu-ttrpg", "noCounterUntilTurn")) await actor.unsetFlag("dbu-ttrpg", "noCounterUntilTurn");
+  // Lock On's Target: "until the start of your next turn" - this one; its start may pick another.
+  if (actor.getFlag?.("dbu-ttrpg", "lockOn")) await actor.unsetFlag("dbu-ttrpg", "lockOn");
 
   // Fired before anything is decided, because something may skip the turn as it begins
   // rather than for as long as it lasts - the Determined State ends and costs you the
@@ -926,6 +928,16 @@ export function registerDefeatHooks() {
     const was = options.dbuWasDefeated;
     const now = actor.system.defeated;
     if (was === now) return;
+
+    // Defeated by an Opponent's Attacking Maneuver: for its maker, what answers having done it (Lock On's 2nd).
+    if (now && options.dbuKnockedBy) {
+      const knocker = fromUuidSync(options.dbuKnockedBy);
+      if (knocker && (knocker.uuid !== actor.uuid)) {
+        const { offerTriggers } = await import("./chat.mjs");
+        await offerTriggers(knocker, "defeat-opponent");
+        await fireMoment(knocker, "defeat-opponent", { defeatedUuid: actor.uuid });
+      }
+    }
 
     if (!now) {
       // Healed back above zero. Nothing to announce: the sheet already shows it, and

@@ -109,6 +109,10 @@ const PREDICATES = {
   /** Is the Maneuver being declared that one, by its id - Cosmic Efficiency's Combat Recovery. */
   using: (scope, id) => (scope.context?.maneuver?.id ?? "") === String(id).trim(),
 
+  /** The one this Moment says was Defeated, your Lock On Target (Lock On's 2nd). */
+  defeatedLockOn: scope => Boolean(scope.context?.defeatedUuid)
+    && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "lockOn")?.uuid === scope.context.defeatedUuid),
+
   /** Ki Multiplier from somewhere else than an effect that always gives it - the sheet's box, until Forms (Power Battery). */
   kiMultiplied: scope => scope.data?.debug?.kiMultiplier === true,
 

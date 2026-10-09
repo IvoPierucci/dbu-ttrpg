@@ -1,0 +1,29 @@
+id: lock-on
+name: Lock On
+order: 3
+category: body
+importance: secondary
+description: >
+  Whether by sheer single-mindedness or via their on-board computers, Androids can hone in on a single target and find their weak spots.
+text: >
+  Lock On (Body): Whether by sheer single-mindedness or via their on-board computers, Androids can hone in on a single target and find their weak spots.
+  (1)-[Triggered/Start of Turn, Ruling]: Target an Opponent, they become your ‘Target’ until the start of your next turn. Increase your Strike and Wound Rolls against your Target by 2(T). While you have a Target, reduce your Dodge Rolls by 1(T) against all other Characters.
+  (2)-[Triggered, 1/Round]: If you Defeat your Target with an Attacking Maneuver, regain Ki Points equal to double your Surgency.
+  (3)-[Passive]: Increase your Perception Skill Checks by 2.
+
+---
+
+# (1) At the start of your turn, which Opponent on the scene - of another disposition than your token's - asked of whoever
+# plays you (Automatic: asked every turn, "No Target" among them). Held till the start of your next turn: Strike and Wound
+# +2(T) against them, Dodge -1(T) against everyone else (chat.mjs lockOnParts, lockOnDodge).
+[triggered/start-of-turn, effect 1]
+lockOn();
+
+# (2) Your Target Defeated by your Attacking Maneuver (moment defeat-opponent, chat.mjs/combat.mjs).
+[triggered/defeat-opponent, 1/round, effect 2]
+requires defeatedLockOn;
+ki.value += surgency * 2;
+
+# (3)
+[passive]
+skill.perception += 2;

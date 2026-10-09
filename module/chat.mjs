@@ -13598,6 +13598,36 @@ export async function openForPlayer(actor, document, note = "") {
   catch (error) { console.warn(`DBU TTRPG | ${actor.name}'s ${document.name} could not be opened for them`, error); }
 }
 
+/**
+ * Lock On: "Target an Opponent, they become your 'Target' until the start of your next turn." Which, of those on the scene
+ * of another disposition than theirs, asked of whoever plays them - or none.
+ */
+export async function askLockOn(actor) {
+  const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && ((own === undefined) || (token.document?.disposition !== own)))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Lock On`,
+    [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "No Target" }]);
+  const target = opponents.find(each => each.uuid === picked);
+  if (target) await requestActorUpdate(actor, { [`flags.${SCOPE}.lockOn`]: { uuid: target.uuid, name: target.name } });
+}
+
+/** Lock On's "Increase your Strike and Wound Rolls against your Target by 2(T)". */
+function lockOnParts(attacker, target) {
+  const locked = attacker?.getFlag?.(SCOPE, "lockOn");
+  if (!locked || !target || (locked.uuid !== target.uuid)) return [];
+  return [{ label: "Lock On", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }];
+}
+
+/** Lock On's "While you have a Target, reduce your Dodge Rolls by 1(T) against all other Characters." */
+function lockOnDodge(actor, attack) {
+  const locked = actor?.getFlag?.(SCOPE, "lockOn");
+  if (!locked || !attack?.attackerUuid || (locked.uuid === attack.attackerUuid)) return [];
+  return [{ label: `Lock On (${locked.name})`, written: "-1(T)", value: -Math.max(1, actor.system.tierOfPower ?? 1) }];
+}
+
 /** Skill of the Watcher's Power Up taken this Combat Round. */
 const WATCHER_POWER_UP = "round:skill-of-the-watcher.power-up";
 
@@ -16151,7 +16181,7 @@ async function resolveAttack(message, attack) {
     // reason the Long Range penalty is taken here: one Strike Roll reaches several people
     // and what it is worth against each of them is not the same number.
     const analysis = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target), ...mindReadBonus(attacker, target),
-      ...secondSightBonus(attacker, target)]
+      ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target)]
       .reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
     const against = attack.techniqueBlocked ? 0 : Math.max(0, (strike.total + analysis) - longRange);
@@ -17546,6 +17576,7 @@ async function rollAttackWound(message, attack) {
       + mindReadBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
       + godMeteorPinned(attacker, target)
       + aggressionAgainst(attacker, target)
+      + lockOnParts(attacker, target).reduce((sum, p) => sum + p.value, 0)
       + grantedLongShot(attacker, attack, target)
       + techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),
           outsideMelee: !attack.portal && Boolean(whyNotWithinMelee(attacker, target, "")),
@@ -17726,6 +17757,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   // Your Dodge against somebody you Analyzed. The attacker is named on the attack, which
   // is what makes this answerable from the defender's side.
   parts.push(...analysisBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
+  // Lock On: a Target held, every other one's attack Dodged at 1(T) less.
+  parts.push(...lockOnDodge(actor, attack));
   // Mind Reading's, against the one who read: the Dodge, and Combat Telepath's on it.
   parts.push(...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }));
   // Telepathy: Defense Value 1(bT) higher beside a mind it is linked with.

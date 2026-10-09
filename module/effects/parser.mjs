@@ -488,7 +488,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Brought to 0 by their own effect (Revenge Bomber's); a Snack eaten this Round (Snack Motivated's).
   "ownDefeat", "snackThisRound",
   // Ki Multiplier from elsewhere; no Ki regained by Surge or Combat Recovery (Power Battery's).
-  "kiMultiplied", "kiLocked"]);
+  "kiMultiplied", "kiLocked",
+  // The one Defeated, your Lock On Target.
+  "defeatedLockOn"]);
 
 /**
  * Dice the character already has, named rather than written out.

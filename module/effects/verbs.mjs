@@ -72,6 +72,11 @@ export const VERBS = Object.freeze({
     doc: "The Opponent the Moment names - who lost the Clash - loses Life Points equal to the named Attribute's Modifier: "
        + "Psychic's \"reduce that Opponent's Life Points by your Insight Modifier\"."
   },
+  lockOn: {
+    args: [0, 0],
+    names: [],
+    doc: "Lock On's: an Opponent on the scene, asked of whoever plays them, their Target till the start of their next turn."
+  },
   encounterTechnique: {
     args: [0, 0],
     names: [],
