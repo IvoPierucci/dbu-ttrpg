@@ -221,8 +221,12 @@ function permitted(actor, maneuver) {
   }
 
   const charging = actor.system.charging;
+  // A Signature Technique being charged is thrown through the Signature Technique Maneuver - the door is let through here,
+  // and which Technique it opens onto is held to the charged one once picked (the user's report: the door was refused).
+  const chargedTechnique = (actor.items.get(charging?.maneuverId ?? "")?.system?.tags ?? []).includes("signature");
   if (charging?.maneuverId && !maneuver.charge
     && (maneuver.itemId !== charging.maneuverId)
+    && !(maneuver.signatureTechnique && chargedTechnique)
     && (maneuver.attacking || (maneuver.type === "standard"))) {
     const held = actor.items.get(charging.maneuverId);
     ui.notifications.warn(
@@ -3916,6 +3920,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       ? signatureTechniquesOf(actor).find(entry => entry.itemId === techniqueId) ?? null
       : await pickSignatureTechnique(actor, maneuver);
     if (!technique) return false;
+    // Charging one: only that one goes through the door until it is thrown.
+    const charged = actor.system.charging?.maneuverId;
+    if (charged && (technique.itemId !== charged)) {
+      ui.notifications.warn(`${actor.name} is charging ${actor.items.get(charged)?.name ?? "an Attacking Maneuver"} and cannot `
+        + "use another Attacking or Standard Maneuver until it is thrown.");
+      return false;
+    }
     const lowStakes = (technique.advantages ?? []).includes("low-stakes-attack");
     if (doorSpent && !lowStakes) {
       ui.notifications.warn(`${actor.name} has no uses of ${maneuver.name} left.`);
