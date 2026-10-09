@@ -1,16 +1,21 @@
 <div class="tab {{tabs.options.cssClass}}" data-group="primary" data-tab="options">
   {{! A Racial Trait's Option effect: which printed effect asks for it, and the one chosen - changeable, its script and
       what it gives changing with it. Empty for a Trait with none. }}
-  {{#if racial.options}}
+  {{#if racial.optionGroups.length}}
   <section class="panel racial-options">
+    {{#each racial.optionGroups as |group|}}
+    {{#each group.selects as |pick|}}
     <label class="racial-option-row">
-      <span>{{racial.optionLabel}}</span>
-      <select data-racial-option>
-        {{#each racial.options as |option|}}
+      <span>{{group.label}}</span>
+      <select data-racial-option data-replacing="{{pick.replacing}}">
+        {{#unless pick.replacing}}<option value="" selected>-</option>{{/unless}}
+        {{#each pick.options as |option|}}
         <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
         {{/each}}
       </select>
     </label>
+    {{/each}}
+    {{/each}}
   </section>
   {{/if}}
   {{#if racial.tail}}

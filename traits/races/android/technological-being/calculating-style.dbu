@@ -1,0 +1,27 @@
+id: calculating-style
+name: Calculating Style
+order: 8
+optionOf: technological-being
+optionEffect: 3
+# Till the end of the turn - bookkeeping, not a Resource the rules name.
+resource: calculatingstyle
+resourceInternal: true
+resourceLabel: Calculating Style
+resourceMax: 1
+description: >
+  Increase your Combat Rolls by 1(T) until the end of your turn when you use the Analysis Maneuver.
+text: >
+  Calculating Style [Triggered]: Increase your Combat Rolls by 1(T) until the end of your turn when you use the Analysis Maneuver.
+
+---
+
+# The Analysis Maneuver declared: asked in its window - Combat Rolls +1(T) till the end of your turn.
+[passive]
+if (hasResource("calculatingstyle")) {
+    combatRolls += 1(T);
+}
+
+[triggered/declare-maneuver, effect 3]
+requires using("analysis");
+calculatingstyle.stacks += 1;
+expires(calculatingstyle, turn);

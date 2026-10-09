@@ -1,0 +1,27 @@
+id: heroic-style
+name: Heroic Style
+order: 7
+optionOf: technological-being
+optionEffect: 3
+# Till the end of the turn - bookkeeping, not a Resource the rules name.
+resource: heroicstyle
+resourceInternal: true
+resourceLabel: Heroic Style
+resourceMax: 1
+description: >
+  Increase your Combat Rolls by 1(T) until the end of your turn when you use the Hype Maneuver.
+text: >
+  Heroic Style [Triggered]: Increase your Combat Rolls by 1(T) until the end of your turn when you use the Hype Maneuver.
+
+---
+
+# The Hype Maneuver declared: asked in its window - Combat Rolls +1(T) till the end of your turn.
+[passive]
+if (hasResource("heroicstyle")) {
+    combatRolls += 1(T);
+}
+
+[triggered/declare-maneuver, effect 3]
+requires using("hype");
+heroicstyle.stacks += 1;
+expires(heroicstyle, turn);

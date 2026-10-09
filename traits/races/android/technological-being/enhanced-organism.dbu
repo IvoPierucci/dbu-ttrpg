@@ -1,0 +1,20 @@
+id: enhanced-organism
+name: Enhanced Organism
+order: 1
+optionOf: technological-being
+optionEffect: 2
+# A Saving Throw chosen as it is gained - its Racial Saving Throw Bonus.
+choose: savingThrow
+description: >
+  Gain the Alternate Upbringing Factor, ignoring its Racial Requirements. You must exchange the Functional Purpose Racial Trait for the Factor Trait. Additionally, increase your Racial Life Modifier by 2 and select an additional Saving Throw to apply your Racial Saving Throw Bonus to.
+text: >
+  Enhanced Organism [Passive]: Gain the Alternate Upbringing Factor, ignoring its Racial Requirements. You must exchange the Functional Purpose Racial Trait for the Factor Trait. Additionally, increase your Racial Life Modifier by 2 and select an additional Saving Throw to apply your Racial Saving Throw Bonus to.
+
+---
+
+# The Factor Trait taken by hand, Functional Purpose with it - the table's; Alternate Upbringing's Factor Traits listed among
+# those this character fits (racial.mjs factorTraitFits). The Saving Throw, chosen when it is gained.
+[passive]
+racialLifeModifier += 2;
+allow save.racial.$choice;
+allow factor.ignoreRequirement.alternate-upbringing;

@@ -77,6 +77,9 @@ const TABLE = [
   { key: "battle-born", label: "You gain a stack of Battle Born", provides: [],
     doc: "Fired as Born for Battle's stacks are gained (gainOneOf) or raised (raiseTo) - Primitive Durability's 3rd. What "
        + "is the player's is asked in a window first." },
+  { key: "light-damage", label: "You would take less Damage than 1/2 your Soak Value from an Attacking Maneuver", provides: [],
+    doc: "Read where an attack's Damage on you is settled (chat.mjs): what answers it - Hyper Resilience's - takes it all "
+       + "away. Automatic, or ticked in the On being hit window." },
   { key: "unique-clash-won", label: "You win a Clash for the effects of a Unique Ability", provides: [],
     doc: "Fired for whoever won a Clash a Unique Ability called for - theirs or the one they answered - with who lost "
        + "(chat.mjs uniqueClashWon) - Psychic's. What is the player's is asked in a window first." },

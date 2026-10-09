@@ -167,6 +167,9 @@ const TABLE = [
        + "Raising Might does not raise this." },
   { key: "initiative", phase: PHASES.CORE, kind: N, ops: NUMERIC, doc: "Initiative Bonus." },
   // Warrior of Two Worlds' - each read where the Wound Roll of an attack is worked out (chat.mjs woundParts).
+  // Enhanced Reflexes': "apply your Greater Dice to this Dodge Roll" - ticked for it (chat.mjs rollSide).
+  { key: "dodge.greaterDice", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
+    doc: "The Greater Dice on this Dodge Roll." },
   { key: "wound.signature", phase: PHASES.CORE, kind: N, ops: ["add"],
     doc: "Added to the Wound Roll of an Attacking Maneuver made through the Signature Technique Maneuver alone." },
   { key: "wound.perThresholdOrAlly", phase: PHASES.CORE, kind: N, ops: ["add"],
@@ -748,6 +751,19 @@ const PATTERNS = [
   { match: /^([a-z][\w-]*)\.strike$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "The Strike Roll of an Attacking Maneuver made with that Maneuver, by its id - `reflect.strike`." },
   // "Apply your Racial Saving Throw Bonus to Cognitive as well as Corporeal" (Warrior's Pride's).
+  // Construct's: "Ignore the penalties for the Bruised or Injured Health Thresholds, but reduce your Steadfast Checks by 3
+  // for the Critical Health Threshold and double its penalties" - a failure there costing nothing, or twice.
+  { match: /^threshold\.(ignore|double)\.(bruised|injured|critical)$/, phase: PHASES.CORE, kind: F,
+    ops: ["allow", "forbid", "set"], valid: () => true,
+    doc: "A Steadfast Check failed at that Health Threshold costs nothing (ignore), or twice what it would (double)." },
+  { match: /^steadfast\.dice\.(bruised|injured|critical)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC, valid: () => true,
+    doc: "Added to the Steadfast Check for that Health Threshold alone." },
+  // Alternate Scale Structure's: "That selected Size Category becomes your base Size Category".
+  { match: /^size\.base\.(\w+)$/, phase: PHASES.TIER, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
+    doc: "The Size Category the character is built as, in place of the one picked on the sheet." },
+  // Enhanced Organism's: "Gain the Alternate Upbringing Factor, ignoring its Racial Requirements".
+  { match: /^factor\.ignoreRequirement\.([\w-]+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+    valid: () => true, doc: "That Racial Factor's Racial Requirement does not apply to them (it only orders the list)." },
   { match: /^save\.racial\.(\w+)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"], valid: () => true,
     doc: "That Saving Throw gets the Racial Saving Throw Bonus too: 1(T), and its Critical Target 1 lower." },
   // "You automatically succeed all Steadfast Checks for the Bruised Health Threshold" (Saiyan Heritage's) - and never fail

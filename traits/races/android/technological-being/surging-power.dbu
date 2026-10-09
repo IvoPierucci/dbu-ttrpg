@@ -1,0 +1,18 @@
+id: surging-power
+name: Surging Power
+order: 1
+optionOf: technological-being
+optionEffect: 3
+description: >
+  Spend 3(bT) Ki Points to gain an additional stack of Power.
+text: >
+  Surging Power [Triggered/Power]: Spend 3(bT) Ki Points to gain an additional stack of Power.
+
+---
+
+# Asked in the Power Up's window: 3(bT) Ki, a stack more - Power still at most 2, its own clock as the Power Up's.
+[triggered/power, effect 3]
+requires power.stacks < 2 && ki.value >= 3(bT);
+ki.value -= 3(bT);
+power.stacks += 1;
+expires(power, next-turn);

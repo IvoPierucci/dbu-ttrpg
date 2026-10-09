@@ -1,0 +1,18 @@
+id: weapon-style
+name: Weapon Style
+order: 6
+optionOf: technological-being
+optionEffect: 3
+# "You gain the Weapon Specialist Talent" - given with it when it is written.
+grantsTalent: weapon-specialist
+description: >
+  You gain the Weapon Specialist Talent, and when creating any type of Signature Technique, you may add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points.
+text: >
+  Weapon Style [Passive]: You gain the Weapon Specialist Talent, and when creating any type of Signature Technique, you may add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points.
+
+---
+
+# As God of War's: Weapon Assisted's TP left out of what each Technique carrying it takes from the character. The Weapon
+# Specialist Talent is given once it is written.
+[passive]
+allow technique.free.weapon-assisted;

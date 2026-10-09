@@ -4868,7 +4868,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   static async _onAddRacialTrait() {
     if (!this.isEditable) return;
     const had = new Set(this.actor.system.racialTraits ?? []);
-    const traits = racialTraitsInOrder(this.actor.system.race);
+    const traits = racialTraitsInOrder(this.actor.system.race, undefined, this.actor.system.effects?.slots);
     if (!traits.length) {
       ui.notifications.info("There are no Racial Traits to add yet.");
       return;

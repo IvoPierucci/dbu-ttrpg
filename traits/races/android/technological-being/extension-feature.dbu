@@ -1,0 +1,13 @@
+id: extension-feature
+name: Extension Feature
+order: 10
+optionOf: technological-being
+optionEffect: 3
+description: >
+  You possess the Extension Attack Monstrous Trait.
+text: >
+  Extension Feature [Passive]: You possess the Extension Attack Monstrous Trait.
+
+---
+
+# Waits on the Extension Attack Monstrous Trait - its text not given yet (the user's): the table's till then.

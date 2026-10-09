@@ -1977,7 +1977,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Clamped to the ends of the list: there is nothing smaller than Nano and nothing
     // larger than Colossal, and a shift past either leaves you standing at it.
     const sizeKeys = Object.keys(DBUCharacterData.SIZES);
-    const chosenSize = this.size;
+    // Or one an effect makes their base - Alternate Scale Structure's Tiny or Enormous.
+    const chosenSize = Object.keys(DBUCharacterData.SIZES).find(key => this.effects?.slots?.[`size.base.${key}`] === true)
+      ?? this.size;
     const builtAt = sizeKeys.indexOf(chosenSize);
     // Or a Size named outright by something worn - the Micro Band's "reduce your Size
     // Category to the Tiny or Nano Size Category" - where it is smaller than the one they
@@ -2503,7 +2505,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // One an effect passes - Saiyan Heritage's Bruised - is passed, and no failure for it counts.
     const passes = key => this.effects?.slots?.[`steadfast.autoPass.${key}`] === true;
-    const failures = reached.filter(key => !passes(key) && (this.thresholdChecks[key] === "fail")).length;
+    // What each costs: nothing where an effect ignores that Threshold's penalties, twice where it doubles them (Construct's).
+    const weight = key => ((this.effects?.slots?.[`threshold.ignore.${key}`] === true) ? 0
+      : (this.effects?.slots?.[`threshold.double.${key}`] === true) ? 2 : 1);
+    const failures = reached.filter(key => !passes(key) && (this.thresholdChecks[key] === "fail"))
+      .reduce((sum, key) => sum + weight(key), 0);
 
     this.threshold = {
       key: current,

@@ -47,6 +47,34 @@ export function plainText(text) {
   return String(text ?? "").replace(LINK, "$1");
 }
 
+/** An Option effect's line: "(2)-[Option]:" - choose one - or "(3)-[Multi-Option/2]:" - choose two. */
+const OPTION_LINE = /^(\(\d+\)-\[(?:Option|Multi-Option\/\d+)\]):/;
+
+/** Which Option effect an Option is of: its own `optionEffect:`, or its Trait's. */
+function optionEffectOf(option, trait = null) {
+  return Number(option?.optionEffect) || Number((trait ?? getTrait(option?.optionOf ?? ""))?.optionEffect) || 0;
+}
+
+/** Whether an Option chosen on an Item is one of that Option effect's - any, where its Trait says none. */
+function optionBelongs(option, item, effect) {
+  const mine = optionEffectOf(option, getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? ""));
+  return !mine || (mine === effect);
+}
+
+/**
+ * A Racial Trait's Option effects, as its text prints them, each with how many are chosen and its Options: "(2)-[Option]"
+ * one, "(3)-[Multi-Option/2]" two. One with no such line - an older file - is its `optionEffect:` and `options:`.
+ */
+export function optionGroupsOf(trait) {
+  const options = racialOptionsOf(trait?.id);
+  if (!options.length) return [];
+  const groups = printedLines(trait.text || "").map(line => /^\((\d+)\)-\[(Option|Multi-Option\/(\d+))\]:/.exec(line))
+    .filter(Boolean).map(match => ({ effect: Number(match[1]), count: Number(match[3]) || 1 }));
+  if (!groups.length) groups.push({ effect: Number(trait.optionEffect) || 0, count: Math.max(1, Number(trait.options) || 1) });
+  return groups.map(group => ({ ...group, options: options.filter(option => (groups.length === 1)
+    || (optionEffectOf(option, trait) === group.effect)) })).filter(group => group.options.length);
+}
+
 /** One printed line as HTML: escaped, its links made links. */
 function lineHtml(text) {
   return Handlebars.escapeExpression(text).replace(LINK, (whole, label, url) =>
@@ -64,7 +92,7 @@ export function racialTraitLines(item) {
   const out = [];
   for (let at = 0; at < lines.length; at++) {
     const line = lines[at];
-    const option = picked.length && /^(\(\d+\)-\[Option\]):/.exec(line);
+    const option = picked.length && OPTION_LINE.exec(line);
     // A Choice effect - "Depending on your choice for the Option effect of this Trait, gain the following effect" - shows
     // the one that goes with the Option chosen (Warrior of Two Worlds').
     const choice = picked.length && /^(\(\d+\)-\[Choice\]):/.exec(line);
@@ -73,11 +101,13 @@ export function racialTraitLines(item) {
       continue;
     }
     out.push({ html: lineHtml(`${(option || choice)[1]}:`), bullet: false, gap: false });
-    // The list after it - blank lines around it and all - read off, and left out but what was chosen.
+    // The list after it - blank lines around it, and what follows it up to the next effect (Construct's "You are
+    // Unnatural") - read off, and left out but what was chosen.
     const list = [];
-    while ((at + 1 < lines.length) && (/^[*\u2022]/.test(lines[at + 1]) || !lines[at + 1])) list.push(lines[++at]);
+    while ((at + 1 < lines.length) && !/^\(\d+\)-/.test(lines[at + 1])) list.push(lines[++at]);
     if (option) {
-      for (const chosen of picked) {
+      // Only this Option effect's own - Technological Being has two (the user's).
+      for (const chosen of picked.filter(each => optionBelongs(each, item, Number(/\d+/.exec(option[1])[0])))) {
         out.push({ html: lineHtml(`*${printedLines(chosen.text).join(" ")}`), bullet: true, gap: false });
       }
     }
@@ -104,11 +134,14 @@ export function effectLineOf(item, n) {
   const at = lines.findIndex(line => line.startsWith(`(${number})-`));
   if (at < 0) return "";
   const line = lines[at];
-  const kind = /^(\(\d+\)-\[(Option|Choice)\]):/.exec(line);
+  const kind = /^(\(\d+\)-\[(Option|Multi-Option\/\d+|Choice)\]):/.exec(line);
   const picked = (item.system?.chosen ?? []).filter(entry => entry.key === "option").map(entry => getTrait(entry.value))
     .filter(Boolean);
   if (!kind || !picked.length) return plainText(line);
-  if (kind[2] === "Option") return plainText(`${kind[1]}: ${picked.map(option => printedLines(option.text).join(" ")).join(" ")}`);
+  if (kind[2] !== "Choice") {
+    return plainText(`${kind[1]}: ${picked.filter(option => optionBelongs(option, item, number))
+      .map(option => printedLines(option.text).join(" ")).join(" ")}`);
+  }
   const bullets = lines.slice(at + 1).filter(each => /^[*\u2022]/.test(each))
     .map(each => each.replace(/^[*\u2022]\s*/, ""))
     .filter(each => picked.some(option => each.startsWith(`${option.name} [`)));
@@ -197,13 +230,15 @@ function requirementOf(factor) {
  * Factor Trait") and its Factor's `nameExcludesRace` - Alternate Upbringing's "if your Race is in the name of that Factor
  * Trait". Only to order the list: nothing is refused (the user's).
  */
-function factorTraitFits(factorId, onlyRace, name, race) {
+function factorTraitFits(factorId, onlyRace, name, race, slots = null) {
   const factor = racialFactor(factorId);
   const words = raceWords(race);
   if (!factor || !words.length) return false;
   if (onlyRace && !words.includes(String(onlyRace).toLowerCase())) return false;
   const { any, races, except } = requirementOf(factor);
-  if (any ? except.some(each => words.includes(each)) : !races.some(each => words.includes(each))) return false;
+  // "Gain the Alternate Upbringing Factor, ignoring its Racial Requirements" (Enhanced Organism's).
+  const ignored = slots?.[`factor.ignoreRequirement.${factorId}`] === true;
+  if (!ignored && (any ? except.some(each => words.includes(each)) : !races.some(each => words.includes(each)))) return false;
   if (factor.nameExcludesRace && words.includes(String(name ?? "").replace(/-Raised$/i, "").trim().toLowerCase())) return false;
   return true;
 }
@@ -212,11 +247,11 @@ function factorTraitFits(factorId, onlyRace, name, race) {
  * Where a Trait's group stands (the user's order): this character's race's; then the Racial Factors for their race alone,
  * and those for any race they may take; then every other race's; then every other Racial Factor's.
  */
-function groupRank(trait, race) {
+function groupRank(trait, race, slots = null) {
   const factor = factorOf(trait);
   if (!factor) return (((trait?.system ? trait.system.race : trait?.owner) ?? "") === race) ? 0 : 3;
   const onlyRace = trait?.system ? trait.system.race : trait?.race;
-  if (!factorTraitFits(factor, onlyRace, trait?.name, race)) return 4;
+  if (!factorTraitFits(factor, onlyRace, trait?.name, race, slots)) return 4;
   return requirementOf(racialFactor(factor)).any ? 2 : 1;
 }
 
@@ -250,9 +285,9 @@ function orderOf(trait) {
  * Factor's - races and Factors each by their own name (not the Trait's), each one's Traits in the order its page prints
  * them.
  */
-export function racialTraitsInOrder(race, traits = racialTraitFiles()) {
+export function racialTraitsInOrder(race, traits = racialTraitFiles(), slots = null) {
   return traits.slice().sort((a, b) =>
-    (groupRank(a, race) - groupRank(b, race))
+    (groupRank(a, race, slots) - groupRank(b, race, slots))
     || groupName(a).localeCompare(groupName(b))
     || (orderOf(a) - orderOf(b))
     || a.name.localeCompare(b.name));
@@ -279,14 +314,24 @@ export function ownedRacialTraits(actor) {
   const race = actor?.system?.race;
   const fileOf = item => getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
   return Array.from(actor?.items ?? []).filter(item => item.type === RACIAL_TYPE).sort((a, b) =>
-    (groupRank(a, race) - groupRank(b, race))
+    (groupRank(a, race, actor?.system?.effects?.slots) - groupRank(b, race, actor?.system?.effects?.slots))
     || groupName(a).localeCompare(groupName(b))
     || (orderOf(fileOf(a)) - orderOf(fileOf(b)))
     || a.name.localeCompare(b.name));
 }
 
+/** A label as a choice's value: "Enormous" -> "enormous". */
+const slug = label => String(label ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
 /** What a `choose:` header offers, as [value, label] pairs. */
-async function choicesFor(kind) {
+async function choicesFor(kind, source = null) {
+  // Its own list, written beside it - `choices: Tiny, Enormous` (Alternate Scale Structure's).
+  if (kind === "list") return listOf(source?.choices).map(label => [slug(label), label]);
+  // "Select an additional Saving Throw to apply your Racial Saving Throw Bonus to" (Enhanced Organism's).
+  if (kind === "savingThrow") {
+    const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
+    return Object.keys(DBUCharacterData.SAVING_THROWS).map(key => [key, key.charAt(0).toUpperCase() + key.slice(1)]);
+  }
   if (kind === "knowledge") {
     const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
     return Object.entries(DBUCharacterData.SKILLS).filter(([key]) => key.startsWith("knowledge"))
@@ -302,7 +347,7 @@ async function choicesFor(kind) {
 
 /** Ask a `choose:` - one of its values, or null when backed out of. */
 async function askChoice(source) {
-  const offered = await choicesFor(source.choose);
+  const offered = await choicesFor(source.choose, source);
   if (!offered.length) {
     ui.notifications.warn(`${source.name}: nothing to choose for "${source.choose}".`);
     return null;
@@ -324,14 +369,13 @@ async function askChoice(source) {
   return pair ? { value: pair[0], label: pair[1] } : null;
 }
 
-/** Ask an Option effect: "choose one of the following effects". The ids chosen, or null. */
-async function askOptions(trait, options) {
-  const count = Math.max(1, Number(trait.options) || 1);
+/** Ask an Option effect: "choose one of the following effects" - or two, a Multi-Option's. The ids chosen, or null. */
+async function askOptions(trait, options, count = Math.max(1, Number(trait.options) || 1), effect = 0) {
   const escape = Handlebars.escapeExpression;
   const type = (count === 1) ? "radio" : "checkbox";
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
-    window: { title: `${trait.name} - Option` },
+    window: { title: `${trait.name} - ${effect ? `${ordinal(effect)} effect` : "Option"}` },
     position: { width: 460 },
     content: `<p class="dbu-respond-hint">Choose ${count}.</p>${options.map((option, index) => `
       <label class="dbu-respond-option" data-tooltip="${escape(plainText(option.text ?? option.description ?? ""))}">
@@ -360,7 +404,11 @@ async function answered(source, chosen) {
   const choice = await askChoice(source);
   if (!choice) return null;
   chosen.push({ key: source.id, value: choice.value, label: `${source.name}: ${choice.label}` });
-  return script.replaceAll("$choice", choice.value);
+  // A list's: each of its values a number too - `$tiny` 1 where Tiny was chosen, 0 where it was not.
+  const flags = (source.choose === "list") ? (await choicesFor("list", source)).map(([value]) => value)
+    .sort((a, b) => b.length - a.length) : [];
+  return flags.reduce((text, value) => text.replaceAll(`$${value}`, (value === choice.value) ? "1" : "0"),
+    script.replaceAll("$choice", choice.value));
 }
 
 /**
@@ -379,9 +427,10 @@ export async function racialItemFrom(trait) {
     insteadTp: Number(trait.grantsUniqueInstead) || 0 }));
   const talents = listOf(trait.grantsTalent);
 
-  const options = racialOptionsOf(trait.id);
-  if (options.length) {
-    const picked = await askOptions(trait, options);
+  // Each Option effect in turn - Technological Being's (2) one, then (3) two.
+  for (const group of optionGroupsOf(trait)) {
+    const options = group.options;
+    const picked = await askOptions(trait, options, group.count, group.effect);
     if (!picked) return null;
     for (const id of picked) {
       const option = options.find(entry => entry.id === id);
@@ -433,6 +482,7 @@ export async function addRacialTrait(actor, trait) {
   if (!item) return null;
   await giveGrants(actor, item, made.grants, trait.name);
   await automateAll(actor, item);
+  for (const option of chosenOptions(item)) await madeByOption(actor, item, option);
   if (trait.defaultCostume) await askDefaultCostume(actor);
   return item;
 }
@@ -575,6 +625,55 @@ async function automateAll(actor, item) {
   await actor.setFlag("dbu-ttrpg", "automatic", [...new Set([...(actor.getFlag("dbu-ttrpg", "automatic") ?? []), ...ids])]);
 }
 
+/** Every Option chosen on a Racial Trait Item, as their files. */
+export function chosenOptions(item) {
+  return (item?.system?.chosen ?? []).filter(entry => entry.key === "option").map(entry => getTrait(entry.value)).filter(Boolean);
+}
+
+/**
+ * What an Option makes as it is chosen: Weapon Ports' "At Character Creation, create 2 Weapons with a Craftsmanship Grade
+ * of 2 that have different Weapon Types (and are not of the Shield Weapon Category). These Weapons possess the Artisan
+ * Weapon Quality" - their Categories asked, made on the Gear tab, marked as that Option's and never damaged or destroyed.
+ */
+async function madeByOption(actor, item, option) {
+  const count = Number(option?.installsWeapons) || 0;
+  if (!count) return;
+  const { craftedItemFrom, WEAPON_TYPES } = await import("./gear.mjs");
+  const categories = traitsOfKind("crafting", "weapon-categories").filter(each => each.weaponType && (each.id !== "shield"));
+  const escape = Handlebars.escapeExpression;
+  const select = n => `<label class="dbu-respond-option"><span class="dbu-respond-name">Weapon ${n}</span>
+    <select name="weapon${n}">${categories.map(each => `<option value="${escape(each.id)}">${escape(`${each.name} (${
+      WEAPON_TYPES[each.weaponType]?.label ?? each.weaponType})`)}</option>`).join("")}</select></label>`;
+  let picked = null;
+  while (!picked) {
+    const answer = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `${option.name} - Installed Weapons` },
+      content: `<p class="dbu-respond-hint">Grade 2, Artisan - two different Weapon Types.</p>
+        ${Array.from({ length: count }, (each, index) => select(index + 1)).join("")}`,
+      buttons: [{ action: "make", label: "Make them", default: true, callback: (event, button, dialog) =>
+        Array.from({ length: count }, (each, index) => dialog.element.querySelector(`[name="weapon${index + 1}"]`)?.value) },
+        { action: "cancel", label: "Later, by hand" }],
+      rejectClose: false
+    });
+    if (!Array.isArray(answer)) return;
+    const types = answer.map(id => categories.find(each => each.id === id)?.weaponType);
+    if (new Set(types).size === types.length) picked = answer;
+    else ui.notifications.warn(`${option.name}: two different Weapon Types.`);
+  }
+  const made = picked.map(id => {
+    const category = categories.find(each => each.id === id);
+    const data = craftedItemFrom("weapon", actor, getTrait);
+    data.name = `${category.name} (Installed)`;
+    Object.assign(data.system.crafted, { category: category.id, weaponType: category.weaponType, grade: 2,
+      qualities: [{ id: "artisan", slots: 1, choice: "", on: false, name: "" }] });
+    data.flags = { "dbu-ttrpg": { grantedBy: item.id, grantedByOption: option.id, installedWeapon: true } };
+    return data;
+  });
+  const { composeEffects } = await import("./gear.mjs");
+  for (const data of made) data.system.crafted.effects = composeEffects(data.system.crafted, "", { getTrait });
+  await actor.createEmbeddedDocuments("Item", made);
+}
+
 /** The Option chosen on a Racial Trait Item, where it has an Option effect of one - its id, or "". */
 export function racialOptionOf(item) {
   return (item?.system?.chosen ?? []).find(entry => entry.key === "option")?.value ?? "";
@@ -600,19 +699,24 @@ export function tailToGrab(actor) {
  * old one's between the `#@ option` markers, its choice asked, what was recorded and its wording changed with it; the
  * Unique Abilities the old Option gave go, the new one's are given - Talents given are kept, as on losing the Trait.
  */
-export async function changeRacialOption(item, optionId) {
+export async function changeRacialOption(item, optionId, replacing = "") {
   const actor = item?.actor;
   const sourceId = item?.flags?.["dbu-ttrpg"]?.sourceId ?? "";
   const options = racialOptionsOf(sourceId);
   const option = options.find(entry => entry.id === optionId);
-  if (!option || (racialOptionOf(item) === optionId)) return false;
+  const had = chosenOptions(item).map(each => each.id);
+  if (!option || had.includes(optionId)) return false;
+  // The one it takes the place of: the dropdown's own, or the one chosen for the same Option effect.
+  const trait = getTrait(sourceId);
+  const old = replacing || had.find(id => optionEffectOf(getTrait(id), trait) === optionEffectOf(option, trait)) || "";
 
   const extra = [];
   const script = await answered(option, extra);
   if (script === null) return false;
-  const chosen = [...(item.system.chosen ?? []).filter(entry => (entry.key !== "option")
-    && !options.some(each => each.id === entry.key)), { key: "option", value: option.id, label: option.name }, ...extra];
-  const kept = String(item.system.script ?? "").replace(/\n*#@ option [^\n]*\n[\s\S]*?\n#@ end/g, "").trimEnd();
+  const chosen = [...(item.system.chosen ?? []).filter(entry => !((entry.key === "option") && (entry.value === old))
+    && (entry.key !== old)), { key: "option", value: option.id, label: option.name }, ...extra];
+  const marker = new RegExp(`\\n*#@ option ${old} \\|[^\\n]*\\n[\\s\\S]*?\\n#@ end`, "g");
+  const kept = (old ? String(item.system.script ?? "").replace(marker, "") : String(item.system.script ?? "")).trimEnd();
   await item.update({
     "system.script": `${kept}\n\n#@ option ${option.id} | ${option.name}\n${script}\n#@ end`,
     "system.chosen": chosen
@@ -620,9 +724,10 @@ export async function changeRacialOption(item, optionId) {
 
   if (!actor) return true;
   await automateAll(actor, item);
-  const old = Array.from(actor.items).filter(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
-    && each.flags?.["dbu-ttrpg"]?.grantedByOption).map(each => each.id);
-  if (old.length) await actor.deleteEmbeddedDocuments("Item", old);
+  const gone = Array.from(actor.items).filter(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
+    && each.flags?.["dbu-ttrpg"]?.grantedByOption && (each.flags["dbu-ttrpg"].grantedByOption === old)).map(each => each.id);
+  if (gone.length) await actor.deleteEmbeddedDocuments("Item", gone);
+  await madeByOption(actor, item, option);
   await giveGrants(actor, item, {
     unique: listOf(option.grantsUnique).map(id => ({ id, restrictions: listOf(option.uniqueRestrictions), option: option.id })),
     talents: listOf(option.grantsTalent)
@@ -647,6 +752,15 @@ export async function removeRacialTrait(actor, itemId) {
 
 /** Deleted any other way - from the sidebar, by a macro - what it gave goes too. */
 export function registerRacialHooks() {
+  // Weapon Ports' Installed Weapons "cannot be destroyed through any means": no Life Points lost, no Break Value, never
+  // destroyed - whatever writes it.
+  Hooks.on("preUpdateItem", (item, changes) => {
+    if (!item.flags?.["dbu-ttrpg"]?.installedWeapon) return;
+    for (const [key, whole] of [["lifeLost", 0], ["breakLost", 0], ["destroyed", false]]) {
+      if (foundry.utils.hasProperty(changes, `system.crafted.${key}`)) foundry.utils.setProperty(changes, `system.crafted.${key}`, whole);
+      if (`system.crafted.${key}` in changes) changes[`system.crafted.${key}`] = whole;
+    }
+  });
   Hooks.on("deleteItem", async (item, options, userId) => {
     if ((item.type !== RACIAL_TYPE) || !item.parent || (userId !== game.user.id)) return;
     const given = Array.from(item.parent.items).filter(each => each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)

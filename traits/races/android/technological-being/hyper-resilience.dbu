@@ -1,0 +1,16 @@
+id: hyper-resilience
+name: Hyper Resilience
+order: 4
+optionOf: technological-being
+optionEffect: 3
+description: >
+  If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no Damage.
+text: >
+  Hyper Resilience [Triggered, 2/Round]: If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no Damage.
+
+---
+
+# Read where an attack's Damage on you is settled (chat.mjs): less than half the Soak Value, none. Automatic by default;
+# set Triggered, it is ticked in the On being hit window.
+[triggered/light-damage, 2/round, effect 3]
+incoming.damage = 0;

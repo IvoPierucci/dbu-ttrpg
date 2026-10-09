@@ -5976,7 +5976,8 @@ const TRIGGER_STAGES = {
   // what these are there to change.
   hit: {
     attacker: ["hit", "before-wound"],
-    target: ["being-hit", "before-wound"]
+    // Hyper Resilience's, Triggered: ticked here, read where the Damage is settled.
+    target: ["being-hit", "before-wound", "light-damage"]
   }
 };
 
@@ -7508,7 +7509,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // are carried alongside and the results shared back out afterwards.
   const groups = [
     ...asDiceGroups(extraDice),
-    ...standing.map(die => ({ label: die.source || "Greater dice", formula: die.formula }))
+    ...standing.map(die => ({ label: die.source || "Greater dice", formula: die.formula })),
+    // Enhanced Reflexes: "apply your Greater Dice to this Dodge Roll" - ticked for it.
+    ...(((slot === "dodge") && (answered?.slots?.["dodge.greaterDice"] === true))
+      ? [{ label: "Greater dice", formula: actor.system.dice?.greater?.formula ?? "" }] : [])
   ].filter(group => group.formula);
 
   // What the character's own effects add to a Strike's or a Dodge's Natural Result - Drunk's L.
@@ -17619,7 +17623,14 @@ async function rollAttackWound(message, attack) {
     // Punching Down: "If you hit a Character with an Attacking Maneuver that is 2+ Size Categories smaller than you,
     // increase the amount of Damage they receive by 1d6(T)" - Damage there already is (the user's ruling).
     const punchingDown = ((dealt > 0) && (sizeDifference(attacker, target) >= 2)) ? await punchingDownRoll(attacker) : 0;
-    const damage = dealt + punchingDown;
+    // Hyper Resilience: "If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no
+    // Damage" - Automatic, or ticked when hit; spent only where it took it away.
+    const rolledDamage = dealt + punchingDown;
+    const resilient = ((rolledDamage > 0) && (rolledDamage < (Number(target.system.soakValue) || 0) / 2))
+      ? reactiveFor(target).find(entry => entry.available && entry.armed
+        && (String(entry.program.blocks?.[0]?.moment ?? "") === "light-damage")) ?? null : null;
+    if (resilient) await spendTriggeredEffect(target, resilient.blockId);
+    const damage = resilient ? 0 : rolledDamage;
 
     await maybeShakeAttacker(attacker, attack, defence, damage);
 
@@ -20792,10 +20803,15 @@ export async function rollSteadfastCheck(actor) {
   // From its window: each effect that adds to it by name, and what moves the die. Closed, nothing is recorded.
   const added = (actor.system.effects?.slots?.["steadfast.dice"]?.parts ?? [])
     .filter(part => (part.op === "add") && part.value).map(part => ({ label: part.source || "Effects", value: part.value }));
+  // And for this Health Threshold alone - Construct's 3 off at Critical.
+  const forThreshold = actor.system.effects?.slots?.[`steadfast.dice.${rolled}`];
+  const thresholdDice = Number(forThreshold?.add) || 0;
   const ready = await prepareRoll(actor, [], `Steadfast Check - ${THRESHOLDS[rolled].label}`, `Needing ${target}`,
     { offerWilling: false, formula: { base: die, parts: [
       ...(natural ? [{ label: "Natural Result", value: natural }] : []),
-      ...(added.length ? added : (bonus ? [{ label: "Effects", value: bonus }] : []))
+      ...(added.length ? added : (bonus ? [{ label: "Effects", value: bonus }] : [])),
+      ...(thresholdDice ? [{ label: (forThreshold?.parts ?? []).map(part => part.source).find(Boolean) ?? "Effects",
+        value: thresholdDice }] : [])
     ] } });
   if (!ready) return null;
   for (const key of automatic) updates[`system.thresholdChecks.${key}`] = "fail";
@@ -20805,8 +20821,8 @@ export async function rollSteadfastCheck(actor) {
   //
   // What moves the die itself - Legacy's "increase the Natural Result for all Steadfast
   // Checks" - is its own term, named, so the card says where it came from.
-  const terms = [die, natural ? `${natural}[Natural Result]` : "", bonus ? String(bonus) : ""]
-    .filter(Boolean);
+  const terms = [die, natural ? `${natural}[Natural Result]` : "", bonus ? String(bonus) : "",
+    thresholdDice ? String(thresholdDice) : ""].filter(Boolean);
   const roll = new Roll(terms.join(" + "));
   await roll.evaluate();
   // Failed, what may pass it instead is asked first - before anything that failing does.

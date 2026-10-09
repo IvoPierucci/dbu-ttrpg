@@ -1,0 +1,23 @@
+id: construct
+name: Construct
+order: 2
+optionOf: technological-being
+optionEffect: 2
+description: >
+  Ignore the penalties for the Bruised or Injured Health Thresholds, but reduce your Steadfast Checks by 3 for the Critical Health Threshold and double its penalties. Double the increase to your Maximum Life Points from the effects of Talents.
+text: >
+  Construct [Passive]: Ignore the penalties for the Bruised or Injured Health Thresholds, but reduce your Steadfast Checks by 3 for the Critical Health Threshold and double its penalties. Double the increase to your Maximum Life Points from the effects of Talents.
+  You are Unnatural.
+
+---
+
+# A Steadfast Check failed at Bruised or Injured costs nothing; at Critical it costs twice over, and its Check is made at
+# -3 (actor-character.mjs, chat.mjs rollSteadfastCheck). "You are Unnatural" (the user's: Construct's alone) - as Rubbery
+# Body's: no Suffocating, no Poisoned, Natural Healing Hands cannot target them.
+# Talents' Maximum Life Points doubled: no Talent written yet raises them - the table's until one does.
+[passive]
+forbid unnatural;
+allow threshold.ignore.bruised;
+allow threshold.ignore.injured;
+allow threshold.double.critical;
+steadfast.dice.critical -= 3;

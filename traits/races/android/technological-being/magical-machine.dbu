@@ -1,0 +1,23 @@
+id: magical-machine
+name: Magical Machine
+order: 11
+optionOf: technological-being
+optionEffect: 3
+grantsUnique: magical-materialization, telekinesis
+# Where the Racial Attribute Score Increase's +2 to Force goes - kept, or to Magic.
+choose: list
+choices: Force, Magic
+description: >
+  Reduce the TP Cost of all Unique Abilities by 3 and gain access to the Magical Materialization and Telekinesis Unique Abilities. Upon gaining this effect, you may replace the bonus to your Force Attribute Score from your Racial Attribute Score Increase with a bonus to your Magic Attribute Score.
+text: >
+  Magical Machine [Passive]: Reduce the TP Cost of all Unique Abilities by 3 and gain access to the Magical Materialization and Telekinesis Unique Abilities. Upon gaining this effect, you may replace the bonus to your Force Attribute Score from your Racial Attribute Score Increase with a bonus to your Magic Attribute Score.
+
+---
+
+# Every Unique Ability's TP, of either type, never below half the listed cost (unique.mjs uniqueTPOf). The Racial +2 to
+# Force moved to Magic where that was chosen.
+[passive]
+unique.technical.tpCost -= 3;
+unique.magical.tpCost -= 3;
+force.score += -2 * $magic;
+magic.score += 2 * $magic;

@@ -60,7 +60,8 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
     context.textLines = racialTraitLines(this.item);
     // A Racial Trait: its race and what the rules call it in place of Prerequisites, and what was chosen for it.
     if (this.item.type === "racial") {
-      const { factorSummary, ordinal, racialOptionOf, racialOptionsOf, racialTraitKind, racialTraitRace } = await import("../racial.mjs");
+      const { chosenOptions, factorSummary, optionGroupsOf, ordinal, racialOptionOf, racialOptionsOf, racialTraitKind,
+        racialTraitRace } = await import("../racial.mjs");
       const { getTrait, printedLines } = await import("../effects/traits.mjs");
       const file = getTrait(this.item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
       const current = racialOptionOf(this.item);
@@ -75,6 +76,15 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
         chosen: (this.item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label)
           .filter(Boolean).join(" \u00b7 "),
         options: options.length ? options : null,
+        // Each Option effect, a dropdown for each chosen - Technological Being's (2) one and (3) two - each changing the one
+        // it shows.
+        optionGroups: file ? optionGroupsOf(file).map(group => {
+          const mine = chosenOptions(this.item).map(each => each.id).filter(id => group.options.some(each => each.id === id));
+          return { label: `${ordinal(group.effect)} effect`, selects: Array.from({ length: group.count }, (each, index) => ({
+            replacing: mine[index] ?? "",
+            options: group.options.map(option => ({ value: option.id, label: option.name, selected: option.id === mine[index] }))
+          })) };
+        }) : [],
         // Which printed effect asks for it - "3rd effect" (the user's).
         optionLabel: Number(file?.optionEffect) ? `${ordinal(Number(file.optionEffect))} effect` : "Option",
         // Its Addendum, as written - for whoever is choosing to read before they choose.
@@ -108,14 +118,14 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
       event.stopPropagation();
       await this.item.actor?.setFlag("dbu-ttrpg", "tailLost", event.target.checked);
     });
-    const select = this.element.querySelector("select[data-racial-option]");
-    if (!select) return;
-    select.addEventListener("change", async event => {
-      event.stopPropagation();
-      const { changeRacialOption } = await import("../racial.mjs");
-      const changed = await changeRacialOption(this.item, event.target.value);
-      if (!changed) this.render();
-    });
+    for (const select of this.element.querySelectorAll("select[data-racial-option]")) {
+      select.addEventListener("change", async event => {
+        event.stopPropagation();
+        const { changeRacialOption } = await import("../racial.mjs");
+        const changed = await changeRacialOption(this.item, event.target.value, event.target.dataset.replacing ?? "");
+        if (!changed) this.render();
+      });
+    }
   }
 
   /** Build the tab configuration used by the shared tabs template. */

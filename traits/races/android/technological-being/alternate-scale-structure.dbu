@@ -1,0 +1,20 @@
+id: alternate-scale-structure
+name: Alternate Scale Structure
+order: 9
+optionOf: technological-being
+optionEffect: 3
+# Tiny or Enormous, chosen as it is gained.
+choose: list
+choices: Tiny, Enormous
+description: >
+  Upon gaining this effect, select either the Tiny Size Category or the Enormous Size Category. That selected Size Category becomes your base Size Category. Additionally, if you choose Tiny, increase your Soak Value by 1(T) and if you choose Enormous, increase your Defense Value by 1(T).
+text: >
+  Alternate Scale Structure [Passive]: Upon gaining this effect, select either the Tiny Size Category or the Enormous Size Category. That selected Size Category becomes your base Size Category. Additionally, if you choose Tiny, increase your Soak Value by 1(T) and if you choose Enormous, increase your Defense Value by 1(T).
+
+---
+
+# The Size chosen is the one they are built as (actor-character.mjs); what moves Size moves it from there.
+[passive]
+allow size.base.$choice;
+soakValue += 1(T) * $tiny;
+defenseValue += 1(T) * $enormous;

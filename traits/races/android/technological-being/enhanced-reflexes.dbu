@@ -1,0 +1,21 @@
+id: enhanced-reflexes
+name: Enhanced Reflexes
+order: 5
+optionOf: technological-being
+optionEffect: 3
+description: >
+  When you are the target of an Attacking Maneuver, you may choose to ignore all of your stacks of Diminishing Defense against that Attacking Maneuver. If you possess no stacks of Diminishing Defense, then apply your Greater Dice to this Dodge Roll.
+text: >
+  Enhanced Reflexes [Triggered, 1/Round]: When you are the target of an Attacking Maneuver, you may choose to ignore all of your stacks of Diminishing Defense against that Attacking Maneuver. If you possess no stacks of Diminishing Defense, then apply your Greater Dice to this Dodge Roll.
+
+---
+
+# Ticked in Respond, for the Dodge Roll: what Diminishing Defense took off it, given back - none to give, the Greater Dice
+# on it (chat.mjs rollSide).
+[triggered/combat-roll, 1/round, effect 3]
+if (diminishing.defense.penalty > 0) {
+    dodge += diminishing.defense.penalty;
+}
+if (diminishing.defense.penalty <= 0) {
+    dodge.greaterDice = true;
+}

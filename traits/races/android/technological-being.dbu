@@ -1,0 +1,44 @@
+id: technological-being
+name: Technological Being
+order: 1
+category: body
+importance: primary
+# Two Option effects: (2) choose one, (3) choose two - each Option file says which (`optionEffect:`), and how many is read
+# off its line, "[Option]" one, "[Multi-Option/2]" two (racial.mjs optionGroupsOf).
+options: 1
+optionEffect: 2
+description: >
+  Created by or enhanced by technology, Androids aren’t natural entities- or at least, not entirely.
+text: >
+  Technological Being (Body): Created by or enhanced by technology, Androids aren’t natural entities- or at least, not entirely.
+  (1)-[Passive]: While in the Healthy Health Threshold, increase your Damage Reduction by 1(T).
+  (2)-[Option]: At Character Creation, choose one of the following effects:
+
+  * Enhanced Organism [Passive]: Gain the Alternate Upbringing Factor, ignoring its Racial Requirements. You must exchange the Functional Purpose Racial Trait for the Factor Trait. Additionally, increase your Racial Life Modifier by 2 and select an additional Saving Throw to apply your Racial Saving Throw Bonus to.
+  * Construct [Passive]: Ignore the penalties for the Bruised or Injured Health Thresholds, but reduce your Steadfast Checks by 3 for the Critical Health Threshold and double its penalties. Double the increase to your Maximum Life Points from the effects of Talents.
+
+  You are Unnatural.
+
+  (3)-[Multi-Option/2]: At Character Creation, choose two of the following effects:
+
+  * Surging Power [Triggered/Power]: Spend 3(bT) Ki Points to gain an additional stack of Power.
+  * Weapon Ports [Passive, Ruling]: At Character Creation, create 2 Weapons with a Craftsmanship Grade of 2 that have different Weapon Types (and are not of the Shield Weapon Category). These Weapons possess the Artisan Weapon Quality (1 Slot). These Weapons are known as your ‘Installed Weapons’, are Integrated into your Character, and cannot be destroyed through any means.
+  * Power Absorption [Passive]: You gain access to the Power Drain and Attack Absorption Special Maneuvers (see — Special Maneuers).
+  * Hyper Resilience [Triggered, 2/Round]: If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no Damage.
+  * Enhanced Reflexes [Triggered, 1/Round]: When you are the target of an Attacking Maneuver, you may choose to ignore all of your stacks of Diminishing Defense against that Attacking Maneuver. If you possess no stacks of Diminishing Defense, then apply your Greater Dice to this Dodge Roll.
+  * Weapon Style [Passive]: You gain the Weapon Specialist Talent, and when creating any type of Signature Technique, you may add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points.
+  * Heroic Style [Triggered]: Increase your Combat Rolls by 1(T) until the end of your turn when you use the Hype Maneuver.
+  * Calculating Style [Triggered]: Increase your Combat Rolls by 1(T) until the end of your turn when you use the Analysis Maneuver.
+  * Alternate Scale Structure [Passive]: Upon gaining this effect, select either the Tiny Size Category or the Enormous Size Category. That selected Size Category becomes your base Size Category. Additionally, if you choose Tiny, increase your Soak Value by 1(T) and if you choose Enormous, increase your Defense Value by 1(T).
+  * Extension Feature [Passive]: You possess the Extension Attack Monstrous Trait.
+  * Magical Machine [Passive]: Reduce the TP Cost of all Unique Abilities by 3 and gain access to the Magical Materialization and Telekinesis Unique Abilities. Upon gaining this effect, you may replace the bonus to your Force Attribute Score from your Racial Attribute Score Increase with a bonus to your Magic Attribute Score.
+
+---
+
+# (1) In the Healthy Health Threshold - below none of them.
+[passive]
+if (!belowThreshold("bruised")) {
+    damageReduction += 1(T);
+}
+
+# (2) and (3): the Options chosen, one file each beside this one.
