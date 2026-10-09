@@ -9253,10 +9253,10 @@ async function meteorAttack(message, actor) {
  */
 export async function postMeteorAttack(actor, maneuver, declared, charges, messageId) {
   const { profile, foundation, kiWager = 0, advantages = [], weapon = null, damageAttribute = null,
-    transformed = false, gigaFlare = 0, superCombination = 0 } = declared ?? {};
+    transformed = false, gigaFlare = 0, superCombination = 0, earthlingCharge = false } = declared ?? {};
   const technique = (maneuver.signature && !maneuver.signatureTechnique)
     ? techniqueAttack(actor, maneuver, { profile, foundation, advantages, weapon, charges, transformed, gigaFlare,
-      superCombination }, { targets: [], shaken: [] })
+      superCombination, earthlingCharge }, { targets: [], shaken: [] })
     : null;
   const attack = {
     maneuverName: maneuver.name, profile, foundation, kiWager, advantages, weapon, damageAttribute, technique,
@@ -14361,7 +14361,8 @@ export async function postAttack(actor, target, maneuver,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
-                                   woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false },
+                                   woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
+                                   earthlingCharge = false },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -14386,7 +14387,9 @@ export async function postAttack(actor, target, maneuver,
     ? (reflecting.technique ?? null)
     : ((maneuver.signature && !maneuver.signatureTechnique)
       ? techniqueAttack(actor, maneuver, { profile, foundation, advantages, weapon, thrown, charges,
-          squaresCharged, transformed, gigaFlare, superCombination, powerbomb, areaFrom, volleyball },
+          squaresCharged, transformed, gigaFlare, superCombination, powerbomb, areaFrom, volleyball,
+          // Earthling-Raised's, asked at declaration - it was dropped here, so its Energy Charge never landed.
+          earthlingCharge },
         { targets: everyone, shaken: everyone.filter(who => (Number(who?.system?.conditions?.shaken) || 0) > 0) })
       : null);
 
