@@ -24,7 +24,7 @@ if (!belowThreshold("injured")) {
 # 1(T) higher; beating the Strike Roll it was measured against, dodged (chat.mjs angelicButtons, angelicRedodge).
 allow angelic.redodge;
 
-# (3) As each Combat Round starts, in Healthy: ticked on the Round's card - no Triggered/Automatic button (the user's).
-[triggered/start-of-round, chosen, effect 3]
+# (3) As each Combat Round starts, in Healthy. Automatic by default; set Triggered, ticked on the Round's card.
+[triggered/start-of-round, effect 3]
 requires !belowThreshold("bruised");
 actions.counterGained += 1;
