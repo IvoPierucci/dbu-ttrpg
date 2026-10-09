@@ -5329,7 +5329,7 @@ async function resettleWound(message, situation, attack, result) {
 
     // The same arithmetic the Wound step does, on the numbers it already worked out.
     const defence = DEFENCES[own.defense] ?? DEFENCES.dodge;
-    const effectiveWound = defence.wound(wound.total);
+    const effectiveWound = defence.wound(wound.total + (Number(own.woundBonus) || 0));
     const negated = counterWound && (counterWound.total > wound.total);
     const raw = negated
       ? 0
@@ -13628,6 +13628,11 @@ function heldAt(actor, moment) {
   return answered;
 }
 
+/** A bonus against one person, as the card names it: "Lock On +4". */
+function signedPart(part) {
+  return `${part.label} ${(part.value > 0) ? "+" : ""}${part.value}`;
+}
+
 /** Lock On's "Increase your Strike and Wound Rolls against your Target by 2(T)". */
 function lockOnParts(attacker, target) {
   const locked = attacker?.getFlag?.(SCOPE, "lockOn");
@@ -16221,9 +16226,10 @@ async function resolveAttack(message, attack) {
     // "Increase your Combat Rolls against Analyzed Opponents." Added here for the same
     // reason the Long Range penalty is taken here: one Strike Roll reaches several people
     // and what it is worth against each of them is not the same number.
-    const analysis = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target), ...mindReadBonus(attacker, target),
-      ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target)]
-      .reduce((sum, p) => sum + p.value, 0);
+    const analysisParts = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target),
+      ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target)]
+      .filter(p => p.value);
+    const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
     const against = attack.techniqueBlocked ? 0 : Math.max(0, (strike.total + analysis) - longRange);
 
@@ -16347,6 +16353,8 @@ async function resolveAttack(message, attack) {
       // beating a Dodge of 17 reads as a bug unless the two that came from somewhere are
       // named.
       analysis,
+      // Named, so the card says where it came from - Lock On's +2(T) was added and never said (the user's report).
+      analysisNamed: analysisParts.map(signedPart),
       against,
       // Said on the card, since a defence that was never rolled needs a reason beside
       // it or it looks like it was simply forgotten.
@@ -17617,15 +17625,18 @@ async function rollAttackWound(message, attack) {
     // One Wound Roll serves everyone the attack reached, and this bonus is against one of
     // them - so it is added where what the roll comes to is already worked out per person,
     // which is the same place a Guard halves it.
-    const analysis = analysisBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
-      + mindReadBonus(attacker, target).reduce((sum, p) => sum + p.value, 0)
-      + godMeteorPinned(attacker, target)
-      + aggressionAgainst(attacker, target)
-      + lockOnParts(attacker, target).reduce((sum, p) => sum + p.value, 0)
-      + grantedLongShot(attacker, attack, target)
-      + techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),
+    const woundParts = [...analysisBonus(attacker, target), ...mindReadBonus(attacker, target),
+      { label: "God Meteor", value: godMeteorPinned(attacker, target) },
+      { label: "Inherited Aggression", value: aggressionAgainst(attacker, target) },
+      ...lockOnParts(attacker, target),
+      { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
+      { label: attack.technique?.name ?? "Technique",
+        value: techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),
           outsideMelee: !attack.portal && Boolean(whyNotWithinMelee(attacker, target, "")),
-          alreadyConditioned: conditionAlreadyOn(attack, target) });
+          alreadyConditioned: conditionAlreadyOn(attack, target) }) }].filter(p => p.value);
+    const analysis = woundParts.reduce((sum, p) => sum + p.value, 0);
+    // Kept, so the card names them and a Wound settled again keeps them.
+    const woundAgainst = analysis ? { woundBonus: analysis, woundNamed: woundParts.map(signedPart) } : {};
     const effectiveWound = defence.wound(wound.total + analysis);
 
     // A blow that lands on one of their Weapons rather than on them - a Called Shot at it, or a
@@ -17637,7 +17648,7 @@ async function rollAttackWound(message, attack) {
     // take the attack", and takes it as any.
     const atBuddy = (attack.modifiers ?? []).find(entry => entry.atBuddy?.ownerUuid === uuid)?.atBuddy;
     if (atBuddy && !["guard", "directHit"].includes(own.defense)) {
-      settledTargets.push({ ...own, counterWound: null, effectiveWound, soak: 0, reduction: 0, damage: 0,
+      settledTargets.push({ ...own, ...woundAgainst, counterWound: null, effectiveWound, soak: 0, reduction: 0, damage: 0,
         buddyHit: { itemId: atBuddy.itemId, name: atBuddy.name } });
       continue;
     }
@@ -17647,7 +17658,7 @@ async function rollAttackWound(message, attack) {
       const item = target.items?.get(struck.itemId);
       const landed = item ? weaponHit(item, target, effectiveWound,
         { getTrait, breaker: Boolean(attack.weapon?.breaker) }) : null;
-      settledTargets.push({ ...own, counterWound: null, effectiveWound, soak: 0, reduction: 0,
+      settledTargets.push({ ...own, ...woundAgainst, counterWound: null, effectiveWound, soak: 0, reduction: 0,
         damage: 0, weaponHit: landed ?? { itemId: struck.itemId, name: struck.name, damage: 0 } });
       continue;
     }
@@ -17719,7 +17730,7 @@ async function rollAttackWound(message, attack) {
 
     await maybeShakeAttacker(attacker, attack, defence, damage);
 
-    settledTargets.push({ ...own, counterWound, effectiveWound, soak, reduction, damage,
+    settledTargets.push({ ...own, ...woundAgainst, counterWound, effectiveWound, soak, reduction, damage,
       ...(punchingDown ? { punchingDown } : {}),
       ...(extra.length ? { techniqueExtra: extra } : {}) });
   }
@@ -21382,8 +21393,8 @@ function targetRow(attack, target) {
   // that follow are measured against it, and the reason it did not stop the first one
   // is said beside it - a defence that plainly won otherwise reads as a bug.
   if (own.answer) {
-    const note = own.forced
-      || (own.longRange ? `Long Range - Strike ${own.against} against them` : "");
+    const why = [...(own.analysisNamed ?? []), ...(own.longRange ? ["Long Range"] : [])];
+    const note = own.forced || (why.length ? `${why.join(", ")} - Strike ${own.against} against them` : "");
     return attackSide(label, target.name, own.answer, note);
   }
 
@@ -21627,13 +21638,15 @@ function outcomeFor(attack, { own, uuid }) {
     : "";
   // Say so when the defence changed the Wound, rather than quoting a number that no
   // longer matches the arithmetic.
-  const reduced = (effectiveWound !== wound.total) ? " halved" : "";
+  // What was added against this one is named, and is no defence's doing (it read as "halved").
+  const reduced = (effectiveWound !== wound.total + (Number(own.woundBonus) || 0)) ? " halved" : "";
+  const named = own.woundNamed?.length ? ` (${own.woundNamed.join(", ")})` : "";
   // Named separately from Soak, because it is subtracted separately: the Category note
   // sits with the Soak it applied to, and Damage Reduction stands outside it.
   const dr = reduction ? ` - DR ${reduction}` : "";
   const barred = own.barrier ? ` - ${own.barrier.name} ${own.barrier.total}` : "";
   const down = own.punchingDown ? ` + Punching Down ${own.punchingDown}` : "";
-  const detail = `Wound ${effectiveWound}${reduced} - Soak ${soak}${stepped}${dr}${barred}${down}`;
+  const detail = `Wound ${effectiveWound}${named}${reduced} - Soak ${soak}${stepped}${dr}${barred}${down}`;
   return (damage <= 0) ? `${detail}: no damage` : `${detail} = ${damage} damage`;
 }
 
