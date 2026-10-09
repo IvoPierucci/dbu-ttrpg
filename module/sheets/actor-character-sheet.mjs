@@ -368,6 +368,15 @@ function ordinal(n) {
   return `${n}${suffix}`;
 }
 
+/** Why an Integrated Item cannot be made Active, or "" - integrated.mjs, read without awaiting it. */
+function wieldProblemOf(items, item) {
+  if (item?.system?.crafted?.destroyed) return "Broken: repair it first.";
+  const id = item?.system?.integratedWith ?? "";
+  const apparel = id ? items.find(other => other.id === id) : null;
+  if (id && !apparel?.system?.equipped) return `Only while ${apparel?.name ?? "its Apparel"} is worn.`;
+  return "";
+}
+
 export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static DEFAULT_OPTIONS = {
@@ -448,6 +457,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       eatPortion: DBUCharacterSheet._onEatPortion,
       teleportGear: DBUCharacterSheet._onTeleportGear,
       equipGear: DBUCharacterSheet._onEquipGear,
+      switchIntegrated: DBUCharacterSheet._onSwitchIntegrated,
       layerGear: DBUCharacterSheet._onLayerGear,
       wieldGear: DBUCharacterSheet._onWieldGear,
       attuneGear: DBUCharacterSheet._onAttuneGear,
@@ -1123,6 +1133,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         materialized: Boolean(item.system.materialized),
         intendedName: item.system.declaresIntended
           ? (item.system.intended?.name || "nobody declared") : "",
+        // Integrated: Active or Inactive in place of worn or wielded - and why it cannot be made Active, where it cannot.
+        integrated: Boolean(item.system.integrated),
+        active: Boolean(item.system.integrated && item.system.equipped),
+        integratedBlocked: item.system.integrated && !item.system.equipped
+          ? (wieldProblemOf(gearItems, item) || "") : "",
         // An Accessory, and whether it is being worn.
         accessory: isAccessory(item),
         equipped: isAccessory(item) && Boolean(item.system.equipped),
@@ -4059,6 +4074,18 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * remove an Accessory. You cannot wear two of the same Accessory." Refused before the
    * Action is spent.
    */
+  /** An Integrated Item made Active or Inactive - the No Effort Maneuver, in a Combat Encounter (integrated.mjs). */
+  static async _onSwitchIntegrated(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
+    const { switchIntegrated } = await import("../integrated.mjs");
+    const said = await switchIntegrated(this.actor, item);
+    if (said && game.combat?.started) {
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: `<p>${Handlebars.escapeExpression(`${this.actor.name}: ${said} - No Effort Maneuver.`)}</p>` });
+    }
+  }
+
   static async _onEquipGear(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     if (!isAccessory(item)) return;

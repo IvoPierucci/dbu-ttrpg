@@ -3988,12 +3988,15 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     }
     const effort = await askEffort(actor, maneuver);
     if (!effort) return false;
+    // Activate/Deactivate Integrated Items: which, asked before anything is paid - nothing switched, nothing spent.
+    const switched = (effort.key === "integrated") ? await (await import("./integrated.mjs")).swapIntegrated(actor) : "";
+    if ((effort.key === "integrated") && !switched) return false;
 
     await payActions(actor, maneuver);
     await recordManeuverUse(actor, maneuver);
     if (effort.key === "cancel-charge") await cancelCharge(actor);
     await recordManeuverType(actor, maneuver.type,
-      { messageId: (await postManeuver(actor, maneuver, { note: `${effort.label}.` }))?.id });
+      { messageId: (await postManeuver(actor, maneuver, { note: switched ? `${effort.label}: ${switched}.` : `${effort.label}.` }))?.id });
     return true;
   }
 
@@ -4376,7 +4379,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       weaponItem = chosen?.item ?? null;
       weaponForm = chosen?.form ?? null;
       if (weaponItem) {
-        declared = { ...declared, weapon: armedWith(actor, weaponItem, declared, [], targetActor, weaponForm) };
+        declared = { ...declared, weapon: { ...armedWith(actor, weaponItem, declared, [], targetActor, weaponForm),
+          // An Integrated Weapon's, treated as an Unarmed Attack.
+          ...(chosen?.unarmed ? { unarmed: true } : {}) } };
       }
       // High-Tech: "Your Damage Attribute for any Attacking Maneuver made with this Weapon is
       // Scholarship" - what stands in for the Foundation's, as a Bomb's recorded one does.
@@ -5599,7 +5604,20 @@ async function askWeapon(actor, declared) {
   });
   if (!chosen || (chosen === "cancel")) return null;
   if (chosen === "unarmed") return false;
-  return offered.find(entry => entry.key === chosen) ?? null;
+  const entry = offered.find(each => each.key === chosen) ?? null;
+  // "All Attacking Maneuvers made with Integrated Weapons may be treated as Unarmed Attacks OR Armed Attacks. Decide which
+  // at Attack Declaration."
+  if (entry && entry.item.system?.integrated) {
+    const as = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: entry.label }, content: "",
+      buttons: [{ action: "armed", label: "Armed Attack" }, { action: "unarmed", label: "Unarmed Attack" },
+        { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    if (!["armed", "unarmed"].includes(as)) return null;
+    return { ...entry, unarmed: as === "unarmed" };
+  }
+  return entry;
 }
 
 /**
@@ -5679,7 +5697,7 @@ export async function armOutOfSequence(actor, maneuver, declared, target = null,
     calledShot: (modifiers ?? []).some(entry => entry.id === "called-shot"),
     area: declared.area ?? PROFILES[declared.profile]?.area ?? null, kiWager: declared.kiWager ?? 0,
     sizes: Object.keys(DBUCharacterData.SIZES), getTrait });
-  return { ...declared, weapon,
+  return { ...declared, weapon: { ...weapon, ...(chosen.unarmed ? { unarmed: true } : {}) },
     ...(weapon?.scholarshipDamage ? { damageAttribute: { label: "Scholarship Modifier",
       value: actor.system.attributes?.scholarship?.mod ?? 0 } } : {}) };
 }

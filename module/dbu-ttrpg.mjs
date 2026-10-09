@@ -3,6 +3,7 @@ import DBUCharacterSheet from "./sheets/actor-character-sheet.mjs";
 import DBUTalentData from "./data/item-talent.mjs";
 import DBURacialData from "./data/item-racial.mjs";
 import { registerRacialHooks } from "./racial.mjs";
+import { registerIntegratedHooks } from "./integrated.mjs";
 import DBUTalentSheet from "./sheets/item-talent-sheet.mjs";
 import DBUManeuverData from "./data/item-maneuver.mjs";
 import DBUManeuverSheet from "./sheets/item-maneuver-sheet.mjs";
@@ -96,6 +97,7 @@ Hooks.once("init", () => {
   registerDefeatHooks();
   registerRacialLifeHooks();
   registerRacialHooks();
+  registerIntegratedHooks();
   registerBreathHooks();
   registerWornBreathHooks();
   registerConditionHooks();

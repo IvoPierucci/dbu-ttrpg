@@ -28,9 +28,7 @@ text: >
 #
 # The Quality: offered on every Category but Weights, taking 1 Quality Slot.
 #
-# --- What is not built ---------------------------------------------------------------------------
-#
-# Everything it does is an Integrated Weapon, and Integrated Items are not in this system yet.
-# When they are: adding Armed makes a Weapon at the Apparel's Craftsmanship Grade, tied to it as
-# its Integrated Weapon, and the character has that Weapon only while the Apparel is worn - its
+# Armed on a piece the character has makes its Integrated Weapon at the piece's Craftsmanship
+# Grade - its Category and Type the player's, on its sheet - gone with the Quality or the piece,
+# and possessed only while the piece is worn: Inactive once it comes off (integrated.mjs). Its
 # attacks Armed or Unarmed, chosen at declaration.

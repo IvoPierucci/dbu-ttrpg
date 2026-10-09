@@ -250,6 +250,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
 
     context.typeLabel = `${system.special ? "Special " : ""}${GEAR_TYPES[system.itemType]?.label ?? ""}`;
     context.sizeLabel = system.size ?? "";
+    // A Weapon, an Accessory or a piece of Apparel may be Integrated - the table's box, or an effect's (the user's).
+    context.integratable = ["weapon", "apparel"].includes(system.crafted?.kind) || (system.itemType === "accessory");
     context.tagLabels = (system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag);
 
     // What it recorded from its maker, and what sets it off - both theirs to change.

@@ -684,10 +684,16 @@ async function madeByOption(actor, item, option) {
     Object.assign(data.system.crafted, { category: category.id, weaponType: category.weaponType, grade: 2,
       qualities: [{ id: "artisan", slots: 1, choice: "", on: false, name: "" }] });
     data.flags = { "dbu-ttrpg": { grantedBy: item.id, grantedByOption: option.id, installedWeapon: true } };
+    // "Integrated into your Character" - Active, as two may be (the user's: Active where it fits).
+    data.system.integrated = true;
     return data;
   });
   const { composeEffects } = await import("./gear.mjs");
   for (const data of made) data.system.crafted.effects = composeEffects(data.system.crafted, "", { getTrait });
+  // Active as far as there is room - two Integrated Weapons at once.
+  const { activeIntegrated, INTEGRATED_ACTIVE } = await import("./integrated.mjs");
+  const room = Math.max(0, INTEGRATED_ACTIVE.weapon - activeIntegrated(actor.items.contents, "weapon").length);
+  made.forEach((data, index) => { data.system.equipped = index < room; });
   await actor.createEmbeddedDocuments("Item", made);
 }
 

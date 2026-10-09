@@ -7,6 +7,10 @@
       {{#if sizeLabel}}<span>{{sizeLabel}}</span>{{/if}}
       {{#each tagLabels as |tag|}}<span class="gear-tag">[{{tag}}]</span>{{/each}}
       {{#if craftDCNow}}<span>Craft DC: {{craftDCNow}}</span>{{/if}}
+      {{#if integratable}}
+      <label data-tooltip="Part of the character: Active or Inactive, no initial Penalties, not counted towards the equipped limit">
+        Integrated <input type="checkbox" name="system.integrated" {{#if item.system.integrated}}checked{{/if}}/></label>
+      {{/if}}
     </div>
   </div>
 </header>

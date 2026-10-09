@@ -44,8 +44,5 @@ text: >
 #
 # Dynamic - what the ARC declared - and Drop/Pickup: there are no objects here to drop.
 #
-# --- What is not built ---------------------------------------------------------------------------
-#
-# Weapons and Integrated Items are not in this system yet. When Weapons arrive, Un/Sheathing
-# and Replace reach them - the Sheath/Holster's first draw among them - and so does Loose's
-# Doff, which is done through this Maneuver.
+# Activate/Deactivate Integrated Items: which to make Inactive and which Active, asked before
+# anything is paid - also from the Gear tab's Activate/Deactivate (integrated.mjs).

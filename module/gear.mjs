@@ -16,6 +16,7 @@
 import { compile as compileScript } from "./effects/parser.mjs";
 import { applyPassives, applySlot, PRIORITY } from "./effects/interpreter.mjs";
 import { PHASES } from "./effects/slots.mjs";
+import { integratedProblem, integratedRoom, isIntegrated } from "./integrated.mjs";
 
 /**
  * The four Item Types, and which list on the Gear tab each is drawn in.
@@ -557,9 +558,10 @@ export function pieceTokens(item, wearer, reading, getTrait) {
  */
 export function apparelPenaltyPieces(items, getTrait) {
   const top = topLayerPiece(items);
-  const counted = apparelQualitiesInEffect(items).filter(({ item }) =>
-    craftedReading(item.system.crafted, { getTrait, difficulties: {}, category: item === top })
-      ?.countsForPenalty !== false);
+  // Integrated: "ignore any initial Penalties they would normally incur" - not counted.
+  const counted = apparelQualitiesInEffect(items).filter(({ item }) => !isIntegrated(item)
+    && (craftedReading(item.system.crafted, { getTrait, difficulties: {}, category: item === top })
+      ?.countsForPenalty !== false));
   return Math.max(0, counted.length - 1);
 }
 
@@ -1423,10 +1425,12 @@ export function wieldedWeapons(items) {
  */
 export function wieldProblem(items, item, getTrait = null, most = WEAPONS_WIELDED) {
   if (item?.system?.crafted?.destroyed) return "Broken: repair it first.";
+  // Integrated: Active rather than wielded, held to two of its own (integrated.mjs) - and not counted with the rest.
+  if (isIntegrated(item)) return integratedProblem(items, item);
   // Telekinetic: "Wielding this Weapon does not count towards your maximum number of Weapons".
   if (heldByMind(items, item, getTrait)) return "";
   const held = wieldedWeapons(items).filter(other => (other !== item)
-    && !heldByMind(items, other, getTrait));
+    && !heldByMind(items, other, getTrait) && !isIntegrated(other));
   if (held.length >= most) return `Already wielding ${most} Weapons.`;
   return "";
 }
@@ -1532,7 +1536,8 @@ export function weaponAttack(item, attacker, { profile = "", calledShot = false,
     // Weapon Specialist Talent has taken it away.
     strike: [
       ...perTier(`${size.label} Weapon`, size.strike),
-      ...(weaponSpecialist(attacker) ? [] : perTier("Weapon Penalty", -WEAPON_PENALTY_PER_TIER)),
+      // An Integrated Weapon ignores it: "Items that are Integrated ... ignore any initial Penalties".
+      ...((weaponSpecialist(attacker) || isIntegrated(item)) ? [] : perTier("Weapon Penalty", -WEAPON_PENALTY_PER_TIER)),
       ...own("weapon.strike")
     ],
     wound: [...perTier(`${size.label} Weapon`, size.wound), ...own("weapon.wound")],
@@ -2878,10 +2883,13 @@ export function equipProblem(items, item) {
   if (item.system.equipped) return "";
   if (isStored(items, item)) return `${item.name} is inside a Capsule.`;
   const worn = wornAccessories(items).filter(other => other.id !== item.id);
+  // "Nor benefit from the same Accessory's effects twice (even if it was Integrated)."
   if (worn.some(other => other.system.gearId === item.system.gearId)) {
     return `Already wearing a ${item.name}.`;
   }
-  if (worn.length >= ACCESSORIES_WORN) {
+  // Integrated: one Active, of its own (integrated.mjs) - the rest's limit not counting it.
+  if (isIntegrated(item)) return integratedProblem(items, item) || (integratedRoom(items, item) ? "" : "Another Integrated Accessory is Active.");
+  if (worn.filter(other => !isIntegrated(other)).length >= ACCESSORIES_WORN) {
     return `Already wearing ${ACCESSORIES_WORN} Accessories.`;
   }
   return "";

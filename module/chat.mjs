@@ -20328,7 +20328,7 @@ async function applyAttackDamage(message, target, attack) {
   // adjacent Square to you." Struck is hit, whatever it dealt; Physical is its Foundation; and
   // Unarmed is made with no Weapon. The adjacent Square is the table's, so the card asks it.
   if (attacker && own.hit && !isAbsoluteMiss(own) && (attack.foundation === "physical")
-    && !attack.weapon) {
+    && (!attack.weapon || attack.weapon.unarmed)) {
     await postGearSpikes(target, attacker);
   }
 

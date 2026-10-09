@@ -230,6 +230,11 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
        *  apply only while it is. */
       equipped: new fields.BooleanField({ required: true, initial: false }),
 
+      /** Integrated - part of the character: Active while `equipped`, Inactive otherwise (integrated.mjs). And the Apparel it
+       *  is part of, an Armed piece's Weapon - possessed only while that piece is worn. */
+      integrated: new fields.BooleanField({ required: true, initial: false }),
+      integratedWith: new fields.StringField({ required: true, blank: true, initial: "" }),
+
       /** The Layer a piece of Apparel is worn on - top, middle or bottom - while it is. */
       layer: new fields.StringField({ required: true, blank: true, initial: "",
         choices: ["", "top", "middle", "bottom"] }),
