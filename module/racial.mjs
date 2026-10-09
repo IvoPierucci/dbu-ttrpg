@@ -658,6 +658,14 @@ export function optionNameOfBlock(item, index) {
   return "";
 }
 
+/**
+ * Whether more than one Option is chosen under this Item's effect `n` - a Multi-Option's - so that one of their buttons is
+ * named by its Option rather than by the shared line (the user's: Calculating Style beside Surging Power).
+ */
+export function sharedOptionEffect(item, n) {
+  return Boolean(n) && (chosenOptions(item).filter(option => optionBelongs(option, item, Number(n))).length > 1);
+}
+
 /** Every Option chosen on a Racial Trait Item, as their files. */
 export function chosenOptions(item) {
   return (item?.system?.chosen ?? []).filter(entry => entry.key === "option").map(entry => getTrait(entry.value)).filter(Boolean);

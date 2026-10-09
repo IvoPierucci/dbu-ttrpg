@@ -4,7 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
-import { addRacialTrait, entryEffectLine, factorSummary, optionNameOfBlock, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { addRacialTrait, entryEffectLine, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens } from "../effects/registry.mjs";
@@ -4872,7 +4872,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           // Nor what a window offers as it happens - the Power Up's, a Counter Maneuver's, a Maneuver declared, a Botch or a
           // Critical (WINDOW_MOMENTS) - nor what hands over an Out-of-Sequence Maneuver, chosen on its card as it happens.
           && !chosenAsItHappens(entry.program.blocks[0]))
-        .map((entry, at, toggles) => ({
+        .map(entry => ({
           id: entry.blockId,
           automatic: (this.actor.getFlag("dbu-ttrpg", "automatic") ?? []).includes(entry.blockId),
           // Named by which of the Trait's printed effects it is - "4th effect" (the user's).
@@ -4880,11 +4880,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             ? `${ordinal(entry.program.blocks[0].modifiers.effect)} effect` : entry.sourceName,
           available: entry.available,
           text: entry.program.blocks[0]?.text ?? "",
-          // Its printed effect line, on hover (the user's) - or, where one effect number has several buttons (two Options
-          // under a Multi-Option), that number and its Option's name: "3rd effect Calculating Style" (the user's).
-          line: (entry.program.blocks[0]?.modifiers?.effect && (toggles.filter(other =>
-            other.program.blocks[0]?.modifiers?.effect === entry.program.blocks[0].modifiers.effect).length > 1)) ? `${ordinal(entry.program.blocks[0].modifiers.effect)} effect ${
-            optionNameOfBlock(item, entry.program.blocks[0].index)}`.trim() : entryEffectLine(entry),
+          // Its printed effect line, on hover (the user's) - or, where one effect number holds several Options (a
+          // Multi-Option's), that number and its Option's name: "3rd effect Calculating Style" (the user's).
+          line: (sharedOptionEffect(item, entry.program.blocks[0]?.modifiers?.effect)
+            && optionNameOfBlock(item, entry.program.blocks[0].index))
+            ? `${ordinal(entry.program.blocks[0].modifiers.effect)} effect ${optionNameOfBlock(item, entry.program.blocks[0].index)}`
+            : entryEffectLine(entry),
           moment: entry.program.blocks[0]?.moment ?? "",
           limits: [Number.isFinite(entry.uses.round) ? `${entry.uses.round} left this round` : "",
             Number.isFinite(entry.uses.encounter) ? `${entry.uses.encounter} this encounter` : ""].filter(Boolean).join(", ")
