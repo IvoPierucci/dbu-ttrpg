@@ -1,0 +1,41 @@
+id: angelic-offense
+name: Angelic Offense
+order: 4
+category: mind
+importance: secondary
+description: >
+  In the midst of battle, you instinctively launch attacks and counterattacks with speed and precision, sending your enemies reeling.
+text: >
+  Angelic Offense (Mind): In the midst of battle, you instinctively launch attacks and counterattacks with speed and precision, sending your enemies reeling.
+  (1)-[Passive]: While you are above the Injured Health Threshold, halve the penalties you receive from Diminishing Offense.
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver, you may spend a Counter Maneuver to make a Clash (Impulsive/Cognitive) against that Opponent. If you win, they suffer from the Guard Down Combat Condition against the next Attacking Maneuver that targets them this Combat Round.
+  (3)-[Triggered, 1/Round]: If you receive no Damage from an Attacking Maneuver that targeted you while you had no Counter Actions, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+  (4)-[Triggered, 1/Round]: If you Defeat an Opponent or knock them through a Health Threshold with an Attacking Maneuver while you are above the Injured Health Threshold, you may gain a Counter Action.
+
+---
+
+[passive]
+# (1) Above Injured: Healthy or Bruised. The penalty halved, rounded down.
+if (!belowThreshold("injured")) {
+    diminishing.offense.penalty *= 0.5;
+}
+
+# (2) An Opponent hit by your Attacking Maneuver: offered on the attack's card, once a Round, with a Counter Action left -
+# "a Counter Maneuver" read as a Counter Action. The Clash read as Thrust's "(Impulsive/Corporeal)" is: either Saving
+# Throw, each side's choice; won, Guard Down on them till the next Attacking Maneuver aimed at them has been answered, this Combat Round
+# (chat.mjs angelicOffenseButtons, settleAngelicOffense).
+allow angelic.offenseClash;
+
+# (3) An Attacking Maneuver that left you without Damage, made at you while you had no Counter Action left: the Basic
+# Attack offered on its card out of sequence, once a Round, counted when taken (chat.mjs offerAngelicCounter).
+allow angelic.counterAttack;
+
+# (4) An Opponent knocked through a Health Threshold, or Defeated, by your Attacking Maneuver - once between the two, a
+# Round - in Healthy or Bruised. Automatic by default; set Triggered, asked in a window as it happens.
+[triggered/knock-through, 1/round, effect 4]
+requires !belowThreshold("injured");
+actions.counterGained += 1;
+
+[triggered/defeat-opponent, 1/round, effect 4]
+requires !belowThreshold("injured");
+actions.counterGained += 1;

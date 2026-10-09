@@ -401,6 +401,8 @@ const TABLE = [
     doc: "Attacking Maneuvers each round before Diminishing Offense begins." },
   { key: "diminishing.offense.perStack", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "What one stack of Diminishing Offense costs your Strike Rolls." },
+  { key: "diminishing.offense.penalty", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "The penalty from Diminishing Offense as it lands - Angelic Offense halves it." },
   { key: "diminishing.defense.perAttack", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Stacks of Diminishing Defense gained per attack aimed at you." },
   { key: "diminishing.defense.onPhysicalHit", phase: PHASES.CORE, kind: F, ops: ["set"],
@@ -749,7 +751,7 @@ const PATTERNS = [
     doc: "The Dice Score of a Might Clash when targeted by the Pin Maneuver; Damage received from an Attacking Maneuver "
        + "of Direct or higher; Squares a Physical Attack or Grapple may reach past the Melee Range, asked; Life Points a "
        + "Healing Surge gives back for each Health Threshold below." },
-  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam|snackFiend\.superior|signature\.earthlingRaised|ki\.protected|concealment\.autoSucceed|kiMultiplier\.always|ki\.noRegain|powerBattery\.overCapacity|protector\.intervene|angelic\.redodge)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam|snackFiend\.superior|signature\.earthlingRaised|ki\.protected|concealment\.autoSucceed|kiMultiplier\.always|ki\.noRegain|powerBattery\.overCapacity|protector\.intervene|angelic\.redodge|angelic\.offenseClash|angelic\.counterAttack)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "Every Collision Damage received halved; moving one hit with a Physical Attack or put in a Grapple, once a Round "
        + "(Rubbery Body's); moving away when hit, and the Movement after Collision Damage (Bouncy Physique's); a Physical "

@@ -661,6 +661,10 @@ async function applyClash(messageId, clash) {
     await settleDevilmite(message, clash);
   }
 
+  if (clash.angelicOffense && clash.result && !clash.angelicOffense.applied) {
+    await settleAngelicOffense(message, clash);
+  }
+
   if (clash.wave && clash.result && !clash.wave.applied) {
     await settleWave(message, clash);
   }
@@ -13633,6 +13637,91 @@ function offerPhysiqueStrike(message, actor, attacker) {
 }
 
 /**
+ * Angelic Offense (3): "If you receive no Damage from an Attacking Maneuver that targeted you while you had no Counter
+ * Actions, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card - at
+ * whoever they aim it at - once a Round, counted when taken.
+ */
+function offerAngelicCounter(message, actor, attacker) {
+  if (!actor || !attacker || actor.system?.defeated || (actor.system?.effects?.slots?.["angelic.counterAttack"] !== true)) return;
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  if (!(attack?.counterless ?? []).includes(actor.uuid)) return;
+  if (actor.getFlag?.(SCOPE, "angelicCounterRound") === roundKey()) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.angelicCounter && (offer.actorUuid === actor.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", reason: "Angelic Offense - no Damage, no Counter Actions", grants: { angelicCounter: true } } });
+}
+
+/**
+ * Angelic Offense (2) open to the one who hit: theirs, a Counter Action left, unspent this Round, and these hit by it - the
+ * Opponents, not anyone the attack caught besides.
+ */
+function angelicOffenseOpen(attacker, attack) {
+  if (!attacker || (attacker.system?.effects?.slots?.["angelic.offenseClash"] !== true)) return [];
+  if (((Number(attacker.system.actions?.counterLeft) || 0) <= 0) || (attacker.getFlag?.(SCOPE, "angelicOffenseRound") === roundKey())) return [];
+  return (attack.result?.targets ?? []).filter(branch => branch.hit && (branch.uuid !== attacker.uuid))
+    .map(branch => fromUuidSync(branch.uuid)).filter(target => target && !target.system?.defeated);
+}
+
+/** Angelic Offense (2)'s buttons on the attack's card, for the one who hit: a Clash at one of those hit. */
+function angelicOffenseButtons(message, container, attack) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker?.isOwner) return;
+  for (const target of angelicOffenseOpen(attacker, attack)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Angelic Offense - ${target.name}`;
+    button.dataset.tooltip = "1 Counter Action: a Clash (Impulsive/Cognitive) - won, Guard Down against the next Attacking "
+      + "Maneuver aimed at them this Round";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      if (!await spendActions(attacker, 1, "counter")) return;
+      await requestActorUpdate(attacker, { [`flags.${SCOPE}.angelicOffenseRound`]: roundKey() });
+      await postSaveClash(attacker, target, {
+        maneuverName: "Angelic Offense",
+        reason: `Win and ${target.name} is Guard Down against the next Attacking Maneuver aimed at them this Round.`,
+        saves: ["impulsive", "cognitive"],
+        defenderSaves: ["impulsive", "cognitive"],
+        angelicOffense: { applied: false }
+      });
+    });
+    container.append(button);
+  }
+}
+
+/**
+ * Angelic Offense (2), won: "they suffer from the Guard Down Combat Condition against the next Attacking Maneuver that
+ * targets them this Combat Round" - put on them and marked, taken off once that Maneuver is answered or as the Round ends.
+ * Guard Down already, for a reason of its own, it is left as it was.
+ */
+async function settleAngelicOffense(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, angelicOffense: { ...clash.angelicOffense, applied: true } });
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!target) return;
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} keeps their guard.`);
+    return;
+  }
+  if ((Number(target.system.conditions?.["guard-down"]) || 0) > 0) {
+    await settledNote(message, `${target.name} is Guard Down already.`);
+    return;
+  }
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "guard-down", 1);
+  await requestActorUpdate(target, { [`flags.${SCOPE}.angelicGuardDown`]: roundKey() });
+  await lasting(target, { kind: KINDS.CONDITION, key: "guard-down", edge: EDGES.ROUND, source: "Angelic Offense" });
+  await settledNote(message, `${target.name} is Guard Down against the next Attacking Maneuver aimed at them this Round.`);
+}
+
+/** The Guard Down Angelic Offense (2) left on them, gone with the Attacking Maneuver it was for. */
+async function endAngelicGuardDown(target) {
+  if (!target?.getFlag?.(SCOPE, "angelicGuardDown")) return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.angelicGuardDown`]: null });
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "guard-down", 0);
+}
+
+/**
  * Flow of Combat (1): "If you suffer no Damage from an Opponent's Attacking Maneuver that targets you, this triggers your
  * Exploit Maneuver" - offered on the attack's card at the one who made it, for them to take or leave.
  */
@@ -14390,6 +14479,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.physique) await requestActorUpdate(actor, { [`flags.${SCOPE}.physiqueUsed`]: game.combat?.id ?? "none" });
   // Bouncy Physique's Movement after a collision, once a Round.
   if (offer.grants?.bouncy) await requestActorUpdate(actor, { [`flags.${SCOPE}.bouncyCollided`]: roundKey() });
+  // Angelic Offense (3)'s Basic Attack, once a Round.
+  if (offer.grants?.angelicCounter) await requestActorUpdate(actor, { [`flags.${SCOPE}.angelicCounterRound`]: roundKey() });
   // Dragon Dash's Movement taken: what follows it, where an Advancement says so.
   if (offer.dash?.follow) await dashFollowUp(actor, offer.dash);
 
@@ -14666,6 +14757,10 @@ export async function postAttack(actor, target, maneuver,
           targets: [{ uuid: target.uuid, name: target.name },
             ...extraTargets.filter(entry => entry.uuid !== target.uuid),
             ...(selfCaught ? [{ uuid: actor.uuid, name: actor.name }] : [])],
+          // Who had no Counter Action left as it was made at them - Angelic Offense (3)'s "targeted you while you had no
+          // Counter Actions".
+          counterless: [target, ...extraTargets].map(entry => entry?.uuid).filter(Boolean)
+            .filter(uuid => (Number(fromUuidSync(uuid)?.system?.actions?.counterLeft) || 0) <= 0),
           ...(selfCaught ? { autoHitUuids: [actor.uuid] } : {}),
           // A Signature Technique's features on this attack, worked out as it was declared.
           technique,
@@ -16539,6 +16634,10 @@ async function resolveAttack(message, attack) {
   // Flow of Combat: an attack that missed you - no Damage from it - and the Exploit at who made it.
   for (const entry of branches) {
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFlowExploit(message, fromUuidSync(entry.uuid), attacker);
+    // Angelic Offense (3): the same, and the Basic Attack.
+    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerAngelicCounter(message, fromUuidSync(entry.uuid), attacker);
+    // Angelic Offense (2)'s Guard Down: this was the next Attacking Maneuver aimed at them.
+    await endAngelicGuardDown(fromUuidSync(entry.uuid));
   }
   // Skill of the Watcher (5): an attack answered with the Defend Maneuver that missed you - no Damage from it.
   for (const entry of branches) {
@@ -20355,6 +20454,7 @@ async function applyAttackDamage(message, target, attack) {
     await requestActorUpdate(target, { [`flags.${SCOPE}.damagedSinceTurn`]: true });
   }
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerFlowExploit(message, target, armsUser);
+  if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerAngelicCounter(message, target, armsUser);
   // Rubbery Body: hit with a Physical Attack, the one hit moved.
   if (own.hit && !isAbsoluteMiss(own) && (attack.foundation === "physical")) {
     offerRubberyMove(message, armsUser, target, { stretched: Boolean(attack.stretched) });
@@ -22023,6 +22123,9 @@ function renderAttack(message, html) {
       container.append(apply);
     }
   }
+
+  // Angelic Offense (2): an Opponent hit, and the Clash theirs to make - once a Round, whenever after the hit.
+  angelicOffenseButtons(message, container, attack);
 
   // Combination's three more Strikes come between the hit and the Wound Roll, and they
   // decide what the Wound Roll is worth - so they are their own step and the Wound

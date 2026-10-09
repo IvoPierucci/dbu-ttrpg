@@ -2439,8 +2439,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.diminishing = {
       offense: {
         stacks: offenseStacks,
-        penalty: offenseStacks * withEffects(this, "diminishing.offense.perStack",
-          this.baseTierOfPower)
+        penalty: Math.max(0, withEffects(this, "diminishing.offense.penalty",
+          offenseStacks * withEffects(this, "diminishing.offense.perStack", this.baseTierOfPower)))
       },
       defense: {
         stacks: this.diminishingDefense,
