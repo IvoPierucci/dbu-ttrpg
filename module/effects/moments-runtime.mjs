@@ -34,6 +34,9 @@ const STATEFUL = {
   // Counter Actions gained this Round, held as the converted ones are - the Round's own allowance is the rest.
   "actions.counterGained": { path: "system.actionsSpent.converted",
     read: a => Number(a.system.actionsSpent?.converted) || 0 },
+  // Counter Actions spent this Round - Divine Physique's Superior.
+  "actions.counterSpent": { path: "system.actionsSpent.counter",
+    read: a => Number(a.system.actionsSpent?.counter) || 0 },
   "capacity.spent": { path: "system.capacity.spent", read: a => a.system.capacity.spent },
 
   // Actions left, which is not a number the character holds: what is held is how many

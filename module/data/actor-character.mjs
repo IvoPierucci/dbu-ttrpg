@@ -1917,6 +1917,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       }
     }
 
+    // The Health Threshold as the effects asking it find it - Discarded Divinity's "above the Bruised Health Threshold" -
+    // before the Maximum Life Points it is read against are worked out again below: against those of the last time they
+    // were, kept on the Actor. Without it the bulk read no Threshold at all - always Healthy. Settled for good further down.
+    const lastLifeMax = Number(this.parent?._dbuLifeMax) || 0;
+    this.threshold = { key: lastLifeMax ? DBUCharacterData.thresholdKey(this.life.value, lastLifeMax) : "healthy" };
+
     // The earliest phase: conditions may read Scores, but amounts may only use (bT),
     // which follows from Power Level alone. (T) is not settled yet.
     runPhase(this, "tier");
@@ -2161,6 +2167,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       lifePerLevelBonus: this.transformationBonuses.lifePerLevel + slot(this, "life.perLevel")
     });
     this.life.max = Math.max(1, withEffects(this, "life.max", this.life.max));
+    // Kept for the next preparation's early Threshold.
+    if (this.parent) this.parent._dbuLifeMax = this.life.max;
 
     this.ki.max = DBUCharacterData.maxKi({
       powerLevel: this.powerLevel,

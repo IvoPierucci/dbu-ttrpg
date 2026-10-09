@@ -137,8 +137,17 @@ const PREDICATES = {
   belowThreshold: (scope, name) => {
     const keys = ["healthy", "bruised", "injured", "critical"];
     const wanted = keys.indexOf(String(name).toLowerCase());
+    // Divine Physique (3): Superior, and Healthy as well for every effect of theirs - so below nothing.
+    if ((scope.data?.effects?.slots?.["threshold.healthyInSuperior"] === true)
+      && ((Number(scope.data?.states?.superior) || 0) > 0)) return false;
     return (wanted > 0) && (keys.indexOf(scope.data?.threshold?.key ?? "healthy") >= wanted);
   },
+
+  /** In the Healthy Health Threshold, whatever counts them as Healthy besides - Divine Physique (2)'s. */
+  trulyHealthy: scope => (scope.data?.threshold?.key ?? "healthy") === "healthy",
+
+  /** The Superior State's extra Damage not taken - Divine Physique (2). */
+  superiorUnhurt: scope => scope.data?.effects?.slots?.["superior.noExtraDamage"] === true,
 
   /**
    * Majin Style's Default Costume, worn or broken, with Break Value to get back - "while wearing your Default Costume ...

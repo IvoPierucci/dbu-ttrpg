@@ -339,6 +339,13 @@ const TABLE = [
   // "Gain 2 Counter Actions" - this Combat Round's, at a moment (Skill of the Watcher's), never past six.
   { key: "actions.counterGained", phase: PHASES.REACTIVE, kind: N, ops: NUMERIC,
     doc: "Counter Actions gained this Combat Round, at a moment." },
+  // "Spend a Counter Action to enter the Superior State" - Divine Physique's, at the Power Up.
+  { key: "actions.counterSpent", phase: PHASES.REACTIVE, kind: N, ops: NUMERIC,
+    doc: "Counter Actions spent this Combat Round, at a moment." },
+  // Divine Physique (3): "While you are in the Superior State, you are considered to be in the Healthy Health Threshold
+  // ... for all of your effects." Before the bulk, so what the bulk asks of the Threshold reads it.
+  { key: "threshold.healthyInSuperior", phase: PHASES.TIER, kind: F, ops: ["allow", "set"],
+    doc: "In the Superior State, Healthy as well wherever an effect asks the Health Threshold (conditions.mjs belowThreshold)." },
   { key: "actions.perRound", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Actions gained each Combat Round." },
   { key: "actions.remaining", phase: PHASES.REACTIVE, kind: N, ops: NUMERIC,
@@ -751,7 +758,7 @@ const PATTERNS = [
     doc: "The Dice Score of a Might Clash when targeted by the Pin Maneuver; Damage received from an Attacking Maneuver "
        + "of Direct or higher; Squares a Physical Attack or Grapple may reach past the Melee Range, asked; Life Points a "
        + "Healing Surge gives back for each Health Threshold below." },
-  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam|snackFiend\.superior|signature\.earthlingRaised|ki\.protected|concealment\.autoSucceed|kiMultiplier\.always|ki\.noRegain|powerBattery\.overCapacity|protector\.intervene|angelic\.redodge|angelic\.offenseClash|angelic\.counterAttack)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam|snackFiend\.superior|signature\.earthlingRaised|ki\.protected|concealment\.autoSucceed|kiMultiplier\.always|ki\.noRegain|powerBattery\.overCapacity|protector\.intervene|angelic\.redodge|angelic\.offenseClash|angelic\.counterAttack|superior\.noExtraDamage)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "Every Collision Damage received halved; moving one hit with a Physical Attack or put in a Grapple, once a Round "
        + "(Rubbery Body's); moving away when hit, and the Movement after Collision Damage (Bouncy Physique's); a Physical "

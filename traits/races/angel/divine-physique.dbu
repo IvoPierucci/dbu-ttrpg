@@ -1,0 +1,55 @@
+id: divine-physique
+name: Divine Physique
+order: 5
+category: body
+importance: secondary
+description: >
+  Even without your full power, your body is built to surpass those of mortals.
+text: >
+  Divine Physique (Body): Even without your full power, your body is built to surpass those of mortals.
+  (1)-[Passive]: While you are above the Injured Health Threshold, you cannot gain the Impaired Combat Condition.
+  (2)-[Passive]: If you are in the Healthy Health Threshold (ignoring the 3rd effect of Divine Physique), ignore the 2nd effect of the Superior State.
+  (3)-[Passive]: While you are in the Superior State, you are considered to be in the Healthy Health Threshold (in addition to whatever Health Threshold you are in) for all of your effects.
+  (4)-[Triggered/Start of Turn]: For each Health Threshold you are above, regain 1(bT) Life and Ki Points.
+  (5)-[Triggered/Power, 1/Encounter]: While you are below the Injured Health Threshold, spend a Counter Action to enter the Superior State until the end of your next turn.
+
+---
+
+[passive]
+# (1) Above Injured: Healthy or Bruised - Superior counting as Healthy (3).
+if (!belowThreshold("injured")) {
+    forbid condition.impaired;
+}
+
+# (2) Truly Healthy, whatever (3) says: the Superior State's "Increase the Damage you take by 2(T)" not taken
+# (states/superior.dbu).
+if (trulyHealthy) {
+    allow superior.noExtraDamage;
+}
+
+# (3) Superior: Healthy as well, wherever an effect of yours asks (conditions.mjs belowThreshold) - not the Health
+# Threshold's own penalties, which are the rules', not an effect.
+allow threshold.healthyInSuperior;
+
+# (4) As your turn starts, 1(bT) Life and Ki Points for each Threshold above the one you are in: 3 in Healthy, 2 in Bruised,
+# 1 in Injured, none in Critical. Automatic by default; set Triggered, ticked on the turn's card.
+[triggered/start-of-turn, effect 4]
+if (!belowThreshold("critical")) {
+    life.value += 1(bT);
+    ki.value += 1(bT);
+}
+if (!belowThreshold("injured")) {
+    life.value += 1(bT);
+    ki.value += 1(bT);
+}
+if (!belowThreshold("bruised")) {
+    life.value += 1(bT);
+    ki.value += 1(bT);
+}
+
+# (5) The Power Up Maneuver, in Critical with a Counter Action left: asked in its window - the Counter Action spent,
+# Superior till the end of your next turn.
+[triggered/power, 1/encounter, effect 5]
+requires belowThreshold("critical") && !noCounterActions;
+actions.counterSpent += 1;
+enterState(superior, 1, next-turn);

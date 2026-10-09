@@ -15,5 +15,7 @@ text: >
 [passive]
 combatRolls.dice += greaterDice;
 
+# Not where Divine Physique (2) waives it.
 [automatic/being-hit]
+requires !superiorUnhurt;
 incoming.damage += 2(T);

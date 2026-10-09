@@ -494,7 +494,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Ki Multiplier from elsewhere; no Ki regained by Surge or Combat Recovery (Power Battery's).
   "kiMultiplied", "kiLocked",
   // The one Defeated, your Lock On Target; no Counter Action left (Lingering Instincts').
-  "defeatedLockOn", "noCounterActions"]);
+  "defeatedLockOn", "noCounterActions",
+  // Healthy in truth, and the Superior State's extra Damage waived (Divine Physique's).
+  "trulyHealthy", "superiorUnhurt"]);
 
 /**
  * Dice the character already has, named rather than written out.
