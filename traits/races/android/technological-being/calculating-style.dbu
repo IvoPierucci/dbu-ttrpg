@@ -15,13 +15,13 @@ text: >
 
 ---
 
-# The Analysis Maneuver declared: asked in its window - Combat Rolls +1(T) till the end of your turn.
+# The Analysis Maneuver declared: Automatic, by itself; Triggered, asked in its window - Combat Rolls +1(T) till the end of your turn.
 [passive]
 if (hasResource("calculatingstyle")) {
     combatRolls += 1(T);
 }
 
-[triggered/declare-maneuver, effect 3]
+[triggered/declare-maneuver, toggle, effect 3]
 requires using("analysis");
 calculatingstyle.stacks += 1;
 expires(calculatingstyle, turn);

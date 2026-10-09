@@ -6210,7 +6210,8 @@ export async function showOutcomeWindow(actor, kind) {
 export async function answerDeclare(actor, context) {
   if (!actor?.isOwner) return;
   const { evaluate } = await import("./effects/conditions.mjs");
-  const triggers = triggersFor(actor, ["declare-maneuver"]).filter(entry => {
+  // Not what is set Automatic (`toggle`): it answers by itself.
+  const triggers = triggersFor(actor, ["declare-maneuver"]).filter(entry => !entry.armed).filter(entry => {
     const requires = entry.program.blocks?.[0]?.requires;
     return !requires || evaluate(requires, { data: actor.system, context, errors: [] });
   });

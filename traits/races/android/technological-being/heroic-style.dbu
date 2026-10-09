@@ -15,13 +15,13 @@ text: >
 
 ---
 
-# The Hype Maneuver declared: asked in its window - Combat Rolls +1(T) till the end of your turn.
+# The Hype Maneuver declared: Automatic, by itself; Triggered, asked in its window - Combat Rolls +1(T) till the end of your turn.
 [passive]
 if (hasResource("heroicstyle")) {
     combatRolls += 1(T);
 }
 
-[triggered/declare-maneuver, effect 3]
+[triggered/declare-maneuver, toggle, effect 3]
 requires using("hype");
 heroicstyle.stacks += 1;
 expires(heroicstyle, turn);

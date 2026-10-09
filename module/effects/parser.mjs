@@ -183,6 +183,10 @@ class Parser {
           // `chosen` - asked as it happens, never Automatic: the player picks the moment (the user's: Warrior's Pride's
           // Superior, once an Encounter, is not always wanted the first time it could be).
           case "chosen": modifiers.chosen = true; break;
+          // `toggle` - the other way: answering a moment a window offers (a Maneuver declared), it gets the
+          // Triggered/Automatic button all the same - Automatic, it answers by itself; Triggered, the window asks (the
+          // user's: Heroic Style's and Calculating Style's).
+          case "toggle": modifiers.toggle = true; break;
           // `effect 4` - which of the Trait's printed effects, "(4)-[Triggered]", this block is: how it is named on the
           // sheet (the user's).
           case "effect":

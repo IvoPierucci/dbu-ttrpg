@@ -642,6 +642,22 @@ async function automateAll(actor, item) {
   await actor.setFlag("dbu-ttrpg", "automatic", [...new Set([...(actor.getFlag("dbu-ttrpg", "automatic") ?? []), ...ids])]);
 }
 
+/**
+ * The Option a block of a Racial Trait Item's script came from - the name its `#@ option` marker gives - or "" where it is
+ * the Trait's own. Blocks are counted by their headers, a line opening "[" - as the parser numbers them, from 1.
+ */
+export function optionNameOfBlock(item, index) {
+  const script = String(item?.system?.script ?? "");
+  const parts = script.split(/(#@ option [^\n]*\n[\s\S]*?\n#@ end)/);
+  let counted = 0;
+  for (const part of parts) {
+    const blocks = (part.match(/^\[[a-z]/gim) ?? []).length;
+    if (index <= counted + blocks) return /^#@ option [^|\n]*\|\s*([^\n]*)/.exec(part)?.[1]?.trim() ?? "";
+    counted += blocks;
+  }
+  return "";
+}
+
 /** Every Option chosen on a Racial Trait Item, as their files. */
 export function chosenOptions(item) {
   return (item?.system?.chosen ?? []).filter(entry => entry.key === "option").map(entry => getTrait(entry.value)).filter(Boolean);

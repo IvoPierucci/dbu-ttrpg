@@ -870,6 +870,8 @@ export const WINDOW_MOMENTS = Object.freeze(["power", "declare-maneuver", "botch
  * over an Out-of-Sequence Maneuver (`outOfSequence`) - Born for Battle's Ki Surge, offered on the Threshold's card.
  */
 export function chosenAsItHappens(block) {
+  // `toggle`: a window's, with the button all the same (the user's: Heroic Style's, Calculating Style's).
+  if (block?.modifiers?.toggle) return false;
   return WINDOW_MOMENTS.includes(momentOf(block)) || Boolean(block?.modifiers?.outOfSequence)
     // And what its file says is the player's to time - `chosen`: Warrior's Pride's Superior on entering Raging.
     || Boolean(block?.modifiers?.chosen)
