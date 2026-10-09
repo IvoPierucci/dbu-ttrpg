@@ -10,7 +10,7 @@ text: >
 
 ---
 
-# Read where an attack's Damage on you is settled (chat.mjs): less than half the Soak Value, none. Automatic by default;
-# set Triggered, it is ticked in the On being hit window.
+# Read where an attack's Damage on you is settled (chat.mjs lightDamageAnswer): less than half the Soak Value, none.
+# Automatic by default; set Triggered, asked there, with the Damage known.
 [triggered/light-damage, 2/round, effect 3]
 incoming.damage = 0;

@@ -5979,8 +5979,8 @@ const TRIGGER_STAGES = {
   // what these are there to change.
   hit: {
     attacker: ["hit", "before-wound"],
-    // Hyper Resilience's, Triggered: ticked here, read where the Damage is settled.
-    target: ["being-hit", "before-wound", "light-damage"]
+    // Not Hyper Resilience's: it answers the Damage, so it is asked once the Damage is known (the user's).
+    target: ["being-hit", "before-wound"]
   }
 };
 
@@ -13633,6 +13633,22 @@ function signedPart(part) {
   return `${part.label} ${(part.value > 0) ? "+" : ""}${part.value}`;
 }
 
+/**
+ * What takes away Damage of less than half the Soak Value (Hyper Resilience): Automatic, the first; Triggered, asked of
+ * whoever plays them with the Damage it would take away. Null where nothing does.
+ */
+async function lightDamageAnswer(target, damage) {
+  const automatic = reactiveFor(target).find(entry => entry.available && entry.armed
+    && (String(entry.program.blocks?.[0]?.moment ?? "") === "light-damage"));
+  if (automatic) return automatic;
+  const offered = unarmedTriggers(target, "light-damage");
+  if (!offered.length) return null;
+  const picked = await askPlayerChoice(target, `${target.name}: ${damage} Damage`, [
+    ...offered.map(entry => ({ value: entry.blockId, label: `Take no Damage - ${entry.sourceName}` })),
+    { value: "take", label: "Take it" }]);
+  return offered.find(entry => entry.blockId === picked) ?? null;
+}
+
 /** Lock On's "Increase your Strike and Wound Rolls against your Target by 2(T)". */
 function lockOnParts(attacker, target) {
   const locked = attacker?.getFlag?.(SCOPE, "lockOn");
@@ -17720,11 +17736,11 @@ async function rollAttackWound(message, attack) {
     // increase the amount of Damage they receive by 1d6(T)" - Damage there already is (the user's ruling).
     const punchingDown = ((dealt > 0) && (sizeDifference(attacker, target) >= 2)) ? await punchingDownRoll(attacker) : 0;
     // Hyper Resilience: "If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no
-    // Damage" - Automatic, or ticked when hit; spent only where it took it away.
+    // Damage" - Automatic, or asked of whoever plays them once the Damage is known (the user's); spent only where it took
+    // it away.
     const rolledDamage = dealt + punchingDown;
     const resilient = ((rolledDamage > 0) && (rolledDamage < (Number(target.system.soakValue) || 0) / 2))
-      ? reactiveFor(target).find(entry => entry.available && entry.armed
-        && (String(entry.program.blocks?.[0]?.moment ?? "") === "light-damage")) ?? null : null;
+      ? await lightDamageAnswer(target, rolledDamage) : null;
     if (resilient) await spendTriggeredEffect(target, resilient.blockId);
     const damage = resilient ? 0 : rolledDamage;
 
