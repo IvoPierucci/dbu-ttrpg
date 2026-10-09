@@ -414,6 +414,8 @@ const TABLE = [
     doc: "Weapons you can wield at once - two, four in Multiple Arms." },
   { key: "diminishing.defense.reduction", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Taken off the total penalty from Diminishing Defense - Desperate Dodge's." },
+  { key: "diminishing.defense.penalty", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "The penalty from Diminishing Defense as it lands, after what takes it down - Angelic Defense halves it." },
 
   // --- Damage Over Time --------------------------------------------------------
   { key: "dot", phase: PHASES.CORE, kind: N, ops: NUMERIC,
@@ -747,7 +749,7 @@ const PATTERNS = [
     doc: "The Dice Score of a Might Clash when targeted by the Pin Maneuver; Damage received from an Attacking Maneuver "
        + "of Direct or higher; Squares a Physical Attack or Grapple may reach past the Melee Range, asked; Life Points a "
        + "Healing Surge gives back for each Health Threshold below." },
-  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam|snackFiend\.superior|signature\.earthlingRaised|ki\.protected|concealment\.autoSucceed|kiMultiplier\.always|ki\.noRegain|powerBattery\.overCapacity|protector\.intervene)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam|snackFiend\.superior|signature\.earthlingRaised|ki\.protected|concealment\.autoSucceed|kiMultiplier\.always|ki\.noRegain|powerBattery\.overCapacity|protector\.intervene|angelic\.redodge)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "Every Collision Damage received halved; moving one hit with a Physical Attack or put in a Grapple, once a Round "
        + "(Rubbery Body's); moving away when hit, and the Movement after Collision Damage (Bouncy Physique's); a Physical "

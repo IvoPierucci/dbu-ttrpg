@@ -13325,6 +13325,62 @@ async function redefendWith(message, target, defence, wager = 0, foundation = "e
   }
 }
 
+/**
+ * Angelic Defense (2) open to the one hit: "If you are hit by an Opponent's Attacking Maneuver that you did not respond to
+ * with a Counter Maneuver, you may spend a Counter Action to reroll your Dodge Roll" - theirs, a Counter Action left,
+ * unspent this Round, at an Opponent.
+ */
+function angelicOpen(target, attacker) {
+  return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated
+    && (target.system?.effects?.slots?.["angelic.redodge"] === true)
+    && ((Number(target.system.actions?.counterLeft) || 0) > 0)
+    && (target.getFlag?.(SCOPE, "angelicRound") !== roundKey()));
+}
+
+/**
+ * Angelic Defense (2), taken: a Counter Action spent and its once a Round, the Dodge Roll made again "and increase the
+ * Dice Score by 1(T)". "If your new Dodge Roll exceeds your Opponent's Strike Roll for this Attacking Maneuver, you
+ * successfully dodge" - exceeds, what the Strike was worth against them.
+ */
+async function angelicRedodge(message, target) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const branch = attack?.result?.targets?.find(entry => entry.uuid === target.uuid);
+  if (!branch || (branch.angelic !== "offered")) return;
+  if (!await spendActions(target, 1, "counter")) return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.angelicRound`]: roundKey() });
+  const answer = await rollSide(target, [...DEFENCES.dodge.parts(target, attack),
+    { label: "Angelic Defense", written: "+1(T)", value: Math.max(1, Number(target.system.tierOfPower) || 1) }],
+  { extraDice: target.system.dice.extra.formula, criticalDice: target.system.dice.critical.formula, combatRoll: true,
+    slot: "dodge", urgent: Boolean(attack.urgentRolls) });
+  const hit = !(answer && (answer.total > (Number(branch.against) || 0)));
+  await rewriteBranch(message, target.uuid, () => ({ answer, hit, angelic: "done" }));
+}
+
+/** Angelic Defense (2)'s buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
+function angelicButtons(message, container, attack) {
+  const waiting = (attack.result?.targets ?? []).filter(branch => branch.angelic === "offered");
+  for (const branch of waiting) {
+    const target = fromUuidSync(branch.uuid);
+    if (!target?.isOwner) continue;
+    for (const [label, tooltip, act] of [
+      [`Angelic Defense - ${target.name}`, `A Counter Action: Dodge again +1(T), against a Strike of ${Number(branch.against) || 0}`,
+        () => angelicRedodge(message, target)],
+      [`Take the hit - ${target.name}`, "", () => rewriteBranch(message, target.uuid, () => ({ angelic: "declined" }))]]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = label;
+      if (tooltip) button.dataset.tooltip = tooltip;
+      button.addEventListener("click", () => {
+        button.disabled = true;
+        return act();
+      });
+      container.append(button);
+    }
+  }
+  return waiting.length > 0;
+}
+
 /** Disarming Demeanor (2)'s buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
 function disarmingButtons(message, container, attack) {
   const waiting = (attack.result?.targets ?? []).filter(branch => DISARMING_WAITS.includes(branch.disarming));
@@ -16451,6 +16507,8 @@ async function resolveAttack(message, attack) {
       counterWound: null,
       // Disarming Demeanor (2): hit, and the Bluff is theirs to try - the Wound Roll waits on it.
       disarming: (hit && !automatic && disarmingOpen(target, attacker)) ? "offered" : null,
+      // Angelic Defense (2): hit through a Dodge, and the Dodge again is theirs to take - the Wound Roll waits on it.
+      angelic: (hit && !automatic && (defense === "dodge") && answer && angelicOpen(target, attacker)) ? "offered" : null,
       applied: false
     });
   }
@@ -22101,6 +22159,8 @@ function renderAttack(message, html) {
 
   // Disarming Demeanor (2): somebody hit is still deciding, or defending again - everyone waits.
   if (!result.wound && disarmingButtons(message, container, attack)) return;
+  // Angelic Defense (2): the same, for a Dodge made again.
+  if (!result.wound && angelicButtons(message, container, attack)) return;
 
   // Whoever owes the Wound Roll, which is the attacker on everything but a reflected
   // attack - there it is the Character whose attack was thrown back, and the button

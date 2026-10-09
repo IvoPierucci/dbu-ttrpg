@@ -1,0 +1,30 @@
+id: angelic-defense
+name: Angelic Defense
+order: 3
+category: mind
+importance: secondary
+description: >
+  You tirelessly maintain your guard, always moving out of the way of attacks with the greatest efficiency, never expending more energy than necessary.
+text: >
+  Angelic Defense (Mind): You tirelessly maintain your guard, always moving out of the way of attacks with the greatest efficiency, never expending more energy than necessary.
+  (1)-[Passive]: While you are above the Injured Health Threshold, halve the penalties you receive from Diminishing Defense.
+  (2)-[Triggered, 1/Round]: If you are hit by an Opponent’s Attacking Maneuver that you did not respond to with a Counter Maneuver, you may spend a Counter Action to reroll your Dodge Roll and increase the Dice Score by 1(T). If your new Dodge Roll exceeds your Opponent’s Strike Roll for this Attacking Maneuver, you successfully dodge that Attacking Maneuver.
+  (3)-[Triggered/Start of Combat Round]: While you are above the Bruised Health Threshold, gain an additional Counter Action.
+
+---
+
+[passive]
+# (1) Above Injured: Healthy or Bruised. The penalty halved after what else takes it down, rounded down.
+if (!belowThreshold("injured")) {
+    diminishing.defense.penalty *= 0.5;
+}
+
+# (2) Hit by an Opponent's Attacking Maneuver you Dodged - no Counter Maneuver - with a Counter Action left: offered on the
+# attack's card, once a Round, the Wound Roll waiting on it. Taken, the Counter Action spent and the Dodge rolled again,
+# 1(T) higher; beating the Strike Roll it was measured against, dodged (chat.mjs angelicButtons, angelicRedodge).
+allow angelic.redodge;
+
+# (3) As each Combat Round starts, in Healthy. Automatic by default; set Triggered, ticked on the Round's card.
+[triggered/start-of-round, effect 3]
+requires !belowThreshold("bruised");
+actions.counterGained += 1;
