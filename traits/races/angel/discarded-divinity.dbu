@@ -49,8 +49,8 @@ if (inState("spectator")) {
     defenseValue += 1(T);
 }
 
-# (7) Knocked through a Health Threshold: how much asked of whoever plays them - up to half the Max Capacity, the Ki and
-# Capacity they have, and the Life Points they are missing - spent, and as many Life Points regained. Automatic by
-# default; set Triggered, it is ticked on the Threshold's card.
-[triggered/threshold, effect 7]
+# (7) Knocked through a Health Threshold: ticked on the Threshold's card - no Triggered/Automatic button (the user's) -
+# then how much asked of whoever plays them - up to half the Max Capacity, the Ki and Capacity they have, and the Life
+# Points they are missing - spent, and as many Life Points regained.
+[triggered/threshold, chosen, effect 7]
 kiForLife();

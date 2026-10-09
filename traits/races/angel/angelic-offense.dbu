@@ -31,7 +31,8 @@ allow angelic.offenseClash;
 allow angelic.counterAttack;
 
 # (4) An Opponent knocked through a Health Threshold, or Defeated, by your Attacking Maneuver - once between the two, a
-# Round - in Healthy or Bruised. Automatic by default; set Triggered, asked in a window as it happens.
+# Round - in Healthy or Bruised. One Triggered/Automatic button for both (the Traits tab groups an effect's blocks);
+# Automatic by default; set Triggered, asked in a window as it happens.
 [triggered/knock-through, 1/round, effect 4]
 requires !belowThreshold("injured");
 actions.counterGained += 1;

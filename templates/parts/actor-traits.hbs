@@ -24,7 +24,7 @@
           {{! Triggered: offered where its moment is, to take or leave. Automatic: it answers that moment by itself, every time. }}
           <button type="button" class="trait-arm {{#if trigger.automatic}}active{{/if}}"
                   data-action="automateTrigger" data-effect-id="{{trigger.id}}"
-                  data-tooltip="{{#if trigger.line}}{{trigger.line}}{{else}}{{trigger.label}}{{/if}}{{#if trigger.limits}} - {{trigger.limits}}{{/if}}">
+                  data-tooltip="{{trigger.label}}{{#if trigger.limits}} - {{trigger.limits}}{{/if}}">
             {{#if trigger.automatic}}Automatic{{else}}Triggered{{/if}}
           </button>
           {{/each}}

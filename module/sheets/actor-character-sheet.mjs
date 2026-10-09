@@ -4,7 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
-import { addRacialTrait, entryEffectLine, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { addRacialTrait, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens } from "../effects/registry.mjs";
@@ -4733,10 +4733,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static async _onAutomateTrigger(event, target) {
     if (!this.isEditable) return;
-    const id = target.dataset.effectId;
+    // Every block of the one effect the button stands for, set together.
+    const ids = String(target.dataset.effectId ?? "").split(",").filter(Boolean);
     const held = new Set(this.actor.getFlag("dbu-ttrpg", "automatic") ?? []);
-    if (held.has(id)) held.delete(id);
-    else held.add(id);
+    const all = ids.every(id => held.has(id));
+    for (const id of ids) {
+      if (all) held.delete(id);
+      else held.add(id);
+    }
     return this.actor.setFlag("dbu-ttrpg", "automatic", [...held]);
   }
 
@@ -4872,24 +4876,32 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           // Nor what a window offers as it happens - the Power Up's, a Counter Maneuver's, a Maneuver declared, a Botch or a
           // Critical (WINDOW_MOMENTS) - nor what hands over an Out-of-Sequence Maneuver, chosen on its card as it happens.
           && !chosenAsItHappens(entry.program.blocks[0]))
-        .map(entry => ({
-          id: entry.blockId,
-          automatic: (this.actor.getFlag("dbu-ttrpg", "automatic") ?? []).includes(entry.blockId),
-          // Named by which of the Trait's printed effects it is - "4th effect" (the user's).
-          label: entry.program.blocks[0]?.modifiers?.effect
-            ? `${ordinal(entry.program.blocks[0].modifiers.effect)} effect` : entry.sourceName,
-          available: entry.available,
-          text: entry.program.blocks[0]?.text ?? "",
-          // Its printed effect line, on hover (the user's) - or, where one effect number holds several Options (a
-          // Multi-Option's), that number and its Option's name: "3rd effect Calculating Style" (the user's).
-          line: (sharedOptionEffect(item, entry.program.blocks[0]?.modifiers?.effect)
-            && optionNameOfBlock(item, entry.program.blocks[0].index))
-            ? `${ordinal(entry.program.blocks[0].modifiers.effect)} effect ${optionNameOfBlock(item, entry.program.blocks[0].index)}`
-            : entryEffectLine(entry),
-          moment: entry.program.blocks[0]?.moment ?? "",
-          limits: [Number.isFinite(entry.uses.round) ? `${entry.uses.round} left this round` : "",
-            Number.isFinite(entry.uses.encounter) ? `${entry.uses.encounter} this encounter` : ""].filter(Boolean).join(", ")
-        }))
+        .map(entry => {
+          const effect = entry.program.blocks[0]?.modifiers?.effect;
+          // Where one effect number holds several Options (a Multi-Option's), its Option's name too.
+          const option = (sharedOptionEffect(item, effect) && optionNameOfBlock(item, entry.program.blocks[0].index)) || "";
+          return {
+            id: entry.blockId,
+            // One button an effect: its blocks - Angelic Offense (4)'s Threshold and Defeat - grouped by this.
+            group: effect ? `${effect}|${option}` : entry.blockId,
+            automatic: (this.actor.getFlag("dbu-ttrpg", "automatic") ?? []).includes(entry.blockId),
+            // Named, and on hover, by which of the Trait's printed effects it is - "4th effect", "3rd effect Calculating
+            // Style" - not its whole line (the user's: the line is for where only a Trait's name is said).
+            label: effect ? `${ordinal(effect)} effect${option ? ` ${option}` : ""}` : entry.sourceName,
+            available: entry.available,
+            text: entry.program.blocks[0]?.text ?? "",
+            moment: entry.program.blocks[0]?.moment ?? "",
+            limits: [Number.isFinite(entry.uses.round) ? `${entry.uses.round} left this round` : "",
+              Number.isFinite(entry.uses.encounter) ? `${entry.uses.encounter} this encounter` : ""].filter(Boolean).join(", ")
+          };
+        })
+        .reduce((buttons, each) => {
+          const same = buttons.find(other => other.group === each.group);
+          if (!same) return [...buttons, each];
+          same.id = `${same.id},${each.id}`;
+          same.automatic = same.automatic && each.automatic;
+          return buttons;
+        }, [])
     }));
   }
 
