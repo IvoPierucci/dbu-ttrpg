@@ -6187,6 +6187,54 @@ export async function showChoice({ title, options }) {
   return options.some(option => option.value === chosen) ? chosen : null;
 }
 
+/** The query an amount an effect asks for is put through, of the player's own client. */
+export const AMOUNT_QUERY = "dbu-ttrpg.amount";
+
+/** An amount an effect asks for, from 0 to `max`, of the character's player: the number, or 0 where none was given. */
+export async function askPlayerAmount(actor, title, max, label) {
+  const player = playerOf(actor);
+  if (!player || (max <= 0)) return 0;
+  if (player === game.user) return showAmount({ title, max, label });
+  try { return Number(await player.query(AMOUNT_QUERY, { title, max, label }, { timeout: 120000 })) || 0; }
+  catch (error) {
+    console.warn(`DBU TTRPG | ${actor.name}'s amount could not be asked`, error);
+    return 0;
+  }
+}
+
+/** The amount itself, on the player's client: a number up to `max`. */
+export async function showAmount({ title, max, label }) {
+  const escape = Handlebars.escapeExpression;
+  const amount = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title },
+    content: `<label class="dbu-respond-option"><span class="dbu-respond-name">${escape(label)}</span>
+      <input type="number" name="amount" min="0" max="${max}" step="1" value="${max}" autofocus/></label>`,
+    buttons: [
+      { action: "ok", label: "Spend", default: true,
+        callback: (event, button, dialog) => Number(dialog.element.querySelector('[name="amount"]')?.value) || 0 },
+      { action: "none", label: "None", callback: () => 0 }],
+    rejectClose: false
+  });
+  return Math.max(0, Math.min(max, Math.floor(Number(amount) || 0)));
+}
+
+/**
+ * Discarded Divinity (7): "You may spend Ki Points up to an amount equal to 1/2 of your Max Capacity to regain an equal
+ * number of Life Points." How much asked - no more than that, the Ki and Capacity they have, and the Life Points they are
+ * missing - paid out of Ki and Capacity, and as many Life Points regained.
+ */
+export async function kiForLife(actor) {
+  const { ki, capacity, life } = actor?.system ?? {};
+  if (!ki || !capacity || !life) return;
+  const most = Math.max(0, Math.min(Math.floor((Number(capacity.max) || 0) / 2), Number(ki.value) || 0,
+    Number(capacity.remaining) || 0, (Number(life.max) || 0) - (Number(life.value) || 0)));
+  if (!most) return;
+  const spent = await askPlayerAmount(actor, `${actor.name}: Discarded Divinity`, most, "Ki Points for Life Points");
+  if (!spent) return;
+  await requestActorUpdate(actor, { "system.ki.value": ki.value - spent, "system.capacity.spent": capacity.spent + spent,
+    "system.life.value": Math.min(life.max, life.value + spent) });
+}
+
 /** The query a Botch or Critical window is asked through, of the player's own client. */
 export const OUTCOME_QUERY = "dbu-ttrpg.outcomeTriggers";
 

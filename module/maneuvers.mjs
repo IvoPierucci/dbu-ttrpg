@@ -2616,7 +2616,13 @@ export function maxKiWager(actor, advantages = []) {
     ? Number.POSITIVE_INFINITY
     : Math.floor(capacity.max / 2);
 
-  return Math.max(0, Math.min(half, capacity.remaining, ki.value));
+  return Math.max(0, Math.min(half, capacity.remaining, ki.value, wagerShareCap(actor)));
+}
+
+/** Discarded Divinity's: no Ki Wager past a share of the Max Capacity (rounded down) - Infinity where nothing says so. */
+function wagerShareCap(actor) {
+  const share = Number(actor?.system?.effects?.slots?.["kiWager.capacityShare"]?.set);
+  return (share > 0) ? Math.floor((Number(actor.system.capacity?.max) || 0) * share) : Number.POSITIVE_INFINITY;
 }
 
 /**
@@ -2633,7 +2639,7 @@ export function maxLifeWager(actor, advantages = []) {
   const half = advantages.includes("full-wager")
     ? Number.POSITIVE_INFINITY
     : Math.floor(capacity.max / 2);
-  return Math.max(0, Math.min(half, capacity.remaining, life.value));
+  return Math.max(0, Math.min(half, capacity.remaining, life.value, wagerShareCap(actor)));
 }
 
 /**

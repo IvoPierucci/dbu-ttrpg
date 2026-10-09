@@ -72,6 +72,12 @@ export const VERBS = Object.freeze({
     doc: "The Opponent the Moment names - who lost the Clash - loses Life Points equal to the named Attribute's Modifier: "
        + "Psychic's \"reduce that Opponent's Life Points by your Insight Modifier\"."
   },
+  kiForLife: {
+    args: [0, 0],
+    names: [],
+    doc: "Discarded Divinity's: \"spend Ki Points up to an amount equal to 1/2 of your Max Capacity to regain an equal "
+       + "number of Life Points\" - how much asked of whoever plays them (chat.mjs kiForLife)."
+  },
   lockOn: {
     args: [0, 0],
     names: [],

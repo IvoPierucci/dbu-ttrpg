@@ -57,6 +57,12 @@ Hooks.once("init", () => {
     return showChoice(data);
   };
 
+  // An amount an effect asks for, of the player whose character it is - Discarded Divinity's Ki for Life Points.
+  CONFIG.queries["dbu-ttrpg.amount"] = async (data) => {
+    const { showAmount } = await import("./chat.mjs");
+    return showAmount(data);
+  };
+
   CONFIG.Combat.initiative = {
     formula: `${DBUCharacterData.BASE_DIE} + @initiativeBonus`,
     decimals: 0

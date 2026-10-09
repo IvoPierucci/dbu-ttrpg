@@ -120,6 +120,10 @@ const TABLE = [
     doc: "Extra Max Capacity, as a fraction of it: 0.25 is \"increase your Max Capacity "
        + "by 1/4\". Added rather than multiplied, so two of them are a half and not a "
        + "quarter twice over." },
+  // Discarded Divinity's "you cannot Ki Wager a number of Ki Points that exceed 1/4 of your Max Capacity".
+  { key: "kiWager.capacityShare", phase: PHASES.CORE, kind: N, ops: ["set"],
+    doc: "The most that may be Ki Wagered - in Ki or in Life - as a share of the Max Capacity: 0.25 is a quarter. "
+       + "A ceiling beside the others, Full Wager's lifted half included (maneuvers.mjs maxKiWager)." },
   { key: "capacity.multiplier", phase: PHASES.CORE, kind: N, ops: ["multiply"],
     doc: "Multiplies Max Capacity, after every flat change." },
   { key: "surge.life.dice", phase: PHASES.CORE, kind: D, ops: ["add-dice"],

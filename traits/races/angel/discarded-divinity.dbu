@@ -1,0 +1,56 @@
+id: discarded-divinity
+name: Discarded Divinity
+order: 1
+category: body
+importance: primary
+description: >
+  Stepping down from the realm of the gods, you blend in among mortalkind.
+text: >
+  Discarded Divinity (Body): Stepping down from the realm of the gods, you blend in among mortalkind.
+  (1)-[Passive]: Gain access to the True Angel Enhancement.
+  (2)-[Passive]: You can sense God Ki.
+  (3)-[Passive]: Increase your Max Capacity by 1/4, but you cannot Ki Wager a number of Ki Points that exceed 1/4 of your Max Capacity.
+  (4)-[Passive]: While you are above the Bruised Health Threshold, apply your Racial Saving Throw Bonus to all Saving Throws instead of just Impulsive, and halve the Ki Point Cost for all Attacking Maneuvers.
+  (5)-[Passive]: While you are above the Injured Health Threshold, increase your Awareness, Soak Value, and Defense Value by 1(T).
+  (6)-[Passive]: While in the Spectator State, increase your Soak Value and Defense Value by 1(T).
+  (7)-[Triggered/Threshold]: You may spend Ki Points up to an amount equal to 1/2 of your Max Capacity to regain an equal number of Life Points.
+
+---
+
+# (1) Waits on Transformations - Enhancements - not built yet: the table's.
+
+[passive]
+# (2) Read where God Ki is sensed (chat.mjs).
+allow sense.godKi;
+# (3) The Max Capacity a quarter more; the Ki Wager - in Ki or in Life - no more than a quarter of it (maneuvers.mjs
+# maxKiWager), rounded down.
+capacity.maxFraction += 0.25;
+kiWager.capacityShare = 0.25;
+
+# (4) Above Bruised: Healthy. The Racial Saving Throw Bonus on every Saving Throw; the Attacking Maneuvers' Ki Point Cost
+# halved, after what else changes it.
+if (!belowThreshold("bruised")) {
+    allow save.racial.corporeal;
+    allow save.racial.cognitive;
+    allow save.racial.morale;
+    attack.kiCost *= 0.5;
+}
+
+# (5) Above Injured: Healthy or Bruised.
+if (!belowThreshold("injured")) {
+    awareness += 1(T);
+    soakValue += 1(T);
+    defenseValue += 1(T);
+}
+
+# (6)
+if (inState("spectator")) {
+    soakValue += 1(T);
+    defenseValue += 1(T);
+}
+
+# (7) Knocked through a Health Threshold: how much asked of whoever plays them - up to half the Max Capacity, the Ki and
+# Capacity they have, and the Life Points they are missing - spent, and as many Life Points regained. Automatic by
+# default; set Triggered, it is ticked on the Threshold's card.
+[triggered/threshold, effect 7]
+kiForLife();
