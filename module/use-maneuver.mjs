@@ -588,6 +588,17 @@ async function askDropPower(actor) {
  *
  * @returns {Promise<?object>} the answers to add to the declaration, or null if cancelled
  */
+/** What Earthling-Raised's search picked - "charge", an Advantage's id - or "" where nothing was. */
+function earthlingPicked(form) {
+  const input = form.querySelector("[data-earthling-search]");
+  if (!input) return "";
+  if (input.dataset.picked) return input.dataset.picked;
+  const typed = String(input.value ?? "").trim().toLowerCase();
+  if (!typed) return "";
+  return [...form.querySelectorAll("[data-earthling-list] [data-feature-option]")]
+    .find(option => String(option.dataset.name ?? "").toLowerCase().startsWith(typed))?.dataset.featureOption ?? "";
+}
+
 async function askTechniqueDeclaration(actor, technique, declared, target) {
   // Each Trait's field with its printed effect on hover (the user's).
   const { traitEffectLine } = await import("./racial.mjs");
@@ -680,12 +691,21 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
         tp: ranks(def.id) ? featureTP(def, ranks(def.id) + 1) - featureTP(def, ranks(def.id)) : featureTP(def, 1) }))
       .filter(entry => (entry.tp > 0) && (entry.tp <= 10));
     const escape = Handlebars.escapeExpression;
-    fields.push(`<label class="dbu-respond-option"${tip("earthling-raised", 3)}><span class="dbu-respond-name">Earthling-Raised</span>
-      <select name="earthling"><option value="">-</option><option value="charge">An Energy Charge</option>
-        <optgroup label="An Advantage (10 TP or less)">${earthlingOffered.map(({ def, rank, tp }) =>
-          `<option value="${escape(def.id)}">${escape(`${def.name}${(rank > 1) ? ` (rank ${rank})` : ""} - ${tp} TP`)}</option>`)
-          .join("")}</optgroup>
-      </select></label>`);
+    // A search over them rather than a list (the user's: there are many, and the name is known): typed, the ones it
+    // starts; nothing typed, nothing taken.
+    fields.push(`<div class="dbu-respond-option dbu-ua-search"${tip("earthling-raised", 3)}>
+      <span class="dbu-respond-name">Earthling-Raised</span>
+      <div class="gear-add-quality">
+        <input type="text" class="gear-quality-search" data-earthling-search autocomplete="off"
+               placeholder="Energy Charge, or an Advantage (10 TP or less)"/>
+        <ol class="gear-quality-list" data-earthling-list hidden>
+          <li class="gear-quality-option" data-feature-option="charge" data-name="Energy Charge">An Energy Charge</li>
+          ${earthlingOffered.map(({ def, rank, tp }) => `<li class="gear-quality-option" data-feature-option="${escape(def.id)}"
+            data-name="${escape(def.name)}" data-tooltip="${escape(def.summary ?? def.description ?? "")}">${escape(def.name)}${
+            (rank > 1) ? ` (rank ${rank})` : ""}<span class="gear-quality-cost">${tp} TP</span></li>`).join("")}
+          <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
+        </ol>
+      </div></div>`);
   }
   const areaProfiles = [declared.profile, technique.secondProfile].filter(id => PROFILES[id]?.area);
   if (areaProfiles.length > 1) {
@@ -712,6 +732,13 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       classes: ["dbu-dialog"],
       window: { title: technique.name },
       content: `<div class="dbu-respond-options">${fields.join("")}</div>`,
+      // Earthling-Raised's search, wired as the Add Racial Trait window's is.
+      render: async (event, dialog) => {
+        const input = dialog.element.querySelector("[data-earthling-search]");
+        if (!input) return;
+        const { wireNameSearch } = await import("./search.mjs");
+        wireNameSearch(input, dialog.element.querySelector("[data-earthling-list]"));
+      },
       buttons: [
         { action: "confirm", label: "Declare", callback: (event, button, dialog) => {
           const form = dialog.element;
@@ -720,7 +747,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           return { transformed: box("transformed"), finalChance: box("finalChance"),
             maliceBacklash: Math.min(maliceMost, num("maliceBacklash")), mentality: box("mentality"),
             moraleGuard: box("moraleGuard"),
-            earthling: form.querySelector('[name="earthling"]')?.value ?? "",
+            earthling: earthlingPicked(form),
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
             areaFrom: form.querySelector('[name="areaFrom"]')?.value ?? "" };

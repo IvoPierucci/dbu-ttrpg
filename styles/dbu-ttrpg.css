@@ -3448,3 +3448,19 @@
   font-weight: bold;
   margin-top: 4px;
 }
+
+/* Earthling-Raised's search, a field among the declaration's: its name above, the list under the input while typed in,
+   shorter than a window's own. */
+.dbu-respond-option.dbu-ua-search {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.dbu-respond-option.dbu-ua-search .gear-quality-list {
+  height: auto;
+  max-height: 200px;
+}
+
+.dbu-respond-option.dbu-ua-search .gear-quality-list[hidden] {
+  display: none;
+}
