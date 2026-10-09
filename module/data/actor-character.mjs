@@ -523,7 +523,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
    * there is somebody on the other side for it to go to; a number is nobody.
    *
    * Flat, and the same for everybody. Nothing here scales with the Tier of Power - what
-   * grows against a fixed Target Number is the Skill Bonus, which is the Attribute Score
+   * grows against a fixed Target Number is the Skill Bonus, which is half the Attribute Score
    * plus two a Rank.
    *
    * "The names represent a general idea of the skill level that should be required to beat
@@ -2108,15 +2108,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         key,
         ranks,
         sizeAdjustment,
-        // Skill Bonus is the governing Attribute's Score plus 2 per Rank, and then
+        // Skill Bonus is half the governing Attribute's Score, rounded down (the user's), plus 2 per Rank, and then
         // whatever effects do to it - Blinded halving Perception, Sleeping taking 2 off
         // it. That last step had been missing: the Slot existed and was written by two
         // Conditions, and nothing here ever read it.
         bonus: withEffects(this, `skill.${key}.bonus`,
-          atts[scoreFrom].score + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment, {
+          Math.floor(atts[scoreFrom].score / 2) + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment, {
             parts: [
-              { label: `${scoreFrom.charAt(0).toUpperCase()}${scoreFrom.slice(1)} Score`,
-                value: atts[scoreFrom].score },
+              { label: `1/2 ${scoreFrom.charAt(0).toUpperCase()}${scoreFrom.slice(1)} Score`,
+                value: Math.floor(atts[scoreFrom].score / 2) },
               { label: `${ranks} Rank${ranks === 1 ? "" : "s"}`,
                 value: DBUCharacterData.SKILL_RANK_BONUS * ranks },
               { label: "Size", value: sizeAdjustment }
