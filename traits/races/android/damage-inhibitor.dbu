@@ -18,12 +18,12 @@ text: >
 damageReduction += 2(T);
 allow collision.halved;
 
-# (2) Direct Hit: the Category one lower for your Damage alone, where the hit is settled (chat.mjs). Automatic by default;
-# set Triggered, ticked in Respond.
-[triggered/direct-hit, 1/round, effect 2]
+# (2) Direct Hit: the Category one lower for your Damage alone, where the hit is settled (chat.mjs). No toggle (the user's):
+# ticked in Respond as you Defend, and spent only where it was used.
+[triggered/direct-hit, 1/round, chosen, effect 2]
 incoming.damage.category.shift -= 1;
 
-# (3) Direct Hit or Guard: 2(T) more Damage Reduction against that attack, where its Damage is settled (chat.mjs).
-# Automatic by default; set Triggered, ticked in Respond.
-[triggered/guard-or-direct-hit, 1/round, effect 3]
+# (3) Direct Hit or Guard: 2(T) more Damage Reduction against that attack, where its Damage is settled (chat.mjs). No
+# toggle (the user's): ticked in Respond as you Defend, and spent only where it was used.
+[triggered/guard-or-direct-hit, 1/round, chosen, effect 3]
 damageReduction += 2(T);
