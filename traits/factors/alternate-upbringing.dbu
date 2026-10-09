@@ -10,6 +10,9 @@ requirement: >
   Any (Except Android, Robot, or Bio-Android)
 maximumFactor: 1
 prerequisites: This Factor Trait can only be gained at Character Creation.
+# "You cannot select a Factor Trait for Alternate Upbringing if your Race is in the name of that Factor Trait" - read to
+# order the list only (racial.mjs factorTraitFits).
+nameExcludesRace: true
 note: >
   You cannot select a Factor Trait for Alternate Upbringing if your Race is in the name of that Factor Trait.
 description: >

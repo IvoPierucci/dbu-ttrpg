@@ -175,10 +175,49 @@ function factorOf(trait) {
   return (trait?.kind === "factors") ? String(trait.owner ?? "") : "";
 }
 
-/** Where a Trait's group stands: this character's race, then every other race, then the Racial Factors. */
+/** A race, as the words a Factor's text names it by: its id and its name, lower case. */
+function raceWords(race) {
+  return [String(race ?? ""), raceName(race)].map(word => word.trim().toLowerCase()).filter(Boolean);
+}
+
+/**
+ * A Racial Factor's Racial Requirement, read: "Any", with what it excepts - "Any (Except Android, Robot, or
+ * Bio-Android)" - or the races it names ("Saiyan").
+ */
+function requirementOf(factor) {
+  const text = [].concat(factor?.requirement ?? []).join(", ").trim();
+  const names = list => list.split(/,|\bor\b|\band\b/i).map(each => each.trim().toLowerCase()).filter(Boolean);
+  const any = /^any\b/i.exec(text);
+  if (any) return { any: true, races: [], except: names((/\(except([^)]*)\)/i.exec(text) ?? [])[1] ?? "") };
+  return { any: false, races: names(text), except: [] };
+}
+
+/**
+ * Whether a Factor Trait is one this race may take, by its Factor's Racial Requirement, a race it is for alone ("Saiyan
+ * Factor Trait") and its Factor's `nameExcludesRace` - Alternate Upbringing's "if your Race is in the name of that Factor
+ * Trait". Only to order the list: nothing is refused (the user's).
+ */
+function factorTraitFits(factorId, onlyRace, name, race) {
+  const factor = racialFactor(factorId);
+  const words = raceWords(race);
+  if (!factor || !words.length) return false;
+  if (onlyRace && !words.includes(String(onlyRace).toLowerCase())) return false;
+  const { any, races, except } = requirementOf(factor);
+  if (any ? except.some(each => words.includes(each)) : !races.some(each => words.includes(each))) return false;
+  if (factor.nameExcludesRace && words.includes(String(name ?? "").replace(/-Raised$/i, "").trim().toLowerCase())) return false;
+  return true;
+}
+
+/**
+ * Where a Trait's group stands (the user's order): this character's race's; then the Racial Factors for their race alone,
+ * and those for any race they may take; then every other race's; then every other Racial Factor's.
+ */
 function groupRank(trait, race) {
-  if (factorOf(trait)) return 2;
-  return (((trait?.system ? trait.system.race : trait?.owner) ?? "") === race) ? 0 : 1;
+  const factor = factorOf(trait);
+  if (!factor) return (((trait?.system ? trait.system.race : trait?.owner) ?? "") === race) ? 0 : 3;
+  const onlyRace = trait?.system ? trait.system.race : trait?.race;
+  if (!factorTraitFits(factor, onlyRace, trait?.name, race)) return 4;
+  return requirementOf(racialFactor(factor)).any ? 2 : 1;
 }
 
 /** Its group's name, to order by: the race's, or the Racial Factor's. */
@@ -206,9 +245,10 @@ function orderOf(trait) {
 }
 
 /**
- * Every Racial Trait there is, in the order the picker and the list show them: this character's race first, then every
- * other race by the race's name (not the Trait's), each race's Traits in the order its page prints them (the user's) -
- * then the Racial Factors' Factor Traits, by the Factor's name.
+ * Every Racial Trait there is, in the order the picker and the list show them (the user's): this character's race's; the
+ * Racial Factors for their race alone, then those for any race they may take; every other race's; every other Racial
+ * Factor's - races and Factors each by their own name (not the Trait's), each one's Traits in the order its page prints
+ * them.
  */
 export function racialTraitsInOrder(race, traits = racialTraitFiles()) {
   return traits.slice().sort((a, b) =>
