@@ -680,7 +680,7 @@ async function madeByOption(actor, item, option) {
   const made = picked.map(id => {
     const category = categories.find(each => each.id === id);
     const data = craftedItemFrom("weapon", actor, getTrait);
-    data.name = `${category.name} (Installed)`;
+    data.name = `${category.name} (Integrated)`;
     Object.assign(data.system.crafted, { category: category.id, weaponType: category.weaponType, grade: 2,
       qualities: [{ id: "artisan", slots: 1, choice: "", on: false, name: "" }] });
     data.flags = { "dbu-ttrpg": { grantedBy: item.id, grantedByOption: option.id, installedWeapon: true } };
