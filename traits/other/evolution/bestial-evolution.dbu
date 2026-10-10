@@ -1,0 +1,15 @@
+id: bestial-evolution
+name: Bestial Evolution
+order: 3
+# (1) A Bestial Trait chosen as it is gained, and gone with it (racial.mjs grantOtherTrait).
+grantsOther: bestial
+description: >
+  Mimicking the most useful traits in nature, you enhance your body in a feral, animalistic way.
+text: >
+  Bestial Evolution: Mimicking the most useful traits in nature, you enhance your body in a feral, animalistic way.
+  (1)-[Passive]: Select and gain a Bestial Trait of your choice while you have this Evolution Trait.
+
+---
+
+# (1) Nothing of its own to run: the Bestial Trait chosen is an Item of its own, given by this one (its header's
+# `grantsOther`), in the Other Traits list - and taken off with it.

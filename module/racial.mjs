@@ -526,9 +526,11 @@ export async function racialItemFrom(trait, actor = null) {
  * Requirements, marked as given by it so it goes with it; each Talent, kept if it is ever lost. One already held is not
  * given twice; a Talent or Unique Ability not written yet is named.
  */
-export async function addRacialTrait(actor, trait) {
+export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
   const made = await racialItemFrom(trait, actor);
   if (!made) return null;
+  // Given by another - Bestial Evolution's Bestial Trait - it goes with that one.
+  if (grantedBy) made.data.flags["dbu-ttrpg"].grantedBy = grantedBy;
   const [item] = await actor.createEmbeddedDocuments("Item", [made.data]);
   if (!item) return null;
   await giveGrants(actor, item, made.grants, trait.name);
@@ -537,7 +539,39 @@ export async function addRacialTrait(actor, trait) {
   if (trait.naturalArmor) await (await import("./natural-armor.mjs")).grantNaturalArmor(actor, item, String(trait.naturalArmor));
   for (const option of chosenOptions(item)) await madeByOption(actor, item, option);
   if (trait.defaultCostume) await askDefaultCostume(actor);
+  // An Other Trait it gives, chosen now - Bestial Evolution's "Select and gain a Bestial Trait of your choice".
+  if (trait.grantsOther) await grantOtherTrait(actor, item, String(trait.grantsOther));
   return item;
+}
+
+/**
+ * An Other Trait of one group given by a Trait - "Select and gain a Bestial Trait of your choice while you have this
+ * Evolution Trait": the ones not had, offered; the one chosen made, given by it, so it is taken off with it. None written
+ * yet, or none chosen, it is said - and one can be added by hand from the Other Traits list.
+ */
+async function grantOtherTrait(actor, item, group) {
+  const had = new Set(actor.system?.racialTraits ?? []);
+  const offered = traitsOfKind("other", group).filter(trait => !had.has(trait.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const name = otherGroupName(group);
+  if (!offered.length) {
+    ui.notifications.info(`${item.name}: there are no ${name} Traits to choose from yet.`);
+    return null;
+  }
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${item.name} - a ${name} Trait` },
+    content: `<label class="dbu-respond-option"><span class="dbu-respond-name">${escape(name)} Trait</span>
+      <select name="other">${offered.map(trait => `<option value="${escape(trait.id)}">${escape(trait.name)}</option>`)
+        .join("")}</select></label>`,
+    buttons: [
+      { action: "take", label: "Gain", default: true,
+        callback: (event, button, dialog) => dialog.element.querySelector('[name="other"]')?.value ?? "" },
+      { action: "later", label: "Later, by hand" }],
+    rejectClose: false
+  });
+  const trait = offered.find(entry => entry.id === picked);
+  return trait ? addRacialTrait(actor, trait, { grantedBy: item.id }) : null;
 }
 
 /**
