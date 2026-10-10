@@ -9,7 +9,8 @@
       {{#if craftDCNow}}<span>Craft DC: {{craftDCNow}}</span>{{/if}}
       {{#if integratable}}
       <label data-tooltip="Part of the character: Active or Inactive, no initial Penalties, not counted towards the equipped limit">
-        Integrated <input type="checkbox" name="system.integrated" {{#if item.system.integrated}}checked{{/if}}/></label>
+        Integrated <input type="checkbox" name="system.integrated" {{#if item.system.integrated}}checked{{/if}}
+          {{#if naturalArmor}}disabled{{/if}}/></label>
       {{/if}}
       {{#if naturalArmorable}}
       <label data-tooltip="Natural Armor: Integrated, its Craftsmanship Grade its owner's base Tier of Power (max. 5)">

@@ -251,6 +251,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     // A piece of Apparel may be Natural Armor - Integrated with it, and its entry under its Category's (the user's).
     context.naturalArmorable = system.crafted?.kind === "apparel";
     context.naturalArmor = isNaturalArmor(this.item);
+    // Its Grade its owner's: closed where it has one.
+    context.naturalGrade = context.naturalArmor && Boolean(this.item.actor);
     context.tagLabels = (system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag);
 
     // What it recorded from its maker, and what sets it off - both theirs to change.
@@ -556,8 +558,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     // Natural Armor - "a special form of Integrated Armor" - is Armor, whatever its select says (the user's).
     const natural = foundry.utils.getProperty(submitData, "flags.dbu-ttrpg.naturalArmor") ?? isNaturalArmor(this.item);
     if (natural === true) foundry.utils.setProperty(submitData, "system.crafted.category", "armor");
-    // Made Natural Armor: Integrated with it, unasked - and on a character, its Grade theirs.
-    if ((foundry.utils.getProperty(submitData, "flags.dbu-ttrpg.naturalArmor") === true) && !isNaturalArmor(this.item)) {
+    // Natural Armor: Integrated, unasked and for as long as it is - and on a character, its Grade theirs (the user's).
+    if (natural === true) {
       foundry.utils.setProperty(submitData, "system.integrated", true);
       if (this.item.actor) {
         const { naturalArmorGrade } = await import("../natural-armor.mjs");

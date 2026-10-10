@@ -47,7 +47,7 @@
       </div>
       <div class="stat">
         <em>Craftsmanship Grade</em>
-        <select name="system.crafted.grade" data-dtype="Number">
+        <select name="system.crafted.grade" data-dtype="Number" {{#if naturalGrade}}disabled data-tooltip="Natural Armor: its owner's base Tier of Power (max. 5)"{{/if}}>
           {{#each crafted.gradeChoices as |choice|}}
           <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
           {{/each}}
