@@ -13965,6 +13965,46 @@ export async function askEnemy(actor) {
  * Out-of-Sequence Maneuver." Overwhelm to its most; the two offered on a card of their own - leaving the Spectator State
  * has none.
  */
+/**
+ * Ruler (3): "Spend 2 stacks of Overwhelm to target all Allies within a Large Sphere AoE (centered on you). Increase the Soak
+ * Value and Combat Rolls of those Allies by 1(T) until the start of your next turn." Who is within it ticked - the Combat
+ * Encounter's Characters, or those targeted outside one - the stacks spent, and each Ruled: its stacks your Tier, on your
+ * clock. None ticked, nothing spent.
+ */
+export async function rulerAllies(actor) {
+  const held = { ...(actor?.system?.resources ?? {}) };
+  if ((Number(held.overwhelm?.stacks) || 0) < 2) return;
+  const pool = [...new Map((game.combat?.started
+    ? (game.combat.combatants ?? []).map(combatant => combatant.actor)
+    : Array.from(game.user.targets ?? []).map(token => token.actor))
+    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .map(other => [other.uuid, other])).values()];
+  if (!pool.length) return ui.notifications.warn(`${actor.name}: Ruler - no Allies to target.`);
+  const escape = Handlebars.escapeExpression;
+  const chosen = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name}: Ruler` },
+    content: `<p class="dbu-respond-hint">Allies within a Large Sphere</p>${pool.map(other => `<label class="dbu-respond-option">
+      <input type="checkbox" name="who" value="${escape(other.uuid)}"/>
+      <span class="dbu-respond-name">${escape(other.name)}</span></label>`).join("")}`,
+    buttons: [{ action: "confirm", label: "Confirm", default: true, callback: (event, button, dialog) =>
+      [...dialog.element.querySelectorAll('input[name="who"]:checked')].map(input => input.value) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!Array.isArray(chosen) || !chosen.length) return;
+  const left = (Number(held.overwhelm.stacks) || 0) - 2;
+  if (left > 0) held.overwhelm = { ...held.overwhelm, stacks: left };
+  else delete held.overwhelm;
+  const { replaceObject, setCondition } = await import("./conditions.mjs");
+  await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  for (const uuid of chosen) {
+    const ally = fromUuidSync(uuid);
+    if (!ally || !await setCondition(ally, "ruled", tier)) continue;
+    await lasting(actor, { kind: KINDS.CONDITION, key: "ruled", edge: EDGES.START, on: ally.uuid, source: "Ruler" });
+  }
+}
+
 export async function comfortForOverwhelm(actor) {
   const comfort = Number(actor?.system?.resources?.comfort?.stacks) || 0;
   if (!comfort) return;

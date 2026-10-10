@@ -1,0 +1,17 @@
+id: ruled
+name: Ruled
+kind: conditions
+maxStacks: 10
+# Not a Combat Condition: what Ruler's (3) gives, held somewhere with a clock on it - its stacks the Tier of whoever gave it.
+combatCondition: no
+source: Core Rule
+description: >
+  Ruler: Soak Value and Combat Rolls 1(T) higher - the Tier of whoever gave it - until the start of their next turn.
+text: >
+  Ruler (3): Increase the Soak Value and Combat Rolls of those Allies by 1(T) until the start of your next turn.
+
+---
+
+[passive]
+soakValue += stacks;
+combatRolls += stacks;

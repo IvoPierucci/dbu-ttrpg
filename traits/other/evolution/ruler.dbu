@@ -1,0 +1,21 @@
+id: ruler
+name: Ruler
+order: 15
+description: >
+  A good leader knows when to delegate, and a good subordinate knows the price of failing you.
+text: >
+  Ruler: A good leader knows when to delegate, and a good subordinate knows the price of failing you.
+  (1)-[Passive]: There is no limit to the number of Minions you may possess, but only up to 10 of your Minions may be in a Combat Encounter at any one time (Defeated Minions do not count towards this limit).
+  (2)-[Triggered]: If one of your Minions hits an Opponent and deals Damage, gain a stack of Overwhelm.
+  (3)-[Triggered/Power, 1/Round]: Spend 2 stacks of Overwhelm to target all Allies within a Large Sphere AoE (centered on you). Increase the Soak Value and Combat Rolls of those Allies by 1(T) until the start of your next turn.
+
+---
+
+# (1) The table's: which Minions are whose, and how many stand, is not tracked.
+
+# (3) The Power Up Maneuver used, 2 stacks of Overwhelm held: offered in a window then and there (chat.mjs answerPower).
+# Who is within the Sphere ticked, the stacks spent, and each of them Ruled - 1(T), your Tier - until the start of your
+# next turn (chat.mjs rulerAllies).
+[triggered/power, 1/round, effect 3]
+requires stacksAtLeast(2, "overwhelm");
+rulerAllies();

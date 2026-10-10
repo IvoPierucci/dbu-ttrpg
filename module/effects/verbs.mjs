@@ -90,6 +90,12 @@ export const VERBS = Object.freeze({
     doc: "Comfortable Count's: every stack of Comfort for as many of Overwhelm (to its most) - and with more Comfort than "
        + "Overwhelm's most, the Power Up or the Transformation Maneuver offered out of sequence (chat.mjs)."
   },
+  rulerAllies: {
+    args: [0, 0],
+    names: [],
+    doc: "Ruler's: 2 stacks of Overwhelm spent, and the Allies ticked as within a Large Sphere around you Ruled - Soak "
+       + "Value and Combat Rolls 1(T) higher - until the start of your next turn (chat.mjs rulerAllies)."
+  },
   chooseEnemy: {
     args: [0, 0],
     names: [],

@@ -341,6 +341,11 @@ async function runVerb(actor, call, context) {
       return comfortForOverwhelm(actor);
     }
 
+    case "rulerAllies": {
+      const { rulerAllies } = await import("../chat.mjs");
+      return rulerAllies(actor);
+    }
+
     case "chooseEnemy": {
       const { askEnemy } = await import("../chat.mjs");
       return askEnemy(actor);
