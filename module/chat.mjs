@@ -13638,8 +13638,9 @@ function offerPhysiqueStrike(message, actor, attacker) {
 
 /**
  * Angelic Offense (3): "If you receive no Damage from an Attacking Maneuver that targeted you while you had no Counter
- * Actions, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card - at
- * whoever they aim it at - once a Round, counted when taken.
+ * Actions, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card, at the
+ * one who made it (the user's report: aimed at whatever was targeted, it struck the Angel herself) - once a Round,
+ * counted when taken.
  */
 function offerAngelicCounter(message, actor, attacker) {
   if (!actor || !attacker || actor.system?.defeated || (actor.system?.effects?.slots?.["angelic.counterAttack"] !== true)) return;
@@ -13648,7 +13649,8 @@ function offerAngelicCounter(message, actor, attacker) {
   if (actor.getFlag?.(SCOPE, "angelicCounterRound") === roundKey()) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.angelicCounter && (offer.actorUuid === actor.uuid))) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
-    maneuverName: "Basic Attack", reason: "Angelic Offense - no Damage, no Counter Actions", grants: { angelicCounter: true } } });
+    maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: "Angelic Offense - no Damage, no Counter Actions",
+    grants: { angelicCounter: true } } });
 }
 
 /**
@@ -14309,6 +14311,11 @@ async function takeOutOfSequence(message, actor, offer) {
 
     if (!target) {
       ui.notifications.warn(`${maneuver.name} needs a target. Target a token first.`);
+      return;
+    }
+    // Never themselves - their own token targeted is a mistake, not an attack.
+    if (target.uuid === actor.uuid) {
+      ui.notifications.warn(`${maneuver.name}: ${actor.name} cannot target themselves. Target another token.`);
       return;
     }
     // Hidden, out of sequence as in it: they cannot be targeted.
