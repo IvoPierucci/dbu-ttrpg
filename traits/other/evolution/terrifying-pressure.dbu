@@ -1,0 +1,30 @@
+id: terrifying-pressure
+name: Terrifying Pressure
+order: 19
+description: >
+  Woe be upon any foes who make you put effort into a fight.
+text: >
+  Terrifying Pressure: Woe be upon any foes who make you put effort into a fight.
+  (1)-[Passive]: Gain access to the Terrify Maneuver. If you already had access to the Terrify Maneuver, increase the Dice Score of your Intimidation Skill Checks by 2.
+  (2)-[Triggered, 1/Round]: If you win the Clash initiated by your Terrify Maneuver against an Opponent, gain a stack of Overwhelm.
+  (3)-[Triggered, 1/Encounter]: If you inflict the Shaken Combat Condition on an Opponent, you may enter the Superior State until the end of your next turn.
+
+---
+
+# (1) Already had it: opened by anything but this - the Intimidation Skill's Ranks (conditions.mjs accessElsewhere).
+[passive]
+allow maneuver.terrify;
+if (accessElsewhere("terrify")) {
+    skill.intimidation += 2;
+}
+
+# (2) Your Terrify's Clash won - clash-win (chat.mjs clashWon): a stack of Overwhelm, once a Round. Automatic by default,
+# its Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/clash-win, 1/round, effect 2]
+requires wonTerrify;
+overwhelm.stacks += 1;
+
+# (3) Shaken put on someone else by you - a new moment, inflict-shaken (chat.mjs shakenBy): Superior until the end of your
+# next turn, once an Encounter. Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window.
+[triggered/inflict-shaken, 1/encounter, effect 3]
+enterState(superior, 1, next-turn);

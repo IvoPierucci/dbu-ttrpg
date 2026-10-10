@@ -816,7 +816,15 @@ async function clashWon(message) {
   if (!winner) return;
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, winAnswered: true });
   const skill = (clash.category === "skill") ? (skillPicked(clash, uuid) ?? "") : "";
-  await answerFor(winner, "clash-win", { clash: { category: clash.category ?? "" }, skill });
+  await answerFor(winner, "clash-win", { clash: { category: clash.category ?? "" }, skill,
+    // Terrifying Pressure's "the Clash initiated by your Terrify Maneuver".
+    terrify: Boolean(clash.terrify) && (uuid === clash.challengerUuid) });
+}
+
+/** Shaken put on someone else by `by` - Terrifying Pressure's "If you inflict the Shaken Combat Condition on an Opponent". */
+async function shakenBy(by, target) {
+  if (!by || !target || (by.uuid === target.uuid)) return;
+  return answerFor(by, "inflict-shaken", {});
 }
 
 /**
@@ -1821,6 +1829,8 @@ async function settleTerrify(message, clash) {
     source: "Terrify"
   });
 
+  await shakenBy(terrifier, target);
+
   // No clock of its own: the entry gives Prone none, so it comes off the way Prone always
   // comes off.
   if (already) await setCondition(target, "prone", 1);
@@ -1970,6 +1980,7 @@ async function settleBluffAttack(message, clash) {
   }
   if (await gainCondition(target, "shaken", 1) !== false) {
     await lasting(target, { kind: KINDS.CONDITION, key: "shaken", edge: EDGES.END, next: true, source: clash.maneuverName });
+    await shakenBy(bluffer, target);
   }
   await settledNote(message, `${target.name} is Staggered until the end of the turn and Shaken until the end of their next.`);
 }
@@ -2344,6 +2355,7 @@ async function chooseDirtyTrick(message, clash, choice) {
 
   const { setCondition } = await import("./conditions.mjs");
   await setCondition(target, trick.condition, 1);
+  if (trick.condition === "shaken") await shakenBy(tricker, target);
 
   await lasting(trick.theirClock ? target : tricker, {
     kind: KINDS.CONDITION,
@@ -15938,6 +15950,7 @@ async function techniqueAfterDamage(message, attack, attacker, target, { damage,
         if (await gainCondition(target, key, 1) !== false) {
           await lasting(target, { kind: KINDS.CONDITION, key, edge: EDGES.END, next: true,
             source: `${attack.maneuverName} - Condition` });
+          if (key === "shaken") await shakenBy(attacker, target);
         }
       }
       said.push(`${target.name}: ${getTrait(key)?.name ?? key}.`);
@@ -19862,6 +19875,8 @@ async function markUntilNextTurn(attacker, target, key, stacks, edge, source) {
 
   const before = Number(target.system.conditions?.[key]) || 0;
   if (await gainCondition(target, key, stacks) === false) return;
+  // Shaken, by them - Terrifying Pressure's.
+  if (key === "shaken") await shakenBy(attacker, target);
 
   // No edge is no clock: Elemental (Water)'s Prone is gained and not given back.
   if (!edge) return;
@@ -20586,6 +20601,7 @@ async function powerDuelShaken(winner, loser) {
   if (await gainCondition(loser, "shaken", 1) === false) return;
   await lasting(loser, { kind: KINDS.CONDITION, key: "shaken", edge: EDGES.ENCOUNTER,
     until: `threshold:${winner.uuid}`, source: "Power Duel" });
+  await shakenBy(winner, loser);
 }
 
 /** Who joined this attack with the United Attack Maneuver, and whom the Technique is waiting on. */

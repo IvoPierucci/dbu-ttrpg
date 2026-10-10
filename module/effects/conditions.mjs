@@ -65,6 +65,9 @@ const PREDICATES = {
   /** The Clash won was won with this Skill (Stealthy Trick's) - clash-win's context. */
   wonWithSkill: (scope, id) => (scope.context?.skill ?? "") === String(id),
 
+  /** The Clash won was the one your Terrify Maneuver opened (Terrifying Pressure's) - clash-win's context. */
+  wonTerrify: scope => Boolean(scope.context?.terrify),
+
   /** The Attacking Maneuver hit someone Oblivious of you, as it hit (Stealthy Trick's) - hit-opponent's context. */
   hitOblivious: scope => Boolean(scope.context?.oblivious),
 

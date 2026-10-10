@@ -101,6 +101,10 @@ const TABLE = [
   { key: "comfort-gained", label: "You gain a stack of Comfort", provides: [],
     doc: "Fired as Comfortable Count's Comfort is gained (moments-runtime.mjs stacksGained). What is the player's is asked "
        + "in a window first." },
+  { key: "inflict-shaken", label: "You inflict the Shaken Combat Condition on an Opponent", provides: [],
+    doc: "Fired for whoever put Shaken on someone else - Terrify, the Bluff Attack, a Dirty Trick, a Technique's Condition, "
+       + "Power Duel, and every mark kept on its giver's clock (chat.mjs shakenBy) - Terrifying Pressure's. What is the "
+       + "player's is asked in a window first." },
   { key: "overwhelm-gained", label: "You gain a stack of Overwhelm", provides: [],
     doc: "Fired as Overwhelm is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Redirected Energy's. "
        + "What is the player's is asked in a window first." },

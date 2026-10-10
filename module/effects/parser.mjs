@@ -517,7 +517,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // The largest in the Combat Encounter (King's Stature's).
   "largestInEncounter",
   // Someone Oblivious of you hit (Stealthy Trick's).
-  "hitOblivious"]);
+  "hitOblivious",
+  // Your Terrify's Clash won (Terrifying Pressure's).
+  "wonTerrify"]);
 
 /**
  * Dice the character already has, named rather than written out.
