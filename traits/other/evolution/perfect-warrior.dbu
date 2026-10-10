@@ -1,0 +1,24 @@
+id: perfect-warrior
+name: Perfect Warrior
+order: 13
+description: >
+  You are, simply, unbeatable and untouchable. None can hurt you… Right?
+text: >
+  Perfect Warrior: You are, simply, unbeatable and untouchable. None can hurt you… Right?
+  (1)-[Passive]: While you are in the Healthy Health Threshold, increase your Defense Value and Soak Value by 1(T).
+  (2)-[Triggered/Start of Turn]: If you are in the Healthy Health Threshold, gain a stack of Overwhelm.
+
+---
+
+# (1)
+[passive]
+if (!belowThreshold("bruised")) {
+    defenseValue += 1(T);
+    soakValue += 1(T);
+}
+
+# (2) Healthy as your turn starts: a stack of Overwhelm. Automatic by default, its Triggered/Automatic button; set
+# Triggered, ticked on the turn's card.
+[triggered/start-of-turn, effect 2]
+requires !belowThreshold("bruised");
+overwhelm.stacks += 1;
