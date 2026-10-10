@@ -1,0 +1,29 @@
+id: stealthy-trick
+name: Stealthy Trick
+order: 17
+description: >
+  You are incredibly adept at slipping past your opponents’ notice.
+text: >
+  Stealthy Trick: You are incredibly adept at slipping past your opponents’ notice.
+  (1)-[Passive]: Increase the Dice Score of your Stealth Skill Checks by 2.
+  (2)-[Triggered, 1/Round]: If you win a Clash in which you used your Stealth Skill, gain a stack of Overwhelm.
+  (3)-[Triggered, 1/Round]: If you hit an Oblivious Character, increase your Wound Roll against them by 1(T) for every 2 stacks of Overwhelm you possess.
+
+---
+
+# (1)
+[passive]
+skill.stealth += 2;
+
+# (2) A Clash won with the Stealth Skill - clash-win, the winner's (chat.mjs clashWon): a stack of Overwhelm, once a Round.
+# Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/clash-win, 1/round, effect 2]
+requires wonWithSkill("stealth");
+overwhelm.stacks += 1;
+
+# (3) An Attacking Maneuver of yours that hit someone Oblivious of you - as it hit, before it revealed you - 2 stacks of
+# Overwhelm held: 1(T) on the Wound against each of them for every 2 stacks, once a Round (chat.mjs rollAttackWound).
+# Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/hit-opponent, 1/round, effect 3]
+requires hitOblivious && stacksAtLeast(2, "overwhelm");
+wound.oblivious = true;

@@ -487,7 +487,9 @@ const PREDICATE_NAMES = new Set([
   // Resources' stacks between them, and a Health Threshold reached - Blood of the Warrior's.
   "stacksAtLeast", "belowThreshold",
   // A Special Maneuver already open by other means - Majestic Grace's.
-  "accessElsewhere"
+  "accessElsewhere",
+  // A Clash won with that Skill - Stealthy Trick's.
+  "wonWithSkill"
 ]);
 
 /** The ones written without brackets, because they take nothing. */
@@ -513,7 +515,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).
-  "largestInEncounter"]);
+  "largestInEncounter",
+  // Someone Oblivious of you hit (Stealthy Trick's).
+  "hitOblivious"]);
 
 /**
  * Dice the character already has, named rather than written out.

@@ -62,6 +62,12 @@ const PREDICATES = {
       && ((Number(scope.data?.skills?.[key]?.ranks) || 0) >= needs));
   },
 
+  /** The Clash won was won with this Skill (Stealthy Trick's) - clash-win's context. */
+  wonWithSkill: (scope, id) => (scope.context?.skill ?? "") === String(id),
+
+  /** The Attacking Maneuver hit someone Oblivious of you, as it hit (Stealthy Trick's) - hit-opponent's context. */
+  hitOblivious: scope => Boolean(scope.context?.oblivious),
+
   /** Are you in a named State. */
   inState: (scope, name) => Boolean(scope.data?.states?.[String(name).toLowerCase()]),
 

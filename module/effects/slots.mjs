@@ -776,7 +776,7 @@ const PATTERNS = [
        + "(Rubbery Body's); moving away when hit, and the Movement after Collision Damage (Bouncy Physique's); a Physical "
        + "Attack through the ground, and 2(bT) Ki to double Diminishing Defense on a Simple one (Burrowed Strike's)." },
   // Majin Malice's: a Healing Surge given as Ki Points and Capacity; and the Power Up's Out-of-Sequence Maneuver.
-  { match: /^(surge\.asKi|malice\.outOfSequence|costume\.mend|plating\.mend|wound\.pressure|wound\.pressureMost|wound\.overwhelmDouble|tail\.reachTaken|soak\.bySize)$/, phase: PHASES.REACTIVE, kind: F, ops: ["set"], valid: () => true,
+  { match: /^(surge\.asKi|malice\.outOfSequence|costume\.mend|plating\.mend|wound\.pressure|wound\.pressureMost|wound\.overwhelmDouble|wound\.oblivious|tail\.reachTaken|soak\.bySize)$/, phase: PHASES.REACTIVE, kind: F, ops: ["set"], valid: () => true,
     doc: "A Healing Surge's Life Points given as Ki Points and Capacity instead, the Capacity past its Max; the Basic "
        + "Attack, a Signature Technique or the Energy Charge out of sequence for 5(bT) Life Points." },
   // Elastic Tentacle's: this attack's Diminishing Defense doubled, ticked as it hits.

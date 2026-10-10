@@ -800,6 +800,23 @@ async function applyClash(messageId, clash) {
   }
   // Won for a Unique Ability's effects - Psychic's.
   if (clash.result) await uniqueClashWon(message);
+  // Won at all - Stealthy Trick's "If you win a Clash in which you used your Stealth Skill".
+  if (clash.result) await clashWon(message);
+}
+
+/**
+ * A Clash won: the winner's clash-win, with the Skill they used where it was a Skill Clash (Stealthy Trick's). Once a
+ * Clash.
+ */
+async function clashWon(message) {
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (!clash?.result || clash.winAnswered) return;
+  const uuid = (whoWonClash(clash.result) === "challenger") ? clash.challengerUuid : clash.defenderUuid;
+  const winner = fromUuidSync(uuid ?? "");
+  if (!winner) return;
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, winAnswered: true });
+  const skill = (clash.category === "skill") ? (skillPicked(clash, uuid) ?? "") : "";
+  await answerFor(winner, "clash-win", { clash: { category: clash.category ?? "" }, skill });
 }
 
 /**
@@ -16707,6 +16724,9 @@ async function resolveAttack(message, attack) {
     // Damage Inhibitor: "If you use the Direct Hit option of the Defend Maneuver, reduce the Damage Category of that
     // Attacking Maneuver by 1 Category for the sake of your Damage calculation."
     const inhibited = (hit && (defense === "directHit")) ? heldAt(target, "direct-hit") : null;
+    // Oblivious of the attacker as it hit, before that reveals them - Stealthy Trick's.
+    const oblivious = Boolean(hit && attacker && (attacker.uuid !== target.uuid)
+      && (await import("./hidden.mjs")).isHiddenFrom(attacker, target));
     // Hidden from them: "hit an enemy with 1 attack" ends it.
     if (hit && attacker) (await import("./hidden.mjs")).revealOnHit(attacker, target);
     // Invisible: "If you hit an Opponent with an Attacking Maneuver, increase the Natural Result of their next Skill
@@ -16833,6 +16853,8 @@ async function resolveAttack(message, attack) {
       // King's Stature: "increase your Soak Value by 1(T) for every Size Category they are smaller than you for the
       // duration of that Attacking Maneuver" - worked out as the hit is, spent only where it gives something.
       sizeSoak: await sizeSoakFor(target, attacker, incoming),
+      // Stealthy Trick (3): whether they were Oblivious of the attacker as it hit.
+      oblivious,
       counterWound: null,
       // Disarming Demeanor (2): hit, and the Bluff is theirs to try - the Wound Roll waits on it.
       disarming: (hit && !automatic && disarmingOpen(target, attacker)) ? "offered" : null,
@@ -17992,11 +18014,13 @@ async function rollAttackWound(message, attack) {
   // Searing Anger (3): the Overwhelm stacks' bonus once more on this Wound Roll (woundParts), and Overwhelm down to 1 once
   // it is made.
   let searing = false;
+  // Stealthy Trick (3): 1(T) for every 2 stacks of Overwhelm, against each one hit who was Oblivious of you.
+  let unseen = 0;
   if (struck.length) {
     await offerTriggers(attacker, "hit-opponent");
     const { fireMoment } = await import("./effects/moments-runtime.mjs");
     const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
-      area: Boolean(attackArea(attack)) });
+      area: Boolean(attackArea(attack)), oblivious: struck.some(({ own }) => own.oblivious) });
     if (answered?.slots?.["wound.pressure"] === true) {
       // "1(T) for every Health Threshold they are below" - each their own; with (2), "as if all ... were below the same
       // number of Health Thresholds as the Character below the most".
@@ -18004,6 +18028,10 @@ async function rollAttackWound(message, attack) {
         ? Math.max(...struck.map(({ actor: hit }) => thresholdsBelow(hit))) : null;
       const tier = Math.max(1, Number(attacker.system.tierOfPower) || 1);
       pressing = target => (most ?? thresholdsBelow(target)) * tier;
+    }
+    if (answered?.slots?.["wound.oblivious"] === true) {
+      unseen = Math.floor((Number(attacker.system.resources?.overwhelm?.stacks) || 0) / 2)
+        * Math.max(1, Number(attacker.system.tierOfPower) || 1);
     }
     if (answered?.slots?.["wound.overwhelmDouble"] === true) {
       searing = true;
@@ -18159,6 +18187,7 @@ async function rollAttackWound(message, attack) {
       { label: "God Meteor", value: godMeteorPinned(attacker, target) },
       { label: "Inherited Aggression", value: aggressionAgainst(attacker, target) },
       { label: "Overwhelming Pressure", value: pressing ? pressing(target) : 0 },
+      { label: "Stealthy Trick", value: own.oblivious ? unseen : 0 },
       ...lockOnParts(attacker, target),
       ...enemyParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
