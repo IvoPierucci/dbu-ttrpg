@@ -101,6 +101,13 @@ const TABLE = [
   { key: "comfort-gained", label: "You gain a stack of Comfort", provides: [],
     doc: "Fired as Comfortable Count's Comfort is gained (moments-runtime.mjs stacksGained). What is the player's is asked "
        + "in a window first." },
+  { key: "overwhelm-gained", label: "You gain a stack of Overwhelm", provides: [],
+    doc: "Fired as Overwhelm is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Redirected Energy's. "
+       + "What is the player's is asked in a window first." },
+  { key: "hit-concluded", label: "An Attacking Maneuver of yours that hit an Opponent is concluded", provides: [CTX.ATTACK],
+    doc: "Fired once an Attacking Maneuver of yours that hit any number of Opponents has made its Wound Roll (chat.mjs "
+       + "rollAttackWound), its Ki Point Cost as `attack.kiCost` - Redirected Energy's. What is the player's is asked in a "
+       + "window first." },
   { key: "hit-unharmed", label: "You are hit by an Attacking Maneuver and take no Damage", provides: [],
     doc: "Fired for whoever an Attacking Maneuver hit for no Damage, once its Damage is settled (chat.mjs answerFor) - "
        + "Bio-Suit's Overwhelm. What is the player's is asked in a window first." },

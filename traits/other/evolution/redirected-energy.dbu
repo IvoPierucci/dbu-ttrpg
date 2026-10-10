@@ -1,0 +1,24 @@
+id: redirected-energy
+name: Redirected Energy
+order: 14
+description: >
+  Your body recycles energy even as you rip apart your enemies with bursts of pure power.
+text: >
+  Redirected Energy: Your body recycles energy even as you rip apart your enemies with bursts of pure power.
+  (1)-[Triggered]: Upon gaining a stack of Overwhelm, regain 2(bT) Ki Points.
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver, after concluding that Attacking Maneuver, you may choose to reduce your number of Overwhelm stacks by 1 to regain Ki Points equal to 1/2 of that Attacking Maneuver’s Ki Point Cost.
+
+---
+
+# (1) Overwhelm gained - a new moment, overwhelm-gained, wherever it is written: 2(bT) Ki Points for each stack gained.
+# Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/overwhelm-gained, effect 1]
+ki.value += 2(bT) * gained;
+
+# (2) An Attacking Maneuver of yours that hit an Opponent, done - a new moment, hit-concluded, once its Wound Roll is made
+# (chat.mjs rollAttackWound): a stack of Overwhelm for 1/2 its Ki Point Cost, once a Round - only where that is any.
+# Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/hit-concluded, 1/round, effect 2]
+requires hasResource("overwhelm") && attack.kiCost >= 2;
+overwhelm.stacks -= 1;
+ki.value += floor(attack.kiCost / 2);

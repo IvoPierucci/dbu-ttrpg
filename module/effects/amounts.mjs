@@ -180,6 +180,9 @@ export function resolvePath(p, scope) {
   // question only that Maneuver asked, and one everywhere else.
   if (p === "actionsSpent") return scope.context?.actionsSpent ?? 1;
 
+  // How many stacks were just gained, where a Moment says - Redirected Energy's "Upon gaining a stack of Overwhelm".
+  if (p === "gained") return scope.context?.gained ?? 1;
+
   const CONTEXTUAL = ["attack", "attacker", "target", "incoming", "clash", "roll",
                       "damage", "burst", "proc"];
   if (CONTEXTUAL.includes(root)) {

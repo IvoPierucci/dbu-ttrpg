@@ -215,6 +215,9 @@ async function writeStateful(actor, slots) {
   // Gained, where that is a Moment of its own - Comfort's - answered once written.
   const gained = resources ? GAINED_MOMENTS.filter(name =>
     (Number(resources[name]?.stacks) || 0) > (Number(actor.system.resources?.[name]?.stacks) || 0)) : [];
+  // How many of each, read before they are written.
+  const counts = Object.fromEntries(gained.map(name => [name,
+    (Number(resources[name]?.stacks) || 0) - (Number(actor.system.resources?.[name]?.stacks) || 0)]));
   if (resources) {
     // Reached dynamically, like every other call from here into conditions.mjs: that
     // module imports fireMoment from this one, and a static import back closes the
@@ -247,7 +250,7 @@ async function writeStateful(actor, slots) {
   }
 
   if (!foundry.utils.isEmpty(updates)) await actor.update(updates);
-  if (gained.length) await stacksGained(actor, gained);
+  if (gained.length) await stacksGained(actor, gained, counts);
 }
 
 /**
@@ -259,8 +262,14 @@ async function writeStateful(actor, slots) {
  * Stacks of these Resources just gained: Battle Born's - on any of its three Combat Rolls - is a Moment (`battle-born`),
  * what is the player's asked in a window first (Primitive Durability's "If you gain a stack of Battle Born").
  */
-export async function stacksGained(actor, names) {
+export async function stacksGained(actor, names, counts = {}) {
   const { offerTriggers } = await import("../chat.mjs");
+  // Overwhelm's - Redirected Energy's "Upon gaining a stack of Overwhelm" - with how many.
+  if (names.includes("overwhelm")) {
+    const context = { gained: Math.max(1, Number(counts.overwhelm) || 1) };
+    await offerTriggers(actor, "overwhelm-gained", context);
+    await fireMoment(actor, "overwhelm-gained", context);
+  }
   // Comfort's - Comfortable Count's "If you gain a stack of Comfort".
   if (names.includes("comfort")) {
     await offerTriggers(actor, "comfort-gained");
@@ -272,7 +281,7 @@ export async function stacksGained(actor, names) {
 }
 
 /** The Resources whose stacks gained are a Moment where an effect writes them - Comfort's. */
-const GAINED_MOMENTS = Object.freeze(["comfort"]);
+const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm"]);
 
 /** A character an effect named, by uuid or by name, or nothing. */
 function named(who) {

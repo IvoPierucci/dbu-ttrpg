@@ -13698,6 +13698,15 @@ function offerPhysiqueStrike(message, actor, attacker) {
     grants: { physique: true, woundAttribute: { label: "Powerful Physique (Force Modifier)", attribute: "force" } } } });
 }
 
+/**
+ * An attack's Ki Point Cost, from what paying it took - Ki and Divine Ki - its Ki Wager left out (Redirected Energy's).
+ */
+function attackKiCost(attack) {
+  const paid = attack?.paid ?? {};
+  const wager = attack?.wagerFromLife ? 0 : (Number(attack?.kiWager) || 0);
+  return Math.max(0, (Number(paid.ki) || 0) + (Number(paid.divine) || 0) - wager);
+}
+
 /** Overwhelming Assault: "If it possesses an AoE, increase the Magnitude of that AoE by 1." */
 function overwhelmedArea(area, overwhelm) {
   if (!area || !overwhelm?.magnitude) return area;
@@ -13962,10 +13971,16 @@ export async function comfortForOverwhelm(actor) {
   const { resourceCeiling, resourceDefinitions } = await import("./effects/traits.mjs");
   const most = resourceCeiling(resourceDefinitions().overwhelm, actor) || 4;
   const held = { ...(actor.system.resources ?? {}) };
-  held.overwhelm = { ...(held.overwhelm ?? {}), stacks: Math.min(most, (Number(held.overwhelm?.stacks) || 0) + comfort), max: most };
+  const had = Number(held.overwhelm?.stacks) || 0;
+  held.overwhelm = { ...(held.overwhelm ?? {}), stacks: Math.min(most, had + comfort), max: most };
   delete held.comfort;
   const { replaceObject } = await import("./conditions.mjs");
   await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
+  // Overwhelm gained - Redirected Energy's.
+  if (held.overwhelm.stacks > had) {
+    const { stacksGained } = await import("./effects/moments-runtime.mjs");
+    await stacksGained(actor, ["overwhelm"], { overwhelm: held.overwhelm.stacks - had });
+  }
   if (comfort <= most) return;
   const offer = (maneuverId, maneuverName) => ({ actorUuid: actor.uuid, actorName: actor.name, maneuverId, maneuverName,
     reason: `Comfortable Count - ${comfort} Comfort` });
@@ -17979,6 +17994,9 @@ async function rollAttackWound(message, attack) {
   });
   // Done: Overwhelming Assault's stacks go now - after this Wound Roll counted them.
   await spendOverwhelm(attack);
+  // "If you hit an Opponent with an Attacking Maneuver, after concluding that Attacking Maneuver" - Redirected Energy's,
+  // with its Ki Point Cost.
+  if (struck.length) await answerFor(attacker, "hit-concluded", { attack: { kiCost: attackKiCost(attack) } });
 
   // What an attack can get past of somebody's Damage Reduction, for this attack only.
   // Collected from the attacker once, since it is their effect and their client that
