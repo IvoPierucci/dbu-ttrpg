@@ -1,0 +1,24 @@
+id: last-resource
+name: Last Resource
+order: 11
+description: >
+  Should the unthinkable happen and you begin to feel pressure from a worthy opponent, you can unleash your pride and rage for a deadly reprisal.
+text: >
+  Last Resource: Should the unthinkable happen and you begin to feel pressure from a worthy opponent, you can unleash your pride and rage for a deadly reprisal.
+  (1)-[Passive]: Increase your Wound Rolls by 1(T) for each Health Threshold you are below.
+  (2)-[Triggered/Threshold]: Maximize your stacks of Overwhelm.
+  (3)-[Triggered, 1/Encounter]: If you would use an Attacking Maneuver while below the Injured Health Threshold, you may apply a number of Energy Charges up to your number of Overwhelm stacks to that Attacking Maneuver. After concluding that Attacking Maneuver, lose a number of Overwhelm stacks equal to the amount of Energy Charges applied to that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) 1(T) for each Health Threshold below - counted where the Wound is worked out, from the Life Points then
+# (actor-character.mjs perThreshold), as Blood of the Warrior's.
+wound.perThreshold += 1(T);
+# (3) Asked as an Attacking Maneuver's declaration ends, Injured or Critical, once an Encounter: how many Energy Charges, up
+# to the stacks held - lost once the attack is done, as Overwhelming Assault's are (maneuvers.mjs withLastResource).
+allow overwhelm.lastResource;
+
+# (2) Knocked through a Health Threshold: Overwhelm at its most. Automatic by default, its Triggered/Automatic button.
+[triggered/threshold, effect 2]
+overwhelm.stacks = 4;

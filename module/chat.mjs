@@ -14838,6 +14838,8 @@ export async function postAttack(actor, target, maneuver,
   // bring, the flags the rolls read. A reflected attack keeps the one it was thrown with.
   // Overwhelming Assault: "Apply an Energy Charge to that Attacking Maneuver."
   if (overwhelm?.charge && !reflecting) charges = (Number(charges) || 0) + 1;
+  // Last Resource: "apply a number of Energy Charges up to your number of Overwhelm stacks".
+  if (overwhelm?.lastResource && !reflecting) charges = (Number(charges) || 0) + (Number(overwhelm.lastResource) || 0);
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
   // Hidden from any of them: "made 2 attacks" at them ends it.
   const { countHiddenAttack } = await import("./hidden.mjs");
@@ -15034,7 +15036,7 @@ export async function postAttack(actor, target, maneuver,
           // the one its features built.
           area: overwhelmedArea(sizedArea(actor, target, technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null),
             { portal }), reflecting ? null : overwhelm),
-          // Overwhelming Assault's stacks, lost once this is done (spendOverwhelm).
+          // Overwhelming Assault's stacks, and Last Resource's, lost once this is done (spendOverwhelm).
           ...((overwhelm?.spent && !reflecting) ? { overwhelmSpent: overwhelm.spent } : {}),
           // Revenge Bomber's: Self-Explosion given to it, free.
           ...(selfExplosion ? { selfExplosion: true } : {}),

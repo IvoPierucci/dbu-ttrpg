@@ -2241,7 +2241,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   const answers = await askFeatures(maneuver, actor, advantages);
   if (!answers) return null;
 
-  if (!profile) return withOverwhelm(actor, { profile: "", foundation: "physical", kiWager, advantages, ...answers });
+  if (!profile) return withLastResource(actor, await withOverwhelm(actor, { profile: "", foundation: "physical", kiWager, advantages, ...answers }));
 
   // A Foundation this character cannot use is offered greyed out rather than left off
   // the list: a missing button reads as a bug. A disabled button also cannot submit, so
@@ -2271,7 +2271,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
       );
   if (!foundation) return null;
 
-  return withOverwhelm(actor, { profile, foundation, kiWager, wagerFromLife, wagerFromDivine, advantages, ...answers });
+  return withLastResource(actor, await withOverwhelm(actor, { profile, foundation, kiWager, wagerFromLife, wagerFromDivine, advantages, ...answers }));
 }
 
 /** Overwhelming Assault (2)'s four effects, each for 2 stacks of Overwhelm. */
@@ -2316,6 +2316,29 @@ async function withOverwhelm(actor, declared) {
   }
   await actor.setFlag("dbu-ttrpg", "overwhelmRound", round);
   return { ...declared, overwhelm: { ...Object.fromEntries(chosen.map(key => [key, true])), spent: chosen.length * 2 } };
+}
+
+/**
+ * Last Resource (3): "If you would use an Attacking Maneuver while below the Injured Health Threshold, you may apply a number
+ * of Energy Charges up to your number of Overwhelm stacks to that Attacking Maneuver. After concluding that Attacking
+ * Maneuver, lose a number of Overwhelm stacks equal to the amount of Energy Charges applied" - asked as the declaration
+ * ends, Injured or Critical, once a Combat Encounter. Carried on `overwhelm` as `lastResource`, read by postAttack, and
+ * its stacks added to those spent once the attack is done (chat.mjs spendOverwhelm). None asked, nothing spent.
+ */
+async function withLastResource(actor, declared) {
+  if (!declared) return declared;
+  const stacks = Number(actor?.system?.resources?.overwhelm?.stacks) || 0;
+  const encounter = game.combat?.id ?? "none";
+  const { PREDICATES } = await import("./effects/conditions.mjs");
+  if ((actor?.system?.effects?.slots?.["overwhelm.lastResource"] !== true) || !stacks
+    || !PREDICATES.belowThreshold({ data: actor.system }, "injured")
+    || (actor.getFlag?.("dbu-ttrpg", "lastResourceEncounter") === encounter)) return declared;
+  const { askPlayerAmount } = await import("./chat.mjs");
+  const charges = await askPlayerAmount(actor, `${actor.name}: Last Resource`, stacks, "Energy Charges (Overwhelm)");
+  if (!charges) return declared;
+  await actor.setFlag("dbu-ttrpg", "lastResourceEncounter", encounter);
+  const overwhelm = declared.overwhelm ?? {};
+  return { ...declared, overwhelm: { ...overwhelm, lastResource: charges, spent: (Number(overwhelm.spent) || 0) + charges } };
 }
 
 /**
