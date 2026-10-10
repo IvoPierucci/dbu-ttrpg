@@ -898,7 +898,9 @@ export function registerRacialLifeHooks() {
     if (!change) return;
     const life = Number(actor.system.life?.value) || 0;
     const delta = change * Math.max(1, Number(actor.system.powerLevel) || 1);
-    const next = (delta > 0) ? life + delta : Math.max(life + delta, Math.min(life, 1));
+    // "1 above" the least they can be - nothing, or Survivor's below it.
+    const above = (Math.min(0, Number(actor.system.life?.min) || 0)) + 1;
+    const next = (delta > 0) ? life + delta : Math.max(life + delta, Math.min(life, above));
     if (next !== life) await actor.update({ "system.life.value": next });
   };
   Hooks.on("updateActor", (actor, changes, options) => settle(actor, options));

@@ -1,0 +1,41 @@
+id: survivor
+name: Survivor
+order: 2
+category: body
+importance: primary
+description: >
+  With sturdy bodies capable of surviving even the icy black depths of space, Arcosians are capable of withstanding far more damage than most races.
+text: >
+  Survivor (Body): With sturdy bodies capable of surviving even the icy black depths of space, Arcosians are capable of withstanding far more damage than most races.
+  (1)-[Passive, Ruling]: At Character Creation, gain a ‘Plating’. Your Plating is Natural Armor (see — Natural Armor).
+  (2)-[Option]: At Character Creation, choose one of the following effects:
+
+  * Dense Plating [Passive]: Increase your Soak Value by 1/2 (rounded up) of your Plating’s Apparel Bonus.
+  * Sleek Plating [Passive]: Increase your Defense Value by 1/2 (rounded up) of your Plating’s Apparel Bonus.
+  * Power Plating [Passive]: Increase your Wound Rolls by your Plating’s Apparel Bonus.
+  * Combat Plating [Passive]: Your Plating gains the Armed Quality without occupying a Quality Slot.
+
+  (3)-[Triggered, 1/Round]: If you benefit from Legend Realized or use a Healing Surge, your Plating regains 1 Break Value. If the piece of Apparel was broken, it stops being broken (Break Value goes from 0 to 1).
+  (4)-[Passive]: You cannot gain the Suffocating Combat Condition.
+  (5)-[Passive]: While your Life Points are below 0, reduce your Combat Rolls by 1(bT) and your Stress Value by 1.
+  (6)-[Passive]: You are not Defeated when your Life Points reach 0. Instead, your Life Points can reach negative values up to 1/4 (rounded up) of your Maximum Life Points. You are Defeated when your Life Points are reduced to this value, as if your Life Points were dropped to 0 if you did not possess this effect.
+  (7)-[Passive]: If one of your effects would reduce your Life Points to 1 or set your amount of Life Points to 1 while your Life Points are below 0, instead set your Life Points to 1 above your lowest possible amount of Life Points.
+
+---
+
+# (1), (2) and (3) wait on Natural Armor's text - the Plating is a piece of it.
+
+[passive]
+# (4)
+forbid condition.suffocating;
+
+# (5) Below 0. The Stress Value waits on its text.
+if (life.value < 0) {
+    combatRolls -= 1(bT);
+}
+
+# (6) The least Life Points can be is -1/4 (rounded up) of the Maximum; Defeated there, as anyone is at 0
+# (actor-character.mjs life.min).
+# (7) An effect setting your Life Points to 1 while they are below 0 sets them to 1 above that least instead
+# (moments-runtime.mjs writeStateful).
+allow life.belowZero;

@@ -2604,14 +2604,16 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
 
     // Life Points are the stated exception: Undying lets damage take them below zero,
     // and they are settled against that rather than against the general floor.
+    // The least they can be: nothing, or Survivor's "negative values up to 1/4 (rounded up) of your Maximum Life Points".
+    this.life.min = (this.effects.slots["life.belowZero"] === true) ? -Math.ceil(this.life.max / 4) : 0;
     if (!this.effects.slots["life.allowNegative"]) {
-      this.life.value = Math.max(0, this.life.value);
+      this.life.value = Math.max(this.life.min, this.life.value);
     }
 
-    // Defeated is derived, not recorded: at zero you are Defeated, and being healed
-    // above zero lifts it by itself without anything having to remember to. Undying
-    // forbids it outright, which is what lets negative Life not end the fight.
-    this.defeated = (this.life.value <= 0) && permits(this.effects.slots, "defeat");
+    // Defeated is derived, not recorded: at the least they can be - zero, or Survivor's - you are Defeated, and being
+    // healed above it lifts it by itself without anything having to remember to. Undying forbids it outright, which is
+    // what lets negative Life not end the fight.
+    this.defeated = (this.life.value <= this.life.min) && permits(this.effects.slots, "defeat");
 
     // --- Combat Rolls ---
     // Only used in combat. Wound depends on the attack's Foundation, since that is

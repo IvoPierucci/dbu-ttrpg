@@ -235,7 +235,12 @@ async function writeStateful(actor, slots) {
     // has to be granted by something - the Undying State.
     const negative = (key === "life.value")
       && !!actor.system.effects?.slots?.["life.allowNegative"];
-    updates[path] = negative ? Math.round(settled) : Math.max(0, Math.round(settled));
+    // Survivor's least, below nothing - and its (7): "If one of your effects would ... set your amount of Life Points to 1
+    // while your Life Points are below 0, instead set your Life Points to 1 above your lowest possible amount" - Undying's.
+    const least = (key === "life.value") ? Math.min(0, Number(actor.system.life?.min) || 0) : 0;
+    let value = Math.round(settled);
+    if (least && (before < 0) && (slots[key]?.set === 1)) value = least + 1;
+    updates[path] = negative ? value : Math.max(least, value);
   }
 
   if (!foundry.utils.isEmpty(updates)) await actor.update(updates);
