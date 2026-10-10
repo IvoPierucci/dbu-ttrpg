@@ -404,6 +404,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
       basicAttackInstant: DBUCharacterSheet._onBasicAttackInstant,
+      signatureInstant: DBUCharacterSheet._onSignatureInstant,
       newTechnique: DBUCharacterSheet._onNewTechnique,
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
       useGrantedUnique: DBUCharacterSheet._onUseGrantedUnique,
@@ -1573,6 +1574,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // Multiple Arms: "You can spend 2 Counter Actions to use the Basic Attack Maneuver as an Instant".
             asInstant: (maneuver.id === "basic-attack")
               && Boolean(this.actor.system.effects?.slots?.["basicAttack.asInstant"]),
+            // Furious Onslaught: "Reduce your Overwhelm Stacks by 2 to use the Signature Technique Maneuver as an Instant".
+            signatureInstant: Boolean(maneuver.signatureTechnique)
+              && (this.actor.system.effects?.slots?.["signature.asInstant"] === true),
             // Off the group, unless the Maneuver has a reason of its own to be here.
             playable: (group.playable || this.#playableAlone(maneuver))
               && !this.#playedThrough(maneuver)
@@ -5867,6 +5871,30 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
     await spendActions(this.actor, 2, "counter");
     return this.actor.update({ "system.usedManeuvers": [...(this.actor.system.usedManeuvers ?? []), ARMS_USES.instant] });
+  }
+
+  /**
+   * Furious Onslaught: "[1/Round]: Reduce your Overwhelm Stacks by 2 to use the Signature Technique Maneuver as an Instant
+   * Maneuver." Played as an Instant - no Action Cost, and the Instant's own rule on the one before - its Technique picked
+   * as ever, and the 2 stacks paid once it is used.
+   */
+  static async _onSignatureInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["signature.asInstant"] !== true)) return;
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (this.actor.getFlag("dbu-ttrpg", "signatureInstantRound") === round) {
+      return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
+    }
+    const held = Number(this.actor.system.resources?.overwhelm?.stacks) || 0;
+    if (held < 2) return ui.notifications.warn(`${this.actor.name} needs 2 stacks of Overwhelm for this.`);
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
+    const resources = { ...(this.actor.system.resources ?? {}) };
+    const left = Math.max(0, (Number(resources.overwhelm?.stacks) || 0) - 2);
+    if (left > 0) resources.overwhelm = { ...resources.overwhelm, stacks: left };
+    else delete resources.overwhelm;
+    const { replaceObject } = await import("../conditions.mjs");
+    return this.actor.update({ "system.resources": replaceObject(resources), "flags.dbu-ttrpg.signatureInstantRound": round });
   }
 
   static async _onUseManeuver(event, target) {

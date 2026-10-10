@@ -44,6 +44,11 @@
                     data-item-id="{{maneuver.itemId}}"
                     data-tooltip="Multiple Arms: as an Instant Maneuver, for 2 Counter Actions (1/Round)">Instant</button>
             {{/if}}
+            {{#if maneuver.signatureInstant}}
+            <button type="button" class="maneuver-control" data-action="signatureInstant"
+                    data-item-id="{{maneuver.itemId}}"
+                    data-tooltip="Furious Onslaught: as an Instant Maneuver, for 2 stacks of Overwhelm (1/Round)">Instant</button>
+            {{/if}}
             {{else}}
             {{! Reactive: it is played from the message of the attack it answers. }}
             <span class="maneuver-name maneuver-triggered">{{maneuver.name}}</span>
