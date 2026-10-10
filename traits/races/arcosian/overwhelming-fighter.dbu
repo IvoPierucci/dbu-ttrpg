@@ -1,0 +1,37 @@
+id: overwhelming-fighter
+name: Overwhelming Fighter
+order: 1
+category: body
+importance: primary
+resource: overwhelm
+resourceLabel: Overwhelm
+resourceMax: 4
+description: >
+  Arcosians are aggressive fighters who break down their opponents with powerful attacks and their unique capabilities.
+text: >
+  Overwhelming Fighter (Body): Arcosians are aggressive fighters who break down their opponents with powerful attacks and their unique capabilities.
+  (1)-[Triggered, Resource]: If you hit any number of Opponents with an Attacking Maneuver, gain 1 Overwhelm (max. 4). For each stack of Overwhelm, increase your Wound Rolls by 1(T).
+  (2)-[Automatic]: You lose all stacks of Overwhelm at the end of each of your turns.
+  (3)-[Passive]: At Character Creation, select and gain access to an Evolution Trait.
+  (4)-[Passive]: Gain access to the Tail Attack Maneuver.
+
+---
+
+# (1) An Attacking Maneuver of yours that hit an Opponent - one stack however many it hit - as its Wound Roll is about to
+# be made (moment hit-opponent, chat.mjs rollAttackWound). Automatic by default; set Triggered, asked in a window there.
+[triggered/hit-opponent, effect 1]
+overwhelm.stacks += 1;
+
+[passive]
+# (1) 1(T) on your Wound Rolls a stack - the one just gained among them.
+if (hasResource("overwhelm")) {
+    wound += (overwhelm.stacks * tierOfPower);
+}
+# (3) Waits on the Evolution Traits' texts.
+# (4)
+allow maneuver.tail-attack;
+
+# (2) Only where there is any, so an empty end of turn puts no card in chat.
+[automatic/end-of-turn]
+requires hasResource("overwhelm");
+overwhelm.stacks = 0;

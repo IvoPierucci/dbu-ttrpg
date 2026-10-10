@@ -17759,6 +17759,14 @@ async function rollAttackWound(message, attack) {
     return;
   }
 
+  // "If you hit any number of Opponents with an Attacking Maneuver" - once for the Maneuver, before its Wound Roll so what
+  // it gives counts on it (Overwhelming Fighter's Overwhelm). Asked first where it is the player's.
+  if (targets.some(({ uuid, own }) => own.hit && (uuid !== attacker.uuid))) {
+    await offerTriggers(attacker, "hit-opponent");
+    const { fireMoment } = await import("./effects/moments-runtime.mjs");
+    await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId } });
+  }
+
   // Elastic Tentacle: "double the amount of Diminishing Defense they suffer from that Attacking Maneuver" - ticked On
   // hitting; "does not stack with any other effect that would increase" it, so not where another already did.
   const onHit = atMoment(attacker, "hit", { maneuver: { id: attack.maneuverId } });

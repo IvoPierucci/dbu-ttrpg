@@ -92,6 +92,9 @@ const TABLE = [
   { key: "unique-clash-won", label: "You win a Clash for the effects of a Unique Ability", provides: [],
     doc: "Fired for whoever won a Clash a Unique Ability called for - theirs or the one they answered - with who lost "
        + "(chat.mjs uniqueClashWon) - Psychic's. What is the player's is asked in a window first." },
+  { key: "hit-opponent", label: "You hit an Opponent with an Attacking Maneuver", provides: [],
+    doc: "Fired once an Attacking Maneuver of yours has hit any number of Opponents, as its Wound Roll is about to be made "
+       + "(chat.mjs rollAttackWound) - Overwhelming Fighter's Overwhelm. What is the player's is asked in a window first." },
   { key: "knock-through", label: "You knock an Opponent through a Health Threshold", provides: [],
     doc: "Fired for whoever made the Attacking Maneuver whose Damage knocked them through (combat.mjs announceThreshold) - "
        + "Inherited Aggression's. What is the player's is asked in a window first." },
