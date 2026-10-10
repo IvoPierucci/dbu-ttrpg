@@ -1,0 +1,23 @@
+id: balance-of-magic-and-might
+name: Balance of Magic and Might
+order: 2
+description: >
+  Untrifled by such petty concerns as whether to wield brute force or magical prowess, you offer both varieties of pain to your enemies.
+text: >
+  Balance of Magic and Might: Untrifled by such petty concerns as whether to wield brute force or magical prowess, you offer both varieties of pain to your enemies.
+  (1)-[Passive]: While your Attribute Score for your Force and Magic Attributes is equal to one another, increase your Wound Rolls by 1(T).
+  (2)-[Triggered/Start of Turn]: If your Attribute Score for your Force and Magic Attributes is equal to one another, gain a stack of Overwhelm.
+
+---
+
+# (1)
+[passive]
+if (attributes.force.score == attributes.magic.score) {
+    wound += 1(T);
+}
+
+# (2) As your turn starts, the two Scores equal: a stack of Overwhelm (Overwhelming Fighter's Resource, max. 4). Automatic
+# by default; set Triggered, ticked on the turn's card.
+[triggered/start-of-turn, effect 2]
+requires attributes.force.score == attributes.magic.score;
+overwhelm.stacks += 1;
