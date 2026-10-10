@@ -21323,17 +21323,20 @@ export async function askTransformation(actor, maneuver, actionsSpent = 1) {
     content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Transformation</span>
         <input type="text" name="name" autofocus/></label>
       ${rolls ? `<label class="dbu-respond-option"><span class="dbu-respond-name">Stress Test Requirement</span>
-        <input type="number" name="requirement" min="0" step="1"/></label>` : ""}`,
+        <input type="number" name="requirement" min="0" step="1"/></label>` : ""}
+      <label class="dbu-respond-option" data-tooltip="${Handlebars.escapeExpression(LEGEND_TIP)}">
+        <span class="dbu-respond-name">Form</span><input type="checkbox" name="form"/></label>`,
     buttons: [
       { action: "confirm", label: maneuver.name, default: true, callback: (event, button, dialog) => ({
         name: String(dialog.element.querySelector('input[name="name"]')?.value ?? "").trim(),
-        requirement: Number(dialog.element.querySelector('input[name="requirement"]')?.value) }) },
+        requirement: Number(dialog.element.querySelector('input[name="requirement"]')?.value),
+        form: Boolean(dialog.element.querySelector('input[name="form"]')?.checked) }) },
       { action: "cancel", label: "Cancel" }
     ],
     rejectClose: false
   });
   if (!asked || (typeof asked !== "object") || !asked.name) return null;
-  if (!rolls) return { name: asked.name, roll: false };
+  if (!rolls) return { name: asked.name, roll: false, form: asked.form };
   if (!Number.isFinite(asked.requirement)) {
     ui.notifications.warn(`${maneuver.name}: its Stress Test Requirement is a number.`);
     return null;
@@ -21344,7 +21347,49 @@ export async function askTransformation(actor, maneuver, actionsSpent = 1) {
   const ready = await prepareRoll(actor, [], `${asked.name}: Stress Test`, "", {
     offerWilling: false, formula: { base: DBUCharacterData.BASE_DIE, parts: windowParts(actor, parts) } });
   if (!ready) return null;
-  return { name: asked.name, roll: true, requirement: asked.requirement, parts };
+  return { name: asked.name, roll: true, requirement: asked.requirement, parts, form: asked.form };
+}
+
+/** What the Transformation window's Form box means, on hover. */
+const LEGEND_TIP = "Into a Form: the first time this Combat Encounter, Legend Realized - 2d10(T) + your Power Level, "
+  + "restored as Life and Ki Points. Not from another Form of the same Form Type and Tier of Power Requirement as one "
+  + "that gave it this Encounter (the table's).";
+
+/**
+ * Legend Realized, from the Transformation Maneuver: "You cannot gain this effect more than once per Transformation per
+ * Combat Encounter. The first time you use the Transformation Maneuver to transform into a Form during each Combat
+ * Encounter" - by the Transformation's name, kept for the Encounter. "Not ... from a Transformation of the same Form Type
+ * and Tier of Power Requirement as another" is the table's: Forms are not built.
+ */
+async function legendRealizedByForm(actor, name) {
+  const encounter = game.combat?.id ?? "";
+  const held = actor.getFlag?.(SCOPE, "legendRealized") ?? {};
+  const names = (encounter && (held.encounter === encounter)) ? (held.names ?? []) : [];
+  const key = String(name).trim().toLowerCase();
+  if (names.includes(key)) return;
+  if (encounter) await requestActorUpdate(actor, { [`flags.${SCOPE}.legendRealized`]: { encounter, names: [...names, key] } });
+  return legendRealized(actor);
+}
+
+/**
+ * Legend Realized: "roll 2d10(T) and increase the Dice Score by your Power Level. Restore Life and Ki Points equal to the
+ * total Dice Score." The Transformation Maneuver's limits are its own - an effect that grants it (a Talent's) is under
+ * none of them (the user's). Then what answers having benefited from it - Survivor's Plating.
+ */
+export async function legendRealized(actor) {
+  if (!actor) return;
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const roll = await new Roll(`${2 * tier}d10 + ${Math.max(0, Number(actor.system.powerLevel) || 0)}`).evaluate();
+  const { life, ki } = actor.system;
+  await requestActorUpdate(actor, { "system.life.value": Math.min(life.max, life.value + roll.total),
+    "system.ki.value": Math.min(ki.max, ki.value + roll.total) });
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), whisper: whisperTo(actor),
+    flavor: `Legend Realized - ${roll.total} Life and Ki Points` });
+  await offerTriggers(actor, "legend-realized");
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  const answered = await fireMoment(actor, "legend-realized");
+  // Survivor: "your Plating regains 1 Break Value".
+  if (answered?.slots?.["plating.mend"] === true) await (await import("./natural-armor.mjs")).repairNaturalArmor(actor, 1);
 }
 
 /**
@@ -21358,8 +21403,10 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
     .replace("1(T) higher for each Action spent", `${Math.max(1, Number(actionsSpent) || 1)}(T) higher`);
   const enters = `${maneuver.name}: ${actor.name} enters ${into.name}.${said ? ` ${said}` : ""}`;
   if (!into.roll) {
-    return ChatMessage.create({ speaker,
+    const card = await ChatMessage.create({ speaker,
       content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(enters)}</div>` });
+    if (into.form) await legendRealizedByForm(actor, into.name);
+    return card;
   }
   const formula = [DBUCharacterData.BASE_DIE, ...into.parts.map(part => `${part.value < 0 ? "-" : "+"} ${Math.abs(part.value)}`)]
     .join(" ");
@@ -21367,8 +21414,10 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
   await roll.toMessage({ speaker, whisper: whisperTo(actor),
     flavor: `${into.name}: Stress Test - ${roll.total} against ${into.requirement}` });
   if (roll.total >= into.requirement) {
-    return ChatMessage.create({ speaker,
+    const card = await ChatMessage.create({ speaker,
       content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(enters)}</div>` });
+    if (into.form) await legendRealizedByForm(actor, into.name);
+    return card;
   }
   const { setCondition } = await import("./conditions.mjs");
   await setCondition(actor, "stress-exhaustion", 1);

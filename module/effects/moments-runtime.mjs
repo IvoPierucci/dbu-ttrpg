@@ -305,6 +305,11 @@ async function runVerb(actor, call, context) {
       return reduceLifePoints(opponent, amount, { reason: actor.name });
     }
 
+    case "legendRealized": {
+      const { legendRealized } = await import("../chat.mjs");
+      return legendRealized(actor);
+    }
+
     case "kiForLife": {
       const { kiForLife } = await import("../chat.mjs");
       return kiForLife(actor);

@@ -72,6 +72,12 @@ export const VERBS = Object.freeze({
     doc: "The Opponent the Moment names - who lost the Clash - loses Life Points equal to the named Attribute's Modifier: "
        + "Psychic's \"reduce that Opponent's Life Points by your Insight Modifier\"."
   },
+  legendRealized: {
+    args: [0, 0],
+    names: [],
+    doc: "Legend Realized, granted by an effect - a Talent's - under none of the Transformation Maneuver's limits "
+       + "(chat.mjs legendRealized): 2d10(T) + the Power Level, restored as Life and Ki Points."
+  },
   kiForLife: {
     args: [0, 0],
     names: [],
