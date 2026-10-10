@@ -509,7 +509,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Your Enemy, Defeated or knocked through (Burning Hatred's).
   "fallenEnemy",
   // A Unique Ability being declared (Frigid Tricks').
-  "usingUnique"]);
+  "usingUnique",
+  // The largest in the Combat Encounter (King's Stature's).
+  "largestInEncounter"]);
 
 /**
  * Dice the character already has, named rather than written out.

@@ -1,0 +1,28 @@
+id: kings-stature
+name: King’s Stature
+order: 10
+description: >
+  You stand head and shoulders above even the largest of your kind. And why shouldn’t you? After all, it’s only natural to stand above your lessers.
+text: >
+  King’s Stature: You stand head and shoulders above even the largest of your kind. And why shouldn’t you? After all, it’s only natural to stand above your lessers.
+  (1)-[Passive]: Your base Size Category becomes Enormous.
+  (2)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver of an Opponent whose Size Category is smaller than yours, increase your Soak Value by 1(T) for every Size Category they are smaller than you for the duration of that Attacking Maneuver.
+  (3)-[Triggered/Start of Turn]: If you have the highest Size Category amongst all Characters in the Combat Encounter, gain 1 stack of Overwhelm.
+
+---
+
+# (1)
+[passive]
+allow size.base.enormous;
+
+# (2) Hit: 1(T) on the Soak Value for that attack for every Size Category the one who made it is smaller - nothing, and not
+# spent, where they are not (chat.mjs, where the hit is settled). Automatic by default, its Triggered/Automatic button;
+# set Triggered, ticked in the On being hit window.
+[triggered/being-hit, toggle, 1/round, effect 2]
+soak.bySize = true;
+
+# (3) As your turn starts, no Character in the Combat Encounter larger than you: a stack of Overwhelm. Automatic by
+# default; set Triggered, ticked on the turn's card.
+[triggered/start-of-turn, effect 3]
+requires largestInEncounter;
+overwhelm.stacks += 1;

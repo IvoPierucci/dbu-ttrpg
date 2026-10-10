@@ -806,6 +806,18 @@ async function applyClash(messageId, clash) {
  * A Clash a Unique Ability called for, its challenger's: by the name the card carries - its own, or with what it was
  * for after it ("Telekinesis - Launch").
  */
+/**
+ * King's Stature (2): hit by an Opponent smaller than you, 1(T) on the Soak Value for every Size Category between - where
+ * it was ticked, or is Automatic - and its once a Round spent only where it gives something.
+ */
+async function sizeSoakFor(target, attacker, incoming) {
+  if (incoming?.slots?.["soak.bySize"] !== true) return 0;
+  const steps = sizeDifference(target, attacker);
+  if (!attacker || (attacker.uuid === target.uuid) || (steps <= 0)) return 0;
+  spendWriting(target, incoming, "soak.bySize");
+  return steps * Math.max(1, Number(target.system.tierOfPower) || 1);
+}
+
 /** Frigid Tricks' 1(T) - `clash.unique` - on a Might or Saving Throw Clash one of your Unique Abilities opened. */
 function uniqueClashBonus(actor, clash, uuid) {
   if ((uuid !== clash?.challengerUuid) || !["might", "save"].includes(clash?.category)) return [];
@@ -16761,6 +16773,9 @@ async function resolveAttack(message, attack) {
       // Carried on the attack so the Wound Roll can apply it: the defender's client
       // worked it out, and the attacker's is as likely to be the one settling this.
       incomingDamage: incoming?.slots?.["incoming.damage"] ?? null,
+      // King's Stature: "increase your Soak Value by 1(T) for every Size Category they are smaller than you for the
+      // duration of that Attacking Maneuver" - worked out as the hit is, spent only where it gives something.
+      sizeSoak: await sizeSoakFor(target, attacker, incoming),
       counterWound: null,
       // Disarming Demeanor (2): hit, and the Bluff is theirs to try - the Wound Roll waits on it.
       disarming: (hit && !automatic && disarmingOpen(target, attacker)) ? "offered" : null,
@@ -18053,7 +18068,7 @@ async function rollAttackWound(message, attack) {
 
     // Only what the Damage Category leaves of the Soak Value counts, and the defence
     // adjusts what survives that.
-    const base = target.system.soakValue + soakBonus;
+    const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0);
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
     // Piercing: "ignore 1/4 (rounded up) of your target's Soak Value (before any reductions)".
     const pierceSoak = Math.ceil(Math.max(0, base) * (Number(attack.weapon?.soakIgnored) || 0));

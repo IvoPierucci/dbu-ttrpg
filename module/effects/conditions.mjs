@@ -147,6 +147,13 @@ const PREDICATES = {
   /** In the Healthy Health Threshold, whatever counts them as Healthy besides - Divine Physique (2)'s. */
   trulyHealthy: scope => (scope.data?.threshold?.key ?? "healthy") === "healthy",
 
+  /** No Character in the Combat Encounter larger than you - King's Stature's "the highest Size Category". */
+  largestInEncounter: scope => {
+    const own = Number(scope.data?.size?.steps) || 0;
+    return Array.from(game.combat?.combatants ?? []).map(entry => entry.actor).filter(Boolean)
+      .every(other => (Number(other.system?.size?.steps) || 0) <= own);
+  },
+
   /** Is the Maneuver being declared a Unique Ability - Frigid Tricks'. */
   usingUnique: scope => (scope.context?.maneuver?.tags ?? []).includes("uniqueAbility"),
 
