@@ -47,9 +47,10 @@ if (!belowThreshold("bruised")) {
     ki.value += 1(bT);
 }
 
-# (5) The Power Up Maneuver, in Critical with a Counter Action left: asked in its window - the Counter Action spent,
-# Superior till the end of your next turn.
+# (5) The Power Up Maneuver, below the Injured Health Threshold - Injured or Critical (the user's: below a Threshold is
+# in it or under it) - with a Counter Action left: asked in its window - the Counter Action spent, Superior till the end
+# of your next turn.
 [triggered/power, 1/encounter, effect 5]
-requires belowThreshold("critical") && !noCounterActions;
+requires belowThreshold("injured") && !noCounterActions;
 actions.counterSpent += 1;
 enterState(superior, 1, next-turn);
