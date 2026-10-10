@@ -507,7 +507,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Natural Armor to mend (Survivor's Plating); an AoE that hit more than one (Overwhelming Pressure's).
   "platingMendable", "aoeHitMany",
   // Your Enemy, Defeated or knocked through (Burning Hatred's).
-  "fallenEnemy"]);
+  "fallenEnemy",
+  // A Unique Ability being declared (Frigid Tricks').
+  "usingUnique"]);
 
 /**
  * Dice the character already has, named rather than written out.

@@ -237,6 +237,10 @@ const TABLE = [
   { key: "lingering.nine", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
     doc: "This Strike or Dodge Roll: a Counter Action spent, its Natural Result 9, no Critical or Botch, and 1 more for "
        + "each effect that would have raised its Natural Result or lowered its Critical Target (chat.mjs rollSide)." },
+  // Frigid Tricks' "Increase the Dice Score of any Clash you make through a Unique Ability which uses your Might or Saving
+  // Throws by 1(T)".
+  { key: "clash.unique", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to a Might or Saving Throw Clash a Unique Ability of yours opens (chat.mjs uniqueClashBonus)." },
   { key: "defend.free", phase: PHASES.REACTIVE, kind: F, ops: ["set"],
     doc: "The Defend Maneuver costs no Counter Action for this attack." },
 

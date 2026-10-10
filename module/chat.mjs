@@ -806,6 +806,13 @@ async function applyClash(messageId, clash) {
  * A Clash a Unique Ability called for, its challenger's: by the name the card carries - its own, or with what it was
  * for after it ("Telekinesis - Launch").
  */
+/** Frigid Tricks' 1(T) - `clash.unique` - on a Might or Saving Throw Clash one of your Unique Abilities opened. */
+function uniqueClashBonus(actor, clash, uuid) {
+  if ((uuid !== clash?.challengerUuid) || !["might", "save"].includes(clash?.category)) return [];
+  const value = applySlot(actor?.system?.effects?.slots, "clash.unique", 0);
+  return (value && uniqueClashOf(clash)) ? [{ label: "Through a Unique Ability", value }] : [];
+}
+
 function uniqueClashOf(clash) {
   const challenger = fromUuidSync(clash?.challengerUuid ?? "");
   const name = String(clash?.maneuverName ?? "").trim();
@@ -7841,7 +7848,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
  */
 function clashParts(kind, actor, clash, uuid) {
   return [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
-    ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : [])];
+    ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
+    ...uniqueClashBonus(actor, clash, uuid)];
 }
 
 /**

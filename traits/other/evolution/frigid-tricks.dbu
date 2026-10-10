@@ -1,0 +1,25 @@
+id: frigid-tricks
+name: Frigid Tricks
+order: 8
+description: >
+  Even as your blood runs hot, you remain cold as ice, keeping a level head to focus on your unusual powers.
+text: >
+  Frigid Tricks: Even as your blood runs hot, you remain cold as ice, keeping a level head to focus on your unusual powers.
+  (1)-[Passive]: Reduce the Ki Point Cost of all Unique Abilities by 2(T).
+  (2)-[Passive]: Increase the Dice Score of any Clash you make through a Unique Ability which uses your Might or Saving Throws by 1(T).
+  (3)-[Triggered, 1/Round]: If you use a Unique Ability, gain 1 stack of Overwhelm.
+
+---
+
+[passive]
+# (1) Technical and Magical alike.
+unique.technical.kiCost -= 2(T);
+unique.magical.kiCost -= 2(T);
+# (2) A Might or Saving Throw Clash one of your Unique Abilities opens (chat.mjs uniqueClashBonus).
+clash.unique += 1(T);
+
+# (3) A Unique Ability declared: a stack of Overwhelm (Overwhelming Fighter's Resource, max. 4), once a Round. Automatic
+# by default, its Triggered/Automatic button; set Triggered, asked in the window as it is declared.
+[triggered/declare-maneuver, toggle, 1/round, effect 3]
+requires usingUnique;
+overwhelm.stacks += 1;
