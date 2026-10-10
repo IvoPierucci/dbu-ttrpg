@@ -1,0 +1,24 @@
+id: studied-lord
+name: Studied Lord
+order: 18
+description: >
+  Not only are your fighting skills and your evolution superior to your foes’, but so is your intellect.
+text: >
+  Studied Lord: Not only are your fighting skills and your evolution superior to your foes’, but so is your intellect.
+  (1)-[Passive]: Gain access to the Analysis Maneuver. If you already had access to the Analysis Maneuver, increase your Scholarship Modifier by 1(T).
+  (2)-[Triggered, 1/Round]: If you use the Analysis Maneuver, gain a stack of Overwhelm.
+
+---
+
+# (1) Already had it: opened by anything but this - the Investigation Skill's Ranks (conditions.mjs accessElsewhere).
+[passive]
+allow maneuver.analysis;
+if (accessElsewhere("analysis")) {
+    scholarship.mod += 1(T);
+}
+
+# (2) The Analysis Maneuver declared: a stack of Overwhelm, once a Round. Automatic by default, its Triggered/Automatic
+# button; set Triggered, asked in the window as it is declared.
+[triggered/declare-maneuver, toggle, 1/round, effect 2]
+requires using("analysis");
+overwhelm.stacks += 1;
