@@ -3,11 +3,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { getTrait, printedLines, traitsOfKind } from "../effects/traits.mjs";
 import { compile } from "../effects/parser.mjs";
-import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, WEAPON_SIZES, WEAPON_TYPES,
-  categoryFitsPiece, composeEffects, connectable, craftedReading, effectsOf, namePrefixMatches,
-  qualityChoiceLabel, qualityChoices, qualityEntries, qualityFitsPiece, qualityInactive,
-  qualityName, qualitySlotRange, qualitySummary, pieceTokens, scriptWithPiece,
-  slotsTaken } from "../gear.mjs";
+import { CRAFTED, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, WEAPON_SIZES, WEAPON_TYPES, categoryFitsPiece, composeEffects, connectable, craftedReading, effectsOf, namePrefixMatches, qualityChoiceLabel, qualityChoices, qualityEntries, qualityFitsPiece, qualityInactive, qualityName, qualitySlotRange, qualitySummary, pieceTokens, scriptWithPiece, slotsTaken, isNaturalArmor } from "../gear.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 
 /**
@@ -252,6 +248,9 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     context.sizeLabel = system.size ?? "";
     // A Weapon, an Accessory or a piece of Apparel may be Integrated - the table's box, or an effect's (the user's).
     context.integratable = ["weapon", "apparel"].includes(system.crafted?.kind) || (system.itemType === "accessory");
+    // A piece of Apparel may be Natural Armor - Integrated with it, and its entry under its Category's (the user's).
+    context.naturalArmorable = system.crafted?.kind === "apparel";
+    context.naturalArmor = isNaturalArmor(this.item);
     context.tagLabels = (system.tags ?? []).map(tag => GEAR_TAGS[tag]?.label ?? tag);
 
     // What it recorded from its maker, and what sets it off - both theirs to change.
@@ -318,6 +317,11 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       || (context.crafted ? getTrait(system.crafted.category)?.text : "")
       || system.text;
     context.entry = printedLines(entry).map(line => ({ text: line, gap: !line }));
+    if (context.naturalArmor) {
+      const { NATURAL_ARMOR_TEXT } = await import("../natural-armor.mjs");
+      context.entry.push(...(context.entry.length ? [{ text: "", gap: true }] : []),
+        ...printedLines(NATURAL_ARMOR_TEXT).map(line => ({ text: line, gap: !line })));
+    }
 
     return context;
   }
@@ -549,6 +553,14 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
    * where the Actor cannot be read.
    */
   async _processSubmitData(event, form, submitData, options) {
+    // Made Natural Armor: Integrated with it, unasked - and on a character, its Grade theirs.
+    if ((foundry.utils.getProperty(submitData, "flags.dbu-ttrpg.naturalArmor") === true) && !isNaturalArmor(this.item)) {
+      foundry.utils.setProperty(submitData, "system.integrated", true);
+      if (this.item.actor) {
+        const { naturalArmorGrade } = await import("../natural-armor.mjs");
+        foundry.utils.setProperty(submitData, "system.crafted.grade", naturalArmorGrade(this.item.actor));
+      }
+    }
     // Connected to something else on the Item: the pair goes with it, for a Collar.
     const connected = foundry.utils.getProperty(submitData, "system.connectedTo");
     if (connected !== undefined) {

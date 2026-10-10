@@ -11,6 +11,10 @@
       <label data-tooltip="Part of the character: Active or Inactive, no initial Penalties, not counted towards the equipped limit">
         Integrated <input type="checkbox" name="system.integrated" {{#if item.system.integrated}}checked{{/if}}/></label>
       {{/if}}
+      {{#if naturalArmorable}}
+      <label data-tooltip="Natural Armor: Integrated, its Craftsmanship Grade its owner's base Tier of Power (max. 5)">
+        Natural Armor <input type="checkbox" name="flags.dbu-ttrpg.naturalArmor" {{#if naturalArmor}}checked{{/if}}/></label>
+      {{/if}}
     </div>
   </div>
 </header>

@@ -20,6 +20,16 @@
 import { getTrait } from "./effects/traits.mjs";
 import { isNaturalArmor } from "./gear.mjs";
 
+/** Its entry, as the rulebook prints it - under its Category's on the piece's sheet. */
+export const NATURAL_ARMOR_TEXT = `Natural Armor: Some effects may grant a Character Natural Armor. Natural Armor is a special form of Integrated Armor that has the following effects:
+
+* The Craftsmanship Grade is equal to the base Tier of Power of that Character (max. 5).
+* At the end of each Combat Encounter, your Natural Armor is fully repaired.
+* While you possess Natural Armor, you can only wear a single layer of Apparel. If you were wearing more than a single layer of Apparel upon gaining Natural Armor, all of your worn Apparel except for the lowest layer is destroyed.
+* Natural Armor naturally possesses no Qualities, but can gain them through effects.
+* Natural Armor does not count as equipped Apparel for any of your effects.
+* Effects that refer to Natural Armor will apply only while that Natural Armor is Active.`;
+
 /** "The Craftsmanship Grade is equal to the base Tier of Power of that Character (max. 5)." */
 export function naturalArmorGrade(actor) {
   return Math.max(1, Math.min(5, Number(actor?.system?.baseTierOfPower) || 1));
