@@ -508,7 +508,11 @@ export function scriptWithChoice(script, choice) {
  * base Tier is not known yet when the scripts are gathered.
  */
 export function scriptWithPiece(script, reading, tokens = {}) {
-  let text = String(script ?? "").replaceAll("$apparelBonus", String(Number(reading?.perBaseTier) || 0));
+  // What is added to it per Tier of Power rather than per base Tier - Bio-Suit's 1(T) on the Plating - beside it.
+  const perTier = Number(tokens?.apparelBonusPerTier) || 0;
+  let text = perTier ? String(script ?? "").replaceAll("$apparelBonus(bT)", `($apparelBonus(bT) + ${perTier}(T))`)
+    : String(script ?? "");
+  text = text.replaceAll("$apparelBonus", String(Number(reading?.perBaseTier) || 0));
   // The rest of what a piece's Effects may name about the piece, longest first so none is read
   // as the start of another - and each at its default where nobody said: nothing narrowed,
   // nothing waived, nothing multiplied.
@@ -546,8 +550,20 @@ export function pieceTokens(item, wearer, reading, getTrait) {
     reachesStrike: reaches("strike"),
     reachesDodge: reaches("dodge"),
     reachesWound: reaches("wound"),
-    waived: (wearer && weightsPenaltyWaived(item, wearer, getTrait)) ? 1 : 0
+    waived: (wearer && weightsPenaltyWaived(item, wearer, getTrait)) ? 1 : 0,
+    // Natural Armor's Apparel Bonus raised per Tier of Power - Bio-Suit's.
+    apparelBonusPerTier: isNaturalArmor(item) ? platingBonusPerTier(wearer, getTrait) : 0
   };
+}
+
+/**
+ * What a character's Traits add to their Natural Armor's Apparel Bonus per Tier of Power - Bio-Suit's "Increase the
+ * Apparel Bonus of your Plating by 1(T)". Read off the Traits had (`platingBonusPerTier:`), not off an effect: the piece is
+ * read before any effect has run.
+ */
+export function platingBonusPerTier(actor, getTrait) {
+  return Array.from(actor?.items ?? []).filter(item => item.type === "racial")
+    .reduce((sum, item) => sum + (Number(getTrait?.(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.platingBonusPerTier) || 0), 0);
 }
 
 /**

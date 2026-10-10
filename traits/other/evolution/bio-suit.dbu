@@ -1,0 +1,21 @@
+id: bio-suit
+name: Bio-Suit
+order: 4
+# (1) Read off the Trait itself, not an effect: the Plating's Apparel Bonus is worked out before any effect has run
+# (gear.mjs platingBonusPerTier) - its Armor's Damage Reduction and what Survivor's Options read alike.
+platingBonusPerTier: 1
+description: >
+  Arcosians are the toughest beings in the universe; covered in a durable hide, it takes immense punishment to keep you down.
+text: >
+  Bio-Suit: Arcosians are the toughest beings in the universe; covered in a durable hide, it takes immense punishment to keep you down.
+  (1)-[Passive]: Increase the Apparel Bonus of your Plating by 1(T).
+  (2)-[Triggered]: If you are hit by an Attacking Maneuver and take no Damage, gain a stack of Overwhelm.
+
+---
+
+# (1) The header's `platingBonusPerTier`.
+
+# (2) Hit by an Attacking Maneuver for no Damage (moment hit-unharmed, chat.mjs): a stack of Overwhelm (Overwhelming
+# Fighter's Resource, max. 4). Automatic by default; set Triggered, asked in a window there.
+[triggered/hit-unharmed, effect 2]
+overwhelm.stacks += 1;

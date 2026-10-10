@@ -92,6 +92,9 @@ const TABLE = [
   { key: "unique-clash-won", label: "You win a Clash for the effects of a Unique Ability", provides: [],
     doc: "Fired for whoever won a Clash a Unique Ability called for - theirs or the one they answered - with who lost "
        + "(chat.mjs uniqueClashWon) - Psychic's. What is the player's is asked in a window first." },
+  { key: "hit-unharmed", label: "You are hit by an Attacking Maneuver and take no Damage", provides: [],
+    doc: "Fired for whoever an Attacking Maneuver hit for no Damage, once its Damage is settled (chat.mjs answerFor) - "
+       + "Bio-Suit's Overwhelm. What is the player's is asked in a window first." },
   { key: "dodged-attack", label: "You dodge an Attacking Maneuver", provides: [],
     doc: "Fired for whoever's Dodge Roll beat an Attacking Maneuver's Strike - Angelic Defense's Dodge again among them "
        + "(chat.mjs answerFor) - Aerodynamic's Overwhelm. What is the player's is asked in a window first." },

@@ -8,7 +8,7 @@ import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
-import { craftedReading, groundIgnored, isNaturalArmor, shrunkSize, weatherResisted } from "../gear.mjs";
+import { craftedReading, groundIgnored, isNaturalArmor, platingBonusPerTier, shrunkSize, weatherResisted } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
   qualitiesOf }
   from "../environments.mjs";
@@ -1931,15 +1931,6 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // more per five Levels, reaching 7 at Level 30.
     this.baseTierOfPower = DBUCharacterData.tierOfPowerFor(this.powerLevel);
 
-    // Natural Armor, as its owner's effects read it - Survivor's Plating's Apparel Bonus: "Effects that refer to Natural
-    // Armor will apply only while that Natural Armor is Active" - and not broken, which is as good as not there.
-    {
-      const plating = Array.from(this.parent?.items ?? []).find(item => isNaturalArmor(item) && item.system?.equipped);
-      const reading = plating
-        ? craftedReading(plating.system.crafted, { getTrait, difficulties: {}, baseTier: this.baseTierOfPower }) : null;
-      const active = Boolean(reading) && (reading.breakLeft !== 0);
-      this.naturalArmor = { active, apparelBonus: active ? (Number(reading.bonus) || 0) : 0 };
-    }
 
     // The ground's Hardness Rank as the Square's Qualities leave it. Derived rather than
     // stored, because the Rank the ARC picked and what Glass or Metallic do to it are two
@@ -1974,6 +1965,18 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       this.baseTierOfPower + DBUCharacterData.BREAKTHROUGH_LIMIT,
       Math.max(1, this.baseTierOfPower + this.tierOfPowerModifier + slot(this, "tierOfPower"))
     );
+
+    // Natural Armor, as its owner's effects read it - Survivor's Plating's Apparel Bonus: "Effects that refer to Natural
+    // Armor will apply only while that Natural Armor is Active" - and not broken, which is as good as not there.
+    {
+      const plating = Array.from(this.parent?.items ?? []).find(item => isNaturalArmor(item) && item.system?.equipped);
+      const reading = plating
+        ? craftedReading(plating.system.crafted, { getTrait, difficulties: {}, baseTier: this.baseTierOfPower }) : null;
+      const active = Boolean(reading) && (reading.breakLeft !== 0);
+      // And what its owner's Traits add per Tier of Power - Bio-Suit's 1(T).
+      const perTier = active ? platingBonusPerTier(this.parent, getTrait) * this.tierOfPower : 0;
+      this.naturalArmor = { active, apparelBonus: active ? ((Number(reading.bonus) || 0) + perTier) : 0 };
+    }
     // Multi-Form Technique: "While you have a Duplicate Minion ... reduce the Tier of Power of you ... by 1 (if already
     // Tier of Power 1, reduce your/their Combat Rolls by 2 instead)" - the 2 read with the Thresholds' (chat.mjs).
     const split = Array.from(this.parent?.items ?? []).some(item => (item.type === "maneuver")

@@ -20559,6 +20559,8 @@ async function applyAttackDamage(message, target, attack) {
   }
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerFlowExploit(message, target, armsUser);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerAngelicCounter(message, target, armsUser);
+  // "If you are hit by an Attacking Maneuver and take no Damage" - Bio-Suit's.
+  if (own.hit && (damage <= 0) && !isAbsoluteMiss(own)) await answerFor(target, "hit-unharmed");
   // Rubbery Body: hit with a Physical Attack, the one hit moved.
   if (own.hit && !isAbsoluteMiss(own) && (attack.foundation === "physical")) {
     offerRubberyMove(message, armsUser, target, { stretched: Boolean(attack.stretched) });
