@@ -21294,6 +21294,9 @@ export async function rollSteadfastCheck(actor) {
       rescued ? `failed, passed by ${rescued}` : (passed ? "passed" : "failed")}${carried}`
   });
 
+  // Passed: what answers succeeding at it - Surprising Resilience's Overwhelm.
+  if (passed) await steadfastPassed(actor, rolled);
+
   return passed;
 }
 
@@ -21302,6 +21305,13 @@ export async function rollSteadfastCheck(actor) {
  * instead choose to pass it automatically" - always asked of whoever plays them (the user's), as it fails: the Undying
  * Saiyan Heritage's Check would give must come before the Defeat stands. What passed it, by name, or "".
  */
+/** The Steadfast Check for a Health Threshold passed: what answers it, asked first where it is the player's. */
+async function steadfastPassed(actor, threshold) {
+  await offerTriggers(actor, "steadfast-passed");
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  await fireMoment(actor, "steadfast-passed", { threshold });
+}
+
 export async function rescueSteadfast(actor, total, target) {
   const entries = triggersFor(actor, ["steadfast-failed"]);
   if (!entries.length) return "";

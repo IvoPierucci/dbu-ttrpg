@@ -101,6 +101,9 @@ const TABLE = [
   { key: "knock-through", label: "You knock an Opponent through a Health Threshold", provides: [],
     doc: "Fired for whoever made the Attacking Maneuver whose Damage knocked them through (combat.mjs announceThreshold) - "
        + "Inherited Aggression's. What is the player's is asked in a window first." },
+  { key: "steadfast-passed", label: "You pass the Steadfast Check for a Health Threshold", provides: [],
+    doc: "Fired once the Steadfast Check for a Health Threshold is passed - rolled, or passed by an effect after failing "
+       + "(chat.mjs rollSteadfastCheck) - Surprising Resilience's Overwhelm. What is the player's is asked in a window first." },
   { key: "steadfast-failed", label: "You fail a Steadfast Check", provides: [],
     doc: "Asked as the Check fails, before its card (chat.mjs rescueSteadfast): what turns it into a pass (steadfastPass) "
        + "- Primitive Durability's 5th." },
