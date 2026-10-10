@@ -8,7 +8,7 @@ import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
-import { craftedReading, groundIgnored, isNaturalArmor, platingBonusPerTier, shrunkSize, weatherResisted } from "../gear.mjs";
+import { craftedReading, groundIgnored, isNaturalArmor, platingBonusPerTier, shrunkSize, weatherResisted, costumeMendable } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
   qualitiesOf }
   from "../environments.mjs";
@@ -1977,6 +1977,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       const perTier = active ? platingBonusPerTier(this.parent, getTrait) * this.tierOfPower : 0;
       this.naturalArmor = { active, apparelBonus: active ? ((Number(reading.bonus) || 0) + perTier) : 0 };
     }
+    // Majin Style (5)'s Default Costume, as its `requires` reads it: worn or broken, with Break Value to get back.
+    this.defaultCostume = { mendable: costumeMendable(this.parent?.items, getTrait) };
     // Multi-Form Technique: "While you have a Duplicate Minion ... reduce the Tier of Power of you ... by 1 (if already
     // Tier of Power 1, reduce your/their Combat Rolls by 2 instead)" - the 2 read with the Thresholds' (chat.mjs).
     const split = Array.from(this.parent?.items ?? []).some(item => (item.type === "maneuver")

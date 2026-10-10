@@ -1092,6 +1092,17 @@ export const APPAREL_EQUIP_COST = 2;
  *
  * @returns {{moves: Array<{id: string, layer: string}>, problem: string}}
  */
+/**
+ * Majin Style (5)'s Default Costume, mendable: "while wearing your Default Costume ... If the piece of Apparel was broken, it
+ * stops being broken" - Break Value lost, and worn, or broken (which took it off); not one merely taken off, nor destroyed.
+ */
+export function costumeMendable(items, getTrait) {
+  const costume = Array.from(items ?? []).find(item => item.getFlag?.("dbu-ttrpg", "defaultCostume"));
+  const crafted = costume?.system?.crafted;
+  if (!crafted || crafted.destroyed || !((Number(crafted.breakLost) || 0) > 0)) return false;
+  return Boolean(costume.system.equipped) || (craftedReading(crafted, { getTrait, difficulties: {} })?.breakLeft === 0);
+}
+
 export function equipPlan(items, item, layer, { inCombat = false, wearer = null, getTrait } = {}) {
   const refuse = problem => ({ moves: [], problem });
   const crafted = item?.system?.crafted;

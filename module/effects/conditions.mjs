@@ -197,9 +197,7 @@ const PREDICATES = {
    * Majin Style's Default Costume, worn or broken, with Break Value to get back - "while wearing your Default Costume ...
    * If the piece of Apparel was broken, it stops being broken".
    */
-  costumeMendable: scope => Array.from(scope.data?.parent?.items ?? []).some(item => item.getFlag?.("dbu-ttrpg", "defaultCostume")
-    && ((Number(item.system?.crafted?.breakLost) || 0) > 0) && !item.system?.crafted?.destroyed
-    && (item.system?.equipped || !String(item.system?.layer ?? ""))),
+  costumeMendable: scope => Boolean(scope.data?.defaultCostume?.mendable),
 
   /** Brought to 0 by their own effect - Revenge Bomber's. */
   ownDefeat: scope => Boolean(scope.data?.parent?.getFlag?.("dbu-ttrpg", "ownDefeat")),

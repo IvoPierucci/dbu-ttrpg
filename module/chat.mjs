@@ -13736,6 +13736,27 @@ function attackKiCost(attack) {
   return Math.max(0, (Number(paid.ki) || 0) + (Number(paid.divine) || 0) - wager);
 }
 
+/**
+ * Majin Style (5): "that piece of Apparel regains 1 Break Value. If the piece of Apparel was broken, it stops being broken" -
+ * and, broken, put back on where there is a Layer for it, as Survivor's Plating is: the Top Layer in a Combat Encounter,
+ * the first open one out of it.
+ */
+async function mendCostume(actor) {
+  const costume = Array.from(actor?.items ?? []).find(item => item.getFlag?.(SCOPE, "defaultCostume"));
+  const lost = Number(costume?.system?.crafted?.breakLost) || 0;
+  if (!lost || costume.system.crafted.destroyed) return;
+  const { craftedReading, equipPlan } = await import("./gear.mjs");
+  const broken = craftedReading(costume.system.crafted, { getTrait, difficulties: {} })?.breakLeft === 0;
+  await costume.update({ "system.crafted.breakLost": lost - 1 });
+  if (!broken || costume.system.equipped) return;
+  const inCombat = Boolean(game.combat?.started);
+  for (const layer of inCombat ? ["top"] : ["top", "middle", "bottom"]) {
+    const { moves, problem } = equipPlan(actor.items.contents, costume, layer, { inCombat, wearer: actor, getTrait });
+    if (problem || !moves.length) continue;
+    return actor.updateEmbeddedDocuments("Item", moves.map(({ id, layer: to }) => ({ _id: id, "system.equipped": true, "system.layer": to })));
+  }
+}
+
 /** Overwhelming Assault: "If it possesses an AoE, increase the Magnitude of that AoE by 1." */
 function overwhelmedArea(area, overwhelm) {
   if (!area || !overwhelm?.magnitude) return area;
@@ -21802,11 +21823,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     // "Double the amount of Life Points you regain from this Healing Surge" - Majin Regeneration's at Defeated.
     const multiplier = Math.max(1, Number(lifeMultiplier) || 1);
     // Majin Style: "that piece of Apparel regains 1 Break Value. If the piece of Apparel was broken, it stops being broken".
-    if (answered?.slots?.["costume.mend"] === true) {
-      const costume = Array.from(actor.items ?? []).find(item => item.getFlag?.(SCOPE, "defaultCostume"));
-      const lost = Number(costume?.system?.crafted?.breakLost) || 0;
-      if (lost > 0) await costume.update({ "system.crafted.breakLost": lost - 1 });
-    }
+    if (answered?.slots?.["costume.mend"] === true) await mendCostume(actor);
     // Survivor: "your Plating regains 1 Break Value. If the piece of Apparel was broken, it stops being broken".
     if (answered?.slots?.["plating.mend"] === true) {
       await (await import("./natural-armor.mjs")).repairNaturalArmor(actor, 1);
