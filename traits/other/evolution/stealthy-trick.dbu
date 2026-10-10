@@ -23,7 +23,7 @@ overwhelm.stacks += 1;
 
 # (3) An Attacking Maneuver of yours that hit someone Oblivious of you - as it hit, before it revealed you - 2 stacks of
 # Overwhelm held: 1(T) on the Wound against each of them for every 2 stacks, once a Round (chat.mjs rollAttackWound).
-# Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window there.
-[triggered/hit-opponent, 1/round, effect 3]
+# Asked in a window there - no Triggered/Automatic button (the user's).
+[triggered/hit-opponent, 1/round, chosen, effect 3]
 requires hitOblivious && stacksAtLeast(2, "overwhelm");
 wound.oblivious = true;

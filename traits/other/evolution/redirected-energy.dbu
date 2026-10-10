@@ -17,8 +17,8 @@ ki.value += 2(bT) * gained;
 
 # (2) An Attacking Maneuver of yours that hit an Opponent, done - a new moment, hit-concluded, once its Wound Roll is made
 # (chat.mjs rollAttackWound): a stack of Overwhelm for 1/2 its Ki Point Cost, once a Round - only where that is any.
-# Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window there.
-[triggered/hit-concluded, 1/round, effect 2]
+# Asked in a window there - no Triggered/Automatic button (the user's).
+[triggered/hit-concluded, 1/round, chosen, effect 2]
 requires hasResource("overwhelm") && attack.kiCost >= 2;
 overwhelm.stacks -= 1;
 ki.value += floor(attack.kiCost / 2);

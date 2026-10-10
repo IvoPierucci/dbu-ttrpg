@@ -16,9 +16,9 @@ text: >
 allow size.base.enormous;
 
 # (2) Hit: 1(T) on the Soak Value for that attack for every Size Category the one who made it is smaller - nothing, and not
-# spent, where they are not (chat.mjs, where the hit is settled). Automatic by default, its Triggered/Automatic button;
-# set Triggered, ticked in the On being hit window.
-[triggered/being-hit, toggle, 1/round, effect 2]
+# spent, where they are not (chat.mjs, where the hit is settled). Ticked in the On being hit window - no
+# Triggered/Automatic button (the user's).
+[triggered/being-hit, 1/round, effect 2]
 soak.bySize = true;
 
 # (3) As your turn starts, no Character in the Combat Encounter larger than you: a stack of Overwhelm. Automatic by

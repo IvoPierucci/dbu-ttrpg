@@ -16,9 +16,9 @@ text: >
 # player's to give the Transformation Maneuver.
 
 # (3) An Attacking Maneuver of yours that hit an Opponent, Raging: the Overwhelm stacks' 1(T) once more on its Wound Roll, a
-# part of its own; once it is made, Overwhelm down to 1 (chat.mjs rollAttackWound). Automatic by default, its
-# Triggered/Automatic button; set Triggered, asked in a window there.
-[triggered/hit-opponent, 1/round, effect 3]
+# part of its own; once it is made, Overwhelm down to 1 (chat.mjs rollAttackWound).
+# Asked in a window there - no Triggered/Automatic button (the user's).
+[triggered/hit-opponent, 1/round, chosen, effect 3]
 requires inState("raging");
 wound.overwhelmDouble = true;
 
