@@ -440,7 +440,11 @@ async function announceChanges(actor, before, after, kind) {
       // And the other end of entering one, which anything may answer. `on-removed` is
       // scoped to the thing being removed, so only Superior's own effects hear that -
       // and "upon leaving the Superior State" is written by things that are not Superior.
-      if (kind === "state") await fireMoment(actor, `left-state/${key}`, context);
+      // What is the player's - Comfortable Count's, handing over an Out-of-Sequence Maneuver - asked first.
+      if (kind === "state") {
+        await (await import("./chat.mjs")).offerTriggers(actor, `left-state/${key}`, context);
+        await fireMoment(actor, `left-state/${key}`, context);
+      }
     }
   }
 }

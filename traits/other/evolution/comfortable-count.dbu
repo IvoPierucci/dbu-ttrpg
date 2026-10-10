@@ -1,0 +1,33 @@
+id: comfortable-count
+name: Comfortable Count
+order: 6
+resource: comfort
+resourceLabel: Comfort
+description: >
+  You’re content to sit back, watch the show, and let others do the fighting for you. For now, anyways.
+text: >
+  Comfortable Count: You’re content to sit back, watch the show, and let others do the fighting for you. For now, anyways.
+  (1)-[Triggered/Start of Turn, Resource]: If you are in the Spectator State, gain a stack of Comfort.
+  (2)-[Triggered, 1/Round]: If you gain a stack of Comfort, regain 3(bT) Life and Ki Points.
+  (3)-[Triggered, 1/Round]: If you leave the Spectator State, you may exchange all of your stacks of Comfort for stacks of Overwhelm. If your number of Comfort stacks exceed your maximum number of Overwhelm stacks, you may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# (1) As your turn starts, a Spectator: a stack of Comfort - no most. Automatic by default; set Triggered, ticked on the
+# turn's card.
+[triggered/start-of-turn, effect 1]
+requires inState("spectator");
+comfort.stacks += 1;
+
+# (2) A stack of Comfort gained (moment comfort-gained, moments-runtime.mjs stacksGained): 3(bT) Life and Ki Points, once
+# a Round. Automatic by default; set Triggered, asked in a window there.
+[triggered/comfort-gained, 1/round, effect 2]
+life.value += 3(bT);
+ki.value += 3(bT);
+
+# (3) Leaving the Spectator State with Comfort held: asked in a window as you leave, never Automatic - it may hand over
+# an Out-of-Sequence Maneuver. Taken, every stack of Comfort for as many of Overwhelm (to its most), and with more Comfort
+# than Overwhelm's most, the Power Up or the Transformation Maneuver offered out of sequence (chat.mjs comfortForOverwhelm).
+[triggered/left-state/spectator, 1/round, outOfSequence, effect 3]
+requires hasResource("comfort");
+comfortForOverwhelm();

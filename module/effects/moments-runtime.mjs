@@ -212,6 +212,9 @@ async function writeStateful(actor, slots) {
 
   // Resources first, since the rest of this is one update and this is part of it.
   const resources = resourceUpdates(actor, slots);
+  // Gained, where that is a Moment of its own - Comfort's - answered once written.
+  const gained = resources ? GAINED_MOMENTS.filter(name =>
+    (Number(resources[name]?.stacks) || 0) > (Number(actor.system.resources?.[name]?.stacks) || 0)) : [];
   if (resources) {
     // Reached dynamically, like every other call from here into conditions.mjs: that
     // module imports fireMoment from this one, and a static import back closes the
@@ -244,6 +247,7 @@ async function writeStateful(actor, slots) {
   }
 
   if (!foundry.utils.isEmpty(updates)) await actor.update(updates);
+  if (gained.length) await stacksGained(actor, gained);
 }
 
 /**
@@ -256,11 +260,19 @@ async function writeStateful(actor, slots) {
  * what is the player's asked in a window first (Primitive Durability's "If you gain a stack of Battle Born").
  */
 export async function stacksGained(actor, names) {
-  if (!names.some(name => String(name).startsWith("battleborn"))) return;
   const { offerTriggers } = await import("../chat.mjs");
+  // Comfort's - Comfortable Count's "If you gain a stack of Comfort".
+  if (names.includes("comfort")) {
+    await offerTriggers(actor, "comfort-gained");
+    await fireMoment(actor, "comfort-gained");
+  }
+  if (!names.some(name => String(name).startsWith("battleborn"))) return;
   await offerTriggers(actor, "battle-born");
   return fireMoment(actor, "battle-born");
 }
+
+/** The Resources whose stacks gained are a Moment where an effect writes them - Comfort's. */
+const GAINED_MOMENTS = Object.freeze(["comfort"]);
 
 /** A character an effect named, by uuid or by name, or nothing. */
 function named(who) {
@@ -313,6 +325,11 @@ async function runVerb(actor, call, context) {
     case "kiForLife": {
       const { kiForLife } = await import("../chat.mjs");
       return kiForLife(actor);
+    }
+
+    case "comfortForOverwhelm": {
+      const { comfortForOverwhelm } = await import("../chat.mjs");
+      return comfortForOverwhelm(actor);
     }
 
     case "chooseEnemy": {

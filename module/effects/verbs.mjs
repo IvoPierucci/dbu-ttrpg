@@ -84,6 +84,12 @@ export const VERBS = Object.freeze({
     doc: "Discarded Divinity's: \"spend Ki Points up to an amount equal to 1/2 of your Max Capacity to regain an equal "
        + "number of Life Points\" - how much asked of whoever plays them (chat.mjs kiForLife)."
   },
+  comfortForOverwhelm: {
+    args: [0, 0],
+    names: [],
+    doc: "Comfortable Count's: every stack of Comfort for as many of Overwhelm (to its most) - and with more Comfort than "
+       + "Overwhelm's most, the Power Up or the Transformation Maneuver offered out of sequence (chat.mjs)."
+  },
   chooseEnemy: {
     args: [0, 0],
     names: [],

@@ -13912,6 +13912,29 @@ export async function askEnemy(actor) {
   await lasting(actor, { kind: KINDS.CONDITION, key: "compelled", edge: EDGES.ROUND, source: `Burning Hatred (${enemy.name})` });
 }
 
+/**
+ * Comfortable Count (3): "you may exchange all of your stacks of Comfort for stacks of Overwhelm. If your number of Comfort
+ * stacks exceed your maximum number of Overwhelm stacks, you may use the Power Up Maneuver or Transformation Maneuver as an
+ * Out-of-Sequence Maneuver." Overwhelm to its most; the two offered on a card of their own - leaving the Spectator State
+ * has none.
+ */
+export async function comfortForOverwhelm(actor) {
+  const comfort = Number(actor?.system?.resources?.comfort?.stacks) || 0;
+  if (!comfort) return;
+  const { resourceCeiling, resourceDefinitions } = await import("./effects/traits.mjs");
+  const most = resourceCeiling(resourceDefinitions().overwhelm, actor) || 4;
+  const held = { ...(actor.system.resources ?? {}) };
+  held.overwhelm = { ...(held.overwhelm ?? {}), stacks: Math.min(most, (Number(held.overwhelm?.stacks) || 0) + comfort), max: most };
+  delete held.comfort;
+  const { replaceObject } = await import("./conditions.mjs");
+  await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
+  if (comfort <= most) return;
+  const offer = (maneuverId, maneuverName) => ({ actorUuid: actor.uuid, actorName: actor.name, maneuverId, maneuverName,
+    reason: `Comfortable Count - ${comfort} Comfort` });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer("power-up", "Power Up"), offer("transformation", "Transformation")] } } });
+}
+
 /** Burning Hatred's "Increase your Wound Rolls against your Enemy by 3(T)". */
 function enemyParts(attacker, target) {
   const enemy = attacker?.getFlag?.(SCOPE, "enemy");
