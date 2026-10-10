@@ -147,6 +147,9 @@ const PREDICATES = {
   /** In the Healthy Health Threshold, whatever counts them as Healthy besides - Divine Physique (2)'s. */
   trulyHealthy: scope => (scope.data?.threshold?.key ?? "healthy") === "healthy",
 
+  /** The attack an AoE, and more than one hit by it - Overwhelming Pressure's (2) (moment hit-opponent's context). */
+  aoeHitMany: scope => Boolean(scope.context?.area) && ((Number(scope.context?.hits) || 0) > 1),
+
   /** Natural Armor with Break Value to get back, or broken - Survivor's Plating (3). */
   platingMendable: scope => Array.from(scope.data?.parent?.items ?? []).some(item => (item.flags?.["dbu-ttrpg"]?.naturalArmor === true)
     && (((Number(item.system?.crafted?.breakLost) || 0) > 0) || Boolean(item.system?.crafted?.destroyed))),

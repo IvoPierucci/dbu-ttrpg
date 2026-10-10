@@ -1,0 +1,34 @@
+id: overwhelming-pressure
+name: Overwhelming Pressure
+order: 5
+category: mind
+importance: secondary
+description: >
+  The incredible pressure of an Arcosian’s presence is enough to make lesser beings quake in terror and awe.
+text: >
+  Overwhelming Pressure (Mind): The incredible pressure of an Arcosian’s presence is enough to make lesser beings quake in terror and awe.
+  (1)-[Triggered]: If you hit a Character(s) with an Attacking Maneuver, increase the Wound Roll by 1(T) for every Health Threshold they are below (if you hit multiple Characters, calculate this independently).
+  (2)-[Triggered, 1/Round]: If you hit multiple Characters with an AoE, apply the effects of the first effect of Overwhelming Pressure as if all Opponents were below the same number of Health Thresholds as the Character below the most amount of Health Thresholds.
+  (3)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold or Defeat them with an Attacking Maneuver, enter the Superior State until the end of your turn.
+
+---
+
+# (1) Your Attacking Maneuver hit someone, its Wound Roll about to be made (moment hit-opponent): 1(T) on it against each
+# one hit for every Health Threshold they are below, worked out per target (chat.mjs rollAttackWound). Automatic by
+# default; set Triggered, asked in a window there.
+[triggered/hit-opponent, effect 1]
+wound.pressure = true;
+
+# (2) The same, with an AoE that hit more than one: each as far below as the one the most below. Once a Round.
+[triggered/hit-opponent, 1/round, effect 2]
+requires aoeHitMany;
+wound.pressure = true;
+wound.pressureMost = true;
+
+# (3) An Opponent knocked through a Health Threshold, or Defeated, by your Attacking Maneuver: Superior till the end of
+# your turn - once a Round between the two, one Triggered/Automatic button.
+[triggered/knock-through, 1/round, effect 3]
+enterState(superior, 1, turn);
+
+[triggered/defeat-opponent, 1/round, effect 3]
+enterState(superior, 1, turn);

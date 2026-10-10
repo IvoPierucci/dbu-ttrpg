@@ -504,8 +504,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "defeatedLockOn", "noCounterActions",
   // Healthy in truth, and the Superior State's extra Damage waived (Divine Physique's).
   "trulyHealthy", "superiorUnhurt",
-  // Natural Armor to mend (Survivor's Plating).
-  "platingMendable"]);
+  // Natural Armor to mend (Survivor's Plating); an AoE that hit more than one (Overwhelming Pressure's).
+  "platingMendable", "aoeHitMany"]);
 
 /**
  * Dice the character already has, named rather than written out.

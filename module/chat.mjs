@@ -17790,11 +17790,23 @@ async function rollAttackWound(message, attack) {
   }
 
   // "If you hit any number of Opponents with an Attacking Maneuver" - once for the Maneuver, before its Wound Roll so what
-  // it gives counts on it (Overwhelming Fighter's Overwhelm). Asked first where it is the player's.
-  if (targets.some(({ uuid, own }) => own.hit && (uuid !== attacker.uuid))) {
+  // it gives counts on it (Overwhelming Fighter's Overwhelm). Asked first where it is the player's. What it says about the
+  // Wound against each one hit - Overwhelming Pressure's - kept for the loop below.
+  const struck = targets.filter(({ uuid, own }) => own.hit && (uuid !== attacker.uuid));
+  let pressing = null;
+  if (struck.length) {
     await offerTriggers(attacker, "hit-opponent");
     const { fireMoment } = await import("./effects/moments-runtime.mjs");
-    await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId } });
+    const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
+      area: Boolean(attackArea(attack)) });
+    if (answered?.slots?.["wound.pressure"] === true) {
+      // "1(T) for every Health Threshold they are below" - each their own; with (2), "as if all ... were below the same
+      // number of Health Thresholds as the Character below the most".
+      const most = (answered.slots["wound.pressureMost"] === true)
+        ? Math.max(...struck.map(({ actor: hit }) => thresholdsBelow(hit))) : null;
+      const tier = Math.max(1, Number(attacker.system.tierOfPower) || 1);
+      pressing = target => (most ?? thresholdsBelow(target)) * tier;
+    }
   }
 
   // Elastic Tentacle: "double the amount of Diminishing Defense they suffer from that Attacking Maneuver" - ticked On
@@ -17934,6 +17946,7 @@ async function rollAttackWound(message, attack) {
     const woundParts = [...analysisBonus(attacker, target), ...mindReadBonus(attacker, target),
       { label: "God Meteor", value: godMeteorPinned(attacker, target) },
       { label: "Inherited Aggression", value: aggressionAgainst(attacker, target) },
+      { label: "Overwhelming Pressure", value: pressing ? pressing(target) : 0 },
       ...lockOnParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
       { label: attack.technique?.name ?? "Technique",
