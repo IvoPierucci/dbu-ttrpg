@@ -6,6 +6,8 @@ importance: primary
 resource: overwhelm
 resourceLabel: Overwhelm
 resourceMax: 4
+# (3) An Evolution Trait chosen as it is gained, and gone with it (racial.mjs grantOtherTrait).
+grantsOther: evolution
 description: >
   Arcosians are aggressive fighters who break down their opponents with powerful attacks and their unique capabilities.
 text: >
@@ -27,7 +29,8 @@ overwhelm.stacks += 1;
 if (hasResource("overwhelm")) {
     wound += (overwhelm.stacks * tierOfPower);
 }
-# (3) Waits on the Evolution Traits' texts.
+# (3) An Evolution Trait chosen as this is gained - its header's `grantsOther` - in the Other Traits list, and taken off
+# with it.
 # (4)
 allow maneuver.tail-attack;
 
