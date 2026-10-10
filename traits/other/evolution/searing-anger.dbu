@@ -1,0 +1,27 @@
+id: searing-anger
+name: Searing Anger
+order: 16
+description: >
+  The gall of these lesser beings who dare to stand before you boils your blood. You will triumph over all, for none can withstand the wrath of the imperious Arcosian race.
+text: >
+  Searing Anger: The gall of these lesser beings who dare to stand before you boils your blood. You will triumph over all, for none can withstand the wrath of the imperious Arcosian race.
+  (1)-[Passive]: Gain access to the Seething Fury Enhancement.
+  (2)-[Passive]: Reduce the Stress Test Requirement for Seething Fury by 2.
+  (3)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver while in the Raging State, double the bonus to your Wound Roll from your Overwhelm stacks for the duration of that Attacking Maneuver. After concluding that Attacking Maneuver, reduce your Overwhelm stacks to 1.
+  (4)-[Triggered/Raging]: Maximize your Overwhelm Stacks.
+
+---
+
+# (1), (2) Wait on the Transformations: Forms and Enhancements are not built yet - the Stress Test Requirement is the
+# player's to give the Transformation Maneuver.
+
+# (3) An Attacking Maneuver of yours that hit an Opponent, Raging: the Overwhelm stacks' 1(T) once more on its Wound Roll, a
+# part of its own; once it is made, Overwhelm down to 1 (chat.mjs rollAttackWound). Automatic by default, its
+# Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/hit-opponent, 1/round, effect 3]
+requires inState("raging");
+wound.overwhelmDouble = true;
+
+# (4) Entering the Raging State: Overwhelm at its most. Automatic by default, its Triggered/Automatic button.
+[triggered/state/raging, effect 4]
+overwhelm.stacks = 4;

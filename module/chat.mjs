@@ -17449,7 +17449,11 @@ function woundRoller(attack) {
  */
 function woundParts(attacker, attack) {
   const up = Number(attack.punchingUp) || 0;
+  // Searing Anger (3): "double the bonus to your Wound Roll from your Overwhelm stacks" - the stacks' 1(T) once more.
+  const doubled = attack.overwhelmDouble ? (Number(attacker.system.resources?.overwhelm?.stacks) || 0) : 0;
   return [
+    ...(doubled ? [{ label: "Searing Anger (Overwhelm doubled)", written: `+${doubled}(T)`,
+      value: doubled * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     // Punching Up: "increase the Wound Roll of that Attacking Maneuver by 1(T) for every Size Category they are larger".
     ...(up ? [{ label: "Punching Up", written: `+${up}(T)`, value: up * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...combinationFollowUps(attacker, attack),
@@ -17985,6 +17989,9 @@ async function rollAttackWound(message, attack) {
   // Wound against each one hit - Overwhelming Pressure's - kept for the loop below.
   const struck = targets.filter(({ uuid, own }) => own.hit && (uuid !== attacker.uuid));
   let pressing = null;
+  // Searing Anger (3): the Overwhelm stacks' bonus once more on this Wound Roll (woundParts), and Overwhelm down to 1 once
+  // it is made.
+  let searing = false;
   if (struck.length) {
     await offerTriggers(attacker, "hit-opponent");
     const { fireMoment } = await import("./effects/moments-runtime.mjs");
@@ -17997,6 +18004,10 @@ async function rollAttackWound(message, attack) {
         ? Math.max(...struck.map(({ actor: hit }) => thresholdsBelow(hit))) : null;
       const tier = Math.max(1, Number(attacker.system.tierOfPower) || 1);
       pressing = target => (most ?? thresholdsBelow(target)) * tier;
+    }
+    if (answered?.slots?.["wound.overwhelmDouble"] === true) {
+      searing = true;
+      attack = { ...attack, overwhelmDouble: true };
     }
   }
 
@@ -18034,6 +18045,13 @@ async function rollAttackWound(message, attack) {
   });
   // Done: Overwhelming Assault's stacks go now - after this Wound Roll counted them.
   await spendOverwhelm(attack);
+  // Searing Anger (3): "After concluding that Attacking Maneuver, reduce your Overwhelm stacks to 1."
+  if (searing && ((Number(attacker.system.resources?.overwhelm?.stacks) || 0) > 1)) {
+    const { replaceObject } = await import("./conditions.mjs");
+    const held = { ...(attacker.system.resources ?? {}) };
+    held.overwhelm = { ...held.overwhelm, stacks: 1 };
+    await requestActorUpdate(attacker, { "system.resources": replaceObject(held) });
+  }
   // "If you hit an Opponent with an Attacking Maneuver, after concluding that Attacking Maneuver" - Redirected Energy's,
   // with its Ki Point Cost.
   if (struck.length) await answerFor(attacker, "hit-concluded", { attack: { kiCost: attackKiCost(attack) } });
