@@ -152,7 +152,17 @@ function levelReached(b, entry) {
 function matchesMoment(b, moment) {
   if (!b.moment) return false;
   const bare = String(b.moment).split(/[(/]/)[0];
-  return bare === String(moment).split(/[(/]/)[0];
+  if (bare !== String(moment).split(/[(/]/)[0]) return false;
+  // And the one it names: `left-state/superior` is leaving Superior, not leaving any State (the user's report: Arrogant
+  // Declaration's answered leaving the Spectator State) - where the Moment fired names one too.
+  const wanted = momentParameter(b.moment);
+  const fired = momentParameter(moment);
+  return !wanted || !fired || (wanted === fired);
+}
+
+/** What a Moment names after its slash - `state/raging`'s "raging" - or "". */
+function momentParameter(moment) {
+  return (/\/(.+)$/.exec(String(moment))?.[1] ?? "").trim().toLowerCase();
 }
 
 // --- Statements ----------------------------------------------------------------
