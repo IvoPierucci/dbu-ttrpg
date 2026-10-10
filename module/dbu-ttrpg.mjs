@@ -41,9 +41,9 @@ Hooks.once("init", () => {
   // behind it, but not one written down in this system yet, and guessing at how it
   // breaks a tie would put a rule in the game that is not in the book.
   // A Botch's or a Critical's window, asked of the player whose character it is, wherever the roll is made.
-  CONFIG.queries["dbu-ttrpg.outcomeTriggers"] = async ({ actorUuid, kind }) => {
+  CONFIG.queries["dbu-ttrpg.outcomeTriggers"] = async ({ actorUuid, kind, context }) => {
     const { showOutcomeWindow } = await import("./chat.mjs");
-    return showOutcomeWindow(fromUuidSync(actorUuid), kind);
+    return showOutcomeWindow(fromUuidSync(actorUuid), kind, context ?? {});
   };
 
   // A sheet opened for the player whose character it is - Inherited Creativity's Technique, made on the GM's client.

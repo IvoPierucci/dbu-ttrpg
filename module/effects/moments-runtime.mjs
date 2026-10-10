@@ -315,6 +315,11 @@ async function runVerb(actor, call, context) {
       return kiForLife(actor);
     }
 
+    case "chooseEnemy": {
+      const { askEnemy } = await import("../chat.mjs");
+      return askEnemy(actor);
+    }
+
     case "lockOn": {
       const { askLockOn } = await import("../chat.mjs");
       return askLockOn(actor);

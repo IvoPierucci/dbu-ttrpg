@@ -84,6 +84,12 @@ export const VERBS = Object.freeze({
     doc: "Discarded Divinity's: \"spend Ki Points up to an amount equal to 1/2 of your Max Capacity to regain an equal "
        + "number of Life Points\" - how much asked of whoever plays them (chat.mjs kiForLife)."
   },
+  chooseEnemy: {
+    args: [0, 0],
+    names: [],
+    doc: "Burning Hatred's: an Opponent on the scene, asked of whoever plays them, their Enemy until another is chosen - "
+       + "and Compelled till the end of the Combat Round (chat.mjs askEnemy)."
+  },
   lockOn: {
     args: [0, 0],
     names: [],

@@ -1,0 +1,31 @@
+id: burning-hatred
+name: Burning Hatred
+order: 5
+description: >
+  You single out a foe, and when they can no longer provide any entertainment, you turn your vicious gaze to another.
+text: >
+  Burning Hatred: You single out a foe, and when they can no longer provide any entertainment, you turn your vicious gaze to another.
+  (1)-[Triggered/Start of Combat Round, Ruling]: Select an Opponent, they become your ‘Enemy’. You gain the Compelled Combat Condition against your Enemy until the end of the Combat Round.
+  (2)-[Passive]: Increase your Wound Rolls against your Enemy by 3(T).
+  (3)-[Triggered]: If you Defeat your Enemy or knock them through a Health Threshold with your Attacking Maneuver, maximize your stacks of Overwhelm.
+
+---
+
+# (1) As each Combat Round starts: which Opponent on the scene - of another disposition than your token's - asked of
+# whoever plays you, or none; your Enemy until another is chosen. Compelled till the Round ends - against them, the
+# table's: who you were told to attack is not tracked (chat.mjs askEnemy). Automatic by default, asked every Round;
+# set Triggered, ticked on the Round's card.
+[triggered/start-of-round, effect 1]
+chooseEnemy();
+
+# (2) Against your Enemy, where the Wound is worked out per target (chat.mjs enemyParts).
+
+# (3) Your Enemy Defeated, or knocked through a Health Threshold, by your Attacking Maneuver: Overwhelm at its most
+# (Overwhelming Fighter's, 4). One Triggered/Automatic button for both.
+[triggered/knock-through, effect 3]
+requires fallenEnemy;
+overwhelm.stacks = 4;
+
+[triggered/defeat-opponent, effect 3]
+requires fallenEnemy;
+overwhelm.stacks = 4;

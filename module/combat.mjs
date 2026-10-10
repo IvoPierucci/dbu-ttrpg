@@ -938,7 +938,7 @@ export function registerDefeatHooks() {
       const knocker = fromUuidSync(options.dbuKnockedBy);
       if (knocker && (knocker.uuid !== actor.uuid)) {
         const { offerTriggers } = await import("./chat.mjs");
-        await offerTriggers(knocker, "defeat-opponent");
+        await offerTriggers(knocker, "defeat-opponent", { defeatedUuid: actor.uuid });
         await fireMoment(knocker, "defeat-opponent", { defeatedUuid: actor.uuid });
       }
     }
@@ -1057,8 +1057,9 @@ async function announceThreshold(actor, before, knockedBy = "") {
   const knocker = knockedBy ? fromUuidSync(knockedBy) : null;
   if (knocker && (knocker.uuid !== actor.uuid)) {
     const { offerTriggers } = await import("./chat.mjs");
-    await offerTriggers(knocker, "knock-through");
-    await fireMoment(knocker, "knock-through");
+    // Who was knocked through - Burning Hatred's Enemy.
+    await offerTriggers(knocker, "knock-through", { knockedUuid: actor.uuid });
+    await fireMoment(knocker, "knock-through", { knockedUuid: actor.uuid });
   }
 
   await announce("threshold", {

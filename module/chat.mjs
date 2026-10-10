@@ -832,7 +832,7 @@ export async function answerFor(actor, moment, context = {}) {
     }
     return null;
   }
-  await offerTriggers(actor, moment);
+  await offerTriggers(actor, moment, context);
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   return fireMoment(actor, moment, context);
 }
@@ -6151,13 +6151,15 @@ async function outcomeTurn(actor, kind) {
  * and is left to the player is offered in a window on their own client, wherever the effect runs, and what they tick is
  * armed for it.
  */
-export async function offerTriggers(actor, moment) {
-  if (!unarmedTriggers(actor, moment).length) return;
+export async function offerTriggers(actor, moment, context = {}) {
+  // Asked with what happened - who fell, for Lock On's and Burning Hatred's `requires` - or a `requires` reading it was
+  // never true here, and the effect never offered.
+  if (!unarmedTriggers(actor, moment, context).length) return;
   const player = playerOf(actor);
   let ids = [];
-  if (player === game.user) ids = await showOutcomeWindow(actor, moment);
+  if (player === game.user) ids = await showOutcomeWindow(actor, moment, context);
   else if (player) {
-    try { ids = await player.query(OUTCOME_QUERY, { actorUuid: actor.uuid, kind: moment }, { timeout: 120000 }) ?? []; }
+    try { ids = await player.query(OUTCOME_QUERY, { actorUuid: actor.uuid, kind: moment, context }, { timeout: 120000 }) ?? []; }
     catch (error) { console.warn(`DBU TTRPG | ${actor.name}'s ${moment} could not be asked`, error); }
   }
   const armed = actor.system.armedTalents ?? [];
@@ -6181,13 +6183,13 @@ async function payCounterCosts(actor, offered) {
  * What answers this Moment, parameter and all (`state/raging`), and is not already set to answer it by itself - the
  * player's to choose now.
  */
-function unarmedTriggers(actor, moment) {
+function unarmedTriggers(actor, moment, context = {}) {
   const bare = String(moment).split(/[(/]/)[0];
   return triggersFor(actor, [bare]).filter(entry => !entry.armed
     && ((bare === moment) || (String(entry.program.blocks?.[0]?.moment ?? "") === moment))
     // Only what may answer it now - Majin Style's, with a Default Costume to mend.
     && (!entry.program.blocks?.[0]?.requires
-      || evaluateCondition(entry.program.blocks[0].requires, { data: actor.system, context: {}, errors: [] }))
+      || evaluateCondition(entry.program.blocks[0].requires, { data: actor.system, context, errors: [] }))
     // And what costs Counter Actions only where they can be had - an Action to convert counting (Divine Physique's).
     && (!game.combat?.started
       || (actionsWithin(actor, "counter") >= (Number(entry.program.blocks?.[0]?.budget?.counter) || 0))));
@@ -6279,8 +6281,8 @@ export async function kiForLife(actor) {
 export const OUTCOME_QUERY = "dbu-ttrpg.outcomeTriggers";
 
 /** The window itself, on the player's client: what answers the Botch or Critical, ticked. The block ids taken. */
-export async function showOutcomeWindow(actor, kind) {
-  const triggers = ["botch", "critical"].includes(kind) ? triggersFor(actor, [kind]) : unarmedTriggers(actor, kind);
+export async function showOutcomeWindow(actor, kind, context = {}) {
+  const triggers = ["botch", "critical"].includes(kind) ? triggersFor(actor, [kind]) : unarmedTriggers(actor, kind, context);
   if (!actor || !triggers.length) return [];
   const before = new Set(actor.system.armedTalents ?? []);
   const said = { botch: ["Botch", "A Botch on this Combat Roll."], critical: ["Critical", "A Critical on this Combat Roll."] }[kind]
@@ -13890,6 +13892,35 @@ export async function askLockOn(actor) {
 }
 
 /**
+ * Burning Hatred: "Select an Opponent, they become your 'Enemy'. You gain the Compelled Combat Condition against your Enemy
+ * until the end of the Combat Round." Which, of those on the scene of another disposition than theirs, asked of whoever
+ * plays them - or none, and no Enemy. Compelled against them is the table's: who you were told to attack is not tracked.
+ */
+export async function askEnemy(actor) {
+  const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && ((own === undefined) || (token.document?.disposition !== own)))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Burning Hatred`,
+    [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "No Enemy" }]);
+  const enemy = opponents.find(each => each.uuid === picked);
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.enemy`]: enemy ? { uuid: enemy.uuid, name: enemy.name } : null });
+  if (!enemy) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "compelled", 1);
+  await lasting(actor, { kind: KINDS.CONDITION, key: "compelled", edge: EDGES.ROUND, source: `Burning Hatred (${enemy.name})` });
+}
+
+/** Burning Hatred's "Increase your Wound Rolls against your Enemy by 3(T)". */
+function enemyParts(attacker, target) {
+  const enemy = attacker?.getFlag?.(SCOPE, "enemy");
+  if (!enemy || !target || (enemy.uuid !== target.uuid)) return [];
+  if (!(attacker.items ?? []).some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "burning-hatred")) return [];
+  return [{ label: "Burning Hatred", written: "+3(T)", value: 3 * Math.max(1, attacker.system.tierOfPower ?? 1) }];
+}
+
+/**
  * What answers a Moment read where it happens rather than fired - Damage Inhibitor's Direct Hit, Hyper Resilience's light
  * Damage: its armed effects (Automatic, or ticked), collected, and spent as they are used.
  */
@@ -17974,6 +18005,7 @@ async function rollAttackWound(message, attack) {
       { label: "Inherited Aggression", value: aggressionAgainst(attacker, target) },
       { label: "Overwhelming Pressure", value: pressing ? pressing(target) : 0 },
       ...lockOnParts(attacker, target),
+      ...enemyParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
       { label: attack.technique?.name ?? "Technique",
         value: techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),

@@ -147,6 +147,12 @@ const PREDICATES = {
   /** In the Healthy Health Threshold, whatever counts them as Healthy besides - Divine Physique (2)'s. */
   trulyHealthy: scope => (scope.data?.threshold?.key ?? "healthy") === "healthy",
 
+  /** Whoever was Defeated or knocked through a Threshold is your Enemy - Burning Hatred's (chat.mjs askEnemy). */
+  fallenEnemy: scope => {
+    const fallen = scope.context?.defeatedUuid || scope.context?.knockedUuid || "";
+    return Boolean(fallen) && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "enemy")?.uuid === fallen);
+  },
+
   /** The attack an AoE, and more than one hit by it - Overwhelming Pressure's (2) (moment hit-opponent's context). */
   aoeHitMany: scope => Boolean(scope.context?.area) && ((Number(scope.context?.hits) || 0) > 1),
 
