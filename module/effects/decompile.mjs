@@ -27,6 +27,7 @@ function blockText(b) {
   if (b.budget?.round) header.push(`${b.budget.round}/round`);
   if (b.budget?.encounter) header.push(`${b.budget.encounter}/encounter`);
   if (b.budget?.actions) header.push(`costs ${b.budget.actions} action`);
+  if (b.budget?.counter) header.push(`costs ${b.budget.counter} counter`);
   if (b.modifiers?.grantsManeuver) header.push(`${b.modifiers.grantsManeuver} maneuver`);
   if (b.modifiers?.before) header.push("before");
   if (b.modifiers?.first) header.push("first");

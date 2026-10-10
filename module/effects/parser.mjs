@@ -207,6 +207,13 @@ class Parser {
             took = 2;
             break;
           case "costs":
+            // `costs 1 counter` - a Counter Action, paid as it is ticked in its window - an Action converted into one
+            // where the player says, as anywhere a Counter Action is paid (Divine Physique's).
+            if (String(rest[1]?.value ?? "").startsWith("counter")) {
+              budget.counter = Number(rest[0]?.value ?? 1);
+              took = 3;
+              break;
+            }
             budget.actions = Number(rest[0]?.value ?? 1);
             modifiers.activated = true;
             // `costs 1 action`, with the noun spelled out the way the rulebook says it.

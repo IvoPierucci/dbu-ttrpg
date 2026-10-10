@@ -6041,6 +6041,8 @@ export async function answerPower(actor, card = null) {
   // Only what may answer it now - Snack Motivated's, after a Snack this Round.
   const triggers = unarmedTriggers(actor, "power");
   if (triggers.length) await prepareRoll(actor, triggers, "Power Up", "", { rolling: false });
+  // What was ticked at a Counter Action's price - Divine Physique's Superior - paid, or left unticked.
+  await payCounterCosts(actor, triggers);
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const fired = await fireMoment(actor, "power");
   if (fired?.slots?.["malice.outOfSequence"] === true) await maliceOutOfSequence(actor, card);
@@ -6145,6 +6147,19 @@ export async function offerTriggers(actor, moment) {
 }
 
 /**
+ * The Counter Actions what was ticked costs (`costs 1 counter`), paid - an Action converted into one where the player says
+ * (combat.mjs spendActions). One that cannot be paid is unticked, and does not answer.
+ */
+async function payCounterCosts(actor, offered) {
+  for (const entry of offered) {
+    const cost = Number(entry.program.blocks?.[0]?.budget?.counter) || 0;
+    if (!cost || !(actor.system.armedTalents ?? []).includes(entry.blockId)) continue;
+    if (await spendActions(actor, cost, "counter")) continue;
+    await actor.update({ "system.armedTalents": (actor.system.armedTalents ?? []).filter(id => id !== entry.blockId) });
+  }
+}
+
+/**
  * What answers this Moment, parameter and all (`state/raging`), and is not already set to answer it by itself - the
  * player's to choose now.
  */
@@ -6154,7 +6169,10 @@ function unarmedTriggers(actor, moment) {
     && ((bare === moment) || (String(entry.program.blocks?.[0]?.moment ?? "") === moment))
     // Only what may answer it now - Majin Style's, with a Default Costume to mend.
     && (!entry.program.blocks?.[0]?.requires
-      || evaluateCondition(entry.program.blocks[0].requires, { data: actor.system, context: {}, errors: [] })));
+      || evaluateCondition(entry.program.blocks[0].requires, { data: actor.system, context: {}, errors: [] }))
+    // And what costs Counter Actions only where they can be had - an Action to convert counting (Divine Physique's).
+    && (!game.combat?.started
+      || (actionsWithin(actor, "counter") >= (Number(entry.program.blocks?.[0]?.budget?.counter) || 0))));
 }
 
 /** Who answers for a character: an active player who owns it, or else the active GM. */
@@ -13337,7 +13355,7 @@ async function redefendWith(message, target, defence, wager = 0, foundation = "e
 function angelicOpen(target, attacker) {
   return Boolean(target && attacker && (target.uuid !== attacker.uuid) && !target.system?.defeated
     && (target.system?.effects?.slots?.["angelic.redodge"] === true)
-    && ((Number(target.system.actions?.counterLeft) || 0) > 0)
+    && (!game.combat?.started || (actionsWithin(target, "counter") >= 1))
     && (target.getFlag?.(SCOPE, "angelicRound") !== roundKey()));
 }
 
@@ -13659,7 +13677,7 @@ function offerAngelicCounter(message, actor, attacker) {
  */
 function angelicOffenseOpen(attacker, attack) {
   if (!attacker || (attacker.system?.effects?.slots?.["angelic.offenseClash"] !== true)) return [];
-  if (((Number(attacker.system.actions?.counterLeft) || 0) <= 0) || (attacker.getFlag?.(SCOPE, "angelicOffenseRound") === roundKey())) return [];
+  if ((game.combat?.started && (actionsWithin(attacker, "counter") < 1)) || (attacker.getFlag?.(SCOPE, "angelicOffenseRound") === roundKey())) return [];
   return (attack.result?.targets ?? []).filter(branch => branch.hit && (branch.uuid !== attacker.uuid))
     .map(branch => fromUuidSync(branch.uuid)).filter(target => target && !target.system?.defeated);
 }

@@ -48,9 +48,8 @@ if (!belowThreshold("bruised")) {
 }
 
 # (5) The Power Up Maneuver, below the Injured Health Threshold - Injured or Critical (the user's: below a Threshold is
-# in it or under it) - with a Counter Action left: asked in its window - the Counter Action spent, Superior till the end
-# of your next turn.
-[triggered/power, 1/encounter, effect 5]
-requires belowThreshold("injured") && !noCounterActions;
-actions.counterSpent += 1;
+# in it or under it): asked in its window with a Counter Action to pay - or an Action to convert into one, offered as
+# anywhere (the user's) - paid as it is ticked; Superior till the end of your next turn.
+[triggered/power, 1/encounter, costs 1 counter, effect 5]
+requires belowThreshold("injured");
 enterState(superior, 1, next-turn);
