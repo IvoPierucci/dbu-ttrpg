@@ -675,6 +675,8 @@ export function registerCombatHooks() {
       // Every clock stops here, not only the ones counting the Encounter: a turn edge
       // that never arrives is a duration that never ends, and there are no more turns.
       await encounterEnded(actor);
+      // "At the end of each Combat Encounter, your Natural Armor is fully repaired."
+      await (await import("./natural-armor.mjs")).repairNaturalArmor(actor);
       // A Frozen Turn still open - its last attack never finished: time runs again with the Encounter's end.
       if (actor.getFlag?.("dbu-ttrpg", "frozenTurn")) await (await import("./chat.mjs")).endFrozenTurn(actor);
       // Quick Learner: "At the end of the Combat Encounter, you can pay the TP Cost of any Copied Technique to gain access

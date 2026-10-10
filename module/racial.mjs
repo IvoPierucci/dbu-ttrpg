@@ -499,6 +499,8 @@ export async function addRacialTrait(actor, trait) {
   if (!item) return null;
   await giveGrants(actor, item, made.grants, trait.name);
   await automateAll(actor, item);
+  // Natural Armor it gives - Survivor's Plating - made before its Options, which may put a Quality on it.
+  if (trait.naturalArmor) await (await import("./natural-armor.mjs")).grantNaturalArmor(actor, item, String(trait.naturalArmor));
   for (const option of chosenOptions(item)) await madeByOption(actor, item, option);
   if (trait.defaultCostume) await askDefaultCostume(actor);
   return item;
@@ -677,6 +679,7 @@ export function chosenOptions(item) {
  * Weapon Quality" - their Categories asked, made on the Gear tab, marked as that Option's and never damaged or destroyed.
  */
 async function madeByOption(actor, item, option) {
+  if (option?.platingQuality) await platingQuality(actor, item, String(option.platingQuality), true);
   const count = Number(option?.installsWeapons) || 0;
   if (!count) return;
   const { craftedItemFrom, WEAPON_TYPES } = await import("./gear.mjs");
@@ -719,6 +722,25 @@ async function madeByOption(actor, item, option) {
   const room = Math.max(0, INTEGRATED_ACTIVE.weapon - activeIntegrated(actor.items.contents, "weapon").length);
   made.forEach((data, index) => { data.system.equipped = index < room; });
   await actor.createEmbeddedDocuments("Item", made);
+}
+
+/**
+ * A Quality an Option gives the Natural Armor its Trait made - Combat Plating's Armed, "without occupying a Quality Slot"
+ * (`free`) - or takes back as another Option is chosen.
+ */
+async function platingQuality(actor, item, id, on) {
+  const plating = Array.from(actor?.items ?? []).find(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
+    && (each.flags?.["dbu-ttrpg"]?.naturalArmor === true));
+  if (!plating) return;
+  const had = (plating.system.crafted?.qualities ?? []).map(entry => ((typeof entry === "string") ? { id: entry } : entry));
+  const without = had.filter(entry => !((entry.id === id) && entry.free));
+  if (on && (without.length !== had.length)) return;
+  const qualities = on ? [...without, { id, slots: 0, choice: "", on: false, name: "", free: true }] : without;
+  if (qualities.length === had.length && !on) return;
+  const { composeEffects } = await import("./gear.mjs");
+  const crafted = { ...plating.system.crafted, qualities };
+  await plating.update({ "system.crafted.qualities": qualities,
+    "system.crafted.effects": composeEffects(crafted, plating.system.crafted.effects ?? "", { getTrait }) });
 }
 
 /** The Option chosen on a Racial Trait Item, where it has an Option effect of one - its id, or "". */
@@ -774,6 +796,9 @@ export async function changeRacialOption(item, optionId, replacing = "") {
   const gone = Array.from(actor.items).filter(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
     && each.flags?.["dbu-ttrpg"]?.grantedByOption && (each.flags["dbu-ttrpg"].grantedByOption === old)).map(each => each.id);
   if (gone.length) await actor.deleteEmbeddedDocuments("Item", gone);
+  // And what the old one put on Natural Armor - Combat Plating's Armed.
+  const was = old ? getTrait(old) : null;
+  if (was?.platingQuality) await platingQuality(actor, item, String(was.platingQuality), false);
   await madeByOption(actor, item, option);
   await giveGrants(actor, item, {
     unique: listOf(option.grantsUnique).map(id => ({ id, restrictions: listOf(option.uniqueRestrictions), option: option.id })),

@@ -1,0 +1,15 @@
+id: dense-plating
+name: Dense Plating
+order: 1
+optionOf: survivor
+optionEffect: 2
+description: >
+  Increase your Soak Value by 1/2 (rounded up) of your Plating’s Apparel Bonus.
+text: >
+  Dense Plating [Passive]: Increase your Soak Value by 1/2 (rounded up) of your Plating’s Apparel Bonus.
+
+---
+
+# The Plating's Apparel Bonus - nothing while it is Inactive (actor-character.mjs naturalArmor).
+[passive]
+soakValue += ceil(naturalArmor.apparelBonus / 2);

@@ -3,6 +3,8 @@ name: Survivor
 order: 2
 category: body
 importance: primary
+# (1) Its Plating: a piece of Natural Armor made as the Trait is gained, gone with it (natural-armor.mjs).
+naturalArmor: Plating
 description: >
   With sturdy bodies capable of surviving even the icy black depths of space, Arcosians are capable of withstanding far more damage than most races.
 text: >
@@ -23,15 +25,22 @@ text: >
 
 ---
 
-# (1), (2) and (3) wait on Natural Armor's text - the Plating is a piece of it.
+# (1) The Plating, made with the Trait (the header's `naturalArmor`). (2) Its Options, one file each beside this one.
+
+# (3) A Healing Surge about to be used - asked in its window while the Plating has Break Value to get back: 1 of it, and
+# broken no more (chat.mjs takeSurge, natural-armor.mjs repairNaturalArmor). Legend Realized waits on Transformations.
+[triggered/healing-surge, 1/round, effect 3]
+requires platingMendable;
+plating.mend = true;
 
 [passive]
 # (4)
 forbid condition.suffocating;
 
-# (5) Below 0. The Stress Value waits on its text.
+# (5) Below 0 - the Stress Value read as the Stress Bonus (the user's).
 if (life.value < 0) {
     combatRolls -= 1(bT);
+    stressBonus -= 1;
 }
 
 # (6) The least Life Points can be is -1/4 (rounded up) of the Maximum; Defeated there, as anyone is at 0

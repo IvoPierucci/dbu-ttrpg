@@ -15,7 +15,7 @@ import { PRIORITY } from "./interpreter.mjs";
 import { getTrait, traitsOfKind } from "./traits.mjs";
 import { environmentIdOf, isAirborne, qualitiesOf } from "../environments.mjs";
 import { lightLevelOf } from "../light.mjs";
-import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, craftedReading,
+import { accessoriesInEffect, apparelPenaltyPieces, apparelQualitiesInEffect, categoryApplies, craftedReading,
   effectParts, effectsOf, groundIgnored, pieceTokens, scriptWithPiece,
   topLayerPiece, wieldedWeapons, formScript, activeForm, buddiesOf, buddyScript,
   buddyHeader } from "../gear.mjs";
@@ -162,13 +162,13 @@ function apparelPrograms(actor, report) {
     // and whatever has been written since. A part at a time, so each keeps its own name in the
     // workings.
     const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {},
-      category: item === top });
+      category: categoryApplies(item, top) });
     // What its Effects may name about it: the Armor's multiplier, the Rolls its Weights
     // reach, and whether they are waived right now.
     const tokens = pieceTokens(item, actor, reading, getTrait);
     const parts = effectParts(effectsOf(item.system.crafted, getTrait))
       // "Benefits that you gain while wearing that piece of Apparel as the Top Layer."
-      .filter(part => (part.type !== "category") || (item === top));
+      .filter(part => (part.type !== "category") || categoryApplies(item, top));
     return { item, reading, tokens, parts };
   });
   const kept = doubleDipped(worn);

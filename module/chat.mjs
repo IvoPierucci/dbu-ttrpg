@@ -21443,6 +21443,10 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
       const lost = Number(costume?.system?.crafted?.breakLost) || 0;
       if (lost > 0) await costume.update({ "system.crafted.breakLost": lost - 1 });
     }
+    // Survivor: "your Plating regains 1 Break Value. If the piece of Apparel was broken, it stops being broken".
+    if (answered?.slots?.["plating.mend"] === true) {
+      await (await import("./natural-armor.mjs")).repairNaturalArmor(actor, 1);
+    }
     // Majin Malice: "forgo gaining Life Points to instead regain an equal amount of Ki Points and Capacity instead. This
     // can allow your Capacity to exceed your Max Capacity."
     if (answered?.slots?.["surge.asKi"] === true) {

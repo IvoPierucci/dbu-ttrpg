@@ -302,7 +302,7 @@ export function groundIgnored(items, getTrait) {
   const ignored = { environments: false, qualities: false };
   const top = topLayerPiece(items);
   for (const { item } of apparelQualitiesInEffect(items)) {
-    const piece = pieceSlots(item.system.crafted, { getTrait, category: item === top });
+    const piece = pieceSlots(item.system.crafted, { getTrait, category: categoryApplies(item, top) });
     if (piece["piece.ignoresEnvironments"] === true) ignored.environments = true;
     if (piece["piece.ignoresEnvironmentalQualities"] === true) ignored.qualities = true;
   }
@@ -415,7 +415,7 @@ export function weatherResisted(items, weatherId, getTrait, data = null) {
   let tiers = 0;
   const top = topLayerPiece(items);
   for (const { item } of apparelQualitiesInEffect(items)) {
-    tiers += applySlot(pieceSlots(item.system.crafted, { getTrait, data, category: item === top }),
+    tiers += applySlot(pieceSlots(item.system.crafted, { getTrait, data, category: categoryApplies(item, top) }),
       `piece.resistsWeather.${weatherId}`, 0);
   }
   return tiers;
@@ -474,7 +474,7 @@ export function spikesOf(items, getTrait, baseTier = 1) {
   const top = topLayerPiece(items);
   for (const { item } of apparelQualitiesInEffect(items)) {
     const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {}, baseTier,
-      category: item === top });
+      category: categoryApplies(item, top) });
     if (!reading?.spikes) continue;
     found.push({ item, amount: reading.bonus ?? 0 });
   }
@@ -560,7 +560,7 @@ export function apparelPenaltyPieces(items, getTrait) {
   const top = topLayerPiece(items);
   // Integrated: "ignore any initial Penalties they would normally incur" - not counted.
   const counted = apparelQualitiesInEffect(items).filter(({ item }) => !isIntegrated(item)
-    && (craftedReading(item.system.crafted, { getTrait, difficulties: {}, category: item === top })
+    && (craftedReading(item.system.crafted, { getTrait, difficulties: {}, category: categoryApplies(item, top) })
       ?.countsForPenalty !== false));
   return Math.max(0, counted.length - 1);
 }
@@ -895,8 +895,22 @@ export function topLayerPiece(items) {
     const at = order.indexOf(item.system?.layer ?? "");
     return (at < 0) ? order.length : at;
   };
-  return apparelQualitiesInEffect(items).map(({ item }) => item)
+  // Never Natural Armor: its Category is its own whatever is worn over it (categoryApplies).
+  return apparelQualitiesInEffect(items).map(({ item }) => item).filter(item => !isNaturalArmor(item))
     .sort((a, b) => rank(a) - rank(b))[0] ?? null;
+}
+
+/** Natural Armor (natural-armor.mjs): Survivor's Plating. */
+export function isNaturalArmor(item) {
+  return (item?.type === "gear") && (item.flags?.["dbu-ttrpg"]?.naturalArmor === true);
+}
+
+/**
+ * Whether a worn piece's Category benefit applies: the Top Layer's - and Natural Armor's always, the one worn over it
+ * giving its own besides (the user's).
+ */
+export function categoryApplies(item, top) {
+  return (item === top) || isNaturalArmor(item);
 }
 
 /**
@@ -1079,8 +1093,13 @@ export function equipPlan(items, item, layer, { inCombat = false, wearer = null,
     return refuse(`Made for a ${sizeLabel(made)} Character.`);
   }
 
+  // Natural Armor is on no Layer, and Armor that nothing may go over only where it is worn: "While you possess Natural
+  // Armor, you can only wear a single layer of Apparel."
   const worn = apparelQualitiesInEffect(items).map(({ item: piece }) => piece)
-    .filter(piece => piece.id !== item.id);
+    .filter(piece => (piece.id !== item.id) && !isNaturalArmor(piece));
+  if ((items ?? []).some(isNaturalArmor) && worn.length) {
+    return refuse("Natural Armor: a single layer of Apparel.");
+  }
   const isArmor = piece => piece.system?.crafted?.category === "armor";
   const overArmor = pieceSlots(crafted, { getTrait })["piece.wornOverArmor"] === true;
   const armorWorn = worn.find(isArmor);
@@ -1676,6 +1695,8 @@ export function qualitySlotRange(trait) {
 
 /** The Slots one Quality entry takes: what was chosen, held to its range. */
 export function slotsTaken(entry, trait) {
+  // One given "without occupying a Quality Slot" - Combat Plating's Armed.
+  if (entry?.free) return 0;
   const { min, max } = qualitySlotRange(trait);
   const chosen = Number(entry?.slots) || 0;
   return chosen ? Math.min(max, Math.max(min, chosen)) : min;

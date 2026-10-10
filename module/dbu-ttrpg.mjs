@@ -4,6 +4,7 @@ import DBUTalentData from "./data/item-talent.mjs";
 import DBURacialData from "./data/item-racial.mjs";
 import { registerRacialHooks } from "./racial.mjs";
 import { registerIntegratedHooks } from "./integrated.mjs";
+import { registerNaturalArmorHooks } from "./natural-armor.mjs";
 import DBUTalentSheet from "./sheets/item-talent-sheet.mjs";
 import DBUManeuverData from "./data/item-maneuver.mjs";
 import DBUManeuverSheet from "./sheets/item-maneuver-sheet.mjs";
@@ -104,6 +105,7 @@ Hooks.once("init", () => {
   registerRacialLifeHooks();
   registerRacialHooks();
   registerIntegratedHooks();
+  registerNaturalArmorHooks();
   registerBreathHooks();
   registerWornBreathHooks();
   registerConditionHooks();

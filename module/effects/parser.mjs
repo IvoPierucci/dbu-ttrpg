@@ -503,7 +503,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // The one Defeated, your Lock On Target; no Counter Action left (Lingering Instincts').
   "defeatedLockOn", "noCounterActions",
   // Healthy in truth, and the Superior State's extra Damage waived (Divine Physique's).
-  "trulyHealthy", "superiorUnhurt"]);
+  "trulyHealthy", "superiorUnhurt",
+  // Natural Armor to mend (Survivor's Plating).
+  "platingMendable"]);
 
 /**
  * Dice the character already has, named rather than written out.

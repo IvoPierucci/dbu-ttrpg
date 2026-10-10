@@ -95,9 +95,10 @@ const PREDICATES = {
     const wanted = String(id).trim().toLowerCase();
     // An Item made from that file, or one built as that Category - "Standard Clothing" is an
     // Apparel Category, and any Apparel of it counts.
+    // "Natural Armor does not count as equipped Apparel for any of your effects."
     return Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "gear")
       && ((item.system?.gearId === wanted) || (item.system?.crafted?.category === wanted))
-      && Boolean(item.system?.equipped));
+      && Boolean(item.system?.equipped) && (item.flags?.["dbu-ttrpg"]?.naturalArmor !== true));
   },
 
   /** Is the Maneuver being declared one made through the Signature Technique Maneuver - God of Judgment's. */
@@ -145,6 +146,10 @@ const PREDICATES = {
 
   /** In the Healthy Health Threshold, whatever counts them as Healthy besides - Divine Physique (2)'s. */
   trulyHealthy: scope => (scope.data?.threshold?.key ?? "healthy") === "healthy",
+
+  /** Natural Armor with Break Value to get back, or broken - Survivor's Plating (3). */
+  platingMendable: scope => Array.from(scope.data?.parent?.items ?? []).some(item => (item.flags?.["dbu-ttrpg"]?.naturalArmor === true)
+    && (((Number(item.system?.crafted?.breakLost) || 0) > 0) || Boolean(item.system?.crafted?.destroyed))),
 
   /** The Superior State's extra Damage not taken - Divine Physique (2). */
   superiorUnhurt: scope => scope.data?.effects?.slots?.["superior.noExtraDamage"] === true,

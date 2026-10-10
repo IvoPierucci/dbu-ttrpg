@@ -1,0 +1,16 @@
+id: combat-plating
+name: Combat Plating
+order: 4
+optionOf: survivor
+optionEffect: 2
+# The Armed Quality put on the Plating, taking no Quality Slot (`free`) - and its Integrated Weapon made with it; taken
+# off again if another Option is chosen (racial.mjs platingQuality).
+platingQuality: armed
+description: >
+  Your Plating gains the Armed Quality without occupying a Quality Slot.
+text: >
+  Combat Plating [Passive]: Your Plating gains the Armed Quality without occupying a Quality Slot.
+
+---
+
+# Nothing of its own to run: the Quality is the Plating's (combat-plating's header).

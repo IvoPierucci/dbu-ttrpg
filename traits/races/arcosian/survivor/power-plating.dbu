@@ -1,0 +1,15 @@
+id: power-plating
+name: Power Plating
+order: 3
+optionOf: survivor
+optionEffect: 2
+description: >
+  Increase your Wound Rolls by your Plating’s Apparel Bonus.
+text: >
+  Power Plating [Passive]: Increase your Wound Rolls by your Plating’s Apparel Bonus.
+
+---
+
+# The Plating's Apparel Bonus - nothing while it is Inactive (actor-character.mjs naturalArmor).
+[passive]
+wound += naturalArmor.apparelBonus;

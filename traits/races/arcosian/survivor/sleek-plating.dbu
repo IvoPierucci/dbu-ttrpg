@@ -1,0 +1,15 @@
+id: sleek-plating
+name: Sleek Plating
+order: 2
+optionOf: survivor
+optionEffect: 2
+description: >
+  Increase your Defense Value by 1/2 (rounded up) of your Plating’s Apparel Bonus.
+text: >
+  Sleek Plating [Passive]: Increase your Defense Value by 1/2 (rounded up) of your Plating’s Apparel Bonus.
+
+---
+
+# The Plating's Apparel Bonus - nothing while it is Inactive (actor-character.mjs naturalArmor).
+[passive]
+defenseValue += ceil(naturalArmor.apparelBonus / 2);
