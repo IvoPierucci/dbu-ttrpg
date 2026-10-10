@@ -51,6 +51,17 @@ const PREDICATES = {
   /** Do you hold any of a Resource. */
   hasResource: (scope, name) => (scope.data?.resources?.[name]?.stacks ?? 0) > 0,
 
+  /**
+   * "If you already had access to the <X> Maneuver" (Majestic Grace's): a Special Maneuver opened by anything but the
+   * effect asking - a Skill's Ranks.
+   */
+  accessElsewhere: (scope, id) => {
+    const table = scope.data?.constructor?.SKILLS ?? {};
+    const needs = Number(scope.data?.constructor?.SKILL_MANEUVER_RANKS) || 2;
+    return Object.entries(table).some(([key, skill]) => (skill.specialManeuver === String(id))
+      && ((Number(scope.data?.skills?.[key]?.ranks) || 0) >= needs));
+  },
+
   /** Are you in a named State. */
   inState: (scope, name) => Boolean(scope.data?.states?.[String(name).toLowerCase()]),
 

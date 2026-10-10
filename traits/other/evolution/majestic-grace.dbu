@@ -1,0 +1,24 @@
+id: majestic-grace
+name: Majestic Grace
+order: 12
+description: >
+  As the most superior life form on the battlefield, your grace and poise are unmatched.
+text: >
+  Majestic Grace: As the most superior life form on the battlefield, your grace and poise are unmatched.
+  (1)-[Passive]: Gain access to the Hype Maneuver. If you already had access to the Hype Maneuver, increase your Personality Modifier by 1(T).
+  (2)-[Triggered, 1/Round]: If you use the Hype Maneuver, gain a stack of Overwhelm.
+
+---
+
+# (1) Already had it: opened by anything but this - the Performance Skill's Ranks (conditions.mjs accessElsewhere).
+[passive]
+allow maneuver.hype;
+if (accessElsewhere("hype")) {
+    personality.mod += 1(T);
+}
+
+# (2) The Hype Maneuver declared: a stack of Overwhelm, once a Round. Automatic by default, its Triggered/Automatic button;
+# set Triggered, asked in the window as it is declared.
+[triggered/declare-maneuver, toggle, 1/round, effect 2]
+requires using("hype");
+overwhelm.stacks += 1;

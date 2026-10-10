@@ -485,7 +485,9 @@ const PREDICATE_NAMES = new Set([
   // Is the Maneuver being declared that one - Cosmic Efficiency's Combat Recovery.
   "using",
   // Resources' stacks between them, and a Health Threshold reached - Blood of the Warrior's.
-  "stacksAtLeast", "belowThreshold"
+  "stacksAtLeast", "belowThreshold",
+  // A Special Maneuver already open by other means - Majestic Grace's.
+  "accessElsewhere"
 ]);
 
 /** The ones written without brackets, because they take nothing. */
