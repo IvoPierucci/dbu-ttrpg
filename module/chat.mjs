@@ -2857,6 +2857,8 @@ async function beginGrapple(grappler, grappled) {
     if ((actor === grappler) && (sizeDifference(grappler, grappled) >= 3)) continue;
     await setCondition(actor, "guard-down", 1);
   }
+  // "If you enter a Grapple as the Grappler" - Elongated Tail's.
+  await answerFor(grappler, "grappling");
 }
 
 /**
@@ -13699,6 +13701,22 @@ async function spendOverwhelm(attack) {
 }
 
 /**
+ * Elongated Tail (2): "If you hit an Opponent with your Tail Attack Maneuver, you may forgo gaining a stack of Overwhelm to
+ * use the Grapple Maneuver against that Opponent as an Out-of-Sequence Maneuver." On the attack's card, once a Round,
+ * counted when taken - and the stack it gained given back (takeOutOfSequence). Hit by the tail, they were within the reach
+ * it had, so that is not asked again.
+ */
+function offerTailGrapple(message, attacker, target, attack) {
+  if (!attacker || !target || (attack?.maneuverId !== "tail-attack")) return;
+  if (attacker.system?.effects?.slots?.["tail.grapple"] !== true) return;
+  if (attacker.getFlag?.(SCOPE, "tailGrappleRound") === roundKey()) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.tailGrapple && (offer.targetUuid === target.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: attacker.uuid, actorName: attacker.name, maneuverId: "grapple",
+    maneuverName: "Grapple", targetUuid: target.uuid, reason: "Elongated Tail - no stack of Overwhelm for it",
+    grants: { tailGrapple: true } } });
+}
+
+/**
  * Angelic Offense (3): "If you receive no Damage from an Attacking Maneuver that targeted you while you had no Counter
  * Actions, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card, at the
  * one who made it (the user's report: aimed at whatever was targeted, it struck the Angel herself) - once a Round,
@@ -14602,6 +14620,15 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.bouncy) await requestActorUpdate(actor, { [`flags.${SCOPE}.bouncyCollided`]: roundKey() });
   // Angelic Offense (3)'s Basic Attack, once a Round.
   if (offer.grants?.angelicCounter) await requestActorUpdate(actor, { [`flags.${SCOPE}.angelicCounterRound`]: roundKey() });
+  // Elongated Tail (2)'s Grapple, once a Round - "forgo gaining a stack of Overwhelm": the one the Tail Attack gave, back.
+  if (offer.grants?.tailGrapple) {
+    const held = { ...(actor.system.resources ?? {}) };
+    const left = Math.max(0, (Number(held.overwhelm?.stacks) || 0) - 1);
+    if (left > 0) held.overwhelm = { ...held.overwhelm, stacks: left };
+    else delete held.overwhelm;
+    const { replaceObject } = await import("./conditions.mjs");
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.tailGrappleRound`]: roundKey(), "system.resources": replaceObject(held) });
+  }
   // Dragon Dash's Movement taken: what follows it, where an Advancement says so.
   if (offer.dash?.follow) await dashFollowUp(actor, offer.dash);
 
@@ -16757,6 +16784,10 @@ async function resolveAttack(message, attack) {
   // Disarming Demeanor: an Opponent missed - the Bluff at them.
   for (const entry of branches) {
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerDisarming(message, attacker, fromUuidSync(entry.uuid));
+  }
+  // Elongated Tail (2): a Tail Attack that hit, the Grapple at whom it hit.
+  for (const entry of branches) {
+    if (entry.hit && (entry.uuid !== attack.attackerUuid)) offerTailGrapple(message, attacker, fromUuidSync(entry.uuid), attack);
   }
   // Nobody hit, nothing more to it: Overwhelming Assault's stacks go now.
   if (!branches.some(entry => entry.hit)) await spendOverwhelm(attack);

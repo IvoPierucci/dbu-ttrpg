@@ -68,6 +68,12 @@ const TABLE = [
   { key: "start-of-encounter", label: "The Combat Encounter begins", provides: [],
     doc: "Fires when you enter the Encounter, so joining late still earns it." },
   { key: "start-of-round", label: "The Combat Round begins", provides: [] },
+  { key: "tail-reach", label: "A Tail Attack reaches past your Melee Range", provides: [],
+    doc: "Never fired: what a Triggered/Automatic toggle needs to stand on - Elongated Tail's reach, asked or taken as "
+       + "the Tail Attack is aimed (maneuvers.mjs tailReach)." },
+  { key: "grappling", label: "You enter a Grapple as the Grappler", provides: [],
+    doc: "Fired for the Grappler as a Grapple begins (chat.mjs beginGrapple) - Elongated Tail's Overwhelm. What is the "
+       + "player's is asked in a window first." },
   { key: "stretch", label: "A Physical Attack or Grapple reaches past your Melee Range", provides: [],
     doc: "Never fired: what a Triggered/Automatic toggle needs to stand on - Rubbery Body's stretch, asked or taken as "
        + "the attack is aimed (maneuvers.mjs stretchReach)." },

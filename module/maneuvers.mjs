@@ -1305,6 +1305,39 @@ export async function stretchReach(actor, refusal, recheck, what) {
 }
 
 /**
+ * Elongated Tail's 1st: "If you would use the Tail Attack Maneuver, increase your Melee Range by 1 Square for the duration
+ * of that Attacking Maneuver. If your Size Category is greater than Large, instead increase your Melee Range by 1 for every
+ * Category you are greater than Large." How many Squares, or 0 without it.
+ */
+export function tailReachSquares(actor) {
+  if (actor?.system?.effects?.slots?.["tail.elongated"] !== true) return 0;
+  const keys = Object.keys(actor.constructor?.SIZES ?? actor.system?.constructor?.SIZES ?? {});
+  const above = keys.length ? (keys.indexOf(actor.system?.size?.key ?? "medium") - keys.indexOf("large")) : 0;
+  return Math.max(1, above);
+}
+
+/**
+ * Elongated Tail's reach, asked as Rubbery Body's stretch is: only where it matters - the Tail Attack aimed past the Melee
+ * Range and within the reach - Triggered asked, Automatic taken.
+ *
+ * @returns {Promise<{why: string|null, extra: number}>}
+ */
+export async function tailReach(actor, refusal, recheck, what) {
+  const extra = tailReachSquares(actor);
+  if (!refusal || !extra || recheck(extra)) return { why: refusal, extra: 0 };
+  const { reactiveFor, momentOf } = await import("./effects/registry.mjs");
+  if (reactiveFor(actor).some(entry => (momentOf(entry.program.blocks?.[0]) === "tail-reach") && entry.armed)) {
+    return { why: null, extra };
+  }
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: `${what} - Melee Range +${extra}` },
+    content: `<p>Elongated Tail: Melee Range +${extra} for this Tail Attack?</p>`,
+    rejectClose: false
+  });
+  return yes ? { why: null, extra } : { why: refusal, extra: 0 };
+}
+
+/**
  * Burrowed Strike's 1st: "When making a Physical Attack, you may target any Opponent within the Standard Environment who
  * is not at Long Range for that Attacking Maneuver, ignoring Cover." Asked only where it is what reaches: past the Melee
  * Range, the target on the ground of the Standard Environment, not at Long Range.

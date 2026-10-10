@@ -1,0 +1,29 @@
+id: elongated-tail
+name: Elongated Tail
+order: 7
+description: >
+  A longer, more dexterous, and stronger tail gives you quite an advantage over less evolved races.
+text: >
+  Elongated Tail: A longer, more dexterous, and stronger tail gives you quite an advantage over less evolved races.
+  (1)-[Triggered]: If you would use the Tail Attack Maneuver, increase your Melee Range by 1 Square for the duration of that Attacking Maneuver. If your Size Category is greater than Large, instead increase your Melee Range by 1 for every Category you are greater than Large.
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with your Tail Attack Maneuver, you may forgo gaining a stack of Overwhelm to use the Grapple Maneuver against that Opponent as an Out-of-Sequence Maneuver. If you do, use the Melee Range you possessed for the duration of your Tail Attack Maneuver for that Grapple.
+  (3)-[Triggered, 1/Round]: If you enter a Grapple as the Grappler, maximize your stacks of Overwhelm.
+
+---
+
+[passive]
+# (1) A Tail Attack aimed past your Melee Range and within the reach this adds - 1 Square, or 1 for every Size Category
+# greater than Large: Triggered, it asks; Automatic - the toggle below - it is taken (maneuvers.mjs tailReach).
+allow tail.elongated;
+# (2) An Opponent hit by your Tail Attack: on its card, the Grapple Maneuver at them out of sequence, once a Round -
+# taken, the stack of Overwhelm it gained given back (chat.mjs offerTailGrapple). Hit, they were within that reach.
+allow tail.grapple;
+
+# (1)'s Triggered/Automatic toggle: nothing of its own to do - the reach above reads whether it is set Automatic.
+[triggered/tail-reach, effect 1]
+tail.reachTaken = true;
+
+# (3) You enter a Grapple as the Grappler (moment grappling, chat.mjs beginGrapple): Overwhelm at its most. Automatic by
+# default; set Triggered, asked in a window there.
+[triggered/grappling, 1/round, effect 3]
+overwhelm.stacks = 4;

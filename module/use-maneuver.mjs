@@ -4503,6 +4503,14 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const unbounded = declared?.weapon?.wholeBattlefield || declared?.weapon?.telekinetic;
     let outOfReach = targetActor && !maneuver.throws && !unbounded
       && whyNotInReach(actor, targetActor, declared ?? {}, declared?.weapon?.meleeRange ?? 0);
+    // Elongated Tail's reach, on a Tail Attack, asked where it is what reaches.
+    if (outOfReach && maneuver.tailAttack) {
+      const { tailReach } = await import("./maneuvers.mjs");
+      const reaching = await tailReach(actor, outOfReach,
+        more => whyNotInReach(actor, targetActor, declared ?? {}, (declared?.weapon?.meleeRange ?? 0) + more), maneuver.name);
+      outOfReach = reaching.why;
+      if (reaching.extra) declared = { ...(declared ?? {}), tailReach: reaching.extra };
+    }
     // Rubbery Body's stretch, asked where it is what reaches.
     if (outOfReach) {
       const { stretchReach } = await import("./maneuvers.mjs");
