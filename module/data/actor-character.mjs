@@ -2035,7 +2035,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // The Size beneath a Shapeshift - "this does not destroy any Apparel you have equipped" (gear.mjs outgrown).
       bodyKey,
       trueSteps: sizeKeys.indexOf(trueKey) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
-      defenseModifier: size.defensePerTier * this.tierOfPower,
+      // At a Size Category an effect moves for the Defense Value alone - Aerodynamic's 1 lower.
+      defenseModifier: (DBUCharacterData.SIZES[sizeKeys[Math.max(0, Math.min(sizeKeys.length - 1,
+        sizeKeys.indexOf(sizeKey) + (Number(this.effects?.slots?.["size.defenseSteps"]?.add) || 0)))]] ?? size).defensePerTier
+        * this.tierOfPower,
       soakModifier: size.soakPerTier * this.tierOfPower,
       speedModifier: size.speed
     };

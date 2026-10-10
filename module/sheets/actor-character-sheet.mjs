@@ -4,7 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
-import { addRacialTrait, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { addRacialTrait, otherGroupName, otherTraitsInOrder, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens } from "../effects/registry.mjs";
@@ -400,6 +400,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       toggleRacialTrait: DBUCharacterSheet._onToggleRacialTrait,
       toggleTrait: DBUCharacterSheet._onToggleTrait,
       addRacialTrait: DBUCharacterSheet._onAddRacialTrait,
+      addOtherTrait: DBUCharacterSheet._onAddOtherTrait,
       rollInitiative: DBUCharacterSheet._onInitiativeRoll,
       useManeuver: DBUCharacterSheet._onUseManeuver,
       basicAttackInstant: DBUCharacterSheet._onBasicAttackInstant,
@@ -569,7 +570,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
   // Anything not named here starts closed - States and Combat Conditions among them,
   // which is what keeps a long checklist from taking over the Combat tab. The Maneuver
   // groups default the other way, in _prepareManeuverGroups.
-  #openSections = { racialTraits: true, talents: true };
+  #openSections = { racialTraits: true, otherTraits: true, talents: true };
 
   /** ApplicationV2 does not wire drag and drop itself; each sheet binds its own. */
   #dragDrop = this.options.dragDrop.map(config => new foundry.applications.ux.DragDrop.implementation({
@@ -1339,6 +1340,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         }))
     }));
     context.racialTraits = this.#racialTraitChoices(triggered);
+    // Evolution, Bestial and Monstrous Traits: the same rows, in a list of their own (the user's).
+    context.otherTraits = this.#racialTraitChoices(triggered, ownedOtherTraits(this.actor));
     context.isGM = game.user.isGM;
 
     const { capacity } = this.actor.system;
@@ -4842,11 +4845,13 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * The Racial Trait Items this character has, in the picker's order: each with the race it comes from, what the rules
    * call it, what was chosen for it, and - as a Talent's are - its Triggered effects to Arm.
    */
-  #racialTraitChoices(triggered = []) {
-    return ownedRacialTraits(this.actor).map(item => ({
+  #racialTraitChoices(triggered = [], items = ownedRacialTraits(this.actor)) {
+    return items.map(item => ({
       item,
       kind: racialTraitKind(item.system),
-      race: racialTraitRace(item.system.race, item.system.subrace, item.system.factor),
+      // An Other Trait's group in the place of a race: "Evolution · Arcosian".
+      race: item.system.other ? otherGroupName(item.system.other)
+        : racialTraitRace(item.system.race, item.system.subrace, item.system.factor),
       // A Factor Trait's: what its Racial Factor asks for, shown and never enforced.
       factorTip: factorSummary(item.system.factor),
       // Unfolded to its text as printed - an Option effect showing only what was chosen - and the choices made for it.
@@ -4935,6 +4940,57 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
                 (trait.kind === "factors") ? factorSummary(trait.owner) : ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
             <span class="gear-quality-cost">${escape((trait.kind === "factors") ? racialTraitRace(String(trait.race ?? ""), "", trait.owner)
               : racialTraitRace(trait.owner, trait.subrace))}</span></li>`).join("")}
+          <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
+        </ol></div>`,
+      buttons: [
+        { action: "add", label: "Add", default: true, callback: (ev, button, dialog) =>
+          pickedName(dialog.element.querySelector("[data-feature-search]"), dialog.element.querySelector("[data-feature-list]"))
+            || null },
+        { action: "cancel", label: "Cancel" }
+      ],
+      render: (event, dialog) => {
+        const root = dialog.element;
+        wireNameSearch(root.querySelector("[data-feature-search]"), root.querySelector("[data-feature-list]"), {
+          alwaysOpen: true, onSubmit: () => root.querySelector('button[data-action="add"]')?.click() });
+      },
+      rejectClose: false
+    });
+    const trait = traits.find(entry => entry.id === picked);
+    if (!trait) return;
+    if (had.has(trait.id)) {
+      ui.notifications.warn(`${this.actor.name} already has ${trait.name}.`);
+      return;
+    }
+    return addRacialTrait(this.actor, trait);
+  }
+
+  /**
+   * Add Other Trait: a search over every Evolution, Bestial and Monstrous Trait there is - its group beside it, the ones
+   * already had named and not offered twice. Taken, its Item is made as a Racial Trait's is (racial.mjs addRacialTrait).
+   * Nothing is enforced: what gives it - a Racial Trait, a Racial Factor, a Transformation - is the table's.
+   */
+  static async _onAddOtherTrait() {
+    if (!this.isEditable) return;
+    const had = new Set(this.actor.system.racialTraits ?? []);
+    const traits = otherTraitsInOrder();
+    if (!traits.length) {
+      ui.notifications.info("There are no Other Traits to add yet.");
+      return;
+    }
+    const escape = Handlebars.escapeExpression;
+    const { pickedName, wireNameSearch } = await import("../search.mjs");
+    const picked = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog", "dbu-ua-search"],
+      window: { title: `${this.actor.name} - Add Other Trait` },
+      position: { width: 420 },
+      content: `<div class="gear-add-quality">
+        <input type="text" class="gear-quality-search" data-feature-search autocomplete="off" autofocus
+               placeholder="Type an Evolution, Bestial or Monstrous Trait"/>
+        <ol class="gear-quality-list" data-feature-list>
+          ${traits.map(trait => `<li class="gear-quality-option${had.has(trait.id) ? " blocked" : ""}"
+            data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
+            data-tooltip="${escape(had.has(trait.id) ? "Already had" : (trait.description ?? ""))}">${escape(trait.name)}
+            <span class="gear-quality-cost">${escape(otherGroupName(trait.owner))}</span></li>`).join("")}
           <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
         </ol></div>`,
       buttons: [

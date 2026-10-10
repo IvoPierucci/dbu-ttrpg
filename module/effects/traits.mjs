@@ -26,6 +26,9 @@ export const KINDS = Object.freeze({
   // Racial Factors: "Factor Traits are considered Racial Traits" - their Priority, and taken from the same list.
   // traits/factors/<factor>.dbu is the Factor; traits/factors/<factor>/... its Factor Traits.
   factors: { label: "Factor Trait", priority: PRIORITY.racial },
+  // Other Traits - Evolution, Bestial and Monstrous: given by Racial Traits, Racial Factors and Transformations, each its
+  // own Item in a list of its own (the user's). traits/other/<group>/<trait>.dbu. At a Racial Trait's Priority.
+  other: { label: "Other Trait", priority: PRIORITY.racial },
   talents: { label: "Talent", priority: PRIORITY.talent },
   conditions: { label: "Combat Condition", priority: PRIORITY.condition },
   // What the ground you are standing on does to you. At base Priority, like a Karmic

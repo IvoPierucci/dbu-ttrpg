@@ -213,6 +213,7 @@ function applyRequest(request) {
       ?.setFlag(SCOPE, SUMMON_FLAG, request.summon);
     case "tornado": return game.messages.get(request.messageId)
       ?.setFlag(SCOPE, TORNADO_FLAG, request.tornado);
+    case "answerFor": return answerFor(fromUuidSync(request.actorUuid ?? ""), request.moment, request.context ?? {});
     case "uniqueClashWon": {
       const message = game.messages.get(request.messageId);
       return message ? uniqueClashWon(message) : null;
@@ -819,6 +820,23 @@ function uniqueClashOf(clash) {
  * who lost (Psychic's "reduce that Opponent's Life Points by your Insight Modifier"). Once a Clash; on the GM's client
  * where this one may not write to the winner.
  */
+/**
+ * A Moment answered for a character where whoever plays them is asked - what is theirs offered in a window first, then
+ * fired. From a client that does not own them - the one that settled an attack they answered - relayed to the GM.
+ */
+export async function answerFor(actor, moment, context = {}) {
+  if (!actor) return null;
+  if (!actor.isOwner) {
+    if (game.users.activeGM && !game.user.isGM) {
+      game.socket.emit(CHANNEL, { type: "answerFor", actorUuid: actor.uuid, moment, context });
+    }
+    return null;
+  }
+  await offerTriggers(actor, moment);
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  return fireMoment(actor, moment, context);
+}
+
 async function uniqueClashWon(message) {
   const clash = message.getFlag(SCOPE, CLASH_FLAG);
   if (!clash?.result || clash.uniqueWon || !uniqueClashOf(clash)) return;
@@ -13376,6 +13394,8 @@ async function angelicRedodge(message, target) {
     slot: "dodge", urgent: Boolean(attack.urgentRolls) });
   const hit = !(answer && (answer.total > (Number(branch.against) || 0)));
   await rewriteBranch(message, target.uuid, () => ({ answer, hit, angelic: "done" }));
+  // Dodged after all: "If you dodge an Attacking Maneuver" - Aerodynamic's.
+  if (!hit) await answerFor(target, "dodged-attack");
 }
 
 /** Angelic Defense (2)'s buttons on the attack's card, for the one hit; true while the Wound Roll must wait. */
@@ -16686,6 +16706,12 @@ async function resolveAttack(message, attack) {
   }
   // Nobody hit, nothing more to it: Overwhelming Assault's stacks go now.
   if (!branches.some(entry => entry.hit)) await spendOverwhelm(attack);
+  // "If you dodge an Attacking Maneuver" - a Dodge Roll that beat it: Aerodynamic's.
+  for (const entry of branches) {
+    if (!entry.hit && (entry.defense === "dodge") && entry.answer && (entry.uuid !== attack.attackerUuid)) {
+      await answerFor(fromUuidSync(entry.uuid), "dodged-attack");
+    }
+  }
   // Flow of Combat: an attack that missed you - no Damage from it - and the Exploit at who made it.
   for (const entry of branches) {
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFlowExploit(message, fromUuidSync(entry.uuid), attacker);

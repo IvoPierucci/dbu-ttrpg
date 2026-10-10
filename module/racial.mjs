@@ -313,11 +313,43 @@ export function racialTraitRace(race, subrace = "", factor = "") {
 export function ownedRacialTraits(actor) {
   const race = actor?.system?.race;
   const fileOf = item => getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
-  return Array.from(actor?.items ?? []).filter(item => item.type === RACIAL_TYPE).sort((a, b) =>
+  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && !isOtherTrait(item)).sort((a, b) =>
     (groupRank(a, race, actor?.system?.effects?.slots) - groupRank(b, race, actor?.system?.effects?.slots))
     || groupName(a).localeCompare(groupName(b))
     || (orderOf(fileOf(a)) - orderOf(fileOf(b)))
     || a.name.localeCompare(b.name));
+}
+
+/** The Other Traits' groups, as their lists name them: Evolution Traits are the Arcosians' own (the user's). */
+export const OTHER_GROUPS = Object.freeze({
+  evolution: "Evolution · Arcosian",
+  bestial: "Bestial",
+  monstrous: "Monstrous"
+});
+
+/** An Other Trait's group, as named - or the folder's name where it is a new one. */
+export function otherGroupName(group) {
+  const key = String(group ?? "");
+  return OTHER_GROUPS[key] ?? (key.charAt(0).toUpperCase() + key.slice(1));
+}
+
+/** Whether a racial Item is an Other Trait - Evolution, Bestial, Monstrous - by its group or its file's folder. */
+export function isOtherTrait(item) {
+  return Boolean(item?.system?.other) || (getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.kind === "other");
+}
+
+/** The Other Traits a character has: by group, as named above, then by name. */
+export function ownedOtherTraits(actor) {
+  const group = item => item.system?.other || getTrait(item.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.owner || "";
+  const rank = item => { const at = Object.keys(OTHER_GROUPS).indexOf(group(item)); return (at < 0) ? 99 : at; };
+  return Array.from(actor?.items ?? []).filter(item => (item.type === RACIAL_TYPE) && isOtherTrait(item))
+    .sort((a, b) => (rank(a) - rank(b)) || a.name.localeCompare(b.name));
+}
+
+/** Every Other Trait there is, for its picker: by group, then by name. */
+export function otherTraitsInOrder() {
+  const rank = trait => { const at = Object.keys(OTHER_GROUPS).indexOf(trait.owner ?? ""); return (at < 0) ? 99 : at; };
+  return traitsOfKind("other").slice().sort((a, b) => (rank(a) - rank(b)) || a.name.localeCompare(b.name));
 }
 
 /** A label as a choice's value: "Enormous" -> "enormous". */
@@ -475,11 +507,13 @@ export async function racialItemFrom(trait, actor = null) {
         addendum: String(trait.addendum ?? "").trim(),
         script: scripts.filter(Boolean).join("\n\n"),
         // A Factor Trait's: the race it is for alone ("Saiyan Factor Trait"), where it is for one.
-        race: factorOf(trait) ? String(trait.race ?? "") : (trait.owner ?? ""),
+        race: factorOf(trait) ? String(trait.race ?? "") : ((trait.kind === "other") ? "" : (trait.owner ?? "")),
         category: String(trait.category ?? ""),
         importance: trait.subrace ? "primary" : String(trait.importance ?? ""),
         subrace: String(trait.subrace ?? ""),
         factor: factorOf(trait),
+        // An Other Trait's group - its folder: Evolution, Bestial, Monstrous.
+        other: (trait.kind === "other") ? String(trait.owner ?? "") : "",
         chosen
       }
     },

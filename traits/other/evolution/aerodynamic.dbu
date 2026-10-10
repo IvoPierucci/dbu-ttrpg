@@ -1,0 +1,23 @@
+id: aerodynamic
+name: Aerodynamic
+order: 1
+description: >
+  With high speed and a slim physique, you can take full advantage of your carefully honed maneuverability.
+text: >
+  Aerodynamic: With high speed and a slim physique, you can take full advantage of your carefully honed maneuverability.
+  (1)-[Passive]: Treat your Size Category as 1 Category lower for calculating the bonus or penalty from your Size Category to your Defense Value.
+  (2)-[Passive]: Reduce the Ki Point Cost for using your Boosted Speed through the Movement Maneuver by 2(T).
+  (3)-[Triggered]: If you dodge an Attacking Maneuver, gain a stack of Overwhelm.
+
+---
+
+[passive]
+# (1) One Size Category lower for the Defense Value's Size bonus or penalty alone (actor-character.mjs size).
+size.defenseSteps -= 1;
+# (2) The Boosted Speed's 3(T) through the Movement Maneuver, 2(T) less (maneuvers.mjs movementKiCost).
+movement.boostedKiCost -= 2(T);
+
+# (3) An Attacking Maneuver dodged - your Dodge Roll beat its Strike (moment dodged-attack): a stack of Overwhelm
+# (Overwhelming Fighter's Resource, max. 4). Automatic by default; set Triggered, asked in a window there.
+[triggered/dodged-attack, effect 3]
+overwhelm.stacks += 1;

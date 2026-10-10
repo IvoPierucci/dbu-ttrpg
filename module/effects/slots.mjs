@@ -124,6 +124,14 @@ const TABLE = [
   { key: "kiWager.capacityShare", phase: PHASES.CORE, kind: N, ops: ["set"],
     doc: "The most that may be Ki Wagered - in Ki or in Life - as a share of the Max Capacity: 0.25 is a quarter. "
        + "A ceiling beside the others, Full Wager's lifted half included (maneuvers.mjs maxKiWager)." },
+  // Aerodynamic's "Treat your Size Category as 1 Category lower for calculating the bonus or penalty from your Size
+  // Category to your Defense Value". Before the Size is read.
+  { key: "size.defenseSteps", phase: PHASES.TIER, kind: N, ops: ["add"],
+    doc: "Size Categories up (or down, negative) the Defense Value's Size bonus or penalty is read at, the Size itself "
+       + "unmoved (actor-character.mjs size.defenseModifier)." },
+  // Aerodynamic's "Reduce the Ki Point Cost for using your Boosted Speed through the Movement Maneuver by 2(T)".
+  { key: "movement.boostedKiCost", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to the Boosted Speed's 3(T) through the Movement Maneuver (maneuvers.mjs movementKiCost)." },
   { key: "capacity.multiplier", phase: PHASES.CORE, kind: N, ops: ["multiply"],
     doc: "Multiplies Max Capacity, after every flat change." },
   { key: "surge.life.dice", phase: PHASES.CORE, kind: D, ops: ["add-dice"],

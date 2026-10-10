@@ -1547,7 +1547,10 @@ export function movementKiCost(actor, { speed = "normal", rapid = false } = {}) 
   const tier = Math.max(1, actor?.system?.tierOfPower ?? 1);
   const chosen = MOVEMENT_SPEEDS[speed] ?? MOVEMENT_SPEEDS.normal;
 
-  const base = chosen.kiCostPerTier ? chosen.kiCostPerTier * tier : (chosen.kiCost ?? 0);
+  const listed = chosen.kiCostPerTier ? chosen.kiCostPerTier * tier : (chosen.kiCost ?? 0);
+  // The Boosted Speed's own - Aerodynamic's 2(T) off it.
+  const base = (speed === "boosted")
+    ? Math.max(0, applySlot(actor?.system?.effects?.slots, "movement.boostedKiCost", listed)) : listed;
   const extra = rapid ? RAPID_MOVEMENT_PER_TIER * tier : 0;
 
   // Named so an effect can discount the Maneuver as a whole, the way every other price

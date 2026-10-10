@@ -92,6 +92,9 @@ const TABLE = [
   { key: "unique-clash-won", label: "You win a Clash for the effects of a Unique Ability", provides: [],
     doc: "Fired for whoever won a Clash a Unique Ability called for - theirs or the one they answered - with who lost "
        + "(chat.mjs uniqueClashWon) - Psychic's. What is the player's is asked in a window first." },
+  { key: "dodged-attack", label: "You dodge an Attacking Maneuver", provides: [],
+    doc: "Fired for whoever's Dodge Roll beat an Attacking Maneuver's Strike - Angelic Defense's Dodge again among them "
+       + "(chat.mjs answerFor) - Aerodynamic's Overwhelm. What is the player's is asked in a window first." },
   { key: "legend-realized", label: "You benefit from Legend Realized", provides: [],
     doc: "Fired once Legend Realized has restored its Life and Ki Points (chat.mjs legendRealized) - Survivor's Plating. "
        + "What is the player's is asked in a window first." },
