@@ -7,7 +7,7 @@ attacking: false
 usageLimit: 1/encounter
 exploitable: All adjacent Opponents
 resource: arrogance
-resourceMax: 1
+resourceMax: 2
 # Not a Resource the rules name: the rulebook calls exactly one thing a Resource,
 # and it is Power. This is bookkeeping, held as a Resource because that is the
 # thing here that takes a clock. `resourceInternal` keeps it off the sheet's
@@ -40,21 +40,27 @@ text: >
 # somebody is - so it is left to the player and the Gamemaster, the way every other
 # thing a table says out loud is.
 
-# Used: the Superior State, and the boast marked. Every character holds this Maneuver,
-# so leaving Superior is not enough to owe the penalty - only the Superior this entered
-# (it used to fire on leaving any Superior, Warrior's Pride's or Divine Physique's,
-# Arrogant Declaration used or not).
+# Used: the Superior State, and the boast marked - 1 stack. Every character holds this
+# Maneuver, so leaving Superior is not enough to owe the penalty: only "the Superior State
+# entered through this effect" (it used to fire on leaving any Superior, Warrior's Pride's
+# or Divine Physique's, Arrogant Declaration used or not).
 [on used]
 enterState(superior, 1, next-turn);
 arrogance.stacks += 1;
 
-# What the boast costs once it wears off: "upon leaving the Superior State entered
-# through this effect ... for the remainder of the Combat Encounter". Marked and out of
-# Superior, then. The Resource is the carrier, and the right one: a Resource is lost when
-# the Combat Encounter ends, which is exactly the span the rule names - so nothing has to
-# remember to take this off. (A later Superior from elsewhere holds it off while it lasts.)
+# Leaving Superior with the boast marked - that Superior: you cannot enter a State you are
+# standing in, so the next one left is the one this entered. The 2nd stack is the penalty.
+# `left-state` rather than `on-removed`: that one is the State's own Moment about itself.
+[automatic/left-state/superior]
+requires stacksAtLeast(1, arrogance) && !stacksAtLeast(2, arrogance);
+arrogance.stacks += 1;
+
+# What the boast costs once it wears off, "for the remainder of the Combat Encounter" -
+# whatever Superior comes after. The Resource is the carrier, and the right one: a
+# Resource is lost when the Combat Encounter ends, which is exactly the span the rule
+# names - so nothing has to remember to take this off.
 [passive]
-if ((arrogance.stacks > 0) && !inState("superior")) {
+if (stacksAtLeast(2, arrogance)) {
     combatRolls -= 1(bT);
     surgency    -= 1(bT);
     soakValue   -= 1(bT);
