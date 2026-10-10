@@ -553,6 +553,9 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
    * where the Actor cannot be read.
    */
   async _processSubmitData(event, form, submitData, options) {
+    // Natural Armor - "a special form of Integrated Armor" - is Armor, whatever its select says (the user's).
+    const natural = foundry.utils.getProperty(submitData, "flags.dbu-ttrpg.naturalArmor") ?? isNaturalArmor(this.item);
+    if (natural === true) foundry.utils.setProperty(submitData, "system.crafted.category", "armor");
     // Made Natural Armor: Integrated with it, unasked - and on a character, its Grade theirs.
     if ((foundry.utils.getProperty(submitData, "flags.dbu-ttrpg.naturalArmor") === true) && !isNaturalArmor(this.item)) {
       foundry.utils.setProperty(submitData, "system.integrated", true);

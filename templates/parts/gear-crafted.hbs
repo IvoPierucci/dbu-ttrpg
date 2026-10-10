@@ -39,7 +39,7 @@
       {{else}}
       <div class="stat">
         <em>Category</em>
-        <select name="system.crafted.category">
+        <select name="system.crafted.category" {{#if naturalArmor}}disabled data-tooltip="Natural Armor: always Armor"{{/if}}>
           {{#each crafted.categoryChoices as |choice|}}
           <option value="{{choice.value}}" {{#if choice.chosen}}selected{{/if}}>{{choice.label}}</option>
           {{/each}}
