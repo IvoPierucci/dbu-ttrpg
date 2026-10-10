@@ -13654,6 +13654,28 @@ function offerPhysiqueStrike(message, actor, attacker) {
     grants: { physique: true, woundAttribute: { label: "Powerful Physique (Force Modifier)", attribute: "force" } } } });
 }
 
+/** Overwhelming Assault: "If it possesses an AoE, increase the Magnitude of that AoE by 1." */
+function overwhelmedArea(area, overwhelm) {
+  if (!area || !overwhelm?.magnitude) return area;
+  return { ...area, magnitudeSteps: (Number(area.magnitudeSteps) || 0) + 1 };
+}
+
+/**
+ * Overwhelming Assault: "you do not lose these stacks of Overwhelm until you have completed the Attacking Maneuver" - lost
+ * once it is: its Wound Roll made, or nobody hit. From whoever made it.
+ */
+async function spendOverwhelm(attack) {
+  const spent = Number(attack?.overwhelmSpent) || 0;
+  const actor = spent ? fromUuidSync(attack.attackerUuid ?? "") : null;
+  if (!actor) return;
+  const { replaceObject } = await import("./conditions.mjs");
+  const held = { ...(actor.system.resources ?? {}) };
+  const left = Math.max(0, (Number(held.overwhelm?.stacks) || 0) - spent);
+  if (left > 0) held.overwhelm = { ...held.overwhelm, stacks: left };
+  else delete held.overwhelm;
+  await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
+}
+
 /**
  * Angelic Offense (3): "If you receive no Damage from an Attacking Maneuver that targeted you while you had no Counter
  * Actions, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card, at the
@@ -14676,7 +14698,7 @@ export async function postAttack(actor, target, maneuver,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
-                                   earthlingCharge = false, featureChoices = null },
+                                   earthlingCharge = false, featureChoices = null, overwhelm = null },
                                  { asOutOfSequence = false, provokedBy = null,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -14693,6 +14715,8 @@ export async function postAttack(actor, target, maneuver,
   // one. In the same write as the rest, off one reading of the character.
   // A Signature Technique's features on this attack: which hold, its Area, the Charges they
   // bring, the flags the rolls read. A reflected attack keeps the one it was thrown with.
+  // Overwhelming Assault: "Apply an Energy Charge to that Attacking Maneuver."
+  if (overwhelm?.charge && !reflecting) charges = (Number(charges) || 0) + 1;
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
   // Hidden from any of them: "made 2 attacks" at them ends it.
   const { countHiddenAttack } = await import("./hidden.mjs");
@@ -14864,7 +14888,9 @@ export async function postAttack(actor, target, maneuver,
             + modifierCategoryShift(modifiers)
             + (Number(weapon?.damageCategory) || 0)
             // The Maneuver's own - Divine Attack's "has its Damage Category increased by 1 category".
-            + (reflecting ? 0 : (Number(maneuver.damageCategoryShift) || 0)),
+            + (reflecting ? 0 : (Number(maneuver.damageCategoryShift) || 0))
+            // Overwhelming Assault's "Increase the Damage Category of that Attacking Maneuver by 1 Category".
+            + ((overwhelm?.category && !reflecting) ? 1 : 0),
           // Genki's is added here: gathered from Empower, and neither paid again nor counted.
           kiWager: kiWager + (Number(freeWager) || 0),
           // What making it took from its maker's pools - Divine Counter's cancelling gives it back.
@@ -14885,8 +14911,10 @@ export async function postAttack(actor, target, maneuver,
           // An Area the attack brings for itself, over its Profile's - the Grenade's Minor
           // Sphere. Null for every attack whose Area, if any, is its Profile's. A Technique's is
           // the one its features built.
-          area: sizedArea(actor, target, technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null),
-            { portal }),
+          area: overwhelmedArea(sizedArea(actor, target, technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null),
+            { portal }), reflecting ? null : overwhelm),
+          // Overwhelming Assault's stacks, lost once this is done (spendOverwhelm).
+          ...((overwhelm?.spent && !reflecting) ? { overwhelmSpent: overwhelm.spent } : {}),
           // Revenge Bomber's: Self-Explosion given to it, free.
           ...(selfExplosion ? { selfExplosion: true } : {}),
           // Punching Up, against the one it was aimed at.
@@ -16656,6 +16684,8 @@ async function resolveAttack(message, attack) {
   for (const entry of branches) {
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerDisarming(message, attacker, fromUuidSync(entry.uuid));
   }
+  // Nobody hit, nothing more to it: Overwhelming Assault's stacks go now.
+  if (!branches.some(entry => entry.hit)) await spendOverwhelm(attack);
   // Flow of Combat: an attack that missed you - no Damage from it - and the Exploit at who made it.
   for (const entry of branches) {
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFlowExploit(message, fromUuidSync(entry.uuid), attacker);
@@ -17799,6 +17829,8 @@ async function rollAttackWound(message, attack) {
     // Delayed's and Personal Bomb's: the Wound Roll made when it hit, not a new one.
     fixedTotal: Number.isFinite(attack.fixedWound) ? attack.fixedWound : null
   });
+  // Done: Overwhelming Assault's stacks go now - after this Wound Roll counted them.
+  await spendOverwhelm(attack);
 
   // What an attack can get past of somebody's Damage Reduction, for this attack only.
   // Collected from the attacker once, since it is their effect and their client that

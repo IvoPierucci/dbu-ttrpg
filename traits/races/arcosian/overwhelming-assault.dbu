@@ -1,0 +1,30 @@
+id: overwhelming-assault
+name: Overwhelming Assault
+order: 3
+category: mind
+importance: secondary
+description: >
+  Relentless in their pursuit of victory, Arcosians do not stop attacking until their enemies stop moving.
+text: >
+  Overwhelming Assault (Mind): Relentless in their pursuit of victory, Arcosians do not stop attacking until their enemies stop moving.
+  (1)-[Triggered]: If you use the Energy Charge Maneuver, gain a stack of Overwhelm.
+  (2)-[Triggered, 1/Round]: If you make an Attacking Maneuver, you may spend 2+ stacks of Overwhelm (you do not lose these stacks of Overwhelm until you have completed the Attacking Maneuver) to apply one of the following effects for every 2 stacks of Overwhelm spent (you cannot apply the same effect multiple times):
+
+  * Apply an Energy Charge to that Attacking Maneuver.
+  * If it possesses an AoE, increase the Magnitude of that AoE by 1.
+  * Reduce the Ki Point Cost for that Attacking Maneuver by 4(T).
+  * Increase the Damage Category of that Attacking Maneuver by 1 Category.
+
+---
+
+# (1) The Energy Charge Maneuver declared: a stack of Overwhelm (Overwhelming Fighter's Resource, max. 4). Automatic by
+# default, its Triggered/Automatic button; set Triggered, asked in the window as it is declared.
+[triggered/declare-maneuver, toggle, effect 1]
+requires using("energy-charge");
+overwhelm.stacks += 1;
+
+# (2) An Attacking Maneuver declared with 2+ stacks: asked as its declaration ends, once a Round - each effect for 2 stacks,
+# none twice (maneuvers.mjs withOverwhelm). The stacks are lost once it is done - its Wound Roll made, or nobody hit -
+# so Overwhelming Fighter's Wound Rolls still count them on it (chat.mjs spendOverwhelm).
+[passive]
+allow overwhelm.assault;

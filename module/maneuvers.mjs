@@ -2205,7 +2205,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   const answers = await askFeatures(maneuver, actor, advantages);
   if (!answers) return null;
 
-  if (!profile) return { profile: "", foundation: "physical", kiWager, advantages, ...answers };
+  if (!profile) return withOverwhelm(actor, { profile: "", foundation: "physical", kiWager, advantages, ...answers });
 
   // A Foundation this character cannot use is offered greyed out rather than left off
   // the list: a missing button reads as a bug. A disabled button also cannot submit, so
@@ -2235,7 +2235,51 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
       );
   if (!foundation) return null;
 
-  return { profile, foundation, kiWager, wagerFromLife, wagerFromDivine, advantages, ...answers };
+  return withOverwhelm(actor, { profile, foundation, kiWager, wagerFromLife, wagerFromDivine, advantages, ...answers });
+}
+
+/** Overwhelming Assault (2)'s four effects, each for 2 stacks of Overwhelm. */
+const OVERWHELM_EFFECTS = Object.freeze([
+  { key: "charge", label: "An Energy Charge" },
+  { key: "magnitude", label: "AoE Magnitude +1", tip: "If it possesses an AoE" },
+  { key: "ki", label: "Ki Point Cost -4(T)" },
+  { key: "category", label: "Damage Category +1" }
+]);
+
+/**
+ * Overwhelming Assault (2): "If you make an Attacking Maneuver, you may spend 2+ stacks of Overwhelm ... to apply one of
+ * the following effects for every 2 stacks of Overwhelm spent (you cannot apply the same effect multiple times)" - asked
+ * as the declaration ends, once a Round, where 2 stacks are held. What was picked is carried on the declaration as
+ * `overwhelm` - the Charge, the Magnitude and the Category read by postAttack, the Ki by maneuverKiCost - and the stacks
+ * spent once the attack is done (chat.mjs spendOverwhelm). Closed, none.
+ */
+async function withOverwhelm(actor, declared) {
+  const stacks = Number(actor?.system?.resources?.overwhelm?.stacks) || 0;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if ((actor?.system?.effects?.slots?.["overwhelm.assault"] !== true) || (stacks < 2)
+    || (actor.getFlag?.("dbu-ttrpg", "overwhelmRound") === round)) return declared;
+  const most = Math.floor(stacks / 2);
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Overwhelming Assault` },
+    content: `<p class="dbu-respond-hint">${stacks} Overwhelm: up to ${most}, 2 stacks each.</p>
+      ${OVERWHELM_EFFECTS.map(effect => `<label class="dbu-respond-option"${effect.tip ? ` data-tooltip="${escape(effect.tip)}"` : ""}>
+        <input type="checkbox" name="overwhelm" value="${effect.key}"/>
+        <span class="dbu-respond-name">${escape(effect.label)}</span></label>`).join("")}`,
+    buttons: [
+      { action: "spend", label: "Spend", default: true, callback: (event, button, dialog) =>
+        [...dialog.element.querySelectorAll('input[name="overwhelm"]:checked')].map(box => box.value) },
+      { action: "none", label: "None", callback: () => [] }],
+    rejectClose: false
+  });
+  const chosen = Array.isArray(picked) ? picked : [];
+  if (!chosen.length) return declared;
+  if (chosen.length > most) {
+    ui.notifications.warn(`Overwhelming Assault: ${stacks} Overwhelm pays for ${most}.`);
+    return withOverwhelm(actor, declared);
+  }
+  await actor.setFlag("dbu-ttrpg", "overwhelmRound", round);
+  return { ...declared, overwhelm: { ...Object.fromEntries(chosen.map(key => [key, true])), spent: chosen.length * 2 } };
 }
 
 /**
@@ -3139,6 +3183,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
     if (features.includes("back-flip") && features.includes("charging-assault")) {
       cost -= (actor.system?.tierOfPower ?? 1);
     }
+    // Overwhelming Assault: "Reduce the Ki Point Cost for that Attacking Maneuver by 4(T)" - held to the Minimum below.
+    if (declared?.overwhelm?.ki) cost -= 4 * Math.max(1, actor.system?.tierOfPower ?? 1);
 
     // Minimum Ki Point Cost, applied last: the price is whatever everything did to it,
     // but never less than half what the Profile lists. Last because it is a floor under
