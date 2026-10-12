@@ -92,6 +92,9 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
           ? printedLines(String(file.addendum)).map(line => ({ text: line, bullet: /^[*\u2022]/.test(line), gap: !line }))
           : null,
         addendumTitle: String(file?.addendumTitle ?? "Addendum"),
+        // Where it is shown: beside the Options it is for, where the Trait has any - Saiyan Heritage's; folded on its
+        // Description otherwise - Demons of the Makyo Star's (the user's).
+        addendumOnDescription: Boolean(String(file?.addendum ?? "").trim()) && !(file && optionGroupsOf(file).length),
         // A tail it may lose: kept on the character, the Tailed Option's `tailed`.
         tail: file?.tail === true,
         tailLost: Boolean(this.item.actor?.getFlag?.("dbu-ttrpg", "tailLost"))

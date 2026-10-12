@@ -14139,15 +14139,29 @@ export async function pressureCheck(actor) {
   if (!actor) return;
   // Denizen of the Demon Realm (1): 1 more while an Opponent suffers from a Combat Condition this character inflicted.
   const more = inflictedOnOpponent(actor) ? (Number(actor.system.effects?.slots?.["pressure.inflicted"]?.add) || 0) : 0;
-  const roll = await new Roll(more ? `1d10 + ${more}` : "1d10").evaluate();
+  // Demons of the Makyo Star (4): "you may reduce your Dice Score for that Pressure Check by 2. If you use this effect and
+  // still succeed at that Pressure Check, gain an additional stack of Demonic Power" - asked.
+  const gamble = (actor.system.effects?.slots?.["pressure.gamble"] === true)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+      window: { title: `${actor.name} - Pressure Check` },
+      content: "<p>2 off it - and, succeeding still, a stack of Demonic Power more?</p>", rejectClose: false });
+  const roll = await new Roll(["1d10", more ? `${more}` : "", gamble ? "-2" : ""].filter(Boolean).join(" + ")
+    .replace("+ -", "- ")).evaluate();
   const success = roll.total >= 4;
   const key = success ? "demonicpower" : "demonicfatigue";
+  const gained = (success && gamble) ? 2 : 1;
   const held = { ...(actor.system.resources ?? {}) };
-  held[key] = { ...(held[key] ?? {}), stacks: (Number(held[key]?.stacks) || 0) + 1 };
+  held[key] = { ...(held[key] ?? {}), stacks: (Number(held[key]?.stacks) || 0) + gained };
   const { replaceObject } = await import("./conditions.mjs");
   await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
-  return roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
-    flavor: `Pressure Check - ${success ? "a success: a stack of Demonic Power" : "a fail: a stack of Demonic Fatigue"}` });
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: `Pressure Check - ${success ? `a success: ${gained} stack${(gained === 1) ? "" : "s"} of Demonic Power`
+      : "a fail: a stack of Demonic Fatigue"}` });
+  // Demonic Power gained - Demons of the Makyo Star's Ki.
+  if (success) {
+    const { stacksGained } = await import("./effects/moments-runtime.mjs");
+    await stacksGained(actor, ["demonicpower"], { demonicpower: gained });
+  }
 }
 
 /**

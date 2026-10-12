@@ -12,4 +12,16 @@
     {{/each}}
   </section>
   {{/if}}
+  {{#if racial.addendumOnDescription}}
+  {{! Its Addendum effect's text box, as written - folded (the user's). }}
+  <section class="panel racial-addendum">
+    <details class="condition-group">
+      <summary class="panel-title">{{racial.addendumTitle}}</summary>
+      {{#each racial.addendum as |line|}}
+      {{#if line.gap}}<div class="dbu-entry-break"></div>{{else}}
+      <div class="dbu-profile-line{{#if line.bullet}} dbu-profile-bullet{{/if}}">{{line.text}}</div>{{/if}}
+      {{/each}}
+    </details>
+  </section>
+  {{/if}}
 </div>

@@ -269,11 +269,13 @@ async function writeStateful(actor, slots) {
  */
 export async function stacksGained(actor, names, counts = {}) {
   const { offerTriggers } = await import("../chat.mjs");
-  // Overwhelm's - Redirected Energy's "Upon gaining a stack of Overwhelm" - with how many.
-  if (names.includes("overwhelm")) {
-    const context = { gained: Math.max(1, Number(counts.overwhelm) || 1) };
-    await offerTriggers(actor, "overwhelm-gained", context);
-    await fireMoment(actor, "overwhelm-gained", context);
+  // Overwhelm's - Redirected Energy's "Upon gaining a stack of Overwhelm" - and Demonic Power's - Demons of the Makyo
+  // Star's - with how many.
+  for (const [name, moment] of [["overwhelm", "overwhelm-gained"], ["demonicpower", "demonic-power-gained"]]) {
+    if (!names.includes(name)) continue;
+    const context = { gained: Math.max(1, Number(counts[name]) || 1) };
+    await offerTriggers(actor, moment, context);
+    await fireMoment(actor, moment, context);
   }
   // Comfort's - Comfortable Count's "If you gain a stack of Comfort".
   if (names.includes("comfort")) {
@@ -286,7 +288,7 @@ export async function stacksGained(actor, names, counts = {}) {
 }
 
 /** The Resources whose stacks gained are a Moment where an effect writes them - Comfort's. */
-const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm"]);
+const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm", "demonicpower"]);
 
 /** A character an effect named, by uuid or by name, or nothing. */
 function named(who) {

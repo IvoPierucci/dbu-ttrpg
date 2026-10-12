@@ -108,6 +108,9 @@ const TABLE = [
     doc: "Fired for whoever put Shaken on someone else - Terrify, the Bluff Attack, a Dirty Trick, a Technique's Condition, "
        + "Power Duel, and every mark kept on its giver's clock (chat.mjs shakenBy) - Terrifying Pressure's. What is the "
        + "player's is asked in a window first." },
+  { key: "demonic-power-gained", label: "You gain a stack of Demonic Power", provides: [],
+    doc: "Fired as Demonic Power is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Demons of the "
+       + "Makyo Star's. What is the player's is asked in a window first." },
   { key: "overwhelm-gained", label: "You gain a stack of Overwhelm", provides: [],
     doc: "Fired as Overwhelm is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Redirected Energy's. "
        + "What is the player's is asked in a window first." },

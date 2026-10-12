@@ -1,0 +1,43 @@
+id: demons-of-the-makyo-star
+name: Demons of the Makyo Star
+order: 4
+category: body
+subrace: makyan
+addendumTitle: Makyo Star
+addendum: >
+  The Makyo Star is the home planet for the Makyans. When upon the Makyo Star or even when it is nearby, they gain an immense amount of power.
+
+  When a Makyan is on or near to the Makyo Star, they gain access to the Makyo Star Awakening as a Level 2 Temporary Awakening. Unlike typical Temporary Awakenings that Characters lose access to at the end of the Combat Encounter, the Makyo Star Awakening remains until they are too far away from the Makyo Star to gain its effects.
+
+  The degree of proximity to the Makyo Star to gain its effects, and the current position of the Makyo Star, are both decided by your ARC.
+description: >
+  Intrinsically tied to the power imbued in the Makyo Star, Makyans are a varied but powerful group that only grows stronger as the Makyo Star draws near.
+text: >
+  Demons of the Makyo Star (Body): Intrinsically tied to the power imbued in the Makyo Star, Makyans are a varied but powerful group that only grows stronger as the Makyo Star draws near.
+  (1)-[Passive]: While you possess 2+ stacks of Demonic Power, increase your Combat Rolls by 1(T).
+  (2)-[Addendum]: Please refer to the ‘Makyo Star’ text box below.
+  (3)-[Triggered]: Each time you gain a stack(s) of Demonic Power, regain Ki Points equal to 1/4 (rounded up) of your Might for each stack of Demonic Power gained.
+  (4)-[Triggered]: If you would make a Pressure Check, you may reduce your Dice Score for that Pressure Check by 2. If you use this effect and still succeed at that Pressure Check, gain an additional stack of Demonic Power.
+  (5)-[Triggered/Power, 1/Round, 3/Encounter]: Gain a stack of Demonic Power.
+
+---
+
+[passive]
+# (1)
+if (stacksAtLeast(2, "demonicpower")) {
+    combatRolls += 1(T);
+}
+# (2) Its text box, on the Item's Description. The Makyo Star Awakening waits on Awakenings, not built yet - and how near
+# the Makyo Star is, the ARC's.
+# (4) Asked as each Pressure Check is made: 2 off it - a success all the same, a stack of Demonic Power more (chat.mjs
+# pressureCheck).
+allow pressure.gamble;
+
+# (3) Demonic Power gained - a new moment, demonic-power-gained, with how many: 1/4 (rounded up) of your Might in Ki Points
+# for each. Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/demonic-power-gained, effect 3]
+ki.value += ceil(might / 4) * gained;
+
+# (5) The Power Up Maneuver used: a stack of Demonic Power - offered in its window (chat.mjs answerPower).
+[triggered/power, 1/round, 3/encounter, effect 5]
+demonicpower.stacks += 1;
