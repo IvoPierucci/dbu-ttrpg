@@ -729,6 +729,9 @@ async function settleClashEffects(messageId, clash) {
     await settleDevilmite(message, clash);
   }
 
+  if (clash.conditionHandOff && clash.result && !clash.conditionHandOff.applied) {
+    await settleConditionHandOff(message, clash);
+  }
   if (clash.demonicImpediment && clash.result && !clash.demonicImpediment.applied) {
     await settleDemonicImpediment(message, clash);
   }
@@ -14162,6 +14165,8 @@ export async function pressureCheck(actor) {
     const { stacksGained } = await import("./effects/moments-runtime.mjs");
     await stacksGained(actor, ["demonicpower"], { demonicpower: gained });
   }
+  // Fallen Idol (4): succeeded, with one of those on them - a Clash to hand one on.
+  if (success) await offerConditionHandOff(actor);
 }
 
 /**
@@ -14177,6 +14182,58 @@ function inflictedOnOpponent(actor) {
     && suffering(fromUuidSync(entry.on), entry.key))) return true;
   return (canvas?.tokens?.placeables ?? []).some(token => Object.entries(token.actor?.getFlag?.(SCOPE, "afflictedBy") ?? {})
     .some(([key, uuid]) => (uuid === actor.uuid) && suffering(token.actor, key)));
+}
+
+/** Fallen Idol (4)'s Combat Conditions: the ones that may be handed on. */
+const HANDED_ON = Object.freeze(["impediment", "guard-down", "broken", "impaired"]);
+
+/**
+ * Fallen Idol (4): "If you succeed a Pressure Check while you possess the Impediment, Guard Down, Broken, and/or Impaired
+ * Combat Condition(s) you may make a Clash (Cognitive) against an Opponent who is not at Long Range." Once a Round: which,
+ * asked - none, its use unspent - and the Clash opened.
+ */
+async function offerConditionHandOff(actor) {
+  if ((actor?.system?.effects?.slots?.["pressure.handOff"] !== true) || (actor.getFlag?.(SCOPE, "handOffRound") === roundKey())) return;
+  if (!HANDED_ON.some(key => (Number(actor.system.conditions?.[key]) || 0) > 0)) return;
+  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && ((own === undefined) || (token.document?.disposition !== own))
+      && !token.actor.system?.defeated && !atLongRange(actor, token.actor))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Fallen Idol`,
+    [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const target = opponents.find(each => each.uuid === picked);
+  if (!target) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.handOffRound`]: roundKey() });
+  return postSaveClash(actor, target, { maneuverName: "Fallen Idol",
+    reason: `Win and a stack of one of your Impediment, Guard Down, Broken or Impaired goes to ${target.name} until the end of your turn.`,
+    saves: ["cognitive"], defenderSaves: ["cognitive"], conditionHandOff: { applied: false } });
+}
+
+/**
+ * Fallen Idol (4), won: "you lose a stack of one of those listed Combat Conditions and that Opponent gains that stack of
+ * your selected Combat Condition until the end of your turn." Which, asked of whoever plays the challenger where more than
+ * one is had; theirs taken off, given on the challenger's clock.
+ */
+async function settleConditionHandOff(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, conditionHandOff: { ...clash.conditionHandOff, applied: true } });
+  const challenger = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!challenger || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} shrugs it off.`);
+  const had = HANDED_ON.filter(key => (Number(challenger.system.conditions?.[key]) || 0) > 0);
+  if (!had.length) return;
+  const key = (had.length === 1) ? had[0] : await askPlayerChoice(challenger, `${challenger.name}: Fallen Idol`,
+    had.map(each => ({ value: each, label: getTrait(each)?.name ?? each })));
+  if (!had.includes(key)) return;
+  const { setCondition } = await import("./conditions.mjs");
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  await setCondition(challenger, key, (Number(challenger.system.conditions?.[key]) || 0) - 1);
+  if (await gainCondition(target, key, 1) !== false) {
+    await lasting(challenger, { kind: KINDS.CONDITION, key, edge: EDGES.END, on: target.uuid, source: "Fallen Idol" });
+  }
+  return settledNote(message, `${challenger.name}'s ${getTrait(key)?.name ?? key} goes to ${target.name} until the end of their turn.`);
 }
 
 /** Suffering from a Combat Condition - one of the published ones, not a mark (Demonic Combat's). */

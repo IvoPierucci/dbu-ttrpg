@@ -1,0 +1,33 @@
+id: fallen-idol
+name: Fallen Idol
+order: 5
+category: body
+subrace: phantom
+# (1) The base Size Category, chosen as it is gained.
+choose: list
+choices: Small, Medium, Large, Enormous, Gigantic
+# (2) A Monstrous Trait and a Bestial Trait, chosen as it is gained, and gone with it (racial.mjs grantOtherTrait).
+grantsOther: monstrous, bestial
+description: >
+  Beasts of monstrous proportions, these demons are known far and wide as unstoppable juggernauts that few can match.
+text: >
+  Fallen Idol (Body): Beasts of monstrous proportions, these demons are known far and wide as unstoppable juggernauts that few can match.
+  (1)-[Passive]: At Character Creation, your base Size Category may be anything between the Small Size Category and the Gigantic Size Category.
+  (2)-[Passive]: Select and gain access to a Monstrous Trait and a Bestial Trait.
+  (3)-[Passive]: For each stack of Demonic Power, increase your Soak Value by 1(T) and the Dice Score of your Steadfast Checks by 1.
+  (4)-[Triggered, 1/Round]: If you succeed a Pressure Check while you possess the Impediment, Guard Down, Broken, and/or Impaired Combat Condition(s) you may make a Clash (Cognitive) against an Opponent who is not at Long Range. If you win, you lose a stack of one of those listed Combat Conditions and that Opponent gains that stack of your selected Combat Condition until the end of your turn.
+
+---
+
+[passive]
+# (1)
+allow size.base.$choice;
+# (3)
+if (hasResource("demonicpower")) {
+    soakValue += (demonicpower.stacks * tierOfPower);
+    steadfast.dice += demonicpower.stacks;
+}
+# (4) A Pressure Check succeeded with Impediment, Guard Down, Broken or Impaired on you: an Opponent not at Long Range asked,
+# once a Round - and a Clash (Cognitive) at them; won, a stack of one of those - asked - from you to them till the end of
+# your turn (chat.mjs pressureCheck, settleConditionHandOff).
+allow pressure.handOff;

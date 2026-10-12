@@ -542,7 +542,8 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
   for (const option of chosenOptions(item)) await madeByOption(actor, item, option);
   if (trait.defaultCostume) await askDefaultCostume(actor);
   // An Other Trait it gives, chosen now - Bestial Evolution's "Select and gain a Bestial Trait of your choice".
-  if (trait.grantsOther) await grantOtherTrait(actor, item, String(trait.grantsOther));
+  // Fallen Idol's two: one of each group it names.
+  for (const group of listOf(trait.grantsOther)) await grantOtherTrait(actor, item, group);
   return item;
 }
 
