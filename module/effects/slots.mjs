@@ -782,6 +782,10 @@ const PATTERNS = [
   // Elastic Tentacle's: this attack's Diminishing Defense doubled, ticked as it hits.
   { match: /^attack\.doublesDiminishing$/, phase: PHASES.REACTIVE, kind: F, ops: ["set"], valid: () => true,
     doc: "The Diminishing Defense this Attacking Maneuver gave the ones it hit, doubled - not on top of another increase." },
+  // Demonic Combat's: the Wound against one suffering from a Combat Condition, and Damage Reduction against their attack.
+  { match: /^(wound|damageReduction)\.vsConditioned$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "Added to the Wound against one suffering from a Combat Condition, or to the Damage Reduction against such a "
+       + "one's attack (chat.mjs conditioned)." },
   // Pinpoint Combat's "Increase the Wound Rolls of your Called Shots and Exploit Maneuvers by 2(T)".
   { match: /^wound\.calledOrExploit$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "Added to the Wound Roll of an attack made with the Called Shot, or through the Exploit Maneuver - once." },

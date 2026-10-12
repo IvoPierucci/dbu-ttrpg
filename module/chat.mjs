@@ -727,6 +727,9 @@ async function settleClashEffects(messageId, clash) {
     await settleDevilmite(message, clash);
   }
 
+  if (clash.demonicImpediment && clash.result && !clash.demonicImpediment.applied) {
+    await settleDemonicImpediment(message, clash);
+  }
   if (clash.angelicOffense && clash.result && !clash.angelicOffense.applied) {
     await settleAngelicOffense(message, clash);
   }
@@ -14126,6 +14129,61 @@ function offerUnscathedExploit(message, actor, attacker) {
     provokedBy: { maneuverId: attack?.maneuverId ?? "", maneuverName: attack?.maneuverName ?? "", messageId: message.id } } });
 }
 
+/** Suffering from a Combat Condition - one of the published ones, not a mark (Demonic Combat's). */
+function conditioned(actor) {
+  return Object.entries(actor?.system?.conditions ?? {}).some(([key, stacks]) => ((Number(stacks) || 0) > 0)
+    && (getTrait(key)?.kind === "conditions") && (getTrait(key)?.combatCondition !== false));
+}
+
+/** Demonic Combat (3): "make a Might Clash against that Opponent. If you win, they are knocked Prone." */
+export async function knockedProneClash(actor, knockedUuid) {
+  const knocked = fromUuidSync(knockedUuid ?? "");
+  if (!actor || !knocked || (knocked.uuid === actor.uuid)) return;
+  return postMightClash(actor, knocked, { maneuverName: "Demonic Combat",
+    reason: `Win and ${knocked.name} is knocked Prone.`, thrownProne: { applied: false } });
+}
+
+/**
+ * Demonic Combat (4): "You may spend 4(bT) Ki Points to target an Opponent who is not at Long Range and make a Clash
+ * (Cognitive) against that Opponent. If you win, they suffer from the Impediment Combat Condition until the end of your
+ * turn." Which, asked; the Ki paid; the Clash opened. None picked, its use unspent.
+ */
+export async function demonicImpediment(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && ((own === undefined) || (token.document?.disposition !== own))
+      && !token.actor.system?.defeated && !atLongRange(actor, token.actor))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) {
+    ui.notifications.info(`${actor.name}: Demonic Combat - no Opponent out of Long Range.`);
+    return UNSPENT;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Demonic Combat`,
+    [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const target = opponents.find(each => each.uuid === picked);
+  if (!target) return UNSPENT;
+  const ki = 4 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const { spendManeuverCost } = await import("./maneuvers.mjs");
+  if (!await spendManeuverCost(actor, { name: "Demonic Combat" }, ki)) return UNSPENT;
+  return postSaveClash(actor, target, { maneuverName: "Demonic Combat",
+    reason: `Win and ${target.name} suffers from Impediment until the end of ${actor.name}'s turn.`,
+    saves: ["cognitive"], defenderSaves: ["cognitive"], demonicImpediment: { applied: false } });
+}
+
+/** Demonic Combat (4), won: Impediment on them till the end of the challenger's turn, on the challenger's clock. */
+async function settleDemonicImpediment(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, demonicImpediment: { ...clash.demonicImpediment, applied: true } });
+  const challenger = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!challenger || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} keeps their footing.`);
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  if (await gainCondition(target, "impediment", 1) === false) return;
+  await lasting(challenger, { kind: KINDS.CONDITION, key: "impediment", edge: EDGES.END, on: target.uuid, source: "Demonic Combat" });
+  return settledNote(message, `${target.name} suffers from Impediment until the end of ${challenger.name}'s turn.`);
+}
+
 /**
  * A Combat Condition's stacks on the one a Moment names as knocked through, till the end of the actor's next turn on
  * the actor's clock - Scarlet Spotter (3)'s 2 Broken.
@@ -18602,6 +18660,9 @@ async function rollAttackWoundWork(message, attack) {
     const woundParts = [...analysisBonus(attacker, target), ...mindReadBonus(attacker, target),
       { label: "God Meteor", value: godMeteorPinned(attacker, target) },
       { label: "Inherited Aggression", value: aggressionAgainst(attacker, target) },
+      // Demonic Combat (2): against one suffering from a Combat Condition.
+      { label: "Demonic Combat", value: conditioned(target)
+        ? (Number(attacker.system.effects?.slots?.["wound.vsConditioned"]?.add) || 0) : 0 },
       { label: "Overwhelming Pressure", value: pressing ? pressing(target) : 0 },
       { label: "Stealthy Trick", value: own.oblivious ? unseen : 0 },
       ...lockOnParts(attacker, target),
@@ -18660,7 +18721,9 @@ async function rollAttackWoundWork(message, attack) {
     const braced = ["directHit", "guard"].includes(own.defense) ? heldAt(target, "guard-or-direct-hit") : null;
     // Scarlet Spotter (1): a Called Shot that spent 2 Critical Eye - "ignore that Opponent's Damage Reduction", all of it.
     const unreduced = (attack.modifiers ?? []).some(entry => entry.ignoresDamageReduction);
-    const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0));
+    // Demonic Combat (2): 1(T) more against the attack of one suffering from a Combat Condition.
+    const demonic = conditioned(attacker) ? (Number(target.system.effects?.slots?.["damageReduction.vsConditioned"]?.add) || 0) : 0;
+    const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic);
 
     const negated = counterWound && (counterWound.total > wound.total);
     const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);

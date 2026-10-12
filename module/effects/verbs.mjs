@@ -96,6 +96,18 @@ export const VERBS = Object.freeze({
     doc: "Ruler's: 2 stacks of Overwhelm spent, and the Allies ticked as within a Large Sphere around you Ruled - Soak "
        + "Value and Combat Rolls 1(T) higher - until the start of your next turn (chat.mjs rulerAllies)."
   },
+  knockedProneClash: {
+    args: [0, 0],
+    names: [],
+    doc: "Demonic Combat's: a Might Clash at whoever this Moment says was knocked through - won, they are knocked Prone "
+       + "(chat.mjs knockedProneClash)."
+  },
+  demonicImpediment: {
+    args: [0, 0],
+    names: [],
+    doc: "Demonic Combat's: an Opponent not at Long Range picked, 4(bT) Ki paid, and a Clash (Cognitive) at them - won, "
+       + "Impediment till the end of your turn (chat.mjs demonicImpediment)."
+  },
   markKnocked: {
     args: [2, 2],
     names: [0],

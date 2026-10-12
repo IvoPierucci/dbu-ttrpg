@@ -1,0 +1,34 @@
+id: demonic-combat
+name: Demonic Combat
+order: 1
+category: mind
+importance: primary
+description: >
+  Sly and cunning, demons prefer to trick and trap opponents rather than face them head-on.
+text: >
+  Demonic Combat (Mind): Sly and cunning, demons prefer to trick and trap opponents rather than face them head-on.
+  (1)-[Passive]: You are considered to possess the Demon Clansman Factor for all Prerequisites.
+  (2)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers against Opponents suffering from a Combat Condition by 2(T). Additionally, increase your Damage Reduction against the Attacking Maneuvers made by Opponents suffering from a Combat Condition by 1(T).
+  (3)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver, make a Might Clash against that Opponent. If you win, they are knocked Prone.
+  (4)-[Triggered/Start of Turn, 1/Round]: You may spend 4(bT) Ki Points to target an Opponent who is not at Long Range and make a Clash (Cognitive) against that Opponent. If you win, they suffer from the Impediment Combat Condition until the end of your turn.
+
+---
+
+# (1) The table's: Prerequisites are read by the table, not the system.
+
+[passive]
+# (2) Against each one suffering from a Combat Condition - a Combat Condition, not a mark - as the Damage is worked out
+# (chat.mjs conditioned): 2(T) on the Wound; and 1(T) more Damage Reduction against the attack of one who is.
+wound.vsConditioned += 2(T);
+damageReduction.vsConditioned += 1(T);
+
+# (3) An Opponent knocked through a Health Threshold by your Attacking Maneuver: a Might Clash at them - won, Prone (chat.mjs
+# knockedProneClash). Once a Round. Automatic by default, its Triggered/Automatic button.
+[triggered/knock-through, 1/round, effect 3]
+knockedProneClash();
+
+# (4) Ticked on the turn's card, once a Round: an Opponent not at Long Range picked, 4(bT) Ki paid, and a Clash (Cognitive)
+# at them - won, Impediment till the end of your turn (chat.mjs demonicImpediment). None picked, its use unspent.
+[triggered/start-of-turn, 1/round, chosen, effect 4]
+requires ki.value >= 4(bT);
+demonicImpediment();

@@ -16,5 +16,19 @@
     }
   ],
   "savingThrow": "cognitive",
-  "skillRanks": 3
+  "skillRanks": 3,
+  "subraces": [
+    {
+      "id": "demon-person",
+      "name": "Demon Person"
+    },
+    {
+      "id": "makyan",
+      "name": "Makyan"
+    },
+    {
+      "id": "phantom",
+      "name": "Phantom"
+    }
+  ]
 }
