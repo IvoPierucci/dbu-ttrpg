@@ -1,8 +1,9 @@
 id: demons-of-the-makyo-star
 name: Demons of the Makyo Star
-order: 4
+order: 6
 category: body
 subrace: makyan
+importance: primary
 addendumTitle: Makyo Star
 addendum: >
   The Makyo Star is the home planet for the Makyans. When upon the Makyo Star or even when it is nearby, they gain an immense amount of power.

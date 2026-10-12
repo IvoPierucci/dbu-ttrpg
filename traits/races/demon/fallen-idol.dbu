@@ -1,8 +1,9 @@
 id: fallen-idol
 name: Fallen Idol
-order: 5
+order: 7
 category: body
 subrace: phantom
+importance: primary
 # (1) The base Size Category, chosen as it is gained.
 choose: list
 choices: Small, Medium, Large, Enormous, Gigantic

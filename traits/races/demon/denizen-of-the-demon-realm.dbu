@@ -1,8 +1,9 @@
 id: denizen-of-the-demon-realm
 name: Denizen of the Demon Realm
-order: 3
+order: 5
 category: body
 subrace: demon-person
+importance: primary
 # (2) A Magical Unique Ability of 30 TP or less, chosen as it is gained - its Prerequisites shown, the table's - and gone with
 # it (racial.mjs).
 grantsUniqueChoice: 30
