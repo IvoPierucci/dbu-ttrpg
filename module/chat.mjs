@@ -7674,9 +7674,15 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // What the character's own effects add to a Strike's or a Dodge's Natural Result - Drunk's L.
   const ownNatural = ["strike", "dodge", "wound"].includes(slot)
     ? applySlot(actor.system.effects?.slots, `${slot}.natural`, 0) : 0;
+  // Evolved Right Eye: "Reduce the Critical Target for your Combat Rolls by 1" - on whatever the roll was made against,
+  // never under the least a Critical Target may be unless it already was.
+  const combatShift = combatRoll ? (Number(actor.system.effects?.slots?.["criticalTarget.combat"]?.add) || 0) : 0;
+  const aimedAt = criticalTarget ?? (Number(actor.system.criticalTarget) || 10);
+  const aimed = combatShift
+    ? Math.max(Math.min(aimedAt, DBUCharacterData.CRITICAL_TARGET_MIN), aimedAt + combatShift) : criticalTarget;
   const evaluated = await evaluateCheck(actor, bonus,
     groups.map(group => group.formula).join(" + "), baseDie,
-    { minimumNatural, criticalTarget, combatRoll: true, naturalAdd: naturalAdd + ownNatural });
+    { minimumNatural, criticalTarget: aimed, combatRoll: true, naturalAdd: naturalAdd + ownNatural });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
   // Lingering Instincts: "You cannot score a Critical Result or a Botch Result on this Combat Roll, regardless of all
@@ -7818,6 +7824,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 
   // Drawn now rather than first, so the Critical Extra Dice are among them.
   lines.unshift(...rolledDice(roll, { rolled, natural, forcedNatural }, groups, criticalTerms));
+  // "Each time you score a Critical Result on a Combat Roll" - Evolved Right Eye's Critical Eye. Once a roll.
+  if (combatRoll && collect && (outcome === "critical")) await answerFor(actor, "critical-scored", {});
 
   // The finished total is a system value like any other: a Botch takes what it takes,
   // but never past zero. Otherwise a bad roll turns into a negative that an opponent
@@ -7848,7 +7856,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     // from scratch. Read off the sheet alone, that second reading loses whatever the
     // Profile brought - a Cutting attack rerolled into a 9 stopped being a Botch, which
     // is the one thing Cutting says it always is.
-    rules: { minimumNatural, criticalTarget, botchUnlessCritical, naturalAdd,
+    rules: { minimumNatural, criticalTarget: aimed, botchUnlessCritical, naturalAdd,
              // The range this roll was measured against, so Karmic Chance rolls the
              // replacement under it rather than under whichever one it guesses at.
              botchRange: botchRangeFor(actor, true) },
@@ -13824,6 +13832,97 @@ function angelicOffenseOpen(attacker, attack) {
 }
 
 /** Angelic Offense (2)'s buttons on the attack's card, for the one who hit: a Clash at one of those hit. */
+/**
+ * Evolved Right Eye (4): "When you hit an Opponent with an Attacking Maneuver, you can spend any number of Critical Eye
+ * stacks to increase the Wound Roll of that Attacking Maneuver by 2(T) for each Critical Eye stack spent" - how many,
+ * asked of whoever plays the attacker; spent, and carried on the attack as `criticalEye` (woundParts).
+ */
+async function spendCriticalEye(attacker, attack) {
+  const held = Number(attacker?.system?.resources?.criticaleye?.stacks) || 0;
+  if (!held || (attacker.system.effects?.slots?.["criticalEye.spend"] !== true)) return attack;
+  const spent = await askPlayerAmount(attacker, `${attacker.name}: Critical Eye`, held, "Critical Eye stacks: 2(T) Wound each");
+  if (!spent) return attack;
+  const { replaceObject } = await import("./conditions.mjs");
+  const resources = { ...(attacker.system.resources ?? {}) };
+  const left = held - spent;
+  if (left > 0) resources.criticaleye = { ...resources.criticaleye, stacks: left };
+  else delete resources.criticaleye;
+  await requestActorUpdate(attacker, { "system.resources": replaceObject(resources) });
+  return { ...attack, criticalEye: spent };
+}
+
+/** Evolved Right Eye (5)'s uses: once a Combat Round, twice a Combat Encounter. Why not, or "". */
+function criticalStrikeRefused(actor) {
+  const used = actor?.getFlag?.(SCOPE, "criticalDeclared") ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const count = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+  if ((used.encounter === encounter) && (used.round === roundKey())) return "Once a Combat Round.";
+  if (count >= 2) return "Twice a Combat Encounter.";
+  return "";
+}
+
+/** Its button: the attacker's, once the Strike is rolled and before the Wound Roll, on a Strike that is not one already. */
+function criticalStrikeButton(message, container, attack) {
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  const strike = attack.result?.strike;
+  if (!attacker?.isOwner || !strike || attack.result.wound || (strike.outcome === "critical")
+    || (attacker.system.effects?.slots?.["strike.declareCritical"] !== true)) return;
+  const refused = criticalStrikeRefused(attacker);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Critical";
+  button.disabled = Boolean(refused);
+  button.dataset.tooltip = refused || "Evolved Right Eye: this Strike Roll a Critical Result, whatever its Natural Result - "
+    + "and no Botch (1/Round, 2/Encounter)";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    await declareStrikeCritical(message, attacker);
+  });
+  container.append(button);
+}
+
+/**
+ * Evolved Right Eye (5): "After rolling your Strike Roll for an Attacking Maneuver, you may declare that it is a Critical
+ * Result regardless of the Natural Result. If your result would have been a Botch Result, it is also no longer a Botch
+ * Result." Its Critical dice rolled onto what it came to before any Botch or Critical, the hit settled again against
+ * each one it was aimed at - as a Karmic Effect settles it - and the Critical answered as any is (critical-scored).
+ */
+async function declareStrikeCritical(message, attacker) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const result = attack?.result;
+  const side = result?.strike;
+  if (!side || result.wound || (side.outcome === "critical") || criticalStrikeRefused(attacker)) return;
+  const extra = new Roll(side.criticalDice || attacker.system.dice?.critical?.formula || "1d10");
+  await extra.evaluate();
+  const total = Math.max(0, (Number.isFinite(side.beforeOutcome) ? side.beforeOutcome : side.total) + extra.total);
+  const lines = [...withoutOutcome(side.lines ?? []), fromOutcome(diceLine(extra, "Critical - Evolved Right Eye"))];
+  const strike = { ...side, total, outcome: "critical", lines, breakdown: breakdownText(lines, total) };
+  const used = attacker.getFlag(SCOPE, "criticalDeclared") ?? {};
+  const encounter = game.combat?.id ?? "none";
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.criticalDeclared`]: { encounter, round: roundKey(),
+    count: ((used.encounter === encounter) ? (Number(used.count) || 0) : 0) + 1 } });
+  let settledTargets = result.targets ?? [];
+  for (const entry of targetResults(attack).filter(each => each.own && !each.own.applied)) {
+    const own = entry.own;
+    const against = Math.max(0, strike.total - (own.longRange ?? 0));
+    const hit = own.automatic || (own.answer ? (against > own.answer.total) : true);
+    let incomingDamage = own.incomingDamage;
+    if (hit && !own.hit) {
+      const target = fromUuidSync(entry.uuid);
+      if (target) {
+        const incoming = atMoment(target, "being-hit", { attack: 1, attacker: 1 });
+        spendChosen(target, incoming);
+        incomingDamage = incoming.slots?.["incoming.damage"] ?? null;
+      }
+    }
+    settledTargets = settledTargets.map(line =>
+      (line.uuid === entry.uuid) ? { ...own, hit, against, incomingDamage } : line);
+  }
+  requestEdit(message, { type: "attack", attack: { ...attack, result: { ...result, strike, targets: settledTargets } } });
+  await answerFor(attacker, "critical-scored", {});
+}
+
 function angelicOffenseButtons(message, container, attack) {
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
   if (!attacker?.isOwner) return;
@@ -17507,7 +17606,11 @@ function woundParts(attacker, attack) {
   const up = Number(attack.punchingUp) || 0;
   // Searing Anger (3): "double the bonus to your Wound Roll from your Overwhelm stacks" - the stacks' 1(T) once more.
   const doubled = attack.overwhelmDouble ? (Number(attacker.system.resources?.overwhelm?.stacks) || 0) : 0;
+  // Evolved Right Eye (4): "2(T) for each Critical Eye stack spent".
+  const eyes = Number(attack.criticalEye) || 0;
   return [
+    ...(eyes ? [{ label: `Critical Eye (${eyes})`, written: `+${2 * eyes}(T)`,
+      value: 2 * eyes * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(doubled ? [{ label: "Searing Anger (Overwhelm doubled)", written: `+${doubled}(T)`,
       value: doubled * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     // Punching Up: "increase the Wound Roll of that Attacking Maneuver by 1(T) for every Size Category they are larger".
@@ -18050,6 +18153,8 @@ async function rollAttackWound(message, attack) {
   let searing = false;
   // Stealthy Trick (3): 1(T) for every 2 stacks of Overwhelm, against each one hit who was Oblivious of you.
   let unseen = 0;
+  // Evolved Right Eye (4): Critical Eye spent on it, asked - 2(T) each (woundParts).
+  if (struck.length) attack = await spendCriticalEye(attacker, attack);
   if (struck.length) {
     await offerTriggers(attacker, "hit-opponent");
     const { fireMoment } = await import("./effects/moments-runtime.mjs");
@@ -19209,6 +19314,7 @@ function lingeringSources(actor, answered, slot, { naturalAdd = 0, minimumNatura
   take(own[`${slot}.natural`], value => value > 0);
   take(answered?.slots?.baseDie, value => value > 0);
   take(own.criticalTarget, value => value < 0);
+  take(own["criticalTarget.combat"], value => value < 0);
   take(answered?.slots?.criticalTarget, value => value < 0);
   const ownTarget = Number(actor?.system?.criticalTarget) || 10;
   return sources.size + ((naturalAdd > 0) ? 1 : 0) + ((minimumNatural > 0) ? 1 : 0)
@@ -22544,6 +22650,8 @@ function renderAttack(message, html) {
 
   // Angelic Offense (2): an Opponent hit, and the Clash theirs to make - once a Round, whenever after the hit.
   angelicOffenseButtons(message, container, attack);
+  // Evolved Right Eye (5): the Strike a Critical Result, before the Wound Roll.
+  criticalStrikeButton(message, container, attack);
 
   // Combination's three more Strikes come between the hit and the Wound Roll, and they
   // decide what the Wound Roll is worth - so they are their own step and the Wound

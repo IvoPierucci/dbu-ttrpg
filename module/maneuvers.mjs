@@ -1245,6 +1245,8 @@ export const LONG_RANGE_PENALTY_PER_BASE_TIER = 2;
 
 export function longRangePenalty(actor, target) {
   if (!atLongRange(actor, target)) return 0;
+  // Evolved Right Eye: "You cannot suffer from the Long Range Penalty."
+  if (actor?.system?.effects?.slots?.["longRange.ignore"] === true) return 0;
   return LONG_RANGE_PENALTY_PER_BASE_TIER * (actor?.system?.baseTierOfPower ?? 1);
 }
 
