@@ -14167,6 +14167,7 @@ export async function pressureCheck(actor) {
   }
   // Fallen Idol (4): succeeded, with one of those on them - a Clash to hand one on.
   if (success) await offerConditionHandOff(actor);
+  return { success };
 }
 
 /**
@@ -14182,6 +14183,41 @@ function inflictedOnOpponent(actor) {
     && suffering(fromUuidSync(entry.on), entry.key))) return true;
   return (canvas?.tokens?.placeables ?? []).some(token => Object.entries(token.actor?.getFlag?.(SCOPE, "afflictedBy") ?? {})
     .some(([key, uuid]) => (uuid === actor.uuid) && suffering(token.actor, key)));
+}
+
+/**
+ * Demonic Resilience (2): "If you are targeted by an Attacking Maneuver, you may make a Pressure Check. If you succeed,
+ * increase your Damage Reduction by 2(T) until the start of your next turn." For each one it is aimed at who plays them,
+ * before it is settled: once an attack, twice a Round. A success, Resilient on their own clock.
+ */
+function resilienceButtons(message, attack, container) {
+  const used = attack.resilienceUsed ?? [];
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || (uuid === attack.attackerUuid) || used.includes(uuid)
+      || (target.system?.effects?.slots?.["pressure.whenTargeted"] !== true)) continue;
+    const count = target.getFlag?.(SCOPE, "resilienceRound");
+    const spent = (count?.round === roundKey()) ? (Number(count.n) || 0) : 0;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Pressure Check - ${target.name}`;
+    button.disabled = spent >= 2;
+    button.dataset.tooltip = (spent >= 2) ? "Twice a Combat Round."
+      : "Demonic Resilience: a success, Damage Reduction 2(T) until the start of your next turn";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      requestEdit(message, { type: "attack", attack: { ...message.getFlag(SCOPE, ATTACK_FLAG),
+        resilienceUsed: [...(message.getFlag(SCOPE, ATTACK_FLAG)?.resilienceUsed ?? []), uuid] } });
+      await requestActorUpdate(target, { [`flags.${SCOPE}.resilienceRound`]: { round: roundKey(), n: spent + 1 } });
+      const made = await pressureCheck(target);
+      if (!made?.success) return;
+      const { setCondition } = await import("./conditions.mjs");
+      if (await setCondition(target, "resilient", 1) === false) return;
+      await lasting(target, { kind: KINDS.CONDITION, key: "resilient", edge: EDGES.START, source: "Demonic Resilience" });
+    });
+    container.append(button);
+  }
 }
 
 /** Fallen Idol (4)'s Combat Conditions: the ones that may be handed on. */
@@ -22166,6 +22202,12 @@ async function steadfastPassed(actor, threshold) {
   await fireMoment(actor, "steadfast-passed", { threshold });
 }
 
+/** Demonic Resilience (4)'s Pressure Check, read by rescueSteadfast: null until one is made. */
+let pressureRescued = null;
+export async function rescueByPressure(actor) {
+  pressureRescued = Boolean((await pressureCheck(actor))?.success);
+}
+
 export async function rescueSteadfast(actor, total, target) {
   const entries = triggersFor(actor, ["steadfast-failed"]);
   if (!entries.length) return "";
@@ -22176,7 +22218,10 @@ export async function rescueSteadfast(actor, total, target) {
   if (!entry) return "";
   await actor.update({ "system.armedTalents": [...new Set([...(actor.system.armedTalents ?? []), entry.blockId])] });
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  pressureRescued = null;
   const fired = await fireMoment(actor, "steadfast-failed", {}, { blocks: [entry.blockId] });
+  // A Pressure Check that failed passes nothing - its use spent on the trying (Demonic Resilience's).
+  if (pressureRescued === false) return "";
   return fired?.fired ? entry.sourceName : "";
 }
 
@@ -23014,6 +23059,8 @@ function renderAttack(message, html) {
   if (!result && !committed && !attack.reflectedFrom && !duelUnderway(attack.duel)) {
     unitedButtons(message, attack, container);
   }
+  // Demonic Resilience (2): targeted, a Pressure Check before it is settled.
+  if (!result) resilienceButtons(message, attack, container);
   // The Duel Clashes: a wager from each who is in it, then the roll.
   if (!result && duelRunning(attack)) duelButtons(message, attack, container);
 

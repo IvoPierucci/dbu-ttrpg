@@ -353,6 +353,11 @@ async function runVerb(actor, call, context) {
       return rulerAllies(actor);
     }
 
+    case "rescueByPressure": {
+      const { rescueByPressure } = await import("../chat.mjs");
+      return rescueByPressure(actor);
+    }
+
     case "pressureCheck": {
       const { pressureCheck } = await import("../chat.mjs");
       return pressureCheck(actor);

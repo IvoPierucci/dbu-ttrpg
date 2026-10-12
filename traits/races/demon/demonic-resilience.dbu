@@ -1,0 +1,35 @@
+id: demonic-resilience
+name: Demonic Resilience
+order: 6
+category: body
+importance: secondary
+description: >
+  Demons thrive in a realm where survival is all that matters, making them hardier than most.
+text: >
+  Demonic Resilience (Body): Demons thrive in a realm where survival is all that matters, making them hardier than most.
+  (1)-[Passive]: While you are below the Injured Health Threshold, increase your Cognitive Save by 1(T).
+  (2)-[Triggered, 2/Round]: If you are targeted by an Attacking Maneuver, you may make a Pressure Check. If you succeed, increase your Damage Reduction by 2(T) until the start of your next turn.
+  (3)-[Triggered/Threshold]: If you succeed at the Steadfast Check for this Health Threshold, regain Life and Ki Points equal to double your Might.
+  (4)-[Triggered, 1/Encounter]: If you fail a Steadfast Check, you may make a Pressure Check. If you succeed, you instead succeed at that Steadfast Check.
+
+---
+
+[passive]
+# (1) Injured or Critical.
+if (belowThreshold("injured")) {
+    save.cognitive += 1(T);
+}
+# (2) Targeted by an Attacking Maneuver, before it is settled: a Pressure Check on its card, twice a Round - a success,
+# Resilient: Damage Reduction 2(T) till the start of your next turn (chat.mjs resilienceButtons).
+allow pressure.whenTargeted;
+
+# (3) The Steadfast Check for a Health Threshold passed: double your Might in Life and Ki Points. Automatic by default, its
+# Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/steadfast-passed, effect 3]
+life.value += might * 2;
+ki.value += might * 2;
+
+# (4) A Steadfast Check failed: asked as it fails, with what else may pass it (chat.mjs rescueSteadfast) - a Pressure
+# Check; a success passes it. Once an Encounter, spent on trying.
+[triggered/steadfast-failed, 1/encounter, chosen, effect 4]
+rescueByPressure();

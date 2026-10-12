@@ -1,0 +1,16 @@
+id: resilient
+name: Resilient
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Demonic Resilience's (2) gives, held with a clock on it.
+combatCondition: no
+source: Core Rule
+description: >
+  Demonic Resilience: Damage Reduction 2(T) higher until the start of your next turn.
+text: >
+  Demonic Resilience (2): If you succeed, increase your Damage Reduction by 2(T) until the start of your next turn.
+
+---
+
+[passive]
+damageReduction += 2(T);
