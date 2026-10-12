@@ -3322,6 +3322,26 @@ function roundNow() {
 /** The Energy Charge Maneuver used this Combat Round - Energy Core's "If you've already used ... once". */
 export async function noteEnergyCharge(actor) {
   if (actor?.getFlag?.("dbu-ttrpg", "energyChargeRound") !== roundNow()) await actor?.setFlag?.("dbu-ttrpg", "energyChargeRound", roundNow());
+  await primeCriticalPoint(actor);
+}
+
+/**
+ * Critical Point (2): "If you use the Energy Charge Maneuver, you may spend 3(bT) Ki Points. If you do and use the declared
+ * Attacking Maneuver for that use of the Energy Charge Maneuver during this Combat Round, increase the Strike and Wound
+ * Rolls of that Attacking Maneuver by 2(T)." Asked, once a Round; paid, the Round marked - read as the declared one is
+ * thrown (use-maneuver.mjs).
+ */
+async function primeCriticalPoint(actor) {
+  if ((actor?.system?.effects?.slots?.["charge.criticalPoint"] !== true)
+    || (actor.getFlag?.("dbu-ttrpg", "criticalPointRound") === roundNow())) return;
+  const ki = 3 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  if ((Number(actor.system.ki?.value) || 0) < ki) return;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+    window: { title: `${actor.name} - Critical Point` },
+    content: `<p>${ki} Ki Points: 2(T) on the declared Attacking Maneuver's Strike and Wound Rolls this Combat Round?</p>`,
+    rejectClose: false });
+  if (!yes || !await spendManeuverCost(actor, { name: "Critical Point" }, ki)) return;
+  await actor.setFlag("dbu-ttrpg", "criticalPointRound", roundNow());
 }
 
 export async function recordManeuverUse(actor, maneuver) {

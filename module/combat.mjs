@@ -927,7 +927,8 @@ export function registerDefeatHooks() {
     if (options.dbuWasDefeated === undefined) return;
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
 
-    await announceThreshold(actor, options.dbuThreshold, options.dbuKnockedBy, Boolean(options.dbuKnockedPinpoint));
+    await announceThreshold(actor, options.dbuThreshold, options.dbuKnockedBy, Boolean(options.dbuKnockedPinpoint),
+      Boolean(options.dbuKnockedCritical));
 
     const was = options.dbuWasDefeated;
     const now = actor.system.defeated;
@@ -938,8 +939,9 @@ export function registerDefeatHooks() {
       const knocker = fromUuidSync(options.dbuKnockedBy);
       if (knocker && (knocker.uuid !== actor.uuid)) {
         const { offerTriggers } = await import("./chat.mjs");
-        await offerTriggers(knocker, "defeat-opponent", { defeatedUuid: actor.uuid });
-        await fireMoment(knocker, "defeat-opponent", { defeatedUuid: actor.uuid });
+        const critical = Boolean(options.dbuKnockedCritical);
+        await offerTriggers(knocker, "defeat-opponent", { defeatedUuid: actor.uuid, critical });
+        await fireMoment(knocker, "defeat-opponent", { defeatedUuid: actor.uuid, critical });
       }
     }
 
@@ -1025,7 +1027,7 @@ export async function releaseFinalChance(actor) {
  * Only downward. Healing back up through a Threshold is not being knocked through one,
  * and it clears the Checks recorded below by itself.
  */
-async function announceThreshold(actor, before, knockedBy = "", pinpoint = false) {
+async function announceThreshold(actor, before, knockedBy = "", pinpoint = false, critical = false) {
   if (!before) return;
 
   const { THRESHOLDS } = DBUCharacterData;
@@ -1059,8 +1061,9 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
     const { offerTriggers } = await import("./chat.mjs");
     // Who was knocked through - Burning Hatred's Enemy.
     // And whether a Called Shot or an attack through the Exploit did it - Scarlet Spotter's.
-    await offerTriggers(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint });
-    await fireMoment(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint });
+    // And whether its Strike was a Critical Result - Critical Point's.
+    await offerTriggers(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint, critical });
+    await fireMoment(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint, critical });
   }
 
   await announce("threshold", {

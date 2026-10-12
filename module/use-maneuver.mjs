@@ -5301,6 +5301,11 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Whatever was charged into this one comes with it, and the charging ends here -
   // Guard Down with it. Only for the Maneuver that was actually declared: throwing a
   // different attack cannot collect somebody else's charges, and cannot happen anyway.
+  // Critical Point (2): the declared Attacking Maneuver, thrown in the Round its Energy Charge was primed.
+  if (maneuver.itemId && (maneuver.itemId === actor.system.charging?.maneuverId) && declared
+    && (actor.getFlag?.("dbu-ttrpg", "criticalPointRound") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`)) {
+    declared = { ...declared, primed: true };
+  }
   const charges = ((maneuver.itemId && (maneuver.itemId === actor.system.charging?.maneuverId))
     ? await collectCharges(actor)
     : 0)

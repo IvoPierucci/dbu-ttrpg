@@ -1,0 +1,31 @@
+id: critical-point
+name: Critical Point
+order: 5
+category: mind
+importance: secondary
+description: >
+  Trained to strike the vital points on your opponents’ bodies with deadly precision, your attacks always strike true.
+text: >
+  Critical Point (Mind): Trained to strike the vital points on your opponents’ bodies with deadly precision, your attacks always strike true.
+  (1)-[Passive]: If your Attacking Maneuver possesses 3+ Energy Charges, set the Critical Target for that Attacking Maneuver’s Strike Roll to 5.
+  (2)-[Triggered, 1/Round]: If you use the Energy Charge Maneuver, you may spend 3(bT) Ki Points. If you do and use the declared Attacking Maneuver for that use of the Energy Charge Maneuver during this Combat Round, increase the Strike and Wound Rolls of that Attacking Maneuver by 2(T). Double this bonus if you score a Critical Result on the Strike Roll of that Attacking Maneuver.
+  (3)-[Triggered, 1/Round]: If you Defeat an Opponent or knock them through a Health Threshold with an Attacking Maneuver of which you scored a Critical Result on the Strike Roll, maximize your stacks of Critical Eye.
+
+---
+
+[passive]
+# (1) An attack carrying 3+ Energy Charges: its Strike Roll's Critical Target 5, as written (chat.mjs resolveAttack).
+allow strike.criticalAtCharges;
+# (2) The Energy Charge Maneuver used: 3(bT) Ki asked, once a Round (maneuvers.mjs noteEnergyCharge) - paid, the declared
+# Attacking Maneuver thrown this Round marked: 2(T) on its Strike and Wound, 2(T) more on each with a Critical Strike.
+allow charge.criticalPoint;
+
+# (3) An Opponent Defeated or knocked through a Health Threshold by an attack whose Strike was a Critical Result: Critical
+# Eye at its most, once a Round between the two. Automatic by default, one Triggered/Automatic button.
+[triggered/knock-through, 1/round, effect 3]
+requires byCriticalStrike;
+criticaleye.stacks = 3;
+
+[triggered/defeat-opponent, 1/round, effect 3]
+requires byCriticalStrike;
+criticaleye.stacks = 3;

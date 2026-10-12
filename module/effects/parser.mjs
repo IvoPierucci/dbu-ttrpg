@@ -521,7 +521,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Your Terrify's Clash won (Terrifying Pressure's).
   "wonTerrify",
   // Knocked through by a Called Shot or an attack through the Exploit (Scarlet Spotter's).
-  "knockedPinpoint"]);
+  "knockedPinpoint",
+  // Done by an attack whose Strike was a Critical Result (Critical Point's).
+  "byCriticalStrike"]);
 
 /**
  * Dice the character already has, named rather than written out.

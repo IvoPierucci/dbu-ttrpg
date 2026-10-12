@@ -65,6 +65,9 @@ const PREDICATES = {
   /** The Clash won was won with this Skill (Stealthy Trick's) - clash-win's context. */
   wonWithSkill: (scope, id) => (scope.context?.skill ?? "") === String(id),
 
+  /** Knocked through or Defeated by an attack whose Strike was a Critical Result - Critical Point's. */
+  byCriticalStrike: scope => Boolean(scope.context?.critical),
+
   /** The one knocked through was knocked by a Called Shot or an attack through the Exploit - Scarlet Spotter's. */
   knockedPinpoint: scope => Boolean(scope.context?.pinpoint),
 

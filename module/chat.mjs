@@ -13988,6 +13988,8 @@ async function declareStrikeCritical(message, attacker) {
   const total = Math.max(0, (Number.isFinite(side.beforeOutcome) ? side.beforeOutcome : side.total) + extra.total);
   const lines = [...withoutOutcome(side.lines ?? []), fromOutcome(diceLine(extra, "Critical - Evolved Right Eye"))];
   const strike = { ...side, total, outcome: "critical", lines, breakdown: breakdownText(lines, total) };
+  // Critical Point (2)'s doubling, on a Strike declared a Critical Result as on one rolled.
+  if (attack.primed) primedCritical(attacker, strike);
   const used = attacker.getFlag(SCOPE, "criticalDeclared") ?? {};
   const encounter = game.combat?.id ?? "none";
   await requestActorUpdate(attacker, { [`flags.${SCOPE}.criticalDeclared`]: { encounter, round: roundKey(),
@@ -15195,7 +15197,7 @@ export async function postAttack(actor, target, maneuver,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
-                                   earthlingCharge = false, featureChoices = null, overwhelm = null },
+                                   earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -15414,6 +15416,8 @@ export async function postAttack(actor, target, maneuver,
           // the one its features built.
           area: overwhelmedArea(sizedArea(actor, target, technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null),
             { portal }), reflecting ? null : overwhelm),
+          // Critical Point (2): primed by the Energy Charge Maneuver this Round.
+          ...((primed && !reflecting) ? { primed: true } : {}),
           // Overwhelming Assault's stacks, and Last Resource's, lost once this is done (spendOverwhelm).
           ...((overwhelm?.spent && !reflecting) ? { overwhelmSpent: overwhelm.spent } : {}),
           // Revenge Bomber's: Self-Explosion given to it, free.
@@ -16852,8 +16856,20 @@ function maneuverStrikeParts(attacker, attack) {
     .map(part => ({ label: part.source || "Effects", value: Number(part.value) }));
 }
 
+/** Critical Point (2)'s 2(T) more on a Strike Roll that came out a Critical Result. */
+function primedCritical(attacker, strike) {
+  if (strike?.outcome !== "critical") return;
+  const more = 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  strike.total += more;
+  strike.lines = [...(strike.lines ?? []), partLine({ label: "Critical Point (Critical)", written: "+2(T)", value: more })];
+  strike.breakdown = breakdownText(strike.lines, strike.total);
+}
+
 function strikeParts(attacker, attack) {
   return [
+    // Critical Point (2): the declared Attacking Maneuver, primed this Round - 2(T).
+    ...(attack?.primed ? [{ label: "Critical Point", written: "+2(T)",
+      value: 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1) }] : []),
     strikeOf(attacker, attack?.foundation),
     ...favoredParts(attacker, attack, "strike"),
     ...profileStrikeParts(attacker, attack),
@@ -16936,10 +16952,14 @@ async function resolveAttackWork(message, attack) {
   // the round's free attacks are spent.
   // Transfiguration Beam: the Strike Roll's Critical Target 1 lower for an Energy or Magic Attack.
   const ownCritical = Number(attacker.system.effects?.slots?.[`criticalTarget.${attack.foundation}`]?.add) || 0;
+  // Critical Point (1): "If your Attacking Maneuver possesses 3+ Energy Charges, set the Critical Target for that Attacking
+  // Maneuver's Strike Roll to 5."
+  const chargedCritical = (attacker.system.effects?.slots?.["strike.criticalAtCharges"] === true)
+    && ((Number(attack.energyCharges) || 0) >= 3);
   const strike = await rollSide(attacker, strikeParts(attacker, attack), {
     ...attackerOptions, slot: "strike", attackingManeuver: true,
-    ...(ownCritical ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN,
-      (Number(attacker.system.criticalTarget) || 10) + ownCritical) } : {}),
+    ...(chargedCritical ? { criticalTarget: 5 } : (ownCritical ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN,
+      (Number(attacker.system.criticalTarget) || 10) + ownCritical) } : {})),
     // Clearing puts a floor under the Natural Result; Cutting makes anything short of a
     // Critical a Botch. Both belong to the Profile rather than to the character, so they
     // travel with the roll instead of being written to a Slot.
@@ -16950,6 +16970,8 @@ async function resolveAttackWork(message, attack) {
     // Twin-Linked or Dead-Link on the Strike: made twice, one kept.
     linked: attack.technique?.linked?.strike ?? ""
   });
+  // Critical Point (2): "Double this bonus if you score a Critical Result on the Strike Roll" - 2(T) more on it.
+  if (attack.primed) primedCritical(attacker, strike);
 
   // From here it branches. What each of them did about that Strike is theirs alone, and
   // one of them being missed says nothing about the next.
@@ -17793,11 +17815,15 @@ function woundParts(attacker, attack) {
   const doubled = attack.overwhelmDouble ? (Number(attacker.system.resources?.overwhelm?.stacks) || 0) : 0;
   // Evolved Right Eye (4): "2(T) for each Critical Eye stack spent".
   const eyes = Number(attack.criticalEye) || 0;
+  // Critical Point (2): 2(T), and 2(T) more where the Strike was a Critical Result.
+  const primed = attack.primed ? ((attack.result?.strike?.outcome === "critical") ? 4 : 2) : 0;
   // Pinpoint Combat (1): "Increase the Wound Rolls of your Called Shots and Exploit Maneuvers by 2(T)".
   const pinpoint = (isCalledShot(attack) || attack.viaExploit) ? attacker.system.effects?.slots?.["wound.calledOrExploit"] : null;
   return [
     ...((Number(pinpoint?.add) || 0) ? [{ label: (pinpoint.parts ?? []).map(part => part.source).find(Boolean) ?? "Called Shot or Exploit",
       value: Number(pinpoint.add) }] : []),
+    ...(primed ? [{ label: "Critical Point", written: `+${primed}(T)`,
+      value: primed * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(eyes ? [{ label: `Critical Eye (${eyes})`, written: `+${2 * eyes}(T)`,
       value: 2 * eyes * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(doubled ? [{ label: "Searing Anger (Overwhelm doubled)", written: `+${doubled}(T)`,
@@ -21114,7 +21140,9 @@ async function applyAttackDamage(message, target, attack) {
     // Who knocked them through, if it does - for what answers having done it (Inherited Aggression's).
     ...((armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) ? { dbuKnockedBy: armsUser.uuid,
       // A Called Shot, or an attack through the Exploit - Scarlet Spotter's.
-      ...((isCalledShot(attack) || attack.viaExploit) ? { dbuKnockedPinpoint: true } : {}) } : {})
+      ...((isCalledShot(attack) || attack.viaExploit) ? { dbuKnockedPinpoint: true } : {}),
+      // Its Strike a Critical Result - Critical Point's.
+      ...((attack.result?.strike?.outcome === "critical") ? { dbuKnockedCritical: true } : {}) } : {})
   });
   if (arms) await offerArmsHit(armsUser, target);
   // Flow of Combat: Damage taken - "since the end of your last turn" - and none taken, the Exploit at who made it.
