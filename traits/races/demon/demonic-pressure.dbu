@@ -1,0 +1,49 @@
+id: demonic-pressure
+name: Demonic Pressure
+order: 2
+category: body
+importance: primary
+# Demonic Power and Demonic Fatigue, two Resources - no most stated.
+resource: demonicpower, demonicfatigue
+resourceLabel: Demonic Power, Demonic Fatigue
+description: >
+  The sheer power in a demon’s body is overwhelming to lesser beings, and their presence alone can make grown men give up the fight.
+text: >
+  Demonic Pressure (Body): The sheer power in a demon’s body is overwhelming to lesser beings, and their presence alone can make grown men give up the fight.
+  (1)-[Triggered, 3/Round, Ruling]: If you make an Attacking Maneuver during your turn, make a ‘Pressure Check’. A Pressure Check is a 1d10, where a Dice Score of 4+ is a success and a result of 3 or less is a fail.
+  (2)-[Automatic, Resource]: If you succeed at a Pressure Check, gain a stack of Demonic Power. If you fail at a Pressure Check, gain a stack of Demonic Fatigue.
+  (3)-[Automatic/Start of Turn]: You lose all stacks of Demonic Power and Demonic Fatigue.
+  (4)-[Passive]: For each stack of Demonic Power, increase your Wound Rolls by 2(T).
+  (5)-[Passive]: For each stack of Demonic Fatigue, reduce your Defense Value and Soak Value by 1(T).
+  (6)-[Passive]: While you possess 2+ stacks of Demonic Power, increase your Might by 1(T).
+
+---
+
+# (1), (2) An Attacking Maneuver declared during your own turn, three times a Round: a Pressure Check - 1d10, 4+ a
+# success - rolled in chat, and a stack of Demonic Power for a success, of Demonic Fatigue for a fail (chat.mjs
+# pressureCheck). Automatic by default, its Triggered/Automatic button; set Triggered, asked in the window as it is
+# declared.
+[triggered/declare-maneuver, toggle, 3/round, effect 1]
+requires declaringAttack && ownTurn;
+pressureCheck();
+
+# (3) Only where there is any, so an empty start of turn puts nothing in chat.
+[automatic/start-of-turn]
+requires hasResource("demonicpower") || hasResource("demonicfatigue");
+demonicpower.stacks = 0;
+demonicfatigue.stacks = 0;
+
+[passive]
+# (4)
+if (hasResource("demonicpower")) {
+    wound += (demonicpower.stacks * tierOfPower * 2);
+}
+# (5)
+if (hasResource("demonicfatigue")) {
+    defenseValue -= (demonicfatigue.stacks * tierOfPower);
+    soakValue -= (demonicfatigue.stacks * tierOfPower);
+}
+# (6)
+if (stacksAtLeast(2, "demonicpower")) {
+    might += 1(T);
+}

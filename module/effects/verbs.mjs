@@ -96,6 +96,12 @@ export const VERBS = Object.freeze({
     doc: "Ruler's: 2 stacks of Overwhelm spent, and the Allies ticked as within a Large Sphere around you Ruled - Soak "
        + "Value and Combat Rolls 1(T) higher - until the start of your next turn (chat.mjs rulerAllies)."
   },
+  pressureCheck: {
+    args: [0, 0],
+    names: [],
+    doc: "Demonic Pressure's Pressure Check: 1d10 rolled in chat, 4+ a success - a stack of Demonic Power; 3 or less a "
+       + "stack of Demonic Fatigue (chat.mjs pressureCheck)."
+  },
   knockedProneClash: {
     args: [0, 0],
     names: [],

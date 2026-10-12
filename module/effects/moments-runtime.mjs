@@ -351,6 +351,11 @@ async function runVerb(actor, call, context) {
       return rulerAllies(actor);
     }
 
+    case "pressureCheck": {
+      const { pressureCheck } = await import("../chat.mjs");
+      return pressureCheck(actor);
+    }
+
     case "knockedProneClash": {
       const { knockedProneClash } = await import("../chat.mjs");
       return knockedProneClash(actor, context?.knockedUuid);

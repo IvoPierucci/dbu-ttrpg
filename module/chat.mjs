@@ -14129,6 +14129,23 @@ function offerUnscathedExploit(message, actor, attacker) {
     provokedBy: { maneuverId: attack?.maneuverId ?? "", maneuverName: attack?.maneuverName ?? "", messageId: message.id } } });
 }
 
+/**
+ * Demonic Pressure (1), (2): "A Pressure Check is a 1d10, where a Dice Score of 4+ is a success and a result of 3 or less is a
+ * fail." Rolled in chat; a stack of Demonic Power for a success, of Demonic Fatigue for a fail.
+ */
+export async function pressureCheck(actor) {
+  if (!actor) return;
+  const roll = await new Roll("1d10").evaluate();
+  const success = roll.total >= 4;
+  const key = success ? "demonicpower" : "demonicfatigue";
+  const held = { ...(actor.system.resources ?? {}) };
+  held[key] = { ...(held[key] ?? {}), stacks: (Number(held[key]?.stacks) || 0) + 1 };
+  const { replaceObject } = await import("./conditions.mjs");
+  await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
+  return roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: `Pressure Check - ${success ? "a success: a stack of Demonic Power" : "a fail: a stack of Demonic Fatigue"}` });
+}
+
 /** Suffering from a Combat Condition - one of the published ones, not a mark (Demonic Combat's). */
 function conditioned(actor) {
   return Object.entries(actor?.system?.conditions ?? {}).some(([key, stacks]) => ((Number(stacks) || 0) > 0)

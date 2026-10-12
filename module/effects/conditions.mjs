@@ -65,6 +65,12 @@ const PREDICATES = {
   /** The Clash won was won with this Skill (Stealthy Trick's) - clash-win's context. */
   wonWithSkill: (scope, id) => (scope.context?.skill ?? "") === String(id),
 
+  /** The Maneuver being declared is an Attacking Maneuver - Demonic Pressure's. */
+  declaringAttack: scope => Boolean(scope.context?.maneuver?.attacking),
+
+  /** It is this character's own turn - or there are no turns, out of a Combat Encounter (Demonic Pressure's). */
+  ownTurn: scope => !game.combat?.started || (game.combat?.combatant?.actor?.uuid === scope.data?.parent?.uuid),
+
   /** Knocked through or Defeated by an attack whose Strike was a Critical Result - Critical Point's. */
   byCriticalStrike: scope => Boolean(scope.context?.critical),
 

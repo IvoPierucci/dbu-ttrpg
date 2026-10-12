@@ -523,7 +523,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Knocked through by a Called Shot or an attack through the Exploit (Scarlet Spotter's).
   "knockedPinpoint",
   // Done by an attack whose Strike was a Critical Result (Critical Point's).
-  "byCriticalStrike"]);
+  "byCriticalStrike",
+  // An Attacking Maneuver being declared, and the character's own turn (Demonic Pressure's).
+  "declaringAttack", "ownTurn"]);
 
 /**
  * Dice the character already has, named rather than written out.
