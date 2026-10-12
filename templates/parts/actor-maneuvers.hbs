@@ -49,6 +49,11 @@
                     data-item-id="{{maneuver.itemId}}"
                     data-tooltip="Furious Onslaught: as an Instant Maneuver, for 2 stacks of Overwhelm (1/Round)">Instant</button>
             {{/if}}
+            {{#if maneuver.creativeOutOfSequence}}
+            <button type="button" class="maneuver-control" data-action="creativeOutOfSequence"
+                    data-item-id="{{maneuver.itemId}}"
+                    data-tooltip="Demonic Creativity: out of sequence, as an Instant Maneuver, for 2 stacks of Demonic Power (1/Round)">OOS</button>
+            {{/if}}
             {{else}}
             {{! Reactive: it is played from the message of the attack it answers. }}
             <span class="maneuver-name maneuver-triggered">{{maneuver.name}}</span>

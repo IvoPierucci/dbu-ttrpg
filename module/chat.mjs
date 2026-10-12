@@ -14148,18 +14148,28 @@ export async function pressureCheck(actor) {
     && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
       window: { title: `${actor.name} - Pressure Check` },
       content: "<p>2 off it - and, succeeding still, a stack of Demonic Power more?</p>", rejectClose: false });
-  const roll = await new Roll(["1d10", more ? `${more}` : "", gamble ? "-2" : ""].filter(Boolean).join(" + ")
+  // Demonic Creativity (4): "you may choose to roll the 1d10 twice and use the higher of the two results. If you still fail,
+  // you gain 2 stacks of Demonic Fatigue instead of 1." Asked, once a Round and three times an Encounter.
+  const used = actor.getFlag?.(SCOPE, "pressureTwice") ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const thisEncounter = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+  const twice = (actor.system.effects?.slots?.["pressure.twice"] === true) && (used.round !== roundKey()) && (thisEncounter < 3)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+      window: { title: `${actor.name} - Pressure Check` },
+      content: "<p>The 1d10 twice, the higher kept - failing still, 2 stacks of Demonic Fatigue?</p>", rejectClose: false });
+  if (twice) await requestActorUpdate(actor, { [`flags.${SCOPE}.pressureTwice`]: { round: roundKey(), encounter, count: thisEncounter + 1 } });
+  const roll = await new Roll([twice ? "2d10kh" : "1d10", more ? `${more}` : "", gamble ? "-2" : ""].filter(Boolean).join(" + ")
     .replace("+ -", "- ")).evaluate();
   const success = roll.total >= 4;
   const key = success ? "demonicpower" : "demonicfatigue";
-  const gained = (success && gamble) ? 2 : 1;
+  const gained = (success && gamble) ? 2 : ((!success && twice) ? 2 : 1);
   const held = { ...(actor.system.resources ?? {}) };
   held[key] = { ...(held[key] ?? {}), stacks: (Number(held[key]?.stacks) || 0) + gained };
   const { replaceObject } = await import("./conditions.mjs");
   await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
   await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
     flavor: `Pressure Check - ${success ? `a success: ${gained} stack${(gained === 1) ? "" : "s"} of Demonic Power`
-      : "a fail: a stack of Demonic Fatigue"}` });
+      : `a fail: ${gained} stack${(gained === 1) ? "" : "s"} of Demonic Fatigue`}` });
   // Demonic Power gained - Demons of the Makyo Star's Ki.
   if (success) {
     const { stacksGained } = await import("./effects/moments-runtime.mjs");

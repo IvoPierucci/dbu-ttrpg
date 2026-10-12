@@ -707,6 +707,16 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
         </ol>
       </div></div>`);
   }
+  // Demonic Creativity (3): "you can spend 1 stack of Demonic Power you possess to apply the Condition Advantage to that
+  // Attacking Maneuver." Once a Round; not on one that has it already.
+  const creative = (actor.system.effects?.slots?.["signature.conditionByPower"] === true) && !has("condition")
+    && ((Number(actor.system.resources?.demonicpower?.stacks) || 0) >= 1)
+    && (actor.getFlag?.("dbu-ttrpg", "creativeConditionRound") !== round);
+  if (creative) {
+    fields.push(`<label class="dbu-respond-option"${tip("demonic-creativity", 3)}><input type="checkbox" name="creativeCondition"/>
+      <span class="dbu-respond-name">Demonic Creativity: the Condition Advantage</span>
+      <span class="dbu-respond-source">1 stack of Demonic Power, once a Round</span></label>`);
+  }
   const areaProfiles = [declared.profile, technique.secondProfile].filter(id => PROFILES[id]?.area);
   if (areaProfiles.length > 1) {
     fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Area of Effect</span>
@@ -746,7 +756,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           const box = name => Boolean(form.querySelector(`[name="${name}"]`)?.checked);
           return { transformed: box("transformed"), finalChance: box("finalChance"),
             maliceBacklash: Math.min(maliceMost, num("maliceBacklash")), mentality: box("mentality"),
-            moraleGuard: box("moraleGuard"),
+            moraleGuard: box("moraleGuard"), creativeCondition: box("creativeCondition"),
             earthling: earthlingPicked(form),
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
@@ -781,6 +791,28 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     answers.advantages = [...(declared.advantages ?? []), answers.earthling];
   }
   delete answers.earthling;
+  // Demonic Creativity's: the Condition Advantage, its Combat Condition asked, for 1 Demonic Power.
+  if (answers.creativeCondition && creative) {
+    const { featureCatalogue, featureChoiceOptions } = await import("./technique.mjs");
+    const def = featureCatalogue().advantages.find(each => each.id === "condition");
+    const offered = def ? featureChoiceOptions(def, { ranks: 1, actor,
+      sig: { foundation: declared.foundation ?? "", features: (declared.advantages ?? []).map(id => ({ id })) } }) : [];
+    const picked = offered.length ? await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: "Demonic Creativity - Condition" }, content: "",
+      buttons: [...offered.map(([value, label]) => ({ action: value, label })), { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    }) : null;
+    if (!offered.some(([value]) => value === picked)) return null;
+    answers.featureChoices = { ...(answers.featureChoices ?? declared.featureChoices ?? {}), condition: picked };
+    answers.advantages = [...(answers.advantages ?? declared.advantages ?? []), "condition"];
+    const { replaceObject } = await import("./conditions.mjs");
+    const resources = { ...(actor.system.resources ?? {}) };
+    const left = (Number(resources.demonicpower?.stacks) || 0) - 1;
+    if (left > 0) resources.demonicpower = { ...resources.demonicpower, stacks: left };
+    else delete resources.demonicpower;
+    await actor.update({ "system.resources": replaceObject(resources), "flags.dbu-ttrpg.creativeConditionRound": round });
+  }
+  delete answers.creativeCondition;
   if (answers.moraleGuard) await actor.setFlag("dbu-ttrpg", "moraleClashed", game.combat?.id ?? "none");
   else delete answers.moraleGuard;
   // What the two Majin Traits put on its Wound Roll, and their uses spent.

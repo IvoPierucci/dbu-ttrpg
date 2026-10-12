@@ -405,6 +405,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useManeuver: DBUCharacterSheet._onUseManeuver,
       basicAttackInstant: DBUCharacterSheet._onBasicAttackInstant,
       signatureInstant: DBUCharacterSheet._onSignatureInstant,
+      creativeOutOfSequence: DBUCharacterSheet._onCreativeOutOfSequence,
       newTechnique: DBUCharacterSheet._onNewTechnique,
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
       useGrantedUnique: DBUCharacterSheet._onUseGrantedUnique,
@@ -1577,6 +1578,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // Furious Onslaught: "Reduce your Overwhelm Stacks by 2 to use the Signature Technique Maneuver as an Instant".
             signatureInstant: Boolean(maneuver.signatureTechnique)
               && (this.actor.system.effects?.slots?.["signature.asInstant"] === true),
+            // Demonic Creativity: "As an Instant Maneuver, you may spend 2 stacks of Demonic Power to use a Maneuver with an
+            // Action Cost of 1 as an Out-of-Sequence Maneuver."
+            creativeOutOfSequence: (this.actor.system.effects?.slots?.["demonicPower.outOfSequence"] === true)
+              && (maneuver.type === "standard") && (Number(maneuver.actionCost) === 1) && !maneuver.actionCostOpen
+              && !(maneuver.actionCostMax > 1),
             // Off the group, unless the Maneuver has a reason of its own to be here.
             playable: (group.playable || this.#playableAlone(maneuver))
               && !this.#playedThrough(maneuver)
@@ -5878,6 +5884,35 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * Maneuver." Played as an Instant - no Action Cost, and the Instant's own rule on the one before - its Technique picked
    * as ever, and the 2 stacks paid once it is used.
    */
+  /**
+   * Demonic Creativity (2): "As an Instant Maneuver, you may spend 2 stacks of Demonic Power to use a Maneuver with an Action
+   * Cost of 1 as an Out-of-Sequence Maneuver." Once a Round, under the Instant rule - and, used, it holds you as an Instant
+   * does; the Maneuver played out of sequence, the 2 stacks paid once it is.
+   */
+  static async _onCreativeOutOfSequence(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["demonicPower.outOfSequence"] !== true)) return;
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (this.actor.getFlag("dbu-ttrpg", "creativeRound") === round) {
+      return ui.notifications.warn(`${this.actor.name}: Demonic Creativity was used this Combat Round.`);
+    }
+    if ((Number(this.actor.system.resources?.demonicpower?.stacks) || 0) < 2) {
+      return ui.notifications.warn(`${this.actor.name} needs 2 stacks of Demonic Power for this.`);
+    }
+    const { whyNotAnotherInstant } = await import("../maneuvers.mjs");
+    const held = whyNotAnotherInstant(this.actor);
+    if (held) return ui.notifications.warn(held);
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, definitionOf(item), { outOfSequence: true })) return;
+    const resources = { ...(this.actor.system.resources ?? {}) };
+    const left = (Number(resources.demonicpower?.stacks) || 0) - 2;
+    if (left > 0) resources.demonicpower = { ...resources.demonicpower, stacks: left };
+    else delete resources.demonicpower;
+    const { replaceObject } = await import("../conditions.mjs");
+    return this.actor.update({ "system.resources": replaceObject(resources), "flags.dbu-ttrpg.creativeRound": round,
+      "system.instantPlayed": { held: true, messageId: "" } });
+  }
+
   static async _onSignatureInstant(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     if (!item || (this.actor.system.effects?.slots?.["signature.asInstant"] !== true)) return;
