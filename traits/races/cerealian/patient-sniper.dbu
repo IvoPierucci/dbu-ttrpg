@@ -14,9 +14,11 @@ text: >
 
 ---
 
-# (1), (2) Wait on the user's answer.
-
 [passive]
+# (1), (2) Where the system sees it (the user's): an Opponent moved - Knockback, a Launch, a Push - or given a Combat
+# Condition by an Ally of yours, as a Clash or an attack between them is settled: the Exploit Maneuver at them, offered
+# to you on that card (chat.mjs sniperOffers). What the table does by hand on the map is the table's.
+allow exploit.sniper;
 # (3) An attack through the Exploit Maneuver while an Ally's turn is under way: 1 on its Strike's and its Wound's Natural
 # Result (chat.mjs sniperNatural).
 allow exploit.allyTurnNatural;

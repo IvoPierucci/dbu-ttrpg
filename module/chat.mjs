@@ -524,7 +524,59 @@ async function applyMoment(messageId, moment) {
 }
 
 /** Write a settled Skill Clash back onto its message. */
+/**
+ * Patient Sniper (2): who is being settled between right now - a Clash's two sides, an attack's attacker - and on which
+ * card. A Combat Condition one of them gains while it is, the other gave (conditionGained).
+ */
+let afflicting = null;
+
 async function applyClash(messageId, clash) {
+  const message = game.messages.get(messageId);
+  const parties = [clash?.challengerUuid, clash?.defenderUuid].map(uuid => fromUuidSync(uuid ?? "")).filter(Boolean);
+  const before = afflicting;
+  afflicting = message ? { message, parties } : null;
+  try {
+    await settleClashEffects(messageId, clash);
+  } finally {
+    afflicting = before;
+  }
+  // Patient Sniper (1): an Opponent moved by the winner - Knockback, a Launch, a Push.
+  if (message && clash?.result && clash.collision && (whoWonClash(clash.result) === "challenger")) {
+    sniperOffers(message, parties.find(party => party.uuid === clash.challengerUuid),
+      parties.find(party => party.uuid === clash.defenderUuid), "moved");
+  }
+}
+
+/**
+ * Patient Sniper: "If an Ally moves an Opponent" / "inflicts a Combat Condition on an Opponent, this triggers your Exploit
+ * Maneuver against that Opponent." For each Ally of `by` on the scene who has it - `target` their Opponent - the Exploit
+ * at `target`, offered on this card; once a card for each.
+ */
+const SNIPER_OFFERED = new Set();
+function sniperOffers(message, by, target, reason) {
+  if (!message || !by || !target || (by.uuid === target.uuid)) return;
+  for (const sniper of alliesOnScene(by)) {
+    if ((sniper.system?.effects?.slots?.["exploit.sniper"] !== true) || sniper.system?.defeated
+      || (sniper.uuid === target.uuid) || alliesOnScene(sniper).some(ally => ally.uuid === target.uuid)
+      || !sniper.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
+    const key = `${message.id}:${sniper.uuid}:${target.uuid}`;
+    if (SNIPER_OFFERED.has(key)) continue;
+    SNIPER_OFFERED.add(key);
+    requestEdit(message, { type: "offer", offer: { actorUuid: sniper.uuid, actorName: sniper.name, maneuverId: "exploit",
+      maneuverName: "Exploit", targetUuid: target.uuid, reason: `Patient Sniper - ${by.name}: ${target.name} ${reason}` } });
+  }
+}
+
+/** A Combat Condition gained while something between characters is being settled - Patient Sniper (2). */
+export function conditionGained(actor, key) {
+  const context = afflicting;
+  if (!context?.message || !actor) return;
+  const by = context.by ?? (context.parties ?? []).find(party => party.uuid !== actor.uuid);
+  if (!by || (by.uuid === actor.uuid)) return;
+  sniperOffers(context.message, by, actor, getTrait(key)?.name ?? key);
+}
+
+async function settleClashEffects(messageId, clash) {
   const message = game.messages.get(messageId);
   if (!message) return;
   await message.setFlag(SCOPE, CLASH_FLAG, clash);
@@ -16805,6 +16857,16 @@ function windowParts(actor, parts) {
  * Roll the exchange: the Strike, and whatever each target chose to meet it with.
  */
 async function resolveAttack(message, attack) {
+  const before = afflicting;
+  afflicting = { message, by: fromUuidSync(attack?.attackerUuid ?? "") };
+  try {
+    return await resolveAttackWork(message, attack);
+  } finally {
+    afflicting = before;
+  }
+}
+
+async function resolveAttackWork(message, attack) {
   const attacker = fromUuidSync(attack.attackerUuid);
   const targets = attackTargets(attack)
     .map(entry => ({ ...entry, actor: fromUuidSync(entry.uuid) }))
@@ -18210,6 +18272,16 @@ function combinationFollowUps(attacker, attack) {
  * be argued over before it becomes a number.
  */
 async function rollAttackWound(message, attack) {
+  const before = afflicting;
+  afflicting = { message, by: fromUuidSync(attack?.attackerUuid ?? "") };
+  try {
+    return await rollAttackWoundWork(message, attack);
+  } finally {
+    afflicting = before;
+  }
+}
+
+async function rollAttackWoundWork(message, attack) {
   // As it stands now: a Barrier raised while the window was open is on it (the user's report - it was not counted), and a
   // Wound already rolled is not rolled again.
   attack = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;

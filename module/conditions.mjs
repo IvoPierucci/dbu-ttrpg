@@ -261,8 +261,10 @@ export async function setCondition(actor, key, stacks) {
   // somebody else - Direct Hit rattles the attacker, and it is the attacker's own
   // client that works out there was no Damage - and writing to an Actor you do not own
   // throws, taking whatever was mid-resolution down with it.
-  const { requestActorUpdate } = await import("./chat.mjs");
+  const { requestActorUpdate, conditionGained } = await import("./chat.mjs");
   await requestActorUpdate(actor, { "system.conditions": replaceObject(conditions) });
+  // Patient Sniper (2): a Combat Condition put on them - by whom, where that is being settled.
+  if ((wanted > current) && definition.combatCondition) conditionGained(actor, key);
   return true;
 }
 
