@@ -10,6 +10,12 @@
 
 import { resolveAmount, useConditionEvaluator } from "./amounts.mjs";
 
+/** Whether a key is a published Combat Condition - set by traits.mjs at load, to keep the import one way. */
+let isCombatCondition = () => false;
+export function useCombatConditionCheck(fn) {
+  isCombatCondition = fn;
+}
+
 /**
  * Questions an effect can ask that are not arithmetic.
  *
@@ -67,6 +73,13 @@ const PREDICATES = {
 
   /** The Maneuver being declared is an Attacking Maneuver - Demonic Pressure's. */
   declaringAttack: scope => Boolean(scope.context?.maneuver?.attacking),
+
+  /** Suffering from a Combat Condition - a published one, not a mark - besides the ones named (Earthling Resolve's). */
+  conditionedBesides: (scope, ...names) => {
+    const besides = names.map(name => String(name).toLowerCase());
+    return Object.entries(scope.data?.conditions ?? {}).some(([key, stacks]) => ((Number(stacks) || 0) > 0)
+      && !besides.includes(key) && isCombatCondition(key));
+  },
 
   /** It is this character's own turn - or there are no turns, out of a Combat Encounter (Demonic Pressure's). */
   ownTurn: scope => !game.combat?.started || (game.combat?.combatant?.actor?.uuid === scope.data?.parent?.uuid),

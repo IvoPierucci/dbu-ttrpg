@@ -14,7 +14,7 @@
 
 import { reactiveFor } from "./registry.mjs";
 import { collectReactive, applySlot } from "./interpreter.mjs";
-import { resourceLimits } from "./traits.mjs";
+import { getTrait, resourceLimits } from "./traits.mjs";
 import { getMoment } from "./moments.mjs";
 
 /**
@@ -351,6 +351,19 @@ async function runVerb(actor, call, context) {
     case "rulerAllies": {
       const { rulerAllies } = await import("../chat.mjs");
       return rulerAllies(actor);
+    }
+
+    case "clearConditions": {
+      // Earthling Resolve (3): "remove all Combat Conditions afflicting you (except Suffocating)".
+      const besides = args.map(name => String(name).toLowerCase());
+      const { setCondition } = await import("../conditions.mjs");
+      for (const [key, stacks] of Object.entries(actor.system?.conditions ?? {})) {
+        if (!((Number(stacks) || 0) > 0) || besides.includes(key)) continue;
+        const trait = getTrait(key);
+        if ((trait?.kind !== "conditions") || (trait.combatCondition === false)) continue;
+        await setCondition(actor, key, 0);
+      }
+      return;
     }
 
     case "rescueByPressure": {

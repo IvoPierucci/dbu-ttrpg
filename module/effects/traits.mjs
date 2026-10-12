@@ -14,6 +14,7 @@
  */
 
 import { PRIORITY, applySlot } from "./interpreter.mjs";
+import { useCombatConditionCheck } from "./conditions.mjs";
 
 const ROOT = "systems/dbu-ttrpg/traits";
 
@@ -98,6 +99,13 @@ const traits = new Map();
 export function getTrait(id) {
   return traits.get(id);
 }
+
+/** A published Combat Condition - not a mark (`combatCondition: no`) - for conditions.mjs's questions. */
+export function combatConditionKey(key) {
+  const trait = traits.get(key);
+  return (trait?.kind === "conditions") && (trait.combatCondition !== false);
+}
+useCombatConditionCheck(combatConditionKey);
 
 /**
  * The Resources the library declares, and the most of each that may be held.

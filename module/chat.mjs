@@ -4938,16 +4938,16 @@ function renderCheckKarma(message, html) {
 
   // Only the ones that ask nothing of a Clash, since there was none. Karmic Boost and
   // Karmic Save both name one, so they rule themselves out.
-  const options = karmicOptionsFor(actor, message)
+  const options = [...karmicOptionsFor(actor, message)
     .filter(answersAfterTheFact)
-    .filter(effect => !(effect.script ?? "").includes("clash."));
+    .filter(effect => !(effect.script ?? "").includes("clash.")), ...resolveRerollOption(actor, check)];
   if (!options.some(effect => effect.available)) return;
 
   const button = document.createElement("button");
   button.type = "button";
   button.className = "dbu-clash-button dbu-karma-button";
   button.textContent = "Apply effects";
-  button.dataset.tooltip = "Karmic Effects that can still change this roll";
+  button.dataset.tooltip = "Effects that can still change this roll";
   button.addEventListener("click", () =>
     prepareRoll(actor, [], "After the roll", "",
       { karmic: { message, check, options }, rolling: false }));
@@ -5149,13 +5149,63 @@ function momentTitle(karmic, which) {
  * the reader than a second reason layered over it.
  */
 function offerableTo(situation, message) {
-  return karmicOptionsFor(situation.actor, message)
+  return [...karmicOptionsFor(situation.actor, message)
     .filter(answersAfterTheFact)
     .map(effect => {
       if (effect.blocked) return effect;
       const reason = whyNot(effect, situation);
       return reason ? { ...effect, blocked: reason, available: false } : effect;
-    });
+    }), ...resolveRerollOption(situation.actor, situation.side)];
+}
+
+/** Earthling Resolve (2)'s reroll, by the key it is picked with in the window. */
+const RESOLVE_REROLL = "earthling-resolve";
+/** And what it does: the Base Die again, the second result taken whatever it is. */
+const RESOLVE_CALL = Object.freeze({ verb: "reroll", forced: true, label: "Earthling Resolve" });
+
+/**
+ * Earthling Resolve (2): "When you score a Natural Result of 2 or less, you may reroll your Base Dice. You must take the
+ * second result." Offered in the roll's after-the-fact window beside the Karmic Effects, on a side whose Base Die came to
+ * 2 or less; once a Round - spent, said rather than hidden.
+ */
+function resolveRerollOption(actor, side) {
+  if (actor?.system?.effects?.slots?.["resolve.reroll"] !== true) return [];
+  const natural = side?.natural;
+  if (!Number.isFinite(natural) || (natural > 2)) return [];
+  const spent = actor.getFlag?.(SCOPE, "resolveRerollRound") === roundKey();
+  return [{ key: RESOLVE_REROLL, trait: true, when: "after", name: "Earthling Resolve",
+    text: "A Natural Result of 2 or less: reroll your Base Die. You must take the second result.",
+    costLabel: "Reroll the Base Die", available: !spent, ...(spent ? { blocked: "Once a Combat Round" } : {}) }];
+}
+
+/** Earthling Resolve (2) taken on a Clash or an attack: its Round spent, the side worked out again. */
+async function takeResolveReroll(message, situation) {
+  const { actor } = situation;
+  if (!resolveRerollOption(actor, situation.side).some(effect => effect.available)) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.resolveRerollRound`]: roundKey() });
+  const given = { spent: [], slots: {}, queue: [RESOLVE_CALL] };
+  return (situation.kind === "clash") ? resettleClash(message, situation, given) : resettleAttack(message, situation, given);
+}
+
+/** And on a lone Check: rerolled, the card posted again - still open to a Karmic Chance. */
+async function takeResolveOnCheck(message, actor, check) {
+  if (!resolveRerollOption(actor, check).some(effect => effect.available)) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.resolveRerollRound`]: roundKey() });
+  const again = await rerollBaseDie(actor, check, RESOLVE_CALL);
+  await ChatMessage.create({
+    speaker: message.speaker,
+    flavor: check.flavor,
+    content: checkCard({
+      parts: `Earthling Resolve &middot; ${breakdownText(again.lines, again.total)}`,
+      total: again.total,
+      outcome: again.outcome,
+      owner: actor.uuid
+    }),
+    flags: { [SCOPE]: { [CHECK_FLAG]: { ...check, natural: again.natural, beforeOutcome: again.beforeOutcome,
+      total: again.total, outcome: again.outcome, lines: again.lines } } }
+  });
+  if (message.isAuthor || game.user.isGM) await message.delete();
+  await resettleCheck(check.settles, again.total, check.against ?? null);
 }
 
 /** How each category reads in a refusal. */
@@ -5232,6 +5282,7 @@ function answersAfterTheFact(effect) {
  * `requires` refused - the player would have bought silence.
  */
 export async function takeAfterTheFact(message, situation, key) {
+  if (key === RESOLVE_REROLL) return takeResolveReroll(message, situation);
   const { actor } = situation;
   const effect = allKarmicEffects().find(e => e.key === key);
   if (!effect) return;
@@ -5258,6 +5309,7 @@ export async function takeAfterTheFact(message, situation, key) {
  * one result in the log instead of a number the reader has to work out for themselves.
  */
 async function takeOnCheck(message, actor, check, key) {
+  if (key === RESOLVE_REROLL) return takeResolveOnCheck(message, actor, check);
   const effect = allKarmicEffects().find(e => e.key === key);
   if (!effect) return;
 
@@ -5337,7 +5389,7 @@ function collectAfterTheFact(situation, mineNow, theirs) {
 }
 
 /** Work a Skill Clash out again. */
-async function resettleClash(message, situation) {
+async function resettleClash(message, situation, given = null) {
   const clash = message.getFlag(SCOPE, CLASH_FLAG);
   if (!clash?.result) return;
 
@@ -5345,8 +5397,8 @@ async function resettleClash(message, situation) {
   const mineNow = isChallenger ? clash.result.challenger : clash.result.defender;
   const theirs = isChallenger ? clash.result.defender : clash.result.challenger;
 
-  const answered = collectAfterTheFact(situation, mineNow, theirs);
-  if (!answered.spent.length) return false;
+  const answered = given ?? collectAfterTheFact(situation, mineNow, theirs);
+  if (!given && !answered.spent.length) return false;
 
   const settled = await applyAfterTheFact(situation.actor, mineNow, answered);
   spendChosen(situation.actor, answered);
@@ -5371,11 +5423,11 @@ async function resettleClash(message, situation) {
  * Karma Point here - so the outcome is recomputed rather than left saying what it said
  * before the number moved.
  */
-async function resettleAttack(message, situation) {
+async function resettleAttack(message, situation, given = null) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   const result = attack?.result;
   if (!result) return false;
-  if (situation.stage === "wound") return resettleWound(message, situation, attack, result);
+  if (situation.stage === "wound") return resettleWound(message, situation, attack, result, given);
   if (result.wound) return false;
 
   const isAttacker = attack.attackerUuid === situation.actor.uuid;
@@ -5391,8 +5443,8 @@ async function resettleAttack(message, situation) {
   const mineNow = isAttacker ? result.strike : branches[0].own.answer;
   const theirs = isAttacker ? branches[0].own.answer : result.strike;
 
-  const answered = collectAfterTheFact(situation, mineNow, theirs);
-  if (!answered.spent.length) return false;
+  const answered = given ?? collectAfterTheFact(situation, mineNow, theirs);
+  if (!given && !answered.spent.length) return false;
 
   const settled = await applyAfterTheFact(situation.actor, mineNow, answered);
   spendChosen(situation.actor, answered);
@@ -5442,7 +5494,7 @@ async function resettleAttack(message, situation) {
  * the Damage Category, what the defender's own effects did to it - so only the roll that
  * changed is redone rather than the whole exchange.
  */
-async function resettleWound(message, situation, attack, result) {
+async function resettleWound(message, situation, attack, result, given = null) {
   const isAttacker = attack.attackerUuid === situation.actor.uuid;
 
   // One Wound Roll, and one line of consequences per person it reached. The attacker
@@ -5458,8 +5510,8 @@ async function resettleWound(message, situation, attack, result) {
   // the margin an effect might read comes to nothing rather than to nonsense.
   const theirs = (isAttacker ? branches[0].own.counterWound : result.wound) ?? mineNow;
 
-  const answered = collectAfterTheFact(situation, mineNow, theirs);
-  if (!answered.spent.length) return false;
+  const answered = given ?? collectAfterTheFact(situation, mineNow, theirs);
+  if (!given && !answered.spent.length) return false;
 
   const settled = await applyAfterTheFact(situation.actor, mineNow, answered);
   spendChosen(situation.actor, answered);
@@ -5515,7 +5567,7 @@ async function resettleWound(message, situation, attack, result) {
  *                       botchPenalty when the roll uses one of its own
  * @returns {Promise<{total: number, outcome: string, notes: string[]}>}
  */
-async function rerollBaseDie(actor, side) {
+async function rerollBaseDie(actor, side, { forced = false, label = "Karmic Chance" } = {}) {
   const again = new Roll(DBUCharacterData.BASE_DIE);
   await again.evaluate();
 
@@ -5529,7 +5581,8 @@ async function rerollBaseDie(actor, side) {
   // "You must accept this second roll, unless it is lower than the first. In which
   // case, you may take the first roll." Only asked when it is actually lower, so the
   // ordinary case costs nobody a click.
-  if ((fresh < before) && await keepTheFirstRoll(actor, before, fresh)) {
+  // Earthling Resolve's is forced: "You must take the second result."
+  if (!forced && (fresh < before) && await keepTheFirstRoll(actor, before, fresh)) {
     // Nothing was replaced, so nothing the first Base Die decided comes off the card.
     // Said out loud because the caller strips those rows by default - which left a total
     // that still carried a Botch beside a column with no Botch in it.
@@ -5537,6 +5590,8 @@ async function rerollBaseDie(actor, side) {
       kept: true,
       total: side.total,
       outcome: side.outcome ?? "",
+      natural: before,
+      beforeOutcome: side.beforeOutcome,
       lines: [noteLine(`Karmic Chance rolled ${fresh}, keeping ${before}`)]
     };
   }
@@ -5545,13 +5600,14 @@ async function rerollBaseDie(actor, side) {
   // die exactly as it did to the old.
   const natural = Math.max(fresh, rules.minimumNatural ?? 0);
 
-  let total = (side.beforeOutcome ?? side.total) - before + natural;
+  const beforeOutcome = (side.beforeOutcome ?? side.total) - before + natural;
+  let total = beforeOutcome;
   let outcome = "";
   // The Base Die was replaced, so what is shown is the swap and not a second die: the
   // first one is no longer part of the roll and a row implying it still counts would be
   // a row that lies.
   const lines = [partLine({
-    label: "Karmic Chance",
+    label,
     written: `${before} → ${natural}`,
     value: natural - before
   })];
@@ -5591,11 +5647,11 @@ async function rerollBaseDie(actor, side) {
     await extra.evaluate();
     total += extra.total;
     outcome = "critical";
-    lines.push(fromOutcome(diceLine(extra, "Karmic Chance - Critical")));
+    lines.push(fromOutcome(diceLine(extra, `${label} - Critical`)));
   }
 
   // Floored like every finished roll: a Botch takes what it takes, never past zero.
-  return { total: Math.max(0, total), outcome, lines };
+  return { total: Math.max(0, total), outcome, lines, natural, beforeOutcome };
 }
 
 /**
@@ -5638,15 +5694,21 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
   const lines = [...(side.lines ?? [])];
   let total = side.total;
   let outcome = side.outcome;
+  let natural = side.natural;
+  let beforeOutcome = side.beforeOutcome;
 
   // Karmic Chance: a different Base Die entirely. The new total is worked out from what
   // the roll came to *before* the old die's consequences, so those consequences come off
   // the card with it - a Botch row left standing beside a total reached without it is a
   // column that will not add up.
-  if ((queue ?? []).some(call => call.verb === "reroll")) {
-    const again = await rerollBaseDie(actor, side);
+  const reroll = (queue ?? []).find(call => call.verb === "reroll");
+  if (reroll) {
+    const again = await rerollBaseDie(actor, side, reroll);
     total = again.total;
     outcome = again.outcome;
+    // The new Natural Result, so what reads it next - Earthling Resolve's 2 or less - reads this die.
+    natural = again.natural ?? natural;
+    beforeOutcome = again.beforeOutcome ?? beforeOutcome;
     // The rows the old Base Die decided come off with it - unless it was kept, in which
     // case it decided them still and they stay.
     const before = again.kept ? lines : withoutOutcome(lines);
@@ -5677,6 +5739,8 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
     ...side,
     total: settled,
     outcome,
+    natural,
+    beforeOutcome,
     succeeded: (slots["clash.succeed"] === true) || side.succeeded,
     lines,
     breakdown: breakdownText(lines, settled)
@@ -6510,7 +6574,8 @@ export function whyNotWilling(actor, { urgent = false, slots = null, combatRoll 
 export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
                                     combatRoll = false, attackingManeuver = false,
-                                    difficulties = false, senses = [], formula = null, offerWilling = true } = {}) {
+                                    difficulties = false, senses = [], formula = null, offerWilling = true,
+                                    pick = null } = {}) {
   const rows = effects.map(entry => `
     <label class="dbu-respond-option"${triggerTip(entry)}>
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
@@ -6525,14 +6590,20 @@ export async function prepareRoll(actor, effects, title, hint = "",
   // paragraph per effect, and the window grows to fit the longest one - which made the
   // dialog wider than the screen. The row keeps what you need to choose between them,
   // the price and the reason it is closed; the wording is a hover away.
-  const karmicRows = (karmic?.options ?? []).map(effect => `
+  const optionRow = effect => `
     <label class="dbu-respond-option${effect.blocked ? " dbu-respond-blocked" : ""}">
       <input type="radio" name="karmic" value="${effect.key}" ${effect.blocked ? "disabled" : ""}/>
       <span class="dbu-respond-name" data-tooltip="${Handlebars.escapeExpression(effect.text)}"
             >${Handlebars.escapeExpression(effect.name)}</span>
       <span class="dbu-respond-source">${Handlebars.escapeExpression(
         effect.blocked ?? effect.costLabel)}</span>
-    </label>`).join("");
+    </label>`;
+  const karmicRows = (karmic?.options ?? []).filter(effect => !effect.trait).map(optionRow).join("");
+  // A Trait's own way of changing the result - Earthling Resolve's reroll - beside them, free, one at a time with them.
+  const traitRows = (karmic?.options ?? []).filter(effect => effect.trait).map(optionRow).join("");
+  const traitGroup = traitRows
+    ? `<details class="dbu-respond-group" open><summary>Effects</summary>${traitRows}</details>`
+    : "";
 
   const karmicGroup = karmicRows
     ? `<details class="dbu-respond-group" open>
@@ -6581,6 +6652,16 @@ export async function prepareRoll(actor, effects, title, hint = "",
 
   // "Any Perception Skill check made relying on sight", "related to your hearing" - which
   // only the player knows. One box per sense something moves this Check for.
+  // An amount the roll is asked for - Earthling Resolve's Life Points for its Steadfast Check.
+  const pickRow = pick
+    ? `<label class="dbu-respond-option dbu-respond-difficulty"${pick.tip
+        ? ` data-tooltip="${Handlebars.escapeExpression(pick.tip)}"` : ""}>
+         <span class="dbu-respond-name">${Handlebars.escapeExpression(pick.label)}</span>
+         <select name="pick">${pick.options.map(option => `<option value="${Handlebars.escapeExpression(option.value)}"
+           >${Handlebars.escapeExpression(option.label)}</option>`).join("")}</select>
+       </label>`
+    : "";
+
   const senseRows = senses.map(sense => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="sense" value="${sense}"
@@ -6595,7 +6676,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
       ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}
       ${formula ? `<p class="dbu-formula">${formulaHtml({ ...formula,
         parts: [...(formula.parts ?? []), ...multiFormRow(actor, combatRoll)] })}</p>` : ""}
-      ${rows}${difficultyRows}${senseRows}${willing}${karmicGroup}
+      ${rows}${difficultyRows}${pickRow}${senseRows}${willing}${traitGroup}${karmicGroup}
     </div>`,
     buttons: [
       {
@@ -6608,6 +6689,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
           willing: dialog.element.querySelector('input[name="willing"]')?.checked ?? null,
           karmic: dialog.element.querySelector('input[name="karmic"]:checked')?.value ?? null,
           difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "",
+          picked: dialog.element.querySelector('select[name="pick"]')?.value ?? "",
           senses: [...dialog.element.querySelectorAll('input[name="sense"]:checked')]
             .map(input => input.value)
         })
@@ -6642,8 +6724,8 @@ export async function prepareRoll(actor, effects, title, hint = "",
   // An object rather than `true` where a Difficulty was offered, so the caller can read
   // what was picked. Truthy either way, which is what every other caller tests - and the
   // one that tests `=== false` still gets what it was looking for from a cancel.
-  return (difficulties || senses.length)
-    ? { difficulty: chosen.difficulty || "", senses: chosen.senses ?? [] }
+  return (difficulties || senses.length || pick)
+    ? { difficulty: chosen.difficulty || "", senses: chosen.senses ?? [], picked: chosen.picked ?? "" }
     : true;
 }
 
@@ -22150,8 +22232,19 @@ export async function rollSteadfastCheck(actor) {
   // And for this Health Threshold alone - Construct's 3 off at Critical.
   const forThreshold = actor.system.effects?.slots?.[`steadfast.dice.${rolled}`];
   const thresholdDice = Number(forThreshold?.add) || 0;
+  // Earthling Resolve (4): "spend up to 6(bT) Life Points. For every 2(bT) Life Points spent, increase the Dice Score of
+  // your Steadfast Check by 1." Once an Encounter, asked in its window - as much as the Life Points left allow.
+  const lifeStep = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const lifeSpendable = (actor.system.effects?.slots?.["steadfast.lifeSpend"] === true)
+    && (actor.getFlag?.(SCOPE, "resolveLifeEncounter") !== (game.combat?.id ?? "none"));
+  const lifeSteps = lifeSpendable ? [1, 2, 3].filter(n => (n * lifeStep) <= (Number(actor.system.life?.value) || 0)) : [];
   const ready = await prepareRoll(actor, [], `Steadfast Check - ${THRESHOLDS[rolled].label}`, `Needing ${target}`,
-    { offerWilling: false, formula: { base: die, parts: [
+    { offerWilling: false,
+      pick: lifeSteps.length ? { label: "Earthling Resolve",
+        tip: "Spend Life Points: 1 to the Dice Score for every 2(bT). Once an Encounter.",
+        options: [{ value: "0", label: "None" },
+          ...lifeSteps.map(n => ({ value: String(n), label: `${n * lifeStep} Life Points: +${n}` }))] } : null,
+      formula: { base: die, parts: [
       ...(natural ? [{ label: "Natural Result", value: natural }] : []),
       ...(added.length ? added : (bonus ? [{ label: "Effects", value: bonus }] : [])),
       ...(thresholdDice ? [{ label: (forThreshold?.parts ?? []).map(part => part.source).find(Boolean) ?? "Effects",
@@ -22159,6 +22252,11 @@ export async function rollSteadfastCheck(actor) {
     ] } });
   if (!ready) return null;
   for (const key of automatic) updates[`system.thresholdChecks.${key}`] = "fail";
+  const lifeSpent = lifeSteps.includes(Number(ready?.picked)) ? Number(ready.picked) : 0;
+  if (lifeSpent) {
+    await actor.update({ "system.life.value": Math.max(0, (Number(actor.system.life?.value) || 0) - (lifeSpent * lifeStep)),
+      [`flags.${SCOPE}.resolveLifeEncounter`]: game.combat?.id ?? "none" });
+  }
 
   // The bonus is part of the formula rather than added afterwards, so that the card shows
   // the whole sum - a Check that failed by one is a thing somebody will want to see.
@@ -22166,7 +22264,7 @@ export async function rollSteadfastCheck(actor) {
   // What moves the die itself - Legacy's "increase the Natural Result for all Steadfast
   // Checks" - is its own term, named, so the card says where it came from.
   const terms = [die, natural ? `${natural}[Natural Result]` : "", bonus ? String(bonus) : "",
-    thresholdDice ? String(thresholdDice) : ""].filter(Boolean);
+    thresholdDice ? String(thresholdDice) : "", lifeSpent ? `${lifeSpent}[Earthling Resolve]` : ""].filter(Boolean);
   const roll = new Roll(terms.join(" + "));
   await roll.evaluate();
   // Failed, what may pass it instead is asked first - before anything that failing does.

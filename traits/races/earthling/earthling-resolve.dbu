@@ -1,0 +1,42 @@
+id: earthling-resolve
+name: Earthling Resolve
+order: 1
+category: mind
+importance: primary
+description: >
+  Earthlings have immeasurable and unbreakable determination to protect life, their allies, and their world. As an Earthling, you will never give up, and you will never back down.
+text: >
+  Earthling Resolve (Mind): Earthlings have immeasurable and unbreakable determination to protect life, their allies, and their world. As an Earthling, you will never give up, and you will never back down.
+  (1)-[Passive]: For each Health Threshold you are below, increase your Strike and Wound Rolls by 1(T).
+  (2)-[Triggered, 1/Round]: When you score a Natural Result of 2 or less, you may reroll your Base Dice. You must take the second result.
+  (3)-[Triggered, 1/Encounter]: Upon succeeding at a Steadfast Check, you can remove all Combat Conditions afflicting you (except Suffocating).
+  (4)-[Triggered/Threshold, 1/Encounter]: Upon making your Steadfast Check for this Health Threshold, you can spend up to 6(bT) Life Points. For every 2(bT) Life Points spent, increase the Dice Score of your Steadfast Check by 1.
+
+---
+
+[passive]
+# (1) Each Health Threshold below - Bruised 1, Injured 2, Critical 3.
+if (belowThreshold("bruised")) {
+    strike += 1(T);
+    wound += 1(T);
+}
+if (belowThreshold("injured")) {
+    strike += 1(T);
+    wound += 1(T);
+}
+if (belowThreshold("critical")) {
+    strike += 1(T);
+    wound += 1(T);
+}
+# (2) A Natural Result of 2 or less: in that roll's "Apply effects" window, beside the Karmic Effects, once a Round - the
+# Base Die rolled again and the second result taken, whatever it is (chat.mjs resolveRerollOption).
+allow resolve.reroll;
+# (4) The Steadfast Check for a Health Threshold being made: in its window, 2(bT), 4(bT) or 6(bT) Life Points spent for
+# 1, 2 or 3 to its Dice Score - once an Encounter (chat.mjs rollSteadfastCheck).
+allow steadfast.lifeSpend;
+
+# (3) A Steadfast Check passed, with a Combat Condition on you besides Suffocating: every one of them off but Suffocating.
+# Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window as it passes.
+[triggered/steadfast-passed, 1/encounter, effect 3]
+requires conditionedBesides("suffocating");
+clearConditions(suffocating);

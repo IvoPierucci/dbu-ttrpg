@@ -489,7 +489,9 @@ const PREDICATE_NAMES = new Set([
   // A Special Maneuver already open by other means - Majestic Grace's.
   "accessElsewhere",
   // A Clash won with that Skill - Stealthy Trick's.
-  "wonWithSkill"
+  "wonWithSkill",
+  // A Combat Condition on you besides the ones named - Earthling Resolve's.
+  "conditionedBesides"
 ]);
 
 /** The ones written without brackets, because they take nothing. */

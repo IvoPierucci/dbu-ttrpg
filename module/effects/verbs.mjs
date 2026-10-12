@@ -96,6 +96,11 @@ export const VERBS = Object.freeze({
     doc: "Ruler's: 2 stacks of Overwhelm spent, and the Allies ticked as within a Large Sphere around you Ruled - Soak "
        + "Value and Combat Rolls 1(T) higher - until the start of your next turn (chat.mjs rulerAllies)."
   },
+  clearConditions: {
+    args: [0, 9],
+    names: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    doc: "Every Combat Condition on you taken off - a published one, not a mark - but the ones named (Earthling Resolve's)."
+  },
   rescueByPressure: {
     args: [0, 0],
     names: [],
