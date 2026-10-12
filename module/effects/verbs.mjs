@@ -96,6 +96,12 @@ export const VERBS = Object.freeze({
     doc: "Ruler's: 2 stacks of Overwhelm spent, and the Allies ticked as within a Large Sphere around you Ruled - Soak "
        + "Value and Combat Rolls 1(T) higher - until the start of your next turn (chat.mjs rulerAllies)."
   },
+  followAlly: {
+    args: [0, 0],
+    names: [],
+    doc: "Patient Sniper's: an Ally with a lower Initiative picked, and your Initiative set just after theirs for this "
+       + "Combat Round - put back as the next begins (chat.mjs followAlly)."
+  },
   chooseEnemy: {
     args: [0, 0],
     names: [],

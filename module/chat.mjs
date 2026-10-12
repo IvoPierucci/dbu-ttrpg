@@ -14130,6 +14130,42 @@ export async function askLockOn(actor) {
  * until the end of the Combat Round." Which, of those on the scene of another disposition than theirs, asked of whoever
  * plays them - or none, and no Enemy. Compelled against them is the table's: who you were told to attack is not tracked.
  */
+/**
+ * Patient Sniper (3): "If you make an Attacking Maneuver through the Exploit Maneuver during an Ally's Turn, increase the
+ * Natural Result for your Strike and Wound Rolls on that Attacking Maneuver by 1." The turn under way an Ally's.
+ */
+function sniperNatural(attacker, attack) {
+  if (!attack?.viaExploit || (attacker?.system?.effects?.slots?.["exploit.allyTurnNatural"] !== true)) return 0;
+  const current = game.combat?.combatant?.actor;
+  if (!current || (current.uuid === attacker.uuid)) return 0;
+  return alliesOnScene(attacker).some(ally => ally.uuid === current.uuid) ? 1 : 0;
+}
+
+/**
+ * Patient Sniper (4): "Target an Ally with a lower Initiative than you. During this Combat Round, take your turn
+ * immediately after they end their turn instead of your usual place in the Initiative Order." Which, asked; your
+ * Initiative set between theirs and whoever comes after them, and put back as the next Round begins (Precognition's).
+ */
+export async function followAlly(actor) {
+  const combat = game.combat;
+  const turns = combat?.turns ?? [];
+  const mine = turns.find(combatant => combatant.actor?.uuid === actor?.uuid);
+  if (!mine) return;
+  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const allies = turns.filter(combatant => combatant.actor && (combatant.id !== mine.id)
+    && ((Number(combatant.initiative) || 0) < (Number(mine.initiative) || 0))
+    && ((own === undefined) || (combatant.token?.disposition === own)));
+  if (!allies.length) return ui.notifications.info(`${actor.name}: Patient Sniper - no Ally with a lower Initiative.`);
+  const picked = await askPlayerChoice(actor, `${actor.name}: Patient Sniper`,
+    [...allies.map(combatant => ({ value: combatant.id, label: combatant.name })), { value: "none", label: "None" }]);
+  const ally = allies.find(combatant => combatant.id === picked);
+  if (!ally) return;
+  const after = turns[turns.indexOf(ally) + 1];
+  const high = Number(ally.initiative) || 0;
+  const low = (after && (after.id !== mine.id)) ? (Number(after.initiative) || 0) : high - 2;
+  return requestForesee(combat, mine.id, (high + low) / 2);
+}
+
 export async function askEnemy(actor) {
   const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
@@ -16806,7 +16842,7 @@ async function resolveAttack(message, attack) {
     minimumNatural: profileFor(attack)?.minimumNatural ?? 0,
     botchUnlessCritical: Boolean(profileFor(attack)?.botchUnlessCritical),
     // The Weapon's own - Targeting System's "Increase the Natural Result of any Strike Roll".
-    naturalAdd: Number(attack.weapon?.strikeNatural) || 0,
+    naturalAdd: (Number(attack.weapon?.strikeNatural) || 0) + sniperNatural(attacker, attack),
     // Twin-Linked or Dead-Link on the Strike: made twice, one kept.
     linked: attack.technique?.linked?.strike ?? ""
   });
@@ -18248,6 +18284,8 @@ async function rollAttackWound(message, attack) {
     combatRoll: true,
     slot: "wound",
     attackingManeuver: true,
+    // Patient Sniper (3): through the Exploit Maneuver in an Ally's turn, 1 on its Natural Result.
+    naturalAdd: sniperNatural(attacker, attack),
     urgent: Boolean(attack.urgentWound || attack.urgentRolls),
     // Cutting: "on the Wound Roll, the Critical Target is 5 (ignoring the usual limit)."
     // The usual limit is the floor a character's own Critical Target is held to when it

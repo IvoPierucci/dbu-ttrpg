@@ -1,0 +1,27 @@
+id: patient-sniper
+name: Patient Sniper
+order: 3
+category: mind
+importance: secondary
+description: >
+  Due to most Cerealians utilizing the range of vision granted to them via their right eye for sniping, they’ve learned to patiently await an opportune moment to strike an opponent, regardless of the distance between them.
+text: >
+  Patient Sniper (Mind): Due to most Cerealians utilizing the range of vision granted to them via their right eye for sniping, they’ve learned to patiently await an opportune moment to strike an opponent, regardless of the distance between them.
+  (1)-[Triggered]: If an Ally moves an Opponent, this triggers your Exploit Maneuver against that Opponent.
+  (2)-[Triggered]: If an Ally inflicts a Combat Condition on an Opponent, this triggers your Exploit Maneuver against that Opponent.
+  (3)-[Triggered]: If you make an Attacking Maneuver through the Exploit Maneuver during an Ally’s Turn, increase the Natural Result for your Strike and Wound Rolls on that Attacking Maneuver by 1.
+  (4)-[Triggered/Start of Combat Round, 3/Encounter]: Target an Ally with a lower Initiative than you. During this Combat Round, take your turn immediately after they end their turn instead of your usual place in the Initiative Order.
+
+---
+
+# (1), (2) Wait on the user's answer.
+
+[passive]
+# (3) An attack through the Exploit Maneuver while an Ally's turn is under way: 1 on its Strike's and its Wound's Natural
+# Result (chat.mjs sniperNatural).
+allow exploit.allyTurnNatural;
+
+# (4) Ticked on the Round's card, three times an Encounter: an Ally with a lower Initiative picked, and your Initiative
+# set just after theirs for the Round - put back as the next begins, as Precognition's is (chat.mjs followAlly).
+[triggered/start-of-round, 3/encounter, chosen, effect 4]
+followAlly();
