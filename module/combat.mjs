@@ -67,11 +67,12 @@ export const NOT_GRAPPLING = Object.freeze({
 async function startRound(combat) {
   const { EDGES, edgeReached } = await import("./durations.mjs");
 
-  // Precognition's "for this Combat Round": whoever it moved goes back to their own Initiative.
+  // Precognition's "for this Combat Round": whoever it moved and never had their turn goes back to their own Initiative -
+  // the rest went back as their turn ended (combatTurnChange). Not told as a turn changing.
   for (const combatant of combat.combatants ?? []) {
     const kept = combatant.getFlag?.("dbu-ttrpg", "foreseen");
     if (typeof kept !== "number") continue;
-    await combatant.update({ initiative: kept });
+    await combatant.update({ initiative: kept }, { turnEvents: false });
     await combatant.unsetFlag("dbu-ttrpg", "foreseen");
   }
 
@@ -516,6 +517,15 @@ async function burnDot(actor) {
   });
 }
 
+/**
+ * The turn kept with this Combatant - after an Initiative moved, which Foundry answers by keeping the turn's number and
+ * handing it to whoever now stands there. Not told as a turn changing.
+ */
+export async function keepTurnWith(combat, combatantId) {
+  const at = (combat?.turns ?? []).findIndex(turn => turn.id === combatantId);
+  if ((at >= 0) && (at !== combat.turn)) await combat.update({ turn: at }, { turnEvents: false });
+}
+
 export function registerCombatHooks() {
   Hooks.on("combatStart", async combat => {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
@@ -554,9 +564,12 @@ export function registerCombatHooks() {
     // after them. Answered here too, it came before both and then a second time.
     if (!(Number(previous?.round) > 0)) return;
 
+    // A turn handed on by its own Initiative moving - Patient Sniper's, at the Round's start: begun, and not ended here.
+    const handedOn = combat.getFlag?.("dbu-ttrpg", "turnHandedOn");
+    if (handedOn) await combat.unsetFlag("dbu-ttrpg", "turnHandedOn");
     // Through the Combatant rather than by actor id, so an unlinked token gets its own
     // Actor rather than the one in the sidebar it was made from.
-    const leaving = previous?.combatantId
+    const leaving = (previous?.combatantId && (previous.combatantId !== handedOn))
       ? combat.combatants.get(previous.combatantId)?.actor : null;
     if (leaving) await foresee(combat, leaving, false);
     // Binding: "For every Turn that an Opponent ends with the Pinned Combat Condition through the effects of your
@@ -627,6 +640,17 @@ export function registerCombatHooks() {
         await leaving.updateEmbeddedDocuments("Item", switched.map(item =>
           ({ _id: item.id, "system.crafted.activeCategory": "" })));
       }
+    }
+
+    // Its turn over, one moved for the Round goes back to their own Initiative - now, while it changes nobody's turn: the
+    // one arriving keeps theirs; across a Round, the turn is the new Round's first.
+    const left = leaving ? combat.combatants.get(previous.combatantId) : null;
+    const kept = left?.getFlag?.("dbu-ttrpg", "foreseen");
+    if (typeof kept === "number") {
+      const arrivingId = combat.combatant?.id;
+      await left.update({ initiative: kept }, { turnEvents: false });
+      await left.unsetFlag("dbu-ttrpg", "foreseen");
+      if (!(Number(current?.round) > Number(previous?.round)) && arrivingId) await keepTurnWith(combat, arrivingId);
     }
 
     const arriving = combat.combatant?.actor;

@@ -407,10 +407,23 @@ export function requestForesee(combat, combatantId, initiative) {
 }
 
 async function applyForesee(combatId, combatantId, initiative) {
-  const combatant = game.combats.get(combatId)?.combatants.get(combatantId);
+  const combat = game.combats.get(combatId);
+  const combatant = combat?.combatants.get(combatantId);
   if (!combatant) return;
   const kept = combatant.getFlag(SCOPE, "foreseen");
-  await combatant.update({ initiative, [`flags.${SCOPE}.foreseen`]: (typeof kept === "number") ? kept : combatant.initiative });
+  // Foundry keeps the turn's number when the order changes, not whose it is - so a moved Initiative handed the turn to
+  // somebody else, and told it as a turn changing: a turn started twice, another skipped (the user's report). The one
+  // whose turn it is keeps it; the one whose turn it is, moved on - Patient Sniper's, at the Round's start - hands it to
+  // whoever now stands where they stood, theirs begun and not ended (combat.mjs).
+  const currentId = combat.combatant?.id;
+  const moving = combatantId === currentId;
+  if (moving) await combat.setFlag(SCOPE, "turnHandedOn", combatantId);
+  await combatant.update({ initiative, [`flags.${SCOPE}.foreseen`]: (typeof kept === "number") ? kept : combatant.initiative },
+    moving ? {} : { turnEvents: false });
+  if (!moving && currentId) {
+    const { keepTurnWith } = await import("./combat.mjs");
+    await keepTurnWith(combat, currentId);
+  }
 }
 
 /** Give a character an Item, whoever owns them - the handcuff put on somebody else. */
