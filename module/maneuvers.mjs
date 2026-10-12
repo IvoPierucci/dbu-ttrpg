@@ -3322,6 +3322,14 @@ function roundNow() {
 /** The Energy Charge Maneuver used this Combat Round - Energy Core's "If you've already used ... once". */
 export async function noteEnergyCharge(actor) {
   if (actor?.getFlag?.("dbu-ttrpg", "energyChargeRound") !== roundNow()) await actor?.setFlag?.("dbu-ttrpg", "energyChargeRound", roundNow());
+  // Declared, as any Maneuver is - its own way past the rest of the use flow, which said so to nobody: what answers the
+  // Energy Charge Maneuver being used is offered and fired here (Overwhelming Assault's stack of Overwhelm, the user's
+  // report). Every door to it - in sequence, out of it, Cyclone's - comes through here.
+  const maneuver = { id: "energy-charge", name: "Energy Charge", tags: [] };
+  const { answerDeclare } = await import("./chat.mjs");
+  await answerDeclare(actor, { maneuver, targets: [] });
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  await fireMoment(actor, "declare-maneuver", { maneuver, targets: [] }, { quiet: true });
   await primeCriticalPoint(actor);
 }
 
