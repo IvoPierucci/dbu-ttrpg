@@ -73,7 +73,9 @@
       <span>Apparel Grade: {{crafted.reading.gradeLabel}}</span>
       <span>Apparel Bonus: {{crafted.bonusLabel}}</span>
       <span>Quality Slots: {{crafted.reading.used}}/{{crafted.reading.slots}}</span>
-      <span>Break Value: {{#if crafted.reading.destroyed}}destroyed{{else}}{{crafted.reading.breakLeft}}/{{crafted.reading.breakValue}}{{/if}}</span>
+      <span data-tooltip="What it has left: 0 is broken, and it comes off; 1 or more, whole again">Break Value:
+        <input type="number" name="breakLeft" value="{{crafted.reading.breakLeft}}" min="0" max="{{crafted.reading.breakValue}}"
+          step="1" data-dtype="Number" style="width: 3em"/>/{{crafted.reading.breakValue}}</span>
       {{#if crafted.reading.hardnessValue}}<span>Hardness Value: {{crafted.reading.hardnessValue}}</span>{{/if}}
       {{/if}}
     </div>

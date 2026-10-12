@@ -555,6 +555,26 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
    * where the Actor cannot be read.
    */
   async _processSubmitData(event, form, submitData, options) {
+    // Its Break Value as it stands, set by hand (the user's): what it has lost written, never its most. 0 is broken - taken
+    // off, as a break in a fight takes it off (gear.mjs); 1 or more, whole again - and no longer destroyed.
+    if (Object.hasOwn(submitData, "breakLeft")) {
+      const asked = Number(submitData.breakLeft);
+      delete submitData.breakLeft;
+      const crafted = this.item.system.crafted;
+      const reading = crafted?.kind ? craftedReading(crafted, { getTrait, difficulties: {} }) : null;
+      if (reading && Number.isFinite(asked)) {
+        const most = Number(reading.breakValue) || 0;
+        const now = Math.max(0, Math.min(most, Math.floor(asked)));
+        if (now !== reading.breakLeft) {
+          foundry.utils.setProperty(submitData, "system.crafted.breakLost", most - now);
+          if (now > 0) foundry.utils.setProperty(submitData, "system.crafted.destroyed", false);
+          if ((now === 0) && this.item.system.equipped) {
+            foundry.utils.setProperty(submitData, "system.equipped", false);
+            foundry.utils.setProperty(submitData, "system.layer", "");
+          }
+        }
+      }
+    }
     // Natural Armor - "a special form of Integrated Armor" - is Armor, whatever its select says (the user's).
     const natural = foundry.utils.getProperty(submitData, "flags.dbu-ttrpg.naturalArmor") ?? isNaturalArmor(this.item);
     if (natural === true) foundry.utils.setProperty(submitData, "system.crafted.category", "armor");
