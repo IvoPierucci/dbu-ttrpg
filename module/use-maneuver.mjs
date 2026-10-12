@@ -1269,6 +1269,20 @@ async function askModifierNote(modifier, target = null) {
 async function applyModifiers(actor, applied) {
   if (!applied.length) return true;
 
+  // Pinpoint Combat (2): "When making an Attacking Maneuver, you may spend 2 stacks of Critical Eye to use the Called Shot
+  // Maneuver without spending an Action through its effects" - asked, once a Round; paid with the rest below.
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  const called = applied.find(entry => ((entry.modifier?.id ?? entry.id) === "called-shot") && entry.actions);
+  let byEyes = false;
+  if (called && (actor.system.effects?.slots?.["calledShot.byCriticalEye"] === true)
+    && ((Number(actor.system.resources?.criticaleye?.stacks) || 0) >= 2)
+    && (actor.getFlag?.("dbu-ttrpg", "pinpointCalledRound") !== round)) {
+    byEyes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+      window: { title: `${actor.name} - Pinpoint Combat` },
+      content: "<p>The Called Shot for 2 stacks of Critical Eye instead of its Action?</p>", rejectClose: false });
+    if (byEyes) applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
+  }
+
   const actions = { standard: 0, counter: 0 };
   let ki = 0;
   for (const entry of applied) {
@@ -1292,6 +1306,14 @@ async function applyModifiers(actor, applied) {
 
   for (const [kind, amount] of Object.entries(actions)) {
     if (amount) await spendActions(actor, amount, kind);
+  }
+  if (byEyes) {
+    const { replaceObject } = await import("./conditions.mjs");
+    const resources = { ...(actor.system.resources ?? {}) };
+    const left = (Number(resources.criticaleye?.stacks) || 0) - 2;
+    if (left > 0) resources.criticaleye = { ...resources.criticaleye, stacks: left };
+    else delete resources.criticaleye;
+    await actor.update({ "system.resources": replaceObject(resources), "flags.dbu-ttrpg.pinpointCalledRound": round });
   }
 
   for (const entry of applied) {

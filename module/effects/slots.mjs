@@ -770,7 +770,7 @@ const PATTERNS = [
     doc: "The Dice Score of a Might Clash when targeted by the Pin Maneuver; Damage received from an Attacking Maneuver "
        + "of Direct or higher; Squares a Physical Attack or Grapple may reach past the Melee Range, asked; Life Points a "
        + "Healing Surge gives back for each Health Threshold below." },
-  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam|snackFiend\.superior|signature\.earthlingRaised|ki\.protected|concealment\.autoSucceed|kiMultiplier\.always|ki\.noRegain|powerBattery\.overCapacity|protector\.intervene|angelic\.redodge|angelic\.offenseClash|angelic\.counterAttack|superior\.noExtraDamage|life\.belowZero|overwhelm\.assault|overwhelm\.lastResource|tail\.elongated|tail\.grapple|signature\.asInstant|longRange\.ignore|criticalEye\.spend|strike\.declareCritical)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
+  { match: /^(collision\.halved|rubbery\.move|bouncy\.moveAway|bouncy\.afterCollision|burrowed\.strike|burrowed\.diminishing|disarming\.onMiss|disarming\.onHit|disarming\.onCounter|malice\.backlash|mentality\.signature|quickSleep\.recovery|quickLearner\.\w+|revenge\.\w+|snack\.double|transfiguration\.beam|snackFiend\.superior|signature\.earthlingRaised|ki\.protected|concealment\.autoSucceed|kiMultiplier\.always|ki\.noRegain|powerBattery\.overCapacity|protector\.intervene|angelic\.redodge|angelic\.offenseClash|angelic\.counterAttack|superior\.noExtraDamage|life\.belowZero|overwhelm\.assault|overwhelm\.lastResource|tail\.elongated|tail\.grapple|signature\.asInstant|longRange\.ignore|criticalEye\.spend|strike\.declareCritical|calledShot\.byCriticalEye|exploit\.inStead)$/, phase: PHASES.CORE, kind: F, ops: ["allow", "forbid", "set"],
     valid: () => true,
     doc: "Every Collision Damage received halved; moving one hit with a Physical Attack or put in a Grapple, once a Round "
        + "(Rubbery Body's); moving away when hit, and the Movement after Collision Damage (Bouncy Physique's); a Physical "
@@ -782,6 +782,9 @@ const PATTERNS = [
   // Elastic Tentacle's: this attack's Diminishing Defense doubled, ticked as it hits.
   { match: /^attack\.doublesDiminishing$/, phase: PHASES.REACTIVE, kind: F, ops: ["set"], valid: () => true,
     doc: "The Diminishing Defense this Attacking Maneuver gave the ones it hit, doubled - not on top of another increase." },
+  // Pinpoint Combat's "Increase the Wound Rolls of your Called Shots and Exploit Maneuvers by 2(T)".
+  { match: /^wound\.calledOrExploit$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "Added to the Wound Roll of an attack made with the Called Shot, or through the Exploit Maneuver - once." },
   // Evolved Right Eye's "Reduce the Critical Target for your Combat Rolls by 1": a Strike, a Dodge, a Wound.
   { match: /^criticalTarget\.combat$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "The Critical Target of a Combat Roll alone - its own floor still under it (chat.mjs rollSide)." },

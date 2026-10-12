@@ -1,0 +1,25 @@
+id: pinpoint-combat
+name: Pinpoint Combat
+order: 2
+category: mind
+importance: primary
+description: >
+  Cerealians have developed a way to fight that utilizes the enhanced sight of their right eye, allowing them to make better use of their natural gift by striking at key points and attacking during openings made by their opponents.
+text: >
+  Pinpoint Combat (Mind): Cerealians have developed a way to fight that utilizes the enhanced sight of their right eye, allowing them to make better use of their natural gift by striking at key points and attacking during openings made by their opponents.
+  (1)-[Passive]: Increase the Wound Rolls of your Called Shots and Exploit Maneuvers by 2(T).
+  (2)-[Triggered, 1/Round]: When making an Attacking Maneuver, you may spend 2 stacks of Critical Eye to use the Called Shot Maneuver without spending an Action through its effects.
+  (3)-[Triggered, 1/Round]: If an Opponent uses an effect or Maneuver that would allow an Ally to use the Exploit Maneuver, your Ally may allow you to use the Exploit Maneuver in their stead regardless of how far away you are from your Opponent. Your Ally may allow you to spend their Counter Action instead of your own for this use of the Exploit Maneuver.
+
+---
+
+[passive]
+# (1) An attack made with the Called Shot, or through the Exploit Maneuver: 2(T) on its Wound Roll - once, both or
+# either (chat.mjs woundParts).
+wound.calledOrExploit += 2(T);
+# (2) The Called Shot applied at Attack Declaration, 2 stacks of Critical Eye held: asked whether they pay for it instead of
+# its Action - once a Round (use-maneuver.mjs applyModifiers).
+allow calledShot.byCriticalEye;
+# (3) An Exploit offered to an Ally of yours: a button beside it for whoever plays them - you take it in their stead, as
+# if beside the Opponent, their Counter Action or yours as they say - once a Round (chat.mjs steadButtons).
+allow exploit.inStead;

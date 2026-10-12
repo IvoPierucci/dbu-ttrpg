@@ -9034,6 +9034,8 @@ function renderOutOfSequence(message, html) {
         use.textContent = "Use";
         use.addEventListener("click", () => takeOutOfSequence(message, actor, offer));
         item.append(use);
+        // Pinpoint Combat (3): an Ally of theirs may take it in their stead.
+        if ((offer.maneuverId === "exploit") && !offer.stead) steadButtons(message, actor, offer, item);
       }
       list.append(item);
     }
@@ -9052,6 +9054,42 @@ function renderOutOfSequence(message, html) {
     container.append(note);
   }
 
+}
+
+/**
+ * Pinpoint Combat (3): "If an Opponent uses an effect or Maneuver that would allow an Ally to use the Exploit Maneuver,
+ * your Ally may allow you to use the Exploit Maneuver in their stead regardless of how far away you are from your
+ * Opponent. Your Ally may allow you to spend their Counter Action instead of your own for this use of the Exploit
+ * Maneuver." For whoever plays the one offered it: a button for each Ally of theirs on the scene who has it, unused this
+ * Round. Taken, whose Counter Action asked; theirs gone, and the Exploit offered to that Ally - as if beside the Opponent.
+ */
+function steadButtons(message, holder, offer, row) {
+  for (const ally of alliesOnScene(holder)) {
+    if ((ally.system?.effects?.slots?.["exploit.inStead"] !== true) || ally.system?.defeated
+      || (ally.getFlag?.(SCOPE, "pinpointSteadRound") === roundKey())) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-oos-button";
+    button.textContent = ally.name;
+    button.dataset.tooltip = `Pinpoint Combat: ${ally.name} uses this Exploit in your stead, whatever the distance`;
+    button.addEventListener("click", async () => {
+      const whose = await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: `Pinpoint Combat - ${ally.name}` },
+        content: "<p>Whose Counter Action?</p>",
+        buttons: [{ action: "mine", label: holder.name }, { action: "theirs", label: ally.name }],
+        rejectClose: false
+      });
+      if (!["mine", "theirs"].includes(whose)) return;
+      if ((whose === "mine") && !await spendActions(holder, 1, "counter")) return;
+      button.disabled = true;
+      requestEdit(message, { type: "offerTaken", actorUuid: holder.uuid });
+      await requestActorUpdate(ally, { [`flags.${SCOPE}.pinpointSteadRound`]: roundKey() });
+      requestEdit(message, { type: "offer", offer: { ...offer, actorUuid: ally.uuid, actorName: ally.name,
+        reason: `Pinpoint Combat - in ${holder.name}'s stead`, stead: true, counterPaid: whose === "mine",
+        grants: { ...(offer.grants ?? {}), portal: true } } });
+    });
+    row.append(button);
+  }
 }
 
 /**
@@ -14617,7 +14655,8 @@ async function takeOutOfSequence(message, actor, offer) {
   // costs its own Counter Action - an Out-of-Sequence Maneuver waives an Action Cost, and
   // this one is not the Out-of-Sequence Maneuver, it is what hands one over.
   if (maneuver.exploit) {
-    if (!await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+    // Pinpoint Combat (3): "Your Ally may allow you to spend their Counter Action instead of your own" - paid already.
+    if (!offer.counterPaid && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
     // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
     await recordManeuverType(actor, "counter");
 
@@ -14640,7 +14679,8 @@ async function takeOutOfSequence(message, actor, offer) {
     return takeOutOfSequence(message, actor, {
       ...offer,
       maneuverId: "basic-attack",
-      maneuverName: "Basic Attack"
+      maneuverName: "Basic Attack",
+      exploited: true
     });
   }
 
@@ -14729,7 +14769,8 @@ async function takeOutOfSequence(message, actor, offer) {
     // Melee Range, and an Out-of-Sequence Maneuver is no exception to it - the Weapon's reach
     // with it, where it has one.
     const unbounded = declared.weapon?.wholeBattlefield || declared.weapon?.telekinetic;
-    let outOfReach = target && !unbounded
+    // Pinpoint Combat (3): "regardless of how far away you are from your Opponent" - as if beside them.
+    let outOfReach = target && !unbounded && !granted?.portal
       && whyNotInReach(actor, target, declared, declared.weapon?.meleeRange ?? 0);
     // Rubbery Body's stretch, out of sequence as in it.
     if (outOfReach) {
@@ -14945,6 +14986,7 @@ async function takeOutOfSequence(message, actor, offer) {
     ? postAttack(actor, target, maneuver, declared, {
         asOutOfSequence: true,
         provokedBy: offer.provokedBy ?? null,
+        viaExploit: Boolean(offer.exploited),
         reflecting,
         // Shaped like the Modifier Maneuvers applied at the door, because they are the
         // same thing to this attack: a named change with a row of its own.
@@ -15024,7 +15066,7 @@ export async function postAttack(actor, target, maneuver,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null },
-                                 { asOutOfSequence = false, provokedBy = null,
+                                 { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
   // Counted as the Maneuver is made, so the stack it earns already weighs on its own
@@ -15113,6 +15155,8 @@ export async function postAttack(actor, target, maneuver,
           // The opening this attack came through, where it came through one. Null for
           // every attack anybody simply chose to make.
           provokedBy,
+          // Made through the Exploit Maneuver - Pinpoint Combat's.
+          ...(viaExploit ? { viaExploit: true } : {}),
           actionCost: maneuver.actionCost ?? 1,
           // Whether it spent its Action Cost at all, and how much Diminishing Offense it counted -
           // what a Duel Escape gives back.
@@ -17608,7 +17652,11 @@ function woundParts(attacker, attack) {
   const doubled = attack.overwhelmDouble ? (Number(attacker.system.resources?.overwhelm?.stacks) || 0) : 0;
   // Evolved Right Eye (4): "2(T) for each Critical Eye stack spent".
   const eyes = Number(attack.criticalEye) || 0;
+  // Pinpoint Combat (1): "Increase the Wound Rolls of your Called Shots and Exploit Maneuvers by 2(T)".
+  const pinpoint = (isCalledShot(attack) || attack.viaExploit) ? attacker.system.effects?.slots?.["wound.calledOrExploit"] : null;
   return [
+    ...((Number(pinpoint?.add) || 0) ? [{ label: (pinpoint.parts ?? []).map(part => part.source).find(Boolean) ?? "Called Shot or Exploit",
+      value: Number(pinpoint.add) }] : []),
     ...(eyes ? [{ label: `Critical Eye (${eyes})`, written: `+${2 * eyes}(T)`,
       value: 2 * eyes * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(doubled ? [{ label: "Searing Anger (Overwhelm doubled)", written: `+${doubled}(T)`,
