@@ -3012,12 +3012,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   static #breakRow(item, inCombat) {
     const reading = craftedReading(item.system.crafted, { getTrait, difficulties: {} });
-    const lost = Number(item.system.crafted?.breakLost) || 0;
+    // Destroyed and broken are one state for Apparel (the user's): what is missing, an old mark among it.
+    const lost = reading ? Math.max(0, (Number(reading.breakValue) || 0) - (Number(reading.breakLeft) || 0)) : 0;
     return {
-      breakLabel: reading?.destroyed ? "Destroyed"
-        : (reading?.breakLeft === 0) ? "Broken"
+      breakLabel: (reading?.breakLeft === 0) ? "Broken"
         : lost ? `Break Value ${reading.breakLeft}/${reading.breakValue}` : "",
-      repairable: Boolean(lost) && !reading?.destroyed && !inCombat
+      repairable: Boolean(lost) && !inCombat
     };
   }
 
@@ -3048,12 +3048,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       }
       return this.#startFullRepair(entry, definition, item.id);
     }
-    if (!item?.system.crafted?.kind || item.system.crafted.destroyed) return;
+    if (!item?.system.crafted?.kind || (item.system.crafted.destroyed && (item.system.crafted.kind !== "apparel"))) return;
     if (game.combat?.started) {
       ui.notifications.warn("Apparel is not repaired in a Combat Encounter.");
       return;
     }
-    await item.update({ "system.crafted.breakLost": 0 });
+    await item.update({ "system.crafted.breakLost": 0, "system.crafted.destroyed": false });
     return ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
       content: `<p>${Handlebars.escapeExpression(this.actor.name)} repairs `

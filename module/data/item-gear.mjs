@@ -147,9 +147,9 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
         // Break Value lost, off the most it can be - so a Quality raising the most (Durable)
         // raises what is left with it. Broken at 0 left; repaired back to none lost.
         breakLost: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0 }),
-        // Destroyed outright - grown out of by 2+ Size Categories. Not repaired. A Weapon's:
-        // broken, its Life Points brought to 0 - the same thing, by the table's ruling - and
-        // repaired.
+        // A Weapon broken, its Life Points brought to 0 - repaired. Not written for a piece of
+        // Apparel any more: destroyed is broken for it (the user's), its Break Value 0 (gear.mjs
+        // brokenChanges) - an old mark still read as broken, and cleared as it is repaired.
         destroyed: new fields.BooleanField({ required: true, initial: false }),
         // A Weapon's Attack Type - "Physical/Energy/Magic" - and its Weapon Size.
         weaponType: new fields.StringField({ required: true, blank: true, initial: "" }),

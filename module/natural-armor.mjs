@@ -41,7 +41,7 @@ export function naturalArmorGrade(actor) {
  */
 export async function grantNaturalArmor(actor, granter, name) {
   if (!actor) return null;
-  const { APPAREL_LAYERS, composeEffects, craftedItemFrom } = await import("./gear.mjs");
+  const { APPAREL_LAYERS, brokenChanges, composeEffects, craftedItemFrom } = await import("./gear.mjs");
   const { activeIntegrated, INTEGRATED_ACTIVE } = await import("./integrated.mjs");
   const items = actor.items.contents;
   // "All of your worn Apparel except for the lowest layer is destroyed."
@@ -51,7 +51,7 @@ export async function grantNaturalArmor(actor, granter, name) {
     && item.system?.equipped && !item.system?.integrated).sort((a, b) => rank(b) - rank(a));
   if (worn.length > 1) {
     await actor.updateEmbeddedDocuments("Item", worn.slice(1).map(item => ({ _id: item.id,
-      "system.crafted.destroyed": true, "system.equipped": false, "system.layer": "" })));
+      ...brokenChanges(item, getTrait), "system.equipped": false, "system.layer": "" })));
     ui.notifications.info(`${name}: ${worn.slice(1).map(item => item.name).join(", ")} destroyed - a single layer of Apparel.`);
   }
   const data = craftedItemFrom("apparel", actor, getTrait);

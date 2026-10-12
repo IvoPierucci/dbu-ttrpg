@@ -269,7 +269,9 @@ export function craftedReading(crafted, { getTrait, difficulties, baseTier = 1, 
     breakLeft: crafted.destroyed ? 0
       : Math.max(0, applySlot(piece, "piece.breakValue", Number(kind.breakValue) || 0)
         - (Number(crafted.breakLost) || 0)),
-    destroyed: Boolean(crafted.destroyed),
+    // A piece of Apparel destroyed is a broken one (the user's: one state, not two) - its Break Value 0, an old mark read
+    // so. A Weapon's is its own: broken, its Life Points 0.
+    destroyed: Boolean(crafted.destroyed) && (crafted.kind !== "apparel"),
     // A Hardness Value its Effects set outright - Hefty Plating's "is set to 4" - or null
     // where they say nothing about it.
     hardnessValue: piece["piece.hardnessValue"] ? applySlot(piece, "piece.hardnessValue", 0) : null,
@@ -1065,7 +1067,7 @@ export async function destroyOutgrown(actor, sizes, getTrait) {
   const gone = outgrown(Array.from(actor?.items ?? []), actor, sizes, getTrait);
   if (!gone.length) return [];
   await actor.updateEmbeddedDocuments("Item", gone.map(item => ({ _id: item.id,
-    "system.crafted.destroyed": true, "system.equipped": false, "system.layer": "" })));
+    ...brokenChanges(item, getTrait), "system.equipped": false, "system.layer": "" })));
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${Handlebars.escapeExpression(actor.name)} grows out of `
@@ -1093,13 +1095,30 @@ export const APPAREL_EQUIP_COST = 2;
  * @returns {{moves: Array<{id: string, layer: string}>, problem: string}}
  */
 /**
+ * What breaking a piece takes - "destroyed", wherever an effect says it: a piece of Apparel broken, its Break Value 0 - the
+ * same state, repaired as any broken piece is (the user's); a Weapon marked broken, its Life Points 0.
+ */
+export function brokenChanges(item, getTrait) {
+  const crafted = item?.system?.crafted ?? {};
+  if (crafted.kind !== "apparel") return { "system.crafted.destroyed": true };
+  const most = Number(craftedReading(crafted, { getTrait, difficulties: {} })?.breakValue) || 0;
+  return { "system.crafted.breakLost": most, "system.crafted.destroyed": false };
+}
+
+/** What a piece of Apparel has lost of its Break Value - all of it where an old mark says destroyed. */
+function breakMissing(crafted, getTrait) {
+  const reading = craftedReading(crafted, { getTrait, difficulties: {} });
+  return reading ? Math.max(0, (Number(reading.breakValue) || 0) - (Number(reading.breakLeft) || 0)) : 0;
+}
+
+/**
  * Majin Style (5)'s Default Costume, mendable: "while wearing your Default Costume ... If the piece of Apparel was broken, it
  * stops being broken" - Break Value lost, and worn, or broken (which took it off); not one merely taken off, nor destroyed.
  */
 export function costumeMendable(items, getTrait) {
   const costume = Array.from(items ?? []).find(item => item.getFlag?.("dbu-ttrpg", "defaultCostume"));
   const crafted = costume?.system?.crafted;
-  if (!crafted || crafted.destroyed || !((Number(crafted.breakLost) || 0) > 0)) return false;
+  if (!crafted || !(breakMissing(crafted, getTrait) > 0)) return false;
   return Boolean(costume.system.equipped) || (craftedReading(crafted, { getTrait, difficulties: {} })?.breakLeft === 0);
 }
 
@@ -1109,7 +1128,6 @@ export function equipPlan(items, item, layer, { inCombat = false, wearer = null,
   if (!crafted?.kind || !APPAREL_LAYERS[layer]) return refuse("That is not a Layer.");
   if (item.system?.equipped) return refuse(`${item.name} is already worn.`);
   // Broken is as good as not there, by the table's ruling - until it is repaired.
-  if (crafted.destroyed) return refuse("Destroyed.");
   const left = craftedReading(crafted, { getTrait, difficulties: {} })?.breakLeft;
   if (left === 0) return refuse("Broken: repair it first.");
 

@@ -9638,9 +9638,9 @@ export async function postHealing(actor, maneuver, plan) {
     await requestActorUpdate(who, { "system.life.value": Math.min(life.max, life.value + amount) });
     // Patch-Up: the first worn piece that has lost Break Value - "damaged or broken" - whole again.
     const piece = plan.patch ? Array.from(who.items ?? []).find(item => (item.type === "gear")
-      && (item.system?.crafted?.kind === "apparel") && !item.system.crafted.destroyed
-      && ((Number(item.system.crafted.breakLost) || 0) > 0)) : null;
-    if (piece) await requestActorUpdate(who, { items: [{ _id: piece.id, "system.crafted.breakLost": 0 }] });
+      && (item.system?.crafted?.kind === "apparel")
+      && (((Number(item.system.crafted.breakLost) || 0) > 0) || item.system.crafted.destroyed)) : null;
+    if (piece) await requestActorUpdate(who, { items: [{ _id: piece.id, "system.crafted.breakLost": 0, "system.crafted.destroyed": false }] });
     lines.push({ uuid, name: who.name, amount, patched: piece?.name ?? "" });
   }
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
@@ -10834,7 +10834,8 @@ async function shedPetrification(target, caster) {
   });
   const item = (chosen && (chosen !== "cancel")) ? target.items.get(chosen) : null;
   if (!item) return;
-  await item.update({ "system.crafted.destroyed": true, "system.equipped": false, "system.layer": "" });
+  const { brokenChanges } = await import("./gear.mjs");
+  await item.update({ ...brokenChanges(item, getTrait), "system.equipped": false, "system.layer": "" });
   const held = target.system.timed ?? [];
   const gone = stacks[0];
   await target.update({ "system.timed": held.filter(entry => entry !== gone) });
@@ -11386,7 +11387,10 @@ async function sealInto(card, sealer, target, item) {
   const seal = card.getFlag(SCOPE, SEAL_FLAG);
   if (!seal || seal.itemId || seal.released) return;
   if (seal.broken) {
-    if (item.system.crafted?.kind) await item.update({ "system.crafted.destroyed": true, "system.equipped": false });
+    if (item.system.crafted?.kind) {
+      const { brokenChanges } = await import("./gear.mjs");
+      await item.update({ ...brokenChanges(item, getTrait), "system.equipped": false });
+    }
     else await item.delete();
     requestEdit(card, { type: "sealing", sealing: { ...seal, released: true } });
     return settledNote(card, `Mafuba: a Natural 1 - ${item.name} is destroyed, and ${target.name} with it free.`);
@@ -13841,11 +13845,13 @@ function attackKiCost(attack) {
  */
 async function mendCostume(actor) {
   const costume = Array.from(actor?.items ?? []).find(item => item.getFlag?.(SCOPE, "defaultCostume"));
-  const lost = Number(costume?.system?.crafted?.breakLost) || 0;
-  if (!lost || costume.system.crafted.destroyed) return;
+  if (!costume?.system?.crafted) return;
   const { craftedReading, equipPlan } = await import("./gear.mjs");
-  const broken = craftedReading(costume.system.crafted, { getTrait, difficulties: {} })?.breakLeft === 0;
-  await costume.update({ "system.crafted.breakLost": lost - 1 });
+  const reading = craftedReading(costume.system.crafted, { getTrait, difficulties: {} });
+  const lost = Math.max(0, (Number(reading?.breakValue) || 0) - (Number(reading?.breakLeft) || 0));
+  if (!lost) return;
+  const broken = reading?.breakLeft === 0;
+  await costume.update({ "system.crafted.breakLost": lost - 1, "system.crafted.destroyed": false });
   if (!broken || costume.system.equipped) return;
   const inCombat = Boolean(game.combat?.started);
   for (const layer of inCombat ? ["top"] : ["top", "middle", "bottom"]) {
