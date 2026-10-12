@@ -17756,9 +17756,52 @@ async function attackerStage(message, attack, attacker) {
   return readyAttacker(message);
 }
 
+/**
+ * "If you hit any number of Opponents with an Attacking Maneuver" - answered once for the Maneuver, as the hit lands: before
+ * its Wound Roll's window is opened, so what it gives is on the Wound shown and rolled (the user's: Overwhelming
+ * Fighter's stack counted on the Wound of the attack that hit). Critical Eye spent on it, asked; the hit-opponent Moment,
+ * the player's asked first; and what it says about the Wound kept for the roll - Overwhelming Pressure's, Stealthy
+ * Trick's, Searing Anger's. Once an attack, on this client.
+ */
+const HIT_ANSWERS = new Map();
+async function answerHit(message, attack, attacker, struck) {
+  if (HIT_ANSWERS.has(message.id)) return HIT_ANSWERS.get(message.id);
+  const answer = { marks: {}, pressure: false, pressureMost: false, unseen: 0, searing: false };
+  HIT_ANSWERS.set(message.id, answer);
+  if (!struck.length) return answer;
+  // Evolved Right Eye (4): Critical Eye spent on it, asked - 2(T) each (woundParts).
+  const eyed = await spendCriticalEye(attacker, attack);
+  if (eyed.criticalEye) answer.marks.criticalEye = eyed.criticalEye;
+  await offerTriggers(attacker, "hit-opponent");
+  const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
+    area: Boolean(attackArea(attack)), oblivious: struck.some(({ own }) => own.oblivious) });
+  answer.pressure = answered?.slots?.["wound.pressure"] === true;
+  answer.pressureMost = answered?.slots?.["wound.pressureMost"] === true;
+  if (answered?.slots?.["wound.oblivious"] === true) {
+    answer.unseen = Math.floor((Number(attacker.system.resources?.overwhelm?.stacks) || 0) / 2)
+      * Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  }
+  if (answered?.slots?.["wound.overwhelmDouble"] === true) {
+    answer.searing = true;
+    answer.marks.overwhelmDouble = true;
+  }
+  return answer;
+}
+
+/** The ones an attack hit, but its maker. */
+function struckBy(attack, attacker) {
+  return attackTargets(attack)
+    .map(entry => ({ ...entry, actor: fromUuidSync(entry.uuid), own: targetResult(attack, entry.uuid) }))
+    .filter(entry => entry.actor && entry.own?.hit && (entry.uuid !== attacker.uuid));
+}
+
 async function woundStage(message, attack) {
   const attacker = woundRoller(attack);
   if (!attacker) return;
+  // The hit answered first, so the window shows the Wound it gave (answerHit).
+  const hitAnswer = await answerHit(message, attack, attacker, struckBy(attack, attacker));
+  attack = { ...attack, ...hitAnswer.marks };
 
   const triggers = relevantTriggers(attacker, message, "hit");
   const ready = await prepareRoll(attacker, triggers, "On hitting",
@@ -18378,29 +18421,17 @@ async function rollAttackWoundWork(message, attack) {
   let searing = false;
   // Stealthy Trick (3): 1(T) for every 2 stacks of Overwhelm, against each one hit who was Oblivious of you.
   let unseen = 0;
-  // Evolved Right Eye (4): Critical Eye spent on it, asked - 2(T) each (woundParts).
-  if (struck.length) attack = await spendCriticalEye(attacker, attack);
-  if (struck.length) {
-    await offerTriggers(attacker, "hit-opponent");
-    const { fireMoment } = await import("./effects/moments-runtime.mjs");
-    const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
-      area: Boolean(attackArea(attack)), oblivious: struck.some(({ own }) => own.oblivious) });
-    if (answered?.slots?.["wound.pressure"] === true) {
-      // "1(T) for every Health Threshold they are below" - each their own; with (2), "as if all ... were below the same
-      // number of Health Thresholds as the Character below the most".
-      const most = (answered.slots["wound.pressureMost"] === true)
-        ? Math.max(...struck.map(({ actor: hit }) => thresholdsBelow(hit))) : null;
-      const tier = Math.max(1, Number(attacker.system.tierOfPower) || 1);
-      pressing = target => (most ?? thresholdsBelow(target)) * tier;
-    }
-    if (answered?.slots?.["wound.oblivious"] === true) {
-      unseen = Math.floor((Number(attacker.system.resources?.overwhelm?.stacks) || 0) / 2)
-        * Math.max(1, Number(attacker.system.tierOfPower) || 1);
-    }
-    if (answered?.slots?.["wound.overwhelmDouble"] === true) {
-      searing = true;
-      attack = { ...attack, overwhelmDouble: true };
-    }
+  // Answered as the hit landed - before the Wound's window was opened, where it was - and not again (answerHit).
+  const hitAnswer = await answerHit(message, attack, attacker, struck);
+  attack = { ...attack, ...hitAnswer.marks };
+  searing = hitAnswer.searing;
+  unseen = hitAnswer.unseen;
+  if (hitAnswer.pressure) {
+    // "1(T) for every Health Threshold they are below" - each their own; with (2), "as if all ... were below the same
+    // number of Health Thresholds as the Character below the most".
+    const most = hitAnswer.pressureMost ? Math.max(...struck.map(({ actor: hit }) => thresholdsBelow(hit))) : null;
+    const tier = Math.max(1, Number(attacker.system.tierOfPower) || 1);
+    pressing = target => (most ?? thresholdsBelow(target)) * tier;
   }
 
   // Elastic Tentacle: "double the amount of Diminishing Defense they suffer from that Attacking Maneuver" - ticked On
