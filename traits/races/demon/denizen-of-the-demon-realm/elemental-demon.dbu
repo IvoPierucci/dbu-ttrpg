@@ -1,0 +1,16 @@
+id: elemental-demon
+name: Elemental Demon
+order: 4
+optionOf: denizen-of-the-demon-realm
+optionEffect: 3
+# "Select a Profile with 'Elemental' in the name" - asked when it is added, `$choice`.
+choose: elementalProfile
+description: >
+  Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+text: >
+  Elemental Demon [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+
+---
+
+[passive]
+favored.$choice = true;

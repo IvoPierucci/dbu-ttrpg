@@ -1,0 +1,32 @@
+id: denizen-of-the-demon-realm
+name: Denizen of the Demon Realm
+order: 3
+category: body
+subrace: demon-person
+# (2) A Magical Unique Ability of 30 TP or less, chosen as it is gained - its Prerequisites shown, the table's - and gone with
+# it (racial.mjs).
+grantsUniqueChoice: 30
+grantsUniqueChoiceType: magical
+description: >
+  Magical in nature themselves, the citizens of the Demon Realm wield magic effortlessly against their foes.
+text: >
+  Denizen of the Demon Realm (Body): Magical in nature themselves, the citizens of the Demon Realm wield magic effortlessly against their foes.
+  (1)-[Passive]: Increase the Dice Score of your Pressure Checks by 1 while at least 1 Opponent is suffering from a Combat Condition that you inflicted.
+  (2)-[Passive]: At Character Creation, select any Magical Unique Ability with a TP Cost of 30 or less. You must still meet any Prerequisites, except those of a listed Attribute Score and if the listed Skill Ranks required are 2 or less. You gain access to that Unique Ability while you possess this Trait.
+  (3)-[Option]: At Character Creation, choose one of the following effects:
+
+  * Demon Warrior [Passive]: You gain the Weapon Specialist Talent, and when creating any type of Signature Technique, you may add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points.
+  * Demon Mage [Passive]: Reduce the Technique Point Cost of any Magical Unique Abilities by 3 and reduce their Ki Point Cost by 2(T).
+  * Demon Face [Passive]: If Scholarship and/or Personality have the highest Attribute Score among your Attributes, increase all of your Combat Rolls and Initiative Rolls by 1(bT).
+  * Elemental Demon [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+  * Gigantic Demon [Passive]: Increase your Racial Life Modifier by 4 and your base Size Category becomes Gigantic. If any other effect from a Factor (except Megath) would change your base Size Category, ignore it.
+  * Transforming Demon [Passive]: Gain access to the Super Demon Alternate Form. Additionally, increase your Stress Bonus by 1. Double this bonus if your base Tier of Power is 5+.
+
+---
+
+# (1) An Opponent suffering from a Combat Condition you put on them - kept on your clock, or given by you as a Clash or an
+# attack between you was settled (chat.mjs inflictedOnOpponent): 1 on the Pressure Check (chat.mjs pressureCheck).
+[passive]
+pressure.inflicted += 1;
+
+# (3) Its Options, one file each beside this one.

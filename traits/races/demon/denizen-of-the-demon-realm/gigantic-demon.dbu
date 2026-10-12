@@ -1,0 +1,16 @@
+id: gigantic-demon
+name: Gigantic Demon
+order: 5
+optionOf: denizen-of-the-demon-realm
+optionEffect: 3
+description: >
+  Increase your Racial Life Modifier by 4 and your base Size Category becomes Gigantic. If any other effect from a Factor (except Megath) would change your base Size Category, ignore it.
+text: >
+  Gigantic Demon [Passive]: Increase your Racial Life Modifier by 4 and your base Size Category becomes Gigantic. If any other effect from a Factor (except Megath) would change your base Size Category, ignore it.
+
+---
+
+# "If any other effect from a Factor (except Megath) would change your base Size Category, ignore it" - the table's.
+[passive]
+racialLifeModifier += 4;
+allow size.base.gigantic;

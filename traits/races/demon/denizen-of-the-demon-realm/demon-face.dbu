@@ -1,0 +1,19 @@
+id: demon-face
+name: Demon Face
+order: 3
+optionOf: denizen-of-the-demon-realm
+optionEffect: 3
+description: >
+  If Scholarship and/or Personality have the highest Attribute Score among your Attributes, increase all of your Combat Rolls and Initiative Rolls by 1(bT).
+text: >
+  Demon Face [Passive]: If Scholarship and/or Personality have the highest Attribute Score among your Attributes, increase all of your Combat Rolls and Initiative Rolls by 1(bT).
+
+---
+
+# The highest - tied counts (the user's, Functional Purpose's): either of the two.
+[passive]
+if (max(scholarship.score, personality.score) >= max(max(max(agility.score, force.score), max(tenacity.score, insight.score)),
+    max(magic.score, max(scholarship.score, personality.score)))) {
+    combatRolls += 1(bT);
+    initiative += 1(bT);
+}

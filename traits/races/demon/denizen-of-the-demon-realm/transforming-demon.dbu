@@ -1,0 +1,20 @@
+id: transforming-demon
+name: Transforming Demon
+order: 6
+optionOf: denizen-of-the-demon-realm
+optionEffect: 3
+description: >
+  Gain access to the Super Demon Alternate Form. Additionally, increase your Stress Bonus by 1. Double this bonus if your base Tier of Power is 5+.
+text: >
+  Transforming Demon [Passive]: Gain access to the Super Demon Alternate Form. Additionally, increase your Stress Bonus by 1. Double this bonus if your base Tier of Power is 5+.
+
+---
+
+# The Super Demon Alternate Form waits on Forms, not built yet.
+[passive]
+if (baseTierOfPower >= 5) {
+    stressBonus += 2;
+}
+if (baseTierOfPower < 5) {
+    stressBonus += 1;
+}

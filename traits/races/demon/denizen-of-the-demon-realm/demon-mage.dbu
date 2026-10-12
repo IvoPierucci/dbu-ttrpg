@@ -1,0 +1,15 @@
+id: demon-mage
+name: Demon Mage
+order: 2
+optionOf: denizen-of-the-demon-realm
+optionEffect: 3
+description: >
+  Reduce the Technique Point Cost of any Magical Unique Abilities by 3 and reduce their Ki Point Cost by 2(T).
+text: >
+  Demon Mage [Passive]: Reduce the Technique Point Cost of any Magical Unique Abilities by 3 and reduce their Ki Point Cost by 2(T).
+
+---
+
+[passive]
+unique.magical.tpCost -= 3;
+unique.magical.kiCost -= 2(T);

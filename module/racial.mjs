@@ -517,7 +517,9 @@ export async function racialItemFrom(trait, actor = null) {
         chosen
       }
     },
-    grants: { unique, talents }
+    grants: { unique, talents,
+      // Denizen of the Demon Realm's: one of that type and TP Cost or less, chosen.
+      uniqueChoice: Number(trait.grantsUniqueChoice) || 0, uniqueChoiceType: String(trait.grantsUniqueChoiceType ?? "") }
   };
 }
 
@@ -612,6 +614,27 @@ function freeUnique(uniqueItemFrom, definition, item, { applied = [], chosenType
   return data;
 }
 
+/** A Unique Ability of that type and TP Cost or less, not had, chosen - or null (Denizen of the Demon Realm's). */
+async function askUniqueChoice(actor, name, most, held, type = "") {
+  const offered = traitsOfKind("unique").filter(each => !each.owner && !held.has(each.id)
+    && ((Number(each.tpCost) || 0) <= most) && (!type || [type, "both"].includes(each.uaType)))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (!offered.length) return null;
+  const escape = Handlebars.escapeExpression;
+  const said = value => [].concat(value ?? []).join(", ");
+  const id = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - ${name}` },
+    content: `<p class="dbu-respond-hint">A ${type ? `${type.charAt(0).toUpperCase()}${type.slice(1)} ` : ""}Unique Ability of ${most} TP or less.</p>
+      <select name="unique">${offered.map(each => `<option value="${escape(each.id)}">${escape(`${each.name} - ${
+        Number(each.tpCost) || 0} TP${said(each.prerequisite) ? ` - ${said(each.prerequisite)}` : ""}`)}</option>`).join("")}</select>`,
+    buttons: [{ action: "take", label: "Take it", default: true,
+      callback: (event, button, dialog) => dialog.element.querySelector('select[name="unique"]')?.value ?? null },
+      { action: "cancel", label: "Later, by hand" }],
+    rejectClose: false
+  });
+  return offered.find(each => each.id === id) ?? null;
+}
+
 /** One Unique Ability of that TP Cost or less, not had, chosen in place of one already had - or null. */
 async function askUniqueInstead(actor, had, most, held) {
   const offered = traitsOfKind("unique").filter(each => !each.owner && !held.has(each.id)
@@ -676,6 +699,17 @@ async function giveGrants(actor, item, grants, name) {
       ...(grant.option ? { grantedByOption: grant.option } : {}) } };
     created.push(data);
     held.add(definition.id);
+  }
+
+  // "Select any Magical Unique Ability with a TP Cost of 30 or less ... You gain access to that Unique Ability while you
+  // possess this Trait" (Denizen of the Demon Realm's) - which, asked; its Prerequisites shown, the table's.
+  if (grants.uniqueChoice) {
+    const picked = await askUniqueChoice(actor, name, grants.uniqueChoice, held, grants.uniqueChoiceType);
+    if (picked) {
+      created.push(freeUnique(uniqueItemFrom, picked, item,
+        { chosenType: (picked.uaType === "both") ? (grants.uniqueChoiceType || "") : "" }));
+      held.add(picked.id);
+    }
   }
 
   const { talentItemFrom } = await import("./talents.mjs");

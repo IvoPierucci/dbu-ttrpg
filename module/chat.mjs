@@ -586,6 +586,8 @@ export function conditionGained(actor, key) {
   if (!context?.message || !actor) return;
   const by = context.by ?? (context.parties ?? []).find(party => party.uuid !== actor.uuid);
   if (!by || (by.uuid === actor.uuid)) return;
+  // Whose it is, kept on the one suffering it - Denizen of the Demon Realm's "a Combat Condition that you inflicted".
+  requestActorUpdate(actor, { [`flags.${SCOPE}.afflictedBy.${key}`]: by.uuid });
   sniperOffers(context.message, by, actor, getTrait(key)?.name ?? key);
 }
 
@@ -14135,7 +14137,9 @@ function offerUnscathedExploit(message, actor, attacker) {
  */
 export async function pressureCheck(actor) {
   if (!actor) return;
-  const roll = await new Roll("1d10").evaluate();
+  // Denizen of the Demon Realm (1): 1 more while an Opponent suffers from a Combat Condition this character inflicted.
+  const more = inflictedOnOpponent(actor) ? (Number(actor.system.effects?.slots?.["pressure.inflicted"]?.add) || 0) : 0;
+  const roll = await new Roll(more ? `1d10 + ${more}` : "1d10").evaluate();
   const success = roll.total >= 4;
   const key = success ? "demonicpower" : "demonicfatigue";
   const held = { ...(actor.system.resources ?? {}) };
@@ -14144,6 +14148,21 @@ export async function pressureCheck(actor) {
   await requestActorUpdate(actor, { "system.resources": replaceObject(held) });
   return roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
     flavor: `Pressure Check - ${success ? "a success: a stack of Demonic Power" : "a fail: a stack of Demonic Fatigue"}` });
+}
+
+/**
+ * An Opponent suffering from a Combat Condition this character inflicted - one kept on their clock, or one marked as theirs
+ * as a Clash or an attack between them was settled (conditionGained) - Denizen of the Demon Realm's.
+ */
+function inflictedOnOpponent(actor) {
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const combat = key => (getTrait(key)?.kind === "conditions") && (getTrait(key)?.combatCondition !== false);
+  const suffering = (other, key) => other && !allies.has(other.uuid) && (other.uuid !== actor.uuid)
+    && ((Number(other.system?.conditions?.[key]) || 0) > 0) && combat(key);
+  if ((actor.system.timed ?? []).some(entry => (entry.kind === KINDS.CONDITION) && entry.on
+    && suffering(fromUuidSync(entry.on), entry.key))) return true;
+  return (canvas?.tokens?.placeables ?? []).some(token => Object.entries(token.actor?.getFlag?.(SCOPE, "afflictedBy") ?? {})
+    .some(([key, uuid]) => (uuid === actor.uuid) && suffering(token.actor, key)));
 }
 
 /** Suffering from a Combat Condition - one of the published ones, not a mark (Demonic Combat's). */
