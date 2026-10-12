@@ -1181,6 +1181,8 @@ export function appliedModifiers(entries) {
     strikePerTier: entry.modifier.strikePerTier ?? 0,
     woundPerTier: entry.modifier.woundPerTier ?? 0,
     note: entry.note ?? "",
+    // Scarlet Spotter (1): 2 Critical Eye spent, its target's Damage Reduction ignored.
+    ...(entry.ignoresDamageReduction ? { ignoresDamageReduction: true } : {}),
     // A Called Shot at a piece of Apparel: its Break Value on a hit, and half the Damage.
     atApparel: Boolean(entry.atApparel),
     // Or at one of the target's Weapons: its Life Points on a hit, and nothing to them.
@@ -1282,6 +1284,18 @@ async function applyModifiers(actor, applied) {
       content: "<p>The Called Shot for 2 stacks of Critical Eye instead of its Action?</p>", rejectClose: false });
     if (byEyes) applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
   }
+  // Scarlet Spotter (1): "If you target an Opponent with a Called Shot, you may spend 2 stacks of Critical Eye to ignore that
+  // Opponent's Damage Reduction" - asked, with 2 more held than Pinpoint Combat took; marked on the Called Shot itself.
+  const aimed = applied.find(entry => (entry.modifier?.id ?? entry.id) === "called-shot");
+  const original = aimed ? (called ?? aimed) : null;
+  let unreduced = false;
+  if (aimed && (actor.system.effects?.slots?.["calledShot.ignoreDamageReduction"] === true)
+    && ((Number(actor.system.resources?.criticaleye?.stacks) || 0) - (byEyes ? 2 : 0) >= 2)) {
+    unreduced = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+      window: { title: `${actor.name} - Scarlet Spotter` },
+      content: "<p>2 stacks of Critical Eye to ignore their Damage Reduction?</p>", rejectClose: false });
+    if (unreduced) original.ignoresDamageReduction = true;
+  }
 
   const actions = { standard: 0, counter: 0 };
   let ki = 0;
@@ -1307,13 +1321,14 @@ async function applyModifiers(actor, applied) {
   for (const [kind, amount] of Object.entries(actions)) {
     if (amount) await spendActions(actor, amount, kind);
   }
-  if (byEyes) {
+  if (byEyes || unreduced) {
     const { replaceObject } = await import("./conditions.mjs");
     const resources = { ...(actor.system.resources ?? {}) };
-    const left = (Number(resources.criticaleye?.stacks) || 0) - 2;
+    const left = (Number(resources.criticaleye?.stacks) || 0) - (byEyes ? 2 : 0) - (unreduced ? 2 : 0);
     if (left > 0) resources.criticaleye = { ...resources.criticaleye, stacks: left };
     else delete resources.criticaleye;
-    await actor.update({ "system.resources": replaceObject(resources), "flags.dbu-ttrpg.pinpointCalledRound": round });
+    await actor.update({ "system.resources": replaceObject(resources),
+      ...(byEyes ? { "flags.dbu-ttrpg.pinpointCalledRound": round } : {}) });
   }
 
   for (const entry of applied) {

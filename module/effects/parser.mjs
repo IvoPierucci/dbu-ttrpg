@@ -519,7 +519,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Someone Oblivious of you hit (Stealthy Trick's).
   "hitOblivious",
   // Your Terrify's Clash won (Terrifying Pressure's).
-  "wonTerrify"]);
+  "wonTerrify",
+  // Knocked through by a Called Shot or an attack through the Exploit (Scarlet Spotter's).
+  "knockedPinpoint"]);
 
 /**
  * Dice the character already has, named rather than written out.

@@ -927,7 +927,7 @@ export function registerDefeatHooks() {
     if (options.dbuWasDefeated === undefined) return;
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
 
-    await announceThreshold(actor, options.dbuThreshold, options.dbuKnockedBy);
+    await announceThreshold(actor, options.dbuThreshold, options.dbuKnockedBy, Boolean(options.dbuKnockedPinpoint));
 
     const was = options.dbuWasDefeated;
     const now = actor.system.defeated;
@@ -1025,7 +1025,7 @@ export async function releaseFinalChance(actor) {
  * Only downward. Healing back up through a Threshold is not being knocked through one,
  * and it clears the Checks recorded below by itself.
  */
-async function announceThreshold(actor, before, knockedBy = "") {
+async function announceThreshold(actor, before, knockedBy = "", pinpoint = false) {
   if (!before) return;
 
   const { THRESHOLDS } = DBUCharacterData;
@@ -1058,8 +1058,9 @@ async function announceThreshold(actor, before, knockedBy = "") {
   if (knocker && (knocker.uuid !== actor.uuid)) {
     const { offerTriggers } = await import("./chat.mjs");
     // Who was knocked through - Burning Hatred's Enemy.
-    await offerTriggers(knocker, "knock-through", { knockedUuid: actor.uuid });
-    await fireMoment(knocker, "knock-through", { knockedUuid: actor.uuid });
+    // And whether a Called Shot or an attack through the Exploit did it - Scarlet Spotter's.
+    await offerTriggers(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint });
+    await fireMoment(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint });
   }
 
   await announce("threshold", {

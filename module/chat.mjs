@@ -14087,6 +14087,35 @@ function offerFlowExploit(message, actor, attacker) {
 }
 
 /**
+ * Scarlet Spotter (2): "If you suffer no damage from an Opponent's Attacking Maneuver that targets you due to any reason,
+ * you may use the Exploit Maneuver as if they triggered its effects." Missed, or hit for nothing: the Exploit at them on its
+ * card - not where one is offered to you already - while unused this Round; spent as it is used (takeOutOfSequence).
+ */
+function offerUnscathedExploit(message, actor, attacker) {
+  if (!actor || !attacker || (actor.system?.effects?.slots?.["exploit.unscathed"] !== true)) return;
+  if (alliesOnScene(actor).some(ally => ally.uuid === attacker.uuid)) return;
+  if (actor.getFlag?.(SCOPE, "unscathedRound") === roundKey()) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.maneuverId === "exploit")
+    && (offer.actorUuid === actor.uuid))) return;
+  if (!actor.items?.some(item => (item.type === "maneuver") && item.system.exploit)) return;
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "exploit",
+    maneuverName: "Exploit", targetUuid: attacker.uuid, reason: "Scarlet Spotter - no damage taken",
+    grants: { unscathed: true },
+    provokedBy: { maneuverId: attack?.maneuverId ?? "", maneuverName: attack?.maneuverName ?? "", messageId: message.id } } });
+}
+
+/**
+ * A Combat Condition's stacks on the one a Moment names as knocked through, till the end of the actor's next turn on
+ * the actor's clock - Scarlet Spotter (3)'s 2 Broken.
+ */
+export async function markKnocked(actor, knockedUuid, key, stacks) {
+  const knocked = fromUuidSync(knockedUuid ?? "");
+  if (!actor || !knocked || !key) return;
+  return markUntilNextTurn(actor, knocked, key, stacks, "end", "Scarlet Spotter");
+}
+
+/**
  * Flow of Combat (2): "If you have taken no Damage since the end of your last turn, you may use Combat Recovery as if you
  * spent 1 Action as an Out-of-Sequence Maneuver. If you do, ignore the reduction to your Defense Value from the effects of
  * Combat Recovery." Offered on a card at the start of the turn, while Combat Recovery has a use left this Round.
@@ -14748,6 +14777,14 @@ async function takeOutOfSequence(message, actor, offer) {
   // costs its own Counter Action - an Out-of-Sequence Maneuver waives an Action Cost, and
   // this one is not the Out-of-Sequence Maneuver, it is what hands one over.
   if (maneuver.exploit) {
+    // Scarlet Spotter (2): once a Round, spent here.
+    if (offer.grants?.unscathed) {
+      if (actor.getFlag?.(SCOPE, "unscathedRound") === roundKey()) {
+        ui.notifications.warn(`${actor.name}: Scarlet Spotter - already used this Combat Round.`);
+        return;
+      }
+      await actor.setFlag(SCOPE, "unscathedRound", roundKey());
+    }
     // Pinpoint Combat (3): "Your Ally may allow you to spend their Counter Action instead of your own" - paid already.
     if (!offer.counterPaid && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
     // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
@@ -17182,6 +17219,7 @@ async function resolveAttackWork(message, attack) {
   // Flow of Combat: an attack that missed you - no Damage from it - and the Exploit at who made it.
   for (const entry of branches) {
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFlowExploit(message, fromUuidSync(entry.uuid), attacker);
+    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerUnscathedExploit(message, fromUuidSync(entry.uuid), attacker);
     // Angelic Offense (3): the same, and the Basic Attack.
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerAngelicCounter(message, fromUuidSync(entry.uuid), attacker);
     // Angelic Offense (2)'s Guard Down: this was the next Attacking Maneuver aimed at them.
@@ -18544,7 +18582,9 @@ async function rollAttackWoundWork(message, attack) {
     // Damage Inhibitor: "If you use the Direct Hit or Guard options of the Defend Maneuver, increase your Damage Reduction
     // by 2(T) for the duration of that Maneuver."
     const braced = ["directHit", "guard"].includes(own.defense) ? heldAt(target, "guard-or-direct-hit") : null;
-    const reduction = Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0);
+    // Scarlet Spotter (1): a Called Shot that spent 2 Critical Eye - "ignore that Opponent's Damage Reduction", all of it.
+    const unreduced = (attack.modifiers ?? []).some(entry => entry.ignoresDamageReduction);
+    const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0));
 
     const negated = counterWound && (counterWound.total > wound.total);
     const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);
@@ -21072,7 +21112,9 @@ async function applyAttackDamage(message, target, attack) {
   }, {
     ...(((attack.technique?.superProfile === "complete-annihilation") && !isAbsoluteMiss(own)) ? { dbuSilenced: true } : {}),
     // Who knocked them through, if it does - for what answers having done it (Inherited Aggression's).
-    ...((armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) ? { dbuKnockedBy: armsUser.uuid } : {})
+    ...((armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)) ? { dbuKnockedBy: armsUser.uuid,
+      // A Called Shot, or an attack through the Exploit - Scarlet Spotter's.
+      ...((isCalledShot(attack) || attack.viaExploit) ? { dbuKnockedPinpoint: true } : {}) } : {})
   });
   if (arms) await offerArmsHit(armsUser, target);
   // Flow of Combat: Damage taken - "since the end of your last turn" - and none taken, the Exploit at who made it.
@@ -21080,6 +21122,7 @@ async function applyAttackDamage(message, target, attack) {
     await requestActorUpdate(target, { [`flags.${SCOPE}.damagedSinceTurn`]: true });
   }
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerFlowExploit(message, target, armsUser);
+  if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerUnscathedExploit(message, target, armsUser);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerAngelicCounter(message, target, armsUser);
   // "If you are hit by an Attacking Maneuver and take no Damage" - Bio-Suit's.
   if (own.hit && (damage <= 0) && !isAbsoluteMiss(own)) await answerFor(target, "hit-unharmed");

@@ -96,6 +96,12 @@ export const VERBS = Object.freeze({
     doc: "Ruler's: 2 stacks of Overwhelm spent, and the Allies ticked as within a Large Sphere around you Ruled - Soak "
        + "Value and Combat Rolls 1(T) higher - until the start of your next turn (chat.mjs rulerAllies)."
   },
+  markKnocked: {
+    args: [2, 2],
+    names: [0],
+    doc: "A Combat Condition's stacks on whoever this Moment says was knocked through - till the end of your next turn, "
+       + "on your clock (chat.mjs markKnocked) - Scarlet Spotter's 2 Broken."
+  },
   followAlly: {
     args: [0, 0],
     names: [],

@@ -351,6 +351,11 @@ async function runVerb(actor, call, context) {
       return rulerAllies(actor);
     }
 
+    case "markKnocked": {
+      const { markKnocked } = await import("../chat.mjs");
+      return markKnocked(actor, context?.knockedUuid, String(args[0] ?? ""), Number(args[1]) || 1);
+    }
+
     case "followAlly": {
       const { followAlly } = await import("../chat.mjs");
       return followAlly(actor);

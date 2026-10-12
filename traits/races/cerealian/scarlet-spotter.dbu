@@ -1,0 +1,29 @@
+id: scarlet-spotter
+name: Scarlet Spotter
+order: 4
+category: body
+importance: secondary
+description: >
+  The enhanced vision of the Cerealians’ evolved eye allows them to better target an opponent’s vitals, even in the heat of the moment, giving them the opportunity to better capitalize on- and exploit- an opponent’s movements.
+text: >
+  Scarlet Spotter (Body): The enhanced vision of the Cerealians’ evolved eye allows them to better target an opponent’s vitals, even in the heat of the moment, giving them the opportunity to better capitalize on- and exploit- an opponent’s movements.
+  (1)-[Triggered]: If you target an Opponent with a Called Shot, you may spend 2 stacks of Critical Eye to ignore that Opponent’s Damage Reduction.
+  (2)-[Triggered, 1/Round]: If you suffer no damage from an Opponent’s Attacking Maneuver that targets you due to any reason, you may use the Exploit Maneuver as if they triggered its effects.
+  (3)-[Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with a Called Shot or an Attacking Maneuver made through the Exploit Maneuver, that Opponent suffers from 2 stacks of the Broken Combat Condition until the end of your next turn.
+
+---
+
+[passive]
+# (1) The Called Shot applied at Attack Declaration, 2 stacks of Critical Eye held: asked whether they are spent - and
+# with them its target's Damage Reduction ignored, all of it (use-maneuver.mjs applyModifiers, chat.mjs).
+allow calledShot.ignoreDamageReduction;
+# (2) An Opponent's Attacking Maneuver that missed you, or hit you for no Damage: the Exploit at them, offered on its card
+# - once a Round, spent as it is used (chat.mjs offerUnscathedExploit).
+allow exploit.unscathed;
+
+# (3) An Opponent knocked through a Health Threshold by your Called Shot, or your attack through the Exploit Maneuver:
+# 2 stacks of Broken on them till the end of your next turn, once a Round. Automatic by default, its
+# Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/knock-through, 1/round, effect 3]
+requires knockedPinpoint;
+markKnocked(broken, 2);
