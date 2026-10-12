@@ -14202,16 +14202,21 @@ export async function followAlly(actor) {
   const combat = game.combat;
   const turns = combat?.turns ?? [];
   const mine = turns.find(combatant => combatant.actor?.uuid === actor?.uuid);
-  if (!mine) return;
+  if (!mine) return (await import("./effects/moments-runtime.mjs")).UNSPENT;
   const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
   const allies = turns.filter(combatant => combatant.actor && (combatant.id !== mine.id)
     && ((Number(combatant.initiative) || 0) < (Number(mine.initiative) || 0))
     && ((own === undefined) || (combatant.token?.disposition === own)));
-  if (!allies.length) return ui.notifications.info(`${actor.name}: Patient Sniper - no Ally with a lower Initiative.`);
+  // Nobody to follow, or "None": its use not spent (the user's).
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (!allies.length) {
+    ui.notifications.info(`${actor.name}: Patient Sniper - no Ally with a lower Initiative.`);
+    return UNSPENT;
+  }
   const picked = await askPlayerChoice(actor, `${actor.name}: Patient Sniper`,
     [...allies.map(combatant => ({ value: combatant.id, label: combatant.name })), { value: "none", label: "None" }]);
   const ally = allies.find(combatant => combatant.id === picked);
-  if (!ally) return;
+  if (!ally) return UNSPENT;
   const after = turns[turns.indexOf(ally) + 1];
   const high = Number(ally.initiative) || 0;
   const low = (after && (after.id !== mine.id)) ? (Number(after.initiative) || 0) : high - 2;

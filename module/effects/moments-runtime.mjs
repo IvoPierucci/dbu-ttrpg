@@ -149,9 +149,14 @@ async function runPass(actor, moment, definition, entries, context, mode, quiet 
   if (!spent.length) return nothing;
 
   await writeStateful(actor, slots);
-  for (const call of scope.queue) await runVerb(actor, call, context);
+  // A verb that did nothing because the player chose nothing - Patient Sniper's "None" - leaves its use unspent.
+  const declined = new Set();
+  for (const call of scope.queue) {
+    if ((await runVerb(actor, call, context)) === UNSPENT) declined.add(call.verb);
+  }
+  const counted = declined.size ? spent.filter(use => !callsAny(entries, use, declined)) : spent;
 
-  await recordUses(actor, spent, definition, context);
+  await recordUses(actor, counted, definition, context, spent);
   // Quiet where the caller says what it did on a card of its own - a Maneuver's Life and Ki, by source (chat.mjs gainsHtml).
   if (!quiet) await announce(actor, entries, spent, moment);
 
@@ -660,9 +665,11 @@ export async function leaveState(actor, name) {
  * Round turns over and `encounter` when one ends, so a limit needs nothing here beyond
  * writing the id into the right one.
  */
-async function recordUses(actor, spent, definition, context) {
+async function recordUses(actor, spent, definition, context, disarmed = spent) {
   const ids = spent.map(use => `${use.sourceId}#${use.block}`);
-  const armed = (actor.system.armedTalents ?? []).filter(id => !ids.includes(id));
+  // Everything that answered is disarmed, whether its use was counted or not.
+  const off = disarmed.map(use => `${use.sourceId}#${use.block}`);
+  const armed = (actor.system.armedTalents ?? []).filter(id => !off.includes(id));
 
   const round = [...(actor.system.talentUses?.round ?? []), ...ids];
   const encounter = [...(actor.system.talentUses?.encounter ?? []), ...ids];
@@ -680,6 +687,17 @@ async function recordUses(actor, spent, definition, context) {
     "system.talentUses.encounter": encounter,
     "system.armedTalents": armed
   });
+}
+
+/** What a verb answers when the player chose nothing, so its use is not counted (runPass). */
+export const UNSPENT = "unspent";
+
+/** Whether the block that was used calls one of these verbs. */
+function callsAny(entries, use, verbs) {
+  const block = entries.find(entry => entry.sourceId === use.sourceId)?.program?.blocks
+    ?.find(each => each.index === use.block);
+  const said = JSON.stringify(block?.statements ?? []);
+  return [...verbs].some(verb => said.includes(`"verb":"${verb}"`));
 }
 
 /** The id a Moment's own limit is counted under. */
