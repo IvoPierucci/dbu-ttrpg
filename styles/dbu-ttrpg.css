@@ -3367,6 +3367,11 @@
   opacity: 0.5;
 }
 
+/* Not this character's to take - another race's, an unmet Racial Factor, another Subrace's: dimmed, still pickable. */
+.dbu-ua-search .gear-quality-option.unfit {
+  opacity: 0.5;
+}
+
 .dbu-ua-search .gear-quality-none {
   font-style: italic;
 }

@@ -4,7 +4,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
 import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
-import { addRacialTrait, otherGroupName, otherTraitsInOrder, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
+import { addRacialTrait, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
 import { reactiveFor, chosenAsItHappens } from "../effects/registry.mjs";
@@ -4943,13 +4943,17 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         <input type="text" class="gear-quality-search" data-feature-search autocomplete="off" autofocus
                placeholder="Type a Racial Trait"/>
         <ol class="gear-quality-list" data-feature-list>
-          ${traits.map(trait => `<li class="gear-quality-option${had.has(trait.id) ? " blocked" : ""}"
+          ${traits.map(trait => {
+            // Not this character's to take - dimmed, and why on hover; still taken if picked (the user's).
+            const unfit = racialTraitUnfit(trait, this.actor.system.race, this.actor.system.subrace, this.actor.system.effects?.slots);
+            return `<li class="gear-quality-option${had.has(trait.id) ? " blocked" : (unfit ? " unfit" : "")}"
             data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
             data-tooltip="${escape(had.has(trait.id) ? "Already had"
-              : [racialTraitKind(trait), trait.description ?? "",
+              : [unfit, racialTraitKind(trait), trait.description ?? "",
                 (trait.kind === "factors") ? factorSummary(trait.owner) : ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
             <span class="gear-quality-cost">${escape((trait.kind === "factors") ? racialTraitRace(String(trait.race ?? ""), "", trait.owner)
-              : racialTraitRace(trait.owner, trait.subrace))}</span></li>`).join("")}
+              : racialTraitRace(trait.owner, trait.subrace))}</span></li>`;
+          }).join("")}
           <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
         </ol></div>`,
       buttons: [
@@ -4997,9 +5001,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         <input type="text" class="gear-quality-search" data-feature-search autocomplete="off" autofocus
                placeholder="Type an Evolution, Bestial or Monstrous Trait"/>
         <ol class="gear-quality-list" data-feature-list>
-          ${traits.map(trait => `<li class="gear-quality-option${had.has(trait.id) ? " blocked" : ""}"
+          ${traits.map(trait => `<li class="gear-quality-option${had.has(trait.id) ? " blocked"
+            : (otherTraitUnfit(trait, this.actor.system.race) ? " unfit" : "")}"
             data-feature-option="${escape(trait.id)}" data-name="${escape(trait.name)}"
-            data-tooltip="${escape(had.has(trait.id) ? "Already had" : (trait.description ?? ""))}">${escape(trait.name)}
+            data-tooltip="${escape(had.has(trait.id) ? "Already had"
+              : [otherTraitUnfit(trait, this.actor.system.race), trait.description ?? ""].filter(Boolean).join(" - "))}">${escape(trait.name)}
             <span class="gear-quality-cost">${escape(otherGroupName(trait.owner))}</span></li>`).join("")}
           <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
         </ol></div>`,

@@ -285,6 +285,24 @@ function orderOf(trait) {
  * Factor's - races and Factors each by their own name (not the Trait's), each one's Traits in the order its page prints
  * them.
  */
+/**
+ * Why a Racial Trait is not one this character would take, or "" - another race's, a Racial Factor whose Racial
+ * Requirement they do not meet, another Subrace's. Only said, and shown dimmed on the Add Racial Trait list: it may be
+ * taken all the same (the user's).
+ */
+export function racialTraitUnfit(trait, race, subrace = "", slots = null) {
+  const rank = groupRank(trait, race, slots);
+  if (rank === 3) return "Another race's";
+  if (rank === 4) return "Its Racial Factor's Racial Requirement is not met";
+  if (trait?.subrace && subrace && (trait.subrace !== subrace)) return "Another Subrace's";
+  return "";
+}
+
+/** The same for an Other Trait: Evolution Traits are the Arcosians' alone (the user's). */
+export function otherTraitUnfit(trait, race) {
+  return ((trait?.owner === "evolution") && (race !== "arcosian")) ? "Arcosians' alone" : "";
+}
+
 export function racialTraitsInOrder(race, traits = racialTraitFiles(), slots = null) {
   return traits.slice().sort((a, b) =>
     (groupRank(a, race, slots) - groupRank(b, race, slots))
