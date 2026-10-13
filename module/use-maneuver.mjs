@@ -720,6 +720,16 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       <input type="number" name="lifeWager" value="0" min="0" max="${warriorMost}"/>
       <span class="dbu-respond-source">as much on the Ki Wager, free</span></label>`);
   }
+  // Last Resort (2): "while you are below the Injured Health Threshold, you do not have to pay the Ki Point Cost for that
+  // instance of the Signature Technique." Once an Encounter.
+  const lastResort = (actor.system.effects?.slots?.["signature.lastResort"] === true)
+    && ["injured", "critical"].includes(actor.system.threshold?.key)
+    && (actor.getFlag?.("dbu-ttrpg", "lastResortEncounter") !== (game.combat?.id ?? "none"));
+  if (lastResort) {
+    fields.push(`<label class="dbu-respond-option"${tip("last-resort", 2)}><input type="checkbox" name="lastResort"/>
+      <span class="dbu-respond-name">Last Resort: no Ki Point Cost</span>
+      <span class="dbu-respond-source">once an Encounter</span></label>`);
+  }
   // Demonic Creativity (3): "you can spend 1 stack of Demonic Power you possess to apply the Condition Advantage to that
   // Attacking Maneuver." Once a Round; not on one that has it already.
   const creative = (actor.system.effects?.slots?.["signature.conditionByPower"] === true) && !has("condition")
@@ -770,7 +780,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           return { transformed: box("transformed"), finalChance: box("finalChance"),
             maliceBacklash: Math.min(maliceMost, num("maliceBacklash")), mentality: box("mentality"),
             moraleGuard: box("moraleGuard"), creativeCondition: box("creativeCondition"),
-            lifeWager: Math.min(warriorMost, num("lifeWager")),
+            lifeWager: Math.min(warriorMost, num("lifeWager")), lastResort: lastResort && box("lastResort"),
             earthling: earthlingPicked(form),
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
@@ -833,6 +843,9 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     answers.freeWager = (Number(declared.freeWager) || 0) + answers.lifeWager;
   }
   delete answers.lifeWager;
+  // Last Resort's: its Encounter spent, the cost waived on this use alone.
+  if (answers.lastResort) await actor.setFlag("dbu-ttrpg", "lastResortEncounter", game.combat?.id ?? "none");
+  else delete answers.lastResort;
   if (answers.moraleGuard) await actor.setFlag("dbu-ttrpg", "moraleClashed", game.combat?.id ?? "none");
   else delete answers.moraleGuard;
   // What the two Majin Traits put on its Wound Roll, and their uses spent.

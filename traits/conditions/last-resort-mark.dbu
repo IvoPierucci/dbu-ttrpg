@@ -1,0 +1,28 @@
+id: last-resort-mark
+name: Last Resort
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Last Resort's (3) gives, held with a clock on it.
+combatCondition: no
+source: Core Rule
+description: >
+  Last Resort: the bonus from Earthling Resolve's first effect doubled until the end of your next turn.
+text: >
+  Last Resort (3): Double the bonus from the first effect of Earthling Resolve until the end of your next turn.
+
+---
+
+# Earthling Resolve's (1) once more - only where it is had: Strike and Wound 1(T) for each Health Threshold below.
+[passive]
+if (benefiting("Earthling Resolve") && belowThreshold("bruised")) {
+    strike += 1(T);
+    wound += 1(T);
+}
+if (benefiting("Earthling Resolve") && belowThreshold("injured")) {
+    strike += 1(T);
+    wound += 1(T);
+}
+if (benefiting("Earthling Resolve") && belowThreshold("critical")) {
+    strike += 1(T);
+    wound += 1(T);
+}

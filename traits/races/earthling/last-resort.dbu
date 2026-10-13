@@ -1,0 +1,27 @@
+id: last-resort
+name: Last Resort
+order: 3
+category: body
+importance: secondary
+description: >
+  No matter the situation, no matter how grim it looks, an Earthling can dig deep and draw out an unexpected wellspring of power.
+text: >
+  Last Resort (Body): No matter the situation, no matter how grim it looks, an Earthling can dig deep and draw out an unexpected wellspring of power.
+  (1)-[Passive]: If your Capacity is 0 when you roll the Wound Roll for a Signature Technique, increase the Wound Roll by 2(T).
+  (2)-[Triggered, 1/Encounter]: When you use the Signature Technique Maneuver to use a Signature Technique while you are below the Injured Health Threshold, you do not have to pay the Ki Point Cost for that instance of the Signature Technique.
+  (3)-[Triggered/Power, 1/Encounter]: Double the bonus from the first effect of Earthling Resolve until the end of your next turn.
+
+---
+
+[passive]
+# (1) Read as the Wound Roll is made - no Capacity left then - on a Signature Technique's (chat.mjs twoWorldsWoundParts).
+wound.signatureNoCapacity += 2(T);
+# (2) A box at the Signature Technique's declaration, Injured or Critical, once an Encounter: its Ki Point Cost not paid -
+# a Ki Wager still is (use-maneuver.mjs askTechniqueDeclaration, maneuvers.mjs maneuverKiCost).
+allow signature.lastResort;
+
+# (3) The Power Up Maneuver used: Last Resort (a mark) - Earthling Resolve's 1(T) a Threshold once more - till the end of
+# your next turn. A box in the Power Up's window, as every effect answering it - no Triggered/Automatic button.
+[triggered/power, 1/encounter, effect 3]
+gain(last-resort-mark);
+expires(last-resort-mark, next-turn);

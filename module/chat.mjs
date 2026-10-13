@@ -18345,6 +18345,11 @@ function twoWorldsWoundParts(attacker, attack) {
   const parts = [];
   const signature = Number(slots["wound.signature"]?.add) || 0;
   if (signature && attack.technique) parts.push({ label: `${named("wound.signature")} (Signature Technique)`, value: signature });
+  // Last Resort (1): "If your Capacity is 0 when you roll the Wound Roll for a Signature Technique" - read now.
+  const spent = Number(slots["wound.signatureNoCapacity"]?.add) || 0;
+  if (spent && attack.technique && ((Number(attacker.system.capacity?.remaining) || 0) <= 0)) {
+    parts.push({ label: `${named("wound.signatureNoCapacity")} (Capacity 0)`, value: spent });
+  }
   const fury = Number(slots["wound.perThresholdOrAlly"]?.add) || 0;
   if (fury) {
     const below = Math.max(thresholdsBelow(attacker), ...alliesOnScene(attacker).map(thresholdsBelow));
