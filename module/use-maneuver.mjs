@@ -5992,7 +5992,7 @@ export async function declareCharge(actor) {
   if (charging.maneuverId) {
     // The ceiling is the declared Profile's, not one number for everything: Mega Flare
     // is built to hold ten, and the Profile was settled when the charging began.
-    const ceiling = maxEnergyCharges(charging.profile, DBUCharacterData.MAX_ENERGY_CHARGES);
+    const ceiling = maxEnergyCharges(charging.profile, DBUCharacterData.MAX_ENERGY_CHARGES, actor);
     if (charging.charges >= ceiling) {
       ui.notifications.warn(
         `That Attacking Maneuver already carries ${ceiling} `

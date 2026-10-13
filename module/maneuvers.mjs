@@ -1,5 +1,5 @@
 import { applySlot, granted, permits } from "./effects/interpreter.mjs";
-import { printedLines, traitsOfKind } from "./effects/traits.mjs";
+import { printedLines, resourceLimits, traitsOfKind } from "./effects/traits.mjs";
 import { featureAsks, withGranted } from "./signature.mjs";
 
 /**
@@ -2433,7 +2433,10 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   const answers = await askFeatures(maneuver, actor, advantages);
   if (!answers) return null;
 
-  if (!profile) return withLastResource(actor, await withOverwhelm(actor, { profile: "", foundation: "physical", kiWager, advantages, ...answers }));
+  if (!profile) {
+    return withGreedCharges(actor, maneuver,
+      await withLastResource(actor, await withOverwhelm(actor, { profile: "", foundation: "physical", kiWager, advantages, ...answers })));
+  }
 
   // A Foundation this character cannot use is offered greyed out rather than left off
   // the list: a missing button reads as a bug. A disabled button also cannot submit, so
@@ -2463,7 +2466,8 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
       );
   if (!foundation) return null;
 
-  return withLastResource(actor, await withOverwhelm(actor, { profile, foundation, kiWager, wagerFromLife, wagerFromDivine, advantages, ...answers }));
+  return withGreedCharges(actor, maneuver,
+    await withLastResource(actor, await withOverwhelm(actor, { profile, foundation, kiWager, wagerFromLife, wagerFromDivine, advantages, ...answers })));
 }
 
 /** Overwhelming Assault (2)'s four effects, each for 2 stacks of Overwhelm. */
@@ -2508,6 +2512,24 @@ async function withOverwhelm(actor, declared) {
   }
   await actor.setFlag("dbu-ttrpg", "overwhelmRound", round);
   return { ...declared, overwhelm: { ...Object.fromEntries(chosen.map(key => [key, true])), spent: chosen.length * 2 } };
+}
+
+/**
+ * Power of the Hera (4): "If you use an Ultimate Signature Technique, you may spend any number of Greed stacks to apply an
+ * equal amount of Energy Charges to that Attacking Maneuver" - asked as the declaration ends, once a Combat Encounter, the
+ * stacks spent then. Carried as `greedCharges`, read by postAttack.
+ */
+async function withGreedCharges(actor, maneuver, declared) {
+  if (!declared || !maneuver?.ultimate || (actor?.system?.effects?.slots?.["greed.ultimateCharges"] !== true)) return declared;
+  const stacks = Number(actor.system.resources?.greed?.stacks) || 0;
+  const encounter = game.combat?.id ?? "none";
+  if (!stacks || (actor.getFlag?.("dbu-ttrpg", "greedUltimateEncounter") === encounter)) return declared;
+  const { askPlayerAmount, setResource } = await import("./chat.mjs");
+  const charges = Math.min(stacks, await askPlayerAmount(actor, `${actor.name}: Power of the Hera`, stacks, "Energy Charges (Greed)"));
+  if (!charges) return declared;
+  await actor.setFlag("dbu-ttrpg", "greedUltimateEncounter", encounter);
+  await setResource(actor, "greed", stacks - charges);
+  return { ...declared, greedCharges: (Number(declared.greedCharges) || 0) + charges };
 }
 
 /**
@@ -3204,8 +3226,12 @@ function baseKiCost(maneuver, actor) {
  * Seven for everything but Mega Flare, which is built to hold ten - "the maximum number
  * of Energy Charges for this Profile is 10".
  */
-export function maxEnergyCharges(profileId, fallback) {
-  return PROFILES[profileId]?.maxEnergyCharges ?? fallback;
+export function maxEnergyCharges(profileId, fallback, actor = null) {
+  const most = PROFILES[profileId]?.maxEnergyCharges ?? fallback;
+  // Power of the Hera (1): "Increase the maximum amount of Energy Charges you can apply to your Attacking Maneuver by your
+  // maximum amount of Power stacks."
+  if (actor?.system?.effects?.slots?.["charges.byPowerMax"] !== true) return most;
+  return most + (Number(resourceLimits(actor).power) || 0);
 }
 
 /**

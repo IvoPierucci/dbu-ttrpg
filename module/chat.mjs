@@ -4551,7 +4551,7 @@ async function cycloneStage(message, actor, item) {
   requestEdit(message, { type: "attack", attack: { ...attack, cycloned: true } });
   const { maxEnergyCharges } = await import("./maneuvers.mjs");
   const charging = actor.system.charging ?? {};
-  const ceiling = maxEnergyCharges(charging.profile, DBUCharacterData.MAX_ENERGY_CHARGES);
+  const ceiling = maxEnergyCharges(charging.profile, DBUCharacterData.MAX_ENERGY_CHARGES, actor);
   const carried = Math.max(0, Number(attack.energyCharges) || 0);
   const now = Math.min(ceiling, (Number(charging.charges) || 0) + carried);
   await actor.update({ "system.charging.charges": now });
@@ -9787,7 +9787,7 @@ export async function postMeteorAttack(actor, maneuver, declared, charges, messa
     chargeCategories: technique?.chargeCategories ?? 0,
     energyCharges: Math.min(charges + (PROFILES[profile]?.grantsEnergyCharge ?? 0) + (Number(weapon?.energyCharges) || 0)
       + (technique?.bonusCharges ?? []).reduce((sum, entry) => sum + entry.amount, 0),
-    maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES) + (technique?.chargeCeilingBonus ?? 0))
+    maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES, actor) + (technique?.chargeCeilingBonus ?? 0))
       + (PROFILES[profile]?.grantsUncappedEnergyCharge ?? 0),
     attackerUuid: actor.uuid, attackerName: actor.name
   };
@@ -13499,7 +13499,7 @@ async function takeGenkiCharge(message, actor, offer) {
   await recordManeuverUse(actor, charge);
   const { maxEnergyCharges } = await import("./maneuvers.mjs");
   const profile = chosen.system.signature?.profile ?? "";
-  const ceiling = maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES);
+  const ceiling = maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES, actor);
   const held = actor.system.charging ?? {};
   const already = (held.maneuverId === chosen.id) ? (Number(held.charges) || 0) : 0;
   const now = Math.min(ceiling, already + (Number(offer.genki.charges) || 0));
@@ -14093,6 +14093,19 @@ function offerPhysiqueStrike(message, actor, attacker) {
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
     maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: "Powerful Physique - hit",
     grants: { physique: true, woundAttribute: { label: "Powerful Physique (Force Modifier)", attribute: "force" } } } });
+}
+
+/**
+ * Power of the Hera (3): "If you Defeat a Character or knock a Character through a Health Threshold with your Attacking
+ * Maneuver, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card - once a Round,
+ * counted when taken.
+ */
+function offerHeraPowerUp(message, actor) {
+  if (actor.system?.defeated || (actor.system?.effects?.slots?.["powerUp.heraKnock"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "heraPowerUpRound") === roundKey()) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.heraPowerUp && (offer.actorUuid === actor.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "power-up",
+    maneuverName: "Power Up", reason: "Power of the Hera - knocked through or Defeated", grants: { heraPowerUp: true } } });
 }
 
 /**
@@ -15982,6 +15995,8 @@ async function takeOutOfSequence(message, actor, offer) {
     const brigand = fromUuidSync(offer.grants.brigandFrom);
     if (brigand) await requestActorUpdate(brigand, { [`flags.${SCOPE}.brigandRound`]: roundKey() });
   }
+  // Power of the Hera (3)'s, once a Round.
+  if (offer.grants?.heraPowerUp) await requestActorUpdate(actor, { [`flags.${SCOPE}.heraPowerUpRound`]: roundKey() });
   // Greed of the Hera (2)'s, once a Round.
   if (offer.grants?.greedStrike) await requestActorUpdate(actor, { [`flags.${SCOPE}.greedStrikeRound`]: roundKey() });
   // Angelic Offense (3)'s Basic Attack, once a Round.
@@ -16168,7 +16183,7 @@ export async function postAttack(actor, target, maneuver,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
-                                   shardEnds = "", greedMagnitude = 0 },
+                                   shardEnds = "", greedMagnitude = 0, greedCharges = 0 },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -16189,6 +16204,8 @@ export async function postAttack(actor, target, maneuver,
   if (overwhelm?.charge && !reflecting) charges = (Number(charges) || 0) + 1;
   // Glass Shards (7): "you may apply an Energy Charge to that Attacking Maneuver".
   if (shardCharge && !reflecting) charges = (Number(charges) || 0) + 1;
+  // Power of the Hera (4): "apply an equal amount of Energy Charges to that Attacking Maneuver" - the Greed spent.
+  if (greedCharges && !reflecting) charges = (Number(charges) || 0) + (Number(greedCharges) || 0);
   // Last Resource: "apply a number of Energy Charges up to your number of Overwhelm stacks".
   if (overwhelm?.lastResource && !reflecting) charges = (Number(charges) || 0) + (Number(overwhelm.lastResource) || 0);
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
@@ -16449,7 +16466,7 @@ export async function postAttack(actor, target, maneuver,
                   // What the Technique's features bring: Concentrated Strike, the Ultimate's
                   // Thresholds, Giga Flare... held to the maximum with the rest.
                   + (technique?.bonusCharges ?? []).reduce((sum, entry) => sum + entry.amount, 0),
-                maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES)
+                maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES, actor)
                   // "Ultimate Signature Techniques can possess an additional Energy Charge beyond
                   // the Character's usual limit."
                   + (technique?.chargeCeilingBonus ?? 0)
@@ -22138,7 +22155,7 @@ async function uniteOnCard(message, attack, joiner) {
       + `${attack.attackerName}'s ${attack.maneuverName} with United Attack${entry.techniqueName
         ? ` (${entry.techniqueName})` : ""}: ${entry.cost} Ki${entry.wager ? `, ${entry.wager} wagered` : ""}.`)}</div>` });
   return requestEdit(message, { type: "attack", attack: withJoiner(attack, entry, attacker,
-    { ceiling: maxEnergyCharges(attack.profile, DBUCharacterData.MAX_ENERGY_CHARGES) }) });
+    { ceiling: maxEnergyCharges(attack.profile, DBUCharacterData.MAX_ENERGY_CHARGES, attacker) }) });
 }
 
 /**
@@ -22215,6 +22232,7 @@ async function applyAttackDamage(message, target, attack) {
   // State being the one thing in the rules that grants it.
   const settled = target.system.life.value - damage;
   const floor = target.system.effects?.slots?.["life.allowNegative"] ? settled : Math.max(0, settled);
+  const wasDefeated = Boolean(target.system.defeated);
 
   // Which Health Threshold this leaves them in, against the one they were in. Read off
   // the Life Points on both sides of the one write, because the Threshold is derived and
@@ -22248,6 +22266,9 @@ async function applyAttackDamage(message, target, attack) {
       ...((attack.result?.strike?.outcome === "critical") ? { dbuKnockedCritical: true } : {}) } : {})
   });
   if (arms) await offerArmsHit(armsUser, target);
+  // Power of the Hera (3): knocked through a Health Threshold, or Defeated, by it - the Power Up, out of sequence.
+  if (armsUser && (armsUser.uuid !== target.uuid) && (damage > 0) && !isAbsoluteMiss(own)
+    && (knockedThrough || (!wasDefeated && target.system.defeated))) offerHeraPowerUp(message, armsUser);
   // Flow of Combat: Damage taken - "since the end of your last turn" - and none taken, the Exploit at who made it.
   if ((damage > 0) && !isAbsoluteMiss(own) && !target.getFlag?.(SCOPE, "damagedSinceTurn")) {
     await requestActorUpdate(target, { [`flags.${SCOPE}.damagedSinceTurn`]: true });

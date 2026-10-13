@@ -1,0 +1,32 @@
+id: power-of-the-hera
+name: Power of the Hera
+order: 3
+category: body
+importance: secondary
+description: >
+  As a warrior race, Herans’ bodies overflow with energy, which they redirect into their attacks.
+text: >
+  Power of the Hera (Body): As a warrior race, Herans’ bodies overflow with energy, which they redirect into their attacks.
+  (1)-[Passive]: Increase the maximum amount of Energy Charges you can apply to your Attacking Maneuver by your maximum amount of Power stacks.
+  (2)-[Triggered, 1/Round]: If you use the Energy Charge Maneuver, gain a stack of Power until the start of your next turn.
+  (3)-[Triggered, 1/Round]: If you Defeat a Character or knock a Character through a Health Threshold with your Attacking Maneuver, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+  (4)-[Triggered, 1/Encounter]: If you use an Ultimate Signature Technique, you may spend any number of Greed stacks to apply an equal amount of Energy Charges to that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) Power's ceiling, whatever raises it, on every Profile's (maneuvers.mjs maxEnergyCharges).
+allow charges.byPowerMax;
+# (3) Knocked through a Health Threshold, or Defeated, by your Attacking Maneuver: the Power Up offered on that attack's
+# card out of sequence, once a Round - counted when taken (chat.mjs offerHeraPowerUp).
+allow powerUp.heraKnock;
+# (4) An Ultimate Signature Technique declared, once an Encounter: how many Greed stacks, as many Energy Charges - spent
+# then (maneuvers.mjs withGreedCharges).
+allow greed.ultimateCharges;
+
+# (2) The Energy Charge Maneuver used: a stack of Power till the start of your next turn. Automatic by default, its
+# Triggered/Automatic button; set Triggered, asked in the window as it is declared.
+[triggered/declare-maneuver, 1/round, toggle, effect 2]
+requires using("energy-charge") && power.stacks < 2;
+power.stacks += 1;
+expires(power, start-of-next-turn);
