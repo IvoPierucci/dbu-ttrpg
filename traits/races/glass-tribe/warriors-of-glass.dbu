@@ -1,0 +1,21 @@
+id: warriors-of-glass
+name: Warriors of Glass
+order: 3
+category: mind
+importance: secondary
+description: >
+  Your uncanny ability to manipulate glass allows you to create animate glass statues that you can use to attack.
+text: >
+  Warriors of Glass (Mind): Your uncanny ability to manipulate glass allows you to create animate glass statues that you can use to attack.
+  (1)-[1/Round, Ruling]: As a Standard Maneuver with an Action Cost of 1 Action, you can spend up to 8(bT) Ki Points. For every 2(bT) Ki Points spent, select a Square with the Glass Environmental Quality. Create a ‘Glass Soldier’ on that Square and remove the Glass Environmental Quality from that Square. A Glass Soldier is a Feature with the Resilient, Glass, and Reflective Environmental Qualities, and a Hardness Rank of 2 (before modification).
+  (2)-[Passive]: If an Opponent that was adjacent to a Glass Soldier uses the Movement Maneuver to move away from that Glass Soldier, this triggers your use of the Exploit Maneuver. If you use the Exploit Maneuver, you must also apply the 4th effect of Warriors of Glass.
+  (3)-[1/Round]: As an Instant Maneuver, you may move any number of Glass Soldiers by a number of Squares up to 1/2 of your Force or Magic Score (whichever is higher). You cannot cause Collision with this movement.
+  (4)-[Triggered]: If you use an Attacking Maneuver, you can have that Attacking Maneuver originate from a Square occupied by a Glass Soldier of your choice as if you were on that Square instead of any Squares you currently occupy (meaning that for all of your effects and purposes, you are treated as if you are in the Glass Soldier’s Square on the Battlefield).
+  (5)-[Triggered/Start of Turn]: If a Glass Soldier is occupying a Square with the Glass Environmental Quality, it regains all of its Life Points. If a Glass Soldier is occupying a Square that does not possess the Glass Environmental Quality, that Square and all adjacent Squares gain the Glass Environmental Quality.
+
+---
+
+# (1), (3) Maneuvers of their own, in the list while this Trait is had (traits/maneuvers/warriors-of-glass-first-effect.dbu,
+# warriors-of-glass-third-effect.dbu): the Ki paid and how many Glass Soldiers, how far they may move - each said on its
+# card. Glass Soldiers are Features, and Features are the table's: where they stand, their Squares' Glass, (2), (4) and
+# (5) are the table's (the user's).

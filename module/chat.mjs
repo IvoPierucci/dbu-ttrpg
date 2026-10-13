@@ -14496,6 +14496,35 @@ export async function glassification(actor, actions) {
 }
 
 /**
+ * Warriors of Glass (1): "you can spend up to 8(bT) Ki Points. For every 2(bT) Ki Points spent, select a Square with the
+ * Glass Environmental Quality. Create a 'Glass Soldier' on that Square". How many asked, paid, and said; the Squares, the
+ * Features and their Glass are the table's (the user's).
+ */
+export async function glassSoldiers(actor) {
+  if (!actor) return;
+  const step = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const most = Math.min(4, Math.floor((Number(actor.system.ki?.value) || 0) / step));
+  const many = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Warriors of Glass`, most, `Glass Soldiers (${step} Ki each)`));
+  if (!(many > 0)) return;
+  const { spendManeuverCost } = await import("./maneuvers.mjs");
+  if (!await spendManeuverCost(actor, { name: "Warriors of Glass" }, many * step)) return;
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
+    data-tooltip="Each on a Square with Glass, which loses it: a Feature - Resilient, Glass and Reflective, Hardness Rank 2.">
+    ${many} Glass Soldier${(many === 1) ? "" : "s"} - ${many * step} Ki.</div>` });
+}
+
+/**
+ * Warriors of Glass (3): "you may move any number of Glass Soldiers by a number of Squares up to 1/2 of your Force or Magic
+ * Score (whichever is higher). You cannot cause Collision with this movement." How far, said; the moving is the table's.
+ */
+export async function glassSoldiersMove(actor) {
+  if (!actor) return;
+  const score = Math.max(Number(actor.system.attributes?.force?.score) || 0, Number(actor.system.attributes?.magic?.score) || 0);
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<div class="dbu-settled-note"
+    data-tooltip="Any number of them. No Collision.">Glass Soldiers move up to ${Math.floor(score / 2)} Squares.</div>` });
+}
+
+/**
  * Glassification's Clash: won, "they gain a stack of Slowed for each time they were targeted until the start of your next
  * turn. If your turn was taken before any other turns during this Combat Round, this effect only lasts until the start of
  * the next Combat Round." Lost, their Exploit Maneuver offered on this card.

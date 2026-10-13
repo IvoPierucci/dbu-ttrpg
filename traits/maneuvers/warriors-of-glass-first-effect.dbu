@@ -1,0 +1,23 @@
+id: warriors-of-glass-first-effect
+name: 1st effect of Warriors of Glass
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: warriors-of-glass
+fromEffect: 1
+source: Core Rule
+description: >
+  Warriors of Glass's first effect, as a Maneuver: up to 8(bT) Ki, a Glass Soldier for every 2(bT) on a Glass Square.
+text: >
+  (1)-[1/Round, Ruling]: As a Standard Maneuver with an Action Cost of 1 Action, you can spend up to 8(bT) Ki Points. For every 2(bT) Ki Points spent, select a Square with the Glass Environmental Quality. Create a ‘Glass Soldier’ on that Square and remove the Glass Environmental Quality from that Square. A Glass Soldier is a Feature with the Resilient, Glass, and Reflective Environmental Qualities, and a Hardness Rank of 2 (before modification).
+
+---
+
+# The Liquid State's sixth effect's shape (liquid-sixth-effect.dbu): owned by every character, in the list only while
+# Warriors of Glass is had (`fromTrait`). Used, how many Glass Soldiers asked - 2(bT) Ki each, 4 at most - paid, and said
+# on a card of its own; the Squares are the table's (chat.mjs glassSoldiers).
+[on used]
+glassSoldiers();

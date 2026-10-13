@@ -357,6 +357,16 @@ async function runVerb(actor, call, context) {
       return rulerAllies(actor);
     }
 
+    case "glassSoldiers": {
+      const { glassSoldiers } = await import("../chat.mjs");
+      return glassSoldiers(actor);
+    }
+
+    case "glassSoldiersMove": {
+      const { glassSoldiersMove } = await import("../chat.mjs");
+      return glassSoldiersMove(actor);
+    }
+
     case "glassification": {
       const { glassification } = await import("../chat.mjs");
       return glassification(actor, Number(context?.actionsSpent) || 1);

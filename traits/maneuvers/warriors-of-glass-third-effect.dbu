@@ -1,0 +1,22 @@
+id: warriors-of-glass-third-effect
+name: 3rd effect of Warriors of Glass
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: warriors-of-glass
+fromEffect: 3
+source: Core Rule
+description: >
+  Warriors of Glass's third effect, as a Maneuver: the Glass Soldiers moved up to 1/2 of your Force or Magic Score.
+text: >
+  (3)-[1/Round]: As an Instant Maneuver, you may move any number of Glass Soldiers by a number of Squares up to 1/2 of your Force or Magic Score (whichever is higher). You cannot cause Collision with this movement.
+
+---
+
+# As the first effect's: in the list while Warriors of Glass is had. Used, how far said on a card - 1/2 of the higher of the
+# Force and Magic Scores, rounded down; the moving is the table's (chat.mjs glassSoldiersMove).
+[on used]
+glassSoldiersMove();
