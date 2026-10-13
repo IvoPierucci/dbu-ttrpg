@@ -505,6 +505,9 @@ export async function racialItemFrom(trait, actor = null) {
   const unique = listOf(trait.grantsUnique).map(id => ({ id, restrictions: listOf(trait.uniqueRestrictions),
     insteadTp: Number(trait.grantsUniqueInstead) || 0 }));
   const talents = listOf(trait.grantsTalent);
+  // One chosen of a TP Cost or less - the Trait's own (Denizen of the Demon Realm's) or an Option's (Riches of Mysticism's).
+  let uniqueChoice = Number(trait.grantsUniqueChoice) || 0;
+  let uniqueChoiceType = String(trait.grantsUniqueChoiceType ?? "");
 
   // Each Option effect in turn - Technological Being's (2) one, then (3) two.
   for (const group of optionGroupsOf(trait)) {
@@ -521,6 +524,10 @@ export async function racialItemFrom(trait, actor = null) {
       unique.push(...listOf(option.grantsUnique).map(each => ({ id: each, restrictions: listOf(option.uniqueRestrictions),
         option: option.id })));
       talents.push(...listOf(option.grantsTalent));
+      if (Number(option.grantsUniqueChoice) > 0) {
+        uniqueChoice = Number(option.grantsUniqueChoice);
+        uniqueChoiceType = String(option.grantsUniqueChoiceType ?? "");
+      }
     }
   }
 
@@ -549,7 +556,7 @@ export async function racialItemFrom(trait, actor = null) {
     },
     grants: { unique, talents,
       // Denizen of the Demon Realm's: one of that type and TP Cost or less, chosen.
-      uniqueChoice: Number(trait.grantsUniqueChoice) || 0, uniqueChoiceType: String(trait.grantsUniqueChoiceType ?? "") }
+      uniqueChoice, uniqueChoiceType }
   };
 }
 

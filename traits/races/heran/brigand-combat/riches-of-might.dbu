@@ -1,0 +1,15 @@
+id: riches-of-might
+name: Riches of Might
+order: 1
+optionOf: brigand-combat
+optionEffect: 3
+description: >
+  Increase your Racial Life Modifier by 3 and increase your Might by 1(T).
+text: >
+  Riches of Might [Passive]: Increase your Racial Life Modifier by 3 and increase your Might by 1(T).
+
+---
+
+[passive]
+racialLifeModifier += 3;
+might += 1(T);

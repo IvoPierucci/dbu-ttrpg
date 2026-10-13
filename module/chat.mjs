@@ -40,6 +40,7 @@ import {
   sizeDifference,
   sizedMovement,
   sizesAboveLarge,
+  squaresBetween,
   resolveDamageCategory,
   allManeuvers,
   declareAttack,
@@ -14110,6 +14111,34 @@ function offerGreedStrike(message, actor, target) {
 }
 
 /**
+ * Brigand Combat (2): "If you deal Damage to an Opponent with one of your Attacking Maneuvers, you may select an Ally adjacent
+ * to your Opponent (that was targeted by this Attacking Maneuver but did not take Damage from this Attacking Maneuver). That
+ * Ally may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If they do, they must target the Opponent that
+ * triggered this effect." Offered on the attack's card to each such Ally, at that Opponent - once a Round for whoever has it,
+ * counted when one is taken.
+ */
+function offerBrigandStrike(message, attack, actor, target) {
+  if (actor.system?.defeated || (actor.system?.effects?.slots?.["brigand.allyStrike"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "brigandRound") === roundKey()) return;
+  const allies = alliesOnScene(actor);
+  if (allies.some(ally => ally.uuid === target.uuid)) return;
+  const at = target.getActiveTokens?.(false, true)?.[0];
+  if (!at) return;
+  const offers = message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? [];
+  for (const entry of attackTargets(attack)) {
+    const ally = allies.find(each => each.uuid === entry.uuid);
+    if (!ally || ally.system?.defeated) continue;
+    const own = targetResult(attack, ally.uuid);
+    if (own?.hit && !isAbsoluteMiss(own) && ((Number(own.damage) || 0) > 0)) continue;
+    if (!(ally.getActiveTokens?.(false, true) ?? []).some(token => squaresBetween(token, at) === 0)) continue;
+    if (offers.some(offer => offer.grants?.brigandFrom && (offer.actorUuid === ally.uuid) && (offer.targetUuid === target.uuid))) continue;
+    requestEdit(message, { type: "offer", offer: { actorUuid: ally.uuid, actorName: ally.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack", targetUuid: target.uuid, reason: `Brigand Combat - ${actor.name}`,
+      grants: { brigandFrom: actor.uuid } } });
+  }
+}
+
+/**
  * An attack's Ki Point Cost, from what paying it took - Ki and Divine Ki - its Ki Wager left out (Redirected Energy's).
  */
 function attackKiCost(attack) {
@@ -15283,6 +15312,31 @@ function lockOnParts(attacker, target) {
   return [{ label: "Lock On", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }];
 }
 
+/**
+ * Brigand Combat (1): "Increase the Strike and Wound Rolls of your Attacking Maneuvers that target an Opponent who has at
+ * least one of your Allies on a Square adjacent to them by 1(T) and 2(T) respectively." Against that one alone.
+ */
+function brigandParts(attacker, target, roll) {
+  if (!target || !attacker || (attacker.uuid === target.uuid) || (attacker.system?.effects?.slots?.["brigand.flanking"] !== true)) {
+    return [];
+  }
+  if (!brigandAllyBeside(attacker, target)) return [];
+  const tier = Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  return (roll === "strike")
+    ? [{ label: "Brigand Combat", written: "+1(T)", value: tier }]
+    : [{ label: "Brigand Combat", written: "+2(T)", value: 2 * tier }];
+}
+
+/** An Opponent of theirs with one of their Allies on a Square adjacent - Brigand Combat's. */
+function brigandAllyBeside(attacker, target) {
+  const allies = alliesOnScene(attacker);
+  if (allies.some(ally => ally.uuid === target.uuid)) return false;
+  const at = target.getActiveTokens?.(false, true)?.[0];
+  if (!at) return false;
+  return allies.some(ally => !ally.system?.defeated && (ally.getActiveTokens?.(false, true) ?? [])
+    .some(token => squaresBetween(token, at) === 0));
+}
+
 /** Lock On's "While you have a Target, reduce your Dodge Rolls by 1(T) against all other Characters." */
 function lockOnDodge(actor, attack) {
   const locked = actor?.getFlag?.(SCOPE, "lockOn");
@@ -15636,6 +15690,11 @@ async function takeOutOfSequence(message, actor, offer) {
   // with that Advantage, then the Technique itself through its door, out of sequence.
   if (offer.technique) return takeTechniqueOffer(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
+  // Brigand Combat (2): once a Round for whoever handed it out - another Ally's taken already, this one is gone.
+  if (offer.grants?.brigandFrom && (fromUuidSync(offer.grants.brigandFrom)?.getFlag?.(SCOPE, "brigandRound") === roundKey())) {
+    ui.notifications.warn("Brigand Combat has been used this Combat Round.");
+    return null;
+  }
   // A Search handed out by someone Hidden powering up: "even if they do not have access" to it.
   if (offer.search) return takeSearch(message, actor, offer);
   // Any Standard Maneuver of 1 Action - Inherited Freedom's: which, asked first, before anything is paid.
@@ -15918,6 +15977,11 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.physique) await requestActorUpdate(actor, { [`flags.${SCOPE}.physiqueUsed`]: game.combat?.id ?? "none" });
   // Bouncy Physique's Movement after a collision, once a Round.
   if (offer.grants?.bouncy) await requestActorUpdate(actor, { [`flags.${SCOPE}.bouncyCollided`]: roundKey() });
+  // Brigand Combat (2)'s, once a Round - counted on whoever has it.
+  if (offer.grants?.brigandFrom) {
+    const brigand = fromUuidSync(offer.grants.brigandFrom);
+    if (brigand) await requestActorUpdate(brigand, { [`flags.${SCOPE}.brigandRound`]: roundKey() });
+  }
   // Greed of the Hera (2)'s, once a Round.
   if (offer.grants?.greedStrike) await requestActorUpdate(actor, { [`flags.${SCOPE}.greedStrikeRound`]: roundKey() });
   // Angelic Offense (3)'s Basic Attack, once a Round.
@@ -16770,7 +16834,6 @@ async function protectorWaives(actor, ally) {
   if (actor?.system?.effects?.slots?.["protector.intervene"] !== true) return false;
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   if (actor.getFlag?.(SCOPE, "protectorRound") === round) return false;
-  const { squaresBetween } = await import("./maneuvers.mjs");
   const away = squaresBetween(actor.getActiveTokens?.(false, true)?.[0], ally?.getActiveTokens?.(false, true)?.[0]);
   if ((away !== null) && (away > 8)) return false;
   const { traitEffectLine } = await import("./racial.mjs");
@@ -18014,7 +18077,8 @@ async function resolveAttackWork(message, attack) {
     // reason the Long Range penalty is taken here: one Strike Roll reaches several people
     // and what it is worth against each of them is not the same number.
     const analysisParts = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target),
-      ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target)]
+      ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
+      ...brigandParts(attacker, target, "strike")]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
@@ -19577,6 +19641,7 @@ async function rollAttackWoundWork(message, attack) {
       { label: "Stealthy Trick", value: own.oblivious ? unseen : 0 },
       ...lockOnParts(attacker, target),
       ...enemyParts(attacker, target),
+      ...brigandParts(attacker, target, "wound"),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
       { label: attack.technique?.name ?? "Technique",
         value: techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),
@@ -22202,6 +22267,8 @@ async function applyAttackDamage(message, target, attack) {
   if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerPhysiqueStrike(message, target, armsUser);
   // Greed of the Hera (2): Damage dealt to an Opponent by an attack with an AoE - the Basic Attack, out of sequence.
   if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && attackArea(attack)) offerGreedStrike(message, armsUser, target);
+  // Brigand Combat (2): Damage dealt to an Opponent - an Ally beside them it targeted and did not harm, the Basic Attack at them.
+  if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerBrigandStrike(message, attack, armsUser, target);
   // Skill of the Watcher (5): Damage dealt through the Exploit Maneuver, or none taken from an attack Defended against.
   if (armsUser && (armsUser.uuid !== target.uuid) && attack.provokedBy && (damage > 0) && !isAbsoluteMiss(own)) {
     offerWatcherPowerUp(message, armsUser, "Damage dealt through the Exploit Maneuver");

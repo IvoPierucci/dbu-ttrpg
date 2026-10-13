@@ -1,0 +1,25 @@
+id: brigand-combat
+name: Brigand Combat
+order: 2
+category: mind
+importance: primary
+description: >
+  Due to their strong lust for battle and their lack of ethics, Herans are often viewed as bandits, brigands, or even pirates.
+text: >
+  Brigand Combat (Mind): Due to their strong lust for battle and their lack of ethics, Herans are often viewed as bandits, brigands, or even pirates.
+  (1)-[Passive]: Increase the Strike and Wound Rolls of your Attacking Maneuvers that target an Opponent who has at least one of your Allies on a Square adjacent to them by 1(T) and 2(T) respectively.
+  (2)-[Triggered, 1/Round]: If you deal Damage to an Opponent with one of your Attacking Maneuvers, you may select an Ally adjacent to your Opponent (that was targeted by this Attacking Maneuver but did not take Damage from this Attacking Maneuver). That Ally may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If they do, they must target the Opponent that triggered this effect.
+  (3)-[Option]: At Character Creation, choose one of the following effects:
+
+  * Riches of Might [Passive]: Increase your Racial Life Modifier by 3 and increase your Might by 1(T).
+  * Riches of Mysticism [Passive]: Upon gaining this effect, gain access to a Unique Ability with a TP Cost of 20 or less (that you meet the prerequisites for) and reduce the TP Cost of all Unique Abilities by 2.
+
+---
+
+[passive]
+# (1) Against that Opponent alone - an Ally of yours, not Defeated, on a Square adjacent to them: 1(T) on the Strike and 2(T)
+# on the Wound, named on the card (chat.mjs brigandParts).
+allow brigand.flanking;
+# (2) An Opponent dealt Damage: each Ally beside them the attack targeted and did not harm is offered the Basic Attack at
+# them, out of sequence, on that attack's card - once a Round, counted when one is taken (chat.mjs offerBrigandStrike).
+allow brigand.allyStrike;

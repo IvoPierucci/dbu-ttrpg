@@ -1,0 +1,19 @@
+id: riches-of-mysticism
+name: Riches of Mysticism
+order: 2
+optionOf: brigand-combat
+optionEffect: 3
+# A Unique Ability of 20 TP or less, chosen as it is gained - its Prerequisites shown, the table's - and gone with it
+# (racial.mjs).
+grantsUniqueChoice: 20
+description: >
+  Upon gaining this effect, gain access to a Unique Ability with a TP Cost of 20 or less (that you meet the prerequisites for) and reduce the TP Cost of all Unique Abilities by 2.
+text: >
+  Riches of Mysticism [Passive]: Upon gaining this effect, gain access to a Unique Ability with a TP Cost of 20 or less (that you meet the prerequisites for) and reduce the TP Cost of all Unique Abilities by 2.
+
+---
+
+# Technical and Magical alike - never below half the listed cost (unique.mjs uniqueTPOf).
+[passive]
+unique.technical.tpCost -= 2;
+unique.magical.tpCost -= 2;
