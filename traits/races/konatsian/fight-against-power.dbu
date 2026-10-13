@@ -1,0 +1,30 @@
+id: fight-against-power
+name: Fight against Power
+order: 5
+category: mind
+importance: secondary
+description: >
+  Tenacious and determined, you stand against your foes no matter how strong they might be.
+text: >
+  Fight against Power (Mind): Tenacious and determined, you stand against your foes no matter how strong they might be.
+  (1)-[Passive]: While below the Injured Health Threshold, increase your Wound Rolls and Surgency by 2(T).
+  (2)-[Triggered, 1/Round]: If you are hit by an Opponent’s Attacking Maneuver that inflicts Damage equal to or exceeding 1/4 (rounded up) of your Maximum Life Points, gain a stack of Tension.
+  (3)-[Triggered, 1/Encounter]: If you apply the 4th effect of the Entrusted State to an Attacking Maneuver, you may apply an Energy Charge to that Attacking Maneuver for every 2 stacks of Tension you possess. After concluding that Attacking Maneuver, lose all stacks of Tension.
+
+---
+
+[passive]
+# (1) Injured or Critical.
+if (belowThreshold("injured")) {
+    wound += 2(T);
+    surgency += 2(T);
+}
+# (3) Entrusted's 4th taken, once an Encounter: asked with it - an Energy Charge every 2 stacks of Tension, every stack
+# lost once the attack is concluded (maneuvers.mjs askTensionCharges).
+allow entrusted.tensionCharges;
+
+# (2) An Opponent's Attacking Maneuver dealt you a quarter (rounded up) of your Maximum Life Points or more - heavy-hit, a
+# new moment (chat.mjs applyAttackDamage): a stack of Tension, once a Round. Automatic by default, its Triggered/Automatic
+# button.
+[triggered/heavy-hit, 1/round, effect 2]
+tension.stacks += 1;

@@ -2419,7 +2419,9 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   if (allIn === null) return null;
   maneuver = allIn;
   const picked = await pickProfile(maneuver, foundations, actor, limits);
-  const declared = (picked && maneuver.entrustedAllIn) ? { ...picked, entrustedAllIn: true } : picked;
+  const declared = (picked && maneuver.entrustedAllIn)
+    ? { ...picked, entrustedAllIn: true, ...(maneuver.tensionCharges ? { tensionCharges: maneuver.tensionCharges } : {}) }
+    : picked;
   if (!declared) return null;
 
   const { profile, kiWager, wagerFromLife = false, wagerFromDivine = false } = declared;
@@ -2438,7 +2440,8 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   const answers = await askFeatures(maneuver, actor, advantages);
   if (!answers) return null;
 
-  const allInMark = declared.entrustedAllIn ? { entrustedAllIn: true } : {};
+  const allInMark = declared.entrustedAllIn
+    ? { entrustedAllIn: true, ...(declared.tensionCharges ? { tensionCharges: declared.tensionCharges } : {}) } : {};
   if (!profile) {
     return withGreedCharges(actor, maneuver,
       await withLastResource(actor, await withOverwhelm(actor, { profile: "", foundation: "physical", kiWager, advantages, ...answers,
@@ -2505,7 +2508,29 @@ async function askEntrustedAllIn(actor, maneuver) {
   await actor.setFlag("dbu-ttrpg", "entrustedAllIn", encounter);
   await actor.update({ "system.capacity.spent": 0 });
   return { ...maneuver, advantages: withGranted(withGranted(maneuver.advantages, "full-wager"), "all-or-nothing"),
-    entrustedAllIn: true };
+    entrustedAllIn: true, ...(await askTensionCharges(actor)) };
+}
+
+/**
+ * Fight against Power (3): "If you apply the 4th effect of the Entrusted State to an Attacking Maneuver, you may apply an
+ * Energy Charge to that Attacking Maneuver for every 2 stacks of Tension you possess. After concluding that Attacking
+ * Maneuver, lose all stacks of Tension." Asked with it, once an Encounter; carried as `tensionCharges` (chat.mjs postAttack),
+ * the Tension lost once the attack is concluded (entrustedAllInEnds).
+ */
+async function askTensionCharges(actor) {
+  if (actor?.system?.effects?.slots?.["entrusted.tensionCharges"] !== true) return {};
+  const charges = Math.floor((Number(actor.system.resources?.tension?.stacks) || 0) / 2);
+  const encounter = game.combat?.id ?? "none";
+  if (!charges || (actor.getFlag?.("dbu-ttrpg", "tensionChargesEncounter") === encounter)) return {};
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Fight against Power" },
+    content: `<p data-tooltip="Once an Encounter. Every stack of Tension lost once the attack is concluded.">${charges} Energy Charge${
+      (charges === 1) ? "" : "s"} for your Tension?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return {};
+  await actor.setFlag("dbu-ttrpg", "tensionChargesEncounter", encounter);
+  return { tensionCharges: charges };
 }
 
 /** Overwhelming Assault (2)'s four effects, each for 2 stacks of Overwhelm. */

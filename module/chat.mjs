@@ -12606,6 +12606,8 @@ async function glassSurgeEnds(attack) {
 async function entrustedAllInEnds(attack) {
   if (!attack?.entrustedAllIn) return;
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  // Fight against Power (3): "After concluding that Attacking Maneuver, lose all stacks of Tension."
+  if (attack.tensionSpent && attacker?.isOwner) await setResource(attacker, "tension", 0);
   if (!attacker?.isOwner || !((Number(attacker.system.states?.entrusted) || 0) > 0)) return;
   const { leaveState } = await import("./effects/moments-runtime.mjs");
   await leaveState(attacker, "entrusted");
@@ -16356,7 +16358,8 @@ export async function postAttack(actor, target, maneuver,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
-                                   shardEnds = "", greedMagnitude = 0, greedCharges = 0, entrustedAllIn = false },
+                                   shardEnds = "", greedMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
+                                   tensionCharges = 0 },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -16379,6 +16382,8 @@ export async function postAttack(actor, target, maneuver,
   if (shardCharge && !reflecting) charges = (Number(charges) || 0) + 1;
   // Power of the Hera (4): "apply an equal amount of Energy Charges to that Attacking Maneuver" - the Greed spent.
   if (greedCharges && !reflecting) charges = (Number(charges) || 0) + (Number(greedCharges) || 0);
+  // Fight against Power (3): an Energy Charge for every 2 stacks of Tension.
+  if (tensionCharges && !reflecting) charges = (Number(charges) || 0) + (Number(tensionCharges) || 0);
   // Last Resource: "apply a number of Energy Charges up to your number of Overwhelm stacks".
   if (overwhelm?.lastResource && !reflecting) charges = (Number(charges) || 0) + (Number(overwhelm.lastResource) || 0);
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
@@ -16515,6 +16520,8 @@ export async function postAttack(actor, target, maneuver,
           ...((glassSurge && !reflecting) ? { glassSurge: true } : {}),
           // Entrusted (4): the State left once this is concluded (entrustedAllInEnds).
           ...((entrustedAllIn && !reflecting) ? { entrustedAllIn: true } : {}),
+          // Fight against Power (3): every stack of Tension lost once this is concluded.
+          ...((tensionCharges && !reflecting) ? { tensionSpent: true } : {}),
           // Glass Shards: the Shard Carrier its shards are spent from once it is concluded - (5), (7) - and (2)'s Homing.
           ...((shardEnds && !reflecting) ? { shardEnds } : {}),
           ...((!reflecting && (actor.system.effects?.slots?.["shards.homing"] === true)
@@ -22478,6 +22485,11 @@ async function applyAttackDamage(message, target, attack) {
   if (own.hit && !isAbsoluteMiss(own)) offerBouncyMove(message, target, armsUser);
   // Powerful Physique: hit by it, the Basic Attack back once it is done.
   if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerPhysiqueStrike(message, target, armsUser);
+  // Hit by an Opponent's Attacking Maneuver for a quarter (rounded up) of your Maximum Life Points or more - Fight against
+  // Power's.
+  if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
+    && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)
+    && (damage >= Math.ceil((Number(target.system.life?.max) || 0) / 4))) await answerFor(target, "heavy-hit");
   // Cutthroat Teamwork (3) and (4): an Ally, not a Minion, dealt Damage by it.
   if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && !target.system?.minion
     && alliesOnScene(armsUser).some(ally => ally.uuid === target.uuid)) await cutthroatAllyHit(armsUser, target);
