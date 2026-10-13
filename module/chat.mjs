@@ -12587,6 +12587,7 @@ async function frozenTurnAfterAttack(attack) {
   // And whatever lasted "for the duration of that Attacking Maneuver" - Heart of Glass's Surging - with it.
   await glassSurgeEnds(attack);
   await entrustedAllInEnds(attack);
+  await warriorTensionEnds(attack);
   // Glass Shards (5), (7): "After concluding that Attacking Maneuver, that Character stops being a Shard Carrier."
   if (attack?.shardEnds) await shardsSpent(attack.shardEnds);
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
@@ -12600,6 +12601,15 @@ async function glassSurgeEnds(attack) {
   if (!attacker?.isOwner || !((Number(attacker.system.states?.surging) || 0) > 0)) return;
   const { leaveState } = await import("./effects/moments-runtime.mjs");
   await leaveState(attacker, "surging");
+}
+
+/** Warrior (4): "You do not lose this stack of Tension until after you complete this Attacking Maneuver." */
+async function warriorTensionEnds(attack) {
+  if (!attack?.warriorTension) return;
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker?.isOwner) return;
+  const held = Number(attacker.system.resources?.tension?.stacks) || 0;
+  if (held > 0) await setResource(attacker, "tension", held - 1);
 }
 
 /** Entrusted (4): "then leave the Entrusted Special State after concluding that Attacking Maneuver." */
@@ -16098,6 +16108,8 @@ async function takeOutOfSequence(message, actor, offer) {
     if (granted?.charges) declared = { ...declared, charges: (Number(declared.charges) || 0) + Number(granted.charges) };
     // Glass Shards (5): the Shard Carrier whose shards this attack spends.
     if (granted?.shardEnds) declared = { ...declared, shardEnds: granted.shardEnds };
+    // Warrior (4), out of sequence as in it.
+    declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
     // Greed of the Hera (3) and (4), out of sequence as in it.
     const { askGreedArea, askGreedMagnitude } = await import("./maneuvers.mjs");
     declared = await askGreedArea(actor, maneuver, declared, { noArea: Boolean(granted?.noArea) });
@@ -16359,7 +16371,7 @@ export async function postAttack(actor, target, maneuver,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
                                    shardEnds = "", greedMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
-                                   tensionCharges = 0 },
+                                   tensionCharges = 0, warriorTension = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -16395,6 +16407,11 @@ export async function postAttack(actor, target, maneuver,
   // Eye of the Dragon's Way of the Weaponmaster: 2(T) on its Wound Roll - its 1(T) on the Strike, carried as eyeWeapon.
   if (eyeWeapon && !reflecting) {
     woundExtra = [...woundExtra, { label: "Eye of the Dragon", written: "+2(T)", value: 2 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
+  // Warrior (4): 2(T) on its Wound Roll for each Health Threshold you are below - its Category step below.
+  if (warriorTension && !reflecting && thresholdsBelow(actor)) {
+    woundExtra = [...woundExtra, { label: "Warrior", written: `+${2 * thresholdsBelow(actor)}(T)`,
+      value: 2 * thresholdsBelow(actor) * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
   }
   // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.
   if (experienced?.kind === "punish") {
@@ -16522,6 +16539,8 @@ export async function postAttack(actor, target, maneuver,
           ...((entrustedAllIn && !reflecting) ? { entrustedAllIn: true } : {}),
           // Fight against Power (3): every stack of Tension lost once this is concluded.
           ...((tensionCharges && !reflecting) ? { tensionSpent: true } : {}),
+          // Warrior (4): its stack of Tension lost once this is concluded (warriorTensionEnds).
+          ...((warriorTension && !reflecting) ? { warriorTension: true } : {}),
           // Glass Shards: the Shard Carrier its shards are spent from once it is concluded - (5), (7) - and (2)'s Homing.
           ...((shardEnds && !reflecting) ? { shardEnds } : {}),
           ...((!reflecting && (actor.system.effects?.slots?.["shards.homing"] === true)
@@ -16594,7 +16613,9 @@ export async function postAttack(actor, target, maneuver,
             // Overwhelming Assault's "Increase the Damage Category of that Attacking Maneuver by 1 Category".
             + ((overwhelm?.category && !reflecting) ? 1 : 0)
             // Punishing Blow's "its Damage Category increased by 1 category".
-            + ((experienced?.kind === "punish") ? 1 : 0),
+            + ((experienced?.kind === "punish") ? 1 : 0)
+            // Warrior (4)'s "increase the Damage Category of that Attacking Maneuver by 1 Category".
+            + ((warriorTension && !reflecting) ? 1 : 0),
           // Genki's is added here: gathered from Empower, and neither paid again nor counted.
           kiWager: kiWager + (Number(freeWager) || 0),
           // What making it took from its maker's pools - Divine Counter's cancelling gives it back.

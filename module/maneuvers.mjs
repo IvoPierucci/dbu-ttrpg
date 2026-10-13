@@ -1506,6 +1506,27 @@ export async function askGlassSurge(actor, declared) {
 }
 
 /**
+ * Warrior (4): "If you make an Armed Attack, spend 1 stack of Tension to increase the Damage Category of that Attacking
+ * Maneuver by 1 Category and the Wound Roll of that Attacking Maneuver by 2(T) for each Health Threshold you are below. You
+ * do not lose this stack of Tension until after you complete this Attacking Maneuver." Asked once a Weapon is declared,
+ * once a Round; carried as `warriorTension` (chat.mjs postAttack), the stack lost once the attack is concluded.
+ */
+export async function askWarriorTension(actor, declared) {
+  if (!declared?.weapon || declared.weapon.unarmed || (actor?.system?.effects?.slots?.["warrior.tension"] !== true)) return declared;
+  if (!((Number(actor.system.resources?.tension?.stacks) || 0) > 0)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "warriorTensionRound") === round) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Warrior" },
+    content: `<p data-tooltip="Once a Round. The stack goes once the attack is complete.">A stack of Tension: Damage Category +1, Wound +2(T) a Health Threshold below?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "warriorTensionRound", round);
+  return { ...declared, warriorTension: true };
+}
+
+/**
  * Eye of the Dragon, Way of the Weaponmaster: "If you would target an Opponent with an Armed Attack, you may increase the
  * Strike and Wound Rolls for that Attacking Maneuver by 1(T) and 2(T) respectively." Asked once a Weapon is declared, once a
  * Round; carried as `eyeWeapon`. The declaration as it then stands.
