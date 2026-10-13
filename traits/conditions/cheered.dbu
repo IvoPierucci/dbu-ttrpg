@@ -1,0 +1,17 @@
+id: cheered
+name: Cheered
+kind: conditions
+maxStacks: 10
+# Not a Combat Condition: what the Spectator State's (1) gives an Ally, held on the Spectator's clock - its stacks the
+# Spectator's base Tier.
+combatCondition: no
+source: Core Rule
+description: >
+  Cheered on by a Spectator: Combat Rolls 1(bT) higher until the start of their next turn, or until they leave the Spectator State.
+text: >
+  Spectator (1): Increase their Combat Rolls by 1(bT) until the start of your next turn or until you leave the Spectator State (whichever occurs first).
+
+---
+
+[passive]
+combatRolls += stacks;

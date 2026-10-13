@@ -111,6 +111,14 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  spectatorCheer: {
+    args: [0, 0],
+    doc: "Spectator (1): an Ally picked, their Combat Rolls 1(bT) till the start of your next turn (chat.mjs spectatorCheer)."
+  },
+  spectatorLeft: {
+    args: [0, 0],
+    doc: "Spectator left: its Ally's bonus off (chat.mjs spectatorLeft)."
+  },
   undyingFall: {
     args: [0, 0],
     doc: "Undying (1): leaving it below nothing - Defeated at once, nothing answering it (chat.mjs undyingFall)."

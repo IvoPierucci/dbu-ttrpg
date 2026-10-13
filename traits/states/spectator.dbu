@@ -4,70 +4,41 @@ kind: state
 # A Special State (the user's terminology): no Narrative Requirement - only an effect that gives it enters it.
 specialState: true
 description: >
-  You step out of the fight to watch it, and to steady an ally from the side.
+  Out of the fight for now: you watch, you recover, and you call encouragement to an ally.
 text: >
-  (1)-[Triggered/Spectator, Triggered/Start of Turn]: Target an Ally. Increase
-  their Combat Rolls by 1(bT) until the start of your next turn or until you
-  leave the Spectator State (whichever occurs first).
-
+  (1)-[Triggered/Spectator, Triggered/Start of Turn]: Target an Ally. Increase their Combat Rolls by 1(bT) until the start of your next turn or until you leave the Spectator State (whichever occurs first).
   (2)-[Triggered/Start of Turn]: Exit the Spectator State.
-
-  (3)-[Automatic/Start of Turn]: If you did not use the second effect of the
-  Spectator State, you lose all of your Actions (except Counter Actions), end
-  your turn, and regain 2d10(bT) Life and Ki Points.
-
-  (4)-[Passive]: You cannot use the Power Up Maneuver, the Transformation
-  Maneuver, the Energy Charge Maneuver, or any Attacking Maneuvers, Special
-  Maneuvers, or Unique Abilities that target another Character.
-
-  (5)-[Passive]: You cannot trigger any [Triggered/Start of Turn] or
-  [Triggered/Start of Combat Round] effects, except those from the Spectator
-  State.
+  (3)-[Automatic/Start of Turn]: If you did not use the second effect of the Spectator State, you lose all of your Actions (except Counter Actions), end your turn, and regain 2d10(bT) Life and Ki Points.
+  (4)-[Passive]: You cannot use the Power Up Maneuver, the Transformation Maneuver, the Energy Charge Maneuver, or any Attacking Maneuvers, Special Maneuvers, or Unique Abilities that target another Character.
+  (5)-[Passive]: You cannot trigger any [Triggered/Start of Turn] or [Triggered/Start of Combat Round] effects, except those from the Spectator State.
 
 ---
 
-# What is here and what is not.
-#
-# (2) and (4) are here and are the whole of themselves. (1), (3) and (5) each
-# need something this system does not have, and a half-built one would be worse
-# than none - each would look like it worked.
-#
-#   - (1) hands a bonus to somebody else, on a clock, with two ends. Effects reach
-#     only the character carrying them: there is no way for a file to say "give
-#     that Ally this". Nor to end a duration on the earlier of two conditions.
-#   - (5) forbids a class of triggers rather than a thing. Nothing can say that.
+# (1) On entering it, and as your turn begins while still in it: which Ally asked - Cheered on them, its stacks your base Tier,
+# till the start of your next turn on your clock, and off as you leave the State (chat.mjs spectatorCheer, spectatorLeft).
+[triggered/state/spectator]
+spectatorCheer();
 
-# (2) is the player's to take at the start of their turn, and leaving is all it does.
 [triggered/start-of-turn]
-leaveState(spectator);
+spectatorCheer();
 
-# (3). "If you did not use the second effect" - and using the second effect leaves the
-# State, so the condition is simply that this is still on you when it resolves. What
-# the player chose is settled before anything automatic is looked at, which is what
-# makes that true rather than merely likely: take (2) and you are no longer a
-# Spectator, so this is no longer yours.
-#
-# Losing the turn is written as a skip: at the start of your turn the two are the same
-# thing, and `turn.skip` is what the Initiative Order reads.
+[on removed]
+spectatorLeft();
+
+# (2) Asked as the turn begins, before its Moment (combat.mjs beginTurn, chat.mjs spectatorTurnStart): left, (3) and (1)'s
+# start-of-turn are no longer yours. It used to be a button on the turn's card - which came after (3) had already ended the
+# turn.
+
+# (3) Still a Spectator once (2) was asked: no Actions, the turn ended - a skip, which is the same thing at its start - and
+# 2d10(bT) Life and Ki Points.
 [automatic/start-of-turn]
 actions.remaining = 0;
 turn.skip = true;
 life.value += 2d10(bT);
 ki.value += 2d10(bT);
 
-# (4). The three named Maneuvers are named, because the rule names them rather
-# than describing them - and two of them do not exist yet, which costs nothing:
-# a forbid on a Maneuver nobody holds forbids nothing.
-#
-# Special Maneuvers were left out of this for as long as there was no such category here
-# to close, and inventing one to have something to forbid would have been inventing a rule.
-# The category arrived with the Analysis Maneuver, so the line the entry writes is written
-# now: `specialManeuvers` closes the class, where `maneuver.<id>` closes one by name.
-#
-# The entry's last clause - "that target another Character" - is left where the rest of
-# this line already left it: applied to none of the three. Which of them it qualifies is
-# one sentence and three readings, and narrowing a forbid on a guess is the half-built kind
-# of wrong that looks like it works.
+# (4) The three named Maneuvers by name; the rest by their class. "That target another Character" is left applied to none
+# of them - which it qualifies is one sentence and three readings.
 [passive]
 forbid maneuver.power-up;
 forbid maneuver.transformation;
@@ -75,3 +46,6 @@ forbid maneuver.energy-charge;
 forbid attackingManeuvers;
 forbid specialManeuvers;
 forbid uniqueAbilities;
+
+# (5) Read where a turn's or a Round's start is answered - its Moment and its card: no Triggered effect but this State's
+# (moments-runtime.mjs spectatorHeld, chat.mjs momentTriggers).

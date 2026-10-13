@@ -13032,6 +13032,52 @@ export async function dancerHype(actor) {
 }
 
 /**
+ * Spectator (2): "[Triggered/Start of Turn]: Exit the Spectator State." Asked as the turn begins, before its Moment - so (3),
+ * "If you did not use the second effect", reads the answer: left, it is no longer theirs.
+ */
+export async function spectatorTurnStart(actor) {
+  if (!((Number(actor?.system?.states?.spectator) || 0) > 0)) return;
+  const answer = await askPlayerChoice(actor, `${actor.name}: Spectator - your turn`,
+    [{ value: "leave", label: "Exit the Spectator State" },
+      { value: "stay", label: "Stay: no Actions, the turn ended, 2d10(bT) Life and Ki" }]);
+  if (answer !== "leave") return;
+  const { leaveState } = await import("./effects/moments-runtime.mjs");
+  return leaveState(actor, "spectator");
+}
+
+/**
+ * Spectator (1): "Target an Ally. Increase their Combat Rolls by 1(bT) until the start of your next turn or until you leave
+ * the Spectator State (whichever occurs first)." Which Ally asked; Cheered on them - its stacks your base Tier - on your
+ * clock, and taken off with the State (spectatorLeft).
+ */
+export async function spectatorCheer(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const allies = alliesOnScene(actor).filter(ally => !ally.system?.defeated);
+  if (!allies.length) return UNSPENT;
+  const picked = (allies.length === 1) ? allies[0].uuid : await askPlayerChoice(actor, `${actor.name}: Spectator - an Ally`,
+    [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const ally = allies.find(each => each.uuid === picked);
+  if (!ally) return UNSPENT;
+  const { setCondition } = await import("./conditions.mjs");
+  if (!await setCondition(ally, "cheered", Math.max(1, Number(actor.system.baseTierOfPower) || 1))) return;
+  await lasting(actor, { kind: KINDS.CONDITION, key: "cheered", edge: EDGES.START, on: ally.uuid, source: "Spectator" });
+  const cheered = Array.from(actor.getFlag?.(SCOPE, "cheered") ?? []);
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.cheered`]: [...new Set([...cheered, ally.uuid])] });
+}
+
+/** Spectator left: Cheered off whoever it was given to - "or until you leave the Spectator State". */
+export async function spectatorLeft(actor) {
+  const cheered = Array.from(actor?.getFlag?.(SCOPE, "cheered") ?? []);
+  if (!cheered.length) return;
+  const { setCondition } = await import("./conditions.mjs");
+  for (const uuid of cheered) {
+    const ally = fromUuidSync(uuid);
+    if (ally && ((Number(ally.system?.conditions?.cheered) || 0) > 0)) await setCondition(ally, "cheered", 0);
+  }
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.cheered`]: [] });
+}
+
+/**
  * Undying (1): "If your Life Points are in a negative value when you leave this State, you are immediately Defeated. No
  * effects can prevent you from being Defeated from this effect." Begun at once, nothing answering it.
  */
@@ -23461,7 +23507,10 @@ function momentTriggers(actor, card) {
   // is not offered again on its card (the user's).
   const automatic = new Set(actor?.getFlag?.(SCOPE, "automatic") ?? []);
   const own = triggersFor(actor, [card.moment]).filter(holds)
-    .filter(entry => !automatic.has(entry.blockId) || chosenAsItHappens(entry.program.blocks?.[0]));
+    .filter(entry => !automatic.has(entry.blockId) || chosenAsItHappens(entry.program.blocks?.[0]))
+    // Spectator (5): none but the Spectator State's own at a turn's or a Round's start.
+    .filter(entry => !((Number(actor.system?.states?.spectator) || 0) > 0)
+      || !["start-of-turn", "start-of-round"].includes(card.moment) || (entry.sourceId === "state:spectator"));
   if ((card.moment !== "start-of-round") || ((game.combat?.round ?? 0) < 2)) return own;
   return [...own, ...triggersFor(actor, ["end-of-round"]).filter(entry => !automatic.has(entry.blockId) && !entry.armed)];
 }

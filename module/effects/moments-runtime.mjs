@@ -80,7 +80,7 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
   // effects are waiting on it.
   if (definition.limit && !momentAvailable(actor, definition, context)) return nothing;
 
-  let entries = reactiveFor(actor).filter(entry => entry.available && entry.armed);
+  let entries = spectatorHeld(actor, moment, reactiveFor(actor).filter(entry => entry.available && entry.armed));
 
   // `on applied` is about the thing being applied, not about everything the character
   // happens to be carrying, so a Moment can be narrowed to one source.
@@ -112,7 +112,7 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
   // whether it applies at all.
   const chosen = await runPass(actor, moment, definition, entries, context, "triggered", quiet);
   const byItself = await runPass(actor, moment, definition,
-    reactiveAgain(actor, entries, { only, stacks, answered }), context, "automatic", quiet);
+    reactiveAgain(actor, entries, { only, stacks, answered, moment }), context, "automatic", quiet);
 
   const fired = chosen.fired + byItself.fired;
   if (!fired) return nothing;
@@ -127,8 +127,19 @@ export async function fireMoment(actor, moment, context = {}, { only = null, sta
  * taken a Condition off - and an entry list gathered before that is a list of things
  * that were true a moment ago.
  */
-function reactiveAgain(actor, before, { only = null, stacks = null, answered = null }) {
-  let entries = reactiveFor(actor).filter(entry => entry.available && entry.armed);
+/**
+ * Spectator (5): "You cannot trigger any [Triggered/Start of Turn] or [Triggered/Start of Combat Round] effects, except those
+ * from the Spectator State." Those left out while it is had - Automatic or not, a Triggered effect is still one.
+ */
+export function spectatorHeld(actor, moment, entries) {
+  if (!["start-of-turn", "start-of-round"].includes(String(moment))) return entries;
+  if (!((Number(actor?.system?.states?.spectator) || 0) > 0)) return entries;
+  return entries.filter(entry => (entry.sourceId === "state:spectator")
+    || (String(entry.program?.blocks?.[0]?.mode ?? "") !== "triggered"));
+}
+
+function reactiveAgain(actor, before, { only = null, stacks = null, answered = null, moment = "" }) {
+  let entries = spectatorHeld(actor, moment, reactiveFor(actor).filter(entry => entry.available && entry.armed));
   if (only) entries = entries.filter(entry => entry.sourceId === only);
   if (answered) entries = entries.filter(entry => !answered.has(entry.blockId));
   if (stacks !== null) entries = entries.map(entry => ({ ...entry, stacks }));
@@ -381,6 +392,8 @@ async function runVerb(actor, call, context) {
       return shardBurst(actor);
     }
 
+    case "spectatorCheer": return (await import("../chat.mjs")).spectatorCheer(actor);
+    case "spectatorLeft": return (await import("../chat.mjs")).spectatorLeft(actor);
     case "undyingFall": return (await import("../chat.mjs")).undyingFall(actor);
     case "rageStrike": return (await import("../chat.mjs")).rageStrike(actor);
     case "surgingFocus": return (await import("../chat.mjs")).surgingFocus(actor);
