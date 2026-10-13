@@ -350,9 +350,13 @@ export function ownedRacialTraits(actor) {
     || a.name.localeCompare(b.name));
 }
 
-/** The Other Traits' groups, as their lists name them: Evolution Traits are the Arcosians' own (the user's). */
+/**
+ * The Other Traits' groups, as their lists name them: Evolution Traits are the Arcosians' own; Vocations are any race's -
+ * Vocation Training gives one, and so does Konatsian-Raised (the user's).
+ */
 export const OTHER_GROUPS = Object.freeze({
   evolution: "Evolution · Arcosian",
+  vocation: "Vocation",
   bestial: "Bestial",
   monstrous: "Monstrous"
 });

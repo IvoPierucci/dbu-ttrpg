@@ -3,6 +3,9 @@ name: Vocation Training
 order: 2
 category: mind
 importance: primary
+# (2) A Vocation chosen as it is gained, and gone with it (racial.mjs grantOtherTrait) - an Other Trait, as Evolution
+# Traits are (the user's).
+grantsOther: vocation
 description: >
   Trained to work in teams to cover each others’ weaknesses, Konatsians take on specialized combat roles.
 text: >
@@ -12,8 +15,10 @@ text: >
 
 ---
 
+# (2) A Vocation, chosen as this is gained - its header's `grantsOther`. Vocations are Other Traits, in their own group of
+# the Other Traits list (traits/other/vocation/), any race's.
+
 # --- What is not built, and why ---------------------------------------------------
 #
 # (1) A Talent of the Physical Attack, Energy Attack, Magic Attack or Weapon Talent Category: no Talent here says which
 #     Category it is of, and most are not written yet. Taken by hand from the Talents list for now.
-# (2) A Vocation: Vocations are not in this system - their rules text is waited on.
