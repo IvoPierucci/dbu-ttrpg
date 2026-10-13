@@ -36,7 +36,7 @@ allow resolve.reroll;
 allow steadfast.lifeSpend;
 
 # (3) A Steadfast Check passed, with a Combat Condition on you besides Suffocating: every one of them off but Suffocating.
-# Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window as it passes.
-[triggered/steadfast-passed, 1/encounter, effect 3]
+# Asked in a window as it passes - no Triggered/Automatic button (the user's).
+[triggered/steadfast-passed, 1/encounter, chosen, effect 3]
 requires conditionedBesides("suffocating");
 clearConditions(suffocating);

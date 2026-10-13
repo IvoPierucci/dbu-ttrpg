@@ -23,8 +23,8 @@ wound.vsConditioned += 2(T);
 damageReduction.vsConditioned += 1(T);
 
 # (3) An Opponent knocked through a Health Threshold by your Attacking Maneuver: a Might Clash at them - won, Prone (chat.mjs
-# knockedProneClash). Once a Round. Automatic by default, its Triggered/Automatic button.
-[triggered/knock-through, 1/round, effect 3]
+# knockedProneClash). Once a Round. Asked in a window as it happens - no Triggered/Automatic button (the user's).
+[triggered/knock-through, 1/round, chosen, effect 3]
 knockedProneClash();
 
 # (4) Ticked on the turn's card, once a Round: an Opponent not at Long Range picked, 4(bT) Ki paid, and a Clash (Cognitive)

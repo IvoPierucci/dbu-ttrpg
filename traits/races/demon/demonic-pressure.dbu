@@ -21,9 +21,8 @@ text: >
 
 # (1), (2) An Attacking Maneuver declared during your own turn, three times a Round: a Pressure Check - 1d10, 4+ a
 # success - rolled in chat, and a stack of Demonic Power for a success, of Demonic Fatigue for a fail (chat.mjs
-# pressureCheck). Automatic by default, its Triggered/Automatic button; set Triggered, asked in the window as it is
-# declared.
-[triggered/declare-maneuver, toggle, 3/round, effect 1]
+# pressureCheck). Ticked in the window as it is declared - no Triggered/Automatic button (the user's).
+[triggered/declare-maneuver, 3/round, effect 1]
 requires declaringAttack && ownTurn;
 pressureCheck();
 
