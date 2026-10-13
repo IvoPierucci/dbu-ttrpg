@@ -81,6 +81,10 @@ const PREDICATES = {
       && !besides.includes(key) && isCombatCondition(key));
   },
 
+  /** That Option chosen on one of their Racial Traits - Quick to Master's Way, for Eye of the Dragon (3). */
+  optionChosen: (scope, id) => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "racial")
+    && (item.system?.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === String(id)))),
+
   /** It is this character's own turn - or there are no turns, out of a Combat Encounter (Demonic Pressure's). */
   ownTurn: scope => !game.combat?.started || (game.combat?.combatant?.actor?.uuid === scope.data?.parent?.uuid),
 

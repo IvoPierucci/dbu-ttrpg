@@ -491,7 +491,9 @@ const PREDICATE_NAMES = new Set([
   // A Clash won with that Skill - Stealthy Trick's.
   "wonWithSkill",
   // A Combat Condition on you besides the ones named - Earthling Resolve's.
-  "conditionedBesides"
+  "conditionedBesides",
+  // A Racial Trait's Option chosen - Eye of the Dragon's, by Quick to Master's.
+  "optionChosen"
 ]);
 
 /** The ones written without brackets, because they take nothing. */

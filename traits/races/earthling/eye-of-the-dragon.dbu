@@ -1,0 +1,60 @@
+id: eye-of-the-dragon
+name: Eye of the Dragon
+order: 5
+category: mind
+importance: secondary
+description: >
+  Earthlings are as varied as the many cities and locales on their home planet, Earth, but one thing is always certain: what they lack in raw power, they make up for with hard work.
+text: >
+  Eye of the Dragon (Mind): Earthlings are as varied as the many cities and locales on their home planet, Earth, but one thing is always certain: what they lack in raw power, they make up for with hard work.
+  (1)-[Passive]: If you’ve already used the Energy Charge Maneuver once during this Combat Round, reduce the Ki Point Cost for the Energy Charge Maneuver by 1(T).
+  (2)-[Triggered, 1/Round]: When using the Signature Technique Maneuver, if this is the first time in the Combat Encounter you have used this Signature Technique, you may apply both effects from the second effect of Quick to Master instead of having to select one.
+  (3)-[Choice]: Depending on your choice for the Option effect of Quick to Master, gain the following effect:
+
+  * Way of the Warrior [Triggered]: When you reduce your Life Points by 10(bT) through the effect of Way of the Warrior, that Attacking Maneuver gains an Energy Charge (this Energy Charge does not count towards your maximum).
+  * Way of the Serene [Triggered/Power, 1/Round, 2/Encounter]: Enter the Mindful State until the end of your next turn.
+  * Way of the Fury [Triggered/Power, 1/Round, 2/Encounter]: Enter the Raging State until the end of your next turn.
+  * Way of the Elements [Passive]: Reduce the Ki Point Cost of any Signature Technique that uses your Favored Elements’ Profile by 2(T).
+  * Way of the Mystic [Passive]: Reduce the Ki Point Cost of all your Unique Abilities by 2(T).
+  * Way of the Weaponmaster [Triggered, 1/Round]: If you would target an Opponent with an Armed Attack, you may increase the Strike and Wound Rolls for that Attacking Maneuver by 1(T) and 2(T) respectively.
+  * Way of the Pilot [Triggered, 1/Round]: If you would target an Opponent with an Attacking Maneuver while piloting a Battle Jacket or Vehicle, you may spend up to 10(bT) of that Battle Jacket or Vehicle’s Life Points to increase the Wound Roll for that Attacking Maneuver by an equal amount.
+
+---
+
+[passive]
+# (1) The Energy Charge Maneuver after its first this Combat Round, as Energy Core's.
+energyCharge.again.kiCost -= 1(T);
+# (2) A box beside Quick to Master's at a Signature Technique's declaration, the first time it is used this Encounter, once
+# a Round: the Energy Charge and the Advantage both (use-maneuver.mjs askTechniqueDeclaration).
+allow signature.earthlingBoth;
+
+# (3) By Quick to Master's Option, as it is chosen there.
+# Way of the Warrior: the full 10(bT) Life Points given up - an Energy Charge, past the most (use-maneuver.mjs).
+if (optionChosen("way-of-the-warrior")) {
+    allow signature.warriorCharge;
+}
+# Way of the Elements: a Signature Technique of a Favored Element's Profile, 2(T) off its Ki (maneuvers.mjs maneuverKiCost).
+if (optionChosen("way-of-the-elements")) {
+    signature.favoredKiCost -= 2(T);
+}
+# Way of the Mystic: every Unique Ability's Ki, Technical and Magical.
+if (optionChosen("way-of-the-mystic")) {
+    unique.technical.kiCost -= 2(T);
+    unique.magical.kiCost -= 2(T);
+}
+# Way of the Weaponmaster: an Armed Attack declared - asked, once a Round: 1(T) Strike, 2(T) Wound (maneuvers.mjs
+# askEyeWeapon).
+if (optionChosen("way-of-the-weaponmaster")) {
+    allow armed.eyeOfTheDragon;
+}
+# Way of the Pilot: waits on Battle Jackets and Vehicles being piloted - till then, the table's.
+
+# Way of the Serene, Way of the Fury: the Power Up used - a box in its window, once a Round and twice an Encounter: the
+# State till the end of your next turn.
+[triggered/power, 1/round, 2/encounter, effect 3]
+requires optionChosen("way-of-the-serene");
+enterState(mindful, 1, next-turn);
+
+[triggered/power, 1/round, 2/encounter, effect 3]
+requires optionChosen("way-of-the-fury");
+enterState(raging, 1, next-turn);

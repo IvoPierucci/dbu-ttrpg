@@ -711,6 +711,17 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
         </ol>
       </div></div>`);
   }
+  // Eye of the Dragon (2): "if this is the first time in the Combat Encounter you have used this Signature Technique, you
+  // may apply both effects from the second effect of Quick to Master" - once a Round; the search picks the Advantage.
+  const usedTechniques = actor.getFlag?.("dbu-ttrpg", "techniquesUsed");
+  const usedHere = (usedTechniques?.combatId === (game.combat?.id ?? "none")) ? (usedTechniques.ids ?? []) : [];
+  const eyeBoth = earthlingOffered.length && (actor.system.effects?.slots?.["signature.earthlingBoth"] === true)
+    && !usedHere.includes(technique.itemId ?? technique.id) && (actor.getFlag?.("dbu-ttrpg", "eyeBothRound") !== round);
+  if (eyeBoth) {
+    fields.push(`<label class="dbu-respond-option"${tip("eye-of-the-dragon", 2)}><input type="checkbox" name="eyeBoth"/>
+      <span class="dbu-respond-name">Eye of the Dragon: both</span>
+      <span class="dbu-respond-source">the Energy Charge too, with the Advantage picked</span></label>`);
+  }
   // Way of the Warrior (Quick to Master): "you may reduce your Life Points by up to 10(bT) to gain a free Ki Wager on this
   // Attacking Maneuver equal to the reduction." Every time; no more than the Life Points left.
   const warriorMost = (actor.system.effects?.slots?.["signature.lifeWager"] === true)
@@ -781,6 +792,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
             maliceBacklash: Math.min(maliceMost, num("maliceBacklash")), mentality: box("mentality"),
             moraleGuard: box("moraleGuard"), creativeCondition: box("creativeCondition"),
             lifeWager: Math.min(warriorMost, num("lifeWager")), lastResort: lastResort && box("lastResort"),
+            eyeBoth: Boolean(eyeBoth) && box("eyeBoth"),
             earthling: earthlingPicked(form),
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
@@ -814,6 +826,12 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     }
     answers.advantages = [...(declared.advantages ?? []), answers.earthling];
   }
+  // Eye of the Dragon's: the Energy Charge as well, beside the Advantage picked.
+  if (answers.eyeBoth && earthlingOffered.some(entry => entry.def.id === answers.earthling)) {
+    answers.earthlingCharge = raisedName;
+    await actor.setFlag("dbu-ttrpg", "eyeBothRound", round);
+  }
+  delete answers.eyeBoth;
   delete answers.earthling;
   // Demonic Creativity's: the Condition Advantage, its Combat Condition asked, for 1 Demonic Power.
   if (answers.creativeCondition && creative) {
@@ -841,6 +859,11 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   if (answers.lifeWager > 0) {
     await actor.update({ "system.life.value": Math.max(0, (Number(actor.system.life?.value) || 0) - answers.lifeWager) });
     answers.freeWager = (Number(declared.freeWager) || 0) + answers.lifeWager;
+    // Eye of the Dragon's Way of the Warrior: the whole 10(bT) - an Energy Charge, past the most.
+    if ((answers.lifeWager >= 10 * Math.max(1, Number(actor.system.baseTierOfPower) || 1))
+      && (actor.system.effects?.slots?.["signature.warriorCharge"] === true)) {
+      answers.uncappedCharges = (Number(declared.uncappedCharges) || 0) + 1;
+    }
   }
   delete answers.lifeWager;
   // Last Resort's: its Encounter spent, the cost waived on this use alone.
@@ -867,6 +890,12 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     answers.extraActions = extraActions;
     // Giga Flare's own price: "2(T) per Action spent through its effects".
     if (answers.gigaFlare) answers.kiSurcharge = 2 * answers.gigaFlare * tier;
+  }
+  // This Technique used this Encounter - Eye of the Dragon (2) asks after the first time.
+  if (actor.system.effects?.slots?.["signature.earthlingBoth"] === true) {
+    const combatId = game.combat?.id ?? "none";
+    await actor.setFlag("dbu-ttrpg", "techniquesUsed", { combatId,
+      ids: [...new Set([...usedHere, technique.itemId ?? technique.id])] });
   }
   return answers;
 }
@@ -4539,6 +4568,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const bladed = await elementalBlade(actor, maneuver, declared);
     if (!bladed) return false;
     ({ maneuver, declared } = bladed);
+    // Eye of the Dragon's Way of the Weaponmaster: an Armed Attack - asked, once a Round.
+    declared = await (await import("./maneuvers.mjs")).askEyeWeapon(actor, declared);
     // Karmic Assault: a Super Profile on an Ultimate, for 2 Karma - asked before the Technique's own
     // questions, so what the Super Profile asks for (Giga Flare's Actions...) is asked with them.
     const assaulted = await karmicAssault(actor, maneuver, declared);

@@ -1396,6 +1396,25 @@ export async function askRevengeBomber(actor, declared) {
 }
 
 /**
+ * Eye of the Dragon, Way of the Weaponmaster: "If you would target an Opponent with an Armed Attack, you may increase the
+ * Strike and Wound Rolls for that Attacking Maneuver by 1(T) and 2(T) respectively." Asked once a Weapon is declared, once a
+ * Round; carried as `eyeWeapon`. The declaration as it then stands.
+ */
+export async function askEyeWeapon(actor, declared) {
+  if (!declared?.weapon || declared.weapon.unarmed || (actor?.system?.effects?.slots?.["armed.eyeOfTheDragon"] !== true)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "eyeWeaponRound") === round) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Eye of the Dragon" },
+    content: `<p data-tooltip="Way of the Weaponmaster. Once a Round.">+1(T) Strike and +2(T) Wound on this Armed Attack?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "eyeWeaponRound", round);
+  return { ...declared, eyeWeapon: true };
+}
+
+/**
  * Burrowed Strike's 2nd: "When making an Attacking Maneuver of the Simple Profile, you may spend 2(bT) Ki Points to double
  * the amount of Diminishing Defense your Opponent suffers from that Attacking Maneuver" - asked, paid with the attack
  * (`kiSurcharge`), once a Round. The declaration as it then stands.
@@ -3224,6 +3243,10 @@ export function maneuverKiCost(maneuver, declared, actor) {
   }
   // A Signature Technique's, any of them - Inherited Creativity's 1(T) off.
   if (actor && maneuver.signature && !maneuver.signatureTechnique) cost = applySlot(slots, "signature.kiCost", cost);
+  // And one of a Favored Element's Profile - Eye of the Dragon's Way of the Elements, 2(T) off.
+  if (actor && maneuver.signature && !maneuver.signatureTechnique && favoredElement(actor, declared?.profile)) {
+    cost = applySlot(slots, "signature.favoredKiCost", cost);
+  }
 
   if (actor && maneuver.attacking) {
     cost = applySlot(slots, "attack.kiCost", cost);

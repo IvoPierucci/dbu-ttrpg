@@ -15660,7 +15660,8 @@ export async function postAttack(actor, target, maneuver,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
-                                   earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false },
+                                   earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
+                                   uncappedCharges = 0, eyeWeapon = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -15687,6 +15688,10 @@ export async function postAttack(actor, target, maneuver,
   const experienced = reflecting ? null : await spendReadied(actor, everyone, ["strike", "punish"]);
   const instinct = [];
   if (!reflecting) for (const aimed of everyone) if (await spendReadied(aimed, [actor], ["dodge"])) instinct.push(aimed.uuid);
+  // Eye of the Dragon's Way of the Weaponmaster: 2(T) on its Wound Roll - its 1(T) on the Strike, carried as eyeWeapon.
+  if (eyeWeapon && !reflecting) {
+    woundExtra = [...woundExtra, { label: "Eye of the Dragon", written: "+2(T)", value: 2 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
   // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.
   if (experienced?.kind === "punish") {
     woundExtra = [...woundExtra, { label: "Punishing Blow", written: "+3(T)", value: 3 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
@@ -15806,6 +15811,7 @@ export async function postAttack(actor, target, maneuver,
           // Experienced Fighter (2)'s, spent on it: the attacker's, and who Dodges with Instinct-Driven Dodge.
           ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
           ...(instinct.length ? { instinct } : {}),
+          ...((eyeWeapon && !reflecting) ? { eyeWeapon: true } : {}),
           ...(maliceBacklash ? { maliceBacklash } : {}),
           // Quick Learner's: made with a Copied Technique.
           ...(maneuver.copied ? { copied: true } : {}),
@@ -15928,7 +15934,9 @@ export async function postAttack(actor, target, maneuver,
                   // "Ultimate Signature Techniques can possess an additional Energy Charge beyond
                   // the Character's usual limit."
                   + (technique?.chargeCeilingBonus ?? 0)
-              ) + (PROFILES[profile].grantsUncappedEnergyCharge ?? 0),
+              ) + (PROFILES[profile].grantsUncappedEnergyCharge ?? 0)
+                // Eye of the Dragon's Way of the Warrior: "this Energy Charge does not count towards your maximum".
+                + (Number(uncappedCharges) || 0),
           // Dice Categories the Technique's features add to each Charge: Maximum Charge, Super Beam.
           chargeCategories: reflecting ? (reflecting.chargeCategories ?? 0) : (technique?.chargeCategories ?? 0),
           // Whose Technique it was, which is what decides the size of an Energy Charge's
@@ -17353,6 +17361,9 @@ function strikeParts(attacker, attack) {
     // Critical Point (2): the declared Attacking Maneuver, primed this Round - 2(T).
     ...(attack?.primed ? [{ label: "Critical Point", written: "+2(T)",
       value: 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1) }] : []),
+    // Eye of the Dragon's Way of the Weaponmaster - 1(T).
+    ...(attack?.eyeWeapon ? [{ label: "Eye of the Dragon", written: "+1(T)",
+      value: Math.max(1, Number(attacker.system.tierOfPower) || 1) }] : []),
     // Experienced Fighter (2): Exploitation Strike - 2(T).
     ...((attack?.experienced?.kind === "strike") ? [{ label: "Exploitation Strike", written: "+2(T)",
       value: 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1) }] : []),
