@@ -1,0 +1,31 @@
+id: whack
+name: Whack
+type: standard
+actionCost: 1
+kiCostPerTier: 10
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+exploitable: All adjacent Opponents.
+source: Core Rule
+description: >
+  A stack of Tension: a Clash (Strike vs Strike/Dodge) at an Opponent below Injured, not at Long Range - won, a 1d10; on a 10, Defeated.
+text: >
+  Whack [1/Round]: In a risky gambit of a move, you attempt to eliminate your opponent, leaving them downed in a single blow if successful.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: 10(T)
+  –Exploitable: All adjacent Opponents.
+  –Effect: Spend a stack of Tension to target an Opponent who is not at Long Range and is below the Injured Health Threshold. Make a Clash (Strike vs Strike/Dodge) against that Opponent. If you win, roll a 1d10. If you roll a 10, their Life Points are set to their lowest possible value and they are Defeated.
+
+  You can only target each Opponent once per Combat Encounter with this Special Maneuver.
+
+---
+
+# A Special Maneuver: open where an effect grants it - the Priest Vocation. Used, which Opponent asked - Injured or
+# Critical, not at Long Range, not Whacked before this Encounter - a stack of Tension (Battle Tension's) spent, and the Clash
+# opened; won, the 1d10 rolled on its card - a 10, their Life Points at their lowest (chat.mjs whack, settleWhack).
+[on used]
+whack();

@@ -3044,6 +3044,11 @@ async function askHeal(actor, maneuver) {
   }
 
   const mightKi = might ? (Number(might.healMightKiPerTier) || 0) * tier : 0;
+  // Priest (4): "you may spend 2(bT) Ki Points to target any Ally who is not at Long Range with its effects, instead of an
+  // Ally within your Melee Range. If you do, increase the amount of Life Points they regain from this use of Healing Hands
+  // by 1/2 of your Surgency." The one targeted.
+  const farKi = (targeted && (actor.system.effects?.slots?.["priest.farHeal"] === true)) ? 2 * baseTier : 0;
+  const priestTip = farKi ? ` data-tooltip="${escape((await import("./racial.mjs")).traitEffectLine(actor, "priest", 4) || "Priest (4)")}"` : "";
   const own = maneuverKiCost(maneuver, null, actor);
   const capacityNow = Math.max(0, Number(actor.system.capacity?.remaining) || 0);
   const rows = pool.map(other => {
@@ -3069,6 +3074,9 @@ async function askHeal(actor, maneuver) {
         ${zone ? `<label class="dbu-wager"><span>For</span><select name="desperateFor">${[targeted, ...pool]
           .filter(Boolean).map(other => `<option value="${escape(other.uuid)}">${escape(other.name)}</option>`)
           .join("")}</select></label>` : ""}` : ""}
+      ${farKi ? `<label class="dbu-respond-option"${priestTip}><input type="checkbox" name="far"/>
+        <span class="dbu-respond-name">Priest</span>
+        <span class="dbu-respond-source">${farKi} KP more: an Ally not at Long Range, 1/2 your Surgency on top</span></label>` : ""}
       ${patch ? `<label class="dbu-respond-option"><input type="checkbox" name="patch"/>
         <span class="dbu-respond-name">${escape(patch.name)}</span>
         <span class="dbu-respond-source">A damaged piece of their Apparel, whole again</span></label>` : ""}`,
@@ -3081,7 +3089,8 @@ async function askHeal(actor, maneuver) {
           might: Boolean(el.querySelector('input[name="might"]')?.checked),
           desperate: Boolean(el.querySelector('input[name="desperate"]')?.checked),
           desperateFor: el.querySelector('select[name="desperateFor"]')?.value ?? targeted?.uuid ?? "",
-          patch: Boolean(el.querySelector('input[name="patch"]')?.checked)
+          patch: Boolean(el.querySelector('input[name="patch"]')?.checked),
+          far: Boolean(farKi) && Boolean(el.querySelector('input[name="far"]')?.checked)
         };
       } },
       { action: "cancel", label: "Cancel" }
@@ -3101,7 +3110,12 @@ async function askHeal(actor, maneuver) {
   }
   else {
     if (!targeted) return null;
-    const far = whyNotWithinMelee(actor, targeted, maneuver.name);
+    // Priest (4): an Ally, anywhere but at Long Range; otherwise within your Melee Range.
+    const far = chosen.far
+      ? ((atLongRange(actor, targeted) && `${targeted.name} is at Long Range.`)
+        || (((targeted.getActiveTokens?.(false, true)?.[0]?.disposition ?? 0)
+          !== (actor.getActiveTokens?.(false, true)?.[0]?.disposition ?? 0)) && `${targeted.name} is not an Ally.`))
+      : whyNotWithinMelee(actor, targeted, maneuver.name);
     if (far) {
       ui.notifications.warn(far);
       return null;
@@ -3116,7 +3130,9 @@ async function askHeal(actor, maneuver) {
   // Desperate Heal: "a number of Ki Points equal to your current Capacity" - what is left of it once this use and
   // Overexertion are paid, which is what it will be.
   const desperateKi = chosen.desperate ? Math.max(0, capacityNow - own - (chosen.might ? mightKi : 0)) : 0;
-  const extraKi = (chosen.might ? mightKi : 0) + desperateKi;
+  const priestKi = (chosen.far && (chosen.mode !== "zone")) ? farKi : 0;
+  const priestLife = priestKi ? Math.floor((Number(actor.system.surgency) || 0) / 2) : 0;
+  const extraKi = (chosen.might ? mightKi : 0) + desperateKi + priestKi;
   if (extraKi && ((Number(actor.system.ki?.value) || 0) < (own + extraKi))) {
     ui.notifications.warn(`${actor.name} has not the Ki Points for that.`);
     return null;
@@ -3132,11 +3148,12 @@ async function askHeal(actor, maneuver) {
     offerWilling: false, formula: { base: dice,
       dice: moreDice ? [{ label: find("healDice")?.name ?? "Dice", formula: moreDice }] : [],
       parts: [...(modifier ? [{ label: "Magic Modifier", value: modifier }] : []),
-        ...(desperateKi ? [{ label: desperate.name, value: desperateKi }] : [])] } });
+        ...(desperateKi ? [{ label: desperate.name, value: desperateKi }] : []),
+        ...(priestLife ? [{ label: "Priest (1/2 Surgency)", value: priestLife }] : [])] } });
   if (!ready) return null;
 
   return { uuids, dice: [dice, moreDice].filter(Boolean).join(" + "), modifier,
-    mightKi: chosen.might ? mightKi : 0, desperateKi, desperateFor, patch: chosen.patch };
+    mightKi: chosen.might ? mightKi : 0, desperateKi, desperateFor, patch: chosen.patch, priestKi, priestLife };
 }
 
 /**

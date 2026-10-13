@@ -1,0 +1,27 @@
+id: priest
+name: Priest
+order: 4
+# (3) Healing Hands, free and without its Requirements, gone with this (racial.mjs).
+grantsUnique: healing-hands
+description: >
+  Dedicated to supporting your comrades, you remain on the back line, keeping your party members in the fight.
+text: >
+  Priest: Dedicated to supporting your comrades, you remain on the back line, keeping your party members in the fight.
+  (1)-[Passive]: Increase your Surgency by 2(T) and reduce the Ki Point Cost of your Magical Unique Abilities by 1(T).
+  (2)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see — Surges).
+  (3)-[Passive]: Gain access to the Healing Hands Unique Ability and the Whack Special Maneuver.
+  (4)-[Triggered]: If you use the Healing Hands Unique Ability, you may spend 2(bT) Ki Points to target any Ally who is not at Long Range with its effects, instead of an Ally within your Melee Range. If you do, increase the amount of Life Points they regain from this use of Healing Hands by 1/2 of your Surgency.
+
+---
+
+[passive]
+# (1)
+surgency += 2(T);
+unique.magical.kiCost -= 1(T);
+# (2) Where the Magic Modifier is the higher (actor-character.mjs).
+allow surgency.magic;
+# (3) Healing Hands through the header's `grantsUnique`; Whack here.
+allow maneuver.whack;
+# (4) A box in Healing Hands' window: 2(bT) Ki, the Ally targeted anywhere but at Long Range, 1/2 your Surgency more
+# (use-maneuver.mjs askHeal).
+allow priest.farHeal;

@@ -746,6 +746,9 @@ async function settleClashEffects(messageId, clash) {
   if (clash.angelicOffense && clash.result && !clash.angelicOffense.applied) {
     await settleAngelicOffense(message, clash);
   }
+  if (clash.whack && clash.result && !clash.whack.applied) {
+    await settleWhack(message, clash);
+  }
   if (clash.cutthroatClash && clash.result && !clash.cutthroatClash.applied) {
     await settleCutthroatClash(message, clash);
   }
@@ -9918,7 +9921,7 @@ const HEAL_FLAG = "healing";
  * Desperate Heal's Capacity to its one; Patch-Up's piece of Apparel whole again.
  */
 export async function postHealing(actor, maneuver, plan) {
-  const extra = plan.mightKi + plan.desperateKi;
+  const extra = plan.mightKi + plan.desperateKi + (Number(plan.priestKi) || 0);
   if (extra) {
     await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - extra),
       "system.capacity.spent": actor.system.capacity.spent + extra });
@@ -9930,7 +9933,9 @@ export async function postHealing(actor, maneuver, plan) {
     const who = fromUuidSync(uuid);
     if (!who) continue;
     const amount = roll.total + plan.modifier + (plan.mightKi ? (Number(who.system.might) || 0) : 0)
-      + ((uuid === plan.desperateFor) ? plan.desperateKi : 0);
+      + ((uuid === plan.desperateFor) ? plan.desperateKi : 0)
+      // Priest (4): half your Surgency more.
+      + (Number(plan.priestLife) || 0);
     const life = who.system.life;
     await requestActorUpdate(who, { "system.life.value": Math.min(life.max, life.value + amount) });
     // Patch-Up: the first worn piece that has lost Break Value - "damaged or broken" - whole again.
@@ -12602,6 +12607,64 @@ async function glassSurgeEnds(attack) {
   if (!attacker?.isOwner || !((Number(attacker.system.states?.surging) || 0) > 0)) return;
   const { leaveState } = await import("./effects/moments-runtime.mjs");
   await leaveState(attacker, "surging");
+}
+
+/**
+ * Whack (Priest): "Spend a stack of Tension to target an Opponent who is not at Long Range and is below the Injured Health
+ * Threshold. Make a Clash (Strike vs Strike/Dodge) against that Opponent. If you win, roll a 1d10. If you roll a 10, their
+ * Life Points are set to their lowest possible value and they are Defeated. You can only target each Opponent once per
+ * Combat Encounter with this Special Maneuver." Which Opponent asked; the stack spent, the Clash opened. None, its use
+ * unspent.
+ */
+export async function whack(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const held = Number(actor?.system?.resources?.tension?.stacks) || 0;
+  if (!held) {
+    ui.notifications.warn(`${actor.name}: Whack needs a stack of Tension.`);
+    return UNSPENT;
+  }
+  const combatId = game.combat?.id ?? "none";
+  const done = actor.getFlag?.(SCOPE, "whacked");
+  const already = (done?.combatId === combatId) ? (done.uuids ?? []) : [];
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid)
+      && !token.actor.system?.defeated && !atLongRange(actor, token.actor) && !already.includes(token.actor.uuid)
+      && ["injured", "critical"].includes(token.actor.system?.threshold?.key))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) {
+    ui.notifications.info(`${actor.name}: Whack - no Opponent below the Injured Health Threshold out of Long Range.`);
+    return UNSPENT;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Whack`,
+    [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const target = opponents.find(each => each.uuid === picked);
+  if (!target) return UNSPENT;
+  await setResource(actor, "tension", held - 1);
+  await actor.setFlag(SCOPE, "whacked", { combatId, uuids: [...already, target.uuid] });
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [RESPONDABLE_FLAG]: false, [CLASH_FLAG]: {
+      category: "strike", clashLabel: "Whack", maneuverName: "Whack",
+      reason: `Win and a 1d10: on a 10, ${target.name} is Defeated.`,
+      challengerUuid: actor.uuid, challengerName: actor.name, defenderUuid: target.uuid, defenderName: target.name,
+      defenderRoll: "", whack: { applied: false }, ready: [], result: null } } }
+  });
+}
+
+/** Whack, settled: won, the 1d10 - a 10, their Life Points at their lowest and Defeated. */
+async function settleWhack(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, whack: { ...clash.whack, applied: true } });
+  const challenger = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!challenger || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} stays up.`);
+  const roll = await new Roll("1d10").evaluate();
+  const downed = roll.total === 10;
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: challenger }),
+    flavor: `Whack - ${downed ? `${target.name} is Defeated` : "not a 10"}` });
+  if (!downed) return;
+  return requestActorUpdate(target, { "system.life.value": Math.min(0, Number(target.system.life?.min) || 0) });
 }
 
 /** Boom: "you do not lose these stacks of Tension until after completing this Attacking Maneuver." */

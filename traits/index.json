@@ -234,6 +234,8 @@
     "other/vocation/warrior.dbu",
     "other/vocation/mage.dbu",
     "other/vocation/martial-artist.dbu",
+    "other/vocation/priest.dbu",
+    "maneuvers/whack.dbu",
     "maneuvers/boom.dbu",
     "maneuvers/zoom.dbu",
     "races/android/energy-core.dbu",

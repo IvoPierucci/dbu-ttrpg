@@ -111,6 +111,11 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  whack: {
+    args: [0, 0],
+    doc: "The Whack Special Maneuver (Priest): a stack of Tension, an Opponent below Injured and out of Long Range picked - "
+       + "once each an Encounter - and a Clash (Strike vs Strike/Dodge); won, a 1d10 - a 10, Defeated (chat.mjs whack)."
+  },
   boom: {
     args: [0, 0],
     doc: "The Boom Special Maneuver (Mage): up to 2 stacks of Tension asked, then the Basic Attack offered out of sequence - "
