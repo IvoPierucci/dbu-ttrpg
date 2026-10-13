@@ -20,12 +20,12 @@ text: >
 
 ---
 
-# (1) and (2) are here and are the whole of themselves. (3) and (4) are not:
+# (1), (2) and (3) are the blocks below.
 #
-#   - (4) hangs two Signature features onto a Basic Attack that is not a Signature
-#     Technique, refills Capacity first and leaves the State afterwards. The two
-#     features exist now; what does not is a way to put them on an attack that did
-#     not declare them, or to refill Capacity, which is spent rather than set.
+#   - (4) is built in code: asked as the Basic Attack is declared, before its Ki Wager, once
+#     an Encounter - the two features put on the Maneuver, the Capacity reset, and the State
+#     left once the attack is concluded (maneuvers.mjs askEntrustedAllIn, chat.mjs
+#     entrustedAllInEnds). Questing Wisdom (2) opens it to the Signature Technique too.
 
 # (1) and (2). The Greater Dice line is the same one Superior uses, and the same Slot.
 [passive]

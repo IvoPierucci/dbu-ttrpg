@@ -12562,6 +12562,7 @@ export async function frozenTurnAfterManeuver(actor, card) {
 async function frozenTurnAfterAttack(attack) {
   // And whatever lasted "for the duration of that Attacking Maneuver" - Heart of Glass's Surging - with it.
   await glassSurgeEnds(attack);
+  await entrustedAllInEnds(attack);
   // Glass Shards (5), (7): "After concluding that Attacking Maneuver, that Character stops being a Shard Carrier."
   if (attack?.shardEnds) await shardsSpent(attack.shardEnds);
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
@@ -12575,6 +12576,15 @@ async function glassSurgeEnds(attack) {
   if (!attacker?.isOwner || !((Number(attacker.system.states?.surging) || 0) > 0)) return;
   const { leaveState } = await import("./effects/moments-runtime.mjs");
   await leaveState(attacker, "surging");
+}
+
+/** Entrusted (4): "then leave the Entrusted Special State after concluding that Attacking Maneuver." */
+async function entrustedAllInEnds(attack) {
+  if (!attack?.entrustedAllIn) return;
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker?.isOwner || !((Number(attacker.system.states?.entrusted) || 0) > 0)) return;
+  const { leaveState } = await import("./effects/moments-runtime.mjs");
+  await leaveState(attacker, "entrusted");
 }
 
 /** Its card: End Frozen Turn, for its user, while it lasts. */
@@ -14209,6 +14219,19 @@ export async function galaxyHoldsPower(actor) {
   await requestActorUpdate(actor, { [`flags.${SCOPE}.galaxyEncounter`]: encounter, [`flags.${SCOPE}.galaxyHold`]: roundKey() });
   await recordManeuverType(actor, "outOfSequence", {});
   return takeSurge(actor, { source: "Galaxy at the Brink", kind: "ki" });
+}
+
+/**
+ * Questing Wisdom (3): "When you regain Ki Points through an Ally's use of the Empower Maneuver, you may use the Power Up
+ * Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver." The two offered on the Empower's card - once a Round,
+ * counted when one is taken.
+ */
+export function questingOffers(actor) {
+  if (!actor || actor.system?.defeated || (actor.system?.effects?.slots?.["questing.empowered"] !== true)) return [];
+  if (actor.getFlag?.(SCOPE, "questingRound") === roundKey()) return [];
+  const offer = (maneuverId, maneuverName) => ({ actorUuid: actor.uuid, actorName: actor.name, maneuverId, maneuverName,
+    reason: "Questing Wisdom - Empowered", grants: { questing: true } });
+  return [offer("power-up", "Power Up"), offer("transformation", "Transformation")];
 }
 
 /**
@@ -16111,6 +16134,8 @@ async function takeOutOfSequence(message, actor, offer) {
     const brigand = fromUuidSync(offer.grants.brigandFrom);
     if (brigand) await requestActorUpdate(brigand, { [`flags.${SCOPE}.brigandRound`]: roundKey() });
   }
+  // Questing Wisdom (3)'s, once a Round.
+  if (offer.grants?.questing) await requestActorUpdate(actor, { [`flags.${SCOPE}.questingRound`]: roundKey() });
   // Power of the Hera (3)'s, once a Round.
   if (offer.grants?.heraPowerUp) await requestActorUpdate(actor, { [`flags.${SCOPE}.heraPowerUpRound`]: roundKey() });
   // Greed of the Hera (2)'s, once a Round.
@@ -16299,7 +16324,7 @@ export async function postAttack(actor, target, maneuver,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
-                                   shardEnds = "", greedMagnitude = 0, greedCharges = 0 },
+                                   shardEnds = "", greedMagnitude = 0, greedCharges = 0, entrustedAllIn = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -16456,6 +16481,8 @@ export async function postAttack(actor, target, maneuver,
           ...((eyeWeapon && !reflecting) ? { eyeWeapon: true } : {}),
           // Heart of Glass (3)'s Surging, for this attack alone - left as it is concluded.
           ...((glassSurge && !reflecting) ? { glassSurge: true } : {}),
+          // Entrusted (4): the State left once this is concluded (entrustedAllInEnds).
+          ...((entrustedAllIn && !reflecting) ? { entrustedAllIn: true } : {}),
           // Glass Shards: the Shard Carrier its shards are spent from once it is concluded - (5), (7) - and (2)'s Homing.
           ...((shardEnds && !reflecting) ? { shardEnds } : {}),
           ...((!reflecting && (actor.system.effects?.slots?.["shards.homing"] === true)
@@ -20578,7 +20605,7 @@ function renderLoss(message, html) {
   (html.querySelector(".message-content") ?? html).append(note);
 }
 
-export async function reduceLifePoints(target, amount, { reason = "Life Point reduction", own = false } = {}) {
+export async function reduceLifePoints(target, amount, { reason = "Life Point reduction", own = false, momentum = true } = {}) {
   const taken = Math.max(0, Math.floor(amount));
   if (!taken) return { taken: 0, knockedThrough: false };
 
@@ -20610,7 +20637,8 @@ export async function reduceLifePoints(target, amount, { reason = "Life Point re
   // "Apparel loses 1 Break Value if you are knocked through a Health Threshold."
   if (knockedThrough) await sayApparelBreak(target);
   // Of their own doing - Holstein Shock's: Reduced Momentum.
-  if (knockedThrough && own) await reducedMomentum(target);
+  // Not where the effect waives it - Questing Wisdom's.
+  if (knockedThrough && own && momentum) await reducedMomentum(target);
   return { taken, knockedThrough };
 }
 

@@ -415,12 +415,16 @@ async function transferKi(actor, ally, actionsSpent) {
     "system.ki.value": Math.min(ally.system.ki.max, ally.system.ki.value + sent)
   });
 
+  // Questing Wisdom (3): the Ally's Power Up or Transformation, out of sequence, offered on this card.
+  const { questingOffers } = await import("./chat.mjs");
+  const offers = questingOffers(ally);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}
       sends <strong>${sent}</strong> Ki Points to
       ${Handlebars.escapeExpression(ally.name)}
-      <em>Capacity untouched</em></div>`
+      <em>Capacity untouched</em></div>`,
+    ...(offers.length ? { flags: { "dbu-ttrpg": { oosOffers: offers } } } : {})
   });
 
   return true;
@@ -731,6 +735,18 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       <input type="number" name="lifeWager" value="0" min="0" max="${warriorMost}"/>
       <span class="dbu-respond-source">as much on the Ki Wager, free</span></label>`);
   }
+  // Questing Wisdom (4): "you may spend up to x(T) Life Points to increase the Wound Roll of that Attacking Maneuver by an
+  // equal amount. For this effect, x is equal to twice your number of Tension Stacks." Once a Round; no more than the Life
+  // Points left.
+  const questingMost = ((actor.system.effects?.slots?.["questing.lifeWound"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "questingLifeRound") !== round))
+    ? Math.min(2 * (Number(actor.system.resources?.tension?.stacks) || 0) * Math.max(1, Number(tier) || 1),
+      Math.max(0, Number(actor.system.life?.value) || 0)) : 0;
+  if (questingMost) {
+    fields.push(`<label class="dbu-respond-option"${tip("questing-wisdom", 4)}><span class="dbu-respond-name">Questing Wisdom: Life Points</span>
+      <input type="number" name="questingLife" value="0" min="0" max="${questingMost}"/>
+      <span class="dbu-respond-source">as much on the Wound Roll</span></label>`);
+  }
   // Last Resort (2): "while you are below the Injured Health Threshold, you do not have to pay the Ki Point Cost for that
   // instance of the Signature Technique." Once an Encounter.
   const lastResort = (actor.system.effects?.slots?.["signature.lastResort"] === true)
@@ -792,6 +808,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
             maliceBacklash: Math.min(maliceMost, num("maliceBacklash")), mentality: box("mentality"),
             moraleGuard: box("moraleGuard"), creativeCondition: box("creativeCondition"),
             lifeWager: Math.min(warriorMost, num("lifeWager")), lastResort: lastResort && box("lastResort"),
+            questingLife: Math.min(questingMost, num("questingLife")),
             eyeBoth: Boolean(eyeBoth) && box("eyeBoth"),
             earthling: earthlingPicked(form),
             gigaFlare: Math.min(2, num("gigaFlare")),
@@ -884,6 +901,15 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     woundExtra.push({ label: "Majin Mentality", value: mentalityWound });
   }
   delete answers.mentality;
+  // Questing Wisdom (4): the Life Points paid - "If you are knocked through a Health Threshold by this effect, do not suffer
+  // from Reduced Momentum" - and as much on the Wound Roll.
+  if (answers.questingLife > 0) {
+    await actor.setFlag("dbu-ttrpg", "questingLifeRound", round);
+    const { reduceLifePoints } = await import("./chat.mjs");
+    const { taken } = await reduceLifePoints(actor, answers.questingLife, { reason: "Questing Wisdom", own: true, momentum: false });
+    if (taken) woundExtra.push({ label: "Questing Wisdom", value: taken });
+  }
+  delete answers.questingLife;
   if (woundExtra.length) answers.woundExtra = woundExtra;
   const extraActions = (answers.gigaFlare ?? 0) + (answers.superCombination ?? 0);
   if (extraActions) {

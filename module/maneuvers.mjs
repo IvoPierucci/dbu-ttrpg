@@ -2414,7 +2414,12 @@ function profileGroups(foundations, allowed = [], actor = null) {
  * @returns {Promise<?{profile: string, foundation: string}>}
  */
 export async function declareAttack(maneuver, foundations, actor, limits = {}) {
-  const declared = await pickProfile(maneuver, foundations, actor, limits);
+  // Entrusted (4): Full Wager and All or Nothing, asked before the Ki Wager is.
+  const allIn = await askEntrustedAllIn(actor, maneuver);
+  if (allIn === null) return null;
+  maneuver = allIn;
+  const picked = await pickProfile(maneuver, foundations, actor, limits);
+  const declared = (picked && maneuver.entrustedAllIn) ? { ...picked, entrustedAllIn: true } : picked;
   if (!declared) return null;
 
   const { profile, kiWager, wagerFromLife = false, wagerFromDivine = false } = declared;
@@ -2433,9 +2438,11 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   const answers = await askFeatures(maneuver, actor, advantages);
   if (!answers) return null;
 
+  const allInMark = declared.entrustedAllIn ? { entrustedAllIn: true } : {};
   if (!profile) {
     return withGreedCharges(actor, maneuver,
-      await withLastResource(actor, await withOverwhelm(actor, { profile: "", foundation: "physical", kiWager, advantages, ...answers })));
+      await withLastResource(actor, await withOverwhelm(actor, { profile: "", foundation: "physical", kiWager, advantages, ...answers,
+        ...allInMark })));
   }
 
   // A Foundation this character cannot use is offered greyed out rather than left off
@@ -2467,7 +2474,38 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   if (!foundation) return null;
 
   return withGreedCharges(actor, maneuver,
-    await withLastResource(actor, await withOverwhelm(actor, { profile, foundation, kiWager, wagerFromLife, wagerFromDivine, advantages, ...answers })));
+    await withLastResource(actor, await withOverwhelm(actor, { profile, foundation, kiWager, wagerFromLife, wagerFromDivine, advantages, ...answers,
+      ...allInMark })));
+}
+
+/**
+ * Entrusted (4): "If you would use the Basic Attack Maneuver, you may apply the Full Wager Advantage and All-or-Nothing
+ * Disadvantage to that Attacking Maneuver. If you do, reset your Capacity to your Max Capacity before using this Attacking
+ * Maneuver and then leave the Entrusted Special State after concluding that Attacking Maneuver." Once an Encounter - and
+ * through the Signature Technique Maneuver instead where Questing Wisdom (2) allows it (`entrusted.signature`). Asked
+ * before the Ki Wager; taken, the Capacity reset and the two put on the Maneuver, `entrustedAllIn` carried to the attack
+ * (chat.mjs entrustedAllInEnds). The Maneuver as it then stands; null where the question was closed.
+ */
+async function askEntrustedAllIn(actor, maneuver) {
+  if (!actor || !maneuver?.attacking || !((Number(actor.system?.states?.entrusted) || 0) > 0)) return maneuver;
+  const technique = maneuver.signature && !maneuver.signatureTechnique;
+  if ((maneuver.id !== BASIC_ATTACK) && !(technique && (actor.system.effects?.slots?.["entrusted.signature"] === true))) {
+    return maneuver;
+  }
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.("dbu-ttrpg", "entrustedAllIn") === encounter) return maneuver;
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Entrusted" },
+    content: `<p data-tooltip="Once an Encounter. Your Capacity reset to its Max first; Entrusted left once the attack is concluded.">Full Wager and All or Nothing?</p>`,
+    buttons: [{ action: "yes", label: "Yes" }, { action: "no", label: "No", default: true }],
+    rejectClose: false
+  });
+  if (!answer) return null;
+  if (answer !== "yes") return maneuver;
+  await actor.setFlag("dbu-ttrpg", "entrustedAllIn", encounter);
+  await actor.update({ "system.capacity.spent": 0 });
+  return { ...maneuver, advantages: withGranted(withGranted(maneuver.advantages, "full-wager"), "all-or-nothing"),
+    entrustedAllIn: true };
 }
 
 /** Overwhelming Assault (2)'s four effects, each for 2 stacks of Overwhelm. */

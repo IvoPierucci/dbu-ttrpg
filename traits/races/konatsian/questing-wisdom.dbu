@@ -1,0 +1,35 @@
+id: questing-wisdom
+name: Questing Wisdom
+order: 3
+category: mind
+importance: secondary
+description: >
+  Guided by truth and wisdom, you follow the surest path to your goals.
+text: >
+  Questing Wisdom (Mind): Guided by truth and wisdom, you follow the surest path to your goals.
+  (1)-[Passive]: Increase the number of Technique Points you gain from Skill Improvements by 3.
+  (2)-[Passive]: You may use the 4th effect of the Entrusted Special State when you use the Signature Technique Maneuver instead of a Basic Attack Maneuver.
+  (3)-[Triggered, 1/Round]: When you regain Ki Points through an Ally’s use of the Empower Maneuver, you may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver.
+  (4)-[Triggered, 1/Round]: When you use the Signature Technique Maneuver, you may spend up to x(T) Life Points to increase the Wound Roll of that Attacking Maneuver by an equal amount. For this effect, x is equal to twice your number of Tension Stacks. If you are knocked through a Health Threshold by this effect, do not suffer from Reduced Momentum.
+  (5)-[Triggered, 1/Encounter]: If you use an Ultimate Signature Technique, gain 1 Tension.
+
+---
+
+[passive]
+# (1) On every Skill Improvement row, as Quick to Master's.
+techniquePoints.perSkillImprovement += 3;
+# (2) Entrusted's 4th offered on a Signature Technique too - its one use an Encounter shared (maneuvers.mjs
+# askEntrustedAllIn).
+allow entrusted.signature;
+# (3) Ki from an Ally's Empower: the Power Up and the Transformation offered on its card out of sequence, once a Round -
+# counted when one is taken (chat.mjs questingOffers).
+allow questing.empowered;
+# (4) In the Signature Technique's own questions, once a Round: up to 2(T) Life Points a stack of Tension (Battle
+# Tension's), as much on the Wound Roll; knocked through by them, no Reduced Momentum (use-maneuver.mjs).
+allow questing.lifeWound;
+
+# (5) An Ultimate Signature Technique declared: a stack of Tension. Automatic by default, its Triggered/Automatic button;
+# set Triggered, asked in the window as it is declared.
+[triggered/declare-maneuver, 1/encounter, toggle, effect 5]
+requires usingUltimate;
+tension.stacks += 1;

@@ -539,7 +539,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // An Ally dealt Damage by your attack this Round (Cutthroat Teamwork's).
   "allyHitThisRound",
   // Greed of the Hera's 7th ignored this turn (Galaxy at the Brink's).
-  "powerHeld"]);
+  "powerHeld",
+  // An Ultimate Signature Technique being declared (Questing Wisdom's).
+  "usingUltimate"]);
 
 /**
  * Dice the character already has, named rather than written out.

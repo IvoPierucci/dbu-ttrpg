@@ -165,6 +165,10 @@ const PREDICATES = {
   /** Is the Maneuver being declared one made through the Signature Technique Maneuver - God of Judgment's. */
   signatureTechnique: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique),
 
+  /** An Ultimate Signature Technique being declared - Questing Wisdom's. */
+  usingUltimate: scope => Boolean(scope.context?.maneuver?.signature && !scope.context?.maneuver?.signatureTechnique
+    && scope.context?.maneuver?.ultimate),
+
   /** No Counter Action left - Lingering Instincts' "while you possess no Counter Actions". */
   noCounterActions: scope => (Number(scope.data?.actions?.counterLeft) || 0) <= 0,
 
