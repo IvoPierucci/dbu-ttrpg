@@ -4,20 +4,27 @@ kind: state
 description: >
   You refuse to fall, and pay for it in every exchange.
 text: >
-  You cannot be Defeated, and Damage can take your Life Points below zero.
-  Reduce your Combat Rolls by 1(T).
+  Narrative Requirement: Pure determination fuels you, allowing you to keep fighting beyond what would normally kill others.
+  (1)-[Passive]: You cannot be Defeated but Damage can reduce your Life Points into negative values. If your Life Points are in a negative value when you leave this State, you are immediately Defeated. No effects can prevent you from being Defeated from this effect.
+  (2)-[Automatic/Undying]: If you enter this State due to an effect that occurred when you would have been Defeated, set your Life Points to 1.
+  (3)-[Passive]: Reduce your Combat Rolls by 1(T).
 
 ---
 
-# Two prohibitions rather than one: defeat is forbidden while this lasts, and
-# the automatic block catches the moment it would otherwise be registered.
-# life.allowNegative is what stops the pipeline flooring Life at zero, which
-# is the one stated exception to the rule that nothing goes below it.
-
+# (1) Defeat forbidden while this lasts; life.allowNegative is what stops the pipeline flooring Life at zero, the one stated
+# exception to the rule that nothing goes below it. (3)
 [passive]
 forbid defeat;
 life.allowNegative = true;
 combatRolls -= 1(T);
 
-[automatic/defeated]
+# (2) Entered at the Life Points you would be Defeated at - by what answered that Defeat (Saiyan Heritage's Steadfast Check,
+# Entering Undying...): 1.
+[on applied]
+requires atDefeat;
 life.value = 1;
+
+# (1) Left below nothing - the stored Life Points, the derived ones floored again - Defeated at once, nothing answering it
+# (chat.mjs undyingFall).
+[on removed]
+undyingFall();

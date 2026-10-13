@@ -273,6 +273,9 @@ const PREDICATES = {
     return (mine === undefined) || (theirs === undefined) || (theirs !== mine);
   },
 
+  /** At the Life Points they would be Defeated at, or below - Undying (2)'s "when you would have been Defeated". */
+  atDefeat: scope => (Number(scope.data?.life?.value) || 0) <= (Number(scope.data?.life?.min) || 0),
+
   /** Surging (5): the one Defeated was your Focus. */
   defeatedFocus: scope => Boolean(scope.context?.defeatedUuid)
     && (scope.context.defeatedUuid === (scope.data?.parent?.getFlag?.("dbu-ttrpg", "surgingFocus") ?? "")),

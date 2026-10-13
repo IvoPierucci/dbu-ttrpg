@@ -545,7 +545,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Your Surging Focus Defeated; Surging's second effect ignored (Surging's).
   "defeatedFocus", "surgingSpared",
   // Hit by an Opponent's attack, not an Ally's (Superior's).
-  "byOpponent"]);
+  "byOpponent",
+  // At Defeat's Life Points (Undying's).
+  "atDefeat"]);
 
 /**
  * Dice the character already has, named rather than written out.

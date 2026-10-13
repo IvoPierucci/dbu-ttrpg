@@ -13032,6 +13032,17 @@ export async function dancerHype(actor) {
 }
 
 /**
+ * Undying (1): "If your Life Points are in a negative value when you leave this State, you are immediately Defeated. No
+ * effects can prevent you from being Defeated from this effect." Begun at once, nothing answering it.
+ */
+export async function undyingFall(actor) {
+  // The stored Life Points: out of the State, the derived ones are floored at nothing again.
+  if (!((Number(actor?._source?.system?.life?.value ?? actor?.system?.life?.value) || 0) < 0)) return;
+  const { beginDefeat } = await import("./combat.mjs");
+  return beginDefeat(actor, { silenced: true });
+}
+
+/**
  * Raging, Apoplectic (1): "You may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver" - once a Round, counted when
  * the Basic Attack is made.
  */

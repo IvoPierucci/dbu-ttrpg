@@ -111,6 +111,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  undyingFall: {
+    args: [0, 0],
+    doc: "Undying (1): leaving it below nothing - Defeated at once, nothing answering it (chat.mjs undyingFall)."
+  },
   rageStrike: {
     args: [0, 0],
     doc: "Raging, Apoplectic (1): the Basic Attack out of sequence, once a Round (chat.mjs rageStrike)."
