@@ -111,6 +111,11 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  boom: {
+    args: [0, 0],
+    doc: "The Boom Special Maneuver (Mage): up to 2 stacks of Tension asked, then the Basic Attack offered out of sequence - "
+       + "the Simple Profile of the Magic Foundation, a Standard Sphere on a Square (chat.mjs boom)."
+  },
   shedCondition: {
     args: [0, 9],
     names: [0, 1, 2, 3, 4, 5, 6, 7, 8],

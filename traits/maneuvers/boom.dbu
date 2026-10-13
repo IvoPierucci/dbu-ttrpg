@@ -1,0 +1,35 @@
+id: boom
+name: Boom
+type: standard
+actionCost: 1
+kiCostPerTier: 2
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+exploitable: All adjacent Opponents.
+source: Core Rule
+description: >
+  A Square picked: the Basic Attack out of sequence, Simple (Magic), a Standard Sphere on it - up to 2 Tension for Magnitude, Charges and Broken.
+text: >
+  Boom Maneuver [1/Round]: Unleashes an explosion that damages all enemies.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: 2(T)
+  –Exploitable: All adjacent Opponents.
+  –Effect: Select a Square. Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver, but you must select the Simple Profile (Magic Foundation) for that Attacking Maneuver and it has a Standard Sphere AoE using the selected Square as the Target Square.
+
+  When using an Attacking Maneuver through this Maneuver, you may spend up to 2 stacks of Tension, but you do not lose these stacks of Tension until after completing this Attacking Maneuver. For each stack of Tension spent:
+  * Increase the Magnitude of this Attacking Maneuver by 1.
+  * Apply an Energy Charge to this Attacking Maneuver.
+  * Apply a stack of Broken to the Character(s) that take Damage from this Attacking Maneuver.
+
+---
+
+# A Special Maneuver: open where an effect grants it - the Mage Vocation. Used, how many stacks of Tension asked (up to 2,
+# Battle Tension's), then the Basic Attack offered out of sequence on a card of its own: the Simple Profile of the Magic
+# Foundation, a Standard Sphere on a Square - which Square, the table's - a Magnitude and an Energy Charge a stack, Broken on
+# whoever it deals Damage to, the stacks lost once it is complete (chat.mjs boom, boomEnds).
+[on used]
+boom();

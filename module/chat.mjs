@@ -12588,6 +12588,7 @@ async function frozenTurnAfterAttack(attack) {
   await glassSurgeEnds(attack);
   await entrustedAllInEnds(attack);
   await warriorTensionEnds(attack);
+  await boomEnds(attack);
   // Glass Shards (5), (7): "After concluding that Attacking Maneuver, that Character stops being a Shard Carrier."
   if (attack?.shardEnds) await shardsSpent(attack.shardEnds);
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
@@ -12601,6 +12602,35 @@ async function glassSurgeEnds(attack) {
   if (!attacker?.isOwner || !((Number(attacker.system.states?.surging) || 0) > 0)) return;
   const { leaveState } = await import("./effects/moments-runtime.mjs");
   await leaveState(attacker, "surging");
+}
+
+/** Boom: "you do not lose these stacks of Tension until after completing this Attacking Maneuver." */
+async function boomEnds(attack) {
+  if (!(Number(attack?.boom?.tension) > 0)) return;
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker?.isOwner) return;
+  const held = Number(attacker.system.resources?.tension?.stacks) || 0;
+  await setResource(attacker, "tension", Math.max(0, held - Number(attack.boom.tension)));
+}
+
+/**
+ * Boom (Mage): "Select a Square. Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver, but you must select the
+ * Simple Profile (Magic Foundation) for that Attacking Maneuver and it has a Standard Sphere AoE using the selected Square as
+ * the Target Square." Up to 2 stacks of Tension asked first - each a Magnitude, an Energy Charge and a stack of Broken on
+ * whoever it deals Damage to, the stacks lost once it is complete. The Basic Attack offered on a card of its own; the Square
+ * the table's.
+ */
+export async function boom(actor) {
+  const held = Number(actor.system.resources?.tension?.stacks) || 0;
+  const tension = held ? await askPlayerAmount(actor, `${actor.name}: Boom`, Math.min(2, held),
+    "Stacks of Tension (a Magnitude, an Energy Charge and a Broken each)") : 0;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    reason: `Boom - a Standard Sphere on a Square${tension ? `, ${tension} Tension` : ""}`,
+    grants: { profile: "simple", profileFoundation: { simple: "magic" },
+      area: { shape: "sphere", magnitude: "standard", anySquare: true, ...(tension ? { magnitudeSteps: tension } : {}) },
+      ...(tension ? { charges: tension, boom: { tension, condition: "broken", stacks: tension } } : {}) } };
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
 }
 
 /** Warrior (4): "You do not lose this stack of Tension until after you complete this Attacking Maneuver." */
@@ -14358,7 +14388,7 @@ async function mendCostume(actor) {
   }
 }
 
-/** Greed of the Hera (4): "For every 2(bT) Ki Points spent, increase the Magnitude of that Attacking Maneuver by 1." */
+/** Magnitudes bought as it was declared - Greed of the Hera (4)'s, Mage (4)'s (maneuvers.mjs askBoughtAreas). */
 function greedArea(area, steps) {
   if (!area || !(Number(steps) > 0)) return area;
   return { ...area, magnitudeSteps: (Number(area.magnitudeSteps) || 0) + Number(steps) };
@@ -16110,11 +16140,11 @@ async function takeOutOfSequence(message, actor, offer) {
     if (granted?.shardEnds) declared = { ...declared, shardEnds: granted.shardEnds };
     // Warrior (4), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
-    // Greed of the Hera (3) and (4), out of sequence as in it.
-    const { askGreedArea, askGreedMagnitude } = await import("./maneuvers.mjs");
-    declared = await askGreedArea(actor, maneuver, declared, { noArea: Boolean(granted?.noArea) });
-    declared = await askGreedMagnitude(actor, declared, (maneuver.signature && !maneuver.signatureTechnique)
-      ? (maneuver.area ?? null) : (declared.area ?? PROFILES[declared.profile]?.area ?? null));
+    // Boom's: its Tension's Broken and the stacks it spends.
+    if (granted?.boom) declared = { ...declared, boom: granted.boom };
+    // Greed of the Hera's and Mage's AoE and Magnitudes, out of sequence as in it.
+    declared = await (await import("./maneuvers.mjs")).askBoughtAreas(actor, maneuver, declared,
+      { noArea: Boolean(granted?.noArea) });
   }
 
   // A Movement's price is a choice rather than a number - Normal Speed for nothing,
@@ -16370,8 +16400,8 @@ export async function postAttack(actor, target, maneuver,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
-                                   shardEnds = "", greedMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
-                                   tensionCharges = 0, warriorTension = false },
+                                   shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
+                                   tensionCharges = 0, warriorTension = false, boom = null },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -16541,6 +16571,8 @@ export async function postAttack(actor, target, maneuver,
           ...((tensionCharges && !reflecting) ? { tensionSpent: true } : {}),
           // Warrior (4): its stack of Tension lost once this is concluded (warriorTensionEnds).
           ...((warriorTension && !reflecting) ? { warriorTension: true } : {}),
+          // Boom: Broken on whoever it deals Damage to, its Tension lost once it is concluded (boomEnds).
+          ...((boom && !reflecting) ? { boom } : {}),
           // Glass Shards: the Shard Carrier its shards are spent from once it is concluded - (5), (7) - and (2)'s Homing.
           ...((shardEnds && !reflecting) ? { shardEnds } : {}),
           ...((!reflecting && (actor.system.effects?.slots?.["shards.homing"] === true)
@@ -16637,7 +16669,7 @@ export async function postAttack(actor, target, maneuver,
           // Sphere. Null for every attack whose Area, if any, is its Profile's. A Technique's is
           // the one its features built.
           area: greedArea(overwhelmedArea(sizedArea(actor, target, technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null),
-            { portal }), reflecting ? null : overwhelm), reflecting ? 0 : greedMagnitude),
+            { portal }), reflecting ? null : overwhelm), reflecting ? 0 : boughtMagnitude),
           // Critical Point (2): primed by the Energy Charge Maneuver this Round.
           ...((primed && !reflecting) ? { primed: true } : {}),
           // Overwhelming Assault's stacks, and Last Resource's, lost once this is done (spendOverwhelm).
@@ -22506,6 +22538,12 @@ async function applyAttackDamage(message, target, attack) {
   if (own.hit && !isAbsoluteMiss(own)) offerBouncyMove(message, target, armsUser);
   // Powerful Physique: hit by it, the Basic Attack back once it is done.
   if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerPhysiqueStrike(message, target, armsUser);
+  // Boom: "Apply a stack of Broken to the Character(s) that take Damage from this Attacking Maneuver" - one a stack of
+  // Tension spent.
+  if ((damage > 0) && !isAbsoluteMiss(own) && attack.boom?.condition && (Number(attack.boom.stacks) > 0)) {
+    const { gainCondition } = await import("./effects/moments-runtime.mjs");
+    await gainCondition(target, attack.boom.condition, Number(attack.boom.stacks));
+  }
   // Hit by an Opponent's Attacking Maneuver for a quarter (rounded up) of your Maximum Life Points or more - Fight against
   // Power's.
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)

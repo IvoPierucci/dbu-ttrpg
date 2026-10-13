@@ -381,6 +381,11 @@ async function runVerb(actor, call, context) {
       return shardBurst(actor);
     }
 
+    case "boom": {
+      const { boom } = await import("../chat.mjs");
+      return boom(actor);
+    }
+
     case "shedCondition": {
       const besides = args.map(name => String(name).toLowerCase());
       const held = Object.entries(actor.system?.conditions ?? {}).filter(([key, stacks]) => ((Number(stacks) || 0) > 0)

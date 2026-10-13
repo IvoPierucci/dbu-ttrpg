@@ -1546,57 +1546,78 @@ export async function askEyeWeapon(actor, declared) {
 }
 
 /**
- * Greed of the Hera (3): "If you would use the Basic Attack Maneuver to make an Attacking Maneuver that does not possess an
- * AoE, you may spend 3(bT) Ki Points to apply a Cone or Line AoE to that Attacking Maneuver." Asked once declared, once a
- * Round; paid with the attack (`kiSurcharge`). No Magnitude named, so Standard (DEFAULT_AREA_MAGNITUDE). Not where what
- * offered it forbids an AoE - a Feint's.
+ * What may be bought onto an attack's Area as it is declared, in order: an AoE where there is none - Greed of the Hera (3)
+ * on a Basic Attack, Mage (3) on a Magic Attack - then Magnitudes on the one it has - Greed of the Hera (4), Mage (4). Each
+ * asked once a Round, paid with the attack (`kiSurcharge`); the Magnitudes carried as `boughtMagnitude` (chat.mjs
+ * postAttack), so a Signature Technique's Area takes them too. Not where what offered it forbids an AoE - a Feint's.
  */
-export async function askGreedArea(actor, maneuver, declared, { noArea = false } = {}) {
-  if (!declared || noArea || (maneuver?.id !== BASIC_ATTACK) || (actor?.system?.effects?.slots?.["greed.area"] !== true)) {
-    return declared;
+export async function askBoughtAreas(actor, maneuver, declared, { noArea = false } = {}) {
+  if (!declared || !maneuver?.attacking) return declared;
+  const slots = actor?.system?.effects?.slots ?? {};
+  const bT = Math.max(1, Number(actor?.system?.baseTierOfPower) || 1);
+  const magic = declared.foundation === "magic";
+  // Greed of the Hera (3): "If you would use the Basic Attack Maneuver to make an Attacking Maneuver that does not possess
+  // an AoE, you may spend 3(bT) Ki Points to apply a Cone or Line AoE to that Attacking Maneuver."
+  if (!noArea && (maneuver.id === BASIC_ATTACK) && (slots["greed.area"] === true)) {
+    declared = await askAddedArea(actor, declared, { title: "Greed of the Hera", flag: "greedAreaRound", ki: 3 * bT });
   }
+  // Mage (3): "When using a Magic Attack that does not possess an AoE, you can spend 2(bT) Ki Points to apply a Line or Cone
+  // AoE to that Attacking Maneuver."
+  if (!noArea && magic && (slots["mage.area"] === true)) {
+    declared = await askAddedArea(actor, declared, { title: "Mage", flag: "mageAreaRound", ki: 2 * bT });
+  }
+  const area = () => (maneuver.signature && !maneuver.signatureTechnique)
+    ? (maneuver.area ?? null) : (declared.area ?? PROFILES[declared.profile]?.area ?? null);
+  // Greed of the Hera (4): "If you would use an Attacking Maneuver with a Minor or Standard AoE, you may spend up to 4(bT) Ki
+  // Points. For every 2(bT) Ki Points spent, increase the Magnitude of that Attacking Maneuver by 1."
+  if ((slots["greed.magnitude"] === true) && area() && (magnitudeIndex(area()) <= MAGNITUDES.indexOf("standard"))) {
+    declared = await askBoughtMagnitude(actor, declared, area(), { title: "Greed of the Hera", flag: "greedMagnitudeRound", step: 2 * bT });
+  }
+  // Mage (4): "When using a Magic Attack with an AoE, you may spend up to 4(bT) Ki Points. For every 2(bT) Ki Points spent,
+  // increase the Magnitude of that Attacking Maneuver by 1."
+  if (magic && (slots["mage.magnitude"] === true) && area()) {
+    declared = await askBoughtMagnitude(actor, declared, area(), { title: "Mage", flag: "mageMagnitudeRound", step: 2 * bT });
+  }
+  return declared;
+}
+
+/** A Cone or a Line, Standard (no Magnitude named - DEFAULT_AREA_MAGNITUDE), on an attack with no AoE: asked, once a Round. */
+async function askAddedArea(actor, declared, { title, flag, ki }) {
   if (declared.area ?? PROFILES[declared.profile]?.area) return declared;
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
-  if (actor.getFlag?.("dbu-ttrpg", "greedAreaRound") === round) return declared;
-  const ki = 3 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
-  if ((Number(actor.system.ki?.value) || 0) < ki) return declared;
+  if (actor.getFlag?.("dbu-ttrpg", flag) === round) return declared;
+  if (((Number(actor.system.ki?.value) || 0) - (Number(declared.kiSurcharge) || 0)) < ki) return declared;
   const shape = await foundry.applications.api.DialogV2.wait({
-    classes: ["dbu-dialog"], window: { title: "Greed of the Hera" },
+    classes: ["dbu-dialog"], window: { title },
     content: `<p data-tooltip="Once a Round. A Standard AoE.">${ki} Ki: a Cone or a Line?</p>`,
     buttons: [{ action: "cone", label: "Cone" }, { action: "line", label: "Line" }, { action: "no", label: "No" }],
     rejectClose: false
   });
   if (!["cone", "line"].includes(shape)) return declared;
-  await actor.setFlag("dbu-ttrpg", "greedAreaRound", round);
+  await actor.setFlag("dbu-ttrpg", flag, round);
   return { ...declared, area: { shape }, kiSurcharge: (Number(declared.kiSurcharge) || 0) + ki };
 }
 
-/**
- * Greed of the Hera (4): "If you would use an Attacking Maneuver with a Minor or Standard AoE, you may spend up to 4(bT) Ki
- * Points. For every 2(bT) Ki Points spent, increase the Magnitude of that Attacking Maneuver by 1." Asked once declared,
- * once a Round, of the Area it has then; paid with the attack (`kiSurcharge`), carried as `greedMagnitude` (chat.mjs
- * postAttack).
- */
-export async function askGreedMagnitude(actor, declared, area) {
-  if (!declared || !area || (actor?.system?.effects?.slots?.["greed.magnitude"] !== true)) return declared;
-  if (magnitudeIndex(area) > MAGNITUDES.indexOf("standard")) return declared;
+/** 1 or 2 Magnitudes on the Area it has, `step` Ki each: asked, once a Round. */
+async function askBoughtMagnitude(actor, declared, area, { title, flag, step }) {
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
-  if (actor.getFlag?.("dbu-ttrpg", "greedMagnitudeRound") === round) return declared;
-  const step = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  if (actor.getFlag?.("dbu-ttrpg", flag) === round) return declared;
   const ki = (Number(actor.system.ki?.value) || 0) - (Number(declared.kiSurcharge) || 0);
   if (ki < step) return declared;
   const steps = Number(await foundry.applications.api.DialogV2.wait({
-    classes: ["dbu-dialog"], window: { title: "Greed of the Hera" },
+    classes: ["dbu-dialog"], window: { title },
     content: `<p data-tooltip="Once a Round. ${step} Ki for each.">The Magnitude of its ${
-      Handlebars.escapeExpression(areaLabel(area))}?</p>`,
+      Handlebars.escapeExpression(areaLabel({ ...area, magnitudeSteps: (Number(area.magnitudeSteps) || 0)
+        + (Number(declared.boughtMagnitude) || 0) }))}?</p>`,
     buttons: [{ action: "1", label: `+1 (${step} Ki)` },
       ...((ki >= 2 * step) ? [{ action: "2", label: `+2 (${2 * step} Ki)` }] : []),
       { action: "0", label: "No" }],
     rejectClose: false
   })) || 0;
   if (!steps) return declared;
-  await actor.setFlag("dbu-ttrpg", "greedMagnitudeRound", round);
-  return { ...declared, greedMagnitude: steps, kiSurcharge: (Number(declared.kiSurcharge) || 0) + (steps * step) };
+  await actor.setFlag("dbu-ttrpg", flag, round);
+  return { ...declared, boughtMagnitude: (Number(declared.boughtMagnitude) || 0) + steps,
+    kiSurcharge: (Number(declared.kiSurcharge) || 0) + (steps * step) };
 }
 
 /**

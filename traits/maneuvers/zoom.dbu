@@ -1,0 +1,24 @@
+id: zoom
+name: Zoom
+type: instant
+actionCost: 0
+kiCostPerTier: 4
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/encounter
+source: Core Rule
+description: >
+  You, and any willing Allies within a Large Sphere around you, to a Square - kept where they stood around you.
+text: >
+  Zoom Maneuver [1/Encounter]: Instantaneously teleport to a nearby area.
+  –Maneuver Type: Instant Maneuver
+  –Action Cost: N/A
+  –Minions: N/A
+  –KP Cost: 4(T)
+  –Effect: Select a Square. You and any number of willing Allies within a Large Sphere AoE (centered on you) are transported to that Square. You are positioned on that Square and your Allies are positioned in relation to that Square based on their previous position. If that would result in placing them on an occupied Square, place them on the nearest unoccupied Square to that position (if there is a tie, you decide).
+
+---
+
+# A Special Maneuver: open where an effect grants it - the Mage Vocation. Its card says it; where everyone lands is the
+# map's.
