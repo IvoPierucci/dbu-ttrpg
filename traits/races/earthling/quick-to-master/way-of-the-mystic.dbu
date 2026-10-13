@@ -1,0 +1,16 @@
+id: way-of-the-mystic
+name: Way of the Mystic
+order: 5
+optionOf: quick-to-master
+optionEffect: 3
+description: >
+  Reduce the TP Cost of all Unique Abilities by 5 TP.
+text: >
+  Way of the Mystic [Passive]: Reduce the TP Cost of all Unique Abilities by 5 TP.
+
+---
+
+# Technical and Magical alike - never below half the listed cost (unique.mjs uniqueTPOf).
+[passive]
+unique.technical.tpCost -= 5;
+unique.magical.tpCost -= 5;

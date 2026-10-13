@@ -1,0 +1,16 @@
+id: way-of-the-pilot
+name: Way of the Pilot
+order: 7
+optionOf: quick-to-master
+optionEffect: 3
+# "You gain the Expert Pilot Talent" - given with it when it is written.
+grantsTalent: expert-pilot
+description: >
+  You gain the Expert Pilot Talent and increase the amount of Technique Points your Battle Jackets get at Jacket Creation and each new Tier of Power by 5.
+text: >
+  Way of the Pilot [Passive]: You gain the Expert Pilot Talent and increase the amount of Technique Points your Battle Jackets get at Jacket Creation and each new Tier of Power by 5.
+
+---
+
+# The Expert Pilot Talent is given once it is written; the Battle Jackets' 5 Technique Points more wait on Battle Jackets
+# being built - till then, the table's.

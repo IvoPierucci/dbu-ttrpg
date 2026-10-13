@@ -1,0 +1,16 @@
+id: way-of-the-warrior
+name: Way of the Warrior
+order: 1
+optionOf: quick-to-master
+optionEffect: 3
+description: >
+  When you use the Signature Technique Maneuver, you may reduce your Life Points by up to 10(bT) to gain a free Ki Wager on this Attacking Maneuver equal to the reduction.
+text: >
+  Way of the Warrior [Triggered]: When you use the Signature Technique Maneuver, you may reduce your Life Points by up to 10(bT) to gain a free Ki Wager on this Attacking Maneuver equal to the reduction.
+
+---
+
+# Asked as a Signature Technique is declared, every time: the Life Points given up, up to 10(bT) and what is left - as
+# much on its Ki Wager, outside its price (use-maneuver.mjs askTechniqueDeclaration).
+[passive]
+allow signature.lifeWager;

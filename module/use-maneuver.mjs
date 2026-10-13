@@ -683,6 +683,10 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   // it asked once picked (the user's). One it has already, short of its last rank, is offered its next - at that rank's
   // price (the user's).
   let earthlingOffered = [];
+  // Whose it is - Quick to Master's (2) or Earthling-Raised's (3) - for its name and its line.
+  const raisedBy = [["quick-to-master", 2], ["earthling-raised", 3]].find(([id]) => Array.from(actor.items ?? [])
+    .some(each => each.flags?.["dbu-ttrpg"]?.sourceId === id)) ?? ["earthling-raised", 3];
+  const raisedName = getTrait(raisedBy[0])?.name ?? "Earthling-Raised";
   if (actor.system.effects?.slots?.["signature.earthlingRaised"] === true) {
     const { featureCatalogue, featureTP, maxRanks } = await import("./technique.mjs");
     earthlingOffered = featureCatalogue().advantages.filter(def => (def.choose !== "text") && (ranks(def.id) < maxRanks(def)))
@@ -693,8 +697,8 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     const escape = Handlebars.escapeExpression;
     // A search over them rather than a list (the user's: there are many, and the name is known): typed, the ones it
     // starts; nothing typed, nothing taken.
-    fields.push(`<div class="dbu-respond-option dbu-ua-search"${tip("earthling-raised", 3)}>
-      <span class="dbu-respond-name">Earthling-Raised</span>
+    fields.push(`<div class="dbu-respond-option dbu-ua-search"${tip(...raisedBy)}>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(raisedName)}</span>
       <div class="gear-add-quality">
         <input type="text" class="gear-quality-search" data-earthling-search autocomplete="off"
                placeholder="Energy Charge, or an Advantage (10 TP or less)"/>
@@ -706,6 +710,15 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
         </ol>
       </div></div>`);
+  }
+  // Way of the Warrior (Quick to Master): "you may reduce your Life Points by up to 10(bT) to gain a free Ki Wager on this
+  // Attacking Maneuver equal to the reduction." Every time; no more than the Life Points left.
+  const warriorMost = (actor.system.effects?.slots?.["signature.lifeWager"] === true)
+    ? Math.min(10 * Math.max(1, Number(actor.system.baseTierOfPower) || 1), Math.max(0, Number(actor.system.life?.value) || 0)) : 0;
+  if (warriorMost) {
+    fields.push(`<label class="dbu-respond-option"${tip("quick-to-master", 3)}><span class="dbu-respond-name">Way of the Warrior: Life Points</span>
+      <input type="number" name="lifeWager" value="0" min="0" max="${warriorMost}"/>
+      <span class="dbu-respond-source">as much on the Ki Wager, free</span></label>`);
   }
   // Demonic Creativity (3): "you can spend 1 stack of Demonic Power you possess to apply the Condition Advantage to that
   // Attacking Maneuver." Once a Round; not on one that has it already.
@@ -757,6 +770,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           return { transformed: box("transformed"), finalChance: box("finalChance"),
             maliceBacklash: Math.min(maliceMost, num("maliceBacklash")), mentality: box("mentality"),
             moraleGuard: box("moraleGuard"), creativeCondition: box("creativeCondition"),
+            lifeWager: Math.min(warriorMost, num("lifeWager")),
             earthling: earthlingPicked(form),
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
@@ -772,7 +786,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
 
   if (answers.finalChance) answers.finalChanceLife = life;
   // Earthling-Raised's, for this use alone: the Energy Charge, or the Advantage on it.
-  if (answers.earthling === "charge") answers.earthlingCharge = true;
+  if (answers.earthling === "charge") answers.earthlingCharge = raisedName;
   else if (earthlingOffered.some(entry => entry.def.id === answers.earthling)) {
     const def = earthlingOffered.find(entry => entry.def.id === answers.earthling).def;
     // Its choice, where it asks one and the Technique has not made it already.
@@ -781,7 +795,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       const offered = featureChoiceOptions(def, { ranks: 1, actor,
         sig: { foundation: declared.foundation ?? "", features: (declared.advantages ?? []).map(id => ({ id })) } });
       const picked = offered.length ? await foundry.applications.api.DialogV2.wait({
-        classes: ["dbu-dialog"], window: { title: `Earthling-Raised - ${def.name}` }, content: "",
+        classes: ["dbu-dialog"], window: { title: `${raisedName} - ${def.name}` }, content: "",
         buttons: [...offered.map(([value, label]) => ({ action: value, label })), { action: "cancel", label: "Cancel" }],
         rejectClose: false
       }) : null;
@@ -813,6 +827,12 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     await actor.update({ "system.resources": replaceObject(resources), "flags.dbu-ttrpg.creativeConditionRound": round });
   }
   delete answers.creativeCondition;
+  // Way of the Warrior's: the Life Points given up, as much on the Ki Wager - free, beside Genki's.
+  if (answers.lifeWager > 0) {
+    await actor.update({ "system.life.value": Math.max(0, (Number(actor.system.life?.value) || 0) - answers.lifeWager) });
+    answers.freeWager = (Number(declared.freeWager) || 0) + answers.lifeWager;
+  }
+  delete answers.lifeWager;
   if (answers.moraleGuard) await actor.setFlag("dbu-ttrpg", "moraleClashed", game.combat?.id ?? "none");
   else delete answers.moraleGuard;
   // What the two Majin Traits put on its Wound Roll, and their uses spent.

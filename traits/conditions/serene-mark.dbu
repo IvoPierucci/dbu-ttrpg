@@ -1,0 +1,21 @@
+id: serene-mark
+name: Serene
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Way of the Serene gives, held till the Mindful State is left.
+combatCondition: no
+source: Core Rule
+description: >
+  Way of the Serene: the Dodge Roll's Critical Target 1 lower and its Natural Result 1 higher until you leave the Mindful State.
+text: >
+  Way of the Serene [Triggered/Mindful]: Your Dodge Rolls have their Critical Target reduced by 1 and you increase the Natural Result by 1 on all Dodge Rolls until you leave the Mindful State.
+
+---
+
+[passive]
+criticalTarget.dodge -= 1;
+dodge.natural += 1;
+
+# The Mindful State left: gone with it.
+[automatic/left-state/mindful]
+remove("serene-mark");

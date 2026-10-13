@@ -7924,7 +7924,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     ? applySlot(actor.system.effects?.slots, `${slot}.natural`, 0) : 0;
   // Evolved Right Eye: "Reduce the Critical Target for your Combat Rolls by 1" - on whatever the roll was made against,
   // never under the least a Critical Target may be unless it already was.
-  const combatShift = combatRoll ? (Number(actor.system.effects?.slots?.["criticalTarget.combat"]?.add) || 0) : 0;
+  // And Way of the Serene's, on a Dodge Roll alone.
+  const combatShift = combatRoll ? ((Number(actor.system.effects?.slots?.["criticalTarget.combat"]?.add) || 0)
+    + ((slot === "dodge") ? (Number(actor.system.effects?.slots?.["criticalTarget.dodge"]?.add) || 0) : 0)) : 0;
   const aimedAt = criticalTarget ?? (Number(actor.system.criticalTarget) || 10);
   const aimed = combatShift
     ? Math.max(Math.min(aimedAt, DBUCharacterData.CRITICAL_TARGET_MIN), aimedAt + combatShift) : criticalTarget;
@@ -19985,6 +19987,7 @@ function lingeringSources(actor, answered, slot, { naturalAdd = 0, minimumNatura
   take(answered?.slots?.baseDie, value => value > 0);
   take(own.criticalTarget, value => value < 0);
   take(own["criticalTarget.combat"], value => value < 0);
+  take(own[`criticalTarget.${slot}`], value => value < 0);
   take(answered?.slots?.criticalTarget, value => value < 0);
   const ownTarget = Number(actor?.system?.criticalTarget) || 10;
   return sources.size + ((naturalAdd > 0) ? 1 : 0) + ((minimumNatural > 0) ? 1 : 0)

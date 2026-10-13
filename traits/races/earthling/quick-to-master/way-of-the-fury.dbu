@@ -1,0 +1,16 @@
+id: way-of-the-fury
+name: Way of the Fury
+order: 3
+optionOf: quick-to-master
+optionEffect: 3
+description: >
+  Increase your Wound Rolls by 2(T) until you leave the Raging State.
+text: >
+  Way of the Fury [Triggered/Raging]: Increase your Wound Rolls by 2(T) until you leave the Raging State.
+
+---
+
+# Entering the Raging State: Fury (a mark) - Wound Rolls 2(T) higher - till the State is left. Automatic by default, its
+# Triggered/Automatic button.
+[triggered/state/raging, effect 3]
+gain("fury-mark");

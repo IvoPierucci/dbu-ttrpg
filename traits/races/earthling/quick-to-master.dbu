@@ -1,0 +1,35 @@
+id: quick-to-master
+name: Quick to Master
+order: 2
+category: mind
+importance: primary
+description: >
+  Earthlings are known for their ability to learn fast and effectively. This allows for them to specialize in certain skills, while also adopting the ability to adjust their techniques on the fly.
+text: >
+  Quick to Master (Mind): Earthlings are known for their ability to learn fast and effectively. This allows for them to specialize in certain skills, while also adopting the ability to adjust their techniques on the fly.
+  (1)-[Passive]: Increase the amount of Technique Points you gain from Skill Improvement by 5.
+  (2)-[Triggered]: When you use the Signature Technique Maneuver, for this instance of using your chosen Signature Technique, you may either:
+
+  * Apply an Energy Charge to that Attacking Maneuver.
+  * Add a single Advantage with a TP cost of up to 10 TP to your chosen Signature Technique.
+
+  (3)-[Option]: At Character Creation, choose one of the following effects:
+
+  * Way of the Warrior [Triggered]: When you use the Signature Technique Maneuver, you may reduce your Life Points by up to 10(bT) to gain a free Ki Wager on this Attacking Maneuver equal to the reduction.
+  * Way of the Serene [Triggered/Mindful]: Your Dodge Rolls have their Critical Target reduced by 1 and you increase the Natural Result by 1 on all Dodge Rolls until you leave the Mindful State.
+  * Way of the Fury [Triggered/Raging]: Increase your Wound Rolls by 2(T) until you leave the Raging State.
+  * Way of the Elements [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+  * Way of the Mystic [Passive]: Reduce the TP Cost of all Unique Abilities by 5 TP.
+  * Way of the Weaponmaster [Passive]: You gain the Weapon Specialist Talent, and when creating any type of Signature Technique, you may add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points (this does not count towards your maximum TP Cost of that Signature Technique).
+  * Way of the Pilot [Passive]: You gain the Expert Pilot Talent and increase the amount of Technique Points your Battle Jackets get at Jacket Creation and each new Tier of Power by 5.
+
+---
+
+# (1) On every Skill Improvement row, as Gifted Student's.
+[passive]
+techniquePoints.perSkillImprovement += 5;
+# (2) Asked as a Signature Technique is declared, every time: an Energy Charge, or one Advantage of 10 TP or less, for
+# that use alone - Earthling-Raised's own box, under this Trait's name (use-maneuver.mjs askTechniqueDeclaration).
+allow signature.earthlingRaised;
+
+# (3) Its Options, one file each beside this one.

@@ -1,0 +1,16 @@
+id: way-of-the-serene
+name: Way of the Serene
+order: 2
+optionOf: quick-to-master
+optionEffect: 3
+description: >
+  Your Dodge Rolls have their Critical Target reduced by 1 and you increase the Natural Result by 1 on all Dodge Rolls until you leave the Mindful State.
+text: >
+  Way of the Serene [Triggered/Mindful]: Your Dodge Rolls have their Critical Target reduced by 1 and you increase the Natural Result by 1 on all Dodge Rolls until you leave the Mindful State.
+
+---
+
+# Entering the Mindful State: Serene (a mark) - the Dodge's Critical Target 1 lower, its Natural Result 1 higher - till the
+# State is left. Automatic by default, its Triggered/Automatic button.
+[triggered/state/mindful, effect 3]
+gain("serene-mark");

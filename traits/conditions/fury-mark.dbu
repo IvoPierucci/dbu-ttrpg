@@ -1,0 +1,20 @@
+id: fury-mark
+name: Fury
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Way of the Fury gives, held till the Raging State is left.
+combatCondition: no
+source: Core Rule
+description: >
+  Way of the Fury: Wound Rolls 2(T) higher until you leave the Raging State.
+text: >
+  Way of the Fury [Triggered/Raging]: Increase your Wound Rolls by 2(T) until you leave the Raging State.
+
+---
+
+[passive]
+wound += 2(T);
+
+# The Raging State left: gone with it.
+[automatic/left-state/raging]
+remove("fury-mark");

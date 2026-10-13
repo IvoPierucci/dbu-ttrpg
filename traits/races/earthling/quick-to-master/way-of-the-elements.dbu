@@ -1,0 +1,16 @@
+id: way-of-the-elements
+name: Way of the Elements
+order: 4
+optionOf: quick-to-master
+optionEffect: 3
+# "Select a Profile with 'Elemental' in the name" - asked when it is added, `$choice`.
+choose: elementalProfile
+description: >
+  Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+text: >
+  Way of the Elements [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+
+---
+
+[passive]
+favored.$choice = true;

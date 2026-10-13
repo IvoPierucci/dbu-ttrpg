@@ -1,0 +1,18 @@
+id: way-of-the-weaponmaster
+name: Way of the Weaponmaster
+order: 6
+optionOf: quick-to-master
+optionEffect: 3
+# "You gain the Weapon Specialist Talent" - given with it when it is written.
+grantsTalent: weapon-specialist
+description: >
+  You gain the Weapon Specialist Talent, and when creating any type of Signature Technique, you may add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points (this does not count towards your maximum TP Cost of that Signature Technique).
+text: >
+  Way of the Weaponmaster [Passive]: You gain the Weapon Specialist Talent, and when creating any type of Signature Technique, you may add the Weapon Assisted Advantage to that Signature Technique without spending Technique Points (this does not count towards your maximum TP Cost of that Signature Technique).
+
+---
+
+# As Demon Warrior's: Weapon Assisted's TP left out of what each Technique carrying it takes, and out of its cap (technique.mjs
+# techniqueTP). The Weapon Specialist Talent is given once it is written.
+[passive]
+allow technique.free.weapon-assisted;
