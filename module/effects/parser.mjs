@@ -533,7 +533,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // An Attacking Maneuver being declared, and the character's own turn (Demonic Pressure's).
   "declaringAttack", "ownTurn",
   // An Attacking Maneuver of the Glass Profile hit with (Glass Shards').
-  "glassAttack"]);
+  "glassAttack",
+  // An Ally dealt Damage by your attack this Round (Cutthroat Teamwork's).
+  "allyHitThisRound"]);
 
 /**
  * Dice the character already has, named rather than written out.

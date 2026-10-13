@@ -746,6 +746,12 @@ async function settleClashEffects(messageId, clash) {
   if (clash.angelicOffense && clash.result && !clash.angelicOffense.applied) {
     await settleAngelicOffense(message, clash);
   }
+  if (clash.cutthroatClash && clash.result && !clash.cutthroatClash.applied) {
+    await settleCutthroatClash(message, clash);
+  }
+  if (clash.cutthroatShove && clash.result && !clash.cutthroatShove.applied) {
+    await settleCutthroatShove(message, clash);
+  }
 
   if (clash.wave && clash.result && !clash.wave.applied) {
     await settleWave(message, clash);
@@ -14096,6 +14102,81 @@ function offerPhysiqueStrike(message, actor, attacker) {
 }
 
 /**
+ * Cutthroat Teamwork, an Ally (not a Minion) dealt Damage by your Attacking Maneuver. (4): marked for this Combat Round, for
+ * the Power Up's extra stack (`allyHitThisRound`). (3): "while they are on an adjacent Square to an Opponent, make a Clash
+ * (Corporeal/Morale) against that Opponent. If you win, that Opponent gains the Guard Down and Broken Combat Conditions until
+ * the end of your turn" - which Opponent asked of the attacker, once a Round, spent when one is picked.
+ */
+async function cutthroatAllyHit(actor, ally) {
+  const slots = actor.system?.effects?.slots ?? {};
+  if ((slots["cutthroat.powerUp"] === true) && (actor.getFlag?.(SCOPE, "cutthroatAllyHit") !== roundKey())) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.cutthroatAllyHit`]: roundKey() });
+  }
+  if ((slots["cutthroat.allyClash"] !== true) || (actor.getFlag?.(SCOPE, "cutthroatClashRound") === roundKey())) return;
+  const at = ally.getActiveTokens?.(false, true)?.[0];
+  if (!at) return;
+  const allies = new Set(alliesOnScene(actor).map(each => each.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid)
+      && !token.actor.system?.defeated && (squaresBetween(token.document, at) === 0))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Cutthroat Teamwork - ${ally.name} hit`,
+    [...opponents.map(each => ({ value: each.uuid, label: `Clash ${each.name}` })), { value: "none", label: "No" }]);
+  const target = opponents.find(each => each.uuid === picked);
+  if (!target) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.cutthroatClashRound`]: roundKey() });
+  return postSaveClash(actor, target, { maneuverName: "Cutthroat Teamwork",
+    reason: `Win and ${target.name} is Guard Down and Broken until the end of ${actor.name}'s turn.`,
+    saves: ["corporeal", "morale"], defenderSaves: ["corporeal", "morale"], cutthroatClash: { applied: false } });
+}
+
+/** Cutthroat Teamwork (3), won: Guard Down and Broken on them till the end of the challenger's turn, on the challenger's clock. */
+async function settleCutthroatClash(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, cutthroatClash: { ...clash.cutthroatClash, applied: true } });
+  const challenger = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!challenger || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} keeps their guard.`);
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  for (const key of ["guard-down", "broken"]) {
+    if (await gainCondition(target, key, 1) === false) continue;
+    await lasting(challenger, { kind: KINDS.CONDITION, key, edge: EDGES.END, on: target.uuid, source: "Cutthroat Teamwork" });
+  }
+  return settledNote(message, `${target.name} is Guard Down and Broken until the end of ${challenger.name}'s turn.`);
+}
+
+/**
+ * Cutthroat Teamwork (2): "As a Standard Maneuver with an Action Cost of 1, you may target an Ally on an adjacent Square.
+ * Make a Might Clash against them. If you win, you may move that Ally onto any Square within a Large Sphere AoE (centered
+ * on you)." Which Ally, asked; the Clash opened; where they land, the map's. None beside you, its use unspent.
+ */
+export async function cutthroatShove(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const own = actor?.getActiveTokens?.(false, true)?.[0];
+  const beside = own ? alliesOnScene(actor).filter(ally => (ally.getActiveTokens?.(false, true) ?? [])
+    .some(token => squaresBetween(token, own) === 0)) : [];
+  if (!beside.length) {
+    ui.notifications.info(`${actor.name}: Cutthroat Teamwork - no Ally on an adjacent Square.`);
+    return UNSPENT;
+  }
+  const picked = (beside.length === 1) ? beside[0].uuid : await askPlayerChoice(actor, `${actor.name}: Cutthroat Teamwork`,
+    [...beside.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const ally = beside.find(each => each.uuid === picked);
+  if (!ally) return UNSPENT;
+  return postMightClash(actor, ally, { maneuverName: "Cutthroat Teamwork",
+    reason: `Win and ${ally.name} may be moved onto any Square within a Large Sphere centred on ${actor.name}.`,
+    cutthroatShove: { applied: false } });
+}
+
+/** Cutthroat Teamwork (2), settled: where the Ally goes, the map's. */
+async function settleCutthroatShove(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, cutthroatShove: { ...clash.cutthroatShove, applied: true } });
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${clash.defenderName} stays where they are.`);
+  return settledNote(message, `${clash.defenderName} may be moved onto any Square within a Large Sphere centred on ${clash.challengerName}.`);
+}
+
+/**
  * Power of the Hera (3): "If you Defeat a Character or knock a Character through a Health Threshold with your Attacking
  * Maneuver, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card - once a Round,
  * counted when taken.
@@ -18963,6 +19044,7 @@ function woundParts(attacker, attack) {
     ...(attack.weapon?.wound ?? []),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...twoWorldsWoundParts(attacker, attack),
+    ...cutthroatWoundParts(attacker, attack),
     ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))
   ];
 }
@@ -18988,6 +19070,21 @@ function alliesOnScene(actor) {
  * the 2(T) once more on a Technique's attack; Inherited Fury's 1(bT) "for every Health Threshold you or the Ally with the
  * lowest Health Threshold is below (whichever results in a higher bonus)".
  */
+/**
+ * Cutthroat Teamwork (1): "Increase the Wound Rolls of your Attacking Maneuvers with AoEs that possess 2+ targets by 2(T).
+ * This bonus is doubled if you possess any Allies among those targets."
+ */
+function cutthroatWoundParts(attacker, attack) {
+  if ((attacker?.system?.effects?.slots?.["cutthroat.aoeWound"] !== true) || !attackArea(attack)) return [];
+  const caught = attackTargets(attack).filter(entry => entry.uuid !== attacker.uuid);
+  if (caught.length < 2) return [];
+  const allies = new Set(alliesOnScene(attacker).map(ally => ally.uuid));
+  const doubled = caught.some(entry => allies.has(entry.uuid));
+  const tier = Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  return [{ label: doubled ? "Cutthroat Teamwork (an Ally caught)" : "Cutthroat Teamwork", written: doubled ? "+4(T)" : "+2(T)",
+    value: (doubled ? 4 : 2) * tier }];
+}
+
 function twoWorldsWoundParts(attacker, attack) {
   const slots = attacker.system.effects?.slots ?? {};
   const named = key => (slots[key]?.parts ?? []).map(part => part.source).find(Boolean) ?? "Effects";
@@ -22286,6 +22383,9 @@ async function applyAttackDamage(message, target, attack) {
   if (own.hit && !isAbsoluteMiss(own)) offerBouncyMove(message, target, armsUser);
   // Powerful Physique: hit by it, the Basic Attack back once it is done.
   if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerPhysiqueStrike(message, target, armsUser);
+  // Cutthroat Teamwork (3) and (4): an Ally, not a Minion, dealt Damage by it.
+  if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && !target.system?.minion
+    && alliesOnScene(armsUser).some(ally => ally.uuid === target.uuid)) await cutthroatAllyHit(armsUser, target);
   // Greed of the Hera (2): Damage dealt to an Opponent by an attack with an AoE - the Basic Attack, out of sequence.
   if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && attackArea(attack)) offerGreedStrike(message, armsUser, target);
   // Brigand Combat (2): Damage dealt to an Opponent - an Ally beside them it targeted and did not harm, the Basic Attack at them.

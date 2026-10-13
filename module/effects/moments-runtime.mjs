@@ -381,6 +381,10 @@ async function runVerb(actor, call, context) {
       return shardBurst(actor);
     }
 
+    case "cutthroatShove": {
+      const { cutthroatShove } = await import("../chat.mjs");
+      return cutthroatShove(actor);
+    }
     case "glassSoldiers": {
       const { glassSoldiers } = await import("../chat.mjs");
       return glassSoldiers(actor);

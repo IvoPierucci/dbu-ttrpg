@@ -111,6 +111,11 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  cutthroatShove: {
+    args: [0, 0],
+    doc: "Cutthroat Teamwork (2): an Ally on an adjacent Square picked, a Might Clash against them - won, they may be moved "
+       + "within a Large Sphere centred on you (chat.mjs cutthroatShove). None beside you, its use unspent."
+  },
   glassSoldiers: {
     args: [0, 0],
     names: [],

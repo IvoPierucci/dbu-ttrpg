@@ -241,6 +241,10 @@ const PREDICATES = {
   snackThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "snackRound") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
 
+  /** An Ally (not a Minion) dealt Damage by one of your Attacking Maneuvers this Combat Round - Cutthroat Teamwork's. */
+  allyHitThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "cutthroatAllyHit") ?? "")
+    === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
+
   /** Is this an even-numbered Combat Round - Born for Battle's. */
   evenRound: () => {
     const round = Number(globalThis.game?.combat?.started ? globalThis.game.combat.round : 0) || 0;

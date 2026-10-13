@@ -1,0 +1,34 @@
+id: cutthroat-teamwork
+name: Cutthroat Teamwork
+order: 4
+category: mind
+importance: secondary
+description: >
+  Uncaring about the safety of their comrades, Herans will do whatever it takes to win.
+text: >
+  Cutthroat Teamwork (Mind): Uncaring about the safety of their comrades, Herans will do whatever it takes to win.
+  (1)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers with AoEs that possess 2+ targets by 2(T). This bonus is doubled if you possess any Allies among those targets.
+  (2)-[1/Round]: As a Standard Maneuver with an Action Cost of 1, you may target an Ally on an adjacent Square. Make a Might Clash against them. If you win, you may move that Ally onto any Square within a Large Sphere AoE (centered on you).
+  (3)-[Triggered, 1/Round]: If you hit an Ally (that is not a Minion) with an Attacking Maneuver (and inflicted Damage) while they are on an adjacent Square to an Opponent, make a Clash (Corporeal/Morale) against that Opponent. If you win, that Opponent gains the Guard Down and Broken Combat Conditions until the end of your turn.
+  (4)-[Triggered/Power, 1/Round]: If you have hit an Ally (that is not a Minion) with one of your Attacking Maneuvers (and inflicted Damage) during this Combat Round, you may gain an additional Stack of Power through this use of the Power Up Maneuver.
+
+---
+
+[passive]
+# (1) An AoE attack with 2 or more targets besides you: 2(T) on its Wound Roll, 4(T) with an Ally among them (chat.mjs
+# cutthroatWoundParts).
+allow cutthroat.aoeWound;
+# (2) Its own Maneuver, a Standard of 1 Action once a Round, listed while this is had (cutthroat-teamwork-second-effect.dbu).
+# (3) An Ally, not a Minion, dealt Damage by your Attacking Maneuver beside an Opponent: which Opponent asked, once a Round -
+# a Clash (Corporeal/Morale), either Saving Throw each side's choice; won, Guard Down and Broken on them till the end of your
+# turn (chat.mjs cutthroatAllyHit).
+allow cutthroat.allyClash;
+# (4) Such an Ally hit, marked for the Round (`allyHitThisRound`).
+allow cutthroat.powerUp;
+
+# (4) The Power Up used, an Ally dealt Damage by your attack this Round: a stack of Power more, on the same clock. Ticked in
+# the window as it is used - no Triggered/Automatic button.
+[triggered/power, 1/round, effect 4]
+requires allyHitThisRound;
+power.stacks += 1;
+expires(power, next-turn);

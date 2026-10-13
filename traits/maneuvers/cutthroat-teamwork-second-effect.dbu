@@ -1,0 +1,23 @@
+id: cutthroat-teamwork-second-effect
+name: 2nd effect of Cutthroat Teamwork
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: cutthroat-teamwork
+fromEffect: 2
+source: Core Rule
+description: >
+  Cutthroat Teamwork's second effect, as a Maneuver: a Might Clash against an Ally on an adjacent Square - won, they may be moved within a Large Sphere centred on you.
+text: >
+  (2)-[1/Round]: As a Standard Maneuver with an Action Cost of 1, you may target an Ally on an adjacent Square. Make a Might Clash against them. If you win, you may move that Ally onto any Square within a Large Sphere AoE (centered on you).
+
+---
+
+# Warriors of Glass's first effect's shape: owned by every character, in the list only while Cutthroat Teamwork is had
+# (`fromTrait`). Used, which Ally beside you asked, and the Might Clash opened; where they land, the map's (chat.mjs
+# cutthroatShove).
+[on used]
+cutthroatShove();
