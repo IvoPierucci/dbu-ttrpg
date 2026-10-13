@@ -405,6 +405,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       useManeuver: DBUCharacterSheet._onUseManeuver,
       basicAttackInstant: DBUCharacterSheet._onBasicAttackInstant,
       signatureInstant: DBUCharacterSheet._onSignatureInstant,
+      glassInstant: DBUCharacterSheet._onGlassInstant,
       creativeOutOfSequence: DBUCharacterSheet._onCreativeOutOfSequence,
       newTechnique: DBUCharacterSheet._onNewTechnique,
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
@@ -1578,6 +1579,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // Furious Onslaught: "Reduce your Overwhelm Stacks by 2 to use the Signature Technique Maneuver as an Instant".
             signatureInstant: Boolean(maneuver.signatureTechnique)
               && (this.actor.system.effects?.slots?.["signature.asInstant"] === true),
+            // Glass Combat (3): "you may use the Movement Maneuver as an Instant Maneuver".
+            glassInstant: Boolean(maneuver.movement) && (this.actor.system.effects?.slots?.["movement.glassInstant"] === true),
             // Demonic Creativity: "As an Instant Maneuver, you may spend 2 stacks of Demonic Power to use a Maneuver with an
             // Action Cost of 1 as an Out-of-Sequence Maneuver."
             creativeOutOfSequence: (this.actor.system.effects?.slots?.["demonicPower.outOfSequence"] === true)
@@ -5917,6 +5920,28 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { replaceObject } = await import("../conditions.mjs");
     return this.actor.update({ "system.resources": replaceObject(resources), "flags.dbu-ttrpg.creativeRound": round,
       "system.instantPlayed": { held: true, messageId: "" } });
+  }
+
+  /**
+   * Glass Combat (3): "During your turn, if you are occupying a Square that has the Glass Environmental Quality, you may use
+   * the Movement Maneuver as an Instant Maneuver." Once a Round; ending on Glass, the player's.
+   */
+  static async _onGlassInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["movement.glassInstant"] !== true)) return;
+    if (game.combat?.started && (game.combat.combatant?.actor?.uuid !== this.actor.uuid)) {
+      return ui.notifications.warn(`${this.actor.name}: only during your turn.`);
+    }
+    if (!(this.actor.system.battlefield?.squareQualities ?? []).includes("glass")) {
+      return ui.notifications.warn(`${this.actor.name} is not on a Square with Glass.`);
+    }
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (this.actor.getFlag("dbu-ttrpg", "glassMoveRound") === round) {
+      return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
+    }
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
+    return this.actor.setFlag("dbu-ttrpg", "glassMoveRound", round);
   }
 
   static async _onSignatureInstant(event, target) {

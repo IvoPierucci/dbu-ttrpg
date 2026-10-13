@@ -14457,6 +14457,21 @@ export async function glassification(actor, actions) {
     rejectClose: false
   });
   if (!Array.isArray(picked)) return;
+  // Glass Combat (6): "If you target only Squares through the effects of the Glassification Maneuver, you do not have to
+  // pay the Ki Point Cost." Asked, once an Encounter: what it was paid, given back.
+  if (picked.every(value => value.startsWith("square:")) && (actor.system.effects?.slots?.["glassification.freeSquares"] === true)
+    && (actor.getFlag?.(SCOPE, "glassFreeEncounter") !== (game.combat?.id ?? "none"))) {
+    const { maneuverKiCost, getManeuver } = await import("./maneuvers.mjs");
+    const paid = maneuverKiCost(getManeuver("glassification") ?? { id: "glassification" }, null, actor) * count;
+    const free = (paid > 0) && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+      window: { title: "Glass Combat" }, content: `<p data-tooltip="Once an Encounter.">Squares alone: ${paid} Ki back?</p>`,
+      rejectClose: false });
+    if (free) {
+      await requestActorUpdate(actor, { "system.ki.value": (Number(actor.system.ki?.value) || 0) + paid,
+        "system.capacity.spent": Math.max(0, (Number(actor.system.capacity?.spent) || 0) - paid),
+        [`flags.${SCOPE}.glassFreeEncounter`]: game.combat?.id ?? "none" });
+    }
+  }
   const times = new Map();
   for (const value of picked) times.set(value, (times.get(value) ?? 0) + 1);
   // Each Square: who stands in its Sphere, Glass on their Square in place of every other Quality ticked there.
@@ -16013,7 +16028,10 @@ export async function postAttack(actor, target, maneuver,
           // Attacking Maneuver by 1" is a step this attack has, whatever gave it.
           damageCategoryShift: (reflecting
             ? (reflecting.damageCategoryShift ?? 0)
-            : profileCategoryShift(profile, charges))
+            : (profileCategoryShift(profile, charges)
+              // Glass Combat's Glass Profile, applied: its Categories as well.
+              + (appliedProfiles ?? []).filter(id => (id !== profile) && PROFILES[id]?.perTwoCharges)
+                .reduce((sum, id) => sum + profileCategoryShift(id, charges), 0)))
             + modifierCategoryShift(modifiers)
             + (Number(weapon?.damageCategory) || 0)
             // The Maneuver's own - Divine Attack's "has its Damage Category increased by 1 category".
@@ -17473,6 +17491,15 @@ function profileStrikeParts(attacker, attack) {
  * Offense blunts every Attacking Maneuver once the round's free attacks are spent. `workingsKey` names the sheet's
  * workings for a part that has them, for that window's hover.
  */
+/** What an effect adds to the Strike Roll of an attack of one Profile - main, second or applied: Glass Combat's, Surging. */
+function profileSlotStrike(attacker, attack) {
+  const slots = attacker.system.effects?.slots ?? {};
+  return [attack?.profile, ...extraProfilesOf(attack)].filter(Boolean)
+    .map(id => ({ id, value: Number(slots[`strike.profile.${id}`]?.add) || 0 })).filter(entry => entry.value)
+    .map(entry => ({ label: `${(slots[`strike.profile.${entry.id}`]?.parts ?? []).map(part => part.source).find(Boolean)
+      ?? "Effects"} (${PROFILES[entry.id]?.label ?? entry.id})`, value: entry.value }));
+}
+
 /** A Favored Element's: "You increase your Strike and Wound Rolls by 1(T) and 2(T) respectively". */
 function favoredParts(attacker, attack, roll) {
   if (!favoredElement(attacker, attack?.profile)) return [];
@@ -17519,6 +17546,7 @@ function strikeParts(attacker, attack) {
     strikeOf(attacker, attack?.foundation),
     ...favoredParts(attacker, attack, "strike"),
     ...profileStrikeParts(attacker, attack),
+    ...profileSlotStrike(attacker, attack),
     ...modifierStrikeParts(attacker, attack),
     ...(attack.weapon?.strike ?? []),
     // One Maneuver's own Strike Roll - Bouncy Physique's 2(T) on the Reflect.

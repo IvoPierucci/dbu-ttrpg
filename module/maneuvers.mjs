@@ -1414,13 +1414,57 @@ export async function askRevengeBomber(actor, declared) {
 }
 
 /**
+ * Glass Combat (4): "When you or an adjacent Ally use an Attacking Maneuver of any Profile except the Glass Profile, you may
+ * spend 2(bT) Ki Points to apply the effects of the Glass Profile to that Attacking Maneuver." Asked of each who has it -
+ * the attacker, or one adjacent and on their side - once a Round each; the first to take it pays and it is applied.
+ */
+export async function askGlassApply(actor, declared) {
+  if (!declared?.profile || [declared.profile, declared.secondProfile, ...(declared.appliedProfiles ?? [])].includes("glass")) {
+    return declared;
+  }
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  const able = other => (other?.system?.effects?.slots?.["glass.applyToAttack"] === true)
+    && (other.getFlag?.("dbu-ttrpg", "glassApplyRound") !== round);
+  const own = actor.getActiveTokens?.(false, true)?.[0] ?? null;
+  const members = new Map(able(actor) ? [[actor.uuid, actor]] : []);
+  if (own) {
+    for (const doc of (canvas?.tokens?.placeables ?? []).map(token => token.document)) {
+      if (!doc?.actor || members.has(doc.actor.uuid) || !able(doc.actor) || (doc.disposition !== own.disposition)) continue;
+      if (squaresBetween(doc, own) === 0) members.set(doc.actor.uuid, doc.actor);
+    }
+  }
+  const { askPlayerChoice, requestActorUpdate } = await import("./chat.mjs");
+  for (const member of members.values()) {
+    const ki = 2 * Math.max(1, Number(member.system.baseTierOfPower) || 1);
+    if ((Number(member.system.ki?.value) || 0) < ki) continue;
+    const yes = (member.uuid === actor.uuid)
+      ? await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: "Glass Combat" },
+        content: `<p data-tooltip="Once a Round. It counts as of the Glass Profile for all effects.">Apply the Glass Profile for ${ki} Ki?</p>`,
+        rejectClose: false })
+      : ((await askPlayerChoice(member, `${member.name}: Glass Combat - ${actor.name}'s attack`,
+        [{ value: "yes", label: `Apply the Glass Profile (${ki} Ki)` }, { value: "no", label: "No" }])) === "yes");
+    if (!yes) continue;
+    if (member.isOwner) {
+      if (!await spendManeuverCost(member, { name: "Glass Combat" }, ki)) continue;
+      await member.setFlag("dbu-ttrpg", "glassApplyRound", round);
+    }
+    else {
+      await requestActorUpdate(member, { "system.ki.value": (Number(member.system.ki?.value) || 0) - ki,
+        "system.capacity.spent": (Number(member.system.capacity?.spent) || 0) + ki, "flags.dbu-ttrpg.glassApplyRound": round });
+    }
+    return { ...declared, appliedProfiles: [...(declared.appliedProfiles ?? []), "glass"] };
+  }
+  return declared;
+}
+
+/**
  * Heart of Glass (3): "If you use an Attacking Maneuver of the Glass Profile while occupying a Square with the Glass
  * Environmental Quality, you may enter the Surging State for the duration of that Attacking Maneuver." Asked once the
  * Profile is declared, once a Round; Surging now, left as the attack is concluded (`glassSurge`, chat.mjs glassSurgeEnds).
  */
 export async function askGlassSurge(actor, declared) {
   if (!declared || (actor?.system?.effects?.slots?.["surging.glassAttack"] !== true)) return declared;
-  if (![declared.profile, declared.secondProfile].includes("glass")) return declared;
+  if (![declared.profile, declared.secondProfile, ...(declared.appliedProfiles ?? [])].includes("glass")) return declared;
   if (!(actor.system.battlefield?.squareQualities ?? []).includes("glass")) return declared;
   if ((Number(actor.system.states?.surging) || 0) > 0) return declared;
   const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
@@ -3156,8 +3200,10 @@ export function whyNotThisProfile(actor, maneuver, profileId) {
   if (maneuver?.id !== BASIC_ATTACK) return "";
   if (UNLIMITED_THROUGH_BASIC_ATTACK.has(profileId)) return "";
 
+  // Once a Round - more where an effect says so: Glass Combat's Glass Profile "an additional time".
   const spent = actor.system?.basicAttackProfiles ?? [];
-  if (!spent.includes(profileId)) return "";
+  const allowed = 1 + Math.max(0, Number(actor.system?.effects?.slots?.[`basicAttack.${profileId}.uses`]?.add) || 0);
+  if (spent.filter(id => id === profileId).length < allowed) return "";
 
   const label = PROFILES[profileId]?.label ?? profileId;
   return `${actor.name} has already used the ${label} Profile through a Basic Attack `
@@ -3185,8 +3231,10 @@ export async function recordProfileUse(actor, maneuver, profileId) {
   if (maneuver?.id !== BASIC_ATTACK) return;
   if (UNLIMITED_THROUGH_BASIC_ATTACK.has(profileId)) return;
 
+  // Once - or as many times as an effect allows it, so the second Glass Combat gives is counted too.
   const spent = actor.system?.basicAttackProfiles ?? [];
-  if (spent.includes(profileId)) return;
+  const allowed = 1 + Math.max(0, Number(actor.system?.effects?.slots?.[`basicAttack.${profileId}.uses`]?.add) || 0);
+  if (spent.filter(id => id === profileId).length >= allowed) return;
 
   await actor.update({ "system.basicAttackProfiles": [...spent, profileId] });
 }

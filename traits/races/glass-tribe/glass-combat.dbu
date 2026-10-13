@@ -1,0 +1,34 @@
+id: glass-combat
+name: Glass Combat
+order: 4
+category: body
+importance: secondary
+description: >
+  Your glass-like body grants you a high tolerance for physical stress, allowing you to push your powers of glass creation and manipulation to their absolute limits.
+text: >
+  Glass Combat (Body): Your glass-like body grants you a high tolerance for physical stress, allowing you to push your powers of glass creation and manipulation to their absolute limits.
+  (1)-[Passive]: You may use the Glass Profile an additional time per Combat Round through the Basic Attack Maneuver.
+  (2)-[Passive]: While in the Surging State, increase the Strike Rolls of your Attacking Maneuvers of the Glass Profile by 1(T).
+  (3)-[1/Round]: During your turn, if you are occupying a Square that has the Glass Environmental Quality, you may use the Movement Maneuver as an Instant Maneuver. If you do, you must end this movement on a Square that has the Glass Environmental Quality.
+  (4)-[Triggered, 1/Round]: When you or an adjacent Ally use an Attacking Maneuver of any Profile except the Glass Profile, you may spend 2(bT) Ki Points to apply the effects of the Glass Profile to that Attacking Maneuver. If you do, that Attacking Maneuver is also considered to be of the Glass Profile for all effects.
+  (5)-[Triggered, 1/Round]: If you or an Ally is hit by an Attacking Maneuver while adjacent to a Feature with the Glass Environmental Quality, you may destroy that Feature to reduce the Damage by 1/2 of that Feature’s Hardness Value.
+  (6)-[Triggered, 1/Encounter]: If you target only Squares through the effects of the Glassification Maneuver, you do not have to pay the Ki Point Cost.
+
+---
+
+[passive]
+# (1) Twice a Round through the Basic Attack (maneuvers.mjs whyNotThisProfile).
+basicAttack.glass.uses += 1;
+# (2) An attack of the Glass Profile - its own, or applied by (4) (chat.mjs profileSlotStrike).
+if (inState("surging")) {
+    strike.profile.glass += 1(T);
+}
+# (3) An "Instant" button on the Movement Maneuver's row: your turn, on a Glass Square, once a Round. Where it ends, the
+# player's (actor-character-sheet.mjs _onGlassInstant).
+allow movement.glassInstant;
+# (4) Asked as an Attacking Maneuver not of the Glass Profile is declared - yours, or an adjacent Ally's - once a Round:
+# 2(bT) of your Ki, the Glass Profile applied and counted as its own (maneuvers.mjs askGlassApply).
+allow glass.applyToAttack;
+# (5) A Feature: the table's (the user's).
+# (6) Glassification at Squares alone - asked, once an Encounter: its Ki given back (chat.mjs glassification).
+allow glassification.freeSquares;

@@ -49,6 +49,11 @@
                     data-item-id="{{maneuver.itemId}}"
                     data-tooltip="Furious Onslaught: as an Instant Maneuver, for 2 stacks of Overwhelm (1/Round)">Instant</button>
             {{/if}}
+            {{#if maneuver.glassInstant}}
+            <button type="button" class="maneuver-control" data-action="glassInstant"
+                    data-item-id="{{maneuver.itemId}}"
+                    data-tooltip="Glass Combat: as an Instant Maneuver, during your turn on a Glass Square - ending on one (1/Round)">Instant</button>
+            {{/if}}
             {{#if maneuver.creativeOutOfSequence}}
             <button type="button" class="maneuver-control" data-action="creativeOutOfSequence"
                     data-item-id="{{maneuver.itemId}}"
