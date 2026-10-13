@@ -1,0 +1,19 @@
+id: vocation-training
+name: Vocation Training
+order: 2
+category: mind
+importance: primary
+description: >
+  Trained to work in teams to cover each others’ weaknesses, Konatsians take on specialized combat roles.
+text: >
+  Vocation Training (Mind): Trained to work in teams to cover each others’ weaknesses, Konatsians take on specialized combat roles.
+  (1)-[Passive]: At Character Creation, gain access to a Talent from the Physical Attack, Energy Attack, Magic Attack, or Weapon Talent Category that you meet the Prerequisites for.
+  (2)-[Passive]: At Character Creation, select and gain access to a Vocation of your choice.
+
+---
+
+# --- What is not built, and why ---------------------------------------------------
+#
+# (1) A Talent of the Physical Attack, Energy Attack, Magic Attack or Weapon Talent Category: no Talent here says which
+#     Category it is of, and most are not written yet. Taken by hand from the Talents list for now.
+# (2) A Vocation: Vocations are not in this system - their rules text is waited on.
