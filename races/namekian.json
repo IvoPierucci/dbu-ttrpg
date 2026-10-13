@@ -16,5 +16,15 @@
     }
   ],
   "savingThrow": "corporeal",
-  "skillRanks": 3
+  "skillRanks": 3,
+  "subraces": [
+    {
+      "id": "warrior-clan",
+      "name": "Warrior Clan"
+    },
+    {
+      "id": "dragon-clan",
+      "name": "Dragon Clan"
+    }
+  ]
 }
