@@ -1,0 +1,24 @@
+id: namekian-biology-third-effect
+name: 3rd effect of Namekian Biology
+type: standard
+actionCost: 1
+kiCostPerBaseTier: 4
+kiCostGrowsPerBaseTier: 2
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+surge: true
+surgeKind: healing
+fromTrait: namekian-biology
+fromEffect: 3
+source: Core Rule
+description: >
+  Namekian Biology's third effect, as a Maneuver: a Healing Surge for 1 Action and 4(bT) Ki, 2(bT) more each time after the first this Encounter.
+text: >
+  (3)-[1/Round]: As a Standard Action with an Action Cost of 1 Action and a Ki Point Cost of 4(bT) Ki Points, use a Healing Surge. Each time you use this effect after the first, increase the Ki Point Cost by 2(bT) for the remainder of the Combat Encounter.
+
+---
+
+# Majin Regeneration's third effect's shape: owned by every character, in the list only while Namekian Biology is had
+# (`fromTrait`). Its price grows with each use this Encounter - `kiCostGrowsPerBaseTier`, counted by recordManeuverUse and
+# read by baseKiCost (maneuvers.mjs).

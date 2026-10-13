@@ -14311,8 +14311,10 @@ function offerRubberyMove(message, mover, moved, { grapple = false, stretched = 
   if (!mover || !moved || (mover.uuid === moved.uuid) || (mover.system?.effects?.slots?.["rubbery.move"] !== true)) return;
   const stretch = stretched ? (Number(mover.system.effects?.slots?.["meleeRange.stretch"]?.add) || 0) : 0;
   const squares = Math.max(0, Number(mover.system.meleeRange) || 0) + stretch + 1;
+  // Whose it is - Rubbery Body's, or Namekian Biology's (5), the same words.
+  const source = (mover.items ?? []).some(item => item.flags?.[SCOPE]?.sourceId === "rubbery-body") ? "Rubbery Body" : "Namekian Biology";
   offerMove(message, mover, { key: `rubbery:${moved.uuid}`, flag: "rubberyMoved", name: `Move ${moved.name}`,
-    reason: `Rubbery Body - up to ${squares} Squares${grapple ? ", ignoring Movement in a Grapple" : ""}` });
+    reason: `${source} - up to ${squares} Squares${grapple ? ", ignoring Movement in a Grapple" : ""}` });
 }
 
 /**

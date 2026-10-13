@@ -1318,7 +1318,7 @@ export async function stretchReach(actor, refusal, recheck, what) {
   const yes = await foundry.applications.api.DialogV2.confirm({
     classes: ["dbu-dialog"], window: { title: `${what} - Melee Range +${stretch}` },
     content: `<p data-tooltip="${Handlebars.escapeExpression((await import("./racial.mjs")).traitEffectLine(actor, "rubbery-body", 7)
-      || refusal)}">Stretch: Melee Range +${stretch} for this Maneuver?</p>`,
+      || (await import("./racial.mjs")).traitEffectLine(actor, "namekian-biology", 4) || refusal)}">Stretch: Melee Range +${stretch} for this Maneuver?</p>`,
     rejectClose: false
   });
   return yes ? { why: null, stretched: true } : { why: refusal, stretched: false };
@@ -3340,8 +3340,11 @@ function surchargeKiCost(maneuver, profileId, actor) {
 }
 
 function baseKiCost(maneuver, actor) {
+  // And what each earlier use this Encounter added - Namekian Biology's Healing Surge, 2(bT) more each time.
+  const grown = (Number(maneuver.kiCostGrowsPerBaseTier) || 0) * (actor?.system?.baseTierOfPower ?? 1)
+    * (actor?.system?.usedManeuvers ?? []).filter(entry => entry === `encounter:${maneuver.id}.grown`).length;
   if (maneuver.kiCostPerBaseTier) {
-    return maneuver.kiCostPerBaseTier * (actor?.system?.baseTierOfPower ?? 1);
+    return (maneuver.kiCostPerBaseTier * (actor?.system?.baseTierOfPower ?? 1)) + grown;
   }
   // "2(T)" - the Tier of Power, which a Breakthrough raises and the Base Tier does not.
   if (maneuver.kiCostPerTier) {
@@ -3709,10 +3712,12 @@ async function primeCriticalPoint(actor) {
 }
 
 export async function recordManeuverUse(actor, maneuver) {
-  if (!maneuver.usageLimit) return;
-  const entry = `${maneuver.usageLimit.per}:${maneuver.id}`;
-  await actor.update({ "system.usedManeuvers": [...actor.system.usedManeuvers, entry,
-    ...(maneuver.encounterLimit ? [`encounter:${maneuver.id}.encounter`] : [])] });
+  if (!maneuver.usageLimit && !maneuver.kiCostGrowsPerBaseTier) return;
+  const entry = maneuver.usageLimit ? [`${maneuver.usageLimit.per}:${maneuver.id}`] : [];
+  await actor.update({ "system.usedManeuvers": [...actor.system.usedManeuvers, ...entry,
+    ...(maneuver.encounterLimit ? [`encounter:${maneuver.id}.encounter`] : []),
+    // Each use this Encounter, for a cost that grows with them (baseKiCost).
+    ...(maneuver.kiCostGrowsPerBaseTier ? [`encounter:${maneuver.id}.grown`] : [])] });
 }
 
 /**
@@ -3852,6 +3857,9 @@ export async function loadManeuvers() {
     // so far that writes two.
     clashDefenderSkills: [].concat(trait.clashDefenderSkills ?? []),
     kiCostPerTier: trait.kiCostPerTier ?? 0,
+    // "Each time you use this effect after the first, increase the Ki Point Cost by 2(bT) for the remainder of the Combat
+    // Encounter" - Namekian Biology's third effect.
+    kiCostGrowsPerBaseTier: Number(trait.kiCostGrowsPerBaseTier) || 0,
     // `coerce` splits a header on commas and leaves a single value a string, so
     // `tags: signature` arrived as the word rather than a list of one and every reader
     // asking `tags.includes(...)` saw the letters instead. No file had ever written a

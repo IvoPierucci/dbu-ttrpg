@@ -63,6 +63,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * the Blockade Maneuver none was priced that way.
        */
       kiCostPerTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
+      /** More each time it was used before this Encounter - "(bT)" a use (maneuvers.mjs baseKiCost). */
+      kiCostGrowsPerBaseTier: new fields.NumberField({ required: true, integer: true, initial: 0 }),
 
       /** How it behaves in an exchange. */
       attacking: new fields.BooleanField({ required: true, initial: false }),

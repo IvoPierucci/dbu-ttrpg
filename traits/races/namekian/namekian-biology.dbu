@@ -1,0 +1,38 @@
+id: namekian-biology
+name: Namekian Biology
+order: 1
+category: body
+importance: primary
+description: >
+  Namekians possess the unique ability to rapidly expand and divide their cells at will, allowing them to regrow limbs, stretch or grow to gigantic proportions, or regenerate damage with a thought, so long as their heads are intact. They also possess exceptional hearing.
+text: >
+  Namekian Biology (Body): Namekians possess the unique ability to rapidly expand and divide their cells at will, allowing them to regrow limbs, stretch or grow to gigantic proportions, or regenerate damage with a thought, so long as their heads are intact. They also possess exceptional hearing.
+  (1)-[Passive]: Reduce the Critical Target of your Clairvoyance and Perception Skill Checks by 1.
+  (2)-[Passive]: Increase the Dice Score of your Steadfast Checks by 1.
+  (3)-[1/Round]: As a Standard Action with an Action Cost of 1 Action and a Ki Point Cost of 4(bT) Ki Points, use a Healing Surge. Each time you use this effect after the first, increase the Ki Point Cost by 2(bT) for the remainder of the Combat Encounter.
+  (4)-[Triggered]: When making any type of Physical Attacking Maneuver or Grapple Maneuver, you may increase your Melee Range by 3 Squares for the duration of that Maneuver.
+  (5)-[Triggered, 1/Round]: Upon hitting an Opponent with a Physical Attacking Maneuver or initiating a Grapple, you may move that Character any number of Squares up to your current Melee Range in any direction – ignoring the usual rules for Movement in a Grapple if you initiated a Grapple.
+  (6)-[Triggered/Start of Combat Round]: Regain 3(bT) Life Points.
+
+---
+
+[passive]
+# (1)
+skill.clairvoyance.criticalTarget -= 1;
+skill.perception.criticalTarget -= 1;
+# (2)
+steadfast.dice += 1;
+# (3) Its own Maneuver, listed while this is had (namekian-biology-third-effect.dbu).
+# (4) Rubbery Body's stretch, the same words: only where it matters - a Physical Attack or a Grapple aimed past your Melee
+# Range and within 3 more. Triggered, asked; Automatic - the toggle below - taken without asking (maneuvers.mjs stretchReach).
+meleeRange.stretch += 3;
+# (5) Rubbery Body's move, the same words: on the card, up to your Melee Range - the stretch with it, where it was taken -
+# once a Round, counted when taken; where to, the map's (chat.mjs offerRubberyMove).
+allow rubbery.move;
+
+# (4)'s Triggered/Automatic toggle: nothing of its own to do - the stretch above reads whether it is set Automatic.
+[triggered/stretch, effect 4]
+
+# (6) As each Combat Round begins. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-round, effect 6]
+life.value += 3(bT);

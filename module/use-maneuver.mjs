@@ -2279,6 +2279,7 @@ export function definitionOf(item) {
     noStressTest: item.system.noStressTest,
     ...(item.system.godStrikeProfile ? { appliedProfiles: [item.system.godStrikeProfile] } : {}),
     kiCostPerTier: item.system.kiCostPerTier,
+    kiCostGrowsPerBaseTier: Number(item.system.kiCostGrowsPerBaseTier) || 0,
     /**
      * Whether this Maneuver *is* a Signature Technique, which is a different question
      * from whether it throws one.
@@ -6339,6 +6340,7 @@ export function maneuverItemFrom(definition) {
       kiCostCoversProfile: Boolean(definition.kiCostCoversProfile),
       tailVariant: definition.tailVariant ?? "",
       kiCostPerTier: definition.kiCostPerTier ?? 0,
+      kiCostGrowsPerBaseTier: Number(definition.kiCostGrowsPerBaseTier) || 0,
       exploitable: definition.exploitable ?? "",
       surge: Boolean(definition.surge),
       charge: Boolean(definition.charge),
