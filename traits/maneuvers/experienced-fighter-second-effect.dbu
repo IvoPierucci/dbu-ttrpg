@@ -12,7 +12,11 @@ source: Core Rule
 description: >
   Experienced Fighter's second effect, as a Maneuver: 3(T) Ki Points at an Opponent - Exploitation Strike, Instinct-Driven Dodge or Punishing Blow.
 text: >
-  (2)-[1/Round]: As an Instant Maneuver, you can spend 3(T) Ki Points to target an Opponent and apply one of the following effects (these effects cannot stack): Exploitation Strike, Instinct-Driven Dodge, Punishing Blow.
+  (2)-[1/Round]: As an Instant Maneuver, you can spend 3(T) Ki Points to target an Opponent and apply one of the following effects (these effects cannot stack):
+
+  * Exploitation Strike [Triggered]: Increase the Strike Roll of your next Attacking Maneuver against the targeted Opponent by 2(T). The penalty they are currently suffering from Diminishing Defense is doubled for the duration of this Attacking Maneuver.
+  * Instinct-Driven Dodge [Triggered]: Increase your Dodge Roll against the next Attacking Maneuver that targets you from the targeted Opponent by 2(T). You ignore any penalties due to the effects of Diminishing Defense for this Dodge Roll.
+  * Punishing Blow [Triggered]: The next Attacking Maneuver you make against the targeted Opponent has its Wound Roll increased by 3(T) and its Damage Category increased by 1 category.
 
 ---
 
