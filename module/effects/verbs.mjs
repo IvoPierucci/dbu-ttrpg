@@ -111,6 +111,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  dancerHype: {
+    args: [0, 0],
+    doc: "Dancer (4): the Hype Maneuver out of sequence, a stack of Tension spent once it is (chat.mjs dancerHype)."
+  },
   rangerMove: {
     args: [0, 0],
     doc: "Ranger (4): 4(bT) Ki paid, then the Movement Maneuver out of sequence (chat.mjs rangerMove)."

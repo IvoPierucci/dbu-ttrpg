@@ -237,6 +237,8 @@
     "other/vocation/priest.dbu",
     "other/vocation/thief.dbu",
     "other/vocation/ranger.dbu",
+    "other/vocation/dancer.dbu",
+    "maneuvers/dance.dbu",
     "maneuvers/whack.dbu",
     "maneuvers/boom.dbu",
     "maneuvers/zoom.dbu",

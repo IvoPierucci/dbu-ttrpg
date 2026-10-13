@@ -147,6 +147,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * what needs asking: everything else this Maneuver does is in its own script.
        */
       powerUp: new fields.BooleanField({ required: true, initial: false }),
+      /** The Dance Modifier Maneuver: its effect asked and its Clashes opened once the Hype is used (chat.mjs dance). */
+      dance: new fields.BooleanField({ required: true, initial: false }),
       /**
        * Throws one of the character's own Signature Techniques: asks which, spends this
        * Maneuver's Action and the Technique's Ki, and is the Technique from there on.

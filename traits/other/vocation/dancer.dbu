@@ -1,0 +1,34 @@
+id: dancer
+name: Dancer
+order: 7
+description: >
+  A skilled performer, your greatest value to the team lies in your ability to boost morale.
+text: >
+  Dancer: A skilled performer, your greatest value to the team lies in your ability to boost morale.
+  (1)-[Passive]: If Personality has the highest Attribute Score among your Attributes, increase your Defense Value and Initiative by 1(bT).
+  (2)-[Passive]: While Hyped, increase your Strike and Wound Rolls by 1(T).
+  (3)-[Passive]: Gain access to Dance Modifier Maneuver.
+  (4)-[Triggered/Start of Combat Round]: Spend 1 Tension to use the Hype Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) The highest - tied counts (the user's, Companion's).
+if (personality.score >= max(max(max(agility.score, force.score), max(tenacity.score, insight.score)),
+    max(magic.score, scholarship.score))) {
+    defenseValue += 1(bT);
+    initiative += 1(bT);
+}
+# (2)
+if (hasCondition("hyped")) {
+    strike += 1(T);
+    wound += 1(T);
+}
+# (3)
+allow maneuver.dance;
+
+# (4) On the Round's card, with a stack of Tension (Battle Tension's), never Automatic (it hands over an Out-of-Sequence
+# Maneuver): the Hype out of sequence, the stack spent once it is (chat.mjs dancerHype).
+[triggered/start-of-round, outOfSequence, effect 4]
+requires hasResource("tension");
+dancerHype();

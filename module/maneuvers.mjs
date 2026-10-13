@@ -3772,6 +3772,7 @@ export async function loadManeuvers() {
     duelEscape: Boolean(trait.duelEscape),
     exploit: Boolean(trait.exploit),
     empower: Boolean(trait.empower),
+    dance: Boolean(trait.dance),
     grapple: Boolean(trait.grapple),
     launch: Boolean(trait.launch),
     movement: Boolean(trait.movement),

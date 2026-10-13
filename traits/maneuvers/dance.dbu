@@ -1,0 +1,32 @@
+id: dance
+name: Dance
+type: modifier
+actionCost: 1
+kiCostPerTier: 4
+usageLimit: 1/round
+baseManeuver: hype
+special: true
+dance: true
+source: Core Rule
+description: >
+  On the Hype: a 'Dance' effect picked, and a Clash (Performance vs Intuition/Performance) at every Opponent in a Huge Sphere around you.
+text: >
+  Dance [1/Round]: Your performance mesmerizes your enemies and leaves them vulnerable.
+  –Action Cost: 1 Action
+  –Base Maneuver: Hype Maneuver
+  –KP Cost: 4(T)
+  –Effect: Choose one of the below 'Dance' effects and then target all Opponents within a Huge Sphere AoE (centered on you). Make a Clash (Performance vs Intuition/Performance) against those Opponents. If you win against an Opponent, apply your chosen effect.
+
+  Below is a list of the 'Dance' effects:
+  * Ban Dance. That Character gains the Staggered Combat Condition until the end of their next turn.
+  * Fuddle Dance. That Character gains a stack of the Impaired Combat Condition until the end of their next turn.
+  * Entice Dance. That Character gains the Compelled Combat Condition until the end of their next turn. You are the target for the Compelled Combat Condition.
+  * Weird Dance. That Character has their Ki Points and Capacity reduced by your Personality Modifier.
+  * Death Dance. That Character has their Life Points reduced by your Personality Modifier.
+
+---
+
+# A Modifier Maneuver opened by an effect alone - the Dancer Vocation - and offered on the Hype only where it is (`special`,
+# use-maneuver.mjs modifiersFor). The Hype used with it: which 'Dance' effect asked, then a Clash at each Opponent targeted -
+# who stands within the Huge Sphere is the table's - won, its effect on them; a Condition on their own clock till the end of
+# their next turn; Compelled's target, as ever, the table's (chat.mjs danceModifier, settleDanceModifier).

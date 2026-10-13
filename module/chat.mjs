@@ -746,6 +746,9 @@ async function settleClashEffects(messageId, clash) {
   if (clash.angelicOffense && clash.result && !clash.angelicOffense.applied) {
     await settleAngelicOffense(message, clash);
   }
+  if (clash.danceEffect && clash.result && !clash.danceEffect.applied) {
+    await settleDanceModifier(message, clash);
+  }
   if (clash.whack && clash.result && !clash.whack.applied) {
     await settleWhack(message, clash);
   }
@@ -12714,6 +12717,73 @@ async function settleWhack(message, clash) {
     flavor: `Whack - ${downed ? `${target.name} is Defeated` : "not a 10"}` });
   if (!downed) return;
   return requestActorUpdate(target, { "system.life.value": Math.min(0, Number(target.system.life?.min) || 0) });
+}
+
+/** The Dance Modifier Maneuver's 'Dance' effects, as a won Clash leaves them. */
+const DANCES = Object.freeze({
+  ban: { label: "Ban Dance", says: "Staggered until the end of their next turn", condition: "staggered" },
+  fuddle: { label: "Fuddle Dance", says: "a stack of Impaired until the end of their next turn", condition: "impaired" },
+  entice: { label: "Entice Dance", says: "Compelled - at you - until the end of their next turn", condition: "compelled" },
+  weird: { label: "Weird Dance", says: "Ki Points and Capacity reduced by your Personality Modifier" },
+  death: { label: "Death Dance", says: "Life Points reduced by your Personality Modifier" }
+});
+
+/**
+ * Dance (Dancer): "Choose one of the below 'Dance' effects and then target all Opponents within a Huge Sphere AoE (centered
+ * on you). Make a Clash (Performance vs Intuition/Performance) against those Opponents. If you win against an Opponent, apply
+ * your chosen effect." Which effect, asked; the Opponents those targeted - who is within the Sphere, the table's - a Clash
+ * at each.
+ */
+export async function danceModifier(actor) {
+  const picked = await askPlayerChoice(actor, `${actor.name}: Dance`,
+    Object.entries(DANCES).map(([value, entry]) => ({ value, label: `${entry.label}: ${entry.says}` })));
+  if (!DANCES[picked]) return;
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const caught = [...new Map(Array.from(game.user.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid) && !allies.has(other.uuid))
+    .map(other => [other.uuid, other])).values()];
+  if (!caught.length) return ui.notifications.warn(`${actor.name}: Dance - target the Opponents within the Huge Sphere.`);
+  for (const target of caught) {
+    await postSkillClash(actor, target, { name: `Dance - ${DANCES[picked].label}`, type: "standard",
+      clash: { skill: "performance", defenderSkills: ["intuition", "performance"] } }, { danceEffect: { effect: picked, applied: false } });
+  }
+}
+
+/** A Dance's Clash, settled: won, its effect on them. */
+async function settleDanceModifier(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, danceEffect: { ...clash.danceEffect, applied: true } });
+  const dancer = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  const effect = DANCES[clash.danceEffect?.effect];
+  if (!dancer || !target || !effect) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} is not taken in.`);
+  const personality = Math.max(0, Number(dancer.system.attributes?.personality?.mod) || 0);
+  if (effect.condition) {
+    const { gainCondition } = await import("./effects/moments-runtime.mjs");
+    if (await gainCondition(target, effect.condition, 1) === false) return;
+    // "until the end of their next turn" - their own clock.
+    await lasting(target, { kind: KINDS.CONDITION, key: effect.condition, edge: EDGES.END, source: effect.label });
+    return settledNote(message, `${effect.label}: ${target.name} - ${effect.says}${(effect.condition === "compelled") ? ` (${dancer.name})` : ""}.`);
+  }
+  if (clash.danceEffect.effect === "weird") {
+    await requestActorUpdate(target, { "system.ki.value": Math.max(0, (Number(target.system.ki?.value) || 0) - personality),
+      "system.capacity.spent": (Number(target.system.capacity?.spent) || 0) + personality });
+    return settledNote(message, `${effect.label}: ${target.name} loses Ki Points and Capacity.`);
+  }
+  return reduceLifePoints(target, personality, { reason: effect.label });
+}
+
+/**
+ * Dancer (4): "Spend 1 Tension to use the Hype Maneuver as an Out-of-Sequence Maneuver." The stack spent once the Hype is.
+ */
+export async function dancerHype(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const held = Number(actor.system.resources?.tension?.stacks) || 0;
+  if (!held) return UNSPENT;
+  const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "hype"));
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  if (!await useManeuver(actor, own ? definitionOf(own) : getManeuver("hype"), { outOfSequence: true })) return UNSPENT;
+  return setResource(actor, "tension", held - 1);
 }
 
 /**

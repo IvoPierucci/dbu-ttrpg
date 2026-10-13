@@ -1195,6 +1195,8 @@ export function modifiersFor(actor, base) {
     .filter(item => (item.type === "maneuver") && (item.system.type === "modifier"))
     .map(definitionOf)
     .filter(modifier => !whyNotModify(modifier, base))
+    // One opened by an effect alone - the Dance (Dancer) - only where it is.
+    .filter(modifier => !whyNotSpecial(actor, modifier))
     .map(modifier => ({
       modifier,
       // The Base Maneuver's currency: a Modifier is part of doing that Maneuver rather
@@ -2144,6 +2146,7 @@ export function definitionOf(item) {
     duelEscape: item.system.duelEscape,
     exploit: item.system.exploit,
     empower: item.system.empower,
+    dance: Boolean(item.system.dance),
     grapple: item.system.grapple,
     launch: item.system.launch,
     terrainLift: item.system.terrainLift,
@@ -5741,6 +5744,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   }
   // Terrain Lift's Feature, thrown: no longer held.
   if (card && thrown?.carried) await (await import("./chat.mjs")).dropCarried(actor);
+  // The Dance Modifier Maneuver, applied to it: its effect picked and its Clashes opened (chat.mjs dance).
+  if (card && modifiers.some(entry => entry.modifier?.dance)) await (await import("./chat.mjs")).danceModifier(actor);
   // Weather Summoning: "When you use the Power Up Maneuver" - offered on a card of its own.
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).offerWeatherSummoning(actor);
   // "When you use the Power Up Maneuver" - its Triggered effects offered in a window then and there (God of Peace's).
@@ -6262,6 +6267,7 @@ export function maneuverItemFrom(definition) {
       duelEscape: Boolean(definition.duelEscape),
       exploit: Boolean(definition.exploit),
       empower: Boolean(definition.empower),
+      dance: Boolean(definition.dance),
       grapple: Boolean(definition.grapple),
       launch: Boolean(definition.launch),
       terrainLift: Boolean(definition.terrainLift),
