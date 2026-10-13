@@ -164,6 +164,14 @@ const TABLE = [
     doc: "Written as the State's own name, e.g. triggered/raging."
   },
   {
+    key: "left-condition",
+    label: "A Condition is taken off you",
+    provides: [],
+    parameterised: true,
+    doc: "Written as the Condition's own name, e.g. triggered/left-condition/courage-mark - the last stack gone. Answerable "
+       + "by anything, as left-state is (conditions.mjs) - Heart of Courage's."
+  },
+  {
     key: "left-state",
     label: "You leave a State",
     provides: [CTX.STATE],

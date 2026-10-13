@@ -1,0 +1,46 @@
+id: heart-of-courage
+name: Heart of Courage
+order: 4
+category: body
+importance: secondary
+description: >
+  With the fire of righteousness and courage burning inside you, you seek justice on your own terms.
+text: >
+  Heart of Courage (Body): With the fire of righteousness and courage burning inside you, you seek justice on your own terms.
+  (1)-[Passive]: While you possess 2+ stacks of Tension, increase the Dice Score of your Steadfast Checks by 1.
+  (2)-[Passive]: While you possess 3+ stacks of Tension, increase your Soak Value by 2(T).
+  (3)-[Passive]: While you are in the Entrusted State, increase your Wound Rolls by 1(T) for each stack of Tension you possess.
+  (4)-[Triggered, 1/Encounter]: If you lose a Clash initiated by an Opponent that used your Saving Throws or Might, you may instead win that Clash.
+  (5)-[Triggered/Start of Turn, 1/Encounter]: Ignore the effects of all Combat Conditions (except Pinned, Prone, Suffocating, or Transfigured) you are suffering from until the end of your next turn. While you are ignoring the effects of Combat Conditions through this effect, you are not considered to be suffering from any Combat Conditions for the effects of your Opponents.
+  (6)-[Triggered, 1/Encounter]: After you stop ignoring the effects of Combat Conditions through the 5th effect of Heart of Courage, gain 1 Tension.
+
+---
+
+[passive]
+# (1)
+if (stacksAtLeast(2, "tension")) {
+    steadfast.dice += 1;
+}
+# (2)
+if (stacksAtLeast(3, "tension")) {
+    soakValue += 2(T);
+}
+# (3)
+if (inState("entrusted") && hasResource("tension")) {
+    wound += (tension.stacks * tierOfPower);
+}
+# (4) Lost, a Might or Saving Throw Clash an Opponent opened: asked as it is settled, once an Encounter - won instead
+# (chat.mjs courageWins).
+allow courage.winClash;
+
+# (5) Your turn begins with a Combat Condition it would ignore: Heart of Courage (a mark) till the end of your next turn -
+# the turn after this one. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, 1/encounter, effect 5]
+requires conditionedBesides("pinned", "prone", "suffocating", "transfigured");
+gain(courage-mark);
+expires(courage-mark, next-turn);
+
+# (6) That mark gone - left-condition, a new moment: a stack of Tension. Automatic by default, its Triggered/Automatic
+# button.
+[triggered/left-condition/courage-mark, 1/encounter, effect 6]
+tension.stacks += 1;

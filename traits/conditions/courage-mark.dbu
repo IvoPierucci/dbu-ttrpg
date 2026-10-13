@@ -1,0 +1,16 @@
+id: courage-mark
+name: Heart of Courage
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Heart of Courage's (5) gives, held with a clock on it.
+combatCondition: no
+source: Core Rule
+description: >
+  Heart of Courage: the effects of Combat Conditions ignored until the end of your next turn.
+text: >
+  Heart of Courage (5): Ignore the effects of all Combat Conditions (except Pinned, Prone, Suffocating, or Transfigured) you are suffering from until the end of your next turn. While you are ignoring the effects of Combat Conditions through this effect, you are not considered to be suffering from any Combat Conditions for the effects of your Opponents.
+
+---
+
+# No script: while it is had, the Combat Conditions' own effects are left out (registry.mjs conditionPrograms,
+# COURAGE_SPARES), and an Opponent's effects count none on you (chat.mjs courageous).

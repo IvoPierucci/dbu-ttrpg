@@ -447,6 +447,11 @@ async function announceChanges(actor, before, after, kind) {
         await (await import("./chat.mjs")).offerTriggers(actor, `left-state/${key}`, context);
         await fireMoment(actor, `left-state/${key}`, context);
       }
+      // A Condition's the same way - Heart of Courage (6)'s "After you stop ignoring the effects of Combat Conditions".
+      else {
+        await (await import("./chat.mjs")).offerTriggers(actor, `left-condition/${key}`, context);
+        await fireMoment(actor, `left-condition/${key}`, context);
+      }
     }
   }
 }

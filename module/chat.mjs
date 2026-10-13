@@ -9287,16 +9287,40 @@ async function resolveSkillClash(message, clash) {
   const hidden = (clash.category === "skill") && (skillPicked(clash, clash.defenderUuid) === "concealment")
     && ((divine(defender) && !senses(challenger))
       || (defender.system.effects?.slots?.["concealment.autoSucceed"] === true));
-  const defenderSide = hidden
+  let defenderSide = hidden
     ? { ...rolledDefence, succeeded: true, lines: [...(rolledDefence.lines ?? []), noteLine(
       (defender.system.effects?.slots?.["concealment.autoSucceed"] === true) ? "Energy Core" : "God Ki - it cannot be sensed")] }
     : rolledDefence;
+  let challengerResult = hidden ? { ...challengerSide, succeeded: false } : challengerSide;
+
+  // Heart of Courage (4): lost, a Might or Saving Throw Clash an Opponent opened - won instead, asked.
+  if (await courageWins(clash, challenger, defender, { challenger: challengerResult, defender: defenderSide })) {
+    challengerResult = { ...challengerResult, succeeded: false };
+    defenderSide = { ...defenderSide, succeeded: true, lines: [...(defenderSide.lines ?? []), noteLine("Heart of Courage - won instead")] };
+  }
 
   requestEdit(message, {
     type: "clash",
-    clash: { ...clash, result: { challenger: hidden ? { ...challengerSide, succeeded: false } : challengerSide,
-      defender: defenderSide } }
+    clash: { ...clash, result: { challenger: challengerResult, defender: defenderSide } }
   });
+}
+
+/**
+ * Heart of Courage (4): "If you lose a Clash initiated by an Opponent that used your Saving Throws or Might, you may instead
+ * win that Clash." Asked of the defender as the Clash is settled, once an Encounter - spent when taken.
+ */
+async function courageWins(clash, challenger, defender, result) {
+  if (!["might", "save"].includes(clash?.category ?? "") || (whoWonClash(result) !== "challenger")) return false;
+  if (!challenger || !defender || (challenger.uuid === defender.uuid)
+    || (defender.system?.effects?.slots?.["courage.winClash"] !== true)) return false;
+  if (alliesOnScene(defender).some(ally => ally.uuid === challenger.uuid)) return false;
+  const encounter = game.combat?.id ?? "none";
+  if (defender.getFlag?.(SCOPE, "courageClash") === encounter) return false;
+  const answer = await askPlayerChoice(defender, `${defender.name}: Heart of Courage - ${clash.maneuverName ?? "a Clash"} lost`,
+    [{ value: "win", label: "Win it instead (once an Encounter)" }, { value: "no", label: "No" }]);
+  if (answer !== "win") return false;
+  await requestActorUpdate(defender, { [`flags.${SCOPE}.courageClash`]: encounter });
+  return true;
 }
 
 /**
@@ -14633,7 +14657,7 @@ export async function pressureCheck(actor) {
 function inflictedOnOpponent(actor) {
   const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
   const combat = key => (getTrait(key)?.kind === "conditions") && (getTrait(key)?.combatCondition !== false);
-  const suffering = (other, key) => other && !allies.has(other.uuid) && (other.uuid !== actor.uuid)
+  const suffering = (other, key) => other && !allies.has(other.uuid) && (other.uuid !== actor.uuid) && !courageous(other)
     && ((Number(other.system?.conditions?.[key]) || 0) > 0) && combat(key);
   if ((actor.system.timed ?? []).some(entry => (entry.kind === KINDS.CONDITION) && entry.on
     && suffering(fromUuidSync(entry.on), entry.key))) return true;
@@ -15074,8 +15098,16 @@ async function settleConditionHandOff(message, clash) {
 
 /** Suffering from a Combat Condition - one of the published ones, not a mark (Demonic Combat's). */
 function conditioned(actor) {
+  // Heart of Courage (5): "you are not considered to be suffering from any Combat Conditions for the effects of your
+  // Opponents" - every reader of this is an Opponent's effect.
+  if (courageous(actor)) return false;
   return Object.entries(actor?.system?.conditions ?? {}).some(([key, stacks]) => ((Number(stacks) || 0) > 0)
     && (getTrait(key)?.kind === "conditions") && (getTrait(key)?.combatCondition !== false));
+}
+
+/** Heart of Courage (5)'s mark on them: no Combat Condition counted for an Opponent's effects. */
+function courageous(actor) {
+  return (Number(actor?.system?.conditions?.["courage-mark"]) || 0) > 0;
 }
 
 /** Demonic Combat (3): "make a Might Clash against that Opponent. If you win, they are knocked Prone." */

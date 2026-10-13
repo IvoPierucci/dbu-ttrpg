@@ -785,6 +785,9 @@ function coverPrograms(actor, report) {
 /** The Combat Conditions Plastered still feels. */
 const PLASTERED_SPARES = Object.freeze(["pinned", "suffocating", "stress-exhaustion", "transfigured"]);
 
+/** And the ones Heart of Courage (5) still feels. */
+const COURAGE_SPARES = Object.freeze(["pinned", "prone", "suffocating", "transfigured"]);
+
 /**
  * The Combat Conditions a Trait or Talent the character has lets them ignore - its file's `ignoresConditions`, while in
  * the State its `ignoresConditionsWhile` names, if it names one: Warrior's Pride's Impaired and Fatigued in Superior.
@@ -826,6 +829,9 @@ function conditionPrograms(actor, report) {
     // Transfigured)" - a Combat Condition's, not a mark's (`combatCondition: no`).
     if (((Number(actor.system?.states?.drunk) || 0) >= 2) && (trait.combatCondition !== false)
       && !PLASTERED_SPARES.includes(key)) continue;
+    // Heart of Courage (5): "Ignore the effects of all Combat Conditions (except Pinned, Prone, Suffocating, or Transfigured)".
+    if (((Number(actor.system?.conditions?.["courage-mark"]) || 0) > 0) && (trait.combatCondition !== false)
+      && !COURAGE_SPARES.includes(key)) continue;
     if (ignored.has(key)) continue;
 
     const { program, errors } = compile(
