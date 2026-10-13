@@ -1,0 +1,22 @@
+id: experienced-fighter-second-effect
+name: 2nd effect of Experienced Fighter
+type: instant
+actionCost: 0
+kiCostPerTier: 3
+attacking: false
+requiresTarget: true
+usageLimit: 1/round
+fromTrait: experienced-fighter
+fromEffect: 2
+source: Core Rule
+description: >
+  Experienced Fighter's second effect, as a Maneuver: 3(T) Ki Points at an Opponent - Exploitation Strike, Instinct-Driven Dodge or Punishing Blow.
+text: >
+  (2)-[1/Round]: As an Instant Maneuver, you can spend 3(T) Ki Points to target an Opponent and apply one of the following effects (these effects cannot stack): Exploitation Strike, Instinct-Driven Dodge, Punishing Blow.
+
+---
+
+# The Liquid State's sixth effect's shape (liquid-sixth-effect.dbu): owned by every character, in the list only while
+# Experienced Fighter is had (`fromTrait`). Used, which of the three is asked (chat.mjs experiencedFighter).
+[on used]
+experiencedFighter();

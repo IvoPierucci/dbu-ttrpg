@@ -1,0 +1,27 @@
+id: experienced-fighter
+name: Experienced Fighter
+order: 4
+category: mind
+importance: secondary
+description: >
+  Many Earthlings that train in combat spend years honing a particular skill, allowing them to keep up with other races despite their disadvantages.
+text: >
+  Experienced Fighter (Mind): Many Earthlings that train in combat spend years honing a particular skill, allowing them to keep up with other races despite their disadvantages.
+  (1)-[Triggered/Start of Combat Round]: If you had used 2+ Attacking Maneuvers but didn’t Ki Wager and none of your Attacking Maneuvers possessed more than 1 Energy Charge during the last Combat Round, you may use the Combat Recovery Maneuver as an Out-of-Sequence Maneuver as if you spent 2 Actions. If you do, you do not suffer from the penalty to your Defense Value through its effects.
+  (2)-[1/Round]: As an Instant Maneuver, you can spend 3(T) Ki Points to target an Opponent and apply one of the following effects (these effects cannot stack):
+
+  * Exploitation Strike [Triggered]: Increase the Strike Roll of your next Attacking Maneuver against the targeted Opponent by 2(T). The penalty they are currently suffering from Diminishing Defense is doubled for the duration of this Attacking Maneuver.
+  * Instinct-Driven Dodge [Triggered]: Increase your Dodge Roll against the next Attacking Maneuver that targets you from the targeted Opponent by 2(T). You ignore any penalties due to the effects of Diminishing Defense for this Dodge Roll.
+  * Punishing Blow [Triggered]: The next Attacking Maneuver you make against the targeted Opponent has its Wound Roll increased by 3(T) and its Damage Category increased by 1 category.
+
+---
+
+# (1) As each Combat Round starts, after one in which 2 or more Attacking Maneuvers were counted, none with a Ki Wager or
+# more than 1 Energy Charge: Combat Recovery offered out of sequence on the Round's card, as if for 2 Actions, its Defense
+# Value not lost (chat.mjs experiencedRoundStart).
+[passive]
+allow combatRecovery.experienced;
+
+# (2) Its own Maneuver, "2nd effect of Experienced Fighter" (traits/maneuvers/experienced-fighter-second-effect.dbu): an
+# Instant at an Opponent, 3(T) Ki, once a Round - one of the three asked, held till it is spent on the attack it names; a
+# new one takes the place of the last (chat.mjs experiencedFighter).

@@ -14550,6 +14550,62 @@ export async function flowOfCombatTurnStart(actor, turnCard = null) {
  * Cost of 1 Action as an Out-of-Sequence Maneuver. If you do, you cannot use a Counter Maneuver until the start of your
  * next turn." Offered on the turn's own card, as Flow of Combat's Combat Recovery is.
  */
+/**
+ * Experienced Fighter (1): "If you had used 2+ Attacking Maneuvers but didn't Ki Wager and none of your Attacking Maneuvers
+ * possessed more than 1 Energy Charge during the last Combat Round, you may use the Combat Recovery Maneuver as an
+ * Out-of-Sequence Maneuver as if you spent 2 Actions." Offered on the Round's card - the attacks the last Round counted, and
+ * none of them marked (heavyRound, postAttack).
+ */
+export async function experiencedRoundStart(actor, roundCard, attacks, lastRound) {
+  if (!actor || (actor.system?.effects?.slots?.["combatRecovery.experienced"] !== true)) return;
+  if (((Number(attacks) || 0) < 2) || (actor.getFlag?.(SCOPE, "heavyRound") === lastRound)) return;
+  const recovery = actor.items?.find(item => (item.type === "maneuver") && ((item.system.maneuverId || "") === "combat-recovery"));
+  if (!recovery) return;
+  const { definitionOf } = await import("./use-maneuver.mjs");
+  if (maneuverUsesLeft(actor, definitionOf(recovery)) <= 0) return;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "combat-recovery",
+    maneuverName: recovery.name, reason: "Experienced Fighter - as if for 2 Actions, no Defense Value lost",
+    grants: { actionsSpent: 2, noDefensePenalty: true } };
+  if (roundCard) return requestEdit(roundCard, { type: "offer", offer });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
+}
+
+/** Experienced Fighter (2)'s three. */
+const READIED = Object.freeze({
+  strike: "Exploitation Strike",
+  dodge: "Instinct-Driven Dodge",
+  punish: "Punishing Blow"
+});
+
+/**
+ * Experienced Fighter (2): "As an Instant Maneuver, you can spend 3(T) Ki Points to target an Opponent and apply one of the
+ * following effects (these effects cannot stack)". Which, asked; held on the user against that Opponent this Encounter till
+ * the attack it names spends it - one at a time, a new one in the last one's place.
+ */
+export async function experiencedFighter(actor, target) {
+  if (!actor || !target || (target.uuid === actor.uuid)) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Experienced Fighter - ${target.name}`,
+    Object.entries(READIED).map(([value, label]) => ({ value, label })));
+  if (!READIED[picked]) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.readied`]: { kind: picked, targetUuid: target.uuid,
+    combatId: game.combat?.id ?? "none" } });
+}
+
+/** What Experienced Fighter (2) holds readied, this Encounter's, or null. */
+function readiedOf(actor) {
+  const readied = actor?.getFlag?.(SCOPE, "readied");
+  return (readied?.kind && (readied.combatId === (game.combat?.id ?? "none"))) ? readied : null;
+}
+
+/** Spent, where it is one of these kinds and against one of these: what it was, or null. */
+async function spendReadied(holder, against, kinds) {
+  const readied = readiedOf(holder);
+  if (!readied || !kinds.includes(readied.kind) || !against.some(each => each?.uuid === readied.targetUuid)) return null;
+  await requestActorUpdate(holder, { [`flags.${SCOPE}.readied`]: null });
+  return readied;
+}
+
 export async function freedomTurnStart(actor, turnCard = null) {
   if (!actor || (actor.system?.effects?.slots?.["freedom.turnStart"] !== true)) return;
   const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "", maneuverName: "a Standard Maneuver (1 Action)",
@@ -15626,6 +15682,15 @@ export async function postAttack(actor, target, maneuver,
   // Last Resource: "apply a number of Energy Charges up to your number of Overwhelm stacks".
   if (overwhelm?.lastResource && !reflecting) charges = (Number(charges) || 0) + (Number(overwhelm.lastResource) || 0);
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
+  // Experienced Fighter (2): the attacker's Exploitation Strike or Punishing Blow against one of these, spent on it; each
+  // target's Instinct-Driven Dodge against this attacker, spent on it.
+  const experienced = reflecting ? null : await spendReadied(actor, everyone, ["strike", "punish"]);
+  const instinct = [];
+  if (!reflecting) for (const aimed of everyone) if (await spendReadied(aimed, [actor], ["dodge"])) instinct.push(aimed.uuid);
+  // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.
+  if (experienced?.kind === "punish") {
+    woundExtra = [...woundExtra, { label: "Punishing Blow", written: "+3(T)", value: 3 * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
   // Hidden from any of them: "made 2 attacks" at them ends it.
   const { countHiddenAttack } = await import("./hidden.mjs");
   for (const aimed of everyone) await countHiddenAttack(actor, aimed);
@@ -15738,6 +15803,9 @@ export async function postAttack(actor, target, maneuver,
           ...(doublesDiminishing ? { doublesDiminishing: true } : {}),
           // Majin Malice's and Majin Mentality's: rows on its Wound Roll, and Malice's Backlash after it.
           ...(woundExtra.length ? { woundExtra } : {}),
+          // Experienced Fighter (2)'s, spent on it: the attacker's, and who Dodges with Instinct-Driven Dodge.
+          ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
+          ...(instinct.length ? { instinct } : {}),
           ...(maliceBacklash ? { maliceBacklash } : {}),
           // Quick Learner's: made with a Copied Technique.
           ...(maneuver.copied ? { copied: true } : {}),
@@ -15800,7 +15868,9 @@ export async function postAttack(actor, target, maneuver,
             // The Maneuver's own - Divine Attack's "has its Damage Category increased by 1 category".
             + (reflecting ? 0 : (Number(maneuver.damageCategoryShift) || 0))
             // Overwhelming Assault's "Increase the Damage Category of that Attacking Maneuver by 1 Category".
-            + ((overwhelm?.category && !reflecting) ? 1 : 0),
+            + ((overwhelm?.category && !reflecting) ? 1 : 0)
+            // Punishing Blow's "its Damage Category increased by 1 category".
+            + ((experienced?.kind === "punish") ? 1 : 0),
           // Genki's is added here: gathered from Empower, and neither paid again nor counted.
           kiWager: kiWager + (Number(freeWager) || 0),
           // What making it took from its maker's pools - Divine Counter's cancelling gives it back.
@@ -15922,6 +15992,12 @@ export async function postAttack(actor, target, maneuver,
           saves: ["morale"], defenderSaves: ["morale"], trapGuard: { applied: false, attackMessageId: card.id } });
       }
     }
+  }
+  // Experienced Fighter (1): this Round's attacks, one with a Ki Wager or more than 1 Energy Charge marked.
+  const madeNow = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (madeNow && !reflecting && game.combat?.started && (actor.system.effects?.slots?.["combatRecovery.experienced"] === true)
+    && (((Number(kiWager) || 0) > 0) || ((Number(madeNow.energyCharges) || 0) > 1))) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.heavyRound`]: roundKey() });
   }
   // Quick Learner: a Signature Technique used in a Combat Encounter - Copy, offered to whoever has the Talent.
   if (card && maneuver.signature && !maneuver.signatureTechnique && game.combat?.started) offerCopies(card, actor, maneuver);
@@ -17276,6 +17352,9 @@ function strikeParts(attacker, attack) {
   return [
     // Critical Point (2): the declared Attacking Maneuver, primed this Round - 2(T).
     ...(attack?.primed ? [{ label: "Critical Point", written: "+2(T)",
+      value: 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1) }] : []),
+    // Experienced Fighter (2): Exploitation Strike - 2(T).
+    ...((attack?.experienced?.kind === "strike") ? [{ label: "Exploitation Strike", written: "+2(T)",
       value: 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1) }] : []),
     strikeOf(attacker, attack?.foundation),
     ...favoredParts(attacker, attack, "strike"),
@@ -19171,10 +19250,22 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   if (other) parts.push({ label: "Dodge bonus", value: other });
 
   parts.push(...musclePenalty(actor));
-  parts.push({ label: "Dim. Defense", value: -actor.system.diminishing.defense.penalty });
+  // Experienced Fighter (2): Instinct-Driven Dodge - 2(T), "You ignore any penalties due to the effects of Diminishing
+  // Defense for this Dodge Roll".
+  const instinct = (attack?.instinct ?? []).includes(actor.uuid);
+  if (instinct) {
+    parts.push({ label: "Instinct-Driven Dodge", written: "+2(T)", value: 2 * Math.max(1, Number(actor.system.tierOfPower) || 1) });
+  }
+  else {
+    parts.push({ label: "Dim. Defense", value: -actor.system.diminishing.defense.penalty });
+    // Exploitation Strike's: "The penalty they are currently suffering from Diminishing Defense is doubled".
+    if ((attack?.experienced?.kind === "strike") && (attack.experienced.targetUuid === actor.uuid)) {
+      parts.push({ label: "Dim. Defense (Exploitation Strike)", value: -actor.system.diminishing.defense.penalty });
+    }
+  }
   // Slashing: "Apply any Diminishing Defense from Attacking Maneuvers made with this Weapon at
   // Attack Declaration" - what this Dodge will earn, already weighing on it.
-  if (attack?.weapon?.diminishingAtDeclaration) {
+  if (attack?.weapon?.diminishingAtDeclaration && !instinct) {
     parts.push({ label: `Dim. Defense (${attack.weapon.categoryName})`,
       value: -actor.system.diminishing.defense.perAttack });
   }

@@ -66,6 +66,8 @@ export const NOT_GRAPPLING = Object.freeze({
  */
 async function startRound(combat) {
   const { EDGES, edgeReached } = await import("./durations.mjs");
+  // The attacks the Round ending counted, for what reads them as the next begins - Experienced Fighter's.
+  const lastAttacks = new Map();
 
   // Precognition's "for this Combat Round": whoever it moved and never had their turn goes back to their own Initiative -
   // the rest went back as their turn ended (combatTurnChange). Not told as a turn changing.
@@ -89,6 +91,7 @@ async function startRound(combat) {
     }
     await edgeReached(actor, EDGES.ROUND);
 
+    lastAttacks.set(actor.uuid, Number(actor.system.attacksThisRound) || 0);
     await actor.update(newRoundFor(actor));
     if (actor.system.foresight?.opponentUuid) await actor.update({ "system.foresight": FORESEEN_NOTHING });
     await fireMoment(actor, "start-of-round");
@@ -128,10 +131,17 @@ async function startRound(combat) {
     }
   }
 
-  await announce("start-of-round", {
+  const roundCard = await announce("start-of-round", {
     title: `Start of Combat Round ${combat.round}`,
     subjects: combatants(combat).map(actor => actor.uuid)
   });
+  // Experienced Fighter (1): Combat Recovery out of sequence, on the Round's card.
+  if ((combat.round ?? 0) > 1) {
+    const { experiencedRoundStart } = await import("./chat.mjs");
+    for (const actor of combatants(combat)) {
+      await experiencedRoundStart(actor, roundCard, lastAttacks.get(actor.uuid), `${combat.id}:${(combat.round ?? 0) - 1}`);
+    }
+  }
 }
 
 /**

@@ -96,6 +96,11 @@ export const VERBS = Object.freeze({
     doc: "Ruler's: 2 stacks of Overwhelm spent, and the Allies ticked as within a Large Sphere around you Ruled - Soak "
        + "Value and Combat Rolls 1(T) higher - until the start of your next turn (chat.mjs rulerAllies)."
   },
+  experiencedFighter: {
+    args: [0, 0],
+    names: [],
+    doc: "Experienced Fighter (2)'s: at the Maneuver's target, one of its three asked and held (chat.mjs experiencedFighter)."
+  },
   clearConditions: {
     args: [0, 9],
     names: [0, 1, 2, 3, 4, 5, 6, 7, 8],

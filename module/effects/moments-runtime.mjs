@@ -357,6 +357,11 @@ async function runVerb(actor, call, context) {
       return rulerAllies(actor);
     }
 
+    case "experiencedFighter": {
+      const { experiencedFighter } = await import("../chat.mjs");
+      return experiencedFighter(actor, context?.targets?.[0] ?? null);
+    }
+
     case "clearConditions": {
       // Earthling Resolve (3): "remove all Combat Conditions afflicting you (except Suffocating)".
       const besides = args.map(name => String(name).toLowerCase());
