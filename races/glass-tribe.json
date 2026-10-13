@@ -16,5 +16,15 @@
     }
   ],
   "savingThrow": "corporeal",
-  "skillRanks": 4
+  "skillRanks": 4,
+  "subraces": [
+    {
+      "id": "glass-user",
+      "name": "Glass User"
+    },
+    {
+      "id": "glass-warrior",
+      "name": "Glass Warrior"
+    }
+  ]
 }
