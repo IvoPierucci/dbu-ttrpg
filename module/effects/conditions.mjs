@@ -81,6 +81,9 @@ const PREDICATES = {
       && !besides.includes(key) && isCombatCondition(key));
   },
 
+  /** Their Square has that Environmental Quality - its Environment's, ticked, or an effect's (Body of Glass's Glass). */
+  onSquare: (scope, name) => (scope.data?.battlefield?.squareQualities ?? []).includes(String(name).toLowerCase()),
+
   /** That Option chosen on one of their Racial Traits - Quick to Master's Way, for Eye of the Dragon (3). */
   optionChosen: (scope, id) => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "racial")
     && (item.system?.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === String(id)))),

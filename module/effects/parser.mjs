@@ -493,7 +493,9 @@ const PREDICATE_NAMES = new Set([
   // A Combat Condition on you besides the ones named - Earthling Resolve's.
   "conditionedBesides",
   // A Racial Trait's Option chosen - Eye of the Dragon's, by Quick to Master's.
-  "optionChosen"
+  "optionChosen",
+  // Your Square has that Environmental Quality - Body of Glass's Glass.
+  "onSquare"
 ]);
 
 /** The ones written without brackets, because they take nothing. */

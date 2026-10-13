@@ -1,0 +1,32 @@
+id: body-of-glass
+name: Body of Glass
+order: 1
+category: body
+importance: primary
+description: >
+  Brittle and unyielding, your body is hard to damage but shatters under extreme force.
+text: >
+  Body of Glass (Body): Brittle and unyielding, your body is hard to damage but shatters under extreme force.
+  (1)-[Passive]: Halve your Soak Value.
+  (2)-[Passive]: Gain Damage Reduction equal to your Soak Value.
+  (3)-[Passive]: If your Top Layer of Apparel is not of the Armor or Weights Apparel Category, increase your Damage Reduction by the Apparel Bonus of that piece of Apparel.
+  (4)-[Passive]: You gain access to the Glassification Special Maneuver and the Glass Profile.
+  (5)-[Passive]: Increase your Combat Rolls by 1(T) while occupying a Square with the Glass Environmental Quality, or while adjacent to a Feature with the Glass Feature Quality.
+  (6)-[Triggered, 1/Round]: If you or an Ally is targeted by an Attacking Maneuver while adjacent to a Feature with the Glass Feature Quality and the attacking Character is not adjacent to the targeted Character, they may benefit from cover using the adjacent Feature even if it is not between the attacking Character and the target.
+
+---
+
+[passive]
+# (1)
+soakValue *= 0.5;
+# (2) The Soak Value as it stands, halved; (3) the Top Layer's Apparel Bonus, not Armor or Weights (actor-character.mjs).
+allow damageReduction.soak;
+allow damageReduction.apparelBonus;
+# (4)
+allow maneuver.glassification;
+allow profile.glass;
+# (5) A Square with the Glass Environmental Quality - ticked, or given by Glassification. Beside a Glass Feature: the
+# table's, as is (6) - Cover is ticked by the player (the user's).
+if (onSquare("glass")) {
+    combatRolls += 1(T);
+}

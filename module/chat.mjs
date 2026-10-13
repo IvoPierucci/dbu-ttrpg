@@ -730,6 +730,9 @@ async function settleClashEffects(messageId, clash) {
     await settleDevilmite(message, clash);
   }
 
+  if (clash.glassSlowed && clash.result && !clash.glassSlowed.applied) {
+    await settleGlassSlowed(message, clash);
+  }
   if (clash.conditionHandOff && clash.result && !clash.conditionHandOff.applied) {
     await settleConditionHandOff(message, clash);
   }
@@ -14407,6 +14410,98 @@ function resilienceButtons(message, attack, container) {
   }
 }
 
+/**
+ * Glassification: "For each Action spent, target a Square or Character that is within your Melee Range (you may target the
+ * same target multiple times)." Each Action's asked - a Square, A to C, or a Character targeted within Melee Range - then
+ * each Square's Sphere and each Character's Clash.
+ */
+export async function glassification(actor, actions) {
+  if (!actor) return;
+  const count = Math.max(1, Math.min(3, Number(actions) || 1));
+  const { whyNotWithinMelee } = await import("./maneuvers.mjs");
+  const reach = [...new Map(Array.from(game.user.targets ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid) && !whyNotWithinMelee(actor, other, "Glassification"))
+    .map(other => [other.uuid, other])).values()];
+  const escape = Handlebars.escapeExpression;
+  const choices = [...["A", "B", "C"].slice(0, count).map(letter => [`square:${letter}`, `Square ${letter}`]),
+    ...reach.map(other => [`character:${other.uuid}`, other.name])];
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Glassification" },
+    content: `<div class="dbu-respond-dialog">${Array.from({ length: count }, (unused, at) => `
+      <label class="dbu-respond-option"><span class="dbu-respond-name">Action ${at + 1}</span>
+        <select name="action">${choices.map(([value, label]) =>
+          `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select></label>`).join("")}
+      <p class="dbu-respond-hint" data-tooltip="A Square: a Sphere of Glass, 1 Magnitude more each time after the first. A Character targeted within your Melee Range: a Clash, a stack of Slowed each time.">Each Action: a Square or a Character.</p></div>`,
+    buttons: [{ action: "confirm", label: "Confirm", default: true, callback: (event, button, dialog) =>
+      [...dialog.element.querySelectorAll('select[name="action"]')].map(select => select.value) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  if (!Array.isArray(picked)) return;
+  const times = new Map();
+  for (const value of picked) times.set(value, (times.get(value) ?? 0) + 1);
+  // Each Square: who stands in its Sphere, Glass on their Square in place of every other Quality ticked there.
+  for (const [value, n] of times) {
+    if (!value.startsWith("square:")) continue;
+    const letter = value.slice(7);
+    const standing = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
+      .filter(other => other?.type === "character").map(other => [other.uuid, other])).values()];
+    if (!standing.length) continue;
+    const caught = await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"], window: { title: `Glassification - Square ${letter}` },
+      content: `<p class="dbu-respond-hint" data-tooltip="Its Features gain the Glass and Reflective Feature Qualities - the table's.">Who stands in the Sphere${
+        (n > 1) ? ` (Magnitude +${n - 1})` : ""}?</p>${standing.map(other => `<label class="dbu-respond-option">
+          <input type="checkbox" name="caught" value="${other.uuid}"/>
+          <span class="dbu-respond-name">${escape(other.name)}</span></label>`).join("")}`,
+      buttons: [{ action: "confirm", label: "Glass", callback: (event, button, dialog) =>
+        [...dialog.element.querySelectorAll('input[name="caught"]:checked')].map(input => input.value) },
+        { action: "cancel", label: "Cancel" }],
+      rejectClose: false
+    });
+    for (const uuid of (Array.isArray(caught) ? caught : [])) {
+      const other = fromUuidSync(uuid);
+      if (other) await requestActorUpdate(other, { "system.battlefield.qualities": ["glass"] });
+    }
+  }
+  // Each Character: a Clash, Corporeal against any Saving Throw - its times, in stacks of Slowed.
+  const first = game.combat?.turns?.[0]?.actor?.uuid === actor.uuid;
+  for (const [value, n] of times) {
+    if (!value.startsWith("character:")) continue;
+    const target = fromUuidSync(value.slice(10));
+    if (!target) continue;
+    await postSaveClash(actor, target, { maneuverName: "Glassification",
+      reason: `Win and ${target.name} gains ${n} stack${(n === 1) ? "" : "s"} of Slowed.`,
+      saves: ["corporeal"], defenderSaves: Object.keys(DBUCharacterData.SAVING_THROWS),
+      glassSlowed: { stacks: n, first, applied: false } });
+  }
+}
+
+/**
+ * Glassification's Clash: won, "they gain a stack of Slowed for each time they were targeted until the start of your next
+ * turn. If your turn was taken before any other turns during this Combat Round, this effect only lasts until the start of
+ * the next Combat Round." Lost, their Exploit Maneuver offered on this card.
+ */
+async function settleGlassSlowed(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, glassSlowed: { ...clash.glassSlowed, applied: true } });
+  const caster = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!caster || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") {
+    await settledNote(message, `${target.name} shrugs it off.`);
+    return offerExploitTo(message, target, caster, `${clash.maneuverName} - the Clash was lost`, "glassification");
+  }
+  const stacks = Math.max(1, Number(clash.glassSlowed.stacks) || 1);
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  if (await gainCondition(target, "slowed", stacks) === false) return;
+  const first = Boolean(clash.glassSlowed.first);
+  for (let n = 0; n < stacks; n++) {
+    await lasting(caster, { kind: KINDS.CONDITION, key: "slowed", edge: first ? EDGES.ROUND : EDGES.START, on: target.uuid,
+      source: "Glassification" });
+  }
+  return settledNote(message, `${target.name} is Slowed${(stacks > 1) ? ` (${stacks})` : ""} until ${
+    first ? "the next Combat Round" : `the start of ${caster.name}'s next turn`}.`);
+}
+
 /** Fallen Idol (4)'s Combat Conditions: the ones that may be handed on. */
 const HANDED_ON = Object.freeze(["impediment", "guard-down", "broken", "impaired"]);
 
@@ -16500,6 +16595,10 @@ function absoluteOutcome(target, wound) {
  */
 function profileCategoryShift(profileId, charges) {
   const profile = PROFILES[profileId];
+  // Glass: "its Damage Category by 1 Category" for every 2 Energy Charges, "max. +2 Categories".
+  if (profile?.perTwoCharges) {
+    return Math.min(profile.perTwoCharges.categoryMax ?? Infinity, Math.floor(Math.max(0, Number(charges) || 0) / 2));
+  }
   if (!profile?.categoryUpAtCharges) return 0;
 
   const total = Math.min(
@@ -18497,6 +18596,13 @@ function profileWoundParts(attacker, attack) {
     const said = own ? own.label : foundation.label;
     const source = profile?.extraDamageAttribute ? profile.label : "Complete Annihilation";
     if (modifier) parts.push({ label: `${source} (${said})`, value: modifier });
+  }
+
+  // Glass: "For every 2 Energy Charges applied to this Attacking Maneuver, increase its Wound Roll by 1(T)".
+  if (profile?.perTwoCharges) {
+    const steps = Math.floor((Number(attack.energyCharges) || 0) / 2);
+    if (steps) parts.push({ label: `${profile.label} (charges)`, written: `+${steps}(T)`,
+      value: steps * Math.max(1, Number(attacker.system.tierOfPower) || 1) });
   }
 
   // Mega Flare: "for every Energy Charge applied to this Attacking Maneuver, increase

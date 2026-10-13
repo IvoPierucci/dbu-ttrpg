@@ -357,6 +357,11 @@ async function runVerb(actor, call, context) {
       return rulerAllies(actor);
     }
 
+    case "glassification": {
+      const { glassification } = await import("../chat.mjs");
+      return glassification(actor, Number(context?.actionsSpent) || 1);
+    }
+
     case "experiencedFighter": {
       const { experiencedFighter } = await import("../chat.mjs");
       return experiencedFighter(actor, context?.targets?.[0] ?? null);

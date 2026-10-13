@@ -96,6 +96,11 @@ export const VERBS = Object.freeze({
     doc: "Ruler's: 2 stacks of Overwhelm spent, and the Allies ticked as within a Large Sphere around you Ruled - Soak "
        + "Value and Combat Rolls 1(T) higher - until the start of your next turn (chat.mjs rulerAllies)."
   },
+  glassification: {
+    args: [0, 0],
+    names: [],
+    doc: "Glassification's: each Action's target asked - a Square or a Character - and each settled (chat.mjs glassification)."
+  },
   experiencedFighter: {
     args: [0, 0],
     names: [],

@@ -1,0 +1,39 @@
+id: glassification
+name: Glassification
+type: standard
+actionCost: 1
+actionCostMax: 3
+kiCostPerTier: 5
+kiPerAction: true
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+exploitable: >
+  If you fail the clash against a target of this Special Maneuver, this triggers their Exploit Maneuver.
+# Only on a lost Clash, as the Magic Trick's: offered on that Clash's card (chat.mjs settleGlassSlowed).
+exploitOnLoss: true
+source: Core Rule
+description: >
+  1 to 3 Actions, 5(T) KP each: each a Square (a Sphere of Glass) or a Character (a Clash, Slowed) within your Melee Range.
+text: >
+  Glassification [1/Round]: You coat the battlefield, along with your friends and even your foes, with glass, allowing you to control the flow of battle.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: Variable (1~3 Actions)
+  –Minions: N/A
+  –KP Cost: 5(T) for each Action spent
+  –Exploitable: If you fail the clash against a target of this Special Maneuver, this triggers their Exploit Maneuver.
+  –Effect: For each Action spent, target a Square or Character that is within your Melee Range (you may target the same target multiple times). Apply the effects depending on what is targeted:
+
+  * Square. All Squares and Features within a Sphere AoE (centered on that Square) gain the Glass Environmental Quality or Glass and Reflective Feature Qualities respectively. For each time that Square was targeted after the first, increase the Magnitude of that AoE by 1.
+  * Character. Make a Clash (Corporeal vs Any Saving Throw) against that target. If you win, they gain a stack of Slowed for each time they were targeted until the start of your next turn. If your turn was taken before any other turns during this Combat Round, this effect only lasts until the start of the next Combat Round.
+
+---
+
+# A Special Maneuver: open where an effect grants it - Body of Glass. Used, each Action's target asked: a Square (A, B,
+# C - the player knows which) or a Character targeted within Melee Range. Each Square: who stands in its Sphere asked, and
+# Glass ticked on their Square in place of what was (Glass's "remove all other Environmental Qualities"); its Features the
+# table's. Each Character: a Clash (Corporeal against any Saving Throw) - won, a stack of Slowed for each time (chat.mjs
+# glassification, settleGlassSlowed).
+[on used]
+glassification();

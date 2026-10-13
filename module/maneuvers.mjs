@@ -616,6 +616,24 @@ export const PROFILES = Object.freeze({
     // (technique-attack.mjs). The AoE sentence is the card's area marking (chat.mjs `markArea`).
   },
 
+  // Glass Tribe's: "You gain access to the Glass Profile" (Body of Glass) - offered only where `profile.glass` is allowed.
+  glass: {
+    label: "Glass",
+    foundations: ["physical", "energy", "magic"],
+    kiCostPerTier: 2,
+    damageCategory: "standard",
+    text: `
+      Glass: Your attack is made out of or covered in glass, slicing through your enemies’ defenses.
+      –Foundations: All
+      –Damage Category: Standard
+      –KP Cost: 2(T)
+      –Effect: For every 2 Energy Charges applied to this Attacking Maneuver, increase its Wound Roll by 1(T) and its
+      Damage Category by 1 Category (max. +2 Categories).`,
+    accessSlot: "profile.glass",
+    // 1(T) Wound each 2 Energy Charges (chat.mjs profileWoundParts); a Category each, 2 at most (profileCategoryShift).
+    perTwoCharges: { categoryMax: 2 }
+  },
+
   elementalEarth: {
     label: "Elemental (Earth)",
     foundations: ["magic"],
@@ -2203,7 +2221,13 @@ function groupTip(group) {
   return note ? ` data-tooltip="${Handlebars.escapeExpression(note)}"` : "";
 }
 
-function profileGroups(foundations, allowed = []) {
+/** Whether a Profile is open to this character: one an effect must give - the Glass Profile - only where it is given. */
+export function profileOpen(actor, id) {
+  const slot = PROFILES[id]?.accessSlot;
+  return !slot || (actor?.system?.effects?.slots?.[slot] === true);
+}
+
+function profileGroups(foundations, allowed = [], actor = null) {
   const groups = [{ key: "multi", label: "Multi-Foundation", profiles: [] }];
   for (const [key, foundation] of Object.entries(foundations)) {
     groups.push({ key, label: foundation.label, profiles: [] });
@@ -2217,6 +2241,7 @@ function profileGroups(foundations, allowed = []) {
 
   for (const [id, profile] of Object.entries(PROFILES)) {
     if (only.size && !only.has(id)) continue;
+    if (!profileOpen(actor, id)) continue;
     const group = (profile.foundations.length > 1)
       ? groups[0]
       : groups.find(candidate => candidate.key === profile.foundations[0]);
@@ -2459,7 +2484,7 @@ function profileOption(profile, maneuver, actor, state, limits = {}) {
 export async function pickProfileOnly(maneuver, foundations, hint = "", actor = null) {
   if (maneuver.profile && (maneuver.profile !== "any")) return maneuver.profile;
 
-  const groups = profileGroups(foundations, maneuver.profileChoices ?? []);
+  const groups = profileGroups(foundations, maneuver.profileChoices ?? [], actor);
   let checked = false;
 
   const shut = shutFoundations(actor, foundations);
@@ -2865,7 +2890,7 @@ export function minimumKiWager(actor, maneuver = null) {
  * either way; it simply has nothing to choose between.
  */
 async function pickProfile(maneuver, foundations, actor, limits = {}) {
-  const groups = profileGroups(foundations, maneuver.profileChoices ?? []);
+  const groups = profileGroups(foundations, maneuver.profileChoices ?? [], actor);
   const fixed = (maneuver.profile !== "any") ? PROFILES[maneuver.profile] : null;
   // An Attacking Maneuver that names no Profile at all - which the schema allows, and
   // a hand-written Signature Technique can be - still has a wager to declare. There is

@@ -8,7 +8,8 @@ import { hardnessValue } from "../features.mjs";
 import { MAX_WEATHER_TIER } from "../weather.mjs";
 import { LIGHT_LEVEL_MAX, LIGHT_LEVEL_MIN } from "../light.mjs";
 import { SENSES } from "../senses.mjs";
-import { craftedReading, groundIgnored, isNaturalArmor, platingBonusPerTier, shrunkSize, weatherResisted, costumeMendable } from "../gear.mjs";
+import { craftedReading, groundIgnored, isNaturalArmor, platingBonusPerTier, shrunkSize, weatherResisted, costumeMendable,
+  topLayerPiece } from "../gear.mjs";
 import { MAX_HIGH_ENVIRONMENT, STANDARD_ENVIRONMENT, environmentIdOf, groundHardnessWith,
   qualitiesOf }
   from "../environments.mjs";
@@ -82,6 +83,15 @@ function slot(data, key) {
  * Undying letting Life Points go negative is one - and are opted into here rather than
  * being the default.
  */
+/** The Top Layer of Apparel's Apparel Bonus, where it is not Armor or Weights and not broken - Body of Glass (3)'s. */
+function topApparelBonus(system) {
+  const top = topLayerPiece(Array.from(system.parent?.items ?? []));
+  if (!top || ["armor", "weights"].includes(top.system?.crafted?.category)) return 0;
+  const reading = craftedReading(top.system.crafted, { getTrait, difficulties: {}, baseTier: system.baseTierOfPower, category: true });
+  if (!reading || (reading.breakLeft === 0)) return 0;
+  return Math.max(0, Number(reading.bonus) || 0);
+}
+
 function withEffects(data, key, base, { min = 0, parts = null, as = "", wraps = false } = {}) {
   const value = applySlot(data.effects?.slots, key, base);
   const floored = (min === null) ? value : Math.max(min, value);
@@ -1943,8 +1953,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // Glass and Metallic are the Square's Qualities, and a wearer who ignores those -
       // Environmental Protection - meets the ground as the ARC picked it.
       const ignoring = groundIgnored(Array.from(this.parent?.items ?? []), getTrait).qualities;
-      const qualities = ignoring ? []
-        : qualitiesOf(this, standing, getTrait).map(id => getTrait(id)).filter(Boolean);
+      // Every Quality the Square has, by id - whatever the wearer ignores of them - for what asks after it (onSquare).
+      const all = qualitiesOf(this, standing, getTrait).map(id => getTrait(id)).filter(Boolean);
+      this.battlefield.squareQualities = all.map(trait => trait.id);
+      const qualities = ignoring ? [] : all;
       this.battlefield.groundRank = groundHardnessWith(
         this.battlefield.groundHardness, qualities, DBUCharacterData.MAX_HARDNESS_RANK);
     }
@@ -2381,7 +2393,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // resemblance stops. The Damage Category does not reduce or ignore it, and nothing
     // that multiplies Soak reaches it either - so a point of this is worth more than a
     // point of Soak, and nothing grants it by default.
-    this.damageReduction = Math.max(0, withEffects(this, "damageReduction", 0));
+    // Body of Glass: "Gain Damage Reduction equal to your Soak Value" - as it stands, halved - and the Top Layer's Apparel
+    // Bonus where it is not Armor or Weights.
+    const glassSoak = (this.effects?.slots?.["damageReduction.soak"] === true) ? this.soakValue : 0;
+    const glassApparel = (this.effects?.slots?.["damageReduction.apparelBonus"] === true) ? topApparelBonus(this) : 0;
+    this.damageReduction = Math.max(0, withEffects(this, "damageReduction", glassSoak + glassApparel, {
+      parts: [...(glassSoak ? [{ label: "Soak Value", value: glassSoak }] : []),
+        ...(glassApparel ? [{ label: "Apparel Bonus (Top Layer)", value: glassApparel }] : [])]
+    }));
 
     // Surgency: increases the Life/Ki Points regained through a Surge. Cosmic Efficiency's "You may use your Magic
     // Modifier instead of your Force Modifier" - the higher of the two.

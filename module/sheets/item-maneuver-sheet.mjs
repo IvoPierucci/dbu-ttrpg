@@ -258,6 +258,9 @@ export default class DBUManeuverSheet extends HandlebarsApplicationMixin(ItemShe
       .map(([value, entry]) => ({ value, label: entry.label, chosen: value === sig.foundation }));
     const profiles = Object.entries(PROFILES)
       .filter(([, profile]) => !sig.foundation || (profile.foundations ?? []).includes(sig.foundation))
+      // One an effect gives - the Glass Profile - only to whoever has it, or a Technique already built with it.
+      .filter(([value, profile]) => !profile.accessSlot || (value === sig.profile)
+        || (actor?.system?.effects?.slots?.[profile.accessSlot] === true))
       .map(([value, profile]) => ({ value, label: `${profile.label} (${profile.kiCostPerTier ?? 0}(T))`,
         chosen: value === sig.profile }));
     const dramatic = sig.level === "dramatic";
