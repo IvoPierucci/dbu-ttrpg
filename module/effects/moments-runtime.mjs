@@ -357,6 +357,21 @@ async function runVerb(actor, call, context) {
       return rulerAllies(actor);
     }
 
+    case "shardCarriers": {
+      const { shardCarriers } = await import("../chat.mjs");
+      return shardCarriers(actor, context?.struck ?? []);
+    }
+
+    case "shardStrike": {
+      const { shardStrike } = await import("../chat.mjs");
+      return shardStrike(actor);
+    }
+
+    case "shardBurst": {
+      const { shardBurst } = await import("../chat.mjs");
+      return shardBurst(actor);
+    }
+
     case "glassSoldiers": {
       const { glassSoldiers } = await import("../chat.mjs");
       return glassSoldiers(actor);

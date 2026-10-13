@@ -1,0 +1,38 @@
+id: glass-shards
+name: Glass Shards
+order: 6
+category: mind
+subrace: glass-warrior
+importance: primary
+description: >
+  By leaving shards of glass embedded in your foes, you are able to enhance your other abilities by manipulating the shards of glass your enemies carry.
+text: >
+  Glass Shards (Mind): By leaving shards of glass embedded in your foes, you are able to enhance your other abilities by manipulating the shards of glass your enemies carry.
+  (1)-[Triggered, Ruling]: If you hit Opponent(s) with an Attacking Maneuver of the Glass Profile, they become a ‘Shard Carrier’ until the start of your next turn.
+  (2)-[Passive]: All Attacking Maneuvers you make that do not possess an AoE and only target a Shard Carrier gain the Homing Advantage.
+  (3)-[Passive]: Increase the Dice Score of any Clash that uses your Might or Saving Throws against a Shard Carrier by 1(T).
+  (4)-[Passive]: You may target a Shard Carrier with Glassification even if they are not within your Melee Range, regardless of their actual position on the Battlefield.
+  (5)-[1/Round]: As an Instant Maneuver, select a Shard Carrier. Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must select the Glass Profile for that Attacking Maneuver and that Attacking Maneuver must include your selected Shard Carrier as a target. After concluding that Attacking Maneuver, that Character stops being a Shard Carrier.
+  (6)-[1/Round]: As an Instant Maneuver, select a Shard Carrier. Make a Clash (Corporeal vs Corporeal/Impulsive) against that Character. If you win, reduce their Life Points by your Might. Then, regardless of if you win or lose, every Square within a Minor Sphere AoE (centered on that Character) gains the Glass Environmental Quality. After concluding this effect, that Character stops being a Shard Carrier.
+  (7)-[Triggered, 1/Round]: If you use an Attacking Maneuver of the Glass Profile that does not possess an AoE and only targets a Shard Carrier, you may apply an Energy Charge to that Attacking Maneuver. After concluding that Attacking Maneuver, that Character stops being a Shard Carrier.
+
+---
+
+[passive]
+# (2) An attack with no AoE at Shard Carriers alone: a Homing rank on its card (chat.mjs postAttack, shardHoming).
+allow shards.homing;
+# (3) A Might or Saving Throw Clash against a Shard Carrier: 1(T) (chat.mjs shardClashBonus).
+allow clash.vsShardCarrier;
+# (4) Glassification reaches a Shard Carrier wherever they stand (chat.mjs glassification).
+allow glassification.shardReach;
+# (5), (6) Maneuvers of their own, in the list while this Trait is had (traits/maneuvers/glass-shards-fifth-effect.dbu,
+# glass-shards-sixth-effect.dbu).
+# (7) A Glass attack with no AoE at a Shard Carrier alone, declared - asked once a Round: an Energy Charge, and the shards
+# spent once it is concluded (maneuvers.mjs askShardCharge).
+allow shards.charge;
+
+# (1) An Attacking Maneuver of the Glass Profile - its own or applied - that hit: each it hit a Shard Carrier (a mark) till
+# the start of your next turn. Automatic by default, its Triggered/Automatic button.
+[triggered/hit-opponent, effect 1]
+requires glassAttack;
+shardCarriers();

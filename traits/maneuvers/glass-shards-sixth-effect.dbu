@@ -1,0 +1,22 @@
+id: glass-shards-sixth-effect
+name: 6th effect of Glass Shards
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: glass-shards
+fromEffect: 6
+source: Core Rule
+description: >
+  Glass Shards' sixth effect, as a Maneuver: a Shard Carrier picked - a Clash for your Might in Life, and Glass around them.
+text: >
+  (6)-[1/Round]: As an Instant Maneuver, select a Shard Carrier. Make a Clash (Corporeal vs Corporeal/Impulsive) against that Character. If you win, reduce their Life Points by your Might. Then, regardless of if you win or lose, every Square within a Minor Sphere AoE (centered on that Character) gains the Glass Environmental Quality. After concluding this effect, that Character stops being a Shard Carrier.
+
+---
+
+# The Liquid State's sixth effect's shape: owned by every character, in the list only while Glass Shards is had. Used, a
+# Shard Carrier picked (chat.mjs shardBurst).
+[on used]
+shardBurst();

@@ -730,6 +730,9 @@ async function settleClashEffects(messageId, clash) {
     await settleDevilmite(message, clash);
   }
 
+  if (clash.shardBurst && clash.result && !clash.shardBurst.applied) {
+    await settleShardBurst(message, clash);
+  }
   if (clash.glassSlowed && clash.result && !clash.glassSlowed.applied) {
     await settleGlassSlowed(message, clash);
   }
@@ -8159,7 +8162,24 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 function clashParts(kind, actor, clash, uuid) {
   return [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
-    ...uniqueClashBonus(actor, clash, uuid)];
+    ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid)];
+}
+
+/** A Shard Carrier - Glass Shards (1)'s mark. */
+export function shardCarrier(actor) {
+  return (Number(actor?.system?.conditions?.["shard-carrier"]) || 0) > 0;
+}
+
+/**
+ * Glass Shards (3): "Increase the Dice Score of any Clash that uses your Might or Saving Throws against a Shard Carrier by
+ * 1(T)."
+ */
+function shardClashBonus(actor, clash, uuid) {
+  if (!["might", "save"].includes(clash?.category ?? "")) return [];
+  if (actor?.system?.effects?.slots?.["clash.vsShardCarrier"] !== true) return [];
+  const other = fromUuidSync(((uuid === clash.challengerUuid) ? clash.defenderUuid : clash.challengerUuid) ?? "");
+  if (!shardCarrier(other)) return [];
+  return [{ label: "Glass Shards", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
 }
 
 /**
@@ -12498,6 +12518,8 @@ export async function frozenTurnAfterManeuver(actor, card) {
 async function frozenTurnAfterAttack(attack) {
   // And whatever lasted "for the duration of that Attacking Maneuver" - Heart of Glass's Surging - with it.
   await glassSurgeEnds(attack);
+  // Glass Shards (5), (7): "After concluding that Attacking Maneuver, that Character stops being a Shard Carrier."
+  if (attack?.shardEnds) await shardsSpent(attack.shardEnds);
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   if (frozenTurnOf(attacker)?.closing) await endFrozenTurn(attacker);
 }
@@ -14439,7 +14461,9 @@ export async function glassification(actor, actions) {
   const count = Math.max(1, Math.min(3, Number(actions) || 1));
   const { whyNotWithinMelee } = await import("./maneuvers.mjs");
   const reach = [...new Map(Array.from(game.user.targets ?? []).map(token => token.actor)
-    .filter(other => other && (other.uuid !== actor.uuid) && !whyNotWithinMelee(actor, other, "Glassification"))
+    .filter(other => other && (other.uuid !== actor.uuid) && (!whyNotWithinMelee(actor, other, "Glassification")
+      // Glass Shards (4): "even if they are not within your Melee Range".
+      || ((actor.system.effects?.slots?.["glassification.shardReach"] === true) && shardCarrier(other))))
     .map(other => [other.uuid, other])).values()];
   const escape = Handlebars.escapeExpression;
   const choices = [...["A", "B", "C"].slice(0, count).map(letter => [`square:${letter}`, `Square ${letter}`]),
@@ -14665,6 +14689,97 @@ async function takeFloatMirror(message, actor, item) {
   if ((attack.foundation !== "energy") && !profiles.includes("elementalLight")) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "reflect",
     maneuverName: "Reflect", reason: "Float Mirror - won the Might Clash", free: true, reflect: reflectOf(attack) } });
+}
+
+/** Glass Shards (1): each the Glass attack hit, a Shard Carrier till the start of your next turn - on your clock. */
+export async function shardCarriers(actor, uuids) {
+  for (const uuid of uuids ?? []) {
+    const target = fromUuidSync(uuid);
+    if (!target || (target.uuid === actor.uuid) || shardCarrier(target)) continue;
+    const { gainCondition } = await import("./effects/moments-runtime.mjs");
+    if (await gainCondition(target, "shard-carrier", 1) === false) continue;
+    await lasting(actor, { kind: KINDS.CONDITION, key: "shard-carrier", edge: EDGES.START, on: target.uuid, source: "Glass Shards" });
+  }
+}
+
+/** The Shard Carriers on the scene, and which one the player picks - or null. */
+async function pickShardCarrier(actor, title) {
+  const carriers = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
+    .filter(other => other && (other.uuid !== actor.uuid) && shardCarrier(other)).map(other => [other.uuid, other])).values()];
+  if (!carriers.length) {
+    ui.notifications.warn(`${actor.name}: no Shard Carrier to pick.`);
+    return null;
+  }
+  if (carriers.length === 1) return carriers[0];
+  const picked = await askPlayerChoice(actor, title, carriers.map(other => ({ value: other.uuid, label: other.name })));
+  return carriers.find(other => other.uuid === picked) ?? null;
+}
+
+/** That Character stops being a Shard Carrier - after the attack or the effect that spent the shards. */
+async function shardsSpent(uuid) {
+  const target = fromUuidSync(uuid ?? "");
+  if (!target || !shardCarrier(target)) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "shard-carrier", 0);
+}
+
+/**
+ * Glass Shards (5): "select a Shard Carrier. Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must
+ * select the Glass Profile for that Attacking Maneuver and that Attacking Maneuver must include your selected Shard Carrier as
+ * a target. After concluding that Attacking Maneuver, that Character stops being a Shard Carrier."
+ */
+export async function shardStrike(actor) {
+  const carrier = await pickShardCarrier(actor, `${actor.name}: Glass Shards - a Basic Attack`);
+  if (!carrier) return;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    targetUuid: carrier.uuid, reason: `Glass Shards - the Glass Profile, at ${carrier.name}`,
+    grants: { profileChoices: ["glass"], shardEnds: carrier.uuid } };
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
+}
+
+/**
+ * Glass Shards (6): "select a Shard Carrier. Make a Clash (Corporeal vs Corporeal/Impulsive) against that Character. If you
+ * win, reduce their Life Points by your Might. Then, regardless of if you win or lose, every Square within a Minor Sphere AoE
+ * (centered on that Character) gains the Glass Environmental Quality." Who stands in it asked now; the Clash settles the rest.
+ */
+export async function shardBurst(actor) {
+  const carrier = await pickShardCarrier(actor, `${actor.name}: Glass Shards - a Clash`);
+  if (!carrier) return;
+  await postSaveClash(actor, carrier, { maneuverName: "Glass Shards",
+    reason: `Win and ${carrier.name} loses Life Points equal to ${actor.name}'s Might.`,
+    saves: ["corporeal"], defenderSaves: ["corporeal", "impulsive"], shardBurst: { applied: false } });
+  const standing = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
+    .filter(other => other?.type === "character").map(other => [other.uuid, other])).values()];
+  if (!standing.length) return;
+  const escape = Handlebars.escapeExpression;
+  const caught = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Glass Shards - Minor Sphere" },
+    content: `<p class="dbu-respond-hint">Who stands in the Minor Sphere around ${escape(carrier.name)}?</p>${standing.map(other =>
+      `<label class="dbu-respond-option"><input type="checkbox" name="caught" value="${other.uuid}"${
+        (other.uuid === carrier.uuid) ? " checked" : ""}/><span class="dbu-respond-name">${escape(other.name)}</span></label>`).join("")}`,
+    buttons: [{ action: "confirm", label: "Glass", callback: (event, button, dialog) =>
+      [...dialog.element.querySelectorAll('input[name="caught"]:checked')].map(input => input.value) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  for (const uuid of (Array.isArray(caught) ? caught : [])) {
+    const other = fromUuidSync(uuid);
+    if (other) await requestActorUpdate(other, { "system.battlefield.qualities": ["glass"] });
+  }
+}
+
+/** Glass Shards (6)'s Clash, settled: won, their Life less your Might; either way, the shards spent. */
+async function settleShardBurst(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, shardBurst: { ...clash.shardBurst, applied: true } });
+  const user = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!user || !target) return;
+  if (whoWonClash(clash.result) === "challenger") {
+    await reduceLifePoints(target, Math.max(0, Number(user.system.might) || 0), { reason: "Glass Shards" });
+  }
+  else await settledNote(message, `${target.name} shrugs it off.`);
+  await shardsSpent(target.uuid);
 }
 
 /** Glass Mastery (6): as the Combat Encounter starts, Healthy - Glassification out of sequence on its card, for 3 Actions. */
@@ -15692,6 +15807,8 @@ async function takeOutOfSequence(message, actor, offer) {
     if (granted?.damageAttribute) declared = { ...declared, damageAttribute: granted.damageAttribute };
     // Violent Punishment: "apply an Energy Charge to that Attacking Maneuver".
     if (granted?.charges) declared = { ...declared, charges: (Number(declared.charges) || 0) + Number(granted.charges) };
+    // Glass Shards (5): the Shard Carrier whose shards this attack spends.
+    if (granted?.shardEnds) declared = { ...declared, shardEnds: granted.shardEnds };
   }
 
   // A Movement's price is a choice rather than a number - Normal Speed for nothing,
@@ -15934,7 +16051,8 @@ export async function postAttack(actor, target, maneuver,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
-                                   uncappedCharges = 0, eyeWeapon = false, glassSurge = false },
+                                   uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
+                                   shardEnds = "" },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -15953,6 +16071,8 @@ export async function postAttack(actor, target, maneuver,
   // bring, the flags the rolls read. A reflected attack keeps the one it was thrown with.
   // Overwhelming Assault: "Apply an Energy Charge to that Attacking Maneuver."
   if (overwhelm?.charge && !reflecting) charges = (Number(charges) || 0) + 1;
+  // Glass Shards (7): "you may apply an Energy Charge to that Attacking Maneuver".
+  if (shardCharge && !reflecting) charges = (Number(charges) || 0) + 1;
   // Last Resource: "apply a number of Energy Charges up to your number of Overwhelm stacks".
   if (overwhelm?.lastResource && !reflecting) charges = (Number(charges) || 0) + (Number(overwhelm.lastResource) || 0);
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
@@ -16087,6 +16207,11 @@ export async function postAttack(actor, target, maneuver,
           ...((eyeWeapon && !reflecting) ? { eyeWeapon: true } : {}),
           // Heart of Glass (3)'s Surging, for this attack alone - left as it is concluded.
           ...((glassSurge && !reflecting) ? { glassSurge: true } : {}),
+          // Glass Shards: the Shard Carrier its shards are spent from once it is concluded - (5), (7) - and (2)'s Homing.
+          ...((shardEnds && !reflecting) ? { shardEnds } : {}),
+          ...((!reflecting && (actor.system.effects?.slots?.["shards.homing"] === true)
+            && !(area ?? technique?.area ?? PROFILES[profile]?.area) && everyone.length && everyone.every(shardCarrier))
+            ? { shardHoming: true } : {}),
           ...(maliceBacklash ? { maliceBacklash } : {}),
           // Quick Learner's: made with a Copied Technique.
           ...(maneuver.copied ? { copied: true } : {}),
@@ -18569,7 +18694,9 @@ async function answerHit(message, attack, attacker, struck) {
   await offerTriggers(attacker, "hit-opponent");
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
-    area: Boolean(attackArea(attack)), oblivious: struck.some(({ own }) => own.oblivious) });
+    area: Boolean(attackArea(attack)), oblivious: struck.some(({ own }) => own.oblivious),
+    // Glass Shards (1): of the Glass Profile, and whom it hit.
+    glass: [attack.profile, ...extraProfilesOf(attack)].includes("glass"), struck: struck.map(entry => entry.uuid) });
   answer.pressure = answered?.slots?.["wound.pressure"] === true;
   answer.pressureMost = answered?.slots?.["wound.pressureMost"] === true;
   if (answered?.slots?.["wound.oblivious"] === true) {
@@ -23908,7 +24035,8 @@ function renderAttack(message, html) {
     container.append(toss);
   }
 
-  const homingRanks = featureRanks(attack.technique?.features ?? [], "homing");
+  // Glass Shards (2): "gain the Homing Advantage", at Shard Carriers alone.
+  const homingRanks = Math.max(featureRanks(attack.technique?.features ?? [], "homing"), attack.shardHoming ? 1 : 0);
   if (homingRanks && !result.wound) {
     const attacker = fromUuidSync(attack.attackerUuid);
     for (const branch of result.targets ?? []) {
@@ -23921,7 +24049,7 @@ function renderAttack(message, html) {
       again.className = "dbu-clash-button";
       again.textContent = `Homing at ${name} (${homingRanks - tries} left)`;
       again.dataset.tooltip = `Roll the Strike again, +${tries + 1}(T), against the defence they made.`
-        + (attack.technique.features.includes("rebound") ? " Rebound: or aim it at somebody else." : "");
+        + (attack.technique?.features?.includes("rebound") ? " Rebound: or aim it at somebody else." : "");
       again.addEventListener("click", () => homingRetry(message, attack, branch.uuid));
       container.append(again);
     }

@@ -1,0 +1,22 @@
+id: glass-shards-fifth-effect
+name: 5th effect of Glass Shards
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: glass-shards
+fromEffect: 5
+source: Core Rule
+description: >
+  Glass Shards' fifth effect, as a Maneuver: a Shard Carrier picked - an Out-of-Sequence Basic Attack of the Glass Profile at them.
+text: >
+  (5)-[1/Round]: As an Instant Maneuver, select a Shard Carrier. Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must select the Glass Profile for that Attacking Maneuver and that Attacking Maneuver must include your selected Shard Carrier as a target. After concluding that Attacking Maneuver, that Character stops being a Shard Carrier.
+
+---
+
+# The Liquid State's sixth effect's shape: owned by every character, in the list only while Glass Shards is had. Used, a
+# Shard Carrier picked (chat.mjs shardStrike).
+[on used]
+shardStrike();

@@ -1,0 +1,15 @@
+id: shard-carrier
+name: Shard Carrier
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Glass Shards (1) leaves, on its user's clock - and what its other effects read.
+combatCondition: no
+source: Core Rule
+description: >
+  Glass Shards: a Shard Carrier until the start of that Glass Warrior's next turn.
+text: >
+  Glass Shards (1): If you hit Opponent(s) with an Attacking Maneuver of the Glass Profile, they become a ‘Shard Carrier’ until the start of your next turn.
+
+---
+
+# Nothing of its own: Glass Shards' other effects ask whether it is held.

@@ -81,6 +81,9 @@ const PREDICATES = {
       && !besides.includes(key) && isCombatCondition(key));
   },
 
+  /** The Attacking Maneuver that hit was of the Glass Profile - its own or applied (Glass Shards') - hit-opponent's context. */
+  glassAttack: scope => Boolean(scope.context?.glass),
+
   /** Their Square has that Environmental Quality - its Environment's, ticked, or an effect's (Body of Glass's Glass). */
   onSquare: (scope, name) => (scope.data?.battlefield?.squareQualities ?? []).includes(String(name).toLowerCase()),
 

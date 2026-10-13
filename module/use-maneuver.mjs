@@ -4574,6 +4574,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askGlassApply(actor, declared);
     // Heart of Glass (3): a Glass attack on a Glass Square - Surging for it, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askGlassSurge(actor, declared);
+    // Glass Shards (7): a Glass attack at a Shard Carrier alone - an Energy Charge, asked once a Round.
+    declared = await (await import("./maneuvers.mjs")).askShardCharge(actor, declared, targetActor);
     // Karmic Assault: a Super Profile on an Ultimate, for 2 Karma - asked before the Technique's own
     // questions, so what the Super Profile asks for (Giga Flare's Actions...) is asked with them.
     const assaulted = await karmicAssault(actor, maneuver, declared);

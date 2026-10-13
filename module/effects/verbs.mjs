@@ -96,6 +96,21 @@ export const VERBS = Object.freeze({
     doc: "Ruler's: 2 stacks of Overwhelm spent, and the Allies ticked as within a Large Sphere around you Ruled - Soak "
        + "Value and Combat Rolls 1(T) higher - until the start of your next turn (chat.mjs rulerAllies)."
   },
+  shardCarriers: {
+    args: [0, 0],
+    names: [],
+    doc: "Glass Shards (1)'s: each the attack hit a Shard Carrier till the start of your next turn (chat.mjs shardCarriers)."
+  },
+  shardStrike: {
+    args: [0, 0],
+    names: [],
+    doc: "Glass Shards (5)'s: a Shard Carrier picked, a Basic Attack of the Glass Profile at them offered (chat.mjs shardStrike)."
+  },
+  shardBurst: {
+    args: [0, 0],
+    names: [],
+    doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
+  },
   glassSoldiers: {
     args: [0, 0],
     names: [],

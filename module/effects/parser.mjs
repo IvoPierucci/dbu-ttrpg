@@ -531,7 +531,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Done by an attack whose Strike was a Critical Result (Critical Point's).
   "byCriticalStrike",
   // An Attacking Maneuver being declared, and the character's own turn (Demonic Pressure's).
-  "declaringAttack", "ownTurn"]);
+  "declaringAttack", "ownTurn",
+  // An Attacking Maneuver of the Glass Profile hit with (Glass Shards').
+  "glassAttack"]);
 
 /**
  * Dice the character already has, named rather than written out.

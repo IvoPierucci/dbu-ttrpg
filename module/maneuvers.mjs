@@ -1458,6 +1458,30 @@ export async function askGlassApply(actor, declared) {
 }
 
 /**
+ * Glass Shards (7): "If you use an Attacking Maneuver of the Glass Profile that does not possess an AoE and only targets a
+ * Shard Carrier, you may apply an Energy Charge to that Attacking Maneuver. After concluding that Attacking Maneuver, that
+ * Character stops being a Shard Carrier." Asked once declared, once a Round.
+ */
+export async function askShardCharge(actor, declared, target) {
+  if (!declared || !target || (actor?.system?.effects?.slots?.["shards.charge"] !== true)) return declared;
+  if (![declared.profile, declared.secondProfile, ...(declared.appliedProfiles ?? [])].includes("glass")) return declared;
+  if (declared.area || PROFILES[declared.profile]?.area) return declared;
+  const { shardCarrier } = await import("./chat.mjs");
+  const aimed = [target, ...Array.from(game.user.targets ?? []).map(token => token.actor)].filter(Boolean);
+  if (!aimed.every(shardCarrier)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "shardChargeRound") === round) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Glass Shards" },
+    content: `<p data-tooltip="Once a Round. ${Handlebars.escapeExpression(target.name)} stops being a Shard Carrier once it is concluded.">An Energy Charge on this attack?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "shardChargeRound", round);
+  return { ...declared, shardCharge: true, shardEnds: target.uuid };
+}
+
+/**
  * Heart of Glass (3): "If you use an Attacking Maneuver of the Glass Profile while occupying a Square with the Glass
  * Environmental Quality, you may enter the Surging State for the duration of that Attacking Maneuver." Asked once the
  * Profile is declared, once a Round; Surging now, left as the attack is concluded (`glassSurge`, chat.mjs glassSurgeEnds).
