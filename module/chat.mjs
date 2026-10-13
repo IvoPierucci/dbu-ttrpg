@@ -746,6 +746,9 @@ async function settleClashEffects(messageId, clash) {
   if (clash.angelicOffense && clash.result && !clash.angelicOffense.applied) {
     await settleAngelicOffense(message, clash);
   }
+  if (clash.goof && clash.result && !clash.goof.applied) {
+    await settleGoof(message, clash);
+  }
   if (clash.danceEffect && clash.result && !clash.danceEffect.applied) {
     await settleDanceModifier(message, clash);
   }
@@ -12719,6 +12722,222 @@ async function settleWhack(message, clash) {
   return requestActorUpdate(target, { "system.life.value": Math.min(0, Number(target.system.life?.min) || 0) });
 }
 
+/** Goof's 1d4, as a won Clash leaves them: the Combat Condition rolled. */
+const GOOFS = Object.freeze(["impaired", "prone", "impediment", "sleeping"]);
+
+/**
+ * Goof (Gadabout): "Target an Opponent who is not at Long Range. Make a Clash (Morale) against them. If you win, roll a 1d4.
+ * That Opponent gains the Combat Condition rolled until the start of your next turn." Which Opponent asked; none, its use
+ * unspent.
+ */
+export async function goof(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid)
+      && !token.actor.system?.defeated && !atLongRange(actor, token.actor))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) {
+    ui.notifications.info(`${actor.name}: Goof - no Opponent out of Long Range.`);
+    return UNSPENT;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Goof`,
+    [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const target = opponents.find(each => each.uuid === picked);
+  if (!target) return UNSPENT;
+  return postSaveClash(actor, target, { maneuverName: "Goof",
+    reason: `Win and a 1d4: Impaired, Prone, Impediment or Sleeping on ${target.name} until the start of your next turn.`,
+    saves: ["morale"], defenderSaves: ["morale"], goof: { applied: false } });
+}
+
+/** Goof, settled: won, the 1d4 - its Combat Condition on them till the start of the challenger's next turn. */
+async function settleGoof(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, goof: { ...clash.goof, applied: true } });
+  const challenger = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!challenger || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} does not fall for it.`);
+  const roll = await new Roll("1d4").evaluate();
+  const key = GOOFS[roll.total - 1];
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: challenger }),
+    flavor: `Goof - ${target.name}: ${getTrait(key)?.name ?? key} until the start of ${challenger.name}'s next turn` });
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  if (await gainCondition(target, key, 1) === false) return;
+  return lasting(challenger, { kind: KINDS.CONDITION, key, edge: EDGES.START, on: target.uuid, source: "Goof" });
+}
+
+/** Who stands within a Sphere around them - themselves and their Allies on the scene, ticked; the table's. */
+async function askWhoWithin(actor, title, hint) {
+  const people = [actor, ...alliesOnScene(actor).filter(ally => !ally.system?.defeated)];
+  const escape = Handlebars.escapeExpression;
+  const ticked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title },
+    content: `<p class="dbu-respond-hint">${escape(hint)}</p>${people.map(each => `<label class="dbu-respond-option">
+      <input type="checkbox" name="${escape(each.uuid)}" checked/><span class="dbu-respond-name">${escape(each.name)}</span></label>`).join("")}`,
+    buttons: [{ action: "ok", label: "Apply", default: true, callback: (event, button, dialog) =>
+      people.filter(each => dialog.element.querySelector(`input[name="${CSS.escape(each.uuid)}"]`)?.checked) }],
+    rejectClose: false
+  });
+  return Array.isArray(ticked) ? ticked : [];
+}
+
+/** You, or one of your Allies on the scene - picked, or (`random`) drawn. */
+async function youOrAlly(actor, title, { random = false } = {}) {
+  const people = [actor, ...alliesOnScene(actor).filter(ally => !ally.system?.defeated)];
+  if (random) return people[Math.floor(Math.random() * people.length)];
+  if (people.length === 1) return actor;
+  const picked = await askPlayerChoice(actor, title, people.map(each => ({ value: each.uuid, label: each.name })));
+  return people.find(each => each.uuid === picked) ?? null;
+}
+
+/**
+ * Hocus Pocus (Gadabout): "Roll a 1d10. Apply the effect based on what you roll." Rolled on its own card, said there, and
+ * applied: who stands within a Destructive Sphere ticked; an Out-of-Sequence Maneuver offered on that card. A Size set for
+ * 1d4 Combat Rounds is said - the Size Category is the table's to change and change back.
+ */
+export async function hocusPocus(actor) {
+  const roll = await new Roll("1d10").evaluate();
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const might = Math.max(0, Number(actor.system.might) || 0);
+  const offers = [];
+  let said = "";
+  const { gainCondition, enterState } = await import("./effects/moments-runtime.mjs");
+  switch (roll.total) {
+    case 1: {
+      const within = await askWhoWithin(actor, "Hocus Pocus - 1", "Who stands within a Destructive Sphere around you: Life less your Might, Impediment till the start of your next turn.");
+      for (const each of within) {
+        await reduceLifePoints(each, might, { reason: "Hocus Pocus" });
+        if (await gainCondition(each, "impediment", 1) !== false) {
+          await lasting(actor, { kind: KINDS.CONDITION, key: "impediment", edge: EDGES.START, on: each.uuid, source: "Hocus Pocus" });
+        }
+      }
+      said = `Life Points less ${might} and Impediment - ${within.map(each => each.name).join(", ") || "nobody"}.`;
+      break;
+    }
+    case 2: {
+      const lost = Math.floor((Number(actor.system.ki?.value) || 0) / 2);
+      await actor.update({ "system.ki.value": (Number(actor.system.ki?.value) || 0) - lost });
+      said = `${actor.name} loses half of their Ki Points.`;
+      break;
+    }
+    case 3: case 8: {
+      const who = await youOrAlly(actor, `${actor.name}: Hocus Pocus - whose Size`, { random: roll.total === 3 });
+      const rounds = (await new Roll("1d4").evaluate()).total;
+      said = (roll.total === 3)
+        ? `${who?.name ?? actor.name}: Tiny for ${rounds} Combat Rounds (Small for the bonus to their Defense Value).`
+        : `${who?.name ?? actor.name}: Gigantic for ${rounds} Combat Rounds (Large for the penalty to their Defense Value).`;
+      break;
+    }
+    case 4:
+      if (await gainCondition(actor, "sleeping", 1) !== false) {
+        await lasting(actor, { kind: KINDS.CONDITION, key: "sleeping", edge: EDGES.END, next: true, source: "Hocus Pocus" });
+      }
+      said = `${actor.name} is Sleeping until the end of their next turn.`;
+      break;
+    case 5:
+      said = "Nothing happens.";
+      break;
+    case 6:
+      offers.push({ actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+        reason: "Hocus Pocus - 7(T) on its Wound Roll",
+        grants: { woundExtra: [{ label: "Hocus Pocus", written: "+7(T)", value: 7 * tier }] } });
+      said = "The Basic Attack, out of sequence, 7(T) on its Wound Roll.";
+      break;
+    case 7: {
+      const who = await youOrAlly(actor, `${actor.name}: Hocus Pocus - whose Surge`);
+      if (who) offers.push({ actorUuid: who.uuid, actorName: who.name, maneuverId: "surge", maneuverName: "Surge",
+        reason: "Hocus Pocus - a Surge of their choice", surge: true });
+      said = `${who?.name ?? actor.name} may use a Surge out of sequence.`;
+      break;
+    }
+    case 9: {
+      const who = await youOrAlly(actor, `${actor.name}: Hocus Pocus - who Surges`);
+      if (who && await enterState(who, "surging", 1, null, "Hocus Pocus")) {
+        await lasting(actor, { kind: KINDS.STATE, key: "surging", edge: EDGES.START, on: who.uuid, source: "Hocus Pocus" });
+      }
+      said = `${who?.name ?? actor.name} is Surging until the start of ${actor.name}'s next turn, its second effect ignored.`;
+      break;
+    }
+    case 10: {
+      const within = await askWhoWithin(actor, "Hocus Pocus - 10", "Who stands within a Destructive Sphere around you: Superior till the start of your next turn.");
+      for (const each of within) {
+        if (await enterState(each, "superior", 1, null, "Hocus Pocus")) {
+          await lasting(actor, { kind: KINDS.STATE, key: "superior", edge: EDGES.START, on: each.uuid, source: "Hocus Pocus" });
+        }
+      }
+      said = `Superior - ${within.map(each => each.name).join(", ") || "nobody"}.`;
+      break;
+    }
+  }
+  return roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Hocus Pocus - ${roll.total}: ${said}`,
+    ...(offers.length ? { flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: offers } } } : {}) });
+}
+
+/**
+ * Gadabout (2): "Roll a 1d10. If you roll a 3 or less, you do not gain a stack of Power. If you roll a 4 or more, gain an
+ * additional stack of Power." Rolled once the Power Up has given its stack: that one taken back - its own clock with it -
+ * or another given, on the same clock.
+ */
+export async function gadaboutPower(actor) {
+  const roll = await new Roll("1d10").evaluate();
+  const lose = roll.total <= 3;
+  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: `Gadabout - ${lose ? "no stack of Power from it" : "a stack of Power more"}` });
+  const { replaceObject } = await import("./conditions.mjs");
+  const resources = { ...(actor.system.resources ?? {}) };
+  const held = Number(resources.power?.stacks) || 0;
+  if (lose) {
+    if (!held) return;
+    if (held > 1) resources.power = { ...resources.power, stacks: held - 1 };
+    else delete resources.power;
+    // The newest clock - the one with the most edges left - is the stack just gained.
+    const timed = [...(actor.system.timed ?? [])];
+    let newest = -1;
+    timed.forEach((entry, index) => {
+      if ((entry.kind !== KINDS.RESOURCE) || (entry.key !== "power")) return;
+      if ((newest < 0) || ((entry.edges ?? 1) >= (timed[newest].edges ?? 1))) newest = index;
+    });
+    if (newest >= 0) timed.splice(newest, 1);
+    return actor.update({ "system.resources": replaceObject(resources), "system.timed": timed });
+  }
+  const { resourceLimits } = await import("./effects/traits.mjs");
+  const most = Number(resourceLimits(actor).power) || 0;
+  if (most && (held >= most)) return;
+  await setResource(actor, "power", held + 1);
+  await lasting(actor, { kind: KINDS.RESOURCE, key: "power", edge: EDGES.END, next: true, source: "Gadabout" });
+  const { stacksGained } = await import("./effects/moments-runtime.mjs");
+  return stacksGained(actor, ["power"], { power: 1 });
+}
+
+/**
+ * Gadabout (3): "Roll a 1d10. If you roll a 1, spend 3 Tension or skip your turn. If you roll an 8 or higher, you may use
+ * a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver." Rolled on its own card; a 1 with 3
+ * stacks of Tension asked, otherwise the turn skipped (`gadaboutSkip`, read as the turn begins - combat.mjs); an 8+ offers
+ * that Maneuver on the roll's card.
+ */
+export async function gadaboutTurn(actor) {
+  const roll = await new Roll("1d10").evaluate();
+  let said = "";
+  if (roll.total === 1) {
+    const held = Number(actor.system.resources?.tension?.stacks) || 0;
+    const pay = (held >= 3) && ((await askPlayerChoice(actor, `${actor.name}: Gadabout - a 1`,
+      [{ value: "pay", label: "Spend 3 Tension" }, { value: "skip", label: "Skip the turn" }])) === "pay");
+    if (pay) {
+      await setResource(actor, "tension", held - 3);
+      said = "a 1 - 3 Tension spent";
+    }
+    else {
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.gadaboutSkip`]: roundKey() });
+      said = "a 1 - the turn is skipped";
+    }
+  }
+  else said = (roll.total >= 8) ? `${roll.total} - a Standard Maneuver (1 Action) out of sequence` : `${roll.total} - nothing`;
+  const offer = (roll.total >= 8) ? [{ actorUuid: actor.uuid, actorName: actor.name, maneuverId: "",
+    maneuverName: "a Standard Maneuver (1 Action)", reason: "Gadabout", anyStandard: true }] : [];
+  return roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Gadabout: ${said}`,
+    ...(offer.length ? { flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: offer } } } : {}) });
+}
+
 /** The Dance Modifier Maneuver's 'Dance' effects, as a won Clash leaves them. */
 const DANCES = Object.freeze({
   ban: { label: "Ban Dance", says: "Staggered until the end of their next turn", condition: "staggered" },
@@ -16410,6 +16629,8 @@ async function takeOutOfSequence(message, actor, offer) {
       return;
     }
     if (granted?.rangerRetreat) declared = { ...declared, rangerRetreat: granted.rangerRetreat };
+    // Hocus Pocus (6)'s 7(T) on its Wound Roll.
+    if (granted?.woundExtra?.length) declared = { ...declared, woundExtra: [...(declared.woundExtra ?? []), ...granted.woundExtra] };
     // Greed of the Hera's and Mage's AoE and Magnitudes, out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askBoughtAreas(actor, maneuver, declared,
       { noArea: Boolean(granted?.noArea) });

@@ -1,0 +1,28 @@
+id: gadabout
+name: Gadabout
+order: 8
+description: >
+  Chaotic and whimsical, your unpredictable nature is beneficial and detrimental in equal measure… to friend and foe alike.
+text: >
+  Gadabout: Chaotic and whimsical, your unpredictable nature is beneficial and detrimental in equal measure… to friend and foe alike.
+  (1)-[Passive]: Gain access to the Goof and the Hocus Pocus Special Maneuvers.
+  (2)-[Triggered/Power]: Roll a 1d10. If you roll a 3 or less, you do not gain a stack of Power. If you roll a 4 or more, gain an additional stack of Power.
+  (3)-[Triggered/Start of Turn]: Roll a 1d10. If you roll a 1, spend 3 Tension or skip your turn. If you roll an 8 or higher, you may use a Standard Maneuver with an Action Cost of 1 Action as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+allow maneuver.goof;
+allow maneuver.hocus-pocus;
+
+# (2) Ticked in the Power Up's window: the 1d10 once its stack is gained - 3 or less, that stack back; 4+, another (chat.mjs
+# gadaboutPower).
+[triggered/power, effect 2]
+gadaboutPower();
+
+# (3) As your turn begins: the 1d10 on its own card - a 1, 3 Tension (Battle Tension's) or the turn skipped, asked; 8+, a
+# Standard Maneuver of 1 Action offered out of sequence there (chat.mjs gadaboutTurn). Automatic by default, its
+# Triggered/Automatic button.
+[triggered/start-of-turn, effect 3]
+gadaboutTurn();

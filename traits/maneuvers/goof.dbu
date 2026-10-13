@@ -1,0 +1,32 @@
+id: goof
+name: Goof
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+exploitable: All adjacent Opponents.
+source: Core Rule
+description: >
+  A Clash (Morale) at an Opponent not at Long Range - won, a 1d4: Impaired, Prone, Impediment or Sleeping till the start of your next turn.
+text: >
+  Goof Maneuver [1/Round]: With a whimsical gag out of seemingly nowhere, you expose your foe’s vulnerabilities.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: N/A
+  –Exploitable: All adjacent Opponents.
+  –Effect: Target an Opponent who is not at Long Range. Make a Clash (Morale) against them. If you win, roll a 1d4. That Opponent gains the Combat Condition rolled until the start of your next turn:
+  * 1) Impaired.
+  * 2) Prone.
+  * 3) Impediment.
+  * 4) Sleeping.
+
+---
+
+# A Special Maneuver: open where an effect grants it - the Gadabout Vocation. Used, which Opponent asked, and the Clash
+# opened; won, the 1d4 rolled on its card and its Combat Condition put on them, on your clock (chat.mjs goof, settleGoof).
+[on used]
+goof();

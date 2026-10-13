@@ -381,6 +381,11 @@ async function runVerb(actor, call, context) {
       return shardBurst(actor);
     }
 
+    case "goof": return (await import("../chat.mjs")).goof(actor);
+    case "hocusPocus": return (await import("../chat.mjs")).hocusPocus(actor);
+    case "gadaboutPower": return (await import("../chat.mjs")).gadaboutPower(actor);
+    case "gadaboutTurn": return (await import("../chat.mjs")).gadaboutTurn(actor);
+
     case "dancerHype": {
       const { dancerHype } = await import("../chat.mjs");
       return dancerHype(actor);

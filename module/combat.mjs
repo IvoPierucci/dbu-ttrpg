@@ -366,7 +366,9 @@ async function beginTurn(actor) {
   // stacks skips it the same way.
   const skipped = Boolean(actor.system.defeated)
     || (actor.system.effects?.slots?.skipTurn === true)
-    || (slots["turn.skip"] === true);
+    || (slots["turn.skip"] === true)
+    // Gadabout (3)'s 1, with no 3 Tension spent for it - rolled in the Moment just fired.
+    || (actor.getFlag?.("dbu-ttrpg", "gadaboutSkip") === `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`);
 
   const turnCard = await announceTurn(actor, { skipped, ran });
 

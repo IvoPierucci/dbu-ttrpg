@@ -111,6 +111,24 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  goof: {
+    args: [0, 0],
+    doc: "The Goof Special Maneuver (Gadabout): an Opponent out of Long Range picked, a Clash (Morale) - won, a 1d4 Combat "
+       + "Condition till the start of your next turn (chat.mjs goof)."
+  },
+  hocusPocus: {
+    args: [0, 0],
+    doc: "The Hocus Pocus Special Maneuver (Gadabout): a 1d10 and its effect (chat.mjs hocusPocus)."
+  },
+  gadaboutPower: {
+    args: [0, 0],
+    doc: "Gadabout (2): a 1d10 at the Power Up - 3 or less, its stack taken back; 4+, another (chat.mjs gadaboutPower)."
+  },
+  gadaboutTurn: {
+    args: [0, 0],
+    doc: "Gadabout (3): a 1d10 as the turn begins - a 1, 3 Tension or the turn skipped; 8+, a Standard Maneuver out of "
+       + "sequence (chat.mjs gadaboutTurn)."
+  },
   dancerHype: {
     args: [0, 0],
     doc: "Dancer (4): the Hype Maneuver out of sequence, a stack of Tension spent once it is (chat.mjs dancerHype)."

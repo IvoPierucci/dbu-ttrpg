@@ -1,0 +1,40 @@
+id: hocus-pocus
+name: Hocus Pocus
+type: standard
+actionCost: 1
+kiCostPerTier: 5
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/round
+exploitable: All adjacent Opponents.
+source: Core Rule
+description: >
+  A 1d10, and whatever it gives - for you, your Allies, or the worse.
+text: >
+  Hocus Pocus Maneuver [1/Round]: Causes completely random effects, some of which benefit the party and others cause catastrophe.
+  –Maneuver Type: Standard Maneuver
+  –Action Cost: 1 Action
+  –Minions: N/A
+  –KP Cost: 5(T)
+  –Exploitable: All adjacent Opponents.
+  –Effect: Roll a 1d10. Apply the effect based on what you roll:
+  * 1) You and all Allies within a Destructive Sphere AoE (centered on you) have their Life Points reduced by your Might and suffer from the Impediment Combat Condition until the start of your next turn.
+  * 2) Lose half of your Ki Points.
+  * 3) You or an Ally (decided randomly) has their Size Category set to Tiny for 1d4 Combat Rounds, but that Character’s Size Category is considered to be Small for the sake of calculating the bonus to their Defense Value.
+  * 4) You gain the Sleeping Combat Condition until the end of your next turn.
+  * 5) Nothing happens.
+  * 6) Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. Increase the Wound Roll of this Attacking Maneuver by 7(T).
+  * 7) You or an Ally of your choice use a Surge of your choice as an Out-of-Sequence Maneuver.
+  * 8) You or an Ally of your choice has their Size Category set to Gigantic for 1d4 Combat Rounds, but that Character’s Size Category is considered to be Large for the sake of calculating the penalty to their Defense Value.
+  * 9) You or an Ally of your choice enter the Surging State until the start of your next turn. Additionally, they ignore the second effect of the Surging State.
+  * 10) You and all Allies within a Destructive Sphere AoE (centered on you) enter the Superior State until the start of your next turn.
+
+---
+
+# A Special Maneuver: open where an effect grants it - the Gadabout Vocation. Used, the 1d10 rolled on its card and its
+# effect applied (chat.mjs hocusPocus): who stands within a Destructive Sphere ticked; an Out-of-Sequence Maneuver offered
+# on that card. The Size set by 3) and 8) is said, its 1d4 Rounds rolled - the Size Category the table's. 9)'s "ignore the
+# second effect of the Surging State" waits on which effect that is.
+[on used]
+hocusPocus();
