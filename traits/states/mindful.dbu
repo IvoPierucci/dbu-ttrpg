@@ -5,25 +5,44 @@ levels: 3
 description: >
   Clarity, bought at the cost of force.
 text: >
-  Level 1: reduce your Critical Target by L and your Wound Rolls by L(T).
-  Level 2: you suffer no Health Threshold Penalties, and regain 2L(bT) Ki
-  Points whenever you use a Counter Maneuver.
-  Level 3: gain one extra Counter Action each Combat Round.
+  Narrative Requirement: A serene calm, a conscious effort to suppress one’s emotions to stop them running rampant.
+
+  Calm (Level 1)
+  (1)-[Passive]: Reduce the Critical Target of your Combat Rolls, Saving Throws, and Skill Checks by L.
+  (2)-[Passive]: Reduce the Wound Rolls of your Attacking Maneuvers by L(T).
+
+  Zen (Level 2)
+  (1)-[Triggered]: If you use a Counter Maneuver, regain 2L(bT) Ki Points.
+
+  Tranquil (Level 3)
+  (1)-[Triggered/Tranquil, Triggered/Start of Combat Round]: Gain 1 Counter Action.
+  (2)-[Passive]: Ignore any Health Threshold Penalties.
 
 ---
 
-# The Critical Target never falls below 7 whatever this says: that floor is in
-# the pipeline rather than here, so no effect has to remember it.
+# Everything accumulates upwards, and L is the level reached. The Critical Target never falls below 7 whatever this says:
+# that floor is in the pipeline rather than here, so no effect has to remember it.
 
+# Calm (1), (2)
 [passive from 1]
 criticalTarget -= L;
 wound -= L(T);
 
-[passive from 2]
-threshold.penalty = 0;
-
-[triggered/counter-maneuver, from 2]
+# Zen (1): offered in a window as the Counter Maneuver is used.
+[triggered/counter-maneuver from 2]
 ki.value += 2 * L(bT);
 
+# Tranquil (2)
 [passive from 3]
-actions.counter += 1;
+threshold.penalty = 0;
+
+# Tranquil (1): a Counter Action on entering Tranquil - Mindful entered at it, or gone up to it (state-level) - and as each
+# Combat Round begins.
+[triggered/state/mindful, from 3]
+actions.counterGained += 1;
+
+[triggered/state-level/mindful, from 3]
+actions.counterGained += 1;
+
+[triggered/start-of-round from 3]
+actions.counterGained += 1;
