@@ -923,6 +923,29 @@ async function sizeSoakFor(target, attacker, incoming) {
   return steps * Math.max(1, Number(target.system.tierOfPower) || 1);
 }
 
+/**
+ * Greed of the Hera (6): "When you are hit by an Attacking Maneuver, you may spend any number of Greed stacks to increase your
+ * Damage Reduction for the duration of that Attacking Maneuver by 2(T) for each stack of Greed spent." Asked of them as the
+ * hit is settled; settled again, what was spent stands and nothing is asked twice.
+ */
+async function greedReductionFor(target, attack, uuid) {
+  const before = (attack.result?.targets ?? []).find(entry => entry.uuid === uuid);
+  if (before?.hit) return Number(before.greedReduction) || 0;
+  if (target?.system?.effects?.slots?.["greed.reduction"] !== true) return 0;
+  const held = Number(target.system.resources?.greed?.stacks) || 0;
+  if (held <= 0) return 0;
+  const tier = Math.max(1, Number(target.system.tierOfPower) || 1);
+  const spent = Math.min(held, await askPlayerAmount(target, `${target.name}: Greed of the Hera - hit by ${attack.maneuverName ?? "an attack"}`,
+    held, `Greed stacks (${2 * tier} Damage Reduction each)`));
+  if (spent <= 0) return 0;
+  const { replaceObject } = await import("./conditions.mjs");
+  const resources = { ...(target.system.resources ?? {}) };
+  if (held - spent > 0) resources.greed = { ...resources.greed, stacks: held - spent };
+  else delete resources.greed;
+  await requestActorUpdate(target, { "system.resources": replaceObject(resources) });
+  return spent * 2 * tier;
+}
+
 /** Frigid Tricks' 1(T) - `clash.unique` - on a Might or Saving Throw Clash one of your Unique Abilities opened. */
 function uniqueClashBonus(actor, clash, uuid) {
   if ((uuid !== clash?.challengerUuid) || !["might", "save"].includes(clash?.category)) return [];
@@ -14072,6 +14095,21 @@ function offerPhysiqueStrike(message, actor, attacker) {
 }
 
 /**
+ * Greed of the Hera (2): "If you deal Damage to an Opponent with an Attacking Maneuver that possesses an AoE, you may use the
+ * Basic Attack Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card, aimed where the player targets - once
+ * a Round, counted when taken.
+ */
+function offerGreedStrike(message, actor, target) {
+  if (!actor || !target || (actor.uuid === target.uuid) || actor.system?.defeated
+    || (actor.system?.effects?.slots?.["greed.aoeStrike"] !== true)) return;
+  if (alliesOnScene(actor).some(ally => ally.uuid === target.uuid)) return;
+  if (actor.getFlag?.(SCOPE, "greedStrikeRound") === roundKey()) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.greedStrike && (offer.actorUuid === actor.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", reason: "Greed of the Hera - Damage dealt with an AoE", grants: { greedStrike: true } } });
+}
+
+/**
  * An attack's Ki Point Cost, from what paying it took - Ki and Divine Ki - its Ki Wager left out (Redirected Energy's).
  */
 function attackKiCost(attack) {
@@ -14101,6 +14139,12 @@ async function mendCostume(actor) {
     if (problem || !moves.length) continue;
     return actor.updateEmbeddedDocuments("Item", moves.map(({ id, layer: to }) => ({ _id: id, "system.equipped": true, "system.layer": to })));
   }
+}
+
+/** Greed of the Hera (4): "For every 2(bT) Ki Points spent, increase the Magnitude of that Attacking Maneuver by 1." */
+function greedArea(area, steps) {
+  if (!area || !(Number(steps) > 0)) return area;
+  return { ...area, magnitudeSteps: (Number(area.magnitudeSteps) || 0) + Number(steps) };
 }
 
 /** Overwhelming Assault: "If it possesses an AoE, increase the Magnitude of that AoE by 1." */
@@ -15809,6 +15853,11 @@ async function takeOutOfSequence(message, actor, offer) {
     if (granted?.charges) declared = { ...declared, charges: (Number(declared.charges) || 0) + Number(granted.charges) };
     // Glass Shards (5): the Shard Carrier whose shards this attack spends.
     if (granted?.shardEnds) declared = { ...declared, shardEnds: granted.shardEnds };
+    // Greed of the Hera (3) and (4), out of sequence as in it.
+    const { askGreedArea, askGreedMagnitude } = await import("./maneuvers.mjs");
+    declared = await askGreedArea(actor, maneuver, declared, { noArea: Boolean(granted?.noArea) });
+    declared = await askGreedMagnitude(actor, declared, (maneuver.signature && !maneuver.signatureTechnique)
+      ? (maneuver.area ?? null) : (declared.area ?? PROFILES[declared.profile]?.area ?? null));
   }
 
   // A Movement's price is a choice rather than a number - Normal Speed for nothing,
@@ -15831,7 +15880,8 @@ async function takeOutOfSequence(message, actor, offer) {
   // waives the Action Cost for everything; `free` is what waives the Ki as well, and only
   // an offer that was already paid for carries it.
   const price = offer.free
-    ? 0
+    // What was bought on top of it all the same - Greed of the Hera's AoE and Magnitude.
+    ? (Number(declared?.kiSurcharge) || 0)
     : crossing
     ? movementKiCost(actor, crossing)
     : maneuverKiCost(maneuver, reflecting ? null : declared, actor);
@@ -15868,6 +15918,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.physique) await requestActorUpdate(actor, { [`flags.${SCOPE}.physiqueUsed`]: game.combat?.id ?? "none" });
   // Bouncy Physique's Movement after a collision, once a Round.
   if (offer.grants?.bouncy) await requestActorUpdate(actor, { [`flags.${SCOPE}.bouncyCollided`]: roundKey() });
+  // Greed of the Hera (2)'s, once a Round.
+  if (offer.grants?.greedStrike) await requestActorUpdate(actor, { [`flags.${SCOPE}.greedStrikeRound`]: roundKey() });
   // Angelic Offense (3)'s Basic Attack, once a Round.
   if (offer.grants?.angelicCounter) await requestActorUpdate(actor, { [`flags.${SCOPE}.angelicCounterRound`]: roundKey() });
   // Elongated Tail (2)'s Grapple, once a Round - "forgo gaining a stack of Overwhelm": the one the Tail Attack gave, back.
@@ -16052,7 +16104,7 @@ export async function postAttack(actor, target, maneuver,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
-                                   shardEnds = "" },
+                                   shardEnds = "", greedMagnitude = 0 },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -16300,8 +16352,8 @@ export async function postAttack(actor, target, maneuver,
           // An Area the attack brings for itself, over its Profile's - the Grenade's Minor
           // Sphere. Null for every attack whose Area, if any, is its Profile's. A Technique's is
           // the one its features built.
-          area: overwhelmedArea(sizedArea(actor, target, technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null),
-            { portal }), reflecting ? null : overwhelm),
+          area: greedArea(overwhelmedArea(sizedArea(actor, target, technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null),
+            { portal }), reflecting ? null : overwhelm), reflecting ? 0 : greedMagnitude),
           // Critical Point (2): primed by the Energy Charge Maneuver this Round.
           ...((primed && !reflecting) ? { primed: true } : {}),
           // Overwhelming Assault's stacks, and Last Resource's, lost once this is done (spendOverwhelm).
@@ -18106,6 +18158,8 @@ async function resolveAttackWork(message, attack) {
       // King's Stature: "increase your Soak Value by 1(T) for every Size Category they are smaller than you for the
       // duration of that Attacking Maneuver" - worked out as the hit is, spent only where it gives something.
       sizeSoak: await sizeSoakFor(target, attacker, incoming),
+      // Greed of the Hera (6): Greed spent as the hit is, 2(T) of Damage Reduction each for this attack.
+      greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
       // Stealthy Trick (3): whether they were Oblivious of the attacker as it hit.
       oblivious,
       counterWound: null,
@@ -19579,7 +19633,9 @@ async function rollAttackWoundWork(message, attack) {
     const unreduced = (attack.modifiers ?? []).some(entry => entry.ignoresDamageReduction);
     // Demonic Combat (2): 1(T) more against the attack of one suffering from a Combat Condition.
     const demonic = conditioned(attacker) ? (Number(target.system.effects?.slots?.["damageReduction.vsConditioned"]?.add) || 0) : 0;
-    const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic);
+    // Greed of the Hera (6)'s, spent as it hit.
+    const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic
+      + (Number(own.greedReduction) || 0));
 
     const negated = counterWound && (counterWound.total > wound.total);
     const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);
@@ -22144,6 +22200,8 @@ async function applyAttackDamage(message, target, attack) {
   if (own.hit && !isAbsoluteMiss(own)) offerBouncyMove(message, target, armsUser);
   // Powerful Physique: hit by it, the Basic Attack back once it is done.
   if (own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)) offerPhysiqueStrike(message, target, armsUser);
+  // Greed of the Hera (2): Damage dealt to an Opponent by an attack with an AoE - the Basic Attack, out of sequence.
+  if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && attackArea(attack)) offerGreedStrike(message, armsUser, target);
   // Skill of the Watcher (5): Damage dealt through the Exploit Maneuver, or none taken from an attack Defended against.
   if (armsUser && (armsUser.uuid !== target.uuid) && attack.provokedBy && (damage > 0) && !isAbsoluteMiss(own)) {
     offerWatcherPowerUp(message, armsUser, "Damage dealt through the Exploit Maneuver");

@@ -229,6 +229,13 @@ async function writeStateful(actor, slots) {
     // circle.
     const { replaceObject } = await import("../conditions.mjs");
     updates["system.resources"] = replaceObject(resources);
+    // A Resource gone to nothing takes its clocks with it - Greed of the Hera's Power, lost at the start of the turn: a
+    // clock left behind would take a stack gained later off before its own time.
+    const gone = Object.keys(actor.system.resources ?? {}).filter(name => !resources[name]);
+    const timed = actor.system.timed ?? [];
+    if (gone.length && timed.some(entry => (entry.kind === "resource") && gone.includes(entry.key))) {
+      updates["system.timed"] = timed.filter(entry => !((entry.kind === "resource") && gone.includes(entry.key)));
+    }
   }
 
   for (const [key, { path, read, write, cap }] of Object.entries(STATEFUL)) {
@@ -271,7 +278,9 @@ export async function stacksGained(actor, names, counts = {}) {
   const { offerTriggers } = await import("../chat.mjs");
   // Overwhelm's - Redirected Energy's "Upon gaining a stack of Overwhelm" - and Demonic Power's - Demons of the Makyo
   // Star's - with how many.
-  for (const [name, moment] of [["overwhelm", "overwhelm-gained"], ["demonicpower", "demonic-power-gained"]]) {
+  // And Power's - Greed of the Hera's "Each time you gain a stack(s) of Power".
+  for (const [name, moment] of [["overwhelm", "overwhelm-gained"], ["demonicpower", "demonic-power-gained"],
+    ["power", "power-gained"]]) {
     if (!names.includes(name)) continue;
     const context = { gained: Math.max(1, Number(counts[name]) || 1) };
     await offerTriggers(actor, moment, context);
@@ -288,7 +297,7 @@ export async function stacksGained(actor, names, counts = {}) {
 }
 
 /** The Resources whose stacks gained are a Moment where an effect writes them - Comfort's. */
-const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm", "demonicpower"]);
+const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm", "demonicpower", "power"]);
 
 /** A character an effect named, by uuid or by name, or nothing. */
 function named(who) {

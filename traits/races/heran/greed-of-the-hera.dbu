@@ -1,0 +1,52 @@
+id: greed-of-the-hera
+name: Greed of the Hera
+order: 1
+category: body
+importance: primary
+# Greed: "Your maximum number of Greed stacks is equal to your maximum number of Power stacks" - Power's ceiling, read
+# whatever raises it (traits.mjs resourceCeiling, `resourceMaxOf`).
+resource: greed
+resourceLabel: Greed
+resourceMaxOf: power
+description: >
+  A race of conquering warriors, the Herans’ greed is renowned throughout the galaxy.
+text: >
+  Greed of the Hera (Body): A race of conquering warriors, the Herans’ greed is renowned throughout the galaxy.
+  (1)-[Passive]: Each stack of Power you possess increases your Soak Value by 1(T).
+  (2)-[Triggered, 1/Round]: If you deal Damage to an Opponent with an Attacking Maneuver that possesses an AoE, you may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+  (3)-[Triggered, 1/Round]: If you would use the Basic Attack Maneuver to make an Attacking Maneuver that does not possess an AoE, you may spend 3(bT) Ki Points to apply a Cone or Line AoE to that Attacking Maneuver.
+  (4)-[Triggered, 1/Round]: If you would use an Attacking Maneuver with a Minor or Standard AoE, you may spend up to 4(bT) Ki Points. For every 2(bT) Ki Points spent, increase the Magnitude of that Attacking Maneuver by 1.
+  (5)-[Triggered, Resource]: Each time you gain a stack(s) of Power, gain an equal number of Greed stacks. Your maximum number of Greed stacks is equal to your maximum number of Power stacks.
+  (6)-[Triggered]: When you are hit by an Attacking Maneuver, you may spend any number of Greed stacks to increase your Damage Reduction for the duration of that Attacking Maneuver by 2(T) for each stack of Greed spent.
+  (7)-[Automatic/Start of Turn]: You lose all stacks of Power (after applying any effects or Aspects that apply at the start of your turn) and regain 2(bT) Ki Points for all stacks of Power lost.
+
+---
+
+[passive]
+# (1)
+if (hasResource("power")) {
+    soakValue += (power.stacks * tierOfPower);
+}
+# (2) An Opponent dealt Damage by an attack of yours with an AoE: the Basic Attack out of sequence, offered on that
+# attack's card once a Round - counted when taken (chat.mjs offerGreedStrike).
+allow greed.aoeStrike;
+# (3) The Basic Attack declared with no AoE, asked once a Round: 3(bT) Ki, a Cone or a Line (maneuvers.mjs askGreedArea).
+allow greed.area;
+# (4) An attack declared with a Minor or Standard AoE, asked once a Round: 2(bT) or 4(bT) Ki, 1 or 2 Magnitudes
+# (maneuvers.mjs askGreedMagnitude).
+allow greed.magnitude;
+# (6) Hit, asked as the hit is settled: how many Greed stacks, 2(T) of Damage Reduction each for that attack (chat.mjs
+# greedReductionFor).
+allow greed.reduction;
+
+# (5) Power gained - a new moment, power-gained, wherever it is written: as many Greed stacks. Automatic by default, its
+# Triggered/Automatic button.
+[triggered/power-gained, effect 5]
+greed.stacks += gained;
+
+# (7) Every stack of Power, and 2(bT) Ki for each. Only where there is any, so an empty start of turn puts nothing in chat.
+# Their clocks go with them (moments-runtime.mjs writeStateful).
+[automatic/start-of-turn, effect 7]
+requires hasResource("power");
+ki.value += (power.stacks * 2(bT));
+power.stacks = 0;

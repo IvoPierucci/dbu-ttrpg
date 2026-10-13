@@ -5248,6 +5248,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         magnitudeSteps: (Number(area.magnitudeSteps) || 0) + declared.weapon.magnitude } };
     }
   }
+  // Greed of the Hera (3), a Cone or a Line on a Basic Attack with none, then (4), its Magnitude - each asked once a Round.
+  if (declared && maneuver.attacking) {
+    const { askGreedArea, askGreedMagnitude } = await import("./maneuvers.mjs");
+    declared = await askGreedArea(actor, maneuver, declared);
+    declared = await askGreedMagnitude(actor, declared, (maneuver.signature && !maneuver.signatureTechnique)
+      ? (maneuver.area ?? null) : (declared.area ?? PROFILES[declared.profile]?.area ?? null));
+  }
 
   // One Maneuver held at a time: the character has one place to keep it, and a second
   // holding would quietly throw the first away.

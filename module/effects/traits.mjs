@@ -153,6 +153,11 @@ export function resourceCeiling(definition, actor = null) {
     if (!definition?.name || !slots?.[`${definition.name}.max`]) return base;
     return Math.max(0, Math.floor(applySlot(slots, `${definition.name}.max`, base)));
   };
+  // Another Resource's, whatever raises it - Greed of the Hera's "equal to your maximum number of Power stacks".
+  if (definition?.maxOf) {
+    const other = resourceDefinitions()[definition.maxOf];
+    return raised((other && (other.name !== definition.name)) ? resourceCeiling(other, actor) : 0);
+  }
   if (!definition?.maxFrom) return raised(definition?.max ?? 0);
   if (!actor?.system) return 0;
   // And how many of it - Lifeforce's "3x your number of Skill Ranks in Clairvoyance".
@@ -193,6 +198,8 @@ export function resourceDefinitions() {
       // states. Blank on every Resource whose limit is simply written down.
       maxFrom: trait.resourceMaxFrom ?? "",
       maxTimes: Number(trait.resourceMaxTimes) || 1,
+      // Another Resource whose ceiling is this one's.
+      maxOf: String(trait.resourceMaxOf ?? "").trim().toLowerCase(),
       label: String(labels[index] ?? "").trim() || (name.charAt(0).toUpperCase() + name.slice(1)),
       source: trait.name ?? "",
       description: trait.description ?? "",

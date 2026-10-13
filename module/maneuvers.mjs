@@ -1525,6 +1525,60 @@ export async function askEyeWeapon(actor, declared) {
 }
 
 /**
+ * Greed of the Hera (3): "If you would use the Basic Attack Maneuver to make an Attacking Maneuver that does not possess an
+ * AoE, you may spend 3(bT) Ki Points to apply a Cone or Line AoE to that Attacking Maneuver." Asked once declared, once a
+ * Round; paid with the attack (`kiSurcharge`). No Magnitude named, so Standard (DEFAULT_AREA_MAGNITUDE). Not where what
+ * offered it forbids an AoE - a Feint's.
+ */
+export async function askGreedArea(actor, maneuver, declared, { noArea = false } = {}) {
+  if (!declared || noArea || (maneuver?.id !== BASIC_ATTACK) || (actor?.system?.effects?.slots?.["greed.area"] !== true)) {
+    return declared;
+  }
+  if (declared.area ?? PROFILES[declared.profile]?.area) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "greedAreaRound") === round) return declared;
+  const ki = 3 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  if ((Number(actor.system.ki?.value) || 0) < ki) return declared;
+  const shape = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Greed of the Hera" },
+    content: `<p data-tooltip="Once a Round. A Standard AoE.">${ki} Ki: a Cone or a Line?</p>`,
+    buttons: [{ action: "cone", label: "Cone" }, { action: "line", label: "Line" }, { action: "no", label: "No" }],
+    rejectClose: false
+  });
+  if (!["cone", "line"].includes(shape)) return declared;
+  await actor.setFlag("dbu-ttrpg", "greedAreaRound", round);
+  return { ...declared, area: { shape }, kiSurcharge: (Number(declared.kiSurcharge) || 0) + ki };
+}
+
+/**
+ * Greed of the Hera (4): "If you would use an Attacking Maneuver with a Minor or Standard AoE, you may spend up to 4(bT) Ki
+ * Points. For every 2(bT) Ki Points spent, increase the Magnitude of that Attacking Maneuver by 1." Asked once declared,
+ * once a Round, of the Area it has then; paid with the attack (`kiSurcharge`), carried as `greedMagnitude` (chat.mjs
+ * postAttack).
+ */
+export async function askGreedMagnitude(actor, declared, area) {
+  if (!declared || !area || (actor?.system?.effects?.slots?.["greed.magnitude"] !== true)) return declared;
+  if (magnitudeIndex(area) > MAGNITUDES.indexOf("standard")) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "greedMagnitudeRound") === round) return declared;
+  const step = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const ki = (Number(actor.system.ki?.value) || 0) - (Number(declared.kiSurcharge) || 0);
+  if (ki < step) return declared;
+  const steps = Number(await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Greed of the Hera" },
+    content: `<p data-tooltip="Once a Round. ${step} Ki for each.">The Magnitude of its ${
+      Handlebars.escapeExpression(areaLabel(area))}?</p>`,
+    buttons: [{ action: "1", label: `+1 (${step} Ki)` },
+      ...((ki >= 2 * step) ? [{ action: "2", label: `+2 (${2 * step} Ki)` }] : []),
+      { action: "0", label: "No" }],
+    rejectClose: false
+  })) || 0;
+  if (!steps) return declared;
+  await actor.setFlag("dbu-ttrpg", "greedMagnitudeRound", round);
+  return { ...declared, greedMagnitude: steps, kiSurcharge: (Number(declared.kiSurcharge) || 0) + (steps * step) };
+}
+
+/**
  * Burrowed Strike's 2nd: "When making an Attacking Maneuver of the Simple Profile, you may spend 2(bT) Ki Points to double
  * the amount of Diminishing Defense your Opponent suffers from that Attacking Maneuver" - asked, paid with the attack
  * (`kiSurcharge`), once a Round. The declaration as it then stands.

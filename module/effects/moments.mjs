@@ -111,6 +111,9 @@ const TABLE = [
   { key: "demonic-power-gained", label: "You gain a stack of Demonic Power", provides: [],
     doc: "Fired as Demonic Power is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Demons of the "
        + "Makyo Star's. What is the player's is asked in a window first." },
+  { key: "power-gained", label: "You gain a stack of Power", provides: [],
+    doc: "Fired as Power is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Greed of the Hera's. "
+       + "What is the player's is asked in a window first." },
   { key: "overwhelm-gained", label: "You gain a stack of Overwhelm", provides: [],
     doc: "Fired as Overwhelm is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Redirected Energy's. "
        + "What is the player's is asked in a window first." },
