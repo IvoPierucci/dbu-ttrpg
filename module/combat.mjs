@@ -279,10 +279,13 @@ async function startEncounter(combat) {
     await fireMoment(actor, "start-of-encounter");
   }
 
-  await announce("start-of-encounter", {
+  const encounterCard = await announce("start-of-encounter", {
     title: "Start of the Combat Encounter",
     subjects: combatants(combat).map(actor => actor.uuid)
   });
+  // Glass Mastery (6): Glassification out of sequence, on that card.
+  const { glassMasteryEncounterStart } = await import("./chat.mjs");
+  for (const actor of combatants(combat)) await glassMasteryEncounterStart(actor, encounterCard);
 }
 
 /**

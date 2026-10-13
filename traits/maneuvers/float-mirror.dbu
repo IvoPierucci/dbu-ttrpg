@@ -1,0 +1,32 @@
+id: float-mirror
+name: Float Mirror
+type: counter
+actionCost: 1
+kiCostPerTier: 8
+attacking: false
+requiresTarget: false
+special: true
+usageLimit: 1/encounter
+source: Core Rule
+description: >
+  An attack at you or an Ally, every target on Glass: a Might Clash - won, it misses them all; an Energy or Elemental (Light) one thrown back.
+text: >
+  Float Mirror [1/Encounter]: You redirect the force of an attack, absorbing the attack and firing it back at the opponent.
+  –Maneuver Type: Counter Maneuver
+  –Action Cost: 1 Counter Action
+  –Minions: N/A
+  –KP Cost: 8(T)
+  –Effect: If you and/or any Allies are targeted by an Attacking Maneuver while all targets of that Attacking Maneuver are occupying a Square with the Glass Environmental Quality and are within a Destructive Sphere AoE (centered on you), you may use this Counter Maneuver.
+
+  Make a Might Clash against the attacking Character, but increase their Dice Score by 1(T) for every Energy Charge or rank of Power Shot applied to their Attacking Maneuver. If you win, that Attacking Maneuver misses all of its targets, is no longer an Absolute Attack if it would be otherwise, and cannot apply the effects of the Homing Advantage.
+
+  Then, if that Attacking Maneuver was of the Energy Foundation or the Elemental (Light) Profile, you may roll Strike against an Opponent of your choice using the Profile of the initial Attacking Maneuver. If they are hit, the original attacking Character rolls the Wound Roll for their initial Attacking Maneuver instead as an Urgent Roll, including any Ki Wagers and Energy Charges included on that Attacking Maneuver. Damage calculation occurs as usual from this point.
+
+---
+
+# A Special Maneuver: open where an effect grants it - Glass Mastery. Played from the attack's card, never from the list:
+# a "Float Mirror" button once the Strike is settled and before the Wound Roll, for whoever has it and is a target or an
+# Ally of one, every target on a Glass Square - the Destructive Sphere the table's. Its Counter Action and 8(T) Ki paid,
+# the Might Clash rolled there; won, the attack turned aside from everyone as a won Deflect is - no Wound Roll, so no
+# Absolute Attack and no Homing - and an Energy or Elemental (Light) one offered back as a Reflect, already paid for
+# (chat.mjs floatMirrorButtons, takeFloatMirror).

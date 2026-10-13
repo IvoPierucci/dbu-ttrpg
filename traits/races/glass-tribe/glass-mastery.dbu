@@ -1,0 +1,38 @@
+id: glass-mastery
+name: Glass Mastery
+order: 5
+category: mind
+subrace: glass-user
+importance: primary
+description: >
+  By covering the battlefield and even your comrades with glass, you shape the flow of battle, healing and protecting your Allies as well as yourself.
+text: >
+  Glass Mastery (Mind): By covering the battlefield and even your comrades with glass, you shape the flow of battle, healing and protecting your Allies as well as yourself.
+  (1)-[Passive]: Increase your Might and Corporeal Saves by 1(T) while in the Healthy Health Threshold.
+  (2)-[Passive]: Increase your Damage Reduction and Surgency by 1(T) and 2(T) respectively while occupying a Square with the Glass Environmental Quality and all adjacent Squares either possess the Glass Environmental Quality or are occupied by a Feature with the Glass Feature Quality.
+  (3)-[Passive]: You gain access to the Float Mirror Special Maneuver.
+  (4)-[Triggered]: If you target an Ally with the effects of the Glassification Special Maneuver and you win the Clash, instead of applying stacks of Slowed, that Ally regains Life Points and Ki Points equal to 1/2 of your Might for each time they were targeted.
+  (5)-[Triggered/Start of Turn]: If every Square within a Large Sphere AoE (centered on you) has the Glass Environmental Quality or is occupied by a Feature with the Glass Feature Quality, regain 3(bT) Life and Ki Points.
+  (6)-[Triggered/Start of Combat Encounter]: If you are in the Healthy Health Threshold, use the Glassification Maneuver as an Out-of-Sequence Maneuver as if you spent 3 Actions for its effects. You do not have to pay the Ki Point Cost for this use of the Glassification Maneuver if you only target Squares through its effects.
+
+---
+
+[passive]
+# (1) Healthy.
+if (!belowThreshold("bruised")) {
+    might += 1(T);
+    save.corporeal += 1(T);
+}
+# (2) The Squares around you: the table's (the user's).
+# (3) A Float Mirror button on an attack's card (chat.mjs floatMirrorButtons).
+allow maneuver.float-mirror;
+# (4) Glassification's Clash at an Ally, won: Life and Ki for each time in place of Slowed (chat.mjs settleGlassSlowed).
+allow glassification.healAllies;
+# (6) As the Combat Encounter starts, Healthy: Glassification out of sequence on its card, as if for 3 Actions - its Ki
+# only where a Character was targeted (combat.mjs, chat.mjs glassMasteryEncounterStart).
+allow glassification.encounterStart;
+
+# (5) As your turn starts, ticked on the turn's card when the Large Sphere around you is all Glass - the table's to say.
+[triggered/start-of-turn, chosen, effect 5]
+life.value += 3(bT);
+ki.value += 3(bT);

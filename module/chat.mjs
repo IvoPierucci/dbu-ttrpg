@@ -14457,6 +14457,17 @@ export async function glassification(actor, actions) {
     rejectClose: false
   });
   if (!Array.isArray(picked)) return;
+  // Glass Mastery (6): the Encounter's first, free on the offer - "You do not have to pay the Ki Point Cost for this use
+  // ... if you only target Squares": paid now, for its 3 Actions, where a Character was targeted.
+  const starting = actor.getFlag?.(SCOPE, "glassStart");
+  if (starting && (starting === (game.combat?.id ?? "none"))) {
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.glassStart`]: null });
+    if (!picked.every(value => value.startsWith("square:"))) {
+      const { maneuverKiCost, getManeuver } = await import("./maneuvers.mjs");
+      const owed = maneuverKiCost(getManeuver("glassification") ?? { id: "glassification" }, null, actor) * count;
+      if (owed > 0) await spendManeuverCost(actor, { name: "Glassification" }, owed);
+    }
+  }
   // Glass Combat (6): "If you target only Squares through the effects of the Glassification Maneuver, you do not have to
   // pay the Ki Point Cost." Asked, once an Encounter: what it was paid, given back.
   if (picked.every(value => value.startsWith("square:")) && (actor.system.effects?.slots?.["glassification.freeSquares"] === true)
@@ -14499,14 +14510,19 @@ export async function glassification(actor, actions) {
   }
   // Each Character: a Clash, Corporeal against any Saving Throw - its times, in stacks of Slowed.
   const first = game.combat?.turns?.[0]?.actor?.uuid === actor.uuid;
+  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
   for (const [value, n] of times) {
     if (!value.startsWith("character:")) continue;
     const target = fromUuidSync(value.slice(10));
     if (!target) continue;
+    // Glass Mastery (4): an Ally - won, Life and Ki in place of Slowed.
+    const heal = (actor.system.effects?.slots?.["glassification.healAllies"] === true) && (own !== undefined)
+      && (target.getActiveTokens?.(false, true)?.[0]?.disposition === own);
     await postSaveClash(actor, target, { maneuverName: "Glassification",
-      reason: `Win and ${target.name} gains ${n} stack${(n === 1) ? "" : "s"} of Slowed.`,
+      reason: heal ? `Win and ${target.name} regains Life and Ki Points.`
+        : `Win and ${target.name} gains ${n} stack${(n === 1) ? "" : "s"} of Slowed.`,
       saves: ["corporeal"], defenderSaves: Object.keys(DBUCharacterData.SAVING_THROWS),
-      glassSlowed: { stacks: n, first, applied: false } });
+      glassSlowed: { stacks: n, first, heal, applied: false } });
   }
 }
 
@@ -14551,9 +14567,20 @@ async function settleGlassSlowed(message, clash) {
   if (!caster || !target) return;
   if (whoWonClash(clash.result) !== "challenger") {
     await settledNote(message, `${target.name} shrugs it off.`);
+    // An Ally's is no opening - "this triggers their Exploit Maneuver" is an Opponent's.
+    if (clash.glassSlowed.heal) return;
     return offerExploitTo(message, target, caster, `${clash.maneuverName} - the Clash was lost`, "glassification");
   }
   const stacks = Math.max(1, Number(clash.glassSlowed.stacks) || 1);
+  // Glass Mastery (4): "that Ally regains Life Points and Ki Points equal to 1/2 of your Might for each time they were
+  // targeted."
+  if (clash.glassSlowed.heal) {
+    const gain = Math.floor((Number(caster.system.might) || 0) / 2) * stacks;
+    await requestActorUpdate(target, {
+      "system.life.value": Math.min(Number(target.system.life?.max) || Infinity, (Number(target.system.life?.value) || 0) + gain),
+      "system.ki.value": Math.min(Number(target.system.ki?.max) || Infinity, (Number(target.system.ki?.value) || 0) + gain) });
+    return settledNote(message, `${target.name} regains ${gain} Life and Ki Points.`);
+  }
   const { gainCondition } = await import("./effects/moments-runtime.mjs");
   if (await gainCondition(target, "slowed", stacks) === false) return;
   const first = Boolean(clash.glassSlowed.first);
@@ -14563,6 +14590,94 @@ async function settleGlassSlowed(message, clash) {
   }
   return settledNote(message, `${target.name} is Slowed${(stacks > 1) ? ` (${stacks})` : ""} until ${
     first ? "the next Combat Round" : `the start of ${caster.name}'s next turn`}.`);
+}
+
+/**
+ * Float Mirror: "If you and/or any Allies are targeted by an Attacking Maneuver while all targets of that Attacking Maneuver
+ * are occupying a Square with the Glass Environmental Quality and are within a Destructive Sphere AoE (centered on you), you
+ * may use this Counter Maneuver." A button for each who may - the Sphere the table's - while the Strike is settled and the
+ * Wound Roll is not made.
+ */
+function floatMirrorButtons(message, container, attack) {
+  const result = attack?.result;
+  if (!result || result.wound || deflection(attack)) return;
+  const aimed = attackTargets(attack).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
+  if (!aimed.length || !aimed.every(each => (each.system?.battlefield?.squareQualities ?? []).includes("glass"))) return;
+  const sides = new Set(aimed.map(each => each.getActiveTokens?.(false, true)?.[0]?.disposition));
+  const seen = new Set();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const actor = token.actor;
+    if (!actor?.isOwner || seen.has(actor.uuid) || (actor.uuid === attack.attackerUuid)) continue;
+    seen.add(actor.uuid);
+    if (actor.system?.effects?.slots?.["maneuver.float-mirror"] !== true) continue;
+    if (!aimed.some(each => each.uuid === actor.uuid) && !sides.has(token.document?.disposition)) continue;
+    const item = actor.items?.find(each => (each.type === "maneuver") && ((each.system.maneuverId || "") === "float-mirror"));
+    if (!item) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Float Mirror - ${actor.name}`;
+    button.dataset.tooltip = "1 Counter Action, 8(T) Ki: a Might Clash - won, it misses everyone. Every target within a Destructive Sphere around you: the table's.";
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return takeFloatMirror(message, actor, item);
+    });
+    container.append(button);
+  }
+}
+
+/**
+ * Float Mirror, taken: "Make a Might Clash against the attacking Character, but increase their Dice Score by 1(T) for every
+ * Energy Charge or rank of Power Shot applied to their Attacking Maneuver. If you win, that Attacking Maneuver misses all of
+ * its targets" - turned aside as a won Deflect turns it. "Then, if that Attacking Maneuver was of the Energy Foundation or the
+ * Elemental (Light) Profile", the Reflect offered, already paid for.
+ */
+async function takeFloatMirror(message, actor, item) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attack?.result || attack.result.wound || deflection(attack) || !attacker) return;
+  const { definitionOf } = await import("./use-maneuver.mjs");
+  const maneuver = definitionOf(item);
+  if (maneuverUsesLeft(actor, maneuver) <= 0) return ui.notifications.warn(`${actor.name}: Float Mirror is once a Combat Encounter.`);
+  const ki = 8 * Math.max(1, Number(actor.system.tierOfPower) || 1);
+  if ((Number(actor.system.ki?.value) || 0) < ki) return ui.notifications.warn(`${actor.name} needs ${ki} Ki for Float Mirror.`);
+  if (!await spendActions(actor, 1, "counter")) return;
+  if (!await spendManeuverCost(actor, { name: "Float Mirror" }, ki)) return;
+  await recordManeuverType(actor, "counter");
+  await recordManeuverUse(actor, maneuver);
+  const counted = (Number(attack.energyCharges) || 0) + (Number(attack.powerShotRanks) || 0);
+  const per = Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  const [mine, theirs] = await Promise.all([
+    rollSide(actor, [{ label: "Might", value: actor.system.might }],
+      { criticalDice: actor.system.dice.critical.formula, slot: "might" }),
+    rollSide(attacker, [{ label: "Might", value: attacker.system.might },
+      ...(counted ? [{ label: "Charges and Power Shot", written: `+${counted}(T)`, value: counted * per }] : [])],
+      { criticalDice: attacker.system.dice.critical.formula, slot: "might" })
+  ]);
+  // The attacker takes ties, as against a Deflect.
+  const won = mine.total > theirs.total;
+  const entry = { uuid: actor.uuid, name: actor.name, allyUuid: actor.uuid, allyName: actor.name, effect: "floatMirror",
+    clash: { mine, theirs, won }, deflected: won, incomingDamage: null, outcome: null };
+  const now = message.getFlag(SCOPE, ATTACK_FLAG);
+  requestEdit(message, { type: "attack", attack: { ...now, interventions: [...interventions(now), entry] } });
+  if (!won) return;
+  const profiles = [attack.profile, ...extraProfilesOf(attack)];
+  if ((attack.foundation !== "energy") && !profiles.includes("elementalLight")) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "reflect",
+    maneuverName: "Reflect", reason: "Float Mirror - won the Might Clash", free: true, reflect: reflectOf(attack) } });
+}
+
+/** Glass Mastery (6): as the Combat Encounter starts, Healthy - Glassification out of sequence on its card, for 3 Actions. */
+export async function glassMasteryEncounterStart(actor, card) {
+  if (!actor || (actor.system?.effects?.slots?.["glassification.encounterStart"] !== true)) return;
+  if ((actor.system.threshold?.key ?? "healthy") !== "healthy") return;
+  if (!actor.items?.some(item => (item.type === "maneuver") && ((item.system.maneuverId || "") === "glassification"))) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.glassStart`]: game.combat?.id ?? "none" });
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "glassification", maneuverName: "Glassification",
+    reason: "Glass Mastery - as if for 3 Actions; Squares alone, no Ki", free: true, grants: { actionsSpent: 3 } };
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
 }
 
 /** Fallen Idol (4)'s Combat Conditions: the ones that may be handed on. */
@@ -18060,22 +18175,27 @@ function offerReflect(message, attack, actor, reason) {
       maneuverId: "reflect",
       maneuverName: "Reflect",
       reason,
-      reflect: {
-        maneuverName: attack.maneuverName,
-        attackerUuid: attack.attackerUuid,
-        attackerName: attack.attackerName,
-        profile: attack.profile,
-        foundation: attack.foundation,
-        kiWager: attack.kiWager ?? 0,
-        energyCharges: attack.energyCharges ?? 0,
-        damageCategoryShift: attack.damageCategoryShift ?? 0,
-        signature: Boolean(attack.signature),
-        advantages: attack.advantages ?? [],
-        powerShotRanks: attack.powerShotRanks ?? 0,
-        squaresCharged: attack.squaresCharged ?? 0
-      }
+      reflect: reflectOf(attack)
     }
   });
+}
+
+/** What a Reflect throws back: that attack as it stood - its Profile, its Ki Wager, its Energy Charges. */
+function reflectOf(attack) {
+  return {
+    maneuverName: attack.maneuverName,
+    attackerUuid: attack.attackerUuid,
+    attackerName: attack.attackerName,
+    profile: attack.profile,
+    foundation: attack.foundation,
+    kiWager: attack.kiWager ?? 0,
+    energyCharges: attack.energyCharges ?? 0,
+    damageCategoryShift: attack.damageCategoryShift ?? 0,
+    signature: Boolean(attack.signature),
+    advantages: attack.advantages ?? [],
+    powerShotRanks: attack.powerShotRanks ?? 0,
+    squaresCharged: attack.squaresCharged ?? 0
+  };
 }
 
 /**
@@ -23352,6 +23472,11 @@ function attackOutcome(attack) {
 function interveneText(attack, entry) {
   const option = INTERVENE_OPTIONS[entry.effect];
   const who = Handlebars.escapeExpression(entry.name);
+  // Float Mirror's, which is no Intervene: won, it missed them all.
+  if (entry.effect === "floatMirror") {
+    return entry.deflected ? `${who}'s Float Mirror wins the Might Clash: the attack misses everyone`
+      : `${who}'s Float Mirror loses the Might Clash, and the attack goes on as it was`;
+  }
   const ally = Handlebars.escapeExpression(entry.allyName);
   const label = Handlebars.escapeExpression(option?.label ?? entry.effect);
 
@@ -23682,6 +23807,8 @@ function renderAttack(message, html) {
 
   // Angelic Offense (2): an Opponent hit, and the Clash theirs to make - once a Round, whenever after the hit.
   angelicOffenseButtons(message, container, attack);
+  // Float Mirror: the Strike settled, before the Wound Roll - every target on Glass.
+  floatMirrorButtons(message, container, attack);
   // Evolved Right Eye (5): the Strike a Critical Result, before the Wound Roll.
   criticalStrikeButton(message, container, attack);
 
