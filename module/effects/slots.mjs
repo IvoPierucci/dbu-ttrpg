@@ -243,6 +243,9 @@ const TABLE = [
        + "each effect that would have raised its Natural Result or lowered its Critical Target (chat.mjs rollSide)." },
   // Frigid Tricks' "Increase the Dice Score of any Clash you make through a Unique Ability which uses your Might or Saving
   // Throws by 1(T)".
+  { key: "clash.defendingMightOrSave", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to your Dice Score in a Might or Saving Throw Clash an Opponent opened against you (chat.mjs "
+       + "defendingClashBonus) - Battle Tension's." },
   { key: "clash.unique", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to a Might or Saving Throw Clash a Unique Ability of yours opens (chat.mjs uniqueClashBonus)." },
   { key: "defend.free", phase: PHASES.REACTIVE, kind: F, ops: ["set"],

@@ -381,6 +381,20 @@ async function runVerb(actor, call, context) {
       return shardBurst(actor);
     }
 
+    case "shedCondition": {
+      const besides = args.map(name => String(name).toLowerCase());
+      const held = Object.entries(actor.system?.conditions ?? {}).filter(([key, stacks]) => ((Number(stacks) || 0) > 0)
+        && !besides.includes(key) && (getTrait(key)?.kind === "conditions") && (getTrait(key)?.combatCondition !== false));
+      if (!held.length) return UNSPENT;
+      const { askPlayerChoice } = await import("../chat.mjs");
+      const key = (held.length === 1) ? held[0][0] : await askPlayerChoice(actor, `${actor.name}: a stack off`,
+        [...held.map(([each]) => ({ value: each, label: getTrait(each)?.name ?? each })), { value: "none", label: "None" }]);
+      const stacks = held.find(([each]) => each === key)?.[1];
+      if (stacks === undefined) return UNSPENT;
+      const { setCondition } = await import("../conditions.mjs");
+      return setCondition(actor, key, (Number(stacks) || 0) - 1);
+    }
+
     case "cutthroatShove": {
       const { cutthroatShove } = await import("../chat.mjs");
       return cutthroatShove(actor);

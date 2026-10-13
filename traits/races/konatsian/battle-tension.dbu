@@ -1,0 +1,65 @@
+id: battle-tension
+name: Battle Tension
+order: 1
+category: body
+importance: primary
+resource: tension
+resourceLabel: Tension
+resourceMax: 5
+description: >
+  Skilled and trained for battle, you’re ready for any obstacle your enemies might throw at you.
+text: >
+  Battle Tension (Body): Skilled and trained for battle, you’re ready for any obstacle your enemies might throw at you.
+  (1)-[Triggered/Threshold, Resource]: Gain a stack of Tension (max. 5).
+  (2)-[Triggered/Start of Turn]: If you are below the Injured Health Threshold, gain a stack of Tension.
+  (3)-[Triggered]: If an Ally (except Minions) is Defeated, gain a stack of Tension.
+  (4)-[Passive]: If you possess a stack of Tension, increase your Damage Reduction by 1(T).
+  (5)-[Passive]: If you possess 2+ stacks of Tension, increase the Dice Score of your roll for any Clash initiated by your Opponent that uses your Might or a Saving Throw by 1(T).
+  (6)-[Triggered/Power, 1/Round]: If you possess 3+ stacks of Tension, you may stop suffering from a stack of a Combat Condition you are suffering from (except Pinned, Suffocating, Stress Exhaustion, or Transfigured).
+  (7)-[Triggered/Defeat]: If you possess 4+ stacks of Tension, regain Life Points equal to 1/4 of your Maximum Life Points and then lose 2 stacks of Tension.
+  (8)-[Triggered/Start of Turn, 1/Encounter]: If you possess 5+ stacks of Tension, you may enter the Entrusted Special State until the end of your next turn.
+
+---
+
+[passive]
+# (4)
+if (hasResource("tension")) {
+    damageReduction += 1(T);
+}
+# (5) A Might or Saving Throw Clash an Opponent opened against you (chat.mjs defendingClashBonus).
+if (stacksAtLeast(2, "tension")) {
+    clash.defendingMightOrSave += 1(T);
+}
+
+# (1) Knocked through a Health Threshold. Automatic by default, its Triggered/Automatic button.
+[triggered/threshold, effect 1]
+tension.stacks += 1;
+
+# (2) Injured or Critical as your turn begins. Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, effect 2]
+requires belowThreshold("injured");
+tension.stacks += 1;
+
+# (3) An Ally of yours on the scene Defeated, not a Minion - ally-defeated, a new moment (combat.mjs). Automatic by default,
+# its Triggered/Automatic button.
+[triggered/ally-defeated, effect 3]
+tension.stacks += 1;
+
+# (6) The Power Up used, 3+ stacks: ticked in its window - which Combat Condition, asked where there are several; a stack
+# of it off (moments-runtime.mjs shedCondition).
+[triggered/power, 1/round, effect 6]
+requires stacksAtLeast(3, "tension") && conditionedBesides("pinned", "suffocating", "stress-exhaustion", "transfigured");
+shedCondition(pinned, suffocating, stress-exhaustion, transfigured);
+
+# (7) Reduced to your minimum Life Points with 4+ stacks: chosen on the Defeated card, never Automatic - a quarter of your
+# Maximum Life Points back, then 2 stacks off.
+[triggered/defeated, effect 7]
+requires stacksAtLeast(4, "tension");
+life.value += floor(life.max / 4);
+tension.stacks -= 2;
+
+# (8) Your turn begins with 5 stacks, once an Encounter: Entrusted until the end of your next turn - the turn after this one.
+# Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-turn, 1/encounter, effect 8]
+requires stacksAtLeast(5, "tension");
+enterState(entrusted, 1, next-turn);

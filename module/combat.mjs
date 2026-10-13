@@ -973,6 +973,22 @@ export function registerDefeatHooks() {
     const now = actor.system.defeated;
     if (was === now) return;
 
+    // An Ally of theirs, not a Minion, Defeated: for each of their Allies on the scene, what answers it (Battle Tension's).
+    if (now && !actor.system?.minion) {
+      const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+      if (own !== undefined) {
+        const { offerTriggers } = await import("./chat.mjs");
+        const allies = new Map((canvas?.tokens?.placeables ?? [])
+          .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.document?.disposition === own)
+            && !token.actor.system?.defeated)
+          .map(token => [token.actor.uuid, token.actor]));
+        for (const ally of allies.values()) {
+          await offerTriggers(ally, "ally-defeated", { defeatedUuid: actor.uuid });
+          await fireMoment(ally, "ally-defeated", { defeatedUuid: actor.uuid });
+        }
+      }
+    }
+
     // Defeated by an Opponent's Attacking Maneuver: for its maker, what answers having done it (Lock On's 2nd).
     if (now && options.dbuKnockedBy) {
       const knocker = fromUuidSync(options.dbuKnockedBy);

@@ -111,6 +111,12 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  shedCondition: {
+    args: [0, 9],
+    names: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    doc: "A stack of one Combat Condition you suffer from taken off - which, asked where there are several - but the ones "
+       + "named (Battle Tension's: not Pinned, Suffocating, Stress Exhaustion or Transfigured). None, its use unspent."
+  },
   cutthroatShove: {
     args: [0, 0],
     doc: "Cutthroat Teamwork (2): an Ally on an adjacent Square picked, a Might Clash against them - won, they may be moved "

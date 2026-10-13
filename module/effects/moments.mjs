@@ -111,6 +111,9 @@ const TABLE = [
   { key: "demonic-power-gained", label: "You gain a stack of Demonic Power", provides: [],
     doc: "Fired as Demonic Power is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Demons of the "
        + "Makyo Star's. What is the player's is asked in a window first." },
+  { key: "ally-defeated", label: "An Ally is Defeated", provides: [],
+    doc: "Fired for each Ally on the scene of whoever is Defeated - not for a Minion's defeat - with them as `defeatedUuid` "
+       + "(combat.mjs) - Battle Tension's. What is the player's is asked in a window first." },
   { key: "power-gained", label: "You gain a stack of Power", provides: [],
     doc: "Fired as Power is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Greed of the Hera's. "
        + "What is the player's is asked in a window first." },

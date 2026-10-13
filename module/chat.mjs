@@ -8192,7 +8192,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 function clashParts(kind, actor, clash, uuid) {
   return [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
-    ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid)];
+    ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid)];
 }
 
 /** A Shard Carrier - Glass Shards (1)'s mark. */
@@ -8210,6 +8210,20 @@ function shardClashBonus(actor, clash, uuid) {
   const other = fromUuidSync(((uuid === clash.challengerUuid) ? clash.defenderUuid : clash.challengerUuid) ?? "");
   if (!shardCarrier(other)) return [];
   return [{ label: "Glass Shards", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+}
+
+/**
+ * Battle Tension (5): "increase the Dice Score of your roll for any Clash initiated by your Opponent that uses your Might or
+ * a Saving Throw by 1(T)" - `clash.defendingMightOrSave`, on the side that did not open it, against one not an Ally.
+ */
+function defendingClashBonus(actor, clash, uuid) {
+  if (!["might", "save"].includes(clash?.category ?? "") || (uuid !== clash.defenderUuid)) return [];
+  const value = applySlot(actor?.system?.effects?.slots, "clash.defendingMightOrSave", 0);
+  if (!value) return [];
+  const challenger = clash.challengerUuid ?? "";
+  if (!challenger || (challenger === actor.uuid) || alliesOnScene(actor).some(ally => ally.uuid === challenger)) return [];
+  const named = (actor.system.effects.slots["clash.defendingMightOrSave"]?.parts ?? []).map(part => part.source).find(Boolean);
+  return [{ label: named || "Effects", value }];
 }
 
 /**
