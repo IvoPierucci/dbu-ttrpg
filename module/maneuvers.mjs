@@ -1546,6 +1546,25 @@ export async function askEyeWeapon(actor, declared) {
 }
 
 /**
+ * Surging (3): "You cannot target a Character who isn't your Focus with an Attacking Maneuver unless that Attacking Maneuver
+ * is an AoE that also targets your Focus." Whoever is aimed at - the target and every token targeted - against the Focus
+ * picked on entering (`surgingFocus`). Why not, or "".
+ */
+export function whyNotFocus(actor, maneuver, declared, target) {
+  if (!maneuver?.attacking || (actor?.system?.effects?.slots?.attacksOnOthers !== false)) return "";
+  const focus = actor.getFlag?.("dbu-ttrpg", "surgingFocus") ?? "";
+  if (!focus) return "";
+  const aimed = [...new Set([target, ...Array.from(game.user?.targets ?? []).map(token => token.actor)]
+    .filter(other => other && (other.uuid !== actor.uuid)).map(other => other.uuid))];
+  if (!aimed.length) return "";
+  const area = (maneuver.signature && !maneuver.signatureTechnique) ? maneuver.area
+    : (declared?.area ?? PROFILES[declared?.profile]?.area ?? null);
+  const name = fromUuidSync(focus)?.name ?? "your Focus";
+  if (area) return aimed.includes(focus) ? "" : `Surging: an AoE must also target ${name}.`;
+  return aimed.every(uuid => uuid === focus) ? "" : `Surging: only ${name}, your Focus - or an AoE that includes them.`;
+}
+
+/**
  * What may be bought onto an attack's Area as it is declared, in order: an AoE where there is none - Greed of the Hera (3)
  * on a Basic Attack, Mage (3) on a Magic Attack - then Magnitudes on the one it has - Greed of the Hera (4), Mage (4). Each
  * asked once a Round, paid with the attack (`kiSurcharge`); the Magnitudes carried as `boughtMagnitude` (chat.mjs

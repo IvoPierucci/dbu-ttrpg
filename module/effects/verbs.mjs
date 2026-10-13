@@ -111,6 +111,14 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  surgingFocus: {
+    args: [0, 0],
+    doc: "Surging (1): the Focus, an Opponent picked as the State is entered (chat.mjs surgingFocus)."
+  },
+  surgingSpare: {
+    args: [0, 0],
+    doc: "No Fatigued on leaving Surging this time - its second effect ignored (chat.mjs surgingSpare)."
+  },
   goof: {
     args: [0, 0],
     doc: "The Goof Special Maneuver (Gadabout): an Opponent out of Long Range picked, a Clash (Morale) - won, a 1d4 Combat "

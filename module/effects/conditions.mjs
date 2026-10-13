@@ -258,6 +258,13 @@ const PREDICATES = {
     return !most || ((Number(scope.data?.resources?.[key]?.stacks) || 0) < most);
   },
 
+  /** Surging (5): the one Defeated was your Focus. */
+  defeatedFocus: scope => Boolean(scope.context?.defeatedUuid)
+    && (scope.context.defeatedUuid === (scope.data?.parent?.getFlag?.("dbu-ttrpg", "surgingFocus") ?? "")),
+
+  /** Surging's second effect ignored this time - its (5)'s, Hocus Pocus (9)'s. */
+  surgingSpared: scope => scope.data?.parent?.getFlag?.("dbu-ttrpg", "surgingSpared") === true,
+
   /** Galaxy at the Brink (3): Greed of the Hera's 7th ignored at the start of this turn. */
   powerHeld: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "galaxyHold") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,

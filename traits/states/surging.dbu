@@ -2,31 +2,38 @@ id: surging
 name: Surging
 kind: state
 description: >
-  Fixed on one opponent to the exclusion of everything else, and burnt out
-  when it passes.
+  Fixed on one opponent to the exclusion of everything else, and burnt out when it passes.
 text: >
-  You choose one opponent as your Focus. You cannot make Attacking Maneuvers
-  that do not include your Focus, and you cannot gain the Compelled Combat
-  Condition. When you stop Surging you become Fatigued, unless you stopped
-  because your Focus was Defeated.
+  Narrative Requirement: An intent desire to inflict harm on a single individual out of desperation. A threat of immense danger to yourself or an ally is required.
+  (1)-[Automatic/Surging, Ruling]: Target an Opponent. This Opponent becomes your ‘Focus’. Apply an Energy Charge to all of your Attacking Maneuvers that include your Focus as a target.
+  (2)-[Automatic]: When you leave this State, gain a stack of the Fatigued Combat Condition until the end of your next turn.
+  (3)-[Passive]: You cannot target a Character who isn’t your Focus with an Attacking Maneuver unless that Attacking Maneuver is an AoE that also targets your Focus.
+  (4)-[Passive]: You cannot gain the Compelled Combat Condition. If, upon entering this State, you had the Compelled Combat Condition, you lose that Combat Condition.
+  (5)-[Triggered]: If you Defeat your Focus, you may leave this State immediately. If you leave this State through this effect, ignore the second effect of the Surging State.
 
 ---
 
-# Not automated: which opponent the Focus is. The system has no notion of a
-# chosen opponent that outlives one Maneuver, so the GM names them and this
-# enforces the shape rather than the target.
-# Leaving because the Focus fell should skip the Fatigued, and does not yet:
-# on removed cannot see why it was removed.
-
-[passive]
-forbid attacksOnOthers;
-forbid condition.compelled;
-
+# (1) The Focus asked as the State is entered - an Opponent on the scene - and kept (chat.mjs surgingFocus); its Energy
+# Charge put on every Attacking Maneuver that includes them (chat.mjs postAttack).
+# (4) Compelled off as it is entered.
 [on applied]
+surgingFocus();
 remove("Compelled");
 
-[on removed]
-gain("Fatigued", 1);
+[passive]
+# (3) Your Focus alone, or an AoE that includes them (maneuvers.mjs whyNotFocus).
+forbid attacksOnOthers;
+# (4)
+forbid condition.compelled;
 
-[triggered/defeated(Focus)]
+# (2) Fatigued till the end of your next turn - not where it was ignored: (5), Hocus Pocus (9) (`surgingSpared`).
+[on removed]
+requires !surgingSpared;
+gain("Fatigued", 1);
+expires(fatigued, next-turn);
+
+# (5) Your Focus Defeated by you: a button - left, and (2) ignored.
+[triggered/defeat-opponent]
+requires defeatedFocus;
+surgingSpare();
 leaveState("Surging");

@@ -541,7 +541,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Greed of the Hera's 7th ignored this turn (Galaxy at the Brink's).
   "powerHeld",
   // An Ultimate Signature Technique being declared (Questing Wisdom's).
-  "usingUltimate"]);
+  "usingUltimate",
+  // Your Surging Focus Defeated; Surging's second effect ignored (Surging's).
+  "defeatedFocus", "surgingSpared"]);
 
 /**
  * Dice the character already has, named rather than written out.

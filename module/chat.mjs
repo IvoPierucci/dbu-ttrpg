@@ -12722,6 +12722,26 @@ async function settleWhack(message, clash) {
   return requestActorUpdate(target, { "system.life.value": Math.min(0, Number(target.system.life?.min) || 0) });
 }
 
+/**
+ * Surging (1): "Target an Opponent. This Opponent becomes your 'Focus'." Asked as the State is entered - of whoever plays
+ * them - and kept as `surgingFocus`; Surging (2)'s pardon (`surgingSpared`) cleared with it, the State being new.
+ */
+export async function surgingFocus(actor) {
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid) && !token.actor.system?.defeated)
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  const picked = (opponents.length === 1) ? opponents[0].uuid : opponents.length
+    ? await askPlayerChoice(actor, `${actor.name}: Surging - your Focus`, opponents.map(each => ({ value: each.uuid, label: each.name })))
+    : "";
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.surgingFocus`]: picked || "", [`flags.${SCOPE}.surgingSpared`]: false });
+}
+
+/** "Ignore the second effect of the Surging State" - Surging (5)'s, Hocus Pocus (9)'s: no Fatigued on leaving it. */
+export async function surgingSpare(actor) {
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.surgingSpared`]: true });
+}
+
 /** Goof's 1d4, as a won Clash leaves them: the Combat Condition rolled. */
 const GOOFS = Object.freeze(["impaired", "prone", "impediment", "sleeping"]);
 
@@ -12854,6 +12874,8 @@ export async function hocusPocus(actor) {
       const who = await youOrAlly(actor, `${actor.name}: Hocus Pocus - who Surges`);
       if (who && await enterState(who, "surging", 1, null, "Hocus Pocus")) {
         await lasting(actor, { kind: KINDS.STATE, key: "surging", edge: EDGES.START, on: who.uuid, source: "Hocus Pocus" });
+        // "Additionally, they ignore the second effect of the Surging State."
+        await surgingSpare(who);
       }
       said = `${who?.name ?? actor.name} is Surging until the start of ${actor.name}'s next turn, its second effect ignored.`;
       break;
@@ -16634,6 +16656,12 @@ async function takeOutOfSequence(message, actor, offer) {
     // Greed of the Hera's and Mage's AoE and Magnitudes, out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askBoughtAreas(actor, maneuver, declared,
       { noArea: Boolean(granted?.noArea) });
+    // Surging (3), out of sequence as in it.
+    const unfocused = (await import("./maneuvers.mjs")).whyNotFocus(actor, maneuver, declared, target);
+    if (unfocused) {
+      ui.notifications.warn(unfocused);
+      return;
+    }
   }
 
   // A Movement's price is a choice rather than a number - Normal Speed for nothing,
@@ -16918,6 +16946,9 @@ export async function postAttack(actor, target, maneuver,
   // Last Resource: "apply a number of Energy Charges up to your number of Overwhelm stacks".
   if (overwhelm?.lastResource && !reflecting) charges = (Number(charges) || 0) + (Number(overwhelm.lastResource) || 0);
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
+  // Surging (1): "Apply an Energy Charge to all of your Attacking Maneuvers that include your Focus as a target."
+  const focus = ((Number(actor.system.states?.surging) || 0) > 0) ? (actor.getFlag?.(SCOPE, "surgingFocus") ?? "") : "";
+  if (focus && !reflecting && everyone.some(each => each?.uuid === focus)) charges = (Number(charges) || 0) + 1;
   // Experienced Fighter (2): the attacker's Exploitation Strike or Punishing Blow against one of these, spent on it; each
   // target's Instinct-Driven Dodge against this attacker, spent on it.
   const experienced = reflecting ? null : await spendReadied(actor, everyone, ["strike", "punish"]);

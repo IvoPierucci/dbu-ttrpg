@@ -5298,6 +5298,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   }
   // Greed of the Hera's and Mage's: a Cone or a Line where there is no AoE, then Magnitudes - each asked once a Round.
   if (declared && maneuver.attacking) declared = await (await import("./maneuvers.mjs")).askBoughtAreas(actor, maneuver, declared);
+  // Surging (3): your Focus, or an AoE that includes them.
+  const unfocused = declared ? (await import("./maneuvers.mjs")).whyNotFocus(actor, maneuver, declared, targetActor) : "";
+  if (unfocused) {
+    ui.notifications.warn(unfocused);
+    return false;
+  }
 
   // One Maneuver held at a time: the character has one place to keep it, and a second
   // holding would quietly throw the first away.
