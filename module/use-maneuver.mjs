@@ -4570,6 +4570,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ({ maneuver, declared } = bladed);
     // Eye of the Dragon's Way of the Weaponmaster: an Armed Attack - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askEyeWeapon(actor, declared);
+    // Heart of Glass (3): a Glass attack on a Glass Square - Surging for it, asked once a Round.
+    declared = await (await import("./maneuvers.mjs")).askGlassSurge(actor, declared);
     // Karmic Assault: a Super Profile on an Ultimate, for 2 Karma - asked before the Technique's own
     // questions, so what the Super Profile asks for (Giga Flare's Actions...) is asked with them.
     const assaulted = await karmicAssault(actor, maneuver, declared);

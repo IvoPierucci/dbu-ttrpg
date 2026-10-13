@@ -799,6 +799,9 @@ function conditionsIgnored(actor) {
     if (!trait?.ignoresConditions) continue;
     const state = String(trait.ignoresConditionsWhile ?? "").toLowerCase();
     if (state && !((Number(actor.system?.states?.[state]) || 0) > 0)) continue;
+    // Or in the Health Threshold its `ignoresConditionsWhileThreshold` names - Heart of Glass's Fatigued while Healthy.
+    const threshold = String(trait.ignoresConditionsWhileThreshold ?? "").toLowerCase();
+    if (threshold && ((actor.system?.threshold?.key ?? "healthy") !== threshold)) continue;
     for (const key of list(trait.ignoresConditions)) ignored.add(key.toLowerCase());
   }
   return ignored;

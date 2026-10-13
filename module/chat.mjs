@@ -6671,7 +6671,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
                                   { karmic = null, rolling = true, urgent = false,
                                     combatRoll = false, attackingManeuver = false,
                                     difficulties = false, senses = [], formula = null, offerWilling = true,
-                                    pick = null } = {}) {
+                                    pick = null, boxes = [] } = {}) {
   const rows = effects.map(entry => `
     <label class="dbu-respond-option"${triggerTip(entry)}>
       <input type="checkbox" name="trigger" value="${entry.blockId}"/>
@@ -6758,6 +6758,13 @@ export async function prepareRoll(actor, effects, title, hint = "",
        </label>`
     : "";
 
+  // What the roll itself may be answered with besides - Heart of Glass's Steadfast Check failed on purpose.
+  const boxRows = boxes.map(box => `
+    <label class="dbu-respond-option"${box.tip ? ` data-tooltip="${Handlebars.escapeExpression(box.tip)}"` : ""}>
+      <input type="checkbox" name="box" value="${Handlebars.escapeExpression(box.name)}"/>
+      <span class="dbu-respond-name">${Handlebars.escapeExpression(box.label)}</span>
+    </label>`).join("");
+
   const senseRows = senses.map(sense => `
     <label class="dbu-respond-option">
       <input type="checkbox" name="sense" value="${sense}"
@@ -6772,7 +6779,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
       ${hint ? `<p class="dbu-respond-hint">${hint}</p>` : ""}
       ${formula ? `<p class="dbu-formula">${formulaHtml({ ...formula,
         parts: [...(formula.parts ?? []), ...multiFormRow(actor, combatRoll)] })}</p>` : ""}
-      ${rows}${difficultyRows}${pickRow}${senseRows}${willing}${traitGroup}${karmicGroup}
+      ${rows}${difficultyRows}${pickRow}${boxRows}${senseRows}${willing}${traitGroup}${karmicGroup}
     </div>`,
     buttons: [
       {
@@ -6786,6 +6793,7 @@ export async function prepareRoll(actor, effects, title, hint = "",
           karmic: dialog.element.querySelector('input[name="karmic"]:checked')?.value ?? null,
           difficulty: dialog.element.querySelector('select[name="difficulty"]')?.value ?? "",
           picked: dialog.element.querySelector('select[name="pick"]')?.value ?? "",
+          boxes: [...dialog.element.querySelectorAll('input[name="box"]:checked')].map(input => input.value),
           senses: [...dialog.element.querySelectorAll('input[name="sense"]:checked')]
             .map(input => input.value)
         })
@@ -6820,8 +6828,8 @@ export async function prepareRoll(actor, effects, title, hint = "",
   // An object rather than `true` where a Difficulty was offered, so the caller can read
   // what was picked. Truthy either way, which is what every other caller tests - and the
   // one that tests `=== false` still gets what it was looking for from a cancel.
-  return (difficulties || senses.length || pick)
-    ? { difficulty: chosen.difficulty || "", senses: chosen.senses ?? [], picked: chosen.picked ?? "" }
+  return (difficulties || senses.length || pick || boxes.length)
+    ? { difficulty: chosen.difficulty || "", senses: chosen.senses ?? [], picked: chosen.picked ?? "", boxes: chosen.boxes ?? [] }
     : true;
 }
 
@@ -12488,8 +12496,19 @@ export async function frozenTurnAfterManeuver(actor, card) {
 
 /** An attack made in its user's closing Frozen Turn, done: the Frozen Turn with it. */
 async function frozenTurnAfterAttack(attack) {
+  // And whatever lasted "for the duration of that Attacking Maneuver" - Heart of Glass's Surging - with it.
+  await glassSurgeEnds(attack);
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   if (frozenTurnOf(attacker)?.closing) await endFrozenTurn(attacker);
+}
+
+/** Heart of Glass (3): the attack Surging was entered for, concluded - Surging left. */
+async function glassSurgeEnds(attack) {
+  if (!attack?.glassSurge) return;
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker?.isOwner || !((Number(attacker.system.states?.surging) || 0) > 0)) return;
+  const { leaveState } = await import("./effects/moments-runtime.mjs");
+  await leaveState(attacker, "surging");
 }
 
 /** Its card: End Frozen Turn, for its user, while it lasts. */
@@ -15756,7 +15775,7 @@ export async function postAttack(actor, target, maneuver,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
                                    woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
-                                   uncappedCharges = 0, eyeWeapon = false },
+                                   uncappedCharges = 0, eyeWeapon = false, glassSurge = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -15907,6 +15926,8 @@ export async function postAttack(actor, target, maneuver,
           ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
           ...(instinct.length ? { instinct } : {}),
           ...((eyeWeapon && !reflecting) ? { eyeWeapon: true } : {}),
+          // Heart of Glass (3)'s Surging, for this attack alone - left as it is concluded.
+          ...((glassSurge && !reflecting) ? { glassSurge: true } : {}),
           ...(maliceBacklash ? { maliceBacklash } : {}),
           // Quick Learner's: made with a Copied Technique.
           ...(maneuver.copied ? { copied: true } : {}),
@@ -22549,6 +22570,9 @@ export async function rollSteadfastCheck(actor) {
   const lifeSteps = lifeSpendable ? [1, 2, 3].filter(n => (n * lifeStep) <= (Number(actor.system.life?.value) || 0)) : [];
   const ready = await prepareRoll(actor, [], `Steadfast Check - ${THRESHOLDS[rolled].label}`, `Needing ${target}`,
     { offerWilling: false,
+      // Heart of Glass (4): failed without rolling, for a Ki Surge out of sequence and Surging after.
+      boxes: (actor.system.effects?.slots?.["steadfast.heartOfGlass"] === true) ? [{ name: "heartOfGlass",
+        label: "Heart of Glass: fail it", tip: "No roll: a Ki Surge as an Out-of-Sequence Maneuver, then Surging until the end of your turn if you like." }] : [],
       pick: lifeSteps.length ? { label: "Earthling Resolve",
         tip: "Spend Life Points: 1 to the Dice Score for every 2(bT). Once an Encounter.",
         options: [{ value: "0", label: "None" },
@@ -22561,6 +22585,16 @@ export async function rollSteadfastCheck(actor) {
     ] } });
   if (!ready) return null;
   for (const key of automatic) updates[`system.thresholdChecks.${key}`] = "fail";
+  // Heart of Glass (4): "fail that Steadfast Check without rolling" - failed, said, and its Surge.
+  if ((ready?.boxes ?? []).includes("heartOfGlass")) {
+    updates[`system.thresholdChecks.${rolled}`] = "fail";
+    await actor.update(updates);
+    await steadfastFailed(actor);
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+      flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - failed without rolling (Heart of Glass)` });
+    await heartOfGlassFail(actor);
+    return false;
+  }
   const lifeSpent = lifeSteps.includes(Number(ready?.picked)) ? Number(ready.picked) : 0;
   if (lifeSpent) {
     await actor.update({ "system.life.value": Math.max(0, (Number(actor.system.life?.value) || 0) - (lifeSpent * lifeStep)),
@@ -22609,6 +22643,22 @@ export async function rollSteadfastCheck(actor) {
  * instead choose to pass it automatically" - always asked of whoever plays them (the user's), as it fails: the Undying
  * Saiyan Heritage's Check would give must come before the Defeat stands. What passed it, by name, or "".
  */
+/**
+ * Heart of Glass (4): "use a Ki Surge as an Out-of-Sequence Maneuver. Then, you may enter the Surging State until the end
+ * of your turn."
+ */
+async function heartOfGlassFail(actor) {
+  await takeSurge(actor, { source: "Heart of Glass", kind: "ki" });
+  if ((Number(actor.system.states?.surging) || 0) > 0) return;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Heart of Glass" },
+    content: "<p>Enter the Surging State until the end of your turn?</p>", rejectClose: false
+  });
+  if (!yes) return;
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  await enterState(actor, "surging", 1, "turn", "Heart of Glass");
+}
+
 /** A Steadfast Check failed - the one rolled, or one failed automatically: what ends with it. */
 async function steadfastFailed(actor) {
   // Multi-Form Technique: a Steadfast Check failed Defeats them.

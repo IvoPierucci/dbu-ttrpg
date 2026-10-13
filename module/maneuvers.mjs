@@ -1414,6 +1414,30 @@ export async function askRevengeBomber(actor, declared) {
 }
 
 /**
+ * Heart of Glass (3): "If you use an Attacking Maneuver of the Glass Profile while occupying a Square with the Glass
+ * Environmental Quality, you may enter the Surging State for the duration of that Attacking Maneuver." Asked once the
+ * Profile is declared, once a Round; Surging now, left as the attack is concluded (`glassSurge`, chat.mjs glassSurgeEnds).
+ */
+export async function askGlassSurge(actor, declared) {
+  if (!declared || (actor?.system?.effects?.slots?.["surging.glassAttack"] !== true)) return declared;
+  if (![declared.profile, declared.secondProfile].includes("glass")) return declared;
+  if (!(actor.system.battlefield?.squareQualities ?? []).includes("glass")) return declared;
+  if ((Number(actor.system.states?.surging) || 0) > 0) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "glassSurgeRound") === round) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Heart of Glass" },
+    content: `<p data-tooltip="Once a Round.">Enter the Surging State for this Attacking Maneuver?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "glassSurgeRound", round);
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  await enterState(actor, "surging", 1, null, "Heart of Glass");
+  return { ...declared, glassSurge: true };
+}
+
+/**
  * Eye of the Dragon, Way of the Weaponmaster: "If you would target an Opponent with an Armed Attack, you may increase the
  * Strike and Wound Rolls for that Attacking Maneuver by 1(T) and 2(T) respectively." Asked once a Weapon is declared, once a
  * Round; carried as `eyeWeapon`. The declaration as it then stands.
