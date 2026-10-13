@@ -543,7 +543,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // An Ultimate Signature Technique being declared (Questing Wisdom's).
   "usingUltimate",
   // Your Surging Focus Defeated; Surging's second effect ignored (Surging's).
-  "defeatedFocus", "surgingSpared"]);
+  "defeatedFocus", "surgingSpared",
+  // Hit by an Opponent's attack, not an Ally's (Superior's).
+  "byOpponent"]);
 
 /**
  * Dice the character already has, named rather than written out.

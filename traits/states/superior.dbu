@@ -4,18 +4,21 @@ kind: state
 description: >
   You fight above the level of everyone around you.
 text: >
-  Apply your Greater Dice to your Combat Rolls. Increase the Damage you take
-  by 2(T).
+  Narrative Requirement: A clear focus achieved through a sense of elation and intense hunger for victory beyond your usual self, what most would describe as ‘entering the zone’.
+  (1)-[Passive]: Apply Greater Dice (see — Tier of Power) to your Combat Rolls.
+  (2)-[Passive]: Increase the Damage you would receive from an Opponent’s Attacking Maneuver by 2(T).
 
 ---
 
-# Impediment cancels this State and is cancelled by it. That bargain is written
-# in Impediment, since it is the one giving up its whole effect.
+# Impediment cancels this State and is cancelled by it. That bargain is written in Impediment, since it is the one giving
+# up its whole effect.
 
+# (1)
 [passive]
 combatRolls.dice += greaterDice;
 
-# Not where Divine Physique (2) waives it.
+# (2) An Opponent's attack alone - not an Ally's caught you in its AoE (`byOpponent`) - and not where Divine Physique (2)
+# waives it.
 [automatic/being-hit]
-requires !superiorUnhurt;
+requires byOpponent && !superiorUnhurt;
 incoming.damage += 2(T);

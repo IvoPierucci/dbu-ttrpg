@@ -258,6 +258,21 @@ const PREDICATES = {
     return !most || ((Number(scope.data?.resources?.[key]?.stacks) || 0) < most);
   },
 
+  /**
+   * The attack that hit came from an Opponent - one not on their side of the scene (`attackerUuid`, being-hit's context).
+   * Where it is not said whose, an Opponent's: Superior's 2(T) is what it was written for.
+   */
+  byOpponent: scope => {
+    const uuid = scope.context?.attackerUuid ?? "";
+    const self = scope.data?.parent;
+    if (!uuid || !self) return true;
+    if (uuid === self.uuid) return false;
+    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+    const mine = side(self);
+    const theirs = side(globalThis.fromUuidSync?.(uuid));
+    return (mine === undefined) || (theirs === undefined) || (theirs !== mine);
+  },
+
   /** Surging (5): the one Defeated was your Focus. */
   defeatedFocus: scope => Boolean(scope.context?.defeatedUuid)
     && (scope.context.defeatedUuid === (scope.data?.parent?.getFlag?.("dbu-ttrpg", "surgingFocus") ?? "")),

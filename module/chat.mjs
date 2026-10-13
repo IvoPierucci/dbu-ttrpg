@@ -5619,7 +5619,7 @@ async function resettleAttack(message, situation, given = null) {
     if (hit && !own.hit) {
       const target = fromUuidSync(entry.uuid);
       if (target) {
-        const incoming = atMoment(target, "being-hit", { attack: 1, attacker: 1 });
+        const incoming = atMoment(target, "being-hit", { attack: 1, attacker: 1, attackerUuid: attack?.attackerUuid ?? "" });
         spendChosen(target, incoming);
         incomingDamage = incoming.slots?.["incoming.damage"] ?? null;
       }
@@ -15065,7 +15065,7 @@ async function declareStrikeCritical(message, attacker) {
     if (hit && !own.hit) {
       const target = fromUuidSync(entry.uuid);
       if (target) {
-        const incoming = atMoment(target, "being-hit", { attack: 1, attacker: 1 });
+        const incoming = atMoment(target, "being-hit", { attack: 1, attacker: 1, attackerUuid: attack?.attackerUuid ?? "" });
         spendChosen(target, incoming);
         incomingDamage = incoming.slots?.["incoming.damage"] ?? null;
       }
@@ -17689,7 +17689,7 @@ async function playIntervene(message, attack, { who, ally, effect }) {
   //
   // On their own client, like a defender's, and carried on the entry: the Wound Roll is
   // settled by whichever client gets there first, and that is as often the attacker's.
-  const incoming = atMoment(actor, "being-hit", { attack: 1, attacker: 1 });
+  const incoming = atMoment(actor, "being-hit", { attack: 1, attacker: 1, attackerUuid: attack?.attackerUuid ?? "" });
   spendChosen(actor, incoming);
 
   const entry = {
@@ -18883,7 +18883,7 @@ async function resolveAttackWork(message, attack) {
 
     // What this defender's own effects do about being hit - Superior taking more
     // Damage, Prone taking it a category harder. Collected once, used at the Wound Roll.
-    const incoming = hit ? atMoment(target, "being-hit", { attack: 1, attacker: 1 }) : null;
+    const incoming = hit ? atMoment(target, "being-hit", { attack: 1, attacker: 1, attackerUuid: attack?.attackerUuid ?? "" }) : null;
     // Damage Inhibitor: "If you use the Direct Hit option of the Defend Maneuver, reduce the Damage Category of that
     // Attacking Maneuver by 1 Category for the sake of your Damage calculation."
     const inhibited = (hit && (defense === "directHit")) ? heldAt(target, "direct-hit") : null;
