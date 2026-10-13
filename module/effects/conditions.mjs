@@ -16,6 +16,12 @@ export function useCombatConditionCheck(fn) {
   isCombatCondition = fn;
 }
 
+/** The most of a Resource a character may hold, nothing for no ceiling - set by traits.mjs at load, the same way. */
+let resourceCeilingOf = () => 0;
+export function useResourceCeiling(fn) {
+  resourceCeilingOf = fn;
+}
+
 /**
  * Questions an effect can ask that are not arithmetic.
  *
@@ -239,6 +245,17 @@ const PREDICATES = {
 
   /** A Snack eaten this Combat Round - Snack Motivated's. */
   snackThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "snackRound") ?? "")
+    === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
+
+  /** Room for another stack of that Resource, whatever raises its ceiling - Power of the Hera's Power. */
+  roomFor: (scope, name) => {
+    const key = String(name ?? "").toLowerCase();
+    const most = Number(resourceCeilingOf(key, scope.data?.parent ?? null)) || 0;
+    return !most || ((Number(scope.data?.resources?.[key]?.stacks) || 0) < most);
+  },
+
+  /** Galaxy at the Brink (3): Greed of the Hera's 7th ignored at the start of this turn. */
+  powerHeld: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "galaxyHold") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
 
   /** An Ally (not a Minion) dealt Damage by one of your Attacking Maneuvers this Combat Round - Cutthroat Teamwork's. */

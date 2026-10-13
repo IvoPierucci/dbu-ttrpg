@@ -14,7 +14,7 @@
  */
 
 import { PRIORITY, applySlot } from "./interpreter.mjs";
-import { useCombatConditionCheck } from "./conditions.mjs";
+import { useCombatConditionCheck, useResourceCeiling } from "./conditions.mjs";
 
 const ROOT = "systems/dbu-ttrpg/traits";
 
@@ -106,6 +106,8 @@ export function combatConditionKey(key) {
   return (trait?.kind === "conditions") && (trait.combatCondition !== false);
 }
 useCombatConditionCheck(combatConditionKey);
+// And a Resource's ceiling, for `roomFor` - Power of the Hera's.
+useResourceCeiling((name, actor) => resourceLimits(actor)[name] ?? 0);
 
 /**
  * The Resources the library declares, and the most of each that may be held.

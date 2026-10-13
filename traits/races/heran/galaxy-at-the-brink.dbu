@@ -1,0 +1,28 @@
+id: galaxy-at-the-brink
+name: Galaxy at the Brink
+order: 5
+category: body
+importance: secondary
+description: >
+  As conquerors and warriors, Herans are resilient, and grow stronger as the battle continues.
+text: >
+  Galaxy at the Brink (Body): As conquerors and warriors, Herans are resilient, and grow stronger as the battle continues.
+  (1)-[Passive]: While you are below the Injured Health Threshold, increase your maximum number of Power stacks by 1.
+  (2)-[Passive]: Increase the Dice Score of your Steadfast Check by 1 while you have a stack of Power.
+  (3)-[Triggered, 1/Encounter]: If you are below the Injured Health Threshold and would trigger the 7th effect of Greed of the Hera while possessing 2+ stacks of Power, you may choose to ignore that effect. If you do, use a Ki Surge as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Injured or Critical: Power's ceiling 1 higher - Greed's with it (Greed of the Hera's "equal to your maximum number of
+# Power stacks"), and every Energy Charge Power of the Hera adds for it.
+if (belowThreshold("injured")) {
+    power.max += 1;
+}
+# (2)
+if (hasResource("power")) {
+    steadfast.dice += 1;
+}
+# (3) As the turn begins, Injured or Critical with 2+ stacks of Power and Greed of the Hera had: asked before its 7th, once an
+# Encounter - kept, the 7th ignored this turn and a Ki Surge taken out of sequence (chat.mjs galaxyHoldsPower).
+allow galaxy.holdPower;

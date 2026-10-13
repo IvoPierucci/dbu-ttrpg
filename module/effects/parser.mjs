@@ -495,7 +495,9 @@ const PREDICATE_NAMES = new Set([
   // A Racial Trait's Option chosen - Eye of the Dragon's, by Quick to Master's.
   "optionChosen",
   // Your Square has that Environmental Quality - Body of Glass's Glass.
-  "onSquare"
+  "onSquare",
+  // Room for another stack of that Resource - Power of the Hera's Power.
+  "roomFor"
 ]);
 
 /** The ones written without brackets, because they take nothing. */
@@ -535,7 +537,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // An Attacking Maneuver of the Glass Profile hit with (Glass Shards').
   "glassAttack",
   // An Ally dealt Damage by your attack this Round (Cutthroat Teamwork's).
-  "allyHitThisRound"]);
+  "allyHitThisRound",
+  // Greed of the Hera's 7th ignored this turn (Galaxy at the Brink's).
+  "powerHeld"]);
 
 /**
  * Dice the character already has, named rather than written out.

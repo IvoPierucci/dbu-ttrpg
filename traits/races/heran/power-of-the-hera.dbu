@@ -27,6 +27,6 @@ allow greed.ultimateCharges;
 # (2) The Energy Charge Maneuver used: a stack of Power till the start of your next turn. Automatic by default, its
 # Triggered/Automatic button; set Triggered, asked in the window as it is declared.
 [triggered/declare-maneuver, 1/round, toggle, effect 2]
-requires using("energy-charge") && power.stacks < 2;
+requires using("energy-charge") && roomFor("power");
 power.stacks += 1;
 expires(power, start-of-next-turn);

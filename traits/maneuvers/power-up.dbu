@@ -46,12 +46,17 @@ expires(power, next-turn);
 #
 # The Capacity is a fraction of the whole rather than a multiplier: two stacks are
 # a quarter each, which is a half, and not a quarter of a quarter more. The cap in
-# the entry's brackets - "only for the first 2 stacks" - needs nothing here, since
-# the Resource itself cannot go above two.
+# the entry's brackets - "only for the first 2 stacks": a third, where an effect
+# raises the most (Galaxy at the Brink's), adds to the Combat Rolls alone.
 [passive]
 if (power.stacks > 0) {
     combatRolls += (power.stacks * tierOfPower);
-    capacity.maxFraction += (power.stacks * 0.25);
+}
+if (power.stacks == 1) {
+    capacity.maxFraction += 0.25;
+}
+if (power.stacks >= 2) {
+    capacity.maxFraction += 0.5;
 }
 
 # --- What is not built, and why ---------------------------------------------------

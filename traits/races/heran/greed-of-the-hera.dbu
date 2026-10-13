@@ -45,8 +45,8 @@ allow greed.reduction;
 greed.stacks += gained;
 
 # (7) Every stack of Power, and 2(bT) Ki for each. Only where there is any, so an empty start of turn puts nothing in chat.
-# Their clocks go with them (moments-runtime.mjs writeStateful).
+# Their clocks go with them (moments-runtime.mjs writeStateful). Not where Galaxy at the Brink (3) had it ignored (`powerHeld`).
 [automatic/start-of-turn, effect 7]
-requires hasResource("power");
+requires hasResource("power") && !powerHeld;
 ki.value += (power.stacks * 2(bT));
 power.stacks = 0;

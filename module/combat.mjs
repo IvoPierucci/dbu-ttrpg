@@ -357,6 +357,8 @@ async function beginTurn(actor) {
   // Fired before anything is decided, because something may skip the turn as it begins
   // rather than for as long as it lasts - the Determined State ends and costs you the
   // turn in the same breath - so the answer has to be read after the Moment, not before.
+  // Galaxy at the Brink (3): Greed of the Hera's 7th ignored and a Ki Surge - asked before the Moment it would answer.
+  await (await import("./chat.mjs")).galaxyHoldsPower(actor);
   const { slots } = await fireMoment(actor, "start-of-turn");
 
   // Defeated keeps its place in the Initiative Order and is only skipped, so that

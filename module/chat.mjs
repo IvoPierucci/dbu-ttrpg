@@ -14177,6 +14177,27 @@ async function settleCutthroatShove(message, clash) {
 }
 
 /**
+ * Galaxy at the Brink (3): "If you are below the Injured Health Threshold and would trigger the 7th effect of Greed of the
+ * Hera while possessing 2+ stacks of Power, you may choose to ignore that effect. If you do, use a Ki Surge as an
+ * Out-of-Sequence Maneuver." Asked as the turn begins, before Greed of the Hera's 7th - once an Encounter; ignored, it is
+ * marked for this turn (`powerHeld`) and the Ki Surge taken.
+ */
+export async function galaxyHoldsPower(actor) {
+  if (!actor || (actor.system?.effects?.slots?.["galaxy.holdPower"] !== true)) return;
+  if (!["injured", "critical"].includes(actor.system.threshold?.key)) return;
+  if ((Number(actor.system.resources?.power?.stacks) || 0) < 2) return;
+  if (!(actor.items ?? []).some(item => item.flags?.[SCOPE]?.sourceId === "greed-of-the-hera")) return;
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.(SCOPE, "galaxyEncounter") === encounter) return;
+  const kept = await askPlayerChoice(actor, `${actor.name}: Galaxy at the Brink`,
+    [{ value: "keep", label: "Keep your Power - a Ki Surge" }, { value: "no", label: "No" }]);
+  if (kept !== "keep") return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.galaxyEncounter`]: encounter, [`flags.${SCOPE}.galaxyHold`]: roundKey() });
+  await recordManeuverType(actor, "outOfSequence", {});
+  return takeSurge(actor, { source: "Galaxy at the Brink", kind: "ki" });
+}
+
+/**
  * Power of the Hera (3): "If you Defeat a Character or knock a Character through a Health Threshold with your Attacking
  * Maneuver, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card - once a Round,
  * counted when taken.
