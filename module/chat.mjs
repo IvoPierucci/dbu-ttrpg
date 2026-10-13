@@ -6025,6 +6025,12 @@ export async function postManeuver(actor, maneuver,
   if (!noExploit) offerExploits(card, actor, maneuver);
   // Hidden, and powering up, charging or transforming: whoever is Oblivious of them may Search for them.
   offerSearches(card, actor, maneuver);
+  // Ranger (3): the movement ended beside a Character - a stack of Tension for an Ally or an Opponent there.
+  if (maneuver?.movement && card && (actor.system?.effects?.slots?.["ranger.afterMove"] === true)
+    && ((Number(actor.system.resources?.tension?.stacks) || 0) > 0)) {
+    offerMove(card, actor, { key: `ranger:${actor.uuid}`, flag: "rangerRound", name: "Ranger",
+      reason: "a stack of Tension - an Ally beside you cleansed, or the Basic Attack at an Opponent beside you", ranger: true });
+  }
   return card;
 }
 
@@ -12636,6 +12642,7 @@ async function frozenTurnAfterAttack(attack) {
   await entrustedAllInEnds(attack);
   await warriorTensionEnds(attack);
   await boomEnds(attack);
+  await rangerRetreatEnds(attack);
   // Glass Shards (5), (7): "After concluding that Attacking Maneuver, that Character stops being a Shard Carrier."
   if (attack?.shardEnds) await shardsSpent(attack.shardEnds);
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
@@ -12707,6 +12714,24 @@ async function settleWhack(message, clash) {
     flavor: `Whack - ${downed ? `${target.name} is Defeated` : "not a 10"}` });
   if (!downed) return;
   return requestActorUpdate(target, { "system.life.value": Math.min(0, Number(target.system.life?.min) || 0) });
+}
+
+/**
+ * Ranger (4): "You may spend 4(bT) Ki Points to use the Movement Maneuver as an Out-of-Sequence Maneuver." Paid, then the
+ * Movement - its own Speed's price asked as ever.
+ */
+export async function rangerMove(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const ki = 4 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  if ((Number(actor.system.ki?.value) || 0) < ki) {
+    ui.notifications.warn(`${actor.name} has not ${ki} Ki Points for that.`);
+    return UNSPENT;
+  }
+  const { spendManeuverCost } = await import("./maneuvers.mjs");
+  if (!await spendManeuverCost(actor, { name: "Ranger" }, ki)) return UNSPENT;
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && item.system?.movement);
+  return useManeuver(actor, own ? definitionOf(own) : getManeuver("movement"), { outOfSequence: true });
 }
 
 /** Boom: "you do not lose these stacks of Tension until after completing this Attacking Maneuver." */
@@ -14241,11 +14266,12 @@ async function copyTechnique(actor, copyFrom) {
  * A move an effect hands over - not an Out-of-Sequence Maneuver, so it takes no one's, and nothing here moves anybody:
  * where to is the map's. Once a Round by the mover's `flag`, counted when taken; `key` tells one from another on a card.
  */
-function offerMove(message, mover, { key, flag, name, reason, clashAt = "", copyFrom = null }) {
+function offerMove(message, mover, { key, flag, name, reason, clashAt = "", copyFrom = null, ranger = false }) {
   if (mover.getFlag?.(SCOPE, flag) === roundKey()) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.move?.key === key)) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: mover.uuid, actorName: mover.name, maneuverId: "",
-    maneuverName: name, reason, move: { key, flag, ...(clashAt ? { clashAt } : {}), ...(copyFrom ? { copyFrom } : {}) } } });
+    maneuverName: name, reason, move: { key, flag, ...(clashAt ? { clashAt } : {}), ...(copyFrom ? { copyFrom } : {}),
+      ...(ranger ? { ranger: true } : {}) } } });
 }
 
 /**
@@ -14272,6 +14298,8 @@ async function takeMoveOffer(message, actor, offer) {
   }
   // Quick Learner's: copied first - a copy not made is no use spent.
   if (offer.move.copyFrom && !await copyTechnique(actor, offer.move.copyFrom)) return;
+  // Ranger (3)'s: whom first - none picked, no use spent.
+  if (offer.move.ranger && !await rangerBeside(message, actor)) return;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.move.flag}`]: roundKey() });
   requestEdit(message, { type: "moveTaken", key: offer.move.key });
   // Disarming Demeanor's: the Clash itself.
@@ -14280,6 +14308,65 @@ async function takeMoveOffer(message, actor, offer) {
     await postSkillClash(actor, at, { name: "Disarming Demeanor", type: "outOfSequence",
       clash: { skill: "bluff", defenderSkills: ["perception", "intuition"] } }, { disarming: { applied: false } });
   }
+}
+
+/**
+ * Ranger (3): "If you end your movement made through the Movement Maneuver adjacent to a Character, you may spend 1 Tension
+ * to apply one of the following effects depending on if that Character is an Ally or an Opponent" - whom, asked among
+ * those beside you now. An Ally: every Combat Condition off them but Pinned, Suffocating and Transfigured. An Opponent:
+ * the Basic Attack offered on this card out of sequence at them - Armed - and, concluded, a move away from them. The stack
+ * spent; false where none was picked.
+ */
+async function rangerBeside(message, actor) {
+  const held = Number(actor.system.resources?.tension?.stacks) || 0;
+  if (!held) {
+    ui.notifications.warn(`${actor.name}: Ranger needs a stack of Tension.`);
+    return false;
+  }
+  const own = actor.getActiveTokens?.(false, true)?.[0];
+  if (!own) return false;
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const beside = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (squaresBetween(token.document, own) === 0))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!beside.length) {
+    ui.notifications.info(`${actor.name}: nobody on an adjacent Square.`);
+    return false;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Ranger`,
+    [...beside.map(each => ({ value: each.uuid, label: `${allies.has(each.uuid) ? "Ally" : "Opponent"}: ${each.name}` })),
+      { value: "none", label: "None" }]);
+  const who = beside.find(each => each.uuid === picked);
+  if (!who) return false;
+  await setResource(actor, "tension", held - 1);
+  if (allies.has(who.uuid)) {
+    const { setCondition } = await import("./conditions.mjs");
+    for (const [key, stacks] of Object.entries(who.system?.conditions ?? {})) {
+      if (!((Number(stacks) || 0) > 0) || ["pinned", "suffocating", "transfigured"].includes(key)) continue;
+      if ((getTrait(key)?.kind !== "conditions") || (getTrait(key)?.combatCondition === false)) continue;
+      await setCondition(who, key, 0);
+    }
+    await settledNote(message, `Ranger: ${who.name}'s Combat Conditions are gone (but Pinned, Suffocating and Transfigured).`);
+    return true;
+  }
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", targetUuid: who.uuid, reason: "Ranger - an Armed Attack, then away",
+    grants: { armedOnly: true, rangerRetreat: who.uuid } } });
+  return true;
+}
+
+/**
+ * Ranger (3), its Basic Attack concluded: "you may move any number of Squares up to your Boosted Speed in a straight line
+ * away from that Opponent. This movement does not trigger the Exploit Maneuver." Said; where to, the map's.
+ */
+async function rangerRetreatEnds(attack) {
+  if (!attack?.rangerRetreat) return;
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  const from = fromUuidSync(attack.rangerRetreat);
+  if (!attacker?.isOwner) return;
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: attacker }), content: `<div class="dbu-settled-note">${
+    Handlebars.escapeExpression(`Ranger: ${attacker.name} may move up to ${Number(attacker.system.speed?.boosted) || 0} Squares `
+      + `in a straight line away from ${from?.name ?? "them"} - no Exploit.`)}</div>` });
 }
 
 /**
@@ -16247,6 +16334,12 @@ async function takeOutOfSequence(message, actor, offer) {
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
     // Boom's: its Tension's Broken and the stacks it spends.
     if (granted?.boom) declared = { ...declared, boom: granted.boom };
+    // Ranger (3)'s: "it must be an Armed Attack", and a move away once it is concluded.
+    if (granted?.armedOnly && (!declared.weapon || declared.weapon.unarmed)) {
+      ui.notifications.warn(`${offer.reason ?? "This"}: it must be an Armed Attack.`);
+      return;
+    }
+    if (granted?.rangerRetreat) declared = { ...declared, rangerRetreat: granted.rangerRetreat };
     // Greed of the Hera's and Mage's AoE and Magnitudes, out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askBoughtAreas(actor, maneuver, declared,
       { noArea: Boolean(granted?.noArea) });
@@ -16506,7 +16599,7 @@ export async function postAttack(actor, target, maneuver,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
-                                   tensionCharges = 0, warriorTension = false, boom = null },
+                                   tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "" },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -16678,6 +16771,8 @@ export async function postAttack(actor, target, maneuver,
           ...((warriorTension && !reflecting) ? { warriorTension: true } : {}),
           // Boom: Broken on whoever it deals Damage to, its Tension lost once it is concluded (boomEnds).
           ...((boom && !reflecting) ? { boom } : {}),
+          // Ranger (3): a move away from them once it is concluded (rangerRetreatEnds).
+          ...((rangerRetreat && !reflecting) ? { rangerRetreat } : {}),
           // Glass Shards: the Shard Carrier its shards are spent from once it is concluded - (5), (7) - and (2)'s Homing.
           ...((shardEnds && !reflecting) ? { shardEnds } : {}),
           ...((!reflecting && (actor.system.effects?.slots?.["shards.homing"] === true)

@@ -111,6 +111,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  rangerMove: {
+    args: [0, 0],
+    doc: "Ranger (4): 4(bT) Ki paid, then the Movement Maneuver out of sequence (chat.mjs rangerMove)."
+  },
   whack: {
     args: [0, 0],
     doc: "The Whack Special Maneuver (Priest): a stack of Tension, an Opponent below Injured and out of Long Range picked - "
