@@ -3111,10 +3111,14 @@ export function registerChatHooks() {
  * Result for a Combat Roll on a Natural Result of 2(WT) or lower" says Combat Roll, and a
  * Skill Check made in the poison is no likelier to go wrong than one made in clean air.
  */
-function botchRangeFor(actor, combatRoll) {
-  return combatRoll
+function botchRangeFor(actor, combatRoll, wound = false) {
+  const range = combatRoll
     ? (actor.system.botchRangeCombat ?? actor.system.botchRange ?? 1)
     : (actor.system.botchRange ?? 1);
+  // And what widens every roll's but a Wound Roll's - Raging's "Strike Rolls, Dodge Rolls, Saving Throws, and Skill
+  // Checks" - held under the Critical Target as the rest is.
+  const more = wound ? 0 : (Number(actor.system.effects?.slots?.["botchRange.notWound"]?.add) || 0);
+  return more ? Math.max(0, Math.min((Number(actor.system.criticalTarget) || 10) - 1, range + more)) : range;
 }
 
 /**
@@ -3141,7 +3145,7 @@ export function sensesAsked(actor, key) {
 
 export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null,
                                     { minimumNatural = 0, criticalTarget = null,
-                                      combatRoll = false, naturalAdd = 0 } = {}) {
+                                      combatRoll = false, naturalAdd = 0, wound = false } = {}) {
   // The whole `baseDie` Slot, not only its `set`. Only `set` was ever read, so an
   // effect *adjusting* the Natural Result - which is what Impaired does, and the only
   // way anything reaches the Botch Range that a penalty to the roll cannot - was
@@ -3194,7 +3198,7 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
     // Which Botch Range this roll is measured against. A Combat Roll may have a wider
     // one than a Skill Check does - Vile Weather gives it one - so the caller says which
     // kind of roll this is rather than being assumed into the harsher of the two.
-    botch: natural <= botchRangeFor(actor, combatRoll),
+    botch: natural <= botchRangeFor(actor, combatRoll, wound),
     // The character's own Critical Target unless the roll states one. Cutting states one
     // for its Wound Roll - "the Critical Target is 5 (ignoring the usual limit)" - and
     // that limit is the floor the character's own target is held to, so a stated target
@@ -8001,7 +8005,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     ? Math.max(Math.min(aimedAt, DBUCharacterData.CRITICAL_TARGET_MIN), aimedAt + combatShift) : criticalTarget;
   const evaluated = await evaluateCheck(actor, bonus,
     groups.map(group => group.formula).join(" + "), baseDie,
-    { minimumNatural, criticalTarget: aimed, combatRoll: true, naturalAdd: naturalAdd + ownNatural });
+    { minimumNatural, criticalTarget: aimed, combatRoll: true, naturalAdd: naturalAdd + ownNatural, wound: slot === "wound" });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
   // Lingering Instincts: "You cannot score a Critical Result or a Botch Result on this Combat Roll, regardless of all
@@ -13025,6 +13029,22 @@ export async function dancerHype(actor) {
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
   if (!await useManeuver(actor, own ? definitionOf(own) : getManeuver("hype"), { outOfSequence: true })) return UNSPENT;
   return setResource(actor, "tension", held - 1);
+}
+
+/**
+ * Raging, Apoplectic (1): "You may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver" - once a Round, counted when
+ * the Basic Attack is made.
+ */
+export async function rageStrike(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (actor.getFlag?.(SCOPE, "rageStrikeRound") === roundKey()) {
+    ui.notifications.warn(`${actor.name}: Apoplectic's Basic Attack already this Combat Round.`);
+    return UNSPENT;
+  }
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "basic-attack"));
+  if (!await useManeuver(actor, own ? definitionOf(own) : getManeuver("basic-attack"), { outOfSequence: true })) return UNSPENT;
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.rageStrikeRound`]: roundKey() });
 }
 
 /**

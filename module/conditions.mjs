@@ -436,6 +436,12 @@ async function announceChanges(actor, before, after, kind) {
         await offerTriggers(actor, `state/${key}`);
         await fireMoment(actor, `state/${key}`, context);
       }
+      // A higher Level of one already entered - Raging's Apoplectic, "Triggered/Apoplectic".
+      else if ((kind === "state") && (was > 0)) {
+        const { offerTriggers } = await import("./chat.mjs");
+        await offerTriggers(actor, `state-level/${key}`, { ...context, level: now });
+        await fireMoment(actor, `state-level/${key}`, { ...context, level: now });
+      }
     }
     else if (now === 0) {
       await fireMoment(actor, "on-removed", context, { only: source, stacks: was });

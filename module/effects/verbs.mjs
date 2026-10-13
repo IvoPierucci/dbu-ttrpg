@@ -111,6 +111,10 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  rageStrike: {
+    args: [0, 0],
+    doc: "Raging, Apoplectic (1): the Basic Attack out of sequence, once a Round (chat.mjs rageStrike)."
+  },
   surgingFocus: {
     args: [0, 0],
     doc: "Surging (1): the Focus, an Opponent picked as the State is entered (chat.mjs surgingFocus)."

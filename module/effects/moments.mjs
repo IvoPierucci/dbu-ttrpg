@@ -168,6 +168,14 @@ const TABLE = [
     doc: "Written as the State's own name, e.g. triggered/raging."
   },
   {
+    key: "state-level",
+    label: "You reach a higher Level of a State",
+    provides: [],
+    parameterised: true,
+    doc: "Written as the State's own name, e.g. triggered/state-level/raging - a State already entered gone up a Level "
+       + "(conditions.mjs). `from 3` on the block reads the Level reached - Raging's Apoplectic."
+  },
+  {
     key: "left-condition",
     label: "A Condition is taken off you",
     provides: [],

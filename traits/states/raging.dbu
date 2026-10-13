@@ -5,26 +5,45 @@ levels: 3
 description: >
   Fury sharpens what you can land and dulls what you can feel.
 text: >
-  Level 1: increase your Wound Rolls by L(T) and your Botch Range by L.
-  Level 2: increase your Soak Value by L(T).
-  Level 3: you suffer no Health Threshold Penalties, and once per Combat Round
-  you may make a Basic Attack out of sequence.
+  Narrative Requirement: A boiling rage, driven by some kind of intense fury related to your Z-Soul.
+
+  Angry (Level 1)
+  (1)-[Passive]: Increase the Wound Rolls of your Attacking Maneuvers by L(T).
+  (2)-[Passive]: Increase the Botch Range of your Strike Rolls, Dodge Rolls, Saving Throws, and Skill Checks by L.
+
+  Furious (Level 2)
+  (1)-[Passive]: Increase your Soak Value by L(T).
+
+  Apoplectic (Level 3)
+  (1)-[Triggered/Apoplectic, Triggered/Start of Turn, 1/Round]: You may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+  (2)-[Passive]: Ignore any Health Threshold Penalties.
 
 ---
 
-# Everything accumulates upwards: at level 3 the level 1 and level 2 effects
-# are still running, and they are worth 3(T) rather than 1(T), because L is
-# the level reached and not the level that unlocked them.
+# Everything accumulates upwards: at level 3 the level 1 and level 2 effects are still running, and they are worth 3(T)
+# rather than 1(T), because L is the level reached and not the level that unlocked them.
 
+# Angry (1), (2) - the Botch Range of every roll but the Wound Roll (chat.mjs botchRangeFor).
 [passive from 1]
 wound += L(T);
-botchRange += L;
+botchRange.notWound += L;
 
+# Furious (1)
 [passive from 2]
 soakValue += L(T);
 
+# Apoplectic (2)
 [passive from 3]
 threshold.penalty = 0;
 
-[triggered/counter-window, 1/round, from 3]
-grantOutOfSequence("basic-attack");
+# Apoplectic (1): entering Apoplectic - Raging entered at it, or gone up to it (state-level, a new moment) - and as your
+# turn begins: a button, never Automatic (it hands over an Out-of-Sequence Maneuver); the Basic Attack out of sequence, once
+# a Round between the three (chat.mjs rageStrike).
+[triggered/state/raging, from 3, outOfSequence]
+rageStrike();
+
+[triggered/state-level/raging, from 3, outOfSequence]
+rageStrike();
+
+[triggered/start-of-turn from 3, outOfSequence]
+rageStrike();

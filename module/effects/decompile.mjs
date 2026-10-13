@@ -21,7 +21,9 @@ function blockText(b) {
   else header.push("passive");
 
   if (b.modifiers?.perStack) header[0] += " per stack";
-  if (b.modifiers?.fromLevel) header[0] += ` from ${b.modifiers.fromLevel}`;
+  // After a Moment that names something - `state/raging` - the Level on its own, or the name would swallow it.
+  const named = String(b.moment ?? "").includes("/");
+  if (b.modifiers?.fromLevel && !named) header[0] += ` from ${b.modifiers.fromLevel}`;
   if (b.modifiers?.after) header[0] += ` after ${b.modifiers.after}`;
 
   if (b.budget?.round) header.push(`${b.budget.round}/round`);
@@ -31,6 +33,7 @@ function blockText(b) {
   if (b.modifiers?.grantsManeuver) header.push(`${b.modifiers.grantsManeuver} maneuver`);
   if (b.modifiers?.before) header.push("before");
   if (b.modifiers?.first) header.push("first");
+  if (b.modifiers?.fromLevel && named) header.push(`from ${b.modifiers.fromLevel}`);
   if (b.modifiers?.outOfSequence) header.push("outOfSequence");
   if (b.modifiers?.chosen) header.push("chosen");
   if (b.modifiers?.toggle) header.push("toggle");

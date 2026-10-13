@@ -268,6 +268,8 @@ const TABLE = [
   { key: "botchRange.combat", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Highest Natural Result that scores a Botch on a Combat Roll, where that is "
        + "wider than the ordinary one. Vile Weather sets it to 2(WT)." },
+  { key: "botchRange.notWound", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to the Botch Range of every roll but a Wound Roll - Raging's (chat.mjs botchRangeFor)." },
   { key: "botch.penalty", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "What a Botch costs: 2 flat on Skill rolls, 2(bT) on everything else." },
   { key: "willingFailure", phase: PHASES.REACTIVE, kind: F, ops: ["set", "allow", "forbid"],

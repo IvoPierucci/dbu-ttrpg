@@ -381,6 +381,7 @@ async function runVerb(actor, call, context) {
       return shardBurst(actor);
     }
 
+    case "rageStrike": return (await import("../chat.mjs")).rageStrike(actor);
     case "surgingFocus": return (await import("../chat.mjs")).surgingFocus(actor);
     case "surgingSpare": return (await import("../chat.mjs")).surgingSpare(actor);
     case "goof": return (await import("../chat.mjs")).goof(actor);
