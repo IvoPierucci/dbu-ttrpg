@@ -905,6 +905,16 @@ async function clashWon(message) {
   const winner = fromUuidSync(uuid ?? "");
   if (!winner) return;
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, winAnswered: true });
+  // Thief (4): "If you win a Clash after using this effect, you may use the Basic Attack Maneuver or Signature Technique
+  // Maneuver as an Out-of-Sequence Maneuver but the Opponent you won the Clash against must be a target of that Attacking
+  // Maneuver." Both offered on the Clash's card at them.
+  if ((clash.thiefBy ?? []).includes(uuid)) {
+    const loser = (uuid === clash.challengerUuid) ? clash.defenderUuid : clash.challengerUuid;
+    const at = { actorUuid: winner.uuid, actorName: winner.name, targetUuid: loser, reason: "Thief - the Clash won" };
+    requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "basic-attack", maneuverName: "Basic Attack" } });
+    requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "signature-technique", maneuverName: "Signature Technique",
+      technique: { via: "", any: true } } });
+  }
   const skill = (clash.category === "skill") ? (skillPicked(clash, uuid) ?? "") : "";
   await answerFor(winner, "clash-win", { clash: { category: clash.category ?? "" }, skill,
     // Terrifying Pressure's "the Clash initiated by your Terrify Maneuver".
@@ -8195,7 +8205,28 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
 function clashParts(kind, actor, clash, uuid) {
   return [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
-    ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid)];
+    ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
+    ...thiefClashBonus(actor, clash, uuid)];
+}
+
+/**
+ * Thief (4): "When making a Skill Clash or a Clash that uses your Saving Throws against an Opponent, you can spend 1 Tension
+ * to increase your Dice Score by 1 or 1(T) respectively." What it would add - its box offered - or 0.
+ */
+function thiefClashOpen(actor, clash) {
+  const category = clash?.category ?? "skill";
+  if (!["skill", "save"].includes(category) || (actor?.system?.effects?.slots?.["thief.clashTension"] !== true)) return 0;
+  if (!((Number(actor.system.resources?.tension?.stacks) || 0) > 0) || (actor.getFlag?.(SCOPE, "thiefClashRound") === roundKey())) return 0;
+  const other = (actor.uuid === clash.challengerUuid) ? clash.defenderUuid : clash.challengerUuid;
+  if (!other || (other === actor.uuid) || alliesOnScene(actor).some(ally => ally.uuid === other)) return 0;
+  return (category === "save") ? `1(T)` : "1";
+}
+
+/** Thief (4)'s, on the side that spent its Tension. */
+function thiefClashBonus(actor, clash, uuid) {
+  if (!(clash?.thiefBy ?? []).includes(uuid)) return [];
+  const save = (clash.category === "save");
+  return [{ label: "Thief", written: save ? "+1(T)" : "+1", value: save ? Math.max(1, Number(actor.system.tierOfPower) || 1) : 1 }];
 }
 
 /** A Shard Carrier - Glass Shards (1)'s mark. */
@@ -9213,8 +9244,13 @@ async function clashStage(message, actor) {
 
   // "All rolls involved become Urgent." A re-aimed Transfiguration says so on the card,
   // and Urgent here means what it means everywhere: it cannot be failed on purpose.
+  // Thief (4): a stack of Tension on a Skill or Saving Throw Clash against an Opponent - a box, once a Round.
+  const thief = thiefClashOpen(actor, opened);
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
-    { urgent: Boolean(opened.urgent), senses, formula: { base: DBUCharacterData.BASE_DIE,
+    { urgent: Boolean(opened.urgent), senses,
+      boxes: thief ? [{ name: "thief", label: `Thief: a stack of Tension, +${thief}`,
+        tip: "Once a Round. Won, the Basic Attack or a Signature Technique out of sequence at them." }] : [],
+      formula: { base: DBUCharacterData.BASE_DIE,
       dice: [...(kind.options?.(actor, { ...opened, ...answer }, actor.uuid)?.combatRoll ? combatDiceGroups(actor) : []),
         ...((actor.uuid === opened.challengerUuid) && opened.challengerDice
           ? [{ label: opened.challengerDiceLabel || "Dice", formula: opened.challengerDice }] : [])],
@@ -9228,10 +9264,16 @@ async function clashStage(message, actor) {
   // erase it.
   const clash = message.getFlag(SCOPE, CLASH_FLAG);
   if (!clash || clash.result) return;
+  const thiefTaken = Boolean(thief) && (ready.boxes ?? []).includes("thief");
+  if (thiefTaken) {
+    await setResource(actor, "tension", Math.max(0, (Number(actor.system.resources?.tension?.stacks) || 0) - 1));
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.thiefClashRound`]: roundKey() });
+  }
 
   return settleClash(message, {
     ...clash,
     ...answer,
+    ...(thiefTaken ? { thiefBy: [...new Set([...(clash.thiefBy ?? []), actor.uuid])] } : {}),
     // Per sense, a list of who said so - not an object keyed by them: a uuid has dots in
     // it, and a write would turn it into nested keys.
     sensesBy: Object.fromEntries(Object.keys(DBUCharacterData.SENSES).map(sense => [sense,

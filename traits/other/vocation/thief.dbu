@@ -1,0 +1,31 @@
+id: thief
+name: Thief
+order: 5
+description: >
+  Though extremely versatile in combat, your actual role in the group is to provide non-combat skills and scout ahead to ensure the overall safety of your teammates.
+text: >
+  Thief: Though extremely versatile in combat, your actual role in the group is to provide non-combat skills and scout ahead to ensure the overall safety of your teammates.
+  (1)-[Passive]: Your Racial Saving Throw Bonus is applied to all of your Saving Throws.
+  (2)-[Passive]: Increase the Skill Bonus of your Skills by 1.
+  (3)-[1/Round, Ruling]: You may use a ‘Thief Maneuver’ as an Instant Maneuver if you have access to it. There is a list of Thief Maneuvers below.
+  (4)-[Triggered, 1/Round]: When making a Skill Clash or a Clash that uses your Saving Throws against an Opponent, you can spend 1 Tension to increase your Dice Score by 1 or 1(T) respectively. If you win a Clash after using this effect, you may use the Basic Attack Maneuver or Signature Technique Maneuver as an Out-of-Sequence Maneuver but the Opponent you won the Clash against must be a target of that Attacking Maneuver.
+
+  Thief Maneuvers: Brace, Dirty Trick, Flip, Hide, Hijack, Insult, Intuit, Search, Sense, Snatch, Terrify, Treatment.
+
+---
+
+[passive]
+# (1)
+allow save.racial.impulsive;
+allow save.racial.corporeal;
+allow save.racial.cognitive;
+allow save.racial.morale;
+# (2)
+skills.allBonus += 1;
+# (3) An "Instant" button on the row of each Thief Maneuver had, once a Round between them (actor-character-sheet.mjs
+# _onThiefInstant). Hijack is not in this system yet.
+allow thief.instant;
+# (4) A box in the Clash's window before the roll, with a stack of Tension (Battle Tension's), once a Round: 1 on a Skill
+# Clash, 1(T) on a Saving Throw Clash; won, the Basic Attack and the Signature Technique offered on the Clash's card at the
+# one beaten (chat.mjs thiefClashOpen, clashWon).
+allow thief.clashTension;

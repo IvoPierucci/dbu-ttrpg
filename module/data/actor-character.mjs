@@ -2150,9 +2150,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // whatever effects do to it - Blinded halving Perception, Sleeping taking 2 off
         // it. That last step had been missing: the Slot existed and was written by two
         // Conditions, and nothing here ever read it.
+        // And what goes on every Skill's - Thief's "Increase the Skill Bonus of your Skills by 1" (`skills.allBonus`).
         bonus: withEffects(this, `skill.${key}.bonus`,
-          Math.floor(atts[scoreFrom].score / 2) + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment, {
+          Math.floor(atts[scoreFrom].score / 2) + (DBUCharacterData.SKILL_RANK_BONUS * ranks) + sizeAdjustment
+            + slot(this, "skills.allBonus"), {
             parts: [
+              ...(slot(this, "skills.allBonus") ? [{ label: (this.effects?.slots?.["skills.allBonus"]?.parts ?? [])
+                .map(part => part.source).find(Boolean) || "Every Skill", value: slot(this, "skills.allBonus") }] : []),
               { label: `1/2 ${scoreFrom.charAt(0).toUpperCase()}${scoreFrom.slice(1)} Score`,
                 value: Math.floor(atts[scoreFrom].score / 2) },
               { label: `${ranks} Rank${ranks === 1 ? "" : "s"}`,

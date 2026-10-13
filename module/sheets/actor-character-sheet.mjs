@@ -377,6 +377,13 @@ function wieldProblemOf(items, item) {
   return "";
 }
 
+/**
+ * Thief (3)'s 'Thief Maneuvers': "Brace, Dirty Trick, Flip, Hide, Hijack, Insult, Intuit, Search, Sense, Snatch, Terrify,
+ * Treatment". Hijack is not in this system yet.
+ */
+const THIEF_MANEUVERS = Object.freeze(["brace", "dirty-trick", "flip", "hide", "hijack", "insult", "intuit", "search", "sense",
+  "snatch", "terrify", "treatment"]);
+
 export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   static DEFAULT_OPTIONS = {
@@ -406,6 +413,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       basicAttackInstant: DBUCharacterSheet._onBasicAttackInstant,
       signatureInstant: DBUCharacterSheet._onSignatureInstant,
       glassInstant: DBUCharacterSheet._onGlassInstant,
+      thiefInstant: DBUCharacterSheet._onThiefInstant,
       creativeOutOfSequence: DBUCharacterSheet._onCreativeOutOfSequence,
       newTechnique: DBUCharacterSheet._onNewTechnique,
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
@@ -1579,6 +1587,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // Furious Onslaught: "Reduce your Overwhelm Stacks by 2 to use the Signature Technique Maneuver as an Instant".
             signatureInstant: Boolean(maneuver.signatureTechnique)
               && (this.actor.system.effects?.slots?.["signature.asInstant"] === true),
+            // Thief (3): "You may use a 'Thief Maneuver' as an Instant Maneuver if you have access to it."
+            thiefInstant: THIEF_MANEUVERS.includes(maneuver.id) && (this.actor.system.effects?.slots?.["thief.instant"] === true),
             // Glass Combat (3): "you may use the Movement Maneuver as an Instant Maneuver".
             glassInstant: Boolean(maneuver.movement) && (this.actor.system.effects?.slots?.["movement.glassInstant"] === true),
             // Demonic Creativity: "As an Instant Maneuver, you may spend 2 stacks of Demonic Power to use a Maneuver with an
@@ -5942,6 +5952,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
     return this.actor.setFlag("dbu-ttrpg", "glassMoveRound", round);
+  }
+
+  /** Thief (3): one of the Thief Maneuvers as an Instant Maneuver, once a Round. */
+  static async _onThiefInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["thief.instant"] !== true)) return;
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (this.actor.getFlag("dbu-ttrpg", "thiefInstantRound") === round) {
+      return ui.notifications.warn(`${this.actor.name}: a Thief Maneuver as an Instant already this Combat Round.`);
+    }
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
+    return this.actor.setFlag("dbu-ttrpg", "thiefInstantRound", round);
   }
 
   static async _onSignatureInstant(event, target) {
