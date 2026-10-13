@@ -23810,15 +23810,20 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
 
   if (!chosen || (typeof chosen !== "object")) return;
 
-  const defend = getManeuver("defend");
-  const cost = defendOptionCost(chosen.defence, target, attack) + chosen.kiWager;
-  if (defend && !await spendManeuverCost(target, defend, cost)) return;
-
   // Defending is a Counter Maneuver and costs a Counter Action - which was never being
   // spent here, because this path does not go through useManeuver. Karmic Desperation
   // is the one thing that waives it, and it would have had nothing to waive.
   const answered = atMoment(target, "defending", { attack: true, attacker: true });
   const free = answered.slots?.["defend.free"] === true;
+  // Martial Artist (3): a stack of Tension for it - "the Guard Option of the Defend Maneuver has its Ki Point Cost (before
+  // any other modifications) set to 2(T)".
+  const byTension = free && (answered.slots?.["defend.byTension"] === true);
+
+  const defend = getManeuver("defend");
+  const cost = defendOptionCost(chosen.defence, target, attack,
+    (byTension && (chosen.defence === "guard")) ? { base: 2 * Math.max(1, Number(target.system.tierOfPower) || 1) } : {})
+    + chosen.kiWager;
+  if (defend && !await spendManeuverCost(target, defend, cost)) return;
   // Only what made it free is spent here: what else was ticked - Powerful Physique's Soak - is for the Defend itself.
 
   // A Parry made with a Weapon in hand counts as made with it, by the table's ruling: its Size and
@@ -23828,6 +23833,10 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
 
   if (!free && !await spendActions(target, 1, "counter")) return;
   if (free) spendWriting(target, answered, "defend.free");
+  if (byTension) {
+    const held = Number(target.system.resources?.tension?.stacks) || 0;
+    await setResource(target, "tension", Math.max(0, held - 1));
+  }
 
   return then(message, target, chosen.defence, chosen.kiWager, chosen.foundation, parryWith);
 }

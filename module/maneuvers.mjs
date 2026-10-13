@@ -1566,6 +1566,11 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
   if (!noArea && magic && (slots["mage.area"] === true)) {
     declared = await askAddedArea(actor, declared, { title: "Mage", flag: "mageAreaRound", ki: 2 * bT });
   }
+  // Martial Artist (4): "If you use an Unarmed Attack that does not possess an AoE, you may spend 2(bT) Ki Points to apply a
+  // Line or Cone AoE to that Attacking Maneuver" - one made with no Weapon.
+  if (!noArea && !declared.weapon && (slots["martial.area"] === true)) {
+    declared = await askAddedArea(actor, declared, { title: "Martial Artist", flag: "martialAreaRound", ki: 2 * bT });
+  }
   const area = () => (maneuver.signature && !maneuver.signatureTechnique)
     ? (maneuver.area ?? null) : (declared.area ?? PROFILES[declared.profile]?.area ?? null);
   // Greed of the Hera (4): "If you would use an Attacking Maneuver with a Minor or Standard AoE, you may spend up to 4(bT) Ki
@@ -1984,9 +1989,10 @@ export function whyNotIntervene(actor, allyUuid,
  * What one Defend option costs this character, resolving the (bT) notation and any
  * Talent that discounts it. A discount can never make a Maneuver pay you.
  */
-export function defendOptionCost(option, actor, attack = null) {
+export function defendOptionCost(option, actor, attack = null, { base: setBase = null } = {}) {
   const definition = DEFEND_OPTIONS[option];
-  const base = definition.kiCostPerBaseTier
+  // What an effect sets it to "before any other modifications" - Martial Artist (3)'s Guard at 2(T).
+  const base = Number.isFinite(setBase) ? setBase : definition.kiCostPerBaseTier
     ? definition.kiCostPerBaseTier * actor.system.baseTierOfPower
     : (definition.kiCost ?? 0);
 

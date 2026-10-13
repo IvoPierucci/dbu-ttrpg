@@ -1,0 +1,33 @@
+id: martial-artist
+name: Martial Artist
+order: 3
+description: >
+  As a mid-range fighter specialized in unarmed combat, you can swap between the front lines and the rear-guard as needed.
+text: >
+  Martial Artist: As a mid-range fighter specialized in unarmed combat, you can swap between the front lines and the rear-guard as needed.
+  (1)-[Passive]: Reduce the Ki Point Cost of your Physical and Energy Attacks by 1(T).
+  (2)-[Passive]: While you are not wielding a Weapon, increase your Speeds and Defense Value by 1(T).
+  (3)-[1/Round]: You can spend 1 stack of Tension to use the Defend Maneuver without spending a Counter Action. If you do, the Guard Option of the Defend Maneuver has its Ki Point Cost (before any other modifications) set to 2(T).
+  (4)-[Triggered, 1/Round]: If you use an Unarmed Attack that does not possess an AoE, you may spend 2(bT) Ki Points to apply a Line or Cone AoE to that Attacking Maneuver.
+
+---
+
+[passive]
+# (1)
+attack.kiCost.physical -= 1(T);
+attack.kiCost.energy -= 1(T);
+# (2)
+if (!wieldingWeapon) {
+    speed.all += 1(T);
+    defenseValue += 1(T);
+}
+# (4) An attack with no Weapon and no AoE declared, asked once a Round: 2(bT) Ki, a Standard Cone or Line (maneuvers.mjs
+# askBoughtAreas).
+allow martial.area;
+
+# (3) Ticked in Respond as you Defend, with a stack of Tension (Battle Tension's): no Counter Action for it, the stack spent,
+# and its Guard 2(T) before any other modification (chat.mjs).
+[triggered/defending, 1/round, effect 3]
+requires hasResource("tension");
+defend.free = true;
+defend.byTension = true;
