@@ -3,6 +3,8 @@ name: Eye of the Dragon
 order: 5
 category: mind
 importance: secondary
+# (3) A Choice by another Trait's Option: shown with only the Way chosen on Quick to Master (racial.mjs choicePicked).
+choiceOf: quick-to-master
 description: >
   Earthlings are as varied as the many cities and locales on their home planet, Earth, but one thing is always certain: what they lack in raw power, they make up for with hard work.
 text: >

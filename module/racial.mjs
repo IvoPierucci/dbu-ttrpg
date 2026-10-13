@@ -82,20 +82,32 @@ function lineHtml(text) {
 }
 
 /**
+ * The Options a Choice effect is read by: the Item's own - Warrior of Two Worlds' - or, where its Trait says `choiceOf:`,
+ * those chosen on that other Trait of the character's (Eye of the Dragon's, by Quick to Master's Way).
+ */
+function choicePicked(item) {
+  const of = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "")?.choiceOf;
+  const source = of ? Array.from(item?.parent?.items ?? []).find(each => each.flags?.["dbu-ttrpg"]?.sourceId === of) : item;
+  return (source?.system?.chosen ?? []).filter(entry => entry.key === "option").map(entry => getTrait(entry.value))
+    .filter(Boolean);
+}
+
+/**
  * A Racial Trait Item's text as shown on the Traits tab: its printed lines, and where it has an Option effect, that line
  * with only what was chosen under it - "(3)-[Option]:" and the Option's own line - not the whole list (the user's).
  */
 export function racialTraitLines(item) {
   const picked = (item?.system?.chosen ?? []).filter(entry => entry.key === "option")
     .map(entry => getTrait(entry.value)).filter(Boolean);
+  const choices = choicePicked(item);
   const lines = printedLines(item?.system?.text || "");
   const out = [];
   for (let at = 0; at < lines.length; at++) {
     const line = lines[at];
     const option = picked.length && OPTION_LINE.exec(line);
     // A Choice effect - "Depending on your choice for the Option effect of this Trait, gain the following effect" - shows
-    // the one that goes with the Option chosen (Warrior of Two Worlds').
-    const choice = picked.length && /^(\(\d+\)-\[Choice\]):/.exec(line);
+    // the one that goes with the Option chosen (Warrior of Two Worlds'), or with another Trait's (Eye of the Dragon's).
+    const choice = choices.length && /^(\(\d+\)-\[Choice\]):/.exec(line);
     if (!option && !choice) {
       out.push({ html: lineHtml(line), bullet: /^[*\u2022]/.test(line), gap: !line });
       continue;
@@ -112,7 +124,7 @@ export function racialTraitLines(item) {
       }
     }
     else {
-      for (const entry of list.filter(each => picked.some(chosen =>
+      for (const entry of list.filter(each => choices.some(chosen =>
         each.replace(/^[*\u2022]\s*/, "").startsWith(`${chosen.name} [`)))) {
         out.push({ html: lineHtml(entry), bullet: true, gap: false });
       }
@@ -135,8 +147,8 @@ export function effectLineOf(item, n) {
   if (at < 0) return "";
   const line = lines[at];
   const kind = /^(\(\d+\)-\[(Option|Multi-Option\/\d+|Choice)\]):/.exec(line);
-  const picked = (item.system?.chosen ?? []).filter(entry => entry.key === "option").map(entry => getTrait(entry.value))
-    .filter(Boolean);
+  const picked = (kind?.[2] === "Choice") ? choicePicked(item)
+    : (item.system?.chosen ?? []).filter(entry => entry.key === "option").map(entry => getTrait(entry.value)).filter(Boolean);
   if (!kind || !picked.length) return plainText(line);
   if (kind[2] !== "Choice") {
     return plainText(`${kind[1]}: ${picked.filter(option => optionBelongs(option, item, number))
