@@ -316,11 +316,15 @@ async function runVerb(actor, call, context) {
       const roll = await new Roll([die, natural ? `${natural}` : "", bonus ? `${bonus}` : "", modifier ? `${modifier}` : ""]
         .filter(Boolean).join(" + ").replace("+ -", "- ")).evaluate();
       // Failed, what may pass it instead is asked first (chat.mjs rescueSteadfast) - Primitive Durability's.
-      const { rescueSteadfast } = await import("../chat.mjs");
+      const { rescueSteadfast, steadfastCheckFlag } = await import("../chat.mjs");
       const rescued = (roll.total >= target) ? "" : await rescueSteadfast(actor, roll.total, target);
       const passed = (roll.total >= target) || Boolean(rescued);
+      // Its die on the card, for what may change it after - turned round, the State entered or left with it.
+      const base = `Steadfast Check - needing ${target}`;
       await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }),
-        flavor: `Steadfast Check - needing ${target} - ${rescued ? `failed, passed by ${rescued}` : (passed ? "passed" : "failed")}` });
+        flavor: `${base} - ${rescued ? `failed, passed by ${rescued}` : (passed ? "passed" : "failed")}`,
+        flags: { "dbu-ttrpg": { check: steadfastCheckFlag(actor, roll, natural,
+          { target, base, passed, ...(args[1] ? { enter: [String(args[1]), args[2] ?? null] } : {}) }) } } });
       if (passed && args[1]) return enterState(actor, args[1], 1, args[2] ?? null);
       return;
     }

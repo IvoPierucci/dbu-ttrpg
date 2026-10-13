@@ -242,6 +242,7 @@ function applyRequest(request) {
       ?.createEmbeddedDocuments("Item", [request.data]);
     case "deleteItem": return fromUuidSync(request.actorUuid)?.items.get(request.itemId)?.delete();
     case "foresee": return applyForesee(request.combatId, request.combatantId, request.initiative);
+    case "initiative": return applyInitiative(request.combatId, request.combatantId, request.initiative);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
     // Rubbery Body's move taken, of whom.
@@ -4930,7 +4931,7 @@ function hidePrivateBreakdowns(message, html) {
  * but is what it says.
  */
 function renderCheckKarma(message, html) {
-  const check = message.getFlag(SCOPE, CHECK_FLAG);
+  const check = message.getFlag(SCOPE, CHECK_FLAG) ?? initiativeCheck(message);
   if (!check) return;
 
   const actor = fromUuidSync(check.actorUuid);
@@ -4938,9 +4939,10 @@ function renderCheckKarma(message, html) {
 
   // Only the ones that ask nothing of a Clash, since there was none. Karmic Boost and
   // Karmic Save both name one, so they rule themselves out.
-  const options = [...karmicOptionsFor(actor, message)
+  // A Karmic Chance already taken on this die: what a Trait gives is still offered, a second Karma Point is not.
+  const options = [...(check.karmaSpent ? [] : karmicOptionsFor(actor, message)
     .filter(answersAfterTheFact)
-    .filter(effect => !(effect.script ?? "").includes("clash.")), ...resolveRerollOption(actor, check)];
+    .filter(effect => !(effect.script ?? "").includes("clash."))), ...resolveRerollOption(actor, check)];
   if (!options.some(effect => effect.available)) return;
 
   const button = document.createElement("button");
@@ -5192,9 +5194,10 @@ async function takeResolveOnCheck(message, actor, check) {
   if (!resolveRerollOption(actor, check).some(effect => effect.available)) return;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.resolveRerollRound`]: roundKey() });
   const again = await rerollBaseDie(actor, check, RESOLVE_CALL);
+  const told = await recheck(actor, check, again.total);
   await ChatMessage.create({
     speaker: message.speaker,
-    flavor: check.flavor,
+    flavor: told?.flavor ?? check.flavor,
     content: checkCard({
       parts: `Earthling Resolve &middot; ${breakdownText(again.lines, again.total)}`,
       total: again.total,
@@ -5202,10 +5205,97 @@ async function takeResolveOnCheck(message, actor, check) {
       owner: actor.uuid
     }),
     flags: { [SCOPE]: { [CHECK_FLAG]: { ...check, natural: again.natural, beforeOutcome: again.beforeOutcome,
-      total: again.total, outcome: again.outcome, lines: again.lines } } }
+      total: again.total, outcome: again.outcome, lines: again.lines, ...(told?.steadfast ? { steadfast: told.steadfast } : {}) } } }
   });
   if (message.isAuthor || game.user.isGM) await message.delete();
-  await resettleCheck(check.settles, again.total, check.against ?? null);
+}
+
+/**
+ * What a lone Check rerolled had settled, settled again: a Steadfast Check passed or failed, an Initiative in the
+ * Tracker, a card's rule (a Create, a Gamble). What the card should now say, where that changed with it.
+ */
+async function recheck(actor, check, total) {
+  if (check.steadfast) return resettleSteadfast(actor, check.steadfast, total);
+  if (check.initiative) {
+    await requestInitiative(check.initiative.combatId, check.initiative.combatantId, total);
+    return null;
+  }
+  await resettleCheck(check.settles, total, check.against ?? null);
+  return null;
+}
+
+/**
+ * A Steadfast Check rerolled - Karmic Chance, Earthling Resolve (2) - judged again. Failed now, what may pass it is asked
+ * again. Turned round: a Health Threshold's pass or fail written again, and what passing or failing it does done; a State's
+ * (Saiyan Heritage's Undying) entered or left. What passing it already did stays done.
+ */
+async function resettleSteadfast(actor, steadfast, total) {
+  const { threshold, target, base, enter } = steadfast;
+  const rescued = (total >= target) ? "" : await rescueSteadfast(actor, total, target);
+  const passed = (total >= target) || Boolean(rescued);
+  // A Health Threshold's that is still the one checked - healed above it since, nothing is left to turn.
+  const live = !threshold || Boolean(actor.system.thresholdChecks?.[threshold]);
+  if (live && (passed !== Boolean(steadfast.passed))) {
+    if (threshold) {
+      await actor.update({ [`system.thresholdChecks.${threshold}`]: passed ? "pass" : "fail" });
+      if (passed) await steadfastPassed(actor, threshold);
+      else await steadfastFailed(actor);
+    }
+    else if (enter?.[0]) {
+      const { enterState, leaveState } = await import("./effects/moments-runtime.mjs");
+      if (passed) await enterState(actor, enter[0], 1, enter[1] ?? null);
+      else await leaveState(actor, enter[0]);
+    }
+  }
+  return { flavor: `${base} - ${rescued ? `failed, passed by ${rescued}` : (passed ? "passed" : "failed")}${steadfast.carried ?? ""}`,
+    steadfast: { ...steadfast, passed } };
+}
+
+/** A Steadfast Check's card, open to what may change its die after - Karmic Chance, Earthling Resolve (2). */
+export function steadfastCheckFlag(actor, roll, naturalAdd, steadfast) {
+  const die = roll?.dice?.[0];
+  if (!Number.isFinite(die?.total)) return null;
+  const add = Number(naturalAdd) || 0;
+  return { actorUuid: actor.uuid, natural: die.total + add, beforeOutcome: roll.total, total: roll.total, outcome: "",
+    flavor: steadfast.base, rules: { die: `${die.number}d${die.faces}`, naturalAdd: add, plain: true }, steadfast };
+}
+
+/**
+ * An Initiative the Combat Tracker rolled, read as a lone Check - "any die" (Karmic Chance), its Base Die (Earthling
+ * Resolve). Only while the Tracker still holds what it rolled: moved since, the card is history.
+ */
+function initiativeCheck(message) {
+  if (!message.getFlag?.("core", "initiativeRoll")) return null;
+  const roll = message.rolls?.[0];
+  const natural = roll?.dice?.[0]?.total;
+  const combat = game.combat;
+  if (!Number.isFinite(natural) || !combat) return null;
+  const { token, actor: actorId } = message.speaker ?? {};
+  const combatant = combat.combatants.find(each => (token && (each.tokenId === token)))
+    ?? combat.combatants.find(each => each.actorId === actorId);
+  if (!combatant?.actor || (combatant.initiative !== roll.total)) return null;
+  return { actorUuid: combatant.actor.uuid, natural, beforeOutcome: roll.total, total: roll.total, outcome: "",
+    flavor: message.flavor || "Initiative", rules: { plain: true },
+    initiative: { combatId: combat.id, combatantId: combatant.id } };
+}
+
+/** An Initiative rerolled, into the Tracker - through the GM, the turn kept with whoever has it. */
+function requestInitiative(combatId, combatantId, initiative) {
+  if (game.user.isGM) return applyInitiative(combatId, combatantId, initiative);
+  if (!game.users.activeGM) return;
+  game.socket.emit(CHANNEL, { type: "initiative", combatId, combatantId, initiative });
+}
+
+async function applyInitiative(combatId, combatantId, initiative) {
+  const combat = game.combats.get(combatId);
+  const combatant = combat?.combatants.get(combatantId);
+  if (!combatant) return;
+  const currentId = combat.combatant?.id;
+  await combatant.update({ initiative }, { turnEvents: false });
+  if (currentId) {
+    const { keepTurnWith } = await import("./combat.mjs");
+    await keepTurnWith(combat, currentId);
+  }
 }
 
 /** How each category reads in a refusal. */
@@ -5328,10 +5418,11 @@ async function takeOnCheck(message, actor, check, key) {
   const again = await rerollBaseDie(actor, check);
   spendChosen(actor, answered);
   await payKarmic(message, actor, effect);
+  const told = await recheck(actor, check, again.total);
 
   await ChatMessage.create({
     speaker: message.speaker,
-    flavor: check.flavor,
+    flavor: told?.flavor ?? check.flavor,
     content: checkCard({
       parts: `${Handlebars.escapeExpression(effect.name)} &middot; ${
         breakdownText(again.lines, again.total)}`,
@@ -5341,15 +5432,15 @@ async function takeOnCheck(message, actor, check, key) {
     }),
     flags: {
       [SCOPE]: {
-        // Rerolled once and no more: the effect is spent, and the new card carries no
-        // Base Die of its own to offer again.
-        [CHECK_FLAG]: null
+        // Rerolled once by Karma and no more: the effect is spent. The new die is still one a Trait may answer -
+        // Earthling Resolve's 2 or less - so the card keeps it, marked.
+        [CHECK_FLAG]: { ...check, natural: again.natural, beforeOutcome: again.beforeOutcome, total: again.total,
+          outcome: again.outcome, lines: again.lines, karmaSpent: true, ...(told?.steadfast ? { steadfast: told.steadfast } : {}) }
       }
     }
   });
 
   if (message.isAuthor || game.user.isGM) await message.delete();
-  await resettleCheck(check.settles, again.total, check.against ?? null);
 }
 
 /**
@@ -5568,7 +5659,8 @@ async function resettleWound(message, situation, attack, result, given = null) {
  * @returns {Promise<{total: number, outcome: string, notes: string[]}>}
  */
 async function rerollBaseDie(actor, side, { forced = false, label = "Karmic Chance" } = {}) {
-  const again = new Roll(DBUCharacterData.BASE_DIE);
+  // The roll's own die where it has one - the Steadfast Check's.
+  const again = new Roll(side.rules?.die ?? DBUCharacterData.BASE_DIE);
   await again.evaluate();
 
   // The same rules the first roll was made under. What moved the first die's Natural
@@ -5614,13 +5706,14 @@ async function rerollBaseDie(actor, side, { forced = false, label = "Karmic Chan
 
   // The Critical Target the roll was made against, which a Profile can state outright -
   // Cutting's Wound Roll does - rather than the character's own.
-  const critical = natural >= (rules.criticalTarget ?? actor.system.criticalTarget ?? 10);
+  // A roll that knows no Critical or Botch - a Steadfast Check, an Initiative from the Tracker - reads neither now.
+  const critical = !rules.plain && (natural >= (rules.criticalTarget ?? actor.system.criticalTarget ?? 10));
 
   // And whether falling short of it is a Botch by itself, which is Cutting's whole
   // Strike: "if you do not score a Critical Result, then you score a Botch Result
   // regardless of the Natural Result". Regardless of it, so the Botch Range is not asked.
-  const botch = rules.botchUnlessCritical
-    ? !critical
+  const botch = rules.plain ? false
+    : rules.botchUnlessCritical ? !critical
     : (natural <= (rules.botchRange ?? actor.system.botchRange ?? 1));
 
   if (rules.botchUnlessCritical && botch) {
@@ -22271,13 +22364,7 @@ export async function rollSteadfastCheck(actor) {
   const rescued = (roll.total >= target) ? "" : await rescueSteadfast(actor, roll.total, target);
   const passed = (roll.total >= target) || Boolean(rescued);
   // Multi-Form Technique: a Steadfast Check failed - the one rolled, or one failed automatically - Defeats them.
-  if (!passed || automatic.length) {
-    for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.multiForm)) {
-      await endMultiForm(actor, item, "are Defeated - a Steadfast Check failed");
-    }
-    // Shapeshift: "If you ... fail a Steadfast Check, immediately stop applying the effects".
-    await endShapeshift(actor, "a Steadfast Check failed");
-  }
+  if (!passed || automatic.length) await steadfastFailed(actor);
   updates[`system.thresholdChecks.${rolled}`] = passed ? "pass" : "fail";
 
   await actor.update(updates);
@@ -22286,10 +22373,13 @@ export async function rollSteadfastCheck(actor) {
     ? ` (${automatic.map(key => THRESHOLDS[key].label).join(", ")} failed automatically)`
     : "";
 
+  // Its die on the card, for what may change it after - Karmic Chance, Earthling Resolve (2).
+  const base = `Steadfast Check - ${THRESHOLDS[rolled].label} - needing ${target}`;
   await roll.toMessage({
     speaker: ChatMessage.getSpeaker({ actor }),
-    flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - needing ${target} - ${
-      rescued ? `failed, passed by ${rescued}` : (passed ? "passed" : "failed")}${carried}`
+    flavor: `${base} - ${rescued ? `failed, passed by ${rescued}` : (passed ? "passed" : "failed")}${carried}`,
+    flags: { [SCOPE]: { [CHECK_FLAG]: steadfastCheckFlag(actor, roll, natural,
+      { threshold: rolled, target, base, carried, passed }) } }
   });
 
   // Passed: what answers succeeding at it - Surprising Resilience's Overwhelm.
@@ -22303,6 +22393,16 @@ export async function rollSteadfastCheck(actor) {
  * instead choose to pass it automatically" - always asked of whoever plays them (the user's), as it fails: the Undying
  * Saiyan Heritage's Check would give must come before the Defeat stands. What passed it, by name, or "".
  */
+/** A Steadfast Check failed - the one rolled, or one failed automatically: what ends with it. */
+async function steadfastFailed(actor) {
+  // Multi-Form Technique: a Steadfast Check failed Defeats them.
+  for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.multiForm)) {
+    await endMultiForm(actor, item, "are Defeated - a Steadfast Check failed");
+  }
+  // Shapeshift: "If you ... fail a Steadfast Check, immediately stop applying the effects".
+  await endShapeshift(actor, "a Steadfast Check failed");
+}
+
 /** The Steadfast Check for a Health Threshold passed: what answers it, asked first where it is the player's. */
 async function steadfastPassed(actor, threshold) {
   await offerTriggers(actor, "steadfast-passed");
