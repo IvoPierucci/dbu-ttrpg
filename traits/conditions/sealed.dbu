@@ -17,5 +17,6 @@ text: >
 [passive]
 forbid maneuvers;
 
-[automatic/start-of-turn, first]
+# Every turn while sealed - "no turn until it is opened". It was `first`, once an Encounter, so only the first was lost.
+[automatic/start-of-turn]
 turn.skip = true;

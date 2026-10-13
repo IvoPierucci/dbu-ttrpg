@@ -4,20 +4,21 @@ kind: state
 description: >
   One last effort, and then nothing left.
 text: >
-  Your Attacking Maneuvers hit automatically and you suffer no Health
-  Threshold Penalties. At the start of your next turn you leave this State and
-  your turn is skipped.
+  Narrative Requirement: A great need that shifts away all reason, directing all of your energy into this one moment. You have blocked out everything but the battle before you.
+  (1)-[Passive]: Your Attacking Maneuvers automatically hit their targets, regardless of any Clashes or effects. You may still roll your Strike Roll for the purpose of assessing if you scored a Critical Result.
+  (2)-[Passive]: You ignore the penalties of any Health Thresholds.
+  (3)-[Automatic/Start of Turn]: Leave this State and then skip this turn. This effect applies before any other effects that occur at the start of the turn.
 
 ---
 
-# first means once per Encounter, which is the closest span the system tracks
-# to once per entry - a State left and re-entered in the same Encounter will
-# not spend itself twice.
-
+# (1) Every target hit without a defence rolled - the Strike Roll still made, for its Critical (chat.mjs resolveAttackWork).
+# (2)
 [passive]
 attack.autoHit = true;
 threshold.penalty = 0;
 
-[automatic/start-of-turn, first]
+# (3) As your turn begins, whichever time that is: left, and the turn skipped (combat.mjs beginTurn reads `turn.skip`). It
+# was once an Encounter - `first` - so a second Determined in the same Encounter never left nor skipped.
+[automatic/start-of-turn]
 leaveState("Determined");
 turn.skip = true;
