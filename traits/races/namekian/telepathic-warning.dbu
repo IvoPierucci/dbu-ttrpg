@@ -1,0 +1,24 @@
+id: telepathic-warning
+name: Telepathic Warning
+order: 4
+category: mind
+importance: secondary
+# (1) Telepathy, free and without its Requirements, gone with this (racial.mjs).
+grantsUnique: telepathy
+description: >
+  With their inherent grasp of telepathy and their peaceful, social nature, Namekians are capable of great feats of teamwork, helping each other to avoid attacks.
+text: >
+  Telepathic Warning (Mind): With their inherent grasp of telepathy and their peaceful, social nature, Namekians are capable of great feats of teamwork, helping each other to avoid attacks.
+  (1)-[Passive]: You gain access to the Telepathy Unique Ability.
+  (2)-[Triggered, 2/Round]: If an Opponent targets you and/or an Ally with an Attacking Maneuver, you may immediately increase the Dodge Roll of yourself and any Allies targeted by that Attacking Maneuver by 1(T) for the duration of that Attacking Maneuver. If an Ally is Studied, double this increase to their Dodge Roll.
+  (3)-[Triggered, 1/Round]: When you trigger the second effect of Telepathic Warning, if the attacker is a Studied Opponent, you may spend a Counter Action to increase the bonus to Dodge Rolls from this effect by 2(T).
+
+---
+
+[passive]
+# (2) An Opponent's attack aimed at you or an Ally: a button on its card before it is settled, twice a Round - 1(T) on the
+# Dodge of each of your side it targets, 2(T) for one you Studied (Intelligent Fighter's), your Tier (chat.mjs
+# telepathicButtons, telepathicDodge).
+allow telepathic.warning;
+# (3) Its attacker Studied by you: the button beside it - 1 Counter Action, 2(T) more on each of those Dodges, once a Round.
+allow telepathic.studied;

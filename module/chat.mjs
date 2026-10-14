@@ -15419,6 +15419,69 @@ function inflictedOnOpponent(actor) {
 }
 
 /**
+ * Telepathic Warning (2): "If an Opponent targets you and/or an Ally with an Attacking Maneuver, you may immediately increase
+ * the Dodge Roll of yourself and any Allies targeted by that Attacking Maneuver by 1(T) for the duration of that Attacking
+ * Maneuver. If an Ally is Studied, double this increase to their Dodge Roll." Twice a Round. (3): "if the attacker is a
+ * Studied Opponent, you may spend a Counter Action to increase the bonus to Dodge Rolls from this effect by 2(T)" - once a
+ * Round. A button for each who has it and plays them, before the attack is settled; kept on the attack (`telepathic`).
+ */
+function telepathicButtons(message, attack, container) {
+  const aimed = attackTargets(attack).map(entry => entry.uuid).filter(uuid => uuid !== attack.attackerUuid);
+  if (!aimed.length) return;
+  const warned = (attack.telepathic ?? []).map(entry => entry.by);
+  const seen = new Set();
+  for (const token of canvas?.tokens?.placeables ?? []) {
+    const warner = token.actor;
+    if (!warner?.isOwner || seen.has(warner.uuid) || warned.includes(warner.uuid) || warner.system?.defeated
+      || (warner.system?.effects?.slots?.["telepathic.warning"] !== true)) continue;
+    seen.add(warner.uuid);
+    const side = new Set([warner.uuid, ...alliesOnScene(warner).map(ally => ally.uuid)]);
+    if (side.has(attack.attackerUuid) || !aimed.some(uuid => side.has(uuid))) continue;
+    const count = warner.getFlag?.(SCOPE, "telepathicRound");
+    const spent = (count?.round === roundKey()) ? (Number(count.n) || 0) : 0;
+    const counter = (warner.system.effects?.slots?.["telepathic.studied"] === true)
+      && isStudiedBy(warner, attack.attackerUuid) && (warner.getFlag?.(SCOPE, "telepathicStudiedRound") !== roundKey())
+      && ((Number(warner.system.actions?.counterLeft) || 0) > 0);
+    const warn = async extra => {
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      const tier = Math.max(1, Number(warner.system.tierOfPower) || 1);
+      if (extra && !await spendActions(warner, 1, "counter")) return;
+      requestEdit(message, { type: "attack", attack: { ...fresh, telepathic: [...(fresh.telepathic ?? []), {
+        by: warner.uuid, name: warner.name, tier, extra: extra ? 2 * tier : 0,
+        aimed: aimed.filter(uuid => side.has(uuid)), studied: aimed.filter(uuid => isStudiedBy(warner, uuid)) }] } });
+      await requestActorUpdate(warner, { [`flags.${SCOPE}.telepathicRound`]: { round: roundKey(), n: spent + 1 },
+        ...(extra ? { [`flags.${SCOPE}.telepathicStudiedRound`]: roundKey() } : {}) });
+    };
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Telepathic Warning - ${warner.name}`;
+    button.disabled = spent >= 2;
+    button.dataset.tooltip = (spent >= 2) ? "Twice a Combat Round."
+      : "Dodge 1(T) for you and every Ally it targets - 2(T) for a Studied one - for this Attacking Maneuver";
+    button.addEventListener("click", () => { button.disabled = true; return warn(false); });
+    container.append(button);
+    if (counter && (spent < 2)) {
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "dbu-clash-button";
+      more.textContent = `Telepathic Warning +2(T) - ${warner.name}`;
+      more.dataset.tooltip = "Its attacker is Studied: 1 Counter Action, 2(T) more on each Dodge (once a Round)";
+      more.addEventListener("click", () => { more.disabled = true; button.disabled = true; return warn(true); });
+      container.append(more);
+    }
+  }
+}
+
+/** Telepathic Warning's on this Dodge - each warning that covers them. */
+function telepathicDodge(actor, attack) {
+  return (attack?.telepathic ?? []).filter(entry => (entry.aimed ?? []).includes(actor?.uuid)).map(entry => {
+    const doubled = (entry.by !== actor.uuid) && (entry.studied ?? []).includes(actor.uuid);
+    return { label: `Telepathic Warning (${entry.name})`, value: (doubled ? 2 : 1) * (Number(entry.tier) || 1) + (Number(entry.extra) || 0) };
+  });
+}
+
+/**
  * Demonic Resilience (2): "If you are targeted by an Attacking Maneuver, you may make a Pressure Check. If you succeed,
  * increase your Damage Reduction by 2(T) until the start of your next turn." For each one it is aimed at who plays them,
  * before it is settled: once an attack, twice a Round. A success, Resilient on their own clock.
@@ -20851,6 +20914,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...lockOnDodge(actor, attack));
   // Intelligent Fighter (5): the attack of one you Studied.
   parts.push(...studiedDodge(actor, attack));
+  // Telepathic Warning: the Dodge raised for this attack by whoever warned them.
+  parts.push(...telepathicDodge(actor, attack));
   // Mind Reading's, against the one who read: the Dodge, and Combat Telepath's on it.
   parts.push(...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }));
   // Telepathy: Defense Value 1(bT) higher beside a mind it is linked with.
@@ -25004,6 +25069,8 @@ function renderAttack(message, html) {
   }
   // Demonic Resilience (2): targeted, a Pressure Check before it is settled.
   if (!result) resilienceButtons(message, attack, container);
+  // Telepathic Warning (2), (3): you or an Ally targeted by an Opponent - the Dodge raised for it, before it is settled.
+  if (!result) telepathicButtons(message, attack, container);
   // The Duel Clashes: a wager from each who is in it, then the roll.
   if (!result && duelRunning(attack)) duelButtons(message, attack, container);
 
