@@ -54,6 +54,7 @@ import {
   postAttack,
   postGrappleCheck,
   postManeuver,
+  countsAsCopied,
   postSaveClash,
   postFeatureAttack,
   postSkillClash,
@@ -676,7 +677,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
   // Majin See, Majin Do: "When you target an Opponent with a Copied Technique, make a Morale Clash against them. If you
   // win, they have Guard Down against this Attacking Maneuver." Once an Encounter.
-  if (technique.copied && target && (actor.system.effects?.slots?.["quickLearner.moraleClash"] === true)
+  if (technique.copiedEffects && target && (actor.system.effects?.slots?.["quickLearner.moraleClash"] === true)
     && (actor.getFlag?.("dbu-ttrpg", "moraleClashed") !== (game.combat?.id ?? "none"))) {
     fields.push(`<label class="dbu-respond-option"${tip("majin-see-majin-do", 4)}><input type="checkbox" name="moraleGuard"/>
       <span class="dbu-respond-name">Majin See, Majin Do: Morale Clash</span>
@@ -684,7 +685,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
   // Neko Mimicry (5): "If you use a Copied Technique possessed by a Character" - an Ally's, the United Attack free of its
   // Action for them; an Opponent's, the Morale Clash. Once a Round; whose it was, on the scene (by name for an older copy).
-  const mimicry = technique.copied && (actor.system.effects?.slots?.["mimicry.owner"] === true)
+  const mimicry = technique.copiedEffects && (actor.system.effects?.slots?.["mimicry.owner"] === true)
     && (actor.getFlag?.("dbu-ttrpg", "mimicryOwnerRound") !== round) ? mimicryOwner(actor, technique) : null;
   if (mimicry) {
     fields.push(`<label class="dbu-respond-option"${tip("neko-mimicry", 5)}><input type="checkbox" name="mimicry"/>
@@ -725,6 +726,26 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           <li class="gear-quality-none" data-feature-none hidden>None starts with that.</li>
         </ol>
       </div></div>`);
+  }
+  // Quick Thinking (3): a Technique not Copied - "you may add a single Advantage with a TP cost of up to 10 TP to your chosen
+  // Signature Technique if one of your Copied Techniques possesses that Advantage". Every use; its next rank where it has it.
+  let thinkingOffered = [];
+  if (!technique.copiedEffects && (actor.system.effects?.slots?.["quickThinking.advantage"] === true)) {
+    const { featureCatalogue, featureTP, maxRanks } = await import("./technique.mjs");
+    const copied = new Set(Array.from(actor.items ?? []).filter(item => (item.type === "maneuver") && countsAsCopied(item))
+      .flatMap(item => (item.system?.signature?.features ?? []).map(entry => entry.id)));
+    thinkingOffered = featureCatalogue().advantages.filter(def => copied.has(def.id) && (def.choose !== "text")
+      && (ranks(def.id) < maxRanks(def)))
+      .map(def => ({ def, rank: ranks(def.id) + 1,
+        tp: ranks(def.id) ? featureTP(def, ranks(def.id) + 1) - featureTP(def, ranks(def.id)) : featureTP(def, 1) }))
+      .filter(entry => (entry.tp > 0) && (entry.tp <= 10));
+    if (thinkingOffered.length) {
+      const escape = Handlebars.escapeExpression;
+      fields.push(`<label class="dbu-respond-option"${tip("quick-thinking", 3)}><span class="dbu-respond-name">Quick Thinking</span>
+        <select name="quickThinking"><option value="">None</option>${thinkingOffered.map(({ def, rank, tp }) =>
+          `<option value="${escape(def.id)}">${escape(def.name)}${(rank > 1) ? ` (rank ${rank})` : ""} - ${tp} TP</option>`).join("")}</select>
+        <span class="dbu-respond-source">a Copied Technique's Advantage, this use</span></label>`);
+    }
   }
   // Eye of the Dragon (2): "if this is the first time in the Combat Encounter you have used this Signature Technique, you
   // may apply both effects from the second effect of Quick to Master" - once a Round; the search picks the Advantage.
@@ -835,6 +856,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
             channeler: channeled && box("channeler"),
             eyeBoth: Boolean(eyeBoth) && box("eyeBoth"),
             earthling: earthlingPicked(form),
+            quickThinking: form.querySelector('[name="quickThinking"]')?.value ?? "",
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
             areaFrom: form.querySelector('[name="areaFrom"]')?.value ?? "" };
@@ -874,6 +896,24 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   }
   delete answers.eyeBoth;
   delete answers.earthling;
+  // Quick Thinking (3)'s, for this use alone - beside Earthling-Raised's, if both were taken.
+  const thought = thinkingOffered.find(entry => entry.def.id === answers.quickThinking)?.def;
+  if (thought) {
+    if (thought.choose && !(technique.featureChoices ?? {})[thought.id] && !(answers.featureChoices ?? {})[thought.id]) {
+      const { featureChoiceOptions } = await import("./technique.mjs");
+      const offered = featureChoiceOptions(thought, { ranks: 1, actor,
+        sig: { foundation: declared.foundation ?? "", features: (declared.advantages ?? []).map(id => ({ id })) } });
+      const picked = offered.length ? await foundry.applications.api.DialogV2.wait({
+        classes: ["dbu-dialog"], window: { title: `Quick Thinking - ${thought.name}` }, content: "",
+        buttons: [...offered.map(([value, label]) => ({ action: value, label })), { action: "cancel", label: "Cancel" }],
+        rejectClose: false
+      }) : null;
+      if (!offered.some(([value]) => value === picked)) return null;
+      answers.featureChoices = { ...(declared.featureChoices ?? {}), ...(answers.featureChoices ?? {}), [thought.id]: picked };
+    }
+    answers.advantages = [...(answers.advantages ?? declared.advantages ?? []), thought.id];
+  }
+  delete answers.quickThinking;
   // Demonic Creativity's: the Condition Advantage, its Combat Condition asked, for 1 Demonic Power.
   if (answers.creativeCondition && creative) {
     const { featureCatalogue, featureChoiceOptions } = await import("./technique.mjs");
@@ -2309,8 +2349,11 @@ export function definitionOf(item) {
     // God Finisher, the door - not its Technique, whose mark is under `signature`.
     ...(item.system.godFinisher ? { godFinisher: true } : {}),
     // Quick Learner's: a Copied Technique, and one that came from it at all (Copied, or kept for its TP).
-    ...(item.getFlag?.("dbu-ttrpg", "copied") ? { copied: true, copiedFrom: item.getFlag("dbu-ttrpg", "copied")?.fromUuid ?? "",
-      copiedFromName: item.getFlag("dbu-ttrpg", "copied")?.from ?? "" } : {}),
+    ...(item.getFlag?.("dbu-ttrpg", "copied") ? { copied: true } : {}),
+    // And Copied for a Trait's effects - Quick Thinking (2)'s kept ones too - with whose it was.
+    ...(countsAsCopied(item) ? { copiedEffects: true,
+      copiedFrom: (item.getFlag("dbu-ttrpg", "copied") ?? item.getFlag("dbu-ttrpg", "keptCopy"))?.fromUuid ?? "",
+      copiedFromName: (item.getFlag("dbu-ttrpg", "copied") ?? item.getFlag("dbu-ttrpg", "keptCopy"))?.from ?? "" } : {}),
     ...(item.getFlag?.("dbu-ttrpg", "fromQuickLearner") ? { fromQuickLearner: true } : {}),
     transforms: item.system.transforms,
     stressPerAction: Number(item.system.stressPerAction) || 0,
@@ -2411,7 +2454,7 @@ function mimicryOwner(actor, technique) {
  */
 export async function mimicryMultiProfile(actor, maneuver, declared) {
   const unchanged = { maneuver, declared };
-  if (!declared || !maneuver.copied || (actor.system.effects?.slots?.["mimicry.multiProfile"] !== true)) return unchanged;
+  if (!declared || !maneuver.copiedEffects || (actor.system.effects?.slots?.["mimicry.multiProfile"] !== true)) return unchanged;
   if (actor.getFlag?.("dbu-ttrpg", "mimicryMultiEncounter") === (game.combat?.id ?? "none")) return unchanged;
   const { profilesOf } = await import("./technique.mjs");
   const own = new Set(Array.from(actor.items ?? []).filter(item => (item.type === "maneuver") && item.system?.signature
@@ -4772,7 +4815,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
     // Majin See, Majin Do: "For Copied Techniques, you may use either your Force or Magic Modifier as the Damage
     // Attribute" - whichever is not the Foundation's own.
-    const copiedAttribute = maneuver.copied && (actor.system.effects?.slots?.["quickLearner.copiedAttribute"] === true);
+    const copiedAttribute = maneuver.copiedEffects && (actor.system.effects?.slots?.["quickLearner.copiedAttribute"] === true);
     const offers = [
       ...damageAttributeOffers(Array.from(actor.items ?? []), maneuver),
       ...(copiedAttribute ? ["force", "magic"].filter(key => key !== DBUCharacterData.FOUNDATIONS[declared.foundation]?.attribute)
@@ -4843,7 +4886,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // aimed at, and whether it is aimed at anybody.
     // Unless it is a Favored Element: "You may use your Favored Element even if your Magic Score is below 3."
     // Majin See, Majin Do: "ignore the Force Score prerequisite to use Energy Attacks" with a Copied Technique.
-    const copiedEnergy = maneuver.copied && (declared?.foundation === "energy")
+    const copiedEnergy = maneuver.copiedEffects && (declared?.foundation === "energy")
       && (actor.system.effects?.slots?.["quickLearner.copiedAttribute"] === true);
     const wrongFoundation = declared && !copiedEnergy && !favoredElement(actor, declared.profile) && whyNotThisFoundation(actor, declared.foundation,
       DBUCharacterData.FOUNDATIONS[declared.foundation]?.label);

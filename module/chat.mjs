@@ -14996,6 +14996,17 @@ function offerCopies(card, user, maneuver) {
 }
 
 /**
+ * Whether a Technique is a Copied Technique for a Trait's effects - Majin See, Majin Do's, Neko Mimicry's, Feline Build's,
+ * Quick Thinking's: Copied; or, with Quick Thinking (2), kept through Quick Learner (4) - "still considered 'Copied
+ * Techniques' for all of your effects (except those of Quick Learner)". Quick Learner's own read the `copied` flag alone.
+ */
+export function countsAsCopied(item) {
+  const flags = item?.flags?.["dbu-ttrpg"] ?? {};
+  if (flags.copied) return true;
+  return Boolean(flags.fromQuickLearner) && (item.parent?.system?.effects?.slots?.["quickThinking.keptCopied"] === true);
+}
+
+/**
  * Neko Mimicry (4): "If an Opponent who is not at Long Range uses a Standard Maneuver with an Action Cost of 1 Action, you
  * may use that Maneuver as an Out-of-Sequence Maneuver. If the Maneuver was a Special Maneuver, you must have access to
  * that Special Maneuver to use it." In a Combat Encounter, on its card, to each on the scene with it - of another
@@ -15332,7 +15343,7 @@ function offerGreedStrike(message, actor, target) {
 function offerFelineTechnique(message, actor) {
   if (!game.combat?.started || actor.system?.defeated || (actor.system?.effects?.slots?.["feline.copiedCounter"] !== true)) return;
   if (actor.getFlag?.(SCOPE, "felineRound") === roundKey()) return;
-  if (!Array.from(actor.items ?? []).some(item => (item.type === "maneuver") && item.getFlag?.(SCOPE, "copied"))) return;
+  if (!Array.from(actor.items ?? []).some(item => (item.type === "maneuver") && countsAsCopied(item))) return;
   const offers = message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? [];
   if (offers.some(offer => offer.grants?.feline && (offer.actorUuid === actor.uuid))) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique",
@@ -16992,7 +17003,7 @@ async function takeTechniqueOffer(message, actor, offer) {
   }
   // Any of them where the offer names no Advantage - Disarming Demeanor's; a Copied one alone - Feline Build's.
   const techniques = actor.items.filter(item => (item.type === "maneuver") && (offer.technique?.copied
-    ? Boolean(item.getFlag?.(SCOPE, "copied")) : offer.technique?.any
+    ? countsAsCopied(item) : offer.technique?.any
     ? Boolean(item.system.signature?.level) : (item.system.advantages ?? []).includes(feature)));
   if (!techniques.length) {
     ui.notifications.warn(offer.technique?.copied ? `${actor.name} has no Copied Technique.`

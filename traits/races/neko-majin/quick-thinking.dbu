@@ -1,0 +1,25 @@
+id: quick-thinking
+name: Quick Thinking
+order: 4
+category: mind
+importance: secondary
+description: >
+  Neko Majins are known for their ability to pick up tactics on their feet.
+text: >
+  Quick Thinking (Mind): Neko Majins are known for their ability to pick up tactics on their feet.
+  (1)-[Passive]: Increase the amount of Technique Points you gain from Skill Improvement by 3.
+  (2)-[Passive]: Any Signature Techniques gained through the 4th effect of Quick Learner are still considered ‘Copied Techniques’ for all of your effects (except those of Quick Learner).
+  (3)-[Triggered]: When you use the Signature Technique Maneuver to use a Signature Technique other than a Copied Technique, for this instance of using your chosen Signature Technique, you may add a single Advantage with a TP cost of up to 10 TP to your chosen Signature Technique if one of your Copied Techniques possesses that Advantage.
+
+---
+
+[passive]
+# (1) On every Skill Improvement row, as Quick to Master's.
+techniquePoints.perSkillImprovement += 3;
+# (2) A Technique kept through Quick Learner (4) counts as Copied for every effect but Quick Learner's own - Majin See,
+# Majin Do's, Neko Mimicry's, Feline Build's, this one's (chat.mjs countsAsCopied); not its Wound penalty, its one Copied
+# Technique at a time, nor its end-of-Encounter question.
+allow quickThinking.keptCopied;
+# (3) Among the Technique's questions, every use of one not Copied: one Advantage of 10 TP or less a Copied Technique of yours
+# has, for this use (use-maneuver.mjs askTechniqueDeclaration).
+allow quickThinking.advantage;

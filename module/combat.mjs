@@ -733,7 +733,9 @@ export function registerCombatHooks() {
         const kept = await askPlayerChoice(actor, `${actor.name}: ${item.name}`,
           [{ value: "keep", label: "Keep it (its TP Cost yours)" }, { value: "lose", label: "Let it go" }]);
         if (kept === "keep") {
-          await item.update({ name: item.name.replace(/ \(Copied\)$/, ""), "flags.dbu-ttrpg.-=copied": null });
+          // Whose it was, kept - Quick Thinking (2) has it count as Copied still (Neko Mimicry's (5) reads whose).
+          await item.update({ name: item.name.replace(/ \(Copied\)$/, ""), "flags.dbu-ttrpg.keptCopy": item.getFlag("dbu-ttrpg", "copied"),
+            "flags.dbu-ttrpg.-=copied": null });
         }
         else await actor.deleteEmbeddedDocuments("Item", [item.id]);
       }
