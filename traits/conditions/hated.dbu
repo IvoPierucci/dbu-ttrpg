@@ -1,0 +1,17 @@
+id: hated
+name: Hated
+kind: conditions
+maxStacks: 4
+# Not a Combat Condition: Hate Empowerment (2)'s - a stack for every 2 Revenge Points spent, each on a clock of its own till
+# the start of your next turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Hate Empowerment: Soak Value 1(T) higher for each stack, till the start of your next turn - 4(T) at most.
+text: >
+  Hate Empowerment (2): Each time you spend Revenge Points, for every 2 Revenge Points spent, increase your Soak Value by 1(T) until the start of your next turn. The bonus to your Soak Value from this effect cannot exceed 4(T).
+
+---
+
+[passive]
+soakValue += stacks * 1(T);

@@ -4378,8 +4378,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       if (!["ascend", "super"].includes(ascend)) return false;
       ascended = (ascend === "ascend");
       if (ascended && bought) {
-        const { setResource } = await import("./chat.mjs");
-        await setResource(actor, "revengepoints", (Number(actor.system.resources?.revengepoints?.stacks) || 0) - 2);
+        const { spendRevenge } = await import("./chat.mjs");
+        await spendRevenge(actor, 2);
       }
     }
     maneuver = throughSignatureTechnique(maneuver, technique);
@@ -4832,7 +4832,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Warrior (4): an Armed Attack - a stack of Tension, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
     // Energy of Revenge (1): Revenge Points on its Wound Roll, how many asked.
-    declared = await (await import("./maneuvers.mjs")).askRevenge(actor, declared, maneuver);
+    declared = await (await import("./maneuvers.mjs")).askRevenge(actor, declared, maneuver, targetActor);
     // Glass Combat (4): the Glass Profile applied - yours, or an adjacent Ally's - for 2(bT) Ki, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askGlassApply(actor, declared);
     // Heart of Glass (3): a Glass attack on a Glass Square - Surging for it, asked once a Round.

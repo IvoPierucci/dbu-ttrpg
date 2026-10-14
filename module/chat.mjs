@@ -15376,6 +15376,28 @@ function offerFelineTechnique(message, actor) {
 }
 
 /**
+ * Revenge Points spent (Energy of Revenge's): taken off, and Hate Empowerment (2) answered - "for every 2 Revenge Points
+ * spent, increase your Soak Value by 1(T) until the start of your next turn. The bonus ... cannot exceed 4(T)." A stack of
+ * Hated for every 2, each on its own clock, 4 at most. How many were spent.
+ */
+export async function spendRevenge(actor, amount) {
+  const held = Number(actor?.system?.resources?.revengepoints?.stacks) || 0;
+  const spent = Math.min(held, Math.max(0, Number(amount) || 0));
+  if (!spent) return 0;
+  await setResource(actor, "revengepoints", held - spent);
+  if ((actor.system?.effects?.slots?.["hate.soak"] === true) && (spent >= 2)) {
+    const had = Number(actor.system.conditions?.hated) || 0;
+    const added = Math.min(Math.floor(spent / 2), 4 - had);
+    if (added > 0) {
+      const { gainCondition, expiresAt } = await import("./effects/moments-runtime.mjs");
+      await gainCondition(actor, "hated", added);
+      await expiresAt(actor, "hated", "start-of-next-turn", added);
+    }
+  }
+  return spent;
+}
+
+/**
  * Violent Rebuke (3): "After completing an Opponent's Attacking Maneuver that targeted you, regardless of if it hits, you may
  * make a Basic Attack Maneuver against them as an Out-of-Sequence Maneuver. You cannot Ki Wager on this Attacking Maneuver
  * unless that Opponent was your Inferior." Offered on its card at them - missed, hit for nothing as the Wound is settled, hit
@@ -17385,7 +17407,7 @@ async function takeOutOfSequence(message, actor, offer) {
     // Warrior (4), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
     // Energy of Revenge (1), out of sequence as in it.
-    declared = await (await import("./maneuvers.mjs")).askRevenge(actor, declared, maneuver);
+    declared = await (await import("./maneuvers.mjs")).askRevenge(actor, declared, maneuver, target);
     // Boom's: its Tension's Broken and the stacks it spends.
     if (granted?.boom) declared = { ...declared, boom: granted.boom };
     // Ranger (3)'s: "it must be an Armed Attack", and a move away once it is concluded.
@@ -17676,7 +17698,7 @@ export async function postAttack(actor, target, maneuver,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
-                                   unstudy = [], mimicry = null, revengeSpent = 0 },
+                                   unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -17701,6 +17723,8 @@ export async function postAttack(actor, target, maneuver,
   if (greedCharges && !reflecting) charges = (Number(charges) || 0) + (Number(greedCharges) || 0);
   // Fight against Power (3): an Energy Charge for every 2 stacks of Tension.
   if (tensionCharges && !reflecting) charges = (Number(charges) || 0) + (Number(tensionCharges) || 0);
+  // Hate Empowerment (1): the Energy Charge its Revenge Points bought.
+  if (revengeCharge && !reflecting) charges = (Number(charges) || 0) + 1;
   // Last Resource: "apply a number of Energy Charges up to your number of Overwhelm stacks".
   if (overwhelm?.lastResource && !reflecting) charges = (Number(charges) || 0) + (Number(overwhelm.lastResource) || 0);
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
@@ -17729,7 +17753,7 @@ export async function postAttack(actor, target, maneuver,
       const each = (maneuver.signature && !maneuver.signatureTechnique && (maneuver.ultimate || maneuver.ascended)) ? 2 : 1;
       woundExtra = [...woundExtra, { label: `Energy of Revenge (${spent})`, written: `+${spent * each}(T)`,
         value: spent * each * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
-      await setResource(actor, "revengepoints", held - spent);
+      await spendRevenge(actor, spent);
     }
   }
   // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.

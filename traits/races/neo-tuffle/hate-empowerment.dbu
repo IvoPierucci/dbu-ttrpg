@@ -1,0 +1,31 @@
+id: hate-empowerment
+name: Hate Empowerment
+order: 5
+category: body
+subrace: hatred-embodiment
+importance: primary
+description: >
+  Empowered by the hatred you feel for those who destroyed your predecessors, you grow stronger as the fight wears on.
+text: >
+  Hate Empowerment (Body): Empowered by the hatred you feel for those who destroyed your predecessors, you grow stronger as the fight wears on.
+  (1)-[Triggered, 1/Round]: If you spend 2+ Revenge Points on a single Attacking Maneuver that targets your Inferior, you may add an Energy Charge to that Attacking Maneuver.
+  (2)-[Triggered]: Each time you spend Revenge Points, for every 2 Revenge Points spent, increase your Soak Value by 1(T) until the start of your next turn. The bonus to your Soak Value from this effect cannot exceed 4(T).
+  (3)-[Triggered]: Gain 1 Revenge Point when you use the Power Up or Energy Charge Maneuver.
+  (4)-[1/Round]: You may spend 2 Revenge Points to make a Basic Attack Maneuver as an Instant Maneuver. If you do, you must target your Inferior with this Attacking Maneuver.
+
+---
+
+[passive]
+# (1) 2+ Revenge Points spent on an attack at this Round's Inferior: an Energy Charge, asked with them, once a Round
+# (maneuvers.mjs askRevenge).
+allow hate.charge;
+# (2) Whatever spends them (chat.mjs spendRevenge): Hated (a mark), a stack for every 2, 1(T) of Soak each - 4 at most -
+# each till the start of your next turn.
+allow hate.soak;
+# (4) The Basic Attack's Instant button on the Maneuvers tab, once a Round: 2 Revenge Points, at your Inferior alone.
+allow hate.instant;
+
+# (3) The Power Up or the Energy Charge Maneuver used. Automatic by default, its Triggered/Automatic button.
+[triggered/declare-maneuver, toggle, effect 3]
+requires using("power-up") || using("energy-charge");
+revengepoints.stacks += 1;

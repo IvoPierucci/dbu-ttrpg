@@ -1532,7 +1532,7 @@ export async function askWarriorTension(actor, declared) {
  * Technique." How many, asked as it is declared; carried as `revengeSpent` - lost, and on the Wound Roll, once the attack is
  * made (chat.mjs postAttack).
  */
-export async function askRevenge(actor, declared, maneuver) {
+export async function askRevenge(actor, declared, maneuver, target = null) {
   if (!declared || (actor?.system?.effects?.slots?.["tuffle.revengeSpend"] !== true) || declared.revengeSpent) return declared;
   const held = Number(actor.system.resources?.revengepoints?.stacks) || 0;
   if (held <= 0) return declared;
@@ -1540,7 +1540,22 @@ export async function askRevenge(actor, declared, maneuver) {
   const { askPlayerAmount } = await import("./chat.mjs");
   const spent = Math.min(held, await askPlayerAmount(actor, `${actor.name}: Energy of Revenge`, held,
     `Revenge Points - Wound +${ultimate ? 2 : 1}(T) each`));
-  return (spent > 0) ? { ...declared, revengeSpent: spent } : declared;
+  if (spent <= 0) return declared;
+  // Hate Empowerment (1): "If you spend 2+ Revenge Points on a single Attacking Maneuver that targets your Inferior, you may
+  // add an Energy Charge to that Attacking Maneuver." Once a Round.
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  const inferior = actor.getFlag?.("dbu-ttrpg", "inferior");
+  const atInferior = Boolean(inferior?.uuid) && (inferior.round === round)
+    && [target?.uuid, ...Array.from(game.user?.targets ?? []).map(token => token.actor?.uuid)].includes(inferior.uuid);
+  let charge = false;
+  if ((spent >= 2) && atInferior && (actor.system.effects?.slots?.["hate.charge"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "hateChargeRound") !== round)) {
+    const { askPlayerChoice } = await import("./chat.mjs");
+    charge = (await askPlayerChoice(actor, `${actor.name}: Hate Empowerment`,
+      [{ value: "charge", label: "An Energy Charge" }, { value: "no", label: "No" }])) === "charge";
+    if (charge) await actor.setFlag("dbu-ttrpg", "hateChargeRound", round);
+  }
+  return { ...declared, revengeSpent: spent, ...(charge ? { revengeCharge: true } : {}) };
 }
 
 /**

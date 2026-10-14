@@ -414,6 +414,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       signatureInstant: DBUCharacterSheet._onSignatureInstant,
       glassInstant: DBUCharacterSheet._onGlassInstant,
       thiefInstant: DBUCharacterSheet._onThiefInstant,
+      hateInstant: DBUCharacterSheet._onHateInstant,
       creativeOutOfSequence: DBUCharacterSheet._onCreativeOutOfSequence,
       newTechnique: DBUCharacterSheet._onNewTechnique,
       addUniqueAbility: DBUCharacterSheet._onAddUniqueAbility,
@@ -1591,6 +1592,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // Furious Onslaught: "Reduce your Overwhelm Stacks by 2 to use the Signature Technique Maneuver as an Instant".
             signatureInstant: Boolean(maneuver.signatureTechnique)
               && (this.actor.system.effects?.slots?.["signature.asInstant"] === true),
+            // Hate Empowerment (4): "spend 2 Revenge Points to make a Basic Attack Maneuver as an Instant Maneuver".
+            hateInstant: (maneuver.id === "basic-attack") && (this.actor.system.effects?.slots?.["hate.instant"] === true),
             // Thief (3): "You may use a 'Thief Maneuver' as an Instant Maneuver if you have access to it."
             thiefInstant: THIEF_MANEUVERS.includes(maneuver.id) && (this.actor.system.effects?.slots?.["thief.instant"] === true),
             // Glass Combat (3): "you may use the Movement Maneuver as an Instant Maneuver".
@@ -5974,6 +5977,31 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
     return this.actor.setFlag("dbu-ttrpg", "thiefInstantRound", round);
+  }
+
+  /**
+   * Hate Empowerment (4): "You may spend 2 Revenge Points to make a Basic Attack Maneuver as an Instant Maneuver. If you do,
+   * you must target your Inferior with this Attacking Maneuver." Once a Round; at this Round's Inferior, the 2 spent once
+   * it is made.
+   */
+  static async _onHateInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["hate.instant"] !== true)) return;
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (this.actor.getFlag("dbu-ttrpg", "hateInstantRound") === round) {
+      return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
+    }
+    if ((Number(this.actor.system.resources?.revengepoints?.stacks) || 0) < 2) {
+      return ui.notifications.warn(`${this.actor.name} needs 2 Revenge Points for this.`);
+    }
+    const inferior = this.actor.getFlag("dbu-ttrpg", "inferior");
+    const at = (inferior?.uuid && (inferior.round === round)) ? fromUuidSync(inferior.uuid) : null;
+    if (!at) return ui.notifications.warn(`${this.actor.name} has no Inferior this Combat Round.`);
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" }, { targetUuid: at.uuid })) return;
+    const { spendRevenge } = await import("../chat.mjs");
+    await spendRevenge(this.actor, 2);
+    return this.actor.setFlag("dbu-ttrpg", "hateInstantRound", round);
   }
 
   static async _onSignatureInstant(event, target) {
