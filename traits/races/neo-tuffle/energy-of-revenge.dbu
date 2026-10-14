@@ -28,6 +28,6 @@ allow apparel.singleLayer;
 soakValue += 1(bT);
 
 # (1) Damage from an Opponent's Attacking Maneuver, once it is applied (chat.mjs applyAttackDamage). Automatic by default,
-# its Triggered/Automatic button.
+# its Triggered/Automatic button. Two from your Inferior's, with Tuffle Superiority (3).
 [triggered/opponent-damage, effect 1]
-revengepoints.stacks += 1;
+revengepoints.stacks += byInferior ? 2 : 1;

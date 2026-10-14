@@ -272,6 +272,12 @@ export const VERBS = Object.freeze({
     doc: "Patient Sniper's: an Ally with a lower Initiative picked, and your Initiative set just after theirs for this "
        + "Combat Round - put back as the next begins (chat.mjs followAlly)."
   },
+  chooseInferior: {
+    args: [0, 0],
+    names: [],
+    doc: "Tuffle Superiority (1): an Opponent on the scene, asked of whoever plays them, their Inferior till the Combat Round "
+       + "ends - and (4)'s Surging offered (chat.mjs askInferior)."
+  },
   chooseEnemy: {
     args: [0, 0],
     names: [],

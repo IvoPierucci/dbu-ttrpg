@@ -1,0 +1,29 @@
+id: tuffle-superiority
+name: Tuffle Superiority
+order: 2
+category: mind
+importance: primary
+description: >
+  Born with a belief in the superior intelligence of Tuffles, Neo-Tuffles look down on all other races.
+text: >
+  Tuffle Superiority (Mind): Born with a belief in the superior intelligence of Tuffles, Neo-Tuffles look down on all other races.
+  (1)-[Triggered/Start of Combat Round, Ruling]: Target an Opponent. That Opponent becomes your ‘Inferior’ until the end of the Combat Round.
+  (2)-[Passive]: Increase your Combat Rolls by 1(T) against your Inferior.
+  (3)-[Passive]: If you possess the Energy of Revenge Trait, double the amount of Revenge Points you gain from Attacking Maneuvers made by your Inferior. If you do not, increase your Wound Rolls by an additional 1(T) against your Inferior.
+  (4)-[Triggered, 1/Encounter]: Upon declaring an Inferior, if they are currently in a higher Health Threshold than you, you may enter the Surging State until the end of your next turn. If you do, you must target your Inferior for the effects of the Surging State and you can only target that Opponent for the first effect of the Tuffle Superiority Trait until you leave the Surging State. You immediately leave the Surging State that you entered through this effect if your Inferior is Defeated.
+
+---
+
+[passive]
+# (2) Strike and Wound against your Inferior, your Dodge against their attacks (chat.mjs inferiorParts, inferiorDodge).
+# (3) Without Energy of Revenge, 1(T) more on the Wound; with it, its Revenge Points doubled from your Inferior's attacks
+# (`byInferior`, read by Energy of Revenge's own line).
+allow superiority.inferior;
+# (4) Asked as the Inferior is declared, once an Encounter (chat.mjs askInferior).
+allow superiority.surging;
+
+# (1) As each Combat Round starts: which Opponent on the scene - of another disposition than your token's - asked of
+# whoever plays you, or none; your Inferior till the Round ends. While in the Surging State (4) gave, the same one, unasked.
+# Automatic by default, asked every Round; set Triggered, ticked on the Round's card.
+[triggered/start-of-round, effect 1]
+chooseInferior();

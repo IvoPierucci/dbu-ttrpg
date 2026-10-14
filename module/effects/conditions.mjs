@@ -223,6 +223,14 @@ const PREDICATES = {
   usingUnique: scope => (scope.context?.maneuver?.tags ?? []).includes("uniqueAbility"),
 
   /** Whoever was Defeated or knocked through a Threshold is your Enemy - Burning Hatred's (chat.mjs askEnemy). */
+  /** Tuffle Superiority (3): the attack that dealt the Damage your Inferior's, this Round (Energy of Revenge's doubled). */
+  byInferior: scope => {
+    const inferior = scope.data?.parent?.getFlag?.("dbu-ttrpg", "inferior");
+    const round = `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
+    return (scope.data?.effects?.slots?.["superiority.inferior"] === true) && Boolean(inferior?.uuid)
+      && (inferior.round === round) && (inferior.uuid === (scope.context?.attackerUuid ?? ""));
+  },
+
   fallenEnemy: scope => {
     const fallen = scope.context?.defeatedUuid || scope.context?.knockedUuid || "";
     return Boolean(fallen) && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "enemy")?.uuid === fallen);

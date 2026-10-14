@@ -520,6 +520,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "platingMendable", "aoeHitMany",
   // Your Enemy, Defeated or knocked through (Burning Hatred's).
   "fallenEnemy",
+  // The Damage from your Inferior's attack (Tuffle Superiority's, on Energy of Revenge).
+  "byInferior",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

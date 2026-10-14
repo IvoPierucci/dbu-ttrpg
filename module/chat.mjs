@@ -12873,10 +12873,13 @@ export async function surgingFocus(actor) {
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
     .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid) && !token.actor.system?.defeated)
     .map(token => [token.actor.uuid, token.actor])).values()];
-  const picked = (opponents.length === 1) ? opponents[0].uuid : opponents.length
+  // Set by what put them in it - Tuffle Superiority (4)'s Inferior - and not asked.
+  const preset = actor.getFlag?.(SCOPE, "surgingFocusPreset") ?? "";
+  const picked = preset ? preset : (opponents.length === 1) ? opponents[0].uuid : opponents.length
     ? await askPlayerChoice(actor, `${actor.name}: Surging - your Focus`, opponents.map(each => ({ value: each.uuid, label: each.name })))
     : "";
-  return requestActorUpdate(actor, { [`flags.${SCOPE}.surgingFocus`]: picked || "", [`flags.${SCOPE}.surgingSpared`]: false });
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.surgingFocus`]: picked || "", [`flags.${SCOPE}.surgingSpared`]: false,
+    ...(preset ? { [`flags.${SCOPE}.surgingFocusPreset`]: "" } : {}) });
 }
 
 /** "Ignore the second effect of the Surging State" - Surging (5)'s, Hocus Pocus (9)'s: no Fatigued on leaving it. */
@@ -16546,6 +16549,67 @@ export async function followAlly(actor) {
   return requestForesee(combat, mine.id, (high + low) / 2);
 }
 
+/**
+ * Tuffle Superiority (1): "Target an Opponent. That Opponent becomes your 'Inferior' until the end of the Combat Round." Of
+ * those on the scene of another disposition, not Defeated, asked of whoever plays them - or none. While in the Surging
+ * State its (4) gave, "you can only target that Opponent": the same one, unasked.
+ *
+ * (4): "Upon declaring an Inferior, if they are currently in a higher Health Threshold than you, you may enter the Surging
+ * State until the end of your next turn. If you do, you must target your Inferior for the effects of the Surging State" -
+ * asked, once an Encounter; the Focus set to them (surgingFocus reads `surgingFocusPreset`). Left as they are Defeated
+ * (combat.mjs).
+ */
+export async function askInferior(actor) {
+  const surging = (Number(actor.system?.states?.surging) || 0) > 0;
+  const held = surging ? fromUuidSync(actor.getFlag?.(SCOPE, "inferiorSurging") ?? "") : null;
+  let inferior = (held && !held.system?.defeated) ? held : null;
+  if (!inferior) {
+    const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
+    const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+      .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated
+        && ((own === undefined) || (token.document?.disposition !== own)))
+      .map(token => [token.actor.uuid, token.actor])).values()];
+    if (!opponents.length) return;
+    const picked = await askPlayerChoice(actor, `${actor.name}: Tuffle Superiority - your Inferior`,
+      [...opponents.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+    inferior = opponents.find(each => each.uuid === picked) ?? null;
+  }
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.inferior`]: inferior
+    ? { uuid: inferior.uuid, name: inferior.name, round: roundKey() } : null });
+  if (!inferior || surging || (actor.system?.effects?.slots?.["superiority.surging"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "superioritySurging") === (game.combat?.id ?? "none")) return;
+  const order = Object.keys(DBUCharacterData.THRESHOLDS);
+  const at = who => order.indexOf(who.system?.threshold?.key ?? "healthy");
+  if (!(at(inferior) < at(actor))) return;
+  const yes = await askPlayerChoice(actor, `${actor.name}: Tuffle Superiority - ${inferior.name} is in a higher Health Threshold`,
+    [{ value: "surge", label: "Surging till the end of your next turn" }, { value: "no", label: "No" }]);
+  if (yes !== "surge") return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.superioritySurging`]: game.combat?.id ?? "none",
+    [`flags.${SCOPE}.inferiorSurging`]: inferior.uuid, [`flags.${SCOPE}.surgingFocusPreset`]: inferior.uuid });
+  const { enterState } = await import("./effects/moments-runtime.mjs");
+  await enterState(actor, "surging", 1, "turn", "Tuffle Superiority");
+}
+
+/** Tuffle Superiority (2), (3): Strike and Wound 1(T) against your Inferior this Round - the Wound 1(T) more without Energy of Revenge. */
+function inferiorParts(attacker, target, roll) {
+  const inferior = attacker?.getFlag?.(SCOPE, "inferior");
+  if (!inferior || !target || (inferior.uuid !== target.uuid) || (inferior.round !== roundKey())
+    || (attacker.system?.effects?.slots?.["superiority.inferior"] !== true)) return [];
+  const tier = Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  const revenge = (attacker.items ?? []).some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "energy-of-revenge");
+  return ((roll === "wound") && !revenge)
+    ? [{ label: "Tuffle Superiority", written: "+2(T)", value: 2 * tier }]
+    : [{ label: "Tuffle Superiority", written: "+1(T)", value: tier }];
+}
+
+/** Tuffle Superiority (2): your Dodge against your Inferior's attack, 1(T). */
+function inferiorDodge(actor, attack) {
+  const inferior = actor?.getFlag?.(SCOPE, "inferior");
+  if (!inferior || !attack?.attackerUuid || (inferior.uuid !== attack.attackerUuid) || (inferior.round !== roundKey())
+    || (actor.system?.effects?.slots?.["superiority.inferior"] !== true)) return [];
+  return [{ label: `Tuffle Superiority (${inferior.name})`, written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+}
+
 export async function askEnemy(actor) {
   const own = actor?.getActiveTokens?.(false, true)?.[0]?.disposition;
   const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
@@ -19546,7 +19610,7 @@ async function resolveAttackWork(message, attack) {
     // and what it is worth against each of them is not the same number.
     const analysisParts = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target),
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
-      ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target)]
+      ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike")]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
@@ -21166,6 +21230,7 @@ async function rollAttackWoundWork(message, attack) {
       { label: "Stealthy Trick", value: own.oblivious ? unseen : 0 },
       ...lockOnParts(attacker, target),
       ...enemyParts(attacker, target),
+      ...inferiorParts(attacker, target, "wound"),
       ...brigandParts(attacker, target, "wound"),
       ...studiedParts(attacker, target),
       ...refinedParts(attacker, target),
@@ -21377,6 +21442,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...analysisBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Lock On: a Target held, every other one's attack Dodged at 1(T) less.
   parts.push(...lockOnDodge(actor, attack));
+  // Tuffle Superiority (2): your Inferior's attack.
+  parts.push(...inferiorDodge(actor, attack));
   // Intelligent Fighter (5): the attack of one you Studied.
   parts.push(...studiedDodge(actor, attack));
   // Telepathic Warning: the Dodge raised for this attack by whoever warned them.
@@ -23821,7 +23888,7 @@ async function applyAttackDamage(message, target, attack) {
     && (damage >= Math.ceil((Number(target.system.life?.max) || 0) / 4))) await answerFor(target, "heavy-hit");
   // Any Damage from an Opponent's Attacking Maneuver - Energy of Revenge's.
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
-    && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)) await answerFor(target, "opponent-damage");
+    && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)) await answerFor(target, "opponent-damage", { attackerUuid: armsUser.uuid });
   // Cutthroat Teamwork (3) and (4): an Ally, not a Minion, dealt Damage by it.
   if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && !target.system?.minion
     && alliesOnScene(armsUser).some(ally => ally.uuid === target.uuid)) await cutthroatAllyHit(armsUser, target);
