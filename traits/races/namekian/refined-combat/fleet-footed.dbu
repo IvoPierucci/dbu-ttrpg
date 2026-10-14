@@ -1,0 +1,16 @@
+id: fleet-footed
+name: Fleet-Footed
+order: 5
+optionOf: refined-combat
+optionEffect: 3
+description: >
+  When you are targeted by an Attacking Maneuver from a Studied Opponent, you may increase your Defense Value by 1/2 of your Surgency for the duration of that Attacking Maneuver. If you do, that Opponent stops being Studied after you complete that Maneuver.
+text: >
+  Fleet-Footed [Triggered, 1/Round]: When you are targeted by an Attacking Maneuver from a Studied Opponent, you may increase your Defense Value by 1/2 of your Surgency for the duration of that Attacking Maneuver. If you do, that Opponent stops being Studied after you complete that Maneuver.
+
+---
+
+# Targeted by one you Studied: a button on the attack's card before it is settled, once a Round - the Defense Value under
+# your Dodge (chat.mjs fleetButtons, fleetDodge).
+[passive]
+allow refined.fleet;

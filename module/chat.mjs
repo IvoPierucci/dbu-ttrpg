@@ -2957,6 +2957,15 @@ async function settleGrapple(message, clash) {
   await beginGrapple(grappler, grappled);
   // Rubbery Body: a Grapple initiated, the one Grappled moved - "ignoring the usual rules for Movement in a Grapple".
   offerRubberyMove(message, grappler, grappled, { grapple: true, stretched: Boolean(clash.grapple.stretched) });
+  // Refined Combat's Grappler: "If you successfully initiate a Grapple with a Studied Opponent, you may use the Launch Maneuver
+  // or Pin Maneuver as an Out-of-Sequence Maneuver. If you do, that Opponent stops being Studied after you complete that
+  // Maneuver." Both offered on that card, once a Round - counted, and the Study ended, when one is taken.
+  if (refinedOpen(grappler, "grappler") && isStudiedBy(grappler, grappled.uuid)) {
+    const at = { actorUuid: grappler.uuid, actorName: grappler.name, targetUuid: grappled.uuid,
+      reason: `Refined Combat - ${grappled.name}, Studied`, grants: { refinedGrappler: grappled.uuid } };
+    requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "launch", maneuverName: "Launch" } });
+    requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "pin", maneuverName: "Pin" } });
+  }
   if (!clash.grapple.tailRestraint) {
     await settledNote(message, `${grappler.name} has ${grappled.name} in a Grapple.`);
     return;
@@ -12651,6 +12660,7 @@ async function frozenTurnAfterAttack(attack) {
   await glassSurgeEnds(attack);
   await entrustedAllInEnds(attack);
   await warriorTensionEnds(attack);
+  await studiedSpent(attack);
   await boomEnds(attack);
   await rangerRetreatEnds(attack);
   // Glass Shards (5), (7): "After concluding that Attacking Maneuver, that Character stops being a Shard Carrier."
@@ -13060,6 +13070,45 @@ function studiedEntries(actor) {
     && ((game.combat?.round ?? 0) <= (Number(entry.through) || 0)));
 }
 
+/** No longer Studied by them - Refined Combat's "that Opponent stops being Studied". */
+async function unstudy(actor, uuid) {
+  const held = actor?.getFlag?.(SCOPE, "studied");
+  if (!held) return;
+  const all = Array.isArray(held) ? held : [held];
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.studied`]: all.filter(entry => entry?.uuid !== uuid) });
+}
+
+/**
+ * Refined Combat's Defender: "When you are hit by an attack from a Studied Opponent, you may increase your Soak Value by 1/2
+ * of your Surgency for the duration of that Attacking Maneuver and reduce the Damage Category of that Attacking Maneuver by
+ * 1. If you do, that Opponent stops being Studied after you complete that Maneuver." Asked once a Round; settled again, what
+ * was taken stands.
+ */
+async function refinedDefenderFor(target, attacker, attack, uuid) {
+  const before = (attack.result?.targets ?? []).find(entry => entry.uuid === uuid);
+  if (before?.hit) return before.refinedSoak ? { soak: before.refinedSoak } : null;
+  if (!attacker || !refinedOpen(target, "defender") || !isStudiedBy(target, attacker.uuid)) return null;
+  const soak = halfSurgency(target);
+  const yes = (await askPlayerChoice(target, `${target.name}: Refined Combat - hit by ${attacker.name}`,
+    [{ value: "yes", label: `Soak +${soak}, Damage Category -1; no longer Studied after` }, { value: "no", label: "No" }])) === "yes";
+  if (!yes) return null;
+  await refinedSpent(target, "defender");
+  return { soak };
+}
+
+/** Half their Surgency, rounded down - every Refined Combat Option's measure. */
+function halfSurgency(actor) {
+  return Math.floor(Math.max(0, Number(actor?.system?.surgency) || 0) / 2);
+}
+
+/** A Refined Combat Option's once a Round: whether it is still to use, and spending it. */
+function refinedOpen(actor, key) {
+  return (actor?.system?.effects?.slots?.[`refined.${key}`] === true) && (actor.getFlag?.(SCOPE, `refined_${key}`) !== roundKey());
+}
+async function refinedSpent(actor, key) {
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.refined_${key}`]: roundKey() });
+}
+
 /** One more Studied, through the Round given - the rest still running kept. */
 async function study(actor, who, through) {
   const kept = studiedEntries(actor).filter(entry => entry.uuid !== who.uuid);
@@ -13130,6 +13179,13 @@ function studiedParts(attacker, target) {
   if (!isStudiedBy(attacker, target.uuid)) return [];
   if (alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return [];
   return [{ label: "Studied", written: "+1(T)", value: Math.max(1, Number(attacker.system.tierOfPower) || 1) }];
+}
+
+/** Refined Combat (1): "Increase your Soak Value and Wound Rolls against Studied Opponents by 1(T)." */
+function refinedParts(actor, other) {
+  if (!other || (actor?.system?.effects?.slots?.["refined.vsStudied"] !== true) || !isStudiedBy(actor, other.uuid)) return [];
+  if (alliesOnScene(actor).some(ally => ally.uuid === other.uuid)) return [];
+  return [{ label: "Refined Combat (Studied)", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
 }
 
 /** And the Dodge against one of their attacks. */
@@ -13278,6 +13334,15 @@ export async function boom(actor) {
       ...(tension ? { charges: tension, boom: { tension, condition: "broken", stacks: tension } } : {}) } };
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
     flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [offer] } } });
+}
+
+/** Refined Combat's "that Opponent stops being Studied after you complete this Attacking Maneuver" - once it is. */
+async function studiedSpent(attack) {
+  const all = [...(attack?.unstudy ?? []), ...(attack?.result?.targets ?? []).flatMap(entry => entry?.unstudy ?? [])];
+  for (const { by, uuid } of all) {
+    const actor = fromUuidSync(by ?? "");
+    if (actor?.isOwner) await unstudy(actor, uuid);
+  }
 }
 
 /** Warrior (4): "You do not lose this stack of Tension until after you complete this Attacking Maneuver." */
@@ -15003,6 +15068,23 @@ export async function galaxyHoldsPower(actor) {
  * Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver." The two offered on the Empower's card - once a Round,
  * counted when one is taken.
  */
+/**
+ * Refined Combat's Trusted Ally: "When you target an Ally with the Empower Maneuver, they become Studied until the end of their
+ * next turn. If they were already Studied, they may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence
+ * Maneuver instead." Once a Round: Studied - through the next Round - or the two offered them on the Empower's card.
+ */
+export async function trustedAllyOffers(giver, ally) {
+  if (!giver || !ally || !refinedOpen(giver, "trusted")) return [];
+  if (!isStudiedBy(giver, ally.uuid)) {
+    await refinedSpent(giver, "trusted");
+    await study(giver, ally, (game.combat?.round ?? 0) + 1);
+    return [];
+  }
+  const offer = (maneuverId, maneuverName) => ({ actorUuid: ally.uuid, actorName: ally.name, maneuverId, maneuverName,
+    reason: `Refined Combat - Trusted Ally (${giver.name})`, grants: { trustedFrom: giver.uuid } });
+  return [offer("power-up", "Power Up"), offer("transformation", "Transformation")];
+}
+
 export function questingOffers(actor) {
   if (!actor || actor.system?.defeated || (actor.system?.effects?.slots?.["questing.empowered"] !== true)) return [];
   if (actor.getFlag?.(SCOPE, "questingRound") === roundKey()) return [];
@@ -15471,6 +15553,41 @@ function telepathicButtons(message, attack, container) {
       container.append(more);
     }
   }
+}
+
+/**
+ * Refined Combat's Fleet-Footed: "When you are targeted by an Attacking Maneuver from a Studied Opponent, you may increase your
+ * Defense Value by 1/2 of your Surgency for the duration of that Attacking Maneuver. If you do, that Opponent stops being
+ * Studied after you complete that Maneuver." A button for each target it is open to, once a Round; kept on the attack.
+ */
+function fleetButtons(message, attack, container) {
+  const done = (attack.fleet ?? []).map(entry => entry.uuid);
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || done.includes(uuid) || (uuid === attack.attackerUuid) || !refinedOpen(target, "fleet")
+      || !isStudiedBy(target, attack.attackerUuid)) continue;
+    const value = halfSurgency(target);
+    if (!value) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Fleet-Footed - ${target.name}`;
+    button.dataset.tooltip = `Defense Value +${value} (1/2 Surgency) for this attack; its attacker no longer Studied after`;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, fleet: [...(fresh.fleet ?? []), { uuid, value }],
+        unstudy: [...(fresh.unstudy ?? []), { by: uuid, uuid: attack.attackerUuid }] } });
+      await refinedSpent(target, "fleet");
+    });
+    container.append(button);
+  }
+}
+
+/** Fleet-Footed's, on this one's Defense Value - the Dodge it is the base of. */
+function fleetDodge(actor, attack) {
+  const entry = (attack?.fleet ?? []).find(each => each.uuid === actor?.uuid);
+  return entry ? [{ label: "Fleet-Footed (Defense Value)", value: Number(entry.value) || 0 }] : [];
 }
 
 /** Telepathic Warning's on this Dodge - each warning that covers them. */
@@ -17002,6 +17119,16 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.questing) await requestActorUpdate(actor, { [`flags.${SCOPE}.questingRound`]: roundKey() });
   // Power of the Hera (3)'s, once a Round.
   if (offer.grants?.heraPowerUp) await requestActorUpdate(actor, { [`flags.${SCOPE}.heraPowerUpRound`]: roundKey() });
+  // Refined Combat's Grappler, once a Round - and its Opponent no longer Studied.
+  if (offer.grants?.refinedGrappler) {
+    await refinedSpent(actor, "grappler");
+    await unstudy(actor, offer.grants.refinedGrappler);
+  }
+  // Refined Combat's Trusted Ally, once a Round - the one who Empowered them.
+  if (offer.grants?.trustedFrom) {
+    const giver = fromUuidSync(offer.grants.trustedFrom);
+    if (giver) await refinedSpent(giver, "trusted");
+  }
   // Greed of the Hera (2)'s, once a Round.
   if (offer.grants?.greedStrike) await requestActorUpdate(actor, { [`flags.${SCOPE}.greedStrikeRound`]: roundKey() });
   // Angelic Offense (3)'s Basic Attack, once a Round.
@@ -17189,7 +17316,8 @@ export async function postAttack(actor, target, maneuver,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
-                                   tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "" },
+                                   tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
+                                   unstudy = [] },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -17364,6 +17492,8 @@ export async function postAttack(actor, target, maneuver,
           ...((warriorTension && !reflecting) ? { warriorTension: true } : {}),
           // Boom: Broken on whoever it deals Damage to, its Tension lost once it is concluded (boomEnds).
           ...((boom && !reflecting) ? { boom } : {}),
+          // Refined Combat's Power Channeler: who stops being Studied once it is done (studiedSpent).
+          ...((unstudy?.length && !reflecting) ? { unstudy } : {}),
           // Ranger (3): a move away from them once it is concluded (rangerRetreatEnds).
           ...((rangerRetreat && !reflecting) ? { rangerRetreat } : {}),
           // Glass Shards: the Shard Carrier its shards are spent from once it is concluded - (5), (7) - and (2)'s Homing.
@@ -17925,9 +18055,15 @@ async function playIntervene(message, attack, { who, ally, effect }) {
   // Protector: "you may use the Intervene Maneuver without spending a Counter Action as long as you are within 8 Squares of
   // that Ally. If you do, increase your Damage Reduction by 2(T)" - asked, once a Round.
   const protector = await protectorWaives(actor, allyActor);
+  // Refined Combat's Protector: "When a Studied Ally is hit by an Attacking Maneuver, you may use the Intervene Maneuver
+  // without spending a Counter Action" - asked, once a Round.
+  const refinedFree = !protector && refinedOpen(actor, "protector") && isStudiedBy(actor, allyActor.uuid)
+    && ((await askPlayerChoice(actor, `${actor.name}: Refined Combat - ${allyActor.name}, Studied`,
+      [{ value: "yes", label: "Intervene without a Counter Action" }, { value: "no", label: "No" }])) === "yes");
+  if (refinedFree) await refinedSpent(actor, "protector");
   // A Counter Action and the chosen effect's Ki, in that order: the Action is the one
   // that can be short, and a refused Maneuver must cost nothing.
-  if (!protector && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+  if (!protector && !refinedFree && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
   if (!await spendManeuverCost(actor, maneuver, interveneOptionCost(effect, actor))) return;
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.
@@ -19187,7 +19323,10 @@ async function resolveAttackWork(message, attack) {
       ? (profileFor(attack)?.categoryUpOnCriticalStrike ?? 0)
       : 0;
 
+    // Refined Combat's Defender: hit by one you Studied - half the Surgency on the Soak, the Category one down, asked.
+    const defender = hit ? await refinedDefenderFor(target, attacker, attack, uuid) : null;
     const shift = (attack.damageCategoryShift ?? 0)
+      + (defender ? -1 : 0)
       + criticalStep
       + (defence.damageCategoryShift ?? 0)
       // Divine Flex: "reduce the Damage Category of that Attacking Maneuver by 1 Category" - against the one who flexed.
@@ -19269,6 +19408,7 @@ async function resolveAttackWork(message, attack) {
       sizeSoak: await sizeSoakFor(target, attacker, incoming),
       // Greed of the Hera (6): Greed spent as the hit is, 2(T) of Damage Reduction each for this attack.
       greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
+      ...(defender ? { refinedSoak: defender.soak, unstudy: [{ by: target.uuid, uuid: attacker.uuid }] } : {}),
       // Stealthy Trick (3): whether they were Oblivious of the attacker as it hit.
       oblivious,
       counterWound: null,
@@ -19870,6 +20010,20 @@ async function answerHit(message, attack, attacker, struck) {
     answer.searing = true;
     answer.marks.overwhelmDouble = true;
   }
+  // Refined Combat's Hand to Hand and Blaster: "When you hit a Studied Opponent with a Physical (an Energy) Attack, you may
+  // increase the Wound Roll by 1/2 of your Surgency. If you do, that Opponent stops being Studied after you complete this
+  // Attacking Maneuver." Asked, once a Round each.
+  const option = (attack.foundation === "physical") ? "handToHand" : (attack.foundation === "energy") ? "blaster" : "";
+  const studied = option && refinedOpen(attacker, option) ? struck.find(({ uuid }) => isStudiedBy(attacker, uuid)) : null;
+  if (studied && halfSurgency(attacker)) {
+    const yes = (await askPlayerChoice(attacker, `${attacker.name}: Refined Combat - ${studied.actor?.name ?? "Studied"}`,
+      [{ value: "yes", label: `Wound +${halfSurgency(attacker)} (1/2 Surgency); no longer Studied after` }, { value: "no", label: "No" }])) === "yes";
+    if (yes) {
+      await refinedSpent(attacker, option);
+      answer.marks.refinedWound = halfSurgency(attacker);
+      answer.marks.unstudy = [...(attack.unstudy ?? []), { by: attacker.uuid, uuid: studied.uuid }];
+    }
+  }
   return answer;
 }
 
@@ -19991,6 +20145,8 @@ function woundParts(attacker, attack) {
     ...(attack.weapon?.wound ?? []),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
     ...twoWorldsWoundParts(attacker, attack),
+    // Refined Combat's Hand to Hand or Blaster: half the Surgency.
+    ...((Number(attack.refinedWound) || 0) ? [{ label: "Refined Combat (1/2 Surgency)", value: Number(attack.refinedWound) }] : []),
     ...cutthroatWoundParts(attacker, attack),
     ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))
   ];
@@ -20683,7 +20839,9 @@ async function rollAttackWoundWork(message, attack) {
 
     // Only what the Damage Category leaves of the Soak Value counts, and the defence
     // adjusts what survives that.
-    const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0);
+    const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0)
+      // Refined Combat (1) against one Studied, and Defender's half Surgency for this attack.
+      + refinedParts(target, attacker).reduce((sum, part) => sum + part.value, 0) + (Number(own.refinedSoak) || 0);
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
     // Piercing: "ignore 1/4 (rounded up) of your target's Soak Value (before any reductions)".
     const pierceSoak = Math.ceil(Math.max(0, base) * (Number(attack.weapon?.soakIgnored) || 0));
@@ -20704,6 +20862,7 @@ async function rollAttackWoundWork(message, attack) {
       ...enemyParts(attacker, target),
       ...brigandParts(attacker, target, "wound"),
       ...studiedParts(attacker, target),
+      ...refinedParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
       { label: attack.technique?.name ?? "Technique",
         value: techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),
@@ -20916,6 +21075,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...studiedDodge(actor, attack));
   // Telepathic Warning: the Dodge raised for this attack by whoever warned them.
   parts.push(...telepathicDodge(actor, attack));
+  // Refined Combat's Fleet-Footed.
+  parts.push(...fleetDodge(actor, attack));
   // Mind Reading's, against the one who read: the Dodge, and Combat Telepath's on it.
   parts.push(...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }));
   // Telepathy: Defense Value 1(bT) higher beside a mind it is linked with.
@@ -25071,6 +25232,8 @@ function renderAttack(message, html) {
   if (!result) resilienceButtons(message, attack, container);
   // Telepathic Warning (2), (3): you or an Ally targeted by an Opponent - the Dodge raised for it, before it is settled.
   if (!result) telepathicButtons(message, attack, container);
+  // Refined Combat's Fleet-Footed: targeted by one you Studied - the Defense Value raised for it.
+  if (!result) fleetButtons(message, attack, container);
   // The Duel Clashes: a wager from each who is in it, then the roll.
   if (!result && duelRunning(attack)) duelButtons(message, attack, container);
 

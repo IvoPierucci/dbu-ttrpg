@@ -416,8 +416,9 @@ async function transferKi(actor, ally, actionsSpent) {
   });
 
   // Questing Wisdom (3): the Ally's Power Up or Transformation, out of sequence, offered on this card.
-  const { questingOffers } = await import("./chat.mjs");
-  const offers = questingOffers(ally);
+  const { questingOffers, trustedAllyOffers } = await import("./chat.mjs");
+  // And Refined Combat's Trusted Ally, the Empowering one's.
+  const offers = [...questingOffers(ally), ...await trustedAllyOffers(actor, ally)];
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}
@@ -735,6 +736,18 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       <input type="number" name="lifeWager" value="0" min="0" max="${warriorMost}"/>
       <span class="dbu-respond-source">as much on the Ki Wager, free</span></label>`);
   }
+  // Refined Combat's Power Channeler: "If you target a Studied Opponent with the Signature Technique Maneuver, you may gain a
+  // free Energy Charge on that Attacking Maneuver that counts towards the required amount of Energy Charges necessary for the
+  // Mandatory Charge Disadvantage. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver."
+  // Once a Round - the Earthling-Raised Energy Charge's place, which is one that counts.
+  const { isStudiedBy } = await import("./chat.mjs");
+  const channeled = Boolean(target) && (actor.system.effects?.slots?.["refined.channeler"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "refined_channeler") !== round) && isStudiedBy(actor, target.uuid) && !declared.earthlingCharge;
+  if (channeled) {
+    fields.push(`<label class="dbu-respond-option"><input type="checkbox" name="channeler"/>
+      <span class="dbu-respond-name">Power Channeler: an Energy Charge</span>
+      <span class="dbu-respond-source">${Handlebars.escapeExpression(target.name)} no longer Studied after</span></label>`);
+  }
   // Questing Wisdom (4): "you may spend up to x(T) Life Points to increase the Wound Roll of that Attacking Maneuver by an
   // equal amount. For this effect, x is equal to twice your number of Tension Stacks." Once a Round; no more than the Life
   // Points left.
@@ -809,6 +822,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
             moraleGuard: box("moraleGuard"), creativeCondition: box("creativeCondition"),
             lifeWager: Math.min(warriorMost, num("lifeWager")), lastResort: lastResort && box("lastResort"),
             questingLife: Math.min(questingMost, num("questingLife")),
+            channeler: channeled && box("channeler"),
             eyeBoth: Boolean(eyeBoth) && box("eyeBoth"),
             earthling: earthlingPicked(form),
             gigaFlare: Math.min(2, num("gigaFlare")),
@@ -910,6 +924,13 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     if (taken) woundExtra.push({ label: "Questing Wisdom", value: taken });
   }
   delete answers.questingLife;
+  // Power Channeler's: its Energy Charge, and its Opponent no longer Studied once the attack is done.
+  if (answers.channeler) {
+    await actor.setFlag("dbu-ttrpg", "refined_channeler", round);
+    answers.earthlingCharge = answers.earthlingCharge || "Power Channeler";
+    answers.unstudy = [...(declared.unstudy ?? []), { by: actor.uuid, uuid: target.uuid }];
+  }
+  delete answers.channeler;
   if (woundExtra.length) answers.woundExtra = woundExtra;
   const extraActions = (answers.gigaFlare ?? 0) + (answers.superCombination ?? 0);
   if (extraActions) {

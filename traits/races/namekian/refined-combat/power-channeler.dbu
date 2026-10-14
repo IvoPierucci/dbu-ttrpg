@@ -1,0 +1,16 @@
+id: power-channeler
+name: Power Channeler
+order: 8
+optionOf: refined-combat
+optionEffect: 3
+description: >
+  If you target a Studied Opponent with the Signature Technique Maneuver, you may gain a free Energy Charge on that Attacking Maneuver that counts towards the required amount of Energy Charges necessary for the Mandatory Charge Disadvantage. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver.
+text: >
+  Power Channeler [Triggered, 1/Round]: If you target a Studied Opponent with the Signature Technique Maneuver, you may gain a free Energy Charge on that Attacking Maneuver that counts towards the required amount of Energy Charges necessary for the Mandatory Charge Disadvantage. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver.
+
+---
+
+# A box in the Signature Technique's own questions, at one you Studied, once a Round: an Energy Charge that counts for
+# Mandatory Charge - the Earthling-Raised one's place (use-maneuver.mjs askTechniqueDeclaration).
+[passive]
+allow refined.channeler;

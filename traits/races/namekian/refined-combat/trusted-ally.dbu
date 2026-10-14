@@ -1,0 +1,16 @@
+id: trusted-ally
+name: Trusted Ally
+order: 7
+optionOf: refined-combat
+optionEffect: 3
+description: >
+  When you target an Ally with the Empower Maneuver, they become Studied until the end of their next turn. If they were already Studied, they may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver instead.
+text: >
+  Trusted Ally [Triggered, 1/Round]: When you target an Ally with the Empower Maneuver, they become Studied until the end of their next turn. If they were already Studied, they may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver instead.
+
+---
+
+# An Ally Empowered, once a Round: Studied through the next Round - or, Studied already, the Power Up and the
+# Transformation offered them on the Empower's card (chat.mjs trustedAllyOffers).
+[passive]
+allow refined.trusted;

@@ -1,0 +1,16 @@
+id: grappler
+name: Grappler
+order: 3
+optionOf: refined-combat
+optionEffect: 3
+description: >
+  If you successfully initiate a Grapple with a Studied Opponent, you may use the Launch Maneuver or Pin Maneuver as an Out-of-Sequence Maneuver. If you do, that Opponent stops being Studied after you complete that Maneuver.
+text: >
+  Grappler [Triggered, 1/Round]: If you successfully initiate a Grapple with a Studied Opponent, you may use the Launch Maneuver or Pin Maneuver as an Out-of-Sequence Maneuver. If you do, that Opponent stops being Studied after you complete that Maneuver.
+
+---
+
+# A Grapple begun with one you Studied: the Launch and the Pin offered on its card out of sequence, once a Round - the Study
+# ended as one is taken (chat.mjs settleGrapple).
+[passive]
+allow refined.grappler;

@@ -1,0 +1,15 @@
+id: hand-to-hand
+name: Hand to Hand
+order: 1
+optionOf: refined-combat
+optionEffect: 3
+description: >
+  When you hit a Studied Opponent with a Physical Attack, you may increase the Wound Roll by 1/2 of your Surgency. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver.
+text: >
+  Hand to Hand [Triggered, 1/Round]: When you hit a Studied Opponent with a Physical Attack, you may increase the Wound Roll by 1/2 of your Surgency. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver.
+
+---
+
+# A Physical Attack that hit one you Studied: asked as its Wound Roll is about to be made, once a Round (chat.mjs answerHit).
+[passive]
+allow refined.handToHand;

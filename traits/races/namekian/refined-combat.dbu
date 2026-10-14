@@ -1,0 +1,35 @@
+id: refined-combat
+name: Refined Combat
+order: 5
+category: mind
+subrace: warrior-clan
+importance: primary
+options: 2
+optionEffect: 3
+description: >
+  Literally bred for battle, Warriors train from birth to protect their brethren from any threats to their people and their planet.
+text: >
+  Refined Combat (Mind): Literally bred for battle, Warriors train from birth to protect their brethren from any threats to their people and their planet.
+  (1)-[Passive]: Increase your Soak Value and Wound Rolls against Studied Opponents by 1(T).
+  (2)-[Passive]: Increase your Surgency by 1/2 (rounded up) of your Insight Modifier.
+  (3)-[Multi-Option/2]: At Character Creation, choose two of the following effects:
+
+  * Hand to Hand [Triggered, 1/Round]: When you hit a Studied Opponent with a Physical Attack, you may increase the Wound Roll by 1/2 of your Surgency. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver.
+  * Blaster [Triggered, 1/Round]: When you hit a Studied Opponent with an Energy Attack, you may increase the Wound Roll by 1/2 of your Surgency. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver.
+  * Grappler [Triggered, 1/Round]: If you successfully initiate a Grapple with a Studied Opponent, you may use the Launch Maneuver or Pin Maneuver as an Out-of-Sequence Maneuver. If you do, that Opponent stops being Studied after you complete that Maneuver.
+  * Defender [Triggered, 1/Round]: When you are hit by an attack from a Studied Opponent, you may increase your Soak Value by 1/2 of your Surgency for the duration of that Attacking Maneuver and reduce the Damage Category of that Attacking Maneuver by 1. If you do, that Opponent stops being Studied after you complete that Maneuver.
+  * Fleet-Footed [Triggered, 1/Round]: When you are targeted by an Attacking Maneuver from a Studied Opponent, you may increase your Defense Value by 1/2 of your Surgency for the duration of that Attacking Maneuver. If you do, that Opponent stops being Studied after you complete that Maneuver.
+  * Protector [Triggered, 1/Round]: When a Studied Ally is hit by an Attacking Maneuver, you may use the Intervene Maneuver without spending a Counter Action.
+  * Trusted Ally [Triggered, 1/Round]: When you target an Ally with the Empower Maneuver, they become Studied until the end of their next turn. If they were already Studied, they may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver instead.
+  * Power Channeler [Triggered, 1/Round]: If you target a Studied Opponent with the Signature Technique Maneuver, you may gain a free Energy Charge on that Attacking Maneuver that counts towards the required amount of Energy Charges necessary for the Mandatory Charge Disadvantage. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver.
+
+---
+
+[passive]
+# (1) Your Wound against one you Studied (Intelligent Fighter's), and your Soak against their attacks (chat.mjs refinedParts).
+allow refined.vsStudied;
+# (2) Rounded up, as the text says.
+surgency += ceil(insight.mod / 2);
+
+# (3) The two Options chosen, one file each beside this one. "Stops being Studied after" - once the attack is done (chat.mjs
+# studiedSpent).

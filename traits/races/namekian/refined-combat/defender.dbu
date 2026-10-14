@@ -1,0 +1,15 @@
+id: defender
+name: Defender
+order: 4
+optionOf: refined-combat
+optionEffect: 3
+description: >
+  When you are hit by an attack from a Studied Opponent, you may increase your Soak Value by 1/2 of your Surgency for the duration of that Attacking Maneuver and reduce the Damage Category of that Attacking Maneuver by 1. If you do, that Opponent stops being Studied after you complete that Maneuver.
+text: >
+  Defender [Triggered, 1/Round]: When you are hit by an attack from a Studied Opponent, you may increase your Soak Value by 1/2 of your Surgency for the duration of that Attacking Maneuver and reduce the Damage Category of that Attacking Maneuver by 1. If you do, that Opponent stops being Studied after you complete that Maneuver.
+
+---
+
+# Hit by one you Studied: asked as the hit is settled, once a Round (chat.mjs refinedDefenderFor).
+[passive]
+allow refined.defender;

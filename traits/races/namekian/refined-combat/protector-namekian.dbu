@@ -1,0 +1,15 @@
+id: protector-namekian
+name: Protector
+order: 6
+optionOf: refined-combat
+optionEffect: 3
+description: >
+  When a Studied Ally is hit by an Attacking Maneuver, you may use the Intervene Maneuver without spending a Counter Action.
+text: >
+  Protector [Triggered, 1/Round]: When a Studied Ally is hit by an Attacking Maneuver, you may use the Intervene Maneuver without spending a Counter Action.
+
+---
+
+# Intervening for an Ally you Studied: asked, once a Round - no Counter Action (chat.mjs playIntervene).
+[passive]
+allow refined.protector;
