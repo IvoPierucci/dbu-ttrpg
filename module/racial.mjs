@@ -396,8 +396,11 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
   if ((kind === "skill") || (kind === "skillRanked")) {
     const { default: DBUCharacterData } = await import("./data/actor-character.mjs");
     const except = new Set(listOf(source?.chooseExcept).map(each => each.toLowerCase()));
+    // Or only those of one Attribute - Intelligent Fighter's "a Skill that uses Insight as its Attribute".
+    const attribute = String(source?.chooseAttribute ?? "").trim().toLowerCase();
     const ranks = key => (Number(actor?.system?.skills?.[key]?.ranks) || 0) + earlier.filter(each => each === key).length;
     return Object.entries(DBUCharacterData.SKILLS).filter(([key]) => !except.has(key.toLowerCase()))
+      .filter(([, skill]) => !attribute || (skill.attribute === attribute))
       .filter(([key]) => (kind === "skill") || (ranks(key) >= 2))
       .map(([key, skill]) => [key, skill.label]);
   }

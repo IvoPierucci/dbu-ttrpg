@@ -1,0 +1,41 @@
+id: intelligent-fighter
+name: Intelligent Fighter
+order: 2
+category: mind
+importance: primary
+# (1) A Skill of the Insight Attribute, chosen as it is gained (racial.mjs choicesFor).
+choose: skill
+chooseAttribute: insight
+description: >
+  Known as some of the most intelligent fighters in the universe, the Namekian people can quickly learn the fighting style of their opponent and use that knowledge to find openings others may miss.
+text: >
+  Intelligent Fighter (Mind): Known as some of the most intelligent fighters in the universe, the Namekian people can quickly learn the fighting style of their opponent and use that knowledge to find openings others may miss.
+  (1)-[Passive]: At Character Creation, select a Skill that uses Insight as its Attribute. You gain a Skill Rank in the Skill selected for this effect.
+  (2)-[Triggered, Ruling]: At the end of each Combat Round, select a Character (except yourself) that has used at least 1 Attacking Maneuver during this Combat Round. That selected Character becomes ‘Studied’ until the end of the next Combat Round.
+  (3)-[Triggered, 1/Round]: If you Defeat a Studied Opponent with an Attacking Maneuver, regain Ki Points equal to your Surgency.
+  (4)-[Triggered, 1/Round]: If a Studied Ally would be Defeated by the Damage from an Opponent’s Attacking Maneuver, reduce the Damage by your Surgency.
+  (5)-[Passive]: Increase your Combat Rolls by 1(T) against Studied Opponents.
+  (6)-[Passive]: Increase the Combat Rolls of Studied Allies by 1(T).
+
+---
+
+[passive]
+# (1) Counted with the Progression tab's.
+skill.$choice.ranks += 1;
+# (4) A Studied Ally about to be Defeated by an Opponent's attack: your Surgency off the Damage, asked of you once a Round
+# (chat.mjs studiedShield).
+allow studied.shield;
+# (5) Your Strike and Wound against them, your Dodge against their attacks (chat.mjs studiedParts, studiedDodge).
+allow studied.opponentRolls;
+# (6) Studied (a mark) on them - your Tier - on your clock as long (chat.mjs studyCharacter).
+allow studied.allyRolls;
+
+# (2) As the Round ends: who, among those that used an Attacking Maneuver in it, asked - Studied through the Round beginning
+# (chat.mjs studyCharacter). Automatic by default, its Triggered/Automatic button.
+[triggered/end-of-round, effect 2]
+studyCharacter();
+
+# (3) Automatic by default, its Triggered/Automatic button.
+[triggered/defeat-opponent, 1/round, effect 3]
+requires defeatedStudied;
+ki.value += surgency;

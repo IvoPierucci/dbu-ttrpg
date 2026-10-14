@@ -547,7 +547,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   // Hit by an Opponent's attack, not an Ally's (Superior's).
   "byOpponent",
   // At Defeat's Life Points (Undying's).
-  "atDefeat"]);
+  "atDefeat",
+  // The one Defeated was the one you Studied (Intelligent Fighter's).
+  "defeatedStudied"]);
 
 /**
  * Dice the character already has, named rather than written out.

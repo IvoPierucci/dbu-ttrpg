@@ -276,6 +276,14 @@ const PREDICATES = {
   /** At the Life Points they would be Defeated at, or below - Undying (2)'s "when you would have been Defeated". */
   atDefeat: scope => (Number(scope.data?.life?.value) || 0) <= (Number(scope.data?.life?.min) || 0),
 
+  /** Intelligent Fighter (3): the one Defeated was the one you Studied, while it lasts. */
+  defeatedStudied: scope => {
+    const studied = scope.data?.parent?.getFlag?.("dbu-ttrpg", "studied");
+    const combat = globalThis.game?.combat;
+    return Boolean(scope.context?.defeatedUuid) && (studied?.uuid === scope.context.defeatedUuid)
+      && (studied.combatId === (combat?.id ?? "none")) && ((combat?.round ?? 0) <= (Number(studied.through) || 0));
+  },
+
   /** Surging (5): the one Defeated was your Focus. */
   defeatedFocus: scope => Boolean(scope.context?.defeatedUuid)
     && (scope.context.defeatedUuid === (scope.data?.parent?.getFlag?.("dbu-ttrpg", "surgingFocus") ?? "")),

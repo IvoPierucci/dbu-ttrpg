@@ -92,6 +92,10 @@ async function startRound(combat) {
     await edgeReached(actor, EDGES.ROUND);
 
     lastAttacks.set(actor.uuid, Number(actor.system.attacksThisRound) || 0);
+    // And on them, for what still asks once their count is reset - Intelligent Fighter's "has used at least 1 Attacking
+    // Maneuver during this Combat Round", asked of everyone as the Round ends.
+    await actor.setFlag("dbu-ttrpg", "roundAttacks", { combatId: combat.id, round: (combat.round ?? 1) - 1,
+      n: Number(actor.system.attacksThisRound) || 0 });
     await actor.update(newRoundFor(actor));
     if (actor.system.foresight?.opponentUuid) await actor.update({ "system.foresight": FORESEEN_NOTHING });
     await fireMoment(actor, "start-of-round");

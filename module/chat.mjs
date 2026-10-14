@@ -13031,6 +13031,88 @@ export async function dancerHype(actor) {
   return setResource(actor, "tension", held - 1);
 }
 
+/** Attacking Maneuvers this one used in the Round just ended - read before or after its count is reset. */
+function attackedLastRound(actor) {
+  const kept = actor?.getFlag?.(SCOPE, "roundAttacks");
+  const ended = (game.combat?.round ?? 1) - 1;
+  if ((kept?.combatId === game.combat?.id) && (kept?.round === ended)) return Number(kept.n) || 0;
+  return Number(actor?.system?.attacksThisRound) || 0;
+}
+
+/**
+ * Who this character has Studied, while it lasts - Intelligent Fighter's "until the end of the next Combat Round". Its uuid,
+ * or "".
+ */
+export function studiedBy(actor) {
+  const studied = actor?.getFlag?.(SCOPE, "studied");
+  if (!studied?.uuid || (studied.combatId !== (game.combat?.id ?? "none"))) return "";
+  return ((game.combat?.round ?? 0) <= (Number(studied.through) || 0)) ? studied.uuid : "";
+}
+
+/**
+ * Intelligent Fighter (2): "At the end of each Combat Round, select a Character (except yourself) that has used at least 1
+ * Attacking Maneuver during this Combat Round. That selected Character becomes 'Studied' until the end of the next Combat
+ * Round." Which, asked; kept on the one who studied them, through the Round now beginning. An Ally: Studied (a mark) - (6)'s
+ * 1(T), yours - on your clock as long.
+ */
+export async function studyCharacter(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const pool = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.type === "character")
+      && (attackedLastRound(token.actor) > 0))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!pool.length) return UNSPENT;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Intelligent Fighter - who to Study`,
+    [...pool.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const who = pool.find(each => each.uuid === picked);
+  if (!who) return UNSPENT;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.studied`]: { uuid: who.uuid, combatId: game.combat?.id ?? "none",
+    through: game.combat?.round ?? 0 } });
+  if (alliesOnScene(actor).some(ally => ally.uuid === who.uuid) && (actor.system.effects?.slots?.["studied.allyRolls"] === true)) {
+    const { setCondition } = await import("./conditions.mjs");
+    if (await setCondition(who, "studied", Math.max(1, Number(actor.system.tierOfPower) || 1))) {
+      await lasting(actor, { kind: KINDS.CONDITION, key: "studied", edge: EDGES.ROUND, next: true, on: who.uuid, source: "Intelligent Fighter" });
+    }
+  }
+  return settledNote({ speaker: ChatMessage.getSpeaker({ actor }) }, `${actor.name} Studies ${who.name}.`);
+}
+
+/** Intelligent Fighter (5): "Increase your Combat Rolls by 1(T) against Studied Opponents" - the Strike and the Wound. */
+function studiedParts(attacker, target) {
+  if (!target || (attacker?.system?.effects?.slots?.["studied.opponentRolls"] !== true)) return [];
+  if (studiedBy(attacker) !== target.uuid) return [];
+  if (alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return [];
+  return [{ label: "Studied", written: "+1(T)", value: Math.max(1, Number(attacker.system.tierOfPower) || 1) }];
+}
+
+/** And the Dodge against one of their attacks. */
+function studiedDodge(actor, attack) {
+  return studiedParts(actor, fromUuidSync(attack?.attackerUuid ?? ""));
+}
+
+/**
+ * Intelligent Fighter (4): "If a Studied Ally would be Defeated by the Damage from an Opponent's Attacking Maneuver, reduce
+ * the Damage by your Surgency." Asked of each of their Allies who Studied them, once a Round - the first who takes it.
+ */
+async function studiedShield(target, attacker, damage) {
+  const floor = target.system.effects?.slots?.["life.allowNegative"] ? -Infinity : (Number(target.system.life?.min) || 0);
+  if (!attacker || ((Number(target.system.life?.value) || 0) - damage > floor)) return damage;
+  const allies = alliesOnScene(target);
+  if (allies.some(ally => ally.uuid === attacker.uuid)) return damage;
+  for (const ally of allies) {
+    if ((ally.system?.effects?.slots?.["studied.shield"] !== true) || (studiedBy(ally) !== target.uuid)) continue;
+    if (ally.getFlag?.(SCOPE, "studiedShieldRound") === roundKey()) continue;
+    const surgency = Math.max(0, Number(ally.system.surgency) || 0);
+    if (!surgency) continue;
+    const answer = await askPlayerChoice(ally, `${ally.name}: Intelligent Fighter - ${target.name} would be Defeated`,
+      [{ value: "yes", label: `Reduce the Damage by ${surgency}` }, { value: "no", label: "No" }]);
+    if (answer !== "yes") continue;
+    await requestActorUpdate(ally, { [`flags.${SCOPE}.studiedShieldRound`]: roundKey() });
+    return Math.max(0, damage - surgency);
+  }
+  return damage;
+}
+
 /**
  * Spectator (2): "[Triggered/Start of Turn]: Exit the Spectator State." Asked as the turn begins, before its Moment - so (3),
  * "If you did not use the second effect", reads the answer: left, it is no longer theirs.
@@ -18931,7 +19013,7 @@ async function resolveAttackWork(message, attack) {
     // and what it is worth against each of them is not the same number.
     const analysisParts = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target),
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
-      ...brigandParts(attacker, target, "strike")]
+      ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target)]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
@@ -20511,6 +20593,7 @@ async function rollAttackWoundWork(message, attack) {
       ...lockOnParts(attacker, target),
       ...enemyParts(attacker, target),
       ...brigandParts(attacker, target, "wound"),
+      ...studiedParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
       { label: attack.technique?.name ?? "Technique",
         value: techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),
@@ -20719,6 +20802,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...analysisBonus(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Lock On: a Target held, every other one's attack Dodged at 1(T) less.
   parts.push(...lockOnDodge(actor, attack));
+  // Intelligent Fighter (5): the attack of one you Studied.
+  parts.push(...studiedDodge(actor, attack));
   // Mind Reading's, against the one who read: the Dodge, and Combat Telepath's on it.
   parts.push(...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }));
   // Telepathy: Defense Value 1(bT) higher beside a mind it is linked with.
@@ -23058,7 +23143,10 @@ async function applyAttackDamage(message, target, attack) {
   // normally would from this Attacking Maneuver" - and the piece loses 1 Break Value, below.
   const atApparel = own.hit && !isAbsoluteMiss(own)
     && (attack.modifiers ?? []).some(modifier => modifier.atApparel);
-  const damage = atApparel ? Math.floor(own.damage / 2) : own.damage;
+  const settledDamage = atApparel ? Math.floor(own.damage / 2) : own.damage;
+  // Intelligent Fighter (4): a Studied Ally about to be Defeated - their Surgency off it, asked.
+  const damage = (own.hit && !isAbsoluteMiss(own) && (settledDamage > 0))
+    ? await studiedShield(target, fromUuidSync(attack.attackerUuid ?? ""), settledDamage) : settledDamage;
 
   // Sweeping: "if you deal Damage with this Attacking Maneuver, double the amount of
   // Diminishing Defense stacks a target would receive from it." Settled here because

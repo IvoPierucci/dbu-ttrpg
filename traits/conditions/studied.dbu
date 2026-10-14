@@ -1,0 +1,17 @@
+id: studied
+name: Studied
+kind: conditions
+maxStacks: 10
+# Not a Combat Condition: what Intelligent Fighter's (6) gives an Ally it Studied, held on the Namekian's clock till the end of
+# the next Combat Round - its stacks their Tier.
+combatCondition: no
+source: Core Rule
+description: >
+  Studied by an Ally's Intelligent Fighter: Combat Rolls 1(T) higher until the end of the next Combat Round.
+text: >
+  Intelligent Fighter (6): Increase the Combat Rolls of Studied Allies by 1(T).
+
+---
+
+[passive]
+combatRolls += stacks;

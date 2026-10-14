@@ -111,6 +111,11 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  studyCharacter: {
+    args: [0, 0],
+    doc: "Intelligent Fighter (2): a Character who attacked this Round picked - Studied till the end of the next (chat.mjs "
+       + "studyCharacter)."
+  },
   spectatorCheer: {
     args: [0, 0],
     doc: "Spectator (1): an Ally picked, their Combat Rolls 1(bT) till the start of your next turn (chat.mjs spectatorCheer)."
