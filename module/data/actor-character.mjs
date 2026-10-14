@@ -1933,6 +1933,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const lastLifeMax = Number(this.parent?._dbuLifeMax) || 0;
     this.threshold = { key: lastLifeMax ? DBUCharacterData.thresholdKey(this.life.value, lastLifeMax) : "healthy" };
 
+    // Neko Majin-Dama's x: "your number of Integrated Majin-Dama (even if they are Inactive)" - and (5)'s none.
+    this.majinDama = { integrated: Array.from(this.parent?.items ?? []).filter(item => (item.type === "gear")
+      && (item.system?.gearId === "majin-dama") && (item.system?.integrated === true)).length };
+
     // The earliest phase: conditions may read Scores, but amounts may only use (bT),
     // which follows from Power Level alone. (T) is not settled yet.
     runPhase(this, "tier");

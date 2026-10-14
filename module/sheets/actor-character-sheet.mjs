@@ -470,6 +470,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       teleportGear: DBUCharacterSheet._onTeleportGear,
       equipGear: DBUCharacterSheet._onEquipGear,
       switchIntegrated: DBUCharacterSheet._onSwitchIntegrated,
+      renewMajinDama: DBUCharacterSheet._onRenewMajinDama,
       layerGear: DBUCharacterSheet._onLayerGear,
       wieldGear: DBUCharacterSheet._onWieldGear,
       attuneGear: DBUCharacterSheet._onAttuneGear,
@@ -1254,6 +1255,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       list.sort((a, b) => ((worn(a) < 0) - (worn(b) < 0)) || (worn(a) - worn(b))
         || a.name.localeCompare(b.name));
     }
+
+    // Neko Majin-Dama (5): none Integrated - a new one for 2 Karma Points, with the ARC's permission.
+    context.majinDamaRenew = (await import("../majin-dama.mjs")).renewOpen(this.actor);
 
     context.collisionDamage = COLLISION_DAMAGE;
     context.baseTierOfPower = system.baseTierOfPower ?? 1;
@@ -4101,6 +4105,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * Action is spent.
    */
   /** An Integrated Item made Active or Inactive - the No Effort Maneuver, in a Combat Encounter (integrated.mjs). */
+  static async _onRenewMajinDama() {
+    const { renewMajinDama } = await import("../majin-dama.mjs");
+    return renewMajinDama(this.actor);
+  }
+
   static async _onSwitchIntegrated(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     if (!item) return;

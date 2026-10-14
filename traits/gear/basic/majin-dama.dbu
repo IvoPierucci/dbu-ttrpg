@@ -1,0 +1,21 @@
+id: majin-dama
+name: Majin-Dama
+kind: gear
+itemType: accessory
+# A Special Accessory: made by Neko Majin-Dama (2), or with 2 Karma Points by its (5) - no Craft DC.
+special: true
+source: Core Rule
+description: >
+  Combat Rolls and Soak Value 1(T) higher, and Maximum Ki Points 2 higher for each Power Level, while worn or Active.
+text: >
+  Majin-Dama: A mystical orb originally contained in the body of a Neko Majin.
+  –Effects: Increase your Combat Rolls and Soak Value by 1(T) and your Maximum Ki Points by 2 for each Power Level reached.
+
+---
+
+# While worn - or Active, Integrated: "Accessories are Basic Items that can be equipped and apply benefits while
+# equipped."
+[passive]
+combatRolls += 1(T);
+soakValue += 1(T);
+ki.perLevel += 2;

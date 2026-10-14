@@ -197,6 +197,16 @@ export const VERBS = Object.freeze({
     doc: "A stack of one Combat Condition you suffer from taken off - which, asked where there are several - but the ones "
        + "named (Battle Tension's: not Pinned, Suffocating, Stress Exhaustion or Transfigured). None, its use unspent."
   },
+  integrateMajinDama: {
+    args: [0, 0],
+    doc: "Neko Majin-Dama (3): a Majin-Dama you possess and not Integrated - which, where several - Integrated, Active where it "
+       + "fits (majin-dama.mjs). None chosen, its use unspent."
+  },
+  expelMajinDama: {
+    args: [0, 0],
+    doc: "Neko Majin-Dama (4): an Integrated Majin-Dama - which, where several - expelled for 1 Action, dropped or Equipped "
+       + "(majin-dama.mjs). None chosen, its use unspent."
+  },
   cutthroatShove: {
     args: [0, 0],
     doc: "Cutthroat Teamwork (2): an Ally on an adjacent Square picked, a Might Clash against them - won, they may be moved "

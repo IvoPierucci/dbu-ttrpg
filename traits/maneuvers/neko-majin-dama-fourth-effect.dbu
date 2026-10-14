@@ -1,0 +1,23 @@
+id: neko-majin-dama-fourth-effect
+name: 4th effect of Neko Majin-Dama
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: neko-majin-dama
+fromEffect: 4
+source: Core Rule
+description: >
+  Neko Majin-Dama's fourth effect, as a Maneuver: an Instant, 1 Action - an Integrated Majin-Dama expelled, dropped or Equipped.
+text: >
+  (4)-[1/Round]: As an Instant Maneuver, you can spend 1 Action to expel an Integrated Majin-Dama from your body. When you do, it stops being Integrated and is dropped or Equipped (your choice).
+
+---
+
+# Owned by every character, listed while Neko Majin-Dama is had (`fromTrait`). An Instant costs no Action of its own: its
+# 1 Action paid as it is expelled - a Standard one on your turn, a Counter one off it. Refused with none Integrated or no
+# Action left (majin-dama.mjs whyNotMajinDama); which, and dropped or Equipped, asked (majin-dama.mjs expelMajinDama).
+[on used]
+expelMajinDama();

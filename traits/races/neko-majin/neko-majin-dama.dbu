@@ -1,0 +1,48 @@
+id: neko-majin-dama
+name: Neko Majin-Dama
+order: 1
+category: body
+importance: primary
+# (1) Illusion and Shapeshift, free and without their Requirements, gone with this (racial.mjs).
+grantsUnique: illusion, shapeshift
+# (2) "At Character Creation, create a Majin-Dama Special Accessory, which is Integrated into your Character" - made as this
+# is added, Active where it fits; gone with this while it is still on the sheet (racial.mjs `grantsGear`).
+grantsGear: majin-dama
+description: >
+  You possess a Majin-Dama, a wondrous ball stored in your body that grants you special abilities.
+addendum: >
+  Majin-Dama: A mystical orb originally contained in the body of a Neko Majin.
+  –Effects: Increase your Combat Rolls and Soak Value by 1(T) and your Maximum Ki Points by 2 for each Power Level reached.
+text: >
+  Neko Majin-Dama (Body): You possess a Majin-Dama, a wondrous ball stored in your body that grants you special abilities.
+  (1)-[Passive]: You gain access to the Illusion and Shapeshift Unique Abilities.
+  (2)-[Passive]: At Character Creation, create a Majin-Dama Special Accessory, which is Integrated into your Character. Another Character may take an Integrated Majin-Dama from you using the Snatch Special Maneuver if you are Defeated or Sleeping. That Character automatically wins the Clash if you are Defeated; if they lose the Clash while you are Sleeping, you lose the Sleeping Combat Condition. A stolen Majin-Dama stops being Integrated.
+  (3)-[1/Round]: You can spend 1 Action to Integrate a Majin-Dama you possess.
+  (4)-[1/Round]: As an Instant Maneuver, you can spend 1 Action to expel an Integrated Majin-Dama from your body. When you do, it stops being Integrated and is dropped or Equipped (your choice).
+  (5)-[Passive]: If you have no Integrated Majin-Dama, reduce your Combat Rolls and Soak Value by 2(T) and you cannot use Signature Techniques, Unique Abilities, or enter Transformations. While you are suffering from these effects, you may, with ARC permission, spend 2 Karma Points to create a new Majin-Dama and Integrate it (typically after performing some act of karmic significance).
+  (6)-[x/Encounter]: Use a Surge of your choice as an Instant Maneuver. x, for this effect, is equal to your number of Integrated Majin-Dama (even if they are Inactive).
+  (7)-[Triggered, x/Encounter]: When you make a roll of any kind, after seeing the result, you may reroll that roll. x, for this effect, is equal to your number of Integrated Majin-Dama (even if they are Inactive).
+
+---
+
+# (2) Snatch on a Defeated or Sleeping owner names an Integrated Majin-Dama too - won outright on a Defeated one, a lost
+# Clash waking a Sleeping one; taken, it is no longer Integrated (majin-dama.mjs, use-maneuver.mjs askSnatch, chat.mjs
+# settlePickpocket). Whoever has one Integrated, whatever their Traits.
+# (3), (4) Their own Maneuvers, listed while this is had (neko-majin-dama-third-effect, -fourth-effect).
+#
+# `majinDama.integrated` - "your number of Integrated Majin-Dama (even if they are Inactive)".
+[passive]
+# (5) And, while so, the Gear tab's button: a new one for 2 Karma Points, with the ARC's permission (majin-dama.mjs).
+if (majinDama.integrated == 0) {
+  combatRolls -= 2(T);
+  soakValue -= 2(T);
+  forbid signatureTechniques;
+  forbid uniqueAbilities;
+  forbid transformations;
+}
+allow nekoDama.renew;
+# (6) A Surge of your choice as an Instant Maneuver - the Surge Maneuver is one: uses more on it, x an Encounter.
+surge.uses += majinDama.integrated;
+# (7) Offered in the roll's after-the-fact window beside the Karmic Effects, x an Encounter: the Base Die rerolled, the
+# second result taken (chat.mjs majinRerollOption).
+allow nekoDama.reroll;

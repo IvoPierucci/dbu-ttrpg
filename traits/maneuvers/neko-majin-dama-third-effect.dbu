@@ -1,0 +1,22 @@
+id: neko-majin-dama-third-effect
+name: 3rd effect of Neko Majin-Dama
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: neko-majin-dama
+fromEffect: 3
+source: Core Rule
+description: >
+  Neko Majin-Dama's third effect, as a Maneuver: 1 Action to Integrate a Majin-Dama you possess.
+text: >
+  (3)-[1/Round]: You can spend 1 Action to Integrate a Majin-Dama you possess.
+
+---
+
+# Owned by every character, listed while Neko Majin-Dama is had (`fromTrait`). Refused with none to Integrate
+# (majin-dama.mjs whyNotMajinDama); which, where several - Active where it fits (majin-dama.mjs integrateMajinDama).
+[on used]
+integrateMajinDama();

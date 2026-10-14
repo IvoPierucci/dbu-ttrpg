@@ -441,6 +441,14 @@ async function runVerb(actor, call, context) {
       return setCondition(actor, key, (Number(stacks) || 0) - 1);
     }
 
+    case "integrateMajinDama": {
+      const { integrateMajinDama } = await import("../majin-dama.mjs");
+      return integrateMajinDama(actor);
+    }
+    case "expelMajinDama": {
+      const { expelMajinDama } = await import("../majin-dama.mjs");
+      return expelMajinDama(actor);
+    }
     case "cutthroatShove": {
       const { cutthroatShove } = await import("../chat.mjs");
       return cutthroatShove(actor);

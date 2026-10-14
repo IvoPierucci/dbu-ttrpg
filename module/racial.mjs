@@ -20,6 +20,8 @@
  *   uniqueRestrictions: <ids>       Restrictions those come with - God of Time's Straining and Difficult Time Freeze
  *   grantsUniqueInstead: 20         one already had, another of that TP Cost or less chosen instead - Psychic's
  *   grantsTalent: <ids>             Talents it gives - kept if the Trait is lost ("you do not lose that Talent")
+ *   grantsGear: majin-dama          a Special Item it makes as it is added - Neko Majin-Dama's Integrated Majin-Dama - gone
+ *                                   with it while still on the sheet
  *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
  *   tail: true                      a tail it may lose - the Options tab's Tail lost box (the `tailed` question)
  *
@@ -581,6 +583,14 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
   if (!item) return null;
   await giveGrants(actor, item, made.grants, trait.name);
   await automateAll(actor, item);
+  // A Special Item it makes - Neko Majin-Dama's: "At Character Creation, create a Majin-Dama Special Accessory, which is
+  // Integrated into your Character".
+  for (const gearId of listOf(trait.grantsGear)) {
+    const { MAJIN_DAMA, damaItemData } = await import("./majin-dama.mjs");
+    if (gearId !== MAJIN_DAMA) continue;
+    const data = await damaItemData(actor, { grantedBy: item.id });
+    if (data) await actor.createEmbeddedDocuments("Item", [data]);
+  }
   // Natural Armor it gives - Survivor's Plating - made before its Options, which may put a Quality on it.
   if (trait.naturalArmor) await (await import("./natural-armor.mjs")).grantNaturalArmor(actor, item, String(trait.naturalArmor));
   for (const option of chosenOptions(item)) await madeByOption(actor, item, option);

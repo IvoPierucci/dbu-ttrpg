@@ -3620,9 +3620,16 @@ async function askTalk(actor, target, maneuver) {
   return chosen;
 }
 
-/** Snatch: which of their Basic Items - "who you know possesses a certain Basic Item". Null if they have none, or none is named. */
+/**
+ * Snatch: which of their Basic Items - "who you know possesses a certain Basic Item". Null if they have none, or none is
+ * named. And Neko Majin-Dama (2)'s: "Another Character may take an Integrated Majin-Dama from you using the Snatch Special
+ * Maneuver if you are Defeated or Sleeping" - named, `majinDama` says which of the two they are.
+ */
 async function askSnatch(actor, target, maneuver) {
-  const items = Array.from(target.items ?? []).filter(item => (item.type === "gear") && (item.system.itemType === "basic"));
+  const { snatchableDama } = await import("./majin-dama.mjs");
+  const dama = snatchableDama(target);
+  const items = [...Array.from(target.items ?? []).filter(item => (item.type === "gear") && (item.system.itemType === "basic")),
+    ...dama.map(entry => entry.item)];
   if (!items.length) {
     ui.notifications.warn(`${target.name} has no Basic Item to take.`);
     return null;
@@ -3641,7 +3648,9 @@ async function askSnatch(actor, target, maneuver) {
     rejectClose: false
   });
   const item = (picked && (picked !== "cancel")) ? target.items.get(picked) : null;
-  return item ? { itemId: item.id, itemName: item.name } : null;
+  const of = dama.find(entry => entry.item.id === item?.id);
+  return item ? { itemId: item.id, itemName: item.name,
+    ...(of ? { majinDama: { defeated: of.defeated, sleeping: of.sleeping && !of.defeated } } : {}) } : null;
 }
 
 /**
@@ -5114,6 +5123,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       return false;
     }
 
+    // Neko Majin-Dama (3), (4): nothing to Integrate, or none Integrated - or (4)'s 1 Action not left.
+    const noDama = (await import("./majin-dama.mjs")).whyNotMajinDama(actor, maneuver);
+    if (noDama) {
+      ui.notifications.warn(noDama);
+      return false;
+    }
+
     // "If you are the Grappler in a Grapple", which the entry then says again on a line
     // of its own.
     const nobodyToPin = whyNotPin(actor, maneuver);
@@ -5689,6 +5705,11 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await postManeuver(actor, maneuver, {
         note: magicTrickNote(actor, maneuver, trick, null)
       })
+    // Neko Majin-Dama (2): "That Character automatically wins the Clash if you are Defeated" - none rolled, it is taken.
+    : snatching?.majinDama?.defeated
+    ? await postManeuver(actor, maneuver, {
+        note: await (await import("./chat.mjs")).takeMajinDama(actor, targetActor, snatching.itemId)
+      })
     : maneuver.clash
     ? await postSkillClash(actor, targetActor, maneuver, {
         ...(maneuver.magicTrick
@@ -5702,7 +5723,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         // Bluff Attack's: Staggered and Shaken won, their Exploit lost.
         ...(maneuver.bluffs ? { bluffAttack: { applied: false } } : {}),
         // Snatch's: won, the Basic Item named is taken.
-        ...(snatching ? { pickpocket: { applied: false, steals: "basic", itemId: snatching.itemId } } : {}),
+        ...(snatching ? { pickpocket: { applied: false, steals: "basic", itemId: snatching.itemId,
+          ...(snatching.majinDama ? { majinDama: true, sleeping: snatching.majinDama.sleeping } : {}) } } : {}),
         // Search's: won, no longer Oblivious of them.
         ...((maneuver.id === "search") ? { search: { applied: false } } : {}),
         // Winning leaves a Condition, and whether it leaves a second one depends on what

@@ -1445,7 +1445,24 @@ async function settlePickpocket(message, clash) {
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, pickpocket: { ...clash.pickpocket, applied: true } });
 
   if (whoWonClash(clash.result) !== "challenger") {
+    // Neko Majin-Dama (2): "if they lose the Clash while you are Sleeping, you lose the Sleeping Combat Condition."
+    if (clash.pickpocket.sleeping && ((Number(victim.system.conditions?.sleeping) || 0) > 0)) {
+      if (victim.isOwner) await (await import("./conditions.mjs")).setCondition(victim, "sleeping", 0);
+      else {
+        const { replaceObject } = await import("./conditions.mjs");
+        const held = { ...(victim.system.conditions ?? {}) };
+        delete held.sleeping;
+        await requestActorUpdate(victim, { "system.conditions": replaceObject(held) });
+      }
+      await settledNote(message, `${victim.name} wakes, and keeps the Majin-Dama.`);
+      return;
+    }
     await settledNote(message, `${victim.name} notices, and keeps what is theirs.`);
+    return;
+  }
+  // Neko Majin-Dama (2): an Integrated Majin-Dama named - taken, no longer Integrated.
+  if (clash.pickpocket.majinDama) {
+    await settledNote(message, await takeMajinDama(thief, victim, clash.pickpocket.itemId));
     return;
   }
   const kinds = (clash.pickpocket.steals === "basic") ? ["basic"] : [clash.pickpocket.steals];
@@ -1472,6 +1489,19 @@ async function settlePickpocket(message, clash) {
   await requestCreateItem(thief, data);
   await requestDeleteItem(victim, item.id);
   await settledNote(message, `${thief.name} steals ${item.name} from ${victim.name}.`);
+}
+
+/**
+ * Neko Majin-Dama (2): an Integrated Majin-Dama taken with the Snatch Maneuver - won, or a Defeated owner's, which "automatically
+ * wins the Clash". "A stolen Majin-Dama stops being Integrated": the taker's copy unworn. What happened, said.
+ */
+export async function takeMajinDama(thief, victim, itemId) {
+  const item = victim?.items?.get(itemId ?? "");
+  if (!thief || !item) return `${victim?.name ?? "They"} no longer has that Majin-Dama.`;
+  const { stolenDamaData } = await import("./majin-dama.mjs");
+  await requestCreateItem(thief, stolenDamaData(item));
+  await requestDeleteItem(victim, item.id);
+  return `${thief.name} takes ${item.name} from ${victim.name}. It is no longer Integrated.`;
 }
 
 /**
@@ -5013,7 +5043,8 @@ function renderCheckKarma(message, html) {
   // A Karmic Chance already taken on this die: what a Trait gives is still offered, a second Karma Point is not.
   const options = [...(check.karmaSpent ? [] : karmicOptionsFor(actor, message)
     .filter(answersAfterTheFact)
-    .filter(effect => !(effect.script ?? "").includes("clash."))), ...resolveRerollOption(actor, check)];
+    .filter(effect => !(effect.script ?? "").includes("clash."))), ...resolveRerollOption(actor, check),
+    ...damaRerollOption(actor)];
   if (!options.some(effect => effect.available)) return;
 
   const button = document.createElement("button");
@@ -5228,7 +5259,7 @@ function offerableTo(situation, message) {
       if (effect.blocked) return effect;
       const reason = whyNot(effect, situation);
       return reason ? { ...effect, blocked: reason, available: false } : effect;
-    }), ...resolveRerollOption(situation.actor, situation.side)];
+    }), ...resolveRerollOption(situation.actor, situation.side), ...damaRerollOption(situation.actor)];
 }
 
 /** Earthling Resolve (2)'s reroll, by the key it is picked with in the window. */
@@ -5264,13 +5295,61 @@ async function takeResolveReroll(message, situation) {
 async function takeResolveOnCheck(message, actor, check) {
   if (!resolveRerollOption(actor, check).some(effect => effect.available)) return;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.resolveRerollRound`]: roundKey() });
-  const again = await rerollBaseDie(actor, check, RESOLVE_CALL);
+  return rerolledCheck(message, actor, check, RESOLVE_CALL);
+}
+
+/** Neko Majin-Dama (7)'s reroll, by the key it is picked with in the window. */
+const DAMA_REROLL = "neko-majin-dama";
+/** And what it does: "reroll that roll" - the Base Die again, the second result taken. */
+const DAMA_CALL = Object.freeze({ verb: "reroll", forced: true, label: "Neko Majin-Dama" });
+/** Each use, kept with the Encounter's (cleared as one begins and ends). */
+const DAMA_USE = "encounter:neko-majin-dama.reroll";
+
+/**
+ * Neko Majin-Dama (7): "When you make a roll of any kind, after seeing the result, you may reroll that roll. x, for this
+ * effect, is equal to your number of Integrated Majin-Dama (even if they are Inactive)." Offered beside the Karmic
+ * Effects, wherever they are - the Base Die, as Karmic Chance's; x spent, said rather than hidden.
+ */
+function damaRerollOption(actor) {
+  if (actor?.system?.effects?.slots?.["nekoDama.reroll"] !== true) return [];
+  const most = Number(actor.system.majinDama?.integrated) || 0;
+  if (most <= 0) return [];
+  const left = most - (actor.system.usedManeuvers ?? []).filter(entry => entry === DAMA_USE).length;
+  return [{ key: DAMA_REROLL, trait: true, when: "after", name: "Neko Majin-Dama",
+    text: "After seeing the result, reroll that roll.", costLabel: `Reroll (${Math.max(0, left)}/${most} left)`,
+    available: left > 0, ...((left > 0) ? {} : { blocked: `${most}/Combat Encounter` }) }];
+}
+
+/** One of its x spent. */
+function spendDamaReroll(actor) {
+  return requestActorUpdate(actor, { "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), DAMA_USE] });
+}
+
+/** Neko Majin-Dama (7) taken on a Clash or an attack: one of its x spent, the side worked out again. */
+async function takeDamaReroll(message, situation) {
+  const { actor } = situation;
+  if (!damaRerollOption(actor).some(effect => effect.available)) return;
+  await spendDamaReroll(actor);
+  const given = { spent: [], slots: {}, queue: [DAMA_CALL] };
+  return (situation.kind === "clash") ? resettleClash(message, situation, given) : resettleAttack(message, situation, given);
+}
+
+/** And on a lone Check. */
+async function takeDamaOnCheck(message, actor, check) {
+  if (!damaRerollOption(actor).some(effect => effect.available)) return;
+  await spendDamaReroll(actor);
+  return rerolledCheck(message, actor, check, DAMA_CALL);
+}
+
+/** A lone Check's Base Die rerolled by a Trait (Earthling Resolve, Neko Majin-Dama): the card posted again in its place. */
+async function rerolledCheck(message, actor, check, call) {
+  const again = await rerollBaseDie(actor, check, call);
   const told = await recheck(actor, check, again.total);
   await ChatMessage.create({
     speaker: message.speaker,
     flavor: told?.flavor ?? check.flavor,
     content: checkCard({
-      parts: `Earthling Resolve &middot; ${breakdownText(again.lines, again.total)}`,
+      parts: `${Handlebars.escapeExpression(call.label)} &middot; ${breakdownText(again.lines, again.total)}`,
       total: again.total,
       outcome: again.outcome,
       owner: actor.uuid
@@ -5444,6 +5523,7 @@ function answersAfterTheFact(effect) {
  */
 export async function takeAfterTheFact(message, situation, key) {
   if (key === RESOLVE_REROLL) return takeResolveReroll(message, situation);
+  if (key === DAMA_REROLL) return takeDamaReroll(message, situation);
   const { actor } = situation;
   const effect = allKarmicEffects().find(e => e.key === key);
   if (!effect) return;
@@ -5471,6 +5551,7 @@ export async function takeAfterTheFact(message, situation, key) {
  */
 async function takeOnCheck(message, actor, check, key) {
   if (key === RESOLVE_REROLL) return takeResolveOnCheck(message, actor, check);
+  if (key === DAMA_REROLL) return takeDamaOnCheck(message, actor, check);
   const effect = allKarmicEffects().find(e => e.key === key);
   if (!effect) return;
 
