@@ -15325,6 +15325,22 @@ function offerGreedStrike(message, actor, target) {
 }
 
 /**
+ * Feline Build (4): "If you receive no Damage from an Attacking Maneuver that targets you, you may use the Signature Technique
+ * Maneuver as an Out-of-Sequence Maneuver. If you do, your Attacking Maneuver must be a Copied Technique." Offered on the
+ * attack's card while they hold one - once a Round, counted when taken.
+ */
+function offerFelineTechnique(message, actor) {
+  if (!game.combat?.started || actor.system?.defeated || (actor.system?.effects?.slots?.["feline.copiedCounter"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "felineRound") === roundKey()) return;
+  if (!Array.from(actor.items ?? []).some(item => (item.type === "maneuver") && item.getFlag?.(SCOPE, "copied"))) return;
+  const offers = message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? [];
+  if (offers.some(offer => offer.grants?.feline && (offer.actorUuid === actor.uuid))) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique",
+    maneuverName: "Signature Technique", reason: "Feline Build - a Copied Technique", technique: { via: "", copied: true },
+    grants: { feline: true } } });
+}
+
+/**
  * Brigand Combat (2): "If you deal Damage to an Opponent with one of your Attacking Maneuvers, you may select an Ally adjacent
  * to your Opponent (that was targeted by this Attacking Maneuver but did not take Damage from this Attacking Maneuver). That
  * Ally may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If they do, they must target the Opponent that
@@ -16969,11 +16985,18 @@ function grantedLongShot(attacker, attack, target) {
  */
 async function takeTechniqueOffer(message, actor, offer) {
   const feature = offer.technique?.feature ?? "";
-  // Any of them where the offer names no Advantage - Disarming Demeanor's.
-  const techniques = actor.items.filter(item => (item.type === "maneuver") && (offer.technique?.any
+  // Feline Build (4)'s, once a Round.
+  if (offer.grants?.feline && (actor.getFlag?.(SCOPE, "felineRound") === roundKey())) {
+    ui.notifications.warn("Feline Build has been used this Combat Round.");
+    return;
+  }
+  // Any of them where the offer names no Advantage - Disarming Demeanor's; a Copied one alone - Feline Build's.
+  const techniques = actor.items.filter(item => (item.type === "maneuver") && (offer.technique?.copied
+    ? Boolean(item.getFlag?.(SCOPE, "copied")) : offer.technique?.any
     ? Boolean(item.system.signature?.level) : (item.system.advantages ?? []).includes(feature)));
   if (!techniques.length) {
-    ui.notifications.warn(offer.technique?.any ? `${actor.name} has no Signature Technique.`
+    ui.notifications.warn(offer.technique?.copied ? `${actor.name} has no Copied Technique.`
+      : offer.technique?.any ? `${actor.name} has no Signature Technique.`
       : `${actor.name} has no Signature Technique with ${feature}.`);
     return;
   }
@@ -16992,6 +17015,7 @@ async function takeTechniqueOffer(message, actor, offer) {
   const used = await useTechnique(actor, chosen.id, { via: offer.technique.via ?? "",
     outOfSequence: true, targetUuid: offer.targetUuid ?? "" });
   if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  if (used && offer.grants?.feline) await requestActorUpdate(actor, { [`flags.${SCOPE}.felineRound`]: roundKey() });
 }
 
 /**
@@ -23725,6 +23749,8 @@ async function applyAttackDamage(message, target, attack) {
     await requestActorUpdate(target, { [`flags.${SCOPE}.damagedSinceTurn`]: true });
   }
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerFlowExploit(message, target, armsUser);
+  // Feline Build (4): no Damage from an attack aimed at you - hit or not - a Copied Technique out of sequence.
+  if (((damage <= 0) || isAbsoluteMiss(own)) && armsUser && (armsUser.uuid !== target.uuid)) offerFelineTechnique(message, target);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerUnscathedExploit(message, target, armsUser);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerAngelicCounter(message, target, armsUser);
   // "If you are hit by an Attacking Maneuver and take no Damage" - Bio-Suit's.

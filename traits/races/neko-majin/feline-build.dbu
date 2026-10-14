@@ -1,0 +1,32 @@
+id: feline-build
+name: Feline Build
+order: 3
+category: body
+importance: secondary
+# (1) Two Bestial Traits of these four, chosen as this is gained - in the Other Traits list, taken off with it (racial.mjs
+# `grantsOther`, `grantsOtherCount`, `grantsOtherFrom`). None of them written yet: said, and added by hand later.
+grantsOther: bestial
+grantsOtherCount: 2
+grantsOtherFrom: bestial-build, land-based-beast, claws, fangs
+description: >
+  While Neko Majins may not be cats, they share many of the same traits.
+text: >
+  Feline Build (Body): While Neko Majins may not be cats, they share many of the same traits.
+  (1)-[Passive]: At Character Creation, gain two Bestial Traits from the following options: Bestial Build, Land-Based Beast, Claws, or Fangs.
+  (2)-[Passive]: Increase the Dice Score of your Perception Skill Checks by 2.
+  (3)-[Triggered/Start of Turn]: While you have an Integrated Majin-Dama, regain 5(bT) Ki Points.
+  (4)-[Triggered, 1/Round]: If you receive no Damage from an Attacking Maneuver that targets you, you may use the Signature Technique Maneuver as an Out-of-Sequence Maneuver. If you do, your Attacking Maneuver must be a Copied Technique.
+
+---
+
+[passive]
+# (2) The roll, shown as the Skill's number on the sheet.
+skill.perception += 2;
+# (4) Targeted by an Opponent's attack and no Damage from it: the Signature Technique Maneuver offered on its card out of
+# sequence, a Copied Technique alone - once a Round, counted when taken (chat.mjs offerFelineTechnique).
+allow feline.copiedCounter;
+
+# (3) "While you have an Integrated Majin-Dama" - Inactive too.
+[triggered/start-of-turn, effect 3]
+requires majinDama.integrated > 0;
+ki.value += 5(bT);

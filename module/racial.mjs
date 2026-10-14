@@ -20,6 +20,8 @@
  *   uniqueRestrictions: <ids>       Restrictions those come with - God of Time's Straining and Difficult Time Freeze
  *   grantsUniqueInstead: 20         one already had, another of that TP Cost or less chosen instead - Psychic's
  *   grantsTalent: <ids>             Talents it gives - kept if the Trait is lost ("you do not lose that Talent")
+ *   grantsOther: bestial            an Other Trait of that group chosen as it is added - `grantsOtherCount` of them, of
+ *                                   `grantsOtherFrom` alone where it names some (Feline Build's two of four)
  *   grantsGear: majin-dama          a Special Item it makes as it is added - Neko Majin-Dama's Integrated Majin-Dama - gone
  *                                   with it while still on the sheet
  *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
@@ -597,7 +599,11 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
   if (trait.defaultCostume) await askDefaultCostume(actor);
   // An Other Trait it gives, chosen now - Bestial Evolution's "Select and gain a Bestial Trait of your choice".
   // Fallen Idol's two: one of each group it names.
-  for (const group of listOf(trait.grantsOther)) await grantOtherTrait(actor, item, group);
+  // Feline Build's: two, of the four it names.
+  const from = listOf(trait.grantsOtherFrom);
+  for (const group of listOf(trait.grantsOther)) {
+    for (let n = 0; n < Math.max(1, Number(trait.grantsOtherCount) || 1); n++) await grantOtherTrait(actor, item, group, from);
+  }
   return item;
 }
 
@@ -606,9 +612,9 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
  * Evolution Trait": the ones not had, offered; the one chosen made, given by it, so it is taken off with it. None written
  * yet, or none chosen, it is said - and one can be added by hand from the Other Traits list.
  */
-async function grantOtherTrait(actor, item, group) {
+async function grantOtherTrait(actor, item, group, from = []) {
   const had = new Set(actor.system?.racialTraits ?? []);
-  const offered = traitsOfKind("other", group).filter(trait => !had.has(trait.id))
+  const offered = traitsOfKind("other", group).filter(trait => !had.has(trait.id) && (!from.length || from.includes(trait.id)))
     .sort((a, b) => a.name.localeCompare(b.name));
   const name = otherGroupName(group);
   if (!offered.length) {
