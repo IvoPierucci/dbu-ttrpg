@@ -192,7 +192,9 @@ export function whyNotUnite(joiner, attack, attacker, { actionsLeft = () => 1 } 
 export async function joinUnitedAttack(attack, joiner, { attacker = null, techniques = [], duel = false } = {}) {
   // Imported here: the combat module brings the data models with it, which a harness has not got.
   const { actionsLeft, refundActions, spendActions } = await import("./combat.mjs");
-  const refused = whyNotUnite(joiner, attack, attacker, { actionsLeft });
+  // Neko Mimicry (5): the Ally whose Copied Technique it is joins "without spending an Action" - still adjacent.
+  const free = Boolean(attack.mimicryAlly) && (attack.mimicryAlly === joiner.uuid);
+  const refused = whyNotUnite(joiner, attack, attacker, { actionsLeft: free ? () => 1 : actionsLeft });
   if (refused) {
     ui.notifications.warn(refused);
     return null;
@@ -243,9 +245,9 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   }
 
   // Paid: 1 Action, then the Ki and the wager together - both come out of Capacity.
-  if (!await spendActions(joiner, 1)) return null;
+  if (!free && !await spendActions(joiner, 1)) return null;
   if (!await spendManeuverCost(joiner, { name: united.name }, cost + wager)) {
-    await refundActions(joiner, 1);
+    if (!free) await refundActions(joiner, 1);
     return null;
   }
   await recordManeuverUse(joiner, united);

@@ -682,6 +682,16 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       <span class="dbu-respond-name">Majin See, Majin Do: Morale Clash</span>
       <span class="dbu-respond-source">won, Guard Down against this attack</span></label>`);
   }
+  // Neko Mimicry (5): "If you use a Copied Technique possessed by a Character" - an Ally's, the United Attack free of its
+  // Action for them; an Opponent's, the Morale Clash. Once a Round; whose it was, on the scene (by name for an older copy).
+  const mimicry = technique.copied && (actor.system.effects?.slots?.["mimicry.owner"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "mimicryOwnerRound") !== round) ? mimicryOwner(actor, technique) : null;
+  if (mimicry) {
+    fields.push(`<label class="dbu-respond-option"${tip("neko-mimicry", 5)}><input type="checkbox" name="mimicry"/>
+      <span class="dbu-respond-name">Neko Mimicry: ${Handlebars.escapeExpression(mimicry.name)}</span>
+      <span class="dbu-respond-source">${(mimicry.kind === "ally") ? "United Attack without an Action"
+        : "Morale Clash, won: Guard Down for this attack"}</span></label>`);
+  }
   // Earthling-Raised: "When you use the Signature Technique Maneuver, for this instance of using your chosen Signature
   // Technique, you may either: Apply an Energy Charge to that Attacking Maneuver. Add a single Advantage with a TP cost of
   // up to 10 TP to your chosen Signature Technique." Every time; one with a choice of its own - Trick Attack's Skill - has
@@ -819,7 +829,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
           const box = name => Boolean(form.querySelector(`[name="${name}"]`)?.checked);
           return { transformed: box("transformed"), finalChance: box("finalChance"),
             maliceBacklash: Math.min(maliceMost, num("maliceBacklash")), mentality: box("mentality"),
-            moraleGuard: box("moraleGuard"), creativeCondition: box("creativeCondition"),
+            moraleGuard: box("moraleGuard"), creativeCondition: box("creativeCondition"), mimicry: box("mimicry"),
             lifeWager: Math.min(warriorMost, num("lifeWager")), lastResort: lastResort && box("lastResort"),
             questingLife: Math.min(questingMost, num("questingLife")),
             channeler: channeled && box("channeler"),
@@ -902,6 +912,12 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
   else delete answers.lastResort;
   if (answers.moraleGuard) await actor.setFlag("dbu-ttrpg", "moraleClashed", game.combat?.id ?? "none");
   else delete answers.moraleGuard;
+  // Neko Mimicry (5)'s, once a Round.
+  if (answers.mimicry && mimicry) {
+    await actor.setFlag("dbu-ttrpg", "mimicryOwnerRound", round);
+    answers.mimicry = mimicry;
+  }
+  else delete answers.mimicry;
   // What the two Majin Traits put on its Wound Roll, and their uses spent.
   const woundExtra = [];
   if (answers.maliceBacklash) {
@@ -2293,7 +2309,8 @@ export function definitionOf(item) {
     // God Finisher, the door - not its Technique, whose mark is under `signature`.
     ...(item.system.godFinisher ? { godFinisher: true } : {}),
     // Quick Learner's: a Copied Technique, and one that came from it at all (Copied, or kept for its TP).
-    ...(item.getFlag?.("dbu-ttrpg", "copied") ? { copied: true } : {}),
+    ...(item.getFlag?.("dbu-ttrpg", "copied") ? { copied: true, copiedFrom: item.getFlag("dbu-ttrpg", "copied")?.fromUuid ?? "",
+      copiedFromName: item.getFlag("dbu-ttrpg", "copied")?.from ?? "" } : {}),
     ...(item.getFlag?.("dbu-ttrpg", "fromQuickLearner") ? { fromQuickLearner: true } : {}),
     transforms: item.system.transforms,
     stressPerAction: Number(item.system.stressPerAction) || 0,
@@ -2367,6 +2384,67 @@ export function techniqueDefinition(item) {
     godFinisher: sig.godFinisher,
     ...(ultimate ? { usageLimit: { amount: 1, per: "encounter" } } : {})
   };
+}
+
+/**
+ * Neko Mimicry (5): whose a Copied Technique was, on the scene - its uuid, or its name for a copy made before it was kept -
+ * and whether an Ally or an Opponent: their token's disposition against yours. Null if they are not here, or yourself.
+ */
+function mimicryOwner(actor, technique) {
+  const tokens = globalThis.canvas?.tokens?.placeables ?? [];
+  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const token = tokens.find(each => each.actor && technique.copiedFrom && (each.actor.uuid === technique.copiedFrom))
+    ?? tokens.find(each => each.actor && !technique.copiedFrom && technique.copiedFromName
+      && (each.actor.name === technique.copiedFromName));
+  const owner = token?.actor;
+  if (!owner || (owner.uuid === actor.uuid) || (own === undefined)) return null;
+  return { kind: (token.document?.disposition === own) ? "ally" : "opponent", uuid: owner.uuid, name: owner.name };
+}
+
+/**
+ * Neko Mimicry (6): "When using a Copied Technique, you may apply the Multi-Profile Super Profile to that Attacking
+ * Maneuver. If you do, you must select a Profile that is used by at least 1 of your Signature Techniques." Once an
+ * Encounter. Elemental Blade's arrangement: an attack has one Super Profile, so one it has already is asked to be kept or
+ * not; Multi-Profile's KP is paid; what its Profile hands out comes with it.
+ *
+ * @returns {Promise<?{maneuver: object, declared: object}>} null when a question was put away
+ */
+export async function mimicryMultiProfile(actor, maneuver, declared) {
+  const unchanged = { maneuver, declared };
+  if (!declared || !maneuver.copied || (actor.system.effects?.slots?.["mimicry.multiProfile"] !== true)) return unchanged;
+  if (actor.getFlag?.("dbu-ttrpg", "mimicryMultiEncounter") === (game.combat?.id ?? "none")) return unchanged;
+  const { profilesOf } = await import("./technique.mjs");
+  const own = new Set(Array.from(actor.items ?? []).filter(item => (item.type === "maneuver") && item.system?.signature
+    && !item.getFlag?.("dbu-ttrpg", "copied")).flatMap(item => profilesOf(item.system.signature)));
+  const offered = [...own].filter(id => PROFILES[id] && (id !== declared.profile));
+  if (!offered.length) return unchanged;
+  const escape = Handlebars.escapeExpression;
+  const had = maneuver.superProfile ?? "";
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${maneuver.name} - Neko Mimicry` },
+    content: `<p class="dbu-respond-hint" data-tooltip="${escape(getTrait("neko-mimicry")?.text ?? "")}">Multi-Profile, once an
+        Encounter - a Profile one of your Signature Techniques uses.${had ? ` It replaces ${escape(SUPER_PROFILES[had]?.label ?? had)}.` : ""}</p>
+      <label class="dbu-wager"><span>Second Profile</span>
+        <select name="second"><option value="">None</option>${offered.map(id =>
+          `<option value="${escape(id)}">${escape(PROFILES[id].label)}</option>`).join("")}</select></label>`,
+    buttons: [
+      { action: "confirm", label: "Confirm", default: true,
+        callback: (event, button, dialog) => dialog.element.querySelector('select[name="second"]')?.value ?? "" },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (answer === null || answer === "cancel") return null;
+  if (!answer || !PROFILES[answer]) return unchanged;
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const was = had ? superProfileKiPerTier(had, maneuver.secondProfile ?? "") : 0;
+  const next = { ...maneuver, superProfile: "multi-profile", secondProfile: answer };
+  const out = { ...declared,
+    superProfileKi: (Number(declared.superProfileKi) || 0) + ((superProfileKiPerTier("multi-profile", answer) - was) * tier),
+    advantages: withGranted(declared.advantages ?? [], PROFILES[answer].grantsAdvantage) };
+  await actor.setFlag("dbu-ttrpg", "mimicryMultiEncounter", game.combat?.id ?? "none");
+  return { maneuver: next, declared: await wagerAgain(actor, next, declared, out, answer) };
 }
 
 /**
@@ -4663,6 +4741,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const assaulted = await karmicAssault(actor, maneuver, declared);
     if (!assaulted) return false;
     ({ maneuver, declared } = assaulted);
+    // Neko Mimicry (6): Multi-Profile on a Copied Technique, once an Encounter.
+    const mimicked = await mimicryMultiProfile(actor, maneuver, declared);
+    if (!mimicked) return false;
+    ({ maneuver, declared } = mimicked);
 
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
     // with the declaration, and only where something worn offers one for this attack.
@@ -4694,7 +4776,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const offers = [
       ...damageAttributeOffers(Array.from(actor.items ?? []), maneuver),
       ...(copiedAttribute ? ["force", "magic"].filter(key => key !== DBUCharacterData.FOUNDATIONS[declared.foundation]?.attribute)
-        .map(attribute => ({ attribute, source: "Majin See, Majin Do" })) : []),
+        .map(attribute => ({ attribute, source: "Copied Technique" })) : []),
       // Brutal Blitz: "If you move a number of Squares equal to your Boosted Speed through the
       // effects of Charging Assault, you may use your Agility as the Damage Attribute."
       ...(((declared.advantages ?? []).includes("brutal-blitz")
@@ -5790,6 +5872,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // under it.
   await recordManeuverType(actor, outOfSequence ? "outOfSequence" : maneuver.type, { messageId: card?.id,
     maneuverId: maneuver.through?.id ?? maneuver.id, profile: declared?.profile ?? "" });
+
+  // Neko Mimicry (4): a Standard Maneuver of 1 Action, used in sequence - offered to an Opponent with it, out of sequence.
+  if (card && !outOfSequence) await (await import("./chat.mjs")).mimicryOffers(card, actor, maneuver);
 
   // Final Chance's held Defeat belongs to this card now.
   if (card && (actor.getFlag?.("dbu-ttrpg", "finalChance") === "pending")) {

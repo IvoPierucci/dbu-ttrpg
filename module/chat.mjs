@@ -14996,6 +14996,32 @@ function offerCopies(card, user, maneuver) {
 }
 
 /**
+ * Neko Mimicry (4): "If an Opponent who is not at Long Range uses a Standard Maneuver with an Action Cost of 1 Action, you
+ * may use that Maneuver as an Out-of-Sequence Maneuver. If the Maneuver was a Special Maneuver, you must have access to
+ * that Special Maneuver to use it." In a Combat Encounter, on its card, to each on the scene with it - of another
+ * disposition, not at Long Range from its user - once a Round, counted when taken. One of the library's; not a Technique.
+ */
+export async function mimicryOffers(card, user, maneuver) {
+  if (!card || !game.combat?.started || maneuver?.signature) return;
+  const library = getManeuver(maneuver?.id ?? "");
+  if (!library || (library.type !== "standard") || (Number(library.actionCost) !== 1)) return;
+  const side = user.getActiveTokens?.(false, true)?.[0]?.disposition;
+  if (side === undefined) return;
+  const { atLongRange, whyNotSpecial } = await import("./maneuvers.mjs");
+  const seen = new Set();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const other = token.actor;
+    if (!other || (other.type !== "character") || (other.uuid === user.uuid) || seen.has(other.uuid)) continue;
+    seen.add(other.uuid);
+    if (other.system?.defeated || (other.system?.effects?.slots?.["mimicry.copyManeuver"] !== true)) continue;
+    if ((token.document?.disposition === side) || (other.getFlag?.(SCOPE, "mimicryRound") === roundKey())) continue;
+    if (atLongRange(other, user) || whyNotSpecial(other, library)) continue;
+    requestEdit(card, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId: library.id,
+      maneuverName: library.name, reason: `Neko Mimicry - ${user.name}'s ${library.name}`, grants: { mimicry: true } } });
+  }
+}
+
+/**
  * The Technique copied: "You can only possess 1 Copied Technique at any one time ... you must choose to lose access to
  * another" - asked. A Maneuver Item of the copier's, marked Copied and from Quick Learner, its TP not theirs. False if not.
  */
@@ -15017,7 +15043,8 @@ async function copyTechnique(actor, copyFrom) {
   delete data._id;
   data.name = `${source.name} (Copied)`;
   data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}),
-    copied: { from: fromUuidSync(copyFrom.actorUuid)?.name ?? "", combat: game.combat?.id ?? "" }, fromQuickLearner: true } };
+    copied: { from: fromUuidSync(copyFrom.actorUuid)?.name ?? "", fromUuid: copyFrom.actorUuid, combat: game.combat?.id ?? "" },
+    fromQuickLearner: true } };
   await actor.createEmbeddedDocuments("Item", [data]);
   return true;
 }
@@ -16983,6 +17010,11 @@ async function takeOutOfSequence(message, actor, offer) {
   // with that Advantage, then the Technique itself through its door, out of sequence.
   if (offer.technique) return takeTechniqueOffer(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
+  // Neko Mimicry (4)'s, once a Round.
+  if (offer.grants?.mimicry && (actor.getFlag?.(SCOPE, "mimicryRound") === roundKey())) {
+    ui.notifications.warn("Neko Mimicry has been used this Combat Round.");
+    return null;
+  }
   // Brigand Combat (2): once a Round for whoever handed it out - another Ally's taken already, this one is gone.
   if (offer.grants?.brigandFrom && (fromUuidSync(offer.grants.brigandFrom)?.getFlag?.(SCOPE, "brigandRound") === roundKey())) {
     ui.notifications.warn("Brigand Combat has been used this Combat Round.");
@@ -17291,6 +17323,8 @@ async function takeOutOfSequence(message, actor, offer) {
     const brigand = fromUuidSync(offer.grants.brigandFrom);
     if (brigand) await requestActorUpdate(brigand, { [`flags.${SCOPE}.brigandRound`]: roundKey() });
   }
+  // Neko Mimicry (4)'s, once a Round.
+  if (offer.grants?.mimicry) await requestActorUpdate(actor, { [`flags.${SCOPE}.mimicryRound`]: roundKey() });
   // Questing Wisdom (3)'s, once a Round.
   if (offer.grants?.questing) await requestActorUpdate(actor, { [`flags.${SCOPE}.questingRound`]: roundKey() });
   // Power of the Hera (3)'s, once a Round.
@@ -17493,7 +17527,7 @@ export async function postAttack(actor, target, maneuver,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
-                                   unstudy = [] },
+                                   unstudy = [], mimicry = null },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -17670,6 +17704,8 @@ export async function postAttack(actor, target, maneuver,
           ...((boom && !reflecting) ? { boom } : {}),
           // Refined Combat's Power Channeler: who stops being Studied once it is done (studiedSpent).
           ...((unstudy?.length && !reflecting) ? { unstudy } : {}),
+          // Neko Mimicry (5): the Ally whose Copied Technique this is joins with United Attack free of its Action.
+          ...(((mimicry?.kind === "ally") && !reflecting) ? { mimicryAlly: mimicry.uuid } : {}),
           // Ranger (3): a move away from them once it is concluded (rangerRetreatEnds).
           ...((rangerRetreat && !reflecting) ? { rangerRetreat } : {}),
           // Glass Shards: the Shard Carrier its shards are spent from once it is concluded - (5), (7) - and (2)'s Homing.
@@ -17856,19 +17892,25 @@ export async function postAttack(actor, target, maneuver,
     }
   });
 
-  // Majin See, Majin Do: the Morale Clash against each it is aimed at, the attack held till they are settled - the Trap
-  // Attack's arrangement, Guard Down for this attack on a win.
+  // Majin See, Majin Do: the Morale Clash against each it is aimed at; Neko Mimicry (5): against the Opponent whose Copied
+  // Technique it is. The attack held till they are settled - the Trap Attack's arrangement, Guard Down for this attack on a win.
+  const guardClashes = [];
   if (moraleGuard && card) {
-    const aimed = attackTargets(card.getFlag(SCOPE, ATTACK_FLAG) ?? {}).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
-    const made = card.getFlag(SCOPE, ATTACK_FLAG);
-    if (made && aimed.length) {
-      await requestEdit(card, { type: "attack", attack: { ...made, trapHold: { pending: true, left: aimed.length,
-        name: "Majin See, Majin Do" } } });
-      for (const other of aimed) {
-        await postSaveClash(actor, other, { maneuverName: "Majin See, Majin Do",
-          reason: `Win and ${other.name} is Guard Down against this Attacking Maneuver.`,
-          saves: ["morale"], defenderSaves: ["morale"], trapGuard: { applied: false, attackMessageId: card.id } });
-      }
+    for (const entry of attackTargets(card.getFlag(SCOPE, ATTACK_FLAG) ?? {})) {
+      const other = fromUuidSync(entry.uuid);
+      if (other) guardClashes.push({ other, name: "Majin See, Majin Do" });
+    }
+  }
+  const mimicked = ((mimicry?.kind === "opponent") && !reflecting) ? fromUuidSync(mimicry.uuid) : null;
+  if (mimicked && card) guardClashes.push({ other: mimicked, name: "Neko Mimicry" });
+  const madeForGuard = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (madeForGuard && guardClashes.length) {
+    await requestEdit(card, { type: "attack", attack: { ...madeForGuard, trapHold: { pending: true, left: guardClashes.length,
+      name: guardClashes[0].name } } });
+    for (const { other, name } of guardClashes) {
+      await postSaveClash(actor, other, { maneuverName: name,
+        reason: `Win and ${other.name} is Guard Down against this Attacking Maneuver.`,
+        saves: ["morale"], defenderSaves: ["morale"], trapGuard: { applied: false, attackMessageId: card.id } });
     }
   }
   // Experienced Fighter (1): this Round's attacks, one with a Ki Wager or more than 1 Energy Charge marked.
