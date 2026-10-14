@@ -15376,6 +15376,26 @@ function offerFelineTechnique(message, actor) {
 }
 
 /**
+ * Violent Rebuke (3): "After completing an Opponent's Attacking Maneuver that targeted you, regardless of if it hits, you may
+ * make a Basic Attack Maneuver against them as an Out-of-Sequence Maneuver. You cannot Ki Wager on this Attacking Maneuver
+ * unless that Opponent was your Inferior." Offered on its card at them - missed, hit for nothing as the Wound is settled, hit
+ * for Damage as it is applied - once a Round, counted when taken; its Ki Wager capped at none but against this Round's
+ * Inferior (Tuffle Superiority's).
+ */
+function offerRebuke(message, actor, attacker) {
+  if (!actor || !attacker || (actor.uuid === attacker.uuid) || actor.system?.defeated) return;
+  if (actor.system?.effects?.slots?.["rebuke.strike"] !== true) return;
+  if (alliesOnScene(actor).some(ally => ally.uuid === attacker.uuid)) return;
+  if (actor.getFlag?.(SCOPE, "rebukeRound") === roundKey()) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.grants?.rebuke && (offer.actorUuid === actor.uuid))) return;
+  const inferior = actor.getFlag?.(SCOPE, "inferior");
+  const wagers = Boolean(inferior?.uuid) && (inferior.uuid === attacker.uuid) && (inferior.round === roundKey());
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: `Violent Rebuke${wagers ? "" : " - no Ki Wager"}`,
+    grants: { rebuke: true, ...(wagers ? {} : { wagerCap: 0 }) } } });
+}
+
+/**
  * Brigand Combat (2): "If you deal Damage to an Opponent with one of your Attacking Maneuvers, you may select an Ally adjacent
  * to your Opponent (that was targeted by this Attacking Maneuver but did not take Damage from this Attacking Maneuver). That
  * Ally may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If they do, they must target the Opponent that
@@ -17130,6 +17150,11 @@ async function takeOutOfSequence(message, actor, offer) {
   // with that Advantage, then the Technique itself through its door, out of sequence.
   if (offer.technique) return takeTechniqueOffer(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
+  // Violent Rebuke (3)'s, once a Round.
+  if (offer.grants?.rebuke && (actor.getFlag?.(SCOPE, "rebukeRound") === roundKey())) {
+    ui.notifications.warn("Violent Rebuke has been used this Combat Round.");
+    return null;
+  }
   // Neko Mimicry (4)'s, once a Round.
   if (offer.grants?.mimicry && (actor.getFlag?.(SCOPE, "mimicryRound") === roundKey())) {
     ui.notifications.warn("Neko Mimicry has been used this Combat Round.");
@@ -17447,6 +17472,8 @@ async function takeOutOfSequence(message, actor, offer) {
   }
   // Neko Mimicry (4)'s, once a Round.
   if (offer.grants?.mimicry) await requestActorUpdate(actor, { [`flags.${SCOPE}.mimicryRound`]: roundKey() });
+  // Violent Rebuke (3)'s, once a Round.
+  if (offer.grants?.rebuke) await requestActorUpdate(actor, { [`flags.${SCOPE}.rebukeRound`]: roundKey() });
   // Questing Wisdom (3)'s, once a Round.
   if (offer.grants?.questing) await requestActorUpdate(actor, { [`flags.${SCOPE}.questingRound`]: roundKey() });
   // Power of the Hera (3)'s, once a Round.
@@ -19812,6 +19839,9 @@ async function resolveAttackWork(message, attack) {
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerUnscathedExploit(message, fromUuidSync(entry.uuid), attacker);
     // Angelic Offense (3): the same, and the Basic Attack.
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerAngelicCounter(message, fromUuidSync(entry.uuid), attacker);
+    // Feline Build (4): no Damage from it - a Copied Technique; Violent Rebuke (3): the Basic Attack back, hit or not.
+    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFelineTechnique(message, fromUuidSync(entry.uuid));
+    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerRebuke(message, fromUuidSync(entry.uuid), attacker);
     // Angelic Offense (2)'s Guard Down: this was the next Attacking Maneuver aimed at them.
     await endAngelicGuardDown(fromUuidSync(entry.uuid));
   }
@@ -21389,6 +21419,15 @@ async function rollAttackWoundWork(message, attack) {
       result: { ...attack.result, wound, targets: settledTargets }
     }
   });
+
+  // Hit for no Damage - there is nothing to apply, so it is said now: Feline Build (4)'s Copied Technique, Violent Rebuke
+  // (3)'s Basic Attack.
+  for (const line of settledTargets) {
+    if (!line.hit || (line.uuid === attack.attackerUuid) || ((Number(line.damage) || 0) > 0)) continue;
+    const who = fromUuidSync(line.uuid);
+    offerFelineTechnique(message, who);
+    offerRebuke(message, who, fromUuidSync(attack.attackerUuid ?? ""));
+  }
 
   // "If you hit the Volleyball with the Spike! Signature Technique, after concluding that Attacking Maneuver, Volleyball
   // Time! ends and that Opponent is no longer Pinned through your use of the Binding Maneuver."
@@ -23877,6 +23916,8 @@ async function applyAttackDamage(message, target, attack) {
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerFlowExploit(message, target, armsUser);
   // Feline Build (4): no Damage from an attack aimed at you - hit or not - a Copied Technique out of sequence.
   if (((damage <= 0) || isAbsoluteMiss(own)) && armsUser && (armsUser.uuid !== target.uuid)) offerFelineTechnique(message, target);
+  // Violent Rebuke (3): the Basic Attack back at whoever made it.
+  if (armsUser && (armsUser.uuid !== target.uuid)) offerRebuke(message, target, armsUser);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerUnscathedExploit(message, target, armsUser);
   if (own.hit && (damage <= 0) && armsUser && (armsUser.uuid !== target.uuid)) offerAngelicCounter(message, target, armsUser);
   // "If you are hit by an Attacking Maneuver and take no Damage" - Bio-Suit's.

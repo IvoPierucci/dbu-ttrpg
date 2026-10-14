@@ -2411,12 +2411,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     }));
 
     // Surgency: increases the Life/Ki Points regained through a Surge. Cosmic Efficiency's "You may use your Magic
-    // Modifier instead of your Force Modifier" - the higher of the two.
-    const surgingMagic = (this.effects?.slots?.["surgency.magic"] === true) && (atts.magic.mod > atts.force.mod);
+    // Modifier instead of your Force Modifier" - the higher of the two; Violent Rebuke's Scholarship or Personality likewise.
+    const surgencyFrom = [["force", "Force Modifier"],
+      ...((this.effects?.slots?.["surgency.magic"] === true) ? [["magic", "Magic Modifier"]] : []),
+      ...((this.effects?.slots?.["surgency.scholarshipOrPersonality"] === true)
+        ? [["scholarship", "Scholarship Modifier"], ["personality", "Personality Modifier"]] : [])]
+      .reduce((best, entry) => ((atts[entry[0]]?.mod ?? 0) > (atts[best[0]]?.mod ?? 0)) ? entry : best);
     const surgencyBelow = perThreshold(this, "surgency");
-    this.surgency = withEffects(this, "surgency", (surgingMagic ? atts.magic.mod : atts.force.mod) + surgencyBelow.value, {
-      parts: [surgingMagic ? { label: "Magic Modifier", value: atts.magic.mod } : { label: "Force Modifier", value: atts.force.mod },
-        ...surgencyBelow.parts]
+    this.surgency = withEffects(this, "surgency", (atts[surgencyFrom[0]]?.mod ?? 0) + surgencyBelow.value, {
+      parts: [{ label: surgencyFrom[1], value: atts[surgencyFrom[0]]?.mod ?? 0 }, ...surgencyBelow.parts]
     });
 
     // Awareness: Insight Modifier, added to Strike Rolls.
