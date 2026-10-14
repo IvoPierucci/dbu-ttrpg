@@ -746,6 +746,9 @@ async function settleClashEffects(messageId, clash) {
   if (clash.angelicOffense && clash.result && !clash.angelicOffense.applied) {
     await settleAngelicOffense(message, clash);
   }
+  if (clash.debuffer && clash.result && !clash.debuffer.applied) {
+    await settleDebuffer(message, clash);
+  }
   if (clash.goof && clash.result && !clash.goof.applied) {
     await settleGoof(message, clash);
   }
@@ -10002,7 +10005,9 @@ export async function postHealing(actor, maneuver, plan) {
     const amount = roll.total + plan.modifier + (plan.mightKi ? (Number(who.system.might) || 0) : 0)
       + ((uuid === plan.desperateFor) ? plan.desperateKi : 0)
       // Priest (4): half your Surgency more.
-      + (Number(plan.priestLife) || 0);
+      + (Number(plan.priestLife) || 0)
+      // Spirit of Namek's Healer: your Surgency more.
+      + (Number(plan.healerLife) || 0);
     const life = who.system.life;
     await requestActorUpdate(who, { "system.life.value": Math.min(life.max, life.value + amount) });
     // Patch-Up: the first worn piece that has lost Break Value - "damaged or broken" - whole again.
@@ -10011,11 +10016,32 @@ export async function postHealing(actor, maneuver, plan) {
       && (((Number(item.system.crafted.breakLost) || 0) > 0) || item.system.crafted.destroyed)) : null;
     if (piece) await requestActorUpdate(who, { items: [{ _id: piece.id, "system.crafted.breakLost": 0, "system.crafted.destroyed": false }] });
     lines.push({ uuid, name: who.name, amount, patched: piece?.name ?? "" });
+    // Healer: "if you use Healing Hands on a Studied Ally, they may either: regain Ki Points equal to 1/2 of the Life Points
+    // they gained, OR stop suffering from a Combat Condition (except Suffocating)" - theirs to choose.
+    if (plan.healerLife && (who.uuid !== actor.uuid) && isStudiedBy(actor, who.uuid)) await healerChoice(who, amount);
   }
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${Handlebars.escapeExpression(maneuver.name)}</p>`,
     flags: { [SCOPE]: { [HEAL_FLAG]: { healerUuid: actor.uuid, dice: plan.dice, rolled: roll.total,
       modifier: plan.modifier, lines } } } });
+}
+
+/** Healer's either-or, asked of the Studied Ally healed. */
+async function healerChoice(ally, healed) {
+  const ki = Math.floor(Math.max(0, healed) / 2);
+  const held = Object.entries(ally.system?.conditions ?? {}).filter(([key, stacks]) => ((Number(stacks) || 0) > 0)
+    && (key !== "suffocating") && (getTrait(key)?.kind === "conditions") && (getTrait(key)?.combatCondition !== false));
+  const picked = await askPlayerChoice(ally, `${ally.name}: Healer`,
+    [{ value: "ki", label: `Regain ${ki} Ki Points` },
+      ...held.map(([key]) => ({ value: `condition:${key}`, label: `Stop suffering from ${getTrait(key)?.name ?? key}` })),
+      { value: "none", label: "Neither" }]);
+  if (picked === "ki") {
+    return requestActorUpdate(ally, { "system.ki.value": Math.min(Number(ally.system.ki?.max) || 0, (Number(ally.system.ki?.value) || 0) + ki) });
+  }
+  if (String(picked ?? "").startsWith("condition:")) {
+    const { setCondition } = await import("./conditions.mjs");
+    return setCondition(ally, String(picked).slice("condition:".length), 0);
+  }
 }
 
 function renderHealing(message, html) {
@@ -13096,6 +13122,57 @@ async function refinedDefenderFor(target, attacker, attack, uuid) {
   return { soak };
 }
 
+/**
+ * Spirit of Namek's Debuffer: "As an Instant Maneuver, you can target a Studied Opponent. Make a Clash (Cognitive) against
+ * them. If you win, they suffer from the Impediment Combat Condition until the end of this turn." Which, asked; none, its use
+ * unspent.
+ */
+export async function debuff(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const studied = studiedBy(actor).map(uuid => fromUuidSync(uuid)).filter(other => other && !allies.has(other.uuid) && !other.system?.defeated);
+  if (!studied.length) {
+    ui.notifications.info(`${actor.name}: Debuffer - no Studied Opponent.`);
+    return UNSPENT;
+  }
+  const picked = (studied.length === 1) ? studied[0].uuid : await askPlayerChoice(actor, `${actor.name}: Debuffer`,
+    [...studied.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const target = studied.find(each => each.uuid === picked);
+  if (!target) return UNSPENT;
+  return postSaveClash(actor, target, { maneuverName: "Debuffer",
+    reason: `Win and ${target.name} suffers from Impediment until the end of this turn.`,
+    saves: ["cognitive"], defenderSaves: ["cognitive"], debuffer: { applied: false } });
+}
+
+/** Debuffer, won: Impediment till the end of this turn - whoever's it is, on their clock. */
+async function settleDebuffer(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, debuffer: { ...clash.debuffer, applied: true } });
+  const challenger = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!challenger || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} keeps their footing.`);
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  if (await gainCondition(target, "impediment", 1) === false) return;
+  const keeper = game.combat?.combatant?.actor ?? challenger;
+  await lasting(keeper, { kind: KINDS.CONDITION, key: "impediment", edge: EDGES.END, on: target.uuid, source: "Debuffer" });
+  return settledNote(message, `${target.name} suffers from Impediment until the end of this turn.`);
+}
+
+/**
+ * Spirit of Namek's Life Burn: "You may reduce your Maximum Life Points and your Life Points by 1/4 of your Maximum Life
+ * Points. If you do, increase your Combat Rolls by 2(T) until you fail a Steadfast Check." The Maximum held down for the
+ * Encounter (Life Burned, a mark of that many stacks); the Combat Rolls a mark of their own, off at a failed Steadfast Check.
+ */
+export async function lifeBurn(actor) {
+  const quarter = Math.floor((Number(actor.system.life?.max) || 0) / 4);
+  if (!quarter) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "life-burned", quarter);
+  await lasting(actor, { kind: KINDS.CONDITION, key: "life-burned", edge: EDGES.ENCOUNTER, source: "Life Burn" });
+  await setCondition(actor, "life-burn-mark", 1);
+  return reduceLifePoints(actor, quarter, { reason: "Life Burn", own: true });
+}
+
 /** Half their Surgency, rounded down - every Refined Combat Option's measure. */
 function halfSurgency(actor) {
   return Math.floor(Math.max(0, Number(actor?.system?.surgency) || 0) / 2);
@@ -13109,11 +13186,25 @@ async function refinedSpent(actor, key) {
   return requestActorUpdate(actor, { [`flags.${SCOPE}.refined_${key}`]: roundKey() });
 }
 
-/** One more Studied, through the Round given - the rest still running kept. */
-async function study(actor, who, through) {
+/**
+ * One more Studied, through the Round given - the rest still running kept. An Ally: what those who Study Allies give them -
+ * Intelligent Fighter (6)'s Combat Rolls, Spirit of Namek (2)'s Soak and Wound - each a mark of your Tier on your clock as
+ * long (`ending`: chosen as a Round ends, its own edge still to come).
+ */
+async function study(actor, who, through, { ending = false } = {}) {
   const kept = studiedEntries(actor).filter(entry => entry.uuid !== who.uuid);
-  return requestActorUpdate(actor, { [`flags.${SCOPE}.studied`]: [...kept,
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.studied`]: [...kept,
     { uuid: who.uuid, combatId: game.combat?.id ?? "none", through }] });
+  if (!alliesOnScene(actor).some(ally => ally.uuid === who.uuid)) return;
+  const slots = actor.system.effects?.slots ?? {};
+  const extra = Math.max(0, through - (game.combat?.round ?? 0)) + (ending ? 1 : 0);
+  const { setCondition } = await import("./conditions.mjs");
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  for (const [slot, key, source] of [["studied.allyRolls", "studied", "Intelligent Fighter"],
+    ["spirit.studiedAllies", "spirit-studied", "Spirit of Namek"]]) {
+    if ((slots[slot] !== true) || !await setCondition(who, key, tier)) continue;
+    await lasting(actor, { kind: KINDS.CONDITION, key, edge: EDGES.ROUND, extra, on: who.uuid, source });
+  }
 }
 
 /**
@@ -13133,14 +13224,18 @@ export async function studyCharacter(actor) {
     [...pool.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
   const who = pool.find(each => each.uuid === picked);
   if (!who) return UNSPENT;
-  await study(actor, who, game.combat?.round ?? 0);
-  if (alliesOnScene(actor).some(ally => ally.uuid === who.uuid) && (actor.system.effects?.slots?.["studied.allyRolls"] === true)) {
-    const { setCondition } = await import("./conditions.mjs");
-    if (await setCondition(who, "studied", Math.max(1, Number(actor.system.tierOfPower) || 1))) {
-      await lasting(actor, { kind: KINDS.CONDITION, key: "studied", edge: EDGES.ROUND, next: true, on: who.uuid, source: "Intelligent Fighter" });
-    }
+  await study(actor, who, game.combat?.round ?? 0, { ending: true });
+  // Spirit of Namek's Bestower: "you may select an additional character to be Studied, but they must be an Ally."
+  let also = null;
+  if (actor.system.effects?.slots?.["refined.bestower"] === true) {
+    const allies = pool.filter(each => (each.uuid !== who.uuid) && alliesOnScene(actor).some(ally => ally.uuid === each.uuid));
+    const more = allies.length ? await askPlayerChoice(actor, `${actor.name}: Bestower - an Ally Studied too`,
+      [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]) : "";
+    also = allies.find(each => each.uuid === more) ?? null;
+    if (also) await study(actor, also, game.combat?.round ?? 0, { ending: true });
   }
-  return settledNote({ speaker: ChatMessage.getSpeaker({ actor }) }, `${actor.name} Studies ${who.name}.`);
+  return settledNote({ speaker: ChatMessage.getSpeaker({ actor }) },
+    `${actor.name} Studies ${who.name}${also ? ` and ${also.name}` : ""}.`);
 }
 
 /**
@@ -20013,7 +20108,9 @@ async function answerHit(message, attack, attacker, struck) {
   // Refined Combat's Hand to Hand and Blaster: "When you hit a Studied Opponent with a Physical (an Energy) Attack, you may
   // increase the Wound Roll by 1/2 of your Surgency. If you do, that Opponent stops being Studied after you complete this
   // Attacking Maneuver." Asked, once a Round each.
-  const option = (attack.foundation === "physical") ? "handToHand" : (attack.foundation === "energy") ? "blaster" : "";
+  const option = (attack.foundation === "physical") ? "handToHand" : (attack.foundation === "energy") ? "blaster"
+    // Spirit of Namek's Caster: "When you hit a Studied Opponent with a Magical Attack" - the same.
+    : (attack.foundation === "magic") ? "caster" : "";
   const studied = option && refinedOpen(attacker, option) ? struck.find(({ uuid }) => isStudiedBy(attacker, uuid)) : null;
   if (studied && halfSurgency(attacker)) {
     const yes = (await askPlayerChoice(attacker, `${attacker.name}: Refined Combat - ${studied.actor?.name ?? "Studied"}`,
@@ -20022,6 +20119,21 @@ async function answerHit(message, attack, attacker, struck) {
       await refinedSpent(attacker, option);
       answer.marks.refinedWound = halfSurgency(attacker);
       answer.marks.unstudy = [...(attack.unstudy ?? []), { by: attacker.uuid, uuid: studied.uuid }];
+    }
+  }
+  // Spirit of Namek's Supporter: "When a Studied Ally hits an Opponent with an Attacking Maneuver, you may increase the Wound
+  // Roll by 1/2 of your Surgency. If you do, that Ally stops being Studied after they complete this Attacking Maneuver." Asked
+  // of each who Studied them, once a Round.
+  if (struck.some(({ uuid }) => !alliesOnScene(attacker).some(ally => ally.uuid === uuid))) {
+    for (const supporter of alliesOnScene(attacker)) {
+      if (!refinedOpen(supporter, "supporter") || !isStudiedBy(supporter, attacker.uuid) || !halfSurgency(supporter)) continue;
+      const yes = (await askPlayerChoice(supporter, `${supporter.name}: Supporter - ${attacker.name}'s hit`,
+        [{ value: "yes", label: `Their Wound +${halfSurgency(supporter)} (1/2 your Surgency); no longer Studied after` },
+          { value: "no", label: "No" }])) === "yes";
+      if (!yes) continue;
+      await refinedSpent(supporter, "supporter");
+      answer.marks.supportWound = [...(answer.marks.supportWound ?? []), { name: supporter.name, value: halfSurgency(supporter) }];
+      answer.marks.unstudy = [...(answer.marks.unstudy ?? attack.unstudy ?? []), { by: supporter.uuid, uuid: attacker.uuid }];
     }
   }
   return answer;
@@ -20147,6 +20259,8 @@ function woundParts(attacker, attack) {
     ...twoWorldsWoundParts(attacker, attack),
     // Refined Combat's Hand to Hand or Blaster: half the Surgency.
     ...((Number(attack.refinedWound) || 0) ? [{ label: "Refined Combat (1/2 Surgency)", value: Number(attack.refinedWound) }] : []),
+    // Spirit of Namek's Supporter: half each supporter's Surgency.
+    ...(attack.supportWound ?? []).map(entry => ({ label: `Supporter (${entry.name})`, value: Number(entry.value) || 0 })),
     ...cutthroatWoundParts(attacker, attack),
     ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker))
   ];

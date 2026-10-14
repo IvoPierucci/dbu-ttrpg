@@ -1,0 +1,13 @@
+id: debuffer
+name: Debuffer
+order: 3
+optionOf: spirit-of-namek
+optionEffect: 4
+description: >
+  As an Instant Maneuver, you can target a Studied Opponent. Make a Clash (Cognitive) against them. If you win, they suffer from the Impediment Combat Condition until the end of this turn.
+text: >
+  Debuffer [1/Round]: As an Instant Maneuver, you can target a Studied Opponent. Make a Clash (Cognitive) against them. If you win, they suffer from the Impediment Combat Condition until the end of this turn.
+
+---
+
+# Its own Maneuver, an Instant once a Round, listed while this Option is had (debuffer-maneuver.dbu).

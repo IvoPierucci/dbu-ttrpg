@@ -1,0 +1,38 @@
+id: spirit-of-namek
+name: Spirit of Namek
+order: 6
+category: mind
+subrace: dragon-clan
+importance: primary
+options: 2
+optionEffect: 4
+# (1) Healing Hands, free and without its Requirements, gone with this (racial.mjs).
+grantsUnique: healing-hands
+description: >
+  Known for their greater magical prowess and their healing powers, Dragon Clan Namekians focus on supporting their Warrior brethren from the rear.
+text: >
+  Spirit of Namek (Mind): Known for their greater magical prowess and their healing powers, Dragon Clan Namekians focus on supporting their Warrior brethren from the rear.
+  (1)-[Passive]: Gain the Healing Hands Unique Ability.
+  (2)-[Passive]: Increase the Soak Value and Wound Rolls of your Studied Allies by 1(T).
+  (3)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see — Surges).
+  (4)-[Multi-Option/2]: At Character Creation, choose two of the following effects:
+
+  * Caster [Triggered, 1/Round]: When you hit a Studied Opponent with a Magical Attack, you may increase the Wound Roll by 1/2 of your Surgency. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver.
+  * Supporter [Triggered, 1/Round]: When a Studied Ally hits an Opponent with an Attacking Maneuver, you may increase the Wound Roll by 1/2 of your Surgency. If you do, that Ally stops being Studied after they complete this Attacking Maneuver.
+  * Debuffer [1/Round]: As an Instant Maneuver, you can target a Studied Opponent. Make a Clash (Cognitive) against them. If you win, they suffer from the Impediment Combat Condition until the end of this turn.
+  * Healer [Triggered]: Increase the amount of Life Points regained from your use of Healing Hands by your Surgency. Additionally, if you use Healing Hands on a Studied Ally, they may either: regain Ki Points equal to 1/2 of the Life Points they gained, OR stop suffering from a Combat Condition (except Suffocating).
+  * Life Burn [Triggered/Power, 1/Encounter]: You may reduce your Maximum Life Points and your Life Points by 1/4 of your Maximum Life Points. If you do, increase your Combat Rolls by 2(T) until you fail a Steadfast Check.
+  * Magician [Passive]: Reduce the Technique Point Cost of any Magical Unique Abilities by 3 and reduce their Ki Point Cost by 2(T).
+  * Bestower [Passive]: Gain access to the Magical Enhancement Unique Ability and the Unleash Dormant Power Advancement. Additionally, when selecting a character to become Studied through the second effect of Intelligent Fighter, you may select an additional character to be Studied, but they must be an Ally.
+  * Poko Priest [1/Round]: As a Standard Action with an Action Cost of 2 and a Ki Point Cost of 5(bT), create a Minion. This Minion is of the Namekian Race and must possess the Dark Vassal Factor. In addition, that Minion gains 2(bT) Attribute Points to spend at Character Creation.
+
+---
+
+[passive]
+# (2) An Ally you Study (Intelligent Fighter's, Trusted Ally's...): Spirit Studied (a mark) - Soak and Wound 1(T) of yours - on
+# your clock as long (chat.mjs study).
+allow spirit.studiedAllies;
+# (3) Where the Magic Modifier is the higher (actor-character.mjs).
+allow surgency.magic;
+
+# (4) The two Options chosen, one file each beside this one.

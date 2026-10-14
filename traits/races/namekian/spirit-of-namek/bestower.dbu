@@ -1,0 +1,18 @@
+id: bestower
+name: Bestower
+order: 7
+optionOf: spirit-of-namek
+optionEffect: 4
+grantsUnique: magical-enhancement
+uniqueAdvancements: unleash-dormant-power
+description: >
+  Gain access to the Magical Enhancement Unique Ability and the Unleash Dormant Power Advancement. Additionally, when selecting a character to become Studied through the second effect of Intelligent Fighter, you may select an additional character to be Studied, but they must be an Ally.
+text: >
+  Bestower [Passive]: Gain access to the Magical Enhancement Unique Ability and the Unleash Dormant Power Advancement. Additionally, when selecting a character to become Studied through the second effect of Intelligent Fighter, you may select an additional character to be Studied, but they must be an Ally.
+
+---
+
+# Magical Enhancement, free, with Unleash Dormant Power bought on it (`uniqueAdvancements`); as the Round ends, a second one
+# Studied - an Ally (chat.mjs studyCharacter).
+[passive]
+allow refined.bestower;

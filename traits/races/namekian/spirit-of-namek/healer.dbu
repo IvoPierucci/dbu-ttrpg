@@ -1,0 +1,16 @@
+id: healer
+name: Healer
+order: 4
+optionOf: spirit-of-namek
+optionEffect: 4
+description: >
+  Increase the amount of Life Points regained from your use of Healing Hands by your Surgency. Additionally, if you use Healing Hands on a Studied Ally, they may either: regain Ki Points equal to 1/2 of the Life Points they gained, OR stop suffering from a Combat Condition (except Suffocating).
+text: >
+  Healer [Triggered]: Increase the amount of Life Points regained from your use of Healing Hands by your Surgency. Additionally, if you use Healing Hands on a Studied Ally, they may either: regain Ki Points equal to 1/2 of the Life Points they gained, OR stop suffering from a Combat Condition (except Suffocating).
+
+---
+
+# Your Surgency on every Healing Hands; a Studied Ally healed asked which of the two (use-maneuver.mjs askHeal, chat.mjs
+# healerChoice).
+[passive]
+allow refined.healer;

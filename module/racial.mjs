@@ -529,7 +529,7 @@ export async function racialItemFrom(trait, actor = null) {
       scripts.push(`#@ option ${option.id} | ${option.name}\n${script}\n#@ end`);
       texts.push(`${option.name}: ${String(option.text ?? "").trim()}`);
       unique.push(...listOf(option.grantsUnique).map(each => ({ id: each, restrictions: listOf(option.uniqueRestrictions),
-        option: option.id })));
+        option: option.id, advancements: listOf(option.uniqueAdvancements) })));
       talents.push(...listOf(option.grantsTalent));
       if (Number(option.grantsUniqueChoice) > 0) {
         uniqueChoice = Number(option.grantsUniqueChoice);
@@ -740,6 +740,11 @@ async function giveGrants(actor, item, grants, name) {
     const data = uniqueItemFrom(definition, traitsOfKind("unique", definition.id),
       { chosenType, applied: grant.restrictions, choices: {} });
     data.system.unique.free = true;
+    // And an Advancement on it, bought and free - Bestower's Unleash Dormant Power (`uniqueAdvancements`).
+    if (grant.advancements?.length) {
+      data.system.unique.advancements = (data.system.unique.advancements ?? []).map(entry => grant.advancements.includes(entry.key)
+        ? { ...entry, bought: true, free: true } : entry);
+    }
     data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}), grantedBy: item.id,
       ...(grant.option ? { grantedByOption: grant.option } : {}) } };
     created.push(data);
@@ -948,7 +953,8 @@ export async function changeRacialOption(item, optionId, replacing = "") {
   if (was?.platingQuality) await platingQuality(actor, item, String(was.platingQuality), false);
   await madeByOption(actor, item, option);
   await giveGrants(actor, item, {
-    unique: listOf(option.grantsUnique).map(id => ({ id, restrictions: listOf(option.uniqueRestrictions), option: option.id })),
+    unique: listOf(option.grantsUnique).map(id => ({ id, restrictions: listOf(option.uniqueRestrictions), option: option.id,
+      advancements: listOf(option.uniqueAdvancements) })),
     talents: listOf(option.grantsTalent)
   }, option.name);
   return true;

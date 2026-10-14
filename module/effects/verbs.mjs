@@ -111,6 +111,16 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  debuff: {
+    args: [0, 0],
+    doc: "Spirit of Namek's Debuffer: a Studied Opponent picked, a Clash (Cognitive) - won, Impediment till the end of this "
+       + "turn (chat.mjs debuff)."
+  },
+  lifeBurn: {
+    args: [0, 0],
+    doc: "Spirit of Namek's Life Burn: a quarter of the Maximum Life Points off it and the Life Points, Combat Rolls 2(T) "
+       + "till a Steadfast Check is failed (chat.mjs lifeBurn)."
+  },
   namekianTechnique: {
     args: [0, 0],
     doc: "Namekian Techniques (4): an Opponent picked - Studied, the Basic Attack or a Signature Technique out of sequence at "

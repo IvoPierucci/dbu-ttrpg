@@ -1,0 +1,16 @@
+id: supporter
+name: Supporter
+order: 2
+optionOf: spirit-of-namek
+optionEffect: 4
+description: >
+  When a Studied Ally hits an Opponent with an Attacking Maneuver, you may increase the Wound Roll by 1/2 of your Surgency. If you do, that Ally stops being Studied after they complete this Attacking Maneuver.
+text: >
+  Supporter [Triggered, 1/Round]: When a Studied Ally hits an Opponent with an Attacking Maneuver, you may increase the Wound Roll by 1/2 of your Surgency. If you do, that Ally stops being Studied after they complete this Attacking Maneuver.
+
+---
+
+# An Ally you Studied hitting an Opponent: asked of you as their hit is answered, once a Round - half your Surgency on
+# their Wound (chat.mjs answerHit).
+[passive]
+allow refined.supporter;

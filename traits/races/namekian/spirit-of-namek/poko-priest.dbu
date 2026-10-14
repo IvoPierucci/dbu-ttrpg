@@ -1,0 +1,13 @@
+id: poko-priest
+name: Poko Priest
+order: 8
+optionOf: spirit-of-namek
+optionEffect: 4
+description: >
+  As a Standard Action with an Action Cost of 2 and a Ki Point Cost of 5(bT), create a Minion. This Minion is of the Namekian Race and must possess the Dark Vassal Factor. In addition, that Minion gains 2(bT) Attribute Points to spend at Character Creation.
+text: >
+  Poko Priest [1/Round]: As a Standard Action with an Action Cost of 2 and a Ki Point Cost of 5(bT), create a Minion. This Minion is of the Namekian Race and must possess the Dark Vassal Factor. In addition, that Minion gains 2(bT) Attribute Points to spend at Character Creation.
+
+---
+
+# Its own Maneuver, listed while this Option is had (poko-priest-maneuver.dbu). The Minion itself waits on Minions.

@@ -1,0 +1,18 @@
+id: spirit-studied
+name: Studied (Spirit of Namek)
+kind: conditions
+maxStacks: 10
+# Not a Combat Condition: what Spirit of Namek's (2) gives an Ally it Studied, held on the Namekian's clock as long - its stacks
+# their Tier.
+combatCondition: no
+source: Core Rule
+description: >
+  Studied by an Ally's Spirit of Namek: Soak Value and Wound Rolls 1(T) higher while it lasts.
+text: >
+  Spirit of Namek (2): Increase the Soak Value and Wound Rolls of your Studied Allies by 1(T).
+
+---
+
+[passive]
+soakValue += stacks;
+wound += stacks;

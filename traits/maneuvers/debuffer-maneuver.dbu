@@ -1,0 +1,22 @@
+id: debuffer-maneuver
+name: Debuffer
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: debuffer
+fromEffect: 4
+source: Core Rule
+description: >
+  Spirit of Namek's Debuffer: a Clash (Cognitive) at a Studied Opponent - won, Impediment till the end of this turn.
+text: >
+  (4)-[1/Round]: Debuffer - As an Instant Maneuver, you can target a Studied Opponent. Make a Clash (Cognitive) against them. If you win, they suffer from the Impediment Combat Condition until the end of this turn.
+
+---
+
+# Owned by every character, listed while the Debuffer Option is had (`fromTrait` - an Option counts). Used, which Studied
+# Opponent asked, and the Clash opened; won, Impediment on whoever's turn this is's clock (chat.mjs debuff, settleDebuffer).
+[on used]
+debuff();

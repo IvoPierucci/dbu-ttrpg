@@ -1,0 +1,16 @@
+id: life-burned
+name: Life Burned
+kind: conditions
+maxStacks: 9999
+# Not a Combat Condition: Spirit of Namek's Life Burn - the Maximum Life Points it took, its stacks, for the Encounter.
+combatCondition: no
+source: Core Rule
+description: >
+  Life Burned: Maximum Life Points lower by what Life Burn took, for the rest of the Combat Encounter.
+text: >
+  Life Burn: You may reduce your Maximum Life Points and your Life Points by 1/4 of your Maximum Life Points.
+
+---
+
+[passive]
+life.max -= stacks;

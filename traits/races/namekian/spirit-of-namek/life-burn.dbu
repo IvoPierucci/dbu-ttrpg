@@ -1,0 +1,16 @@
+id: life-burn
+name: Life Burn
+order: 5
+optionOf: spirit-of-namek
+optionEffect: 4
+description: >
+  You may reduce your Maximum Life Points and your Life Points by 1/4 of your Maximum Life Points. If you do, increase your Combat Rolls by 2(T) until you fail a Steadfast Check.
+text: >
+  Life Burn [Triggered/Power, 1/Encounter]: You may reduce your Maximum Life Points and your Life Points by 1/4 of your Maximum Life Points. If you do, increase your Combat Rolls by 2(T) until you fail a Steadfast Check.
+
+---
+
+# Ticked in the Power Up's window, once an Encounter: a quarter of the Maximum off it for the Encounter and off the Life
+# Points; Combat Rolls 2(T) till a Steadfast Check is failed (chat.mjs lifeBurn).
+[triggered/power, 1/encounter, effect 4]
+lifeBurn();

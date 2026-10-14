@@ -1,0 +1,19 @@
+id: life-burn-mark
+name: Life Burn
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Spirit of Namek's Life Burn - its Combat Rolls, till a Steadfast Check is failed.
+combatCondition: no
+source: Core Rule
+description: >
+  Life Burn: Combat Rolls 2(T) higher until you fail a Steadfast Check.
+text: >
+  Life Burn: Increase your Combat Rolls by 2(T) until you fail a Steadfast Check.
+
+---
+
+[passive]
+combatRolls += 2(T);
+
+[automatic/steadfast-failed]
+remove("life-burn-mark");

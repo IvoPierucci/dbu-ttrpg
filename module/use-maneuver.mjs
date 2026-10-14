@@ -3155,6 +3155,8 @@ async function askHeal(actor, maneuver) {
   // Desperate Heal: "a number of Ki Points equal to your current Capacity" - what is left of it once this use and
   // Overexertion are paid, which is what it will be.
   const desperateKi = chosen.desperate ? Math.max(0, capacityNow - own - (chosen.might ? mightKi : 0)) : 0;
+  // Spirit of Namek's Healer: "Increase the amount of Life Points regained from your use of Healing Hands by your Surgency."
+  const healerLife = (actor.system.effects?.slots?.["refined.healer"] === true) ? Math.max(0, Number(actor.system.surgency) || 0) : 0;
   const priestKi = (chosen.far && (chosen.mode !== "zone")) ? farKi : 0;
   const priestLife = priestKi ? Math.floor((Number(actor.system.surgency) || 0) / 2) : 0;
   const extraKi = (chosen.might ? mightKi : 0) + desperateKi + priestKi;
@@ -3174,11 +3176,12 @@ async function askHeal(actor, maneuver) {
       dice: moreDice ? [{ label: find("healDice")?.name ?? "Dice", formula: moreDice }] : [],
       parts: [...(modifier ? [{ label: "Magic Modifier", value: modifier }] : []),
         ...(desperateKi ? [{ label: desperate.name, value: desperateKi }] : []),
-        ...(priestLife ? [{ label: "Priest (1/2 Surgency)", value: priestLife }] : [])] } });
+        ...(priestLife ? [{ label: "Priest (1/2 Surgency)", value: priestLife }] : []),
+        ...(healerLife ? [{ label: "Healer (Surgency)", value: healerLife }] : [])] } });
   if (!ready) return null;
 
   return { uuids, dice: [dice, moreDice].filter(Boolean).join(" + "), modifier,
-    mightKi: chosen.might ? mightKi : 0, desperateKi, desperateFor, patch: chosen.patch, priestKi, priestLife };
+    mightKi: chosen.might ? mightKi : 0, desperateKi, desperateFor, patch: chosen.patch, priestKi, priestLife, healerLife };
 }
 
 /**

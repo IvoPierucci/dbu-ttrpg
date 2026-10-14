@@ -1,0 +1,16 @@
+id: magician
+name: Magician
+order: 6
+optionOf: spirit-of-namek
+optionEffect: 4
+description: >
+  Reduce the Technique Point Cost of any Magical Unique Abilities by 3 and reduce their Ki Point Cost by 2(T).
+text: >
+  Magician [Passive]: Reduce the Technique Point Cost of any Magical Unique Abilities by 3 and reduce their Ki Point Cost by 2(T).
+
+---
+
+# Never below half the listed TP (unique.mjs uniqueTPOf).
+[passive]
+unique.magical.tpCost -= 3;
+unique.magical.kiCost -= 2(T);

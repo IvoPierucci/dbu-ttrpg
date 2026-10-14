@@ -1,0 +1,16 @@
+id: caster
+name: Caster
+order: 1
+optionOf: spirit-of-namek
+optionEffect: 4
+description: >
+  When you hit a Studied Opponent with a Magical Attack, you may increase the Wound Roll by 1/2 of your Surgency. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver.
+text: >
+  Caster [Triggered, 1/Round]: When you hit a Studied Opponent with a Magical Attack, you may increase the Wound Roll by 1/2 of your Surgency. If you do, that Opponent stops being Studied after you complete this Attacking Maneuver.
+
+---
+
+# A Magic Attack that hit one you Studied: asked as its Wound Roll is about to be made, once a Round - Refined Combat's
+# Hand to Hand, for Magic (chat.mjs answerHit).
+[passive]
+allow refined.caster;
