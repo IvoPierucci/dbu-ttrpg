@@ -1670,8 +1670,31 @@ export async function askHoldingBack(actor, maneuver) {
  * The number is the same for two of the three and is read off the character when the
  * Maneuver is used, so a Rank gained mid-Encounter counts.
  */
+/**
+ * The Use Magic Ranks the Magic Trick counts - Whimsical Magic (6): "treat your number of Use Magic Skill Ranks as if they
+ * were doubled (this can allow them to be treated as if they were beyond 5)".
+ */
+function magicTrickRanks(actor, maneuver) {
+  const ranks = Number(actor.system.skills?.[maneuver.moveSkill]?.ranks) || 0;
+  return ranks * ((actor.system.effects?.slots?.["whimsical.trickRanks"] === true) ? 2 : 1);
+}
+
+/**
+ * Whimsical Magic (8): every Opponent not at Long Range - of another disposition than yours, on the scene, not Defeated -
+ * but the one aimed at.
+ */
+function trickOpponents(actor, aimed) {
+  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+  if (own === undefined) return [];
+  return [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.type === "character") && (token.actor.uuid !== actor.uuid)
+      && (token.actor.uuid !== aimed?.uuid) && (token.document?.disposition !== own) && !token.actor.system?.defeated
+      && !atLongRange(actor, token.actor))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+}
+
 function magicTrickNote(actor, maneuver, trick, target) {
-  const ranks = actor.system.skills?.[maneuver.moveSkill]?.ranks ?? 0;
+  const ranks = magicTrickRanks(actor, maneuver);
   const squares = (maneuver.movePerRank ?? 1) * ranks;
   const many = `${squares} Square${squares === 1 ? "" : "s"}`;
   const them = target?.name ?? "them";
@@ -1728,9 +1751,14 @@ async function askEffort(actor, maneuver) {
 }
 
 async function askMagicTrick(actor, maneuver, target) {
-  const ranks = actor.system.skills?.[maneuver.moveSkill]?.ranks ?? 0;
+  const ranks = magicTrickRanks(actor, maneuver);
   const squares = (maneuver.movePerRank ?? 1) * ranks;
   const aimed = target ? target.name : "";
+  // Whimsical Magic (8): aimed at an Opponent, once an Encounter - asked with the effect.
+  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const allOffered = Boolean(target) && (actor.system.effects?.slots?.["whimsical.trickAll"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "trickAllEncounter") !== (game.combat?.id ?? "none")) && (own !== undefined)
+    && (target.getActiveTokens?.(false, true)?.[0]?.disposition !== own) && (trickOpponents(actor, target).length > 0);
 
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
@@ -1763,13 +1791,18 @@ async function askMagicTrick(actor, maneuver, target) {
               Square${squares === 1 ? "" : "s"}, no Clash, and nothing to Exploit.</span>
           </span>
         </label>
-      </div>`,
+      </div>
+      ${allOffered ? `<label class="dbu-respond-option"><input type="checkbox" name="trickAll"/>
+        <span class="dbu-respond-name">Whimsical Magic: every Opponent not at Long Range</span>
+        <span class="dbu-respond-source">once an Encounter - a Clash at each</span></label>` : ""}`,
     buttons: [
       {
         action: "confirm",
         label: "Confirm",
-        callback: (event, button, dialog) =>
-          dialog.element.querySelector('input[name="trick"]:checked')?.value ?? ""
+        callback: (event, button, dialog) => {
+          const picked = dialog.element.querySelector('input[name="trick"]:checked')?.value ?? "";
+          return (picked && dialog.element.querySelector('input[name="trickAll"]')?.checked) ? `${picked}:all` : picked;
+        }
       },
       { action: "cancel", label: "Cancel" }
     ],
@@ -1777,15 +1810,27 @@ async function askMagicTrick(actor, maneuver, target) {
   });
 
   if ((typeof chosen !== "string") || !chosen || (chosen === "cancel")) return "";
+  const [trick, all] = chosen.split(":");
 
   // The two that open a Clash need somebody to open it against. Refused here rather than
   // by the Maneuver asking for a target outright, since the third effect needs none.
-  if ((chosen !== "move") && !target) {
+  if ((trick !== "move") && !target) {
     ui.notifications.warn(`${maneuver.name} needs a target for that. Target a token first.`);
     return "";
   }
+  // "Target an Opponent within your Melee Range" - or, Whimsical Magic (5), "Characters outside of your Melee Range ...
+  // must not be at Long Range".
+  if (trick !== "move") {
+    const far = (actor.system.effects?.slots?.["whimsical.trickReach"] === true)
+      ? (atLongRange(actor, target) ? `${target.name} is at Long Range.` : "")
+      : whyNotWithinMelee(actor, target, maneuver.name);
+    if (far) {
+      ui.notifications.warn(far);
+      return "";
+    }
+  }
 
-  return chosen;
+  return (all && (trick !== "move")) ? `${trick}:all` : trick;
 }
 
 /**
@@ -4594,6 +4639,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // Which of a Maneuver's own effects the player picked, where it has several and the
   // choice comes before the dice rather than after them.
   let trick = "";
+  let trickAll = [];
   let repairing = null;
   let materializing = null;
   let foreseen = null;
@@ -4931,6 +4977,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     if (maneuver.magicTrick) {
       trick = await askMagicTrick(actor, maneuver, targetActor);
       if (!trick) return false;
+      // Whimsical Magic (8): every Opponent not at Long Range - its Encounter spent.
+      if (trick.endsWith(":all")) {
+        trick = trick.slice(0, -4);
+        trickAll = trickOpponents(actor, targetActor);
+        await actor.setFlag("dbu-ttrpg", "trickAllEncounter", game.combat?.id ?? "none");
+      }
     }
 
     // Repair: which Item, asked before the Actions are paid.
@@ -5916,6 +5968,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   await recordManeuverType(actor, outOfSequence ? "outOfSequence" : maneuver.type, { messageId: card?.id,
     maneuverId: maneuver.through?.id ?? maneuver.id, profile: declared?.profile ?? "" });
 
+  // Whimsical Magic (8): the same Clash at every other Opponent not at Long Range.
+  if (card && trickAll.length) {
+    for (const other of trickAll) {
+      await postSkillClash(actor, other, maneuver, { magicTrick: { option: trick, applied: false },
+        reason: magicTrickNote(actor, maneuver, trick, other) });
+    }
+  }
   // Neko Mimicry (4): a Standard Maneuver of 1 Action, used in sequence - offered to an Opponent with it, out of sequence.
   if (card && !outOfSequence) await (await import("./chat.mjs")).mimicryOffers(card, actor, maneuver);
 

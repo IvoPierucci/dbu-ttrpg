@@ -1,0 +1,37 @@
+id: whimsical-magic
+name: Whimsical Magic
+order: 5
+category: mind
+importance: secondary
+description: >
+  The trickster-like personality of Neko Majins is only accentuated by their innate magical abilities.
+text: >
+  Whimsical Magic (Mind): The trickster-like personality of Neko Majins is only accentuated by their innate magical abilities.
+  (1)-[Passive]: You may use your Magic Modifier instead of your Force Modifier when calculating Surgency (see — Surges).
+  (2)-[Passive]: Reduce the Ki Point Cost of your Magical Unique Abilities by 2(T).
+  (3)-[Passive]: Increase the Natural Result of your Clashes using Skill Ranks or Saving Throws made through the effects of one of your Unique Abilities by 1.
+  (4)-[Passive]: At Character Creation, gain 2 Skill Ranks in the Use Magic Skill.
+  (5)-[Passive]: You may use the Magic Trick Maneuver to target Characters outside of your Melee Range with its effects. Those Characters must not be at Long Range.
+  (6)-[Passive]: For the effects of the Magic Trick Maneuver, treat your number of Use Magic Skill Ranks as if they were doubled (this can allow them to be treated as if they were beyond 5).
+  (7)-[Triggered]: If you would inflict a Combat Condition upon an Opponent(s) through the effects of the Magic Trick Maneuver, you may instead knock that Opponent(s) Prone instead.
+  (8)-[Triggered, 1/Encounter]: If you would target one Opponent with the effect of the Magic Trick Maneuver, you may instead target all Opponents who are not at Long Range with that effect of the Magic Trick Maneuver.
+
+---
+
+[passive]
+# (1) Where the Magic Modifier is the higher (actor-character.mjs).
+allow surgency.magic;
+# (2) Never below its least (unique.mjs).
+unique.magical.kiCost -= 2(T);
+# (3) A Skill or Saving Throw Clash a Unique Ability of yours opened - the challenger's side (chat.mjs uniqueNatural).
+allow whimsical.uniqueNatural;
+# (4) Counted with the Progression tab's.
+skill.useMagic.ranks += 2;
+# (5) Its two Clashes at anyone not at Long Range, rather than only within your Melee Range (use-maneuver.mjs).
+allow whimsical.trickReach;
+# (6) The Squares it moves you or them (use-maneuver.mjs magicTrickRanks).
+allow whimsical.trickRanks;
+# (7) Its Impaired won: Prone instead, asked as the Clash settles (chat.mjs settleMagicTrick).
+allow whimsical.trickProne;
+# (8) Aimed at one Opponent: a box among its effects, once an Encounter - a Clash at every Opponent not at Long Range.
+allow whimsical.trickAll;

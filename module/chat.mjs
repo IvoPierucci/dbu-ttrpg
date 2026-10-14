@@ -982,6 +982,15 @@ function uniqueClashBonus(actor, clash, uuid) {
   return (value && uniqueClashOf(clash)) ? [{ label: "Through a Unique Ability", value }] : [];
 }
 
+/**
+ * Whimsical Magic (3): "Increase the Natural Result of your Clashes using Skill Ranks or Saving Throws made through the
+ * effects of one of your Unique Abilities by 1." The challenger's side, a Unique Ability of theirs having opened it.
+ */
+function uniqueNatural(actor, clash, uuid) {
+  return ((uuid === clash?.challengerUuid) && (actor?.system?.effects?.slots?.["whimsical.uniqueNatural"] === true)
+    && uniqueClashOf(clash)) ? 1 : 0;
+}
+
 function uniqueClashOf(clash) {
   const challenger = fromUuidSync(clash?.challengerUuid ?? "");
   const name = String(clash?.maneuverName ?? "").trim();
@@ -2092,6 +2101,15 @@ async function settleMagicTrick(message, clash) {
     return;
   }
 
+  // Whimsical Magic (7): "you may instead knock that Opponent(s) Prone instead" - asked of the caster.
+  if ((clash.magicTrick.option === "impair") && (caster.system.effects?.slots?.["whimsical.trickProne"] === true)
+    && (await askPlayerChoice(caster, `${caster.name}: ${clash.maneuverName} - ${target.name}`,
+      [{ value: "impaired", label: "Impaired" }, { value: "prone", label: "Prone" }])) === "prone") {
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(target, "prone", Math.max(1, Number(target.system.conditions?.prone) || 0));
+    await settledNote(message, `${target.name} is knocked Prone.`);
+    return;
+  }
   if (clash.magicTrick.option === "impair") {
     const { setCondition } = await import("./conditions.mjs");
     await setCondition(target, "impaired", 1);
@@ -2150,7 +2168,8 @@ async function settleBluffAttack(message, clash) {
 /** How far a Magic Trick moves somebody: the caster's Ranks in the Skill it is made with. */
 function casterSquares(caster, clash) {
   const ranks = caster.system.skills?.[clash.skill]?.ranks ?? 0;
-  return Math.max(0, ranks);
+  // Whimsical Magic (6): "treat your number of Use Magic Skill Ranks as if they were doubled".
+  return Math.max(0, ranks) * ((caster.system.effects?.slots?.["whimsical.trickRanks"] === true) ? 2 : 1);
 }
 
 /**
@@ -8434,6 +8453,8 @@ const CLASH_ROLLS = ({
         + ((clash.search && (uuid === clash.challengerUuid))
           ? (Number(Array.from(actor.getFlag?.(SCOPE, "findBonus") ?? []).find(entry => entry.uuid === clash.defenderUuid)?.n) || 0)
           : 0)
+        // Whimsical Magic (3): opened by a Unique Ability of theirs.
+        + uniqueNatural(actor, clash, uuid)
     }),
 
     prompt: (actor, clash, uuid) => ((uuid === clash.defenderUuid)
@@ -8629,7 +8650,7 @@ const CLASH_ROLLS = ({
     options: (actor, clash, uuid) => ({
       criticalTarget: actor.system.savingThrows[savePicked(clash, uuid)]?.criticalTarget ?? null,
       // Legacy's "increase the Natural Result for all ... Saving Throws".
-      naturalAdd: Number(actor.system.saveNatural) || 0,
+      naturalAdd: (Number(actor.system.saveNatural) || 0) + uniqueNatural(actor, clash, uuid),
       // Which Slot an effect that raises this roll writes to, so "increase your Corporeal
       // Saving Throws by 1(T)" reaches the side that answered with Corporeal.
       slot: `save.${savePicked(clash, uuid)}`
