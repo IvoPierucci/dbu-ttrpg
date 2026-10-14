@@ -17295,6 +17295,8 @@ async function takeOutOfSequence(message, actor, offer) {
     if (granted?.shardEnds) declared = { ...declared, shardEnds: granted.shardEnds };
     // Warrior (4), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
+    // Energy of Revenge (1), out of sequence as in it.
+    declared = await (await import("./maneuvers.mjs")).askRevenge(actor, declared, maneuver);
     // Boom's: its Tension's Broken and the stacks it spends.
     if (granted?.boom) declared = { ...declared, boom: granted.boom };
     // Ranger (3)'s: "it must be an Armed Attack", and a move away once it is concluded.
@@ -17583,7 +17585,7 @@ export async function postAttack(actor, target, maneuver,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
-                                   unstudy = [], mimicry = null },
+                                   unstudy = [], mimicry = null, revengeSpent = 0 },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -17627,6 +17629,17 @@ export async function postAttack(actor, target, maneuver,
   if (warriorTension && !reflecting && thresholdsBelow(actor)) {
     woundExtra = [...woundExtra, { label: "Warrior", written: `+${2 * thresholdsBelow(actor)}(T)`,
       value: 2 * thresholdsBelow(actor) * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+  }
+  // Energy of Revenge (1): the Revenge Points spent, 1(T) each on its Wound Roll - 2(T) on an Ultimate - and lost.
+  if ((Number(revengeSpent) > 0) && !reflecting) {
+    const held = Number(actor.system.resources?.revengepoints?.stacks) || 0;
+    const spent = Math.min(held, Number(revengeSpent));
+    if (spent > 0) {
+      const each = (maneuver.signature && !maneuver.signatureTechnique && (maneuver.ultimate || maneuver.ascended)) ? 2 : 1;
+      woundExtra = [...woundExtra, { label: `Energy of Revenge (${spent})`, written: `+${spent * each}(T)`,
+        value: spent * each * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+      await setResource(actor, "revengepoints", held - spent);
+    }
   }
   // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.
   if (experienced?.kind === "punish") {
@@ -23806,6 +23819,9 @@ async function applyAttackDamage(message, target, attack) {
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
     && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)
     && (damage >= Math.ceil((Number(target.system.life?.max) || 0) / 4))) await answerFor(target, "heavy-hit");
+  // Any Damage from an Opponent's Attacking Maneuver - Energy of Revenge's.
+  if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
+    && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)) await answerFor(target, "opponent-damage");
   // Cutthroat Teamwork (3) and (4): an Ally, not a Minion, dealt Damage by it.
   if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && !target.system?.minion
     && alliesOnScene(armsUser).some(ally => ally.uuid === target.uuid)) await cutthroatAllyHit(armsUser, target);

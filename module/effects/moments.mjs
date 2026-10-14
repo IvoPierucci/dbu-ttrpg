@@ -115,6 +115,9 @@ const TABLE = [
     doc: "Fired for whoever an Opponent's Attacking Maneuver hit for Damage of a quarter (rounded up) of their Maximum Life "
        + "Points or more, once it is applied (chat.mjs applyAttackDamage) - Fight against Power's. What is the player's is "
        + "asked in a window first." },
+  { key: "opponent-damage", label: "An Opponent's Attacking Maneuver deals you Damage", provides: [],
+    doc: "Fired for whoever an Opponent's Attacking Maneuver dealt Damage to, once it is applied (chat.mjs applyAttackDamage) - "
+       + "Energy of Revenge's. What is the player's is asked in a window first." },
   { key: "ally-defeated", label: "An Ally is Defeated", provides: [],
     doc: "Fired for each Ally on the scene of whoever is Defeated - not for a Minion's defeat - with them as `defeatedUuid` "
        + "(combat.mjs) - Battle Tension's. What is the player's is asked in a window first." },

@@ -1145,6 +1145,10 @@ export function equipPlan(items, item, layer, { inCombat = false, wearer = null,
   if ((items ?? []).some(isNaturalArmor) && worn.length) {
     return refuse("Natural Armor: a single layer of Apparel.");
   }
+  // Energy of Revenge (3): "You can only wear a single layer of Apparel".
+  if ((wearer?.system?.effects?.slots?.["apparel.singleLayer"] === true) && worn.length) {
+    return refuse("Energy of Revenge: a single layer of Apparel.");
+  }
   const isArmor = piece => piece.system?.crafted?.category === "armor";
   const overArmor = pieceSlots(crafted, { getTrait })["piece.wornOverArmor"] === true;
   const armorWorn = worn.find(isArmor);

@@ -1527,6 +1527,23 @@ export async function askWarriorTension(actor, declared) {
 }
 
 /**
+ * Energy of Revenge (1): "When making an Attacking Maneuver, you may spend any number of Revenge Points to increase your
+ * Wound Roll by 1(T) for each point spent. Double this effect if your Attacking Maneuver is an Ultimate Signature
+ * Technique." How many, asked as it is declared; carried as `revengeSpent` - lost, and on the Wound Roll, once the attack is
+ * made (chat.mjs postAttack).
+ */
+export async function askRevenge(actor, declared, maneuver) {
+  if (!declared || (actor?.system?.effects?.slots?.["tuffle.revengeSpend"] !== true) || declared.revengeSpent) return declared;
+  const held = Number(actor.system.resources?.revengepoints?.stacks) || 0;
+  if (held <= 0) return declared;
+  const ultimate = Boolean(maneuver?.signature && !maneuver.signatureTechnique && (maneuver.ultimate || maneuver.ascended));
+  const { askPlayerAmount } = await import("./chat.mjs");
+  const spent = Math.min(held, await askPlayerAmount(actor, `${actor.name}: Energy of Revenge`, held,
+    `Revenge Points - Wound +${ultimate ? 2 : 1}(T) each`));
+  return (spent > 0) ? { ...declared, revengeSpent: spent } : declared;
+}
+
+/**
  * Eye of the Dragon, Way of the Weaponmaster: "If you would target an Opponent with an Armed Attack, you may increase the
  * Strike and Wound Rolls for that Attacking Maneuver by 1(T) and 2(T) respectively." Asked once a Weapon is declared, once a
  * Round; carried as `eyeWeapon`. The declaration as it then stands.

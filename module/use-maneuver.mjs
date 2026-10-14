@@ -4819,6 +4819,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askEyeWeapon(actor, declared);
     // Warrior (4): an Armed Attack - a stack of Tension, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
+    // Energy of Revenge (1): Revenge Points on its Wound Roll, how many asked.
+    declared = await (await import("./maneuvers.mjs")).askRevenge(actor, declared, maneuver);
     // Glass Combat (4): the Glass Profile applied - yours, or an adjacent Ally's - for 2(bT) Ki, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askGlassApply(actor, declared);
     // Heart of Glass (3): a Glass attack on a Glass Square - Surging for it, asked once a Round.

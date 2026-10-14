@@ -1,0 +1,33 @@
+id: energy-of-revenge
+name: Energy of Revenge
+order: 1
+category: body
+importance: primary
+resource: revengepoints
+resourceLabel: Revenge Points
+resourceMax: 4
+description: >
+  Created by Tuffle scientists for the sole purpose of enacting vengeance on those who slaughtered the fallen Tuffles, Neo-Tuffles draw strength from their single-minded hatred.
+text: >
+  Energy of Revenge (Body): Created by Tuffle scientists for the sole purpose of enacting vengeance on those who slaughtered the fallen Tuffles, Neo-Tuffles draw strength from their single-minded hatred.
+  (1)-[Triggered, Resource]: Whenever you receive Damage from an Opponent’s Attacking Maneuver, gain 1 Revenge Point (max. 4). When making an Attacking Maneuver, you may spend any number of Revenge Points to increase your Wound Roll by 1(T) for each point spent. Double this effect if your Attacking Maneuver is an Ultimate Signature Technique.
+  (2)-[Passive]: You cannot gain the Poisoned Combat Condition.
+  (3)-[Passive]: You can only wear a single layer of Apparel, but increase your Soak Value by 1(bT).
+
+---
+
+[passive]
+# (1) The Resource is `revengepoints` - Revenge Bomber has `revenge.` already. Spent as an Attacking Maneuver is declared -
+# how many asked - each 1(T) on its Wound Roll, 2(T) on an Ultimate (maneuvers.mjs askRevenge); lost once the attack is
+# made (chat.mjs postAttack).
+allow tuffle.revengeSpend;
+# (2)
+forbid condition.poisoned;
+# (3) A second piece of Apparel refused (gear.mjs equipPlan) - Natural Armor's rule.
+allow apparel.singleLayer;
+soakValue += 1(bT);
+
+# (1) Damage from an Opponent's Attacking Maneuver, once it is applied (chat.mjs applyAttackDamage). Automatic by default,
+# its Triggered/Automatic button.
+[triggered/opponent-damage, effect 1]
+revengepoints.stacks += 1;
