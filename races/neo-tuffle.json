@@ -16,5 +16,15 @@
     }
   ],
   "savingThrow": "cognitive",
-  "skillRanks": 3
+  "skillRanks": 3,
+  "subraces": [
+    {
+      "id": "hatred-embodiment",
+      "name": "Hatred Embodiment"
+    },
+    {
+      "id": "parasite",
+      "name": "Parasite"
+    }
+  ]
 }
