@@ -278,10 +278,11 @@ const PREDICATES = {
 
   /** Intelligent Fighter (3): the one Defeated was the one you Studied, while it lasts. */
   defeatedStudied: scope => {
-    const studied = scope.data?.parent?.getFlag?.("dbu-ttrpg", "studied");
+    const held = scope.data?.parent?.getFlag?.("dbu-ttrpg", "studied");
     const combat = globalThis.game?.combat;
-    return Boolean(scope.context?.defeatedUuid) && (studied?.uuid === scope.context.defeatedUuid)
-      && (studied.combatId === (combat?.id ?? "none")) && ((combat?.round ?? 0) <= (Number(studied.through) || 0));
+    return Boolean(scope.context?.defeatedUuid) && (Array.isArray(held) ? held : [held]).some(studied =>
+      (studied?.uuid === scope.context.defeatedUuid) && (studied.combatId === (combat?.id ?? "none"))
+      && ((combat?.round ?? 0) <= (Number(studied.through) || 0)));
   },
 
   /** Surging (5): the one Defeated was your Focus. */

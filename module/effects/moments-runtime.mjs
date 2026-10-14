@@ -392,6 +392,7 @@ async function runVerb(actor, call, context) {
       return shardBurst(actor);
     }
 
+    case "namekianTechnique": return (await import("../chat.mjs")).namekianTechnique(actor);
     case "studyCharacter": return (await import("../chat.mjs")).studyCharacter(actor);
     case "spectatorCheer": return (await import("../chat.mjs")).spectatorCheer(actor);
     case "spectatorLeft": return (await import("../chat.mjs")).spectatorLeft(actor);

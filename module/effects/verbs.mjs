@@ -111,6 +111,11 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Glass Shards (6)'s: a Shard Carrier picked, a Clash, and Glass around them (chat.mjs shardBurst)."
   },
+  namekianTechnique: {
+    args: [0, 0],
+    doc: "Namekian Techniques (4): an Opponent picked - Studied, the Basic Attack or a Signature Technique out of sequence at "
+       + "them; not, Studied for the Round (chat.mjs namekianTechnique)."
+  },
   studyCharacter: {
     args: [0, 0],
     doc: "Intelligent Fighter (2): a Character who attacked this Round picked - Studied till the end of the next (chat.mjs "

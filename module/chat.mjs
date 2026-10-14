@@ -13040,13 +13040,31 @@ function attackedLastRound(actor) {
 }
 
 /**
- * Who this character has Studied, while it lasts - Intelligent Fighter's "until the end of the next Combat Round". Its uuid,
- * or "".
+ * Who this character has Studied, while it lasts - Intelligent Fighter's "until the end of the next Combat Round", Namekian
+ * Techniques' "until the end of the Combat Round". Their uuids.
  */
 export function studiedBy(actor) {
-  const studied = actor?.getFlag?.(SCOPE, "studied");
-  if (!studied?.uuid || (studied.combatId !== (game.combat?.id ?? "none"))) return "";
-  return ((game.combat?.round ?? 0) <= (Number(studied.through) || 0)) ? studied.uuid : "";
+  return studiedEntries(actor).map(entry => entry.uuid);
+}
+
+/** Whether this one is Studied by them. */
+export function isStudiedBy(actor, uuid) {
+  return Boolean(uuid) && studiedBy(actor).includes(uuid);
+}
+
+/** The entries still running - one written before the list was a list read as a list of one. */
+function studiedEntries(actor) {
+  const held = actor?.getFlag?.(SCOPE, "studied");
+  const all = Array.isArray(held) ? held : (held?.uuid ? [held] : []);
+  return all.filter(entry => entry?.uuid && (entry.combatId === (game.combat?.id ?? "none"))
+    && ((game.combat?.round ?? 0) <= (Number(entry.through) || 0)));
+}
+
+/** One more Studied, through the Round given - the rest still running kept. */
+async function study(actor, who, through) {
+  const kept = studiedEntries(actor).filter(entry => entry.uuid !== who.uuid);
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.studied`]: [...kept,
+    { uuid: who.uuid, combatId: game.combat?.id ?? "none", through }] });
 }
 
 /**
@@ -13066,8 +13084,7 @@ export async function studyCharacter(actor) {
     [...pool.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
   const who = pool.find(each => each.uuid === picked);
   if (!who) return UNSPENT;
-  await requestActorUpdate(actor, { [`flags.${SCOPE}.studied`]: { uuid: who.uuid, combatId: game.combat?.id ?? "none",
-    through: game.combat?.round ?? 0 } });
+  await study(actor, who, game.combat?.round ?? 0);
   if (alliesOnScene(actor).some(ally => ally.uuid === who.uuid) && (actor.system.effects?.slots?.["studied.allyRolls"] === true)) {
     const { setCondition } = await import("./conditions.mjs");
     if (await setCondition(who, "studied", Math.max(1, Number(actor.system.tierOfPower) || 1))) {
@@ -13077,10 +13094,40 @@ export async function studyCharacter(actor) {
   return settledNote({ speaker: ChatMessage.getSpeaker({ actor }) }, `${actor.name} Studies ${who.name}.`);
 }
 
+/**
+ * Namekian Techniques (4): "Target an Opponent: If your targeted Opponent is Studied, you may use the Signature Technique
+ * Maneuver or Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, the Opponent you targeted for this effect must
+ * be a target for this Attacking Maneuver. If your targeted Opponent is not Studied, they become Studied until the end of
+ * the Combat Round." Which Opponent asked; Studied, the two offered on a card at them; otherwise Studied for this Round.
+ */
+export async function namekianTechnique(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid) && !token.actor.system?.defeated)
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) return UNSPENT;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Namekian Techniques`,
+    [...opponents.map(each => ({ value: each.uuid, label: `${each.name}${isStudiedBy(actor, each.uuid) ? " (Studied)" : ""}` })),
+      { value: "none", label: "None" }]);
+  const target = opponents.find(each => each.uuid === picked);
+  if (!target) return UNSPENT;
+  if (!isStudiedBy(actor, target.uuid)) {
+    await study(actor, target, game.combat?.round ?? 0);
+    return settledNote({ speaker: ChatMessage.getSpeaker({ actor }) }, `${actor.name} Studies ${target.name} until the end of the Round.`);
+  }
+  const at = { actorUuid: actor.uuid, actorName: actor.name, targetUuid: target.uuid,
+    reason: `Namekian Techniques - ${target.name}, Studied` };
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [
+      { ...at, maneuverId: "basic-attack", maneuverName: "Basic Attack" },
+      { ...at, maneuverId: "signature-technique", maneuverName: "Signature Technique", technique: { via: "", any: true } }] } } });
+}
+
 /** Intelligent Fighter (5): "Increase your Combat Rolls by 1(T) against Studied Opponents" - the Strike and the Wound. */
 function studiedParts(attacker, target) {
   if (!target || (attacker?.system?.effects?.slots?.["studied.opponentRolls"] !== true)) return [];
-  if (studiedBy(attacker) !== target.uuid) return [];
+  if (!isStudiedBy(attacker, target.uuid)) return [];
   if (alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return [];
   return [{ label: "Studied", written: "+1(T)", value: Math.max(1, Number(attacker.system.tierOfPower) || 1) }];
 }
@@ -13100,7 +13147,7 @@ async function studiedShield(target, attacker, damage) {
   const allies = alliesOnScene(target);
   if (allies.some(ally => ally.uuid === attacker.uuid)) return damage;
   for (const ally of allies) {
-    if ((ally.system?.effects?.slots?.["studied.shield"] !== true) || (studiedBy(ally) !== target.uuid)) continue;
+    if ((ally.system?.effects?.slots?.["studied.shield"] !== true) || !isStudiedBy(ally, target.uuid)) continue;
     if (ally.getFlag?.(SCOPE, "studiedShieldRound") === roundKey()) continue;
     const surgency = Math.max(0, Number(ally.system.surgency) || 0);
     if (!surgency) continue;

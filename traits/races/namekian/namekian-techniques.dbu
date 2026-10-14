@@ -1,0 +1,30 @@
+id: namekian-techniques
+name: Namekian Techniques
+order: 3
+category: mind
+importance: secondary
+# (1) Both Unique Abilities, free and without their Requirements, gone with this (racial.mjs).
+grantsUnique: magical-materialization, telekinesis
+description: >
+  Known for their magical prowess, even among their warriors, this peace-loving race has developed certain techniques over time for both times of peace and times of war.
+text: >
+  Namekian Techniques (Mind): Known for their magical prowess, even among their warriors, this peace-loving race has developed certain techniques over time for both times of peace and times of war.
+  (1)-[Passive]: You gain access to the Magical Materialization and Telekinesis Unique Abilities.
+  (2)-[Passive]: You gain access to the Unify Maneuver.
+  (3)-[Passive]: Increase the number of Technique Points you gain from Skill Improvements by 3.
+  (4)-[Triggered/Power, 1/Round]: Target an Opponent:
+
+  * If your targeted Opponent is Studied, you may use the Signature Technique Maneuver or Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, the Opponent you targeted for this effect must be a target for this Attacking Maneuver.
+  * If your targeted Opponent is not Studied, they become Studied until the end of the Combat Round.
+
+---
+
+[passive]
+# (3) On every Skill Improvement row, as Quick to Master's.
+techniquePoints.perSkillImprovement += 3;
+# (2) The Unify Maneuver is not in this system yet - its text is waited on.
+
+# (4) Ticked in the Power Up's window: which Opponent asked - Studied by you (Intelligent Fighter's), the Basic Attack and a
+# Signature Technique offered out of sequence at them; not, Studied till the end of this Round (chat.mjs namekianTechnique).
+[triggered/power, 1/round, effect 4]
+namekianTechnique();
