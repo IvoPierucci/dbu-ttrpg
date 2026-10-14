@@ -1,0 +1,29 @@
+id: legacy-of-the-scholars
+name: Legacy of the Scholars
+order: 3
+category: mind
+importance: secondary
+description: >
+  You possess the great wisdom of the Tuffles and know when to go all in as well as when to fold.
+text: >
+  Legacy of the Scholars (Mind): You possess the great wisdom of the Tuffles and know when to go all in as well as when to fold.
+  (1)-[Passive]: Apply your Greater Dice to the Wound Roll(s) of your Signature Techniques if their target(s) include your Inferior.
+  (2)-[Triggered]: If you would use a Super Signature, you may spend 2 Revenge Points to apply the Ascended Signature Advantage to that Attacking Maneuver.
+  (3)-[Triggered, 1/Encounter]: When you are targeted by an Attacking Maneuver with 3+ Energy Charges, you may use the Defend Maneuver without spending a Counter Action and ignoring the increase to the Ki Point Cost of the Guard option of the Defend Maneuver from any Energy Charges on that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) Tuffle Superiority's Inferior among the targets of a Technique: the Greater Dice on its Wound Roll (chat.mjs
+# scholarsDice).
+allow scholars.greaterDice;
+# (2) A Super with 2 Revenge Points (Energy of Revenge's) and an Ultimate left: Ascend offered at Attack Declaration, as
+# the Advantage's own question - taken, the 2 spent, and not used again this Encounter (use-maneuver.mjs).
+allow scholars.ascend;
+
+# (3) Ticked in Respond as you Defend against an attack of 3+ Energy Charges, once an Encounter: no Counter Action, and no
+# Charges on the Guard's Ki (chat.mjs, maneuvers.mjs defendOptionCost).
+[triggered/defending, 1/encounter, effect 3]
+requires chargesAtLeast(3);
+defend.free = true;
+defend.noSurcharge = true;

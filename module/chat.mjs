@@ -20592,8 +20592,22 @@ function woundDice(attacker, attack) {
   return [
     { label: "Extra dice", formula: attacker.system.dice.extra.formula },
     { label: "Energy charges", formula: energyChargeDice(attacker, attack) },
-    ...phantomEdgeDice(attacker, attack)
+    ...phantomEdgeDice(attacker, attack),
+    ...scholarsDice(attacker, attack)
   ];
+}
+
+/**
+ * Legacy of the Scholars (1): "Apply your Greater Dice to the Wound Roll(s) of your Signature Techniques if their target(s)
+ * include your Inferior." This Round's Inferior (Tuffle Superiority's).
+ */
+function scholarsDice(attacker, attack) {
+  if (!attack?.technique || (attacker?.system?.effects?.slots?.["scholars.greaterDice"] !== true)) return [];
+  const inferior = attacker.getFlag?.(SCOPE, "inferior");
+  if (!inferior?.uuid || (inferior.round !== roundKey())) return [];
+  if (!attackTargets(attack).some(entry => entry.uuid === inferior.uuid)) return [];
+  const formula = attacker.system.dice?.greater?.formula ?? "";
+  return formula ? [{ label: "Legacy of the Scholars", formula }] : [];
 }
 
 function woundBase(attacker, attack) {
@@ -25156,15 +25170,18 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
   // Defending is a Counter Maneuver and costs a Counter Action - which was never being
   // spent here, because this path does not go through useManeuver. Karmic Desperation
   // is the one thing that waives it, and it would have had nothing to waive.
-  const answered = atMoment(target, "defending", { attack: true, attacker: true });
+  const answered = atMoment(target, "defending", { attack: true, attacker: true, charges: Number(attack?.energyCharges) || 0 });
   const free = answered.slots?.["defend.free"] === true;
+  // Legacy of the Scholars (3): the Guard's Ki not raised by the attack's Energy Charges.
+  const noSurcharge = answered.slots?.["defend.noSurcharge"] === true;
   // Martial Artist (3): a stack of Tension for it - "the Guard Option of the Defend Maneuver has its Ki Point Cost (before
   // any other modifications) set to 2(T)".
   const byTension = free && (answered.slots?.["defend.byTension"] === true);
 
   const defend = getManeuver("defend");
   const cost = defendOptionCost(chosen.defence, target, attack,
-    (byTension && (chosen.defence === "guard")) ? { base: 2 * Math.max(1, Number(target.system.tierOfPower) || 1) } : {})
+    { ...((byTension && (chosen.defence === "guard")) ? { base: 2 * Math.max(1, Number(target.system.tierOfPower) || 1) } : {}),
+      noSurcharge })
     + chosen.kiWager;
   if (defend && !await spendManeuverCost(target, defend, cost)) return;
   // Only what made it free is spent here: what else was ticked - Powerful Physique's Soak - is for the Defend itself.

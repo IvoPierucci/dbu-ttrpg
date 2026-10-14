@@ -486,6 +486,8 @@ const PREDICATE_NAMES = new Set([
   "using",
   // Resources' stacks between them, and a Health Threshold reached - Blood of the Warrior's.
   "stacksAtLeast", "belowThreshold",
+  // The attack defended against has that many Energy Charges - Legacy of the Scholars'.
+  "chargesAtLeast",
   // A Special Maneuver already open by other means - Majestic Grace's.
   "accessElsewhere",
   // A Clash won with that Skill - Stealthy Trick's.

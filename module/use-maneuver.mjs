@@ -4358,17 +4358,29 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     }
     // Ascended Signature: "At Attack Declaration, this Signature Technique can become an Ultimate
     // Signature Technique" - offered while one of the three Ultimates is left.
-    if ((technique.advantages ?? []).includes("ascended-signature") && !technique.ultimate
+    // Legacy of the Scholars (2): "If you would use a Super Signature, you may spend 2 Revenge Points to apply the Ascended
+    // Signature Advantage to that Attacking Maneuver" - the same question, the 2 spent if it ascends.
+    const owned = (technique.advantages ?? []).includes("ascended-signature");
+    const bought = !owned && !technique.ultimate && ((technique.level ?? "super") === "super")
+      && (actor.system.effects?.slots?.["scholars.ascend"] === true)
+      && ((Number(actor.system.resources?.revengepoints?.stacks) || 0) >= 2)
+      && !(actor.system.usedManeuvers ?? []).includes(`encounter:${technique.id}.ascended`);
+    if ((owned || bought) && !technique.ultimate
       && (ultimatesUsed(actor) < ULTIMATES_PER_ENCOUNTER)) {
       const ascend = await foundry.applications.api.DialogV2.wait({
         classes: ["dbu-dialog"], window: { title: `${technique.name} - Ascended Signature` },
-        content: "<p>Use it as an Ultimate Signature Technique? It cannot be used again this Combat Encounter.</p>",
+        content: `<p>Use it as an Ultimate Signature Technique? It cannot be used again this Combat Encounter.${
+          bought ? " Legacy of the Scholars: 2 Revenge Points." : ""}</p>`,
         buttons: [{ action: "ascend", label: "Ascend" }, { action: "super", label: "As a Super" },
           { action: "cancel", label: "Cancel" }],
         rejectClose: false
       });
       if (!["ascend", "super"].includes(ascend)) return false;
       ascended = (ascend === "ascend");
+      if (ascended && bought) {
+        const { setResource } = await import("./chat.mjs");
+        await setResource(actor, "revengepoints", (Number(actor.system.resources?.revengepoints?.stacks) || 0) - 2);
+      }
     }
     maneuver = throughSignatureTechnique(maneuver, technique);
     if (ascended) maneuver = { ...maneuver, ultimate: true, ascended: true };

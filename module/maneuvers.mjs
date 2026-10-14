@@ -2025,7 +2025,7 @@ export function whyNotIntervene(actor, allyUuid,
  * What one Defend option costs this character, resolving the (bT) notation and any
  * Talent that discounts it. A discount can never make a Maneuver pay you.
  */
-export function defendOptionCost(option, actor, attack = null, { base: setBase = null } = {}) {
+export function defendOptionCost(option, actor, attack = null, { base: setBase = null, noSurcharge = false } = {}) {
   const definition = DEFEND_OPTIONS[option];
   // What an effect sets it to "before any other modifications" - Martial Artist (3)'s Guard at 2(T).
   const base = Number.isFinite(setBase) ? setBase : definition.kiCostPerBaseTier
@@ -2035,7 +2035,8 @@ export function defendOptionCost(option, actor, attack = null, { base: setBase =
   // Guard gets dearer the more the attack was charged: "+1(bT) for each Energy Charge
   // on your Opponent's Attacking Maneuver (max. +4(bT))". The cap is on the Charges
   // counted, not on the Ki - four Charges is as expensive as seven.
-  const surcharge = definition.chargeSurcharge
+  // Legacy of the Scholars (3): "ignoring the increase to the Ki Point Cost of the Guard option ... from any Energy Charges".
+  const surcharge = (definition.chargeSurcharge && !noSurcharge)
     ? Math.min(attack?.energyCharges ?? 0, definition.chargeSurcharge.max)
       * definition.chargeSurcharge.perCharge * actor.system.baseTierOfPower
     : 0;

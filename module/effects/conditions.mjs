@@ -231,6 +231,9 @@ const PREDICATES = {
       && (inferior.round === round) && (inferior.uuid === (scope.context?.attackerUuid ?? ""));
   },
 
+  /** The attack defended against carries that many Energy Charges or more (Legacy of the Scholars' 3+). */
+  chargesAtLeast: (scope, amount) => (Number(scope.context?.charges) || 0) >= (Number(amount) || 0),
+
   fallenEnemy: scope => {
     const fallen = scope.context?.defeatedUuid || scope.context?.knockedUuid || "";
     return Boolean(fallen) && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "enemy")?.uuid === fallen);
