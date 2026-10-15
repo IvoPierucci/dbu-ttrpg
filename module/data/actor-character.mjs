@@ -2572,8 +2572,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // What each costs: nothing where an effect ignores that Threshold's penalties, twice where it doubles them (Construct's).
     const weight = key => ((this.effects?.slots?.[`threshold.ignore.${key}`] === true) ? 0
       : (this.effects?.slots?.[`threshold.double.${key}`] === true) ? 2 : 1);
-    const failures = reached.filter(key => !passes(key) && (this.thresholdChecks[key] === "fail"))
-      .reduce((sum, key) => sum + weight(key), 0);
+    const failedKeys = reached.filter(key => !passes(key) && (this.thresholdChecks[key] === "fail"));
+    const failures = failedKeys.reduce((sum, key) => sum + weight(key), 0);
 
     this.threshold = {
       key: current,
@@ -2581,6 +2581,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // How many Thresholds below Healthy the character is.
       depth: reached.length,
       failures,
+      // Which, by name - Parasite-Drained's "while they suffer the Health Threshold Penalties for that Health Threshold".
+      failedKeys,
       // Each failure costs 1(bT) on every Combat Roll.
       penalty: failures * this.baseTierOfPower,
       // Thresholds reached but not yet checked. Crossing several at once auto-fails

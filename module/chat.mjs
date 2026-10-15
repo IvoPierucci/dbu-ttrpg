@@ -5408,7 +5408,7 @@ async function resettleSteadfast(actor, steadfast, total) {
     if (threshold) {
       await actor.update({ [`system.thresholdChecks.${threshold}`]: passed ? "pass" : "fail" });
       if (passed) await steadfastPassed(actor, threshold);
-      else await steadfastFailed(actor);
+      else await steadfastFailed(actor, [threshold]);
     }
     else if (enter?.[0]) {
       const { enterState, leaveState } = await import("./effects/moments-runtime.mjs");
@@ -15376,6 +15376,22 @@ function offerFelineTechnique(message, actor) {
 }
 
 /**
+ * Parasitic Biology (3): "Each time you hit your Inferior with an Attacking Maneuver, reduce their Ki Points by 2(bT). If you
+ * spent Revenge Points on that Attacking Maneuver, increase the reduction by 1(bT) for every Revenge Point spent."
+ */
+export async function parasiteDrain(actor, context = {}) {
+  const inferior = actor?.getFlag?.(SCOPE, "inferior");
+  if (!inferior?.uuid || (inferior.round !== roundKey()) || !(context.struck ?? []).includes(inferior.uuid)) return;
+  const target = fromUuidSync(inferior.uuid);
+  if (!target) return;
+  const drained = (2 + (Number(context.revengeSpent) || 0)) * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const left = Math.max(0, (Number(target.system.ki?.value) || 0) - drained);
+  await requestActorUpdate(target, { "system.ki.value": left });
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(`Parasitic Biology: ${target.name} loses ${drained} Ki Points.`)}</p>` });
+}
+
+/**
  * Revenge Points spent (Energy of Revenge's): taken off, and Hate Empowerment (2) answered - "for every 2 Revenge Points
  * spent, increase your Soak Value by 1(T) until the start of your next turn. The bonus ... cannot exceed 4(T)." A stack of
  * Hated for every 2, each on its own clock, 4 at most. How many were spent.
@@ -17746,6 +17762,7 @@ export async function postAttack(actor, target, maneuver,
       value: 2 * thresholdsBelow(actor) * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
   }
   // Energy of Revenge (1): the Revenge Points spent, 1(T) each on its Wound Roll - 2(T) on an Ultimate - and lost.
+  let revengeSpentDone = 0;
   if ((Number(revengeSpent) > 0) && !reflecting) {
     const held = Number(actor.system.resources?.revengepoints?.stacks) || 0;
     const spent = Math.min(held, Number(revengeSpent));
@@ -17753,7 +17770,7 @@ export async function postAttack(actor, target, maneuver,
       const each = (maneuver.signature && !maneuver.signatureTechnique && (maneuver.ultimate || maneuver.ascended)) ? 2 : 1;
       woundExtra = [...woundExtra, { label: `Energy of Revenge (${spent})`, written: `+${spent * each}(T)`,
         value: spent * each * Math.max(1, Number(actor.system.tierOfPower) || 1) }];
-      await spendRevenge(actor, spent);
+      revengeSpentDone = await spendRevenge(actor, spent);
     }
   }
   // Punishing Blow: "has its Wound Roll increased by 3(T)" - a row on its Wound Roll.
@@ -17888,6 +17905,8 @@ export async function postAttack(actor, target, maneuver,
           ...((boom && !reflecting) ? { boom } : {}),
           // Refined Combat's Power Channeler: who stops being Studied once it is done (studiedSpent).
           ...((unstudy?.length && !reflecting) ? { unstudy } : {}),
+          // Energy of Revenge's Revenge Points spent on it - Parasitic Biology (3) reads them.
+          ...(revengeSpentDone ? { revengeSpentDone } : {}),
           // Neko Mimicry (5): the Ally whose Copied Technique this is joins with United Attack free of its Action.
           ...(((mimicry?.kind === "ally") && !reflecting) ? { mimicryAlly: mimicry.uuid } : {}),
           // Ranger (3): a move away from them once it is concluded (rangerRetreatEnds).
@@ -20404,7 +20423,9 @@ async function answerHit(message, attack, attacker, struck) {
   const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
     area: Boolean(attackArea(attack)), oblivious: struck.some(({ own }) => own.oblivious),
     // Glass Shards (1): of the Glass Profile, and whom it hit.
-    glass: [attack.profile, ...extraProfilesOf(attack)].includes("glass"), struck: struck.map(entry => entry.uuid) });
+    glass: [attack.profile, ...extraProfilesOf(attack)].includes("glass"), struck: struck.map(entry => entry.uuid),
+    // Parasitic Biology (3): the Revenge Points spent on it.
+    revengeSpent: Number(attack.revengeSpentDone) || 0 });
   answer.pressure = answered?.slots?.["wound.pressure"] === true;
   answer.pressureMost = answered?.slots?.["wound.pressureMost"] === true;
   if (answered?.slots?.["wound.oblivious"] === true) {
@@ -23967,7 +23988,16 @@ async function applyAttackDamage(message, target, attack) {
     && (damage >= Math.ceil((Number(target.system.life?.max) || 0) / 4))) await answerFor(target, "heavy-hit");
   // Any Damage from an Opponent's Attacking Maneuver - Energy of Revenge's.
   if ((damage > 0) && own.hit && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid)
-    && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)) await answerFor(target, "opponent-damage", { attackerUuid: armsUser.uuid });
+    && !alliesOnScene(target).some(ally => ally.uuid === armsUser.uuid)) {
+    const revengeBefore = Number(target.system.resources?.revengepoints?.stacks) || 0;
+    await answerFor(target, "opponent-damage", { attackerUuid: armsUser.uuid });
+    // Parasitic Biology (4): "regain 3(bT) Ki Points for each Revenge Point you gained as a result of that Attacking Maneuver".
+    const revengeGained = (Number(target.system.resources?.revengepoints?.stacks) || 0) - revengeBefore;
+    if ((revengeGained > 0) && target.isOwner && (target.system.effects?.slots?.["parasite.kiPerRevenge"] === true)) {
+      await target.update({ "system.ki.value": Math.min(Number(target.system.ki?.max) || 0,
+        (Number(target.system.ki?.value) || 0) + revengeGained * 3 * Math.max(1, Number(target.system.baseTierOfPower) || 1)) });
+    }
+  }
   // Cutthroat Teamwork (3) and (4): an Ally, not a Minion, dealt Damage by it.
   if ((damage > 0) && !isAbsoluteMiss(own) && armsUser && (armsUser.uuid !== target.uuid) && !target.system?.minion
     && alliesOnScene(armsUser).some(ally => ally.uuid === target.uuid)) await cutthroatAllyHit(armsUser, target);
@@ -24727,7 +24757,7 @@ export async function rollSteadfastCheck(actor) {
   if ((ready?.boxes ?? []).includes("heartOfGlass")) {
     updates[`system.thresholdChecks.${rolled}`] = "fail";
     await actor.update(updates);
-    await steadfastFailed(actor);
+    await steadfastFailed(actor, [rolled, ...automatic]);
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
       flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - failed without rolling (Heart of Glass)` });
     await heartOfGlassFail(actor);
@@ -24752,7 +24782,7 @@ export async function rollSteadfastCheck(actor) {
   const rescued = (roll.total >= target) ? "" : await rescueSteadfast(actor, roll.total, target);
   const passed = (roll.total >= target) || Boolean(rescued);
   // Multi-Form Technique: a Steadfast Check failed - the one rolled, or one failed automatically - Defeats them.
-  if (!passed || automatic.length) await steadfastFailed(actor);
+  if (!passed || automatic.length) await steadfastFailed(actor, [...automatic, ...(passed ? [] : [rolled])]);
   updates[`system.thresholdChecks.${rolled}`] = passed ? "pass" : "fail";
 
   await actor.update(updates);
@@ -24797,8 +24827,27 @@ async function heartOfGlassFail(actor) {
   await enterState(actor, "surging", 1, "turn", "Heart of Glass");
 }
 
-/** A Steadfast Check failed - the one rolled, or one failed automatically: what ends with it. */
-async function steadfastFailed(actor) {
+/**
+ * A Steadfast Check failed - the one rolled, or one failed automatically: what ends with it. `failed`, the Health Thresholds
+ * whose Checks these were, where known.
+ */
+async function steadfastFailed(actor, failed = []) {
+  // Parasitic Biology (5): knocked through by the one whose Inferior they are - that Threshold's mark, once a Round theirs.
+  const knock = actor.getFlag?.(SCOPE, "parasiteKnock");
+  if (knock?.by && (knock.round === roundKey())
+    && (failed.includes(knock.threshold) || (actor.system.thresholdChecks?.[knock.threshold] === "fail"))) {
+    const knocker = fromUuidSync(knock.by);
+    if (knocker && (knocker.getFlag?.(SCOPE, "parasiteRound") !== roundKey())) {
+      await requestActorUpdate(knocker, { [`flags.${SCOPE}.parasiteRound`]: roundKey() });
+      const { gainCondition, expiresAt } = await import("./effects/moments-runtime.mjs");
+      const mark = `parasite-drained-${knock.threshold}`;
+      if (!(Number(actor.system.conditions?.[mark]) || 0)) {
+        await gainCondition(actor, mark, 1);
+        await expiresAt(actor, mark, "encounter");
+      }
+    }
+    await actor.unsetFlag(SCOPE, "parasiteKnock");
+  }
   // Multi-Form Technique: a Steadfast Check failed Defeats them.
   for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.multiForm)) {
     await endMultiForm(actor, item, "are Defeated - a Steadfast Check failed");

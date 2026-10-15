@@ -488,6 +488,8 @@ const PREDICATE_NAMES = new Set([
   "stacksAtLeast", "belowThreshold",
   // The attack defended against has that many Energy Charges - Legacy of the Scholars'.
   "chargesAtLeast",
+  // A Health Threshold's penalties suffered - Parasite-Drained's.
+  "penalizedBy",
   // A Special Maneuver already open by other means - Majestic Grace's.
   "accessElsewhere",
   // A Clash won with that Skill - Stealthy Trick's.
@@ -522,8 +524,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "platingMendable", "aoeHitMany",
   // Your Enemy, Defeated or knocked through (Burning Hatred's).
   "fallenEnemy",
-  // The Damage from your Inferior's attack (Tuffle Superiority's, on Energy of Revenge).
-  "byInferior",
+  // The Damage from your Inferior's attack (Tuffle Superiority's, on Energy of Revenge); your Inferior hit (Parasitic Biology's).
+  "byInferior", "struckInferior",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

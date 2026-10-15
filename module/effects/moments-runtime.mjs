@@ -516,6 +516,10 @@ async function runVerb(actor, call, context) {
       return followAlly(actor);
     }
 
+    case "parasiteDrain": {
+      const { parasiteDrain } = await import("../chat.mjs");
+      return parasiteDrain(actor, context);
+    }
     case "chooseInferior": {
       const { askInferior } = await import("../chat.mjs");
       return askInferior(actor);

@@ -234,6 +234,16 @@ const PREDICATES = {
   /** The attack defended against carries that many Energy Charges or more (Legacy of the Scholars' 3+). */
   chargesAtLeast: (scope, amount) => (Number(scope.context?.charges) || 0) >= (Number(amount) || 0),
 
+  /** Parasitic Biology (3): this Round's Inferior among those the attack hit (moment hit-opponent's `struck`). */
+  struckInferior: scope => {
+    const inferior = scope.data?.parent?.getFlag?.("dbu-ttrpg", "inferior");
+    const round = `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
+    return Boolean(inferior?.uuid) && (inferior.round === round) && (scope.context?.struck ?? []).includes(inferior.uuid);
+  },
+
+  /** A Health Threshold whose penalties are suffered: reached, its Steadfast Check failed (Parasite-Drained's). */
+  penalizedBy: (scope, key) => (scope.data?.threshold?.failedKeys ?? []).includes(String(key).toLowerCase()),
+
   fallenEnemy: scope => {
     const fallen = scope.context?.defeatedUuid || scope.context?.knockedUuid || "";
     return Boolean(fallen) && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "enemy")?.uuid === fallen);

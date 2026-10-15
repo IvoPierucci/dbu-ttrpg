@@ -1,0 +1,38 @@
+id: parasitic-biology
+name: Parasitic Biology
+order: 6
+category: body
+subrace: parasite
+importance: primary
+description: >
+  Able to liquefy into a smaller form and enter another being’s body, you possess the power to take control over that being.
+text: >
+  Parasitic Biology (Body): Able to liquefy into a smaller form and enter another being’s body, you possess the power to take control over that being.
+  (1)-[Passive]: You gain access to the Liquid Form Maneuver (see — Special Maneuvers). While in Liquid Form, you have access to the Internal Attack Maneuver (see — Special Maneuvers) and the Possess Maneuver (see — Special Maneuvers).
+  (2)-[Passive]: When using the Possess Maneuver, you can only target a willing Character. To target an unwilling Character they must be; a character of a larger Size Category who is below the Bruised Health Threshold, OR a Character of a larger Size Category that has been damaged by one of your Attacking Maneuvers this Combat Round.
+  (3)-[Triggered]: Each time you hit your Inferior with an Attacking Maneuver, reduce their Ki Points by 2(bT). If you spent Revenge Points on that Attacking Maneuver, increase the reduction by 1(bT) for every Revenge Point spent.
+  (4)-[Triggered]: If you are hit by an Attacking Maneuver, regain 3(bT) Ki Points for each Revenge Point you gained as a result of that Attacking Maneuver.
+  (5)-[Triggered, 1/Round]: If you knock your Inferior through a Health Threshold with an Attacking Maneuver, and they fail the Steadfast Check for that Health Threshold, reduce their Combat Rolls by 1(bT) and their Stress Bonus by 1 while they suffer the Health Threshold Penalties for that Health Threshold.
+
+---
+
+# (1) The Liquid Form is the Liquid State it puts you in. The Possess Maneuver is not in this system yet - its text, and
+# (2) with it, are waited on.
+[passive]
+allow maneuver.liquid-form;
+if (inState("liquid")) {
+    allow maneuver.internal-attack;
+}
+# (4) The Revenge Points an Opponent's attack just gave you (Energy of Revenge's), 3(bT) of Ki each (chat.mjs
+# applyAttackDamage).
+allow parasite.kiPerRevenge;
+# (5) This Round's Inferior knocked through by your attack, and failing that Threshold's Steadfast Check, once a Round:
+# Parasite-Drained (a mark for that Threshold) - Combat Rolls 1(bT) and Stress Bonus 1 less while its penalties hold, for the
+# Encounter (combat.mjs, chat.mjs steadfastFailed).
+allow parasite.drain;
+
+# (3) Your Inferior among those your attack hit: 2(bT) off their Ki, 1(bT) more for each Revenge Point spent on it (chat.mjs
+# parasiteDrain). Automatic by default, its Triggered/Automatic button.
+[triggered/hit-opponent, effect 3]
+requires struckInferior;
+parasiteDrain();

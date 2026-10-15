@@ -1,0 +1,20 @@
+id: parasite-drained-critical
+name: Parasite-Drained (Critical)
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Parasitic Biology (5)'s, for the Critical Health Threshold - its penalties' while they hold, for the
+# Combat Encounter.
+combatCondition: no
+source: Core Rule
+description: >
+  Parasitic Biology: Combat Rolls 1(bT) and Stress Bonus 1 lower while the Critical Health Threshold's penalties are suffered.
+text: >
+  Parasitic Biology (5): If you knock your Inferior through a Health Threshold with an Attacking Maneuver, and they fail the Steadfast Check for that Health Threshold, reduce their Combat Rolls by 1(bT) and their Stress Bonus by 1 while they suffer the Health Threshold Penalties for that Health Threshold.
+
+---
+
+[passive]
+if (penalizedBy("critical")) {
+  combatRolls -= 1(bT);
+  stressBonus -= 1;
+}
