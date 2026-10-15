@@ -752,6 +752,9 @@ async function settleClashEffects(messageId, clash) {
   if (clash.goof && clash.result && !clash.goof.applied) {
     await settleGoof(message, clash);
   }
+  if (clash.negativeImpair && clash.result && !clash.negativeImpair.applied) {
+    await settleNegativeImpair(message, clash);
+  }
   if (clash.danceEffect && clash.result && !clash.danceEffect.applied) {
     await settleDanceModifier(message, clash);
   }
@@ -15376,6 +15379,120 @@ function offerFelineTechnique(message, actor) {
 }
 
 /**
+ * Negative Ki (1): "Reduce your Life Points by up to 8(bT). For every 2(bT) Life Points lost, gain 1 Negative Energy." How
+ * many, asked of whoever plays them - none, nothing. Gained as an effect gains it, so (4)'s moment answers.
+ */
+export async function negativeEnergy(actor) {
+  const step = 2 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const life = Number(actor.system.life?.value) || 0;
+  const most = Math.min(4, Math.floor(life / step));
+  if (most <= 0) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Negative Ki`, [{ value: "0", label: "None" },
+    ...Array.from({ length: most }, (each, index) => index + 1)
+      .map(n => ({ value: String(n), label: `${n * step} Life Points: ${n} Negative Energy` }))]);
+  const n = Number(picked) || 0;
+  if (n <= 0) return;
+  await reduceLifePoints(actor, n * step, { reason: "Negative Ki", own: true, momentum: false });
+  const held = Number(actor.system.resources?.negativeenergy?.stacks) || 0;
+  await setResource(actor, "negativeenergy", held + n);
+  const { stacksGained } = await import("./effects/moments-runtime.mjs");
+  return stacksGained(actor, ["negativeenergy"], { negativeenergy: n });
+}
+
+/**
+ * Negative Ki (2): "As an Instant Maneuver, spend any amount of Negative Energy to make a Morale Clash against an equal number
+ * of Opponents that are not at Long Range. If you win, that Opponent(s) gains a stack of the Impaired Combat Condition until
+ * the start of your next turn." Which, one at a time, asked - as many as there is Negative Energy; each spends one.
+ */
+export async function negativeClash(actor) {
+  const held = Number(actor.system.resources?.negativeenergy?.stacks) || 0;
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid)
+      && !token.actor.system?.defeated && !atLongRange(actor, token.actor))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  const picked = [];
+  while ((picked.length < held) && (picked.length < opponents.length)) {
+    const left = opponents.filter(each => !picked.includes(each));
+    const uuid = await askPlayerChoice(actor, `${actor.name}: Negative Ki - ${held - picked.length} Negative Energy left`,
+      [...left.map(each => ({ value: each.uuid, label: each.name })), { value: "done", label: picked.length ? "Done" : "None" }]);
+    const one = left.find(each => each.uuid === uuid);
+    if (!one) break;
+    picked.push(one);
+  }
+  if (!picked.length) return;
+  await setResource(actor, "negativeenergy", held - picked.length);
+  for (const other of picked) {
+    await postSaveClash(actor, other, { maneuverName: "Negative Ki",
+      reason: `Win and ${other.name} is Impaired until the start of ${actor.name}'s next turn.`,
+      saves: ["morale"], defenderSaves: ["morale"], negativeImpair: { applied: false } });
+  }
+}
+
+/** Negative Ki (2)'s Clash, settled: won, a stack of Impaired till the start of the challenger's next turn. */
+async function settleNegativeImpair(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, negativeImpair: { ...clash.negativeImpair, applied: true } });
+  const challenger = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!challenger || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} shrugs it off.`);
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  if (await gainCondition(target, "impaired", 1) === false) return;
+  await lasting(challenger, { kind: KINDS.CONDITION, key: "impaired", edge: EDGES.START, on: target.uuid, source: "Negative Ki" });
+  return settledNote(message, `${target.name} is Impaired until the start of ${challenger.name}'s next turn.`);
+}
+
+/**
+ * Negative Ki (3): "When an Opponent suffering from the Impaired Combat Condition would make a Combat Roll within your Melee
+ * Range, before the roll is made, you may spend up to 2 Negative Energy to reduce the Natural Result of their roll by an equal
+ * amount." On an attack's card before it is settled: for each Impaired Opponent in it - its maker, whose Strike it is, or one
+ * it is aimed at, whose Dodge it is - within your Melee Range, a button for 1 and for 2. Kept on the attack (`negativeKi`).
+ */
+function negativeKiButtons(message, attack, container) {
+  const people = [attack.attackerUuid, ...attackTargets(attack).map(entry => entry.uuid)]
+    .map(uuid => fromUuidSync(uuid ?? "")).filter(Boolean);
+  const used = attack.negativeKi ?? [];
+  const seen = new Set();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const dragon = token.actor;
+    if (!dragon?.isOwner || seen.has(dragon.uuid) || dragon.system?.defeated
+      || (dragon.system?.effects?.slots?.["negative.natural"] !== true)) continue;
+    seen.add(dragon.uuid);
+    const held = Number(dragon.system.resources?.negativeenergy?.stacks) || 0;
+    if (!held) continue;
+    const side = new Set([dragon.uuid, ...alliesOnScene(dragon).map(ally => ally.uuid)]);
+    for (const other of people) {
+      if (side.has(other.uuid) || !((Number(other.system?.conditions?.impaired) || 0) > 0)) continue;
+      if (used.some(entry => (entry.by === dragon.uuid) && (entry.uuid === other.uuid))) continue;
+      if (whyNotWithinMelee(dragon, other, "")) continue;
+      for (const n of [1, 2].filter(each => each <= held)) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "dbu-clash-button";
+        button.textContent = `Negative Ki - ${other.name} -${n}`;
+        button.dataset.tooltip = `${n} Negative Energy: ${other.name}'s ${(other.uuid === attack.attackerUuid) ? "Strike" : "Dodge"} `
+          + `Roll, its Natural Result ${n} lower`;
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+          const now = Number(dragon.system.resources?.negativeenergy?.stacks) || 0;
+          if (now < n) return ui.notifications.warn(`${dragon.name} has ${now} Negative Energy.`);
+          await setResource(dragon, "negativeenergy", now - n);
+          requestEdit(message, { type: "attack", attack: { ...fresh,
+            negativeKi: [...(fresh.negativeKi ?? []), { by: dragon.uuid, uuid: other.uuid, n }] } });
+        });
+        container.append(button);
+      }
+    }
+  }
+}
+
+/** Negative Ki (3) on this roll: the Natural Result taken off it - its Strike, or its Dodge. */
+function negativeNatural(attack, uuid) {
+  return -(attack?.negativeKi ?? []).filter(entry => entry.uuid === uuid).reduce((sum, entry) => sum + (Number(entry.n) || 0), 0);
+}
+
+/**
  * Parasitic Biology (3): "Each time you hit your Inferior with an Attacking Maneuver, reduce their Ki Points by 2(bT). If you
  * spent Revenge Points on that Attacking Maneuver, increase the reduction by 1(bT) for every Revenge Point spent."
  */
@@ -19597,7 +19714,8 @@ async function resolveAttackWork(message, attack) {
     minimumNatural: profileFor(attack)?.minimumNatural ?? 0,
     botchUnlessCritical: Boolean(profileFor(attack)?.botchUnlessCritical),
     // The Weapon's own - Targeting System's "Increase the Natural Result of any Strike Roll".
-    naturalAdd: (Number(attack.weapon?.strikeNatural) || 0) + sniperNatural(attacker, attack),
+    // And Negative Ki (3)'s, taken off an Impaired attacker's.
+    naturalAdd: (Number(attack.weapon?.strikeNatural) || 0) + sniperNatural(attacker, attack) + negativeNatural(attack, attacker.uuid),
     // Twin-Linked or Dead-Link on the Strike: made twice, one kept.
     linked: attack.technique?.linked?.strike ?? ""
   });
@@ -21903,7 +22021,9 @@ const DEFENCES = {
     // Diminishing Defense reduces Dodge Rolls, and only Dodge Rolls.
     parts: (actor, attack) => dodgeBonus(actor, { attack }),
     answer: (actor, options, attack) =>
-      rollSide(actor, DEFENCES.dodge.parts(actor, attack), { ...options, slot: "dodge" }),
+      rollSide(actor, DEFENCES.dodge.parts(actor, attack), { ...options, slot: "dodge",
+        // Negative Ki (3): its Natural Result lowered.
+        naturalAdd: (Number(options?.naturalAdd) || 0) + negativeNatural(attack, actor.uuid) }),
     // Named here so the two halves stay visible in the breakdown.
     // Dodging is not the Defend Maneuver, so it does not spare you the stacks.
     gainsDiminishingDefense: true,
@@ -25741,6 +25861,8 @@ function renderAttack(message, html) {
   if (!result) resilienceButtons(message, attack, container);
   // Telepathic Warning (2), (3): you or an Ally targeted by an Opponent - the Dodge raised for it, before it is settled.
   if (!result) telepathicButtons(message, attack, container);
+  // Negative Ki (3): an Impaired Opponent's Strike or Dodge, its Natural Result lowered before it is rolled.
+  if (!result) negativeKiButtons(message, attack, container);
   // Refined Combat's Fleet-Footed: targeted by one you Studied - the Defense Value raised for it.
   if (!result) fleetButtons(message, attack, container);
   // The Duel Clashes: a wager from each who is in it, then the roll.

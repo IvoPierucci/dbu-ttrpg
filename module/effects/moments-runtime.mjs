@@ -291,7 +291,7 @@ export async function stacksGained(actor, names, counts = {}) {
   // Star's - with how many.
   // And Power's - Greed of the Hera's "Each time you gain a stack(s) of Power".
   for (const [name, moment] of [["overwhelm", "overwhelm-gained"], ["demonicpower", "demonic-power-gained"],
-    ["power", "power-gained"]]) {
+    ["power", "power-gained"], ["negativeenergy", "negative-energy-gained"]]) {
     if (!names.includes(name)) continue;
     const context = { gained: Math.max(1, Number(counts[name]) || 1) };
     await offerTriggers(actor, moment, context);
@@ -308,7 +308,7 @@ export async function stacksGained(actor, names, counts = {}) {
 }
 
 /** The Resources whose stacks gained are a Moment where an effect writes them - Comfort's. */
-const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm", "demonicpower", "power"]);
+const GAINED_MOMENTS = Object.freeze(["comfort", "overwhelm", "demonicpower", "power", "negativeenergy"]);
 
 /** A character an effect named, by uuid or by name, or nothing. */
 function named(who) {
@@ -516,6 +516,14 @@ async function runVerb(actor, call, context) {
       return followAlly(actor);
     }
 
+    case "negativeEnergy": {
+      const { negativeEnergy } = await import("../chat.mjs");
+      return negativeEnergy(actor);
+    }
+    case "negativeClash": {
+      const { negativeClash } = await import("../chat.mjs");
+      return negativeClash(actor);
+    }
     case "parasiteDrain": {
       const { parasiteDrain } = await import("../chat.mjs");
       return parasiteDrain(actor, context);

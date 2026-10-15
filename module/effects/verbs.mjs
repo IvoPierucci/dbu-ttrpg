@@ -272,6 +272,18 @@ export const VERBS = Object.freeze({
     doc: "Patient Sniper's: an Ally with a lower Initiative picked, and your Initiative set just after theirs for this "
        + "Combat Round - put back as the next begins (chat.mjs followAlly)."
   },
+  negativeEnergy: {
+    args: [0, 0],
+    names: [],
+    doc: "Negative Ki (1): how many 2(bT) of Life Points to lose, up to 8(bT), asked - a Negative Energy for each (chat.mjs "
+       + "negativeEnergy)."
+  },
+  negativeClash: {
+    args: [0, 0],
+    names: [],
+    doc: "Negative Ki (2): Opponents not at Long Range picked, a Negative Energy spent for each - a Morale Clash at each, won, "
+       + "Impaired till the start of your next turn (chat.mjs negativeClash)."
+  },
   parasiteDrain: {
     args: [0, 0],
     names: [],

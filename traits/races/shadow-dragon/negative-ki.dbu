@@ -1,0 +1,46 @@
+id: negative-ki
+name: Negative Ki
+order: 1
+category: body
+importance: primary
+resource: negativeenergy
+resourceLabel: Negative Energy
+# Not printed: what (1) can give in a Round - 8(bT) of Life, 2(bT) each - and (5) takes it all as the Round ends.
+resourceMax: 4
+description: >
+  Produced by the overwhelming negative energy stored in the Dragon Balls over time when they are overused, Shadow Dragons can tap into the force that created them to manipulate reality.
+text: >
+  Negative Ki (Body): Produced by the overwhelming negative energy stored in the Dragon Balls over time when they are overused, Shadow Dragons can tap into the force that created them to manipulate reality.
+  (1)-[Triggered/Start of Combat Round, Resource]: Reduce your Life Points by up to 8(bT). For every 2(bT) Life Points lost, gain 1 Negative Energy.
+  (2)-[Triggered/Start of Turn]: As an Instant Maneuver, spend any amount of Negative Energy to make a Morale Clash against an equal number of Opponents that are not at Long Range. If you win, that Opponent(s) gains a stack of the Impaired Combat Condition until the start of your next turn.
+  (3)-[Triggered]: When an Opponent suffering from the Impaired Combat Condition would make a Combat Roll within your Melee Range, before the roll is made, you may spend up to 2 Negative Energy to reduce the Natural Result of their roll by an equal amount.
+  (4)-[Triggered]: Each time you gain Negative Energy, regain 1(T) Ki Points for every Negative Energy gained.
+  (5)-[Automatic]: At the end of the Combat Round, lose all Negative Energy you possess and regain 1(T) Ki Points for every Negative Energy lost.
+
+---
+
+[passive]
+# (3) On the card of an attack an Impaired Opponent within your Melee Range makes or is aimed at, before it is settled: a
+# button - 1 or 2 Negative Energy off their Strike or their Dodge (chat.mjs negativeKiButtons).
+allow negative.natural;
+
+# (1) As each Combat Round starts: how many 2(bT) of Life Points, up to 8(bT), asked - a Negative Energy each (chat.mjs
+# negativeEnergy). Automatic by default, asked every Round; its Triggered/Automatic button.
+[triggered/start-of-round, effect 1]
+negativeEnergy();
+
+# (2) As your turn starts: which Opponents not at Long Range, as many as you spend, asked - a Morale Clash at each, won,
+# Impaired till the start of your next turn (chat.mjs negativeClash). Its Triggered/Automatic button.
+[triggered/start-of-turn, effect 2]
+requires hasResource("negativeenergy");
+negativeClash();
+
+# (4) Gained, how many (moment negative-energy-gained). Its Triggered/Automatic button.
+[triggered/negative-energy-gained, effect 4]
+ki.value += gained * 1(T);
+
+# (5)
+[automatic/end-of-round]
+requires hasResource("negativeenergy");
+ki.value += negativeenergy.stacks * 1(T);
+negativeenergy.stacks = 0;

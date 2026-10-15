@@ -121,6 +121,9 @@ const TABLE = [
   { key: "ally-defeated", label: "An Ally is Defeated", provides: [],
     doc: "Fired for each Ally on the scene of whoever is Defeated - not for a Minion's defeat - with them as `defeatedUuid` "
        + "(combat.mjs) - Battle Tension's. What is the player's is asked in a window first." },
+  { key: "negative-energy-gained", label: "You gain Negative Energy", provides: [],
+    doc: "Fired as Negative Energy is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Negative Ki's. "
+       + "What is the player's is asked in a window first." },
   { key: "power-gained", label: "You gain a stack of Power", provides: [],
     doc: "Fired as Power is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Greed of the Hera's. "
        + "What is the player's is asked in a window first." },
