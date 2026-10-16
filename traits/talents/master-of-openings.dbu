@@ -1,0 +1,20 @@
+id: master-of-openings
+name: Master of Openings
+talentCategory: counter
+prerequisites: Exploit Expert
+description: >
+  You are so skilled at taking advantage of openings in your enemy’s guard that you create openings where none were before.
+text: >
+  Master of Openings: You are so skilled at taking advantage of openings in your enemy’s guard that you create openings where none were before.
+  –Prerequisites: Exploit Expert
+  (1)-[Passive]: Increase your Strike Rolls for Attacking Maneuvers made through the Exploit Maneuver by 1(T).
+  (2)-[Triggered, 1/Round]: If an Opponent uses the Power Up Maneuver or Transformation Maneuver while not at Long Range, this triggers your Exploit Maneuver.
+
+---
+
+[passive]
+# (1) An attack made through the Exploit (chat.mjs strikeParts).
+strike.viaExploit += 1(T);
+# (2) An Opponent not at Long Range using the Power Up or the Transformation Maneuver: the Exploit at them, out of sequence, on
+# its card - taken, once a Round (chat.mjs openingsOffers).
+allow exploit.onPowerUp;

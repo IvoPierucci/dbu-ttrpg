@@ -596,6 +596,26 @@ export function conditionGained(actor, key) {
 }
 
 /**
+ * Master of Openings (2): "If an Opponent uses the Power Up Maneuver or Transformation Maneuver while not at Long Range, this
+ * triggers your Exploit Maneuver." For each who has it and the Exploit - `user` their Opponent, not at Long Range - the Exploit
+ * at them, out of sequence, on its card. Taken, once a Round (takeOutOfSequence).
+ */
+export async function openingsOffers(message, user) {
+  if (!message || !user || !canvas?.tokens) return;
+  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const watchers = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
+    .filter(watcher => watcher && (watcher.uuid !== user.uuid) && !watcher.system?.defeated
+      && (watcher.system?.effects?.slots?.["exploit.onPowerUp"] === true) && (side(watcher) !== side(user))
+      && (watcher.getFlag?.(SCOPE, "openingsRound") !== roundKey())
+      && watcher.items.some(item => (item.type === "maneuver") && item.system.exploit)
+      && !atLongRange(watcher, user));
+  for (const watcher of watchers) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: watcher.uuid, actorName: watcher.name, maneuverId: "exploit",
+      maneuverName: "Exploit", targetUuid: user.uuid, reason: `Master of Openings - ${user.name}`, grants: { openings: true } } });
+  }
+}
+
+/**
  * Perfected Tactics (2): an Opponent within four Squares of you gaining a Combat Condition "provokes your Exploit Maneuver".
  * For each who has it and the Exploit - `actor` their Opponent, within four Squares - the Exploit at them, out of sequence: on the
  * card being settled as it was gained, or on a note of its own where none is. Taken, once a Round (takeOutOfSequence).
@@ -18321,6 +18341,14 @@ async function takeOutOfSequence(message, actor, offer) {
       await actor.setFlag(SCOPE, "unscathedRound", roundKey());
     }
     // Sinister Dragon: once a Round - and 2 Negative Energy instead of the Counter Action, if they would.
+    // Master of Openings (2): once a Round, spent here.
+    if (offer.grants?.openings) {
+      if (actor.getFlag?.(SCOPE, "openingsRound") === roundKey()) {
+        ui.notifications.warn(`${actor.name}: Master of Openings - already used this Combat Round.`);
+        return;
+      }
+      await actor.setFlag(SCOPE, "openingsRound", roundKey());
+    }
     // Perfected Tactics (2): once a Round, spent here.
     if (offer.grants?.tactics) {
       if (actor.getFlag?.(SCOPE, "tacticsRound") === roundKey()) {
@@ -20628,7 +20656,11 @@ function strikeParts(attacker, attack) {
     // Last Legs: "Ignore all Health Threshold penalties during this Attacking Maneuver."
     ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker)),
     // Rebound's retry at another target: Homing's "+1(T) for each time you've missed".
-    ...(attack.homing?.bonus ? [{ label: `Homing (${attack.homing.misses} missed)`, value: attack.homing.bonus }] : [])
+    ...(attack.homing?.bonus ? [{ label: `Homing (${attack.homing.misses} missed)`, value: attack.homing.bonus }] : []),
+    // Master of Openings (1): made through the Exploit Maneuver.
+    ...((attack.viaExploit && (Number(attacker.system.effects?.slots?.["strike.viaExploit"]?.add) || 0))
+      ? [{ label: (attacker.system.effects.slots["strike.viaExploit"].parts ?? []).map(part => part.source).find(Boolean) ?? "Exploit",
+          value: Number(attacker.system.effects.slots["strike.viaExploit"].add) }] : [])
   ];
 }
 

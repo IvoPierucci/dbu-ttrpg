@@ -4529,8 +4529,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     if ((price > 0) && !await spendManeuverCost(actor, maneuver, price)) return false;
     await payActions(actor, maneuver, actionsSpent);
     await recordManeuverUse(actor, maneuver);
-    await recordManeuverType(actor, maneuver.type,
-      { messageId: (await postTransformation(actor, maneuver, into, actionsSpent))?.id });
+    const transformed = await postTransformation(actor, maneuver, into, actionsSpent);
+    await recordManeuverType(actor, maneuver.type, { messageId: transformed?.id });
+    // Master of Openings (2): an Opponent's Exploit, offered on the Transformation's card.
+    if (transformed) await (await import("./chat.mjs")).openingsOffers(transformed, actor);
     return true;
   }
 
@@ -6031,6 +6033,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).offerWeatherSummoning(actor);
   // "When you use the Power Up Maneuver" - its Triggered effects offered in a window then and there (God of Peace's).
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).answerPower(actor, card);
+  // Master of Openings (2): an Opponent's Exploit, offered on the Power Up's card.
+  if (card && maneuver.powerUp) await (await import("./chat.mjs")).openingsOffers(card, actor);
   // Karmic Assault's Karma: the attack has been made, so now it is paid.
   if (card) await payKarmicAssault(actor, maneuver, declared);
   // Time Freeze: the Frozen Turn's last Maneuver made - closed now, or, an attack, once it is done (chat.mjs).
