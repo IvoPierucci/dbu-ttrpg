@@ -1,0 +1,21 @@
+id: cunning-dodge
+name: Cunning Dodge
+talentCategory: dodging
+prerequisites: Agility Score of 4+
+description: >
+  Masterfully skilled at evading attacks, you duck and weave out of the way of any incoming assault.
+text: >
+  Cunning Dodge: Masterfully skilled at evading attacks, you duck and weave out of the way of any incoming assault.
+  –Prerequisites: Agility Score of 4+
+  (1)-[Passive]: Increase the Dice Category of your Critical Result Extra Dice by 1 Category for your Dodge Rolls.
+  (2)-[Triggered, 1/Round]: If your Dodge Roll’s Natural Result is 1 below the Critical Target, score a Critical Result on that Dodge Roll.
+
+---
+
+[passive]
+# (1) A Dodge Roll's Critical Extra Dice, held to the same ceiling as every raise of them (actor-character.mjs dice.criticalDodge,
+# chat.mjs rollSide).
+dice.critical.dodge.category += 1;
+# (2) Your Dodge - a Cross Counter's too - a Natural Result 1 below its Critical Target: a "Critical" button on the attack's card
+# before the Wound Roll, once a Round - the Critical dice rolled on, whether it hit settled again (chat.mjs cunningDodgeButtons).
+allow dodge.cunningCritical;

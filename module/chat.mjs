@@ -8157,6 +8157,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   if ((slot === "strike") && actor?.system?.dice?.criticalStrike && (criticalDice === actor.system.dice.critical?.formula)) {
     criticalDice = actor.system.dice.criticalStrike.formula;
   }
+  // Cunning Dodge (1): a Dodge Roll's.
+  if ((slot === "dodge") && actor?.system?.dice?.criticalDodge && (criticalDice === actor.system.dice.critical?.formula)) {
+    criticalDice = actor.system.dice.criticalDodge.formula;
+  }
   // Bruising Wound (1): a Wound Roll's.
   if ((slot === "wound") && actor?.system?.dice?.criticalWound && (criticalDice === actor.system.dice.critical?.formula)) {
     criticalDice = actor.system.dice.criticalWound.formula;
@@ -16098,6 +16102,55 @@ function criticalStrikeButton(message, container, attack) {
     await declareStrikeCritical(message, attacker);
   });
   container.append(button);
+}
+
+/** The defences that answer with a Dodge Roll - a Cross Counter's among them. */
+const DODGE_DEFENCES = Object.freeze(["dodge", "crossCounter", "crossCounterSignature"]);
+
+/**
+ * Cunning Dodge (2): "If your Dodge Roll's Natural Result is 1 below the Critical Target, score a Critical Result on that Dodge
+ * Roll." A button for the one who Dodged, before the Wound Roll, once a Round.
+ */
+function cunningDodgeButtons(message, container, attack) {
+  const result = attack?.result;
+  if (!result || result.wound) return;
+  for (const branch of result.targets ?? []) {
+    const target = fromUuidSync(branch.uuid ?? "");
+    if (!target?.isOwner || !DODGE_DEFENCES.includes(branch.defense) || branch.answer?.total === 0
+      || (target.system?.effects?.slots?.["dodge.cunningCritical"] !== true) || !oneBelowCritical(target, branch.answer)) continue;
+    const used = target.getFlag?.(SCOPE, "cunningRound") === roundKey();
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Critical - Cunning Dodge (${target.name})`;
+    button.disabled = used;
+    button.dataset.tooltip = used ? "Once a Combat Round." : "Its Natural Result is 1 below the Critical Target: a Critical Result (1/Round)";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      await cunningDodge(message, target);
+    });
+    container.append(button);
+  }
+}
+
+/** The Dodge Roll a Critical Result: its Critical dice rolled on, and whether it hit settled again - dodged now, said so. */
+async function cunningDodge(message, target) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const branch = attack?.result?.targets?.find(entry => entry.uuid === target.uuid);
+  const side = branch?.answer;
+  if (!side || attack.result.wound || !DODGE_DEFENCES.includes(branch.defense) || !oneBelowCritical(target, side)
+    || (target.getFlag?.(SCOPE, "cunningRound") === roundKey())) return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.cunningRound`]: roundKey() });
+  const extra = new Roll(side.criticalDice || target.system.dice?.criticalDodge?.formula || target.system.dice?.critical?.formula || "1d10");
+  await extra.evaluate();
+  const total = Math.max(0, (Number.isFinite(side.beforeOutcome) ? side.beforeOutcome : side.total) + extra.total);
+  const lines = [...withoutOutcome(side.lines ?? []), fromOutcome(diceLine(extra, "Critical - Cunning Dodge"))];
+  const answer = { ...side, total, outcome: "critical", lines, breakdown: breakdownText(lines, total) };
+  const hit = (Number(branch.against) || 0) > total;
+  await rewriteBranch(message, target.uuid, () => ({ answer, hit }));
+  // Dodged after all: "If you dodge an Attacking Maneuver".
+  if (!hit && branch.hit) await answerFor(target, "dodged-attack");
+  await answerFor(target, "critical-scored", {});
 }
 
 /**
@@ -27476,6 +27529,8 @@ function renderAttack(message, html) {
   artfulParryButtons(message, container, attack);
   // Bruising Wound (2): the Wound Roll a Natural Result 1 below its Critical Target - before the Damage is dealt.
   woundCriticalButton(message, container, attack);
+  // Cunning Dodge (2): a Dodge Roll's, before the Wound Roll.
+  cunningDodgeButtons(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.
   bondButtons(message, attack, container);
 

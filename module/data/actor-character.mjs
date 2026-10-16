@@ -2450,6 +2450,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const criticalCategory = greaterDiceCategory(this.tierOfPower) + Math.min(criticalRaise, increaseLimit);
     const strikeCriticalCategory = greaterDiceCategory(this.tierOfPower)
       + Math.min(criticalRaise + (Number(this.effects?.slots?.["dice.critical.strike.category"]?.add) || 0), increaseLimit);
+    // And a Dodge Roll's alone (Cunning Dodge's).
+    const dodgeCriticalCategory = greaterDiceCategory(this.tierOfPower)
+      + Math.min(criticalRaise + (Number(this.effects?.slots?.["dice.critical.dodge.category"]?.add) || 0), increaseLimit);
     // And a Wound Roll's alone (Bruising Wound's).
     const woundCriticalCategory = greaterDiceCategory(this.tierOfPower)
       + Math.min(criticalRaise + (Number(this.effects?.slots?.["dice.critical.wound.category"]?.add) || 0), increaseLimit);
@@ -2461,6 +2464,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       // A Strike Roll's, where an effect raises those alone.
       criticalStrike: { category: strikeCriticalCategory, formula: categoryFormula(strikeCriticalCategory) },
       criticalWound: { category: woundCriticalCategory, formula: categoryFormula(woundCriticalCategory) },
+      criticalDodge: { category: dodgeCriticalCategory, formula: categoryFormula(dodgeCriticalCategory) },
       maxCategoryIncrease: increaseLimit
     };
 
