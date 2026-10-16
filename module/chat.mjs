@@ -15261,6 +15261,20 @@ async function rangerRetreatEnds(attack) {
 }
 
 /**
+ * Balanced Mind (3): "If you use the Hype Maneuver or the Analysis Maneuver, use the other Maneuver as an Out-of-Sequence
+ * Maneuver." Offered on the card of the one used, where the other is had (both are Special), and while the once an Encounter
+ * is unspent - spent as it is taken (takeOutOfSequence).
+ */
+export function balancedMindOffer(message, actor, maneuver) {
+  const pair = { hype: "analysis", analysis: "hype" };
+  const other = getManeuver(pair[maneuver?.through?.id ?? maneuver?.id] ?? "");
+  if (!message || !other || (actor?.system?.effects?.slots?.["balanced.mind"] !== true)) return;
+  if ((actor.getFlag?.(SCOPE, "balancedMindEncounter") === (game.combat?.id ?? "none")) || whyNotSpecial(actor, other)) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: other.id,
+    maneuverName: other.name, reason: `Balanced Mind - ${maneuver.name}`, grants: { balancedMind: true } } });
+}
+
+/**
  * Powerful Physique (4): "If you are hit by an Attacking Maneuver, after concluding that Attacking Maneuver, you may use
  * the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, increase the Wound Roll of that Attacking Maneuver
  * by your Force Modifier." Offered on the attack's card at the one who made it; counted, once per Encounter, when taken.
@@ -18139,6 +18153,15 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.mimicry && (actor.getFlag?.(SCOPE, "mimicryRound") === roundKey())) {
     ui.notifications.warn("Neko Mimicry has been used this Combat Round.");
     return null;
+  }
+  // Balanced Mind (3)'s, once an Encounter.
+  if (offer.grants?.balancedMind) {
+    const encounter = game.combat?.id ?? "none";
+    if (actor.getFlag?.(SCOPE, "balancedMindEncounter") === encounter) {
+      ui.notifications.warn(`${actor.name}: Balanced Mind - already used this Combat Encounter.`);
+      return null;
+    }
+    await actor.setFlag(SCOPE, "balancedMindEncounter", encounter);
   }
   // Masters of Movement (5), (6): once a Round each - and an Opponent beside you, whom asked, or an Ally, now the token stands
   // where it was placed.

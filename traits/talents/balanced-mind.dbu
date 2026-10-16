@@ -1,0 +1,29 @@
+id: balanced-mind
+name: Balanced Mind
+talentCategory: balance
+prerequisites: Personality and Scholarship Scores of 4+, 2+ Skill Ranks in Performance and Investigation
+description: >
+  Focusing on both social and intellectual pursuits has taught you how to effectively blend the two.
+text: >
+  Balanced Mind: Focusing on both social and intellectual pursuits has taught you how to effectively blend the two.
+  –Prerequisites: Personality and Scholarship Scores of 4+, 2+ Skill Ranks in Performance and Investigation
+  (1)-[Passive]: While your Personality and Scholarship Scores are equal to each other, increase your Attribute Modifiers (SC/PE) by 1(T).
+  (2)-[Passive]: While your Personality and Scholarship Scores are equal to each other and higher than the Attribute Score of your other Attributes, increase your Combat Rolls by 1(bT).
+  (3)-[Triggered, 1/Encounter]: If you use the Hype Maneuver or the Analysis Maneuver, use the other Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+if (personality.score == scholarship.score) {
+    scholarship.mod += 1(T);
+    personality.mod += 1(T);
+}
+# (2) Higher than each of the other five.
+if ((personality.score == scholarship.score)
+    && (personality.score > max(max(max(agility.score, force.score), max(tenacity.score, insight.score)), magic.score))) {
+    combatRolls += 1(bT);
+}
+# (3) The Hype or Analysis used: the other offered on its card out of sequence, where you have it - taken, once an Encounter
+# (chat.mjs balancedMindOffer, takeOutOfSequence).
+allow balanced.mind;

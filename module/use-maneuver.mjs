@@ -6016,6 +6016,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   }
   // Neko Mimicry (4): a Standard Maneuver of 1 Action, used in sequence - offered to an Opponent with it, out of sequence.
   if (card && !outOfSequence) await (await import("./chat.mjs")).mimicryOffers(card, actor, maneuver);
+  // Balanced Mind (3): the Hype or Analysis used - the other offered on its card, out of sequence.
+  if (card) (await import("./chat.mjs")).balancedMindOffer(card, actor, maneuver);
 
   // Final Chance's held Defeat belongs to this card now.
   if (card && (actor.getFlag?.("dbu-ttrpg", "finalChance") === "pending")) {
