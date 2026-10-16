@@ -70,7 +70,7 @@ import { fireMoment } from "./effects/moments-runtime.mjs";
 import { brokenByPowerUp, damageAttributeOffers, movementPayment, thrownAs,
   throwables, weaponAttack, weaponsFor, wieldedWeapons, MULTI_STORAGE_THROWS,
   throwsAllowed, throwsCopies, thrownWeaponAttack, weaponForms, activeForm,
-  drawnBonuses, borrowedCategory, withBorrowed, buddyOnlyTechniques, activeBuddy, buddyHeader,
+  drawnBonuses, borrowedCategory, withBorrowed, buddyOnlyTechniques, activeBuddy, activeBuddies, buddyHeader,
   buddyAttribute, targetableBuddy } from "./gear.mjs";
 import { getTrait } from "./effects/traits.mjs";
 import { emptiesCapacity } from "./signature.mjs";
@@ -5671,9 +5671,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (drawn.spent.length) await actor.updateEmbeddedDocuments("Item", drawn.spent);
   // A Technique Hermit, Active, with the Signature Technique chosen for it: "double the benefits
   // from Mentor Buddy for the duration of that Attacking Maneuver" - its Combat Rolls' 1(bT) again.
-  const hermit = activeBuddy(actor.items.contents);
-  if (declared && hermit && (buddyHeader(hermit, getTrait, "hermit") === true)
-    && hermit.system.buddy?.technique && (hermit.system.buddy.technique === maneuver.itemId)) {
+  const hermit = activeBuddies(actor.items.contents).find(each => (buddyHeader(each, getTrait, "hermit") === true)
+    && each.system.buddy?.technique && (each.system.buddy.technique === maneuver.itemId));
+  if (declared && hermit) {
     drawn.rows.push({ id: "technique-hermit", name: hermit.name, strikePerTier: 0, woundPerTier: 0,
       strikePerBaseTier: 1, woundPerBaseTier: 1, damageCategoryShift: 0, note: "", atApparel: false,
       atWeapon: null });

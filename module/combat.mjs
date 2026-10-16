@@ -125,10 +125,10 @@ async function startRound(combat) {
 
     // Zen-O, Active through the Round that just ended: the ARC's Temperament Check.
     if ((combat.round ?? 0) > 1) {
-      const { activeBuddy, buddyHeader } = await import("./gear.mjs");
+      const { activeBuddies, buddyHeader } = await import("./gear.mjs");
       const { getTrait } = await import("./effects/traits.mjs");
-      const zen = activeBuddy(actor.items.contents);
-      if (zen && (buddyHeader(zen, getTrait, "buddyAction") === "zeno")) {
+      const zen = activeBuddies(actor.items.contents).find(each => buddyHeader(each, getTrait, "buddyAction") === "zeno");
+      if (zen) {
         const { postTemperament } = await import("./chat.mjs");
         await postTemperament(actor, zen);
       }

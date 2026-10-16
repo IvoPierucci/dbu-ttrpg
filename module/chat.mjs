@@ -10,7 +10,7 @@ import { evaluate as evaluateCondition } from "./effects/conditions.mjs";
 import { permits } from "./effects/interpreter.mjs";
 import { actionsLeft, actionsWithin, frozenBy, frozenTurnOf, refundActions, spendActions, strikeLightning, weatherToRoll }
   from "./combat.mjs";
-import { activeBuddy, apparelQualitiesInEffect, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
+import { activeBuddy, activeBuddies, apparelQualitiesInEffect, buddyAttribute, buddyHeader, craftedReading, damageWeapon, soarElsewhere, weaponAttack,
   recordedLabel, weaponHit, wieldedWeapons } from "./gear.mjs";
 import { EDGES, KINDS, endedBy, lasting } from "./durations.mjs";
 import { COLLISION_DAMAGE, COLLISION_QUALITIES, FEATURE_QUALITIES, HARDNESS_RANKS, hardnessValue }
@@ -18143,6 +18143,8 @@ async function takeOutOfSequence(message, actor, offer) {
   // A Signature Technique handed over - Counter's, Exploiting Technique's: which of the Techniques
   // with that Advantage, then the Technique itself through its door, out of sequence.
   if (offer.technique) return takeTechniqueOffer(message, actor, offer);
+  // Buddy Collector (2)'s: a Buddy called, not a Maneuver.
+  if (offer.callBuddy) return takeBuddyCall(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
   // Violent Rebuke (3)'s, once a Round.
   if (offer.grants?.rebuke && (actor.getFlag?.(SCOPE, "rebukeRound") === roundKey())) {
@@ -22797,8 +22799,8 @@ function analysisBonus(actor, target) {
   const scholarship = actor.system.attributes?.scholarship?.mod ?? 0;
   // A Smart Buddy, Active: "you may use your Buddy Attribute instead of Scholarship for its
   // effects" - whichever gives more, since nobody chooses less.
-  const smart = activeBuddy(Array.from(actor.items ?? []));
-  const own = (smart && (buddyHeader(smart, getTrait, "analysis") === true))
+  const smart = activeBuddies(Array.from(actor.items ?? [])).find(each => buddyHeader(each, getTrait, "analysis") === true);
+  const own = smart
     ? buddyAttribute(actor.system.baseTierOfPower ?? 1) : -Infinity;
   const quarter = Math.ceil(Math.max(scholarship, own) / 4);
   const total = tier + quarter;
@@ -23733,10 +23735,44 @@ async function settleBuddyHit(message, target, attack, saved) {
     await buddy.update(saved ? { "system.buddy.active": false, "system.buddy.locked": true }
       : { "system.buddy.active": false, "system.buddy.destroyed": true });
   }
+  // Buddy Collector (2): "If one of your Buddies is destroyed, you may call another Buddy as an Out-of-Sequence Maneuver" - on
+  // the note that says so, once an Encounter.
+  const collector = !saved && (target.system?.effects?.slots?.["buddy.collectorCall"] === true)
+    && (target.getFlag?.(SCOPE, "collectorEncounter") !== (game.combat?.id ?? "none"));
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(own.buddyHit.name)} `
       + `${saved ? "is saved with a Karma Point: dismissed, and not called again this Combat Encounter."
-        : "is destroyed."}</div>` });
+        : "is destroyed."}</div>`,
+    ...(collector ? { flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: [{ actorUuid: target.uuid, actorName: target.name,
+      maneuverId: "", maneuverName: "Call a Buddy", reason: `Buddy Collector - ${own.buddyHit.name} destroyed`,
+      callBuddy: true }] } } } : {}) });
+}
+
+/**
+ * Buddy Collector (2), taken: which Buddy - one not destroyed, not locked, not Active, and room for it - asked, called, and the
+ * once an Encounter spent. Out of sequence, so no Instant and no turn asked for.
+ */
+async function takeBuddyCall(message, actor, offer) {
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.(SCOPE, "collectorEncounter") === encounter) {
+    ui.notifications.warn(`${actor.name}: Buddy Collector - already used this Combat Encounter.`);
+    return null;
+  }
+  const { buddiesOf, buddiesAllowed, callProblem } = await import("./gear.mjs");
+  const items = Array.from(actor.items ?? []);
+  const callable = buddiesOf(items).filter(item => !item.system.buddy?.active && !callProblem(items, item, buddiesAllowed(actor)));
+  if (!callable.length) {
+    ui.notifications.warn(`${actor.name} has no Buddy that can be called now.`);
+    return null;
+  }
+  const picked = (callable.length === 1) ? callable[0].id : await askPlayerChoice(actor, `${actor.name}: Buddy Collector - call`,
+    callable.map(item => ({ value: item.id, label: item.name })));
+  const buddy = callable.find(item => item.id === picked);
+  if (!buddy) return null;
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  await actor.setFlag(SCOPE, "collectorEncounter", encounter);
+  await buddy.update({ "system.buddy.active": true });
+  return settledNote(message, `${actor.name} calls ${buddy.name}.`);
 }
 
 /** Apply what a Weapon took in its holder's place. */

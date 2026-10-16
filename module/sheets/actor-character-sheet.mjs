@@ -21,7 +21,7 @@ import { EQUIP_COST, GEAR_TAGS, GEAR_TRIGGERS, GEAR_TYPES, canTrigger, connectab
   grantDoffBonus, topLayerPiece, unequipCost, wieldProblem, WEAPON_SIZES, WEAPON_TYPES,
   MULTI_STORAGE_THROWS, throwsCopies, activeForm, flexibleCategories, variableSizes,
   remoteKinds, remotesAll, remoteCost, snacksLeft, snackKey, drawChanges, emptySheath,
-  buddyLine, buddyHeader, buddyChoiceLabel, callProblem, activeBuddy, buddyActions, buddyUseKey,
+  buddyLine, buddyHeader, buddyChoiceLabel, callProblem, activeBuddy, activeBuddies, buddiesAllowed, buddyActions, buddyUseKey,
   shiftProblem, rideSquares, rideFits, buddyAttribute,
   shrinkChoices, storable, tierDice, typeOf, usedThisEncounter, atCraftDC } from "../gear.mjs";
 import { lightLevelOf } from "../light.mjs";
@@ -1850,10 +1850,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       };
     };
     const rows = items.map(item => rowOf(item));
-    const buddy = activeBuddy(actor.items.contents);
-    for (const id of grantedUniques(buddy, actor.items, (item, key) => buddyHeader(item, getTrait, key))) {
-      const trait = getTrait(id);
-      if (trait) rows.push(rowOf(await grantedUniqueItem(actor, trait), buddy.name));
+    for (const buddy of activeBuddies(actor.items.contents)) {
+      for (const id of grantedUniques(buddy, actor.items, (item, key) => buddyHeader(item, getTrait, key))) {
+        const trait = getTrait(id);
+        if (trait) rows.push(rowOf(await grantedUniqueItem(actor, trait), buddy.name));
+      }
     }
     const spent = rows.reduce((sum, row) => sum + row.tp, 0);
     const together = spent + (techniques?.spent ?? 0);
@@ -3201,7 +3202,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       active: Boolean(buddy.active) && !buddy.destroyed,
       destroyed: Boolean(buddy.destroyed),
       locked: Boolean(buddy.locked),
-      callBlocked: buddy.active ? "" : callProblem(items, item),
+      callBlocked: buddy.active ? "" : callProblem(items, item, buddiesAllowed(this.actor)),
       // Its Activated Buddy Effect - and a Shifting Buddy's form's - once a Combat Round.
       actions: buddyActions(item, getTrait, game.combat?.started ? (game.combat.round ?? 0) : 0)
         .map(action => ({ ...action, used: Boolean(game.combat?.started)
@@ -3413,7 +3414,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     if (item?.system.itemType !== "buddy") return;
     const calling = !item.system.buddy?.active;
     if (calling) {
-      const problem = callProblem(this.actor.items.contents, item);
+      const problem = callProblem(this.actor.items.contents, item, buddiesAllowed(this.actor));
       if (problem) {
         ui.notifications.warn(problem);
         return;
@@ -5454,8 +5455,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const owned = this.actor.items.filter(item => (item.type === "maneuver") && item.system.unique?.libraryId)
       .map(item => item.system.unique.libraryId);
     // And one an Active Buddy gives access to - the Oracle Fish's Precognition, and what its Passive grants.
-    const buddy = activeBuddy(this.actor.items.contents);
-    return [...owned, ...grantedUniques(buddy, this.actor.items, (item, key) => buddyHeader(item, getTrait, key))];
+    return [...owned, ...activeBuddies(this.actor.items.contents)
+      .flatMap(buddy => grantedUniques(buddy, this.actor.items, (item, key) => buddyHeader(item, getTrait, key)))];
   }
 
   /**

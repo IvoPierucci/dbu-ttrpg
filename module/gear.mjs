@@ -2599,9 +2599,19 @@ export function buddiesOf(items) {
   return (items ?? []).filter(item => (item.type === "gear") && (item.system?.itemType === "buddy"));
 }
 
-/** The one Active: "You can only have one Buddy active at any one time." */
+/** The one Active: "You can only have one Buddy active at any one time." The first, where Buddy Collector allows two. */
 export function activeBuddy(items) {
-  return buddiesOf(items).find(item => item.system.buddy?.active && !item.system.buddy?.destroyed) ?? null;
+  return activeBuddies(items)[0] ?? null;
+}
+
+/** Every Active one - two, with Buddy Collector (1). */
+export function activeBuddies(items) {
+  return buddiesOf(items).filter(item => item.system.buddy?.active && !item.system.buddy?.destroyed);
+}
+
+/** How many may be Active at once: one, or Buddy Collector's "You may have 2 Buddies active at the same time." */
+export function buddiesAllowed(actor) {
+  return (actor?.system?.effects?.slots?.["buddy.twoActive"] === true) ? 2 : 1;
 }
 
 /**
@@ -2763,9 +2773,7 @@ export function buddyOnlyTechniques(items, getTrait) {
  * it "cannot be targeted by a Called Shot" (the Guiding Spirit, the Invincibuddy, Zen-O).
  */
 export function targetableBuddy(items, getTrait) {
-  const buddy = activeBuddy(items);
-  if (!buddy || (buddyHeader(buddy, getTrait, "calledShotImmune") === true)) return null;
-  return buddy;
+  return activeBuddies(items).find(buddy => buddyHeader(buddy, getTrait, "calledShotImmune") !== true) ?? null;
 }
 
 /**
@@ -2785,12 +2793,12 @@ export function soarElsewhere(actor, buddy) {
  * Why a Buddy cannot be called now, or "": destroyed, kept from it for the Encounter, or another
  * one Active - "You can only have one Buddy active at any one time" - which is dismissed first.
  */
-export function callProblem(items, item) {
+export function callProblem(items, item, allowed = 1) {
   const buddy = item?.system?.buddy ?? {};
   if (buddy.destroyed) return "Destroyed.";
   if (buddy.locked) return "It cannot be called again this Combat Encounter.";
-  const other = activeBuddy(items);
-  if (other && (other !== item)) return `${other.name} is Active: dismiss it first.`;
+  const others = activeBuddies(items).filter(other => other !== item);
+  if (others.length >= allowed) return `${others.map(other => other.name).join(" and ")} ${(others.length > 1) ? "are" : "is"} Active: dismiss ${(others.length > 1) ? "one" : "it"} first.`;
   return "";
 }
 

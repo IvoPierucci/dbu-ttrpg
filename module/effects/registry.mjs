@@ -295,7 +295,8 @@ function buddyPrograms(actor, report, { baseTier = 1, skills = {} } = {}) {
     });
   }
   // The Unique Ability an Active Buddy gives access to - the Oracle Fish's Precognition - and so its Passive.
-  const active = buddiesOf(Array.from(actor.items ?? [])).find(item => item.system?.buddy?.active) ?? null;
+  // Each Active one's - two, with Buddy Collector.
+  for (const active of buddiesOf(Array.from(actor.items ?? [])).filter(item => item.system?.buddy?.active && !item.system?.buddy?.destroyed))
   for (const id of grantedUniques(active, actor.items, (item, key) => buddyHeader(item, getTrait, key))) {
     const trait = getTrait(id);
     if (!trait?.script) continue;

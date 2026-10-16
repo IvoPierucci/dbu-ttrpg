@@ -1,0 +1,20 @@
+id: buddy-collector
+name: Buddy Collector
+talentCategory: buddy
+prerequisites: Personality Score of 4+
+description: >
+  You have a lot of friends who will come to your aid when you need them.
+text: >
+  Buddy Collector: You have a lot of friends who will come to your aid when you need them.
+  –Prerequisites: Personality Score of 4+
+  (1)-[Passive]: You may have 2 Buddies active at the same time.
+  (2)-[Triggered, 1/Encounter]: If one of your Buddies is destroyed, you may call another Buddy as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Two Active at once - each one's effects its own (gear.mjs callProblem, activeBuddies).
+allow buddy.twoActive;
+# (2) A Buddy of yours destroyed: "Call a Buddy" offered on the note that says so, out of sequence - which one asked as it is
+# taken, once an Encounter (chat.mjs settleBuddyHit, takeBuddyCall).
+allow buddy.collectorCall;
