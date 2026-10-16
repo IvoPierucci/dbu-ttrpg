@@ -1,0 +1,20 @@
+id: instinctual-dodge
+name: Instinctual Dodge
+talentCategory: dodging
+prerequisites: Cunning Dodge, Agility Score of 6+
+description: >
+  Your ability to dodge is second-nature, to the point where you don’t even have to think about it anymore.
+text: >
+  Instinctual Dodge: Your ability to dodge is second-nature, to the point where you don’t even have to think about it anymore.
+  –Prerequisites: Cunning Dodge, Agility Score of 6+
+  (1)-[Passive]: Reduce the Critical Target of your Dodge Rolls by 1.
+  (2)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver, reroll your Dodge Roll and apply it against the same roll you lost against.
+
+---
+
+[passive]
+# (1) Any Dodge Roll's, its own floor still under it (chat.mjs rollSide).
+criticalTarget.dodge -= 1;
+# (2) Hit through a Dodge - a Cross Counter's too: a button on the attack's card before the Wound Roll, once a Round - the Dodge
+# rolled again as it was made, against the Strike that beat it (chat.mjs instinctualButtons, instinctualRedodge).
+allow dodge.instinctualReroll;

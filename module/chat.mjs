@@ -16154,6 +16154,47 @@ async function cunningDodge(message, target) {
 }
 
 /**
+ * Instinctual Dodge (2): "If you are hit by an Attacking Maneuver, reroll your Dodge Roll and apply it against the same roll you
+ * lost against." A button for the one hit through a Dodge, before the Wound Roll, once a Round.
+ */
+function instinctualButtons(message, container, attack) {
+  const result = attack?.result;
+  if (!result || result.wound) return;
+  for (const branch of result.targets ?? []) {
+    const target = fromUuidSync(branch.uuid ?? "");
+    if (!target?.isOwner || !branch.hit || branch.automatic || !branch.answer || !DODGE_DEFENCES.includes(branch.defense)
+      || (target.system?.effects?.slots?.["dodge.instinctualReroll"] !== true) || defenceFor(attack, target.uuid)?.jolt) continue;
+    const used = target.getFlag?.(SCOPE, "instinctualRound") === roundKey();
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Instinctual Dodge - ${target.name}`;
+    button.disabled = used;
+    button.dataset.tooltip = used ? "Once a Combat Round." : `Reroll the Dodge against the Strike of ${Number(branch.against) || 0} (1/Round)`;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      await instinctualRedodge(message, target);
+    });
+    container.append(button);
+  }
+}
+
+async function instinctualRedodge(message, target) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const branch = attack?.result?.targets?.find(entry => entry.uuid === target.uuid);
+  if (!branch?.hit || attack.result.wound || !DODGE_DEFENCES.includes(branch.defense)
+    || (target.getFlag?.(SCOPE, "instinctualRound") === roundKey())) return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.instinctualRound`]: roundKey() });
+  const defence = DEFENCES[branch.defense] ?? DEFENCES.dodge;
+  const answer = await rollSide(target, defence.parts(target, attack), { extraDice: target.system.dice.extra.formula,
+    criticalDice: target.system.dice.critical.formula, combatRoll: true, slot: "dodge", urgent: Boolean(attack.urgentRolls) });
+  const hit = !(answer && (answer.total > (Number(branch.against) || 0)));
+  await rewriteBranch(message, target.uuid, () => ({ answer, hit }));
+  // Dodged after all: "If you dodge an Attacking Maneuver".
+  if (!hit) await answerFor(target, "dodged-attack");
+}
+
+/**
  * Bruising Wound (2): "If your Wound Roll's Natural Result is 1 below the Critical Target, score a Critical Result on that Wound
  * Roll." Its button: the attacker's, once the Wound Roll is made and before the Damage is dealt, once a Round.
  */
@@ -27531,6 +27572,8 @@ function renderAttack(message, html) {
   woundCriticalButton(message, container, attack);
   // Cunning Dodge (2): a Dodge Roll's, before the Wound Roll.
   cunningDodgeButtons(message, container, attack);
+  // Instinctual Dodge (2): hit through a Dodge - the Dodge again.
+  instinctualButtons(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.
   bondButtons(message, attack, container);
 
