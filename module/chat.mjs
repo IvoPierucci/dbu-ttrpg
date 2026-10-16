@@ -585,12 +585,48 @@ function sniperOffers(message, by, target, reason) {
 /** A Combat Condition gained while something between characters is being settled - Patient Sniper (2). */
 export function conditionGained(actor, key) {
   const context = afflicting;
+  // Perfected Tactics (2): whoever gave it, an Opponent near you gaining one.
+  tacticsOffers(actor, key, context?.message ?? null);
   if (!context?.message || !actor) return;
   const by = context.by ?? (context.parties ?? []).find(party => party.uuid !== actor.uuid);
   if (!by || (by.uuid === actor.uuid)) return;
   // Whose it is, kept on the one suffering it - Denizen of the Demon Realm's "a Combat Condition that you inflicted".
   requestActorUpdate(actor, { [`flags.${SCOPE}.afflictedBy.${key}`]: by.uuid });
   sniperOffers(context.message, by, actor, getTrait(key)?.name ?? key);
+}
+
+/**
+ * Perfected Tactics (2): an Opponent within four Squares of you gaining a Combat Condition "provokes your Exploit Maneuver".
+ * For each who has it and the Exploit - `actor` their Opponent, within four Squares - the Exploit at them, out of sequence: on the
+ * card being settled as it was gained, or on a note of its own where none is. Taken, once a Round (takeOutOfSequence).
+ */
+const TACTICS_OFFERED = new Set();
+async function tacticsOffers(actor, key, message) {
+  if (!actor || !canvas?.tokens) return;
+  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const { squaresAway } = await import("./maneuvers.mjs");
+  const watchers = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
+    .filter(watcher => watcher && (watcher.uuid !== actor.uuid) && !watcher.system?.defeated
+      && (watcher.system?.effects?.slots?.["exploit.onConditioned"] === true) && (side(watcher) !== side(actor))
+      && (watcher.getFlag?.(SCOPE, "tacticsRound") !== roundKey())
+      && watcher.items.some(item => (item.type === "maneuver") && item.system.exploit)
+      && ((squaresAway(watcher, actor) ?? Infinity) <= 4));
+  if (!watchers.length) return;
+  const name = getTrait(key)?.name ?? key;
+  const offers = watchers.map(watcher => ({ actorUuid: watcher.uuid, actorName: watcher.name, maneuverId: "exploit",
+    maneuverName: "Exploit", targetUuid: actor.uuid, reason: `Perfected Tactics - ${actor.name}: ${name}`, grants: { tactics: true } }));
+  if (message) {
+    for (const offer of offers) {
+      const once = `${message.id}:${offer.actorUuid}:${actor.uuid}`;
+      if (TACTICS_OFFERED.has(once)) continue;
+      TACTICS_OFFERED.add(once);
+      requestEdit(message, { type: "offer", offer });
+    }
+    return;
+  }
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(`${actor.name} gains ${name}.`)}</div>`,
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: offers } } });
 }
 
 async function settleClashEffects(messageId, clash) {
@@ -18256,6 +18292,14 @@ async function takeOutOfSequence(message, actor, offer) {
       await actor.setFlag(SCOPE, "unscathedRound", roundKey());
     }
     // Sinister Dragon: once a Round - and 2 Negative Energy instead of the Counter Action, if they would.
+    // Perfected Tactics (2): once a Round, spent here.
+    if (offer.grants?.tactics) {
+      if (actor.getFlag?.(SCOPE, "tacticsRound") === roundKey()) {
+        ui.notifications.warn(`${actor.name}: Perfected Tactics - already used this Combat Round.`);
+        return;
+      }
+      await actor.setFlag(SCOPE, "tacticsRound", roundKey());
+    }
     if (offer.grants?.sinister) {
       if (actor.getFlag?.(SCOPE, "sinisterRound") === roundKey()) {
         ui.notifications.warn(`${actor.name}: Sinister Dragon - already used this Combat Round.`);
@@ -22438,7 +22482,9 @@ async function rollAttackWoundWork(message, attack) {
       { label: "God Meteor", value: godMeteorPinned(attacker, target) },
       { label: "Inherited Aggression", value: aggressionAgainst(attacker, target) },
       // Demonic Combat (2): against one suffering from a Combat Condition.
-      { label: "Demonic Combat", value: conditioned(target)
+      // And Perfected Tactics (1)'s - the line named by whatever gave it.
+      { label: (attacker.system.effects?.slots?.["wound.vsConditioned"]?.parts ?? []).map(part => part.source).filter(Boolean)
+          .join(", ") || "Demonic Combat", value: conditioned(target)
         ? (Number(attacker.system.effects?.slots?.["wound.vsConditioned"]?.add) || 0) : 0 },
       { label: "Overwhelming Pressure", value: pressing ? pressing(target) : 0 },
       { label: "Stealthy Trick", value: own.oblivious ? unseen : 0 },

@@ -1,0 +1,20 @@
+id: perfected-tactics
+name: Perfected Tactics
+talentCategory: condition
+prerequisites: Combat Tactician
+description: >
+  Your brilliant tactics allow you to make the most of your opponents missteps.
+text: >
+  Perfected Tactics: Your brilliant tactics allow you to make the most of your opponents missteps.
+  –Prerequisites: Combat Tactician
+  (1)-[Passive]: Increase your Wound Rolls by 1(T) against any Opponent(s) that are suffering from a Combat Condition.
+  (2)-[Triggered, 1/Round]: If an Opponent within 4 Squares of you gains a Combat Condition, this provokes your Exploit Maneuver.
+
+---
+
+[passive]
+# (1) Against each one it hits suffering from a Combat Condition (chat.mjs, where the Wound is worked out per person).
+wound.vsConditioned += 1(T);
+# (2) An Opponent within 4 Squares gaining a Combat Condition: the Exploit at them offered out of sequence - on the card being
+# settled as it is gained, or on a note of its own where none is - taken, once a Round (chat.mjs tacticsOffers).
+allow exploit.onConditioned;
