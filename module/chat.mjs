@@ -18214,8 +18214,10 @@ async function takeOutOfSequence(message, actor, offer) {
     const used = actor.getFlag?.(SCOPE, "wildCounterRound");
     await actor.setFlag(SCOPE, "wildCounterRound", { round: roundKey(),
       n: ((used?.round === roundKey()) ? (Number(used.n) || 0) : 0) + 1 });
-    // Fierce Counter (2): "increase the Wound Roll for that Attacking Maneuver by 1(T)" - once a Round.
-    if ((actor.system?.effects?.slots?.["counter.fierce"] === true) && (actor.getFlag?.(SCOPE, "fierceCounterRound") !== roundKey())) {
+    // Fierce Counter (2): "increase the Wound Roll for that Attacking Maneuver by 1(T)" - asked (the user's), once a Round.
+    if ((actor.system?.effects?.slots?.["counter.fierce"] === true) && (actor.getFlag?.(SCOPE, "fierceCounterRound") !== roundKey())
+      && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Fierce Counter` },
+        content: `<p data-tooltip="Once a Round">This Basic Attack's Wound Roll +1(T)?</p>`, rejectClose: false })) {
       await actor.setFlag(SCOPE, "fierceCounterRound", roundKey());
       offer = { ...offer, grants: { ...offer.grants, woundExtra: [...(offer.grants.woundExtra ?? []),
         { label: "Fierce Counter", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }] } };

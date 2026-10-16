@@ -15,5 +15,5 @@ text: >
 [passive]
 # (1) The Strike Roll a Parry makes.
 parry += 1(T);
-# (2) Wild Counter's Basic Attack, taken: 1(T) on its Wound Roll, once a Round (chat.mjs takeOutOfSequence).
+# (2) Wild Counter's Basic Attack, taken: asked - 1(T) on its Wound Roll - once a Round (chat.mjs takeOutOfSequence).
 allow counter.fierce;
