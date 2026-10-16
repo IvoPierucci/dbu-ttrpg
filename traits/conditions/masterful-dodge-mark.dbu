@@ -1,0 +1,16 @@
+id: masterful-dodge-mark
+name: Masterful Dodge
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Masterful Dodge's (2) gives, held till the start of your next turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Masterful Dodge: every penalty to your Dodge Rolls ignored until the start of your next turn.
+text: >
+  Masterful Dodge (2): Until the start of your next turn, ignore all penalties to your Dodge Rolls.
+
+---
+
+[passive]
+allow dodge.ignorePenalties;

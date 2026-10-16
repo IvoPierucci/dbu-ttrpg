@@ -758,6 +758,8 @@
     "talents/critical-wound.dbu",
     "talents/cunning-dodge.dbu",
     "talents/instinctual-dodge.dbu",
+    "talents/masterful-dodge.dbu",
+    "conditions/masterful-dodge-mark.dbu",
     "talents/quick-learner.dbu",
     "talents/snack-fiend.dbu",
     "talents/effective-defenses.dbu",

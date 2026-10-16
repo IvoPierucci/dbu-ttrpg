@@ -3377,10 +3377,18 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
  * left off where it is measured (chat.mjs resolveAttack).
  */
 function strikePenaltiesIgnored(actor, slot, parts) {
-  if ((slot !== "strike") || (actor?.system?.effects?.slots?.["strike.ignorePenalties"] !== true)) return parts;
-  const slots = actor.system.effects.slots;
+  const slots = actor?.system?.effects?.slots ?? {};
   const taken = key => (slots[key]?.parts ?? []).filter(part => (part.op === "add") && (Number(part.value) < 0))
     .reduce((sum, part) => sum + Number(part.value), 0);
+  // Masterful Dodge (2): "Until the start of your next turn, ignore all penalties to your Dodge Rolls." Every part that takes
+  // something off left off - what effects write to `dodge` among them, a row each - and what they took off the Defense Value
+  // under it given back.
+  if ((slot === "dodge") && (slots["dodge.ignorePenalties"] === true)) {
+    const back = -taken("defenseValue");
+    return [...parts.filter(part => !(Number(part.value) < 0)),
+      ...(back > 0 ? [{ label: "Masterful Dodge (penalties ignored)", value: back }] : [])];
+  }
+  if ((slot !== "strike") || (slots["strike.ignorePenalties"] !== true)) return parts;
   // The Slots a value carried on a Strike Roll was made through: a Parry's is the Physical Strike's, a Foundation's the shared one's.
   const through = key => (key === "parry") ? ["parry", "strike.physical", "strike"]
     : key.startsWith("strike.") ? [key, "strike"] : (key === "strike") ? ["strike"] : [];
@@ -8264,8 +8272,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     groups.map(group => group.formula).join(" + "), baseDie,
     { minimumNatural, criticalTarget: aimed, combatRoll: true, naturalAdd: naturalAdd + ownNatural, wound: slot === "wound",
       twice: ((slot === "strike") && (actor.system.effects?.slots?.["strike.baseDieTwice"] === true))
-        // Critical Wound (1): a Wound Roll's.
-        || ((slot === "wound") && (actor.system.effects?.slots?.["wound.baseDieTwice"] === true)) });
+        // Critical Wound (1): a Wound Roll's. Masterful Dodge (1): a Dodge Roll's.
+        || ((slot === "wound") && (actor.system.effects?.slots?.["wound.baseDieTwice"] === true))
+        || ((slot === "dodge") && (actor.system.effects?.slots?.["dodge.baseDieTwice"] === true)) });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
   // Lingering Instincts: "You cannot score a Critical Result or a Botch Result on this Combat Roll, regardless of all
@@ -23057,6 +23066,11 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
 
   const other = actor.system.rollModifiers.dodge;
   if (other) parts.push({ label: "Dodge bonus", value: other });
+  // What effects write to `dodge` - Guard Down's 2(T) off it, Cover's on it, every Combat Rolls' - each by its source. The
+  // sheet's Dodge always had them (combat.dodge); the roll read the Defense Value alone and left every one of them off.
+  for (const part of (actor.system.effects?.slots?.dodge?.parts ?? [])) {
+    if ((part.op === "add") && Number(part.value)) parts.push({ label: part.source || "Effects", value: Number(part.value) });
+  }
 
   parts.push(...musclePenalty(actor));
   // Experienced Fighter (2): Instinct-Driven Dodge - 2(T), "You ignore any penalties due to the effects of Diminishing

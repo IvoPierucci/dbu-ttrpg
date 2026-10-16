@@ -1,0 +1,24 @@
+id: masterful-dodge
+name: Masterful Dodge
+talentCategory: dodging
+prerequisites: Instinctual Dodge, Agility Score of 10+, Tier of Power 3+
+description: >
+  Having mastered the elusive technique of dodging without intent, your evasive skills are without equal.
+text: >
+  Masterful Dodge: Having mastered the elusive technique of dodging without intent, your evasive skills are without equal.
+  –Prerequisites: Instinctual Dodge, Agility Score of 10+, Tier of Power 3+
+  (1)-[Passive]: Roll your Base Die twice for any Dodge Roll and use the highest result.
+  (2)-[Triggered/Start of Turn, 1/Encounter]: Until the start of your next turn, ignore all penalties to your Dodge Rolls.
+
+---
+
+[passive]
+# (1) Any Dodge Roll's Base Die rolled twice, the higher kept (chat.mjs rollSide, evaluateCheck).
+allow dodge.baseDieTwice;
+
+# (2) As your turn starts, once an Encounter: Masterful Dodge (a mark) till the start of your next turn - every penalty on your
+# Dodge Rolls left off, what effects take off your Defense Value among them (chat.mjs strikePenaltiesIgnored). Automatic by
+# default, its Triggered/Automatic button; set Triggered, ticked on the turn's card.
+[triggered/start-of-turn, 1/encounter, effect 2]
+gain(masterful-dodge-mark);
+expires(masterful-dodge-mark, start-of-next-turn);
