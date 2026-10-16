@@ -156,6 +156,14 @@ Hooks.on("updateItem", item => forget(item.uuid));
 }
 Hooks.on("deleteItem", item => forget(item.uuid));
 
+// Talents come from the Progression tab: the Talent Addition rows reached, or the Power Level moved - made to match, by
+// whoever made the change.
+Hooks.on("updateActor", async (actor, changes, options, userId) => {
+  if ((userId !== game.user.id) || !changes.system || !(("progression" in changes.system) || ("powerLevel" in changes.system))) return;
+  const { syncProgressionTalents } = await import("./talents.mjs");
+  await syncProgressionTalents(actor);
+});
+
 // Conduit of Spirit (1): "while you have at least 1 Ally and none of your Allies are Defeated" - read off the others, so read
 // again as one of them is hurt or healed, or a token comes, goes or changes side.
 function conduitRefresh() {

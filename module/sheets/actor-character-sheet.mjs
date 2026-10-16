@@ -3,7 +3,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 import { portalsMaxOf } from "../chat.mjs";
 import DBUCharacterData from "../data/actor-character.mjs";
-import { importCoreTalents, ownedTalents, reloadCoreTalents } from "../talents.mjs";
+import { importCoreTalents, ownedTalents, reloadCoreTalents, talentChoicesFor } from "../talents.mjs";
 import { addRacialTrait, otherGroupName, otherTraitUnfit, otherTraitsInOrder, racialTraitUnfit, ownedOtherTraits, factorSummary, optionNameOfBlock, sharedOptionEffect, ownedRacialTraits, racialTraitKind, racialTraitLines, racialTraitRace,
   racialTraitsInOrder,
   removeRacialTrait } from "../racial.mjs";
@@ -628,6 +628,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     }
     // Dropping an Item the character already owns is a re-order, not a second copy.
     if (this.actor.items.has(item.id)) return;
+    // A Talent is taken on the Progression tab, not dropped in (the user's).
+    if (item.type === "talent") {
+      ui.notifications.warn(`${item.name}: Talents are taken on the Progression tab, in a Talent Addition row.`);
+      return;
+    }
 
     return this.actor.createEmbeddedDocuments("Item", [item.toObject()]);
   }
@@ -2262,9 +2267,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    */
   _prepareProgressionRows() {
     const { SKILLS } = DBUCharacterData;
-    // A Talent Addition row records which of the character's Talents was taken at that
-    // Level. The Talents themselves are the Items they own, not these rows.
-    const talents = ownedTalents(this.actor).map(item => ({ value: item.id, label: item.name }));
+    // A Talent Addition row names the Talent taken at that Level - every Talent written, by Category - and the Talent is
+    // put on the character from it (talents.mjs syncProgressionTalents).
 
     const powerLevel = this.actor.system.powerLevel;
     const progression = this.actor.system.progression;
@@ -2303,7 +2307,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
         // Rows above the character's current Power Level are not earned yet and do
         // not count toward the TP total.
         reached: entry.lvl <= powerLevel,
-        talentOptions: talents.map(option => ({ ...option, selected: option.value === entry.talent })),
+        talentGroups: isTalentAddition ? talentChoicesFor(this.actor, entry) : [],
         // The Level 1 Skill Improvement offers 6 rank slots; every other one offers 4.
         skillRanks: Array.from({ length: DBUCharacterData.skillRankSlotsFor(entry) }, (unused, slot) => {
           const value = entry.skillRanks[slot] ?? "";

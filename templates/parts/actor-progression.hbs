@@ -160,8 +160,12 @@
           {{#if row.isTalentAddition}}
             <select name="system.progression.{{row.index}}.talent">
               <option value=""></option>
-              {{#each row.talentOptions as |option|}}
-              <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
+              {{#each row.talentGroups as |group|}}
+              <optgroup label="{{group.label}}">
+                {{#each group.options as |option|}}
+                <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
+                {{/each}}
+              </optgroup>
               {{/each}}
             </select>
           {{else}}

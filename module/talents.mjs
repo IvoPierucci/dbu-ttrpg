@@ -7,8 +7,89 @@
  * also where someone writing their own puts theirs.
  */
 
-import { traitsOfKind } from "./effects/traits.mjs";
+import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { compareTalents, talentCategoryOf } from "./talent-categories.mjs";
+
+/**
+ * Talents are taken on the Progression tab (the user's, 2026-10-15): a Talent Addition row - fixed, or a Character Perk made
+ * one - names a Talent by its file's id, and once its Level is reached the Talent is on the character, made from its file and
+ * marked as the Progression tab's (`fromProgression`). Another picked, the row emptied, or the Level left behind, it goes.
+ * Not added by hand, nor removed from the Traits tab: only a Racial Trait gives one besides (`fromTrait`), and keeps it.
+ */
+export const FROM_PROGRESSION = "fromProgression";
+
+/** What the reached Talent Addition rows name, in row order. */
+export function progressionTalentIds(system) {
+  const level = Number(system?.powerLevel) || 1;
+  return (system?.progression ?? [])
+    .filter(entry => (entry.choice === "Talent Addition") && ((Number(entry.lvl) || 1) <= level) && entry.talent)
+    .map(entry => entry.talent);
+}
+
+/**
+ * The character's Talents made to match their Progression tab: each reached row's Talent made where it is missing, each the
+ * tab gave and no row names any more removed. A row written before this - an owned Talent's Item id - is turned into that
+ * Talent's file id, and the Talent is the tab's from then on; so is one added by hand before, once a row names it.
+ */
+export async function syncProgressionTalents(actor) {
+  if (!actor?.isOwner || (actor.type !== "character")) return;
+  const owned = Array.from(actor.items ?? []).filter(item => item.type === "talent");
+  const sourceOf = item => item.flags?.["dbu-ttrpg"]?.sourceId ?? "";
+  const rows = actor.system.progression ?? [];
+  const adopted = new Set();
+  let rewritten = false;
+  const fixed = rows.map(entry => {
+    const item = entry.talent ? actor.items.get(entry.talent) : null;
+    if (item?.type !== "talent") return entry;
+    rewritten = true;
+    if (sourceOf(item)) adopted.add(item.id);
+    return { ...entry, talent: sourceOf(item) };
+  });
+  const wanted = new Set(progressionTalentIds({ powerLevel: actor.system.powerLevel, progression: fixed }));
+
+  const ours = item => adopted.has(item.id) || Boolean(item.flags?.["dbu-ttrpg"]?.[FROM_PROGRESSION]);
+  const removed = owned.filter(item => ours(item) && !wanted.has(sourceOf(item))).map(item => item.id);
+  const kept = owned.filter(item => !removed.includes(item.id));
+  // Held already, not by a Racial Trait - the tab's from now on.
+  const adopt = kept.filter(item => wanted.has(sourceOf(item)) && !ours(item) && !item.flags?.["dbu-ttrpg"]?.fromTrait)
+    .map(item => item.id);
+  const held = new Set(kept.map(sourceOf));
+  const created = [...wanted].filter(id => !held.has(id)).map(id => getTrait(id))
+    .filter(trait => trait?.kind === "talents")
+    .map(trait => {
+      const data = itemFrom(trait);
+      data.flags["dbu-ttrpg"][FROM_PROGRESSION] = true;
+      return data;
+    });
+
+  if (rewritten) await actor.update({ "system.progression": fixed });
+  const marks = [...adopted, ...adopt].filter(id => !removed.includes(id))
+    .map(id => ({ _id: id, [`flags.dbu-ttrpg.${FROM_PROGRESSION}`]: true }));
+  if (marks.length) await actor.updateEmbeddedDocuments("Item", marks);
+  if (removed.length) await actor.deleteEmbeddedDocuments("Item", removed);
+  if (created.length) await actor.createEmbeddedDocuments("Item", created);
+}
+
+/**
+ * What a Talent Addition row offers: every Talent written, by Category in the published order - but those another row took
+ * and those a Racial Trait gave ("You can take each Talent only once").
+ */
+export function talentChoicesFor(actor, entry) {
+  const taken = new Set((actor.system.progression ?? []).filter(other => (other !== entry) && (other.choice === "Talent Addition"))
+    .map(other => other.talent).filter(Boolean));
+  for (const item of actor.items ?? []) {
+    if ((item.type === "talent") && item.flags?.["dbu-ttrpg"]?.fromTrait) taken.add(item.flags["dbu-ttrpg"].sourceId);
+  }
+  const groups = new Map();
+  for (const trait of [...traitsOfKind("talents")].sort(compareTalents)) {
+    if (taken.has(trait.id) && (trait.id !== entry.talent)) continue;
+    const category = talentCategoryOf(trait);
+    const label = category ? (category.raceLabel ? `${category.label} - ${category.raceLabel}` : category.label) : "Other";
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push({ value: trait.id, label: trait.name, selected: trait.id === entry.talent });
+  }
+  return [...groups].map(([label, options]) => ({ label, options }));
+}
 
 /** The Talent Items a character owns, in the order the Talents are published: by Category, then within it. */
 export function ownedTalents(actor) {

@@ -814,11 +814,14 @@ async function giveGrants(actor, item, grants, name) {
   for (const id of grants.talents) {
     const talent = getTrait(id);
     if (!talent || (talent.kind !== "talents")) {
-      ui.notifications.warn(`${name}: the ${id} Talent is not written yet - add it by hand once it is.`);
+      ui.notifications.warn(`${name}: the ${id} Talent is not written yet.`);
       continue;
     }
     if (talentsHeld.has(id)) continue;
-    created.push(talentItemFrom(talent));
+    // Marked as a Racial Trait's: the Progression tab neither offers it nor takes it away.
+    const data = talentItemFrom(talent);
+    data.flags["dbu-ttrpg"].fromTrait = item.flags?.["dbu-ttrpg"]?.sourceId ?? item.id;
+    created.push(data);
   }
   if (created.length) await actor.createEmbeddedDocuments("Item", created);
 }

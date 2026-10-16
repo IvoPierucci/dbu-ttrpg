@@ -191,8 +191,6 @@
 
           <button type="button" class="trait-control" data-action="editItem" data-item-id="{{entry.item.id}}"
                   data-tooltip="Edit this talent">&#9998;</button>
-          <button type="button" class="trait-control" data-action="deleteItem" data-item-id="{{entry.item.id}}"
-                  data-tooltip="Remove from this character">&times;</button>
         </div>
 
         <div class="trait-body">
@@ -217,7 +215,7 @@
       {{/each}}
     </ul>
     {{else}}
-    <p class="tab-placeholder">No talents yet. Drag a talent Item onto this sheet to grant one.</p>
+    <p class="tab-placeholder">No talents yet. They are taken on the Progression tab.</p>
     {{/if}}
   </details>
 
