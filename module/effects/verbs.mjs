@@ -272,6 +272,17 @@ export const VERBS = Object.freeze({
     doc: "Wrath of the Dragon (5): a stack of Impaired on whoever this Moment says failed, till the start of your next turn "
        + "(chat.mjs impairFailed)."
   },
+  mastersPlace: {
+    args: [0, 0],
+    names: [],
+    doc: "Masters of Movement (3): placed on any Square - the map's; the Grappled, a Clash (Cognitive) at the Grappler first "
+       + "(chat.mjs mastersPlace)."
+  },
+  mastersPlaceAny: {
+    args: [0, 0],
+    names: [],
+    doc: "Masters of Movement (4): you or an Ally, or nobody, asked - placed the same way (chat.mjs mastersPlace)."
+  },
   bondTo: {
     args: [0, 0],
     names: [],

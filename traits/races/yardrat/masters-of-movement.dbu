@@ -1,0 +1,35 @@
+id: masters-of-movement
+name: Masters of Movement
+order: 3
+category: mind
+importance: secondary
+description: >
+  While Yardrats may not hit particularly hard, they’re notoriously difficult to hurt due to their unique ability to dart around the battlefield.
+text: >
+  Masters of Movement (Mind): While Yardrats may not hit particularly hard, they’re notoriously difficult to hurt due to their unique ability to dart around the battlefield.
+  (1)-[Passive]: You gain access to the Instant Transmission Unique Ability.
+  (2)-[Passive]: At Character Creation, you may apply the Yardrat Material Special Apparel Quality as if it was a normal Apparel Quality through creating a Gear Kit.
+  (3)-[Triggered/Threshold]: If you succeed at the Steadfast Check for this Threshold, select a Square within the Battlefield. You are removed from your current place on the Battlefield and placed on that Square. If you were in a Grapple before applying this effect, you must make a Clash (Cognitive) against the Grappler. If you win, that Grapple ends and you may apply this effect as usual. If you lose, this effect fails and is not applied.
+  (4)-[Triggered/Start of Turn]: Select a Square within the Battlefield. Either you or a willing Ally are removed from your current place on the Battlefield and placed on that Square. If you or your chosen Ally were in a Grapple before applying this effect, you must make a Clash (Cognitive) against the Grappler. If you win, that Grapple ends and you may apply this effect as usual. If you lose, this effect fails and is not applied.
+  (5)-[Triggered, 1/Round]: If you are placed on a Square adjacent to an Opponent, you may use the Basic Attack Maneuver against them as an Out-of-Sequence Maneuver.
+  (6)-[Triggered, 1/Round]: If you are placed on a Square adjacent to an Ally, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# (1) Not built: the Instant Transmission Unique Ability's text is still to come.
+# (2) Not built: the Yardrat Material Special Apparel Quality's text is still to come.
+
+[passive]
+# (5), (6) Placed by (3) or (4): on that note, the Basic Attack and the Power Up out of sequence - whom beside you asked as
+# it is taken, now the token stands where it was put; once a Round each (chat.mjs mastersPlaced, takeOutOfSequence).
+allow masters.besideStrike;
+allow masters.besidePowerUp;
+
+# (3) The Steadfast Check for a Health Threshold passed: chosen in its window. Placed on any Square - where, the map's; the
+# Grappled, a Clash (Cognitive) at the Grappler first, won, out of the Grapple (chat.mjs mastersPlace, settleMastersPlace).
+[triggered/steadfast-passed, effect 3]
+mastersPlace();
+
+# (4) As your turn starts: you or an Ally, or nobody, asked - placed the same way. Its Triggered/Automatic button.
+[triggered/start-of-turn, effect 4]
+mastersPlaceAny();

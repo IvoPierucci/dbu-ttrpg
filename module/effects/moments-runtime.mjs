@@ -514,6 +514,11 @@ async function runVerb(actor, call, context) {
       const { impairKnocked } = await import("../chat.mjs");
       return impairKnocked(actor, context?.failedUuid, "Wrath of the Dragon");
     }
+    case "mastersPlace":
+    case "mastersPlaceAny": {
+      const { mastersPlace } = await import("../chat.mjs");
+      return mastersPlace(actor, verb === "mastersPlaceAny");
+    }
     case "bondTo": {
       const { bondTo } = await import("../chat.mjs");
       return bondTo(actor, context?.allyUuid);

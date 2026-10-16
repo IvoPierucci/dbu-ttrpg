@@ -758,6 +758,9 @@ async function settleClashEffects(messageId, clash) {
   if (clash.nobleDragon && clash.result && !clash.nobleDragon.applied) {
     await settleNobleDragon(message, clash);
   }
+  if (clash.mastersPlace && clash.result && !clash.mastersPlace.applied) {
+    await settleMastersPlace(message, clash);
+  }
   if (clash.danceEffect && clash.result && !clash.danceEffect.applied) {
     await settleDanceModifier(message, clash);
   }
@@ -16234,6 +16237,72 @@ function weakParts(actor, attack) {
   return entry ? [{ label: "Power of the Weak", written: `+${entry.steps}(T)`, value: Number(entry.value) || 0 }] : [];
 }
 
+/**
+ * Masters of Movement (3), (4): "Select a Square within the Battlefield. [You / Either you or a willing Ally] are removed from
+ * your current place on the Battlefield and placed on that Square. If you [or your chosen Ally] were in a Grapple before
+ * applying this effect, you must make a Clash (Cognitive) against the Grappler. If you win, that Grapple ends and you may
+ * apply this effect as usual. If you lose, this effect fails and is not applied." Whom asked where an Ally may be it (nobody
+ * among them); where to is the map's. The Grappled, the Clash first (settleMastersPlace); the Grappler lets go.
+ */
+export async function mastersPlace(actor, anyAlly = false) {
+  if (!actor) return;
+  let placed = actor;
+  if (anyAlly) {
+    const allies = alliesOnScene(actor).filter(each => !each.system?.defeated);
+    const picked = await askPlayerChoice(actor, `${actor.name}: Masters of Movement - placed on a Square`,
+      [{ value: actor.uuid, label: actor.name }, ...allies.map(each => ({ value: each.uuid, label: each.name })),
+        { value: "none", label: "Nobody" }]);
+    placed = [actor, ...allies].find(each => each.uuid === picked) ?? null;
+    if (!placed) return;
+  }
+  const partner = fromUuidSync(placed.system?.grapple?.partner ?? "");
+  if (partner && (placed.system.grapple.role === "grappled")) {
+    await postSaveClash(actor, partner, { maneuverName: "Masters of Movement", clashLabel: "Clash (Cognitive)",
+      reason: `${placed.name} out of ${partner.name}'s Grapple`, saves: ["cognitive"],
+      mastersPlace: { placedUuid: placed.uuid, applied: false } });
+    return;
+  }
+  if (partner) await endGrapple(placed, partner);
+  return mastersPlaced(actor, placed);
+}
+
+/** Masters of Movement's Clash (Cognitive) at the Grappler: won, out of the Grapple and placed; lost, it fails. */
+async function settleMastersPlace(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, mastersPlace: { ...clash.mastersPlace, applied: true } });
+  const actor = fromUuidSync(clash.challengerUuid);
+  const grappler = fromUuidSync(clash.defenderUuid);
+  const placed = fromUuidSync(clash.mastersPlace.placedUuid ?? "");
+  if (!actor || !placed) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `Masters of Movement fails: ${placed.name} stays Grappled.`);
+  if (grappler && (placed.system?.grapple?.partner === grappler.uuid)) await endGrapple(grappler, placed);
+  return mastersPlaced(actor, placed);
+}
+
+/**
+ * Masters of Movement, placed: said, the Square the map's. (5): "If you are placed on a Square adjacent to an Opponent, you may
+ * use the Basic Attack Maneuver against them as an Out-of-Sequence Maneuver." (6): "... adjacent to an Ally, you may use the
+ * Power Up Maneuver as an Out-of-Sequence Maneuver." Offered on the note where it was you placed - who stands beside you asked
+ * as one is taken (takeOutOfSequence); once a Round each.
+ */
+async function mastersPlaced(actor, placed) {
+  const slots = placed.system?.effects?.slots ?? {};
+  const own = placed.uuid === actor.uuid;
+  const open = (slot, flag) => own && (slots[slot] === true) && (placed.getFlag?.(SCOPE, flag) !== roundKey());
+  const offers = [
+    ...(open("masters.besideStrike", "mastersStrikeRound") ? [{ actorUuid: placed.uuid, actorName: placed.name,
+      maneuverId: "basic-attack", maneuverName: "Basic Attack", reason: "Masters of Movement - beside an Opponent",
+      grants: { masters: "strike" } }] : []),
+    ...(open("masters.besidePowerUp", "mastersPowerRound") ? [{ actorUuid: placed.uuid, actorName: placed.name,
+      maneuverId: "power-up", maneuverName: "Power Up", reason: "Masters of Movement - beside an Ally",
+      grants: { masters: "power" } }] : [])];
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(
+      `Masters of Movement: ${placed.name} is placed on any Square of the Battlefield.`)}</div>`,
+    ...(offers.length ? { flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: offers } } } : {})
+  });
+}
+
 /** Power of the Weak (4): Bonded to that Ally - "until you become Bonded to another Ally". */
 export async function bondTo(actor, allyUuid) {
   const ally = fromUuidSync(allyUuid ?? "");
@@ -17636,6 +17705,33 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.mimicry && (actor.getFlag?.(SCOPE, "mimicryRound") === roundKey())) {
     ui.notifications.warn("Neko Mimicry has been used this Combat Round.");
     return null;
+  }
+  // Masters of Movement (5), (6): once a Round each - and an Opponent beside you, whom asked, or an Ally, now the token stands
+  // where it was placed.
+  if (offer.grants?.masters) {
+    const strike = offer.grants.masters === "strike";
+    const flag = strike ? "mastersStrikeRound" : "mastersPowerRound";
+    if (actor.getFlag?.(SCOPE, flag) === roundKey()) {
+      ui.notifications.warn(`${actor.name}: Masters of Movement - already used this Combat Round.`);
+      return null;
+    }
+    const own = actor.getActiveTokens?.(false, true)?.[0];
+    const allies = new Set(alliesOnScene(actor).map(each => each.uuid));
+    const beside = own ? [...new Map((canvas?.tokens?.placeables ?? [])
+      .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !token.actor.system?.defeated
+        && (allies.has(token.actor.uuid) !== strike) && (squaresBetween(token.document, own) === 0))
+      .map(token => [token.actor.uuid, token.actor])).values()] : [];
+    if (!beside.length) {
+      ui.notifications.warn(`${actor.name}: no ${strike ? "Opponent" : "Ally"} on an adjacent Square.`);
+      return null;
+    }
+    if (strike) {
+      const picked = (beside.length === 1) ? beside[0].uuid : await askPlayerChoice(actor,
+        `${actor.name}: Masters of Movement - the Basic Attack at`, beside.map(each => ({ value: each.uuid, label: each.name })));
+      if (!beside.some(each => each.uuid === picked)) return null;
+      offer = { ...offer, targetUuid: picked };
+    }
+    await actor.setFlag(SCOPE, flag, roundKey());
   }
   // Brigand Combat (2): once a Round for whoever handed it out - another Ally's taken already, this one is gone.
   if (offer.grants?.brigandFrom && (fromUuidSync(offer.grants.brigandFrom)?.getFlag?.(SCOPE, "brigandRound") === roundKey())) {
