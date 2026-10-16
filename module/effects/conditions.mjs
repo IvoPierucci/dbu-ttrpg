@@ -278,6 +278,9 @@ const PREDICATES = {
     return opponentNear(self, knocked);
   },
 
+  /** Critical Wound (2): the attack that knocked them through a Critical Result on its Wound Roll (moment knock-through). */
+  woundCriticalKnock: scope => Boolean(scope.context?.woundCritical),
+
   /** Beat-down Tactics (2): the one knocked through (moment knock-through) an Opponent - of another side than yours. */
   knockedOpponent: scope => {
     const self = scope.data?.parent;

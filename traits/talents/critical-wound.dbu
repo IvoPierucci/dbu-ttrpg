@@ -1,0 +1,24 @@
+id: critical-wound
+name: Critical Wound
+talentCategory: damaging
+prerequisites: Injuring Wound, Force and/or Magic Score of 10+, Tier of Power 3+
+description: >
+  Your attacks land with such devastating force that it’s difficult for your foes to recover.
+text: >
+  Critical Wound: Your attacks land with such devastating force that it’s difficult for your foes to recover.
+  –Prerequisites: Injuring Wound, Force and/or Magic Score of 10+, Tier of Power 3+
+  (1)-[Passive]: Roll your Base Die twice for any Wound Roll and use the highest result.
+  (2)-[Triggered, 1/Encounter]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver in which you scored a Critical Result on the Wound Roll, they automatically fail their Steadfast Check for that Health Threshold.
+
+---
+
+[passive]
+# (1) Any Wound Roll's Base Die rolled twice, the higher kept (chat.mjs rollSide, evaluateCheck).
+allow wound.baseDieTwice;
+
+# (2) An Opponent knocked through a Health Threshold by your attack whose Wound Roll was a Critical Result: their Steadfast Check
+# for it failed without rolling, once an Encounter (chat.mjs steadfastFailedBy, rollSteadfastCheck). Automatic by default, its
+# Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/knock-through, 1/encounter, effect 2]
+requires knockedOpponent && woundCriticalKnock;
+failSteadfastKnocked();

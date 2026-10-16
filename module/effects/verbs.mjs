@@ -283,6 +283,12 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Masters of Movement (4): you or an Ally, or nobody, asked - placed the same way (chat.mjs mastersPlace)."
   },
+  failSteadfastKnocked: {
+    args: [0, 0],
+    names: [],
+    doc: "Critical Wound (2): whoever this Moment says was knocked through fails their Steadfast Check for that Health "
+       + "Threshold without rolling (chat.mjs steadfastFailedBy)."
+  },
   buddySystem: {
     args: [0, 0],
     names: [],

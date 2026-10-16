@@ -977,7 +977,7 @@ export function registerDefeatHooks() {
     if (!game.users.activeGM || (game.users.activeGM !== game.user)) return;
 
     await announceThreshold(actor, options.dbuThreshold, options.dbuKnockedBy, Boolean(options.dbuKnockedPinpoint),
-      Boolean(options.dbuKnockedCritical), options.dbuKnockedProfiles ?? []);
+      Boolean(options.dbuKnockedCritical), options.dbuKnockedProfiles ?? [], Boolean(options.dbuKnockedWoundCritical));
 
     const was = options.dbuWasDefeated;
     const now = actor.system.defeated;
@@ -1104,7 +1104,7 @@ export async function releaseFinalChance(actor) {
  * Only downward. Healing back up through a Threshold is not being knocked through one,
  * and it clears the Checks recorded below by itself.
  */
-async function announceThreshold(actor, before, knockedBy = "", pinpoint = false, critical = false, profiles = []) {
+async function announceThreshold(actor, before, knockedBy = "", pinpoint = false, critical = false, profiles = [], woundCritical = false) {
   if (!before) return;
 
   const { THRESHOLDS } = DBUCharacterData;
@@ -1139,14 +1139,15 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
     // Who was knocked through - Burning Hatred's Enemy.
     // And whether a Called Shot or an attack through the Exploit did it - Scarlet Spotter's.
     // And whether its Strike was a Critical Result - Critical Point's.
-    await offerTriggers(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint, critical, profiles });
+    // And whether its Wound Roll was, and which Threshold - Critical Wound's.
+    await offerTriggers(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint, critical, profiles, woundCritical, threshold: now });
     // Parasitic Biology (5): this Round's Inferior of theirs - kept on them till its Steadfast Check is made (chat.mjs).
     const inferior = knocker.getFlag?.("dbu-ttrpg", "inferior");
     const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
     if ((knocker.system?.effects?.slots?.["parasite.drain"] === true) && (inferior?.uuid === actor.uuid) && (inferior.round === round)) {
       await actor.setFlag("dbu-ttrpg", "parasiteKnock", { by: knocker.uuid, threshold: now, round });
     }
-    await fireMoment(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint, critical, profiles });
+    await fireMoment(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint, critical, profiles, woundCritical, threshold: now });
     // Whoever answers anybody's knocking through - Wrath of the Dragon's "you or an Ally".
     const { answerFor } = await import("./chat.mjs");
     for (const other of new Map((canvas?.tokens?.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()) {

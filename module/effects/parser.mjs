@@ -546,6 +546,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "buddyActive",
   // Knocked through, an Opponent (Beat-down Tactics').
   "knockedOpponent",
+  // Knocked through by a Critical Wound Roll (Critical Wound's).
+  "woundCriticalKnock",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

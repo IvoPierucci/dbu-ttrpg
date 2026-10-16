@@ -8259,7 +8259,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   const evaluated = await evaluateCheck(actor, bonus,
     groups.map(group => group.formula).join(" + "), baseDie,
     { minimumNatural, criticalTarget: aimed, combatRoll: true, naturalAdd: naturalAdd + ownNatural, wound: slot === "wound",
-      twice: (slot === "strike") && (actor.system.effects?.slots?.["strike.baseDieTwice"] === true) });
+      twice: ((slot === "strike") && (actor.system.effects?.slots?.["strike.baseDieTwice"] === true))
+        // Critical Wound (1): a Wound Roll's.
+        || ((slot === "wound") && (actor.system.effects?.slots?.["wound.baseDieTwice"] === true)) });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
   // Lingering Instincts: "You cannot score a Critical Result or a Botch Result on this Combat Roll, regardless of all
@@ -24111,6 +24113,16 @@ async function settleBuddyHit(message, target, attack, saved) {
 }
 
 /**
+ * Critical Wound (2): "they automatically fail their Steadfast Check for that Health Threshold" - marked on them, read as their
+ * Check for it is made (rollSteadfastCheck).
+ */
+export async function steadfastFailedBy(actor, knockedUuid, threshold) {
+  const knocked = fromUuidSync(knockedUuid ?? "");
+  if (!actor || !knocked || !threshold) return;
+  await requestActorUpdate(knocked, { [`flags.${SCOPE}.steadfastAutoFail`]: { threshold, by: actor.name } });
+}
+
+/**
  * Buddy System (2): "You may spend 1 Karma Point to gain a Buddy of your choice (you cannot choose a Special Buddy)." Which -
  * every Buddy but the Special ones, or none - asked; gained as from the Gear tab, its own questions asked there; the Karma
  * Point paid once it is, so a Buddy refused halfway costs nothing.
@@ -25489,6 +25501,8 @@ async function applyAttackDamage(message, target, attack) {
       ...((isCalledShot(attack) || attack.viaExploit) ? { dbuKnockedPinpoint: true } : {}),
       // Its Strike a Critical Result - Critical Point's.
       ...((attack.result?.strike?.outcome === "critical") ? { dbuKnockedCritical: true } : {}),
+      // And its Wound Roll - Critical Wound's.
+      ...((attack.result?.wound?.outcome === "critical") ? { dbuKnockedWoundCritical: true } : {}),
       // Its Profiles - Draconic Physique's Elemental Dragon reads its Favored Element among them.
       dbuKnockedProfiles: [attack.profile, ...extraProfilesOf(attack)].filter(Boolean) } : {})
   });
@@ -26265,6 +26279,21 @@ export async function rollSteadfastCheck(actor) {
 
   const automatic = pending.slice(0, -1);
   const rolled = pending[pending.length - 1];
+
+  // Critical Wound (2): this Threshold's Check failed without rolling - the mark used up by it.
+  const marked = actor.getFlag?.(SCOPE, "steadfastAutoFail");
+  if (marked?.threshold && pending.includes(marked.threshold)) {
+    await actor.unsetFlag(SCOPE, "steadfastAutoFail");
+    if (marked.threshold === rolled) {
+      for (const key of automatic) updates[`system.thresholdChecks.${key}`] = "fail";
+      updates[`system.thresholdChecks.${rolled}`] = "fail";
+      await actor.update(updates);
+      await steadfastFailed(actor, [rolled, ...automatic]);
+      await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+        flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - failed automatically (Critical Wound, ${marked.by})` });
+      return false;
+    }
+  }
 
   // From its window: each effect that adds to it by name, and what moves the die. Closed, nothing is recorded.
   const added = (actor.system.effects?.slots?.["steadfast.dice"]?.parts ?? [])

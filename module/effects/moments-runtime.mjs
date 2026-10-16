@@ -519,6 +519,10 @@ async function runVerb(actor, call, context) {
       const { mastersPlace } = await import("../chat.mjs");
       return mastersPlace(actor, verb === "mastersPlaceAny");
     }
+    case "failSteadfastKnocked": {
+      const { steadfastFailedBy } = await import("../chat.mjs");
+      return steadfastFailedBy(actor, context?.knockedUuid, context?.threshold);
+    }
     case "buddySystem": {
       const { buddySystem } = await import("../chat.mjs");
       return buddySystem(actor);
