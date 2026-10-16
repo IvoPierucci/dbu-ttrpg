@@ -16226,7 +16226,9 @@ function weakButtons(message, attack, container) {
         const { ki, capacity } = target.system;
         if ((ki.value < cost) || (capacity.remaining < cost)) return ui.notifications.warn(`${target.name} cannot pay ${cost} Ki Points.`);
         await requestActorUpdate(target, { "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost });
-        requestEdit(message, { type: "attack", attack: { ...fresh, weak: [...(fresh.weak ?? []), { uuid, steps, value: steps * tier }] } });
+        // Spiritual Warrior (2): "increase your Soak Value by 1(T) for every 2(bT) Ki Points spent through that effect".
+        const soak = (target.system.effects?.slots?.["warrior.weakSoak"] === true) ? steps * tier : 0;
+        requestEdit(message, { type: "attack", attack: { ...fresh, weak: [...(fresh.weak ?? []), { uuid, steps, value: steps * tier, soak }] } });
       });
       group.push(button);
       container.append(button);
@@ -16437,6 +16439,72 @@ async function takeConduit(message, actor) {
   requestEdit(message, { type: "attack", attack: { ...now, interventions: [...interventions(now), entry] } });
   const { gainCondition } = await import("./effects/moments-runtime.mjs");
   await gainCondition(actor, "fatigued", 1);
+}
+
+/**
+ * Spiritual Warrior (3): "If your Bonded Ally targets an Opponent with an Attacking Maneuver, you may spend a Counter Action to
+ * use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must target the same Opponent with this
+ * Attacking Maneuver." A button for whoever is Bonded to its maker while it is under way - which Opponent asked - and the
+ * Basic Attack at them offered on its card, a Counter Action to take it. Once an attack.
+ */
+function spiritualStrikeButtons(message, attack, container) {
+  if (attack.result?.wound) return;
+  const ally = fromUuidSync(attack.attackerUuid ?? "");
+  if (!ally) return;
+  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const opponents = attackTargets(attack).map(entry => fromUuidSync(entry.uuid ?? ""))
+    .filter(each => each && (each.uuid !== ally.uuid) && (side(each) !== side(ally)) && !each.system?.defeated);
+  if (!opponents.length) return;
+  const seen = new Set();
+  for (const token of canvas?.tokens?.placeables ?? []) {
+    const yardrat = token.actor;
+    if (!yardrat?.isOwner || seen.has(yardrat.uuid) || yardrat.system?.defeated || (yardrat.uuid === ally.uuid)
+      || (yardrat.system?.effects?.slots?.["warrior.bondStrike"] !== true)
+      || (yardrat.getFlag?.(SCOPE, "bonded")?.uuid !== ally.uuid) || (attack.spiritualStrike ?? []).includes(yardrat.uuid)) continue;
+    seen.add(yardrat.uuid);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Spiritual Warrior - ${yardrat.name}`;
+    button.dataset.tooltip = `${ally.name}'s attack: the Basic Attack at the same Opponent, out of sequence, for a Counter Action`;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      const at = (opponents.length === 1) ? opponents[0].uuid : await askPlayerChoice(yardrat,
+        `${yardrat.name}: Spiritual Warrior - the Basic Attack at`, opponents.map(each => ({ value: each.uuid, label: each.name })));
+      const opponent = opponents.find(each => each.uuid === at);
+      if (!opponent) { button.disabled = false; return; }
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      requestEdit(message, { type: "attack", attack: { ...fresh, spiritualStrike: [...(fresh.spiritualStrike ?? []), yardrat.uuid] } });
+      requestEdit(message, { type: "offer", offer: { actorUuid: yardrat.uuid, actorName: yardrat.name, maneuverId: "basic-attack",
+        maneuverName: "Basic Attack", targetUuid: opponent.uuid, reason: `Spiritual Warrior - ${ally.name}'s attack`, counterCost: 1 } });
+    });
+    container.append(button);
+  }
+}
+
+/**
+ * Spiritual Warrior (6): "If you have a Bonded Ally, they may use the Empower Maneuver as an Out-of-Sequence Maneuver as if they
+ * spent 2 Actions. Instead of regaining Ki Points through this use of the Empower Maneuver, you regain Life Points equal to the
+ * amount of Ki Points spent." Their player asked how much - up to the Empower's for 2 Actions, doubled within their Melee
+ * Range - their Ki paid, and as many Life Points yours, there and then, while the Defeat can still be caught.
+ */
+export async function warriorEmpower(actor) {
+  const ally = fromUuidSync(actor?.getFlag?.(SCOPE, "bonded")?.uuid ?? "");
+  if (!ally || ally.system?.defeated) return;
+  const { squaresAway } = await import("./maneuvers.mjs");
+  const squares = squaresAway(ally, actor);
+  const reach = Math.max(0, Number(ally.system.meleeRange) || 0) + 1;
+  const close = (ally.system.effects?.slots?.["empower.anyRange"] === true) || ((squares !== null) && (squares <= reach));
+  const cap = Math.max(0, Math.min(2 * 2 * (Number(ally.system.might) || 0) * (close ? 2 : 1), Number(ally.system.ki?.value) || 0));
+  if (!cap) return;
+  const title = `${ally.name}: Empower ${actor.name} (Spiritual Warrior)`;
+  // Power of the Weak (1), theirs: the most, or nothing.
+  const sent = (ally.system.effects?.slots?.["empower.maximum"] === true)
+    ? (((await askPlayerChoice(ally, title, [{ value: "send", label: `${cap} Ki Points` }, { value: "no", label: "No" }])) === "send") ? cap : 0)
+    : await askPlayerAmount(ally, title, cap, `Ki Points - as Life Points for ${actor.name}`);
+  if (!sent) return;
+  await requestActorUpdate(ally, { "system.ki.value": Math.max(0, (Number(ally.system.ki.value) || 0) - sent) });
+  await requestActorUpdate(actor, { "system.life.value": Math.min(Number(actor.system.life.max) || 0, (Number(actor.system.life.value) || 0) + sent) });
 }
 
 /** Power of the Weak (4): Bonded to that Ally - "until you become Bonded to another Ally". */
@@ -18111,6 +18179,8 @@ async function takeOutOfSequence(message, actor, offer) {
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
     // Energy of Revenge (1), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askRevenge(actor, declared, maneuver, target);
+    // Spiritual Warrior (5), out of sequence as in it.
+    declared = await (await import("./maneuvers.mjs")).askSpiritualFree(actor, declared, maneuver);
     // Boom's: its Tension's Broken and the stacks it spends.
     if (granted?.boom) declared = { ...declared, boom: granted.boom };
     // Ranger (3)'s: "it must be an Armed Attack", and a move away once it is concluded.
@@ -22013,7 +22083,9 @@ async function rollAttackWoundWork(message, attack) {
       // Draconic Physique (2): an Impaired Opponent's attack.
       + draconicParts(target, attacker).reduce((sum, part) => sum + part.value, 0)
       // Power of the Weak (6): the Ki of whoever is Bonded to them.
-      + (attack.bondSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0);
+      + (attack.bondSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
+      // Spiritual Warrior (2): Power of the Weak (3)'s Ki on the Soak Value as well.
+      + (attack.weak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.soak) || 0), 0);
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
     // Piercing: "ignore 1/4 (rounded up) of your target's Soak Value (before any reductions)".
     const pierceSoak = Math.ceil(Math.max(0, base) * (Number(attack.weapon?.soakIgnored) || 0));
@@ -26503,6 +26575,8 @@ function renderAttack(message, html) {
   if (!result) fleetButtons(message, attack, container);
   // Power of the Weak (3): targeted - Ki for the Strike and Dodge, before it is settled.
   if (!result) weakButtons(message, attack, container);
+  // Spiritual Warrior (3): your Bonded Ally's attack - the Basic Attack at the same Opponent.
+  spiritualStrikeButtons(message, attack, container);
   // The Duel Clashes: a wager from each who is in it, then the roll.
   if (!result && duelRunning(attack)) duelButtons(message, attack, container);
 

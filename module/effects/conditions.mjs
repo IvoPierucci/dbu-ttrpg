@@ -278,6 +278,13 @@ const PREDICATES = {
     return opponentNear(self, knocked);
   },
 
+  /** Spiritual Warrior (6): a Bonded Ally (Power of the Weak's), not Defeated. */
+  bondedAlly: scope => {
+    const bond = scope.data?.parent?.getFlag?.("dbu-ttrpg", "bonded");
+    const ally = bond?.uuid ? globalThis.fromUuidSync?.(bond.uuid) : null;
+    return Boolean(ally) && !ally.system?.defeated;
+  },
+
   /**
    * Conduit of Spirit (1): "while you have at least 1 Ally and none of your Allies are Defeated" - the tokens of your token's
    * disposition on the scene.

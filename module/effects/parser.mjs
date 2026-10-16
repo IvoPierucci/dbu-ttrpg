@@ -538,6 +538,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "bondOpen",
   // An Ally on the scene, and none of them Defeated (Conduit of Spirit's).
   "alliesStanding",
+  // A Bonded Ally standing (Spiritual Warrior's).
+  "bondedAlly",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

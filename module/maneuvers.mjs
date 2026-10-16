@@ -1527,6 +1527,25 @@ export async function askWarriorTension(actor, declared) {
 }
 
 /**
+ * Spiritual Warrior (5): "If you use the Basic Attack Maneuver, you do not have to pay the Ki Point Cost for this Attacking
+ * Maneuver. You still have to pay any Ki Points spent through a Ki Wager or other effects." Asked as a Basic Attack is
+ * declared, once a Round; carried as `spiritualFree` (maneuverKiCost).
+ */
+export async function askSpiritualFree(actor, declared, maneuver) {
+  if (!declared || (maneuver?.id !== BASIC_ATTACK) || (actor?.system?.effects?.slots?.["warrior.freeBasic"] !== true)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "spiritualFreeRound") === round) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Spiritual Warrior" },
+    content: `<p data-tooltip="Once a Round. A Ki Wager is still paid.">This Basic Attack without its Ki Point Cost?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "spiritualFreeRound", round);
+  return { ...declared, spiritualFree: true };
+}
+
+/**
  * Energy of Revenge (1): "When making an Attacking Maneuver, you may spend any number of Revenge Points to increase your
  * Wound Roll by 1(T) for each point spent. Double this effect if your Attacking Maneuver is an Ultimate Signature
  * Technique." How many, asked as it is declared; carried as `revengeSpent` - lost, and on the Wound Roll, once the attack is
@@ -3666,6 +3685,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
   if (actor?.getFlag?.("dbu-ttrpg", "frozenTurn")?.straining) cost += 2 * Math.max(1, actor.system?.tierOfPower ?? 1);
   // Last Resort (2): "you do not have to pay the Ki Point Cost for that instance" - its cost, not the wager chosen on top.
   if (declared?.lastResort) cost = 0;
+  // Spiritual Warrior (5): the Basic Attack's, the wager still paid.
+  if (declared?.spiritualFree) cost = 0;
   // A wager in Life or in Divine Ki is paid on its own (spendLifeWager), not with the cost.
   return Math.max(0, cost) + ((declared?.wagerFromLife || declared?.wagerFromDivine) ? 0 : (declared?.kiWager ?? 0));
 }

@@ -1,0 +1,40 @@
+id: spiritual-warrior
+name: Spiritual Warrior
+order: 5
+category: body
+importance: primary
+subrace: tall-yardrat
+description: >
+  More prepared for battle than their brethren, these Yardrats stand at the forefront of the battlefield, supported by those lesser suited to combat.
+text: >
+  Spiritual Warrior (Body): More prepared for battle than their brethren, these Yardrats stand at the forefront of the battlefield, supported by those lesser suited to combat.
+  (1)-[Passive]: Increase your Racial Life Modifier by 3.
+  (2)-[Triggered]: When you apply the 3rd effect of Power of the Weak, increase your Soak Value by 1(T) for every 2(bT) Ki Points spent through that effect. This increase lasts for the duration of that Attacking Maneuver.
+  (3)-[Triggered]: If your Bonded Ally targets an Opponent with an Attacking Maneuver, you may spend a Counter Action to use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you must target the same Opponent with this Attacking Maneuver.
+  (4)-[Triggered, 1/Round]: If you use the Empower Maneuver to give Ki Points to an Ally, gain 1 Counter Action.
+  (5)-[Triggered, 1/Round]: If you use the Basic Attack Maneuver, you do not have to pay the Ki Point Cost for this Attacking Maneuver. You still have to pay any Ki Points spent through a Ki Wager or other effects.
+  (6)-[Triggered/Defeated]: If you have a Bonded Ally, they may use the Empower Maneuver as an Out-of-Sequence Maneuver as if they spent 2 Actions. Instead of regaining Ki Points through this use of the Empower Maneuver, you regain Life Points equal to the amount of Ki Points spent.
+
+---
+
+[passive]
+# (1)
+racialLifeModifier += 3;
+# (2) Power of the Weak (3)'s button: as many 1(T) on your Soak Value for that attack (chat.mjs weakButtons).
+allow warrior.weakSoak;
+# (3) Your Bonded Ally's (Power of the Weak's) attack at an Opponent: a button on its card - which Opponent asked - and the
+# Basic Attack at them offered there out of sequence, a Counter Action to take it (chat.mjs spiritualStrikeButtons).
+allow warrior.bondStrike;
+# (5) Asked as a Basic Attack is declared, once a Round: its Ki Point Cost not paid - a Ki Wager still is (maneuvers.mjs
+# askSpiritualFree, maneuverKiCost).
+allow warrior.freeBasic;
+
+# (4) Ki given through the Empower (moment empowered-ally): a Counter Action. Its Triggered/Automatic button.
+[triggered/empowered-ally, 1/round, effect 4]
+actions.counterGained += 1;
+
+# (6) Reduced to your minimum Life Points, a Bonded Ally standing: chosen on the Defeated card. Their player asked how much
+# Ki - as if 2 Actions were spent - and as many Life Points yours (chat.mjs warriorEmpower).
+[triggered/defeated, outOfSequence, effect 6]
+requires bondedAlly;
+warriorEmpower();

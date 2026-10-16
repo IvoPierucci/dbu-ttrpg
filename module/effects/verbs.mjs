@@ -283,6 +283,12 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Masters of Movement (4): you or an Ally, or nobody, asked - placed the same way (chat.mjs mastersPlace)."
   },
+  warriorEmpower: {
+    args: [0, 0],
+    names: [],
+    doc: "Spiritual Warrior (6): your Bonded Ally's player asked how much Ki, as if 2 Actions were spent - as many Life Points "
+       + "yours (chat.mjs warriorEmpower)."
+  },
   conduitPower: {
     args: [0, 0],
     names: [],
