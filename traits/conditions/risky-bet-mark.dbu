@@ -1,0 +1,16 @@
+id: risky-bet-mark
+name: Risky Bet
+kind: conditions
+maxStacks: 99
+# Not a Combat Condition: what Risky Bet's (2) took off your Soak Value, a stack a point, till the start of your next turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Risky Bet: Soak Value 1 lower for each stack, till the start of your next turn.
+text: >
+  Risky Bet (2): When making an Attacking Maneuver, reduce your Soak Value by up to 4(bT) until the start of your next turn to increase your Wound Rolls for that Attacking Maneuver by twice the reduction.
+
+---
+
+[passive]
+soakValue -= stacks;

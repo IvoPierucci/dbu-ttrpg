@@ -4864,6 +4864,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askSpiritualFree(actor, declared, maneuver);
     // Injuring Wound (2): 1(bT) of the Strike for 2(bT) on the Wound, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askInjuring(actor, declared);
+    // Risky Bet (2): Soak Value for twice as much Wound, asked once a Round.
+    declared = await (await import("./maneuvers.mjs")).askRiskyBet(actor, declared);
     // Glass Combat (4): the Glass Profile applied - yours, or an adjacent Ally's - for 2(bT) Ki, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askGlassApply(actor, declared);
     // Heart of Glass (3): a Glass attack on a Glass Square - Surging for it, asked once a Round.

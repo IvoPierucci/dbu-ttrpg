@@ -1527,6 +1527,29 @@ export async function askWarriorTension(actor, declared) {
 }
 
 /**
+ * Risky Bet (2): "When making an Attacking Maneuver, reduce your Soak Value by up to 4(bT) until the start of your next turn to
+ * increase your Wound Rolls for that Attacking Maneuver by twice the reduction." How much asked as one is declared, once a
+ * Round: Risky Bet (a mark, a stack a point) on your own clock, and twice as much on the attack's Wound Roll.
+ */
+export async function askRiskyBet(actor, declared) {
+  if (!declared || (actor?.system?.effects?.slots?.["wound.riskyBet"] !== true)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "riskyBetRound") === round) return declared;
+  const { askPlayerAmount } = await import("./chat.mjs");
+  const most = 4 * Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const off = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Risky Bet`, most,
+    "Soak Value off till the start of your next turn - twice as much on this Wound Roll"));
+  if (off <= 0) return declared;
+  await actor.setFlag("dbu-ttrpg", "riskyBetRound", round);
+  const { setCondition } = await import("./conditions.mjs");
+  if (await setCondition(actor, "risky-bet-mark", off) !== false) {
+    const { lasting, EDGES, KINDS } = await import("./durations.mjs");
+    await lasting(actor, { kind: KINDS.CONDITION, key: "risky-bet-mark", edge: EDGES.START, source: "Risky Bet" });
+  }
+  return { ...declared, woundExtra: [...(declared.woundExtra ?? []), { label: `Risky Bet (${off} Soak)`, value: 2 * off }] };
+}
+
+/**
  * Injuring Wound (2): "When making an Attacking Maneuver, you can reduce your Strike Roll by 1(bT) to increase your Wound Roll
  * by 2(bT)." Asked as one is declared, once a Round; carried on the attack as a row on its Strike and one on its Wound.
  */

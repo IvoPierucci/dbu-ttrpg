@@ -18781,6 +18781,8 @@ async function takeOutOfSequence(message, actor, offer) {
     declared = await (await import("./maneuvers.mjs")).askSpiritualFree(actor, declared, maneuver);
     // Injuring Wound (2), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askInjuring(actor, declared);
+    // Risky Bet (2), out of sequence as in it.
+    declared = await (await import("./maneuvers.mjs")).askRiskyBet(actor, declared);
     // Boom's: its Tension's Broken and the stacks it spends.
     if (granted?.boom) declared = { ...declared, boom: granted.boom };
     // Ranger (3)'s: "it must be an Armed Attack", and a move away once it is concluded.
