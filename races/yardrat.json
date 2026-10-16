@@ -19,5 +19,15 @@
     "cognitive",
     "impulsive"
   ],
-  "skillRanks": 3
+  "skillRanks": 3,
+  "subraces": [
+    {
+      "id": "tall-yardrat",
+      "name": "Tall Yardrat"
+    },
+    {
+      "id": "bulbous-yardrat",
+      "name": "Bulbous Yardrat"
+    }
+  ]
 }
