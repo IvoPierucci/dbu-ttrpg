@@ -1,0 +1,16 @@
+id: jack-of-all-styles-mark
+name: Jack of All Styles
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Jack of All Styles' (2) gives, held till the end of your turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Jack of All Styles: Wound Rolls 2(T) higher until the end of your turn.
+text: >
+  Jack of All Styles (2): If you use a Unique Ability, increase your Wound Rolls by 2(T) until the end of your turn.
+
+---
+
+[passive]
+wound += 2(T);

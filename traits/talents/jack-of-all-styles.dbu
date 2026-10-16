@@ -1,0 +1,23 @@
+id: jack-of-all-styles
+name: Jack of All Styles
+talentCategory: balance
+prerequisites: Balanced Warrior or Balanced Defender
+description: >
+  You are able to utilize a wide variety of techniques, but your diversity prevents you from truly specializing in any one style.
+text: >
+  Jack of All Styles: You are able to utilize a wide variety of techniques, but your diversity prevents you from truly specializing in any one style.
+  –Prerequisites: Balanced Warrior or Balanced Defender
+  (1)-[Passive]: Treat your Attribute Scores (AG/FO/TE/MA) as if they were 2(bT) higher for the Attribute Score Requirements of all Unique Abilities.
+  (2)-[Triggered, 1/Round]: If you use a Unique Ability, increase your Wound Rolls by 2(T) until the end of your turn.
+
+---
+
+# (1) Not built: a Unique Ability's Prerequisite is shown and never checked by the system, so there is nothing for it to
+# loosen - the table's, as every Prerequisite is.
+
+# (2) A Unique Ability declared: ticked in the window as it is, once a Round - Jack of All Styles (a mark), Wound Rolls 2(T),
+# till the end of your turn.
+[triggered/declare-maneuver, 1/round, effect 2]
+requires usingUnique;
+gain(jack-of-all-styles-mark);
+expires(jack-of-all-styles-mark, turn);
