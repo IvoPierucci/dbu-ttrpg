@@ -8,12 +8,13 @@
  */
 
 import { traitsOfKind } from "./effects/traits.mjs";
+import { compareTalents, talentCategoryOf } from "./talent-categories.mjs";
 
-/** The Talent Items a character owns, in name order. */
+/** The Talent Items a character owns, in the order the Talents are published: by Category, then within it. */
 export function ownedTalents(actor) {
   return actor.items
     .filter(item => item.type === "talent")
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort(compareTalents);
 }
 
 /** Where the published Talents live once imported. */
@@ -35,6 +36,9 @@ function itemFrom(trait) {
     system: {
       description: trait.description ?? "",
       prerequisites: trait.prerequisites ?? "",
+      // Its Talent Category: the file's `talentCategory:`, or its name's.
+      category: talentCategoryOf(trait)?.id ?? "",
+      race: talentCategoryOf(trait)?.race ?? "",
       text: trait.text ?? "",
       addendum: trait.addendum ?? "",
       script: trait.script ?? ""

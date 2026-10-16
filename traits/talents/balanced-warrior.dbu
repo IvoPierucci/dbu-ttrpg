@@ -1,5 +1,6 @@
 id: balanced-warrior
 name: Balanced Warrior
+talentCategory: balance
 prerequisites: Force and Magic Scores of 4+
 description: >
   Proficient in combat and magic, you train to use both equally.

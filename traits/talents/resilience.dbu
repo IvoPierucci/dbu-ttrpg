@@ -1,5 +1,6 @@
 id: resilience
 name: Resilience
+talentCategory: durability
 prerequisites: Tenacity Score 6+
 description: >
   Able to bounce back from damage more easily than most, you are exceptionally

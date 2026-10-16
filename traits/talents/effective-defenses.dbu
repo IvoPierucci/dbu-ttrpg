@@ -1,5 +1,6 @@
 id: effective-defenses
 name: Effective Defenses
+talentCategory: durability
 prerequisites:
 description: >
   Able to withstand damage more efficiently than most, you are nearly

@@ -58,6 +58,15 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
     // Its text as printed, under its description - a Talent's and a Racial Trait's (the user's).
     const { racialTraitLines } = await import("../racial.mjs");
     context.textLines = racialTraitLines(this.item);
+    // A Talent: its Category - the one it says, or its name's - and a Racial Talent's race.
+    if (this.item.type === "talent") {
+      const { RACIAL_TALENT_GROUPS, TALENT_CATEGORIES, talentCategoryOf } = await import("../talent-categories.mjs");
+      const now = talentCategoryOf(this.item);
+      context.talentCategories = [{ value: "", label: "-", selected: !now },
+        ...TALENT_CATEGORIES.map(category => ({ value: category.id, label: category.label, selected: category.id === now?.id }))];
+      context.talentRaces = (now?.id === "racial") ? [{ value: "", label: "-", selected: !now.race },
+        ...RACIAL_TALENT_GROUPS.map(group => ({ value: group.race, label: group.label, selected: group.race === now.race }))] : null;
+    }
     // A Racial Trait: its race and what the rules call it in place of Prerequisites, and what was chosen for it.
     if (this.item.type === "racial") {
       const { chosenOptions, factorSummary, optionGroupsOf, ordinal, racialOptionOf, racialOptionsOf, racialTraitKind,

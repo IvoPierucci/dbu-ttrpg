@@ -1,5 +1,6 @@
 id: power-of-the-z-warrior
 name: Power of the Z-Warrior
+talentCategory: balance
 prerequisites: >
   Agility, Force or Magic, Tenacity, Insight, Scholarship, and Personality
   Scores of 4+

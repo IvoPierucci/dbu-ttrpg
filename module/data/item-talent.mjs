@@ -22,6 +22,13 @@ export default class DBUTalentData extends foundry.abstract.TypeDataModel {
       description: new fields.HTMLField({ required: true, blank: true, initial: "" }),
       prerequisites: new fields.StringField({ required: true, blank: true, initial: "" }),
 
+      /**
+       * Its Talent Category (talent-categories.mjs) - and a Racial Talent's race. Blank, it is read off the name: every
+       * published Talent's is known by it.
+       */
+      category: new fields.StringField({ required: true, blank: true, initial: "" }),
+      race: new fields.StringField({ required: true, blank: true, initial: "" }),
+
       /** What the Talent does. */
       script: new fields.StringField({ required: true, blank: true, initial: "" }),
 

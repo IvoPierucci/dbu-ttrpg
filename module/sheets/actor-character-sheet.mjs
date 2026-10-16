@@ -1337,8 +1337,11 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // could not have them armed or spent separately before, because both the armed list
     // and the use counters were keyed on the Talent itself.
     const triggered = reactiveFor(this.actor);
+    const { talentCategoryOf } = await import("../talent-categories.mjs");
     context.talents = ownedTalents(this.actor).map(item => ({
       item,
+      // Its Talent Category - a Racial Talent's race beside it.
+      category: (cat => cat ? (cat.raceLabel ? `${cat.label} \u00b7 ${cat.raceLabel}` : cat.label) : "")(talentCategoryOf(item)),
       // Unfolded to its text as printed, as a Racial Trait is (the user's: the text was nowhere to be seen).
       open: Boolean(this.#openSections[`trait-${item.id}`]),
       lines: racialTraitLines(item),

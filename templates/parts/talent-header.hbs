@@ -6,6 +6,24 @@
     <span class="trait-prereq" data-tooltip="{{racial.tip}}">{{racial.race}}{{#if racial.kind}} &middot; {{racial.kind}}{{/if}}{{#if racial.chosen}} &middot; {{racial.chosen}}{{/if}}</span>
 
     {{else}}
+    {{#if talentCategories}}
+    <label>Category
+      <select name="system.category">
+        {{#each talentCategories as |option|}}
+        <option value="{{option.value}}"{{#if option.selected}} selected{{/if}}>{{option.label}}</option>
+        {{/each}}
+      </select>
+    </label>
+    {{#if talentRaces}}
+    <label>Race
+      <select name="system.race">
+        {{#each talentRaces as |option|}}
+        <option value="{{option.value}}"{{#if option.selected}} selected{{/if}}>{{option.label}}</option>
+        {{/each}}
+      </select>
+    </label>
+    {{/if}}
+    {{/if}}
     <label>Prerequisites
       <input type="text" name="system.prerequisites" value="{{system.prerequisites}}" placeholder="N/A"/>
     </label>

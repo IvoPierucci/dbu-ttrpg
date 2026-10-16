@@ -1,5 +1,6 @@
 id: snack-fiend
 name: Snack Fiend
+talentCategory: miscellaneous
 prerequisites: N/A
 description: >
   You always have a snack on you, hidden away. No one, sometimes not even you, knows it’s there before you need it.
