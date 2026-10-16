@@ -131,7 +131,7 @@ export async function lasting(actor, { kind, key, edge, next = false, source = "
  * The one question the wording cannot answer for itself, and the reason a duration is
  * turned into a count when it is set rather than when it is read.
  */
-function isTheirTurnNow(actor) {
+export function isTheirTurnNow(actor) {
   const combatant = game.combat?.combatant;
   if (!game.combat?.started || !combatant) return false;
   return combatant.actor?.uuid === actor.uuid;

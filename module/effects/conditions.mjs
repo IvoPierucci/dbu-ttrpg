@@ -278,6 +278,9 @@ const PREDICATES = {
     return opponentNear(self, knocked);
   },
 
+  /** Spiritual Pacifist (5): Ki Points the Ally Empowered gained (moment empowered-ally). */
+  kiGained: scope => (Number(scope.context?.gained) || 0) > 0,
+
   /** Spiritual Warrior (6): a Bonded Ally (Power of the Weak's), not Defeated. */
   bondedAlly: scope => {
     const bond = scope.data?.parent?.getFlag?.("dbu-ttrpg", "bonded");

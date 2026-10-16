@@ -283,6 +283,18 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Masters of Movement (4): you or an Ally, or nobody, asked - placed the same way (chat.mjs mastersPlace)."
   },
+  pacifistMend: {
+    args: [0, 0],
+    names: [],
+    doc: "Spiritual Pacifist (5): the Ally this Moment says was Empowered regains a quarter of the Ki they gained, rounded up, "
+       + "in Life Points (chat.mjs pacifistMend)."
+  },
+  pacifistEmpower: {
+    args: [0, 0],
+    names: [],
+    doc: "Spiritual Pacifist (6): which Ally asked, and the Empower at them as if 9,001 Actions were spent (chat.mjs "
+       + "pacifistEmpower)."
+  },
   warriorEmpower: {
     args: [0, 0],
     names: [],

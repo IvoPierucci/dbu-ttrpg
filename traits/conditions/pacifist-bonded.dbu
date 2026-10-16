@@ -1,0 +1,17 @@
+id: pacifist-bonded
+name: Pacifist Bonded
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Spiritual Pacifist (2)'s - on whoever a Spiritual Pacifist is Bonded to, put on and taken off as the
+# Bond is made and moved (chat.mjs bondTo).
+combatCondition: no
+source: Core Rule
+description: >
+  Spiritual Pacifist: Combat Rolls 1(T) higher while a Spiritual Pacifist is Bonded to you.
+text: >
+  Spiritual Pacifist (2): Your Bonded Ally has their Combat Rolls increased by 1(T).
+
+---
+
+[passive]
+combatRolls += 1(T);

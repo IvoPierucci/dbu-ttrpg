@@ -519,6 +519,14 @@ async function runVerb(actor, call, context) {
       const { mastersPlace } = await import("../chat.mjs");
       return mastersPlace(actor, verb === "mastersPlaceAny");
     }
+    case "pacifistMend": {
+      const { pacifistMend } = await import("../chat.mjs");
+      return pacifistMend(actor, context?.allyUuid, context?.gained);
+    }
+    case "pacifistEmpower": {
+      const { pacifistEmpower } = await import("../chat.mjs");
+      return pacifistEmpower(actor);
+    }
     case "warriorEmpower": {
       const { warriorEmpower } = await import("../chat.mjs");
       return warriorEmpower(actor);

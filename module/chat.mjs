@@ -16507,11 +16507,86 @@ export async function warriorEmpower(actor) {
   await requestActorUpdate(actor, { "system.life.value": Math.min(Number(actor.system.life.max) || 0, (Number(actor.system.life.value) || 0) + sent) });
 }
 
-/** Power of the Weak (4): Bonded to that Ally - "until you become Bonded to another Ally". */
+/**
+ * Power of the Weak (4): Bonded to that Ally - "until you become Bonded to another Ally". Spiritual Pacifist (2): "Your Bonded
+ * Ally has their Combat Rolls increased by 1(T)" - its mark taken off the one before and put on this one.
+ */
 export async function bondTo(actor, allyUuid) {
   const ally = fromUuidSync(allyUuid ?? "");
   if (!actor || !ally) return;
+  const before = fromUuidSync(actor.getFlag?.(SCOPE, "bonded")?.uuid ?? "");
   await requestActorUpdate(actor, { [`flags.${SCOPE}.bonded`]: { uuid: ally.uuid, name: ally.name } });
+  if (actor.system?.effects?.slots?.["pacifist.bondRolls"] !== true) return;
+  const { setCondition } = await import("./conditions.mjs");
+  if (before && (before.uuid !== ally.uuid) && ((Number(before.system?.conditions?.["pacifist-bonded"]) || 0) > 0)) {
+    await setCondition(before, "pacifist-bonded", 0);
+  }
+  await setCondition(ally, "pacifist-bonded", 1);
+}
+
+/**
+ * Spiritual Pacifist (4): "If you target an Ally with the Empower Maneuver, you may transfer a number of Power Stacks you
+ * possess up to the amount of Actions spent on the Empower Maneuver to that Ally. These Power stacks last until the end of
+ * their next turn." How many asked, once a Round: yours off with their newest clocks, theirs on - each till the end of their
+ * next turn, as far as their Power goes - and gained as Power is (`power-gained`).
+ */
+export async function pacifistPower(actor, ally, actionsSpent) {
+  if (!actor || !ally || (actor.system?.effects?.slots?.["pacifist.power"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "pacifistPowerRound") === roundKey()) return;
+  const held = Number(actor.system.resources?.power?.stacks) || 0;
+  const { resourceLimits } = await import("./effects/traits.mjs");
+  const theirs = Number(ally.system.resources?.power?.stacks) || 0;
+  const limit = Number(resourceLimits(ally).power) || 0;
+  const most = Math.min(held, Math.max(1, Number(actionsSpent) || 1), limit ? Math.max(0, limit - theirs) : Infinity);
+  if (most <= 0) return;
+  const moved = Math.min(most, await askPlayerAmount(actor, `${actor.name}: Spiritual Pacifist - Power to ${ally.name}`, most,
+    "Power stacks, till the end of their next turn"));
+  if (moved <= 0) return;
+  await actor.setFlag(SCOPE, "pacifistPowerRound", roundKey());
+  const { replaceObject } = await import("./conditions.mjs");
+  const mine = { ...(actor.system.resources ?? {}) };
+  if (held - moved > 0) mine.power = { ...mine.power, stacks: held - moved };
+  else delete mine.power;
+  // The newest clocks go with them - the ones with the most edges left.
+  const timed = [...(actor.system.timed ?? [])];
+  for (let i = 0; i < moved; i++) {
+    let newest = -1;
+    timed.forEach((entry, index) => {
+      if ((entry.kind !== KINDS.RESOURCE) || (entry.key !== "power")) return;
+      if ((newest < 0) || ((entry.edges ?? 1) >= (timed[newest].edges ?? 1))) newest = index;
+    });
+    if (newest >= 0) timed.splice(newest, 1);
+  }
+  await actor.update({ "system.resources": replaceObject(mine), "system.timed": timed });
+  const { edgesToWait, isTheirTurnNow } = await import("./durations.mjs");
+  const edges = edgesToWait(EDGES.END, { next: true, theirTurn: isTheirTurnNow(ally) });
+  const given = { ...(ally.system.resources ?? {}), power: { ...(ally.system.resources?.power ?? {}), stacks: theirs + moved, max: limit } };
+  await requestActorUpdate(ally, { "system.resources": replaceObject(given), "system.timed": [...(ally.system.timed ?? []),
+    ...Array.from({ length: moved }, () => ({ kind: KINDS.RESOURCE, key: "power", edge: EDGES.END, edges, source: "Spiritual Pacifist" }))] });
+  await answerFor(ally, "power-gained", { gained: moved });
+}
+
+/** Spiritual Pacifist (5): "they may regain Life Points equal to 1/4 (rounded up) of the amount of Ki Points they gained". */
+export async function pacifistMend(actor, allyUuid, gained) {
+  const ally = fromUuidSync(allyUuid ?? "");
+  const life = Math.ceil((Number(gained) || 0) / 4);
+  if (!ally || (life <= 0)) return;
+  await requestActorUpdate(ally, { "system.life.value": Math.min(Number(ally.system.life.max) || 0, (Number(ally.system.life.value) || 0) + life) });
+}
+
+/**
+ * Spiritual Pacifist (6): "You may use the Empower Maneuver as an Out-of-Sequence Maneuver as if you spent 9,001 Actions."
+ * Which Ally asked, then the Empower's own Ki at them - what follows an Empower follows this one.
+ */
+export async function pacifistEmpower(actor) {
+  const allies = alliesOnScene(actor).filter(each => !each.system?.defeated);
+  if (!actor || !allies.length) return;
+  const picked = (allies.length === 1) ? allies[0].uuid : await askPlayerChoice(actor, `${actor.name}: Spiritual Pacifist - Empower`,
+    [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "Nobody" }]);
+  const ally = allies.find(each => each.uuid === picked);
+  if (!ally) return;
+  const { empowerAs } = await import("./use-maneuver.mjs");
+  return empowerAs(actor, ally, 9001);
 }
 
 /**
@@ -19239,9 +19314,16 @@ async function playIntervene(message, attack, { who, ally, effect }) {
     && ((await askPlayerChoice(actor, `${actor.name}: Refined Combat - ${allyActor.name}, Studied`,
       [{ value: "yes", label: "Intervene without a Counter Action" }, { value: "no", label: "No" }])) === "yes");
   if (refinedFree) await refinedSpent(actor, "protector");
+  // Spiritual Pacifist (3): "If you are hit by an Attacking Maneuver, your Bonded Ally may use the Intervene Maneuver without
+  // spending a Counter Action" - the one they are Bonded to stepping in for them, asked, once a Round of the Pacifist's.
+  const pacifistFree = !protector && !refinedFree && (allyActor.system?.effects?.slots?.["pacifist.freeIntervene"] === true)
+    && (allyActor.getFlag?.(SCOPE, "bonded")?.uuid === actor.uuid) && (allyActor.getFlag?.(SCOPE, "pacifistInterveneRound") !== roundKey())
+    && ((await askPlayerChoice(actor, `${actor.name}: Spiritual Pacifist - ${allyActor.name}, Bonded`,
+      [{ value: "yes", label: "Intervene without a Counter Action" }, { value: "no", label: "No" }])) === "yes");
+  if (pacifistFree) await requestActorUpdate(allyActor, { [`flags.${SCOPE}.pacifistInterveneRound`]: roundKey() });
   // A Counter Action and the chosen effect's Ki, in that order: the Action is the one
   // that can be short, and a refused Maneuver must cost nothing.
-  if (!protector && !refinedFree && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+  if (!protector && !refinedFree && !pacifistFree && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
   if (!await spendManeuverCost(actor, maneuver, interveneOptionCost(effect, actor))) return;
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.

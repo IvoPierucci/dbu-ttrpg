@@ -117,6 +117,11 @@ function actionCostOf(maneuver, spent = null) {
  *
  * @returns {Promise<number|null>} the count, or null if the player backed out
  */
+/** Spiritual Pacifist (6): the Empower at this Ally, out of sequence, as if this many Actions were spent. */
+export async function empowerAs(actor, ally, actions) {
+  return transferKi(actor, ally, actions);
+}
+
 async function askActionsSpent(actor, maneuver) {
   // "As if you spent 3 Actions" - People of the Spirit's Empower: the count given, not asked.
   if (Number(maneuver.presetActions) > 0) return Number(maneuver.presetActions);
@@ -406,8 +411,14 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
   const { requestActorUpdate, answerFor } = await import("./chat.mjs");
   // Power of the Weak (4): Ki given - Bonded to them, said on the Empower's own note.
   const bondBefore = actor.getFlag?.("dbu-ttrpg", "bonded")?.uuid;
-  await answerFor(actor, "empowered-ally", { allyUuid: ally.uuid });
+  // What they gain of it - Spiritual Pacifist (5)'s "the amount of Ki Points they gained": none where Genki takes it as a wager.
+  const genki = ally.items?.get(ally.system.charging?.maneuverId ?? "")?.system?.signature?.superProfile === "genki";
+  const gained = genki ? 0 : Math.max(0, Math.min(sent, (Number(ally.system.ki.max) || 0) - (Number(ally.system.ki.value) || 0)));
+  await answerFor(actor, "empowered-ally", { allyUuid: ally.uuid, gained });
   const bonded = ((bondBefore !== ally.uuid) && (actor.getFlag?.("dbu-ttrpg", "bonded")?.uuid === ally.uuid)) ? " &middot; Bonded" : "";
+  // Spiritual Pacifist (4): Power stacks, up to the Actions spent, asked once a Round.
+  const { pacifistPower } = await import("./chat.mjs");
+  await pacifistPower(actor, ally, actionsSpent);
   // Genki: "While you have declared an Attacking Maneuver with this Super Profile for the effects of
   // Energy Charge, if an Ally would give you Ki Points through the Empower Maneuver, instead of gaining
   // those Ki points, you gain an additional Ki Wager that does not count towards your Capacity equal

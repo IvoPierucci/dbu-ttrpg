@@ -1,0 +1,41 @@
+id: spiritual-pacifist
+name: Spiritual Pacifist
+order: 6
+category: body
+importance: primary
+subrace: bulbous-yardrat
+description: >
+  The true masters of combat support, these Yardrats prefer to avoid combat, only offering support to those who fight on their behalf.
+text: >
+  Spiritual Pacifist (Body): The true masters of combat support, these Yardrats prefer to avoid combat, only offering support to those who fight on their behalf.
+  (1)-[Passive]: Your base Size Category is Small.
+  (2)-[Passive]: Your Bonded Ally has their Combat Rolls increased by 1(T).
+  (3)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver, your Bonded Ally may use the Intervene Maneuver without spending a Counter Action.
+  (4)-[Triggered, 1/Round]: If you target an Ally with the Empower Maneuver, you may transfer a number of Power Stacks you possess up to the amount of Actions spent on the Empower Maneuver to that Ally. These Power stacks last until the end of their next turn.
+  (5)-[Triggered, 1/Round]: If you give Ki Points to an Ally through the Empower Maneuver, they may regain Life Points equal to 1/4 (rounded up) of the amount of Ki Points they gained.
+  (6)-[Triggered/Defeated]: You may use the Empower Maneuver as an Out-of-Sequence Maneuver as if you spent 9,001 Actions.
+
+---
+
+[passive]
+# (1)
+allow size.base.small;
+# (2) Pacifist Bonded, a mark, on whoever you are Bonded to (Power of the Weak's) - moved with the Bond (chat.mjs bondTo).
+allow pacifist.bondRolls;
+# (3) Hit, and your Bonded Ally stepping in for you: asked as they Intervene, once a Round - no Counter Action (chat.mjs
+# playIntervene).
+allow pacifist.freeIntervene;
+# (4) Your Empower at an Ally: how many Power stacks, up to the Actions spent, asked once a Round - yours off, theirs till the
+# end of their next turn (chat.mjs pacifistPower).
+allow pacifist.power;
+
+# (5) Ki given through the Empower (moment empowered-ally): a quarter of what they gained, rounded up, in Life Points. Its
+# Triggered/Automatic button.
+[triggered/empowered-ally, 1/round, effect 5]
+requires kiGained;
+pacifistMend();
+
+# (6) Reduced to your minimum Life Points: chosen on the Defeated card - which Ally asked, and the Empower at them as if 9,001
+# Actions were spent (chat.mjs pacifistEmpower).
+[triggered/defeated, outOfSequence, effect 6]
+pacifistEmpower();

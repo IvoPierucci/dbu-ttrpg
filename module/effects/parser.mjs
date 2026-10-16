@@ -540,6 +540,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "alliesStanding",
   // A Bonded Ally standing (Spiritual Warrior's).
   "bondedAlly",
+  // Ki gained through your Empower (Spiritual Pacifist's).
+  "kiGained",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).
