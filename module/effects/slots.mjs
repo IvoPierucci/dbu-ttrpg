@@ -811,6 +811,9 @@ const PATTERNS = [
   { match: /^pressure\.inflicted$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "Added to a Pressure Check while an Opponent suffers from a Combat Condition you inflicted (chat.mjs pressureCheck)." },
   // Demonic Combat's: the Wound against one suffering from a Combat Condition, and Damage Reduction against their attack.
+  // Beat-down Tactics (1): `clash.mightVsConditioned`, your side of a Might Clash against one (chat.mjs beatdownClashBonus).
+  { match: /^clash\.mightVsConditioned$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "Added to your side of a Might Clash against an Opponent suffering from a Combat Condition." },
   { match: /^(wound|damageReduction|combatRolls)\.vsConditioned$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "Added to the Wound against one suffering from a Combat Condition, or to the Damage Reduction against such a "
        + "one's attack (chat.mjs conditioned)." },

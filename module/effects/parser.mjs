@@ -544,6 +544,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "kiGained",
   // A Buddy Active (Buddy to Buddies').
   "buddyActive",
+  // Knocked through, an Opponent (Beat-down Tactics').
+  "knockedOpponent",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

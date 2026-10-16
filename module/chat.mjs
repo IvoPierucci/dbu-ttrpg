@@ -8425,7 +8425,17 @@ function clashParts(kind, actor, clash, uuid) {
   return [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
-    ...thiefClashBonus(actor, clash, uuid)];
+    ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid)];
+}
+
+/** Beat-down Tactics (1): "Increase your Might Clashes against an Opponent with a Combat Condition by 1(T)." */
+function beatdownClashBonus(actor, clash, uuid) {
+  const slot = actor?.system?.effects?.slots?.["clash.mightVsConditioned"];
+  if ((clash?.category !== "might") || !(Number(slot?.add) || 0)) return [];
+  const other = fromUuidSync((uuid === clash.challengerUuid) ? (clash.defenderUuid ?? "") : (clash.challengerUuid ?? ""));
+  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  if (!other || (other.uuid === actor.uuid) || (side(other) === side(actor)) || !conditioned(other)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Against a Combat Condition", value: Number(slot.add) }];
 }
 
 /**

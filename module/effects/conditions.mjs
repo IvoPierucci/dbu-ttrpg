@@ -278,6 +278,15 @@ const PREDICATES = {
     return opponentNear(self, knocked);
   },
 
+  /** Beat-down Tactics (2): the one knocked through (moment knock-through) an Opponent - of another side than yours. */
+  knockedOpponent: scope => {
+    const self = scope.data?.parent;
+    const knocked = globalThis.fromUuidSync?.(scope.context?.knockedUuid ?? "");
+    if (!self || !knocked || (knocked.uuid === self.uuid)) return false;
+    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+    return side(knocked) !== side(self);
+  },
+
   /** Buddy to Buddies (1): a Buddy of yours Active - not destroyed, not locked. */
   buddyActive: scope => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "gear")
     && (item.system?.itemType === "buddy") && item.system.buddy?.active && !item.system.buddy?.destroyed && !item.system.buddy?.locked),

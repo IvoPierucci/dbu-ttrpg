@@ -1,0 +1,23 @@
+id: beat-down-tactics
+name: Beat-down Tactics
+talentCategory: condition
+prerequisites: Combat Tactician, Tier of Power 2+
+description: >
+  Your ability to capitalize on your opponent’s weak points is second to none.
+text: >
+  Beat-down Tactics: Your ability to capitalize on your opponent’s weak points is second to none.
+  –Prerequisites: Combat Tactician, Tier of Power 2+
+  (1)-[Passive]: Increase your Might Clashes against an Opponent with a Combat Condition by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you knock an Opponent through a Health Threshold, they gain a stack of the Broken Combat Condition until the end of your next turn.
+
+---
+
+[passive]
+# (1) Your side of a Might Clash against an Opponent suffering from a Combat Condition (chat.mjs beatdownClashBonus).
+clash.mightVsConditioned += 1(T);
+
+# (2) An Opponent knocked through a Health Threshold by you: a stack of Broken on them till the end of your next turn, once an
+# Encounter. Automatic by default, its Triggered/Automatic button; set Triggered, asked in a window there.
+[triggered/knock-through, 1/encounter, effect 2]
+requires knockedOpponent;
+markKnocked(broken, 1);
