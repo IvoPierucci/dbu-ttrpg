@@ -1,0 +1,18 @@
+id: free-flowing-stance-mark
+name: Free Flowing Stance
+kind: conditions
+maxStacks: 9
+# Not a Combat Condition: Free Flowing Stance's stance, a stack for each Action spent entering it, till the start of your next turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Free Flowing Stance: no Attacking Maneuvers; Defense Value 1(T) for each stack; an Attacking Maneuver aimed at you costs 1(T) more
+  Ki for each.
+text: >
+  Free Flowing Stance (2): While you are in the Free Flowing Stance: You cannot use any Attacking Maneuvers. Increase your Defense Value by 1(T) for each Action spent. Increase the Ki Point Cost of Attacking Maneuvers that target you by 1(T) for each Action spent.
+
+---
+
+[passive]
+forbid attackingManeuvers;
+defenseValue += stacks * 1(T);

@@ -283,6 +283,12 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Masters of Movement (4): you or an Ally, or nobody, asked - placed the same way (chat.mjs mastersPlace)."
   },
+  freeFlowingStance: {
+    args: [0, 0],
+    names: [],
+    doc: "Free Flowing Stance (1): in the Stance till the start of your next turn, a stack for each Action spent (chat.mjs "
+       + "freeFlowingStance)."
+  },
   failSteadfastKnocked: {
     args: [0, 0],
     names: [],

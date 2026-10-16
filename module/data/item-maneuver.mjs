@@ -151,6 +151,10 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
       powerUp: new fields.BooleanField({ required: true, initial: false }),
       /** The Dance Modifier Maneuver: its effect asked and its Clashes opened once the Hype is used (chat.mjs dance). */
       dance: new fields.BooleanField({ required: true, initial: false }),
+      /** "Costs all of your remaining Actions" - Free Flowing Stance's: every one left, none asked. */
+      spendsAllActions: new fields.BooleanField({ required: true, initial: false }),
+      /** "If you have not used an Attacking Maneuver this Combat Round" - refused after one. */
+      noAttackThisRound: new fields.BooleanField({ required: true, initial: false }),
       /**
        * Throws one of the character's own Signature Techniques: asks which, spends this
        * Maneuver's Action and the Technique's Ki, and is the Technique from there on.

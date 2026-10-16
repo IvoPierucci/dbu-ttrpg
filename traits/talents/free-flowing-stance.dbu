@@ -1,0 +1,21 @@
+id: free-flowing-stance
+name: Free Flowing Stance
+talentCategory: dodging
+prerequisites: Agility Score of 6+
+description: >
+  You can take a defensive posture that allows you to dodge and weave around all attacks.
+text: >
+  Free Flowing Stance: You can take a defensive posture that allows you to dodge and weave around all attacks.
+  –Prerequisites: Agility Score of 6+
+  (1)-[1/Round, Ruling]: If you have not used an Attacking Maneuver this Combat Round, you can, as a Standard Maneuver that costs all of your remaining Actions, enter the ‘Free Flowing Stance’ until the start of your next turn.
+  (2)-[Passive]: While you are in the Free Flowing Stance:
+  * You cannot use any Attacking Maneuvers.
+  * Increase your Defense Value by 1(T) for each Action spent.
+  * Increase the Ki Point Cost of Attacking Maneuvers that target you by 1(T) for each Action spent.
+
+---
+
+# (1) Its own Maneuver, listed while this is had (maneuvers/free-flowing-stance-first-effect.dbu): every Action left, none of
+# them after an attack this Round; used, the Free Flowing Stance (a mark) till the start of your next turn, a stack an Action.
+# (2) The mark's own (conditions/free-flowing-stance-mark.dbu): no Attacking Maneuvers, the Defense Value 1(T) a stack, and an
+# attack aimed at you 1(T) a stack dearer (use-maneuver.mjs, where it is paid).

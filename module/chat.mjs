@@ -24221,6 +24221,17 @@ async function settleBuddyHit(message, target, attack, saved) {
 }
 
 /**
+ * Free Flowing Stance (1): "enter the 'Free Flowing Stance' until the start of your next turn" - a stack for each Action spent,
+ * which is what its (2) counts; on your own clock.
+ */
+export async function freeFlowingStance(actor, actions) {
+  if (!actor) return;
+  const { setCondition } = await import("./conditions.mjs");
+  if (await setCondition(actor, "free-flowing-stance-mark", Math.max(1, Number(actions) || 1)) === false) return;
+  await lasting(actor, { kind: KINDS.CONDITION, key: "free-flowing-stance-mark", edge: EDGES.START, source: "Free Flowing Stance" });
+}
+
+/**
  * Critical Wound (2): "they automatically fail their Steadfast Check for that Health Threshold" - marked on them, read as their
  * Check for it is made (rollSteadfastCheck).
  */

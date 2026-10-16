@@ -2292,6 +2292,8 @@ export function definitionOf(item) {
     exploit: item.system.exploit,
     empower: item.system.empower,
     dance: Boolean(item.system.dance),
+    spendsAllActions: Boolean(item.system.spendsAllActions),
+    noAttackThisRound: Boolean(item.system.noAttackThisRound),
     grapple: item.system.grapple,
     launch: item.system.launch,
     terrainLift: item.system.terrainLift,
@@ -5343,6 +5345,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       return false;
     }
 
+    // Free Flowing Stance (1): "If you have not used an Attacking Maneuver this Combat Round".
+    if (maneuver.noAttackThisRound && ((Number(actor.system.attacksThisRound) || 0) > 0)) {
+      ui.notifications.warn(`${maneuver.name}: not after an Attacking Maneuver this Combat Round.`);
+      return false;
+    }
+
     // Neko Majin-Dama (3), (4): nothing to Integrate, or none Integrated - or (4)'s 1 Action not left.
     const noDama = (await import("./majin-dama.mjs")).whyNotMajinDama(actor, maneuver);
     if (noDama) {
@@ -5594,6 +5602,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   const price = crossing
     ? movementKiCost(actor, crossing)
     : maneuverKiCost(maneuver, declared, actor) + (Number(sustaining?.extraKi) || 0)
+      // Free Flowing Stance (2): "Increase the Ki Point Cost of Attacking Maneuvers that target you by 1(T) for each Action
+      // spent" - the one aimed at, their Tier.
+      + ((declared && targetActor) ? (Number(targetActor.system?.conditions?.["free-flowing-stance-mark"]) || 0)
+        * Math.max(1, Number(targetActor.system?.tierOfPower) || 1) : 0)
       // "6(T) for each Action spent" - Explosion Sorcery's.
       + (maneuver.kiPerAction ? (Math.max(1, Number(actionsSpent) || 1) - 1) * maneuverKiCost(maneuver, null, actor) : 0);
 
@@ -6555,6 +6567,8 @@ export function maneuverItemFrom(definition) {
       exploit: Boolean(definition.exploit),
       empower: Boolean(definition.empower),
       dance: Boolean(definition.dance),
+      spendsAllActions: Boolean(definition.spendsAllActions),
+      noAttackThisRound: Boolean(definition.noAttackThisRound),
       grapple: Boolean(definition.grapple),
       launch: Boolean(definition.launch),
       terrainLift: Boolean(definition.terrainLift),

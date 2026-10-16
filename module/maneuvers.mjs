@@ -3872,6 +3872,8 @@ export async function loadManeuvers() {
     exploit: Boolean(trait.exploit),
     empower: Boolean(trait.empower),
     dance: Boolean(trait.dance),
+    spendsAllActions: Boolean(trait.spendsAllActions),
+    noAttackThisRound: Boolean(trait.noAttackThisRound),
     grapple: Boolean(trait.grapple),
     launch: Boolean(trait.launch),
     movement: Boolean(trait.movement),

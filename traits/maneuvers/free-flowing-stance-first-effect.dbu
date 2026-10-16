@@ -1,0 +1,25 @@
+id: free-flowing-stance-first-effect
+name: Free Flowing Stance
+type: standard
+actionCost: 1
+spendsAllActions: true
+noAttackThisRound: true
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: free-flowing-stance
+fromEffect: 1
+source: Core Rule
+description: >
+  Free Flowing Stance's first effect, as a Maneuver: every Action you have left, none of them after an attack this Round - in the
+  Free Flowing Stance till the start of your next turn.
+text: >
+  (1)-[1/Round, Ruling]: If you have not used an Attacking Maneuver this Combat Round, you can, as a Standard Maneuver that costs all of your remaining Actions, enter the ‘Free Flowing Stance’ until the start of your next turn.
+
+---
+
+# Every Action left, refused after an Attacking Maneuver this Round (use-maneuver.mjs). Used: the Free Flowing Stance, a stack
+# for each Action spent, till the start of your next turn (chat.mjs freeFlowingStance).
+[on used]
+freeFlowingStance();
