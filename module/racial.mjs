@@ -823,7 +823,11 @@ async function giveGrants(actor, item, grants, name) {
     data.flags["dbu-ttrpg"].fromTrait = item.flags?.["dbu-ttrpg"]?.sourceId ?? item.id;
     created.push(data);
   }
-  if (created.length) await actor.createEmbeddedDocuments("Item", created);
+  if (!created.length) return;
+  // Its Triggered effects start Automatic, each in turn - the list is one flag.
+  for (const made of (await actor.createEmbeddedDocuments("Item", created)) ?? []) {
+    if (made.type === "talent") await automateAll(actor, made);
+  }
 }
 
 /**
@@ -838,8 +842,8 @@ export async function toggledBlocks(item) {
     .map(block => `${item.id}#${block.index}`);
 }
 
-/** Gained - or its Option changed - its toggles start Automatic (the user's). */
-async function automateAll(actor, item) {
+/** Gained - or its Option changed - its toggles start Automatic (the user's). A Talent's too. */
+export async function automateAll(actor, item) {
   const ids = await toggledBlocks(item);
   if (!actor || !ids.length) return;
   await actor.setFlag("dbu-ttrpg", "automatic", [...new Set([...(actor.getFlag("dbu-ttrpg", "automatic") ?? []), ...ids])]);

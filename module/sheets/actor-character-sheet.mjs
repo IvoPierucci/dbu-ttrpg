@@ -1350,19 +1350,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // Unfolded to its text as printed, as a Racial Trait is (the user's: the text was nowhere to be seen).
       open: Boolean(this.#openSections[`trait-${item.id}`]),
       lines: racialTraitLines(item),
-      triggered: triggered
-        .filter(entry => (entry.sourceId === item.id) && entry.budget
-          // What a window offers as it happens is not Armed beforehand (WINDOW_MOMENTS), nor what hands over an
-          // Out-of-Sequence Maneuver.
-          && !chosenAsItHappens(entry.program.blocks[0]))
-        .map(entry => ({
-          id: entry.blockId,
-          armed: entry.armed,
-          available: entry.available,
-          round: entry.uses.round,
-          encounter: entry.uses.encounter,
-          text: entry.program.blocks[0]?.text ?? ""
-        }))
+      // Triggered or Automatic, as a Racial Trait's (the user's) - Arming it beforehand is gone.
+      triggered: this.#toggleButtons(item, triggered)
     }));
     context.racialTraits = this.#racialTraitChoices(triggered);
     // Evolution, Bestial and Monstrous Traits: the same rows, in a list of their own (the user's).
@@ -4919,8 +4908,16 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             ? `${maneuver.actionCost} ${MANEUVER_TYPES[maneuver.type].action}` : "—"
         })),
       chosen: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean).join(" \u00b7 "),
-      // Every Triggered one - with a limit or not - but what costs Actions, which the moment's own card takes and pays.
-      triggered: triggered
+      triggered: this.#toggleButtons(item, triggered)
+    }));
+  }
+
+  /**
+   * The Triggered/Automatic buttons of one Item's effects - a Racial Trait's, an Other Trait's, a Talent's (the user's): every
+   * Triggered one - with a limit or not - but what costs Actions, which the moment's own card takes and pays.
+   */
+  #toggleButtons(item, triggered) {
+    return triggered
         .filter(entry => (entry.sourceId === item.id) && (entry.program.blocks[0]?.mode === "triggered")
           && !entry.program.blocks[0]?.budget?.actions
           // Nor what a window offers as it happens - the Power Up's, a Counter Maneuver's, a Maneuver declared, a Botch or a
@@ -4951,8 +4948,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
           same.id = `${same.id},${each.id}`;
           same.automatic = same.automatic && each.automatic;
           return buttons;
-        }, [])
-    }));
+        }, []);
   }
 
   /**

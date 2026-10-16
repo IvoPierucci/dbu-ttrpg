@@ -67,7 +67,10 @@ export async function syncProgressionTalents(actor) {
     .map(id => ({ _id: id, [`flags.dbu-ttrpg.${FROM_PROGRESSION}`]: true }));
   if (marks.length) await actor.updateEmbeddedDocuments("Item", marks);
   if (removed.length) await actor.deleteEmbeddedDocuments("Item", removed);
-  if (created.length) await actor.createEmbeddedDocuments("Item", created);
+  if (!created.length) return;
+  // Their Triggered effects start Automatic, as a Racial Trait's do - each in turn, the list being one flag.
+  const { automateAll } = await import("./racial.mjs");
+  for (const made of (await actor.createEmbeddedDocuments("Item", created)) ?? []) await automateAll(actor, made);
 }
 
 /**
