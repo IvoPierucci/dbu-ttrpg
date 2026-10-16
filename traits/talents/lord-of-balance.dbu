@@ -1,0 +1,25 @@
+id: lord-of-balance
+name: Lord of Balance
+talentCategory: balance
+prerequisites: Balanced Warrior, Balanced Defender
+description: >
+  The epitome of the balanced combat style, you are able to adapt offensively and defensively in equal measure.
+text: >
+  Lord of Balance: The epitome of the balanced combat style, you are able to adapt offensively and defensively in equal measure.
+  –Prerequisites: Balanced Warrior, Balanced Defender
+  (1)-[Passive]: If you are benefiting from the first effects of Balanced Warrior and Balanced Defender, increase your Combat Rolls by 1(T).
+  (2)-[Triggered/Start of Combat Round]: Regain 3(bT) Life and Ki Points.
+
+---
+
+[passive]
+# (1) Both Talents had, and the Scores each one's first effect asks for equal - Force and Magic, Agility and Tenacity.
+if (benefiting("Balanced Warrior") && benefiting("Balanced Defender")
+    && (force.score == magic.score) && (agility.score == tenacity.score)) {
+    combatRolls += 1(T);
+}
+
+# (2) As each Combat Round starts, ticked on the Round's card.
+[triggered/start-of-round, effect 2]
+life.value += 3(bT);
+ki.value += 3(bT);
