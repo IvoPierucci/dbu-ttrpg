@@ -2,20 +2,21 @@ id: power-of-the-z-warrior
 name: Power of the Z-Warrior
 talentCategory: balance
 prerequisites: >
-  Agility, Force or Magic, Tenacity, Insight, Scholarship, and Personality
-  Scores of 4+
+  Agility, Force or Magic, Tenacity, Insight, Scholarship, and Personality Scores of 4+
 description: >
-  With a well-rounded approach to battle, you are a jack of all trades, but
-  master of none.
+  With a well-rounded approach to battle, you are a jack of all trades, but master of none.
 text: >
-  Increase your Stress Bonus by 1.
-  When making any Combat Roll, instead of rolling your Base Die, set the Natural
-  Result to 10. This will cause you to score a Critical Result.
+  Power of the Z-Warrior: With a well-rounded approach to battle, you are a jack of all trades, but master of none.
+  –Prerequisites: Agility, Force or Magic, Tenacity, Insight, Scholarship, and Personality Scores of 4+
+  (1)-[Passive]: Increase your Stress Bonus by 1.
+  (2)-[Triggered, 1/Round, 2/Encounter]: When making any Combat Roll, instead of rolling your Base Die, set the Natural Result to 10. This will cause you to score a Critical Result.
 
 ---
 
 [passive]
+# (1)
 stressBonus += 1;
 
+# (2) Ticked in the Combat Roll's window as it is made: the Base Die not rolled, its Natural Result 10 - a Critical Result.
 [triggered/combat-roll, 1/round, 2/encounter, before]
 baseDie = 10;
