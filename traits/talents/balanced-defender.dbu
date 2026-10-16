@@ -1,0 +1,23 @@
+id: balanced-defender
+name: Balanced Defender
+talentCategory: balance
+prerequisites: Agility and Tenacity Scores of 4+
+description: >
+  Focused on both the ability to avoid damage and the ability to withstand it, you are able to shift stances to do either effectively.
+text: >
+  Balanced Defender: Focused on both the ability to avoid damage and the ability to withstand it, you are able to shift stances to do either effectively.
+  –Prerequisites: Agility and Tenacity Scores of 4+
+  (1)-[Passive]: While your Agility and Tenacity Scores are equal to one another, increase your Defense Value and Soak Value by 1(T).
+  (2)-[Triggered, 1/Round]: When targeted by an Attacking Maneuver, spend 2(bT) Ki Points to increase your Defense Value and Soak Value by 1(T) for the duration of that Maneuver.
+
+---
+
+[passive]
+# (1)
+if (agility.score == tenacity.score) {
+    defenseValue += 1(T);
+    soakValue += 1(T);
+}
+# (2) Targeted, before it is settled: a button on the attack's card, once a Round - 2(bT) Ki, 1(T) on the Defense Value under
+# your Dodge and on your Soak Value for that attack (chat.mjs balancedButtons, balancedDodge).
+allow balanced.defender;

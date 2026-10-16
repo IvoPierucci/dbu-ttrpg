@@ -16350,6 +16350,47 @@ function weakButtons(message, attack, container) {
   }
 }
 
+/**
+ * Balanced Defender (2): "When targeted by an Attacking Maneuver, spend 2(bT) Ki Points to increase your Defense Value and Soak
+ * Value by 1(T) for the duration of that Maneuver." A button for each target who has it, before it is settled, once a Round;
+ * kept on the attack (`balanced`) - on the Defense Value under their Dodge, and on their Soak Value.
+ */
+function balancedButtons(message, attack, container) {
+  const done = (attack.balanced ?? []).map(entry => entry.uuid);
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || done.includes(uuid) || (uuid === attack.attackerUuid)
+      || (target.system?.effects?.slots?.["balanced.defender"] !== true)) continue;
+    const cost = 2 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
+    const tier = Math.max(1, Number(target.system.tierOfPower) || 1);
+    const used = target.getFlag?.(SCOPE, "balancedRound") === roundKey();
+    const short = Math.min(Number(target.system.ki?.value) || 0, Number(target.system.capacity?.remaining) || 0) < cost;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Balanced Defender - ${target.name}`;
+    button.disabled = used || short;
+    button.dataset.tooltip = used ? "Once a Combat Round." : `${cost} Ki Points: Defense Value and Soak Value +${tier} for this attack`;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+      if ((fresh.balanced ?? []).some(entry => entry.uuid === uuid) || (target.getFlag?.(SCOPE, "balancedRound") === roundKey())) return;
+      const { ki, capacity } = target.system;
+      if ((ki.value < cost) || (capacity.remaining < cost)) return ui.notifications.warn(`${target.name} cannot pay ${cost} Ki Points.`);
+      await requestActorUpdate(target, { "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost,
+        [`flags.${SCOPE}.balancedRound`]: roundKey() });
+      requestEdit(message, { type: "attack", attack: { ...fresh, balanced: [...(fresh.balanced ?? []), { uuid, value: tier }] } });
+    });
+    container.append(button);
+  }
+}
+
+/** Balanced Defender (2)'s, on this one's Defense Value - the Dodge it is the base of - or their Soak Value. */
+function balancedParts(actor, attack, label) {
+  const entry = (attack?.balanced ?? []).find(each => each.uuid === actor?.uuid);
+  return entry ? [{ label: `Balanced Defender (${label})`, written: "+1(T)", value: Number(entry.value) || 0 }] : [];
+}
+
 /** Power of the Weak (3)'s, on this one's Dodge or Parry. */
 function weakParts(actor, attack) {
   const entry = (attack?.weak ?? []).find(each => each.uuid === actor?.uuid);
@@ -22344,7 +22385,9 @@ async function rollAttackWoundWork(message, attack) {
       // Power of the Weak (6): the Ki of whoever is Bonded to them.
       + (attack.bondSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0)
       // Spiritual Warrior (2): Power of the Weak (3)'s Ki on the Soak Value as well.
-      + (attack.weak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.soak) || 0), 0);
+      + (attack.weak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.soak) || 0), 0)
+      // Balanced Defender (2).
+      + balancedParts(target, attack, "Soak").reduce((sum, part) => sum + part.value, 0);
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
     // Piercing: "ignore 1/4 (rounded up) of your target's Soak Value (before any reductions)".
     const pierceSoak = Math.ceil(Math.max(0, base) * (Number(attack.weapon?.soakIgnored) || 0));
@@ -22597,6 +22640,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...fleetDodge(actor, attack));
   // Power of the Weak (3).
   parts.push(...weakParts(actor, attack));
+  // Balanced Defender (2).
+  parts.push(...balancedParts(actor, attack, "Defense Value"));
   // Mind Reading's, against the one who read: the Dodge, and Combat Telepath's on it.
   parts.push(...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }));
   // Telepathy: Defense Value 1(bT) higher beside a mind it is linked with.
@@ -26834,6 +26879,8 @@ function renderAttack(message, html) {
   if (!result) fleetButtons(message, attack, container);
   // Power of the Weak (3): targeted - Ki for the Strike and Dodge, before it is settled.
   if (!result) weakButtons(message, attack, container);
+  // Balanced Defender (2): targeted - Ki for the Defense Value and Soak Value, before it is settled.
+  if (!result) balancedButtons(message, attack, container);
   // Spiritual Warrior (3): your Bonded Ally's attack - the Basic Attack at the same Opponent.
   spiritualStrikeButtons(message, attack, container);
   // The Duel Clashes: a wager from each who is in it, then the roll.
