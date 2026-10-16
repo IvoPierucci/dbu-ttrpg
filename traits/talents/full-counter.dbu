@@ -1,0 +1,20 @@
+id: full-counter
+name: Full Counter
+talentCategory: counter
+prerequisites: Jolt Counter
+description: >
+  Turning every ounce of pain you receive back against your opponent, you open yourself up to powerful hits from your foes to unleash devastating counterblows.
+text: >
+  Full Counter: Turning every ounce of pain you receive back against your opponent, you open yourself up to powerful hits from your foes to unleash devastating counterblows.
+  –Prerequisites: Jolt Counter
+  (1)-[Passive]: Increase your Damage Reduction when using the Cross Counter option of the Defend Maneuver by 2(T).
+  (2)-[Triggered, 1/Encounter]: If you apply the second effect of Jolt Counter to an Attacking Maneuver, increase the Wound Roll of both your Attacking Maneuver and your Opponent’s Attacking Maneuver by your Might.
+
+---
+
+[passive]
+# (1) Cross Counter chosen: 2(T) of Damage Reduction against that attack (chat.mjs, where its Damage is worked out).
+crossCounter.damageReduction += 2(T);
+# (2) Jolt Counter taken: asked, once an Encounter - your Might on the Wound Roll of their attack against you and of your
+# Basic Attack back (chat.mjs, its defence entry's fullCounter).
+allow crossCounter.full;

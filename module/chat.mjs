@@ -21119,7 +21119,8 @@ function offerWildCounter(message, attack, actor) {
 function crossCounterGrants(actor, entry) {
   const wound = Number(actor?.system?.effects?.slots?.["crossCounter.wound"]?.add) || 0;
   const grants = {
-    ...(wound ? { woundExtra: [{ label: "Jolt Counter", value: wound }] } : {}),
+    ...((wound || entry?.fullCounter) ? { woundExtra: [...(wound ? [{ label: "Jolt Counter", value: wound }] : []),
+      ...(entry?.fullCounter ? [{ label: "Full Counter (Might)", value: Number(entry.fullCounter) || 0 }] : [])] } : {}),
     ...(entry?.jolt ? { modifiers: [{ id: "jolt-counter", name: "Jolt Counter (Defense Value)", strikePerTier: 0, woundPerTier: 0,
       strikePerBaseTier: 0, woundPerBaseTier: 0, strikeFlat: Number(entry.joltValue) || 0, damageCategoryShift: 1, note: "",
       atApparel: false, atWeapon: null }] } : {})
@@ -22584,6 +22585,8 @@ async function rollAttackWoundWork(message, attack) {
       ...inferiorParts(attacker, target, "wound"),
       ...brigandParts(attacker, target, "wound"),
       ...tacticianParts(attacker, target),
+      // Full Counter (2): the Might of the one who Jolted, on this attack's Wound against them.
+      { label: "Full Counter", value: Number(defenceFor(attack, target.uuid)?.fullCounter) || 0 },
       ...studiedParts(attacker, target),
       ...refinedParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
@@ -22642,8 +22645,12 @@ async function rollAttackWoundWork(message, attack) {
     const unreduced = (attack.modifiers ?? []).some(entry => entry.ignoresDamageReduction);
     // Demonic Combat (2): 1(T) more against the attack of one suffering from a Combat Condition.
     const demonic = conditioned(attacker) ? (Number(target.system.effects?.slots?.["damageReduction.vsConditioned"]?.add) || 0) : 0;
+    // Full Counter (1): "Increase your Damage Reduction when using the Cross Counter option of the Defend Maneuver by 2(T)."
+    const fullCounter = (own.defense === "crossCounter")
+      ? (Number(target.system.effects?.slots?.["crossCounter.damageReduction"]?.add) || 0) : 0;
     // Greed of the Hera (6)'s, spent as it hit.
     const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic
+      + fullCounter
       + (Number(own.greedReduction) || 0));
 
     const negated = counterWound && (counterWound.total > wound.total);
@@ -26692,6 +26699,15 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
       rejectClose: false }))
     ? { jolt: true, joltValue: Math.max(0, Number(target.system.defenseValue) || 0) } : {};
   if (jolt.jolt) await target.setFlag(SCOPE, "joltEncounter", game.combat?.id ?? "none");
+  // Full Counter (2): Jolted - "increase the Wound Roll of both your Attacking Maneuver and your Opponent's Attacking Maneuver
+  // by your Might", asked, once an Encounter.
+  if (jolt.jolt && (target.system?.effects?.slots?.["crossCounter.full"] === true)
+    && (target.getFlag?.(SCOPE, "fullCounterEncounter") !== (game.combat?.id ?? "none"))
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${target.name} - Full Counter` },
+      content: `<p data-tooltip="Once an Encounter">Your Might on both Wound Rolls - theirs and yours?</p>`, rejectClose: false })) {
+    jolt.fullCounter = Math.max(0, Number(target.system.might) || 0);
+    await target.setFlag(SCOPE, "fullCounterEncounter", game.combat?.id ?? "none");
+  }
   if (byTension) {
     const held = Number(target.system.resources?.tension?.stacks) || 0;
     await setResource(target, "tension", Math.max(0, held - 1));
