@@ -20339,6 +20339,9 @@ function modifierStrikeParts(attacker, attack) {
         written: `${entry.strikePerTier > 0 ? "+" : ""}${entry.strikePerTier}(T)`,
         value: entry.strikePerTier * tier
       })),
+    // And a number as it stands - Jolt Counter's Defense Value.
+    ...(attack.modifiers ?? []).filter(entry => entry.strikeFlat)
+      .map(entry => ({ label: entry.name, value: Number(entry.strikeFlat) || 0 })),
     // And one written in (bT) - a Technique Hermit's.
     ...(attack.modifiers ?? [])
       .filter(entry => entry.strikePerBaseTier)
@@ -20466,7 +20469,7 @@ function attackIsReady(attack) {
  * The defence is only written down here - it is rolled once the attacker has confirmed
  * too, so that neither side is committed to dice while the other is still deciding.
  */
-function chooseDefence(message, target, defence, wager = 0, foundation = "energy", parryWith = []) {
+function chooseDefence(message, target, defence, wager = 0, foundation = "energy", parryWith = [], extra = {}) {
   // Read fresh rather than trusting what the dialog was opened with: the other side
   // may have confirmed since, and writing a stale copy back would erase it.
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
@@ -20474,7 +20477,8 @@ function chooseDefence(message, target, defence, wager = 0, foundation = "energy
 
   // Replaced rather than merged in, so choosing again overwrites rather than piling up.
   const others = (attack.defences ?? []).filter(entry => entry.uuid !== target.uuid);
-  const entry = { uuid: target.uuid, defence, wager, foundation, parryWith };
+  // And what was chosen with it - Jolt Counter's.
+  const entry = { uuid: target.uuid, defence, wager, foundation, parryWith, ...extra };
 
   // Disarming Demeanor (3): answered with the Defend Maneuver - the attack waits on its attacker.
   const attacker = fromUuidSync(attack.attackerUuid);
@@ -20752,9 +20756,13 @@ async function resolveAttackWork(message, attack) {
     // Without this the defender met three more Strikes with nothing at all, and every
     // one of them landed for free.
     const stillCounts = Boolean(profileFor(attack)?.followUps);
-    const answer = (forced && !stillCounts)
+    let answer = (forced && !stillCounts)
       ? null
       : await defence.answer(target, options, attack);
+    // Jolt Counter (2): "reduce the Dice Score of your Dodge Roll against your opponents' Attacking Maneuver to 0".
+    if (answer && defenceFor(attack, uuid)?.jolt) {
+      answer = { ...answer, total: 0, lines: [...(answer.lines ?? []), noteLine("Jolt Counter: its Dice Score 0")] };
+    }
 
     const automatic = Boolean(forced);
 
@@ -20861,6 +20869,8 @@ async function resolveAttackWork(message, attack) {
       + (defence.damageCategoryShift ?? 0)
       // Divine Flex: "reduce the Damage Category of that Attacking Maneuver by 1 Category" - against the one who flexed.
       + (defenceFor(attack, uuid)?.divineFlex ? -1 : 0)
+      // Jolt Counter (2): "increase the Damage Category of both your and your Opponent's Attacking Maneuver by 1 Category".
+      + (defenceFor(attack, uuid)?.jolt ? 1 : 0)
       // Karmic: "Increase the Damage Category by 1 Category against Characters who have an opposing
       // Z-Soul. If that Opponent's Z-Soul Alignment is 'Pure', apply this bonus twice."
       + karmicSteps(attacker, attack, target)
@@ -21036,7 +21046,7 @@ async function resolveAttackWork(message, attack) {
             maneuverName: "Signature Technique (Counter)", targetUuid: attack.attackerUuid,
             reason: "Cross Counter", technique: { via: "counter", feature: "counter" } }
         : { actorUuid: uuid, actorName: name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
-            targetUuid: attack.attackerUuid, reason: "Cross Counter" }
+            targetUuid: attack.attackerUuid, reason: "Cross Counter", ...crossCounterGrants(fromUuidSync(uuid), defenceFor(attack, uuid)) }
     });
   }
 
@@ -21099,6 +21109,35 @@ function offerWildCounter(message, attack, actor) {
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
     maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: "Wild Counter - your Parry turned it aside",
     grants: { wildCounter: true } } });
+}
+
+/**
+ * Jolt Counter on Cross Counter's Basic Attack: (1) "Increase your Wound Roll when using the Cross Counter option of the Defend
+ * Maneuver by 2(T)"; (2), Jolted, "increase your Strike Roll for your Attacking Maneuver by your Defense Value and increase the
+ * Damage Category of both" - the Defense Value as it stood when Jolt Counter was chosen.
+ */
+function crossCounterGrants(actor, entry) {
+  const wound = Number(actor?.system?.effects?.slots?.["crossCounter.wound"]?.add) || 0;
+  const grants = {
+    ...(wound ? { woundExtra: [{ label: "Jolt Counter", value: wound }] } : {}),
+    ...(entry?.jolt ? { modifiers: [{ id: "jolt-counter", name: "Jolt Counter (Defense Value)", strikePerTier: 0, woundPerTier: 0,
+      strikePerBaseTier: 0, woundPerBaseTier: 0, strikeFlat: Number(entry.joltValue) || 0, damageCategoryShift: 1, note: "",
+      atApparel: false, atWeapon: null }] } : {})
+  };
+  return Object.keys(grants).length ? { grants } : {};
+}
+
+/**
+ * Jolt Counter (2): "against an Attacking Maneuver that has at least 1 Energy Charge and/or a Ki Wager equal or higher than 1/4
+ * of that character's Max Capacity" - theirs, unused this Encounter.
+ */
+function joltOpen(actor, attack) {
+  if ((actor?.system?.effects?.slots?.["crossCounter.jolt"] !== true)
+    || (actor.getFlag?.(SCOPE, "joltEncounter") === (game.combat?.id ?? "none"))) return false;
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  const capacity = Number(attacker?.system?.capacity?.max) || 0;
+  return ((Number(attack?.energyCharges) || 0) >= 1)
+    || ((capacity > 0) && ((Number(attack?.kiWager) || 0) >= Math.floor(capacity / 4)));
 }
 
 /** Wild Counter's uses this Round, against once - three times with Perfect Counter (1): whether there are none left. */
@@ -26646,12 +26685,19 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
   if (perfect) await target.setFlag(SCOPE, "perfectParryRound", roundKey());
   if (!free && !perfect && !await spendActions(target, 1, "counter")) return;
   if (free) spendWriting(target, answered, "defend.free");
+  // Jolt Counter (2): asked as Cross Counter is chosen, against an attack it answers - once an Encounter.
+  const jolt = ((chosen.defence === "crossCounter") && joltOpen(target, attack)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${target.name} - Jolt Counter` },
+      content: `<p data-tooltip="Once an Encounter. Your Dodge's Dice Score 0, their attack a Damage Category up; your Basic Attack your Defense Value on its Strike, a Damage Category up">Jolt Counter?</p>`,
+      rejectClose: false }))
+    ? { jolt: true, joltValue: Math.max(0, Number(target.system.defenseValue) || 0) } : {};
+  if (jolt.jolt) await target.setFlag(SCOPE, "joltEncounter", game.combat?.id ?? "none");
   if (byTension) {
     const held = Number(target.system.resources?.tension?.stacks) || 0;
     await setResource(target, "tension", Math.max(0, held - 1));
   }
 
-  return then(message, target, chosen.defence, chosen.kiWager, chosen.foundation, parryWith);
+  return then(message, target, chosen.defence, chosen.kiWager, chosen.foundation, parryWith, jolt);
 }
 
 /**

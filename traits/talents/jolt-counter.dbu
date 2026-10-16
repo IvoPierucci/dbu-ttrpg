@@ -1,0 +1,21 @@
+id: jolt-counter
+name: Jolt Counter
+talentCategory: counter
+prerequisites: Tenacity or Personality Score of 6+
+description: >
+  With the ability to dish it out as well as take it, you are skilled at turning the momentum of an attack against you into a more powerful blow against your attacker.
+text: >
+  Jolt Counter: With the ability to dish it out as well as take it, you are skilled at turning the momentum of an attack against you into a more powerful blow against your attacker.
+  –Prerequisites: Tenacity or Personality Score of 6+
+  (1)-[Passive]: Increase your Wound Roll when using the Cross Counter option of the Defend Maneuver by 2(T).
+  (2)-[Triggered, 1/Encounter]: When using the Cross Counter option of the Defend Maneuver against an Attacking Maneuver that has at least 1 Energy Charge and/or a Ki Wager equal or higher than 1/4 of that character’s Max Capacity, you may Jolt Counter. If you do, you may choose to reduce the Dice Score of your Dodge Roll against your opponents’ Attacking Maneuver to 0. If you do, increase your Strike Roll for your Attacking Maneuver by your Defense Value and increase the Damage Category of both your and your Opponent’s Attacking Maneuver by 1 Category.
+
+---
+
+[passive]
+# (1) Cross Counter's Basic Attack: 2(T) on its Wound Roll (chat.mjs, its offer).
+crossCounter.wound += 2(T);
+# (2) Cross Counter chosen against an attack of an Energy Charge or more, or a Ki Wager of 1/4 its maker's Max Capacity or
+# more: asked, once an Encounter - your Dodge's Dice Score 0, their attack a Damage Category up against you; your Basic
+# Attack back your Defense Value on its Strike, a Damage Category up (chat.mjs joltOpen).
+allow crossCounter.jolt;
