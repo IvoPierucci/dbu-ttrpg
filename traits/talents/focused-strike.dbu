@@ -1,0 +1,20 @@
+id: focused-strike
+name: Focused Strike
+talentCategory: attacking
+prerequisites: Artful Strike, Insight Score of 6+
+description: >
+  Able to pinpoint weak points in a target’s defense, your attacks hone in on the least guarded parts of the opponent’s body to land strikes consistently.
+text: >
+  Focused Strike: Able to pinpoint weak points in a target’s defense, your attacks hone in on the least guarded parts of the opponent’s body to land strikes consistently.
+  –Prerequisites: Artful Strike, Insight Score of 6+
+  (1)-[Passive]: Reduce the Critical Target of your Strike Rolls by 1.
+  (2)-[Triggered, 1/Round]: If you fail to hit an Opponent with an Attacking Maneuver, reroll your Strike Roll and apply it against the same roll you lost against.
+
+---
+
+[passive]
+# (1) Any Strike Roll - the attacker's, a Parry's - its Critical Target's own floor still under it (chat.mjs rollSide).
+criticalTarget.strike -= 1;
+# (2) An Opponent your attack missed, their defence rolled: a button on its card before the Wound Roll, once a Round - the
+# Strike rolled again with what it had, against the roll that beat it (chat.mjs focusedRetry).
+allow strike.focusedReroll;

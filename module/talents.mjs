@@ -116,7 +116,8 @@ function itemFrom(trait) {
     flags: { "dbu-ttrpg": { sourceId: trait.id } },
     system: {
       description: trait.description ?? "",
-      prerequisites: trait.prerequisites ?? "",
+      // Read off its file as a list where it names several ("Artful Strike, Insight Score of 6+") - written back as it reads.
+      prerequisites: [].concat(trait.prerequisites ?? []).join(", "),
       // Its Talent Category: the file's `talentCategory:`, or its name's.
       category: talentCategoryOf(trait)?.id ?? "",
       race: talentCategoryOf(trait)?.race ?? "",

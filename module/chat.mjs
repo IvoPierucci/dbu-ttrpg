@@ -8137,7 +8137,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // never under the least a Critical Target may be unless it already was.
   // And Way of the Serene's, on a Dodge Roll alone.
   const combatShift = combatRoll ? ((Number(actor.system.effects?.slots?.["criticalTarget.combat"]?.add) || 0)
-    + ((slot === "dodge") ? (Number(actor.system.effects?.slots?.["criticalTarget.dodge"]?.add) || 0) : 0)) : 0;
+    + ((slot === "dodge") ? (Number(actor.system.effects?.slots?.["criticalTarget.dodge"]?.add) || 0) : 0)
+    // Focused Strike (1): a Strike Roll's.
+    + ((slot === "strike") ? (Number(actor.system.effects?.slots?.["criticalTarget.strike"]?.add) || 0) : 0)) : 0;
   const aimedAt = criticalTarget ?? (Number(actor.system.criticalTarget) || 10);
   const aimed = combatShift
     ? Math.max(Math.min(aimedAt, DBUCharacterData.CRITICAL_TARGET_MIN), aimedAt + combatShift) : criticalTarget;
@@ -22008,6 +22010,66 @@ async function homingRetry(message, attack, uuid) {
 }
 
 /**
+ * Focused Strike (2): "If you fail to hit an Opponent with an Attacking Maneuver, reroll your Strike Roll and apply it
+ * against the same roll you lost against." For each Opponent it missed who answered it, a button before the Wound Roll, once
+ * a Round: the Strike rolled again from what it was made of - the Long Range it paid against them paid again - and settled
+ * against their defence as it stood. Hit, they are hit, and what being hit gathers is gathered.
+ */
+function focusedButtons(message, container, attack) {
+  const result = attack?.result;
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!result || result.wound || !attacker?.isOwner || (attacker.system.effects?.slots?.["strike.focusedReroll"] !== true)) return;
+  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const used = attacker.getFlag?.(SCOPE, "focusedRound") === roundKey();
+  for (const branch of result.targets ?? []) {
+    const target = fromUuidSync(branch.uuid ?? "");
+    if (!target || branch.hit || !branch.answer || branch.focused || (side(target) === side(attacker))) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Focused Strike - ${target.name}`;
+    button.disabled = used;
+    button.dataset.tooltip = used ? "Once a Combat Round." : `Reroll the Strike against their ${branch.answer.total ?? 0} (1/Round)`;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      await focusedRetry(message, attacker, target.uuid);
+    });
+    container.append(button);
+  }
+}
+
+async function focusedRetry(message, attacker, uuid) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const own = targetResult(attack, uuid);
+  if (!attack?.result || attack.result.wound || !own || own.hit || !own.answer || own.focused) return;
+  if (attacker.getFlag?.(SCOPE, "focusedRound") === roundKey()) return ui.notifications.warn(`${attacker.name}: Focused Strike - once a Combat Round.`);
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.focusedRound`]: roundKey() });
+  const roll = await rollSide(attacker, [{ label: "Strike", value: attack.result.strike?.bonus ?? 0 }], {
+    extraDice: attacker.system.dice.extra.formula,
+    criticalDice: attacker.system.dice.critical.formula,
+    combatRoll: true, collect: false, attackingManeuver: true, slot: "strike",
+    linked: attack.technique?.linked?.strike ?? ""
+  });
+  const against = Math.max(0, roll.total - (Number(own.longRange) || 0));
+  const hit = against > (Number(own.answer.total) || 0);
+  let incomingDamage = own.incomingDamage;
+  if (hit) {
+    const target = fromUuidSync(uuid);
+    if (target) {
+      const incoming = atMoment(target, "being-hit", { attack: 1, attacker: 1, attackerUuid: attack?.attackerUuid ?? "" });
+      spendChosen(target, incoming);
+      incomingDamage = incoming.slots?.["incoming.damage"] ?? null;
+    }
+  }
+  // A Botch on any Strike Roll of it sets Hostile Chase off, once.
+  const chased = (roll.outcome === "botch") && attack.technique?.features?.includes("hostile-chase") && !attack.hostileChased;
+  requestEdit(message, { type: "attack", attack: { ...attack, ...(chased ? { hostileChased: true } : {}),
+    result: { ...attack.result, targets: replaceTarget(attack, uuid, { focused: { total: roll.total, outcome: roll.outcome },
+      ...(hit ? { hit: true, against, incomingDamage } : {}) }) } } });
+  if (chased) await postHostileChase(attack, attacker);
+}
+
+/**
  * Hostile Chase: the attacker is hit by their own attack. "Roll Wound as an Urgent Roll and apply
  * Damage as you would normally." A card of its own, already hit, whose Wound Roll is theirs.
  */
@@ -26942,6 +27004,9 @@ function renderAttack(message, html) {
     });
     container.append(toss);
   }
+
+  // Focused Strike (2): an Opponent it missed - the Strike again, against their defence.
+  focusedButtons(message, container, attack);
 
   // Glass Shards (2): "gain the Homing Advantage", at Shard Carriers alone.
   const homingRanks = Math.max(featureRanks(attack.technique?.features ?? [], "homing"), attack.shardHoming ? 1 : 0);
