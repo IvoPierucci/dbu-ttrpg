@@ -16191,6 +16191,119 @@ function fleetButtons(message, attack, container) {
   }
 }
 
+/**
+ * Power of the Weak (3): "If you are targeted by an Attacking Maneuver, you may spend up to 4(bT) Ki Points. For every 2(bT) Ki
+ * Points spent, increase your Strike and Dodge Rolls by 1(T) for the duration of that Attacking Maneuver." A button for each
+ * step a target who has it can pay, before it is settled; kept on the attack (`weak`) - on their Dodge, or a Parry's Strike.
+ */
+function weakButtons(message, attack, container) {
+  const done = (attack.weak ?? []).map(entry => entry.uuid);
+  for (const { uuid } of attackTargets(attack)) {
+    const target = fromUuidSync(uuid);
+    if (!target?.isOwner || done.includes(uuid) || (uuid === attack.attackerUuid)
+      || (target.system?.effects?.slots?.["weak.targeted"] !== true)) continue;
+    const base = Math.max(1, Number(target.system.baseTierOfPower) || 1);
+    const tier = Math.max(1, Number(target.system.tierOfPower) || 1);
+    const affordable = Math.min(Number(target.system.ki?.value) || 0, Number(target.system.capacity?.remaining) || 0);
+    const group = [];
+    for (const steps of [1, 2].filter(n => 2 * n * base <= affordable)) {
+      const cost = 2 * steps * base;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = `Power of the Weak +${steps}(T) - ${target.name}`;
+      button.dataset.tooltip = `${cost} Ki Points: Strike and Dodge Rolls +${steps * tier} for this Attacking Maneuver`;
+      button.addEventListener("click", async () => {
+        group.forEach(each => { each.disabled = true; });
+        const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+        if ((fresh.weak ?? []).some(entry => entry.uuid === uuid)) return;
+        const { ki, capacity } = target.system;
+        if ((ki.value < cost) || (capacity.remaining < cost)) return ui.notifications.warn(`${target.name} cannot pay ${cost} Ki Points.`);
+        await requestActorUpdate(target, { "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost });
+        requestEdit(message, { type: "attack", attack: { ...fresh, weak: [...(fresh.weak ?? []), { uuid, steps, value: steps * tier }] } });
+      });
+      group.push(button);
+      container.append(button);
+    }
+  }
+}
+
+/** Power of the Weak (3)'s, on this one's Dodge or Parry. */
+function weakParts(actor, attack) {
+  const entry = (attack?.weak ?? []).find(each => each.uuid === actor?.uuid);
+  return entry ? [{ label: "Power of the Weak", written: `+${entry.steps}(T)`, value: Number(entry.value) || 0 }] : [];
+}
+
+/** Power of the Weak (4): Bonded to that Ally - "until you become Bonded to another Ally". */
+export async function bondTo(actor, allyUuid) {
+  const ally = fromUuidSync(allyUuid ?? "");
+  if (!actor || !ally) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.bonded`]: { uuid: ally.uuid, name: ally.name } });
+}
+
+/**
+ * Power of the Weak (5): "If a Bonded Ally hits an Opponent with an Attacking Maneuver, you may spend up to 3(bT) Ki Points.
+ * Increase the Wound Roll of that Attacking Maneuver by an equal amount." (6): "If a Bonded Ally is hit by an Opponent's
+ * Attacking Maneuver, you may spend up to 3(bT) Ki Points. Increase your Bonded Ally's Soak Value by an equal amount for the
+ * duration of that Attacking Maneuver." Twice a Round each. A button for whoever is Bonded to them, hit and before the Wound
+ * Roll; kept on the attack (`bondWound`, `bondSoak`).
+ */
+function bondButtons(message, attack, container) {
+  const result = attack?.result;
+  if (!result || result.wound) return;
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  const hits = (result.targets ?? []).filter(entry => entry.hit).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
+  if (!attacker || !hits.length) return;
+  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const opposed = (one, other) => (one.uuid !== other.uuid) && (side(one) !== side(other));
+  const seen = new Set();
+  for (const token of canvas?.tokens?.placeables ?? []) {
+    const yardrat = token.actor;
+    if (!yardrat?.isOwner || seen.has(yardrat.uuid) || yardrat.system?.defeated) continue;
+    seen.add(yardrat.uuid);
+    const bond = yardrat.getFlag?.(SCOPE, "bonded");
+    const slots = yardrat.system.effects?.slots ?? {};
+    if (!bond?.uuid || (bond.uuid === yardrat.uuid)) continue;
+    const base = Math.max(1, Number(yardrat.system.baseTierOfPower) || 1);
+    const offer = (kind, who, label, tooltip) => {
+      if ((attack[kind] ?? []).some(entry => (entry.by === yardrat.uuid) && (entry.uuid === who.uuid))) return;
+      const count = yardrat.getFlag?.(SCOPE, `${kind}Round`);
+      const spent = (count?.round === roundKey()) ? (Number(count.n) || 0) : 0;
+      const most = Math.min(3 * base, Number(yardrat.system.ki?.value) || 0, Number(yardrat.system.capacity?.remaining) || 0);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = label;
+      button.disabled = (spent >= 2) || (most <= 0);
+      button.dataset.tooltip = (spent >= 2) ? "Twice a Combat Round." : tooltip;
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        const amount = await askPlayerAmount(yardrat, `${yardrat.name}: Power of the Weak`, most, `Ki Points (up to ${3 * base})`);
+        if (!amount) { button.disabled = false; return; }
+        const { ki, capacity } = yardrat.system;
+        if ((ki.value < amount) || (capacity.remaining < amount)) return ui.notifications.warn(`${yardrat.name} cannot pay ${amount} Ki Points.`);
+        await requestActorUpdate(yardrat, { "system.ki.value": ki.value - amount, "system.capacity.spent": capacity.spent + amount,
+          [`flags.${SCOPE}.${kind}Round`]: { round: roundKey(), n: spent + 1 } });
+        const fresh = message.getFlag(SCOPE, ATTACK_FLAG) ?? attack;
+        requestEdit(message, { type: "attack", attack: { ...fresh,
+          [kind]: [...(fresh[kind] ?? []), { by: yardrat.uuid, name: yardrat.name, uuid: who.uuid, value: amount }] } });
+      });
+      container.append(button);
+    };
+    // (5) Their attack, an Opponent of theirs hit.
+    if ((slots["bond.wound"] === true) && (bond.uuid === attacker.uuid) && hits.some(each => opposed(attacker, each))) {
+      offer("bondWound", attacker, `Power of the Weak - ${attacker.name}'s Wound`,
+        `Up to ${3 * base} Ki Points: as much on this Wound Roll (twice a Round)`);
+    }
+    // (6) Them hit by an Opponent's.
+    const struck = hits.find(each => (each.uuid === bond.uuid) && opposed(attacker, each));
+    if ((slots["bond.soak"] === true) && struck) {
+      offer("bondSoak", struck, `Power of the Weak - ${struck.name}'s Soak`,
+        `Up to ${3 * base} Ki Points: as much on ${struck.name}'s Soak Value for this attack (twice a Round)`);
+    }
+  }
+}
+
 /** Fleet-Footed's, on this one's Defense Value - the Dodge it is the base of. */
 function fleetDodge(actor, attack) {
   const entry = (attack?.fleet ?? []).find(each => each.uuid === actor?.uuid);
@@ -20941,6 +21054,8 @@ function woundParts(attacker, attack) {
       value: Number(attacker.system.attributes?.[attack.woundAttribute.attribute]?.mod) || 0 }] : []),
     ...(attack.weapon?.wound ?? []),
     { label: "Ki Wager", value: attack.kiWager ?? 0 },
+    // Power of the Weak (5): the Ki of whoever is Bonded to them.
+    ...(attack.bondWound ?? []).map(entry => ({ label: `Power of the Weak (${entry.name})`, value: Number(entry.value) || 0 })),
     ...twoWorldsWoundParts(attacker, attack),
     // Refined Combat's Hand to Hand or Blaster: half the Surgency.
     ...((Number(attack.refinedWound) || 0) ? [{ label: "Refined Combat (1/2 Surgency)", value: Number(attack.refinedWound) }] : []),
@@ -21664,7 +21779,9 @@ async function rollAttackWoundWork(message, attack) {
       // Refined Combat (1) against one Studied, and Defender's half Surgency for this attack.
       + refinedParts(target, attacker).reduce((sum, part) => sum + part.value, 0) + (Number(own.refinedSoak) || 0)
       // Draconic Physique (2): an Impaired Opponent's attack.
-      + draconicParts(target, attacker).reduce((sum, part) => sum + part.value, 0);
+      + draconicParts(target, attacker).reduce((sum, part) => sum + part.value, 0)
+      // Power of the Weak (6): the Ki of whoever is Bonded to them.
+      + (attack.bondSoak ?? []).filter(entry => entry.uuid === target.uuid).reduce((sum, entry) => sum + (Number(entry.value) || 0), 0);
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
     // Piercing: "ignore 1/4 (rounded up) of your target's Soak Value (before any reductions)".
     const pierceSoak = Math.ceil(Math.max(0, base) * (Number(attack.weapon?.soakIgnored) || 0));
@@ -21915,6 +22032,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...telepathicDodge(actor, attack));
   // Refined Combat's Fleet-Footed.
   parts.push(...fleetDodge(actor, attack));
+  // Power of the Weak (3).
+  parts.push(...weakParts(actor, attack));
   // Mind Reading's, against the one who read: the Dodge, and Combat Telepath's on it.
   parts.push(...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }));
   // Telepathy: Defense Value 1(bT) higher beside a mind it is linked with.
@@ -22300,6 +22419,8 @@ const DEFENCES = {
       ...rideExploitBonus(actor, attack),
       // With a Weapon: its Size and the Weapon Penalty, chosen when the Parry was.
       ...(defenceFor(attack, actor.uuid)?.parryWith ?? []),
+      // Power of the Weak (3): "increase your Strike and Dodge Rolls" - a Parry's is a Strike.
+      ...weakParts(actor, attack),
       // Mind Reading: "the Dice Score of any Strike Roll made through the Parry effect of the Defend Maneuver".
       ...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true })
     ],
@@ -26144,6 +26265,8 @@ function renderAttack(message, html) {
   if (!result) negativeKiButtons(message, attack, container);
   // Refined Combat's Fleet-Footed: targeted by one you Studied - the Defense Value raised for it.
   if (!result) fleetButtons(message, attack, container);
+  // Power of the Weak (3): targeted - Ki for the Strike and Dodge, before it is settled.
+  if (!result) weakButtons(message, attack, container);
   // The Duel Clashes: a wager from each who is in it, then the roll.
   if (!result && duelRunning(attack)) duelButtons(message, attack, container);
 
@@ -26238,6 +26361,8 @@ function renderAttack(message, html) {
   floatMirrorButtons(message, container, attack);
   // Evolved Right Eye (5): the Strike a Critical Result, before the Wound Roll.
   criticalStrikeButton(message, container, attack);
+  // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.
+  bondButtons(message, attack, container);
 
   // Combination's three more Strikes come between the hit and the Wound Roll, and they
   // decide what the Wound Roll is worth - so they are their own step and the Wound

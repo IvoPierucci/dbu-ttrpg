@@ -371,7 +371,8 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
     return false;
   }
 
-  const chosen = await foundry.applications.api.DialogV2.wait({
+  // Power of the Weak (1): "you must always give the maximum amount of Ki Points possible to that Ally" - nothing asked.
+  const chosen = (actor.system.effects?.slots?.["empower.maximum"] === true) ? cap : await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `Empower - ${ally.name}` },
     content: `<p>${Handlebars.escapeExpression(actor.name)} is sending Ki Points to
@@ -402,7 +403,11 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
   await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - sent) });
 
   // Theirs is written through the relay: the Ally is very often somebody else's.
-  const { requestActorUpdate } = await import("./chat.mjs");
+  const { requestActorUpdate, answerFor } = await import("./chat.mjs");
+  // Power of the Weak (4): Ki given - Bonded to them, said on the Empower's own note.
+  const bondBefore = actor.getFlag?.("dbu-ttrpg", "bonded")?.uuid;
+  await answerFor(actor, "empowered-ally", { allyUuid: ally.uuid });
+  const bonded = ((bondBefore !== ally.uuid) && (actor.getFlag?.("dbu-ttrpg", "bonded")?.uuid === ally.uuid)) ? " &middot; Bonded" : "";
   // Genki: "While you have declared an Attacking Maneuver with this Super Profile for the effects of
   // Energy Charge, if an Ally would give you Ki Points through the Empower Maneuver, instead of gaining
   // those Ki points, you gain an additional Ki Wager that does not count towards your Capacity equal
@@ -413,7 +418,7 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
     await requestActorUpdate(ally, { "system.charging.bonusWager": (Number(ally.system.charging.bonusWager) || 0) + bonus });
     await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
       content: `<div class="dbu-settled-note">Genki: ${Handlebars.escapeExpression(ally.name)} takes no Ki - `
-        + `+${bonus} Ki Wager on ${Handlebars.escapeExpression(charged.name)} instead.</div>` });
+        + `+${bonus} Ki Wager on ${Handlebars.escapeExpression(charged.name)} instead.${bonded}</div>` });
     return true;
   }
   await requestActorUpdate(ally, {
@@ -432,7 +437,7 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}
       sends <strong>${sent}</strong> Ki Points to
       ${Handlebars.escapeExpression(ally.name)}
-      <em>Capacity untouched</em></div>`,
+      <em>Capacity untouched${bonded}</em></div>`,
     ...(offers.length ? { flags: { "dbu-ttrpg": { oosOffers: offers } } } : {})
   });
 

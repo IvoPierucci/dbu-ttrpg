@@ -534,6 +534,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "botchNear",
   // Knocked through near you by you or an Ally; failing a Steadfast Check near you (Wrath of the Dragon's).
   "knockedNear", "failedNear",
+  // The Ally Empowered open to a Bond (Power of the Weak's).
+  "bondOpen",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

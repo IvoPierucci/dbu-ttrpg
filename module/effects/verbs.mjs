@@ -272,6 +272,11 @@ export const VERBS = Object.freeze({
     doc: "Wrath of the Dragon (5): a stack of Impaired on whoever this Moment says failed, till the start of your next turn "
        + "(chat.mjs impairFailed)."
   },
+  bondTo: {
+    args: [0, 0],
+    names: [],
+    doc: "Power of the Weak (4): Bonded to the Ally this Moment says was Empowered, till Bonded to another (chat.mjs bondTo)."
+  },
   impairKnocked: {
     args: [0, 0],
     names: [],

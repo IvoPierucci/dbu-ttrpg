@@ -278,6 +278,18 @@ const PREDICATES = {
     return opponentNear(self, knocked);
   },
 
+  /**
+   * Power of the Weak (4): the Ally Empowered (moment empowered-ally) not Bonded to you already, nor to another - "You cannot
+   * be Bonded with a Character that another Yardrat is already Bonded to."
+   */
+  bondOpen: scope => {
+    const self = scope.data?.parent;
+    const ally = scope.context?.allyUuid;
+    if (!self || !ally || (self.getFlag?.("dbu-ttrpg", "bonded")?.uuid === ally)) return false;
+    const others = [...(globalThis.game?.actors ?? []), ...(globalThis.canvas?.tokens?.placeables ?? []).map(token => token.actor)];
+    return !others.some(other => other && (other.uuid !== self.uuid) && (other.getFlag?.("dbu-ttrpg", "bonded")?.uuid === ally));
+  },
+
   /** Wrath of the Dragon (5): the one failing an Opponent not at Long Range (moment opponent-steadfast-failed). */
   failedNear: scope => {
     const self = scope.data?.parent;

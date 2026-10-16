@@ -1,0 +1,38 @@
+id: power-of-the-weak
+name: Power of the Weak
+order: 2
+category: body
+importance: primary
+description: >
+  Though physically unimpressive, Yardrats more than make up for their shortcomings by sharing their spiritual power with others.
+text: >
+  Power of the Weak (Body): Though physically unimpressive, Yardrats more than make up for their shortcomings by sharing their spiritual power with others.
+  (1)-[Passive]: When using the Empower Maneuver to give Ki Points to an Ally, you must always give the maximum amount of Ki Points possible to that Ally.
+  (2)-[Passive]: Increase the Ki Point Cost of all your Attacking Maneuvers by 2(T), but reduce the Ki Point Cost of all your Unique Abilities by 2(T).
+  (3)-[Triggered]: If you are targeted by an Attacking Maneuver, you may spend up to 4(bT) Ki Points. For every 2(bT) Ki Points spent, increase your Strike and Dodge Rolls by 1(T) for the duration of that Attacking Maneuver.
+  (4)-[Triggered, 1/Round, Ruling]: If you give Ki Points to an Ally (except a Minion) through the Empower Maneuver, you become ‘Bonded’ until you become Bonded to another Ally. You cannot be Bonded with a Character that another Yardrat is already Bonded to.
+  (5)-[Triggered, 2/Round]: If a Bonded Ally hits an Opponent with an Attacking Maneuver, you may spend up to 3(bT) Ki Points. Increase the Wound Roll of that Attacking Maneuver by an equal amount.
+  (6)-[Triggered, 2/Round]: If a Bonded Ally is hit by an Opponent’s Attacking Maneuver, you may spend up to 3(bT) Ki Points. Increase your Bonded Ally’s Soak Value by an equal amount for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) The Empower sends the most it can, nothing asked (use-maneuver.mjs transferKi).
+allow empower.maximum;
+# (2)
+attack.kiCost += 2(T);
+unique.technical.kiCost -= 2(T);
+unique.magical.kiCost -= 2(T);
+# (3) Targeted, before it is settled: a button on the attack's card - 2(bT) or 4(bT) Ki, 1(T) or 2(T) on your Dodge, or on
+# the Strike of a Parry, for that attack (chat.mjs weakButtons, weakParts).
+allow weak.targeted;
+# (5), (6) Your Bonded Ally hitting an Opponent, or hit by one: a button on the attack's card before the Wound Roll, twice a
+# Round each - up to 3(bT) Ki, as much on that attack's Wound Roll, or on their Soak Value for it (chat.mjs bondButtons).
+allow bond.wound;
+allow bond.soak;
+
+# (4) Ki given through the Empower (moment empowered-ally): Bonded to that Ally, till Bonded to another - not one another is
+# Bonded to. Once a Round; its Triggered/Automatic button. Minions are not tracked.
+[triggered/empowered-ally, 1/round, effect 4]
+requires bondOpen;
+bondTo();

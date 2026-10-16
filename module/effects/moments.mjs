@@ -128,6 +128,9 @@ const TABLE = [
   { key: "opponent-steadfast-failed", label: "An Opponent fails a Steadfast Check", provides: [],
     doc: "Fired for whoever has an effect answering it as anybody fails a Steadfast Check, with `failedUuid` (chat.mjs "
        + "steadfastFailed) - Wrath of the Dragon's. What is the player's is asked in a window first." },
+  { key: "empowered-ally", label: "You give Ki Points to an Ally through the Empower Maneuver", provides: [],
+    doc: "Fired for whoever Empowered, once the Ki is given, with who as `allyUuid` (use-maneuver.mjs transferKi) - Power of "
+       + "the Weak's Bond. What is the player's is asked in a window first." },
   { key: "botch-seen", label: "A Botch Result is scored on a Combat Roll", provides: [],
     doc: "Fired for whoever has an effect answering it, as anybody's Combat Roll comes to a Botch Result, with whose as "
        + "`botcherUuid` (chat.mjs rollSide) - Karmic Reflection's. What is the player's is asked in a window first." },
