@@ -1,0 +1,20 @@
+id: injuring-wound
+name: Injuring Wound
+talentCategory: damaging
+prerequisites: Bruising Wound, Force and/or Magic Score of 6+
+description: >
+  Trading precision for power, you land debilitating blows on your enemies.
+text: >
+  Injuring Wound: Trading precision for power, you land debilitating blows on your enemies.
+  –Prerequisites: Bruising Wound, Force and/or Magic Score of 6+
+  (1)-[Passive]: Reduce the Critical Target of your Wound Rolls by 1.
+  (2)-[Triggered, 1/Round]: When making an Attacking Maneuver, you can reduce your Strike Roll by 1(bT) to increase your Wound Roll by 2(bT).
+
+---
+
+[passive]
+# (1) Any Wound Roll's Critical Target, its own floor still under it (chat.mjs rollSide).
+criticalTarget.wound -= 1;
+# (2) Asked as an Attacking Maneuver is declared, once a Round: 1(bT) off its Strike Roll, 2(bT) on its Wound Roll (maneuvers.mjs
+# askInjuring; the attack's strikeExtra and woundExtra).
+allow wound.injuring;

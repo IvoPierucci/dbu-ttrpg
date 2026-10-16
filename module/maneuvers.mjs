@@ -1527,6 +1527,27 @@ export async function askWarriorTension(actor, declared) {
 }
 
 /**
+ * Injuring Wound (2): "When making an Attacking Maneuver, you can reduce your Strike Roll by 1(bT) to increase your Wound Roll
+ * by 2(bT)." Asked as one is declared, once a Round; carried on the attack as a row on its Strike and one on its Wound.
+ */
+export async function askInjuring(actor, declared) {
+  if (!declared || (actor?.system?.effects?.slots?.["wound.injuring"] !== true)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "injuringRound") === round) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: "Injuring Wound" },
+    content: `<p data-tooltip="Once a Round">Strike -1(bT), Wound +2(bT)?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "injuringRound", round);
+  const base = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  return { ...declared,
+    strikeExtra: [...(declared.strikeExtra ?? []), { label: "Injuring Wound", written: "-1(bT)", value: -base }],
+    woundExtra: [...(declared.woundExtra ?? []), { label: "Injuring Wound", written: "+2(bT)", value: 2 * base }] };
+}
+
+/**
  * Spiritual Warrior (5): "If you use the Basic Attack Maneuver, you do not have to pay the Ki Point Cost for this Attacking
  * Maneuver. You still have to pay any Ki Points spent through a Ki Wager or other effects." Asked as a Basic Attack is
  * declared, once a Round; carried as `spiritualFree` (maneuverKiCost).

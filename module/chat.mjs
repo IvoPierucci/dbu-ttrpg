@@ -8250,8 +8250,9 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // And Way of the Serene's, on a Dodge Roll alone.
   const combatShift = combatRoll ? ((Number(actor.system.effects?.slots?.["criticalTarget.combat"]?.add) || 0)
     + ((slot === "dodge") ? (Number(actor.system.effects?.slots?.["criticalTarget.dodge"]?.add) || 0) : 0)
-    // Focused Strike (1): a Strike Roll's.
-    + ((slot === "strike") ? (Number(actor.system.effects?.slots?.["criticalTarget.strike"]?.add) || 0) : 0)) : 0;
+    // Focused Strike (1): a Strike Roll's. Injuring Wound (1): a Wound Roll's.
+    + ((slot === "strike") ? (Number(actor.system.effects?.slots?.["criticalTarget.strike"]?.add) || 0) : 0)
+    + ((slot === "wound") ? (Number(actor.system.effects?.slots?.["criticalTarget.wound"]?.add) || 0) : 0)) : 0;
   const aimedAt = criticalTarget ?? (Number(actor.system.criticalTarget) || 10);
   const aimed = combatShift
     ? Math.max(Math.min(aimedAt, DBUCharacterData.CRITICAL_TARGET_MIN), aimedAt + combatShift) : criticalTarget;
@@ -18652,6 +18653,8 @@ async function takeOutOfSequence(message, actor, offer) {
     declared = await (await import("./maneuvers.mjs")).askRevenge(actor, declared, maneuver, target);
     // Spiritual Warrior (5), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askSpiritualFree(actor, declared, maneuver);
+    // Injuring Wound (2), out of sequence as in it.
+    declared = await (await import("./maneuvers.mjs")).askInjuring(actor, declared);
     // Boom's: its Tension's Broken and the stacks it spends.
     if (granted?.boom) declared = { ...declared, boom: granted.boom };
     // Ranger (3)'s: "it must be an Armed Attack", and a move away once it is concluded.
@@ -18937,7 +18940,7 @@ export async function postAttack(actor, target, maneuver,
                                    markFrom = "", compressedElement = false, volleyball = null, longShotRanks = 0,
                                    genkiLifeforce = 0, portal = false, spiritSword = null, paid = null,
                                    appliedProfiles = [], stretched = false, burrowed = false, doublesDiminishing = false,
-                                   woundExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
+                                   woundExtra = [], strikeExtra = [], maliceBacklash = 0, moraleGuard = false, selfExplosion = false,
                                    earthlingCharge = false, featureChoices = null, overwhelm = null, primed = false,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
@@ -19117,6 +19120,8 @@ export async function postAttack(actor, target, maneuver,
           ...(doublesDiminishing ? { doublesDiminishing: true } : {}),
           // Majin Malice's and Majin Mentality's: rows on its Wound Roll, and Malice's Backlash after it.
           ...(woundExtra.length ? { woundExtra } : {}),
+          // What was added to the Strike as it was declared - Injuring Wound's 1(bT) off it.
+          ...(strikeExtra.length ? { strikeExtra } : {}),
           // Experienced Fighter (2)'s, spent on it: the attacker's, and who Dodges with Instinct-Driven Dodge.
           ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
           ...(instinct.length ? { instinct } : {}),
@@ -20762,6 +20767,8 @@ function strikeParts(attacker, attack) {
     ...(attack.technique?.noThresholdPenalty ? [] : thresholdPenalty(attacker)),
     // Rebound's retry at another target: Homing's "+1(T) for each time you've missed".
     ...(attack.homing?.bonus ? [{ label: `Homing (${attack.homing.misses} missed)`, value: attack.homing.bonus }] : []),
+    // What was added to it as it was declared - Injuring Wound's.
+    ...(attack.strikeExtra ?? []),
     // Master of Openings (1): made through the Exploit Maneuver.
     ...((attack.viaExploit && (Number(attacker.system.effects?.slots?.["strike.viaExploit"]?.add) || 0))
       ? [{ label: (attacker.system.effects.slots["strike.viaExploit"].parts ?? []).map(part => part.source).find(Boolean) ?? "Exploit",
