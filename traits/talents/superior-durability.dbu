@@ -1,0 +1,24 @@
+id: superior-durability
+name: Superior Durability
+talentCategory: durability
+prerequisites: Tough Warrior, ToP3+
+description: >
+  Unmatched in your ability to take a hit, even the most lethal of blows barely scratches you.
+text: >
+  Superior Durability: Unmatched in your ability to take a hit, even the most lethal of blows barely scratches you.
+  –Prerequisites: Tough Warrior, ToP3+
+  (1)-[Passive]: Increase your Soak Value by 1(bT).
+  (2)-[Passive]: Halve the amount of Life Points you would lose from the effects of a Combat Condition, Environmental Qualities, or Damage Over Time.
+  (3)-[Triggered, 1/Round]: If you use the second effect of Tough Warrior and spend the maximum amount of Ki Points through its second effect, you can reduce the Damage Category of that Attacking Maneuver by 1 Category.
+
+---
+
+[passive]
+# (1)
+soakValue += 1(bT);
+# (2) What a Combat Condition, a Quality or an Environment of the Battlefield takes off your Life Points - and Damage Over
+# Time - halved, rounded down (moments-runtime.mjs writeStateful, combat.mjs burnDot).
+allow life.lossHalved;
+# (3) Tough Warrior's 4(bT) spent in full: asked, once a Round - that attack's Damage Category one down (chat.mjs
+# toughReductionFor).
+allow reduction.byKiCategory;

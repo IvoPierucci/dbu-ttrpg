@@ -530,7 +530,9 @@ export async function strikeLightning(actor) {
  * which is the same wording Collision Damage uses and the same thing Soak has no say in.
  */
 async function burnDot(actor) {
-  const taken = actor.system.dot?.total ?? 0;
+  // Superior Durability (2): Damage Over Time's halved, rounded down.
+  const whole = actor.system.dot?.total ?? 0;
+  const taken = (actor.system.effects?.slots?.["life.lossHalved"] === true) ? Math.floor(whole / 2) : whole;
   if (taken <= 0) return;
 
   const { reduceLifePoints } = await import("./chat.mjs");

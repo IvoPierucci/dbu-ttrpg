@@ -273,6 +273,9 @@ function gather(contributions, slot, op, value, kind, entry, b, phase, scope) {
       op, value,
       priority: entry.priority ?? PRIORITY.base,
       source: entry.sourceName,
+      // And which - `condition:poisoned`, `quality:aflame` - for a reader asking what kind of thing it was (Superior
+      // Durability's).
+      sourceId: entry.sourceId ?? "",
       block: b.index,
       clamp: slot.clamp
     });
@@ -311,7 +314,7 @@ function resolveNumber(entries, scope) {
     // Which of these actually bit is not decided here - a `set` that lost on Priority
     // is still a contribution somebody made, and saying so is more use than silently
     // dropping it.
-    parts: entries.map(e => ({ op: e.op, value: e.value, source: e.source ?? "" })),
+    parts: entries.map(e => ({ op: e.op, value: e.value, source: e.source ?? "", sourceId: e.sourceId ?? "" })),
     // Dice rolled onto a number - Combat Recovery's `life.value += 1d10(bT)` - are added as what they rolled; a dice Slot
     // keeps its dice as dice (its value is not a number), and is left to whatever rolls them.
     add: entries.filter(e => (e.op === "add") || ((e.op === "add-dice") && (typeof e.value === "number")))

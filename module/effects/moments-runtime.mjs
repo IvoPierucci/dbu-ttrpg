@@ -253,7 +253,14 @@ async function writeStateful(actor, slots) {
     if (!(key in slots)) continue;
 
     const before = read(actor);
-    const raised = applySlot(slots, key, before);
+    let raised = applySlot(slots, key, before);
+    // Superior Durability (2): "Halve the amount of Life Points you would lose from the effects of a Combat Condition,
+    // Environmental Qualities, or Damage Over Time" - what those took, half of it given back (the loss rounded down).
+    if ((key === "life.value") && (actor.system.effects?.slots?.["life.lossHalved"] === true)) {
+      const lost = -(slots[key]?.parts ?? []).filter(part => (part.op === "add") && (Number(part.value) < 0)
+        && /^(condition|quality|battlefield|high):/.test(part.sourceId ?? "")).reduce((sum, part) => sum + Number(part.value), 0);
+      if (lost > 0) raised += lost - Math.floor(lost / 2);
+    }
     // Raised no further than the most there may be; what was already above it is left.
     const settled = (cap && (raised > before)) ? Math.min(raised, Math.max(before, cap(actor))) : raised;
     if (write) {

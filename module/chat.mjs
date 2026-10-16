@@ -1071,18 +1071,26 @@ async function greedReductionFor(target, attack, uuid) {
  */
 async function toughReductionFor(target, attack, uuid) {
   const before = (attack.result?.targets ?? []).find(entry => entry.uuid === uuid);
-  if (before?.hit) return Number(before.toughReduction) || 0;
-  if ((target?.system?.effects?.slots?.["reduction.byKi"] !== true) || (target.getFlag?.(SCOPE, "toughRound") === roundKey())) return 0;
-  const most = Math.min(4 * Math.max(1, Number(target.system.baseTierOfPower) || 1), Number(target.system.ki?.value) || 0,
-    Number(target.system.capacity?.remaining) || 0);
-  if (most <= 0) return 0;
+  if (before?.hit) return { value: Number(before.toughReduction) || 0, step: Number(before.toughStep) || 0 };
+  const none = { value: 0, step: 0 };
+  if ((target?.system?.effects?.slots?.["reduction.byKi"] !== true) || (target.getFlag?.(SCOPE, "toughRound") === roundKey())) return none;
+  const full = 4 * Math.max(1, Number(target.system.baseTierOfPower) || 1);
+  const most = Math.min(full, Number(target.system.ki?.value) || 0, Number(target.system.capacity?.remaining) || 0);
+  if (most <= 0) return none;
   const spent = Math.min(most, await askPlayerAmount(target, `${target.name}: Tough Warrior - hit by ${attack.maneuverName ?? "an attack"}`,
     most, "Ki Points - as much Damage Reduction"));
-  if (spent <= 0) return 0;
+  if (spent <= 0) return none;
   const { ki, capacity } = target.system;
   await requestActorUpdate(target, { "system.ki.value": ki.value - spent, "system.capacity.spent": capacity.spent + spent,
     [`flags.${SCOPE}.toughRound`]: roundKey() });
-  return spent;
+  // Superior Durability (3): "spend the maximum amount of Ki Points through its second effect, you can reduce the Damage
+  // Category of that Attacking Maneuver by 1 Category" - asked, once a Round.
+  const step = (spent >= full) && (target.system.effects?.slots?.["reduction.byKiCategory"] === true)
+    && (target.getFlag?.(SCOPE, "superiorDurabilityRound") !== roundKey())
+    && ((await askPlayerChoice(target, `${target.name}: Superior Durability`,
+      [{ value: "down", label: "This attack's Damage Category one down" }, { value: "no", label: "No" }])) === "down");
+  if (step) await requestActorUpdate(target, { [`flags.${SCOPE}.superiorDurabilityRound`]: roundKey() });
+  return { value: spent, step: step ? 1 : 0 };
 }
 
 /** Frigid Tricks' 1(T) - `clash.unique` - on a Might or Saving Throw Clash one of your Unique Abilities opened. */
@@ -21190,6 +21198,9 @@ async function resolveAttackWork(message, attack) {
       });
     }
 
+    // Tough Warrior (2): Ki spent as the hit is, as much Damage Reduction - and Superior Durability (3)'s Category down.
+    const tough = hit ? await toughReductionFor(target, attack, uuid) : { value: 0, step: 0 };
+
     branches.push({
       uuid,
       defense,
@@ -21217,9 +21228,9 @@ async function resolveAttackWork(message, attack) {
       // Said on the card, since a defence that was never rolled needs a reason beside
       // it or it looks like it was simply forgotten.
       forced,
-      damageCategory: resolveDamageCategory(attack.damageCategory, shift),
+      damageCategory: resolveDamageCategory(attack.damageCategory, shift - tough.step),
       // The steps the Category took here, kept so a defence made again can be put in place of this one.
-      categoryShift: shift,
+      categoryShift: shift - tough.step,
       // Carried on the attack so the Wound Roll can apply it: the defender's client
       // worked it out, and the attacker's is as likely to be the one settling this.
       incomingDamage: incoming?.slots?.["incoming.damage"] ?? null,
@@ -21228,8 +21239,8 @@ async function resolveAttackWork(message, attack) {
       sizeSoak: await sizeSoakFor(target, attacker, incoming),
       // Greed of the Hera (6): Greed spent as the hit is, 2(T) of Damage Reduction each for this attack.
       greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
-      // Tough Warrior (2): Ki spent as the hit is, as much Damage Reduction for this attack.
-      toughReduction: hit ? await toughReductionFor(target, attack, uuid) : 0,
+      toughReduction: tough.value,
+      toughStep: tough.step,
       ...(defender ? { refinedSoak: defender.soak, unstudy: [{ by: target.uuid, uuid: attacker.uuid }] } : {}),
       // Stealthy Trick (3): whether they were Oblivious of the attacker as it hit.
       oblivious,
