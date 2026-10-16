@@ -121,6 +121,13 @@ const TABLE = [
   { key: "ally-defeated", label: "An Ally is Defeated", provides: [],
     doc: "Fired for each Ally on the scene of whoever is Defeated - not for a Minion's defeat - with them as `defeatedUuid` "
        + "(combat.mjs) - Battle Tension's. What is the player's is asked in a window first." },
+  { key: "opponent-knocked", label: "You or an Ally knock an Opponent through a Health Threshold", provides: [],
+    doc: "Fired for whoever has an effect answering it as anybody is knocked through a Health Threshold by an Attacking "
+       + "Maneuver, with `knockedUuid` and `knockerUuid` (combat.mjs) - Wrath of the Dragon's. What is the player's is asked "
+       + "in a window first." },
+  { key: "opponent-steadfast-failed", label: "An Opponent fails a Steadfast Check", provides: [],
+    doc: "Fired for whoever has an effect answering it as anybody fails a Steadfast Check, with `failedUuid` (chat.mjs "
+       + "steadfastFailed) - Wrath of the Dragon's. What is the player's is asked in a window first." },
   { key: "botch-seen", label: "A Botch Result is scored on a Combat Roll", provides: [],
     doc: "Fired for whoever has an effect answering it, as anybody's Combat Roll comes to a Botch Result, with whose as "
        + "`botcherUuid` (chat.mjs rollSide) - Karmic Reflection's. What is the player's is asked in a window first." },

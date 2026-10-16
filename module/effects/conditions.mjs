@@ -28,6 +28,21 @@ export function useResourceCeiling(fn) {
  * Each takes the scope and whatever arguments the condition carried. Adding one is a
  * row here; nothing else changes.
  */
+/**
+ * Whether another is an Opponent of theirs - of another token disposition - and not at Long Range: fewer than 9 Squares,
+ * measured on the map; unmeasurable, near.
+ */
+function opponentNear(self, other) {
+  if (!self || !other || (self.uuid === other.uuid)) return false;
+  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  if ((side(self) === undefined) || (side(self) === side(other))) return false;
+  const mine = self.getActiveTokens?.(false, true)?.[0];
+  const theirs = other.getActiveTokens?.(false, true)?.[0];
+  const grid = globalThis.canvas?.grid;
+  if (!mine || !theirs || !grid?.measurePath) return true;
+  return Math.round(grid.measurePath([mine.center, theirs.center]).distance / (grid.distance || 1)) < 9;
+}
+
 const PREDICATES = {
   /** Are you Defending against the attack currently being resolved. */
   defending: scope => Boolean(scope.context?.defending),
@@ -251,6 +266,24 @@ const PREDICATES = {
   /** The attack that knocked them through of a Favored Element's Profile of yours (Draconic Physique's Elemental Dragon). */
   knockedFavored: scope => (scope.context?.profiles ?? [])
     .some(profile => scope.data?.effects?.slots?.[`favored.${profile}`] === true),
+
+  /** Wrath of the Dragon (4): knocked through by you or an Ally - an Opponent, not at Long Range (moment opponent-knocked). */
+  knockedNear: scope => {
+    const self = scope.data?.parent;
+    const knocker = globalThis.fromUuidSync?.(scope.context?.knockerUuid ?? "");
+    const knocked = globalThis.fromUuidSync?.(scope.context?.knockedUuid ?? "");
+    if (!self || !knocker || !knocked) return false;
+    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+    if ((knocker.uuid !== self.uuid) && (side(knocker) !== side(self))) return false;
+    return opponentNear(self, knocked);
+  },
+
+  /** Wrath of the Dragon (5): the one failing an Opponent not at Long Range (moment opponent-steadfast-failed). */
+  failedNear: scope => {
+    const self = scope.data?.parent;
+    const failed = globalThis.fromUuidSync?.(scope.context?.failedUuid ?? "");
+    return Boolean(self && failed) && opponentNear(self, failed);
+  },
 
   /** Karmic Reflection (2): the Botch yours, or an Opponent's not at Long Range from you (moment botch-seen). */
   botchNear: scope => {

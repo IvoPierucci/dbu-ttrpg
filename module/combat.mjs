@@ -1147,6 +1147,13 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
       await actor.setFlag("dbu-ttrpg", "parasiteKnock", { by: knocker.uuid, threshold: now, round });
     }
     await fireMoment(knocker, "knock-through", { knockedUuid: actor.uuid, pinpoint, critical, profiles });
+    // Whoever answers anybody's knocking through - Wrath of the Dragon's "you or an Ally".
+    const { answerFor } = await import("./chat.mjs");
+    for (const other of new Map((canvas?.tokens?.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()) {
+      if (!other || other.system?.defeated
+        || !Array.from(other.items ?? []).some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "wrath-of-the-dragon")) continue;
+      await answerFor(other, "opponent-knocked", { knockedUuid: actor.uuid, knockerUuid: knocker.uuid });
+    }
   }
 
   await announce("threshold", {

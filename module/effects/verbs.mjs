@@ -260,6 +260,18 @@ export const VERBS = Object.freeze({
     doc: "Demonic Combat's: an Opponent not at Long Range picked, 4(bT) Ki paid, and a Clash (Cognitive) at them - won, "
        + "Impediment till the end of your turn (chat.mjs demonicImpediment)."
   },
+  wrathSteadfast: {
+    args: [0, 0],
+    names: [],
+    doc: "Wrath of the Dragon (4): 2 off the Steadfast Check of whoever this Moment says was knocked through - kept on them "
+       + "till it is rolled (chat.mjs wrathSteadfast)."
+  },
+  impairFailed: {
+    args: [0, 0],
+    names: [],
+    doc: "Wrath of the Dragon (5): a stack of Impaired on whoever this Moment says failed, till the start of your next turn "
+       + "(chat.mjs impairFailed)."
+  },
   impairKnocked: {
     args: [0, 0],
     names: [],

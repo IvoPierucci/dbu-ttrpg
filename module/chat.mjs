@@ -16703,11 +16703,35 @@ async function settleDemonicImpediment(message, clash) {
  * A Combat Condition's stacks on the one a Moment names as knocked through, till the end of the actor's next turn on
  * the actor's clock - Scarlet Spotter (3)'s 2 Broken.
  */
-/** Draconic Physique's Elemental Dragon: "they gain a stack of Impaired until the start of your next turn". */
-export async function impairKnocked(actor, knockedUuid) {
+/** Draconic Physique's Elemental Dragon, Wrath of the Dragon (5): "a stack of Impaired until the start of your next turn". */
+export async function impairKnocked(actor, knockedUuid, source = "Draconic Physique") {
   const knocked = fromUuidSync(knockedUuid ?? "");
   if (!actor || !knocked) return;
-  return markUntilNextTurn(actor, knocked, "impaired", 1, "start", "Draconic Physique");
+  return markUntilNextTurn(actor, knocked, "impaired", 1, "start", source);
+}
+
+/**
+ * Wrath of the Dragon (2): "If you hit an Opponent suffering from the Impaired Combat Condition with an Attacking Maneuver
+ * that is not an AoE, increase the Natural Result of that Wound Roll by 1 for each stack"; (3): with an AoE, "for each
+ * Opponent targeted by that Attacking Maneuver that is suffering from the Impaired Combat Condition", 1.
+ */
+function wrathNatural(attacker, attack, struck = []) {
+  if (attacker?.system?.effects?.slots?.["wrath.impairedNatural"] !== true) return 0;
+  const allies = new Set([attacker.uuid, ...alliesOnScene(attacker).map(ally => ally.uuid)]);
+  const impaired = who => Number(who?.system?.conditions?.impaired) || 0;
+  if (attackArea(attack)) {
+    return attackTargets(attack).map(entry => fromUuidSync(entry.uuid))
+      .filter(who => who && !allies.has(who.uuid) && (impaired(who) > 0)).length;
+  }
+  const hit = struck.map(entry => entry.actor).find(who => who && !allies.has(who.uuid));
+  return impaired(hit);
+}
+
+/** Wrath of the Dragon (4): "reduce the Dice Score of their Steadfast Check by 2" - kept on them till it is rolled. */
+export async function wrathSteadfast(actor, knockedUuid) {
+  const knocked = fromUuidSync(knockedUuid ?? "");
+  if (!actor || !knocked) return;
+  return requestActorUpdate(knocked, { [`flags.${SCOPE}.wrathSteadfast`]: (Number(knocked.getFlag?.(SCOPE, "wrathSteadfast")) || 0) + 2 });
 }
 
 export async function markKnocked(actor, knockedUuid, key, stacks) {
@@ -21507,14 +21531,15 @@ async function rollAttackWoundWork(message, attack) {
   // One Wound Roll for the whole Maneuver, like the Strike. What differs between the
   // people it reached is what each of them did about it - their Soak, their Damage
   // Reduction, and a Power Flare that answers it for them alone.
-  const wound = await rollSide(attacker, woundParts(attacker, attack), {
+  let wound = await rollSide(attacker, woundParts(attacker, attack), {
     extraDice: woundDice(attacker, attack),
     criticalDice: attacker.system.dice.critical.formula,
     combatRoll: true,
     slot: "wound",
     attackingManeuver: true,
-    // Patient Sniper (3): through the Exploit Maneuver in an Ally's turn, 1 on its Natural Result.
-    naturalAdd: sniperNatural(attacker, attack),
+    // Patient Sniper (3): through the Exploit Maneuver in an Ally's turn, 1 on its Natural Result. Wrath of the Dragon (2),
+    // (3): the Impaired.
+    naturalAdd: sniperNatural(attacker, attack) + wrathNatural(attacker, attack, struck),
     urgent: Boolean(attack.urgentWound || attack.urgentRolls),
     // Cutting: "on the Wound Roll, the Critical Target is 5 (ignoring the usual limit)."
     // The usual limit is the floor a character's own Critical Target is held to when it
@@ -21525,6 +21550,13 @@ async function rollAttackWoundWork(message, attack) {
     // Delayed's and Personal Bomb's: the Wound Roll made when it hit, not a new one.
     fixedTotal: Number.isFinite(attack.fixedWound) ? attack.fixedWound : null
   });
+  // Wrath of the Dragon (1): "Increase the Dice Score of your Wound Roll by 2(T) if you scored a Critical Result on that Wound
+  // Roll."
+  if (wound && (wound.outcome === "critical") && (attacker.system.effects?.slots?.["wrath.criticalWound"] === true)) {
+    const value = 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1);
+    wound = { ...wound, total: (Number(wound.total) || 0) + value,
+      lines: [...(wound.lines ?? []), partLine({ label: "Wrath of the Dragon", written: "+2(T)", value })] };
+  }
   // Done: Overwhelming Assault's stacks go now - after this Wound Roll counted them.
   await spendOverwhelm(attack);
   // Searing Anger (3): "After concluding that Attacking Maneuver, reduce your Overwhelm stacks to 1."
@@ -25111,6 +25143,9 @@ export async function rollSteadfastCheck(actor) {
   }
   const lifeSpent = lifeSteps.includes(Number(ready?.picked)) ? Number(ready.picked) : 0;
   const karmicSpent = (ready?.boxes ?? []).filter(name => /^karmic\d$/.test(name)).length;
+  // Wrath of the Dragon (4): 2 off it for each spent on them - used up by this Check.
+  const wrath = Number(actor.getFlag?.(SCOPE, "wrathSteadfast")) || 0;
+  if (wrath) await actor.unsetFlag(SCOPE, "wrathSteadfast");
   if (karmicSpent) {
     await setResource(actor, "negativeenergy", (Number(actor.system.resources?.negativeenergy?.stacks) || 0) - karmicSpent);
   }
@@ -25126,7 +25161,7 @@ export async function rollSteadfastCheck(actor) {
   // Checks" - is its own term, named, so the card says where it came from.
   const terms = [die, natural ? `${natural}[Natural Result]` : "", bonus ? String(bonus) : "",
     thresholdDice ? String(thresholdDice) : "", lifeSpent ? `${lifeSpent}[Earthling Resolve]` : "",
-    karmicSpent ? `${karmicSpent}[Karmic Reflection]` : ""].filter(Boolean);
+    karmicSpent ? `${karmicSpent}[Karmic Reflection]` : "", wrath ? `-${wrath}[Wrath of the Dragon]` : ""].filter(Boolean);
   const roll = new Roll(terms.join(" + "));
   await roll.evaluate();
   // Failed, what may pass it instead is asked first - before anything that failing does.
@@ -25188,6 +25223,12 @@ async function heartOfGlassFail(actor) {
  * whose Checks these were, where known.
  */
 async function steadfastFailed(actor, failed = []) {
+  // Whoever answers anybody's failing - Wrath of the Dragon's (5).
+  for (const other of new Map((canvas?.tokens?.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()) {
+    if (!other || (other.uuid === actor.uuid) || other.system?.defeated
+      || !Array.from(other.items ?? []).some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "wrath-of-the-dragon")) continue;
+    await answerFor(other, "opponent-steadfast-failed", { failedUuid: actor.uuid });
+  }
   // Parasitic Biology (5): knocked through by the one whose Inferior they are - that Threshold's mark, once a Round theirs.
   const knock = actor.getFlag?.(SCOPE, "parasiteKnock");
   if (knock?.by && (knock.round === roundKey())

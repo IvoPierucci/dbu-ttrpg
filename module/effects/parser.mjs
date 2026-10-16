@@ -532,6 +532,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "knockedFavored",
   // A Botch yours or an Opponent's near (Karmic Reflection's).
   "botchNear",
+  // Knocked through near you by you or an Ally; failing a Steadfast Check near you (Wrath of the Dragon's).
+  "knockedNear", "failedNear",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

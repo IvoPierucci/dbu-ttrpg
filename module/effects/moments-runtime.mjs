@@ -506,6 +506,14 @@ async function runVerb(actor, call, context) {
       return demonicImpediment(actor);
     }
 
+    case "wrathSteadfast": {
+      const { wrathSteadfast } = await import("../chat.mjs");
+      return wrathSteadfast(actor, context?.knockedUuid);
+    }
+    case "impairFailed": {
+      const { impairKnocked } = await import("../chat.mjs");
+      return impairKnocked(actor, context?.failedUuid, "Wrath of the Dragon");
+    }
     case "impairKnocked": {
       const { impairKnocked } = await import("../chat.mjs");
       return impairKnocked(actor, context?.knockedUuid);

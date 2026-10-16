@@ -1,0 +1,37 @@
+id: wrath-of-the-dragon
+name: Wrath of the Dragon
+order: 5
+category: mind
+importance: secondary
+description: >
+  Imbued with the righteous fury of the Eternal Dragon that spawned you, you bring punishment upon those who would misuse the Dragon Balls.
+text: >
+  Wrath of the Dragon (Mind): Imbued with the righteous fury of the Eternal Dragon that spawned you, you bring punishment upon those who would misuse the Dragon Balls.
+  (1)-[Passive]: Increase the Dice Score of your Wound Roll by 2(T) if you scored a Critical Result on that Wound Roll.
+  (2)-[Triggered]: If you hit an Opponent suffering from the Impaired Combat Condition with an Attacking Maneuver that is not an AoE, increase the Natural Result of that Wound Roll by 1 for each stack of the Impaired Combat Condition that Opponent is suffering from.
+  (3)-[Triggered]: If you use an Attacking Maneuver that possesses an AoE, for each Opponent targeted by that Attacking Maneuver that is suffering from the Impaired Combat Condition, increase the Natural Result of that Wound Roll by 1.
+  (4)-[Triggered, 1/Round]: If you or an Ally knock an Opponent (who is not at Long Range) through a Health Threshold with an Attacking Maneuver, you may spend 1 Negative Energy to reduce the Dice Score of their Steadfast Check by 2.
+  (5)-[Triggered, 1/Round]: If an Opponent who is not at Long Range fails their Steadfast Check, you may spend 1 Negative Energy to inflict a stack of the Impaired Combat Condition on that Opponent until the start of your next turn.
+
+---
+
+[passive]
+# (1) A Critical Result on your Wound Roll, 2(T) on it (chat.mjs rollAttackWoundWork).
+allow wrath.criticalWound;
+# (2), (3) The Natural Result of your Wound Roll: the stacks of Impaired on the one a single-target attack hit, or one for
+# each Impaired Opponent an AoE targets (chat.mjs wrathNatural).
+allow wrath.impairedNatural;
+
+# (4) You or an Ally knocking an Opponent not at Long Range through a Health Threshold (moment opponent-knocked): a Negative
+# Energy for 2 off their Steadfast Check, once a Round (chat.mjs wrathSteadfast). Its Triggered/Automatic button.
+[triggered/opponent-knocked, 1/round, effect 4]
+requires knockedNear && hasResource("negativeenergy");
+negativeenergy.stacks -= 1;
+wrathSteadfast();
+
+# (5) An Opponent not at Long Range failing a Steadfast Check (moment opponent-steadfast-failed): a Negative Energy for a stack
+# of Impaired on them till the start of your next turn, once a Round (chat.mjs impairFailed). Its Triggered/Automatic button.
+[triggered/opponent-steadfast-failed, 1/round, effect 5]
+requires failedNear && hasResource("negativeenergy");
+negativeenergy.stacks -= 1;
+impairFailed();
