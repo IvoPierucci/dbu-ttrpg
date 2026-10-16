@@ -8157,6 +8157,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   if ((slot === "strike") && actor?.system?.dice?.criticalStrike && (criticalDice === actor.system.dice.critical?.formula)) {
     criticalDice = actor.system.dice.criticalStrike.formula;
   }
+  // Bruising Wound (1): a Wound Roll's.
+  if ((slot === "wound") && actor?.system?.dice?.criticalWound && (criticalDice === actor.system.dice.critical?.formula)) {
+    criticalDice = actor.system.dice.criticalWound.formula;
+  }
   // Twin-Linked keeps the higher of two, Dead-Link the lower. The second is made without offering
   // the triggered effects again - they answered the first - and the one set aside is named.
   if (linked) {
@@ -16042,9 +16046,14 @@ function criticalStrikeRefused(actor) {
  * Strike Roll." Once a Round - its own count, beside Evolved Right Eye's.
  */
 function artfulOpen(attacker, strike) {
-  if ((attacker?.system?.effects?.slots?.["strike.artfulCritical"] !== true) || !strike || (strike.outcome === "critical")) return false;
-  const target = Number(strike.rules?.criticalTarget ?? attacker.system.criticalTarget) || 10;
-  return Number(strike.natural) === (target - 1);
+  return (attacker?.system?.effects?.slots?.["strike.artfulCritical"] === true) && oneBelowCritical(attacker, strike);
+}
+
+/** A roll not a Critical Result already, its Natural Result 1 below the Critical Target it was made against. */
+function oneBelowCritical(actor, side) {
+  if (!side || (side.outcome === "critical")) return false;
+  const target = Number(side.rules?.criticalTarget ?? actor?.system?.criticalTarget) || 10;
+  return Number(side.natural) === (target - 1);
 }
 
 /** Artful Strike's: its once a Round taken. */
@@ -16086,6 +16095,59 @@ function criticalStrikeButton(message, container, attack) {
     await declareStrikeCritical(message, attacker);
   });
   container.append(button);
+}
+
+/**
+ * Bruising Wound (2): "If your Wound Roll's Natural Result is 1 below the Critical Target, score a Critical Result on that Wound
+ * Roll." Its button: the attacker's, once the Wound Roll is made and before the Damage is dealt, once a Round.
+ */
+function woundCriticalButton(message, container, attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  const wound = attack?.result?.wound;
+  if (!attacker?.isOwner || !wound || (attacker.system.effects?.slots?.["wound.bruisingCritical"] !== true)
+    || !oneBelowCritical(attacker, wound)
+    || !(attack.result.targets ?? []).some(entry => entry.hit && !entry.applied)) return;
+  const used = attacker.getFlag?.(SCOPE, "bruisingRound") === roundKey();
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = "Critical - Bruising Wound";
+  button.disabled = used;
+  button.dataset.tooltip = used ? "Once a Combat Round." : "Its Natural Result is 1 below the Critical Target: a Critical Result (1/Round)";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    await declareWoundCritical(message, attacker);
+  });
+  container.append(button);
+}
+
+/**
+ * The Wound Roll a Critical Result: its Critical dice rolled onto what it came to before any Botch or Critical, and the Damage
+ * to each it hit worked out again on the numbers already worked out - as a Karmic Effect resettles it.
+ */
+async function declareWoundCritical(message, attacker) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const result = attack?.result;
+  const side = result?.wound;
+  if (!side || (side.outcome === "critical") || (attacker.getFlag?.(SCOPE, "bruisingRound") === roundKey())) return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.bruisingRound`]: roundKey() });
+  const extra = new Roll(side.criticalDice || attacker.system.dice?.criticalWound?.formula || attacker.system.dice?.critical?.formula || "1d10");
+  await extra.evaluate();
+  const total = Math.max(0, (Number.isFinite(side.beforeOutcome) ? side.beforeOutcome : side.total) + extra.total);
+  const lines = [...withoutOutcome(side.lines ?? []), fromOutcome(diceLine(extra, "Critical - Bruising Wound"))];
+  const wound = { ...side, total, outcome: "critical", lines, breakdown: breakdownText(lines, total) };
+  let settledTargets = result.targets ?? [];
+  for (const own of settledTargets.filter(entry => entry.hit && !entry.applied)) {
+    const defence = DEFENCES[own.defense] ?? DEFENCES.dodge;
+    const effectiveWound = defence.wound(wound.total + (Number(own.woundBonus) || 0));
+    const negated = own.counterWound && (own.counterWound.total > wound.total);
+    const raw = negated ? 0 : Math.max(0, effectiveWound - (own.soak ?? 0) - (own.reduction ?? 0));
+    const dealt = Math.max(0, damageTaken(raw, { "incoming.damage": own.incomingDamage }) - (Number(own.barrier?.total) || 0));
+    const damage = dealt + ((dealt > 0) ? (Number(own.punchingDown) || 0) : 0);
+    settledTargets = settledTargets.map(line => (line.uuid === own.uuid) ? { ...own, effectiveWound, damage } : line);
+  }
+  requestEdit(message, { type: "attack", attack: { ...attack, result: { ...result, wound, targets: settledTargets } } });
+  await answerFor(attacker, "critical-scored", {});
 }
 
 /**
@@ -27376,6 +27438,8 @@ function renderAttack(message, html) {
   criticalStrikeButton(message, container, attack);
   // Artful Strike (2): a Parry's Strike Roll, too.
   artfulParryButtons(message, container, attack);
+  // Bruising Wound (2): the Wound Roll a Natural Result 1 below its Critical Target - before the Damage is dealt.
+  woundCriticalButton(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.
   bondButtons(message, attack, container);
 

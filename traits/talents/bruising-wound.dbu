@@ -1,0 +1,21 @@
+id: bruising-wound
+name: Bruising Wound
+talentCategory: damaging
+prerequisites: Force and/or Magic Score of 4+
+description: >
+  The power behind your strikes leaves a lasting mark on your opponents.
+text: >
+  Bruising Wound: The power behind your strikes leaves a lasting mark on your opponents.
+  –Prerequisites: Force and/or Magic Score of 4+
+  (1)-[Passive]: Increase the Dice Category of your Critical Result Extra Dice by 1 Category for your Wound Rolls.
+  (2)-[Triggered, 1/Round]: If your Wound Roll’s Natural Result is 1 below the Critical Target, score a Critical Result on that Wound Roll.
+
+---
+
+[passive]
+# (1) A Wound Roll's Critical Extra Dice, held to the same ceiling as every raise of them (actor-character.mjs dice.criticalWound,
+# chat.mjs rollSide).
+dice.critical.wound.category += 1;
+# (2) Your attack's Wound Roll a Natural Result 1 below its Critical Target: a "Critical" button on its card before the Damage is
+# dealt, once a Round - the Critical dice rolled on, and the Damage worked out again (chat.mjs woundCriticalButton).
+allow wound.bruisingCritical;
