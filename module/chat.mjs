@@ -16083,6 +16083,7 @@ async function artfulParry(message, target) {
   if (!hit && branch.hit) {
     offerReflect(message, attack, target, "Reflect - your Parry turned it aside");
     offerAbsorb(message, attack, target, "Attack Absorption - your Parry turned it aside");
+    offerWildCounter(message, attack, target);
   }
   await answerFor(target, "critical-scored", {});
 }
@@ -18204,6 +18205,14 @@ async function takeOutOfSequence(message, actor, offer) {
   // Buddy Collector (2)'s: a Buddy called, not a Maneuver.
   if (offer.callBuddy) return takeBuddyCall(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
+  // Wild Counter's, once a Round.
+  if (offer.grants?.wildCounter) {
+    if (actor.getFlag?.(SCOPE, "wildCounterRound") === roundKey()) {
+      ui.notifications.warn("Wild Counter has been used this Combat Round.");
+      return null;
+    }
+    await actor.setFlag(SCOPE, "wildCounterRound", roundKey());
+  }
   // Violent Rebuke (3)'s, once a Round.
   if (offer.grants?.rebuke && (actor.getFlag?.(SCOPE, "rebukeRound") === roundKey())) {
     ui.notifications.warn("Violent Rebuke has been used this Combat Round.");
@@ -21063,7 +21072,23 @@ async function resolveAttackWork(message, attack) {
     // Attack Absorption names the Parry alone.
     if (own.defense !== "parry") continue;
     offerAbsorb(message, attack, target, "Attack Absorption - your Parry turned it aside");
+    // Wild Counter: the Basic Attack back at its maker.
+    offerWildCounter(message, attack, target);
   }
+}
+
+/**
+ * Wild Counter: "When you successfully avoid an Attacking Maneuver through the Parry effect of the Defend Maneuver, you can use
+ * the Basic Attack Maneuver against the attacking Opponent as an Out-of-Sequence Maneuver." Offered on its card, at its maker;
+ * taken, once a Round (takeOutOfSequence).
+ */
+function offerWildCounter(message, attack, actor) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!message || !attacker || !actor || (attacker.uuid === actor.uuid) || actor.system?.defeated
+    || (actor.system?.effects?.slots?.["counter.wild"] !== true) || (actor.getFlag?.(SCOPE, "wildCounterRound") === roundKey())) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: "Wild Counter - your Parry turned it aside",
+    grants: { wildCounter: true } } });
 }
 
 /**

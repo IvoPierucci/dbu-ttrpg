@@ -1,0 +1,17 @@
+id: wild-counter
+name: Wild Counter
+talentCategory: counter
+prerequisites: N/A
+description: >
+  Able to defend and attack in the same motion, you respond to being attacked with an attack of your own!
+text: >
+  Wild Counter: Able to defend and attack in the same motion, you respond to being attacked with an attack of your own!
+  –Prerequisites: N/A
+  (1)-[Triggered, 1/Round]: When you successfully avoid an Attacking Maneuver through the Parry effect of the Defend Maneuver, you can use the Basic Attack Maneuver against the attacking Opponent as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) A Parry that turned the attack aside: the Basic Attack at its maker offered on its card, out of sequence, beside the
+# Reflect and Attack Absorption - taken, once a Round (chat.mjs offerWildCounter).
+allow counter.wild;
