@@ -2011,6 +2011,11 @@ async function settleTerrify(message, clash) {
   // No clock of its own: the entry gives Prone none, so it comes off the way Prone always
   // comes off.
   if (already) await setCondition(target, "prone", 1);
+  // Draconic Physique, Ominous Dragon: "that Opponent also suffers from the Impaired Combat Condition until the start of your
+  // turn".
+  if (terrifier.system?.effects?.slots?.["draconic.terrifyImpair"] === true) {
+    await markUntilNextTurn(terrifier, target, "impaired", 1, "start", "Draconic Physique");
+  }
 
   await settledNote(message, already
     ? `${target.name} was Shaken already, so they are knocked Prone - and Shaken until the `
@@ -13387,6 +13392,17 @@ function studiedParts(attacker, target) {
   return [{ label: "Studied", written: "+1(T)", value: Math.max(1, Number(attacker.system.tierOfPower) || 1) }];
 }
 
+/**
+ * Draconic Physique (2): "Increase your Soak Value and Defense Value by 1(T) against Attacking Maneuvers made by Opponents with
+ * the Impaired Combat Condition."
+ */
+function draconicParts(actor, attacker) {
+  if (!attacker || (actor?.system?.effects?.slots?.["draconic.vsImpaired"] !== true)) return [];
+  if (!((Number(attacker.system?.conditions?.impaired) || 0) > 0)) return [];
+  if (alliesOnScene(actor).some(ally => ally.uuid === attacker.uuid)) return [];
+  return [{ label: "Draconic Physique (Impaired)", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
+}
+
 /** Refined Combat (1): "Increase your Soak Value and Wound Rolls against Studied Opponents by 1(T)." */
 function refinedParts(actor, other) {
   if (!other || (actor?.system?.effects?.slots?.["refined.vsStudied"] !== true) || !isStudiedBy(actor, other.uuid)) return [];
@@ -15431,6 +15447,10 @@ async function settleNobleDragon(message, clash) {
   }
   await gainCondition(dragon, "noble-compelled", 1);
   await lasting(dragon, { kind: KINDS.CONDITION, key: "noble-compelled", edge: EDGES.START, source: "Noble Dragon" });
+  // Draconic Physique: "they gain a stack of Impaired until the start of your next turn".
+  if (dragon.system?.effects?.slots?.["draconic.nobleImpair"] === true) {
+    await markUntilNextTurn(dragon, target, "impaired", 1, "start", "Draconic Physique");
+  }
   return settledNote(message, `${dragon.name} and ${target.name} are Compelled against one another until the start of `
     + `${dragon.name}'s next turn.`);
 }
@@ -16620,6 +16640,13 @@ async function settleDemonicImpediment(message, clash) {
  * A Combat Condition's stacks on the one a Moment names as knocked through, till the end of the actor's next turn on
  * the actor's clock - Scarlet Spotter (3)'s 2 Broken.
  */
+/** Draconic Physique's Elemental Dragon: "they gain a stack of Impaired until the start of your next turn". */
+export async function impairKnocked(actor, knockedUuid) {
+  const knocked = fromUuidSync(knockedUuid ?? "");
+  if (!actor || !knocked) return;
+  return markUntilNextTurn(actor, knocked, "impaired", 1, "start", "Draconic Physique");
+}
+
 export async function markKnocked(actor, knockedUuid, key, stacks) {
   const knocked = fromUuidSync(knockedUuid ?? "");
   if (!actor || !knocked || !key) return;
@@ -20779,7 +20806,11 @@ function woundParts(attacker, attack) {
   const primed = attack.primed ? ((attack.result?.strike?.outcome === "critical") ? 4 : 2) : 0;
   // Pinpoint Combat (1): "Increase the Wound Rolls of your Called Shots and Exploit Maneuvers by 2(T)".
   const pinpoint = (isCalledShot(attack) || attack.viaExploit) ? attacker.system.effects?.slots?.["wound.calledOrExploit"] : null;
+  // Draconic Physique, Sinister Dragon: "Increase the Wound Rolls of your Attacking Maneuvers made through the Exploit
+  // Maneuver by 2(T)."
+  const sinister = attack.viaExploit && (attacker.system.effects?.slots?.["draconic.exploitWound"] === true);
   return [
+    ...(sinister ? [{ label: "Draconic Physique (Exploit)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...((Number(pinpoint?.add) || 0) ? [{ label: (pinpoint.parts ?? []).map(part => part.source).find(Boolean) ?? "Called Shot or Exploit",
       value: Number(pinpoint.add) }] : []),
     ...(primed ? [{ label: "Critical Point", written: `+${primed}(T)`,
@@ -21536,7 +21567,9 @@ async function rollAttackWoundWork(message, attack) {
     // adjusts what survives that.
     const base = target.system.soakValue + soakBonus + (Number(own.sizeSoak) || 0)
       // Refined Combat (1) against one Studied, and Defender's half Surgency for this attack.
-      + refinedParts(target, attacker).reduce((sum, part) => sum + part.value, 0) + (Number(own.refinedSoak) || 0);
+      + refinedParts(target, attacker).reduce((sum, part) => sum + part.value, 0) + (Number(own.refinedSoak) || 0)
+      // Draconic Physique (2): an Impaired Opponent's attack.
+      + draconicParts(target, attacker).reduce((sum, part) => sum + part.value, 0);
     const counted = Math.floor(base * DAMAGE_CATEGORIES[own.damageCategory].soakMultiplier);
     // Piercing: "ignore 1/4 (rounded up) of your target's Soak Value (before any reductions)".
     const pierceSoak = Math.ceil(Math.max(0, base) * (Number(attack.weapon?.soakIgnored) || 0));
@@ -21779,6 +21812,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...lockOnDodge(actor, attack));
   // Tuffle Superiority (2): your Inferior's attack.
   parts.push(...inferiorDodge(actor, attack));
+  // Draconic Physique (2): an Impaired Opponent's attack - the Defense Value under the Dodge.
+  parts.push(...draconicParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Intelligent Fighter (5): the attack of one you Studied.
   parts.push(...studiedDodge(actor, attack));
   // Telepathic Warning: the Dodge raised for this attack by whoever warned them.
@@ -24187,7 +24222,9 @@ async function applyAttackDamage(message, target, attack) {
       // A Called Shot, or an attack through the Exploit - Scarlet Spotter's.
       ...((isCalledShot(attack) || attack.viaExploit) ? { dbuKnockedPinpoint: true } : {}),
       // Its Strike a Critical Result - Critical Point's.
-      ...((attack.result?.strike?.outcome === "critical") ? { dbuKnockedCritical: true } : {}) } : {})
+      ...((attack.result?.strike?.outcome === "critical") ? { dbuKnockedCritical: true } : {}),
+      // Its Profiles - Draconic Physique's Elemental Dragon reads its Favored Element among them.
+      dbuKnockedProfiles: [attack.profile, ...extraProfilesOf(attack)].filter(Boolean) } : {})
   });
   if (arms) await offerArmsHit(armsUser, target);
   // Power of the Hera (3): knocked through a Health Threshold, or Defeated, by it - the Power Up, out of sequence.

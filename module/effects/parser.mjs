@@ -528,6 +528,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "byInferior", "struckInferior",
   // In your Ball Form (Personified Dragon Ball's).
   "inBallForm",
+  // Knocked through by your Favored Element's Profile (Draconic Physique's).
+  "knockedFavored",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

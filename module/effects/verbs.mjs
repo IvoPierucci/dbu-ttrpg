@@ -260,6 +260,12 @@ export const VERBS = Object.freeze({
     doc: "Demonic Combat's: an Opponent not at Long Range picked, 4(bT) Ki paid, and a Clash (Cognitive) at them - won, "
        + "Impediment till the end of your turn (chat.mjs demonicImpediment)."
   },
+  impairKnocked: {
+    args: [0, 0],
+    names: [],
+    doc: "A stack of Impaired on whoever this Moment says was knocked through, till the start of your next turn, on your clock "
+       + "(chat.mjs impairKnocked) - Draconic Physique's Elemental Dragon."
+  },
   markKnocked: {
     args: [2, 2],
     names: [0],

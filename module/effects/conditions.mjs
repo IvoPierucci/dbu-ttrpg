@@ -248,6 +248,10 @@ const PREDICATES = {
   inBallForm: scope => ((Number(scope.data?.conditions?.["ball-form"]) || 0) > 0)
     || ((Number(scope.data?.life?.value) || 0) <= (Number(scope.data?.life?.min) || 0)),
 
+  /** The attack that knocked them through of a Favored Element's Profile of yours (Draconic Physique's Elemental Dragon). */
+  knockedFavored: scope => (scope.context?.profiles ?? [])
+    .some(profile => scope.data?.effects?.slots?.[`favored.${profile}`] === true),
+
   fallenEnemy: scope => {
     const fallen = scope.context?.defeatedUuid || scope.context?.knockedUuid || "";
     return Boolean(fallen) && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "enemy")?.uuid === fallen);

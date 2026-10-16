@@ -506,6 +506,10 @@ async function runVerb(actor, call, context) {
       return demonicImpediment(actor);
     }
 
+    case "impairKnocked": {
+      const { impairKnocked } = await import("../chat.mjs");
+      return impairKnocked(actor, context?.knockedUuid);
+    }
     case "markKnocked": {
       const { markKnocked } = await import("../chat.mjs");
       return markKnocked(actor, context?.knockedUuid, String(args[0] ?? ""), Number(args[1]) || 1);

@@ -1,0 +1,61 @@
+id: draconic-physique
+name: Draconic Physique
+order: 3
+category: body
+importance: secondary
+# (1) The Dragon Scales: a piece of Natural Armor made as the Trait is gained, gone with it (natural-armor.mjs).
+naturalArmor: Dragon Scales
+description: >
+  Though Shadow Dragons are far removed in appearance from the Eternal Dragon with which they share a name, they possess the supernatural abilities of a draconic form.
+text: >
+  Draconic Physique (Body): Though Shadow Dragons are far removed in appearance from the Eternal Dragon with which they share a name, they possess the supernatural abilities of a draconic form.
+  (1)-[Passive, Ruling]: At Character Creation or upon gaining this Trait, gain ‘Dragon Scales’ while you possess this Trait. Your Dragon Scales are Natural Armor (see — Natural Armor).
+  (2)-[Passive]: Increase your Soak Value and Defense Value by 1(T) against Attacking Maneuvers made by Opponents with the Impaired Combat Condition.
+  (3)-[Choice]: Depending on your choice for the Option effect of Personified Dragon Ball, apply the following effect:
+
+  * Sinister Dragon [Passive]: Increase the Wound Rolls of your Attacking Maneuvers made through the Exploit Maneuver by 2(T).
+  * Hazy Dragon [Passive]: Ignore the penalties from the Bog Environment. Instead, while you are in the Bog Environment, increase your Combat Rolls by 1(bT) and increase your Speeds by 1/2.
+  * Elemental Dragon [Triggered, 1/Round]: If you knock an Opponent through a Health Threshold with an Attacking Maneuver of your Favored Element’s Profile, they gain a stack of Impaired until the start of your next turn.
+  * Noble Dragon [Triggered]: If you inflict the Compelled Combat Condition upon an Opponent through the effects of Noble Dragon, they gain a stack of Impaired until the start of your next turn.
+  * Regenerative Dragon [Triggered/Defeat]: You are not Defeated and lose all of your Dragon Slimes. For every Dragon Slime lost, regain Life Points equal to 1/10th of your Maximum Life Points.
+  * Ominous Dragon [Passive]: Gain access to the Terrify Maneuver. Additionally, if you inflict a Combat Condition to an Opponent through the Terrify Maneuver’s effects, that Opponent also suffers from the Impaired Combat Condition until the start of your turn.
+  * Natural Dragon [Triggered]: Upon gaining a stack of Absorption, you may increase your Size Category to Gigantic while you possess that stack of Absorption. Additionally, increase your Soak Value and Wound Rolls by 1(T) while you possess at least 1 stack of Absorption.
+
+---
+
+[passive]
+# (2) An Impaired Opponent's attack: your Soak, and the Defense Value under your Dodge (chat.mjs draconicParts).
+allow draconic.vsImpaired;
+
+# (3) Read off Personified Dragon Ball's Option (`optionChosen`).
+# Sinister Dragon: an attack made through the Exploit, its Wound (chat.mjs woundParts).
+if (optionChosen("sinister-dragon")) {
+  allow draconic.exploitWound;
+}
+# Hazy Dragon: the Bog Environment's own effects left out (registry.mjs environmentPrograms), and these instead.
+if (optionChosen("hazy-dragon") && inEnvironment("bog")) {
+  combatRolls += 1(bT);
+  speed.all *= 1.5;
+}
+# Noble Dragon: its Compelled given, Impaired with it (chat.mjs settleNobleDragon).
+if (optionChosen("noble-dragon")) {
+  allow draconic.nobleImpair;
+}
+# Ominous Dragon: the Terrify Maneuver, and Impaired with what it inflicts (chat.mjs settleTerrify).
+if (optionChosen("ominous-dragon")) {
+  allow maneuver.terrify;
+  allow draconic.terrifyImpair;
+}
+# Natural Dragon: not built - the Absorption Awakening is not in this system yet.
+
+# Elemental Dragon: knocked through by an attack of your Favored Element's Profile (moment knock-through's `profiles`).
+# Its Triggered/Automatic button.
+[triggered/knock-through, 1/round, effect 3]
+requires optionChosen("elemental-dragon") && knockedFavored;
+impairKnocked();
+
+# Regenerative Dragon: the Defeat answered - every Dragon Slime off, 1/10 of the Maximum Life Points back for each.
+[triggered/defeated, effect 3]
+requires optionChosen("regenerative-dragon") && hasResource("dragonslime");
+life.value += floor(life.max / 10) * dragonslime.stacks;
+dragonslime.stacks = 0;

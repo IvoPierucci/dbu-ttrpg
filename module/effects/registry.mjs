@@ -640,6 +640,13 @@ function qualityPrograms(actor, report) {
  * early return for an empty id - an empty one is a character whose data predates this, and
  * the Standard Environment is what they are in.
  */
+/** Draconic Physique had, with Personified Dragon Ball's Hazy Dragon chosen. */
+function hazyInBog(actor) {
+  const items = Array.from(actor?.items ?? []).filter(item => item.type === "racial");
+  return items.some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "draconic-physique")
+    && items.some(item => (item.system?.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === "hazy-dragon")));
+}
+
 function environmentPrograms(actor, report) {
   // Not while they are above it. "Layered above the usual Battle Environments" is what a
   // High Environment is, and the Soar Maneuver says the same thing from the other side:
@@ -653,6 +660,8 @@ function environmentPrograms(actor, report) {
   if (groundIgnored(Array.from(actor.items ?? []), getTrait).environments) return [];
 
   const id = environmentIdOf(actor.system, getTrait);
+  // Draconic Physique with Hazy Dragon: "Ignore the penalties from the Bog Environment" - its own script stands in.
+  if ((id === "bog-environment") && hazyInBog(actor)) return [];
 
   const trait = traitsOfKind("battlefields").find(candidate => candidate.id === id);
   if (!trait) {
