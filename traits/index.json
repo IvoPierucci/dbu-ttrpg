@@ -742,6 +742,8 @@
     "talents/resilience.dbu",
     "talents/artful-strike.dbu",
     "talents/focused-strike.dbu",
+    "talents/masterful-strike.dbu",
+    "conditions/masterful-strike-mark.dbu",
     "unique/afterimage-technique.dbu",
     "unique/afterimage-technique/afterimage-strike.dbu",
     "unique/afterimage-technique/sonic-sway.dbu",

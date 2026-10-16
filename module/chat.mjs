@@ -3220,7 +3220,7 @@ export function sensesAsked(actor, key) {
 
 export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null,
                                     { minimumNatural = 0, criticalTarget = null,
-                                      combatRoll = false, naturalAdd = 0, wound = false } = {}) {
+                                      combatRoll = false, naturalAdd = 0, wound = false, twice = false } = {}) {
   // The whole `baseDie` Slot, not only its `set`. Only `set` was ever read, so an
   // effect *adjusting* the Natural Result - which is what Impaired does, and the only
   // way anything reaches the Botch Range that a penalty to the roll cannot - was
@@ -3230,7 +3230,11 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
   // With the Base Die set by an effect it is not rolled at all: it is stated. Rolling
   // one and discarding it left a die on the card that meant nothing. Every other die
   // still rolls - the Tier of Power Extra Dice and the critical die among them.
-  const base = (forcedNatural === null) ? DBUCharacterData.BASE_DIE : String(forcedNatural);
+  // Masterful Strike (1): "Roll your Base Die twice for any Strike Roll and use the highest result" - one die kept, the other
+  // shown dropped, so what the card says it rolled is the die the Natural Result is read off.
+  const base = (forcedNatural === null)
+    ? (twice ? DBUCharacterData.BASE_DIE.replace(/^1d/, "2d") + "kh" : DBUCharacterData.BASE_DIE)
+    : String(forcedNatural);
 
   // The Base Die stays first, since the critical and botch rules read its natural
   // result - Extra Dice never decide either.
@@ -3280,6 +3284,26 @@ export async function evaluateCheck(actor, bonus, extraDice = "", baseDie = null
     // goes in as it is written rather than through it.
     critical: natural >= (criticalTarget ?? actor.system.criticalTarget)
   };
+}
+
+/**
+ * Masterful Strike (2): "Until the end of your turn, ignore all penalties to your Strike Rolls." On a Strike Roll while its
+ * mark is held: every part that takes something off left off, and what effects took off the Strike value the sheet carries
+ * (`strike`, a Foundation's, a Parry's - Impaired's, a Health Threshold's) given back as a line of its own. Long Range is
+ * left off where it is measured (chat.mjs resolveAttack).
+ */
+function strikePenaltiesIgnored(actor, slot, parts) {
+  if ((slot !== "strike") || (actor?.system?.effects?.slots?.["strike.ignorePenalties"] !== true)) return parts;
+  const slots = actor.system.effects.slots;
+  const taken = key => (slots[key]?.parts ?? []).filter(part => (part.op === "add") && (Number(part.value) < 0))
+    .reduce((sum, part) => sum + Number(part.value), 0);
+  // The Slots a value carried on a Strike Roll was made through: a Parry's is the Physical Strike's, a Foundation's the shared one's.
+  const through = key => (key === "parry") ? ["parry", "strike.physical", "strike"]
+    : key.startsWith("strike.") ? [key, "strike"] : (key === "strike") ? ["strike"] : [];
+  const back = parts.filter(part => part.workingsKey)
+    .reduce((sum, part) => sum - through(part.workingsKey).reduce((each, key) => each + taken(key), 0), 0);
+  return [...parts.filter(part => !(Number(part.value) < 0)),
+    ...(back > 0 ? [{ label: "Masterful Strike (penalties ignored)", value: back }] : [])];
 }
 
 /**
@@ -8064,8 +8088,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   }
   // A single netted number cannot be taken apart again, so what went into it is kept
   // as labelled parts and only summed for the roll itself.
-  const parts = [...((typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers),
-    ...multiFormRow(actor, combatRoll)];
+  const parts = strikePenaltiesIgnored(actor, slot,
+    [...((typeof modifiers === "number") ? [{ label: "Bonus", value: modifiers }] : modifiers), ...multiFormRow(actor, combatRoll)]);
 
   // Asked before the dice are picked up, because an effect that sets the Base Die
   // replaces the roll rather than adjusting it: rolling a d10 and then throwing the
@@ -8145,7 +8169,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
     ? Math.max(Math.min(aimedAt, DBUCharacterData.CRITICAL_TARGET_MIN), aimedAt + combatShift) : criticalTarget;
   const evaluated = await evaluateCheck(actor, bonus,
     groups.map(group => group.formula).join(" + "), baseDie,
-    { minimumNatural, criticalTarget: aimed, combatRoll: true, naturalAdd: naturalAdd + ownNatural, wound: slot === "wound" });
+    { minimumNatural, criticalTarget: aimed, combatRoll: true, naturalAdd: naturalAdd + ownNatural, wound: slot === "wound",
+      twice: (slot === "strike") && (actor.system.effects?.slots?.["strike.baseDieTwice"] === true) });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
   // Lingering Instincts: "You cannot score a Critical Result or a Botch Result on this Combat Roll, regardless of all
@@ -20602,7 +20627,10 @@ async function resolveAttackWork(message, attack) {
         - techniqueStrikeAgainst(attacker, attack, { longRange: atLongRange(attacker, target),
             outsideMelee: Boolean(whyNotWithinMelee(attacker, target, "")),
             tricked: (attack.tricked ?? []).includes(uuid) })
-        - grantedLongShot(attacker, attack, target));
+        - grantedLongShot(attacker, attack, target))
+      // Masterful Strike (2): a penalty to the Strike Roll like any other - left off; what lowers it kept.
+      - ((attacker.system.effects?.slots?.["strike.ignorePenalties"] === true)
+        ? Math.max(0, (weapon.ignoresLongRange || skyWaived ? 0 : longRangePenalty(attacker, target))) : 0);
 
     // "Increase your Combat Rolls against Analyzed Opponents." Added here for the same
     // reason the Long Range penalty is taken here: one Strike Roll reaches several people

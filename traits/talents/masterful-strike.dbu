@@ -1,0 +1,24 @@
+id: masterful-strike
+name: Masterful Strike
+talentCategory: attacking
+prerequisites: Focused Strike, Insight Score of 10+, Tier of Power 3+
+description: >
+  You are able to recover your momentum even when you miss, surprising your opponent with a strike that lands.
+text: >
+  Masterful Strike: You are able to recover your momentum even when you miss, surprising your opponent with a strike that lands.
+  –Prerequisites: Focused Strike, Insight Score of 10+, Tier of Power 3+
+  (1)-[Passive]: Roll your Base Die twice for any Strike Roll and use the highest result.
+  (2)-[Triggered/Start of Turn, 1/Encounter]: Until the end of your turn, ignore all penalties to your Strike Rolls.
+
+---
+
+[passive]
+# (1) Any Strike Roll's Base Die rolled twice, the higher kept - its Natural Result, Critical and Botch read off that one
+# (chat.mjs rollSide, evaluateCheck).
+allow strike.baseDieTwice;
+
+# (2) As your turn starts, ticked on the turn's card, once an Encounter: Masterful Strike (a mark) till the end of this turn -
+# every penalty on your Strike Rolls left off, Long Range's among them (chat.mjs rollSide, strikePenaltiesIgnored).
+[triggered/start-of-turn, 1/encounter, effect 2]
+gain(masterful-strike-mark);
+expires(masterful-strike-mark, turn);

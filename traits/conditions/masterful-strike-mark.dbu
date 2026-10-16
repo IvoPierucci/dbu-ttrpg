@@ -1,0 +1,16 @@
+id: masterful-strike-mark
+name: Masterful Strike
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Masterful Strike's (2) gives, held till the end of the turn it was taken.
+combatCondition: no
+source: Core Rule
+description: >
+  Masterful Strike: every penalty to your Strike Rolls ignored until the end of your turn.
+text: >
+  Masterful Strike (2): Until the end of your turn, ignore all penalties to your Strike Rolls.
+
+---
+
+[passive]
+allow strike.ignorePenalties;
