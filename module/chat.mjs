@@ -21148,13 +21148,19 @@ async function resolveAttackWork(message, attack) {
     // Opponent who was initially targeted ... receives Diminishing Defense".
     // Sonic Sway: "You do not gain stacks of Diminishing Defense from an Attacking Maneuver you used the
     // Afterimage Technique in response to."
+    let agileFree = false;
     if (defence.gainsDiminishingDefense && answer && !attack.homing && !defenceFor(attack, uuid)?.evade?.noDiminishing) {
       // Sweeping doubles what a target takes, but only "if you deal Damage with this
       // Attacking Maneuver" - which is not known yet. So the multiplier travels with
       // the attack and the stacks are settled once the Damage is.
       // Peppering Blows: "this Attacking Maneuver is considered another Attacking Maneuver for the
       // sake of applying Diminishing Defense stacks", once per rank.
-      await requestActorUpdate(target, {
+      // Agile Warrior (2): "You do not gain Diminishing Defense stack(s) from the first Attacking Maneuver made with you as a
+      // target each Combat Round" - the first that would give any, counted here where it would.
+      agileFree = (target.system?.effects?.slots?.["diminishing.firstFree"] === true)
+        && (target.getFlag?.(SCOPE, "agileRound") !== roundKey());
+      if (agileFree) await requestActorUpdate(target, { [`flags.${SCOPE}.agileRound`]: roundKey() });
+      else await requestActorUpdate(target, {
         "system.diminishingDefense":
           target.system.diminishingDefense + (target.system.diminishing.defense.perAttack
             * (attack.technique?.diminishingDefenseTimes ?? 1) * (attack.doublesDiminishing ? 2 : 1))
@@ -21165,6 +21171,8 @@ async function resolveAttackWork(message, attack) {
       uuid,
       defense,
       defenseLabel: defence.label,
+      // Agile Warrior (2): none from this attack - Sweeping's second helping and Elastic Tentacle's doubling neither.
+      ...(agileFree ? { agileFree: true } : {}),
       // Carried through to the Wound Roll step, which is where Power Flare's own roll
       // happens - the Ki was already paid when the defence was declared.
       defenceWager,
@@ -22707,7 +22715,7 @@ async function rollAttackWoundWork(message, attack) {
     spendWriting(attacker, onHit, "attack.doublesDiminishing");
     const raised = attack.doublesDiminishing || ((attack.technique?.diminishingDefenseTimes ?? 1) > 1) || attack.homing;
     for (const { actor: target, own } of targets) {
-      if (raised || !own.hit || own.forced || !DEFENCES[own.defense]?.gainsDiminishingDefense) continue;
+      if (raised || !own.hit || own.forced || own.agileFree || !DEFENCES[own.defense]?.gainsDiminishingDefense) continue;
       await requestActorUpdate(target, { "system.diminishingDefense":
         (Number(target.system.diminishingDefense) || 0) + (Number(target.system.diminishing?.defense?.perAttack) || 0) });
     }
@@ -25576,7 +25584,8 @@ async function applyAttackDamage(message, target, attack) {
     && !isAbsoluteMiss(own)
     && profileFor(attack)?.doublesDiminishingDefense
     && DEFENCES[own.defense]?.gainsDiminishingDefense
-    && !own.forced;
+    && !own.forced
+    && !own.agileFree;
 
   // Multiple Arms: "[1/Round, Triggered] If you hit an Opponent with a Physical Attack, apply additional stack(s)
   // of Diminishing Defense ..." - offered, below, for the attacker to apply or keep for a later hit this Round.

@@ -1,0 +1,20 @@
+id: agile-warrior
+name: Agile Warrior
+talentCategory: dodging
+prerequisites: Agility Score of 6+
+description: >
+  You are nimble enough to avoid almost any attack.
+text: >
+  Agile Warrior: You are nimble enough to avoid almost any attack.
+  –Prerequisites: Agility Score of 6+
+  (1)-[Passive]: Increase your Defense Value by 1(T).
+  (2)-[Automatic]: You do not gain Diminishing Defense stack(s) from the first Attacking Maneuver made with you as a target each Combat Round. Do not count Attacking Maneuvers you already would not obtain Diminishing Defense stack(s) from for this effect.
+
+---
+
+[passive]
+# (1)
+defenseValue += 1(T);
+# (2) The first Attacking Maneuver each Combat Round that would give you Diminishing Defense: none from it (chat.mjs, where it is
+# gained).
+allow diminishing.firstFree;
