@@ -1064,6 +1064,27 @@ async function greedReductionFor(target, attack, uuid) {
   return spent * 2 * tier;
 }
 
+/**
+ * Tough Warrior (2): "If you are hit by an Attacking Maneuver, spend up to 4(bT) Ki Points. Increase your Damage Reduction by an
+ * equal amount for the duration of that Attacking Maneuver." Asked as the hit is settled, once a Round; settled again, what was
+ * spent stands and nothing is asked twice.
+ */
+async function toughReductionFor(target, attack, uuid) {
+  const before = (attack.result?.targets ?? []).find(entry => entry.uuid === uuid);
+  if (before?.hit) return Number(before.toughReduction) || 0;
+  if ((target?.system?.effects?.slots?.["reduction.byKi"] !== true) || (target.getFlag?.(SCOPE, "toughRound") === roundKey())) return 0;
+  const most = Math.min(4 * Math.max(1, Number(target.system.baseTierOfPower) || 1), Number(target.system.ki?.value) || 0,
+    Number(target.system.capacity?.remaining) || 0);
+  if (most <= 0) return 0;
+  const spent = Math.min(most, await askPlayerAmount(target, `${target.name}: Tough Warrior - hit by ${attack.maneuverName ?? "an attack"}`,
+    most, "Ki Points - as much Damage Reduction"));
+  if (spent <= 0) return 0;
+  const { ki, capacity } = target.system;
+  await requestActorUpdate(target, { "system.ki.value": ki.value - spent, "system.capacity.spent": capacity.spent + spent,
+    [`flags.${SCOPE}.toughRound`]: roundKey() });
+  return spent;
+}
+
 /** Frigid Tricks' 1(T) - `clash.unique` - on a Might or Saving Throw Clash one of your Unique Abilities opened. */
 function uniqueClashBonus(actor, clash, uuid) {
   if ((uuid !== clash?.challengerUuid) || !["might", "save"].includes(clash?.category)) return [];
@@ -21205,6 +21226,8 @@ async function resolveAttackWork(message, attack) {
       sizeSoak: await sizeSoakFor(target, attacker, incoming),
       // Greed of the Hera (6): Greed spent as the hit is, 2(T) of Damage Reduction each for this attack.
       greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
+      // Tough Warrior (2): Ki spent as the hit is, as much Damage Reduction for this attack.
+      toughReduction: hit ? await toughReductionFor(target, attack, uuid) : 0,
       ...(defender ? { refinedSoak: defender.soak, unstudy: [{ by: target.uuid, uuid: attacker.uuid }] } : {}),
       // Stealthy Trick (3): whether they were Oblivious of the attacker as it hit.
       oblivious,
@@ -22953,7 +22976,7 @@ async function rollAttackWoundWork(message, attack) {
     // Greed of the Hera (6)'s, spent as it hit.
     const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic
       + fullCounter
-      + (Number(own.greedReduction) || 0));
+      + (Number(own.greedReduction) || 0) + (Number(own.toughReduction) || 0));
 
     const negated = counterWound && (counterWound.total > wound.total);
     const raw = negated ? 0 : Math.max(0, effectiveWound - soak - reduction);

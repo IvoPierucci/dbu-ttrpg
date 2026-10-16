@@ -1,0 +1,20 @@
+id: tough-warrior
+name: Tough Warrior
+talentCategory: durability
+prerequisites: Resilience
+description: >
+  Your ability to protect yourself from damage is far greater than average, allowing you to shrug off massive blows.
+text: >
+  Tough Warrior: Your ability to protect yourself from damage is far greater than average, allowing you to shrug off massive blows.
+  –Prerequisites: Resilience
+  (1)-[Passive]: Halve any Collision Damage you would suffer.
+  (2)-[Triggered, 1/Round]: If you are hit by an Attacking Maneuver, spend up to 4(bT) Ki Points. Increase your Damage Reduction by an equal amount for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1)
+allow collision.halved;
+# (2) Hit, asked as the hit is settled, once a Round: up to 4(bT) Ki - as much Damage Reduction for that attack (chat.mjs
+# toughReductionFor).
+allow reduction.byKi;
