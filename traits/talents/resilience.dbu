@@ -3,14 +3,17 @@ name: Resilience
 talentCategory: durability
 prerequisites: Tenacity Score 6+
 description: >
-  Able to bounce back from damage more easily than most, you are exceptionally
-  good at ignoring injuries.
+  Able to bounce back from damage more easily than most, you are exceptionally good at ignoring injuries.
 text: >
-  Increase your Soak Value by 1(bT).
-  Increase the Life Points regained through a Healing Surge by 1d10(T).
+  Resilience: Able to bounce back from damage more easily than most, you are exceptionally good at ignoring injuries.
+  –Prerequisites: Tenacity Score 6+
+  (1)-[Passive]: Increase your Soak Value by 1(bT).
+  (2)-[Passive]: Increase the amount of Life Points regained through a Healing Surge by 1d10(T).
 
 ---
 
 [passive]
+# (1)
 soakValue       += 1(bT);
+# (2) Rolled with the Healing Surge's own (chat.mjs).
 surge.life.dice += 1d10(T);
