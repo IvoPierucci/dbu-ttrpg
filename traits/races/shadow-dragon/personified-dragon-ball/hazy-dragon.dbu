@@ -1,0 +1,17 @@
+id: hazy-dragon
+name: Hazy Dragon
+order: 2
+optionOf: personified-dragon-ball
+optionEffect: 6
+description: >
+  Spend up to 4 Negative Energy to turn all Squares within a Sphere AoE (centered on you) into the Bog Environment. For every Negative Energy spent after the first, increase the Magnitude of this effect by 1.
+text: >
+  Hazy Dragon [Triggered/Power, 1/Round]: Spend up to 4 Negative Energy to turn all Squares within a Sphere AoE (centered on you) into the Bog Environment. For every Negative Energy spent after the first, increase the Magnitude of this effect by 1.
+
+---
+
+# Ticked in the Power Up's window, once a Round: how many asked, spent, and the Sphere said - its Squares Bog, the map's
+# (chat.mjs hazyDragon).
+[triggered/power, 1/round, effect 6]
+requires hasResource("negativeenergy");
+hazyDragon();

@@ -1,0 +1,20 @@
+id: noble-compelled
+name: Noble Compelled
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Noble Dragon's - "While you possess the Compelled Combat Condition inflicted by this effect" - on the
+# same clock as that Compelled.
+combatCondition: no
+source: Core Rule
+description: >
+  Noble Dragon: Soak Value and Wound Rolls 1(T) higher while Compelled by it.
+text: >
+  Noble Dragon: While you possess the Compelled Combat Condition inflicted by this effect, increase your Soak Value and Wound Rolls by 1(T).
+
+---
+
+[passive]
+if (hasCondition("compelled")) {
+  soakValue += 1(T);
+  wound += 1(T);
+}

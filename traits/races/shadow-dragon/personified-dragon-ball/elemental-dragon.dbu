@@ -1,0 +1,16 @@
+id: elemental-dragon
+name: Elemental Dragon
+order: 3
+optionOf: personified-dragon-ball
+optionEffect: 6
+choose: elementalProfile
+description: >
+  Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+text: >
+  Elemental Dragon [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+
+---
+
+# "Select a Profile with 'Elemental' in the name" - asked when it is added, `$choice`.
+[passive]
+favored.$choice = true;

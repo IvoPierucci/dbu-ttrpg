@@ -1,0 +1,65 @@
+id: personified-dragon-ball
+name: Personified Dragon Ball
+order: 2
+category: body
+importance: primary
+options: 1
+optionEffect: 6
+# (1) The set, its Size Category (Nano to Small) and its stars, asked as it is added - kept on the Item (racial.mjs
+# `dragonBall`).
+dragonBall: true
+# (2) A Bestial Trait chosen as it is gained, in the Other Traits list - taken off with it. None written yet: said, and
+# added by hand later.
+grantsOther: bestial
+description: >
+  Tied to one of the Dragon Balls, your true form is actually one of the magical wish-granting orbs and, as its representative, you have unique abilities.
+addendum: >
+  Dragon Ball
+  At Character Creation, select a set of Dragon Balls (including a Size Category from Nano to Small) and a number of stars from among them. While you are Defeated, you are in your ‘Ball Form’, meaning that you have returned to the form of the Dragon Ball you selected at Character Creation.
+
+  While you are in your Ball Form:
+
+  * You have access to the Possess Maneuver (see — Special Maneuvers).
+  * Your Size Category is decided by the size of the Dragon Balls from your set (decided at Character Creation above).
+  * You cannot use any Attacking Maneuvers or Unique Abilities.
+  * You cannot use the Power Up, Energy Charge, or Transformation Maneuver.
+text: >
+  Personified Dragon Ball (Body): Tied to one of the Dragon Balls, your true form is actually one of the magical wish-granting orbs and, as its representative, you have unique abilities.
+  (1)-[Addendum]: Please see the ‘Dragon Ball’ text box below.
+  (2)-[Passive]: Gain 1 Bestial Trait.
+  (3)-[Passive]: You gain access to the Unify Maneuver, but you can only use it on a Shadow Dragon that is from the same set of Dragon Balls as you. If that Shadow Dragon is in their Ball Form and is Defeated, they do not need to be willing for the effects of the Unify Maneuver.
+  (4)-[1/Round]: As a Standard Action with an Action Cost of 1, you can transform into your Ball Form.
+  (5)-[Triggered/Start of Turn]: If you are in your Ball Form, you may exit your Ball Form and return to normal.
+  (6)-[Option]: At Character Creation, choose one of the following effects:
+
+  * Sinister Dragon [Triggered, 1/Round]: If an Opponent scores a Botch Result on their Combat Roll, or if an Opponent who is suffering from the Impaired Combat Condition failed to inflict any Damage to you with an Attacking Maneuver that targeted you, you may use the Exploit Maneuver as if they triggered its effects. Furthermore, you may spend 2 Negative Energy instead of a Counter Action to use the Exploit Maneuver through this effect.
+  * Hazy Dragon [Triggered/Power, 1/Round]: Spend up to 4 Negative Energy to turn all Squares within a Sphere AoE (centered on you) into the Bog Environment. For every Negative Energy spent after the first, increase the Magnitude of this effect by 1.
+  * Elemental Dragon [Passive]: Upon gaining this effect, select a Profile with ‘Elemental’ in the name – it becomes a Favored Element (see — Favored Element).
+  * Noble Dragon [1/Round]: Spend 1 Action to target an Opponent. Make a Morale Clash against them. If you win, you both gain the Compelled Combat Condition against one another until the start of your next turn. While you possess the Compelled Combat Condition inflicted by this effect, increase your Soak Value and Wound Rolls by 1(T).
+  * Regenerative Dragon [Triggered, Resource]: When you gain 4+ Negative Energy at once, gain a stack of Dragon Slime (max. 3). Whenever you are knocked through a Health Threshold, you may spend a stack of Dragon Slime to use a Healing Surge.
+  * Ominous Dragon [Passive]: Increase the Dice Score of your Intimidation Skill Checks by 2 and, while Personality has the highest Attribute Score amongst your Attributes, increase your Combat Rolls and Initiative by 1(bT).
+  * Natural Dragon [Passive]: While you are in your Ball Form, you also have access to the Absorb Maneuver. Additionally, increase your Combat Rolls by 1(T) while you possess at least 1 stack of the Absorption Awakening. Upon gaining a stack of the Absorption Awakening, immediately leave your Ball Form and return to normal.
+
+---
+
+# (1) Ball Form - Ball Form (a mark) taken by (4), or Defeated: its Size the set's (actor-character.mjs); no Attacking
+# Maneuvers or Unique Abilities, no Power Up, Energy Charge or Transformation. The Possess Maneuver and (3)'s Unify are not
+# in this system yet - their texts are waited on.
+[passive]
+if (inBallForm) {
+  forbid attackingManeuvers;
+  forbid uniqueAbilities;
+  forbid transformations;
+  forbid maneuver.power-up;
+  forbid maneuver.energy-charge;
+  forbid maneuver.transformation;
+}
+
+# (4) Its own Maneuver, listed while this is had (personified-dragon-ball-fourth-effect).
+
+# (5) Your turn begins in your Ball Form - not Defeated: asked in a window, never on its own.
+[triggered/start-of-turn, chosen, effect 5]
+requires hasCondition("ball-form");
+remove("ball-form");
+
+# (6) The Option chosen, one file each beside this one.

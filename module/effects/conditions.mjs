@@ -244,6 +244,10 @@ const PREDICATES = {
   /** A Health Threshold whose penalties are suffered: reached, its Steadfast Check failed (Parasite-Drained's). */
   penalizedBy: (scope, key) => (scope.data?.threshold?.failedKeys ?? []).includes(String(key).toLowerCase()),
 
+  /** Personified Dragon Ball: in your Ball Form - taken by its (4), or Defeated. */
+  inBallForm: scope => ((Number(scope.data?.conditions?.["ball-form"]) || 0) > 0)
+    || ((Number(scope.data?.life?.value) || 0) <= (Number(scope.data?.life?.min) || 0)),
+
   fallenEnemy: scope => {
     const fallen = scope.context?.defeatedUuid || scope.context?.knockedUuid || "";
     return Boolean(fallen) && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "enemy")?.uuid === fallen);

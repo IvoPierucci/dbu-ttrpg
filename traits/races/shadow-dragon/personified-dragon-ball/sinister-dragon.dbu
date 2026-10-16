@@ -1,0 +1,16 @@
+id: sinister-dragon
+name: Sinister Dragon
+order: 1
+optionOf: personified-dragon-ball
+optionEffect: 6
+description: >
+  If an Opponent scores a Botch Result on their Combat Roll, or if an Opponent who is suffering from the Impaired Combat Condition failed to inflict any Damage to you with an Attacking Maneuver that targeted you, you may use the Exploit Maneuver as if they triggered its effects. Furthermore, you may spend 2 Negative Energy instead of a Counter Action to use the Exploit Maneuver through this effect.
+text: >
+  Sinister Dragon [Triggered, 1/Round]: If an Opponent scores a Botch Result on their Combat Roll, or if an Opponent who is suffering from the Impaired Combat Condition failed to inflict any Damage to you with an Attacking Maneuver that targeted you, you may use the Exploit Maneuver as if they triggered its effects. Furthermore, you may spend 2 Negative Energy instead of a Counter Action to use the Exploit Maneuver through this effect.
+
+---
+
+# An Opponent's Strike or Dodge a Botch, in an attack; or an Impaired Opponent's attack at you that did you no Damage: the
+# Exploit at them on its card, once a Round - its Counter Action or 2 Negative Energy, asked (chat.mjs offerSinister).
+[passive]
+allow sinister.exploit;

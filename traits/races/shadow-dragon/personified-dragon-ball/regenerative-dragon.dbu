@@ -1,0 +1,25 @@
+id: regenerative-dragon
+name: Regenerative Dragon
+order: 5
+optionOf: personified-dragon-ball
+optionEffect: 6
+resource: dragonslime
+resourceLabel: Dragon Slime
+resourceMax: 3
+description: >
+  When you gain 4+ Negative Energy at once, gain a stack of Dragon Slime (max. 3). Whenever you are knocked through a Health Threshold, you may spend a stack of Dragon Slime to use a Healing Surge.
+text: >
+  Regenerative Dragon [Triggered, Resource]: When you gain 4+ Negative Energy at once, gain a stack of Dragon Slime (max. 3). Whenever you are knocked through a Health Threshold, you may spend a stack of Dragon Slime to use a Healing Surge.
+
+---
+
+# 4+ Negative Energy at once (moment negative-energy-gained). Its Triggered/Automatic button.
+[triggered/negative-energy-gained, effect 6]
+requires gained >= 4;
+dragonslime.stacks += 1;
+
+# Knocked through a Health Threshold: chosen on its card - a stack for a Healing Surge.
+[triggered/threshold, chosen, effect 6]
+requires hasResource("dragonslime");
+dragonslime.stacks -= 1;
+surge(healing);

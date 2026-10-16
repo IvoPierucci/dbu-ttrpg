@@ -1,0 +1,19 @@
+id: ominous-dragon
+name: Ominous Dragon
+order: 6
+optionOf: personified-dragon-ball
+optionEffect: 6
+description: >
+  Increase the Dice Score of your Intimidation Skill Checks by 2 and, while Personality has the highest Attribute Score amongst your Attributes, increase your Combat Rolls and Initiative by 1(bT).
+text: >
+  Ominous Dragon [Passive]: Increase the Dice Score of your Intimidation Skill Checks by 2 and, while Personality has the highest Attribute Score amongst your Attributes, increase your Combat Rolls and Initiative by 1(bT).
+
+---
+
+[passive]
+skill.intimidation += 2;
+# The highest Score, or tied for it - Majin Mentality's reading.
+if (personality.score >= max(agility.score, force.score, tenacity.score, scholarship.score, insight.score, magic.score)) {
+    combatRolls += 1(bT);
+    initiative += 1(bT);
+}

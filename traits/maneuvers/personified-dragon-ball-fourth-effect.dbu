@@ -1,0 +1,22 @@
+id: personified-dragon-ball-fourth-effect
+name: 4th effect of Personified Dragon Ball
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: personified-dragon-ball
+fromEffect: 4
+source: Core Rule
+description: >
+  Personified Dragon Ball's fourth effect, as a Maneuver: a Standard Action of 1 Action - your Ball Form.
+text: >
+  (4)-[1/Round]: As a Standard Action with an Action Cost of 1, you can transform into your Ball Form.
+
+---
+
+# Owned by every character, listed while Personified Dragon Ball is had (`fromTrait`). Ball Form, a mark - left by (5) at
+# the start of a turn.
+[on used]
+gain("ball-form");

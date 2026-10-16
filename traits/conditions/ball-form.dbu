@@ -1,0 +1,16 @@
+id: ball-form
+name: Ball Form
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Personified Dragon Ball's Ball Form, taken by its (4) and left by its (5). Defeated is Ball Form
+# too, without it (the Trait's `inBallForm`).
+combatCondition: no
+source: Core Rule
+description: >
+  Ball Form: in the form of your Dragon Ball - its Size; no Attacking Maneuvers, Unique Abilities, Power Up, Energy Charge or Transformation.
+text: >
+  While you are in your Ball Form: You have access to the Possess Maneuver. Your Size Category is decided by the size of the Dragon Balls from your set. You cannot use any Attacking Maneuvers or Unique Abilities. You cannot use the Power Up, Energy Charge, or Transformation Maneuver.
+
+---
+
+# What it does is Personified Dragon Ball's own script, read through `inBallForm`.

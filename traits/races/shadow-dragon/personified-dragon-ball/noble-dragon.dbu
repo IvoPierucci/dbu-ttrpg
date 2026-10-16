@@ -1,0 +1,13 @@
+id: noble-dragon
+name: Noble Dragon
+order: 4
+optionOf: personified-dragon-ball
+optionEffect: 6
+description: >
+  Spend 1 Action to target an Opponent. Make a Morale Clash against them. If you win, you both gain the Compelled Combat Condition against one another until the start of your next turn. While you possess the Compelled Combat Condition inflicted by this effect, increase your Soak Value and Wound Rolls by 1(T).
+text: >
+  Noble Dragon [1/Round]: Spend 1 Action to target an Opponent. Make a Morale Clash against them. If you win, you both gain the Compelled Combat Condition against one another until the start of your next turn. While you possess the Compelled Combat Condition inflicted by this effect, increase your Soak Value and Wound Rolls by 1(T).
+
+---
+
+# Its own Maneuver, listed while this Option is had (noble-dragon-maneuver.dbu).

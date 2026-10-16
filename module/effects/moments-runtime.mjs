@@ -516,6 +516,14 @@ async function runVerb(actor, call, context) {
       return followAlly(actor);
     }
 
+    case "hazyDragon": {
+      const { hazyDragon } = await import("../chat.mjs");
+      return hazyDragon(actor);
+    }
+    case "nobleDragon": {
+      const { nobleDragon } = await import("../chat.mjs");
+      return nobleDragon(actor, context);
+    }
     case "negativeEnergy": {
       const { negativeEnergy } = await import("../chat.mjs");
       return negativeEnergy(actor);

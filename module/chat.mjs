@@ -755,6 +755,9 @@ async function settleClashEffects(messageId, clash) {
   if (clash.negativeImpair && clash.result && !clash.negativeImpair.applied) {
     await settleNegativeImpair(message, clash);
   }
+  if (clash.nobleDragon && clash.result && !clash.nobleDragon.applied) {
+    await settleNobleDragon(message, clash);
+  }
   if (clash.danceEffect && clash.result && !clash.danceEffect.applied) {
     await settleDanceModifier(message, clash);
   }
@@ -15379,6 +15382,98 @@ function offerFelineTechnique(message, actor) {
 }
 
 /**
+ * Hazy Dragon: "Spend up to 4 Negative Energy to turn all Squares within a Sphere AoE (centered on you) into the Bog
+ * Environment. For every Negative Energy spent after the first, increase the Magnitude of this effect by 1." How many,
+ * asked; the Squares the map's.
+ */
+export async function hazyDragon(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const held = Number(actor.system.resources?.negativeenergy?.stacks) || 0;
+  const most = Math.min(4, held);
+  if (!most) return UNSPENT;
+  const picked = Number(await askPlayerChoice(actor, `${actor.name}: Hazy Dragon`, [{ value: "0", label: "None" },
+    ...Array.from({ length: most }, (each, index) => index + 1)
+      .map(n => ({ value: String(n), label: `${n} Negative Energy${(n > 1) ? ` - Magnitude +${n - 1}` : ""}` }))])) || 0;
+  if (picked <= 0) return UNSPENT;
+  await setResource(actor, "negativeenergy", held - picked);
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<p>${Handlebars.escapeExpression(`Hazy Dragon: every Square within a Sphere AoE centred on ${actor.name}`
+      + `${(picked > 1) ? `, Magnitude +${picked - 1},` : ""} becomes the Bog Environment.`)}</p>` });
+}
+
+/**
+ * Noble Dragon: "Spend 1 Action to target an Opponent. Make a Morale Clash against them. If you win, you both gain the
+ * Compelled Combat Condition against one another until the start of your next turn." The one its Maneuver was used at.
+ */
+export async function nobleDragon(actor, context = {}) {
+  const aimed = (context.targets ?? [])[0];
+  const target = (typeof aimed === "string") ? fromUuidSync(aimed)
+    : (aimed?.uuid ? (fromUuidSync(aimed.uuid) ?? aimed) : (game.user?.targets?.first()?.actor ?? null));
+  if (!target || (target.uuid === actor.uuid)) return ui.notifications.warn(`${actor.name}: Noble Dragon needs an Opponent targeted.`);
+  return postSaveClash(actor, target, { maneuverName: "Noble Dragon",
+    reason: `Win and you are both Compelled against one another until the start of ${actor.name}'s next turn.`,
+    saves: ["morale"], defenderSaves: ["morale"], nobleDragon: { applied: false } });
+}
+
+/** Noble Dragon's Clash, settled: won, Compelled on both - and Noble Compelled on its user - on the user's clock. */
+async function settleNobleDragon(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, nobleDragon: { ...clash.nobleDragon, applied: true } });
+  const dragon = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!dragon || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} is not drawn in.`);
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  const { setCondition } = await import("./conditions.mjs");
+  for (const who of [dragon, target]) {
+    await setCondition(who, "compelled", Math.max(1, Number(who.system.conditions?.compelled) || 0));
+    await lasting(dragon, { kind: KINDS.CONDITION, key: "compelled", edge: EDGES.START,
+      ...((who.uuid !== dragon.uuid) ? { on: who.uuid } : {}), source: "Noble Dragon" });
+  }
+  await gainCondition(dragon, "noble-compelled", 1);
+  await lasting(dragon, { kind: KINDS.CONDITION, key: "noble-compelled", edge: EDGES.START, source: "Noble Dragon" });
+  return settledNote(message, `${dragon.name} and ${target.name} are Compelled against one another until the start of `
+    + `${dragon.name}'s next turn.`);
+}
+
+/**
+ * Sinister Dragon: "If an Opponent scores a Botch Result on their Combat Roll, or if an Opponent who is suffering from the
+ * Impaired Combat Condition failed to inflict any Damage to you with an Attacking Maneuver that targeted you, you may use the
+ * Exploit Maneuver as if they triggered its effects." On the card, at them, once a Round - its Counter Action, or 2 Negative
+ * Energy, asked as it is taken.
+ */
+function offerSinister(message, dragon, opponent) {
+  if (!dragon || !opponent || (dragon.uuid === opponent.uuid) || dragon.system?.defeated) return;
+  if (dragon.system?.effects?.slots?.["sinister.exploit"] !== true) return;
+  if (alliesOnScene(dragon).some(ally => ally.uuid === opponent.uuid)) return;
+  if (dragon.getFlag?.(SCOPE, "sinisterRound") === roundKey()) return;
+  if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => (offer.maneuverId === "exploit")
+    && (offer.actorUuid === dragon.uuid))) return;
+  if (!dragon.items?.some(item => (item.type === "maneuver") && item.system.exploit)) return;
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  requestEdit(message, { type: "offer", offer: { actorUuid: dragon.uuid, actorName: dragon.name, maneuverId: "exploit",
+    maneuverName: "Exploit", targetUuid: opponent.uuid, reason: "Sinister Dragon", grants: { sinister: true },
+    provokedBy: { maneuverId: attack?.maneuverId ?? "", maneuverName: attack?.maneuverName ?? "", messageId: message.id } } });
+}
+
+/** Sinister Dragon: a Botch an Opponent scored, offered to each on the scene with it. */
+function offerSinisterAll(message, botcher) {
+  if (!botcher) return;
+  const seen = new Set();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const dragon = token.actor;
+    if (!dragon || seen.has(dragon.uuid)) continue;
+    seen.add(dragon.uuid);
+    offerSinister(message, dragon, botcher);
+  }
+}
+
+/** Sinister Dragon: an Impaired Opponent's attack at them that did them no Damage. */
+function offerSinisterUnharmed(message, dragon, attacker) {
+  if (!attacker || !((Number(attacker.system?.conditions?.impaired) || 0) > 0)) return;
+  offerSinister(message, dragon, attacker);
+}
+
+/**
  * Negative Ki (1): "Reduce your Life Points by up to 8(bT). For every 2(bT) Life Points lost, gain 1 Negative Energy." How
  * many, asked of whoever plays them - none, nothing. Gained as an effect gains it, so (4)'s moment answers.
  */
@@ -17365,6 +17460,22 @@ async function takeOutOfSequence(message, actor, offer) {
         return;
       }
       await actor.setFlag(SCOPE, "unscathedRound", roundKey());
+    }
+    // Sinister Dragon: once a Round - and 2 Negative Energy instead of the Counter Action, if they would.
+    if (offer.grants?.sinister) {
+      if (actor.getFlag?.(SCOPE, "sinisterRound") === roundKey()) {
+        ui.notifications.warn(`${actor.name}: Sinister Dragon - already used this Combat Round.`);
+        return;
+      }
+      const negative = Number(actor.system.resources?.negativeenergy?.stacks) || 0;
+      const pay = (negative >= 2) ? await askPlayerChoice(actor, `${actor.name}: Sinister Dragon`,
+        [{ value: "counter", label: "A Counter Action" }, { value: "negative", label: "2 Negative Energy" }]) : "counter";
+      if (!pay) return;
+      await actor.setFlag(SCOPE, "sinisterRound", roundKey());
+      if (pay === "negative") {
+        await setResource(actor, "negativeenergy", negative - 2);
+        offer = { ...offer, counterPaid: true };
+      }
     }
     // Pinpoint Combat (3): "Your Ally may allow you to spend their Counter Action instead of your own" - paid already.
     if (!offer.counterPaid && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
@@ -19986,6 +20097,11 @@ async function resolveAttackWork(message, attack) {
   for (const entry of branches) {
     if (entry.hit && (entry.uuid !== attack.attackerUuid)) offerTailGrapple(message, attacker, fromUuidSync(entry.uuid), attack);
   }
+  // Sinister Dragon: a Botch on the Strike, or on a Dodge.
+  if (strike?.outcome === "botch") offerSinisterAll(message, attacker);
+  for (const entry of branches) {
+    if ((entry.uuid !== attack.attackerUuid) && (entry.answer?.outcome === "botch")) offerSinisterAll(message, fromUuidSync(entry.uuid));
+  }
   // Nobody hit, nothing more to it: Overwhelming Assault's stacks go now.
   if (!branches.some(entry => entry.hit)) await spendOverwhelm(attack);
   // "If you dodge an Attacking Maneuver" - a Dodge Roll that beat it: Aerodynamic's.
@@ -20003,6 +20119,8 @@ async function resolveAttackWork(message, attack) {
     // Feline Build (4): no Damage from it - a Copied Technique; Violent Rebuke (3): the Basic Attack back, hit or not.
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerFelineTechnique(message, fromUuidSync(entry.uuid));
     if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerRebuke(message, fromUuidSync(entry.uuid), attacker);
+    // Sinister Dragon: an Impaired Opponent's attack that missed you.
+    if (!entry.hit && (entry.uuid !== attack.attackerUuid)) offerSinisterUnharmed(message, fromUuidSync(entry.uuid), attacker);
     // Angelic Offense (2)'s Guard Down: this was the next Attacking Maneuver aimed at them.
     await endAngelicGuardDown(fromUuidSync(entry.uuid));
   }
@@ -21590,6 +21708,7 @@ async function rollAttackWoundWork(message, attack) {
     const who = fromUuidSync(line.uuid);
     offerFelineTechnique(message, who);
     offerRebuke(message, who, fromUuidSync(attack.attackerUuid ?? ""));
+    offerSinisterUnharmed(message, who, fromUuidSync(attack.attackerUuid ?? ""));
   }
 
   // "If you hit the Volleyball with the Spike! Signature Technique, after concluding that Attacking Maneuver, Volleyball

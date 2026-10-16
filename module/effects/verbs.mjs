@@ -272,6 +272,18 @@ export const VERBS = Object.freeze({
     doc: "Patient Sniper's: an Ally with a lower Initiative picked, and your Initiative set just after theirs for this "
        + "Combat Round - put back as the next begins (chat.mjs followAlly)."
   },
+  hazyDragon: {
+    args: [0, 0],
+    names: [],
+    doc: "Hazy Dragon: up to 4 Negative Energy, how many asked, spent - a Sphere around you the Bog Environment, Magnitude 1 more "
+       + "for each after the first, said for the map (chat.mjs hazyDragon). None, its use unspent."
+  },
+  nobleDragon: {
+    args: [0, 0],
+    names: [],
+    doc: "Noble Dragon: a Morale Clash at the one targeted - won, both Compelled till the start of your next turn, and Noble "
+       + "Compelled on you (chat.mjs nobleDragon)."
+  },
   negativeEnergy: {
     args: [0, 0],
     names: [],

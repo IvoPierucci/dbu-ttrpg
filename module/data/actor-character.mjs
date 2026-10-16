@@ -2032,7 +2032,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Shapeshift: "Change your Size Category to any other Size Category except Colossal" - while it is applied.
     const shaped = Array.from(this.parent?.items ?? []).find(item => (item.type === "maneuver")
       && item.system?.unique?.applied && item.system.unique.shapeSize);
-    const trueKey = (shaped && sizeKeys.includes(shaped.system.unique.shapeSize)) ? shaped.system.unique.shapeSize : bodyKey;
+    // Personified Dragon Ball's Ball Form - taken, or Defeated: "Your Size Category is decided by the size of the Dragon Balls
+    // from your set".
+    const ballSize = Array.from(this.parent?.items ?? []).find(item => (item.type === "racial")
+      && item.flags?.["dbu-ttrpg"]?.dragonBall?.size)?.flags["dbu-ttrpg"].dragonBall.size ?? "";
+    const balled = Boolean(ballSize) && sizeKeys.includes(ballSize) && (((Number(this.conditions?.["ball-form"]) || 0) > 0)
+      || ((Number(this.life?.value) || 0) <= 0));
+    const trueKey = balled ? ballSize
+      : (shaped && sizeKeys.includes(shaped.system.unique.shapeSize)) ? shaped.system.unique.shapeSize : bodyKey;
     // Ki Avatar: "if your Size Category is smaller than Gigantic, your Size Category is considered Gigantic for
     // calculating the benefits and penalties of Size ... and for all rules detailed on the Size page except Punching Up".
     // The Size beneath it is kept as `trueKey`, which Punching Up and the Apparel on the body read.

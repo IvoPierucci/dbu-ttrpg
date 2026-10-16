@@ -1,0 +1,23 @@
+id: noble-dragon-maneuver
+name: Noble Dragon
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: true
+usageLimit: 1/round
+fromTrait: noble-dragon
+fromEffect: 6
+source: Core Rule
+description: >
+  Personified Dragon Ball's Noble Dragon: 1 Action, a Morale Clash at an Opponent - won, both Compelled against one another till the start of your next turn, and your Soak and Wound 1(T) for it.
+text: >
+  (6)-[1/Round]: Noble Dragon - Spend 1 Action to target an Opponent. Make a Morale Clash against them. If you win, you both gain the Compelled Combat Condition against one another until the start of your next turn. While you possess the Compelled Combat Condition inflicted by this effect, increase your Soak Value and Wound Rolls by 1(T).
+
+---
+
+# Owned by every character, listed while the Noble Dragon Option is had (`fromTrait` - an Option counts). Used at the one
+# targeted, the Clash opened; won, Compelled on both and Noble Compelled (a mark) on you, on your clock (chat.mjs
+# nobleDragon, settleNobleDragon). Who is Compelled against whom, the table's - as Burning Hatred's.
+[on used]
+nobleDragon();

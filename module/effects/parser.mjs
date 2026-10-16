@@ -526,6 +526,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "fallenEnemy",
   // The Damage from your Inferior's attack (Tuffle Superiority's, on Energy of Revenge); your Inferior hit (Parasitic Biology's).
   "byInferior", "struckInferior",
+  // In your Ball Form (Personified Dragon Ball's).
+  "inBallForm",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

@@ -22,6 +22,8 @@
  *   grantsTalent: <ids>             Talents it gives - kept if the Trait is lost ("you do not lose that Talent")
  *   grantsOther: bestial            an Other Trait of that group chosen as it is added - `grantsOtherCount` of them, of
  *                                   `grantsOtherFrom` alone where it names some (Feline Build's two of four)
+ *   dragonBall: true                Personified Dragon Ball's set - its name, Size Category (Nano to Small) and stars - asked
+ *                                   as it is added, kept on the Item (`dragonBall` flag)
  *   grantsGear: majin-dama          a Special Item it makes as it is added - Neko Majin-Dama's Integrated Majin-Dama - gone
  *                                   with it while still on the sheet
  *   addendum: >                     its Addendum effect's text box, shown as written in the Item's Options tab
@@ -579,6 +581,13 @@ export async function racialItemFrom(trait, actor = null) {
 export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
   const made = await racialItemFrom(trait, actor);
   if (!made) return null;
+  // Personified Dragon Ball: "select a set of Dragon Balls (including a Size Category from Nano to Small) and a number of
+  // stars from among them".
+  if (trait.dragonBall) {
+    const ball = await askDragonBall(trait);
+    if (!ball) return null;
+    made.data.flags["dbu-ttrpg"].dragonBall = ball;
+  }
   // Given by another - Bestial Evolution's Bestial Trait - it goes with that one.
   if (grantedBy) made.data.flags["dbu-ttrpg"].grantedBy = grantedBy;
   const [item] = await actor.createEmbeddedDocuments("Item", [made.data]);
@@ -605,6 +614,27 @@ export async function addRacialTrait(actor, trait, { grantedBy = "" } = {}) {
     for (let n = 0; n < Math.max(1, Number(trait.grantsOtherCount) || 1); n++) await grantOtherTrait(actor, item, group, from);
   }
   return item;
+}
+
+/** The Dragon Ball set asked for - its name, Size Category and stars - or null if backed out of. */
+async function askDragonBall(trait) {
+  const sizes = [["nano", "Nano"], ["tiny", "Tiny"], ["small", "Small"]];
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${trait.name} - your Dragon Ball` },
+    content: `<label class="dbu-respond-option"><span class="dbu-respond-name">Set</span>
+        <input type="text" name="set" value="" placeholder="Which set of Dragon Balls"/></label>
+      <label class="dbu-respond-option"><span class="dbu-respond-name">Size Category</span>
+        <select name="size">${sizes.map(([key, label]) => `<option value="${key}">${label}</option>`).join("")}</select></label>
+      <label class="dbu-respond-option"><span class="dbu-respond-name">Stars</span>
+        <input type="number" name="stars" value="1" min="1" max="7"/></label>`,
+    buttons: [{ action: "take", label: "Confirm", default: true, callback: (event, button, dialog) => ({
+      set: String(dialog.element.querySelector('[name="set"]')?.value ?? "").trim(),
+      size: dialog.element.querySelector('[name="size"]')?.value ?? "small",
+      stars: Math.min(7, Math.max(1, Math.floor(Number(dialog.element.querySelector('[name="stars"]')?.value) || 1))) }) },
+      { action: "cancel", label: "Cancel" }],
+    rejectClose: false
+  });
+  return (answer && (typeof answer === "object")) ? answer : null;
 }
 
 /**

@@ -1,0 +1,13 @@
+id: natural-dragon
+name: Natural Dragon
+order: 7
+optionOf: personified-dragon-ball
+optionEffect: 6
+description: >
+  While you are in your Ball Form, you also have access to the Absorb Maneuver. Additionally, increase your Combat Rolls by 1(T) while you possess at least 1 stack of the Absorption Awakening. Upon gaining a stack of the Absorption Awakening, immediately leave your Ball Form and return to normal.
+text: >
+  Natural Dragon [Passive]: While you are in your Ball Form, you also have access to the Absorb Maneuver. Additionally, increase your Combat Rolls by 1(T) while you possess at least 1 stack of the Absorption Awakening. Upon gaining a stack of the Absorption Awakening, immediately leave your Ball Form and return to normal.
+
+---
+
+# Not built: the Absorb Maneuver and the Absorption Awakening are not in this system yet - this waits on them.
