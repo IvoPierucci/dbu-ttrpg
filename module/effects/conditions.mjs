@@ -252,6 +252,23 @@ const PREDICATES = {
   knockedFavored: scope => (scope.context?.profiles ?? [])
     .some(profile => scope.data?.effects?.slots?.[`favored.${profile}`] === true),
 
+  /** Karmic Reflection (2): the Botch yours, or an Opponent's not at Long Range from you (moment botch-seen). */
+  botchNear: scope => {
+    const self = scope.data?.parent;
+    const uuid = scope.context?.botcherUuid ?? "";
+    if (!self || !uuid) return false;
+    if (uuid === self.uuid) return true;
+    const other = globalThis.fromUuidSync?.(uuid);
+    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+    if (!other || (side(self) === undefined) || (side(self) === side(other))) return false;
+    const mine = self.getActiveTokens?.(false, true)?.[0];
+    const theirs = other.getActiveTokens?.(false, true)?.[0];
+    const grid = globalThis.canvas?.grid;
+    if (!mine || !theirs || !grid?.measurePath) return true;
+    const squares = Math.round(grid.measurePath([mine.center, theirs.center]).distance / (grid.distance || 1));
+    return squares < 9;
+  },
+
   fallenEnemy: scope => {
     const fallen = scope.context?.defeatedUuid || scope.context?.knockedUuid || "";
     return Boolean(fallen) && (scope.data?.parent?.getFlag?.("dbu-ttrpg", "enemy")?.uuid === fallen);

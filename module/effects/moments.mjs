@@ -121,6 +121,9 @@ const TABLE = [
   { key: "ally-defeated", label: "An Ally is Defeated", provides: [],
     doc: "Fired for each Ally on the scene of whoever is Defeated - not for a Minion's defeat - with them as `defeatedUuid` "
        + "(combat.mjs) - Battle Tension's. What is the player's is asked in a window first." },
+  { key: "botch-seen", label: "A Botch Result is scored on a Combat Roll", provides: [],
+    doc: "Fired for whoever has an effect answering it, as anybody's Combat Roll comes to a Botch Result, with whose as "
+       + "`botcherUuid` (chat.mjs rollSide) - Karmic Reflection's. What is the player's is asked in a window first." },
   { key: "negative-energy-gained", label: "You gain Negative Energy", provides: [],
     doc: "Fired as Negative Energy is gained, with how many as `gained` (moments-runtime.mjs stacksGained) - Negative Ki's. "
        + "What is the player's is asked in a window first." },

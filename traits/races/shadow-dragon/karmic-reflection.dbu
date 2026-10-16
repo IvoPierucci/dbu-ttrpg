@@ -1,0 +1,38 @@
+id: karmic-reflection
+name: Karmic Reflection
+order: 4
+category: mind
+importance: secondary
+description: >
+  Your personality is an inverse reflection of the wish that made you; in the same way that your morality is inverted, so too may you invert reality.
+text: >
+  Karmic Reflection (Mind): Your personality is an inverse reflection of the wish that made you; in the same way that your morality is inverted, so too may you invert reality.
+  (1)-[Passive]: For calculating your Morale Save, use the higher of your Magic or Force Score if they exceed your Personality Score.
+  (2)-[Triggered]: If you or an Opponent (who is not at Long Range) scores a Botch Result on a Combat Roll, gain 1 Negative Energy.
+  (3)-[Triggered/Power]: Spend 2(bT) Life Points to gain 1 Negative Energy.
+  (4)-[Triggered/Threshold]: Spend up to 2 Negative Energy to increase the Dice Score of your Steadfast Check for this Health Threshold by an equal amount. If you succeed at the Steadfast Check, regain 2(T) Ki Points for every Negative Energy spent on this effect.
+  (5)-[Triggered, 1/Encounter]: If your Opponent scores a Critical Result on their Combat Roll, they score a Botch Result instead (regardless of their Natural Result).
+
+---
+
+[passive]
+# (1) The highest of the three (actor-character.mjs).
+allow save.morale.from.force;
+allow save.morale.from.magic;
+# (4) In the Steadfast Check's window, a box for each of up to 2 Negative Energy - 1 on its Dice Score each; passed, 2(T) of
+# Ki each (chat.mjs rollSteadfastCheck).
+allow karmic.steadfast;
+# (5) An Opponent's Critical Result on the Strike or a Dodge of an attack: a button on its card while it is still to be
+# Wounded, once an Encounter - their Critical a Botch (chat.mjs karmicInvertButtons).
+allow karmic.invert;
+
+# (2) A Botch on a Combat Roll - yours, or an Opponent's not at Long Range (moment botch-seen, chat.mjs rollSide). Its
+# Triggered/Automatic button.
+[triggered/botch-seen, effect 2]
+requires botchNear;
+negativeenergy.stacks += 1;
+
+# (3) Ticked in the Power Up's window.
+[triggered/power, effect 3]
+life.value -= 2(bT);
+negativeenergy.stacks += 1;

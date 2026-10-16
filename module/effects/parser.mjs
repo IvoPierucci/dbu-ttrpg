@@ -530,6 +530,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "inBallForm",
   // Knocked through by your Favored Element's Profile (Draconic Physique's).
   "knockedFavored",
+  // A Botch yours or an Opponent's near (Karmic Reflection's).
+  "botchNear",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

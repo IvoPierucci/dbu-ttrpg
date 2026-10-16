@@ -5976,6 +5976,14 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
   // the roll came to *before* the old die's consequences, so those consequences come off
   // the card with it - a Botch row left standing beside a total reached without it is a
   // column that will not add up.
+  // Karmic Reflection (5): a Critical Result a Botch Result instead, "regardless of their Natural Result".
+  if ((queue ?? []).some(call => call.verb === "invertCritical") && (outcome === "critical")) {
+    const penalty = side.botchPenalty ?? actor.system.botch?.penalty ?? DBUCharacterData.BOTCH_PENALTY;
+    total = (Number.isFinite(Number(beforeOutcome)) ? Number(beforeOutcome) : total) - penalty;
+    outcome = "botch";
+    lines.splice(0, lines.length, ...withoutOutcome(lines), noteLine("Karmic Reflection: a Botch Result instead"),
+      fromOutcome(partLine({ label: "Botch", written: "-2(bT)", value: -penalty, rank: "botch" })));
+  }
   const reroll = (queue ?? []).find(call => call.verb === "reroll");
   if (reroll) {
     const again = await rerollBaseDie(actor, side, reroll);
@@ -8145,6 +8153,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // against.
   const botchedByRule = botchUnlessCritical && !critical;
   if (botchUnlessCritical) botch = botchedByRule;
+  // Karmic Reflection (2): a Botch on a Combat Roll - said to whoever has an effect answering it.
+  if (botch && collect) await botchSeen(actor);
   // What the die actually showed, before an effect moved it. The shift is the whole of
   // the difference, so this is the one subtraction that recovers it.
   const rolled = natural - naturalShift;
@@ -15395,6 +15405,59 @@ function offerFelineTechnique(message, actor) {
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique",
     maneuverName: "Signature Technique", reason: "Feline Build - a Copied Technique", technique: { via: "", copied: true },
     grants: { feline: true } } });
+}
+
+/** A Botch on a Combat Roll: whoever on the scene has an effect answering it (Karmic Reflection's) - asked as it happens. */
+async function botchSeen(botcher) {
+  const seen = new Set();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const other = token.actor;
+    if (!other || seen.has(other.uuid) || other.system?.defeated) continue;
+    seen.add(other.uuid);
+    if (!Array.from(other.items ?? []).some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "karmic-reflection")) continue;
+    await answerFor(other, "botch-seen", { botcherUuid: botcher.uuid });
+  }
+}
+
+/**
+ * Karmic Reflection (5): "If your Opponent scores a Critical Result on their Combat Roll, they score a Botch Result instead
+ * (regardless of their Natural Result)." Once an Encounter: on an attack's card, a Critical on its Strike or a Dodge -
+ * an Opponent's - before the Wound Roll, a button for each who has it; the roll worked out again as a Botch.
+ */
+function karmicInvertButtons(message, attack, container) {
+  const result = attack?.result;
+  if (!result || result.wound) return;
+  const sides = [{ uuid: attack.attackerUuid, side: result.strike },
+    ...targetResults(attack).filter(entry => entry.own?.answer && !entry.own.applied)
+      .map(entry => ({ uuid: entry.uuid, side: entry.own.answer }))]
+    .filter(entry => entry.side?.outcome === "critical");
+  if (!sides.length) return;
+  const seen = new Set();
+  for (const token of (canvas?.tokens?.placeables ?? [])) {
+    const dragon = token.actor;
+    if (!dragon?.isOwner || seen.has(dragon.uuid) || dragon.system?.defeated
+      || (dragon.system?.effects?.slots?.["karmic.invert"] !== true)) continue;
+    seen.add(dragon.uuid);
+    if (dragon.getFlag?.(SCOPE, "karmicInvert") === (game.combat?.id ?? "none")) continue;
+    const allies = new Set([dragon.uuid, ...alliesOnScene(dragon).map(ally => ally.uuid)]);
+    for (const entry of sides.filter(each => !allies.has(each.uuid))) {
+      const who = fromUuidSync(entry.uuid);
+      if (!who) continue;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dbu-clash-button";
+      button.textContent = `Karmic Reflection - ${who.name}: a Botch`;
+      button.dataset.tooltip = `${dragon.name}: ${who.name}'s Critical Result a Botch Result instead. Once a Combat Encounter.`;
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        if (dragon.getFlag?.(SCOPE, "karmicInvert") === (game.combat?.id ?? "none")) return;
+        await dragon.setFlag(SCOPE, "karmicInvert", game.combat?.id ?? "none");
+        await resettleAttack(message, { ...entry, actor: who, kind: "attack", stage: "strike", category: "combat" },
+          { spent: [], slots: {}, queue: [{ verb: "invertCritical" }] });
+      });
+      container.append(button);
+    }
+  }
 }
 
 /**
@@ -25012,11 +25075,18 @@ export async function rollSteadfastCheck(actor) {
   const lifeSpendable = (actor.system.effects?.slots?.["steadfast.lifeSpend"] === true)
     && (actor.getFlag?.(SCOPE, "resolveLifeEncounter") !== (game.combat?.id ?? "none"));
   const lifeSteps = lifeSpendable ? [1, 2, 3].filter(n => (n * lifeStep) <= (Number(actor.system.life?.value) || 0)) : [];
+  const negativeHeld = (actor.system.effects?.slots?.["karmic.steadfast"] === true)
+    ? Math.min(2, Number(actor.system.resources?.negativeenergy?.stacks) || 0) : 0;
+  const karmicBoxes = Array.from({ length: negativeHeld }, (each, index) => ({ name: `karmic${index + 1}`,
+    label: "Karmic Reflection: 1 Negative Energy, +1",
+    tip: "1 to the Dice Score; passed, 2(T) Ki Points back for it." }));
   const ready = await prepareRoll(actor, [], `Steadfast Check - ${THRESHOLDS[rolled].label}`, `Needing ${target}`,
     { offerWilling: false,
       // Heart of Glass (4): failed without rolling, for a Ki Surge out of sequence and Surging after.
-      boxes: (actor.system.effects?.slots?.["steadfast.heartOfGlass"] === true) ? [{ name: "heartOfGlass",
-        label: "Heart of Glass: fail it", tip: "No roll: a Ki Surge as an Out-of-Sequence Maneuver, then Surging until the end of your turn if you like." }] : [],
+      boxes: [...((actor.system.effects?.slots?.["steadfast.heartOfGlass"] === true) ? [{ name: "heartOfGlass",
+        label: "Heart of Glass: fail it", tip: "No roll: a Ki Surge as an Out-of-Sequence Maneuver, then Surging until the end of your turn if you like." }] : []),
+        // Karmic Reflection (4): a Negative Energy for 1 on the Dice Score - up to 2; passed, 2(T) of Ki each.
+        ...karmicBoxes],
       pick: lifeSteps.length ? { label: "Earthling Resolve",
         tip: "Spend Life Points: 1 to the Dice Score for every 2(bT). Once an Encounter.",
         options: [{ value: "0", label: "None" },
@@ -25040,6 +25110,10 @@ export async function rollSteadfastCheck(actor) {
     return false;
   }
   const lifeSpent = lifeSteps.includes(Number(ready?.picked)) ? Number(ready.picked) : 0;
+  const karmicSpent = (ready?.boxes ?? []).filter(name => /^karmic\d$/.test(name)).length;
+  if (karmicSpent) {
+    await setResource(actor, "negativeenergy", (Number(actor.system.resources?.negativeenergy?.stacks) || 0) - karmicSpent);
+  }
   if (lifeSpent) {
     await actor.update({ "system.life.value": Math.max(0, (Number(actor.system.life?.value) || 0) - (lifeSpent * lifeStep)),
       [`flags.${SCOPE}.resolveLifeEncounter`]: game.combat?.id ?? "none" });
@@ -25051,7 +25125,8 @@ export async function rollSteadfastCheck(actor) {
   // What moves the die itself - Legacy's "increase the Natural Result for all Steadfast
   // Checks" - is its own term, named, so the card says where it came from.
   const terms = [die, natural ? `${natural}[Natural Result]` : "", bonus ? String(bonus) : "",
-    thresholdDice ? String(thresholdDice) : "", lifeSpent ? `${lifeSpent}[Earthling Resolve]` : ""].filter(Boolean);
+    thresholdDice ? String(thresholdDice) : "", lifeSpent ? `${lifeSpent}[Earthling Resolve]` : "",
+    karmicSpent ? `${karmicSpent}[Karmic Reflection]` : ""].filter(Boolean);
   const roll = new Roll(terms.join(" + "));
   await roll.evaluate();
   // Failed, what may pass it instead is asked first - before anything that failing does.
@@ -25076,6 +25151,11 @@ export async function rollSteadfastCheck(actor) {
       { threshold: rolled, target, base, carried, passed }) } }
   });
 
+  // Karmic Reflection (4): passed, 2(T) of Ki for each Negative Energy spent on it.
+  if (passed && karmicSpent) {
+    await actor.update({ "system.ki.value": Math.min(Number(actor.system.ki?.max) || 0,
+      (Number(actor.system.ki?.value) || 0) + 2 * karmicSpent * Math.max(1, Number(actor.system.tierOfPower) || 1)) });
+  }
   // Passed: what answers succeeding at it - Surprising Resilience's Overwhelm.
   if (passed) await steadfastPassed(actor, rolled);
 
@@ -26017,6 +26097,8 @@ function renderAttack(message, html) {
   if (!result) resilienceButtons(message, attack, container);
   // Telepathic Warning (2), (3): you or an Ally targeted by an Opponent - the Dodge raised for it, before it is settled.
   if (!result) telepathicButtons(message, attack, container);
+  // Karmic Reflection (5): an Opponent's Critical, a Botch.
+  karmicInvertButtons(message, attack, container);
   // Negative Ki (3): an Impaired Opponent's Strike or Dodge, its Natural Result lowered before it is rolled.
   if (!result) negativeKiButtons(message, attack, container);
   // Refined Combat's Fleet-Footed: targeted by one you Studied - the Defense Value raised for it.

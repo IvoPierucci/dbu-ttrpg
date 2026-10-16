@@ -2780,6 +2780,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       Object.entries(DBUCharacterData.SAVING_THROWS).map(([save, attribute]) => {
       // Or one an effect gives the bonus to as well - Warrior's Pride's Cognitive.
       const racial = racialSaves.includes(save) || (this.effects?.slots?.[`save.racial.${save}`] === true);
+      // Or the higher Score of one an effect lets it be worked out from - Karmic Reflection's Morale from Magic or Force.
+      const from = Object.keys(atts).filter(key => this.effects?.slots?.[`save.${save}.from.${key}`] === true)
+        .reduce((best, key) => ((atts[key]?.score ?? 0) > (atts[best]?.score ?? 0)) ? key : best, attribute);
       return [save, {
         label: save.charAt(0).toUpperCase() + save.slice(1),
         racial,
@@ -2791,7 +2794,7 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // finished Throw, which is what Calculation Priority asks.
         value: withEffects(this, "save.all",
           withEffects(this, `save.${save}`,
-            atts[attribute].score + (racial ? this.perTier(1) : 0)),
+            atts[from].score + (racial ? this.perTier(1) : 0)),
           { as: `save.${save}`, wraps: true }),
         criticalTarget: racial
           ? Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, this.criticalTarget - 1)
