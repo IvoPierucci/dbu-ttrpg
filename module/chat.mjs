@@ -15952,6 +15952,55 @@ function criticalStrikeButton(message, container, attack) {
 }
 
 /**
+ * Artful Strike (2) on a Parry's Strike Roll (the user's: "also for Parries"): a button for the one who Parried, its Natural
+ * Result 1 below its Critical Target - before the Wound Roll, on the same once a Round.
+ */
+function artfulParryButtons(message, container, attack) {
+  const result = attack?.result;
+  if (!result || result.wound) return;
+  for (const branch of result.targets ?? []) {
+    const target = fromUuidSync(branch.uuid ?? "");
+    if (!target?.isOwner || (branch.defense !== "parry") || !artfulOpen(target, branch.answer)) continue;
+    const refused = artfulRefused(target);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Critical - Artful Strike (${target.name}'s Parry)`;
+    button.disabled = Boolean(refused);
+    button.dataset.tooltip = refused || "Its Natural Result is 1 below the Critical Target: a Critical Result (1/Round)";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      await artfulParry(message, target);
+    });
+    container.append(button);
+  }
+}
+
+/**
+ * The Parry's Strike Roll a Critical Result: its Critical dice rolled onto what it came to before any Botch or Critical, and
+ * whether it was hit settled again against the attack's Strike. Turned aside now, what a won Parry offers is offered.
+ */
+async function artfulParry(message, target) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const branch = attack?.result?.targets?.find(entry => entry.uuid === target.uuid);
+  const side = branch?.answer;
+  if (!side || attack.result.wound || (branch.defense !== "parry") || !artfulOpen(target, side) || artfulRefused(target)) return;
+  await requestActorUpdate(target, { [`flags.${SCOPE}.artfulRound`]: roundKey() });
+  const extra = new Roll(side.criticalDice || target.system.dice?.criticalStrike?.formula || target.system.dice?.critical?.formula || "1d10");
+  await extra.evaluate();
+  const total = Math.max(0, (Number.isFinite(side.beforeOutcome) ? side.beforeOutcome : side.total) + extra.total);
+  const lines = [...withoutOutcome(side.lines ?? []), fromOutcome(diceLine(extra, "Critical - Artful Strike"))];
+  const answer = { ...side, total, outcome: "critical", lines, breakdown: breakdownText(lines, total) };
+  const hit = (Number(branch.against) || 0) > total;
+  await rewriteBranch(message, target.uuid, () => ({ answer, hit }));
+  if (!hit && branch.hit) {
+    offerReflect(message, attack, target, "Reflect - your Parry turned it aside");
+    offerAbsorb(message, attack, target, "Attack Absorption - your Parry turned it aside");
+  }
+  await answerFor(target, "critical-scored", {});
+}
+
+/**
  * Evolved Right Eye (5): "After rolling your Strike Roll for an Attacking Maneuver, you may declare that it is a Critical
  * Result regardless of the Natural Result. If your result would have been a Botch Result, it is also no longer a Botch
  * Result." Its Critical dice rolled onto what it came to before any Botch or Critical, the hit settled again against
@@ -26793,6 +26842,8 @@ function renderAttack(message, html) {
   conduitButtons(message, container, attack);
   // Evolved Right Eye (5): the Strike a Critical Result, before the Wound Roll.
   criticalStrikeButton(message, container, attack);
+  // Artful Strike (2): a Parry's Strike Roll, too.
+  artfulParryButtons(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.
   bondButtons(message, attack, container);
 
