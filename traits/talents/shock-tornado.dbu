@@ -1,0 +1,18 @@
+id: shock-tornado
+name: Shock Tornado
+talentCategory: counter
+prerequisites: N/A
+description: >
+  As you redirect your enemy’s attack, you are able to turn that momentum against them, creating space between you and your assailant.
+text: >
+  Shock Tornado: As you redirect your enemy’s attack, you are able to turn that momentum against them, creating space between you and your assailant.
+  –Prerequisites: N/A
+  (1)-[Triggered, 1/Round]: When you successfully avoid an Opponent’s Attacking Maneuver through the Parry effect of the Defend Maneuver, if that Opponent is within your Melee Range, you may target that Opponent with the Thrust Maneuver as an Out-of-Sequence Maneuver. If you succeed the Clash for the Thrust Maneuver, reduce that Opponent’s Life Points by 1/2 of your Might.
+
+---
+
+[passive]
+# (1) A Parry that turned the attack aside, its maker within your Melee Range: the Thrust at them offered on its card, out of
+# sequence, beside Wild Counter's Basic Attack - taken, once a Round, its Ki paid; its Clash won, half your Might off their Life
+# Points (chat.mjs offerShockTornado, takeShockTornado, settleThrust).
+allow counter.shockTornado;

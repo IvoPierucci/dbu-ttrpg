@@ -2859,6 +2859,10 @@ async function settleThrust(message, clash) {
     await reduceLifePoints(target, Math.floor((Number(thruster.system.attributes?.agility?.mod) || 0) / 2),
       { reason: "Hyper Tornado" });
   }
+  // Shock Tornado: "If you succeed the Clash for the Thrust Maneuver, reduce that Opponent's Life Points by 1/2 of your Might."
+  if (clash.shockTornado) {
+    await reduceLifePoints(target, Math.floor((Number(thruster.system.might) || 0) / 2), { reason: "Shock Tornado" });
+  }
 }
 
 /**
@@ -9084,6 +9088,8 @@ export async function postThrust(actor, target, maneuver, { pushOnly = false } =
           thrust: { stage: "strike", applied: false, chosen: "", ...(pushOnly ? { pushOnly: true } : {}) },
           // Hyper Tornado's, while Spinning.
           ...(hyperTornado(actor) ? { tornadoHyper: true } : {}),
+          // Shock Tornado's: won, half the Might off their Life Points.
+          ...(maneuver.shockTornado ? { shockTornado: true } : {}),
           ready: [],
           result: null
         }
@@ -16128,6 +16134,7 @@ async function artfulParry(message, target) {
     offerReflect(message, attack, target, "Reflect - your Parry turned it aside");
     offerAbsorb(message, attack, target, "Attack Absorption - your Parry turned it aside");
     offerWildCounter(message, attack, target);
+    await offerShockTornado(message, attack, target);
   }
   await answerFor(target, "critical-scored", {});
 }
@@ -18248,6 +18255,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.technique) return takeTechniqueOffer(message, actor, offer);
   // Buddy Collector (2)'s: a Buddy called, not a Maneuver.
   if (offer.callBuddy) return takeBuddyCall(message, actor, offer);
+  // Shock Tornado's: the Thrust, its Clash marked.
+  if (offer.shockTornado) return takeShockTornado(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
   // Wild Counter's, once a Round.
   if (offer.grants?.wildCounter) {
@@ -21158,8 +21167,9 @@ async function resolveAttackWork(message, attack) {
     // Attack Absorption names the Parry alone.
     if (own.defense !== "parry") continue;
     offerAbsorb(message, attack, target, "Attack Absorption - your Parry turned it aside");
-    // Wild Counter: the Basic Attack back at its maker.
+    // Wild Counter: the Basic Attack back at its maker. Shock Tornado: the Thrust.
     offerWildCounter(message, attack, target);
+    await offerShockTornado(message, attack, target);
   }
 }
 
@@ -21205,6 +21215,46 @@ function joltOpen(actor, attack) {
   const capacity = Number(attacker?.system?.capacity?.max) || 0;
   return ((Number(attack?.energyCharges) || 0) >= 1)
     || ((capacity > 0) && ((Number(attack?.kiWager) || 0) >= Math.floor(capacity / 4)));
+}
+
+/**
+ * Shock Tornado: "When you successfully avoid an Opponent's Attacking Maneuver through the Parry effect of the Defend Maneuver,
+ * if that Opponent is within your Melee Range, you may target that Opponent with the Thrust Maneuver as an Out-of-Sequence
+ * Maneuver." Offered on its card, at its maker; taken, once a Round (takeShockTornado).
+ */
+async function offerShockTornado(message, attack, actor) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!message || !attacker || !actor || (attacker.uuid === actor.uuid) || actor.system?.defeated
+    || (actor.system?.effects?.slots?.["counter.shockTornado"] !== true) || (actor.getFlag?.(SCOPE, "shockTornadoRound") === roundKey())) return;
+  const { whyNotWithinMelee } = await import("./maneuvers.mjs");
+  if (whyNotWithinMelee(actor, attacker, "")) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "thrust",
+    maneuverName: "Thrust", targetUuid: attacker.uuid, reason: "Shock Tornado - your Parry turned it aside", shockTornado: true } });
+}
+
+/**
+ * Shock Tornado, taken: the Thrust at them out of sequence - no Action, its Ki paid, still within your Melee Range - its Clash
+ * opened marked, so a win takes 1/2 of your Might off their Life Points (settleThrust).
+ */
+async function takeShockTornado(message, actor, offer) {
+  if (actor.getFlag?.(SCOPE, "shockTornadoRound") === roundKey()) {
+    ui.notifications.warn(`${actor.name}: Shock Tornado - already used this Combat Round.`);
+    return null;
+  }
+  const target = fromUuidSync(offer.targetUuid ?? "");
+  const thrust = getManeuver("thrust");
+  if (!target || !thrust) return null;
+  const { whyNotWithinMelee, spendManeuverCost, maneuverKiCost } = await import("./maneuvers.mjs");
+  const far = whyNotWithinMelee(actor, target, "Shock Tornado");
+  if (far) {
+    ui.notifications.warn(far);
+    return null;
+  }
+  if (!await spendManeuverCost(actor, thrust, maneuverKiCost(thrust, null, actor))) return null;
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  await actor.setFlag(SCOPE, "shockTornadoRound", roundKey());
+  await recordManeuverType(actor, "outOfSequence");
+  return postThrust(actor, target, { ...thrust, name: `${thrust.name} (Shock Tornado)`, shockTornado: true });
 }
 
 /** Wild Counter's uses this Round, against once - three times with Perfect Counter (1): whether there are none left. */
