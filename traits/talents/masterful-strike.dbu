@@ -17,8 +17,9 @@ text: >
 # (chat.mjs rollSide, evaluateCheck).
 allow strike.baseDieTwice;
 
-# (2) As your turn starts, ticked on the turn's card, once an Encounter: Masterful Strike (a mark) till the end of this turn -
-# every penalty on your Strike Rolls left off, Long Range's among them (chat.mjs rollSide, strikePenaltiesIgnored).
-[triggered/start-of-turn, 1/encounter, effect 2]
+# (2) As your turn starts, ticked on the turn's card, once an Encounter - never Automatic, no button (the user's): Masterful
+# Strike (a mark) till the end of this turn - every penalty on your Strike Rolls left off, Long Range's among them (chat.mjs
+# rollSide, strikePenaltiesIgnored).
+[triggered/start-of-turn, 1/encounter, chosen, effect 2]
 gain(masterful-strike-mark);
 expires(masterful-strike-mark, turn);
