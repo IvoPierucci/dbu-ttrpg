@@ -23760,6 +23760,27 @@ async function settleBuddyHit(message, target, attack, saved) {
 }
 
 /**
+ * Buddy System (2): "You may spend 1 Karma Point to gain a Buddy of your choice (you cannot choose a Special Buddy)." Which -
+ * every Buddy but the Special ones, or none - asked; gained as from the Gear tab, its own questions asked there; the Karma
+ * Point paid once it is, so a Buddy refused halfway costs nothing.
+ */
+export async function buddySystem(actor) {
+  if (!actor) return;
+  if ((Number(actor.system?.karma) || 0) < 1) return ui.notifications.warn(`${actor.name} has no Karma Point to spend.`);
+  const { traitsOfKind } = await import("./effects/traits.mjs");
+  const offered = traitsOfKind("gear").filter(trait => (trait.itemType === "buddy") && (trait.special !== true))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const picked = await askPlayerChoice(actor, `${actor.name}: Buddy System - 1 Karma Point`,
+    [...offered.map(trait => ({ value: trait.id, label: trait.name })), { value: "none", label: "None" }]);
+  const definition = offered.find(trait => trait.id === picked);
+  if (!definition || !actor.sheet?.giveGear) return;
+  const made = await actor.sheet.giveGear(definition);
+  if (!made?.length) return;
+  const { spendKarma } = await import("./karma.mjs");
+  await spendKarma(actor, { name: "Buddy System", cost: 1 });
+}
+
+/**
  * Buddy Collector (2), taken: which Buddy - one not destroyed, not locked, not Active, and room for it - asked, called, and the
  * once an Encounter spent. Out of sequence, so no Instant and no turn asked for.
  */

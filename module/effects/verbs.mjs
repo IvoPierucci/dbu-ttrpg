@@ -283,6 +283,12 @@ export const VERBS = Object.freeze({
     names: [],
     doc: "Masters of Movement (4): you or an Ally, or nobody, asked - placed the same way (chat.mjs mastersPlace)."
   },
+  buddySystem: {
+    args: [0, 0],
+    names: [],
+    doc: "Buddy System (2): a Buddy of your choice - not a Special one - gained as from the Gear tab, and a Karma Point paid "
+       + "once it is (chat.mjs buddySystem)."
+  },
   pacifistMend: {
     args: [0, 0],
     names: [],

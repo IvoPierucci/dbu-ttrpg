@@ -1,0 +1,26 @@
+id: buddy-system
+name: Buddy System
+talentCategory: buddy
+prerequisites: Personality Score of 4+
+description: >
+  You know better than anyone not to go anywhere alone.
+text: >
+  Buddy System: You know better than anyone not to go anywhere alone.
+  –Prerequisites: Personality Score of 4+
+  (1)-[Passive]: While you have an active Buddy, increase the Dice Score of your Steadfast Checks by 1.
+  (2)-[Triggered/Start of Combat Encounter]: You may spend 1 Karma Point to gain a Buddy of your choice (you cannot choose a Special Buddy).
+
+---
+
+[passive]
+# (1)
+if (buddyActive) {
+    steadfast.dice += 1;
+}
+
+# (2) As the Combat Encounter starts, ticked on its card - never Automatic, a Karma Point being spent: which Buddy asked among
+# all but the Special ones, gained as from the Gear tab (its own questions asked), and the Karma Point paid once it is
+# (chat.mjs buddySystem).
+[triggered/start-of-encounter, chosen, effect 2]
+requires karma >= 1;
+buddySystem();
