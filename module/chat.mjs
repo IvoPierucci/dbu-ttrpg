@@ -9319,6 +9319,9 @@ function renderSkillClash(message, html) {
     }
   }
 
+  // Conduit of Spirit (2): a Bonded Ally's Cognitive Clash taken in their place, before they answer it.
+  conduitClashButtons(message, clash, container);
+
   // Both sides confirm the same way, and each only for themselves. The challenger has
   // as much to declare as the defender does - a willing failure, an effect - so the
   // card asks them both rather than rolling the challenger's dice unasked.
@@ -16301,6 +16304,139 @@ async function mastersPlaced(actor, placed) {
       `Masters of Movement: ${placed.name} is placed on any Square of the Battlefield.`)}</div>`,
     ...(offers.length ? { flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: offers } } } : {})
   });
+}
+
+/**
+ * Conduit of Spirit (2): "If a Bonded Ally is targeted by an Opponent's effect that requires them to use the Cognitive Saving
+ * Throw for a Clash, you may choose to shift the target of that effect to you (regardless of distance or AoE that was used to
+ * target that Ally). Apply the effect as usual, but with you as the target instead of the targeted Ally, including what occurs
+ * if you lose this Clash." Once a Round. A button for whoever is Bonded to its defender, before they have answered: the Clash
+ * theirs to answer from then on.
+ */
+function conduitClashButtons(message, clash, container) {
+  if ((clash.category !== "save") || clash.result || (clash.ready ?? []).includes(clash.defenderUuid)) return;
+  const answers = (clash.defenderSaves?.length ? clash.defenderSaves : clash.saves) ?? [];
+  if ((answers.length !== 1) || (answers[0] !== "cognitive")) return;
+  const ally = fromUuidSync(clash.defenderUuid ?? "");
+  const challenger = fromUuidSync(clash.challengerUuid ?? "");
+  if (!ally || !challenger) return;
+  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  if (side(challenger) === side(ally)) return;
+  const seen = new Set();
+  for (const token of canvas?.tokens?.placeables ?? []) {
+    const yardrat = token.actor;
+    if (!yardrat?.isOwner || seen.has(yardrat.uuid) || yardrat.system?.defeated || [ally.uuid, challenger.uuid].includes(yardrat.uuid)
+      || (yardrat.system?.effects?.slots?.["conduit.shift"] !== true)
+      || (yardrat.getFlag?.(SCOPE, "bonded")?.uuid !== ally.uuid)) continue;
+    seen.add(yardrat.uuid);
+    const used = yardrat.getFlag?.(SCOPE, "conduitRound") === roundKey();
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Conduit of Spirit - ${yardrat.name}`;
+    button.disabled = used;
+    button.dataset.tooltip = used ? "Once a Combat Round."
+      : `Take this from ${ally.name}: you its target instead, and whatever losing it does`;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      const fresh = message.getFlag(SCOPE, CLASH_FLAG) ?? clash;
+      if (fresh.result || (fresh.defenderUuid !== ally.uuid)) return;
+      await requestActorUpdate(yardrat, { [`flags.${SCOPE}.conduitRound`]: roundKey() });
+      requestEdit(message, { type: "clash", clash: { ...fresh, defenderUuid: yardrat.uuid, defenderName: yardrat.name,
+        defenderSave: "", ready: (fresh.ready ?? []).filter(uuid => uuid !== ally.uuid), conduitFrom: ally.uuid } });
+    });
+    container.append(button);
+  }
+}
+
+/**
+ * Conduit of Spirit (3): "You may choose not to gain a stack of Power and instead gain a stack of the Impaired Combat Condition
+ * until the start of your next turn. If you do, you may target a willing Ally within a Large Sphere AoE (centered on you). That
+ * Ally enters the Superior State until the end of their next turn." The stack is given back by the effect itself; whom asked -
+ * within the Sphere, and willing, the table's.
+ */
+export async function conduitPower(actor) {
+  if (!actor) return;
+  const { gainCondition, enterState } = await import("./effects/moments-runtime.mjs");
+  if (await gainCondition(actor, "impaired", 1) !== false) {
+    await lasting(actor, { kind: KINDS.CONDITION, key: "impaired", edge: EDGES.START, source: "Conduit of Spirit" });
+  }
+  const allies = alliesOnScene(actor).filter(each => !each.system?.defeated && !((Number(each.system?.states?.superior) || 0) > 0));
+  if (!allies.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Conduit of Spirit - Superior, a willing Ally within a Large Sphere`,
+    [...allies.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "Nobody" }]);
+  const ally = allies.find(each => each.uuid === picked);
+  if (ally) await enterState(ally, "superior", 1, "next-turn", "Conduit of Spirit");
+}
+
+/**
+ * Conduit of Spirit (4): "If you and at least 1 of your Allies are targeted by an Opponent's Attacking Maneuver with an AoE,
+ * you may make a Might Clash against that Opponent, but increase the Dice Score of their Might Clash by 1(T) for every Energy
+ * Charge or rank of the Power Shot Advantage applied to that Attacking Maneuver." A button for each of its targets who has it,
+ * once the Strike is settled and before the Wound Roll - Float Mirror's window; once an Encounter.
+ */
+function conduitButtons(message, container, attack) {
+  const result = attack?.result;
+  if (!result || result.wound || deflection(attack) || !attackArea(attack)) return;
+  const attacker = fromUuidSync(attack.attackerUuid ?? "");
+  if (!attacker) return;
+  const aimed = attackTargets(attack).map(entry => fromUuidSync(entry.uuid)).filter(Boolean);
+  for (const yardrat of aimed) {
+    if (!yardrat.isOwner || (yardrat.uuid === attacker.uuid) || yardrat.system?.defeated
+      || (yardrat.system?.effects?.slots?.["conduit.mirror"] !== true)) continue;
+    const side = new Set(alliesOnScene(yardrat).map(each => each.uuid));
+    if (side.has(attacker.uuid) || !aimed.some(each => side.has(each.uuid))) continue;
+    const used = yardrat.getFlag?.(SCOPE, "conduitEncounter") === (game.combat?.id ?? "none");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Conduit of Spirit - ${yardrat.name}`;
+    button.disabled = used;
+    button.dataset.tooltip = used ? "Once a Combat Encounter."
+      : "A Might Clash, half your targeted Allies' Might on yours: won, it misses. Fatigued either way";
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      return takeConduit(message, yardrat);
+    });
+    container.append(button);
+  }
+}
+
+/**
+ * Conduit of Spirit (4), taken: "If you do, increase your Might by 1/2 of the total Might of all other Allies targeted by that
+ * Attacking Maneuver. If you win this Might Clash, that Attacking Maneuver fails to hit you or any of your Allies. You suffer a
+ * stack of the Fatigue Combat Condition after using this effect." Won, turned aside as Float Mirror's is.
+ */
+async function takeConduit(message, actor) {
+  const attack = message.getFlag(SCOPE, ATTACK_FLAG);
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attack?.result || attack.result.wound || deflection(attack) || !attacker) return;
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.(SCOPE, "conduitEncounter") === encounter) {
+    return ui.notifications.warn(`${actor.name}: Conduit of Spirit is once a Combat Encounter.`);
+  }
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.conduitEncounter`]: encounter });
+  const side = new Set(alliesOnScene(actor).map(each => each.uuid));
+  const lent = Math.floor(attackTargets(attack).map(entry => fromUuidSync(entry.uuid))
+    .filter(each => each && side.has(each.uuid)).reduce((sum, each) => sum + (Number(each.system?.might) || 0), 0) / 2);
+  const counted = (Number(attack.energyCharges) || 0) + (Number(attack.powerShotRanks) || 0);
+  const per = Math.max(1, Number(attacker.system.tierOfPower) || 1);
+  const [mine, theirs] = await Promise.all([
+    rollSide(actor, [{ label: "Might", value: actor.system.might },
+      ...(lent ? [{ label: "Allies' Might (1/2)", value: lent }] : [])],
+      { criticalDice: actor.system.dice.critical.formula, slot: "might" }),
+    rollSide(attacker, [{ label: "Might", value: attacker.system.might },
+      ...(counted ? [{ label: "Charges and Power Shot", written: `+${counted}(T)`, value: counted * per }] : [])],
+      { criticalDice: attacker.system.dice.critical.formula, slot: "might" })
+  ]);
+  // The attacker takes ties, as against Float Mirror.
+  const won = mine.total > theirs.total;
+  const entry = { uuid: actor.uuid, name: actor.name, allyUuid: actor.uuid, allyName: actor.name, effect: "conduit",
+    clash: { mine, theirs, won }, deflected: won, incomingDamage: null, outcome: null };
+  const now = message.getFlag(SCOPE, ATTACK_FLAG);
+  requestEdit(message, { type: "attack", attack: { ...now, interventions: [...interventions(now), entry] } });
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  await gainCondition(actor, "fatigued", 1);
 }
 
 /** Power of the Weak (4): Bonded to that Ally - "until you become Bonded to another Ally". */
@@ -26113,6 +26249,10 @@ function interveneText(attack, entry) {
     return entry.deflected ? `${who}'s Float Mirror wins the Might Clash: the attack misses everyone`
       : `${who}'s Float Mirror loses the Might Clash, and the attack goes on as it was`;
   }
+  if (entry.effect === "conduit") {
+    return entry.deflected ? `${who}'s Conduit of Spirit wins the Might Clash: the attack misses`
+      : `${who}'s Conduit of Spirit loses the Might Clash, and the attack goes on as it was`;
+  }
   const ally = Handlebars.escapeExpression(entry.allyName);
   const label = Handlebars.escapeExpression(option?.label ?? entry.effect);
 
@@ -26455,6 +26595,8 @@ function renderAttack(message, html) {
   angelicOffenseButtons(message, container, attack);
   // Float Mirror: the Strike settled, before the Wound Roll - every target on Glass.
   floatMirrorButtons(message, container, attack);
+  // Conduit of Spirit (4): an Opponent's AoE at you and an Ally - the same window, once an Encounter.
+  conduitButtons(message, container, attack);
   // Evolved Right Eye (5): the Strike a Critical Result, before the Wound Roll.
   criticalStrikeButton(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.

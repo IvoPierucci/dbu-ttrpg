@@ -1,0 +1,37 @@
+id: conduit-of-spirit
+name: Conduit of Spirit
+order: 4
+category: body
+importance: secondary
+description: >
+  The spiritual energy that ripples and flows through the Yardrat people allows them to perform unique feats of teamwork.
+text: >
+  Conduit of Spirit (Body): The spiritual energy that ripples and flows through the Yardrat people allows them to perform unique feats of teamwork.
+  (1)-[Passive]: Increase your Cognitive Saving Throw and Might by 1(T) while you have at least 1 Ally and none of your Allies are Defeated.
+  (2)-[Triggered, 1/Round]: If a Bonded Ally is targeted by an Opponent’s effect that requires them to use the Cognitive Saving Throw for a Clash, you may choose to shift the target of that effect to you (regardless of distance or AoE that was used to target that Ally). Apply the effect as usual, but with you as the target instead of the targeted Ally, including what occurs if you lose this Clash.
+  (3)-[Triggered/Power, 1/Round]: You may choose not to gain a stack of Power and instead gain a stack of the Impaired Combat Condition until the start of your next turn. If you do, you may target a willing Ally within a Large Sphere AoE (centered on you). That Ally enters the Superior State until the end of their next turn.
+  (4)-[Triggered, 1/Encounter]: If you and at least 1 of your Allies are targeted by an Opponent’s Attacking Maneuver with an AoE, you may make a Might Clash against that Opponent, but increase the Dice Score of their Might Clash by 1(T) for every Energy Charge or rank of the Power Shot Advantage applied to that Attacking Maneuver. If you do, increase your Might by 1/2 of the total Might of all other Allies targeted by that Attacking Maneuver. If you win this Might Clash, that Attacking Maneuver fails to hit you or any of your Allies. You suffer a stack of the Fatigue Combat Condition after using this effect.
+
+---
+
+[passive]
+# (1) Allies are the tokens of your token's disposition on the scene; read again as any of them changes (dbu-ttrpg.mjs).
+if (alliesStanding) {
+    save.cognitive += 1(T);
+    might += 1(T);
+}
+# (2) An Opponent's Clash your Bonded Ally (Power of the Weak's) answers with the Cognitive Saving Throw alone: a button on its
+# card before they have answered, once a Round - you its defender instead (chat.mjs conduitButtons).
+allow conduit.shift;
+# (4) An Opponent's attack with an AoE aimed at you and an Ally: a button on its card once the Strike is settled, before the
+# Wound Roll, once an Encounter - the Might Clash as Float Mirror's, half the other Allies' Might on yours; won, it misses;
+# Fatigued either way (chat.mjs conduitButtons, takeConduit).
+allow conduit.mirror;
+
+# (3) The Power Up used, a stack of Power held: chosen in its window. The stack given back; Impaired till the start of your
+# next turn; a willing Ally within a Large Sphere - the table's - asked: Superior till the end of their next turn
+# (chat.mjs conduitPower).
+[triggered/power, 1/round, effect 3]
+requires hasResource("power");
+power.stacks -= 1;
+conduitPower();

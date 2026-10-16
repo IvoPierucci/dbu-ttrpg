@@ -536,6 +536,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "knockedNear", "failedNear",
   // The Ally Empowered open to a Bond (Power of the Weak's).
   "bondOpen",
+  // An Ally on the scene, and none of them Defeated (Conduit of Spirit's).
+  "alliesStanding",
   // A Unique Ability being declared (Frigid Tricks').
   "usingUnique",
   // The largest in the Combat Encounter (King's Stature's).

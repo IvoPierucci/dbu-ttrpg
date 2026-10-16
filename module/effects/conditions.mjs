@@ -279,6 +279,19 @@ const PREDICATES = {
   },
 
   /**
+   * Conduit of Spirit (1): "while you have at least 1 Ally and none of your Allies are Defeated" - the tokens of your token's
+   * disposition on the scene.
+   */
+  alliesStanding: scope => {
+    const self = scope.data?.parent;
+    const own = self?.getActiveTokens?.(false, true)?.[0]?.document?.disposition;
+    if (own === undefined) return false;
+    const allies = (globalThis.canvas?.tokens?.placeables ?? []).map(token => (token.document?.disposition === own) ? token.actor : null)
+      .filter(other => other && (other.uuid !== self.uuid));
+    return (allies.length > 0) && allies.every(other => !other.system?.defeated);
+  },
+
+  /**
    * Power of the Weak (4): the Ally Empowered (moment empowered-ally) not Bonded to you already, nor to another - "You cannot
    * be Bonded with a Character that another Yardrat is already Bonded to."
    */

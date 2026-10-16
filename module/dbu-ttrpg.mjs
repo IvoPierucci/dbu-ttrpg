@@ -156,6 +156,20 @@ Hooks.on("updateItem", item => forget(item.uuid));
 }
 Hooks.on("deleteItem", item => forget(item.uuid));
 
+// Conduit of Spirit (1): "while you have at least 1 Ally and none of your Allies are Defeated" - read off the others, so read
+// again as one of them is hurt or healed, or a token comes, goes or changes side.
+function conduitRefresh() {
+  for (const actor of new Set((canvas?.tokens?.placeables ?? []).map(token => token.actor))) {
+    if (!actor || !Array.from(actor.items ?? []).some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "conduit-of-spirit")) continue;
+    actor.reset();
+    if (actor.sheet?.rendered) actor.sheet.render();
+  }
+}
+Hooks.on("updateActor", (actor, changes) => { if (changes.system?.life) conduitRefresh(); });
+Hooks.on("createToken", () => conduitRefresh());
+Hooks.on("deleteToken", () => conduitRefresh());
+Hooks.on("updateToken", (token, changes) => { if ("disposition" in (changes ?? {})) conduitRefresh(); });
+
 Hooks.once("setup", async () => {
   registerManeuverSocket();
   registerDebugTools();
