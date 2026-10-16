@@ -17275,6 +17275,18 @@ function conditioned(actor) {
     && (getTrait(key)?.kind === "conditions") && (getTrait(key)?.combatCondition !== false));
 }
 
+/**
+ * Combat Tactician: "Increase your Combat Rolls by 1(T) against any Opponent(s) that are suffering from a Combat Condition"
+ * (`combatRolls.vsConditioned`) - an Opponent, of another side than yours, with one on them.
+ */
+function tacticianParts(actor, other) {
+  const slot = actor?.system?.effects?.slots?.["combatRolls.vsConditioned"];
+  const add = Number(slot?.add) || 0;
+  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  if (!add || !other || (other.uuid === actor.uuid) || (side(other) === side(actor)) || !conditioned(other)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Against a Combat Condition", value: add }];
+}
+
 /** Heart of Courage (5)'s mark on them: no Combat Condition counted for an Opponent's effects. */
 function courageous(actor) {
   return (Number(actor?.system?.conditions?.["courage-mark"]) || 0) > 0;
@@ -20703,7 +20715,8 @@ async function resolveAttackWork(message, attack) {
     // and what it is worth against each of them is not the same number.
     const analysisParts = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target),
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
-      ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike")]
+      ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
+      ...tacticianParts(attacker, target)]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
@@ -22433,6 +22446,7 @@ async function rollAttackWoundWork(message, attack) {
       ...enemyParts(attacker, target),
       ...inferiorParts(attacker, target, "wound"),
       ...brigandParts(attacker, target, "wound"),
+      ...tacticianParts(attacker, target),
       ...studiedParts(attacker, target),
       ...refinedParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
@@ -22657,6 +22671,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...inferiorDodge(actor, attack));
   // Draconic Physique (2): an Impaired Opponent's attack - the Defense Value under the Dodge.
   parts.push(...draconicParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
+  // Combat Tactician: the attack of an Opponent suffering from a Combat Condition.
+  parts.push(...tacticianParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Intelligent Fighter (5): the attack of one you Studied.
   parts.push(...studiedDodge(actor, attack));
   // Telepathic Warning: the Dodge raised for this attack by whoever warned them.
@@ -23054,6 +23070,8 @@ const DEFENCES = {
       ...(defenceFor(attack, actor.uuid)?.parryWith ?? []),
       // Power of the Weak (3): "increase your Strike and Dodge Rolls" - a Parry's is a Strike.
       ...weakParts(actor, attack),
+      // Combat Tactician: a Parry's Strike against an Opponent suffering from a Combat Condition.
+      ...tacticianParts(actor, fromUuidSync(attack?.attackerUuid ?? "")),
       // Mind Reading: "the Dice Score of any Strike Roll made through the Parry effect of the Defend Maneuver".
       ...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true })
     ],
