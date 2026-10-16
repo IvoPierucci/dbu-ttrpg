@@ -1,0 +1,21 @@
+id: artful-strike
+name: Artful Strike
+talentCategory: attacking
+prerequisites: Insight Score of 4+
+description: >
+  Masterfully able to weave through an opponent’s defense, you catch them unaware.
+text: >
+  Artful Strike: Masterfully able to weave through an opponent’s defense, you catch them unaware.
+  –Prerequisites: Insight Score of 4+
+  (1)-[Passive]: Increase the Dice Category of your Critical Result Extra Dice by 1 Category for your Strike Rolls.
+  (2)-[Triggered, 1/Round]: If your Strike Roll’s Natural Result is 1 below the Critical Target, score a Critical Result on that Strike Roll.
+
+---
+
+[passive]
+# (1) A Strike Roll's Critical Extra Dice, held to the same ceiling as every raise of them (actor-character.mjs dice.criticalStrike,
+# chat.mjs rollSide).
+dice.critical.strike.category += 1;
+# (2) Your Strike a Natural Result 1 below its Critical Target: a "Critical" button on the attack's card before the Wound Roll,
+# once a Round (chat.mjs criticalStrikeButton, declareStrikeCritical).
+allow strike.artfulCritical;

@@ -8045,6 +8045,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
       outcome: "normal", lines: [noteLine(`The recorded Wound Roll: ${fixedTotal}`)],
       breakdown: `Recorded Wound Roll: ${fixedTotal}` };
   }
+  // Artful Strike (1): a Strike Roll's Critical Extra Dice, where an effect raises those alone.
+  if ((slot === "strike") && actor?.system?.dice?.criticalStrike && (criticalDice === actor.system.dice.critical?.formula)) {
+    criticalDice = actor.system.dice.criticalStrike.formula;
+  }
   // Twin-Linked keeps the higher of two, Dead-Link the lower. The second is made without offering
   // the triggered effects again - they answered the first - and the one set aside is named.
   if (linked) {
@@ -15896,12 +15900,42 @@ function criticalStrikeRefused(actor) {
   return "";
 }
 
+/**
+ * Artful Strike (2): "If your Strike Roll's Natural Result is 1 below the Critical Target, score a Critical Result on that
+ * Strike Roll." Once a Round - its own count, beside Evolved Right Eye's.
+ */
+function artfulOpen(attacker, strike) {
+  if ((attacker?.system?.effects?.slots?.["strike.artfulCritical"] !== true) || !strike || (strike.outcome === "critical")) return false;
+  const target = Number(strike.rules?.criticalTarget ?? attacker.system.criticalTarget) || 10;
+  return Number(strike.natural) === (target - 1);
+}
+
+/** Artful Strike's: its once a Round taken. */
+function artfulRefused(actor) {
+  return (actor?.getFlag?.(SCOPE, "artfulRound") === roundKey()) ? "Once a Combat Round." : "";
+}
+
 /** Its button: the attacker's, once the Strike is rolled and before the Wound Roll, on a Strike that is not one already. */
 function criticalStrikeButton(message, container, attack) {
   const attacker = fromUuidSync(attack.attackerUuid ?? "");
   const strike = attack.result?.strike;
-  if (!attacker?.isOwner || !strike || attack.result.wound || (strike.outcome === "critical")
-    || (attacker.system.effects?.slots?.["strike.declareCritical"] !== true)) return;
+  if (!attacker?.isOwner || !strike || attack.result.wound || (strike.outcome === "critical")) return;
+  // Artful Strike (2): a Natural Result 1 below the Critical Target.
+  if (artfulOpen(attacker, strike)) {
+    const refused = artfulRefused(attacker);
+    const artful = document.createElement("button");
+    artful.type = "button";
+    artful.className = "dbu-clash-button";
+    artful.textContent = "Critical - Artful Strike";
+    artful.disabled = Boolean(refused);
+    artful.dataset.tooltip = refused || "Its Natural Result is 1 below the Critical Target: a Critical Result (1/Round)";
+    artful.addEventListener("click", async () => {
+      artful.disabled = true;
+      await declareStrikeCritical(message, attacker, { via: "artful" });
+    });
+    container.append(artful);
+  }
+  if (attacker.system.effects?.slots?.["strike.declareCritical"] !== true) return;
   const refused = criticalStrikeRefused(attacker);
   const button = document.createElement("button");
   button.type = "button";
@@ -15923,21 +15957,25 @@ function criticalStrikeButton(message, container, attack) {
  * Result." Its Critical dice rolled onto what it came to before any Botch or Critical, the hit settled again against
  * each one it was aimed at - as a Karmic Effect settles it - and the Critical answered as any is (critical-scored).
  */
-async function declareStrikeCritical(message, attacker) {
+async function declareStrikeCritical(message, attacker, { via = "eye" } = {}) {
   const attack = message.getFlag(SCOPE, ATTACK_FLAG);
   const result = attack?.result;
   const side = result?.strike;
-  if (!side || result.wound || (side.outcome === "critical") || criticalStrikeRefused(attacker)) return;
+  const artful = via === "artful";
+  if (!side || result.wound || (side.outcome === "critical")) return;
+  if (artful ? (!artfulOpen(attacker, side) || artfulRefused(attacker)) : criticalStrikeRefused(attacker)) return;
   const extra = new Roll(side.criticalDice || attacker.system.dice?.critical?.formula || "1d10");
   await extra.evaluate();
   const total = Math.max(0, (Number.isFinite(side.beforeOutcome) ? side.beforeOutcome : side.total) + extra.total);
-  const lines = [...withoutOutcome(side.lines ?? []), fromOutcome(diceLine(extra, "Critical - Evolved Right Eye"))];
+  const lines = [...withoutOutcome(side.lines ?? []),
+    fromOutcome(diceLine(extra, artful ? "Critical - Artful Strike" : "Critical - Evolved Right Eye"))];
   const strike = { ...side, total, outcome: "critical", lines, breakdown: breakdownText(lines, total) };
   // Critical Point (2)'s doubling, on a Strike declared a Critical Result as on one rolled.
   if (attack.primed) primedCritical(attacker, strike);
   const used = attacker.getFlag(SCOPE, "criticalDeclared") ?? {};
   const encounter = game.combat?.id ?? "none";
-  await requestActorUpdate(attacker, { [`flags.${SCOPE}.criticalDeclared`]: { encounter, round: roundKey(),
+  if (artful) await requestActorUpdate(attacker, { [`flags.${SCOPE}.artfulRound`]: roundKey() });
+  else await requestActorUpdate(attacker, { [`flags.${SCOPE}.criticalDeclared`]: { encounter, round: roundKey(),
     count: ((used.encounter === encounter) ? (Number(used.count) || 0) : 0) + 1 } });
   let settledTargets = result.targets ?? [];
   for (const entry of targetResults(attack).filter(each => each.own && !each.own.applied)) {

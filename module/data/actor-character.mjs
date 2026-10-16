@@ -2444,13 +2444,19 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Critical Extra Dice: a d4 at Tier 1, one Category higher per Tier above that.
     // An effect can push them further, but no further than the shared ceiling.
     const increaseLimit = maxCategoryIncrease(this.baseTierOfPower);
-    const criticalCategory = greaterDiceCategory(this.tierOfPower)
-      + Math.min(this.diceModifiers.criticalCategory, increaseLimit);
+    // What effects raise them by - the stored modifier and `dice.critical.category` - and a Strike Roll's alone (Artful
+    // Strike's), all under the one ceiling.
+    const criticalRaise = this.diceModifiers.criticalCategory + (Number(this.effects?.slots?.["dice.critical.category"]?.add) || 0);
+    const criticalCategory = greaterDiceCategory(this.tierOfPower) + Math.min(criticalRaise, increaseLimit);
+    const strikeCriticalCategory = greaterDiceCategory(this.tierOfPower)
+      + Math.min(criticalRaise + (Number(this.effects?.slots?.["dice.critical.strike.category"]?.add) || 0), increaseLimit);
 
     this.dice = {
       extra: { category: extraCategory, formula: categoryFormula(extraCategory) },
       greater: { category: greaterCategory, formula: categoryFormula(greaterCategory) },
       critical: { category: criticalCategory, formula: categoryFormula(criticalCategory) },
+      // A Strike Roll's, where an effect raises those alone.
+      criticalStrike: { category: strikeCriticalCategory, formula: categoryFormula(strikeCriticalCategory) },
       maxCategoryIncrease: increaseLimit
     };
 
