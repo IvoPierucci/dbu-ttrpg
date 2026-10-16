@@ -15,9 +15,9 @@ text: >
 # (1) Not built: a Unique Ability's Prerequisite is shown and never checked by the system, so there is nothing for it to
 # loosen - the table's, as every Prerequisite is.
 
-# (2) A Unique Ability declared: ticked in the window as it is, once a Round - Jack of All Styles (a mark), Wound Rolls 2(T),
-# till the end of your turn.
-[triggered/declare-maneuver, 1/round, effect 2]
+# (2) A Unique Ability declared, once a Round - Jack of All Styles (a mark), Wound Rolls 2(T), till the end of your turn.
+# Automatic by default, its Triggered/Automatic button (the user's); set Triggered, asked in the window as it is declared.
+[triggered/declare-maneuver, toggle, 1/round, effect 2]
 requires usingUnique;
 gain(jack-of-all-styles-mark);
 expires(jack-of-all-styles-mark, turn);
