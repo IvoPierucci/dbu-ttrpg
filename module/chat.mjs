@@ -596,6 +596,30 @@ export function conditionGained(actor, key) {
 }
 
 /**
+ * Exploit Expert (2): "If an Opponent makes an Attacking Maneuver while they are within the Melee Range of 2+ Allies (including
+ * yourself, for this effect), this triggers your Exploit Maneuver." For each who has it and the Exploit - the attacker their
+ * Opponent, within the Melee Range of two or more of their side, them counted - the Exploit at them, out of sequence, on the
+ * attack's card. Taken, once a Round (takeOutOfSequence).
+ */
+async function expertOffers(message, attacker) {
+  if (!message || !attacker || !canvas?.tokens) return;
+  const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const { whyNotWithinMelee } = await import("./maneuvers.mjs");
+  const on = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()].filter(Boolean);
+  for (const watcher of on) {
+    if ((watcher.uuid === attacker.uuid) || watcher.system?.defeated || (watcher.system?.effects?.slots?.["exploit.byAllies"] !== true)
+      || (side(watcher) === side(attacker)) || (watcher.getFlag?.(SCOPE, "expertRound") === roundKey())
+      || !watcher.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
+    const near = on.filter(each => !each.system?.defeated && (side(each) === side(watcher)) && (each.uuid !== attacker.uuid)
+      && !whyNotWithinMelee(each, attacker, ""));
+    if (near.length < 2) continue;
+    requestEdit(message, { type: "offer", offer: { actorUuid: watcher.uuid, actorName: watcher.name, maneuverId: "exploit",
+      maneuverName: "Exploit", targetUuid: attacker.uuid, reason: `Exploit Expert - ${attacker.name} within ${near.length} Melee Ranges`,
+      grants: { expert: true } } });
+  }
+}
+
+/**
  * Master of Openings (2): "If an Opponent uses the Power Up Maneuver or Transformation Maneuver while not at Long Range, this
  * triggers your Exploit Maneuver." For each who has it and the Exploit - `user` their Opponent, not at Long Range - the Exploit
  * at them, out of sequence, on its card. Taken, once a Round (takeOutOfSequence).
@@ -18341,6 +18365,14 @@ async function takeOutOfSequence(message, actor, offer) {
       await actor.setFlag(SCOPE, "unscathedRound", roundKey());
     }
     // Sinister Dragon: once a Round - and 2 Negative Energy instead of the Counter Action, if they would.
+    // Exploit Expert (2): once a Round, spent here.
+    if (offer.grants?.expert) {
+      if (actor.getFlag?.(SCOPE, "expertRound") === roundKey()) {
+        ui.notifications.warn(`${actor.name}: Exploit Expert - already used this Combat Round.`);
+        return;
+      }
+      await actor.setFlag(SCOPE, "expertRound", roundKey());
+    }
     // Master of Openings (2): once a Round, spent here.
     if (offer.grants?.openings) {
       if (actor.getFlag?.(SCOPE, "openingsRound") === roundKey()) {
@@ -19265,6 +19297,8 @@ export async function postAttack(actor, target, maneuver,
   // Burrowed Strike: "This Attacking Maneuver triggers the Exploit Maneuver for any Opponent on an adjacent Square to you."
   offerExploits(card, actor, burrowed ? { ...maneuver, exploitable: [maneuver.exploitable,
     "Opponents on a Square adjacent to the attacker (Burrowed Strike)"].filter(Boolean).join("; ") } : maneuver);
+  // Exploit Expert (2): made within the Melee Range of 2 or more of an Opponent's side.
+  if (card && !reflecting) await expertOffers(card, actor);
   return card;
 }
 
@@ -21757,7 +21791,11 @@ function woundParts(attacker, attack) {
   // Draconic Physique, Sinister Dragon: "Increase the Wound Rolls of your Attacking Maneuvers made through the Exploit
   // Maneuver by 2(T)."
   const sinister = attack.viaExploit && (attacker.system.effects?.slots?.["draconic.exploitWound"] === true);
+  // Exploit Expert (1): made through the Exploit Maneuver.
+  const expert = attack.viaExploit ? attacker.system.effects?.slots?.["wound.viaExploit"] : null;
   return [
+    ...((Number(expert?.add) || 0) ? [{ label: (expert.parts ?? []).map(part => part.source).find(Boolean) ?? "Exploit",
+      value: Number(expert.add) }] : []),
     ...(sinister ? [{ label: "Draconic Physique (Exploit)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...((Number(pinpoint?.add) || 0) ? [{ label: (pinpoint.parts ?? []).map(part => part.source).find(Boolean) ?? "Called Shot or Exploit",
       value: Number(pinpoint.add) }] : []),
