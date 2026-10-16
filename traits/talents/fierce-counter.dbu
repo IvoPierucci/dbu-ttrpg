@@ -1,0 +1,19 @@
+id: fierce-counter
+name: Fierce Counter
+talentCategory: counter
+prerequisites: Wild Counter
+description: >
+  Your counterattacks are stronger than most, striking with brutal efficiency.
+text: >
+  Fierce Counter: Your counterattacks are stronger than most, striking with brutal efficiency.
+  –Prerequisites: Wild Counter
+  (1)-[Passive]: Increase your Strike Roll when using the Parry effect of the Defend Maneuver by 1(T).
+  (2)-[Triggered, 1/Round]: When you use the Basic Attack Maneuver through the effects of Wild Counter, increase the Wound Roll for that Attacking Maneuver by 1(T).
+
+---
+
+[passive]
+# (1) The Strike Roll a Parry makes.
+parry += 1(T);
+# (2) Wild Counter's Basic Attack, taken: 1(T) on its Wound Roll, once a Round (chat.mjs takeOutOfSequence).
+allow counter.fierce;

@@ -18212,6 +18212,12 @@ async function takeOutOfSequence(message, actor, offer) {
       return null;
     }
     await actor.setFlag(SCOPE, "wildCounterRound", roundKey());
+    // Fierce Counter (2): "increase the Wound Roll for that Attacking Maneuver by 1(T)" - once a Round.
+    if ((actor.system?.effects?.slots?.["counter.fierce"] === true) && (actor.getFlag?.(SCOPE, "fierceCounterRound") !== roundKey())) {
+      await actor.setFlag(SCOPE, "fierceCounterRound", roundKey());
+      offer = { ...offer, grants: { ...offer.grants, woundExtra: [...(offer.grants.woundExtra ?? []),
+        { label: "Fierce Counter", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }] } };
+    }
   }
   // Violent Rebuke (3)'s, once a Round.
   if (offer.grants?.rebuke && (actor.getFlag?.(SCOPE, "rebukeRound") === roundKey())) {
