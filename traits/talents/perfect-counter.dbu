@@ -1,0 +1,19 @@
+id: perfect-counter
+name: Perfect Counter
+talentCategory: counter
+prerequisites: Fierce Counter, Tier of Power 2+
+description: >
+  Able to defend even without preparations, your ability to counterattack is peerless.
+text: >
+  Perfect Counter: Able to defend even without preparations, your ability to counterattack is peerless.
+  –Prerequisites: Fierce Counter, Tier of Power 2+
+  (1)-[Passive]: The 1/Round Keyword on the first effect of Wild Counter becomes 3/Round.
+  (2)-[Triggered, 1/Round]: When you are targeted by an Attacking Maneuver, use the Parry option of the Defend Maneuver without spending a Counter Action.
+
+---
+
+[passive]
+# (1) Wild Counter's Basic Attack three times a Round (chat.mjs offerWildCounter, wildCounterUsed).
+allow counter.perfectWild;
+# (2) The Parry chosen in Respond: asked, once a Round - no Counter Action spent for it (chat.mjs, where a Defend is paid).
+allow counter.perfectParry;

@@ -18207,11 +18207,13 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.spike) return takeSpike(message, actor, offer);
   // Wild Counter's, once a Round.
   if (offer.grants?.wildCounter) {
-    if (actor.getFlag?.(SCOPE, "wildCounterRound") === roundKey()) {
-      ui.notifications.warn("Wild Counter has been used this Combat Round.");
+    if (wildCounterSpent(actor)) {
+      ui.notifications.warn("Wild Counter has been used up this Combat Round.");
       return null;
     }
-    await actor.setFlag(SCOPE, "wildCounterRound", roundKey());
+    const used = actor.getFlag?.(SCOPE, "wildCounterRound");
+    await actor.setFlag(SCOPE, "wildCounterRound", { round: roundKey(),
+      n: ((used?.round === roundKey()) ? (Number(used.n) || 0) : 0) + 1 });
     // Fierce Counter (2): "increase the Wound Roll for that Attacking Maneuver by 1(T)" - once a Round.
     if ((actor.system?.effects?.slots?.["counter.fierce"] === true) && (actor.getFlag?.(SCOPE, "fierceCounterRound") !== roundKey())) {
       await actor.setFlag(SCOPE, "fierceCounterRound", roundKey());
@@ -21091,10 +21093,17 @@ async function resolveAttackWork(message, attack) {
 function offerWildCounter(message, attack, actor) {
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   if (!message || !attacker || !actor || (attacker.uuid === actor.uuid) || actor.system?.defeated
-    || (actor.system?.effects?.slots?.["counter.wild"] !== true) || (actor.getFlag?.(SCOPE, "wildCounterRound") === roundKey())) return;
+    || (actor.system?.effects?.slots?.["counter.wild"] !== true) || wildCounterSpent(actor)) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
     maneuverName: "Basic Attack", targetUuid: attacker.uuid, reason: "Wild Counter - your Parry turned it aside",
     grants: { wildCounter: true } } });
+}
+
+/** Wild Counter's uses this Round, against once - three times with Perfect Counter (1): whether there are none left. */
+function wildCounterSpent(actor) {
+  const used = actor?.getFlag?.(SCOPE, "wildCounterRound");
+  const count = (used?.round === roundKey()) ? (Number(used.n) || 0) : 0;
+  return count >= ((actor?.system?.effects?.slots?.["counter.perfectWild"] === true) ? 3 : 1);
 }
 
 /**
@@ -26627,7 +26636,13 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
   const parryWith = (chosen.defence === "parry") ? await askParryWeapon(target) : [];
   if (parryWith === null) return;
 
-  if (!free && !await spendActions(target, 1, "counter")) return;
+  // Perfect Counter (2): "use the Parry option of the Defend Maneuver without spending a Counter Action" - asked, once a Round.
+  const perfect = !free && (chosen.defence === "parry") && (target.system?.effects?.slots?.["counter.perfectParry"] === true)
+    && (target.getFlag?.(SCOPE, "perfectParryRound") !== roundKey())
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${target.name} - Perfect Counter` },
+      content: "<p data-tooltip=\"Once a Round\">This Parry without a Counter Action?</p>", rejectClose: false });
+  if (perfect) await target.setFlag(SCOPE, "perfectParryRound", roundKey());
+  if (!free && !perfect && !await spendActions(target, 1, "counter")) return;
   if (free) spendWriting(target, answered, "defend.free");
   if (byTension) {
     const held = Number(target.system.resources?.tension?.stacks) || 0;
