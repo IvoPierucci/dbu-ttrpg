@@ -278,6 +278,10 @@ const PREDICATES = {
     return opponentNear(self, knocked);
   },
 
+  /** Buddy to Buddies (1): a Buddy of yours Active - not destroyed, not locked. */
+  buddyActive: scope => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "gear")
+    && (item.system?.itemType === "buddy") && item.system.buddy?.active && !item.system.buddy?.destroyed && !item.system.buddy?.locked),
+
   /** Spiritual Pacifist (5): Ki Points the Ally Empowered gained (moment empowered-ally). */
   kiGained: scope => (Number(scope.context?.gained) || 0) > 0,
 

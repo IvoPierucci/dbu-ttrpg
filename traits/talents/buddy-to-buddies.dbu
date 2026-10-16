@@ -1,0 +1,23 @@
+id: buddy-to-buddies
+name: Buddy to Buddies
+talentCategory: buddy
+prerequisites: Personality Score of 4+
+description: >
+  You are renowned for your kindness, and your reputation as “everyone’s friend” precedes you.
+text: >
+  Buddy to Buddies: You are renowned for your kindness, and your reputation as “everyone’s friend” precedes you.
+  –Prerequisites: Personality Score of 4+
+  (1)-[Passive]: While you have an active Buddy, increase your Morale Saves and Soak Value by 1(bT).
+  (2)-[Triggered, 1/Encounter]: If your Buddy would be destroyed, you can dismiss them instead
+
+---
+
+[passive]
+# (1)
+if (buddyActive) {
+    save.morale += 1(bT);
+    soakValue += 1(bT);
+}
+# (2) A Called Shot destroying your Buddy: beside "destroyed" and the Karma Point, a button to dismiss it instead - free to be
+# called again - once an Encounter (chat.mjs settleBuddyHit).
+allow buddy.dismissInstead;

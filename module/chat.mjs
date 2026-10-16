@@ -23723,6 +23723,17 @@ async function settleBuddyHit(message, target, attack, saved) {
   const own = targetResult(attack, target.uuid);
   if (!own?.buddyHit || own.applied) return;
   const buddy = target.items?.get(own.buddyHit.itemId);
+  // Buddy to Buddies (2): "If your Buddy would be destroyed, you can dismiss them instead" - once an Encounter, and free to be
+  // called again.
+  if (saved === "dismiss") {
+    const encounter = game.combat?.id ?? "none";
+    if (target.getFlag?.(SCOPE, "buddyDismissEncounter") === encounter) return;
+    requestEdit(message, { type: "attack", attack: { ...attack, result: { ...attack.result,
+      targets: replaceTarget(attack, target.uuid, { applied: true }) } } });
+    await requestActorUpdate(target, { [`flags.${SCOPE}.buddyDismissEncounter`]: encounter });
+    if (buddy) await buddy.update({ "system.buddy.active": false });
+    return settledNote(message, `${own.buddyHit.name} is dismissed instead (Buddy to Buddies).`);
+  }
   if (saved) {
     if (!await spendKarma(target, { name: `Save ${own.buddyHit.name}`, cost: 1 })) return;
   }
@@ -27283,6 +27294,17 @@ function renderAttack(message, html) {
         save.dataset.tooltip = "It is dismissed, and cannot be called again this Combat Encounter.";
         save.addEventListener("click", () => settleBuddyHit(message, target, attack, true));
         container.append(save);
+      }
+      // Buddy to Buddies (2): dismissed instead, once an Encounter.
+      if ((target.system?.effects?.slots?.["buddy.dismissInstead"] === true)
+        && (target.getFlag?.(SCOPE, "buddyDismissEncounter") !== (game.combat?.id ?? "none"))) {
+        const dismiss = document.createElement("button");
+        dismiss.type = "button";
+        dismiss.className = "dbu-clash-button";
+        dismiss.textContent = `Dismiss ${entry.own.buddyHit.name} instead`;
+        dismiss.dataset.tooltip = "Buddy to Buddies: not destroyed - dismissed, and it may be called again (once an Encounter)";
+        dismiss.addEventListener("click", () => settleBuddyHit(message, target, attack, "dismiss"));
+        container.append(dismiss);
       }
       continue;
     }
