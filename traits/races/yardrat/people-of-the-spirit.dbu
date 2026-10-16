@@ -1,0 +1,29 @@
+id: people-of-the-spirit
+name: People of the Spirit
+order: 1
+category: mind
+importance: primary
+description: >
+  A spiritually focused culture, Yardrat society promotes inner peace and enlightenment.
+text: >
+  People of the Spirit (Mind): A spiritually focused culture, Yardrat society promotes inner peace and enlightenment.
+  (1)-[Passive]: At Character Creation, gain a stack of Spirit Control. This stack of Spirit Control does not count towards your Awakening Limit, and you do not gain the Attribute Modifier Bonus from this stack of Spirit Control.
+  (2)-[Passive]: At Character Creation, gain 2 Skill Ranks in the Clairvoyance Skill.
+  (3)-[Passive]: You are always treated as being within the Melee Range of your Allies for the effects of the Empower Maneuver.
+  (4)-[Passive]: Reduce the TP Cost of all Unique Abilities by 3.
+  (5)-[1/Encounter]: As an Instant Maneuver, you may use the Empower Maneuver as if you spent 3 Actions. Your target for this usage of the Empower Maneuver may immediately use a Surge of their choice as an Out-of-Sequence Maneuver.
+
+---
+
+# (1) Not built: Spirit Control is an Awakening, and Awakenings are not in this system yet.
+[passive]
+# (2) Counted with the Progression tab's.
+skill.clairvoyance.ranks += 2;
+# (3) The Empower's Ki doubled as within your Melee Range, wherever the Ally is (use-maneuver.mjs transferKi).
+allow empower.anyRange;
+# (4) Never below half the listed TP (unique.mjs uniqueTPOf).
+unique.technical.tpCost -= 3;
+unique.magical.tpCost -= 3;
+# (5) The Empower's Instant button on the Maneuvers tab, once an Encounter: 3 Actions' worth, no Action paid, and a Surge of
+# their choice offered on its card to the one Empowered (actor-character-sheet.mjs, use-maneuver.mjs transferKi).
+allow empower.spiritInstant;

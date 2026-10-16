@@ -413,6 +413,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       basicAttackInstant: DBUCharacterSheet._onBasicAttackInstant,
       signatureInstant: DBUCharacterSheet._onSignatureInstant,
       glassInstant: DBUCharacterSheet._onGlassInstant,
+      spiritInstant: DBUCharacterSheet._onSpiritInstant,
       thiefInstant: DBUCharacterSheet._onThiefInstant,
       hateInstant: DBUCharacterSheet._onHateInstant,
       creativeOutOfSequence: DBUCharacterSheet._onCreativeOutOfSequence,
@@ -1594,6 +1595,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
               && (this.actor.system.effects?.slots?.["signature.asInstant"] === true),
             // Hate Empowerment (4): "spend 2 Revenge Points to make a Basic Attack Maneuver as an Instant Maneuver".
             hateInstant: (maneuver.id === "basic-attack") && (this.actor.system.effects?.slots?.["hate.instant"] === true),
+            // People of the Spirit (5): "As an Instant Maneuver, you may use the Empower Maneuver as if you spent 3 Actions."
+            spiritInstant: Boolean(maneuver.empower) && (this.actor.system.effects?.slots?.["empower.spiritInstant"] === true),
             // Thief (3): "You may use a 'Thief Maneuver' as an Instant Maneuver if you have access to it."
             thiefInstant: THIEF_MANEUVERS.includes(maneuver.id) && (this.actor.system.effects?.slots?.["thief.instant"] === true),
             // Glass Combat (3): "you may use the Movement Maneuver as an Instant Maneuver".
@@ -5948,6 +5951,23 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * Glass Combat (3): "During your turn, if you are occupying a Square that has the Glass Environmental Quality, you may use
    * the Movement Maneuver as an Instant Maneuver." Once a Round; ending on Glass, the player's.
    */
+  /**
+   * People of the Spirit (5): "As an Instant Maneuver, you may use the Empower Maneuver as if you spent 3 Actions. Your target
+   * for this usage of the Empower Maneuver may immediately use a Surge of their choice as an Out-of-Sequence Maneuver."
+   * Once an Encounter.
+   */
+  static async _onSpiritInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["empower.spiritInstant"] !== true)) return;
+    const encounter = game.combat?.id ?? "none";
+    if (this.actor.getFlag("dbu-ttrpg", "spiritInstantEncounter") === encounter) {
+      return ui.notifications.warn(`${this.actor.name}: already used this Combat Encounter.`);
+    }
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant", presetActions: 3, spiritSurge: true })) return;
+    return this.actor.setFlag("dbu-ttrpg", "spiritInstantEncounter", encounter);
+  }
+
   static async _onGlassInstant(event, target) {
     const item = this.actor.items.get(target.dataset.itemId);
     if (!item || (this.actor.system.effects?.slots?.["movement.glassInstant"] !== true)) return;

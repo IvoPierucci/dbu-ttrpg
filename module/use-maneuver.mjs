@@ -118,6 +118,8 @@ function actionCostOf(maneuver, spent = null) {
  * @returns {Promise<number|null>} the count, or null if the player backed out
  */
 async function askActionsSpent(actor, maneuver) {
+  // "As if you spent 3 Actions" - People of the Spirit's Empower: the count given, not asked.
+  if (Number(maneuver.presetActions) > 0) return Number(maneuver.presetActions);
   const least = maneuver.actionCost ?? 1;
   const kind = (maneuver.type === "counter") ? "counter" : "standard";
 
@@ -342,7 +344,7 @@ function permitted(actor, maneuver) {
  *
  * @returns {Promise<boolean>} false if the player backed out, and nothing was moved.
  */
-async function transferKi(actor, ally, actionsSpent) {
+async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {}) {
   if (!ally) {
     ui.notifications.warn(`${actor.name} needs an Ally to Empower. Target a token first.`);
     return false;
@@ -355,7 +357,9 @@ async function transferKi(actor, ally, actionsSpent) {
   // same answer the Melee Range gives everywhere else.
   const squares = squaresAway(actor, ally);
   const reach = Math.max(0, actor.system.meleeRange ?? 0) + 1;
-  const close = (squares !== null) && (squares <= reach);
+  // People of the Spirit (3): "always treated as being within the Melee Range of your Allies for the effects of the Empower
+  // Maneuver".
+  const close = (actor.system.effects?.slots?.["empower.anyRange"] === true) || ((squares !== null) && (squares <= reach));
 
   const cap = Math.max(0, Math.min(
     actionsSpent * 2 * might * (close ? 2 : 1),
@@ -419,7 +423,10 @@ async function transferKi(actor, ally, actionsSpent) {
   // Questing Wisdom (3): the Ally's Power Up or Transformation, out of sequence, offered on this card.
   const { questingOffers, trustedAllyOffers } = await import("./chat.mjs");
   // And Refined Combat's Trusted Ally, the Empowering one's.
-  const offers = [...questingOffers(ally), ...await trustedAllyOffers(actor, ally)];
+  const offers = [...questingOffers(ally), ...await trustedAllyOffers(actor, ally),
+    // People of the Spirit (5): "Your target ... may immediately use a Surge of their choice as an Out-of-Sequence Maneuver."
+    ...(spiritSurge ? [{ actorUuid: ally.uuid, actorName: ally.name, maneuverId: "surge", maneuverName: "Surge",
+      reason: `People of the Spirit - ${actor.name}'s Empower`, surge: true }] : [])];
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}
@@ -5622,7 +5629,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
   // Empower hands Ki over before anything is recorded, so backing out of the amount
   // leaves the Maneuver unused rather than spent on nothing.
-  if (maneuver.empower && !await transferKi(actor, targetActor, actionsSpent)) return false;
+  if (maneuver.empower && !await transferKi(actor, targetActor, actionsSpent, { spiritSurge: Boolean(maneuver.spiritSurge) })) return false;
 
   if (!outOfSequence) await payActions(actor, maneuver, actionsSpent);
   if (burstActions) await spendActions(actor, burstActions);
