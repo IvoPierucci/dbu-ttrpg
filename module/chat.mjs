@@ -8947,7 +8947,11 @@ function grappleAllParts(actor, clash = null, uuid = "") {
   // Gigantic Grip: "increase the Dice Score of your Grapple Check by 1(T) (max. 3(T)) for every Size Category you are
   // larger than the opposing Character".
   const larger = clash ? Math.min(3, Math.max(0, gripDifference(actor, clashOpponent(clash, uuid)))) : 0;
+  // Judo Training (1): "Increase your Grapple Checks when already in a Grapple by 1(T)" - every one but the Check that starts it.
+  const judo = clash?.grapple && (clash.grapple.kind !== "start") && !clash.telekinetic
+    && (actor.system.effects?.slots?.["judo.inGrapple"] === true);
   return [...(value ? [{ label: "Grapple Checks", value }] : []),
+    ...(judo ? [{ label: "Judo Training", written: "+1(T)", value: Math.max(1, actor.system.tierOfPower ?? 1) }] : []),
     ...(larger ? [{ label: "Gigantic Grip", written: `+${larger}(T)`, value: larger * Math.max(1, actor.system.tierOfPower ?? 1) }] : [])];
 }
 
@@ -13733,6 +13737,24 @@ export async function undyingFall(actor) {
   if (!((Number(actor?._source?.system?.life?.value ?? actor?.system?.life?.value) || 0) < 0)) return;
   const { beginDefeat } = await import("./combat.mjs");
   return beginDefeat(actor, { silenced: true });
+}
+
+/**
+ * Judo Training (2): "If you are in a Grapple as the Grappler, you may use the Basic Attack Maneuver or the Launch Maneuver as an
+ * Out-of-Sequence Maneuver." Which, asked; unspent where none is made.
+ */
+export async function judoStrike(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (!actor.system.grapple?.partner || (actor.system.grapple.role !== "grappler")) {
+    ui.notifications.warn(`${actor.name}: Judo Training - only in a Grapple as the Grappler.`);
+    return UNSPENT;
+  }
+  const which = await askPlayerChoice(actor, `${actor.name}: Judo Training`,
+    [{ value: "basic-attack", label: "Basic Attack" }, { value: "launch", label: "Launch" }]);
+  if (!["basic-attack", "launch"].includes(which)) return UNSPENT;
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === which));
+  return (await useManeuver(actor, own ? definitionOf(own) : getManeuver(which), { outOfSequence: true })) ? undefined : UNSPENT;
 }
 
 /**

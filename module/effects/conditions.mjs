@@ -430,6 +430,9 @@ const PREDICATES = {
   allyHitThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "cutthroatAllyHit") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
 
+  /** In a Grapple as the Grappler - Judo Training's. */
+  grappler: scope => Boolean(scope.data?.grapple?.partner) && (scope.data?.grapple?.role === "grappler"),
+
   /** Is this an even-numbered Combat Round - Born for Battle's. */
   evenRound: () => {
     const round = Number(globalThis.game?.combat?.started ? globalThis.game.combat.round : 0) || 0;

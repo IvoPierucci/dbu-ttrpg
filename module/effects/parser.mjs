@@ -518,6 +518,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "kiMultiplied", "kiLocked",
   // The one Defeated, your Lock On Target; no Counter Action left (Lingering Instincts').
   "defeatedLockOn", "noCounterActions",
+  // In a Grapple as the Grappler (Judo Training's).
+  "grappler",
   // Healthy in truth, and the Superior State's extra Damage waived (Divine Physique's).
   "trulyHealthy", "superiorUnhurt",
   // Natural Armor to mend (Survivor's Plating); an AoE that hit more than one (Overwhelming Pressure's).

@@ -1,0 +1,25 @@
+id: judo-training
+name: Judo Training
+talentCategory: grappling
+prerequisites: Brawler
+description: >
+  Expanding your training in the art of submission holds, you are able to use your grip on a target to deal damage or reposition them as you please.
+text: >
+  Judo Training: Expanding your training in the art of submission holds, you are able to use your grip on a target to deal damage or reposition them as you please.
+  –Prerequisites: Brawler
+  (1)-[Passive]: Increase your Grapple Checks when already in a Grapple by 1(T).
+  (2)-[Triggered/Start of Turn]: If you are in a Grapple as the Grappler, you may use the Basic Attack Maneuver or the Launch Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Every Grapple Check made within a Grapple - an escape, a Launch, a Pin - as either side; not the one that starts it
+# (chat.mjs grappleAllParts).
+allow judo.inGrapple;
+
+# (2) On your turn's card while the Grappler, never Automatic (it hands over an Out-of-Sequence Maneuver): the Basic Attack
+# or the Launch, which asked (chat.mjs judoStrike).
+[triggered/start-of-turn, outOfSequence, effect 2]
+if (grappler) {
+  judoStrike();
+}
