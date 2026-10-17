@@ -16,7 +16,7 @@ text: >
 [triggered/start-of-turn, effect 1]
 ki.value += floor(insight.mod / 2);
 
-# (2) Hit by an Opponent's Attacking Maneuver, once a Round: 1/4 of their Might, rounded up, on your Damage Reduction against it
-# (chat.mjs taiChiReductionFor).
-[triggered/being-hit, 1/round, effect 2]
-reduction.taiChi = true;
+[passive]
+# (2) Hit by an Opponent's Attacking Maneuver, once a Round - always, no button (the user's): 1/4 of their Might, rounded up, on
+# your Damage Reduction against it (chat.mjs taiChiReductionFor).
+allow reduction.taiChi;

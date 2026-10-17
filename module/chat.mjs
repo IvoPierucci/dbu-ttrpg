@@ -1032,14 +1032,17 @@ async function shakenBy(by, target) {
  */
 /**
  * Tai Chi Practitioner (2): "If you are hit by an Opponent's Attacking Maneuver, increase your Damage Reduction by 1/4 (rounded
- * up) of that Opponent's Might for the duration of that Maneuver" - where it was ticked, or is Automatic; once a Round, spent
- * only where it gives something.
+ * up) of that Opponent's Might for the duration of that Maneuver" - always, no button (the user's); once a Round, spent only
+ * where it gives something.
  */
-function taiChiReductionFor(target, attacker, incoming) {
-  if ((incoming?.slots?.["reduction.taiChi"] !== true) || !attacker || (attacker.uuid === target.uuid)
-    || alliesOnScene(target).some(ally => ally.uuid === attacker.uuid)) return 0;
+async function taiChiReductionFor(target, attacker, attack, uuid) {
+  // Settled again - the same hit: what it gave then.
+  const before = (attack?.result?.targets ?? []).find(entry => entry.uuid === uuid);
+  if (before?.hit) return Number(before.taiChiReduction) || 0;
+  if ((target?.system?.effects?.slots?.["reduction.taiChi"] !== true) || (target.getFlag?.(SCOPE, "taiChiRound") === roundKey())
+    || !attacker || (attacker.uuid === target.uuid) || alliesOnScene(target).some(ally => ally.uuid === attacker.uuid)) return 0;
   const value = Math.ceil(Math.max(0, Number(attacker.system?.might) || 0) / 4);
-  if (value) spendWriting(target, incoming, "reduction.taiChi");
+  if (value) await requestActorUpdate(target, { [`flags.${SCOPE}.taiChiRound`]: roundKey() });
   return value;
 }
 
@@ -21632,7 +21635,7 @@ async function resolveAttackWork(message, attack) {
       // King's Stature: "increase your Soak Value by 1(T) for every Size Category they are smaller than you for the
       // duration of that Attacking Maneuver" - worked out as the hit is, spent only where it gives something.
       sizeSoak: await sizeSoakFor(target, attacker, incoming),
-      taiChiReduction: taiChiReductionFor(target, attacker, incoming),
+      taiChiReduction: hit ? await taiChiReductionFor(target, attacker, attack, uuid) : 0,
       // Greed of the Hera (6): Greed spent as the hit is, 2(T) of Damage Reduction each for this attack.
       greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
       toughReduction: tough.value,
