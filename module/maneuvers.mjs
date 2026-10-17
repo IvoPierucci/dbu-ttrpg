@@ -1902,9 +1902,12 @@ export function whyNotPin(actor, maneuver) {
  */
 export function whyNotLaunch(actor, maneuver) {
   // Heel (2)'s as well: "While you are the Grappler in a Grapple ... target a Grappled Character in your Grapple".
-  if (maneuver?.choke) {
+  if (maneuver?.choke || maneuver?.suplex) {
     const { partner, role } = actor?.system?.grapple ?? {};
-    return (partner && (role === "grappler")) ? null : `${maneuver.name}: only as the Grappler in a Grapple.`;
+    if (!partner || (role !== "grappler")) return `${maneuver.name}: only as the Grappler in a Grapple.`;
+    // Suplex (1): "in a High Environment".
+    return (maneuver.suplex && !((Number(actor.system.battlefield?.highEnvironment) || 0) > 0))
+      ? `${maneuver.name}: only in a High Environment.` : null;
   }
   if (!maneuver?.launch) return null;
 
@@ -3952,6 +3955,7 @@ export async function loadManeuvers() {
     grapple: Boolean(trait.grapple),
     launch: Boolean(trait.launch),
     choke: Boolean(trait.choke),
+    suplex: Boolean(trait.suplex),
     movement: Boolean(trait.movement),
     pin: Boolean(trait.pin),
     powerUp: Boolean(trait.powerUp),

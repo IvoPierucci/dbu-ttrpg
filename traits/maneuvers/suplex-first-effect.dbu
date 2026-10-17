@@ -1,0 +1,23 @@
+id: suplex-first-effect
+name: Suplex
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+suplex: true
+usageLimit: 1/round
+fromTrait: suplex
+fromEffect: 1
+source: Core Rule
+description: >
+  Suplex's first effect, as a Maneuver: as the Grappler in a High Environment, a Might Clash against your Grappled - won, both
+  down to the Battle Environment below, and their Ground Collision doubled.
+text: >
+  (1)-[1/Round]: While you are the Grappler in a Grapple in a High Environment, as a Standard Maneuver with an Action Cost of 1 Action, you can make a Might Clash against the Grappled. If you win, move to the Battle Environment of the Square below and deal Ground Collision to your Opponent. Double the amount of Collision Damage they receive from this effect.
+
+---
+
+# Refused but as the Grappler in a High Environment (maneuvers.mjs whyNotLaunch); the Might Clash against the one held
+# (use-maneuver.mjs), settled - won, both down to the ground, and the card's collision button their Ground Collision, doubled
+# (chat.mjs settleGrapple).

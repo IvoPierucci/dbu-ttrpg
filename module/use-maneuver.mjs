@@ -2298,6 +2298,7 @@ export function definitionOf(item) {
     grapple: item.system.grapple,
     launch: item.system.launch,
     choke: Boolean(item.system.choke),
+    suplex: Boolean(item.system.suplex),
     terrainLift: item.system.terrainLift,
     godManeuver: item.system.godManeuver,
     divineMovement: item.system.divineMovement,
@@ -5374,7 +5375,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
     // Both of these aim themselves, so a partner whose Actor is gone is a refusal here
     // rather than a card that reads a Tier of Power off nothing.
-    if ((maneuver.launch || maneuver.pin || maneuver.choke)
+    if ((maneuver.launch || maneuver.pin || maneuver.choke || maneuver.suplex)
       && !fromUuidSync(actor.system.grapple?.partner ?? "")) {
       ui.notifications.warn(
         `${actor.name} is holding somebody who is no longer here. Let go and start again.`);
@@ -5800,7 +5801,15 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       extraActions: (Number(declared.extraActions) || 0) + (Number(burstActions) || 0)
     } } };
   }
-  const card = (maneuver.launch || maneuver.pin || maneuver.choke)
+  const card = maneuver.suplex
+    ? await (await import("./chat.mjs")).postMightClash(actor, fromUuidSync(actor.system.grapple.partner), {
+        maneuverName: maneuver.name,
+        reason: `Win: down to the Battle Environment below, and ${fromUuidSync(actor.system.grapple.partner)?.name ?? "they"} `
+          + "takes Ground Collision - doubled.",
+        grapple: { kind: "suplex", applied: false },
+        collision: { doubles: true, doubledBy: "Suplex", groundFirst: true }
+      })
+    : (maneuver.launch || maneuver.pin || maneuver.choke)
     ? await postGrappleCheck(actor, fromUuidSync(actor.system.grapple.partner), {
         maneuverName: maneuver.name,
         maneuver,
@@ -6578,6 +6587,7 @@ export function maneuverItemFrom(definition) {
       grapple: Boolean(definition.grapple),
       launch: Boolean(definition.launch),
       choke: Boolean(definition.choke),
+      suplex: Boolean(definition.suplex),
       terrainLift: Boolean(definition.terrainLift),
       godManeuver: Boolean(definition.godManeuver),
       divineMovement: Boolean(definition.divineMovement),

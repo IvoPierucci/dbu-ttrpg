@@ -3068,6 +3068,14 @@ async function settleGrapple(message, clash) {
     return;
   }
 
+  // Suplex (1): "If you win, move to the Battle Environment of the Square below" - the one held with you - its Ground
+  // Collision the card's button (doubled). Lost, nothing.
+  if (clash.grapple.kind === "suplex") {
+    if (winner !== "challenger") return settledNote(message, `${grappled.name} is not slammed down.`);
+    for (const actor of [grappler, grappled]) await requestActorUpdate(actor, { "system.battlefield.highEnvironment": 0 });
+    return settledNote(message, `${grappler.name} slams ${grappled.name} down to the Battle Environment below.`);
+  }
+
   // Heel (2): "If you win, they gain the Suffocating Combat Condition until they escape the Grapple" - lost, nothing.
   if (clash.grapple.kind === "choke") {
     if (winner !== "challenger") return settledNote(message, `${grappled.name} keeps breathing.`);
@@ -9228,7 +9236,7 @@ export async function postThrust(actor, target, maneuver, { pushOnly = false } =
 export async function postMightClash(actor, target,
                                      { maneuverName, clashLabel = "", reason = "",
                                        collision = null, grapple = null, ...leaves } = {}) {
-  await ChatMessage.create({
+  return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: "",
     flags: {
@@ -16396,6 +16404,40 @@ function brawlerButtons(message, container, attack) {
     });
     container.append(button);
   }
+}
+
+/**
+ * Suplex (2): "If you use an Attacking Maneuver of the Powered or Crushing Profile while in a Grapple that is not in a High
+ * Environment, if your target is a Grappled Character in that Grapple, apply Ground Collision for the Square that the Grappled
+ * Character is in." A button on its card, at its maker; once a Round, and once for the attack.
+ */
+function suplexButton(message, container, attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attacker?.isOwner || attack.suplexed || (attacker.system.effects?.slots?.["suplex.ground"] !== true)) return;
+  if (![attack.profile, ...extraProfilesOf(attack)].some(id => ["powered", "crushing"].includes(id))) return;
+  const { partner, role } = attacker.system.grapple ?? {};
+  const held = (role === "grappler") ? fromUuidSync(partner ?? "") : null;
+  if (!held || ((Number(attacker.system.battlefield?.highEnvironment) || 0) > 0)
+    || !attackTargets(attack).some(entry => entry.uuid === held.uuid)) return;
+  const used = attacker.getFlag?.(SCOPE, "suplexRound") === roundKey();
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-clash-button";
+  button.textContent = `Ground Collision - Suplex`;
+  button.disabled = used;
+  button.dataset.tooltip = used ? "Once a Combat Round." : `${held.name} collides with the Square they are in (1/Round)`;
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    if (attacker.getFlag?.(SCOPE, "suplexRound") === roundKey()) return;
+    const settled = await askCollisionDamage(held, { title: `${attack.maneuverName} - Suplex`, groundFirst: true });
+    if (!settled) {
+      button.disabled = false;
+      return;
+    }
+    await requestActorUpdate(attacker, { [`flags.${SCOPE}.suplexRound`]: roundKey() });
+    requestEdit(message, { type: "attack", attack: { ...(message.getFlag(SCOPE, ATTACK_FLAG) ?? attack), suplexed: true } });
+  });
+  container.append(button);
 }
 
 /** Brawler (2), taken: the Grapple at them out of sequence - once a Round, spent as it is used. */
@@ -27916,6 +27958,8 @@ function renderAttack(message, html) {
   instinctualButtons(message, container, attack);
   // Brawler (2): an Opponent hit by an Unarmed Physical Attack - the Grapple at them, out of sequence.
   brawlerButtons(message, container, attack);
+  // Suplex (2): a Powered or Crushing attack at the one you hold, on the ground - their Ground Collision.
+  suplexButton(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.
   bondButtons(message, attack, container);
 

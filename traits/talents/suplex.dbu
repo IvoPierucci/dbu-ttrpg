@@ -1,0 +1,19 @@
+id: suplex
+name: Suplex
+talentCategory: grappling
+prerequisites: Brawler
+description: >
+  Able to use the terrain to your advantage while grappling an opponent, you can smash them into the ground or drag them through a wall to inflict massive damage.
+text: >
+  Suplex: Able to use the terrain to your advantage while grappling an opponent, you can smash them into the ground or drag them through a wall to inflict massive damage.
+  –Prerequisites: Brawler
+  (1)-[1/Round]: While you are the Grappler in a Grapple in a High Environment, as a Standard Maneuver with an Action Cost of 1 Action, you can make a Might Clash against the Grappled. If you win, move to the Battle Environment of the Square below and deal Ground Collision to your Opponent. Double the amount of Collision Damage they receive from this effect.
+  (2)-[Triggered, 1/Round]: If you use an Attacking Maneuver of the Powered or Crushing Profile while in a Grapple that is not in a High Environment, if your target is a Grappled Character in that Grapple, apply Ground Collision for the Square that the Grappled Character is in.
+
+---
+
+[passive]
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/suplex-first-effect.dbu).
+# (2) A Powered or Crushing attack at the one you hold, on the ground: a button on its card - their Ground Collision, once a
+# Round (chat.mjs suplexButton).
+allow suplex.ground;
