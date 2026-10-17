@@ -12,9 +12,12 @@ text: >
 
 ---
 
-# (1) As your turn begins.
+# (1) As your turn begins - with Tai Chi Master (its (2)), as many Life Points as well.
 [triggered/start-of-turn, effect 1]
 ki.value += floor(insight.mod / 2);
+if (hasTalent("tai-chi-master")) {
+  life.value += floor(insight.mod / 2);
+}
 
 # (2) Hit by an Opponent's Attacking Maneuver: 1/4 of their Might, rounded up, on your Damage Reduction against it (chat.mjs
 # taiChiReductionFor). Ticked as it happens, once a Round, no button - and with Tai Chi Expert (its (1): "loses its 1/Round

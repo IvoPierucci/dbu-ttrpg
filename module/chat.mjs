@@ -5498,7 +5498,8 @@ function offerableTo(situation, message) {
       if (effect.blocked) return effect;
       const reason = whyNot(effect, situation);
       return reason ? { ...effect, blocked: reason, available: false } : effect;
-    }), ...resolveRerollOption(situation.actor, situation.side), ...damaRerollOption(situation.actor)];
+    }), ...resolveRerollOption(situation.actor, situation.side), ...damaRerollOption(situation.actor),
+    ...taiChiRerollOptions(situation, message)];
 }
 
 /** Earthling Resolve (2)'s reroll, by the key it is picked with in the window. */
@@ -5543,6 +5544,52 @@ const DAMA_REROLL = "neko-majin-dama";
 const DAMA_CALL = Object.freeze({ verb: "reroll", forced: true, label: "Neko Majin-Dama" });
 /** Each use, kept with the Encounter's (cleared as one begins and ends). */
 const DAMA_USE = "encounter:neko-majin-dama.reroll";
+
+/** Tai Chi Master (3)'s reroll, and the same with Tai Chi Expert (3) applied - by the keys they are picked with. */
+const TAI_CHI_REROLL = "tai-chi-master";
+const TAI_CHI_MIGHT = "tai-chi-master-might";
+
+/**
+ * Tai Chi Master (3): "If you lose a Might Clash initiated by an Opponent, you may reroll that Might Clash. If you haven't already
+ * applied the 3rd effect of Tai Chi Expert to this Might Clash, you may apply that effect now." Offered beside the Karmic Effects
+ * on the Defender's side of a Might Clash lost; the Base Die again, the second result taken - and, where their Might is not in it
+ * yet and Tai Chi Expert is held, the same with their Might for yours. Once a Round, twice an Encounter.
+ */
+function taiChiRerollOptions(situation, message) {
+  const actor = situation.actor;
+  if ((actor?.system?.effects?.slots?.["taiChi.mightReroll"] !== true) || (situation.kind !== "clash")
+    || (situation.category !== "might") || !situation.answering || !situation.lost) return [];
+  const clash = message?.getFlag?.(SCOPE, CLASH_FLAG);
+  const challenger = fromUuidSync(clash?.challengerUuid ?? "");
+  if (!challenger || alliesOnScene(actor).some(ally => ally.uuid === challenger.uuid)) return [];
+  const used = actor.getFlag?.(SCOPE, "taiChiReroll") ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const count = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+  const blocked = (used.round === roundKey()) ? "Once a Combat Round" : (count >= 2) ? "Twice a Combat Encounter" : "";
+  const option = (key, costLabel, text) => ({ key, trait: true, when: "after", name: "Tai Chi Master", text, costLabel,
+    available: !blocked, ...(blocked ? { blocked } : {}) });
+  const theirs = !Number.isFinite(clash.mightFor?.[actor.uuid]) && (actor.system.effects?.slots?.["taiChi.mightClash"] === true);
+  return [option(TAI_CHI_REROLL, "Reroll the Might Clash", "A Might Clash an Opponent opened, lost: reroll it."),
+    ...(theirs ? [option(TAI_CHI_MIGHT, `Reroll with ${challenger.name}'s Might`,
+      "Reroll it, and Tai Chi Expert's third effect now - their Might for yours.")] : [])];
+}
+
+/** Tai Chi Master (3) taken: its use counted, the Base Die again - and their Might for yours, where that was picked. */
+async function takeTaiChiReroll(message, situation, key) {
+  const { actor } = situation;
+  if (!taiChiRerollOptions(situation, message).some(effect => (effect.key === key) && effect.available)) return;
+  const used = actor.getFlag?.(SCOPE, "taiChiReroll") ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const count = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.taiChiReroll`]: { encounter, round: roundKey(), count: count + 1 } });
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  const challenger = fromUuidSync(clash?.challengerUuid ?? "");
+  const swap = (key === TAI_CHI_MIGHT) && challenger
+    ? (Number(challenger.system.might) || 0) - (Number(actor.system.might) || 0) : 0;
+  const given = { spent: [], queue: [{ verb: "reroll", forced: true, label: "Tai Chi Master" }],
+    slots: (key === TAI_CHI_MIGHT) ? { "roll.total": { add: swap, label: `${challenger.name}'s Might (Tai Chi Expert)` } } : {} };
+  return resettleClash(message, situation, given);
+}
 
 /**
  * Neko Majin-Dama (7): "When you make a roll of any kind, after seeing the result, you may reroll that roll. x, for this
@@ -5787,6 +5834,7 @@ function answersAfterTheFact(effect) {
 export async function takeAfterTheFact(message, situation, key) {
   if (key === RESOLVE_REROLL) return takeResolveReroll(message, situation);
   if (key === DAMA_REROLL) return takeDamaReroll(message, situation);
+  if ((key === TAI_CHI_REROLL) || (key === TAI_CHI_MIGHT)) return takeTaiChiReroll(message, situation, key);
   const { actor } = situation;
   const effect = allKarmicEffects().find(e => e.key === key);
   if (!effect) return;
@@ -6243,7 +6291,8 @@ async function applyAfterTheFact(actor, side, { slots, queue }) {
 
   const settled = Math.max(0, applySlot(slots, "roll.total", total));
   if (settled !== total) {
-    lines.push(partLine({ label: "Karma", value: settled - total }));
+    // Named where what changed it says so - Tai Chi Master's Might for yours.
+    lines.push(partLine({ label: slots["roll.total"]?.label || "Karma", value: settled - total }));
   }
 
   if (slots["clash.succeed"] === true) {

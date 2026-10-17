@@ -15,9 +15,15 @@ text: >
 
 # (1) Read on Tai Chi Practitioner's file: its second effect, held with this, has no limit and its Triggered/Automatic button.
 
-# (2) An Opponent hit by an attack with no AoE: 1/4 of their Might, rounded up, on the Wound against them - once a Round (chat.mjs,
-# where the Wound is worked out against each).
-[triggered/hit, 1/round, effect 2]
+# (2) An Opponent hit by an attack with no AoE: 1/4 of their Might, rounded up, on the Wound against them (chat.mjs, where the
+# Wound is worked out against each). Ticked as it happens, once a Round, no button - and with Tai Chi Master (its (1): "loses its
+# 1/Round Keyword") no limit, and the Triggered/Automatic button (the user's, as for Tai Chi Practitioner's second).
+[triggered/hit, 1/round, chosen]
+requires !hasTalent("tai-chi-master");
+taiChi.wound = true;
+
+[triggered/hit, effect 2]
+requires hasTalent("tai-chi-master");
 taiChi.wound = true;
 
 [passive]

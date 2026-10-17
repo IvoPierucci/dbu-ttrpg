@@ -1,0 +1,22 @@
+id: tai-chi-master
+name: Tai Chi Master
+talentCategory: insightful
+prerequisites: Tai Chi Expert, ToP 4+
+description: >
+  As a master in turning an enemy’s own movements against them, you waste no effort and expend minimal energy.
+text: >
+  Tai Chi Master: As a master in turning an enemy’s own movements against them, you waste no effort and expend minimal energy.
+  –Prerequisites: Tai Chi Expert, ToP 4+
+  (1)-[Passive]: The second effect of Tai Chi Expert loses its 1/Round Keyword.
+  (2)-[Passive]: The first effect of Tai Chi Practitioner regains an equal amount of Life Points to the amount of Ki Points regained.
+  (3)-[Triggered, 1/Round, 2/Encounter]: If you lose a Might Clash initiated by an Opponent, you may reroll that Might Clash. If you haven’t already applied the 3rd effect of Tai Chi Expert to this Might Clash, you may apply that effect now.
+
+---
+
+# (1) Read on Tai Chi Expert's file: its second effect, held with this, has no limit and its Triggered/Automatic button.
+# (2) Read on Tai Chi Practitioner's file: its first effect's Ki, as many Life Points as well.
+
+[passive]
+# (3) A Might Clash an Opponent opened, lost: offered beside the Karmic Effects - reroll it, or reroll it with their Might for
+# yours where Tai Chi Expert's third is not in it yet; once a Round, twice an Encounter (chat.mjs taiChiRerollOptions).
+allow taiChi.mightReroll;
