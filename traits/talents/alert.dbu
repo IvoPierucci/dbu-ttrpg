@@ -1,0 +1,29 @@
+id: alert
+name: Alert
+talentCategory: initiative
+prerequisites: Improved Initiative, Insight Score of 8+
+description: >
+  Constantly on the lookout for danger, your awareness of your surroundings is unparalleled.
+text: >
+  Alert: Constantly on the lookout for danger, your awareness of your surroundings is unparalleled.
+  –Prerequisites: Improved Initiative, Insight Score of 8+
+  (1)-[Passive]: Increase your Initiative Value by 1(bT).
+  (2)-[Passive]: You ignore the effects of Surprise Rounds.
+  (3)-[Passive]: While you have Initiative Advantage, increase your Wound Rolls by 1(T).
+  (4)-[Triggered/Start of Combat Round, 1/Encounter]: If you have Initiative Advantage, gain 1 Counter Action.
+
+---
+
+[passive]
+# (1)
+initiative += 1(bT);
+# (2) Nothing here runs a Surprise Round - who is caught by one is the table's, and this is a line for it to read.
+# (3) Initiative Advantage: above every Opponent's Initiative Value (conditions.mjs initiativeAdvantage).
+if (initiativeAdvantage) {
+  wound += 1(T);
+}
+
+# (4) As the Round begins, with Initiative Advantage: a Counter Action more, once an Encounter.
+[triggered/start-of-round, 1/encounter, effect 4]
+requires initiativeAdvantage;
+actions.counterGained += 1;
