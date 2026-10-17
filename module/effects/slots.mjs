@@ -191,6 +191,8 @@ const TABLE = [
   { key: "wound.perThresholdOrAlly", phase: PHASES.CORE, kind: N, ops: ["add"],
     doc: "Added to the Wound Roll once for each Health Threshold you, or the Ally deepest below, is below - whichever "
        + "is more (Inherited Fury)." },
+  { key: "wound.vsGrappled", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to the Wound against each target in a Grapple (Heel's; chat.mjs heelParts)." },
   { key: "wound.perTargetThreshold", phase: PHASES.CORE, kind: N, ops: ["add"],
     doc: "Added to the Wound against each target once for each Health Threshold they are below (Inherited Aggression)." },
   { key: "techniquePoints.perSkillImprovement", phase: PHASES.TIER, kind: N, ops: ["add"],

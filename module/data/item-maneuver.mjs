@@ -104,6 +104,8 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
        * Character and the Grapple already knows which.
        */
       launch: new fields.BooleanField({ required: true, initial: false }),
+      /** Heel (2)'s: a Grapple Check against your Grappled - won, they are Suffocating till they escape (chat.mjs settleGrapple). */
+      choke: new fields.BooleanField({ required: true, initial: false }),
       /** Lifts a Square or a Feature and holds it - the Terrain Lift Maneuver (chat.mjs askTerrainLift). */
       terrainLift: new fields.BooleanField({ required: true, initial: false }),
       /** A God Maneuver: "only available to those with access to Divine Ki Points ... spend Divine Ki Points to use". */

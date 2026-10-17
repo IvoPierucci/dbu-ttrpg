@@ -781,6 +781,8 @@
     "talents/brawler.dbu",
     "talents/wrestler.dbu",
     "talents/judo-training.dbu",
+    "talents/heel.dbu",
+    "maneuvers/heel-second-effect.dbu",
     "talents/artful-strike.dbu",
     "talents/focused-strike.dbu",
     "talents/masterful-strike.dbu",

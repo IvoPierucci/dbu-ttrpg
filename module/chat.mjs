@@ -3068,6 +3068,15 @@ async function settleGrapple(message, clash) {
     return;
   }
 
+  // Heel (2): "If you win, they gain the Suffocating Combat Condition until they escape the Grapple" - lost, nothing.
+  if (clash.grapple.kind === "choke") {
+    if (winner !== "challenger") return settledNote(message, `${grappled.name} keeps breathing.`);
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(grappled, "suffocating", 1);
+    await requestActorUpdate(grappled, { [`flags.${SCOPE}.heelChoked`]: true });
+    return settledNote(message, `${grappled.name} is Suffocating until they escape the Grapple.`);
+  }
+
   // Telekinesis's Launch, with no Grapple: Psychic Counter's won, it never reached them; otherwise thrown or not.
   if ((clash.grapple.kind === "launch") && clash.telekinetic) {
     if (clash.tkFailed) return settledNote(message, `${grappler.name}'s Telekinesis fails to reach ${grappled.name}.`);
@@ -3257,6 +3266,12 @@ export async function endGrapple(grappler, grappled) {
   // which is a question with no better answer than doing it twice.
   for (const actor of [grappler, grappled]) {
     if (actor) await setCondition(actor, "pinned", 0);
+  }
+  // Heel (2)'s Suffocating, "until they escape the Grapple" - however it ends.
+  for (const actor of [grappler, grappled]) {
+    if (!actor?.getFlag?.(SCOPE, "heelChoked")) continue;
+    await setCondition(actor, "suffocating", 0);
+    await requestActorUpdate(actor, { [`flags.${SCOPE}.heelChoked`]: false });
   }
 }
 
@@ -18257,6 +18272,14 @@ function rangeParts(attacker, attack, target, roll) {
       value: Number(slot.add) }));
 }
 
+/** Heel (1): "Increase the Wound Roll of your Attacking Maneuvers made against Opponents in a Grapple by 1(T)." */
+function heelParts(attacker, target) {
+  const slot = attacker?.system?.effects?.slots?.["wound.vsGrappled"];
+  if (!(Number(slot?.add) || 0) || !target || (attacker.uuid === target.uuid) || !target.system?.grapple?.partner
+    || alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "In a Grapple", value: Number(slot.add) }];
+}
+
 /** An Opponent of theirs with one of their Allies on a Square adjacent - Brigand Combat's. */
 function brigandAllyBeside(attacker, target) {
   const allies = alliesOnScene(attacker);
@@ -23169,6 +23192,7 @@ async function rollAttackWoundWork(message, attack) {
       ...brigandParts(attacker, target, "wound"),
       ...tacticianParts(attacker, target),
       ...rangeParts(attacker, attack, target, "wound"),
+      ...heelParts(attacker, target),
       // Full Counter (2): the Might of the one who Jolted, on this attack's Wound against them.
       { label: "Full Counter", value: Number(defenceFor(attack, target.uuid)?.fullCounter) || 0 },
       ...studiedParts(attacker, target),

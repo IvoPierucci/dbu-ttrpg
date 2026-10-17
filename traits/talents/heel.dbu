@@ -1,0 +1,18 @@
+id: heel
+name: Heel
+talentCategory: grappling
+prerequisites: Brawler
+description: >
+  Unabashed by dishonorable tactics, you are more than willing to choke the life out of your target.
+text: >
+  Heel: Unabashed by dishonorable tactics, you are more than willing to choke the life out of your target.
+  –Prerequisites: Brawler
+  (1)-[Passive]: Increase the Wound Roll of your Attacking Maneuvers made against Opponents in a Grapple by 1(T).
+  (2)-[1/Round]: While you are the Grappler in a Grapple, as a Standard Maneuver with an Action Cost of 1 Action, target a Grappled Character in your Grapple and make a Grapple Check against them. If you win, they gain the Suffocating Combat Condition until they escape the Grapple.
+
+---
+
+[passive]
+# (1) Against each Opponent in a Grapple alone (chat.mjs heelParts).
+wound.vsGrappled += 1(T);
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/heel-second-effect.dbu).

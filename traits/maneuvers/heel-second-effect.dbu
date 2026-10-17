@@ -1,0 +1,22 @@
+id: heel-second-effect
+name: Heel
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+choke: true
+usageLimit: 1/round
+fromTrait: heel
+fromEffect: 2
+source: Core Rule
+description: >
+  Heel's second effect, as a Maneuver: as the Grappler, a Grapple Check against your Grappled - won, they are Suffocating till
+  they escape the Grapple.
+text: >
+  (2)-[1/Round]: While you are the Grappler in a Grapple, as a Standard Maneuver with an Action Cost of 1 Action, target a Grappled Character in your Grapple and make a Grapple Check against them. If you win, they gain the Suffocating Combat Condition until they escape the Grapple.
+
+---
+
+# Refused but as the Grappler (maneuvers.mjs whyNotLaunch); the Grapple Check against the one held (use-maneuver.mjs), settled
+# - won, Suffocating till the Grapple ends (chat.mjs settleGrapple, endGrapple).

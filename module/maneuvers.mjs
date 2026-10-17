@@ -1901,6 +1901,11 @@ export function whyNotPin(actor, maneuver) {
  * @returns {null|string} null if they may, otherwise why not
  */
 export function whyNotLaunch(actor, maneuver) {
+  // Heel (2)'s as well: "While you are the Grappler in a Grapple ... target a Grappled Character in your Grapple".
+  if (maneuver?.choke) {
+    const { partner, role } = actor?.system?.grapple ?? {};
+    return (partner && (role === "grappler")) ? null : `${maneuver.name}: only as the Grappler in a Grapple.`;
+  }
   if (!maneuver?.launch) return null;
 
   const { partner, role } = actor?.system?.grapple ?? {};
@@ -3946,6 +3951,7 @@ export async function loadManeuvers() {
     noAttackThisRound: Boolean(trait.noAttackThisRound),
     grapple: Boolean(trait.grapple),
     launch: Boolean(trait.launch),
+    choke: Boolean(trait.choke),
     movement: Boolean(trait.movement),
     pin: Boolean(trait.pin),
     powerUp: Boolean(trait.powerUp),
