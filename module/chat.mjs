@@ -18080,6 +18080,24 @@ function brigandParts(attacker, target, roll) {
     : [{ label: "Brigand Combat", written: "+2(T)", value: 2 * tier }];
 }
 
+/**
+ * A Foundation's Strike or Wound against one target alone - Enhanced Shot (2)'s "against adjacent Opponents" and (3)'s
+ * "against Opponents who are outside of your Melee Range". Through a Portal they are as if adjacent.
+ */
+function rangeParts(attacker, attack, target, roll) {
+  if (!attacker || !target || (attacker.uuid === target.uuid) || !attack?.foundation) return [];
+  const slots = attacker.system.effects?.slots ?? {};
+  const from = attacker.getActiveTokens?.(false, true)?.[0], to = target.getActiveTokens?.(false, true)?.[0];
+  const where = {
+    adjacent: Boolean(attack.portal) || ((from && to) ? (squaresBetween(from, to) === 0) : false),
+    outsideMelee: !attack.portal && Boolean(whyNotWithinMelee(attacker, target, ""))
+  };
+  return Object.entries(where).filter(([, yes]) => yes).map(([key]) => slots[`${roll}.${attack.foundation}.${key}`])
+    .filter(slot => Number(slot?.add) || 0)
+    .map(slot => ({ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Range",
+      value: Number(slot.add) }));
+}
+
 /** An Opponent of theirs with one of their Allies on a Square adjacent - Brigand Combat's. */
 function brigandAllyBeside(attacker, target) {
   const allies = alliesOnScene(attacker);
@@ -21077,7 +21095,7 @@ async function resolveAttackWork(message, attack) {
     const analysisParts = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target),
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
       ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
-      ...tacticianParts(attacker, target)]
+      ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike")]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
@@ -22923,6 +22941,7 @@ async function rollAttackWoundWork(message, attack) {
       ...inferiorParts(attacker, target, "wound"),
       ...brigandParts(attacker, target, "wound"),
       ...tacticianParts(attacker, target),
+      ...rangeParts(attacker, attack, target, "wound"),
       // Full Counter (2): the Might of the one who Jolted, on this attack's Wound against them.
       { label: "Full Counter", value: Number(defenceFor(attack, target.uuid)?.fullCounter) || 0 },
       ...studiedParts(attacker, target),

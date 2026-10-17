@@ -697,6 +697,11 @@ const PATTERNS = [
   { match: /^wound\.(physical|energy|magic)$/, phase: PHASES.LATE, kind: N, ops: NUMERIC,
     valid: () => true,
     doc: "That Foundation's Wound Rolls only - Physical, Energy or Magic Wound." },
+  // One Foundation's, against one target alone: adjacent to you, or outside your Melee Range - Enhanced Shot's (chat.mjs
+  // rangeParts).
+  { match: /^(strike|wound)\.(physical|energy|magic)\.(adjacent|outsideMelee)$/, phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    valid: () => true,
+    doc: "That Foundation's Strike or Wound Rolls against an adjacent Opponent, or one outside your Melee Range." },
   // The Combat Roll a piece narrows its Category's effects to - Focal's choice.
   { match: /^piece\.narrows\.(strike|dodge|wound)$/, phase: PHASES.PIECE, kind: F,
     ops: ["allow", "forbid", "set"],

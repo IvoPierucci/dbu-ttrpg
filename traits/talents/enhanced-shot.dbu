@@ -1,0 +1,22 @@
+id: enhanced-shot
+name: Enhanced Shot
+talentCategory: energy-attack
+prerequisites: N/A
+description: >
+  You have become particularly adept at funneling energy into your ranged blasts with minimal effort.
+text: >
+  Enhanced Shot: You have become particularly adept at funneling energy into your ranged blasts with minimal effort.
+  –Prerequisites: N/A
+  (1)-[Passive]: Increase the Wound Rolls for your Energy Attacks by 1(T).
+  (2)-[Passive]: Increase the Strike Roll of Energy Attacks made against adjacent Opponents by 1(T).
+  (3)-[Passive]: Increase the Wound Rolls for your Energy Attacks against Opponents who are outside of your Melee Range by 1(T).
+
+---
+
+[passive]
+# (1)
+wound.energy += 1(T);
+# (2) Against each adjacent one alone (chat.mjs rangeParts).
+strike.energy.adjacent += 1(T);
+# (3) Against each one outside the Melee Range alone (chat.mjs rangeParts).
+wound.energy.outsideMelee += 1(T);
