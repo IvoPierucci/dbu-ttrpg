@@ -1,0 +1,28 @@
+id: blaster-master
+name: Blaster Master
+talentCategory: energy-attack
+prerequisites: Point Blank Shot and/or Artillery Shot, ToP2+
+description: >
+  Your unparalleled skill with energy blasts allows you to obliterate your enemies.
+text: >
+  Blaster Master: Your unparalleled skill with energy blasts allows you to obliterate your enemies.
+  –Prerequisites: Point Blank Shot and/or Artillery Shot, ToP2+
+  (1)-[Triggered]: If you hit an Opponent with an Energy Attack, spend up to 5(bT) Ki Points. If you do, increase the Wound Roll by an equal amount.
+  (2)-[Triggered, 1/Round]: If you use an Energy Attack with an AoE and at least 1 Energy Charge applied to it, you may either:
+
+  * Increase the Dice Category of the Energy Charge Extra Dice applied to this Attacking Maneuver by 1 Category.
+  * Increase the Magnitude of this Attacking Maneuver’s AoE by 1.
+
+  (3)-[Triggered, 1/Encounter]: If you make an Energy Attack, increase the Damage Category of that Attacking Maneuver by 1 Category.
+
+---
+
+[passive]
+# (1) An Opponent hit by an Energy Attack: Ki asked as the hit lands, up to 5(bT) - as much on the Wound Roll (chat.mjs
+# spendBlasterKi, woundParts).
+allow blaster.woundKi;
+# (2) An Energy Attack with an AoE and an Energy Charge, as it is made: its Charges' Dice a Category up, or its AoE a Magnitude
+# up - asked, once a Round (chat.mjs askBlasterMaster).
+allow blaster.chargeOrMagnitude;
+# (3) An Energy Attack, as it is made: its Damage Category one up - asked, once an Encounter (chat.mjs askBlasterMaster).
+allow blaster.category;

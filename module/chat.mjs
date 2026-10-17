@@ -16076,6 +16076,53 @@ async function spendCriticalEye(attacker, attack) {
   return { ...attack, criticalEye: spent };
 }
 
+/**
+ * Blaster Master (1): "If you hit an Opponent with an Energy Attack, spend up to 5(bT) Ki Points. If you do, increase the
+ * Wound Roll by an equal amount." How many, asked of whoever plays the attacker; spent - as Tough Warrior's, out of the
+ * Capacity as well. The Ki spent, or 0.
+ */
+async function spendBlasterKi(attacker, attack, struck) {
+  if ((attack.foundation !== "energy") || (attacker?.system?.effects?.slots?.["blaster.woundKi"] !== true)) return 0;
+  const allies = new Set(alliesOnScene(attacker).map(ally => ally.uuid));
+  if (!struck.some(({ uuid }) => !allies.has(uuid))) return 0;
+  const most = Math.min(5 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1), Number(attacker.system.ki?.value) || 0,
+    Number(attacker.system.capacity?.remaining) || 0);
+  if (most <= 0) return 0;
+  const spent = Math.min(most, await askPlayerAmount(attacker, `${attacker.name}: Blaster Master`, most, "Ki Points - as much on the Wound Roll"));
+  if (spent <= 0) return 0;
+  const { ki, capacity } = attacker.system;
+  await requestActorUpdate(attacker, { "system.ki.value": ki.value - spent, "system.capacity.spent": capacity.spent + spent });
+  return spent;
+}
+
+/**
+ * Blaster Master (2): "If you use an Energy Attack with an AoE and at least 1 Energy Charge applied to it, you may either:
+ * Increase the Dice Category of the Energy Charge Extra Dice applied to this Attacking Maneuver by 1 Category. Increase the
+ * Magnitude of this Attacking Maneuver's AoE by 1." Asked, once a Round. (3): "If you make an Energy Attack, increase the
+ * Damage Category of that Attacking Maneuver by 1 Category" - asked, once an Encounter. What they add (postAttack).
+ */
+async function askBlasterMaster(actor, area, charges) {
+  const slots = actor?.system?.effects?.slots ?? {};
+  const out = { dice: 0, magnitude: 0, category: 0 };
+  if ((slots["blaster.chargeOrMagnitude"] === true) && area && (charges >= 1) && (actor.getFlag?.(SCOPE, "blasterRound") !== roundKey())) {
+    const which = await askPlayerChoice(actor, `${actor.name}: Blaster Master`,
+      [{ value: "dice", label: "Energy Charge Dice one Category up" }, { value: "magnitude", label: "AoE Magnitude +1" },
+        { value: "no", label: "No" }]);
+    if (["dice", "magnitude"].includes(which)) {
+      await actor.setFlag(SCOPE, "blasterRound", roundKey());
+      out[which] = 1;
+    }
+  }
+  const encounter = game.combat?.id ?? "none";
+  if ((slots["blaster.category"] === true) && (actor.getFlag?.(SCOPE, "blasterEncounter") !== encounter)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Blaster Master` },
+      content: `<p data-tooltip="Once an Encounter">This Energy Attack's Damage Category +1?</p>`, rejectClose: false })) {
+    await actor.setFlag(SCOPE, "blasterEncounter", encounter);
+    out.category = 1;
+  }
+  return out;
+}
+
 /** Evolved Right Eye (5)'s uses: once a Combat Round, twice a Combat Encounter. Why not, or "". */
 function criticalStrikeRefused(actor) {
   const used = actor?.getFlag?.(SCOPE, "criticalDeclared") ?? {};
@@ -19183,6 +19230,12 @@ export async function postAttack(actor, target, maneuver,
   if (technique?.area?.centredOnTarget) technique.area.centreName = target.name;
   // Volatile Explosion with its Sphere on the user: they are inside it, so they are a target, hit.
   const selfCaught = Boolean(technique?.features?.includes("volatile-explosion") && technique?.area?.centredOnSelf);
+  // Blaster Master (2), (3): an Energy Attack - its Charges' Dice or its AoE's Magnitude; its Damage Category.
+  const blaster = (reflecting || (foundation !== "energy")) ? { dice: 0, magnitude: 0, category: 0 }
+    : await askBlasterMaster(actor, technique ? (technique.area ?? (areaAdded ? area : null)) : (area ?? PROFILES[profile]?.area ?? null),
+      (Number(charges) || 0) + (PROFILES[profile]?.grantsEnergyCharge ?? 0) + (Number(weapon?.energyCharges) || 0)
+        + (technique?.bonusCharges ?? []).reduce((sum, entry) => sum + entry.amount, 0)
+        + (PROFILES[profile]?.grantsUncappedEnergyCharge ?? 0) + (Number(uncappedCharges) || 0));
 
   // "Do not count towards the penalty from Diminishing Offense." The count is what the
   // penalty is worked out from, so an attack outside it does not raise the count - and the
@@ -19374,7 +19427,9 @@ export async function postAttack(actor, target, maneuver,
             // Punishing Blow's "its Damage Category increased by 1 category".
             + ((experienced?.kind === "punish") ? 1 : 0)
             // Warrior (4)'s "increase the Damage Category of that Attacking Maneuver by 1 Category".
-            + ((warriorTension && !reflecting) ? 1 : 0),
+            + ((warriorTension && !reflecting) ? 1 : 0)
+            // Blaster Master (3)'s.
+            + blaster.category,
           // Genki's is added here: gathered from Empower, and neither paid again nor counted.
           kiWager: kiWager + (Number(freeWager) || 0),
           // What making it took from its maker's pools - Divine Counter's cancelling gives it back.
@@ -19396,7 +19451,7 @@ export async function postAttack(actor, target, maneuver,
           // Sphere. Null for every attack whose Area, if any, is its Profile's. A Technique's is
           // the one its features built - or, with none, one an effect added (`areaAdded`, Artillery Shot's).
           area: greedArea(overwhelmedArea(sizedArea(actor, target, technique ? (technique.area ?? (areaAdded ? area : null)) : (area ?? PROFILES[profile]?.area ?? null),
-            { portal }), reflecting ? null : overwhelm), reflecting ? 0 : boughtMagnitude),
+            { portal }), reflecting ? null : overwhelm), reflecting ? 0 : (boughtMagnitude + blaster.magnitude)),
           // Critical Point (2): primed by the Energy Charge Maneuver this Round.
           ...((primed && !reflecting) ? { primed: true } : {}),
           // Overwhelming Assault's stacks, and Last Resource's, lost once this is done (spendOverwhelm).
@@ -19436,7 +19491,7 @@ export async function postAttack(actor, target, maneuver,
                 // Eye of the Dragon's Way of the Warrior: "this Energy Charge does not count towards your maximum".
                 + (Number(uncappedCharges) || 0),
           // Dice Categories the Technique's features add to each Charge: Maximum Charge, Super Beam.
-          chargeCategories: reflecting ? (reflecting.chargeCategories ?? 0) : (technique?.chargeCategories ?? 0),
+          chargeCategories: reflecting ? (reflecting.chargeCategories ?? 0) : ((technique?.chargeCategories ?? 0) + blaster.dice),
           // Whose Technique it was, which is what decides the size of an Energy Charge's
           // die - and it is their attack being thrown back, not the reflector's.
           signature: reflecting
@@ -22004,6 +22059,9 @@ async function answerHit(message, attack, attacker, struck) {
   // Evolved Right Eye (4): Critical Eye spent on it, asked - 2(T) each (woundParts).
   const eyed = await spendCriticalEye(attacker, attack);
   if (eyed.criticalEye) answer.marks.criticalEye = eyed.criticalEye;
+  // Blaster Master (1): Ki spent on it, asked - as much on the Wound Roll (woundParts).
+  const blasted = await spendBlasterKi(attacker, attack, struck);
+  if (blasted) answer.marks.blasterWound = blasted;
   await offerTriggers(attacker, "hit-opponent");
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
@@ -22144,6 +22202,8 @@ function woundParts(attacker, attack) {
       value: primed * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(eyes ? [{ label: `Critical Eye (${eyes})`, written: `+${2 * eyes}(T)`,
       value: 2 * eyes * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
+    // Blaster Master (1): the Ki spent as it hit.
+    ...((Number(attack.blasterWound) || 0) ? [{ label: "Blaster Master", value: Number(attack.blasterWound) }] : []),
     ...(doubled ? [{ label: "Searing Anger (Overwhelm doubled)", written: `+${doubled}(T)`,
       value: doubled * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     // Punching Up: "increase the Wound Roll of that Attacking Maneuver by 1(T) for every Size Category they are larger".
