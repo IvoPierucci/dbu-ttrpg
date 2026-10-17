@@ -1216,6 +1216,15 @@ export function sizeDifference(a, b) {
   return (Number(a?.system?.size?.steps) || 0) - (Number(b?.system?.size?.steps) || 0);
 }
 
+/**
+ * Size Categories between them for Gigantic Grip: Wrestler (1)'s "Treat your Size Category as if it was 1 larger for the
+ * effects of Gigantic Grip" on either side.
+ */
+export function gripDifference(a, b) {
+  const wrestler = actor => ((actor?.system?.effects?.slots?.["wrestler.grip"] === true) ? 1 : 0);
+  return sizeDifference(a, b) + wrestler(a) - wrestler(b);
+}
+
 /** "For every Size Category after Large" / "greater than Large you are" - Enormous 1, Gigantic 2, Colossal 3. */
 export function sizesAboveLarge(actor) {
   return Math.max(0, (Number(actor?.system?.size?.steps) || 0) - 1);

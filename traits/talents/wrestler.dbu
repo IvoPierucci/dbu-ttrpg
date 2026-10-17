@@ -1,0 +1,21 @@
+id: wrestler
+name: Wrestler
+talentCategory: grappling
+prerequisites: Brawler
+description: >
+  You know how to best make use of your might, crushing your opponent in an iron grip.
+text: >
+  Wrestler: You know how to best make use of your might, crushing your opponent in an iron grip.
+  –Prerequisites: Brawler
+  (1)-[Passive]: Treat your Size Category as if it was 1 larger for the effects of Gigantic Grip.
+  (2)-[Triggered, 1/Round]: When you make a Grapple Check to maintain a Grapple, you may choose to make the Grapple Check become a Clash (Might vs Might/Strike/Dodge). If you do, that Grapple Check also counts as a Might Clash for all effects.
+
+---
+
+[passive]
+# (1) A Size Category more wherever Gigantic Grip measures (maneuvers.mjs gripDifference).
+allow wrestler.grip;
+# (2) The Grappled's escape - the Grapple Check that keeps the Grapple: asked of the Grappler as it is opened, once a Round - a
+# Clash of their Might against the Grappled's Might, Strike or Dodge, a Might Clash for every effect (chat.mjs
+# postGrappleCheck, CLASH_ROLLS.wrestle).
+allow wrestler.mightClash;

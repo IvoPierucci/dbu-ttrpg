@@ -21,6 +21,7 @@ import {
   maxEnergyCharges,
   maneuverKiCost,
   sizeDifference,
+  gripDifference,
   lifeWagerProblem,
   spendLifeWager,
   maneuverUsesLeft,
@@ -5404,7 +5405,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Attack makes, with a different sentence around it.
     // Gigantic Grip: "If you are 3+ Size Categories larger than another Character, you cannot be targeted by their use of
     // the Grapple or Pin Maneuvers."
-    if ((maneuver.grapple || maneuver.pin) && targetActor && (sizeDifference(targetActor, actor) >= 3)) {
+    if ((maneuver.grapple || maneuver.pin) && targetActor && (gripDifference(targetActor, actor) >= 3)) {
       ui.notifications.warn(`${targetActor.name} is too large for ${actor.name} to ${maneuver.pin ? "Pin" : "Grapple"}.`);
       return false;
     }

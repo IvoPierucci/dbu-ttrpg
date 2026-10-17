@@ -38,6 +38,7 @@ import {
   areaLabel,
   maxEnergyCharges,
   sizeDifference,
+  gripDifference,
   sizedMovement,
   sizesAboveLarge,
   squaresBetween,
@@ -3219,7 +3220,7 @@ async function beginGrapple(grappler, grappled) {
   // Gigantic Grip: "In a Grapple, if you are 3+ Size Categories larger than the Grappled, you do not gain the Guard Down
   // Combat Condition from that Grapple."
   for (const actor of [grappler, grappled]) {
-    if ((actor === grappler) && (sizeDifference(grappler, grappled) >= 3)) continue;
+    if ((actor === grappler) && (gripDifference(grappler, grappled) >= 3)) continue;
     await setCondition(actor, "guard-down", 1);
   }
   // "If you enter a Grapple as the Grappler" - Elongated Tail's.
@@ -8814,6 +8815,41 @@ const CLASH_ROLLS = ({
   },
 
   /**
+   * Wrestler (2): "you may choose to make the Grapple Check become a Clash (Might vs Might/Strike/Dodge). If you do, that
+   * Grapple Check also counts as a Might Clash for all effects." The Grappler's Might; the Grappled answers with their
+   * Might, Strike or Dodge - a Grapple Check still, so its rows stay, and a Might Clash for every effect that asks.
+   */
+  wrestle: {
+    label: "Might Clash",
+    family: "might",
+    of: (actor, clash, uuid) => (wrestleRoll(clash, uuid) === "might")
+      ? CLASH_ROLLS.might.of(actor, clash, uuid) : CLASH_ROLLS.strike.of(actor, clash, uuid),
+    criticalDice: (actor) => actor.system.dice.critical.formula,
+    parts: (actor, clash, uuid) => (wrestleRoll(clash, uuid) === "might")
+      ? [...CLASH_ROLLS.might.parts(actor, clash, uuid),
+        ...(((uuid === clash.defenderUuid) && clash.defenderBonus)
+          ? [{ label: "Earlier attempts", written: `+${clash.earlierAttempts}(T)`, value: clash.defenderBonus }] : []),
+        ...(((uuid === clash.defenderUuid) && clash.grapple) ? grappleDefenceParts(actor) : []),
+        ...(clash.grapple ? grappleAllParts(actor, clash, uuid) : [])]
+      : CLASH_ROLLS.strike.parts(actor, clash, uuid),
+    options: (actor, clash, uuid) => (wrestleRoll(clash, uuid) === "might") ? {} : CLASH_ROLLS.strike.options(actor, clash, uuid),
+    prompt: (actor, clash, uuid) => (uuid === clash.defenderUuid) ? "Might, Strike or Dodge" : "Might",
+    choose: async (clash, actor) => {
+      if (actor.uuid !== clash.defenderUuid) return {};
+      const chosen = await pick(
+        `${clash.maneuverName} - ${actor.name}`,
+        `Answer the ${clash.clashLabel ?? "Clash"} with which roll?`,
+        [
+          { action: "might", label: `Might ${actor.system.might}` },
+          { action: "strike", label: `Strike ${actor.system.combat.strike}` },
+          { action: "dodge", label: `Dodge ${actor.system.combat.dodge}` }
+        ]
+      );
+      return chosen ? { defenderRoll: chosen } : null;
+    }
+  },
+
+  /**
    * A Clash of Saving Throws. The Thrust Maneuver's second one is the first there has
    * ever been, though "save" has been one of the four categories since they were told
    * apart - and until now nothing could open one.
@@ -8900,12 +8936,17 @@ Object.freeze(CLASH_ROLLS);
  * Returned as a list so it drops out of the breakdown entirely rather than showing as a
  * row worth nothing.
  */
+/** Which roll a side makes in Wrestler's Clash: the Grappler's Might; the Grappled's answer, Might till they say. */
+function wrestleRoll(clash, uuid) {
+  return (uuid === clash.defenderUuid) ? (clash.defenderRoll || "might") : "might";
+}
+
 /** What an effect adds to every Grapple Check you make, Grappler or Grappled - Four Witches Grip's. */
 function grappleAllParts(actor, clash = null, uuid = "") {
   const value = Math.round(applySlot(actor.system.effects?.slots, "grapple.all", 0));
   // Gigantic Grip: "increase the Dice Score of your Grapple Check by 1(T) (max. 3(T)) for every Size Category you are
   // larger than the opposing Character".
-  const larger = clash ? Math.min(3, Math.max(0, sizeDifference(actor, clashOpponent(clash, uuid)))) : 0;
+  const larger = clash ? Math.min(3, Math.max(0, gripDifference(actor, clashOpponent(clash, uuid)))) : 0;
   return [...(value ? [{ label: "Grapple Checks", value }] : []),
     ...(larger ? [{ label: "Gigantic Grip", written: `+${larger}(T)`, value: larger * Math.max(1, actor.system.tierOfPower ?? 1) }] : [])];
 }
@@ -9051,6 +9092,13 @@ export async function postGrappleCheck(grappler, grappled, {
   maneuver = null, telekinetic = false, tailRestraint = false, stretched = false
 } = {}) {
   const tier = Math.max(1, grappled.system.tierOfPower ?? 1);
+  // Wrestler (2): the Grapple Check to keep the Grapple - the Grappled's escape - a Might Clash, asked of the Grappler, once a
+  // Round.
+  const wrestle = (kind === "escape") && (grappler.system?.effects?.slots?.["wrestler.mightClash"] === true)
+    && (grappler.getFlag?.(SCOPE, "wrestlerRound") !== roundKey())
+    && ((await askPlayerChoice(grappler, `${grappler.name}: Wrestler - ${grappled.name} tries to escape`,
+      [{ value: "might", label: "A Might Clash (Might vs Might/Strike/Dodge)" }, { value: "no", label: "No" }])) === "might");
+  if (wrestle) await requestActorUpdate(grappler, { [`flags.${SCOPE}.wrestlerRound`]: roundKey() });
 
   return ChatMessage.create({
     speaker: speaker ?? ChatMessage.getSpeaker({ actor: grappler }),
@@ -9063,7 +9111,7 @@ export async function postGrappleCheck(grappler, grappled, {
         // there to answer.
         [RESPONDABLE_FLAG]: Boolean(maneuver) && isRespondable(maneuver),
         [CLASH_FLAG]: {
-          category: "strike",
+          category: wrestle ? "wrestle" : "strike",
           // "This Clash is known as a Grapple Check", which is the card's name for it
           // and not the name of the pair of rolls underneath.
           clashLabel: "Grapple Check",
