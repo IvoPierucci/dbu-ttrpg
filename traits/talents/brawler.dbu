@@ -1,0 +1,24 @@
+id: brawler
+name: Brawler
+talentCategory: grappling
+prerequisites: N/A
+description: >
+  Particularly adept at submission holds and wrestling, you are more accustomed to fighting in a grapple than most.
+text: >
+  Brawler: Particularly adept at submission holds and wrestling, you are more accustomed to fighting in a grapple than most.
+  –Prerequisites: N/A
+  (1)-[Passive]: Gain an additional Action each Combat Round while Pinned.
+  (2)-[Triggered, 1/Round]: When you hit an Opponent with an Unarmed Physical Attack, you may use the Grapple Maneuver as an Out-of-Sequence Maneuver. You cannot trigger this effect if:
+
+  * That Opponent used the Guard or Direct Hit option of the Defend Maneuver.
+  * An Ally to that Opponent used the Intervene Maneuver in response to you hitting that Opponent with this Attacking Maneuver.
+
+---
+
+[passive]
+# (1) Pinned: 2 Actions each Combat Round rather than its 1 (actor-character.mjs).
+allow brawler.pinnedAction;
+# (2) An Opponent hit by an Unarmed Physical Attack - not through a Guard or a Direct Hit, nobody Intervening for them: a
+# button on the attack's card once the Wound Roll is made, the Grapple at them out of sequence; once a Round (chat.mjs
+# brawlerButtons, brawlerGrapple).
+allow brawler.grapple;

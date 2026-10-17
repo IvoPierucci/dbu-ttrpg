@@ -2262,7 +2262,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         // Bonus Momentum's Standard Action more, Reduced Momentum's one fewer - this Combat Round's.
         + (Number(this.momentum?.bonus) || 0) - (Number(this.momentum?.reduced) || 0)
         // Celestial Potential's Counter Actions made Actions.
-        + (Number(this.actionsSpent?.fromCounter) || 0)),
+        + (Number(this.actionsSpent?.fromCounter) || 0)
+        // Brawler (1): "Gain an additional Action each Combat Round while Pinned" - past Pinned's one.
+        + ((((Number(this.conditions?.pinned) || 0) > 0) && (this.effects.slots["brawler.pinnedAction"] === true)) ? 1 : 0)),
       // "You cannot gain more than 6 Counter Actions in a single Combat Round."
       counter: Math.min(DBUCharacterData.MAX_COUNTER_ACTIONS, Math.max(0, withEffects(this, "actions.counter",
         DBUCharacterData.BASE_COUNTER_ACTIONS + this.actionModifiers.counter))

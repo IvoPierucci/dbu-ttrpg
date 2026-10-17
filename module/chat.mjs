@@ -16283,6 +16283,48 @@ async function instinctualRedodge(message, target) {
  * Bruising Wound (2): "If your Wound Roll's Natural Result is 1 below the Critical Target, score a Critical Result on that Wound
  * Roll." Its button: the attacker's, once the Wound Roll is made and before the Damage is dealt, once a Round.
  */
+/**
+ * Brawler (2): "When you hit an Opponent with an Unarmed Physical Attack, you may use the Grapple Maneuver as an Out-of-Sequence
+ * Maneuver. You cannot trigger this effect if: That Opponent used the Guard or Direct Hit option of the Defend Maneuver. An
+ * Ally to that Opponent used the Intervene Maneuver in response to you hitting that Opponent with this Attacking Maneuver."
+ * A button for each such one, once the Wound Roll is made - an Intervene's chance gone by then - at its maker; once a Round.
+ */
+function brawlerButtons(message, container, attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attacker?.isOwner || !attack?.result?.wound || (attacker.system.effects?.slots?.["brawler.grapple"] !== true)
+    || (attack.foundation !== "physical") || (attack.weapon && !attack.weapon.unarmed)) return;
+  const allies = new Set(alliesOnScene(attacker).map(ally => ally.uuid));
+  const used = attacker.getFlag?.(SCOPE, "brawlerRound") === roundKey();
+  for (const entry of (attack.result.targets ?? []).filter(own => own.hit && (own.uuid !== attacker.uuid) && !allies.has(own.uuid)
+    && !["guard", "directHit"].includes(own.defense) && !interventionFor(attack, own.uuid))) {
+    const target = fromUuidSync(entry.uuid);
+    if (!target || target.system?.defeated) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Grapple ${target.name} - Brawler`;
+    button.disabled = used;
+    button.dataset.tooltip = used ? "Once a Combat Round." : "An Out-of-Sequence Maneuver (1/Round)";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      await brawlerGrapple(attacker, target);
+    });
+    container.append(button);
+  }
+}
+
+/** Brawler (2), taken: the Grapple at them out of sequence - once a Round, spent as it is used. */
+async function brawlerGrapple(actor, target) {
+  if (actor.getFlag?.(SCOPE, "brawlerRound") === roundKey()) {
+    ui.notifications.warn(`${actor.name}: Brawler - already used this Combat Round.`);
+    return;
+  }
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "grapple"));
+  if (!await useManeuver(actor, own ? definitionOf(own) : getManeuver("grapple"), { outOfSequence: true, targetUuid: target.uuid })) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.brawlerRound`]: roundKey() });
+}
+
 function woundCriticalButton(message, container, attack) {
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   const wound = attack?.result?.wound;
@@ -27778,6 +27820,8 @@ function renderAttack(message, html) {
   cunningDodgeButtons(message, container, attack);
   // Instinctual Dodge (2): hit through a Dodge - the Dodge again.
   instinctualButtons(message, container, attack);
+  // Brawler (2): an Opponent hit by an Unarmed Physical Attack - the Grapple at them, out of sequence.
+  brawlerButtons(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.
   bondButtons(message, attack, container);
 
