@@ -5651,6 +5651,30 @@ function initiativeCheck(message) {
     initiative: { combatId: combat.id, combatantId: combatant.id } };
 }
 
+/**
+ * Patient Fighter (1): "When you roll your Initiative Check at the start of a Combat Encounter, you may reduce the Dice Score by
+ * 1(bT). If you do, you may increase the Initiative of a willing Ally by an equal amount." Which Ally, asked - willing is theirs
+ * to say at the table - once an Encounter; both moved through the GM.
+ */
+export async function patientFighterShare(combatant) {
+  const actor = combatant?.actor;
+  const combat = combatant?.parent;
+  if (!actor || !combat || (actor.system?.effects?.slots?.["initiative.patientShare"] !== true)
+    || (Number(combat.round) > 1) || (actor.getFlag?.(SCOPE, "patientFighterEncounter") === combat.id)) return;
+  const side = combatant.token?.disposition;
+  const allies = Array.from(combat.combatants).filter(entry => (entry.id !== combatant.id) && entry.actor
+    && (entry.token?.disposition === side) && Number.isFinite(entry.initiative));
+  if (!allies.length) return;
+  const step = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  const picked = await askPlayerChoice(actor, `${actor.name}: Patient Fighter - ${step} off your Initiative, onto`,
+    [...allies.map(entry => ({ value: entry.id, label: `${entry.name} (${entry.initiative})` })), { value: "none", label: "No" }]);
+  const ally = allies.find(entry => entry.id === picked);
+  if (!ally) return;
+  await actor.setFlag(SCOPE, "patientFighterEncounter", combat.id);
+  requestInitiative(combat.id, combatant.id, combatant.initiative - step);
+  requestInitiative(combat.id, ally.id, ally.initiative + step);
+}
+
 /** An Initiative rerolled, into the Tracker - through the GM, the turn kept with whoever has it. */
 function requestInitiative(combatId, combatantId, initiative) {
   if (game.user.isGM) return applyInitiative(combatId, combatantId, initiative);

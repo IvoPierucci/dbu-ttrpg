@@ -48,12 +48,22 @@ function opponentNear(self, other) {
  * Combat's Combatants; every Opponent's rolled and lower, and at least one of them.
  */
 export function initiativeAdvantageOf(actor) {
+  return initiativeAgainstAll(actor, (theirs, own) => theirs < own);
+}
+
+/** Patient Fighter (2)'s: "If your Initiative Value is lower than all of your Opponents". */
+export function initiativeBehindOf(actor) {
+  return initiativeAgainstAll(actor, (theirs, own) => theirs > own);
+}
+
+/** Every Opponent in the Combat rolled, and each of their Initiative Values as `holds` says against yours - at least one. */
+function initiativeAgainstAll(actor, holds) {
   const combat = globalThis.game?.combat;
   const own = combat?.combatants?.find(entry => entry.actor?.uuid === actor?.uuid);
   if (!own || !Number.isFinite(own.initiative)) return false;
   const side = own.token?.disposition;
   const opponents = Array.from(combat.combatants ?? []).filter(entry => (entry.id !== own.id) && (entry.token?.disposition !== side));
-  return (opponents.length > 0) && opponents.every(entry => Number.isFinite(entry.initiative) && (entry.initiative < own.initiative));
+  return (opponents.length > 0) && opponents.every(entry => Number.isFinite(entry.initiative) && holds(entry.initiative, own.initiative));
 }
 
 const PREDICATES = {
@@ -448,6 +458,7 @@ const PREDICATES = {
    * Combat's Combatants; every Opponent's rolled and lower, and at least one of them.
    */
   initiativeAdvantage: scope => initiativeAdvantageOf(scope.data?.parent),
+  initiativeBehind: scope => initiativeBehindOf(scope.data?.parent),
 
   /** In a Grapple as the Grappled - Personal Space's. */
   grappledInGrapple: scope => Boolean(scope.data?.grapple?.partner) && (scope.data?.grapple?.role === "grappled"),

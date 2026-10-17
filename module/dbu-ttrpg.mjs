@@ -177,7 +177,8 @@ function conduitRefresh() {
 Hooks.on("updateActor", (actor, changes) => { if (changes.system?.life) conduitRefresh(); });
 
 // Improved Initiative (2), Alert (3): Initiative Advantage read off the Combat's Initiative Values - read again as they change.
-const ADVANTAGE_READERS = new Set(["improved-initiative", "alert", "attentive-warrior", "speedblitz", "lightning-initiative"]);
+const ADVANTAGE_READERS = new Set(["improved-initiative", "alert", "attentive-warrior", "speedblitz", "lightning-initiative",
+  "patient-fighter"]);
 function initiativeRefresh(combat) {
   for (const actor of new Set(Array.from(combat?.combatants ?? []).map(entry => entry.actor))) {
     if (!actor || !Array.from(actor.items ?? []).some(item => ADVANTAGE_READERS.has(item.flags?.["dbu-ttrpg"]?.sourceId))) continue;
@@ -186,6 +187,12 @@ function initiativeRefresh(combat) {
   }
 }
 Hooks.on("updateCombatant", (combatant, changes) => { if ("initiative" in (changes ?? {})) initiativeRefresh(combatant.parent); });
+// Patient Fighter (1): an Initiative rolled at the Encounter's start, by whoever rolled it - not one moved after (turnEvents off).
+Hooks.on("updateCombatant", async (combatant, changes, options, userId) => {
+  if ((userId !== game.user.id) || (options?.turnEvents === false) || !Number.isFinite(changes?.initiative)) return;
+  const { patientFighterShare } = await import("./chat.mjs");
+  await patientFighterShare(combatant);
+});
 Hooks.on("createCombatant", combatant => initiativeRefresh(combatant.parent));
 Hooks.on("deleteCombatant", combatant => initiativeRefresh(combatant.parent));
 Hooks.on("deleteCombat", combat => initiativeRefresh(combat));

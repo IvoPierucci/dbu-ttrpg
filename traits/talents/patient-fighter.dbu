@@ -1,0 +1,23 @@
+id: patient-fighter
+name: Patient Fighter
+talentCategory: initiative
+prerequisites: Scholarship or Insight Score of 6+
+description: >
+  You know the value of patience in battle, choosing to study your opponents to react perfectly to their attacks, rather than rush headlong into a fight.
+text: >
+  Patient Fighter: You know the value of patience in battle, choosing to study your opponents to react perfectly to their attacks, rather than rush headlong into a fight.
+  –Prerequisites: Scholarship or Insight Score of 6+
+  (1)-[Triggered]: When you roll your Initiative Check at the start of a Combat Encounter, you may reduce the Dice Score by 1(bT). If you do, you may increase the Initiative of a willing Ally by an equal amount.
+  (2)-[1/Round, 3/Encounter]: If your Initiative Value is lower than all of your Opponents, you may use the Defend Maneuver without spending a Counter Action.
+
+---
+
+[passive]
+# (1) Your Initiative rolled at the Encounter's start: which Ally gets 1(bT) of it, asked - once an Encounter (chat.mjs
+# patientFighterShare).
+allow initiative.patientShare;
+
+# (2) Ticked in Respond as you Defend, below every Opponent's Initiative Value: no Counter Action for it.
+[triggered/defending, 1/round, 3/encounter, effect 2]
+requires initiativeBehind;
+defend.free = true;
