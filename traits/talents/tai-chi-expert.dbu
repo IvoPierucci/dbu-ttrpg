@@ -1,0 +1,26 @@
+id: tai-chi-expert
+name: Tai Chi Expert
+talentCategory: insightful
+prerequisites: Tai Chi Practitioner, ToP 3+
+description: >
+  In the ebb and flow of battle, you ride the tides with expert prowess, transforming the enemies’ strengths into you own.
+text: >
+  Tai Chi Expert: In the ebb and flow of battle, you ride the tides with expert prowess, transforming the enemies’ strengths into you own.
+  –Prerequisites: Tai Chi Practitioner, ToP 3+
+  (1)-[Passive]: The second effect of Tai Chi Practitioner loses its 1/Round Keyword.
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver that did not possess an AoE, increase the Wound Roll of that Attacking Maneuver by 1/4 (rounded up) of that Opponent’s Might.
+  (3)-[Triggered, 1/Round, 2/Encounter]: When making a Might Clash that was initiated by an Opponent, you may use that Opponent’s Might for this Might Clash.
+
+---
+
+# (1) Read on Tai Chi Practitioner's file: its second effect, held with this, has no limit and its Triggered/Automatic button.
+
+# (2) An Opponent hit by an attack with no AoE: 1/4 of their Might, rounded up, on the Wound against them - once a Round (chat.mjs,
+# where the Wound is worked out against each).
+[triggered/hit, 1/round, effect 2]
+taiChi.wound = true;
+
+[passive]
+# (3) A Might Clash an Opponent opened: a button for you before you are ready - their Might for yours; once a Round, twice an
+# Encounter (chat.mjs renderTaiChiMight).
+allow taiChi.mightClash;

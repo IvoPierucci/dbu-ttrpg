@@ -135,6 +135,10 @@ const PREDICATES = {
   optionChosen: (scope, id) => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "racial")
     && (item.system?.chosen ?? []).some(entry => (entry.key === "option") && (entry.value === String(id)))),
 
+  /** That Talent held, by its file's id - Tai Chi Expert's (1), read on Tai Chi Practitioner's (2). */
+  hasTalent: (scope, id) => Array.from(scope.data?.parent?.items ?? []).some(item => (item.type === "talent")
+    && (item.flags?.["dbu-ttrpg"]?.sourceId === String(id))),
+
   /** It is this character's own turn - or there are no turns, out of a Combat Encounter (Demonic Pressure's). */
   ownTurn: scope => !game.combat?.started || (game.combat?.combatant?.actor?.uuid === scope.data?.parent?.uuid),
 

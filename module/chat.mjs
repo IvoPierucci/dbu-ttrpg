@@ -1032,17 +1032,17 @@ async function shakenBy(by, target) {
  */
 /**
  * Tai Chi Practitioner (2): "If you are hit by an Opponent's Attacking Maneuver, increase your Damage Reduction by 1/4 (rounded
- * up) of that Opponent's Might for the duration of that Maneuver" - always, no button (the user's); once a Round, spent only
- * where it gives something.
+ * up) of that Opponent's Might for the duration of that Maneuver" - ticked as it happens, once a Round; with Tai Chi Expert,
+ * no limit and its Triggered/Automatic button (the user's). Spent only where it gives something.
  */
-async function taiChiReductionFor(target, attacker, attack, uuid) {
+function taiChiReductionFor(target, attacker, incoming, attack, uuid) {
   // Settled again - the same hit: what it gave then.
   const before = (attack?.result?.targets ?? []).find(entry => entry.uuid === uuid);
   if (before?.hit) return Number(before.taiChiReduction) || 0;
-  if ((target?.system?.effects?.slots?.["reduction.taiChi"] !== true) || (target.getFlag?.(SCOPE, "taiChiRound") === roundKey())
-    || !attacker || (attacker.uuid === target.uuid) || alliesOnScene(target).some(ally => ally.uuid === attacker.uuid)) return 0;
+  if ((incoming?.slots?.["reduction.taiChi"] !== true) || !attacker || (attacker.uuid === target.uuid)
+    || alliesOnScene(target).some(ally => ally.uuid === attacker.uuid)) return 0;
   const value = Math.ceil(Math.max(0, Number(attacker.system?.might) || 0) / 4);
-  if (value) await requestActorUpdate(target, { [`flags.${SCOPE}.taiChiRound`]: roundKey() });
+  if (value) spendWriting(target, incoming, "reduction.taiChi");
   return value;
 }
 
@@ -3573,6 +3573,7 @@ function onRenderChatMessage(message, html) {
   renderParaPara(message, html);
   renderPetrify(message, html);
   renderRetreat(message, html);
+  renderTaiChiMight(message, html);
   renderPositionChange(message, html);
   renderPunisher(message, html);
   renderGodBind(message, html);
@@ -8777,7 +8778,7 @@ const CLASH_ROLLS = ({
     of: (actor, clash, uuid) => {
       const own = clash?.mightFor?.[uuid];
       return Number.isFinite(own)
-        ? { label: clash.mightLabel || "Might", value: own }
+        ? { label: clash.mightLabels?.[uuid] || clash.mightLabel || "Might", value: own }
         : { label: "Might", value: actor.system.might };
     },
     // Might is not a Skill, so it does not take a Skill's flat critical die - it takes
@@ -14674,6 +14675,40 @@ async function askUnhinged(attacker, attack, wound) {
 /** Whether an attack was declared a Called Shot. */
 function isCalledShot(attack) {
   return (attack?.modifiers ?? []).some(entry => (entry.id === "called-shot") || (entry.modifier?.id === "called-shot"));
+}
+
+/**
+ * Tai Chi Expert (3): "When making a Might Clash that was initiated by an Opponent, you may use that Opponent's Might for this
+ * Might Clash." A button for its Defender before they are ready; once a Round, twice an Encounter.
+ */
+function renderTaiChiMight(message, html) {
+  const clash = message.getFlag(SCOPE, CLASH_FLAG);
+  if (!clash || clash.result || (clashFamily(clash) !== "might") || Number.isFinite(clash.mightFor?.[clash.defenderUuid])) return;
+  if ((clash.ready ?? []).includes(clash.defenderUuid)) return;
+  const defender = fromUuidSync(clash.defenderUuid);
+  const challenger = fromUuidSync(clash.challengerUuid);
+  if (!defender?.isOwner || !challenger || (defender.system?.effects?.slots?.["taiChi.mightClash"] !== true)
+    || alliesOnScene(defender).some(ally => ally.uuid === challenger.uuid)) return;
+  const used = defender.getFlag?.(SCOPE, "taiChiMight") ?? {};
+  const encounter = game.combat?.id ?? "none";
+  const count = (used.encounter === encounter) ? (Number(used.count) || 0) : 0;
+  const why = (used.round === roundKey()) ? "Once a Combat Round." : (count >= 2) ? "Twice a Combat Encounter." : "";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dbu-oos-button";
+  button.textContent = "Tai Chi Expert";
+  button.disabled = Boolean(why);
+  button.dataset.tooltip = why || `Use ${challenger.name}'s Might in this Might Clash (1/Round, 2/Encounter)`;
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    const now = message.getFlag(SCOPE, CLASH_FLAG);
+    if (!now || now.result) return;
+    await requestActorUpdate(defender, { [`flags.${SCOPE}.taiChiMight`]: { encounter, round: roundKey(), count: count + 1 } });
+    requestEdit(message, { type: "clash", clash: { ...now,
+      mightFor: { ...(now.mightFor ?? {}), [defender.uuid]: Number(challenger.system.might) || 0 },
+      mightLabels: { ...(now.mightLabels ?? {}), [defender.uuid]: `${challenger.name}'s Might (Tai Chi Expert)` } } });
+  });
+  (html.querySelector(".message-content") ?? html).append(button);
 }
 
 /**
@@ -21635,7 +21670,7 @@ async function resolveAttackWork(message, attack) {
       // King's Stature: "increase your Soak Value by 1(T) for every Size Category they are smaller than you for the
       // duration of that Attacking Maneuver" - worked out as the hit is, spent only where it gives something.
       sizeSoak: await sizeSoakFor(target, attacker, incoming),
-      taiChiReduction: hit ? await taiChiReductionFor(target, attacker, attack, uuid) : 0,
+      taiChiReduction: hit ? taiChiReductionFor(target, attacker, incoming, attack, uuid) : 0,
       // Greed of the Hera (6): Greed spent as the hit is, 2(T) of Damage Reduction each for this attack.
       greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
       toughReduction: tough.value,
@@ -23231,6 +23266,10 @@ async function rollAttackWoundWork(message, attack) {
   // Elastic Tentacle: "double the amount of Diminishing Defense they suffer from that Attacking Maneuver" - ticked On
   // hitting; "does not stack with any other effect that would increase" it, so not where another already did.
   const onHit = atMoment(attacker, "hit", { maneuver: { id: attack.maneuverId } });
+  // Tai Chi Expert (2): "If you hit an Opponent with an Attacking Maneuver that did not possess an AoE, increase the Wound Roll
+  // of that Attacking Maneuver by 1/4 (rounded up) of that Opponent's Might" - against each, once a Round.
+  const taiChiWound = (onHit.slots?.["taiChi.wound"] === true) && !attackArea(attack);
+  if (taiChiWound) spendWriting(attacker, onHit, "taiChi.wound");
   if (onHit.slots?.["attack.doublesDiminishing"] === true) {
     spendWriting(attacker, onHit, "attack.doublesDiminishing");
     const raised = attack.doublesDiminishing || ((attack.technique?.diminishingDefenseTimes ?? 1) > 1) || attack.homing;
@@ -23414,6 +23453,8 @@ async function rollAttackWoundWork(message, attack) {
       ...studiedParts(attacker, target),
       ...refinedParts(attacker, target),
       { label: "Long Shot", value: grantedLongShot(attacker, attack, target) },
+      { label: "Tai Chi Expert", value: (taiChiWound && !alliesOnScene(attacker).some(ally => ally.uuid === target.uuid))
+        ? Math.ceil(Math.max(0, Number(target.system?.might) || 0) / 4) : 0 },
       { label: attack.technique?.name ?? "Technique",
         value: techniqueWoundAgainst(attacker, attack, { longRange: !attack.portal && atLongRange(attacker, target),
           outsideMelee: !attack.portal && Boolean(whyNotWithinMelee(attacker, target, "")),

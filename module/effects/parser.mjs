@@ -501,7 +501,9 @@ const PREDICATE_NAMES = new Set([
   // Your Square has that Environmental Quality - Body of Glass's Glass.
   "onSquare",
   // Room for another stack of that Resource - Power of the Hera's Power.
-  "roomFor"
+  "roomFor",
+  // That Talent held, by its id - Tai Chi Expert's, on Tai Chi Practitioner.
+  "hasTalent"
 ]);
 
 /** The ones written without brackets, because they take nothing. */

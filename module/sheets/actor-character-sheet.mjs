@@ -4917,13 +4917,23 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * The Triggered/Automatic buttons of one Item's effects - a Racial Trait's, an Other Trait's, a Talent's (the user's): every
    * Triggered one - with a limit or not - but what costs Actions, which the moment's own card takes and pays.
    */
+  /** A block whose `requires` is `hasTalent("x")`: whether this character holds it. Any other block: true. */
+  #talentNeedHeld(block) {
+    const need = block?.requires;
+    if ((need?.type !== "predicate") || (need.name !== "hasTalent")) return true;
+    const id = String(need.args?.[0]?.value ?? need.args?.[0] ?? "");
+    return Array.from(this.actor.items).some(item => (item.type === "talent") && (item.flags?.["dbu-ttrpg"]?.sourceId === id));
+  }
+
   #toggleButtons(item, triggered) {
     return triggered
         .filter(entry => (entry.sourceId === item.id) && (entry.program.blocks[0]?.mode === "triggered")
           && !entry.program.blocks[0]?.budget?.actions
           // Nor what a window offers as it happens - the Power Up's, a Counter Maneuver's, a Maneuver declared, a Botch or a
           // Critical (WINDOW_MOMENTS) - nor what hands over an Out-of-Sequence Maneuver, chosen on its card as it happens.
-          && !chosenAsItHappens(entry.program.blocks[0]))
+          && !chosenAsItHappens(entry.program.blocks[0])
+          // Nor one that needs a Talent not held - Tai Chi Practitioner (2)'s, Tai Chi Expert's to give (the user's).
+          && this.#talentNeedHeld(entry.program.blocks[0]))
         .map(entry => {
           const effect = entry.program.blocks[0]?.modifiers?.effect;
           // Where one effect number holds several Options (a Multi-Option's), its Option's name too.
