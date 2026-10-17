@@ -1,0 +1,22 @@
+id: tai-chi-practitioner
+name: Tai Chi Practitioner
+talentCategory: insightful
+prerequisites: Insightful Warrior or Balanced in Yin and Yang
+description: >
+  Your fluid movements and reactive combat style allow you to turn your opponents’ power against them.
+text: >
+  Tai Chi Practitioner: Your fluid movements and reactive combat style allow you to turn your opponents’ power against them.
+  –Prerequisites: Insightful Warrior or Balanced in Yin and Yang
+  (1)-[Triggered/Start of Turn]: Regain Ki Points equal to 1/2 of your Insight Modifier.
+  (2)-[Triggered, 1/Round]: If you are hit by an Opponent’s Attacking Maneuver, increase your Damage Reduction by 1/4 (rounded up) of that Opponent’s Might for the duration of that Maneuver.
+
+---
+
+# (1) As your turn begins.
+[triggered/start-of-turn, effect 1]
+ki.value += floor(insight.mod / 2);
+
+# (2) Hit by an Opponent's Attacking Maneuver, once a Round: 1/4 of their Might, rounded up, on your Damage Reduction against it
+# (chat.mjs taiChiReductionFor).
+[triggered/being-hit, 1/round, effect 2]
+reduction.taiChi = true;

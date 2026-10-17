@@ -1031,6 +1031,19 @@ async function shakenBy(by, target) {
  * for after it ("Telekinesis - Launch").
  */
 /**
+ * Tai Chi Practitioner (2): "If you are hit by an Opponent's Attacking Maneuver, increase your Damage Reduction by 1/4 (rounded
+ * up) of that Opponent's Might for the duration of that Maneuver" - where it was ticked, or is Automatic; once a Round, spent
+ * only where it gives something.
+ */
+function taiChiReductionFor(target, attacker, incoming) {
+  if ((incoming?.slots?.["reduction.taiChi"] !== true) || !attacker || (attacker.uuid === target.uuid)
+    || alliesOnScene(target).some(ally => ally.uuid === attacker.uuid)) return 0;
+  const value = Math.ceil(Math.max(0, Number(attacker.system?.might) || 0) / 4);
+  if (value) spendWriting(target, incoming, "reduction.taiChi");
+  return value;
+}
+
+/**
  * King's Stature (2): hit by an Opponent smaller than you, 1(T) on the Soak Value for every Size Category between - where
  * it was ticked, or is Automatic - and its once a Round spent only where it gives something.
  */
@@ -21619,6 +21632,7 @@ async function resolveAttackWork(message, attack) {
       // King's Stature: "increase your Soak Value by 1(T) for every Size Category they are smaller than you for the
       // duration of that Attacking Maneuver" - worked out as the hit is, spent only where it gives something.
       sizeSoak: await sizeSoakFor(target, attacker, incoming),
+      taiChiReduction: taiChiReductionFor(target, attacker, incoming),
       // Greed of the Hera (6): Greed spent as the hit is, 2(T) of Damage Reduction each for this attack.
       greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
       toughReduction: tough.value,
@@ -23461,7 +23475,7 @@ async function rollAttackWoundWork(message, attack) {
     const wiseReduction = Number(defending?.slots?.damageReduction?.add) || 0;
     if (wiseReduction) spendWriting(target, defending, "damageReduction");
     const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic
-      + fullCounter + wiseReduction
+      + fullCounter + wiseReduction + (Number(own.taiChiReduction) || 0)
       + (Number(own.greedReduction) || 0) + (Number(own.toughReduction) || 0));
 
     const negated = counterWound && (counterWound.total > wound.total);
