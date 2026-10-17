@@ -18920,6 +18920,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.shockTornado) return takeShockTornado(message, actor, offer);
   // Point Blank Shot's: the charged Attacking Maneuver itself.
   if (offer.pointBlank) return takePointBlank(message, actor, offer);
+  // Magic Blaster's: the Energy Charge, for a Magic Attack.
+  if (offer.magicCharge) return takeMagicCharge(message, actor);
   if (offer.spike) return takeSpike(message, actor, offer);
   // Wild Counter's, once a Round.
   if (offer.grants?.wildCounter) {
@@ -21940,6 +21942,44 @@ function chargedAsEnergy(actor) {
   if (!item) return false;
   const pinned = item.system.signature?.foundation ?? "";
   return pinned ? (pinned === "energy") : (PROFILES[charging.profile]?.foundations ?? []).includes("energy");
+}
+
+/**
+ * Magic Blaster (2): "After using a Magical Unique Ability or the Magic Trick Special Maneuver, you may use the Energy Charge
+ * Maneuver as an Out-of-Sequence Maneuver. Your declared Attacking Maneuver must be a Magic Attack." Offered on that card;
+ * taken, once a Round (takeMagicCharge).
+ */
+export function offerMagicCharge(card, actor, maneuver) {
+  if (!card || (actor?.system?.effects?.slots?.["magicBlaster.charge"] !== true)
+    || (actor.getFlag?.(SCOPE, "magicBlasterRound") === roundKey())) return;
+  const id = maneuver?.through?.id ?? maneuver?.id;
+  if ((id !== "magic-trick") && (maneuver?.uniqueType !== "magical")) return;
+  requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "energy-charge",
+    maneuverName: "Energy Charge (a Magic Attack)", reason: `Magic Blaster - ${maneuver.name}`, magicCharge: true } });
+}
+
+/** Magic Blaster (2), taken: the Energy Charge out of sequence - its own Ki, no Action - for a Magic Attack only. */
+async function takeMagicCharge(message, actor) {
+  if (actor.getFlag?.(SCOPE, "magicBlasterRound") === roundKey()) {
+    ui.notifications.warn(`${actor.name}: Magic Blaster - already used this Combat Round.`);
+    return null;
+  }
+  const charge = getManeuver("energy-charge");
+  if (!charge) return null;
+  const cost = maneuverKiCost(charge, null, actor);
+  if ((Number(actor.system.ki?.value) || 0) < cost) {
+    ui.notifications.warn(`${actor.name} needs ${cost} Ki Points for ${charge.name}.`);
+    return null;
+  }
+  const { declareCharge } = await import("./use-maneuver.mjs");
+  if (!await declareCharge(actor, { foundation: "magic" })) return null;
+  await spendManeuverCost(actor, charge, cost);
+  await recordManeuverUse(actor, charge);
+  await actor.setFlag(SCOPE, "magicBlasterRound", roundKey());
+  await (await import("./maneuvers.mjs")).noteEnergyCharge(actor);
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  await recordManeuverType(actor, "outOfSequence", { messageId: message.id });
+  return postManeuver(actor, charge, { foundation: null });
 }
 
 /**

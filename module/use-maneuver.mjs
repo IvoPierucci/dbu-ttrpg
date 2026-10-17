@@ -6063,6 +6063,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && !outOfSequence) await (await import("./chat.mjs")).mimicryOffers(card, actor, maneuver);
   // Balanced Mind (3): the Hype or Analysis used - the other offered on its card, out of sequence.
   if (card) (await import("./chat.mjs")).balancedMindOffer(card, actor, maneuver);
+  // Magic Blaster (2): a Magical Unique Ability or the Magic Trick used - the Energy Charge offered on its card, out of sequence.
+  if (card) (await import("./chat.mjs")).offerMagicCharge(card, actor, maneuver);
 
   // Final Chance's held Defeat belongs to this card now.
   if (card && (actor.getFlag?.("dbu-ttrpg", "finalChance") === "pending")) {
@@ -6359,8 +6361,24 @@ async function askThrown(actor, maneuver) {
  *
  * @returns {Promise<boolean>} False when nothing was declared and nothing should be paid.
  */
-export async function declareCharge(actor) {
+/**
+ * Whether a charge declared for this Item with this Profile is an attack of that Foundation: a Signature Technique's own
+ * Foundation, or its Profile's - Point Blank Shot's Energy Attack, Magic Blaster's Magic Attack.
+ */
+export function chargeOfFoundation(item, profile, foundation) {
+  if (!item) return false;
+  const pinned = item.system?.signature?.foundation ?? "";
+  return pinned ? (pinned === foundation) : (PROFILES[profile]?.foundations ?? []).includes(foundation);
+}
+
+export async function declareCharge(actor, { foundation = "" } = {}) {
   const charging = actor.system.charging;
+
+  // Magic Blaster's: "Your declared Attacking Maneuver must be a Magic Attack."
+  if (charging.maneuverId && foundation && !chargeOfFoundation(actor.items.get(charging.maneuverId), charging.profile, foundation)) {
+    ui.notifications.warn(`${actor.name} is charging an attack that is not a ${foundation[0].toUpperCase()}${foundation.slice(1)} Attack.`);
+    return false;
+  }
 
   if (charging.maneuverId) {
     // The ceiling is the declared Profile's, not one number for everything: Mega Flare
@@ -6418,11 +6436,15 @@ export async function declareCharge(actor) {
   const held = actor.items.get(chosen);
   const profile = await pickProfileOnly(
     definitionOf(held),
-    DBUCharacterData.FOUNDATIONS,
+    foundation ? { [foundation]: DBUCharacterData.FOUNDATIONS[foundation] } : DBUCharacterData.FOUNDATIONS,
     `Which Profile is ${Handlebars.escapeExpression(held.name)} being charged for?`,
     actor
   );
   if (!profile) return false;
+  if (foundation && !chargeOfFoundation(held, profile, foundation)) {
+    ui.notifications.warn(`${held.name} with that Profile is not a ${foundation[0].toUpperCase()}${foundation.slice(1)} Attack.`);
+    return false;
+  }
 
   await actor.update({
     "system.charging.maneuverId": chosen,

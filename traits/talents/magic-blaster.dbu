@@ -1,0 +1,20 @@
+id: magic-blaster
+name: Magic Blaster
+talentCategory: magic-attack
+prerequisites: 2+ Skill Ranks in Use Magic
+description: >
+  Choosing to focus solely on your magical skills, you eschew other forms of combat to fire spell after spell at the enemy.
+text: >
+  Magic Blaster: Choosing to focus solely on your magical skills, you eschew other forms of combat to fire spell after spell at the enemy.
+  –Prerequisites: 2+ Skill Ranks in Use Magic
+  (1)-[Passive]: Increase the Wound Rolls of your Magic Attacks by 1(T).
+  (2)-[Triggered, 1/Round]: After using a Magical Unique Ability or the Magic Trick Special Maneuver, you may use the Energy Charge Maneuver as an Out-of-Sequence Maneuver. Your declared Attacking Maneuver must be a Magic Attack.
+
+---
+
+[passive]
+# (1)
+wound.magic += 1(T);
+# (2) A Magical Unique Ability or the Magic Trick used: the Energy Charge offered on its card out of sequence - its Ki, no
+# Action - for a Magic Attack only; once a Round (chat.mjs offerMagicCharge, takeMagicCharge; use-maneuver.mjs declareCharge).
+allow magicBlaster.charge;
