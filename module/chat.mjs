@@ -6485,12 +6485,18 @@ function offerExploits(card, actor, maneuver) {
   // triggers the Exploit Maneuver from the target" - one person, and only on a loss.
   if (maneuver.exploitOnLoss) return;
 
+  // Lightning Initiative (2): "Your use of the Movement Maneuver does not trigger the Exploit Maneuver from Opponents with a lower
+  // Initiative Value than you."
+  const outpaces = maneuver.movement && (actor.system.effects?.slots?.["movement.noExploitFromSlower"] === true);
+  const initiativeOf = who => game.combat?.combatants?.find(entry => entry.actor?.uuid === who.uuid)?.initiative;
   const seen = new Map();
   for (const token of (canvas?.tokens?.placeables ?? [])) {
     const other = token.actor;
     if (!other || (other.type !== "character")) continue;
     if (other.uuid === actor.uuid) continue;
     if (!other.items.some(item => (item.type === "maneuver") && item.system.exploit)) continue;
+    if (outpaces && Number.isFinite(initiativeOf(other)) && Number.isFinite(initiativeOf(actor))
+      && (initiativeOf(other) < initiativeOf(actor))) continue;
     seen.set(other.uuid, other);
   }
 

@@ -1,0 +1,27 @@
+id: lightning-initiative
+name: Lightning Initiative
+talentCategory: initiative
+prerequisites: Speedblitz, Agility Score of 10+
+description: >
+  Lightning-quick and ready to rumble, you dash into combat without thinking.
+text: >
+  Lightning Initiative: Lightning-quick and ready to rumble, you dash into combat without thinking.
+  –Prerequisites: Speedblitz, Agility Score of 10+
+  (1)-[Passive]: While you have Initiative Advantage, increase your Dodge Rolls by 1(T).
+  (2)-[Passive]: Your use of the Movement Maneuver does not trigger the Exploit Maneuver from Opponents with a lower Initiative Value than you.
+  (3)-[Triggered/Start of Turn, 1/Encounter]: If you have Initiative Advantage, gain an additional Action to spend during your turn this Combat Round.
+
+---
+
+[passive]
+# (1) Initiative Advantage: above every Opponent's Initiative Value (conditions.mjs initiativeAdvantage).
+if (initiativeAdvantage) {
+  dodge += 1(T);
+}
+# (2) Your Movement's Exploits offered to nobody below your Initiative Value (chat.mjs offerExploits).
+allow movement.noExploitFromSlower;
+
+# (3) As your turn begins with Initiative Advantage: an Action more this Combat Round, once an Encounter.
+[triggered/start-of-turn, 1/encounter, effect 3]
+requires initiativeAdvantage;
+actions.remaining += 1;
