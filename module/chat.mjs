@@ -3068,6 +3068,22 @@ async function settleGrapple(message, clash) {
     return;
   }
 
+  // Human Shield (2): "If you win, that Opponent becomes the target of that Attacking Maneuver instead and the Strike and Wound
+  // Rolls for that Attacking Maneuver become Urgent Rolls" - where the attack has not been rolled yet. Lost, you stay its target.
+  if (clash.grapple.kind === "shield") {
+    if (winner !== "challenger") return settledNote(message, `${grappler.name} cannot put ${grappled.name} in the way.`);
+    const card = game.messages.get(clash.grapple.shield?.messageId ?? "");
+    const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+    if (!attack || attack.result) return settledNote(message, `${grappler.name} wins, but the attack has already been rolled.`);
+    const swap = entry => (entry.uuid === grappler.uuid) ? { ...entry, uuid: grappled.uuid, name: grappled.name } : entry;
+    requestEdit(card, { type: "attack", attack: { ...attack, targets: attackTargets(attack).map(swap),
+      ...((attack.targetUuid === grappler.uuid) ? { targetUuid: grappled.uuid, targetName: grappled.name } : {}),
+      defences: (attack.defences ?? []).filter(entry => entry.uuid !== grappler.uuid),
+      ready: (attack.ready ?? []).filter(uuid => uuid !== grappler.uuid), urgentRolls: true } });
+    return settledNote(message, `${grappled.name} takes ${attack.maneuverName} in ${grappler.name}'s place - its Strike and `
+      + "Wound Rolls Urgent.");
+  }
+
   // Suplex (1): "If you win, move to the Battle Environment of the Square below" - the one held with you - its Ground
   // Collision the card's button (doubled). Lost, nothing.
   if (clash.grapple.kind === "suplex") {
@@ -9116,7 +9132,7 @@ export async function postSkillClash(actor, target, maneuver, leaves = {}) {
  */
 export async function postGrappleCheck(grappler, grappled, {
   maneuverName = "Grapple", reason = "", kind = "start", earlierAttempts = 0, speaker = null,
-  maneuver = null, telekinetic = false, tailRestraint = false, stretched = false
+  maneuver = null, telekinetic = false, tailRestraint = false, stretched = false, shield = null
 } = {}) {
   const tier = Math.max(1, grappled.system.tierOfPower ?? 1);
   // Wrestler (2): the Grapple Check to keep the Grapple - the Grappled's escape - a Might Clash, asked of the Grappler, once a
@@ -9161,7 +9177,7 @@ export async function postGrappleCheck(grappler, grappled, {
           // is the Launch Maneuver, which is a different thing with a similar name.
           collision: (kind === "launch") ? { doubles: false, doubledBy: "" } : null,
           collisionApplied: false,
-          grapple: { kind, applied: false, ...(tailRestraint ? { tailRestraint: true } : {}),
+          grapple: { kind, applied: false, ...(tailRestraint ? { tailRestraint: true } : {}), ...(shield ? { shield } : {}),
             ...(stretched ? { stretched: true } : {}) },
           // Telekinesis's Launch: as if Grappling them, with no Grapple to end.
           ...(telekinetic ? { telekinetic: true } : {}),
@@ -16438,6 +16454,40 @@ function suplexButton(message, container, attack) {
     requestEdit(message, { type: "attack", attack: { ...(message.getFlag(SCOPE, ATTACK_FLAG) ?? attack), suplexed: true } });
   });
   container.append(button);
+}
+
+/**
+ * Human Shield (2): "If you are targeted for an Attacking Maneuver (that does not possess an AoE and is not from a Character in
+ * the Grapple) while in a Grapple as the Grappler, you can make a Grapple Check against a Grappled Character." A button for
+ * each such target, before they have answered it and before it is rolled; once a Round, spent as the Check is opened.
+ */
+function humanShieldButtons(message, container, attack) {
+  if (!attack || attack.result || attackArea(attack)) return;
+  for (const entry of attackTargets(attack)) {
+    const actor = fromUuidSync(entry.uuid);
+    if (!actor?.isOwner || (actor.system?.effects?.slots?.["humanShield.redirect"] !== true)) continue;
+    const { partner, role } = actor.system.grapple ?? {};
+    const held = (role === "grappler") ? fromUuidSync(partner ?? "") : null;
+    if (!held || [actor.uuid, held.uuid].includes(attack.attackerUuid) || defenceFor(attack, actor.uuid)
+      || (attack.ready ?? []).includes(actor.uuid) || attackTargets(attack).some(other => other.uuid === held.uuid)) continue;
+    const used = actor.getFlag?.(SCOPE, "humanShieldRound") === roundKey();
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Human Shield - ${held.name}`;
+    button.disabled = used;
+    button.dataset.tooltip = used ? "Once a Combat Round."
+      : `A Grapple Check: win and ${held.name} is its target instead, its Strike and Wound Urgent (1/Round)`;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      if (actor.getFlag?.(SCOPE, "humanShieldRound") === roundKey()) return;
+      await requestActorUpdate(actor, { [`flags.${SCOPE}.humanShieldRound`]: roundKey() });
+      await postGrappleCheck(actor, held, { maneuverName: "Human Shield", kind: "shield",
+        reason: `${actor.name} pulls ${held.name} into the way of ${attack.maneuverName}`,
+        shield: { messageId: message.id } });
+    });
+    container.append(button);
+  }
 }
 
 /** Brawler (2), taken: the Grapple at them out of sequence - once a Round, spent as it is used. */
@@ -27960,6 +28010,8 @@ function renderAttack(message, html) {
   brawlerButtons(message, container, attack);
   // Suplex (2): a Powered or Crushing attack at the one you hold, on the ground - their Ground Collision.
   suplexButton(message, container, attack);
+  // Human Shield (2): targeted while holding someone - them in your place, a Grapple Check first.
+  humanShieldButtons(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.
   bondButtons(message, attack, container);
 

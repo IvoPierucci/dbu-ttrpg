@@ -1,0 +1,23 @@
+id: human-shield
+name: Human Shield
+talentCategory: grappling
+prerequisites: Brawler
+description: >
+  You can protect yourself by directing incoming attacks at the opponent currently in your grasp.
+text: >
+  Human Shield: You can protect yourself by directing incoming attacks at the opponent currently in your grasp.
+  –Prerequisites: Brawler
+  (1)-[Passive]: Increase your Soak Value by 1(T) while you are in a Grapple.
+  (2)-[Triggered, 1/Round]: If you are targeted for an Attacking Maneuver (that does not possess an AoE and is not from a Character in the Grapple) while in a Grapple as the Grappler, you can make a Grapple Check against a Grappled Character. If you win, that Opponent becomes the target of that Attacking Maneuver instead and the Strike and Wound Rolls for that Attacking Maneuver become Urgent Rolls.
+
+---
+
+[passive]
+# (1)
+if (inGrapple) {
+  soakValue += 1(T);
+}
+# (2) Targeted by an attack with no AoE from outside the Grapple, as the Grappler: a button on its card before you answer it -
+# a Grapple Check against the one held, once a Round; won, they are its target instead and its Strike and Wound Urgent
+# (chat.mjs humanShieldButtons, settleGrapple).
+allow humanShield.redirect;
