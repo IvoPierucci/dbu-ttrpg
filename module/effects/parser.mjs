@@ -520,6 +520,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "defeatedLockOn", "noCounterActions",
   // In a Grapple as the Grappler (Judo Training's); in one at all (Human Shield's).
   "grappler", "inGrapple",
+  // In one as the Grappled (Personal Space's).
+  "grappledInGrapple",
   // Healthy in truth, and the Superior State's extra Damage waived (Divine Physique's).
   "trulyHealthy", "superiorUnhurt",
   // Natural Armor to mend (Survivor's Plating); an AoE that hit more than one (Overwhelming Pressure's).

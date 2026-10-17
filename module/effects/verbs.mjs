@@ -143,6 +143,10 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Undying (1): leaving it below nothing - Defeated at once, nothing answering it (chat.mjs undyingFall)."
   },
+  personalEscape: {
+    args: [0, 0],
+    doc: "Personal Space (2): a Grapple Check to escape, counted as an Action spent (use-maneuver.mjs escapeGrapple)."
+  },
   judoStrike: {
     args: [0, 0],
     doc: "Judo Training (2): the Basic Attack or the Launch out of sequence, which asked (chat.mjs judoStrike)."

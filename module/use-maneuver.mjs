@@ -513,7 +513,7 @@ export async function releaseGrapple(actor) {
  * the roles in a Grapple do not swap. Which is also what settles a tie: the Defender
  * takes one, and within a Grapple the Defender is always the Grappled.
  */
-export async function escapeGrapple(actor) {
+export async function escapeGrapple(actor, { free = false } = {}) {
   const grappler = fromUuidSync(actor.system.grapple?.partner ?? "");
   if (!grappler) {
     ui.notifications.warn(`${actor.name} is not in a Grapple.`);
@@ -526,7 +526,8 @@ export async function escapeGrapple(actor) {
     return false;
   }
 
-  if (game.combat?.started && (actionsLeft(actor, "standard") < 1)) {
+  // Personal Space (2): "This counts as spending 1 Action for the effects of Escaping a Grapple" - none paid, the attempt counted.
+  if (!free && game.combat?.started && (actionsLeft(actor, "standard") < 1)) {
     ui.notifications.warn(`${actor.name} has no Actions left this round.`);
     return false;
   }
@@ -534,7 +535,7 @@ export async function escapeGrapple(actor) {
   // One Action, one Check. Not a number bought in advance: the Actions after the first
   // buy a bonus on the attempts that follow, and you only make a second because the
   // first one lost - which a player cannot know until they have made it.
-  if (!await spendActions(actor, 1, "standard")) return false;
+  if (!free && !await spendActions(actor, 1, "standard")) return false;
 
   // What the earlier attempts this turn are worth to this one, read before this attempt
   // is counted: the first is made at no bonus, which is what "each Action spent after the
@@ -550,7 +551,8 @@ export async function escapeGrapple(actor) {
     // The Grappled is the one doing something, so the card speaks for them even though
     // the Grappler is its challenger.
     speaker: ChatMessage.getSpeaker({ actor }),
-    reason: already
+    reason: free ? `Personal Space: ${actor.name} tries to break free`
+      : already
       ? `${actor.name} tries again - attempt ${already + 1} this turn`
       : `${actor.name} spends an Action to break free`
   });

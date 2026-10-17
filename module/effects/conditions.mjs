@@ -430,6 +430,9 @@ const PREDICATES = {
   allyHitThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "cutthroatAllyHit") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
 
+  /** In a Grapple as the Grappled - Personal Space's. */
+  grappledInGrapple: scope => Boolean(scope.data?.grapple?.partner) && (scope.data?.grapple?.role === "grappled"),
+
   /** In a Grapple, either side - Human Shield's. */
   inGrapple: scope => Boolean(scope.data?.grapple?.partner),
 

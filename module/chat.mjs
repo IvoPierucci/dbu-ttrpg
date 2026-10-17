@@ -3032,6 +3032,7 @@ async function settleGrapple(message, clash) {
       await endGrapple(grappler, grappled);
       await settledNote(message,
         `${grappler.name} loses the Grapple Check, and ${grappled.name} escapes.`);
+      offerPersonalSpace(message, grappled);
       return;
     }
 
@@ -3058,6 +3059,7 @@ async function settleGrapple(message, clash) {
       await endGrapple(grappler, grappled);
       await settledNote(message,
         `${grappler.name} loses the Might Clash, and ${grappled.name} escapes.`);
+      offerPersonalSpace(message, grappled);
       return;
     }
 
@@ -3117,6 +3119,7 @@ async function settleGrapple(message, clash) {
       await endGrapple(grappler, grappled);
       await settledNote(message,
         `${grappler.name} loses the Grapple Check, and ${grappled.name} escapes.`);
+      offerPersonalSpace(message, grappled);
       return;
     }
 
@@ -3143,6 +3146,7 @@ async function settleGrapple(message, clash) {
     }
     await endGrapple(grappler, grappled);
     await settledNote(message, `${grappled.name} escapes the Grapple.`);
+    offerPersonalSpace(message, grappled);
     return;
   }
 
@@ -8989,8 +8993,12 @@ function grappleAllParts(actor, clash = null, uuid = "") {
   // Judo Training (1): "Increase your Grapple Checks when already in a Grapple by 1(T)" - every one but the Check that starts it.
   const judo = clash?.grapple && (clash.grapple.kind !== "start") && !clash.telekinetic
     && (actor.system.effects?.slots?.["judo.inGrapple"] === true);
+  // Personal Space (1): "if they are initiated by another Character or while you are in a Grapple as the Grappled" - the
+  // Defender's side of every Grapple Check.
+  const personal = clash?.grapple && (uuid === clash.defenderUuid) && (actor.system.effects?.slots?.["personalSpace.grapple"] === true);
   return [...(value ? [{ label: "Grapple Checks", value }] : []),
     ...(judo ? [{ label: "Judo Training", written: "+1(T)", value: Math.max(1, actor.system.tierOfPower ?? 1) }] : []),
+    ...(personal ? [{ label: "Personal Space", written: "+1(T)", value: Math.max(1, actor.system.tierOfPower ?? 1) }] : []),
     ...(larger ? [{ label: "Gigantic Grip", written: `+${larger}(T)`, value: larger * Math.max(1, actor.system.tierOfPower ?? 1) }] : [])];
 }
 
@@ -18813,6 +18821,14 @@ async function takeOutOfSequence(message, actor, offer) {
     }
     await actor.setFlag(SCOPE, flag, roundKey());
   }
+  // Personal Space (3)'s, once a Round.
+  if (offer.grants?.personalSpace) {
+    if (actor.getFlag?.(SCOPE, "personalSpaceRound") === roundKey()) {
+      ui.notifications.warn(`${actor.name}: Personal Space - already used this Combat Round.`);
+      return null;
+    }
+    await actor.setFlag(SCOPE, "personalSpaceRound", roundKey());
+  }
   // Brigand Combat (2): once a Round for whoever handed it out - another Ally's taken already, this one is gone.
   if (offer.grants?.brigandFrom && (fromUuidSync(offer.grants.brigandFrom)?.getFlag?.(SCOPE, "brigandRound") === roundKey())) {
     ui.notifications.warn("Brigand Combat has been used this Combat Round.");
@@ -21803,6 +21819,33 @@ async function takePointBlank(message, actor, offer) {
   requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
   await actor.setFlag(SCOPE, "pointBlankEncounter", encounter);
   return used;
+}
+
+/**
+ * Personal Space (3): "If you escape a Grapple or an Opponent ends their turn within your Melee Range, you may use the Movement
+ * Maneuver as an Out-of-Sequence Maneuver." Offered on the card at hand; taken, once a Round (takeOutOfSequence).
+ */
+function offerPersonalSpace(card, actor) {
+  if (!card || !actor || actor.system?.defeated || (actor.system?.effects?.slots?.["personalSpace.move"] !== true)
+    || (actor.getFlag?.(SCOPE, "personalSpaceRound") === roundKey())) return;
+  requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "movement",
+    maneuverName: "Movement", reason: "Personal Space", grants: { personalSpace: true } } });
+}
+
+/** Personal Space (3), as an Opponent's turn ends within your Melee Range: offered on that turn's card. */
+export function personalSpaceTurnEnd(leaving) {
+  const card = (game.messages?.contents ?? []).findLast(message => {
+    const moment = message.getFlag(SCOPE, MOMENT_FLAG);
+    return (moment?.moment === "start-of-turn") && (moment.subjectUuid === leaving?.uuid);
+  });
+  const own = leaving?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  if (!card || (own === undefined)) return;
+  for (const token of canvas?.tokens?.placeables ?? []) {
+    const other = token.actor;
+    if (!other || (other.uuid === leaving.uuid) || (token.document?.disposition === own)) continue;
+    if (whyNotWithinMelee(other, leaving, "")) continue;
+    offerPersonalSpace(card, other);
+  }
 }
 
 /**

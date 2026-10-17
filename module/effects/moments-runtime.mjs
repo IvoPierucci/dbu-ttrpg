@@ -408,6 +408,7 @@ async function runVerb(actor, call, context) {
     case "undyingFall": return (await import("../chat.mjs")).undyingFall(actor);
     case "rageStrike": return (await import("../chat.mjs")).rageStrike(actor);
     case "judoStrike": return (await import("../chat.mjs")).judoStrike(actor);
+    case "personalEscape": return (await import("../use-maneuver.mjs")).escapeGrapple(actor, { free: true });
     case "surgingFocus": return (await import("../chat.mjs")).surgingFocus(actor);
     case "surgingSpare": return (await import("../chat.mjs")).surgingSpare(actor);
     case "goof": return (await import("../chat.mjs")).goof(actor);

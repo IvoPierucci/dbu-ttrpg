@@ -614,6 +614,8 @@ export function registerCombatHooks() {
       // Surprise Strike: whoever fakes it, with this Oblivious one ending their turn beside them.
       const { offerSurpriseStrikes } = await import("./hidden.mjs");
       await offerSurpriseStrikes(leaving, combat);
+      // Personal Space (3): whoever has them within their Melee Range as the turn ends - the Movement, out of sequence.
+      (await import("./chat.mjs")).personalSpaceTurnEnd(leaving);
 
       // Dead Zone, open: its Might Clash against everyone, at the end of each of its user's turns.
       const { pullAtEndOfTurn } = await import("./chat.mjs");
