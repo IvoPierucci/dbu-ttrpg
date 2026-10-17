@@ -1670,6 +1670,13 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
   const slots = actor?.system?.effects?.slots ?? {};
   const bT = Math.max(1, Number(actor?.system?.baseTierOfPower) || 1);
   const magic = declared.foundation === "magic";
+  const area = () => (maneuver.signature && !maneuver.signatureTechnique)
+    ? (maneuver.area ?? (declared.areaAdded ? declared.area : null) ?? null)
+    : (declared.area ?? PROFILES[declared.profile]?.area ?? null);
+  // Artillery Shot (2): asked first, its Area the one the others then build on.
+  if (!noArea && (declared.foundation === "energy") && (slots["artillery.area"] === true) && !area()) {
+    declared = await askArtilleryArea(actor, declared, bT);
+  }
   // Greed of the Hera (3): "If you would use the Basic Attack Maneuver to make an Attacking Maneuver that does not possess
   // an AoE, you may spend 3(bT) Ki Points to apply a Cone or Line AoE to that Attacking Maneuver."
   if (!noArea && (maneuver.id === BASIC_ATTACK) && (slots["greed.area"] === true)) {
@@ -1685,8 +1692,6 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
   if (!noArea && !declared.weapon && (slots["martial.area"] === true)) {
     declared = await askAddedArea(actor, declared, { title: "Martial Artist", flag: "martialAreaRound", ki: 2 * bT });
   }
-  const area = () => (maneuver.signature && !maneuver.signatureTechnique)
-    ? (maneuver.area ?? null) : (declared.area ?? PROFILES[declared.profile]?.area ?? null);
   // Greed of the Hera (4): "If you would use an Attacking Maneuver with a Minor or Standard AoE, you may spend up to 4(bT) Ki
   // Points. For every 2(bT) Ki Points spent, increase the Magnitude of that Attacking Maneuver by 1."
   if ((slots["greed.magnitude"] === true) && area() && (magnitudeIndex(area()) <= MAGNITUDES.indexOf("standard"))) {
@@ -1715,6 +1720,37 @@ async function askAddedArea(actor, declared, { title, flag, ki }) {
   if (!["cone", "line"].includes(shape)) return declared;
   await actor.setFlag("dbu-ttrpg", flag, round);
   return { ...declared, area: { shape }, kiSurcharge: (Number(declared.kiSurcharge) || 0) + ki };
+}
+
+/**
+ * Artillery Shot (2): "If you make an Energy Attack that does not possess an AoE, you may apply an AoE of your choice to that
+ * Attacking Maneuver. The Target Square of that AoE can be any Square that is outside of your Melee Range. The Magnitude of
+ * that AoE starts at Large, but you may spend up to 4(bT) Ki Points to increase the Magnitude of that AoE by 1 for every
+ * 2(bT) Ki Points spent." The shape, then the Ki - paid with the attack (`kiSurcharge`); once an Encounter.
+ */
+async function askArtilleryArea(actor, declared, bT) {
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.("dbu-ttrpg", "artilleryEncounter") === encounter) return declared;
+  const shape = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Artillery Shot" },
+    content: `<p data-tooltip="Once an Encounter. Its Target Square any Square outside your Melee Range.">A Large AoE?</p>`,
+    buttons: [{ action: "sphere", label: "Sphere" }, { action: "cone", label: "Cone" }, { action: "line", label: "Line" },
+      { action: "no", label: "No" }],
+    rejectClose: false
+  });
+  if (!["sphere", "cone", "line"].includes(shape)) return declared;
+  const step = 2 * bT;
+  const ki = (Number(actor.system.ki?.value) || 0) - (Number(declared.kiSurcharge) || 0);
+  const steps = (ki < step) ? 0 : (Number(await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: "Artillery Shot" },
+    content: `<p data-tooltip="${step} Ki for each Magnitude.">Its Magnitude?</p>`,
+    buttons: [{ action: "0", label: "Large" }, { action: "1", label: `Huge (${step} Ki)` },
+      ...((ki >= 2 * step) ? [{ action: "2", label: `Destructive (${2 * step} Ki)` }] : [])],
+    rejectClose: false
+  })) || 0);
+  await actor.setFlag("dbu-ttrpg", "artilleryEncounter", encounter);
+  return { ...declared, area: { shape, magnitude: "large", magnitudeSteps: steps, outsideMelee: true }, areaAdded: true,
+    kiSurcharge: (Number(declared.kiSurcharge) || 0) + (steps * step) };
 }
 
 /** 1 or 2 Magnitudes on the Area it has, `step` Ki each: asked, once a Round. */
@@ -2334,6 +2370,8 @@ export function areaLabel(area) {
   if (area.wholeBattlefield) name += " - entire Battlefield";
   if (area.centredOnTarget) return `${name} (centred on ${area.centreName || "the target"})`;
   if (area.anySquare) return `${name} (any Square)`;
+  // Artillery Shot's: "any Square that is outside of your Melee Range".
+  if (area.outsideMelee) return `${name} (a Square outside your Melee Range)`;
   return area.centredOnSelf ? `${name} (centred on you)` : name;
 }
 

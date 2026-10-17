@@ -19101,7 +19101,7 @@ export async function postAttack(actor, target, maneuver,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
-                                   unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false },
+                                   unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -19394,8 +19394,8 @@ export async function postAttack(actor, target, maneuver,
           weapon,
           // An Area the attack brings for itself, over its Profile's - the Grenade's Minor
           // Sphere. Null for every attack whose Area, if any, is its Profile's. A Technique's is
-          // the one its features built.
-          area: greedArea(overwhelmedArea(sizedArea(actor, target, technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null),
+          // the one its features built - or, with none, one an effect added (`areaAdded`, Artillery Shot's).
+          area: greedArea(overwhelmedArea(sizedArea(actor, target, technique ? (technique.area ?? (areaAdded ? area : null)) : (area ?? PROFILES[profile]?.area ?? null),
             { portal }), reflecting ? null : overwhelm), reflecting ? 0 : boughtMagnitude),
           // Critical Point (2): primed by the Energy Charge Maneuver this Round.
           ...((primed && !reflecting) ? { primed: true } : {}),
@@ -19405,7 +19405,7 @@ export async function postAttack(actor, target, maneuver,
           ...(selfExplosion ? { selfExplosion: true } : {}),
           // Punching Up, against the one it was aimed at.
           punchingUp: punchingUp(actor, target, sizedArea(actor, target,
-            technique ? technique.area : (area ?? PROFILES[profile]?.area ?? null), { portal }), modifiers),
+            technique ? (technique.area ?? (areaAdded ? area : null)) : (area ?? PROFILES[profile]?.area ?? null), { portal }), modifiers),
           // "A Bomb's Strike Roll for this Attacking Maneuver will automatically succeed."
           // Carried on the attack, since it is the attack's and not the character's.
           autoHit: Boolean(autoHit),

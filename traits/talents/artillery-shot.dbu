@@ -1,0 +1,21 @@
+id: artillery-shot
+name: Artillery Shot
+talentCategory: energy-attack
+prerequisites: Enhanced Shot
+description: >
+  Like a grenadier, your ability to lob energy blasts that cover a wide area makes your attacks even more likely to hit, despite the range.
+text: >
+  Artillery Shot: Like a grenadier, your ability to lob energy blasts that cover a wide area makes your attacks even more likely to hit, despite the range.
+  –Prerequisites: Enhanced Shot
+  (1)-[Passive]: Increase the Strike Roll of Energy Attacks made against Opponents outside of your Melee Range by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you make an Energy Attack that does not possess an AoE, you may apply an AoE of your choice to that Attacking Maneuver. The Target Square of that AoE can be any Square that is outside of your Melee Range. The Magnitude of that AoE starts at Large, but you may spend up to 4(bT) Ki Points to increase the Magnitude of that AoE by 1 for every 2(bT) Ki Points spent.
+
+---
+
+[passive]
+# (1) Against each one outside the Melee Range alone (chat.mjs rangeParts).
+strike.energy.outsideMelee += 1(T);
+# (2) An Energy Attack with no AoE: asked as it is declared, in sequence or out of it - a Sphere, a Cone or a Line, Large,
+# its Target Square outside your Melee Range; up to 2 Magnitudes more, 2(bT) Ki each, paid with the attack. Once an
+# Encounter (maneuvers.mjs askArtilleryArea).
+allow artillery.area;
