@@ -1509,6 +1509,18 @@ async function applyModifiers(actor, applied) {
       content: "<p>The Called Shot for 2 stacks of Critical Eye instead of its Action?</p>", rejectClose: false });
     if (byEyes) applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
   }
+  // Attentive Warrior (3): "If you have Initiative Advantage, when making an Attacking Maneuver, you may apply the Called Shot
+  // Modifier Maneuver to that Attacking Maneuver without spending an Action" - asked, once an Encounter.
+  const encounter = game.combat?.id ?? "none";
+  if (called && !byEyes && (actor.system.effects?.slots?.["calledShot.byAdvantage"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "attentiveCalledEncounter") !== encounter)
+    && (await import("./effects/conditions.mjs")).initiativeAdvantageOf(actor)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
+      window: { title: `${actor.name} - Attentive Warrior` },
+      content: `<p data-tooltip="Initiative Advantage. Once an Encounter.">The Called Shot without its Action?</p>`, rejectClose: false })) {
+    await actor.setFlag("dbu-ttrpg", "attentiveCalledEncounter", encounter);
+    applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
+  }
   // Scarlet Spotter (1): "If you target an Opponent with a Called Shot, you may spend 2 stacks of Critical Eye to ignore that
   // Opponent's Damage Reduction" - asked, with 2 more held than Pinpoint Combat took; marked on the Called Shot itself.
   const aimed = applied.find(entry => (entry.modifier?.id ?? entry.id) === "called-shot");

@@ -8922,7 +8922,7 @@ const CLASH_ROLLS = ({
 
     // "...and Saving Throws in Clashes against a Seen Opponent by ... 1(T)." The other
     // half of the same sentence, and a different number - which is why they are two rows.
-    parts: (actor, clash, uuid) => seenBonus(actor, clashOpponent(clash, uuid), "save"),
+    parts: (actor, clash, uuid) => [...seenBonus(actor, clashOpponent(clash, uuid), "save"), ...saveDefendingParts(actor, clash, uuid)],
 
     options: (actor, clash, uuid) => ({
       criticalTarget: actor.system.savingThrows[savePicked(clash, uuid)]?.criticalTarget ?? null,
@@ -8979,6 +8979,18 @@ Object.freeze(CLASH_ROLLS);
  * Returned as a list so it drops out of the breakdown entirely rather than showing as a
  * row worth nothing.
  */
+/**
+ * Attentive Warrior (1): "increase the Dice Score of your Clashes initiated by an Opponent that uses your Saving Throws by 1(T)"
+ * - its Defender's side, the one who opened it not an Ally.
+ */
+function saveDefendingParts(actor, clash, uuid) {
+  const slot = actor?.system?.effects?.slots?.["clash.saveDefending"];
+  if ((uuid !== clash.defenderUuid) || !(Number(slot?.add) || 0)
+    || alliesOnScene(actor).some(ally => ally.uuid === clash.challengerUuid)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Initiated by an Opponent",
+    value: Number(slot.add) }];
+}
+
 /** Which roll a side makes in Wrestler's Clash: the Grappler's Might; the Grappled's answer, Might till they say. */
 function wrestleRoll(clash, uuid) {
   return (uuid === clash.defenderUuid) ? (clash.defenderRoll || "might") : "might";

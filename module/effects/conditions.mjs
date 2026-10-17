@@ -43,6 +43,19 @@ function opponentNear(self, other) {
   return Math.round(grid.measurePath([mine.center, theirs.center]).distance / (grid.distance || 1)) < 9;
 }
 
+/**
+ * Initiative Advantage - Improved Initiative's: "If your Initiative Value is higher than that of all Opponents". Read off the
+ * Combat's Combatants; every Opponent's rolled and lower, and at least one of them.
+ */
+export function initiativeAdvantageOf(actor) {
+  const combat = globalThis.game?.combat;
+  const own = combat?.combatants?.find(entry => entry.actor?.uuid === actor?.uuid);
+  if (!own || !Number.isFinite(own.initiative)) return false;
+  const side = own.token?.disposition;
+  const opponents = Array.from(combat.combatants ?? []).filter(entry => (entry.id !== own.id) && (entry.token?.disposition !== side));
+  return (opponents.length > 0) && opponents.every(entry => Number.isFinite(entry.initiative) && (entry.initiative < own.initiative));
+}
+
 const PREDICATES = {
   /** Are you Defending against the attack currently being resolved. */
   defending: scope => Boolean(scope.context?.defending),
@@ -434,15 +447,7 @@ const PREDICATES = {
    * Initiative Advantage - Improved Initiative's: "If your Initiative Value is higher than that of all Opponents". Read off the
    * Combat's Combatants; every Opponent's rolled and lower, and at least one of them.
    */
-  initiativeAdvantage: scope => {
-    const combat = globalThis.game?.combat;
-    const actor = scope.data?.parent;
-    const own = combat?.combatants?.find(entry => entry.actor?.uuid === actor?.uuid);
-    if (!own || !Number.isFinite(own.initiative)) return false;
-    const side = own.token?.disposition;
-    const opponents = Array.from(combat.combatants ?? []).filter(entry => (entry.id !== own.id) && (entry.token?.disposition !== side));
-    return (opponents.length > 0) && opponents.every(entry => Number.isFinite(entry.initiative) && (entry.initiative < own.initiative));
-  },
+  initiativeAdvantage: scope => initiativeAdvantageOf(scope.data?.parent),
 
   /** In a Grapple as the Grappled - Personal Space's. */
   grappledInGrapple: scope => Boolean(scope.data?.grapple?.partner) && (scope.data?.grapple?.role === "grappled"),

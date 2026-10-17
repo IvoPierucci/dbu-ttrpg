@@ -1,0 +1,26 @@
+id: attentive-warrior
+name: Attentive Warrior
+talentCategory: initiative
+prerequisites: Alert, Insight Score of 10+
+description: >
+  Your keen battlefield awareness allows you to manipulate the battlefield to your advantage.
+text: >
+  Attentive Warrior: Your keen battlefield awareness allows you to manipulate the battlefield to your advantage.
+  –Prerequisites: Alert, Insight Score of 10+
+  (1)-[Passive]: While you have Initiative Advantage, increase the Dice Score of your Clashes initiated by an Opponent that uses your Saving Throws by 1(T).
+  (2)-[Passive]: While you have Initiative Advantage, increase your Strike Rolls by 1(T).
+  (3)-[Triggered, 1/Encounter]: If you have Initiative Advantage, when making an Attacking Maneuver, you may apply the Called Shot Modifier Maneuver to that Attacking Maneuver without spending an Action.
+
+---
+
+[passive]
+# Initiative Advantage: above every Opponent's Initiative Value (conditions.mjs initiativeAdvantage).
+if (initiativeAdvantage) {
+  # (1) A Saving Throw Clash an Opponent opened, on your side (chat.mjs saveDefendingParts).
+  clash.saveDefending += 1(T);
+  # (2)
+  strike += 1(T);
+}
+# (3) The Called Shot taken with an Attacking Maneuver: asked, once an Encounter, with Initiative Advantage - its Action not
+# spent (use-maneuver.mjs applyModifiers).
+allow calledShot.byAdvantage;
