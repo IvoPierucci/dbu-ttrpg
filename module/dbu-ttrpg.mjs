@@ -177,7 +177,7 @@ function conduitRefresh() {
 Hooks.on("updateActor", (actor, changes) => { if (changes.system?.life) conduitRefresh(); });
 
 // Improved Initiative (2), Alert (3): Initiative Advantage read off the Combat's Initiative Values - read again as they change.
-const ADVANTAGE_READERS = new Set(["improved-initiative", "alert", "attentive-warrior"]);
+const ADVANTAGE_READERS = new Set(["improved-initiative", "alert", "attentive-warrior", "speedblitz"]);
 function initiativeRefresh(combat) {
   for (const actor of new Set(Array.from(combat?.combatants ?? []).map(entry => entry.actor))) {
     if (!actor || !Array.from(actor.items ?? []).some(item => ADVANTAGE_READERS.has(item.flags?.["dbu-ttrpg"]?.sourceId))) continue;

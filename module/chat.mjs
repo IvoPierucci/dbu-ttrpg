@@ -13808,9 +13808,22 @@ export async function judoStrike(actor) {
     ui.notifications.warn(`${actor.name}: Judo Training - only in a Grapple as the Grappler.`);
     return UNSPENT;
   }
-  const which = await askPlayerChoice(actor, `${actor.name}: Judo Training`,
-    [{ value: "basic-attack", label: "Basic Attack" }, { value: "launch", label: "Launch" }]);
-  if (!["basic-attack", "launch"].includes(which)) return UNSPENT;
+  return oneOutOfSequence(actor, "Judo Training", [{ value: "basic-attack", label: "Basic Attack" }, { value: "launch", label: "Launch" }]);
+}
+
+/**
+ * Speedblitz (3): "If you have Initiative Advantage, you may use the Movement Maneuver or Basic Attack Maneuver as an
+ * Out-of-Sequence Maneuver." Which, asked; unspent where none is made.
+ */
+export async function speedblitz(actor) {
+  return oneOutOfSequence(actor, "Speedblitz", [{ value: "movement", label: "Movement" }, { value: "basic-attack", label: "Basic Attack" }]);
+}
+
+/** One of these Maneuvers, which asked, out of sequence - the character's own where they have it. Unspent where none is made. */
+async function oneOutOfSequence(actor, title, choices) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const which = await askPlayerChoice(actor, `${actor.name}: ${title}`, choices);
+  if (!choices.some(choice => choice.value === which)) return UNSPENT;
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
   const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === which));
   return (await useManeuver(actor, own ? definitionOf(own) : getManeuver(which), { outOfSequence: true })) ? undefined : UNSPENT;

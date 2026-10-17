@@ -1,0 +1,29 @@
+id: speedblitz
+name: Speedblitz
+talentCategory: initiative
+prerequisites: Improved Initiative, Agility Score of 8+
+description: >
+  You jump into action, moving quicker than your foes can react.
+text: >
+  Speedblitz: You jump into action, moving quicker than your foes can react.
+  –Prerequisites: Improved Initiative, Agility Score of 8+
+  (1)-[Passive]: Increase your Initiative Value by 1(bT).
+  (2)-[Passive]: While you have Initiative Advantage, increase your Speeds and Wound Rolls by 1(T).
+  (3)-[Triggered/Start of Turn, 1/Encounter]: If you have Initiative Advantage, you may use the Movement Maneuver or Basic Attack Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+initiative += 1(bT);
+# (2) Initiative Advantage: above every Opponent's Initiative Value (conditions.mjs initiativeAdvantage).
+if (initiativeAdvantage) {
+  speed.all += 1(T);
+  wound += 1(T);
+}
+
+# (3) On your turn's card with Initiative Advantage, never Automatic (it hands over an Out-of-Sequence Maneuver): the Movement
+# or the Basic Attack, which asked - once an Encounter (chat.mjs speedblitz).
+[triggered/start-of-turn, outOfSequence, 1/encounter, effect 3]
+requires initiativeAdvantage;
+speedblitz();
