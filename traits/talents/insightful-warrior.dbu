@@ -3,16 +3,16 @@ name: Insightful Warrior
 talentCategory: insightful
 prerequisites: Insight Score of 8+
 description: >
-  You realize that reading your opponent and reacting accordingly is more
-  effective than brute strength.
+  You realize that reading your opponent and reacting accordingly is more effective than brute strength.
 text: >
-  While your Force and Magic Scores are at least 4 lower than your Insight Score
-  and you are not benefiting from Balanced Warrior, increase your Wound Rolls and
-  Might by 2(T).
+  Insightful Warrior: You realize that reading your opponent and reacting accordingly is more effective than brute strength.
+  –Prerequisites: Insight Score of 8+
+  (1)-[Passive]: While your Force and Magic Attribute Scores are at least 4 lower than your Insight Attribute Score and you are not benefiting from the effect of Balanced Warrior, increase your Wound Rolls and Might by 2(T).
 
 ---
 
 [passive]
+# (1)
 if (force.score <= insight.score - 4 &&
     magic.score <= insight.score - 4 &&
     !benefiting("Balanced Warrior")) {
