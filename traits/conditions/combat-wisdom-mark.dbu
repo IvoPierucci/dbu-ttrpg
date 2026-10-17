@@ -1,0 +1,17 @@
+id: combat-wisdom-mark
+name: Combat Wisdom
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Combat Wisdom's (2) gives, for the Signature Technique it was declared with.
+combatCondition: no
+source: Core Rule
+description: >
+  Combat Wisdom: Wound Rolls and Might 1(T) higher for this Signature Technique.
+text: >
+  Combat Wisdom (2): If you use the Signature Technique Maneuver while benefiting from the effect of Insightful Warrior, increase your Wound Rolls and Might by 1(T) for the duration of that Maneuver.
+
+---
+
+[passive]
+wound += 1(T);
+might += 1(T);

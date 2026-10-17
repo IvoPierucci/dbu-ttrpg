@@ -13130,6 +13130,7 @@ export async function frozenTurnAfterManeuver(actor, card) {
 async function frozenTurnAfterAttack(attack) {
   // And whatever lasted "for the duration of that Attacking Maneuver" - Heart of Glass's Surging - with it.
   await glassSurgeEnds(attack);
+  await combatWisdomEnds(attack);
   await entrustedAllInEnds(attack);
   await warriorTensionEnds(attack);
   await studiedSpent(attack);
@@ -13139,6 +13140,14 @@ async function frozenTurnAfterAttack(attack) {
   if (attack?.shardEnds) await shardsSpent(attack.shardEnds);
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   if (frozenTurnOf(attacker)?.closing) await endFrozenTurn(attacker);
+}
+
+/** Combat Wisdom (2): "for the duration of that Maneuver" - its mark off its maker once the attack is concluded. */
+async function combatWisdomEnds(attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attacker?.isOwner || !((Number(attacker.system.conditions?.["combat-wisdom-mark"]) || 0) > 0)) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(attacker, "combat-wisdom-mark", 0);
 }
 
 /** Heart of Glass (3): the attack Surging was entered for, concluded - Surging left. */
@@ -23447,8 +23456,12 @@ async function rollAttackWoundWork(message, attack) {
     const fullCounter = (own.defense === "crossCounter")
       ? (Number(target.system.effects?.slots?.["crossCounter.damageReduction"]?.add) || 0) : 0;
     // Greed of the Hera (6)'s, spent as it hit.
+    // Combat Wisdom (3): "If you would use the Defend Maneuver ... increase your Damage Reduction by 2(T) for the duration of
+    // that Maneuver" - its 1/Round spent here.
+    const wiseReduction = Number(defending?.slots?.damageReduction?.add) || 0;
+    if (wiseReduction) spendWriting(target, defending, "damageReduction");
     const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic
-      + fullCounter
+      + fullCounter + wiseReduction
       + (Number(own.greedReduction) || 0) + (Number(own.toughReduction) || 0));
 
     const negated = counterWound && (counterWound.total > wound.total);

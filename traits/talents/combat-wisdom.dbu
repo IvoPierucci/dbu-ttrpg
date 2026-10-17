@@ -1,0 +1,33 @@
+id: combat-wisdom
+name: Combat Wisdom
+talentCategory: insightful
+prerequisites: Insight Score of 10+, Insightful Warrior
+description: >
+  You are able to substitute your skill and experience in battle for raw, unbridled power.
+text: >
+  Combat Wisdom: You are able to substitute your skill and experience in battle for raw, unbridled power.
+  –Prerequisites: Insight Score of 10+, Insightful Warrior
+  (1)-[Passive]: While benefiting from the effect of Insightful Warrior, increase your Insight Modifier by 1(T).
+  (2)-[Triggered, 1/Round]: If you use the Signature Technique Maneuver while benefiting from the effect of Insightful Warrior, increase your Wound Rolls and Might by 1(T) for the duration of that Maneuver.
+  (3)-[Triggered, 1/Round]: If you would use the Defend Maneuver while benefiting from the effect of Insightful Warrior, increase your Damage Reduction by 2(T) for the duration of that Maneuver.
+
+---
+
+[passive]
+# (1)
+if (benefiting("Insightful Warrior")) {
+  insight.mod += 1(T);
+}
+
+# (2) A Signature Technique declared: asked in its window, once a Round - Combat Wisdom (a mark), Wound Rolls and Might 1(T),
+# off once that attack is concluded (chat.mjs combatWisdomEnds) or at the end of the turn at the latest.
+[triggered/declare-maneuver, 1/round, effect 2]
+requires signatureTechnique && benefiting("Insightful Warrior");
+gain(combat-wisdom-mark);
+expires(combat-wisdom-mark, turn);
+
+# (3) The Defend Maneuver used against an attack: its Damage Reduction 2(T) more for it, once a Round (chat.mjs, where the
+# Damage Reduction is).
+[triggered/defending, 1/round, effect 3]
+requires benefiting("Insightful Warrior");
+damageReduction += 2(T);
