@@ -4471,8 +4471,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
     await recordManeuverUse(actor, maneuver);
     await (await import("./maneuvers.mjs")).noteEnergyCharge(actor);
-    await recordManeuverType(actor, maneuver.type,
-      { messageId: (await postManeuver(actor, maneuver, { foundation: null }))?.id, maneuverId: maneuver.id });
+    const card = await postManeuver(actor, maneuver, { foundation: null });
+    await recordManeuverType(actor, maneuver.type, { messageId: card?.id, maneuverId: maneuver.id });
+    // Point Blank Shot (2): the declared Attacking Maneuver, out of sequence, offered on this card.
+    (await import("./chat.mjs")).offerPointBlank(card, actor);
     return true;
   }
 

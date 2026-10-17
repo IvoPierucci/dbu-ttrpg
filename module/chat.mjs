@@ -18472,6 +18472,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.callBuddy) return takeBuddyCall(message, actor, offer);
   // Shock Tornado's: the Thrust, its Clash marked.
   if (offer.shockTornado) return takeShockTornado(message, actor, offer);
+  // Point Blank Shot's: the charged Attacking Maneuver itself.
+  if (offer.pointBlank) return takePointBlank(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
   // Wild Counter's, once a Round.
   if (offer.grants?.wildCounter) {
@@ -21466,6 +21468,59 @@ async function offerShockTornado(message, attack, actor) {
   if (whyNotWithinMelee(actor, attacker, "")) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "thrust",
     maneuverName: "Thrust", targetUuid: attacker.uuid, reason: "Shock Tornado - your Parry turned it aside", shockTornado: true } });
+}
+
+/** Whether the Attacking Maneuver being charged is an Energy Attack: a Technique's own Foundation, or its Profile's. */
+function chargedAsEnergy(actor) {
+  const charging = actor?.system?.charging;
+  const item = actor?.items?.get(charging?.maneuverId ?? "");
+  if (!item) return false;
+  const pinned = item.system.signature?.foundation ?? "";
+  return pinned ? (pinned === "energy") : (PROFILES[charging.profile]?.foundations ?? []).includes("energy");
+}
+
+/**
+ * Point Blank Shot (2): "If you use the Energy Charge Maneuver within the Melee Range of an Opponent, use the declared
+ * Attacking Maneuver as an Out-of-Sequence Maneuver if it was an Energy Attack." Offered on the Energy Charge's card; taken,
+ * once an Encounter (takePointBlank).
+ */
+export function offerPointBlank(card, actor) {
+  if (!card || (actor?.system?.effects?.slots?.["charge.pointBlank"] !== true)
+    || (actor.getFlag?.(SCOPE, "pointBlankEncounter") === (game.combat?.id ?? "none")) || !chargedAsEnergy(actor)) return;
+  const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+  const near = (canvas?.tokens?.placeables ?? []).some(token => token.actor && (token.actor.uuid !== actor.uuid)
+    && ((own === undefined) || (token.document?.disposition !== own)) && !token.actor.system?.defeated
+    && !whyNotWithinMelee(actor, token.actor, ""));
+  if (!near) return;
+  const item = actor.items.get(actor.system.charging.maneuverId);
+  requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: item.name, reason: "Point Blank Shot", pointBlank: true } });
+}
+
+/** Point Blank Shot, taken: the charged Attacking Maneuver out of sequence, as an Energy Attack - once an Encounter. */
+async function takePointBlank(message, actor, offer) {
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.(SCOPE, "pointBlankEncounter") === encounter) {
+    ui.notifications.warn(`${actor.name}: Point Blank Shot - already used this Combat Encounter.`);
+    return null;
+  }
+  const charging = actor.system.charging;
+  const item = actor.items.get(charging?.maneuverId ?? "");
+  if (!item || !chargedAsEnergy(actor)) {
+    ui.notifications.warn(`${actor.name} is not charging an Energy Attack.`);
+    return null;
+  }
+  const { definitionOf, useManeuver, useTechnique } = await import("./use-maneuver.mjs");
+  const definition = definitionOf(item);
+  const used = ((item.system.tags ?? []).includes("signature") && !item.system.signatureTechnique)
+    ? await useTechnique(actor, item.id, { outOfSequence: true })
+    // A Profile of more than one Foundation, thrown as Energy.
+    : await useManeuver(actor, { ...definition, profileFoundation: { ...(definition.profileFoundation ?? {}), [charging.profile]: "energy" } },
+      { outOfSequence: true });
+  if (!used) return null;
+  requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  await actor.setFlag(SCOPE, "pointBlankEncounter", encounter);
+  return used;
 }
 
 /**
