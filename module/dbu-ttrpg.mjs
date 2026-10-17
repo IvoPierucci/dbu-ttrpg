@@ -65,7 +65,8 @@ Hooks.once("init", () => {
   };
 
   CONFIG.Combat.initiative = {
-    formula: `${DBUCharacterData.BASE_DIE} + @initiativeBonus`,
+    // `@initiativeDie`: the Base Die, or Improved Initiative's twice.
+    formula: "@initiativeDie + @initiativeBonus",
     decimals: 0
   };
 
@@ -174,6 +175,19 @@ function conduitRefresh() {
   }
 }
 Hooks.on("updateActor", (actor, changes) => { if (changes.system?.life) conduitRefresh(); });
+
+// Improved Initiative (2): Initiative Advantage read off the Combat's Initiative Values - read again as they change.
+function initiativeRefresh(combat) {
+  for (const actor of new Set(Array.from(combat?.combatants ?? []).map(entry => entry.actor))) {
+    if (!actor || !Array.from(actor.items ?? []).some(item => item.flags?.["dbu-ttrpg"]?.sourceId === "improved-initiative")) continue;
+    actor.reset();
+    if (actor.sheet?.rendered) actor.sheet.render();
+  }
+}
+Hooks.on("updateCombatant", (combatant, changes) => { if ("initiative" in (changes ?? {})) initiativeRefresh(combatant.parent); });
+Hooks.on("createCombatant", combatant => initiativeRefresh(combatant.parent));
+Hooks.on("deleteCombatant", combatant => initiativeRefresh(combatant.parent));
+Hooks.on("deleteCombat", combat => initiativeRefresh(combat));
 Hooks.on("createToken", () => conduitRefresh());
 Hooks.on("deleteToken", () => conduitRefresh());
 Hooks.on("updateToken", (token, changes) => { if ("disposition" in (changes ?? {})) conduitRefresh(); });

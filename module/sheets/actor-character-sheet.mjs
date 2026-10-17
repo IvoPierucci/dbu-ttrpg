@@ -2413,7 +2413,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
 
     // An Initiative Check is Urgent, so it cannot be failed on purpose.
     const ready = await prepareRoll(this.actor, [], "Initiative", "", { urgent: true, formula: {
-      base: DBUCharacterData.BASE_DIE, parts: [{ label: "Initiative", value: this.actor.system.initiativeBonus,
+      base: this.actor.system.initiativeDie ?? DBUCharacterData.BASE_DIE, parts: [{ label: "Initiative", value: this.actor.system.initiativeBonus,
         workings: workingsTable(this.actor.system, "initiative") }] } });
     if (!ready) return;
 

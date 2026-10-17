@@ -2310,6 +2310,9 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     this.initiativeBonus = withEffects(this, "initiative", Math.floor(atts.agility.score / 2), {
       parts: [{ label: "Agility Score / 2", value: Math.floor(atts.agility.score / 2) }]
     });
+    // Improved Initiative (1): "roll your Base Die twice. You may choose which result becomes the Natural Result" - the
+    // higher kept (CONFIG.Combat.initiative's `@initiativeDie`).
+    this.initiativeDie = (this.effects.slots["initiative.baseDieTwice"] === true) ? "2d10kh" : DBUCharacterData.BASE_DIE;
 
     // --- Super Stacks ---
     // Extreme muscle, and it cuts both ways: it slows you down, it makes you harder to

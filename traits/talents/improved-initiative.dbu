@@ -1,0 +1,21 @@
+id: improved-initiative
+name: Improved Initiative
+talentCategory: initiative
+prerequisites: Insight or Agility Score of 4+
+description: >
+  Due to your great speed, you dominate the competition.
+text: >
+  Improved Initiative: Due to your great speed, you dominate the competition.
+  –Prerequisites: Insight or Agility Score of 4+
+  (1)-[Passive]: When rolling Initiative, roll your Base Die twice. You may choose which result becomes the Natural Result.
+  (2)-[Passive, Ruling]: If your Initiative Value is higher than that of all Opponents, you have ‘Initiative Advantage’. While you possess Initiative Advantage, increase your Combat Rolls by 1(T).
+
+---
+
+[passive]
+# (1) The Initiative roll's Base Die twice, the higher kept (actor-character.mjs initiativeDie).
+allow initiative.baseDieTwice;
+# (2) Initiative Advantage: an Initiative Value above every Opponent's in the Combat (conditions.mjs initiativeAdvantage).
+if (initiativeAdvantage) {
+  combatRolls += 1(T);
+}

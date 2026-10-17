@@ -522,6 +522,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "grappler", "inGrapple",
   // In one as the Grappled (Personal Space's).
   "grappledInGrapple",
+  // An Initiative Value higher than every Opponent's (Improved Initiative's Initiative Advantage).
+  "initiativeAdvantage",
   // Healthy in truth, and the Superior State's extra Damage waived (Divine Physique's).
   "trulyHealthy", "superiorUnhurt",
   // Natural Armor to mend (Survivor's Plating); an AoE that hit more than one (Overwhelming Pressure's).
