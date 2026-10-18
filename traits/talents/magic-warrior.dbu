@@ -1,0 +1,19 @@
+id: magic-warrior
+name: Magic Warrior
+talentCategory: magic-attack
+prerequisites: Magic Score of 6+
+description: >
+  Able to use magical power to supplement your physical might or ki blasts, your magical prowess is more than enough to stand up to others in combat.
+text: >
+  Magic Warrior: Able to use magical power to supplement your physical might or ki blasts, your magical prowess is more than enough to stand up to others in combat.
+  –Prerequisites: Magic Score of 6+
+  (1)-[Passive]: You gain access to all Energy Profiles.
+  (2)-[Passive]: You may use your Magic Modifier as the Damage Attribute for all Physical and Energy Attacks.
+
+---
+
+[passive]
+# (1) Energy Attacks whatever the Force Score (maneuvers.mjs whyNotThisFoundation).
+allow magicWarrior.energyAccess;
+# (2) A Physical or Energy Attack's Damage Attribute your Magic Modifier, where it is the higher (maneuvers.mjs favoredDamage).
+allow magicWarrior.damage;

@@ -1103,7 +1103,15 @@ export function favoredElement(actor, profile) {
  * Element(s)" - taken where it is the higher, nothing else having named one.
  */
 export function favoredDamage(actor, declared) {
-  if (!declared || declared.damageAttribute || !favoredElement(actor, declared.profile)) return declared;
+  if (!declared || declared.damageAttribute) return declared;
+  // Magic Warrior (2): "You may use your Magic Modifier as the Damage Attribute for all Physical and Energy Attacks" - taken
+  // where it is the higher, as a Favored Element's Force is.
+  if (["physical", "energy"].includes(declared.foundation) && (actor?.system?.effects?.slots?.["magicWarrior.damage"] === true)) {
+    const magic = Number(actor.system.attributes?.magic?.mod) || 0;
+    const force = Number(actor.system.attributes?.force?.mod) || 0;
+    if (magic > force) return { ...declared, damageAttribute: { label: "Magic Modifier (Magic Warrior)", value: magic } };
+  }
+  if (!favoredElement(actor, declared.profile)) return declared;
   const force = Number(actor?.system?.attributes?.force?.mod) || 0;
   const own = Number(actor?.system?.attributes?.[FOUNDATION_ATTRIBUTE[declared.foundation] ?? "magic"]?.mod) || 0;
   return (force > own) ? { ...declared, damageAttribute: { label: "Force Modifier (Favored Element)", value: force } } : declared;
@@ -1115,6 +1123,8 @@ const FOUNDATION_ATTRIBUTE = Object.freeze({ physical: "force", energy: "force",
 export function whyNotThisFoundation(actor, foundation, name = foundation) {
   const required = FOUNDATION_RULES[foundation]?.minimum;
   if (!required) return null;
+  // Magic Warrior (1): "You gain access to all Energy Profiles" - whatever the Force Score.
+  if ((foundation === "energy") && (actor?.system?.effects?.slots?.["magicWarrior.energyAccess"] === true)) return null;
 
   const score = actor?.system?.attributes?.[required.attribute]?.score ?? 0;
   if (score >= required.score) return null;
