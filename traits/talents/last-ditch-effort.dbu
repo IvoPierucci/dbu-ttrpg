@@ -1,0 +1,20 @@
+id: last-ditch-effort
+name: Last Ditch Effort
+talentCategory: skill
+prerequisites: Desperate Distraction
+description: >
+  You have one last trick up your sleeve for emergencies, allowing you to stand tall even when your back is against the wall.
+text: >
+  Last Ditch Effort: You have one last trick up your sleeve for emergencies, allowing you to stand tall even when your back is against the wall.
+  –Prerequisites: Desperate Distraction
+  (1)-[Passive]: Increase the Natural Result of your Bluff Skill Checks by 1.
+  (2)-[Triggered, 1/Encounter]: If you win the Clash for the Dirty Trick Maneuver, after completing that Maneuver, you may use the Basic Attack Maneuver or Signature Technique Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+skill.bluff.natural += 1;
+# (2) The Dirty Trick's Clash won and its trick chosen: the Basic Attack and a Signature Technique out of sequence, offered on
+# its card - once an Encounter, either spending it (chat.mjs lastDitchOffers).
+allow lastDitch.followUp;

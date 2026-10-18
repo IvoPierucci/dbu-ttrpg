@@ -2692,6 +2692,22 @@ async function chooseDirtyTrick(message, clash, choice) {
   });
 
   await settledNote(message, trickNote(trick, tricker, target, against, clash));
+  // Last Ditch Effort (2): "after completing that Maneuver" - the trick done.
+  lastDitchOffers(message, tricker);
+}
+
+/**
+ * Last Ditch Effort (2): "If you win the Clash for the Dirty Trick Maneuver, after completing that Maneuver, you may use the Basic
+ * Attack Maneuver or Signature Technique Maneuver as an Out-of-Sequence Maneuver." Both offered on its card, once an Encounter -
+ * either spends it (takeOutOfSequence).
+ */
+function lastDitchOffers(message, actor) {
+  if (!message || (actor?.system?.effects?.slots?.["lastDitch.followUp"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "lastDitchEncounter") === (game.combat?.id ?? "none")) return;
+  const at = { actorUuid: actor.uuid, actorName: actor.name, reason: "Last Ditch Effort - the Dirty Trick won", grants: { lastDitch: true } };
+  requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "basic-attack", maneuverName: "Basic Attack" } });
+  requestEdit(message, { type: "offer", offer: { ...at, maneuverId: "signature-technique", maneuverName: "Signature Technique",
+    technique: { via: "", any: true } } });
 }
 
 /**
@@ -19891,6 +19907,14 @@ async function takeOutOfSequence(message, actor, offer) {
   if (frozenTurnOf(actor) || (frozenBy(actor) && !offer.surge)) {
     ui.notifications.warn("Time is frozen: no Out-of-Sequence Maneuvers.");
     return null;
+  }
+  // Last Ditch Effort (2)'s, once an Encounter - either of the two its card offered.
+  if (offer.grants?.lastDitch) {
+    if (actor.getFlag?.(SCOPE, "lastDitchEncounter") === (game.combat?.id ?? "none")) {
+      ui.notifications.warn(`${actor.name}: Last Ditch Effort - already used this Combat Encounter.`);
+      return null;
+    }
+    await actor.setFlag(SCOPE, "lastDitchEncounter", game.combat?.id ?? "none");
   }
   // A Signature Technique handed over - Counter's, Exploiting Technique's: which of the Techniques
   // with that Advantage, then the Technique itself through its door, out of sequence.
