@@ -3385,6 +3385,11 @@ export function skillNatural(actor, key, senses = []) {
     + senses.reduce((sum, sense) => sum + (skill.naturalBy?.[sense] ?? 0), 0);
 }
 
+/** Practiced (1): "If your Natural Result on a Skill Check is below 4, increase it to a 4" - the least a Skill Check's may be. */
+export function skillMinimum(actor) {
+  return Math.max(0, Math.round(applySlot(actor?.system?.effects?.slots, "skill.minimumNatural", 0)));
+}
+
 /** The senses worth asking about for a Skill: the ones something moves its die for. */
 export function sensesAsked(actor, key) {
   const by = actor?.system?.skills?.[key]?.naturalBy ?? {};
@@ -8807,6 +8812,8 @@ const CLASH_ROLLS = ({
     // What the Skill does to its own Natural Result - and, for each sense the side said
     // the Check relies on, that part too.
     options: (actor, clash, uuid) => ({
+      // Practiced (1): its least Natural Result.
+      ...(skillMinimum(actor) ? { minimumNatural: skillMinimum(actor) } : {}),
       ...((Number(actor.system.skills?.[skillPicked(clash, uuid)]?.criticalShift) || 0)
         ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, (Number(actor.system.criticalTarget) || 10)
           + Number(actor.system.skills[skillPicked(clash, uuid)].criticalShift)) } : {}),

@@ -540,6 +540,8 @@ const TABLE = [
     doc: "Added to the Natural Result of every Strike Roll you make - attacking, Parrying, or in a Clash." },
   { key: "parry.natural", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Natural Result of a Parry's Strike Roll (Zen Counter's; chat.mjs DEFENCES.parry)." },
+  { key: "skill.minimumNatural", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "The least a Skill Check's Natural Result may be - Practiced's 4 (chat.mjs skillMinimum)." },
   { key: "dodge.natural", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Natural Result of every Dodge Roll you make." },
   // Feral's "Increase the Natural Result of your Strike and Wound Rolls ... by L".

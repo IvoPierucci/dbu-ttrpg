@@ -57,6 +57,7 @@ import {
   rollSteadfastCheck,
   sensesAsked,
   skillNatural,
+  skillMinimum,
   whyNotWilling
 } from "../chat.mjs";
 import {
@@ -6073,7 +6074,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
    * which offers the extra die as a button on the message (see chat.mjs).
    */
   async #rollCheck({ parts = [], flavor, criticalDice, skillRoll = false, urgent = false,
-                    criticalTarget = null, difficulty = "", naturalAdd = 0, settles = null, target = null }) {
+                    criticalTarget = null, difficulty = "", naturalAdd = 0, settles = null, target = null, minimumNatural = 0 }) {
     // The Difficulty this Check is measured against, where it has one. Resolved once here
     // rather than looked up in each of the three branches below, all of which say whether
     // it was met - a willing failure that totals 0 has still missed a Target Number, and
@@ -6094,7 +6095,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     // a racial Saving Throw crits a point more easily, which is worked out per Saving
     // Throw and had nowhere to be read. Null means the character's own.
     const { roll, natural, naturalShift, botch, critical } =
-      await evaluateCheck(this.actor, bonus, "", null, { criticalTarget, naturalAdd });
+      await evaluateCheck(this.actor, bonus, "", null, { criticalTarget, naturalAdd,
+        // Practiced (1): a Skill Check's least Natural Result.
+        minimumNatural: skillRoll ? Math.max(minimumNatural, skillMinimum(this.actor)) : minimumNatural });
     // The die counts in the total at its moved value, as a Combat Roll's does: moving the
     // Natural Result moves the sum it sits in.
     const rolledTotal = roll.total + naturalShift;

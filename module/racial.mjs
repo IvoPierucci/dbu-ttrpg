@@ -408,6 +408,8 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     return Object.entries(DBUCharacterData.SKILLS).filter(([key]) => !except.has(key.toLowerCase()))
       .filter(([, skill]) => !attribute || (skill.attribute === attribute))
       .filter(([key]) => (kind === "skill") || (ranks(key) >= 2))
+      // A second Skill chosen after a first is another one - Practiced's "2 different Skills".
+      .filter(([key]) => (kind !== "skill") || !earlier.includes(key))
       .map(([key, skill]) => [key, skill.label]);
   }
   // Its own list, written beside it - `choices: Tiny, Enormous` (Alternate Scale Structure's).

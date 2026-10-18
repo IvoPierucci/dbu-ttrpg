@@ -1,0 +1,23 @@
+id: practiced
+name: Practiced
+talentCategory: skill
+prerequisites: N/A
+# (2)'s two Skills, asked as it is gained: `$choice`, then `$choice2` - another (racial.mjs choicesFor).
+choose: skill
+choose2: skill
+description: >
+  You are especially adept in a variety of skills.
+text: >
+  Practiced: You are especially adept in a variety of skills.
+  –Prerequisites: N/A
+  (1)-[Passive]: If your Natural Result on a Skill Check is below 4, increase it to a 4.
+  (2)-[Passive]: Gain a Skill Rank in 2 different Skills of your choice.
+
+---
+
+[passive]
+# (1) A Skill Check's least Natural Result (chat.mjs skillMinimum) - the sheet's and a Skill Clash's.
+skill.minimumNatural = 4;
+# (2) The two chosen as it was gained.
+skill.$choice.ranks += 1;
+skill.$choice2.ranks += 1;
