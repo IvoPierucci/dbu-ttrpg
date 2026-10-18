@@ -21,8 +21,7 @@ text: >
 [passive]
 # (1) Each of the two rolled with the higher Skill Bonus of them (actor-character.mjs, where each Skill's roll is put together).
 allow senses.higherBonus;
-# (2) A won Sense: their Alignment too, in what is whispered to you (chat.mjs settleSense).
-allow sense.alignment;
+# (2) A won Sense: their Alignment is the ARC's to tell - it may be kept back (the user's). Nothing here.
 # (3) Read on the Light Levels' own files: their Perception line left out for whoever holds this Talent.
 
 # (5) On your turn's card, the player's to choose: which Character, then the Clash; won, Marked (a mark) on them till the start

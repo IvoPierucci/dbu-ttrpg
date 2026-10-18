@@ -2204,10 +2204,7 @@ async function settleSense(message, clash) {
 
   await settledNote(message,
     `${sensor.name} gets a read on ${target.name} - what they sense is theirs.`);
-  // Enhanced Search (2): "you become aware of their Alignment".
-  const alignment = (sensor.system?.effects?.slots?.["sense.alignment"] === true)
-    ? ` ${target.name}'s Alignment: ${DBUCharacterData.ALIGNMENTS[target.system.alignment ?? 0]?.label ?? "Neutral"}.` : "";
-  await settledNote(message, `${senseReading(target)}${alignment}`, { to: sensor });
+  await settledNote(message, senseReading(target), { to: sensor });
 }
 
 /**
