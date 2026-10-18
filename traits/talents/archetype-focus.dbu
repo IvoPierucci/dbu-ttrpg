@@ -15,9 +15,10 @@ text: >
 
 ---
 
-# (1) The Focused Foundation's Wound.
+# (1) The Focused Foundation's Wound; which it is, said for what reads it - Archetype Defense's (`focusedOn`).
 [passive]
 wound.$choice += 1(T);
+allow focused.$choice;
 
 # (2) A Critical Result on an attack's Strike or Wound (the `critical-scored` Moment), that attack of the Focused Foundation
 # (`ofFoundation`): 2(bT) Ki. Automatic by default, its Triggered/Automatic button.

@@ -420,6 +420,9 @@ const PREDICATES = {
   ofFoundation: (scope, name) => Boolean(scope.context?.foundation)
     && (String(scope.context.foundation).toLowerCase() === String(name?.value ?? name ?? "").toLowerCase()),
 
+  /** The Focused Foundation is that one - Archetype Focus's, said as `focused.<foundation>` (Archetype Defense's). */
+  focusedOn: (scope, name) => scope.data?.effects?.slots?.[`focused.${String(name?.value ?? name ?? "").toLowerCase()}`] === true,
+
   /** A Snack eaten this Combat Round - Snack Motivated's. */
   snackThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "snackRound") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,

@@ -1,0 +1,34 @@
+id: archetype-defense
+name: Archetype Defense
+talentCategory: specialization
+prerequisites: Archetype Focus
+description: >
+  You have turned your offensive specialization towards defense.
+text: >
+  Archetype Defense: You have turned your offensive specialization towards defense.
+  –Prerequisites: Archetype Focus
+  (1)-[Passive]: Increase the Strike Rolls of your Focused Foundation by 1(T).
+  (2)-[Passive]: If your Focused Foundation is not Physical, you may use it instead of Physical for calculating your Strike Roll for the Parry option of the Defend Maneuver.
+  (3)-[Passive]: If your Focused Foundation is Physical, you may use it instead of Energy/Magic for calculating your Wound Roll for the Power Flare option of the Defend Maneuver.
+  (4)-[1/Encounter]: You may use the Defend Maneuver without spending a Counter Action.
+
+---
+
+[passive]
+# (1) The Focused Foundation - Archetype Focus's - its Strike.
+if (focusedOn("physical")) {
+    strike.physical += 1(T);
+}
+if (focusedOn("energy")) {
+    strike.energy += 1(T);
+}
+if (focusedOn("magic")) {
+    strike.magic += 1(T);
+}
+# (2) Energy or Magic: the Parry with that Strike where it is the higher - nobody chooses less (actor-character.mjs).
+# (3) Physical: the Power Flare's "Wound as" offers Physical too (chat.mjs, the Defend window).
+allow archetype.defense;
+
+# (4) Ticked in Respond as you Defend, once an Encounter: no Counter Action for it.
+[triggered/defending, 1/encounter, effect 4]
+defend.free = true;

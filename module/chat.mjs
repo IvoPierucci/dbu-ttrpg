@@ -28868,6 +28868,10 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
     return;
   }
 
+  // Archetype Defense (3): "If your Focused Foundation is Physical, you may use it instead of Energy/Magic for calculating
+  // your Wound Roll for the Power Flare option" - Physical offered beside them.
+  const flarePhysical = (target.system.effects?.slots?.["archetype.defense"] === true)
+    && (target.system.effects?.slots?.["focused.physical"] === true);
   // Power Flare's own Wound Roll - made as the attacker's is, so shown here: the Foundation's Wound and the wager.
   const flareFormula = (foundation, wager) => formulaHtml({ base: DBUCharacterData.BASE_DIE,
     dice: combatDiceGroups(target), parts: windowParts(target, [
@@ -28888,6 +28892,7 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
            <select name="defenceFoundation" disabled>
              <option value="energy">Energy</option>
              <option value="magic">Magic</option>
+             ${flarePhysical ? '<option value="physical">Physical (Archetype Defense)</option>' : ""}
            </select>
            <span>Ki Wager</span>
            <input type="number" name="defenceWager" value="0" min="0" max="${wagerMax}" disabled/>

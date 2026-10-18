@@ -2734,6 +2734,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     const strikeBy = Object.fromEntries(Object.keys(DBUCharacterData.FOUNDATIONS).map(key =>
       [key, ownFoundation(this, `strike.${key}`, combatStrike)]));
 
+    const focused = ["energy", "magic"].find(key => this.effects?.slots?.[`focused.${key}`] === true);
+    const parryStrike = ((this.effects?.slots?.["archetype.defense"] === true) && focused && (strikeBy[focused] > strikeBy.physical))
+      ? { label: `${DBUCharacterData.FOUNDATIONS[focused]?.label ?? focused} Strike (Archetype Defense)`, value: strikeBy[focused] }
+      : { label: "Physical Strike", value: strikeBy.physical };
+
     this.combat = {
       strike: combatStrike,
       strikeBy,
@@ -2747,9 +2752,10 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       }),
       // A Parry rolls the Strike value, so it takes Strike's effects and adds its own -
       // which exist for effects that only apply when Strike is rolled defensively.
-      // "Use your Strike Roll (as if you rolled a Physical Attack)" - the Physical Strike.
-      parry: withEffects(this, "parry", strikeBy.physical, {
-        parts: [{ label: "Physical Strike", value: strikeBy.physical }]
+      // "Use your Strike Roll (as if you rolled a Physical Attack)" - the Physical Strike. Archetype Defense (2): the Focused
+      // Foundation's, Energy or Magic, where it is the higher - nobody chooses less.
+      parry: withEffects(this, "parry", parryStrike.value, {
+        parts: [{ label: parryStrike.label, value: parryStrike.value }]
       }),
       // The Wound Roll is the Damage Attribute the Foundation names, and that alone.
       // It used to carry Might as well, which counted the same Modifier twice for
