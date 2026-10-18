@@ -122,6 +122,8 @@ async function startRound(combat) {
     // A Shifting Buddy's Weapon lasts "until the end of the Combat Round".
     const shifted = actor.items.filter(item => item.system?.crafted?.fromBuddy).map(item => item.id);
     if (shifted.length) await actor.deleteEmbeddedDocuments("Item", shifted);
+    // So does Counter Jury-rigging (2)'s Quality - before the Round's card can offer another.
+    await (await import("./chat.mjs")).juryRigEnds(actor);
 
     // Zen-O, Active through the Round that just ended: the ARC's Temperament Check.
     if ((combat.round ?? 0) > 1) {
@@ -706,6 +708,8 @@ export function registerCombatHooks() {
       for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.fakeMoon)) {
         await falseMoonGone(actor, item);
       }
+      // Counter Jury-rigging (2)'s Quality, with the Round it was for.
+      await (await import("./chat.mjs")).juryRigEnds(actor);
       // Finish Sign: its Finisher stacks are a Resource and end with the Encounter - and what they were for with them.
       for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.finishTechnique)) {
         await item.update({ "system.unique.finishTechnique": "" });

@@ -4894,6 +4894,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ({ maneuver, declared } = bladed);
     // Eye of the Dragon's Way of the Weaponmaster: an Armed Attack - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askEyeWeapon(actor, declared);
+    // Counter Jury-rigging (1): an Armed Attack at one you Analyzed - asked, once a Round.
+    declared = await (await import("./maneuvers.mjs")).askJuryRigWound(actor, declared, targetActor);
     // Warrior (4): an Armed Attack - a stack of Tension, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
     // Energy of Revenge (1): Revenge Points on its Wound Roll, how many asked.

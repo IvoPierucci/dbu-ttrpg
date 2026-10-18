@@ -14095,6 +14095,59 @@ export async function motivatingPerformance(actor) {
   return requestActorUpdate(actor, { [`flags.${SCOPE}.motivated`]: [...new Set([...given, ...within.map(each => each.uuid)])] });
 }
 
+/**
+ * Counter Jury-rigging (2): "Select a Weapon you possess and apply an applicable Weapon Quality that takes up 1 Weapon Slot to that
+ * Weapon until the end of the Combat Round (this can exceed the Weapon's number of Weapon Slots)." Which Weapon, then which
+ * Quality - one its Type takes, at 1 Slot, not on it already, none asking a choice of its own; on it, its Effects written again,
+ * and off as the Round turns over (juryRigEnds). None picked, not spent.
+ */
+export async function juryRig(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const weapons = Array.from(actor?.items ?? []).filter(item => (item.type === "gear") && (item.system?.crafted?.kind === "weapon")
+    && !item.system.crafted.destroyed);
+  if (!weapons.length) {
+    ui.notifications.info(`${actor.name}: Counter Jury-rigging - no Weapon.`);
+    return UNSPENT;
+  }
+  const which = (weapons.length === 1) ? weapons[0].id : await askPlayerChoice(actor, `${actor.name}: Counter Jury-rigging - a Weapon`,
+    [...weapons.map(each => ({ value: each.id, label: each.name })), { value: "none", label: "None" }]);
+  const item = weapons.find(each => each.id === which);
+  if (!item) return UNSPENT;
+  const { composeEffects, qualityEntries, qualityFitsPiece, qualitySlotRange } = await import("./gear.mjs");
+  const had = qualityEntries(item.system.crafted);
+  const offered = traitsOfKind("crafting", "weapon-qualities").filter(quality => !had.some(entry => entry.id === quality.id)
+    && qualityFitsPiece(quality, item.system.crafted) && (qualitySlotRange(quality).min === 1) && !quality.chooses && !quality.choices)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (!offered.length) return UNSPENT;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Counter Jury-rigging - ${item.name}`,
+    [...offered.map(each => ({ value: each.id, label: each.name })), { value: "none", label: "None" }]);
+  const quality = offered.find(each => each.id === picked);
+  if (!quality) return UNSPENT;
+  const qualities = [...had, { id: quality.id, slots: 1, choice: "", on: false, name: "" }];
+  await item.update({ "system.crafted.qualities": qualities,
+    "system.crafted.effects": composeEffects({ ...item.system.crafted, qualities }, item.system.crafted.effects ?? "", { getTrait }) });
+  await actor.setFlag(SCOPE, "juryRig", { itemId: item.id, qualityId: quality.id });
+  ui.notifications.info(`${actor.name}: ${item.name} - ${quality.name} till the end of the Combat Round.`);
+}
+
+/** Counter Jury-rigging (2)'s Quality, off its Weapon as the Round turns over - or the Encounter ends. */
+export async function juryRigEnds(actor) {
+  const rig = actor?.getFlag?.(SCOPE, "juryRig");
+  if (!rig) return;
+  const item = actor.items?.get(rig.itemId);
+  if (item) {
+    const { composeEffects, qualityEntries } = await import("./gear.mjs");
+    const had = qualityEntries(item.system.crafted);
+    const at = had.map(entry => entry.id).lastIndexOf(rig.qualityId);
+    if (at >= 0) {
+      const qualities = had.filter((entry, index) => index !== at);
+      await item.update({ "system.crafted.qualities": qualities,
+        "system.crafted.effects": composeEffects({ ...item.system.crafted, qualities }, item.system.crafted.effects ?? "", { getTrait }) });
+    }
+  }
+  await actor.unsetFlag(SCOPE, "juryRig");
+}
+
 /** A Talent's Item by its file's id - Show Stopping Performance's, Analytic Fighter's. */
 function talentItemOf(actor, id) {
   return Array.from(actor?.items ?? []).find(each => (each.type === "talent") && (each.flags?.[SCOPE]?.sourceId === id)) ?? null;
@@ -19934,6 +19987,8 @@ async function takeOutOfSequence(message, actor, offer) {
     if (granted?.shardEnds) declared = { ...declared, shardEnds: granted.shardEnds };
     // Warrior (4), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
+    // Counter Jury-rigging (1), out of sequence as in it.
+    declared = await (await import("./maneuvers.mjs")).askJuryRigWound(actor, declared, target);
     // Energy of Revenge (1), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askRevenge(actor, declared, maneuver, target);
     // Spiritual Warrior (5), out of sequence as in it.

@@ -1716,6 +1716,30 @@ export async function askEyeWeapon(actor, declared) {
 }
 
 /**
+ * Counter Jury-rigging (1): "While you are benefiting from the effects of the Analysis Maneuver, increase your Wound Rolls with
+ * Armed Attacks by an additional 2(T)." An Armed Attack aimed at an Opponent you Analyzed (your clock on their mark): asked as
+ * it is declared, once a Round - a row on its Wound.
+ */
+export async function askJuryRigWound(actor, declared, target = null) {
+  if (!declared?.weapon || declared.weapon.unarmed || (actor?.system?.effects?.slots?.["juryRig.analysisWound"] !== true)) return declared;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "juryRigWoundRound") === round) return declared;
+  const aimed = [target, ...Array.from(game.user?.targets ?? []).map(token => token.actor)].filter(Boolean);
+  const analyzed = aimed.some(other => (actor.system.timed ?? []).some(entry => (entry?.kind === "condition")
+    && (entry.key === "analyzed") && (entry.on === other.uuid)));
+  if (!analyzed) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Counter Jury-rigging` },
+    content: `<p data-tooltip="An Opponent you Analyzed. Once a Round.">+2(T) on this Armed Attack's Wound Roll?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "juryRigWoundRound", round);
+  const value = 2 * Math.max(1, Number(actor.system.tierOfPower) || 1);
+  return { ...declared, woundExtra: [...(declared.woundExtra ?? []), { label: "Counter Jury-rigging", written: "+2(T)", value }] };
+}
+
+/**
  * Surging (3): "You cannot target a Character who isn't your Focus with an Attacking Maneuver unless that Attacking Maneuver
  * is an AoE that also targets your Focus." Whoever is aimed at - the target and every token targeted - against the Focus
  * picked on entering (`surgingFocus`). Why not, or "".

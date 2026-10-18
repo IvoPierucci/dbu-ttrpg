@@ -408,6 +408,7 @@ async function runVerb(actor, call, context) {
     case "motivatingPerformance": return (await import("../chat.mjs")).motivatingPerformance(actor);
     case "motivatedLeft": return (await import("../chat.mjs")).motivatedLeft(actor);
     case "dynamicHypeEnds": return (await import("../chat.mjs")).dynamicHypeEnds(actor);
+    case "juryRig": return (await import("../chat.mjs")).juryRig(actor);
     case "analyticFighter": return (await import("../chat.mjs")).analyticFighter(actor, args[0], context);
     case "explosivePerformance": return (await import("../chat.mjs")).explosivePerformance(actor);
     case "undyingFall": return (await import("../chat.mjs")).undyingFall(actor);

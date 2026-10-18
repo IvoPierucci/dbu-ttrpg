@@ -150,6 +150,11 @@ export const VERBS = Object.freeze({
     doc: "Analytic Fighter: the named Option's (damageAnalysis, weak, offensive, defensive, critical, teamwork) - its mark on the one "
        + "Analyzed, and its Clash where it has one (chat.mjs analyticFighter)."
   },
+  juryRig: {
+    args: [0, 0],
+    doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "
+       + "juryRig)."
+  },
   dynamicHypeEnds: {
     args: [0, 0],
     doc: "Hyped gone: the Option asked at that Hype and Dynamic Hype (2)'s second no longer in use (chat.mjs dynamicHypeEnds)."

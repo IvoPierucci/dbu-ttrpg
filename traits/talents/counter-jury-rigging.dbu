@@ -1,0 +1,23 @@
+id: counter-jury-rigging
+name: Counter Jury-rigging
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in Investigation and Craft (Weapon), Weapon Specialist
+description: >
+  You are able to modify your weapons to suit the situation at hand, though such modifications don’t last.
+text: >
+  Counter Jury-rigging: You are able to modify your weapons to suit the situation at hand, though such modifications don’t last.
+  –Prerequisites: 2+ Skill Ranks in Investigation and Craft (Weapon), Weapon Specialist
+  (1)-[Triggered, 1/Round]: While you are benefiting from the effects of the Analysis Maneuver, increase your Wound Rolls with Armed Attacks by an additional 2(T).
+  (2)-[Triggered/Start of Combat Round]: Select a Weapon you possess and apply an applicable Weapon Quality that takes up 1 Weapon Slot to that Weapon until the end of the Combat Round (this can exceed the Weapon’s number of Weapon Slots).
+
+---
+
+# (1) An Armed Attack at an Opponent you Analyzed: asked as it is declared, once a Round - 2(T) on its Wound (maneuvers.mjs
+# askJuryRigWound).
+[passive]
+allow juryRig.analysisWound;
+
+# (2) On the Round's card, the player's to choose: which Weapon, then which Quality - one its Type takes, at 1 Slot, not on it
+# already; on it till the Round turns over (chat.mjs juryRig, juryRigEnds).
+[triggered/start-of-round, chosen, effect 2]
+juryRig();
