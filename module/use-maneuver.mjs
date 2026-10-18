@@ -4798,7 +4798,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // picker already understands - it shows it rather than offering a choice.
     const charging = actor.system.charging;
     const locked = (charging?.maneuverId === maneuver.itemId) && charging.profile
-      ? { ...maneuver, profile: charging.profile }
+      ? { ...maneuver, profile: charging.profile,
+          // And its Foundation, where the charge was held to one - Magic Blaster's Magic Attack.
+          ...(charging.foundation
+            ? { profileFoundation: { ...(maneuver.profileFoundation ?? {}), [charging.profile]: charging.foundation } } : {}) }
       : maneuver;
 
     // "You cannot Ki Wager more than 1/4 (rounded up) of your Ki Points on an Attacking
@@ -6449,6 +6452,8 @@ export async function declareCharge(actor, { foundation = "" } = {}) {
   await actor.update({
     "system.charging.maneuverId": chosen,
     "system.charging.profile": profile,
+    // Held to that Foundation as it is thrown, where its Profile allows more than one (the user's).
+    "system.charging.foundation": foundation,
     "system.charging.charges": 1
   });
 

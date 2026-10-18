@@ -165,6 +165,7 @@ async function startRound(combat) {
 export const NOT_CHARGING = Object.freeze({
   "system.charging.maneuverId": "",
   "system.charging.profile": "",
+  "system.charging.foundation": "",
   "system.charging.charges": 0,
   "system.charging.bonusWager": 0
 });

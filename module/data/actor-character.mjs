@@ -1463,6 +1463,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
        */
       profile: new fields.StringField({ required: true, blank: true, initial: "" }),
       /**
+       * The Foundation it is held to, where something named one and the Profile allows more than one - Magic Blaster's
+       * "must be a Magic Attack". Empty when nothing did: the Foundation is picked as it is thrown.
+       */
+      foundation: new fields.StringField({ required: true, blank: true, initial: "" }),
+      /**
        * How many Energy Charges have been fed into it.
        *
        * No ceiling here, and that is the point: how many an Attacking Maneuver can hold
