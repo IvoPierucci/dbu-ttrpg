@@ -1,0 +1,23 @@
+id: acrobat-star
+name: Acrobat Star
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in the Acrobatics Skill
+description: >
+  You are extremely skilled at gymnastics and acrobatics.
+text: >
+  Acrobat Star: You are extremely skilled at gymnastics and acrobatics.
+  –Prerequisites: 2+ Skill Ranks in the Acrobatics Skill
+  (1)-[Passive]: You may use the Flip Maneuver as an Instant Maneuver.
+  (2)-[Passive]: For the effects of the Flip Maneuver, treat yourself as if you have +1 Skill Ranks in Acrobatics. This can allow you to exceed your maximum for the effects of the Flip Maneuver.
+  (3)-[Triggered, 1/Round, 2/Encounter]: When you use the Flip Maneuver, instead of moving any number of Squares, you can stop being Prone.
+
+---
+
+[passive]
+# (1) The Flip's own Instant button on the Maneuvers tab - its 1/Round its own (actor-character-sheet.mjs _onFlipInstant).
+allow flip.asInstant;
+# (2) The Squares it says: twice the Ranks, one more counted (use-maneuver.mjs moveRanks).
+flip.extraRanks += 1;
+# (3) Asked as the Flip is used Prone - the player's to time: standing instead of moving, once a Round and twice an
+# Encounter (use-maneuver.mjs askAcrobatStand).
+allow flip.standUp;

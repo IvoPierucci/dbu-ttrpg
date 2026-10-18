@@ -1942,12 +1942,39 @@ function powerUpBreaks(actor, maneuver) {
   return `Destroyed if within 15 Squares: ${named.join(", ")}.`;
 }
 
+/** The Ranks a moving Maneuver counts - Acrobat Star (2)'s one more for the Flip, "this can allow you to exceed your maximum". */
+function moveRanks(actor, maneuver) {
+  const own = Number(actor.system.skills?.[maneuver.moveSkill]?.ranks) || 0;
+  const more = (maneuver.id === "flip") ? Math.max(0, Math.floor(Number(actor.system.effects?.slots?.["flip.extraRanks"]?.add) || 0)) : 0;
+  return own + more;
+}
+
+/**
+ * Acrobat Star (3): "When you use the Flip Maneuver, instead of moving any number of Squares, you can stop being Prone." Asked
+ * where Prone, once a Round and twice an Encounter; Prone gone, and the Flip moves nobody.
+ */
+async function askAcrobatStand(actor) {
+  if ((actor.system.effects?.slots?.["flip.standUp"] !== true) || !((Number(actor.system.conditions?.prone) || 0) > 0)) return false;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  const used = actor.getFlag?.("dbu-ttrpg", "acrobatStand") ?? {};
+  const encounter = (used.combat === (game.combat?.id ?? "none")) ? (Number(used.n) || 0) : 0;
+  if ((used.round === round) || (encounter >= 2)) return false;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Acrobat Star` },
+    content: `<p data-tooltip="Once a Round, twice an Encounter.">Stop being Prone instead of moving?</p>`, rejectClose: false });
+  if (!yes) return false;
+  await actor.setFlag("dbu-ttrpg", "acrobatStand", { round, combat: game.combat?.id ?? "none", n: encounter + 1 });
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "prone", 0);
+  return true;
+}
+
 function maneuverNote(actor, maneuver) {
   const said = String(maneuver.says ?? "").trim();
   if (!maneuver.moveSkill || !maneuver.movePerRank) return said;
 
   const skill = actor.system.skills?.[maneuver.moveSkill];
-  const ranks = skill?.ranks ?? 0;
+  const ranks = moveRanks(actor, maneuver);
   const squares = maneuver.movePerRank * ranks;
   const name = skill?.label ?? maneuver.moveSkill;
 
@@ -5771,6 +5798,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // is in the file, as a passive reading the Resource - which is where a reader looks for
   // the rule.
   if (crossing?.rapid) await takeRapidMovement(actor);
+  // Acrobat Star (3): the Flip used Prone - standing instead of moving, asked.
+  const stood = (maneuver.id === "flip") ? await askAcrobatStand(actor) : false;
   // Tiny Target: an Opponent 2+ Size Categories larger, whose Melee Range you were in.
   if (crossing?.rapid) await (await import("./chat.mjs")).tinyTarget(actor);
   // "If you use the Movement Maneuver while Hidden through the effect of Fake Death, you stop being Hidden."
@@ -6066,7 +6095,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         // What a Maneuver whose whole effect is a number and a sentence says at the table,
         // and which way one that throws a State went. Blank on everything that does
         // something the system can do for itself and says so by doing it.
-        note: [maneuverNote(actor, maneuver), stateNote(maneuver, toggled),
+        note: [stood ? "Stops being Prone instead of moving (Acrobat Star)." : maneuverNote(actor, maneuver), stateNote(maneuver, toggled),
                soarNote(maneuver, soarTo), powerUpBreaks(actor, maneuver),
                moving.store ? `${moving.fromStore} Ki from the ${moving.store.name}.` : ""]
           .filter(Boolean).join(" "),

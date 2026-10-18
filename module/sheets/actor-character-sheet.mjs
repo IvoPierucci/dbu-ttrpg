@@ -416,6 +416,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       glassInstant: DBUCharacterSheet._onGlassInstant,
       spiritInstant: DBUCharacterSheet._onSpiritInstant,
       thiefInstant: DBUCharacterSheet._onThiefInstant,
+      flipInstant: DBUCharacterSheet._onFlipInstant,
       hateInstant: DBUCharacterSheet._onHateInstant,
       creativeOutOfSequence: DBUCharacterSheet._onCreativeOutOfSequence,
       newTechnique: DBUCharacterSheet._onNewTechnique,
@@ -1601,7 +1602,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // People of the Spirit (5): "As an Instant Maneuver, you may use the Empower Maneuver as if you spent 3 Actions."
             spiritInstant: Boolean(maneuver.empower) && (this.actor.system.effects?.slots?.["empower.spiritInstant"] === true),
             // Thief (3): "You may use a 'Thief Maneuver' as an Instant Maneuver if you have access to it."
-            thiefInstant: THIEF_MANEUVERS.includes(maneuver.id) && (this.actor.system.effects?.slots?.["thief.instant"] === true),
+            thiefInstant: THIEF_MANEUVERS.includes(maneuver.id) && (this.actor.system.effects?.slots?.["thief.instant"] === true)
+              && !((maneuver.id === "flip") && (this.actor.system.effects?.slots?.["flip.asInstant"] === true)),
+            // Acrobat Star (1): "You may use the Flip Maneuver as an Instant Maneuver."
+            flipInstant: (maneuver.id === "flip") && (this.actor.system.effects?.slots?.["flip.asInstant"] === true),
             // Glass Combat (3): "you may use the Movement Maneuver as an Instant Maneuver".
             glassInstant: Boolean(maneuver.movement) && (this.actor.system.effects?.slots?.["movement.glassInstant"] === true),
             // Demonic Creativity: "As an Instant Maneuver, you may spend 2 stacks of Demonic Power to use a Maneuver with an
@@ -6006,6 +6010,14 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
     return this.actor.setFlag("dbu-ttrpg", "glassMoveRound", round);
+  }
+
+  /** Acrobat Star (1): the Flip as an Instant Maneuver - its own 1/Round the only limit. */
+  static async _onFlipInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["flip.asInstant"] !== true)) return;
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    return useManeuver(this.actor, { ...definitionOf(item), type: "instant" });
   }
 
   /** Thief (3): one of the Thief Maneuvers as an Instant Maneuver, once a Round. */
