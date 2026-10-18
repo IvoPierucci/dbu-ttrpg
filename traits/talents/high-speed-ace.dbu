@@ -1,0 +1,22 @@
+id: high-speed-ace
+name: High Speed Ace
+talentCategory: mobility
+prerequisites: Agility Score of 6+
+description: >
+  Focused on zipping around the battlefield, you build up momentum and combine it with your fighting style.
+text: >
+  High Speed Ace: Focused on zipping around the battlefield, you build up momentum and combine it with your fighting style.
+  –Prerequisites: Agility Score of 6+
+  (1)-[Passive]: Increase your Defense Value and Speed by 1(T).
+  (2)-[Passive]: During this Combat Round, if you have moved a total number of Squares that matches or exceeds your Normal Speed through your own effects or Maneuvers, increase your Wound Rolls by 1(T) until the end of this Combat Round.
+
+---
+
+[passive]
+# (1) "Speed": the Normal Speed.
+defenseValue += 1(T);
+speed.normal += 1(T);
+# (2) Nothing here counts Squares - moving is the table's. The Movement's card carries a "High Speed Ace" button, once a Round:
+# the player says the Normal Speed is reached, their own way - High Speed (a mark), Wound 1(T) till the Round ends (chat.mjs
+# takeMoveOffer).
+allow highSpeed.wound;

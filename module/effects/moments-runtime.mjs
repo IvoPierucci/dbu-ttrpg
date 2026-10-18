@@ -805,6 +805,8 @@ async function clockFor(duration) {
     "next-turn": { edge: EDGES.END, next: true },
     "start-of-turn": { edge: EDGES.START, next: false },
     "start-of-next-turn": { edge: EDGES.START, next: true },
+    // "Until the end of this Combat Round" - High Speed Ace's.
+    "round": { edge: EDGES.ROUND, next: false },
     "encounter": { edge: EDGES.ENCOUNTER, next: false }
   }[String(duration).toLowerCase()] ?? null;
 }
@@ -882,6 +884,8 @@ export async function enterState(actor, name, level, duration, source = "") {
     "next-turn": { edge: EDGES.END, next: true },
     "start-of-turn": { edge: EDGES.START, next: false },
     "start-of-next-turn": { edge: EDGES.START, next: true },
+    // "Until the end of this Combat Round" - High Speed Ace's.
+    "round": { edge: EDGES.ROUND, next: false },
     "encounter": { edge: EDGES.ENCOUNTER, next: false }
   };
 

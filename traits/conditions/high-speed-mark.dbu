@@ -1,0 +1,16 @@
+id: high-speed-mark
+name: High Speed
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what High Speed Ace's (2) gives, till the end of the Combat Round.
+combatCondition: no
+source: Core Rule
+description: >
+  High Speed Ace: Wound Rolls 1(T) higher until the end of this Combat Round.
+text: >
+  High Speed Ace (2): During this Combat Round, if you have moved a total number of Squares that matches or exceeds your Normal Speed through your own effects or Maneuvers, increase your Wound Rolls by 1(T) until the end of this Combat Round.
+
+---
+
+[passive]
+wound += 1(T);

@@ -6448,6 +6448,12 @@ export async function postManeuver(actor, maneuver,
   if (!noExploit) offerExploits(card, actor, maneuver);
   // Hidden, and powering up, charging or transforming: whoever is Oblivious of them may Search for them.
   offerSearches(card, actor, maneuver);
+  // High Speed Ace (2): your Normal Speed moved this Round, said by the player - Wound 1(T) till the Round ends.
+  if (maneuver?.movement && card && (actor.system?.effects?.slots?.["highSpeed.wound"] === true)) {
+    offerMove(card, actor, { key: `highSpeed:${actor.uuid}`, flag: "highSpeedRound", name: "High Speed Ace",
+      reason: `moved ${Number(actor.system.speed?.normal) || 0} Squares (your Normal Speed) or more this Round, your own way - `
+        + "Wound 1(T) till the Round ends", highSpeed: true });
+  }
   // Fleet of Foot (2): the Movement into an Opponent's Melee Range - 1(T) on the next Strike at them this turn.
   if (maneuver?.movement && card && (actor.system?.effects?.slots?.["fleetOfFoot.strike"] === true)) {
     offerMove(card, actor, { key: `fleet:${actor.uuid}`, flag: "fleetRound", name: "Fleet of Foot",
@@ -15627,12 +15633,13 @@ async function copyTechnique(actor, copyFrom) {
  * A move an effect hands over - not an Out-of-Sequence Maneuver, so it takes no one's, and nothing here moves anybody:
  * where to is the map's. Once a Round by the mover's `flag`, counted when taken; `key` tells one from another on a card.
  */
-function offerMove(message, mover, { key, flag, name, reason, clashAt = "", copyFrom = null, ranger = false, fleet = false }) {
+function offerMove(message, mover, { key, flag, name, reason, clashAt = "", copyFrom = null, ranger = false, fleet = false,
+                                      highSpeed = false }) {
   if (mover.getFlag?.(SCOPE, flag) === roundKey()) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.move?.key === key)) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: mover.uuid, actorName: mover.name, maneuverId: "",
     maneuverName: name, reason, move: { key, flag, ...(clashAt ? { clashAt } : {}), ...(copyFrom ? { copyFrom } : {}),
-      ...(ranger ? { ranger: true } : {}), ...(fleet ? { fleet: true } : {}) } } });
+      ...(ranger ? { ranger: true } : {}), ...(fleet ? { fleet: true } : {}), ...(highSpeed ? { highSpeed: true } : {}) } } });
 }
 
 /**
@@ -15663,6 +15670,13 @@ async function takeMoveOffer(message, actor, offer) {
   if (offer.move.ranger && !await rangerBeside(message, actor)) return;
   // Fleet of Foot (2)'s: whom - none picked, no use spent.
   if (offer.move.fleet && !await fleetTarget(message, actor)) return;
+  // High Speed Ace (2)'s: its mark, till the Round ends.
+  if (offer.move.highSpeed) {
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(actor, "high-speed-mark", 1);
+    const { expiresAt } = await import("./effects/moments-runtime.mjs");
+    await expiresAt(actor, "high-speed-mark", "round");
+  }
   await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.move.flag}`]: roundKey() });
   requestEdit(message, { type: "moveTaken", key: offer.move.key });
   // Disarming Demeanor's: the Clash itself.
