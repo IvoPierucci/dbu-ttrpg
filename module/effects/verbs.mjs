@@ -170,6 +170,10 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  terrifyingPresence: {
+    args: [0, 0],
+    doc: "Terrifying Presence (2): the Terrify out of sequence, offered on your latest card (chat.mjs terrifyingPresence)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "

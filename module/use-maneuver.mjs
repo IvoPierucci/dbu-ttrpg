@@ -6166,6 +6166,18 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && !outOfSequence) await (await import("./chat.mjs")).mimicryOffers(card, actor, maneuver);
   // Balanced Mind (3): the Hype or Analysis used - the other offered on its card, out of sequence.
   if (card) (await import("./chat.mjs")).balancedMindOffer(card, actor, maneuver);
+  // Terrifying Presence (1): "you can target all Opponents within a Sphere AoE centered on you" - a Clash at every other
+  // Opponent targeted, as at the first.
+  if (card && maneuver.terrify && targetActor && (actor.system.effects?.slots?.["terrify.presence"] === true)) {
+    // An Opponent: of another disposition than yours, as Whimsical Magic's are told apart.
+    const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+    const others = [...new Map(Array.from(game.user.targets ?? [])
+      .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.uuid !== targetActor.uuid)
+        && ((own === undefined) || (token.document?.disposition !== own)))
+      .map(token => [token.actor.uuid, token.actor])).values()];
+    const { postSkillClash } = await import("./chat.mjs");
+    for (const other of others) await postSkillClash(actor, other, maneuver, { terrify: { applied: false } });
+  }
   // Terrifying Speed (2): Rapid Movement taken - the Terrify out of sequence on its card.
   if (card && crossing?.rapid) (await import("./chat.mjs")).terrifyingSpeedOffer(card, actor);
   // Team Pose: the Hype used - (2) the Hype offered on its card to Allies with Show Stopping Performance; (1) each Ally's Ki.

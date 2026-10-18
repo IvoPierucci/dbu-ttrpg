@@ -16524,17 +16524,37 @@ export function terrifyingSpeedOffer(message, actor) {
     maneuverName: terrify.name, reason: "Terrifying Speed - ended beside an Opponent (target them)", terrifyingSpeed: true } });
 }
 
-/** Terrifying Speed (2)'s Terrify, taken: the Maneuver itself, out of sequence, at the one targeted - its own 1/Round still its. */
+/** Terrifying Speed (2)'s Terrify, taken: once a Round, spent as it is. */
 async function takeTerrifyingSpeed(message, actor) {
   if (actor.getFlag?.(SCOPE, "terrifyingSpeedRound") === roundKey()) {
     ui.notifications.warn(`${actor.name}: Terrifying Speed - already used this Combat Round.`);
     return null;
   }
-  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
-  const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "terrify"));
-  const used = await useManeuver(actor, own ? definitionOf(own) : getManeuver("terrify"), { outOfSequence: true });
+  const used = await terrifyOutOfSequence(actor);
   if (used) await actor.setFlag(SCOPE, "terrifyingSpeedRound", roundKey());
   return used;
+}
+
+/** The Terrify itself, out of sequence, at the one targeted - its own 1/Round still its (Terrifying Speed's, Presence's). */
+async function terrifyOutOfSequence(actor) {
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "terrify"));
+  return useManeuver(actor, own ? definitionOf(own) : getManeuver("terrify"), { outOfSequence: true });
+}
+
+/**
+ * Terrifying Presence (2): "If you knock an Opponent through a Health Threshold, you may use the Terrify Maneuver as an
+ * Out-of-Sequence Maneuver." Offered on your latest card - one made for it where there is none; its 1/Round the block's.
+ */
+export async function terrifyingPresence(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const terrify = getManeuver("terrify");
+  if (!actor || !terrify || whyNotSpecial(actor, terrify)) return UNSPENT;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "terrify", maneuverName: terrify.name,
+    reason: "Terrifying Presence - an Opponent knocked through a Health Threshold (target them)", terrifyingPresence: true };
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
 }
 
 /**
@@ -19888,6 +19908,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.spike) return takeSpike(message, actor, offer);
   if (offer.yoinkGrenade) return takeYoinkGrenade(message, actor, offer);
   if (offer.terrifyingSpeed) return takeTerrifyingSpeed(message, actor);
+  if (offer.terrifyingPresence) return terrifyOutOfSequence(actor);
   // Wild Counter's, once a Round.
   if (offer.grants?.wildCounter) {
     if (wildCounterSpent(actor)) {
