@@ -1,0 +1,31 @@
+id: tranquil-warrior
+name: Tranquil Warrior
+talentCategory: mindful
+prerequisites: Combat Zen and/or Zen Counter, ToP3+
+description: >
+  Filling your mind with pure serenity, you completely avoid the stress of combat.
+text: >
+  Tranquil Warrior: Filling your mind with pure serenity, you completely avoid the stress of combat.
+  –Prerequisites: Combat Zen and/or Zen Counter, ToP3+
+  (1)-[Passive]: While in the Mindful State, increase your Surgency by L(T).
+  (2)-[Triggered, 2/Round]: When you use an Attacking Maneuver or Counter Maneuver, you may enter the Mindful State for the duration of that Maneuver.
+
+---
+
+[passive]
+# (1) L: the Mindful State's Level held (Calm Mind (1)).
+if (inState("mindful")) {
+  surgency += states.mindful * 1(T);
+}
+
+# (2) An Attacking Maneuver declared, or a Counter Maneuver used, out of the Mindful State: asked, twice a Round between the two
+# - the Mindful State at Level 1 and Tranquil (a mark), left once that Maneuver is concluded (chat.mjs tranquilEnds).
+[triggered/declare-maneuver, 2/round, effect 2]
+requires attackingManeuver && !inState("mindful");
+enterState("mindful", 1);
+gain(tranquil-mark);
+
+[triggered/counter-maneuver, 2/round, chosen, effect 2]
+requires !inState("mindful");
+enterState("mindful", 1);
+gain(tranquil-mark);

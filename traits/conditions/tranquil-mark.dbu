@@ -1,0 +1,13 @@
+id: tranquil-mark
+name: Tranquil
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: says the Mindful State was entered by Tranquil Warrior's (2), for one Maneuver.
+combatCondition: no
+source: Core Rule
+description: >
+  Tranquil Warrior: in the Mindful State for this Maneuver - left once it is concluded.
+text: >
+  Tranquil Warrior (2): When you use an Attacking Maneuver or Counter Maneuver, you may enter the Mindful State for the duration of that Maneuver.
+
+---

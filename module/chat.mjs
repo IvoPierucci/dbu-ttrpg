@@ -6882,6 +6882,8 @@ export async function answerCounter(actor) {
 
 /** A Counter Maneuver's duration over: what was ticked for it stops holding. */
 export async function endCounterBoost(actor) {
+  // Tranquil Warrior (2): the Mindful State entered for a Counter Maneuver, left as it has run its course.
+  await tranquilEnds(actor);
   if (!actor?.getFlag?.(SCOPE, "counterBoost")) return;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.counterBoost`]: null });
 }
@@ -13197,6 +13199,7 @@ async function frozenTurnAfterAttack(attack) {
   // And whatever lasted "for the duration of that Attacking Maneuver" - Heart of Glass's Surging - with it.
   await glassSurgeEnds(attack);
   await combatWisdomEnds(attack);
+  await tranquilEnds(fromUuidSync(attack?.attackerUuid ?? ""));
   await entrustedAllInEnds(attack);
   await warriorTensionEnds(attack);
   await studiedSpent(attack);
@@ -13206,6 +13209,20 @@ async function frozenTurnAfterAttack(attack) {
   if (attack?.shardEnds) await shardsSpent(attack.shardEnds);
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   if (frozenTurnOf(attacker)?.closing) await endFrozenTurn(attacker);
+}
+
+/**
+ * Tranquil Warrior (2): "you may enter the Mindful State for the duration of that Maneuver" - its mark says it was entered so;
+ * the Maneuver concluded (an attack, or a Counter Maneuver run its course), the State left and the mark with it.
+ */
+async function tranquilEnds(actor) {
+  if (!actor?.isOwner || !((Number(actor.system.conditions?.["tranquil-mark"]) || 0) > 0)) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(actor, "tranquil-mark", 0);
+  if ((Number(actor.system.states?.mindful) || 0) > 0) {
+    const { leaveState } = await import("./effects/moments-runtime.mjs");
+    await leaveState(actor, "mindful");
+  }
 }
 
 /** Combat Wisdom (2): "for the duration of that Maneuver" - its mark off its maker once the attack is concluded. */
