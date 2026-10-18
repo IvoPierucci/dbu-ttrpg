@@ -632,6 +632,8 @@ export function registerCombatHooks() {
       for (const each of combatants(combat)) await endCounterBoost(each);
       // "Since the end of your last turn" - Flow of Combat's count of Damage starts again.
       if (leaving.getFlag?.("dbu-ttrpg", "damagedSinceTurn")) await leaving.unsetFlag("dbu-ttrpg", "damagedSinceTurn");
+      // Fleet of Foot (2): "until the end of your turn".
+      if (leaving.getFlag?.("dbu-ttrpg", "fleetOfFoot")) await leaving.unsetFlag("dbu-ttrpg", "fleetOfFoot");
       // Super Spirit Sword's use again: "during this turn" - unused, gone with it.
       const { swordAgainExpires } = await import("./chat.mjs");
       await swordAgainExpires(leaving);

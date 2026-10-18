@@ -14,3 +14,7 @@ text: >
 
 [passive]
 defenseValue += 1(T);
+# Fleet of Foot (1): "Increase the bonus to your Defense Value from Footwork's second effect by 1(T)."
+if (hasTalent("fleet-of-foot")) {
+  defenseValue += 1(T);
+}

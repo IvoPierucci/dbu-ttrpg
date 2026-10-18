@@ -1,0 +1,19 @@
+id: fleet-of-foot
+name: Fleet of Foot
+talentCategory: mobility
+prerequisites: Footwork
+description: >
+  Your ability to gather momentum while moving is unmatched, allowing you to land blows before your opponent even realizes you’re attacking.
+text: >
+  Fleet of Foot: Your ability to gather momentum while moving is unmatched, allowing you to land blows before your opponent even realizes you’re attacking.
+  –Prerequisites: Footwork
+  (1)-[Passive]: Increase the bonus to your Defense Value from Footwork’s second effect by 1(T).
+  (2)-[Triggered, 1/Round]: If you enter the Melee Range of an Opponent when using the Movement Maneuver, increase the Strike Roll of your next Attacking Maneuver that targets them by 1(T) until the end of your turn.
+
+---
+
+[passive]
+# (1) Read on Footwork's mark (conditions/footwork-mark.dbu): 1(T) more while this is held.
+# (2) The Movement used: a "Fleet of Foot" button on its card, once a Round - which Opponent whose Melee Range you stand in now,
+# asked; 1(T) on your next Strike at them, till the end of your turn (chat.mjs fleetTarget, fleetParts).
+allow fleetOfFoot.strike;

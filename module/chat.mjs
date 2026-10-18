@@ -6448,6 +6448,11 @@ export async function postManeuver(actor, maneuver,
   if (!noExploit) offerExploits(card, actor, maneuver);
   // Hidden, and powering up, charging or transforming: whoever is Oblivious of them may Search for them.
   offerSearches(card, actor, maneuver);
+  // Fleet of Foot (2): the Movement into an Opponent's Melee Range - 1(T) on the next Strike at them this turn.
+  if (maneuver?.movement && card && (actor.system?.effects?.slots?.["fleetOfFoot.strike"] === true)) {
+    offerMove(card, actor, { key: `fleet:${actor.uuid}`, flag: "fleetRound", name: "Fleet of Foot",
+      reason: "an Opponent whose Melee Range you entered - 1(T) on your next Strike at them this turn", fleet: true });
+  }
   // Ranger (3): the movement ended beside a Character - a stack of Tension for an Ally or an Opponent there.
   if (maneuver?.movement && card && (actor.system?.effects?.slots?.["ranger.afterMove"] === true)
     && ((Number(actor.system.resources?.tension?.stacks) || 0) > 0)) {
@@ -13212,6 +13217,7 @@ async function frozenTurnAfterAttack(attack) {
   // And whatever lasted "for the duration of that Attacking Maneuver" - Heart of Glass's Surging - with it.
   await glassSurgeEnds(attack);
   await combatWisdomEnds(attack);
+  await fleetSpent(attack);
   await tranquilEnds(fromUuidSync(attack?.attackerUuid ?? ""));
   await entrustedAllInEnds(attack);
   await warriorTensionEnds(attack);
@@ -13236,6 +13242,14 @@ async function tranquilEnds(actor) {
     const { leaveState } = await import("./effects/moments-runtime.mjs");
     await leaveState(actor, "mindful");
   }
+}
+
+/** Fleet of Foot (2): "your next Attacking Maneuver that targets them" - made, the bonus gone. */
+async function fleetSpent(attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  const held = attacker?.getFlag?.(SCOPE, "fleetOfFoot");
+  if (!attacker?.isOwner || !held?.uuid || !attackTargets(attack).some(entry => entry.uuid === held.uuid)) return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.fleetOfFoot`]: null });
 }
 
 /** Combat Wisdom (2): "for the duration of that Maneuver" - its mark off its maker once the attack is concluded. */
@@ -15613,12 +15627,12 @@ async function copyTechnique(actor, copyFrom) {
  * A move an effect hands over - not an Out-of-Sequence Maneuver, so it takes no one's, and nothing here moves anybody:
  * where to is the map's. Once a Round by the mover's `flag`, counted when taken; `key` tells one from another on a card.
  */
-function offerMove(message, mover, { key, flag, name, reason, clashAt = "", copyFrom = null, ranger = false }) {
+function offerMove(message, mover, { key, flag, name, reason, clashAt = "", copyFrom = null, ranger = false, fleet = false }) {
   if (mover.getFlag?.(SCOPE, flag) === roundKey()) return;
   if ((message.getFlag(SCOPE, OOS_OFFERS_FLAG) ?? []).some(offer => offer.move?.key === key)) return;
   requestEdit(message, { type: "offer", offer: { actorUuid: mover.uuid, actorName: mover.name, maneuverId: "",
     maneuverName: name, reason, move: { key, flag, ...(clashAt ? { clashAt } : {}), ...(copyFrom ? { copyFrom } : {}),
-      ...(ranger ? { ranger: true } : {}) } } });
+      ...(ranger ? { ranger: true } : {}), ...(fleet ? { fleet: true } : {}) } } });
 }
 
 /**
@@ -15647,6 +15661,8 @@ async function takeMoveOffer(message, actor, offer) {
   if (offer.move.copyFrom && !await copyTechnique(actor, offer.move.copyFrom)) return;
   // Ranger (3)'s: whom first - none picked, no use spent.
   if (offer.move.ranger && !await rangerBeside(message, actor)) return;
+  // Fleet of Foot (2)'s: whom - none picked, no use spent.
+  if (offer.move.fleet && !await fleetTarget(message, actor)) return;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.${offer.move.flag}`]: roundKey() });
   requestEdit(message, { type: "moveTaken", key: offer.move.key });
   // Disarming Demeanor's: the Clash itself.
@@ -15655,6 +15671,37 @@ async function takeMoveOffer(message, actor, offer) {
     await postSkillClash(actor, at, { name: "Disarming Demeanor", type: "outOfSequence",
       clash: { skill: "bluff", defenderSkills: ["perception", "intuition"] } }, { disarming: { applied: false } });
   }
+}
+
+/**
+ * Fleet of Foot (2): "If you enter the Melee Range of an Opponent when using the Movement Maneuver, increase the Strike Roll of
+ * your next Attacking Maneuver that targets them by 1(T) until the end of your turn." Whom, asked among the Opponents whose Melee
+ * Range you stand in now; held till that Strike or the end of your turn (fleetParts). False where none was picked.
+ */
+async function fleetTarget(message, actor) {
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const near = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid) && !token.actor.system?.defeated
+      && !whyNotWithinMelee(token.actor, actor, ""))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!near.length) {
+    ui.notifications.info(`${actor.name}: no Opponent's Melee Range reached.`);
+    return false;
+  }
+  const picked = await askPlayerChoice(actor, `${actor.name}: Fleet of Foot`,
+    [...near.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const who = near.find(each => each.uuid === picked);
+  if (!who) return false;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.fleetOfFoot`]: { uuid: who.uuid, name: who.name } });
+  await settledNote(message, `Fleet of Foot: ${actor.name}'s next Strike at ${who.name} this turn, +1(T).`);
+  return true;
+}
+
+/** Fleet of Foot (2): its 1(T), against the one it names. */
+function fleetParts(attacker, target) {
+  const held = attacker?.getFlag?.(SCOPE, "fleetOfFoot");
+  if (!held?.uuid || (held.uuid !== target?.uuid)) return [];
+  return [{ label: "Fleet of Foot", written: "+1(T)", value: Math.max(1, Number(attacker.system.tierOfPower) || 1) }];
 }
 
 /**
@@ -21621,7 +21668,7 @@ async function resolveAttackWork(message, attack) {
     const analysisParts = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target),
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
       ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
-      ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike")]
+      ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike"), ...fleetParts(attacker, target)]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
