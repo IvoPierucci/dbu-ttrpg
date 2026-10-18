@@ -14410,6 +14410,32 @@ function markedParts(roller, other) {
   return yours ? [{ label: "Marked", written: "+1(T)", value: Math.max(1, Number(roller.system.tierOfPower) || 1) }] : [];
 }
 
+/**
+ * Warm Up (2): "If you lose all stacks of Holding Back, you may use the Power Up or Transformation Maneuver as an Out-of-Sequence
+ * Maneuver." Both offered on your latest card - one made for them where there is none; either taken, the Maneuver itself.
+ */
+export async function warmUpPower(actor) {
+  if (!actor) return;
+  const offers = [["power-up", "Power Up"], ["transformation", "Transformation"]].map(([id, name]) => ({ actorUuid: actor.uuid,
+    actorName: actor.name, maneuverId: id, maneuverName: getManeuver(id)?.name ?? name, reason: "Warm Up - no longer Holding Back",
+    ownOutOfSequence: id }));
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
+  if (card) {
+    for (const offer of offers) requestEdit(card, { type: "offer", offer });
+    return;
+  }
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+    flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: offers } } });
+}
+
+/** One of the character's own Maneuvers, by its file's id, used out of sequence - Warm Up (2)'s. */
+async function ownOutOfSequence(actor, id) {
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor?.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === id));
+  const maneuver = own ? definitionOf(own) : getManeuver(id);
+  return maneuver ? useManeuver(actor, maneuver, { outOfSequence: true }) : null;
+}
+
 /** Slow Starter (3): "Use the Holding Back Maneuver as an Out-of-Sequence Maneuver." */
 export async function slowStarter(actor) {
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
@@ -20090,6 +20116,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.terrifyingSpeed) return takeTerrifyingSpeed(message, actor);
   if (offer.terrifyingPresence) return terrifyOutOfSequence(actor);
   if (offer.frequentFlyer) return takeFrequentFlyer(message, actor);
+  if (offer.ownOutOfSequence) return ownOutOfSequence(actor, offer.ownOutOfSequence);
   // Wild Counter's, once a Round.
   if (offer.grants?.wildCounter) {
     if (wildCounterSpent(actor)) {

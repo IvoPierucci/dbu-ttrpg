@@ -1,0 +1,13 @@
+id: warm-up-mark
+name: Warmed Up
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Warm Up (1)'s - the Holding Back Maneuver's effects ignored, its stacks still held (maneuvers/holding-back.dbu).
+combatCondition: no
+source: Core Rule
+description: >
+  Warm Up: the effects of your Holding Back stacks ignored till the end of your next turn - the stacks still held.
+text: >
+  Warm Up (1): While you are Holding Back, as a Standard Maneuver with an Action Cost of 1 Action, you can ignore the effects of your Holding Back stacks until the end of your next turn.
+
+---

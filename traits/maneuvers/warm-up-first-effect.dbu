@@ -1,0 +1,23 @@
+id: warm-up-first-effect
+name: Warm Up
+type: standard
+actionCost: 1
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+fromTrait: warm-up
+fromEffect: 1
+source: Core Rule
+description: >
+  Warm Up's first effect, as a Maneuver: Holding Back's effects ignored till the end of your next turn, its stacks still held.
+text: >
+  (1)-[1/Encounter]: While you are Holding Back, as a Standard Maneuver with an Action Cost of 1 Action, you can ignore the effects of your Holding Back stacks until the end of your next turn.
+
+---
+
+# In the list while Warm Up is had. Warmed Up: read on the Holding Back Maneuver's own file, its effects left out while it is
+# had - the stacks kept, for what reads them (the user's).
+[on used]
+gain("warm-up-mark");
+expires("warm-up-mark", next-turn);
