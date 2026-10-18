@@ -1,4 +1,20 @@
 <div class="tab {{tabs.options.cssClass}}" data-group="primary" data-tab="options">
+  {{! What it asked as it was gained - Practiced's two Skills, Elementalist's Profile - changeable, its script with it. }}
+  {{#if choices.length}}
+  <section class="panel racial-options">
+    {{#each choices as |row|}}
+    <label class="racial-option-row">
+      <span>{{row.label}}</span>
+      <select data-choice="{{row.which}}">
+        {{#unless row.current}}<option value="" selected>-</option>{{/unless}}
+        {{#each row.options as |option|}}
+        <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
+        {{/each}}
+      </select>
+    </label>
+    {{/each}}
+  </section>
+  {{/if}}
   {{! A Racial Trait's Option effect: which printed effect asks for it, and the one chosen - changeable, its script and
       what it gives changing with it. Empty for a Trait with none. }}
   {{#if racial.optionGroups.length}}

@@ -496,6 +496,57 @@ export async function answeredTalent(data, trait, actor) {
   return { ...data, system: { ...data.system, script, chosen } };
 }
 
+/**
+ * What a Trait's or a Talent's own `choose:` (and `choose2:`) was answered with, as rows its sheet can change: which, what
+ * is chosen, and what may be. The Option's own choices are its Option's, not these.
+ */
+export async function choiceRowsOf(item) {
+  const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  if (!file?.choose) return [];
+  const actor = item.actor ?? null;
+  const chosen = item.system.chosen ?? [];
+  const first = chosen.find(entry => entry.key === file.id)?.value ?? "";
+  const second = chosen.find(entry => entry.key === `${file.id}#2`)?.value ?? "";
+  const row = async (which, kind, current, earlier) => ({ which, current,
+    label: (which === 2) ? "2nd choice" : (file.choose2 ? "1st choice" : "Choice"),
+    options: (await choicesFor(kind, file, { actor, earlier }))
+      // What it has now stays offered, whatever the list says of it today.
+      .concat((current && !(await choicesFor(kind, file, { actor, earlier })).some(([value]) => value === current))
+        ? [[current, chosen.find(entry => entry.value === current)?.label?.split(": ").pop() ?? current]] : [])
+      .map(([value, label]) => ({ value, label, selected: value === current })) });
+  return [await row(1, file.choose, first, second ? [second] : []),
+    ...(file.choose2 ? [await row(2, file.choose2, second, first ? [first] : [])] : [])];
+}
+
+/**
+ * A choice changed on the sheet: the Item's own script written again from its file with the new answer, the Options' blocks
+ * after it kept as they were, and what was chosen recorded. False where nothing changed.
+ */
+export async function changeChoice(item, which, value) {
+  const file = getTrait(item?.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+  if (!file?.choose || !value) return false;
+  const key = (which === 2) ? `${file.id}#2` : file.id;
+  const kind = (which === 2) ? file.choose2 : file.choose;
+  const offered = await choicesFor(kind, file, { actor: item.actor ?? null });
+  const label = offered.find(([each]) => each === value)?.[1] ?? value;
+  const chosen = [...(item.system.chosen ?? []).filter(entry => entry.key !== key), { key, value, label: `${file.name}: ${label}` }];
+  const first = chosen.find(entry => entry.key === file.id)?.value ?? "";
+  const second = chosen.find(entry => entry.key === `${file.id}#2`)?.value ?? "";
+  // Its own part: the file's script with both answers written in - a list's flags too.
+  let own = String(file.script ?? "").trim();
+  if (second) own = own.replaceAll("$choice2", second);
+  const flags = (file.choose === "list") ? (await choicesFor("list", file)).map(([each]) => each).sort((a, b) => b.length - a.length) : [];
+  own = flags.reduce((text, each) => text.replaceAll(`$${each}`, (each === first) ? "1" : "0"), own.replaceAll("$choice", first));
+  // And what an Option put after it, as it is.
+  const script = String(item.system.script ?? "");
+  const at = script.indexOf("#@ option");
+  const tail = (at >= 0) ? `
+
+${script.slice(at).trim()}` : "";
+  await item.update({ "system.script": `${own}${tail}`, "system.chosen": chosen });
+  return true;
+}
+
 /** A part's script with its `choose:` answered - `$choice` replaced - and the choice recorded. */
 async function answered(source, chosen, actor = null) {
   let script = String(source.script ?? "").trim();

@@ -110,6 +110,23 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
       };
     }
 
+    // Its own choices - Practiced's Skills, Elementalist's Profile - changeable on the Options tab, a Talent's and a Racial
+    // Trait's alike (the user's); and a Talent's Options, where its file has an Option effect.
+    const { choiceRowsOf } = await import("../racial.mjs");
+    context.choices = await choiceRowsOf(this.item);
+    if (this.item.type === "talent") {
+      const { chosenOptions, optionGroupsOf, ordinal } = await import("../racial.mjs");
+      const { getTrait } = await import("../effects/traits.mjs");
+      const file = getTrait(this.item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
+      context.racial = { optionGroups: file ? optionGroupsOf(file).map(group => {
+        const mine = chosenOptions(this.item).map(each => each.id).filter(id => group.options.some(each => each.id === id));
+        return { label: `${ordinal(group.effect)} effect`, selects: Array.from({ length: group.count }, (each, index) => ({
+          replacing: mine[index] ?? "",
+          options: group.options.map(option => ({ value: option.id, label: option.name, selected: option.id === mine[index] }))
+        })) };
+      }) : [] };
+    }
+
     // Compiled every time the sheet is drawn, so a mistake is reported as it is made.
     // The character is passed in when there is one, which is what lets a slot name be
     // checked against the Skills and Attributes that actually exist.
@@ -130,6 +147,15 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
       event.stopPropagation();
       await this.item.actor?.setFlag("dbu-ttrpg", "tailLost", event.target.checked);
     });
+    // A choice of its own changed: its script written again with it.
+    for (const select of this.element.querySelectorAll("select[data-choice]")) {
+      select.addEventListener("change", async event => {
+        event.stopPropagation();
+        const { changeChoice } = await import("../racial.mjs");
+        const changed = await changeChoice(this.item, Number(event.target.dataset.choice), event.target.value);
+        if (!changed) this.render();
+      });
+    }
     for (const select of this.element.querySelectorAll("select[data-racial-option]")) {
       select.addEventListener("change", async event => {
         event.stopPropagation();
@@ -142,9 +168,9 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
 
   /** Build the tab configuration used by the shared tabs template. */
   _getTabs() {
-    // The Options tab is a Racial Trait's alone - shown on every one, empty where it has none.
+    // The Options tab: a Racial Trait's and a Talent's (the user's) - shown on every one, empty where it has none.
     return Object.fromEntries(Object.entries(this.constructor.TABS)
-      .filter(([key]) => (key !== "options") || (this.item.type === "racial")).map(([key, tab]) => [key, {
+      .filter(([key]) => (key !== "options") || ["racial", "talent"].includes(this.item.type)).map(([key, tab]) => [key, {
       ...tab,
       cssClass: this.tabGroups[tab.group] === key ? "active" : ""
     }]));
