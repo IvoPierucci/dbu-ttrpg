@@ -14092,29 +14092,50 @@ export async function motivatingPerformance(actor) {
 }
 
 /**
- * Dynamic Hype (2): "When using the Hype Maneuver, you may benefit from two of your Option effects for Show Stopping Performance
- * at once." Asked as the Hype is used, once an Encounter: which one besides the one in use (`secondOption`) - for that Hype,
- * till Hyped goes (dynamicHypeEnds). Before its Moment, so that one's Triggered effect answers it too.
+ * Dynamic Hype's Options as the Hype Maneuver is used, before its Moment so what is put in use answers it - one window (the
+ * user's): none on the selector, which one, every time (`hypeOption`); and (2), "When using the Hype Maneuver, you may benefit
+ * from two of your Option effects for Show Stopping Performance at once", once an Encounter - a second besides
+ * (`secondOption`). Both for that Hype, till Hyped goes (dynamicHypeEnds). Closed, none.
  */
 export async function askDynamicHype(actor) {
-  if ((actor?.system?.effects?.slots?.["dynamicHype.twice"] !== true) || !game.combat?.started
-    || (actor.getFlag?.(SCOPE, "dynamicHypeEncounter") === game.combat.id)) return;
-  const item = Array.from(actor.items ?? []).find(each => (each.type === "talent") && each.flags?.[SCOPE]?.primaryOption);
+  const item = Array.from(actor?.items ?? []).find(each => (each.type === "talent") && each.flags?.[SCOPE]?.oneAtATime);
   if (!item) return;
   const { chosenOptions } = await import("./racial.mjs");
-  const others = chosenOptions(item).filter(option => option.id !== item.flags[SCOPE].primaryOption);
-  if (!others.length) return;
-  const picked = await askPlayerChoice(actor, `${actor.name}: Dynamic Hype (1/Encounter)`,
-    [...others.map(option => ({ value: option.id, label: option.name })), { value: "none", label: "Not now" }]);
-  if (!others.some(option => option.id === picked)) return;
-  await actor.setFlag(SCOPE, "dynamicHypeEncounter", game.combat.id);
-  await item.update({ [`flags.${SCOPE}.secondOption`]: picked });
+  const all = chosenOptions(item);
+  const primary = item.flags[SCOPE].primaryOption || "";
+  const twice = (actor.system.effects?.slots?.["dynamicHype.twice"] === true) && game.combat?.started
+    && (actor.getFlag?.(SCOPE, "dynamicHypeEncounter") !== game.combat.id);
+  if (primary && !twice) return;
+  const escape = Handlebars.escapeExpression;
+  const tip = option => escape(String(option.description ?? "").trim());
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"], window: { title: `${actor.name}: ${item.name}` }, position: { width: 420 },
+    content: `${primary ? "" : all.map((option, index) => `<label class="dbu-respond-option" data-tooltip="${tip(option)}">
+        <input type="radio" name="first" value="${escape(option.id)}" ${index ? "" : "checked"}/>
+        <span class="dbu-respond-name">${escape(option.name)}</span></label>`).join("")}
+      ${twice ? `<label class="dbu-respond-option" data-tooltip="Dynamic Hype: a second one for this Hype (1/Encounter)">
+        <span class="dbu-respond-name">Dynamic Hype</span>
+        <select name="second"><option value="">-</option>${all.filter(option => option.id !== primary)
+          .map(option => `<option value="${escape(option.id)}">${escape(option.name)}</option>`).join("")}</select></label>` : ""}`,
+    buttons: [{ action: "ok", label: "Hype", default: true, callback: (event, button, dialog) => ({
+      first: dialog.element.querySelector('input[name="first"]:checked')?.value ?? "",
+      second: dialog.element.querySelector('select[name="second"]')?.value ?? "" }) }],
+    rejectClose: false
+  });
+  if (!answer || (typeof answer !== "object")) return;
+  const first = primary ? "" : answer.first;
+  const second = (answer.second && (answer.second !== (first || primary))) ? answer.second : "";
+  if (second) await actor.setFlag(SCOPE, "dynamicHypeEncounter", game.combat.id);
+  if (first || second) {
+    await item.update({ ...(first ? { [`flags.${SCOPE}.hypeOption`]: first } : {}),
+      ...(second ? { [`flags.${SCOPE}.secondOption`]: second } : {}) });
+  }
 }
 
-/** Hyped gone: Dynamic Hype (2)'s second one no longer in use. */
+/** Hyped gone: what was put in use for that Hype - asked, or Dynamic Hype (2)'s second - no longer. */
 export async function dynamicHypeEnds(actor) {
-  for (const item of Array.from(actor?.items ?? []).filter(each => each.flags?.[SCOPE]?.secondOption)) {
-    await item.update({ [`flags.${SCOPE}.secondOption`]: "" });
+  for (const item of Array.from(actor?.items ?? []).filter(each => each.flags?.[SCOPE]?.secondOption || each.flags?.[SCOPE]?.hypeOption)) {
+    await item.update({ [`flags.${SCOPE}.secondOption`]: "", [`flags.${SCOPE}.hypeOption`]: "" });
   }
 }
 

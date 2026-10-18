@@ -1077,7 +1077,8 @@ export async function changeRacialOption(item, optionId, replacing = "") {
     "system.chosen": chosen,
     // The one in use replaced - Dynamic Hype's: the new one in use.
     ...((old && (flags.primaryOption === old)) ? { "flags.dbu-ttrpg.primaryOption": option.id } : {}),
-    ...((old && (flags.secondOption === old)) ? { "flags.dbu-ttrpg.secondOption": "" } : {})
+    ...((old && (flags.secondOption === old)) ? { "flags.dbu-ttrpg.secondOption": "" } : {}),
+    ...((old && (flags.hypeOption === old)) ? { "flags.dbu-ttrpg.hypeOption": "" } : {})
   });
 
   if (!actor) return true;
@@ -1132,6 +1133,7 @@ export async function addGrantedOptions(actor, trait) {
     scripts.push(`#@ option ${option.id} | ${option.name}\n${own}\n#@ end`);
   }
   await target.update({ "system.script": scripts.filter(Boolean).join("\n\n"), "system.chosen": chosen,
+    "flags.dbu-ttrpg.oneAtATime": true,
     "flags.dbu-ttrpg.primaryOption": target.flags?.["dbu-ttrpg"]?.primaryOption || had[0] || picked[0] });
   await automateAll(actor, target);
   return true;
@@ -1140,15 +1142,18 @@ export async function addGrantedOptions(actor, trait) {
 /** That Talent lost: the Option in use kept, the others gone with what they asked, and one at a time no longer. */
 export async function dropGrantedOptions(actor, trait) {
   const target = grantedOptionsTarget(actor, trait);
-  const primary = target?.flags?.["dbu-ttrpg"]?.primaryOption;
-  if (!primary) return false;
+  const flags = target?.flags?.["dbu-ttrpg"] ?? {};
+  if (!flags.oneAtATime && !flags.primaryOption) return false;
+  // The one in use - on the selector, or else asked at this Hype, or else the first had.
+  const primary = flags.primaryOption || flags.hypeOption || chosenOptions(target)[0]?.id || "";
   const gone = chosenOptions(target).map(each => each.id).filter(id => id !== primary);
   const script = gone.reduce((text, id) => text.replace(new RegExp(`\\n*#@ option ${id} \\|[^\\n]*\\n[\\s\\S]*?\\n#@ end`, "g"), ""),
     String(target.system.script ?? ""));
   await target.update({ "system.script": script.trim(),
     "system.chosen": (target.system.chosen ?? []).filter(entry => !((entry.key === "option") && gone.includes(entry.value))
       && !gone.includes(entry.key)),
-    "flags.dbu-ttrpg.primaryOption": "", "flags.dbu-ttrpg.secondOption": "" });
+    "flags.dbu-ttrpg.oneAtATime": false, "flags.dbu-ttrpg.primaryOption": "", "flags.dbu-ttrpg.hypeOption": "",
+    "flags.dbu-ttrpg.secondOption": "" });
   return true;
 }
 

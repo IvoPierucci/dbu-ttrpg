@@ -128,9 +128,9 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
         })) };
       }) : [] };
       // Dynamic Hype's "only one of these effects at any one time": which is in use.
-      const primary = this.item.flags?.["dbu-ttrpg"]?.primaryOption;
-      context.inUse = primary ? chosenOptions(this.item).map(option => ({ value: option.id, label: option.name, selected: option.id === primary }))
-        : null;
+      const flags = this.item.flags?.["dbu-ttrpg"] ?? {};
+      context.inUse = (flags.oneAtATime || flags.primaryOption) ? chosenOptions(this.item)
+        .map(option => ({ value: option.id, label: option.name, selected: option.id === flags.primaryOption })) : null;
     }
 
     // Compiled every time the sheet is drawn, so a mistake is reported as it is made.

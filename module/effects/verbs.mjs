@@ -146,7 +146,7 @@ export const VERBS = Object.freeze({
   },
   dynamicHypeEnds: {
     args: [0, 0],
-    doc: "Hyped gone: Dynamic Hype (2)'s second Option no longer in use (chat.mjs dynamicHypeEnds)."
+    doc: "Hyped gone: the Option asked at that Hype and Dynamic Hype (2)'s second no longer in use (chat.mjs dynamicHypeEnds)."
   },
   motivatedLeft: {
     args: [0, 0],

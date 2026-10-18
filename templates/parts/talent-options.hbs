@@ -33,9 +33,10 @@
     {{/each}}
     {{/each}}
     {{#if inUse}}
-    <label class="racial-option-row" data-tooltip="Only one benefits you at a time (Dynamic Hype)">
+    <label class="racial-option-row" data-tooltip="Only one benefits you at a time (Dynamic Hype); - asks at each Hype">
       <span>In use</span>
       <select data-in-use>
+        <option value="">-</option>
         {{#each inUse as |option|}}
         <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
         {{/each}}

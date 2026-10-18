@@ -78,16 +78,18 @@ function optionIdsByBlock(script) {
 }
 
 /**
- * Dynamic Hype (1): "You can only use and benefit from one of these effects at any one time" - an Item with several Options
- * and one in use (`primaryOption`; and Dynamic Hype (2)'s `secondOption` with it): the others' blocks left out, numbered as
- * they were.
+ * Dynamic Hype (1): "You can only use and benefit from one of these effects at any one time" - an Item with several Options,
+ * one at a time (`oneAtATime`): in use, the one on its selector (`primaryOption`), or - none there - the one asked as the Hype
+ * is used (`hypeOption`), and Dynamic Hype (2)'s (`secondOption`). The others' blocks left out, numbered as they were; those
+ * in use answer by themselves, the choice being the asking (the user's: no Triggered/Automatic button) - `inUseOption`.
  */
 function activeOptionsOnly(item, program) {
   const flags = item.flags?.["dbu-ttrpg"] ?? {};
-  if (!flags.primaryOption) return program;
-  const active = new Set([flags.primaryOption, flags.secondOption].filter(Boolean));
+  if (!flags.oneAtATime && !flags.primaryOption) return program;
+  const active = new Set([flags.primaryOption, flags.hypeOption, flags.secondOption].filter(Boolean));
   const ids = optionIdsByBlock(item.system?.script);
-  return { ...program, blocks: (program.blocks ?? []).filter(block => !ids[block.index - 1] || active.has(ids[block.index - 1])) };
+  return { ...program, blocks: (program.blocks ?? []).filter(block => !ids[block.index - 1] || active.has(ids[block.index - 1]))
+    .map(block => (ids[block.index - 1] ? { ...block, inUseOption: true } : block)) };
 }
 
 /**
@@ -941,6 +943,8 @@ export function reactiveFor(actor, options = {}) {
         blockId: `${entry.sourceId}#${b.index}`,
         armed: (b.mode === "automatic") || armed.has(`${entry.sourceId}#${b.index}`)
           || (automatic.has(`${entry.sourceId}#${b.index}`) && !chosenAsItHappens(b))
+          // An Option in use of several, one at a time - Dynamic Hype's: answers by itself, chosen as it was put in use.
+          || Boolean(b.inUseOption)
           // A Talent armed under the old per-Talent key still counts, so nothing a
           // player armed before this change quietly stops working.
           || armed.has(entry.sourceId),
