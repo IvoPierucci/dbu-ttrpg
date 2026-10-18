@@ -15849,6 +15849,14 @@ async function askSizeMatters(actor, everyone) {
   return Boolean(yes);
 }
 
+/** Miniature Warrior (1): "Increase your Wound Rolls against an Opponent with a larger Size Category than you by 1(T)." */
+function largerParts(attacker, target) {
+  const slot = attacker?.system?.effects?.slots?.["wound.vsLarger"];
+  if (!(Number(slot?.add) || 0) || !target || (sizeDifference(target, attacker) <= 0)
+    || alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Larger", value: Number(slot.add) }];
+}
+
 /** Tremendous Warrior (1): "Increase your Strike Rolls against an Opponent with a smaller Size Category than you by 1(T)." */
 function smallerParts(attacker, target) {
   const slot = attacker?.system?.effects?.slots?.["strike.vsSmaller"];
@@ -22065,6 +22073,8 @@ async function resolveAttackWork(message, attack) {
       // duration of that Attacking Maneuver" - worked out as the hit is, spent only where it gives something.
       sizeSoak: await sizeSoakFor(target, attacker, incoming),
       taiChiReduction: hit ? taiChiReductionFor(target, attacker, incoming, attack, uuid) : 0,
+      // Miniature Warrior (2): ticked as it was hit - no Punching Down on it.
+      ...((incoming?.slots?.["miniature.noPunchingDown"] === true) ? { noPunchingDown: true } : {}),
       // Greed of the Hera (6): Greed spent as the hit is, 2(T) of Damage Reduction each for this attack.
       greedReduction: hit ? await greedReductionFor(target, attack, uuid) : 0,
       toughReduction: tough.value,
@@ -23914,6 +23924,7 @@ async function rollAttackWoundWork(message, attack) {
       ...tacticianParts(attacker, target),
       ...rangeParts(attacker, attack, target, "wound"),
       ...heelParts(attacker, target),
+      ...largerParts(attacker, target),
       // Full Counter (2): the Might of the one who Jolted, on this attack's Wound against them.
       { label: "Full Counter", value: Number(defenceFor(attack, target.uuid)?.fullCounter) || 0 },
       ...studiedParts(attacker, target),
@@ -24023,7 +24034,7 @@ async function rollAttackWoundWork(message, attack) {
     const dealt = Math.max(0, taken + extra.reduce((sum, part) => sum + part.value, 0) - (Number(own.barrier?.total) || 0));
     // Punching Down: "If you hit a Character with an Attacking Maneuver that is 2+ Size Categories smaller than you,
     // increase the amount of Damage they receive by 1d6(T)" - Damage there already is (the user's ruling).
-    const punchingDown = ((dealt > 0) && (sizeDifference(attacker, target) >= 2)) ? await punchingDownRoll(attacker) : 0;
+    const punchingDown = ((dealt > 0) && (sizeDifference(attacker, target) >= 2) && !own.noPunchingDown) ? await punchingDownRoll(attacker) : 0;
     // Hyper Resilience: "If you take less Damage than 1/2 of your Soak Value from an Attacking Maneuver, you take no
     // Damage" - Automatic, or asked of whoever plays them once the Damage is known (the user's); spent only where it took
     // it away.

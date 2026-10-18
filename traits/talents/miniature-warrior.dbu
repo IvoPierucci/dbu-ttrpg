@@ -1,0 +1,21 @@
+id: miniature-warrior
+name: Miniature Warrior
+talentCategory: size
+prerequisites: N/A
+description: >
+  When someone is as small as you, all enemies are giants. You’ve learned to navigate in that world of giants with ease and efficiency.
+text: >
+  Miniature Warrior: When someone is as small as you, all enemies are giants. You’ve learned to navigate in that world of giants with ease and efficiency.
+  –Prerequisites: N/A
+  (1)-[Passive]: Increase your Wound Rolls against an Opponent with a larger Size Category than you by 1(T).
+  (2)-[Triggered, 1/Round]: If you are hit by an Opponent’s Attacking Maneuver that benefits from the Punching Down rules, do not apply that bonus to this Attacking Maneuver.
+
+---
+
+[passive]
+# (1) Against each larger Opponent alone (chat.mjs largerParts).
+wound.vsLarger += 1(T);
+
+# (2) Ticked in the window as you are hit, once a Round: no Punching Down on that attack (chat.mjs, where its Damage is).
+[triggered/being-hit, 1/round, effect 2]
+miniature.noPunchingDown = true;

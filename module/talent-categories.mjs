@@ -69,7 +69,7 @@ const ROSTER = {
   "multi-type": ["Multi-Type Attacker", "Multi-Type Specialist", "Multi-Type Gambit", "Multi-Type Master"],
   "physical-attack": ["Enhanced Fist", "Iron Fist", "Rapid Fist", "Supreme Fist"],
   "raging": ["Angry Warrior", "Burning Fury", "Furious Berserker", "Apoplectic Beast"],
-  "size": ["Tremendous Warrior", "Size Matters"],
+  "size": ["Tremendous Warrior", "Size Matters", "Miniature Warrior"],
   "skill": ["Practiced", "Show Stopping Performance", "Dynamic Hype", "Team Pose", "Analytic Fighter", "Flexible Planning",
     "Counter Jury-rigging", "Silent Footsteps", "Stealth Strike", "Assassinate", "Master Assassin", "Acrobat Star", "Expert Pilot",
     "Yoink", "Battlefield Doctor", "Enhanced Search", "Terrifying Presence", "Terrifying Speed", "Desperate Distraction",
