@@ -2234,16 +2234,19 @@ async function settleMagicTrick(message, clash) {
     return;
   }
 
+  // Trickster Magician (2): the first two on this one Clash - Impaired, then moved.
+  const both = clash.magicTrick.option === "both";
+  const impairs = both || (clash.magicTrick.option === "impair");
   // Whimsical Magic (7): "you may instead knock that Opponent(s) Prone instead" - asked of the caster.
-  if ((clash.magicTrick.option === "impair") && (caster.system.effects?.slots?.["whimsical.trickProne"] === true)
+  if (impairs && (caster.system.effects?.slots?.["whimsical.trickProne"] === true)
     && (await askPlayerChoice(caster, `${caster.name}: ${clash.maneuverName} - ${target.name}`,
       [{ value: "impaired", label: "Impaired" }, { value: "prone", label: "Prone" }])) === "prone") {
     const { setCondition } = await import("./conditions.mjs");
     await setCondition(target, "prone", Math.max(1, Number(target.system.conditions?.prone) || 0));
     await settledNote(message, `${target.name} is knocked Prone.`);
-    return;
+    if (!both) return;
   }
-  if (clash.magicTrick.option === "impair") {
+  else if (impairs) {
     const { setCondition } = await import("./conditions.mjs");
     await setCondition(target, "impaired", 1);
     await lasting(caster, {
@@ -2257,7 +2260,7 @@ async function settleMagicTrick(message, clash) {
 
     await settledNote(message,
       `${target.name} is Impaired until the start of ${caster.name}'s next turn.`);
-    return;
+    if (!both) return;
   }
 
   // "Move that target by a number of Squares equal to your number of Skill Ranks in the Use
@@ -2267,6 +2270,16 @@ async function settleMagicTrick(message, clash) {
   await settledNote(message,
     `${caster.name} moves ${target.name} ${squares} Square${squares === 1 ? "" : "s"} - `
     + `${caster.name}'s Use Magic Ranks. Where to is ${caster.name}'s to say.`);
+  // Trickster Magician (1): an Opponent moved - the Basic Attack at them, out of sequence, for each Ally they were put beside
+  // (the table's), on this card.
+  const allies = alliesOnScene(caster);
+  if ((caster.system.effects?.slots?.["trickster.allyStrike"] === true) && !allies.some(ally => ally.uuid === target.uuid)) {
+    for (const ally of allies.filter(each => !each.system?.defeated)) {
+      requestEdit(message, { type: "offer", offer: { actorUuid: ally.uuid, actorName: ally.name, maneuverId: "basic-attack",
+        maneuverName: "Basic Attack", targetUuid: target.uuid,
+        reason: `Trickster Magician - ${target.name} moved beside you` } });
+    }
+  }
 }
 
 /**

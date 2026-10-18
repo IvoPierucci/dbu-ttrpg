@@ -1757,6 +1757,11 @@ function magicTrickNote(actor, maneuver, trick, target) {
     return `${actor.name} works a trick on ${them}. Win and ${them} moves ${many} - `
       + `${actor.name}'s Use Magic Ranks; lose and ${them} may Exploit.`;
   }
+  // Trickster Magician (2): the first two on one Clash.
+  if (trick === "both") {
+    return `${actor.name} works a trick on ${them}. Win and they are Impaired until the start of ${actor.name}'s next turn `
+      + `and move ${many}; lose and ${them} may Exploit.`;
+  }
   return `Move up to ${many} - ${actor.name}'s Use Magic Ranks. This movement does not `
     + "trigger the Exploit Maneuver.";
 }
@@ -1809,6 +1814,10 @@ async function askMagicTrick(actor, maneuver, target) {
   const allOffered = Boolean(target) && (actor.system.effects?.slots?.["whimsical.trickAll"] === true)
     && (actor.getFlag?.("dbu-ttrpg", "trickAllEncounter") !== (game.combat?.id ?? "none")) && (own !== undefined)
     && (target.getActiveTokens?.(false, true)?.[0]?.disposition !== own) && (trickOpponents(actor, target).length > 0);
+  // Trickster Magician (2): "you may apply up to 3 of its effects at once" - boxes rather than one choice, once an Encounter.
+  const multi = (actor.system.effects?.slots?.["trickster.multi"] === true)
+    && (actor.getFlag?.("dbu-ttrpg", "tricksterEncounter") !== (game.combat?.id ?? "none"));
+  const kind = multi ? "checkbox" : "radio";
 
   const chosen = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
@@ -1816,7 +1825,7 @@ async function askMagicTrick(actor, maneuver, target) {
     content: `
       <div class="dbu-defend-list">
         <label class="dbu-defend-option">
-          <input type="radio" name="trick" value="impair" checked/>
+          <input type="${kind}" name="trick" value="impair" checked/>
           <span class="dbu-defend-body">
             <span class="dbu-defend-head"><strong>Impair them</strong></span>
             <span class="dbu-defend-summary">An Opponent in your Melee Range. A Clash of
@@ -1825,7 +1834,7 @@ async function askMagicTrick(actor, maneuver, target) {
           </span>
         </label>
         <label class="dbu-defend-option">
-          <input type="radio" name="trick" value="shove"/>
+          <input type="${kind}" name="trick" value="shove"/>
           <span class="dbu-defend-body">
             <span class="dbu-defend-head"><strong>Move them</strong></span>
             <span class="dbu-defend-summary">Any Character in your Melee Range, the same
@@ -1834,7 +1843,7 @@ async function askMagicTrick(actor, maneuver, target) {
           </span>
         </label>
         <label class="dbu-defend-option">
-          <input type="radio" name="trick" value="move"/>
+          <input type="${kind}" name="trick" value="move"/>
           <span class="dbu-defend-body">
             <span class="dbu-defend-head"><strong>Move yourself</strong></span>
             <span class="dbu-defend-summary">${squares}
@@ -1842,6 +1851,7 @@ async function askMagicTrick(actor, maneuver, target) {
           </span>
         </label>
       </div>
+      ${multi ? `<p class="dbu-respond-hint">Trickster Magician: tick up to all three (once an Encounter) - the first two on one Clash.</p>` : ""}
       ${allOffered ? `<label class="dbu-respond-option"><input type="checkbox" name="trickAll"/>
         <span class="dbu-respond-name">Whimsical Magic: every Opponent not at Long Range</span>
         <span class="dbu-respond-source">once an Encounter - a Clash at each</span></label>` : ""}`,
@@ -1850,7 +1860,7 @@ async function askMagicTrick(actor, maneuver, target) {
         action: "confirm",
         label: "Confirm",
         callback: (event, button, dialog) => {
-          const picked = dialog.element.querySelector('input[name="trick"]:checked')?.value ?? "";
+          const picked = [...dialog.element.querySelectorAll('input[name="trick"]:checked')].map(input => input.value).join("+");
           return (picked && dialog.element.querySelector('input[name="trickAll"]')?.checked) ? `${picked}:all` : picked;
         }
       },
@@ -1864,13 +1874,14 @@ async function askMagicTrick(actor, maneuver, target) {
 
   // The two that open a Clash need somebody to open it against. Refused here rather than
   // by the Maneuver asking for a target outright, since the third effect needs none.
-  if ((trick !== "move") && !target) {
+  const clashing = trick.split("+").some(part => part !== "move");
+  if (clashing && !target) {
     ui.notifications.warn(`${maneuver.name} needs a target for that. Target a token first.`);
     return "";
   }
   // "Target an Opponent within your Melee Range" - or, Whimsical Magic (5), "Characters outside of your Melee Range ...
   // must not be at Long Range".
-  if (trick !== "move") {
+  if (clashing) {
     const far = (actor.system.effects?.slots?.["whimsical.trickReach"] === true)
       ? (atLongRange(actor, target) ? `${target.name} is at Long Range.` : "")
       : whyNotWithinMelee(actor, target, maneuver.name);
@@ -1880,7 +1891,7 @@ async function askMagicTrick(actor, maneuver, target) {
     }
   }
 
-  return (all && (trick !== "move")) ? `${trick}:all` : trick;
+  return (all && clashing) ? `${trick}:all` : trick;
 }
 
 /**
@@ -4776,6 +4787,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // choice comes before the dice rather than after them.
   let trick = "";
   let trickAll = [];
+  // Trickster Magician (2): moving yourself as well as a Clash's effect.
+  let trickMove = false;
   let repairing = null;
   let materializing = null;
   let foreseen = null;
@@ -5136,6 +5149,13 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         trickAll = trickOpponents(actor, targetActor);
         await actor.setFlag("dbu-ttrpg", "trickAllEncounter", game.combat?.id ?? "none");
       }
+      // Trickster Magician (2): more than one ticked - its Encounter spent; the first two one Clash ("both"), moving yourself
+      // said beside it.
+      const parts = trick.split("+");
+      if (parts.length > 1) await actor.setFlag("dbu-ttrpg", "tricksterEncounter", game.combat?.id ?? "none");
+      const clashing = parts.filter(part => part !== "move");
+      trickMove = parts.includes("move") && (clashing.length > 0);
+      trick = (clashing.length > 1) ? "both" : (clashing[0] ?? "move");
     }
 
     // Repair: which Item, asked before the Actions are paid.
@@ -6085,7 +6105,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await postSkillClash(actor, targetActor, maneuver, {
         ...(maneuver.magicTrick
           ? { magicTrick: { option: trick, applied: false },
-              reason: magicTrickNote(actor, maneuver, trick, targetActor) }
+              reason: [magicTrickNote(actor, maneuver, trick, targetActor),
+                trickMove ? `And: ${magicTrickNote(actor, maneuver, "move", null)}` : ""].filter(Boolean).join(" ") }
           : {}),
         // Winning reads something off the other side, and the reading goes to one side
         // rather than to the room. Nothing is decided here: what is known is what they

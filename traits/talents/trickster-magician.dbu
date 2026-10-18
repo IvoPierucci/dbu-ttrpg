@@ -1,0 +1,21 @@
+id: trickster-magician
+name: Trickster Magician
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in Use Magic
+description: >
+  Your expertise with magic allows you to perform flashy tricks that leave your enemies mystified.
+text: >
+  Trickster Magician: Your expertise with magic allows you to perform flashy tricks that leave your enemies mystified.
+  –Prerequisites: 2+ Skill Ranks in Use Magic
+  (1)-[Triggered]: If you move an Opponent using the Magic Trick Maneuver to a Square adjacent to an Ally, that Ally may use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If they do, they must target an Opponent you moved through the effects of the Magic Trick Maneuver this Combat Round.
+  (2)-[Triggered, 1/Encounter]: When using the Magic Trick maneuver, you may apply up to 3 of its effects at once. For the first two effects, you only apply the listed Clash once and use the results of that Clash for both effects.
+
+---
+
+[passive]
+# (1) An Opponent moved by the Magic Trick's won Clash: the Basic Attack out of sequence at them, offered on its card to each of
+# your Allies - beside whom they were put, the table's (chat.mjs settleMagicTrick).
+allow trickster.allyStrike;
+# (2) The Magic Trick's three as boxes rather than one choice, once an Encounter - the player's to time; the first two on one
+# Clash, its result for both (use-maneuver.mjs askMagicTrick; chat.mjs settleMagicTrick).
+allow trickster.multi;
