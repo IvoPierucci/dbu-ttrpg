@@ -38,6 +38,13 @@ export default class DBUTalentData extends foundry.abstract.TypeDataModel {
       /** An Addendum's separate explanation, when the effect carries one. */
       addendum: new fields.StringField({ required: true, blank: true, initial: "" }),
 
+      /** What its `choose:` was answered with as it was gained - Elementalist's Elemental Profile. */
+      chosen: new fields.ArrayField(new fields.SchemaField({
+        key: new fields.StringField({ required: true, blank: true, initial: "" }),
+        value: new fields.StringField({ required: true, blank: true, initial: "" }),
+        label: new fields.StringField({ required: true, blank: true, initial: "" })
+      }), { required: true, initial: [] }),
+
       // --- Deprecated -------------------------------------------------------
       // The old typed rows. Nothing writes these any more; they are read once by
       // migrateData and otherwise left alone, so reverting the system loses nothing.

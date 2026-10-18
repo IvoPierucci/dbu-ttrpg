@@ -1696,6 +1696,11 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
   if (!noArea && magic && (slots["mage.area"] === true)) {
     declared = await askAddedArea(actor, declared, { title: "Mage", flag: "mageAreaRound", ki: 2 * bT });
   }
+  // Elementalist (2): "If you use an Attacking Maneuver with a Profile that is your Favored Element, you may apply a Line or Cone
+  // AoE to that Attacking Maneuver" - asked, once an Encounter, for nothing.
+  if (!noArea && (slots["elementalist.area"] === true) && favoredElement(actor, declared.profile) && !area()) {
+    declared = await askAddedArea(actor, declared, { title: "Elementalist", flag: "elementalistAreaEncounter", ki: 0, encounter: true });
+  }
   // Martial Artist (4): "If you use an Unarmed Attack that does not possess an AoE, you may spend 2(bT) Ki Points to apply a
   // Line or Cone AoE to that Attacking Maneuver" - one made with no Weapon.
   if (!noArea && !declared.weapon && (slots["martial.area"] === true)) {
@@ -1715,14 +1720,15 @@ export async function askBoughtAreas(actor, maneuver, declared, { noArea = false
 }
 
 /** A Cone or a Line, Standard (no Magnitude named - DEFAULT_AREA_MAGNITUDE), on an attack with no AoE: asked, once a Round. */
-async function askAddedArea(actor, declared, { title, flag, ki }) {
+async function askAddedArea(actor, declared, { title, flag, ki, encounter = false }) {
   if (declared.area ?? PROFILES[declared.profile]?.area) return declared;
-  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  // Once a Round - or, Elementalist's, once an Encounter.
+  const round = encounter ? (game.combat?.id ?? "none") : `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
   if (actor.getFlag?.("dbu-ttrpg", flag) === round) return declared;
   if (((Number(actor.system.ki?.value) || 0) - (Number(declared.kiSurcharge) || 0)) < ki) return declared;
   const shape = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title },
-    content: `<p data-tooltip="Once a Round. A Standard AoE.">${ki} Ki: a Cone or a Line?</p>`,
+    content: `<p data-tooltip="Once ${encounter ? "an Encounter" : "a Round"}. A Standard AoE.">${ki ? `${ki} Ki: a` : "A"} Cone or a Line?</p>`,
     buttons: [{ action: "cone", label: "Cone" }, { action: "line", label: "Line" }, { action: "no", label: "No" }],
     rejectClose: false
   });

@@ -482,6 +482,18 @@ async function askOptions(trait, options, count = Math.max(1, Number(trait.optio
   return chosen;
 }
 
+/**
+ * A Talent's `choose:` answered as it is gained (Elementalist's): its Item's data with the script written in and the choice
+ * kept - or null when backed out of. One with nothing to choose, as it was.
+ */
+export async function answeredTalent(data, trait, actor) {
+  if (!trait?.choose) return data;
+  const chosen = [];
+  const script = await answered({ ...trait, script: data.system.script }, chosen, actor);
+  if (script === null) return null;
+  return { ...data, system: { ...data.system, script, chosen } };
+}
+
 /** A part's script with its `choose:` answered - `$choice` replaced - and the choice recorded. */
 async function answered(source, chosen, actor = null) {
   let script = String(source.script ?? "").trim();
@@ -819,7 +831,8 @@ async function giveGrants(actor, item, grants, name) {
     }
     if (talentsHeld.has(id)) continue;
     // Marked as a Racial Trait's: the Progression tab neither offers it nor takes it away.
-    const data = talentItemFrom(talent);
+    const data = await answeredTalent(talentItemFrom(talent), talent, actor);
+    if (!data) continue;
     data.flags["dbu-ttrpg"].fromTrait = item.flags?.["dbu-ttrpg"]?.sourceId ?? item.id;
     created.push(data);
   }

@@ -1,0 +1,22 @@
+id: elementalist
+name: Elementalist
+talentCategory: magic-attack
+prerequisites: Magic Blaster
+# "Select a Profile with 'Elemental' in the name" - asked when it is gained, `$choice`.
+choose: elementalProfile
+description: >
+  Your intense focus on a specific element allows you to use it in unconventional ways.
+text: >
+  Elementalist: Your intense focus on a specific element allows you to use it in unconventional ways.
+  –Prerequisites: Magic Blaster
+  (1)-[Passive]: Select a Profile with ‘Elemental’ in the name. That Profile becomes a Favored Element.
+  (2)-[Triggered, 1/Encounter]: If you use an Attacking Maneuver with a Profile that is your Favored Element, you may apply a Line or Cone AoE to that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) The Elemental Profile chosen as it was gained.
+favored.$choice = true;
+# (2) An attack of a Favored Element with no AoE, as it is declared: asked, once an Encounter - a Cone or a Line, Standard
+# (maneuvers.mjs askBoughtAreas).
+allow elementalist.area;

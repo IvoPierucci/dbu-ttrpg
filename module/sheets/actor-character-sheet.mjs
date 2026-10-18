@@ -1350,6 +1350,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // Unfolded to its text as printed, as a Racial Trait is (the user's: the text was nowhere to be seen).
       open: Boolean(this.#openSections[`trait-${item.id}`]),
       lines: racialTraitLines(item),
+      // What its `choose:` was answered with - Elementalist's Elemental Profile.
+      chosenLines: (item.system.chosen ?? []).map(entry => entry.label).filter(Boolean),
       // Triggered or Automatic, as a Racial Trait's (the user's) - Arming it beforehand is gone.
       triggered: this.#toggleButtons(item, triggered)
     }));

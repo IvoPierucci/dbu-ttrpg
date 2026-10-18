@@ -54,13 +54,16 @@ export async function syncProgressionTalents(actor) {
   const adopt = kept.filter(item => wanted.has(sourceOf(item)) && !ours(item) && !item.flags?.["dbu-ttrpg"]?.fromTrait)
     .map(item => item.id);
   const held = new Set(kept.map(sourceOf));
-  const created = [...wanted].filter(id => !held.has(id)).map(id => getTrait(id))
-    .filter(trait => trait?.kind === "talents")
-    .map(trait => {
-      const data = itemFrom(trait);
-      data.flags["dbu-ttrpg"][FROM_PROGRESSION] = true;
-      return data;
-    });
+  // What a Talent asks as it is gained - Elementalist's Elemental Profile - asked of whoever made the change; backed out of,
+  // not given (asked again the next time the tab is touched).
+  const { answeredTalent } = await import("./racial.mjs");
+  const created = [];
+  for (const trait of [...wanted].filter(id => !held.has(id)).map(id => getTrait(id)).filter(each => each?.kind === "talents")) {
+    const data = await answeredTalent(itemFrom(trait), trait, actor);
+    if (!data) continue;
+    data.flags["dbu-ttrpg"][FROM_PROGRESSION] = true;
+    created.push(data);
+  }
 
   if (rewritten) await actor.update({ "system.progression": fixed });
   const marks = [...adopted, ...adopt].filter(id => !removed.includes(id))
