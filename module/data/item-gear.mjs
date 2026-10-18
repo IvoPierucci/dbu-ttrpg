@@ -136,7 +136,10 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
           // something the table keeps - Team Outfit's teammates.
           on: new fields.BooleanField({ required: true, initial: false }),
           // The name its owner gave it, for one that takes one - Dynamic.
-          name: new fields.StringField({ required: true, blank: true, initial: "" })
+          name: new fields.StringField({ required: true, blank: true, initial: "" }),
+          // Given "without occupying a Quality Slot" by something else - Combat Plating's Armed,
+          // on its Natural Armor - and taken back by it alone.
+          free: new fields.BooleanField({ required: true, initial: false })
         })),
         // Its own pseudo-code, which is what the piece does: its Category and Qualities write
         // their parts into it when chosen, and its owner may write anything else. Null for a
