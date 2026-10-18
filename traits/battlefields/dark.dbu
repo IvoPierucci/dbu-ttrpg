@@ -21,4 +21,7 @@ text: >
 [passive]
 awareness -= 2(bT);
 defenseValue -= 2(bT);
-skill.perception.bonus -= 2;
+# Enhanced Search (3): "Your Perception Skill Checks are unaffected by the Light Level."
+if (!hasTalent("enhanced-search")) {
+    skill.perception.bonus -= 2;
+}

@@ -1,0 +1,32 @@
+id: enhanced-search
+name: Enhanced Search
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in the Clairvoyance Skill and/or Perception Skill
+# (4) "Ignore the effects of the Blinded Combat Condition and the Obscured Environmental Quality" (registry.mjs).
+ignoresConditions: blinded
+ignoresQualities: obscured
+description: >
+  Whether through advanced ki sensory techniques or highly refined senses, nothing escapes your notice.
+text: >
+  Enhanced Search: Whether through advanced ki sensory techniques or highly refined senses, nothing escapes your notice.
+  –Prerequisites: 2+ Skill Ranks in the Clairvoyance Skill and/or Perception Skill
+  (1)-[Passive]: When making a Clairvoyance or Perception Skill Check/Clash, you may use the higher Skill Bonus between the two Skills.
+  (2)-[Triggered]: If you win the Skill Clash for the Sense Maneuver, you become aware of their Alignment.
+  (3)-[Passive]: Your Perception Skill Checks are unaffected by the Light Level.
+  (4)-[Passive]: You may ignore the effects of the Blinded Combat Condition and the Obscured Environmental Quality.
+  (5)-[Triggered/Start of Turn, Ruling, 1/Round]: Target a Character. Make a Clash (Perception/Clairvoyance vs Stealth/Concealment) against that Character. If you win, that Character becomes ‘Marked’ until the start of your next turn. Increase your Strike and Dodge Rolls against a ‘Marked’ Character by 1(T) and a ‘Marked’ Character cannot become Hidden from you.
+
+---
+
+[passive]
+# (1) Each of the two rolled with the higher Skill Bonus of them (actor-character.mjs, where each Skill's roll is put together).
+allow senses.higherBonus;
+# (2) A won Sense: their Alignment too, in what is whispered to you (chat.mjs settleSense).
+allow sense.alignment;
+# (3) Read on the Light Levels' own files: their Perception line left out for whoever holds this Talent.
+
+# (5) On your turn's card, the player's to choose: which Character, then the Clash; won, Marked (a mark) on them till the start
+# of your next turn, on your clock - your Strike and Dodge 1(T) against them, and Hidden from you they cannot become
+# (chat.mjs enhancedMark, settleSearchMark, markedParts; hidden.mjs hideFrom).
+[triggered/start-of-turn, 1/round, chosen, effect 5]
+enhancedMark();

@@ -2653,6 +2653,14 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         }),
         { as: `skill.${key}`, wraps: true });
     }
+    // Enhanced Search (1): "When making a Clairvoyance or Perception Skill Check/Clash, you may use the higher Skill Bonus
+    // between the two Skills" - each rolled with the higher, since nobody chooses less.
+    if ((this.effects?.slots?.["senses.higherBonus"] === true) && this.skills.clairvoyance && this.skills.perception) {
+      const higher = Math.max(Number(this.skills.clairvoyance.bonus) || 0, Number(this.skills.perception.bonus) || 0);
+      for (const key of ["clairvoyance", "perception"]) {
+        this.skills[key].roll += Math.max(0, higher - (Number(this.skills[key].bonus) || 0));
+      }
+    }
     // Silent Footsteps (2): "When making a Concealment Skill Check, you may use your Stealth Skill Bonus instead. If you do,
     // reduce your Dice Score by 2" - taken where it comes to more, since nobody chooses less.
     if ((this.effects?.slots?.["concealment.byStealth"] === true) && this.skills.concealment && this.skills.stealth) {

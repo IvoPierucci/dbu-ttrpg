@@ -63,6 +63,9 @@ async function say(actor, text) {
  */
 export async function hideFrom(hider, seeker, { quiet = false, until = "", via = "" } = {}) {
   if (!hider || !seeker || (hider.uuid === seeker.uuid) || isHiddenFrom(hider, seeker)) return;
+  // Enhanced Search (5): "a 'Marked' Character cannot become Hidden from you" - Marked by the seeker, on their clock.
+  if ((seeker.system?.timed ?? []).some(entry => (entry?.kind === "condition") && (entry.key === "marked-mark")
+    && (entry.on === hider.uuid))) return;
   await write(hider, [...hiddenEntries(hider), { uuid: seeker.uuid, name: seeker.name, attacks: 0, until, via }]);
   if (quiet) return;
   const compelled = (Number(seeker.system?.conditions?.compelled) || 0) > 0;

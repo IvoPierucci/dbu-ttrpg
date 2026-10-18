@@ -1,0 +1,15 @@
+id: marked-mark
+name: Marked
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Enhanced Search (5) leaves on the one it won against - its clock the Searcher's, read against them
+# (chat.mjs markedParts; hidden.mjs hideFrom).
+combatCondition: no
+source: Core Rule
+description: >
+  Marked: the Searcher's Strike and Dodge Rolls 1(T) higher against you, and you cannot become Hidden from them, till the
+  start of their next turn.
+text: >
+  Enhanced Search (5): If you win, that Character becomes ‘Marked’ until the start of your next turn. Increase your Strike and Dodge Rolls against a ‘Marked’ Character by 1(T) and a ‘Marked’ Character cannot become Hidden from you.
+
+---

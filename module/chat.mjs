@@ -728,6 +728,10 @@ async function settleClashEffects(messageId, clash) {
     await settleStealthStrike(message, clash);
   }
 
+  if (clash.searchMark && clash.result && !clash.searchMark.applied) {
+    await settleSearchMark(message, clash);
+  }
+
   if (clash.sense && clash.result && !clash.sense.applied) {
     await settleSense(message, clash);
   }
@@ -2200,7 +2204,10 @@ async function settleSense(message, clash) {
 
   await settledNote(message,
     `${sensor.name} gets a read on ${target.name} - what they sense is theirs.`);
-  await settledNote(message, senseReading(target), { to: sensor });
+  // Enhanced Search (2): "you become aware of their Alignment".
+  const alignment = (sensor.system?.effects?.slots?.["sense.alignment"] === true)
+    ? ` ${target.name}'s Alignment: ${DBUCharacterData.ALIGNMENTS[target.system.alignment ?? 0]?.label ?? "Neutral"}.` : "";
+  await settledNote(message, `${senseReading(target)}${alignment}`, { to: sensor });
 }
 
 /**
@@ -14284,6 +14291,48 @@ async function yoinkGuardAttack(card, actor) {
 }
 
 /**
+ * Enhanced Search (5): "Target a Character. Make a Clash (Perception/Clairvoyance vs Stealth/Concealment) against that
+ * Character." Which, asked; the Clash with whichever of the two you roll higher (settleSearchMark). None, not spent.
+ */
+export async function enhancedMark(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const pool = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.type === "character") && !token.actor.system?.defeated)
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!pool.length) return UNSPENT;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Enhanced Search - a Character`,
+    [...pool.map(each => ({ value: each.uuid, label: each.name })), { value: "none", label: "None" }]);
+  const target = pool.find(each => each.uuid === picked);
+  if (!target) return UNSPENT;
+  const skills = actor.system.skills ?? {};
+  const skill = ((Number(skills.clairvoyance?.roll) || 0) > (Number(skills.perception?.roll) || 0)) ? "clairvoyance" : "perception";
+  return postSkillClash(actor, target, { name: "Enhanced Search", type: "outOfSequence",
+    clash: { skill, defenderSkills: ["stealth", "concealment"] } }, { searchMark: { applied: false } });
+}
+
+/** Enhanced Search (5), settled: won, Marked on them till the start of your next turn - your clock, as Analysis's is. */
+async function settleSearchMark(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, searchMark: { ...clash.searchMark, applied: true } });
+  const searcher = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  if (!searcher || !target) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} slips ${searcher.name}'s notice.`);
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "marked-mark", 1);
+  await lasting(searcher, { kind: KINDS.CONDITION, key: "marked-mark", edge: EDGES.START, next: true, on: target.uuid,
+    source: "Enhanced Search" });
+  return settledNote(message, `${target.name} is Marked by ${searcher.name} until the start of their next turn.`);
+}
+
+/** Enhanced Search (5): "Increase your Strike and Dodge Rolls against a 'Marked' Character by 1(T)" - yours, on your clock. */
+function markedParts(roller, other) {
+  if (!roller || !other || (roller.uuid === other.uuid)) return [];
+  const yours = (roller.system?.timed ?? []).some(entry => (entry?.kind === "condition") && (entry.key === "marked-mark")
+    && (entry.on === other.uuid));
+  return yours ? [{ label: "Marked", written: "+1(T)", value: Math.max(1, Number(roller.system.tierOfPower) || 1) }] : [];
+}
+
+/**
  * Counter Jury-rigging (2): "Select a Weapon you possess and apply an applicable Weapon Quality that takes up 1 Weapon Slot to that
  * Weapon until the end of the Combat Round (this can exceed the Weapon's number of Weapon Slots)." Which Weapon, then which
  * Quality - one its Type takes, at 1 Slot, not on it already, none asking a choice of its own; on it, its Effects written again,
@@ -22538,7 +22587,8 @@ async function resolveAttackWork(message, attack) {
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
       ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
       ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike"), ...fleetParts(attacker, target),
-      ...smallerParts(attacker, target), ...analyticParts(attacker, target, "strike"), ...obliviousParts(attacker, target)]
+      ...smallerParts(attacker, target), ...analyticParts(attacker, target, "strike"), ...obliviousParts(attacker, target),
+      ...markedParts(attacker, target)]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
@@ -24843,6 +24893,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...studiedDodge(actor, attack));
   // Analytic Fighter: Defensive Analysis's, Teamwork Tactics'.
   parts.push(...analyticParts(actor, fromUuidSync(attack?.attackerUuid ?? ""), "dodge"));
+  // Enhanced Search (5): the attack of one you Marked.
+  parts.push(...markedParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Telepathic Warning: the Dodge raised for this attack by whoever warned them.
   parts.push(...telepathicDodge(actor, attack));
   // Refined Combat's Fleet-Footed.
