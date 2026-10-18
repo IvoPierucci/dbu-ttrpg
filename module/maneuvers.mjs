@@ -3796,6 +3796,10 @@ export function maneuverKiCost(maneuver, declared, actor) {
     }
     // Overwhelming Assault: "Reduce the Ki Point Cost for that Attacking Maneuver by 4(T)" - held to the Minimum below.
     if (declared?.overwhelm?.ki) cost -= 4 * Math.max(1, actor.system?.tierOfPower ?? 1);
+    // Multi-Type Master: the one it handed over - 1(T) off for each of Multi-Type Attacker's stacks on its Foundation.
+    if (declared?.foundation && (actor.getFlag?.("dbu-ttrpg", "multiTypeMasterNext") === roundNow())) {
+      cost -= (Number(actor.getFlag?.("dbu-ttrpg", "multiType")?.[declared.foundation]) || 0) * Math.max(1, actor.system?.tierOfPower ?? 1);
+    }
 
     // Minimum Ki Point Cost, applied last: the price is whatever everything did to it,
     // but never less than half what the Profile lists. Last because it is a floor under

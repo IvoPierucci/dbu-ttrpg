@@ -13219,12 +13219,13 @@ export async function frozenTurnAfterManeuver(actor, card) {
 }
 
 /** An attack made in its user's closing Frozen Turn, done: the Frozen Turn with it. */
-async function frozenTurnAfterAttack(attack) {
+async function frozenTurnAfterAttack(attack, message = null) {
   // And whatever lasted "for the duration of that Attacking Maneuver" - Heart of Glass's Surging - with it.
   await glassSurgeEnds(attack);
   await combatWisdomEnds(attack);
   await fleetSpent(attack);
   await multiTypeSwitch(attack);
+  offerMultiTypeMaster(message, attack);
   await tranquilEnds(fromUuidSync(attack?.attackerUuid ?? ""));
   await entrustedAllInEnds(attack);
   await warriorTensionEnds(attack);
@@ -13311,6 +13312,56 @@ async function askGambitCharges(actor, foundation) {
     content: `<p data-tooltip="Once an Encounter">2 Energy Charges on this attack?</p>`, rejectClose: false });
   if (yes) await actor.setFlag(SCOPE, "gambitEncounter", encounter);
   return Boolean(yes);
+}
+
+/**
+ * Multi-Type Master (1): "After concluding an Attacking Maneuver during your turn, you may use the Basic Attack Maneuver or
+ * Signature Technique Maneuver as an Out-of-Sequence Maneuver. If you do, reduce the Ki Point Cost of that Maneuver by 1(T) for
+ * each time the first effect of Multi-Type Attacker has been applied to the Foundation of that Attacking Maneuver." Offered on
+ * the attack's card; taken, once a Round (takeMultiTypeMaster).
+ */
+function offerMultiTypeMaster(message, attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!message || !attacker || (attacker.system?.effects?.slots?.["multiType.master"] !== true)) return;
+  if (!game.combat?.started || (game.combat.combatant?.actor?.uuid !== attacker.uuid)
+    || (attacker.getFlag?.(SCOPE, "multiTypeMasterRound") === roundKey())) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: attacker.uuid, actorName: attacker.name, maneuverId: "basic-attack",
+    maneuverName: "Basic Attack or Signature Technique", reason: "Multi-Type Master", multiTypeMaster: true } });
+}
+
+/**
+ * Multi-Type Master, taken: which, asked - the Basic Attack, or a Signature Technique through its door - out of sequence; its
+ * Ki 1(T) less for each of Multi-Type Attacker's stacks on the Foundation it is declared with (maneuvers.mjs maneuverKiCost,
+ * while `multiTypeMasterNext` is held).
+ */
+async function takeMultiTypeMaster(message, actor, offer) {
+  if (actor.getFlag?.(SCOPE, "multiTypeMasterRound") === roundKey()) {
+    ui.notifications.warn(`${actor.name}: Multi-Type Master - already used this Combat Round.`);
+    return null;
+  }
+  const which = await askPlayerChoice(actor, `${actor.name}: Multi-Type Master`,
+    [{ value: "basic", label: "Basic Attack" }, { value: "signature", label: "Signature Technique" }]);
+  if (!["basic", "signature"].includes(which)) return null;
+  await actor.setFlag(SCOPE, "multiTypeMasterNext", roundKey());
+  try {
+    if (which === "signature") {
+      const used = await takeTechniqueOffer(message, actor, { ...offer, maneuverName: "Signature Technique",
+        technique: { via: "", any: true } });
+      if (used) await actor.setFlag(SCOPE, "multiTypeMasterRound", roundKey());
+      return used;
+    }
+    const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+    const own = Array.from(actor.items ?? []).find(item => (item.type === "maneuver") && (item.flags?.[SCOPE]?.sourceId === "basic-attack"));
+    const used = await useManeuver(actor, own ? definitionOf(own) : getManeuver("basic-attack"), { outOfSequence: true });
+    if (used) {
+      requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+      await actor.setFlag(SCOPE, "multiTypeMasterRound", roundKey());
+    }
+    return used;
+  }
+  finally {
+    await actor.unsetFlag(SCOPE, "multiTypeMasterNext");
+  }
 }
 
 /** Multi-Type Attacker (1): its stacks on an attack of that Foundation, 1(T) each. */
@@ -19074,6 +19125,7 @@ async function takeTechniqueOffer(message, actor, offer) {
     outOfSequence: true, targetUuid: offer.targetUuid ?? "" });
   if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
   if (used && offer.grants?.feline) await requestActorUpdate(actor, { [`flags.${SCOPE}.felineRound`]: roundKey() });
+  return used;
 }
 
 /**
@@ -19099,6 +19151,8 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.pointBlank) return takePointBlank(message, actor, offer);
   // Magic Blaster's: the Energy Charge, for a Magic Attack.
   if (offer.magicCharge) return takeMagicCharge(message, actor);
+  // Multi-Type Master's: the Basic Attack or a Signature Technique, cheaper.
+  if (offer.multiTypeMaster) return takeMultiTypeMaster(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
   // Wild Counter's, once a Round.
   if (offer.grants?.wildCounter) {
@@ -21994,7 +22048,7 @@ async function resolveAttackWork(message, attack) {
     }
   }
   // Time Freeze: the Frozen Turn's last attack, answered and owing no Wound Roll - done.
-  if (!owesWound({ ...attack, result: { strike, targets: branches, wound: null } })) await frozenTurnAfterAttack(attack);
+  if (!owesWound({ ...attack, result: { strike, targets: branches, wound: null } })) await frozenTurnAfterAttack(attack, message);
   // Trap Attack: its Guard Down, "for the duration of that Attacking Maneuver" - rolled, and gone.
   if ([attack.trapGuardOn ?? []].flat().length) await trapGuardOff(attack);
   // Tornado Attack: an Opponent's attack that missed the one Spinning - their Basic Attack back, offered.
@@ -23906,7 +23960,7 @@ async function rollAttackWoundWork(message, attack) {
     if (binder) await endVolleyball(binder, { release: true });
   }
   // Time Freeze: the Frozen Turn's last attack, done.
-  await frozenTurnAfterAttack(attack);
+  await frozenTurnAfterAttack(attack, message);
 }
 
 /**
