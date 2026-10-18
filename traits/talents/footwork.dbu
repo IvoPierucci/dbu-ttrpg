@@ -15,9 +15,12 @@ text: >
 
 [passive]
 # (1) Its own Maneuver, on the Maneuvers tab (maneuvers/footwork-first-effect.dbu).
-# (2) Rapid Movement taken: asked, once a Round - Footwork (a mark), Defense Value 1(T) till the start of your next turn
-# (use-maneuver.mjs takeRapidMovement).
-allow footwork.rapid;
 # (3) A Movement used by one within your Melee Range: the Movement offered on its card out of sequence beside your Exploit -
 # taking it closes the Exploit; once a Round (chat.mjs offerExploits).
 allow footwork.follow;
+
+# (2) Rapid Movement taken, once a Round - Footwork (a mark), Defense Value 1(T) till the start of your next turn. Its
+# Triggered/Automatic button (the user's); set Triggered, asked in a window (use-maneuver.mjs takeRapidMovement).
+[triggered/rapid-movement, 1/round, effect 2]
+gain(footwork-mark);
+expires(footwork-mark, start-of-next-turn);

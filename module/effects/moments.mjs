@@ -71,6 +71,9 @@ const TABLE = [
   { key: "tail-reach", label: "A Tail Attack reaches past your Melee Range", provides: [],
     doc: "Never fired: what a Triggered/Automatic toggle needs to stand on - Elongated Tail's reach, asked or taken as "
        + "the Tail Attack is aimed (maneuvers.mjs tailReach)." },
+  { key: "rapid-movement", label: "You take Rapid Movement", provides: [],
+    doc: "Fired as Rapid Movement is taken (use-maneuver.mjs takeRapidMovement) - Footwork's Defense Value. What is the "
+       + "player's is asked in a window first." },
   { key: "grappling", label: "You enter a Grapple as the Grappler", provides: [],
     doc: "Fired for the Grappler as a Grapple begins (chat.mjs beginGrapple) - Elongated Tail's Overwhelm. What is the "
        + "player's is asked in a window first." },

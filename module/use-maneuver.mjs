@@ -2273,17 +2273,8 @@ export async function takeRapidMovement(actor) {
   // "Until the end of your turn", which is what this system calls "turn".
   await expiresAt(actor, "rapid", "turn");
 
-  // Footwork (2): "If you use the Rapid Movement effect of the Movement Maneuver, increase your Defense Value by 1(T) until the
-  // start of your next turn" - asked, once a Round; Footwork (a mark).
-  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
-  if ((actor.system.effects?.slots?.["footwork.rapid"] === true) && (actor.getFlag?.("dbu-ttrpg", "footworkRapidRound") !== round)
-    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Footwork` },
-      content: `<p data-tooltip="Once a Round">Defense Value +1(T) till the start of your next turn?</p>`, rejectClose: false })) {
-    await actor.setFlag("dbu-ttrpg", "footworkRapidRound", round);
-    const { setCondition } = await import("./conditions.mjs");
-    await setCondition(actor, "footwork-mark", 1);
-    await expiresAt(actor, "footwork-mark", "start-of-next-turn");
-  }
+  // What answers Rapid Movement being taken - Footwork (2)'s Defense Value: Automatic, or asked in a window.
+  await (await import("./chat.mjs")).answerFor(actor, "rapid-movement");
 }
 
 /** Take the Actions, once the Maneuver has actually committed. */
