@@ -3804,6 +3804,10 @@ export function maneuverKiCost(maneuver, declared, actor) {
   }
   // A Signature Technique's, any of them - Inherited Creativity's 1(T) off.
   if (actor && maneuver.signature && !maneuver.signatureTechnique) cost = applySlot(slots, "signature.kiCost", cost);
+  // And one of a Foundation - Supreme Fist's 2(T) off a Physical one.
+  if (actor && maneuver.signature && !maneuver.signatureTechnique && declared?.foundation) {
+    cost = applySlot(slots, `signature.kiCost.${declared.foundation}`, cost);
+  }
   // And one of a Favored Element's Profile - Eye of the Dragon's Way of the Elements, 2(T) off.
   if (actor && maneuver.signature && !maneuver.signatureTechnique && favoredElement(actor, declared?.profile)) {
     cost = applySlot(slots, "signature.favoredKiCost", cost);

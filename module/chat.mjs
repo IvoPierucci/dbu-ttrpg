@@ -16576,7 +16576,9 @@ async function spendCriticalEye(attacker, attack) {
  */
 const KI_ON_HIT = Object.freeze({
   energy: { slot: "blaster.woundKi", name: "Blaster Master" },
-  magic: { slot: "magicMaster.woundKi", name: "Magic Master" }
+  magic: { slot: "magicMaster.woundKi", name: "Magic Master" },
+  // Supreme Fist (2): a Physical Attack.
+  physical: { slot: "supremeFist.woundKi", name: "Supreme Fist" }
 });
 
 /**
@@ -16609,8 +16611,11 @@ async function askBlasterMaster(actor, area, charges, foundation = "energy") {
   const out = { dice: 0, magnitude: 0, category: 0 };
   // Magic Master (3): "If you make a Magic Attack, increase the Damage Category of that Attacking Maneuver by 1 Category" - the
   // same question, its own once an Encounter.
+  // Supreme Fist (3): a Physical Attack's.
   const own = (foundation === "magic")
     ? { slot: "magicMaster.category", flag: "magicMasterEncounter", name: "Magic Master", kind: "Magic" }
+    : (foundation === "physical")
+    ? { slot: "supremeFist.category", flag: "supremeFistEncounter", name: "Supreme Fist", kind: "Physical" }
     : { slot: "blaster.category", flag: "blasterEncounter", name: "Blaster Master", kind: "Energy" };
   if ((foundation === "energy") && (slots["blaster.chargeOrMagnitude"] === true) && area && (charges >= 1)
     && (actor.getFlag?.(SCOPE, "blasterRound") !== roundKey())) {
@@ -19884,7 +19889,7 @@ export async function postAttack(actor, target, maneuver,
   const selfCaught = Boolean(technique?.features?.includes("volatile-explosion") && technique?.area?.centredOnSelf);
   // Blaster Master (2), (3): an Energy Attack - its Charges' Dice or its AoE's Magnitude; its Damage Category. Magic Master
   // (3): a Magic Attack's Damage Category.
-  const blaster = (reflecting || !["energy", "magic"].includes(foundation)) ? { dice: 0, magnitude: 0, category: 0 }
+  const blaster = (reflecting || !["energy", "magic", "physical"].includes(foundation)) ? { dice: 0, magnitude: 0, category: 0 }
     : await askBlasterMaster(actor, technique ? (technique.area ?? (areaAdded ? area : null)) : (area ?? PROFILES[profile]?.area ?? null),
       (Number(charges) || 0) + (PROFILES[profile]?.grantsEnergyCharge ?? 0) + (Number(weapon?.energyCharges) || 0)
         + (technique?.bonusCharges ?? []).reduce((sum, entry) => sum + entry.amount, 0)

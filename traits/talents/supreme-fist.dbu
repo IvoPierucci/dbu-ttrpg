@@ -1,0 +1,23 @@
+id: supreme-fist
+name: Supreme Fist
+talentCategory: physical-attack
+prerequisites: Iron Fist and/or Rapid Fist, ToP2+
+description: >
+  A master of hitting your enemies where it hurts most, you land physical strikes with immense and devastating power.
+text: >
+  Supreme Fist: A master of hitting your enemies where it hurts most, you land physical strikes with immense and devastating power.
+  –Prerequisites: Iron Fist and/or Rapid Fist, ToP2+
+  (1)-[Passive]: Reduce the Ki Point Cost of your Physical Signature Techniques by 2(T).
+  (2)-[Triggered]: If you hit an Opponent with a Physical Attack, spend up to 5(bT) Ki Points. If you do, increase the Wound Roll by an equal amount.
+  (3)-[Triggered, 1/Encounter]: If you make a Physical Attack, increase the Damage Category of that Attacking Maneuver by 1 Category.
+
+---
+
+[passive]
+# (1) A Signature Technique declared as a Physical Attack (maneuvers.mjs maneuverKiCost).
+signature.kiCost.physical -= 2(T);
+# (2) An Opponent hit by a Physical Attack: Ki asked as the hit lands, up to 5(bT) - as much on the Wound Roll (chat.mjs
+# spendBlasterKi, Blaster Master's).
+allow supremeFist.woundKi;
+# (3) A Physical Attack, as it is made: its Damage Category one up - asked, once an Encounter (chat.mjs askBlasterMaster).
+allow supremeFist.category;
