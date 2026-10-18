@@ -1,0 +1,24 @@
+id: dynamic-hype
+name: Dynamic Hype
+talentCategory: skill
+prerequisites: 3+ Skill Ranks in Performance, Show Stopping Performance
+# (1) Asked as it is gained: 2 more of Show Stopping Performance's Options, written into its Item (racial.mjs addGrantedOptions);
+# lost, the one in use kept and the others gone (dropGrantedOptions).
+grantsOptions: show-stopping-performance
+grantsOptionsCount: 2
+description: >
+  With a variety of performances in your arsenal, your shows are unparalleled!
+text: >
+  Dynamic Hype: With a variety of performances in your arsenal, your shows are unparalleled!
+  –Prerequisites: 3+ Skill Ranks in Performance, Show Stopping Performance
+  (1)-[Passive]: Upon gaining this Talent, select 2 additional effects through the Option effect of Show Stopping Performance. You can only use and benefit from one of these effects at any one time.
+  (2)-[Triggered, 1/Encounter]: When using the Hype Maneuver, you may benefit from two of your Option effects for Show Stopping Performance at once.
+
+---
+
+# (1) "Only one of these effects at any one time": the one in use chosen on Show Stopping Performance's Options tab; the
+# others' blocks left out (registry.mjs activeOptionsOnly).
+# (2) Asked as the Hype Maneuver is used, once an Encounter - the player's to time: a second one in use besides, till Hyped
+# goes (chat.mjs askDynamicHype, dynamicHypeEnds).
+[passive]
+allow dynamicHype.twice;

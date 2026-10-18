@@ -32,6 +32,16 @@
     </label>
     {{/each}}
     {{/each}}
+    {{#if inUse}}
+    <label class="racial-option-row" data-tooltip="Only one benefits you at a time (Dynamic Hype)">
+      <span>In use</span>
+      <select data-in-use>
+        {{#each inUse as |option|}}
+        <option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>
+        {{/each}}
+      </select>
+    </label>
+    {{/if}}
   </section>
   {{/if}}
   {{#if racial.tail}}

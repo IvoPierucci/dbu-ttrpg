@@ -74,11 +74,22 @@ export async function syncProgressionTalents(actor) {
   const marks = [...adopted, ...adopt].filter(id => !removed.includes(id))
     .map(id => ({ _id: id, [`flags.dbu-ttrpg.${FROM_PROGRESSION}`]: true }));
   if (marks.length) await actor.updateEmbeddedDocuments("Item", marks);
+  // One that added Options to another - Dynamic Hype's - lost: those Options with it.
+  const { automateAll, addGrantedOptions, dropGrantedOptions } = await import("./racial.mjs");
+  for (const item of owned.filter(each => removed.includes(each.id))) {
+    const file = getTrait(sourceOf(item));
+    if (file?.grantsOptions) await dropGrantedOptions(actor, file);
+  }
   if (removed.length) await actor.deleteEmbeddedDocuments("Item", removed);
   if (!created.length) return;
   // Their Triggered effects start Automatic, as a Racial Trait's do - each in turn, the list being one flag.
-  const { automateAll } = await import("./racial.mjs");
-  for (const made of (await actor.createEmbeddedDocuments("Item", created)) ?? []) await automateAll(actor, made);
+  const made = (await actor.createEmbeddedDocuments("Item", created)) ?? [];
+  for (const item of made) await automateAll(actor, item);
+  // And what adds Options to another - Dynamic Hype's - asked once that other is there too.
+  for (const item of made) {
+    const file = getTrait(sourceOf(item));
+    if (file?.grantsOptions) await addGrantedOptions(actor, file);
+  }
 }
 
 /**

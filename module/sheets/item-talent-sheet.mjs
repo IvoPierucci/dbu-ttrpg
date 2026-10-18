@@ -89,7 +89,8 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
         // it shows.
         optionGroups: file ? optionGroupsOf(file).map(group => {
           const mine = chosenOptions(this.item).map(each => each.id).filter(id => group.options.some(each => each.id === id));
-          return { label: `${ordinal(group.effect)} effect`, selects: Array.from({ length: group.count }, (each, index) => ({
+          // As many as were chosen - Dynamic Hype's three.
+        return { label: `${ordinal(group.effect)} effect`, selects: Array.from({ length: Math.max(group.count, mine.length) }, (each, index) => ({
             replacing: mine[index] ?? "",
             options: group.options.map(option => ({ value: option.id, label: option.name, selected: option.id === mine[index] }))
           })) };
@@ -120,11 +121,16 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
       const file = getTrait(this.item.flags?.["dbu-ttrpg"]?.sourceId ?? "");
       context.racial = { optionGroups: file ? optionGroupsOf(file).map(group => {
         const mine = chosenOptions(this.item).map(each => each.id).filter(id => group.options.some(each => each.id === id));
-        return { label: `${ordinal(group.effect)} effect`, selects: Array.from({ length: group.count }, (each, index) => ({
+        // As many as were chosen - Dynamic Hype's three.
+        return { label: `${ordinal(group.effect)} effect`, selects: Array.from({ length: Math.max(group.count, mine.length) }, (each, index) => ({
           replacing: mine[index] ?? "",
           options: group.options.map(option => ({ value: option.id, label: option.name, selected: option.id === mine[index] }))
         })) };
       }) : [] };
+      // Dynamic Hype's "only one of these effects at any one time": which is in use.
+      const primary = this.item.flags?.["dbu-ttrpg"]?.primaryOption;
+      context.inUse = primary ? chosenOptions(this.item).map(option => ({ value: option.id, label: option.name, selected: option.id === primary }))
+        : null;
     }
 
     // Compiled every time the sheet is drawn, so a mistake is reported as it is made.
@@ -154,6 +160,16 @@ export default class DBUTalentSheet extends HandlebarsApplicationMixin(ItemSheet
         const { changeChoice } = await import("../racial.mjs");
         const changed = await changeChoice(this.item, Number(event.target.dataset.choice), event.target.value);
         if (!changed) this.render();
+      });
+    }
+    // The Option in use changed - Dynamic Hype's.
+    for (const select of this.element.querySelectorAll("select[data-in-use]")) {
+      select.addEventListener("change", async event => {
+        event.stopPropagation();
+        const value = event.target.value;
+        const second = this.item.flags?.["dbu-ttrpg"]?.secondOption;
+        await this.item.update({ "flags.dbu-ttrpg.primaryOption": value,
+          ...((second === value) ? { "flags.dbu-ttrpg.secondOption": "" } : {}) });
       });
     }
     for (const select of this.element.querySelectorAll("select[data-racial-option]")) {

@@ -14091,6 +14091,33 @@ export async function motivatingPerformance(actor) {
   return requestActorUpdate(actor, { [`flags.${SCOPE}.motivated`]: [...new Set([...given, ...within.map(each => each.uuid)])] });
 }
 
+/**
+ * Dynamic Hype (2): "When using the Hype Maneuver, you may benefit from two of your Option effects for Show Stopping Performance
+ * at once." Asked as the Hype is used, once an Encounter: which one besides the one in use (`secondOption`) - for that Hype,
+ * till Hyped goes (dynamicHypeEnds). Before its Moment, so that one's Triggered effect answers it too.
+ */
+export async function askDynamicHype(actor) {
+  if ((actor?.system?.effects?.slots?.["dynamicHype.twice"] !== true) || !game.combat?.started
+    || (actor.getFlag?.(SCOPE, "dynamicHypeEncounter") === game.combat.id)) return;
+  const item = Array.from(actor.items ?? []).find(each => (each.type === "talent") && each.flags?.[SCOPE]?.primaryOption);
+  if (!item) return;
+  const { chosenOptions } = await import("./racial.mjs");
+  const others = chosenOptions(item).filter(option => option.id !== item.flags[SCOPE].primaryOption);
+  if (!others.length) return;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Dynamic Hype (1/Encounter)`,
+    [...others.map(option => ({ value: option.id, label: option.name })), { value: "none", label: "Not now" }]);
+  if (!others.some(option => option.id === picked)) return;
+  await actor.setFlag(SCOPE, "dynamicHypeEncounter", game.combat.id);
+  await item.update({ [`flags.${SCOPE}.secondOption`]: picked });
+}
+
+/** Hyped gone: Dynamic Hype (2)'s second one no longer in use. */
+export async function dynamicHypeEnds(actor) {
+  for (const item of Array.from(actor?.items ?? []).filter(each => each.flags?.[SCOPE]?.secondOption)) {
+    await item.update({ [`flags.${SCOPE}.secondOption`]: "" });
+  }
+}
+
 /** Hyped gone: Motivating Performance's Motivated off whoever it was given to - "while you are Hyped". */
 export async function motivatedLeft(actor) {
   const given = Array.from(actor?.getFlag?.(SCOPE, "motivated") ?? []);

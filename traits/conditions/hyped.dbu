@@ -32,6 +32,7 @@ text: >
 combatRolls += 1(T) + ceil(personality.mod / 4);
 
 # Motivating Performance's "while you are Hyped": its Allies' Motivated off as this goes (chat.mjs motivatedLeft) - nothing
-# where none was given.
+# where none was given. And Dynamic Hype (2)'s second Option, for that Hype (dynamicHypeEnds).
 [on removed]
 motivatedLeft();
+dynamicHypeEnds();

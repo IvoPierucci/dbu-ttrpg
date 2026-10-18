@@ -67,6 +67,29 @@ function compile(uuid, { script, rows }, report) {
   return built;
 }
 
+/** The Option each block of an Item's script came from - its `#@ option` marker's id - by its number, from 1; "" its own. */
+function optionIdsByBlock(script) {
+  const ids = [];
+  for (const part of String(script ?? "").split(/(#@ option [^\n]*\n[\s\S]*?\n#@ end)/)) {
+    const id = /^#@ option ([^|\n]*)\|/.exec(part)?.[1]?.trim() ?? "";
+    for (const header of part.match(/^\[[a-z]/gim) ?? []) ids.push(id);
+  }
+  return ids;
+}
+
+/**
+ * Dynamic Hype (1): "You can only use and benefit from one of these effects at any one time" - an Item with several Options
+ * and one in use (`primaryOption`; and Dynamic Hype (2)'s `secondOption` with it): the others' blocks left out, numbered as
+ * they were.
+ */
+function activeOptionsOnly(item, program) {
+  const flags = item.flags?.["dbu-ttrpg"] ?? {};
+  if (!flags.primaryOption) return program;
+  const active = new Set([flags.primaryOption, flags.secondOption].filter(Boolean));
+  const ids = optionIdsByBlock(item.system?.script);
+  return { ...program, blocks: (program.blocks ?? []).filter(block => !ids[block.index - 1] || active.has(ids[block.index - 1])) };
+}
+
 /**
  * Every program that applies to a character, with the Priority of what granted it.
  *
@@ -86,13 +109,14 @@ export function programsFor(actor, { report = () => {}, baseTier = 1, skills = {
     // A Unique Ability's script is its own and each Advancement bought and Restriction applied.
     const script = (item.type === "maneuver") && (item.system?.tags ?? []).includes("uniqueAbility")
       ? uniqueScriptOf(item.system) : item.system?.script;
-    const { program, errors } = compile(
+    const { program: whole, errors } = compile(
       item.uuid,
       { script, rows: item.system?.effects },
       message => report(`${item.name}: ${message}`)
     );
     // A Trait that does not compile is skipped and named, never applied half-way.
     if (errors.length) continue;
+    const program = activeOptionsOnly(item, whole);
 
     // What was ticked as a Counter Maneuver was used holds as a passive for its duration - Skill of the Watcher's
     // (chat.mjs answerCounter).
