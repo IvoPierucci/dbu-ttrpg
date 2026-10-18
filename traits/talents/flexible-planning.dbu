@@ -1,0 +1,27 @@
+id: flexible-planning
+name: Flexible Planning
+talentCategory: skill
+prerequisites: 3+ Skill Ranks in Investigation, Analytic Fighter
+# (1) Asked as it is gained: 2 more of Analytic Fighter's Options, written into its Item (racial.mjs addGrantedOptions); lost,
+# the one in use kept and the others gone (dropGrantedOptions).
+grantsOptions: analytic-fighter
+grantsOptionsCount: 2
+description: >
+  You are able to adapt to changes in the battlefield and adjust your strategies accordingly.
+text: >
+  Flexible Planning: You are able to adapt to changes in the battlefield and adjust your strategies accordingly.
+  –Prerequisites: 3+ Skill Ranks in Investigation, Analytic Fighter
+  (1)-[Passive]: Upon gaining this Talent, select 2 additional effects through the Option effect of Analytic Fighter. You can only use and benefit from one of these effects at any one time.
+  (2)-[Triggered, 1/Round]: When using the Analysis Maneuver, you may target an additional Opponent to apply its effects to.
+  (3)-[Triggered, 1/Encounter]: If there is only one Opponent, when you use the Analysis Maneuver against that Opponent, you may use two effects from the Option effect of Analytic Fighter and benefit from both of them.
+
+---
+
+# (1) "Only one of these effects at any one time": the one in use chosen on Analytic Fighter's Options tab - "-", asked at
+# every Analysis; the others' blocks left out (registry.mjs activeOptionsOnly).
+# (2), (3) Asked as the Analysis is used, in the same window - the player's to time (chat.mjs askAnalysisPlan): an Opponent
+# more, Analyzed too and Analytic Fighter's in use on both (the user's), once a Round; with one Opponent alone, a second
+# Option for that Analysis, once an Encounter.
+[passive]
+allow flexible.secondTarget;
+allow flexible.twoOptions;

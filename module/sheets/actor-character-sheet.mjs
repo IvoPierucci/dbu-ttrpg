@@ -1354,7 +1354,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       // What its `choose:` was answered with - Elementalist's Elemental Profile.
       chosenLines: [...(item.system.chosen ?? []).filter(entry => entry.key !== "option").map(entry => entry.label).filter(Boolean),
         // Dynamic Hype's: the Option in use.
-        ...[item.flags?.["dbu-ttrpg"]?.primaryOption, item.flags?.["dbu-ttrpg"]?.hypeOption, item.flags?.["dbu-ttrpg"]?.secondOption].filter(Boolean)
+        ...[item.flags?.["dbu-ttrpg"]?.primaryOption, item.flags?.["dbu-ttrpg"]?.askedOption, item.flags?.["dbu-ttrpg"]?.secondOption].filter(Boolean)
           .map(id => `In use: ${(item.system.chosen ?? []).find(entry => (entry.key === "option") && (entry.value === id))?.label ?? id}`)],
       // Triggered or Automatic, as a Racial Trait's (the user's) - Arming it beforehand is gone.
       triggered: this.#toggleButtons(item, triggered)

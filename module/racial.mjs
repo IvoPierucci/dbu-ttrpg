@@ -1078,7 +1078,7 @@ export async function changeRacialOption(item, optionId, replacing = "") {
     // The one in use replaced - Dynamic Hype's: the new one in use.
     ...((old && (flags.primaryOption === old)) ? { "flags.dbu-ttrpg.primaryOption": option.id } : {}),
     ...((old && (flags.secondOption === old)) ? { "flags.dbu-ttrpg.secondOption": "" } : {}),
-    ...((old && (flags.hypeOption === old)) ? { "flags.dbu-ttrpg.hypeOption": "" } : {})
+    ...((old && (flags.askedOption === old)) ? { "flags.dbu-ttrpg.askedOption": "" } : {})
   });
 
   if (!actor) return true;
@@ -1145,14 +1145,14 @@ export async function dropGrantedOptions(actor, trait) {
   const flags = target?.flags?.["dbu-ttrpg"] ?? {};
   if (!flags.oneAtATime && !flags.primaryOption) return false;
   // The one in use - on the selector, or else asked at this Hype, or else the first had.
-  const primary = flags.primaryOption || flags.hypeOption || chosenOptions(target)[0]?.id || "";
+  const primary = flags.primaryOption || flags.askedOption || chosenOptions(target)[0]?.id || "";
   const gone = chosenOptions(target).map(each => each.id).filter(id => id !== primary);
   const script = gone.reduce((text, id) => text.replace(new RegExp(`\\n*#@ option ${id} \\|[^\\n]*\\n[\\s\\S]*?\\n#@ end`, "g"), ""),
     String(target.system.script ?? ""));
   await target.update({ "system.script": script.trim(),
     "system.chosen": (target.system.chosen ?? []).filter(entry => !((entry.key === "option") && gone.includes(entry.value))
       && !gone.includes(entry.key)),
-    "flags.dbu-ttrpg.oneAtATime": false, "flags.dbu-ttrpg.primaryOption": "", "flags.dbu-ttrpg.hypeOption": "",
+    "flags.dbu-ttrpg.oneAtATime": false, "flags.dbu-ttrpg.primaryOption": "", "flags.dbu-ttrpg.askedOption": "",
     "flags.dbu-ttrpg.secondOption": "" });
   return true;
 }

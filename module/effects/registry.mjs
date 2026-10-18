@@ -79,14 +79,14 @@ function optionIdsByBlock(script) {
 
 /**
  * Dynamic Hype (1): "You can only use and benefit from one of these effects at any one time" - an Item with several Options,
- * one at a time (`oneAtATime`): in use, the one on its selector (`primaryOption`), or - none there - the one asked as the Hype
- * is used (`hypeOption`), and Dynamic Hype (2)'s (`secondOption`). The others' blocks left out, numbered as they were; those
+ * one at a time (`oneAtATime`): in use, the one on its selector (`primaryOption`), or - none there - the one asked as it is used
+ * (`askedOption`: the Hype, the Analysis), and Dynamic Hype (2)'s or Flexible Planning (3)'s (`secondOption`). The others' blocks left out, numbered as they were; those
  * in use answer by themselves, the choice being the asking (the user's: no Triggered/Automatic button) - `inUseOption`.
  */
 function activeOptionsOnly(item, program) {
   const flags = item.flags?.["dbu-ttrpg"] ?? {};
   if (!flags.oneAtATime && !flags.primaryOption) return program;
-  const active = new Set([flags.primaryOption, flags.hypeOption, flags.secondOption].filter(Boolean));
+  const active = new Set([flags.primaryOption, flags.askedOption, flags.secondOption].filter(Boolean));
   const ids = optionIdsByBlock(item.system?.script);
   return { ...program, blocks: (program.blocks ?? []).filter(block => !ids[block.index - 1] || active.has(ids[block.index - 1]))
     .map(block => (ids[block.index - 1] ? { ...block, inUseOption: true } : block)) };

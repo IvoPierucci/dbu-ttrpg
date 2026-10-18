@@ -14095,52 +14095,116 @@ export async function motivatingPerformance(actor) {
   return requestActorUpdate(actor, { [`flags.${SCOPE}.motivated`]: [...new Set([...given, ...within.map(each => each.uuid)])] });
 }
 
+/** A Talent's Item by its file's id - Show Stopping Performance's, Analytic Fighter's. */
+function talentItemOf(actor, id) {
+  return Array.from(actor?.items ?? []).find(each => (each.type === "talent") && (each.flags?.[SCOPE]?.sourceId === id)) ?? null;
+}
+
 /**
- * Dynamic Hype's Options as the Hype Maneuver is used, before its Moment so what is put in use answers it - one window (the
- * user's): none on the selector, which one, every time (`hypeOption`); and (2), "When using the Hype Maneuver, you may benefit
- * from two of your Option effects for Show Stopping Performance at once", once an Encounter - a second besides
- * (`secondOption`). Both for that Hype, till Hyped goes (dynamicHypeEnds). Closed, none.
+ * One window as a Maneuver whose Options are one at a time is used (the user's): none on the selector, which one, every time
+ * (`askedOption`); a second besides (`twice`: Dynamic Hype (2)'s, Flexible Planning (3)'s - `secondOption`); an Opponent more
+ * (`others`: Flexible Planning (2)'s). What was answered - null closed, nothing asked.
  */
-export async function askDynamicHype(actor) {
-  const item = Array.from(actor?.items ?? []).find(each => (each.type === "talent") && each.flags?.[SCOPE]?.oneAtATime);
-  if (!item) return;
+async function askInUse(actor, item, { button, twice = "", others = [], othersLabel = "" } = {}) {
   const { chosenOptions } = await import("./racial.mjs");
-  const all = chosenOptions(item);
-  const primary = item.flags[SCOPE].primaryOption || "";
-  const twice = (actor.system.effects?.slots?.["dynamicHype.twice"] === true) && game.combat?.started
-    && (actor.getFlag?.(SCOPE, "dynamicHypeEncounter") !== game.combat.id);
-  if (primary && !twice) return;
+  const all = item?.flags?.[SCOPE]?.oneAtATime ? chosenOptions(item) : [];
+  const primary = item?.flags?.[SCOPE]?.primaryOption || "";
+  const ask = Boolean(all.length) && !primary;
+  const second = Boolean(twice) && (all.length > 1);
+  if (!ask && !second && !others.length) return null;
   const escape = Handlebars.escapeExpression;
   const tip = option => escape(String(option.description ?? "").trim());
+  const select = (name, label, tooltip, entries) => `<label class="dbu-respond-option" data-tooltip="${escape(tooltip)}">
+    <span class="dbu-respond-name">${escape(label)}</span>
+    <select name="${name}"><option value="">-</option>${entries.map(([value, text]) =>
+      `<option value="${escape(value)}">${escape(text)}</option>`).join("")}</select></label>`;
   const answer = await foundry.applications.api.DialogV2.wait({
-    classes: ["dbu-dialog"], window: { title: `${actor.name}: ${item.name}` }, position: { width: 420 },
-    content: `${primary ? "" : all.map((option, index) => `<label class="dbu-respond-option" data-tooltip="${tip(option)}">
+    classes: ["dbu-dialog"], window: { title: `${actor.name}: ${button}` }, position: { width: 420 },
+    content: `${ask ? all.map((option, index) => `<label class="dbu-respond-option" data-tooltip="${tip(option)}">
         <input type="radio" name="first" value="${escape(option.id)}" ${index ? "" : "checked"}/>
-        <span class="dbu-respond-name">${escape(option.name)}</span></label>`).join("")}
-      ${twice ? `<label class="dbu-respond-option" data-tooltip="Dynamic Hype: a second one for this Hype (1/Encounter)">
-        <span class="dbu-respond-name">Dynamic Hype</span>
-        <select name="second"><option value="">-</option>${all.filter(option => option.id !== primary)
-          .map(option => `<option value="${escape(option.id)}">${escape(option.name)}</option>`).join("")}</select></label>` : ""}`,
-    buttons: [{ action: "ok", label: "Hype", default: true, callback: (event, button, dialog) => ({
+        <span class="dbu-respond-name">${escape(option.name)}</span></label>`).join("") : ""}
+      ${second ? select("second", twice, `${twice}: a second one for this ${button} (1/Encounter)`,
+        all.filter(option => option.id !== primary).map(option => [option.id, option.name])) : ""}
+      ${others.length ? select("other", othersLabel, `${othersLabel}: an Opponent more (1/Round)`,
+        others.map(each => [each.uuid, each.name])) : ""}`,
+    buttons: [{ action: "ok", label: button, default: true, callback: (event, button, dialog) => ({
       first: dialog.element.querySelector('input[name="first"]:checked')?.value ?? "",
-      second: dialog.element.querySelector('select[name="second"]')?.value ?? "" }) }],
+      second: dialog.element.querySelector('select[name="second"]')?.value ?? "",
+      other: dialog.element.querySelector('select[name="other"]')?.value ?? "" }) }],
     rejectClose: false
   });
-  if (!answer || (typeof answer !== "object")) return;
-  const first = primary ? "" : answer.first;
-  const second = (answer.second && (answer.second !== (first || primary))) ? answer.second : "";
-  if (second) await actor.setFlag(SCOPE, "dynamicHypeEncounter", game.combat.id);
-  if (first || second) {
-    await item.update({ ...(first ? { [`flags.${SCOPE}.hypeOption`]: first } : {}),
-      ...(second ? { [`flags.${SCOPE}.secondOption`]: second } : {}) });
-  }
+  if (!answer || (typeof answer !== "object")) return { first: "", second: "", other: "" };
+  const first = ask ? answer.first : "";
+  return { first, second: (second && answer.second && (answer.second !== (first || primary))) ? answer.second : "",
+    other: answer.other ?? "" };
+}
+
+/** What the window put in use, on its Item - for this use. */
+async function putInUse(item, { first = "", second = "" } = {}) {
+  if (!item || (!first && !second)) return;
+  await item.update({ ...(first ? { [`flags.${SCOPE}.askedOption`]: first } : {}),
+    ...(second ? { [`flags.${SCOPE}.secondOption`]: second } : {}) });
+}
+
+/** What was put in use for one use, no longer. */
+async function outOfUse(item) {
+  if (!item?.flags?.[SCOPE]?.askedOption && !item?.flags?.[SCOPE]?.secondOption) return;
+  await item.update({ [`flags.${SCOPE}.secondOption`]: "", [`flags.${SCOPE}.askedOption`]: "" });
+}
+
+/**
+ * Dynamic Hype's Options as the Hype Maneuver is used, before its Moment so what is put in use answers it: none on the
+ * selector, which one, every time; and (2), "When using the Hype Maneuver, you may benefit from two of your Option effects for
+ * Show Stopping Performance at once", once an Encounter. Both for that Hype, till Hyped goes (dynamicHypeEnds).
+ */
+export async function askDynamicHype(actor) {
+  const item = talentItemOf(actor, "show-stopping-performance");
+  if (!item?.flags?.[SCOPE]?.oneAtATime) return;
+  const twice = (actor.system.effects?.slots?.["dynamicHype.twice"] === true) && game.combat?.started
+    && (actor.getFlag?.(SCOPE, "dynamicHypeEncounter") !== game.combat.id);
+  const answer = await askInUse(actor, item, { button: "Hype", twice: twice ? "Dynamic Hype" : "" });
+  if (!answer) return;
+  if (answer.second) await actor.setFlag(SCOPE, "dynamicHypeEncounter", game.combat.id);
+  await putInUse(item, answer);
 }
 
 /** Hyped gone: what was put in use for that Hype - asked, or Dynamic Hype (2)'s second - no longer. */
 export async function dynamicHypeEnds(actor) {
-  for (const item of Array.from(actor?.items ?? []).filter(each => each.flags?.[SCOPE]?.secondOption || each.flags?.[SCOPE]?.hypeOption)) {
-    await item.update({ [`flags.${SCOPE}.secondOption`]: "", [`flags.${SCOPE}.hypeOption`]: "" });
-  }
+  return outOfUse(talentItemOf(actor, "show-stopping-performance"));
+}
+
+/**
+ * Flexible Planning, the Analysis Maneuver used - one window: Analytic Fighter's in use, none on its selector (1); "you may target
+ * an additional Opponent to apply its effects to" (2), once a Round - Analyzed too, and Analytic Fighter's on both (the user's);
+ * "If there is only one Opponent ... you may use two effects from the Option effect of Analytic Fighter and benefit from both of
+ * them" (3), once an Encounter. The Opponents its effects reach - the targeted one first; what was put in use is put back after
+ * (analysisDone).
+ */
+export async function askAnalysisPlan(actor, target) {
+  const item = talentItemOf(actor, "analytic-fighter");
+  const slots = actor?.system?.effects?.slots ?? {};
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && !allies.has(token.actor.uuid) && !token.actor.system?.defeated)
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  const others = ((slots["flexible.secondTarget"] === true) && (actor.getFlag?.(SCOPE, "flexibleTargetRound") !== roundKey()))
+    ? opponents.filter(each => each.uuid !== target.uuid) : [];
+  const twice = (slots["flexible.twoOptions"] === true) && game.combat?.started
+    && (actor.getFlag?.(SCOPE, "flexibleTwiceEncounter") !== game.combat.id)
+    && (opponents.length === 1) && (opponents[0].uuid === target.uuid);
+  const answer = await askInUse(actor, item, { button: "Analysis", twice: twice ? "Flexible Planning" : "", others,
+    othersLabel: "Flexible Planning" });
+  if (!answer) return [target];
+  if (answer.second) await actor.setFlag(SCOPE, "flexibleTwiceEncounter", game.combat.id);
+  await putInUse(item, answer);
+  const also = others.find(each => each.uuid === answer.other) ?? null;
+  if (also) await actor.setFlag(SCOPE, "flexibleTargetRound", roundKey());
+  return [target, ...(also ? [also] : [])];
+}
+
+/** The Analysis answered: what was put in use for it, no longer - its marks and Clashes stay theirs. */
+export async function analysisDone(actor) {
+  return outOfUse(talentItemOf(actor, "analytic-fighter"));
 }
 
 /** Hyped gone: Motivating Performance's Motivated off whoever it was given to - "while you are Hyped". */
@@ -16069,17 +16133,30 @@ const ANALYTIC = Object.freeze({
 export async function analyticFighter(actor, option, context = {}) {
   const { UNSPENT } = await import("./effects/moments-runtime.mjs");
   const own = ANALYTIC[option];
-  const target = fromUuidSync(context?.opponentUuid ?? "");
-  if (!actor || !own || !target) return UNSPENT;
-  if (own.key) {
-    const { setCondition } = await import("./conditions.mjs");
-    await setCondition(target, own.key, 1);
-    await lasting(actor, { kind: KINDS.CONDITION, key: own.key, edge: EDGES.END, next: true, on: target.uuid, source: own.name });
+  // Every Opponent the Analysis reached - Flexible Planning (2)'s second with the first.
+  const targets = [...new Set(context?.opponentUuids ?? [context?.opponentUuid])].map(uuid => fromUuidSync(uuid ?? "")).filter(Boolean);
+  if (!actor || !own || !targets.length) return UNSPENT;
+  const { setCondition } = await import("./conditions.mjs");
+  for (const target of targets) {
+    if (own.key) {
+      await setCondition(target, own.key, 1);
+      await lasting(actor, { kind: KINDS.CONDITION, key: own.key, edge: EDGES.END, next: true, on: target.uuid, source: own.name });
+    }
+    if (option === "weak") {
+      await actor.setFlag(SCOPE, "weakPoint", [...weakPoints(actor).filter(entry => entry.uuid !== target.uuid),
+        { uuid: target.uuid, round: roundKey(), won: false, message: "" }]);
+    }
+    if (own.clash) {
+      await postSkillClash(actor, target, { name: own.name, type: "outOfSequence",
+        clash: { skill: "investigation", defenderSkills: ["intuition", "bluff", "stealth"] } }, { analytic: { option, applied: false } });
+    }
   }
-  if (option === "weak") await actor.setFlag(SCOPE, "weakPoint", { uuid: target.uuid, round: roundKey(), won: false, message: "" });
-  if (!own.clash) return;
-  return postSkillClash(actor, target, { name: own.name, type: "outOfSequence",
-    clash: { skill: "investigation", defenderSkills: ["intuition", "bluff", "stealth"] } }, { analytic: { option, applied: false } });
+}
+
+/** Weak Point Analysis's, kept on you - one for each Opponent it was made at, this Round's alone counting. */
+export function weakPoints(actor) {
+  const held = actor?.getFlag?.(SCOPE, "weakPoint");
+  return [].concat(held ?? []).filter(entry => entry?.uuid && (entry.round === roundKey()));
 }
 
 /**
@@ -16100,8 +16177,8 @@ async function settleAnalytic(message, clash) {
     return settledNote(message, `${target.name}: Broken until the start of ${analyst.name}'s next turn.`);
   }
   if (option === "weak") {
-    const weak = analyst.getFlag?.(SCOPE, "weakPoint");
-    if (weak?.uuid === target.uuid) await requestActorUpdate(analyst, { [`flags.${SCOPE}.weakPoint`]: { ...weak, won: true } });
+    await requestActorUpdate(analyst, { [`flags.${SCOPE}.weakPoint`]: weakPoints(analyst)
+      .map(entry => (entry.uuid === target.uuid) ? { ...entry, won: true } : entry) });
     return settledNote(message, `${analyst.name}: the next Attacking Maneuver at ${target.name} this Round may be a Called Shot.`);
   }
   if ((option === "offensive") || (option === "defensive")) {
@@ -16155,11 +16232,13 @@ function criticalTactics(uuids) {
  * Wound.
  */
 async function weakPointNatural(attacker, uuids, message) {
-  const weak = attacker?.getFlag?.(SCOPE, "weakPoint");
-  if (!weak || (weak.round !== roundKey()) || !message) return 0;
-  if (weak.message) return (weak.message === message.id) ? 2 : 0;
-  if (!uuids.includes(weak.uuid)) return 0;
-  await requestActorUpdate(attacker, { [`flags.${SCOPE}.weakPoint`]: { ...weak, message: message.id } });
+  const held = weakPoints(attacker);
+  if (!held.length || !message) return 0;
+  if (held.some(entry => entry.message === message.id)) return 2;
+  const claimed = held.filter(entry => !entry.message && uuids.includes(entry.uuid));
+  if (!claimed.length) return 0;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.weakPoint`]: held
+    .map(entry => claimed.includes(entry) ? { ...entry, message: message.id } : entry) });
   return 2;
 }
 

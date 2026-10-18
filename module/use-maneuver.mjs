@@ -1514,10 +1514,10 @@ async function applyModifiers(actor, applied) {
   }
   // Weak Point Analysis, its Clash won: "you may make that Maneuver a Called Shot" - the next Attacking Maneuver at them this
   // Round, the Called Shot on it without its Action.
-  const weak = actor.getFlag?.("dbu-ttrpg", "weakPoint");
+  const aimedAt = new Set(Array.from(game.user.targets ?? []).map(token => token.actor?.uuid));
+  const weak = (await import("./chat.mjs")).weakPoints(actor).find(entry => entry.won && !entry.message && aimedAt.has(entry.uuid));
   let weakCalled = false;
-  if (called && !byEyes && weak?.won && !weak.message && (weak.round === round)
-    && Array.from(game.user.targets ?? []).some(token => token.actor?.uuid === weak.uuid)) {
+  if (called && !byEyes && weak) {
     weakCalled = true;
     applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
   }
@@ -5749,10 +5749,14 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // "Target an Opponent. They become Analyzed until the end of your next turn." The mark
   // sits on them and the clock sits on you, because the turn the entry names is yours -
   // and that clock is also the record of who Analyzed whom.
-  if (maneuver.analysis && targetActor) await analyze(actor, targetActor);
-  // What answers it - Analytic Fighter's Options: Automatic, or asked in a window.
-  if (maneuver.analysis && targetActor) {
-    await (await import("./chat.mjs")).answerFor(actor, "analysis", { opponentUuid: targetActor.uuid });
+  // Flexible Planning: an Opponent more, and which of Analytic Fighter's in use - asked first, in one window.
+  const analyzing = (maneuver.analysis && targetActor) ? await (await import("./chat.mjs")).askAnalysisPlan(actor, targetActor) : [];
+  for (const each of analyzing) await analyze(actor, each);
+  // What answers it - Analytic Fighter's Options: Automatic, or asked in a window. Once for all it reached (the user's).
+  if (analyzing.length) {
+    await (await import("./chat.mjs")).answerFor(actor, "analysis", { opponentUuid: analyzing[0].uuid,
+      opponentUuids: analyzing.map(each => each.uuid) });
+    await (await import("./chat.mjs")).analysisDone(actor);
   }
 
   // "Target an Opponent, that Opponent becomes 'Seen' until the end of your next turn."
