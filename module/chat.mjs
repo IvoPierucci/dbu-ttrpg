@@ -13224,6 +13224,7 @@ async function frozenTurnAfterAttack(attack) {
   await glassSurgeEnds(attack);
   await combatWisdomEnds(attack);
   await fleetSpent(attack);
+  await multiTypeSwitch(attack);
   await tranquilEnds(fromUuidSync(attack?.attackerUuid ?? ""));
   await entrustedAllInEnds(attack);
   await warriorTensionEnds(attack);
@@ -13248,6 +13249,35 @@ async function tranquilEnds(actor) {
     const { leaveState } = await import("./effects/moments-runtime.mjs");
     await leaveState(actor, "mindful");
   }
+}
+
+/**
+ * Multi-Type Attacker (1): "After concluding an Attacking Maneuver during your turn, select a Foundation different to the one
+ * used in that Attacking Maneuver. Increase your Wound Rolls with Attacking Maneuvers of that Foundation by 1(T) for the
+ * remainder of your turn. This effect can stack." Asked, twice a Round; held on the character till their turn ends
+ * (multiTypeParts).
+ */
+async function multiTypeSwitch(attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attacker?.isOwner || (attacker.system?.effects?.slots?.["multiType.switch"] !== true) || !attack.foundation) return;
+  if (!game.combat?.started || (game.combat.combatant?.actor?.uuid !== attacker.uuid)) return;
+  const used = attacker.getFlag?.(SCOPE, "multiTypeRound");
+  const count = (used?.round === roundKey()) ? (Number(used.n) || 0) : 0;
+  if (count >= 2) return;
+  const others = Object.entries(DBUCharacterData.FOUNDATIONS).filter(([key]) => key !== attack.foundation);
+  const picked = await askPlayerChoice(attacker, `${attacker.name}: Multi-Type Attacker - Wound 1(T) for the rest of your turn`,
+    [...others.map(([key, foundation]) => ({ value: key, label: `${foundation.label} Attacks` })), { value: "none", label: "None" }]);
+  if (!others.some(([key]) => key === picked)) return;
+  const held = attacker.getFlag?.(SCOPE, "multiType") ?? {};
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.multiTypeRound`]: { round: roundKey(), n: count + 1 },
+    [`flags.${SCOPE}.multiType`]: { ...held, [picked]: (Number(held[picked]) || 0) + 1 } });
+}
+
+/** Multi-Type Attacker (1): its stacks on an attack of that Foundation, 1(T) each. */
+function multiTypeParts(attacker, attack) {
+  const stacks = Number(attacker?.getFlag?.(SCOPE, "multiType")?.[attack?.foundation]) || 0;
+  return stacks ? [{ label: `Multi-Type Attacker (${stacks})`, written: `+${stacks}(T)`,
+    value: stacks * Math.max(1, Number(attacker.system.tierOfPower) || 1) }] : [];
 }
 
 /** Fleet of Foot (2): "your next Attacking Maneuver that targets them" - made, the bonus gone. */
@@ -22798,6 +22828,7 @@ function woundParts(attacker, attack) {
       value: primed * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...(eyes ? [{ label: `Critical Eye (${eyes})`, written: `+${2 * eyes}(T)`,
       value: 2 * eyes * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
+    ...multiTypeParts(attacker, attack),
     // Blaster Master (1): the Ki spent as it hit.
     ...((Number(attack.blasterWound) || 0) ? [{ label: attack.blasterName || "Blaster Master", value: Number(attack.blasterWound) }] : []),
     ...(doubled ? [{ label: "Searing Anger (Overwhelm doubled)", written: `+${doubled}(T)`,

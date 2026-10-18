@@ -1,0 +1,17 @@
+id: multi-type-attacker
+name: Multi-Type Attacker
+talentCategory: multi-type
+prerequisites: 2+ of Enhanced Fist, Enhanced Shot, or Magic Blaster
+description: >
+  Skilled in the art of switching between different attack styles at the drop of a hat, your ability to catch enemies off-guard enhances your effectiveness in combat.
+text: >
+  Multi-Type Attacker: Skilled in the art of switching between different attack styles at the drop of a hat, your ability to catch enemies off-guard enhances your effectiveness in combat.
+  –Prerequisites: 2+ of Enhanced Fist, Enhanced Shot, or Magic Blaster
+  (1)-[Triggered, 2/Round]: After concluding an Attacking Maneuver during your turn, select a Foundation different to the one used in that Attacking Maneuver. Increase your Wound Rolls with Attacking Maneuvers of that Foundation by 1(T) for the remainder of your turn. This effect can stack.
+
+---
+
+[passive]
+# (1) An Attacking Maneuver concluded on your turn: which other Foundation, asked - twice a Round; 1(T) a stack on the Wound of
+# that Foundation's attacks, till your turn ends (chat.mjs multiTypeSwitch, multiTypeParts).
+allow multiType.switch;

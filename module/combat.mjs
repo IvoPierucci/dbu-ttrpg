@@ -634,6 +634,8 @@ export function registerCombatHooks() {
       if (leaving.getFlag?.("dbu-ttrpg", "damagedSinceTurn")) await leaving.unsetFlag("dbu-ttrpg", "damagedSinceTurn");
       // Fleet of Foot (2): "until the end of your turn".
       if (leaving.getFlag?.("dbu-ttrpg", "fleetOfFoot")) await leaving.unsetFlag("dbu-ttrpg", "fleetOfFoot");
+      // Multi-Type Attacker (1): "for the remainder of your turn".
+      if (leaving.getFlag?.("dbu-ttrpg", "multiType")) await leaving.unsetFlag("dbu-ttrpg", "multiType");
       // Super Spirit Sword's use again: "during this turn" - unused, gone with it.
       const { swordAgainExpires } = await import("./chat.mjs");
       await swordAgainExpires(leaving);
