@@ -341,10 +341,10 @@ export function qualityInactive(entry, crafted, getTrait) {
  */
 export function qualityEntries(crafted) {
   return (crafted?.qualities ?? []).map(entry => (typeof entry === "string")
-    ? { id: entry, slots: 0, choice: "", on: false, name: "", free: false }
+    ? { id: entry, slots: 0, choice: "", on: false, name: "", free: false, granted: false }
     : { id: String(entry?.id ?? ""), slots: Number(entry?.slots) || 0,
         choice: String(entry?.choice ?? ""), on: entry?.on === true,
-        name: String(entry?.name ?? ""), free: entry?.free === true })
+        name: String(entry?.name ?? ""), free: entry?.free === true, granted: entry?.granted === true })
     .filter(entry => entry.id);
 }
 
@@ -665,7 +665,7 @@ function partBody(trait, entry = null) {
     .filter(line => !/^\s*(#|\/\/)/.test(line)).join("\n");
   if (entry) {
     code = scriptWithChoice(code, entry.choice);
-    code = code.replaceAll("$slots", String(slotsTaken(entry, trait)));
+    code = code.replaceAll("$slots", String(slotsGiven(entry, trait)));
   }
   return trimBlank(code);
 }
@@ -1742,13 +1742,18 @@ export function qualitySlotRange(trait) {
   return { min, max, ranged: max > min };
 }
 
-/** The Slots one Quality entry takes: what was chosen, held to its range. */
-export function slotsTaken(entry, trait) {
-  // One given "without occupying a Quality Slot" - Combat Plating's Armed.
-  if (entry?.free) return 0;
+/** The Slots one Quality entry was given - what was chosen, held to its range - which is what its `$slots` reads. */
+export function slotsGiven(entry, trait) {
   const { min, max } = qualitySlotRange(trait);
   const chosen = Number(entry?.slots) || 0;
   return chosen ? Math.min(max, Math.max(min, chosen)) : min;
+}
+
+/** The Slots one Quality entry takes up on its piece: those it was given, or none ticked Free. */
+export function slotsTaken(entry, trait) {
+  // "without occupying a Quality Slot" - Combat Plating's Armed. Still as strong as its Slots.
+  if (entry?.free) return 0;
+  return slotsGiven(entry, trait);
 }
 
 /**

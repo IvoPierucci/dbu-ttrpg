@@ -50,6 +50,8 @@
       {{/if}}
       {{#if quality.choiceLabel}}<span class="gear-type">{{quality.choiceLabel}}</span>{{/if}}
       <span class="gear-type">{{quality.slotsLabel}}</span>
+      <label class="gear-type" data-tooltip="Takes no Quality Slot"><input type="checkbox" data-action="freeQuality"
+             data-index="{{quality.index}}" {{#if quality.free}}checked{{/if}}/> Free</label>
       {{#if quality.toggle}}
       <label class="gear-type"><input type="checkbox" data-action="toggleQuality"
              data-index="{{quality.index}}" {{#if quality.on}}checked{{/if}}/> {{quality.toggle}}</label>

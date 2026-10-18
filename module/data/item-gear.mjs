@@ -137,9 +137,12 @@ export default class DBUGearData extends foundry.abstract.TypeDataModel {
           on: new fields.BooleanField({ required: true, initial: false }),
           // The name its owner gave it, for one that takes one - Dynamic.
           name: new fields.StringField({ required: true, blank: true, initial: "" }),
-          // Given "without occupying a Quality Slot" by something else - Combat Plating's Armed,
-          // on its Natural Armor - and taken back by it alone.
-          free: new fields.BooleanField({ required: true, initial: false })
+          // Taking no Quality Slot - "without occupying a Quality Slot", Combat Plating's Armed.
+          // The player's to tick on the Item, ticked by what gives one so.
+          free: new fields.BooleanField({ required: true, initial: false }),
+          // Put on by its Natural Armor's Option - Combat Plating's Armed - and so taken off by
+          // it as another Option is chosen, whatever was done to its Free since.
+          granted: new fields.BooleanField({ required: true, initial: false })
         })),
         // Its own pseudo-code, which is what the piece does: its Category and Qualities write
         // their parts into it when chosen, and its owner may write anything else. Null for a

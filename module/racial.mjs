@@ -1010,17 +1010,17 @@ async function madeByOption(actor, item, option) {
 }
 
 /**
- * A Quality an Option gives the Natural Armor its Trait made - Combat Plating's Armed, "without occupying a Quality Slot"
- * (`free`) - or takes back as another Option is chosen.
+ * A Quality an Option gives the Natural Armor its Trait made - Combat Plating's Armed, "without occupying a Quality Slot":
+ * put on with its Free ticked, the player's to change - or takes back as another Option is chosen (`granted`).
  */
 async function platingQuality(actor, item, id, on) {
   const plating = Array.from(actor?.items ?? []).find(each => (each.flags?.["dbu-ttrpg"]?.grantedBy === item.id)
     && (each.flags?.["dbu-ttrpg"]?.naturalArmor === true));
   if (!plating) return;
   const had = (plating.system.crafted?.qualities ?? []).map(entry => ((typeof entry === "string") ? { id: entry } : entry));
-  const without = had.filter(entry => !((entry.id === id) && entry.free));
+  const without = had.filter(entry => !((entry.id === id) && entry.granted));
   if (on && (without.length !== had.length)) return;
-  const qualities = on ? [...without, { id, slots: 0, choice: "", on: false, name: "", free: true }] : without;
+  const qualities = on ? [...without, { id, slots: 0, choice: "", on: false, name: "", free: true, granted: true }] : without;
   if (qualities.length === had.length && !on) return;
   const { composeEffects } = await import("./gear.mjs");
   const crafted = { ...plating.system.crafted, qualities };

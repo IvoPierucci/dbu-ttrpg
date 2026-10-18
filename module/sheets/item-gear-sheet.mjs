@@ -30,7 +30,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
       resyncEffects: DBUGearSheet._onResyncEffects,
       addQuality: DBUGearSheet._onAddQuality,
       removeQuality: DBUGearSheet._onRemoveQuality,
-      toggleQuality: DBUGearSheet._onToggleQuality
+      toggleQuality: DBUGearSheet._onToggleQuality,
+      freeQuality: DBUGearSheet._onFreeQuality
     },
     form: { submitOnChange: true }
   };
@@ -397,6 +398,8 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
           // A switch of its own, where its effect waits on something the table keeps.
           toggle: trait?.toggle ? String(trait.toggle) : "",
           on: entry.on,
+          // Taking no Quality Slot: the player's to tick, ticked by what gives one so.
+          free: entry.free,
           // Its Category does not take it, or another Quality holds it off: kept, and
           // inactive until that changes.
           misfit: DBUGearSheet.#inactiveNote(qualityInactive(entry, crafted, getTrait),
@@ -540,6 +543,14 @@ export default class DBUGearSheet extends HandlebarsApplicationMixin(ItemSheetV2
     const index = Number(target.dataset.index);
     const qualities = qualityEntries(this.item.system.crafted)
       .map((entry, at) => (at === index) ? { ...entry, on: !entry.on } : entry);
+    return this.item.update(this.#withQualities(qualities));
+  }
+
+  /** Tick a Quality Free - taking no Quality Slot - or untick it, by where it is in the list. */
+  static async _onFreeQuality(event, target) {
+    const index = Number(target.dataset.index);
+    const qualities = qualityEntries(this.item.system.crafted)
+      .map((entry, at) => (at === index) ? { ...entry, free: !entry.free } : entry);
     return this.item.update(this.#withQualities(qualities));
   }
 
