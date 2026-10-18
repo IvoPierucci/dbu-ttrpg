@@ -23939,7 +23939,12 @@ function woundParts(attacker, attack) {
   const sinister = attack.viaExploit && (attacker.system.effects?.slots?.["draconic.exploitWound"] === true);
   // Exploit Expert (1): made through the Exploit Maneuver.
   const expert = attack.viaExploit ? attacker.system.effects?.slots?.["wound.viaExploit"] : null;
+  // Precision Kata (2): "If you score a Critical Result on your Strike Roll for an Attacking Maneuver made with your Focused
+  // Foundation, increase your Wound Roll for that Attacking Maneuver by 2(T)."
+  const kata = (attacker.system.effects?.slots?.["precisionKata.wound"] === true) && (attack.result?.strike?.outcome === "critical")
+    && (attacker.system.effects?.slots?.[`focused.${attack.foundation}`] === true);
   return [
+    ...(kata ? [{ label: "Precision Kata (Critical)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     ...((Number(expert?.add) || 0) ? [{ label: (expert.parts ?? []).map(part => part.source).find(Boolean) ?? "Exploit",
       value: Number(expert.add) }] : []),
     ...(sinister ? [{ label: "Draconic Physique (Exploit)", written: "+2(T)", value: 2 * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),

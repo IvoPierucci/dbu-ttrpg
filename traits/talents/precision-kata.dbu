@@ -1,0 +1,27 @@
+id: precision-kata
+name: Precision Kata
+talentCategory: specialization
+prerequisites: Archetype Focus, Insight Score of 5+
+description: >
+  Trained to increase your accuracy in your chosen type of attack, your blows land precisely where you mean for them to.
+text: >
+  Precision Kata: Trained to increase your accuracy in your chosen type of attack, your blows land precisely where you mean for them to.
+  –Prerequisites: Archetype Focus, Insight Score of 5+
+  (1)-[Passive]: Reduce the Critical Target by 1 for your Strike Rolls for an Attacking Maneuver of your Focused Foundation.
+  (2)-[Triggered]: If you score a Critical Result on your Strike Roll for an Attacking Maneuver made with your Focused Foundation, increase your Wound Roll for that Attacking Maneuver by 2(T).
+
+---
+
+[passive]
+# (1) The Focused Foundation's Strike, its Critical Target 1 lower.
+if (focusedOn("physical")) {
+    criticalTarget.physical -= 1;
+}
+if (focusedOn("energy")) {
+    criticalTarget.energy -= 1;
+}
+if (focusedOn("magic")) {
+    criticalTarget.magic -= 1;
+}
+# (2) Its Strike a Critical Result: 2(T) on that attack's Wound, a row of its own (chat.mjs woundParts).
+allow precisionKata.wound;
