@@ -2551,6 +2551,8 @@ async function settleFeint(message, clash) {
  * Rounded up, which is unusual in these rules and is what the entry says.
  */
 function feintGrants(feinter) {
+  // Feint Master (1), (2): a row of its own on the Strike and the Wound; "up to 1/2 of your Maximum Capacity".
+  const master = feinter.system.effects?.slots?.["feintMaster.attack"] === true;
   return {
     // Shaped like a Modifier Maneuver, because that is what the list on an attack holds:
     // a named thing that changed it, with a row of its own on the breakdown.
@@ -2561,13 +2563,45 @@ function feintGrants(feinter) {
       strikePerTier: 1,
       woundPerTier: 1,
       note: ""
-    }],
+    }, ...(master ? [{ id: "feint-master", name: "Feint Master", damageCategoryShift: 0, strikePerTier: 1, woundPerTier: 1,
+      note: "" }] : [])],
     // "Cannot use any option of the Defend Maneuver in response to this Attacking Maneuver
     // except Cross Counter."
     defencesAllowed: ["crossCounter"],
     noArea: true,
-    wagerCap: Math.ceil((feinter.system.capacity.max ?? 0) / 4)
+    wagerCap: master ? Math.floor((feinter.system.capacity.max ?? 0) / 2) : Math.ceil((feinter.system.capacity.max ?? 0) / 4)
   };
+}
+
+/**
+ * Feint Master (3): "If you target an Opponent with the Feint Maneuver for the first time in this Combat Encounter, you may
+ * automatically win the initial Clash for the effects of the Feint Maneuver." Every one Feinted kept for the Encounter
+ * (`feintedAt`); the first at them, asked - once an Encounter.
+ */
+export async function askFeintMaster(actor, target) {
+  if (!actor || !target || (actor.system.effects?.slots?.["feintMaster.autoWin"] !== true) || !game.combat?.started) return false;
+  const encounter = game.combat.id;
+  const held = actor.getFlag?.(SCOPE, "feintedAt");
+  const before = (held?.combat === encounter) ? Array.from(held.uuids ?? []) : [];
+  await actor.setFlag(SCOPE, "feintedAt", { combat: encounter, uuids: [...new Set([...before, target.uuid])] });
+  if (before.includes(target.uuid) || (actor.getFlag?.(SCOPE, "feintMasterEncounter") === encounter)) return false;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Feint Master` },
+    content: `<p data-tooltip="The first Feint at them this Encounter. Once an Encounter.">Win the Clash against ${
+      Handlebars.escapeExpression(target.name)} outright?</p>`, rejectClose: false });
+  if (!yes) return false;
+  await actor.setFlag(SCOPE, "feintMasterEncounter", encounter);
+  return true;
+}
+
+/** Feint Master (3), taken: the Feint's own card, its Clash won outright - the Basic Attack it buys offered there. */
+export async function postFeintWon(actor, target, maneuver) {
+  const card = await postManeuver(actor, maneuver, { note: `Feint Master: the Clash against ${target.name} won outright.` });
+  if (card) {
+    requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+      maneuverName: "Basic Attack", targetUuid: target.uuid, reason: "Feint - they bought it", grants: feintGrants(actor) } });
+  }
+  return card;
 }
 
 /**

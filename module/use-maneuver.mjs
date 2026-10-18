@@ -4785,6 +4785,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   let bursting = null;
   let shifting = null;
   let snatching = null;
+  // Feint Master (3): the Feint's Clash won outright, where taken.
+  let feintWon = false;
   let talking = null;
   let tailRestraint = false;
   let grappleStretched = false;
@@ -5551,6 +5553,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       snatching = await askSnatch(actor, targetActor, maneuver);
       if (!snatching) return false;
     }
+    if (maneuver.feint && targetActor) feintWon = await (await import("./chat.mjs")).askFeintMaster(actor, targetActor);
 
     // Bluff Attack: "Target an Opponent within your Melee Range".
     const outOfBluff = maneuver.bluffs && targetActor && whyNotWithinMelee(actor, targetActor, maneuver.name);
@@ -6076,6 +6079,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     ? await postManeuver(actor, maneuver, {
         note: await (await import("./chat.mjs")).takeMajinDama(actor, targetActor, snatching.itemId)
       })
+    : (maneuver.feint && feintWon)
+    ? await (await import("./chat.mjs")).postFeintWon(actor, targetActor, maneuver)
     : maneuver.clash
     ? await postSkillClash(actor, targetActor, maneuver, {
         ...(maneuver.magicTrick

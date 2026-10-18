@@ -1,0 +1,22 @@
+id: feint-master
+name: Feint Master
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in Bluff
+description: >
+  You are most effective when tricking your opponents into opening their guard for your attacks.
+text: >
+  Feint Master: You are most effective when tricking your opponents into opening their guard for your attacks.
+  –Prerequisites: 2+ Skill Ranks in Bluff
+  (1)-[Passive]: Increase the Strike and Wound Rolls of Attacking Maneuvers made through the effects of the Feint Maneuver by 1(T).
+  (2)-[Passive]: You can Ki Wager up to 1/2 of your Maximum Capacity on Attacking Maneuvers made through the effects of the Feint Maneuver.
+  (3)-[Triggered, 1/Encounter]: If you target an Opponent with the Feint Maneuver for the first time in this Combat Encounter, you may automatically win the initial Clash for the effects of the Feint Maneuver.
+
+---
+
+[passive]
+# (1), (2) On the Basic Attack a won Feint hands over: a row of its own, 1(T) on the Strike and the Wound; its Ki Wager
+# capped at half your Maximum Capacity, not a quarter (chat.mjs feintGrants).
+allow feintMaster.attack;
+# (3) The first Feint at an Opponent this Encounter: asked, once an Encounter - the player's to time; taken, no Clash, the
+# Basic Attack offered on the Feint's own card (chat.mjs askFeintMaster, postFeintWon).
+allow feintMaster.autoWin;
