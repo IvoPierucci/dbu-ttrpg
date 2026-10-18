@@ -1,0 +1,27 @@
+id: frequent-flyer
+name: Frequent Flyer
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in Flight
+description: >
+  You’ve become extremely accustomed to fighting in the sky.
+text: >
+  Frequent Flyer: You’ve become extremely accustomed to fighting in the sky.
+  –Prerequisites: 2+ Skill Ranks in Flight
+  (1)-[1/Round]: You may use the Soar Maneuver as an Instant Maneuver.
+  (2)-[Passive]: Double the bonus to your Defense Value from using the Soar Maneuver.
+  (3)-[1/Encounter]: As an Instant Maneuver, you can stop being Prone.
+  (4)-[Triggered, 1/Round]: When a Character within your Melee Range enters a High Environment, you can use the Soar Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) The Soar's own Instant button on the Maneuvers tab, once a Round (actor-character-sheet.mjs _onSoarInstant).
+allow soar.asInstant;
+# (2) Soaring's 1(bT) once more.
+if (hasCondition("soaring")) {
+    defenseValue += 1(bT);
+}
+# (3) Its own Maneuver, on the Maneuvers tab (maneuvers/frequent-flyer-third-effect.dbu).
+# (4) Another Character, within your Melee Range - measured where both have a token - going from the ground into a High
+# Environment: the Soar out of sequence, offered on their latest card, once a Round (chat.mjs frequentFlyerCheck).
+allow frequentFlyer.soarFollow;

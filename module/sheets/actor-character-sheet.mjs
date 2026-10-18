@@ -417,6 +417,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       spiritInstant: DBUCharacterSheet._onSpiritInstant,
       thiefInstant: DBUCharacterSheet._onThiefInstant,
       flipInstant: DBUCharacterSheet._onFlipInstant,
+      soarInstant: DBUCharacterSheet._onSoarInstant,
       desperateInstant: DBUCharacterSheet._onDesperateInstant,
       hateInstant: DBUCharacterSheet._onHateInstant,
       creativeOutOfSequence: DBUCharacterSheet._onCreativeOutOfSequence,
@@ -1609,6 +1610,8 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // an Instant Maneuver."
             desperateInstant: (maneuver.id === "dirty-trick")
               && (this.actor.system.effects?.slots?.["dirtyTrick.desperateInstant"] === true),
+            // Frequent Flyer (1): "You may use the Soar Maneuver as an Instant Maneuver" - once a Round.
+            soarInstant: (maneuver.id === "soar") && (this.actor.system.effects?.slots?.["soar.asInstant"] === true),
             // Acrobat Star (1): "You may use the Flip Maneuver as an Instant Maneuver."
             flipInstant: (maneuver.id === "flip") && (this.actor.system.effects?.slots?.["flip.asInstant"] === true),
             // Glass Combat (3): "you may use the Movement Maneuver as an Instant Maneuver".
@@ -6028,6 +6031,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
     return this.actor.setFlag("dbu-ttrpg", "desperateInstantRound", round);
+  }
+
+  /** Frequent Flyer (1): the Soar as an Instant Maneuver, once a Round. */
+  static async _onSoarInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["soar.asInstant"] !== true)) return;
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (this.actor.getFlag("dbu-ttrpg", "soarInstantRound") === round) {
+      return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
+    }
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
+    return this.actor.setFlag("dbu-ttrpg", "soarInstantRound", round);
   }
 
   /** Acrobat Star (1): the Flip as an Instant Maneuver - its own 1/Round the only limit. */

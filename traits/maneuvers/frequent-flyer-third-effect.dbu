@@ -1,0 +1,21 @@
+id: frequent-flyer-third-effect
+name: Frequent Flyer
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/encounter
+fromTrait: frequent-flyer
+fromEffect: 3
+source: Core Rule
+description: >
+  Frequent Flyer's third effect, as a Maneuver: no longer Prone.
+text: >
+  (3)-[1/Encounter]: As an Instant Maneuver, you can stop being Prone.
+
+---
+
+# In the list while Frequent Flyer is had.
+[on used]
+remove("prone");

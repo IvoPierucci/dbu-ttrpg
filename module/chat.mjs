@@ -16605,6 +16605,41 @@ async function takeTerrifyingSpeed(message, actor) {
   return used;
 }
 
+/**
+ * Frequent Flyer (4): "When a Character within your Melee Range enters a High Environment, you can use the Soar Maneuver as an
+ * Out-of-Sequence Maneuver." Another Character gone from the ground into one (its height before, read before the change): to
+ * each who has it within whose Melee Range they are - measured where both have a token - the Soar offered on that Character's
+ * latest card, once a Round (takeFrequentFlyer).
+ */
+export async function frequentFlyerCheck(mover, before) {
+  if (((Number(before) || 0) > 0) || !((Number(mover?.system?.battlefield?.highEnvironment) || 0) > 0) || !game.combat?.started) return;
+  const soar = getManeuver("soar");
+  const flyers = [...new Map((canvas?.tokens?.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
+    .filter(each => each && (each.uuid !== mover.uuid) && (each.type === "character") && !each.system?.defeated
+      && (each.system?.effects?.slots?.["frequentFlyer.soarFollow"] === true)
+      && (each.getFlag?.(SCOPE, "frequentFlyerRound") !== roundKey()) && !whyNotWithinMelee(each, mover, ""));
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === mover.id);
+  for (const flyer of flyers) {
+    const offer = { actorUuid: flyer.uuid, actorName: flyer.name, maneuverId: "soar", maneuverName: soar?.name ?? "Soar",
+      reason: `Frequent Flyer - ${mover.name} took to the sky beside you`, frequentFlyer: true };
+    if (card) requestEdit(card, { type: "offer", offer });
+    else await offerOutOfSequence(flyer, offer);
+  }
+}
+
+/** Frequent Flyer (4)'s Soar, taken: the Maneuver itself, out of sequence - once a Round, spent as it is. */
+async function takeFrequentFlyer(message, actor) {
+  if (actor.getFlag?.(SCOPE, "frequentFlyerRound") === roundKey()) {
+    ui.notifications.warn(`${actor.name}: Frequent Flyer - already used this Combat Round.`);
+    return null;
+  }
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "soar"));
+  const used = await useManeuver(actor, own ? definitionOf(own) : getManeuver("soar"), { outOfSequence: true });
+  if (used) await actor.setFlag(SCOPE, "frequentFlyerRound", roundKey());
+  return used;
+}
+
 /** The Terrify itself, out of sequence, at the one targeted - its own 1/Round still its (Terrifying Speed's, Presence's). */
 async function terrifyOutOfSequence(actor) {
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
@@ -20003,6 +20038,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.yoinkGrenade) return takeYoinkGrenade(message, actor, offer);
   if (offer.terrifyingSpeed) return takeTerrifyingSpeed(message, actor);
   if (offer.terrifyingPresence) return terrifyOutOfSequence(actor);
+  if (offer.frequentFlyer) return takeFrequentFlyer(message, actor);
   // Wild Counter's, once a Round.
   if (offer.grants?.wildCounter) {
     if (wildCounterSpent(actor)) {

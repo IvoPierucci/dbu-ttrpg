@@ -69,6 +69,11 @@
                     data-item-id="{{maneuver.itemId}}"
                     data-tooltip="Desperate Distraction: as an Instant Maneuver, below Injured (1/Round)">Instant</button>
             {{/if}}
+            {{#if maneuver.soarInstant}}
+            <button type="button" class="maneuver-control" data-action="soarInstant"
+                    data-item-id="{{maneuver.itemId}}"
+                    data-tooltip="Frequent Flyer: as an Instant Maneuver (1/Round)">Instant</button>
+            {{/if}}
             {{#if maneuver.flipInstant}}
             <button type="button" class="maneuver-control" data-action="flipInstant"
                     data-item-id="{{maneuver.itemId}}"

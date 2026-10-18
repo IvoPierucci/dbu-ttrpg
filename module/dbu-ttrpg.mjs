@@ -187,6 +187,18 @@ Hooks.on("updateItem", (item, changes, options, userId) => sizeWatch(item.parent
 Hooks.on("createItem", (item, options, userId) => sizeWatch(item.parent, userId));
 Hooks.on("deleteItem", (item, options, userId) => sizeWatch(item.parent, userId));
 
+// Frequent Flyer (4): a Character entering a High Environment - its height before the change, kept for after it.
+Hooks.on("preUpdateActor", (actor, changes, options) => {
+  if (foundry.utils.hasProperty(changes, "system.battlefield.highEnvironment")) {
+    options.dbuHighBefore = Number(actor.system?.battlefield?.highEnvironment) || 0;
+  }
+});
+Hooks.on("updateActor", async (actor, changes, options, userId) => {
+  if ((userId !== game.user.id) || !("dbuHighBefore" in options) || (actor.type !== "character")) return;
+  const { frequentFlyerCheck } = await import("./chat.mjs");
+  await frequentFlyerCheck(actor, options.dbuHighBefore);
+});
+
 // Improved Initiative (2), Alert (3): Initiative Advantage read off the Combat's Initiative Values - read again as they change.
 const ADVANTAGE_READERS = new Set(["improved-initiative", "alert", "attentive-warrior", "speedblitz", "lightning-initiative",
   "patient-fighter"]);
