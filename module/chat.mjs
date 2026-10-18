@@ -724,6 +724,10 @@ async function settleClashEffects(messageId, clash) {
     await settleSilentFootsteps(message, clash);
   }
 
+  if (clash.stealthStrike && clash.result && !clash.stealthStrike.applied) {
+    await settleStealthStrike(message, clash);
+  }
+
   if (clash.sense && clash.result && !clash.sense.applied) {
     await settleSense(message, clash);
   }
@@ -14135,16 +14139,70 @@ async function settleSilentFootsteps(message, clash) {
   return settledNote(message, `${hider.name} is Hidden from ${seeker.name}.`);
 }
 
-/** Silent Footsteps (1): "or until after you make an Attacking Maneuver against them" - the attack concluded, theirs no more. */
+/**
+ * The attack concluded: Silent Footsteps (1)'s "or until after you make an Attacking Maneuver against them", and Stealth Strike
+ * (2)'s "for the duration of this Attacking Maneuver" - Hidden from those it was aimed at no more.
+ */
 async function silentFootstepsAttacked(attack) {
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
   if (!attacker) return;
   const { hiddenEntries, revealTo } = await import("./hidden.mjs");
   const aimed = new Set(attackTargets(attack).map(entry => entry.uuid));
-  for (const entry of hiddenEntries(attacker).filter(each => (each.via === "silent-footsteps") && aimed.has(each.uuid))) {
+  for (const entry of hiddenEntries(attacker).filter(each => ["silent-footsteps", "stealth-strike"].includes(each.via)
+    && aimed.has(each.uuid))) {
     const seeker = fromUuidSync(entry.uuid);
     if (seeker) await revealTo(attacker, seeker, "after an Attacking Maneuver at them");
   }
+}
+
+/**
+ * Stealth Strike (2): "When making an Attacking Maneuver against an Opponent, make a Skill Clash (Stealth vs Perception). If you
+ * win, you become Hidden to them for the duration of this Attacking Maneuver." Asked as it is made, once a Round: a Clash at
+ * each Opponent it is aimed at you are not Hidden from already, the attack held till they are settled (settleStealthStrike).
+ */
+async function stealthStrikeClashes(card, actor) {
+  const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || (actor?.system?.effects?.slots?.["stealthStrike.clash"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "stealthStrikeRound") === roundKey()) return;
+  const { isHiddenFrom } = await import("./hidden.mjs");
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const aimed = attackTargets(attack).map(entry => fromUuidSync(entry.uuid))
+    .filter(other => other && (other.uuid !== actor.uuid) && !allies.has(other.uuid) && !isHiddenFrom(actor, other));
+  if (!aimed.length) return;
+  const escape = Handlebars.escapeExpression;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Stealth Strike` },
+    content: `<p data-tooltip="Won: Hidden from them for this Attacking Maneuver. Once a Round.">A Skill Clash (Stealth vs Perception) at ${
+      escape(aimed.map(other => other.name).join(", "))}?</p>`,
+    rejectClose: false
+  });
+  if (!yes) return;
+  await actor.setFlag(SCOPE, "stealthStrikeRound", roundKey());
+  const now = card.getFlag(SCOPE, ATTACK_FLAG);
+  await requestEdit(card, { type: "attack", attack: { ...now, stealthHold: { pending: true, left: aimed.length, name: "Stealth Strike" } } });
+  for (const other of aimed) {
+    await postSkillClash(actor, other, { name: "Stealth Strike", type: "outOfSequence",
+      clash: { skill: "stealth", defenderSkills: ["perception"] } }, { stealthStrike: { applied: false, attackMessageId: card.id } });
+  }
+}
+
+/** Stealth Strike (2), settled: won, Hidden from them for the attack; the last of its Clashes, the attack let go. */
+async function settleStealthStrike(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, stealthStrike: { ...clash.stealthStrike, applied: true } });
+  const hider = fromUuidSync(clash.challengerUuid);
+  const seeker = fromUuidSync(clash.defenderUuid);
+  const card = game.messages.get(clash.stealthStrike.attackMessageId ?? "");
+  const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (hider && seeker && (whoWonClash(clash.result) === "challenger") && attack && !attack.result) {
+    const { hideFrom } = await import("./hidden.mjs");
+    await hideFrom(hider, seeker, { quiet: true, via: "stealth-strike" });
+    await settledNote(message, `${hider.name} is Hidden from ${seeker.name} for this Attacking Maneuver.`);
+  }
+  else await settledNote(message, `${clash.defenderName} sees it coming.`);
+  if (!attack) return;
+  const left = Math.max(0, (Number(attack.stealthHold?.left) || 1) - 1);
+  const next = { ...attack, stealthHold: { ...attack.stealthHold, left, pending: left > 0 } };
+  return left ? requestEdit(card, { type: "attack", attack: next }) : settleAttack(card, next);
 }
 
 /**
@@ -16291,6 +16349,14 @@ async function settleAnalytic(message, clash) {
       source: `${own.name} (won)` });
     return settledNote(message, `${analyst.name}'s Allies: ${(option === "offensive") ? "Strike" : "Dodge"} Rolls against ${target.name} higher too.`);
   }
+}
+
+/** Stealth Strike (1): "Increase your Strike Rolls against your Oblivious Characters by 1(T)" - one you are Hidden from. */
+function obliviousParts(attacker, target) {
+  const slot = attacker?.system?.effects?.slots?.["strike.vsOblivious"];
+  const add = Number(slot?.add) || 0;
+  if (!add || !target || !(attacker.system.hiddenFrom ?? []).some(entry => entry?.uuid === target.uuid)) return [];
+  return [{ label: `${(slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Oblivious"} (Oblivious)`, value: add }];
 }
 
 /** Analytic Fighter: who has a `key` mark running on this one - each once - and whether its Clash was won. */
@@ -20764,6 +20830,8 @@ export async function postAttack(actor, target, maneuver,
         saves: ["morale"], defenderSaves: ["morale"], trapGuard: { applied: false, attackMessageId: card.id } });
     }
   }
+  // Stealth Strike (2): its Clash at each it is aimed at, the attack held till they are settled.
+  if (card && !reflecting) await stealthStrikeClashes(card, actor);
   // Experienced Fighter (1): this Round's attacks, one with a Ki Wager or more than 1 Energy Charge marked.
   const madeNow = card?.getFlag(SCOPE, ATTACK_FLAG);
   if (madeNow && !reflecting && game.combat?.started && (actor.system.effects?.slots?.["combatRecovery.experienced"] === true)
@@ -22065,7 +22133,7 @@ async function settleAttack(message, attack) {
   // Sacrifice Play's Clash, still to be rolled: who the attack is at waits on it. Punisher Guard's Basic Attack: this
   // Exploit waits on it, and is cancelled by it.
   if (!attackIsReady(attack) || duelRunning(attack) || endedByDuel(attack) || attack.sacrifice?.pending
-    || attack.punisherHold?.pending || attack.punished || attack.trapHold?.pending
+    || attack.punisherHold?.pending || attack.punished || attack.trapHold?.pending || attack.stealthHold?.pending
     || attack.divineHold?.pending || attack.divineCancelled
     || attack.godBindHold?.pending || attack.godBindCancelled
     || attack.disarmingSwap?.pending || attack.disarmingSwapped) {
@@ -22370,7 +22438,7 @@ async function resolveAttackWork(message, attack) {
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
       ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
       ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike"), ...fleetParts(attacker, target),
-      ...smallerParts(attacker, target), ...analyticParts(attacker, target, "strike")]
+      ...smallerParts(attacker, target), ...analyticParts(attacker, target, "strike"), ...obliviousParts(attacker, target)]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
@@ -23258,6 +23326,7 @@ function awaitingWhom(attack) {
   if (attack.sacrifice?.pending) waiting.push(`${attack.sacrifice.casterName}'s Sacrifice Play`);
   if (attack.punisherHold?.pending) waiting.push(`${attack.punisherHold.punisherName}'s Punisher Guard`);
   if (attack.trapHold?.pending) waiting.push(`${attack.trapHold.name}'s Clash`);
+  if (attack.stealthHold?.pending) waiting.push(`${attack.stealthHold.name}'s Clash`);
   if (attack.divineHold?.pending) waiting.push(`${attack.divineHold.name}'s ${attack.divineHold.maneuverName}`);
   if (attack.godBindHold?.pending) waiting.push(`${attack.godBindHold.name}'s ${attack.godBindHold.maneuverName}`);
   return waiting.length ? `Waiting on ${waiting.map(name => Handlebars.escapeExpression(name)).join(", ")}` : "Rolling";

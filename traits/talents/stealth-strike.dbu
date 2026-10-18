@@ -1,0 +1,21 @@
+id: stealth-strike
+name: Stealth Strike
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in the Stealth Skill
+description: >
+  Slipping through the shadows, your strikes are deadly when you attack from hiding.
+text: >
+  Stealth Strike: Slipping through the shadows, your strikes are deadly when you attack from hiding.
+  –Prerequisites: 2+ Skill Ranks in the Stealth Skill
+  (1)-[Passive]: Increase your Strike Rolls against your Oblivious Characters by 1(T).
+  (2)-[Triggered, 1/Round]: When making an Attacking Maneuver against an Opponent, make a Skill Clash (Stealth vs Perception). If you win, you become Hidden to them for the duration of this Attacking Maneuver.
+
+---
+
+[passive]
+# (1) Against each it is aimed at who is Oblivious of you - you Hidden from them (chat.mjs obliviousParts).
+strike.vsOblivious += 1(T);
+# (2) Asked as the attack is made, once a Round - the player's to time: a Skill Clash at each Opponent it is aimed at you are
+# not Hidden from already, the attack held till they are settled; won, Hidden from them till it is concluded (chat.mjs
+# stealthStrikeClashes, settleStealthStrike).
+allow stealthStrike.clash;
