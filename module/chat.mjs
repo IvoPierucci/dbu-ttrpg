@@ -716,6 +716,10 @@ async function settleClashEffects(messageId, clash) {
     await settleMagicTrick(message, clash);
   }
 
+  if (clash.analytic && clash.result && !clash.analytic.applied) {
+    await settleAnalytic(message, clash);
+  }
+
   if (clash.sense && clash.result && !clash.sense.applied) {
     await settleSense(message, clash);
   }
@@ -16047,6 +16051,118 @@ export function balancedMindOffer(message, actor, maneuver) {
     maneuverName: other.name, reason: `Balanced Mind - ${maneuver.name}`, grants: { balancedMind: true } } });
 }
 
+/** Analytic Fighter's Options that leave something on the one Analyzed: each one's name, its mark, and whether it Clashes. */
+const ANALYTIC = Object.freeze({
+  damageAnalysis: { name: "Damage Analysis", key: "damage-analysis-mark", clash: true },
+  weak: { name: "Weak Point Analysis", key: "", clash: true },
+  offensive: { name: "Offensive Analysis", key: "offensive-analysis-mark", clash: true },
+  defensive: { name: "Defensive Analysis", key: "defensive-analysis-mark", clash: true },
+  critical: { name: "Critical Tactics", key: "critical-tactics-mark", clash: false },
+  teamwork: { name: "Teamwork Tactics", key: "teamwork-tactics-mark", clash: false }
+});
+
+/**
+ * Analytic Fighter, the Analysis Maneuver used: the Option's mark on the one Analyzed till the end of your next turn - its clock
+ * yours, as Analysis's is - and, where it says so, "a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted
+ * Character" (settleAnalytic). Weak Point Analysis's, kept on you for this Round (`weakPoint`).
+ */
+export async function analyticFighter(actor, option, context = {}) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const own = ANALYTIC[option];
+  const target = fromUuidSync(context?.opponentUuid ?? "");
+  if (!actor || !own || !target) return UNSPENT;
+  if (own.key) {
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(target, own.key, 1);
+    await lasting(actor, { kind: KINDS.CONDITION, key: own.key, edge: EDGES.END, next: true, on: target.uuid, source: own.name });
+  }
+  if (option === "weak") await actor.setFlag(SCOPE, "weakPoint", { uuid: target.uuid, round: roundKey(), won: false, message: "" });
+  if (!own.clash) return;
+  return postSkillClash(actor, target, { name: own.name, type: "outOfSequence",
+    clash: { skill: "investigation", defenderSkills: ["intuition", "bluff", "stealth"] } }, { analytic: { option, applied: false } });
+}
+
+/**
+ * Analytic Fighter's Clash, settled - "If you won the Clash for this effect": Damage Analysis, Broken till the start of your next
+ * turn; Weak Point Analysis, the Called Shot on that Maneuver without its Action; Offensive and Defensive Analysis, your Allies
+ * the same 1(T) - a second entry on its clock, marked won.
+ */
+async function settleAnalytic(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, analytic: { ...clash.analytic, applied: true } });
+  const analyst = fromUuidSync(clash.challengerUuid);
+  const target = fromUuidSync(clash.defenderUuid);
+  const option = clash.analytic?.option;
+  const own = ANALYTIC[option];
+  if (!analyst || !target || !own) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${target.name} gives nothing away.`);
+  if (option === "damageAnalysis") {
+    await markUntilNextTurn(analyst, target, "broken", 1, "start", own.name);
+    return settledNote(message, `${target.name}: Broken until the start of ${analyst.name}'s next turn.`);
+  }
+  if (option === "weak") {
+    const weak = analyst.getFlag?.(SCOPE, "weakPoint");
+    if (weak?.uuid === target.uuid) await requestActorUpdate(analyst, { [`flags.${SCOPE}.weakPoint`]: { ...weak, won: true } });
+    return settledNote(message, `${analyst.name}: the next Attacking Maneuver at ${target.name} this Round may be a Called Shot.`);
+  }
+  if ((option === "offensive") || (option === "defensive")) {
+    await lasting(analyst, { kind: KINDS.CONDITION, key: own.key, edge: EDGES.END, next: true, on: target.uuid,
+      source: `${own.name} (won)` });
+    return settledNote(message, `${analyst.name}'s Allies: ${(option === "offensive") ? "Strike" : "Dodge"} Rolls against ${target.name} higher too.`);
+  }
+}
+
+/** Analytic Fighter: who has a `key` mark running on this one - each once - and whether its Clash was won. */
+function analyticBy(key, uuid) {
+  const found = new Map();
+  for (const token of canvas?.tokens?.placeables ?? []) {
+    const who = token.actor;
+    if (!who || found.has(who.uuid)) continue;
+    const mine = (who.system?.timed ?? []).filter(entry => (entry?.kind === "condition") && (entry.key === key) && (entry.on === uuid));
+    if (mine.length) found.set(who.uuid, { actor: who, won: mine.some(entry => String(entry.source ?? "").endsWith("(won)")) });
+  }
+  return [...found.values()];
+}
+
+/**
+ * Analytic Fighter, a roll against one Analyzed: Damage Analysis's Wound, Offensive Analysis's Strike, Defensive Analysis's Dodge
+ * - 1(T), yours; won, your Allies' too (the Talent once a character: the highest) - and Teamwork Tactics' quarter of an Ally's
+ * Scholarship Modifier on every Combat Roll ("only gain the highest bonus").
+ */
+function analyticParts(roller, other, roll) {
+  if (!roller || !other || (roller.uuid === other.uuid)) return [];
+  const allies = new Set(alliesOnScene(roller).map(ally => ally.uuid));
+  if (allies.has(other.uuid)) return [];
+  const tier = who => Math.max(1, Number(who.system?.tierOfPower) || 1);
+  const parts = [];
+  const own = { strike: "offensive", dodge: "defensive", wound: "damageAnalysis" }[roll];
+  const by = analyticBy(ANALYTIC[own].key, other.uuid).filter(each => (each.actor.uuid === roller.uuid)
+    || (each.won && (own !== "damageAnalysis") && allies.has(each.actor.uuid)));
+  if (by.length) parts.push({ label: ANALYTIC[own].name, written: "+1(T)", value: Math.max(...by.map(each => tier(each.actor))) });
+  const quarter = Math.max(0, ...analyticBy(ANALYTIC.teamwork.key, other.uuid).filter(each => allies.has(each.actor.uuid))
+    .map(each => Math.ceil((Number(each.actor.system?.attributes?.scholarship?.mod) || 0) / 4)));
+  if (quarter > 0) parts.push({ label: ANALYTIC.teamwork.name, value: quarter });
+  return parts;
+}
+
+/** Critical Tactics: a Strike or a Wound at one of these with it on them - its Critical Target 1 lower. */
+function criticalTactics(uuids) {
+  return uuids.some(uuid => analyticBy(ANALYTIC.critical.key, uuid).length) ? 1 : 0;
+}
+
+/**
+ * Weak Point Analysis: "your Combat Rolls for the next Attacking Maneuver made against the targeted Character during this Combat
+ * Round have their Natural Result increased by 2" - the first attack at them this Round claims it (its card), its Strike and its
+ * Wound.
+ */
+async function weakPointNatural(attacker, uuids, message) {
+  const weak = attacker?.getFlag?.(SCOPE, "weakPoint");
+  if (!weak || (weak.round !== roundKey()) || !message) return 0;
+  if (weak.message) return (weak.message === message.id) ? 2 : 0;
+  if (!uuids.includes(weak.uuid)) return 0;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.weakPoint`]: { ...weak, message: message.id } });
+  return 2;
+}
+
 /**
  * Team Pose (1): "If an Ally uses the Hype Maneuver within a Sphere AoE centered on you, regain 2(bT) Ki Points." The Hype
  * used: each of the user's Allies with something answering it (`ally-hype`) answers - Automatic, or asked; within the Sphere,
@@ -21960,10 +22076,14 @@ async function resolveAttackWork(message, attack) {
   // Maneuver's Strike Roll to 5."
   const chargedCritical = (attacker.system.effects?.slots?.["strike.criticalAtCharges"] === true)
     && ((Number(attack.energyCharges) || 0) >= 3);
+  // Critical Tactics: at one with it on them, 1 lower.
+  const tactics = criticalTactics(targets.map(entry => entry.uuid));
+  // Weak Point Analysis: the first attack at them this Round, its Natural 2 higher.
+  const weakPoint = await weakPointNatural(attacker, targets.map(entry => entry.uuid), message);
   const strike = await rollSide(attacker, strikeParts(attacker, attack), {
     ...attackerOptions, slot: "strike", attackingManeuver: true,
-    ...(chargedCritical ? { criticalTarget: 5 } : (ownCritical ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN,
-      (Number(attacker.system.criticalTarget) || 10) + ownCritical) } : {})),
+    ...(chargedCritical ? { criticalTarget: 5 } : ((ownCritical || tactics) ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN,
+      (Number(attacker.system.criticalTarget) || 10) + ownCritical - tactics) } : {})),
     // Clearing puts a floor under the Natural Result; Cutting makes anything short of a
     // Critical a Botch. Both belong to the Profile rather than to the character, so they
     // travel with the roll instead of being written to a Slot.
@@ -21972,7 +22092,7 @@ async function resolveAttackWork(message, attack) {
     // The Weapon's own - Targeting System's "Increase the Natural Result of any Strike Roll".
     // And Negative Ki (3)'s, taken off an Impaired attacker's.
     naturalAdd: (Number(attack.weapon?.strikeNatural) || 0) + sniperNatural(attacker, attack) + negativeNatural(attack, attacker.uuid)
-      - (Number(attack.angryNatural) || 0),
+      - (Number(attack.angryNatural) || 0) + weakPoint,
     // Twin-Linked or Dead-Link on the Strike: made twice, one kept.
     linked: attack.technique?.linked?.strike ?? ""
   });
@@ -22064,7 +22184,7 @@ async function resolveAttackWork(message, attack) {
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
       ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
       ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike"), ...fleetParts(attacker, target),
-      ...smallerParts(attacker, target)]
+      ...smallerParts(attacker, target), ...analyticParts(attacker, target, "strike")]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
@@ -23940,12 +24060,15 @@ async function rollAttackWoundWork(message, attack) {
     attackingManeuver: true,
     // Patient Sniper (3): through the Exploit Maneuver in an Ally's turn, 1 on its Natural Result. Wrath of the Dragon (2),
     // (3): the Impaired.
-    naturalAdd: sniperNatural(attacker, attack) + wrathNatural(attacker, attack, struck),
+    // Weak Point Analysis's, on the attack that claimed it.
+    naturalAdd: sniperNatural(attacker, attack) + wrathNatural(attacker, attack, struck) + await weakPointNatural(attacker, [], message),
     urgent: Boolean(attack.urgentWound || attack.urgentRolls),
     // Cutting: "on the Wound Roll, the Critical Target is 5 (ignoring the usual limit)."
     // The usual limit is the floor a character's own Critical Target is held to when it
     // is derived, so a stated one goes in as written rather than through it.
-    criticalTarget: profileFor(attack)?.woundCriticalTarget ?? null,
+    // Critical Tactics: one it reached with it on them, 1 lower.
+    criticalTarget: profileFor(attack)?.woundCriticalTarget ?? (criticalTactics(struck.map(each => each.actor?.uuid ?? each.uuid))
+      ? Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, (Number(attacker.system.criticalTarget) || 10) - 1) : null),
     // Twin-Linked or Dead-Link on the Wound: made twice, one kept.
     linked: attack.technique?.linked?.wound ?? "",
     // Delayed's and Personal Bomb's: the Wound Roll made when it hit, not a new one.
@@ -24098,6 +24221,7 @@ async function rollAttackWoundWork(message, attack) {
       ...rangeParts(attacker, attack, target, "wound"),
       ...heelParts(attacker, target),
       ...largerParts(attacker, target),
+      ...analyticParts(attacker, target, "wound"),
       // Full Counter (2): the Might of the one who Jolted, on this attack's Wound against them.
       { label: "Full Counter", value: Number(defenceFor(attack, target.uuid)?.fullCounter) || 0 },
       ...studiedParts(attacker, target),
@@ -24353,6 +24477,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...tacticianParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Intelligent Fighter (5): the attack of one you Studied.
   parts.push(...studiedDodge(actor, attack));
+  // Analytic Fighter: Defensive Analysis's, Teamwork Tactics'.
+  parts.push(...analyticParts(actor, fromUuidSync(attack?.attackerUuid ?? ""), "dodge"));
   // Telepathic Warning: the Dodge raised for this attack by whoever warned them.
   parts.push(...telepathicDodge(actor, attack));
   // Refined Combat's Fleet-Footed.

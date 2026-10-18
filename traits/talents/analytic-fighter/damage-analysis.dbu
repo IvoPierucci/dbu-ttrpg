@@ -1,0 +1,16 @@
+id: damage-analysis
+name: Damage Analysis
+order: 1
+optionOf: analytic-fighter
+optionEffect: 1
+description: >
+  If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, increase your Wound Rolls against that target by 1(T) until the end of your next turn. If you won the Clash for this effect, that target gains the Broken Combat Condition until the start of your next turn.
+text: >
+  Damage Analysis [Triggered, 1/Round]: If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, increase your Wound Rolls against that target by 1(T) until the end of your next turn. If you won the Clash for this effect, that target gains the Broken Combat Condition until the start of your next turn.
+
+---
+
+# Analysis used: Damage Analysis (a mark) on them, your Wound 1(T) against them till the end of your next turn; a Clash,
+# won - Broken till the start of your next turn (chat.mjs analyticFighter, settleAnalytic, analyticParts).
+[triggered/analysis, 1/round, effect 1]
+analyticFighter(damageAnalysis);

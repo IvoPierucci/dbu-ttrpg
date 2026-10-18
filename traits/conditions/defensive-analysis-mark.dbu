@@ -1,0 +1,14 @@
+id: defensive-analysis-mark
+name: Defensive Analysis
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Analytic Fighter's Defensive Analysis leaves on the one Analyzed - the clock and the bonus the Analyst's,
+# read against them (chat.mjs analyticParts, criticalTactics).
+combatCondition: no
+source: Core Rule
+description: >
+  Defensive Analysis: the Analyst's Dodge Rolls 1(T) higher against your attacks - won, their Allies' too, till the end of the Analyst's next turn.
+text: >
+  Defensive Analysis: If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, increase your Dodge Rolls against that target by 1(T) until the end of your next turn. If you won the Clash for this effect, increase the Dodge Rolls of all Allies against that Opponent by an equal amount.
+
+---

@@ -144,6 +144,12 @@ export const VERBS = Object.freeze({
     doc: "Motivating Performance: the Allies within a Sphere ticked - Motivated, a quarter of your Personality Modifier, while "
        + "you are Hyped (chat.mjs motivatingPerformance)."
   },
+  analyticFighter: {
+    args: [1, 1],
+    names: [0],
+    doc: "Analytic Fighter: the named Option's (damageAnalysis, weak, offensive, defensive, critical, teamwork) - its mark on the one "
+       + "Analyzed, and its Clash where it has one (chat.mjs analyticFighter)."
+  },
   dynamicHypeEnds: {
     args: [0, 0],
     doc: "Hyped gone: the Option asked at that Hype and Dynamic Hype (2)'s second no longer in use (chat.mjs dynamicHypeEnds)."

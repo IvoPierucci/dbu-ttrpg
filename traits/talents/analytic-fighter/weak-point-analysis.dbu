@@ -1,0 +1,16 @@
+id: weak-point-analysis
+name: Weak Point Analysis
+order: 2
+optionOf: analytic-fighter
+optionEffect: 1
+description: >
+  If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, your Combat Rolls for the next Attacking Maneuver made against the targeted Character during this Combat Round have their Natural Result increased by 2. If you won the Clash for this effect, you may make that Maneuver a Called Shot.
+text: >
+  Weak Point Analysis [Triggered, 1/Round]: If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, your Combat Rolls for the next Attacking Maneuver made against the targeted Character during this Combat Round have their Natural Result increased by 2. If you won the Clash for this effect, you may make that Maneuver a Called Shot.
+
+---
+
+# Analysis used: your next Attacking Maneuver at them this Round, its Strike's and Wound's Natural Result 2 higher; a Clash,
+# won - the Called Shot on it without its Action (chat.mjs analyticFighter, weakPointNatural; use-maneuver.mjs applyModifiers).
+[triggered/analysis, 1/round, effect 1]
+analyticFighter(weak);

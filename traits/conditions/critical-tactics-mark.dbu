@@ -1,0 +1,14 @@
+id: critical-tactics-mark
+name: Critical Tactics
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Analytic Fighter's Critical Tactics leaves on the one Analyzed - the clock and the bonus the Analyst's,
+# read against them (chat.mjs analyticParts, criticalTactics).
+combatCondition: no
+source: Core Rule
+description: >
+  Critical Tactics: the Critical Target of Strike and Wound Rolls against you 1 lower, till the end of the Analyst's next turn.
+text: >
+  Critical Tactics: If you use the Analysis Maneuver, reduce the Critical Target of all Strike and Wound Rolls made against the target by 1 until the end of your next turn.
+
+---

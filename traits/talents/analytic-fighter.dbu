@@ -1,0 +1,24 @@
+id: analytic-fighter
+name: Analytic Fighter
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in Investigation
+description: >
+  Studious and perceptive, you take the time to pick apart an enemy’s strengths and weaknesses.
+text: >
+  Analytic Fighter: Studious and perceptive, you take the time to pick apart an enemy’s strengths and weaknesses.
+  –Prerequisites: 2+ Skill Ranks in Investigation
+  (1)-[Option]: Upon gaining this Talent, select an effect from the list below:
+
+  * Damage Analysis [Triggered, 1/Round]: If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, increase your Wound Rolls against that target by 1(T) until the end of your next turn. If you won the Clash for this effect, that target gains the Broken Combat Condition until the start of your next turn.
+  * Weak Point Analysis [Triggered, 1/Round]: If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, your Combat Rolls for the next Attacking Maneuver made against the targeted Character during this Combat Round have their Natural Result increased by 2. If you won the Clash for this effect, you may make that Maneuver a Called Shot.
+  * Offensive Analysis [Triggered, 1/Round]: If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, increase your Strike Rolls against that target by 1(T) until the end of your next turn. If you won the Clash for this effect, increase the Strike Rolls of all Allies against that Opponent by an equal amount.
+  * Defensive Analysis [Triggered, 1/Round]: If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, increase your Dodge Rolls against that target by 1(T) until the end of your next turn. If you won the Clash for this effect, increase the Dodge Rolls of all Allies against that Opponent by an equal amount.
+  * Critical Tactics [Triggered, 1/Round]: If you use the Analysis Maneuver, reduce the Critical Target of all Strike and Wound Rolls made against the target by 1 until the end of your next turn.
+  * Teamwork Tactics [Triggered, 1/Round]: If you use the Analysis Maneuver, increase the Combat Rolls of all Allies against that Opponent by 1/4 (rounded up) of your Scholarship Modifier (this effect cannot stack – if multiple Characters use this effect, only gain the highest bonus) until the end of your next turn.
+  * Counter Tactics [Triggered, 1/Round]: If you use the Analysis Maneuver, gain an additional Counter Action. You may allow Allies to use this Counter Action if it is in response to the Attacking Maneuver of the targeted Character.
+
+---
+
+# (1) Its Options, one file each beside this one - asked as it is gained (racial.mjs answeredTalent), changeable on its
+# Options tab. Each answers the Analysis Maneuver used (use-maneuver.mjs, the `analysis` Moment): Automatic by default, its
+# Triggered/Automatic button.

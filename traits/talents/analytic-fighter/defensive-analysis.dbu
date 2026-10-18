@@ -1,0 +1,16 @@
+id: defensive-analysis
+name: Defensive Analysis
+order: 4
+optionOf: analytic-fighter
+optionEffect: 1
+description: >
+  If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, increase your Dodge Rolls against that target by 1(T) until the end of your next turn. If you won the Clash for this effect, increase the Dodge Rolls of all Allies against that Opponent by an equal amount.
+text: >
+  Defensive Analysis [Triggered, 1/Round]: If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, increase your Dodge Rolls against that target by 1(T) until the end of your next turn. If you won the Clash for this effect, increase the Dodge Rolls of all Allies against that Opponent by an equal amount.
+
+---
+
+# Analysis used: Defensive Analysis (a mark) on them, your Dodge 1(T) against their attacks till the end of your next turn; a
+# Clash, won - your Allies' too, your 1(T) (chat.mjs analyticFighter, settleAnalytic, analyticParts).
+[triggered/analysis, 1/round, effect 1]
+analyticFighter(defensive);

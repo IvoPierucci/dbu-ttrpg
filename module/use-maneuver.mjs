@@ -1512,10 +1512,19 @@ async function applyModifiers(actor, applied) {
       content: "<p>The Called Shot for 2 stacks of Critical Eye instead of its Action?</p>", rejectClose: false });
     if (byEyes) applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
   }
+  // Weak Point Analysis, its Clash won: "you may make that Maneuver a Called Shot" - the next Attacking Maneuver at them this
+  // Round, the Called Shot on it without its Action.
+  const weak = actor.getFlag?.("dbu-ttrpg", "weakPoint");
+  let weakCalled = false;
+  if (called && !byEyes && weak?.won && !weak.message && (weak.round === round)
+    && Array.from(game.user.targets ?? []).some(token => token.actor?.uuid === weak.uuid)) {
+    weakCalled = true;
+    applied = applied.map(entry => (entry === called) ? { ...entry, actions: 0 } : entry);
+  }
   // Attentive Warrior (3): "If you have Initiative Advantage, when making an Attacking Maneuver, you may apply the Called Shot
   // Modifier Maneuver to that Attacking Maneuver without spending an Action" - asked, once an Encounter.
   const encounter = game.combat?.id ?? "none";
-  if (called && !byEyes && (actor.system.effects?.slots?.["calledShot.byAdvantage"] === true)
+  if (called && !byEyes && !weakCalled && (actor.system.effects?.slots?.["calledShot.byAdvantage"] === true)
     && (actor.getFlag?.("dbu-ttrpg", "attentiveCalledEncounter") !== encounter)
     && (await import("./effects/conditions.mjs")).initiativeAdvantageOf(actor)
     && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"],
@@ -5741,6 +5750,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // sits on them and the clock sits on you, because the turn the entry names is yours -
   // and that clock is also the record of who Analyzed whom.
   if (maneuver.analysis && targetActor) await analyze(actor, targetActor);
+  // What answers it - Analytic Fighter's Options: Automatic, or asked in a window.
+  if (maneuver.analysis && targetActor) {
+    await (await import("./chat.mjs")).answerFor(actor, "analysis", { opponentUuid: targetActor.uuid });
+  }
 
   // "Target an Opponent, that Opponent becomes 'Seen' until the end of your next turn."
   // The same split Analysis uses: the mark is theirs and the clock is yours.

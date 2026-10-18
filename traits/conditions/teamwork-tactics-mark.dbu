@@ -1,0 +1,14 @@
+id: teamwork-tactics-mark
+name: Teamwork Tactics
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Analytic Fighter's Teamwork Tactics leaves on the one Analyzed - the clock and the bonus the Analyst's,
+# read against them (chat.mjs analyticParts, criticalTactics).
+combatCondition: no
+source: Core Rule
+description: >
+  Teamwork Tactics: the Analyst's Allies' Combat Rolls against you higher by a quarter of their Scholarship Modifier, till the end of the Analyst's next turn.
+text: >
+  Teamwork Tactics: If you use the Analysis Maneuver, increase the Combat Rolls of all Allies against that Opponent by 1/4 (rounded up) of your Scholarship Modifier (this effect cannot stack – if multiple Characters use this effect, only gain the highest bonus) until the end of your next turn.
+
+---

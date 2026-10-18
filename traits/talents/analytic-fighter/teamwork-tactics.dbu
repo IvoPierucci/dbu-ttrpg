@@ -1,0 +1,16 @@
+id: teamwork-tactics
+name: Teamwork Tactics
+order: 6
+optionOf: analytic-fighter
+optionEffect: 1
+description: >
+  If you use the Analysis Maneuver, increase the Combat Rolls of all Allies against that Opponent by 1/4 (rounded up) of your Scholarship Modifier (this effect cannot stack – if multiple Characters use this effect, only gain the highest bonus) until the end of your next turn.
+text: >
+  Teamwork Tactics [Triggered, 1/Round]: If you use the Analysis Maneuver, increase the Combat Rolls of all Allies against that Opponent by 1/4 (rounded up) of your Scholarship Modifier (this effect cannot stack – if multiple Characters use this effect, only gain the highest bonus) until the end of your next turn.
+
+---
+
+# Analysis used: Teamwork Tactics (a mark) on them till the end of your next turn - your Allies' Combat Rolls against them a
+# quarter of your Scholarship Modifier higher; of several, the highest (chat.mjs analyticParts).
+[triggered/analysis, 1/round, effect 1]
+analyticFighter(teamwork);

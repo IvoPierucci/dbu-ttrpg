@@ -1,0 +1,15 @@
+id: counter-tactics
+name: Counter Tactics
+order: 7
+optionOf: analytic-fighter
+optionEffect: 1
+description: >
+  If you use the Analysis Maneuver, gain an additional Counter Action. You may allow Allies to use this Counter Action if it is in response to the Attacking Maneuver of the targeted Character.
+text: >
+  Counter Tactics [Triggered, 1/Round]: If you use the Analysis Maneuver, gain an additional Counter Action. You may allow Allies to use this Counter Action if it is in response to the Attacking Maneuver of the targeted Character.
+
+---
+
+# Analysis used: a Counter Action more. An Ally using it against the targeted Character's attack - the table's.
+[triggered/analysis, 1/round, effect 1]
+actions.counterGained += 1;

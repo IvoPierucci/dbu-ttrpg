@@ -1,0 +1,14 @@
+id: damage-analysis-mark
+name: Damage Analysis
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Analytic Fighter's Damage Analysis leaves on the one Analyzed - the clock and the bonus the Analyst's,
+# read against them (chat.mjs analyticParts, criticalTactics).
+combatCondition: no
+source: Core Rule
+description: >
+  Damage Analysis: the Analyst's Wound Rolls 1(T) higher against you, till the end of the Analyst's next turn.
+text: >
+  Damage Analysis: If you use the Analysis Maneuver, make a Clash (Investigation vs Intuition/Bluff/Stealth) against the targeted Character. Regardless of if you win or lose, increase your Wound Rolls against that target by 1(T) until the end of your next turn. If you won the Clash for this effect, that target gains the Broken Combat Condition until the start of your next turn.
+
+---
