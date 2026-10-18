@@ -1,0 +1,22 @@
+id: zen-counter
+name: Zen Counter
+talentCategory: mindful
+prerequisites: Calm Mind
+description: >
+  Your patience and tranquility allow you to see past the emotional responses of others and quickly find the most efficient way to counter an attack.
+text: >
+  Zen Counter: Your patience and tranquility allow you to see past the emotional responses of others and quickly find the most efficient way to counter an attack.
+  –Prerequisites: Calm Mind
+  (1)-[Passive]: While in the Mindful State, increase the Natural Result of your Strike Rolls when using the Parry effect of the Defend Maneuver by 1.
+  (2)-[Triggered, L/Round]: If you are targeted by an Attacking Maneuver while in the Mindful State, increase your Combat Rolls by 1(T) for the duration of that Maneuver.
+
+---
+
+[passive]
+# (1) A Parry's Natural Result (chat.mjs DEFENCES.parry).
+if (inState("mindful")) {
+  parry.natural += 1;
+}
+# (2) Asked in Respond in the Mindful State, L a Round (L: its Level): 1(T) on what answers that attack (chat.mjs
+# zenCounterParts).
+allow zenCounter.rolls;

@@ -23743,6 +23743,12 @@ async function rollAttackWoundWork(message, attack) {
  * each part is kept separate rather than folded into one number that would be halved
  * wholesale.
  */
+/** Zen Counter (2): its 1(T), taken in Respond, on what answers that attack. */
+function zenCounterParts(actor, attack) {
+  const value = Number(defenceFor(attack ?? {}, actor?.uuid)?.zenCounter) || 0;
+  return value ? [{ label: "Zen Counter", written: "+1(T)", value }] : [];
+}
+
 function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   const defenseValue = actor.system.defenseValue;
   const parts = [{
@@ -23798,6 +23804,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...lockOnDodge(actor, attack));
   // Tuffle Superiority (2): your Inferior's attack.
   parts.push(...inferiorDodge(actor, attack));
+  // Zen Counter (2), taken as it was answered.
+  parts.push(...zenCounterParts(actor, attack));
   // Draconic Physique (2): an Impaired Opponent's attack - the Defense Value under the Dodge.
   parts.push(...draconicParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Combat Tactician: the attack of an Opponent suffering from a Combat Condition.
@@ -24202,10 +24210,13 @@ const DEFENCES = {
       // Combat Tactician: a Parry's Strike against an Opponent suffering from a Combat Condition.
       ...tacticianParts(actor, fromUuidSync(attack?.attackerUuid ?? "")),
       // Mind Reading: "the Dice Score of any Strike Roll made through the Parry effect of the Defend Maneuver".
-      ...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true })
+      ...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }),
+      ...zenCounterParts(actor, attack)
     ],
     answer: (actor, options, attack) => rollSide(actor, DEFENCES.parry.parts(actor, attack),
-      { ...options, slot: "strike" }),
+      // Zen Counter (1): the Parry's Natural Result.
+      { ...options, slot: "strike",
+        naturalAdd: (Number(options?.naturalAdd) || 0) + Math.round(applySlot(actor.system.effects?.slots, "parry.natural", 0)) }),
     soak: (soak) => soak,
     wound: (total) => total
   },
@@ -27737,6 +27748,18 @@ async function defendAgainst(message, target, attack, then = chooseDefence) {
     await setResource(target, "tension", Math.max(0, held - 1));
   }
 
+  // Zen Counter (2): "If you are targeted by an Attacking Maneuver while in the Mindful State, increase your Combat Rolls by
+  // 1(T) for the duration of that Maneuver" - asked, L a Round.
+  const zenUsed = target.getFlag?.(SCOPE, "zenCounterRound");
+  const zenCount = (zenUsed?.round === roundKey()) ? (Number(zenUsed.n) || 0) : 0;
+  const level = Number(target.system.states?.mindful) || 0;
+  if ((target.system?.effects?.slots?.["zenCounter.rolls"] === true) && (level > 0) && (zenCount < level)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${target.name} - Zen Counter` },
+      content: `<p data-tooltip="${level} a Round (L); ${zenCount} used">Your Combat Rolls +1(T) against this attack?</p>`,
+      rejectClose: false })) {
+    await target.setFlag(SCOPE, "zenCounterRound", { round: roundKey(), n: zenCount + 1 });
+    jolt.zenCounter = Math.max(1, Number(target.system.tierOfPower) || 1);
+  }
   return then(message, target, chosen.defence, chosen.kiWager, chosen.foundation, parryWith, jolt);
 }
 
