@@ -1,0 +1,20 @@
+id: iron-fist
+name: Iron Fist
+talentCategory: physical-attack
+prerequisites: Enhanced Fist
+description: >
+  Unleashing a powerful blow, you strike hard and fast, landing a brutal attack.
+text: >
+  Iron Fist: Unleashing a powerful blow, you strike hard and fast, landing a brutal attack.
+  –Prerequisites: Enhanced Fist
+  (1)-[Passive]: Increase the Wound Rolls of your Physical Attacks by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you use the Energy Charge Maneuver for a Physical Attack that does not possess an AoE, use the declared Attacking Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+wound.physical += 1(T);
+# (2) The Energy Charge Maneuver used for a Physical Attack with no AoE: it offered on the Energy Charge's card, out of sequence,
+# as a Physical Attack - taken, once an Encounter (chat.mjs offerIronFist, takePointBlank).
+allow charge.ironFist;

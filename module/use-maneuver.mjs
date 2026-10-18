@@ -4496,8 +4496,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     await (await import("./maneuvers.mjs")).noteEnergyCharge(actor);
     const card = await postManeuver(actor, maneuver, { foundation: null });
     await recordManeuverType(actor, maneuver.type, { messageId: card?.id, maneuverId: maneuver.id });
-    // Point Blank Shot (2): the declared Attacking Maneuver, out of sequence, offered on this card.
+    // Point Blank Shot (2): the declared Attacking Maneuver, out of sequence, offered on this card. Iron Fist (2) the same.
     (await import("./chat.mjs")).offerPointBlank(card, actor);
+    await (await import("./chat.mjs")).offerIronFist(card, actor);
     return true;
   }
 

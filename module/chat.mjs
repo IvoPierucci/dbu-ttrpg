@@ -22249,29 +22249,60 @@ export function offerPointBlank(card, actor) {
     maneuverName: item.name, reason: "Point Blank Shot", pointBlank: true } });
 }
 
-/** Point Blank Shot, taken: the charged Attacking Maneuver out of sequence, as an Energy Attack - once an Encounter. */
+/**
+ * Iron Fist (2): "If you use the Energy Charge Maneuver for a Physical Attack that does not possess an AoE, use the declared
+ * Attacking Maneuver as an Out-of-Sequence Maneuver." Offered on the Energy Charge's card; taken, once an Encounter
+ * (takePointBlank, its Physical).
+ */
+export async function offerIronFist(card, actor) {
+  if (!card || (actor?.system?.effects?.slots?.["charge.ironFist"] !== true)
+    || (actor.getFlag?.(SCOPE, "ironFistEncounter") === (game.combat?.id ?? "none"))) return;
+  const charging = actor.system.charging;
+  const item = actor.items.get(charging?.maneuverId ?? "");
+  const { chargeOfFoundation, definitionOf } = await import("./use-maneuver.mjs");
+  if (!item || !chargeOfFoundation(item, charging.profile, "physical")
+    || (charging.foundation && (charging.foundation !== "physical"))) return;
+  // "That does not possess an AoE" - its Profile's, or the Area a Technique's features build.
+  const definition = definitionOf(item);
+  const { buildArea } = await import("./technique.mjs");
+  const area = buildArea({ profiles: [charging.profile, definition.secondProfile].filter(Boolean),
+    features: definition.advantages ?? [], choices: definition.featureChoices ?? {} }).area;
+  if (area) return;
+  requestEdit(card, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack",
+    maneuverName: item.name, reason: "Iron Fist", pointBlank: true, ironFist: true } });
+}
+
+/**
+ * Point Blank Shot, taken: the charged Attacking Maneuver out of sequence, as an Energy Attack - once an Encounter. Iron Fist's
+ * the same, as a Physical one.
+ */
 async function takePointBlank(message, actor, offer) {
+  const rule = offer.ironFist
+    ? { foundation: "physical", flag: "ironFistEncounter", name: "Iron Fist", kind: "a Physical Attack" }
+    : { foundation: "energy", flag: "pointBlankEncounter", name: "Point Blank Shot", kind: "an Energy Attack" };
   const encounter = game.combat?.id ?? "none";
-  if (actor.getFlag?.(SCOPE, "pointBlankEncounter") === encounter) {
-    ui.notifications.warn(`${actor.name}: Point Blank Shot - already used this Combat Encounter.`);
+  if (actor.getFlag?.(SCOPE, rule.flag) === encounter) {
+    ui.notifications.warn(`${actor.name}: ${rule.name} - already used this Combat Encounter.`);
     return null;
   }
   const charging = actor.system.charging;
   const item = actor.items.get(charging?.maneuverId ?? "");
-  if (!item || !chargedAsEnergy(actor)) {
-    ui.notifications.warn(`${actor.name} is not charging an Energy Attack.`);
+  const { chargeOfFoundation } = await import("./use-maneuver.mjs");
+  if (!item || !chargeOfFoundation(item, charging.profile, rule.foundation)) {
+    ui.notifications.warn(`${actor.name} is not charging ${rule.kind}.`);
     return null;
   }
   const { definitionOf, useManeuver, useTechnique } = await import("./use-maneuver.mjs");
   const definition = definitionOf(item);
   const used = ((item.system.tags ?? []).includes("signature") && !item.system.signatureTechnique)
     ? await useTechnique(actor, item.id, { outOfSequence: true })
-    // A Profile of more than one Foundation, thrown as Energy.
-    : await useManeuver(actor, { ...definition, profileFoundation: { ...(definition.profileFoundation ?? {}), [charging.profile]: "energy" } },
+    // A Profile of more than one Foundation, thrown as the one named.
+    : await useManeuver(actor, { ...definition,
+        profileFoundation: { ...(definition.profileFoundation ?? {}), [charging.profile]: rule.foundation } },
       { outOfSequence: true });
   if (!used) return null;
   requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
-  await actor.setFlag(SCOPE, "pointBlankEncounter", encounter);
+  await actor.setFlag(SCOPE, rule.flag, encounter);
   return used;
 }
 
