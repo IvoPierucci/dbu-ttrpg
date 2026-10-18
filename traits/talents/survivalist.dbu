@@ -1,0 +1,22 @@
+id: survivalist
+name: Survivalist
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in Survival
+description: >
+  You are skilled at adapting to extreme environmental conditions.
+text: >
+  Survivalist: You are skilled at adapting to extreme environmental conditions.
+  –Prerequisites: 2+ Skill Ranks in Survival
+  (1)-[Passive]: Reduce the Critical Target for your Survival Skill Checks by 1.
+  (2)-[Passive]: While you are in a Battle Weather that you are not suffering the effects of, increase your Defense Value and Soak Value by 1(T).
+
+---
+
+[passive]
+# (1)
+skill.survival.criticalTarget -= 1;
+# (2) A Battle Weather on you, felt at Tier 0 - ignored, by Weather Resistant or Brace (weatherUnfelt).
+if (weatherUnfelt) {
+    defenseValue += 1(T);
+    soakValue += 1(T);
+}

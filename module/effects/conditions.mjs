@@ -409,6 +409,13 @@ const PREDICATES = {
     && ((scope.data?.parent?.getFlag?.("dbu-ttrpg", "movedRound") ?? "")
       === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`),
 
+  /**
+   * Survivalist (2): "While you are in a Battle Weather that you are not suffering the effects of" - one set on you, felt at
+   * Tier 0 (Weather Resistant's, Brace's: "completely ignore the effects").
+   */
+  weatherUnfelt: scope => Boolean(scope.data?.battlefield?.weather?.id)
+    && (Number(scope.data?.battlefield?.weather?.felt ?? NaN) === 0),
+
   /** A Snack eaten this Combat Round - Snack Motivated's. */
   snackThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "snackRound") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
