@@ -6079,6 +6079,11 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && !outOfSequence) await (await import("./chat.mjs")).mimicryOffers(card, actor, maneuver);
   // Balanced Mind (3): the Hype or Analysis used - the other offered on its card, out of sequence.
   if (card) (await import("./chat.mjs")).balancedMindOffer(card, actor, maneuver);
+  // Team Pose: the Hype used - (2) the Hype offered on its card to Allies with Show Stopping Performance; (1) each Ally's Ki.
+  if (card && ((maneuver.through?.id ?? maneuver.id) === "hype")) {
+    (await import("./chat.mjs")).teamPoseOffers(card, actor);
+    await (await import("./chat.mjs")).allyHyped(actor);
+  }
   // Magic Blaster (2): a Magical Unique Ability or the Magic Trick used - the Energy Charge offered on its card, out of sequence.
   if (card) (await import("./chat.mjs")).offerMagicCharge(card, actor, maneuver);
 

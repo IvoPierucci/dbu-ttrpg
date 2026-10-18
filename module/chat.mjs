@@ -16048,6 +16048,35 @@ export function balancedMindOffer(message, actor, maneuver) {
 }
 
 /**
+ * Team Pose (1): "If an Ally uses the Hype Maneuver within a Sphere AoE centered on you, regain 2(bT) Ki Points." The Hype
+ * used: each of the user's Allies with something answering it (`ally-hype`) answers - Automatic, or asked; within the Sphere,
+ * the table's.
+ */
+export async function allyHyped(actor) {
+  for (const ally of alliesOnScene(actor).filter(each => !each.system?.defeated && triggersFor(each, ["ally-hype"]).length)) {
+    await answerFor(ally, "ally-hype");
+  }
+}
+
+/**
+ * Team Pose (2): "If you use the Hype Maneuver, any Allies within a Sphere AoE centered on you that have the Show Stopping
+ * Performance Talent may use the Hype Maneuver as an Out-of-Sequence Maneuver." On the Hype's card, to each such Ally who may
+ * still Hype - who stands within the Sphere, the table's; once an Encounter, spent as the first is taken (the others that card
+ * offered stay: the same use).
+ */
+export function teamPoseOffers(message, actor) {
+  if (!message || !game.combat?.started || (actor?.system?.effects?.slots?.["teamPose.allyHype"] !== true)) return;
+  if (String(actor.getFlag?.(SCOPE, "teamPoseUsed") ?? "").split("|")[0] === game.combat.id) return;
+  const hype = getManeuver("hype");
+  for (const ally of alliesOnScene(actor).filter(each => !each.system?.defeated && Array.from(each.items ?? []).some(item =>
+    (item.type === "talent") && (item.flags?.[SCOPE]?.sourceId === "show-stopping-performance")))) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: ally.uuid, actorName: ally.name, maneuverId: "hype",
+      maneuverName: hype?.name ?? "Hype", reason: `Team Pose - ${actor.name}'s Hype, within the Sphere`,
+      grants: { teamPose: { by: actor.uuid, card: message.id } } } });
+  }
+}
+
+/**
  * Powerful Physique (4): "If you are hit by an Attacking Maneuver, after concluding that Attacking Maneuver, you may use
  * the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, increase the Wound Roll of that Attacking Maneuver
  * by your Force Modifier." Offered on the attack's card at the one who made it; counted, once per Encounter, when taken.
@@ -19411,6 +19440,16 @@ async function takeOutOfSequence(message, actor, offer) {
       offer = { ...offer, targetUuid: picked };
     }
     await actor.setFlag(SCOPE, flag, roundKey());
+  }
+  // Team Pose (2)'s, once an Encounter of whose it is - every Ally its card offered it to, the same use.
+  if (offer.grants?.teamPose) {
+    const by = fromUuidSync(offer.grants.teamPose.by);
+    const [encounter, card] = String(by?.getFlag?.(SCOPE, "teamPoseUsed") ?? "").split("|");
+    if (by && (encounter === (game.combat?.id ?? "none")) && (card !== offer.grants.teamPose.card)) {
+      ui.notifications.warn(`${by.name}: Team Pose - already used this Combat Encounter.`);
+      return null;
+    }
+    if (by) await requestActorUpdate(by, { [`flags.${SCOPE}.teamPoseUsed`]: `${game.combat?.id ?? "none"}|${offer.grants.teamPose.card}` });
   }
   // All Sizes Fit Me (2)'s, once a Round.
   if (offer.grants?.allSizes) {

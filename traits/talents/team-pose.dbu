@@ -1,0 +1,24 @@
+id: team-pose
+name: Team Pose
+talentCategory: skill
+prerequisites: Show Stopping Performance
+description: >
+  With the others in your group, your group performance grows stronger as everyone performs together.
+text: >
+  Team Pose: With the others in your group, your group performance grows stronger as everyone performs together.
+  –Prerequisites: Show Stopping Performance
+  (1)-[Triggered]: If an Ally uses the Hype Maneuver within a Sphere AoE centered on you, regain 2(bT) Ki Points.
+  (2)-[Triggered, 1/Encounter]: If you use the Hype Maneuver, any Allies within a Sphere AoE centered on you that have the Show Stopping Performance Talent may use the Hype Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# (1) An Ally's Hype Maneuver used (chat.mjs allyHyped, the `ally-hype` Moment): Automatic by default - within the Sphere taken
+# as so - or, set Triggered, asked each time.
+[triggered/ally-hype, effect 1]
+ki.value += 2(bT);
+
+# (2) Your Hype's card: the Hype offered out of sequence to each of your Allies with Show Stopping Performance - who is within
+# the Sphere, the table's - once an Encounter, spent as the first is taken; the others that card offered stay (chat.mjs
+# teamPoseOffers).
+[passive]
+allow teamPose.allyHype;

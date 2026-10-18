@@ -77,6 +77,9 @@ const TABLE = [
   { key: "hype", label: "You use the Hype Maneuver", provides: [],
     doc: "Fired as the Hype Maneuver is used, after its own effect and before its card (use-maneuver.mjs) - Show Stopping "
        + "Performance's Options. What is the player's is asked in a window first." },
+  { key: "ally-hype", label: "An Ally uses the Hype Maneuver", provides: [],
+    doc: "Fired on each of the user's Allies once the Hype's card is made (chat.mjs allyHyped) - Team Pose's Ki. What is the "
+       + "player's is asked in a window first." },
   { key: "grappling", label: "You enter a Grapple as the Grappler", provides: [],
     doc: "Fired for the Grappler as a Grapple begins (chat.mjs beginGrapple) - Elongated Tail's Overwhelm. What is the "
        + "player's is asked in a window first." },
