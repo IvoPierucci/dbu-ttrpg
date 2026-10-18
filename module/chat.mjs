@@ -19511,6 +19511,7 @@ async function takeOutOfSequence(message, actor, offer) {
     declared = await (await import("./maneuvers.mjs")).askInjuring(actor, declared);
     // Risky Bet (2), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askRiskyBet(actor, declared);
+    declared = await (await import("./maneuvers.mjs")).askAngryWarrior(actor, declared);
     // Boom's: its Tension's Broken and the stacks it spends.
     if (granted?.boom) declared = { ...declared, boom: granted.boom };
     // Ranger (3)'s: "it must be an Armed Attack", and a move away once it is concluded.
@@ -19802,7 +19803,7 @@ export async function postAttack(actor, target, maneuver,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
-                                   rapidFist = false },
+                                   rapidFist = false, angryNatural = 0 },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -20114,6 +20115,8 @@ export async function postAttack(actor, target, maneuver,
           ...((primed && !reflecting) ? { primed: true } : {}),
           // Rapid Fist (2): its targets' Diminishing Defense doubled for it (dodgeBonus).
           ...((rapidFist && !reflecting) ? { rapidFist: true } : {}),
+          // Angry Warrior (2): off its Strike's Natural Result.
+          ...((angryNatural && !reflecting) ? { angryNatural } : {}),
           // Overwhelming Assault's stacks, and Last Resource's, lost once this is done (spendOverwhelm).
           ...((overwhelm?.spent && !reflecting) ? { overwhelmSpent: overwhelm.spent } : {}),
           // Revenge Bomber's: Self-Explosion given to it, free.
@@ -21727,7 +21730,8 @@ async function resolveAttackWork(message, attack) {
     botchUnlessCritical: Boolean(profileFor(attack)?.botchUnlessCritical),
     // The Weapon's own - Targeting System's "Increase the Natural Result of any Strike Roll".
     // And Negative Ki (3)'s, taken off an Impaired attacker's.
-    naturalAdd: (Number(attack.weapon?.strikeNatural) || 0) + sniperNatural(attacker, attack) + negativeNatural(attack, attacker.uuid),
+    naturalAdd: (Number(attack.weapon?.strikeNatural) || 0) + sniperNatural(attacker, attack) + negativeNatural(attack, attacker.uuid)
+      - (Number(attack.angryNatural) || 0),
     // Twin-Linked or Dead-Link on the Strike: made twice, one kept.
     linked: attack.technique?.linked?.strike ?? ""
   });

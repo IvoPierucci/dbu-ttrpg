@@ -1,0 +1,24 @@
+id: angry-warrior
+name: Angry Warrior
+talentCategory: raging
+prerequisites: N/A
+description: >
+  Your rage pushes you to greater heights, allowing you to hit harder and more often.
+text: >
+  Angry Warrior: Your rage pushes you to greater heights, allowing you to hit harder and more often.
+  –Prerequisites: N/A
+  (1)-[Passive]: The L listed on any Raging Talent refers to your current Level of your use of the Raging State.
+  (2)-[Triggered]: When you make an Attacking Maneuver while in the Raging State, you may choose to reduce the Natural Result of your Strike Roll by up to L. If you do, increase your Wound Roll for that Attacking Maneuver by 1(T) for each reduction to your Natural Result.
+  (3)-[Triggered/Power, 2/Encounter]: Enter the Raging State until the end of your next turn.
+
+---
+
+[passive]
+# (1) Read as `states.raging` - the Level of the Raging State held - wherever a Raging Talent says L.
+# (2) An Attacking Maneuver declared in the Raging State: how much off its Strike's Natural Result, up to L, asked - 1(T) each on
+# its Wound Roll (maneuvers.mjs askAngryWarrior).
+allow angry.natural;
+
+# (3) Offered in a window as the Power Up Maneuver is used: the Raging State, at Level 1, till the end of your next turn.
+[triggered/power, 2/encounter, effect 3]
+enterState("raging", 1, "next-turn");

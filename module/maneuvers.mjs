@@ -1591,6 +1591,23 @@ export async function askRiskyBet(actor, declared) {
 }
 
 /**
+ * Angry Warrior (2): "When you make an Attacking Maneuver while in the Raging State, you may choose to reduce the Natural Result
+ * of your Strike Roll by up to L. If you do, increase your Wound Roll for that Attacking Maneuver by 1(T) for each reduction to
+ * your Natural Result." How much, asked as it is declared; carried as `angryNatural` (its Strike) and a row on its Wound.
+ */
+export async function askAngryWarrior(actor, declared) {
+  const level = Number(actor?.system?.states?.raging) || 0;
+  if (!declared || (level <= 0) || (actor?.system?.effects?.slots?.["angry.natural"] !== true)) return declared;
+  const { askPlayerAmount } = await import("./chat.mjs");
+  const off = Math.min(level, await askPlayerAmount(actor, `${actor.name}: Angry Warrior`, level,
+    "off this Strike's Natural Result - 1(T) each on its Wound Roll"));
+  if (off <= 0) return declared;
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  return { ...declared, angryNatural: off,
+    woundExtra: [...(declared.woundExtra ?? []), { label: `Angry Warrior (${off} off the Natural)`, written: `+${off}(T)`, value: off * tier }] };
+}
+
+/**
  * Injuring Wound (2): "When making an Attacking Maneuver, you can reduce your Strike Roll by 1(bT) to increase your Wound Roll
  * by 2(bT)." Asked as one is declared, once a Round; carried on the attack as a row on its Strike and one on its Wound.
  */
