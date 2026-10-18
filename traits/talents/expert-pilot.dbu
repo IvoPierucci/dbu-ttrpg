@@ -1,0 +1,19 @@
+id: expert-pilot
+name: Expert Pilot
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in the Pilot Skill
+description: >
+  You are a trained pilot, skilled in the use of Vehicles and Battle Jackets.
+text: >
+  Expert Pilot: You are a trained pilot, skilled in the use of Vehicles and Battle Jackets.
+  –Prerequisites: 2+ Skill Ranks in the Pilot Skill
+  (1)-[Passive]: For the effects of this Talent, the 5th Skill Rank in Piloting is treated as 2 Skill Ranks.
+  (2)-[Passive]: Increase all of your Dodge Rolls made with a Vehicle by 1(T) for every 2 Skill Ranks of Piloting gained.
+  (3)-[Passive]: Ignore the Battle Jacket Penalty.
+  (4)-[1/Round]: Use the Ride Maneuver as an Instant Maneuver.
+  (5)-[Triggered, 1/Round]: If you would make a Combat Roll while Piloting a Battle Jacket, you may increase the Dice Score by 1(T) for every 2 Skill Ranks of Piloting you possess.
+
+---
+
+# Every effect here is about a Vehicle, a Battle Jacket or the Ride Maneuver, and none of them is built yet: written, held and
+# given (Way of the Pilot's), its effects the table's till they are - (1) counts only for this Talent's own.
