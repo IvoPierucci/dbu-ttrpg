@@ -1,0 +1,30 @@
+id: multi-type-specialist
+name: Multi-Type Specialist
+talentCategory: multi-type
+prerequisites: Multi-Type Attacker, ToP2+
+description: >
+  You excel in using multiple different combat styles at the same time.
+text: >
+  Multi-Type Specialist: You excel in using multiple different combat styles at the same time.
+  –Prerequisites: Multi-Type Attacker, ToP2+
+  (1)-[Passive]: Increase your Surgency by 1(bT) for every Talent you possess that is listed as a potential prerequisite for Multi-Type Attacker.
+  (2)-[Triggered/Start of Turn]: Trigger the effect of Multi-Type Attacker. This does not count to its 2/Round limit.
+
+---
+
+[passive]
+# (1) Multi-Type Attacker's: Enhanced Fist, Enhanced Shot, Magic Blaster.
+if (hasTalent("enhanced-fist")) {
+  surgency += 1(bT);
+}
+if (hasTalent("enhanced-shot")) {
+  surgency += 1(bT);
+}
+if (hasTalent("magic-blaster")) {
+  surgency += 1(bT);
+}
+
+# (2) As your turn begins: Multi-Type Attacker's stack, any Foundation, outside its 2/Round (chat.mjs multiTypeStart). Its
+# Triggered/Automatic button; Automatic, the Foundation is asked as the turn begins.
+[triggered/start-of-turn, effect 2]
+multiTypeStart();

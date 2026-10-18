@@ -13264,13 +13264,28 @@ async function multiTypeSwitch(attack) {
   const used = attacker.getFlag?.(SCOPE, "multiTypeRound");
   const count = (used?.round === roundKey()) ? (Number(used.n) || 0) : 0;
   if (count >= 2) return;
-  const others = Object.entries(DBUCharacterData.FOUNDATIONS).filter(([key]) => key !== attack.foundation);
-  const picked = await askPlayerChoice(attacker, `${attacker.name}: Multi-Type Attacker - Wound 1(T) for the rest of your turn`,
+  if (!await multiTypeStack(attacker, attack.foundation)) return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.multiTypeRound`]: { round: roundKey(), n: count + 1 } });
+}
+
+/** Multi-Type Attacker's stack: which Foundation (not `excluded`), asked - 1(T) more on its Wound till the turn ends. */
+async function multiTypeStack(actor, excluded = "") {
+  const others = Object.entries(DBUCharacterData.FOUNDATIONS).filter(([key]) => key !== excluded);
+  const picked = await askPlayerChoice(actor, `${actor.name}: Multi-Type Attacker - Wound 1(T) for the rest of your turn`,
     [...others.map(([key, foundation]) => ({ value: key, label: `${foundation.label} Attacks` })), { value: "none", label: "None" }]);
-  if (!others.some(([key]) => key === picked)) return;
-  const held = attacker.getFlag?.(SCOPE, "multiType") ?? {};
-  await requestActorUpdate(attacker, { [`flags.${SCOPE}.multiTypeRound`]: { round: roundKey(), n: count + 1 },
-    [`flags.${SCOPE}.multiType`]: { ...held, [picked]: (Number(held[picked]) || 0) + 1 } });
+  if (!others.some(([key]) => key === picked)) return false;
+  const held = actor.getFlag?.(SCOPE, "multiType") ?? {};
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.multiType`]: { ...held, [picked]: (Number(held[picked]) || 0) + 1 } });
+  return true;
+}
+
+/**
+ * Multi-Type Specialist (2): "Trigger the effect of Multi-Type Attacker. This does not count to its 2/Round limit." As the turn
+ * begins, no attack concluded - any Foundation.
+ */
+export async function multiTypeStart(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  return (await multiTypeStack(actor)) ? undefined : UNSPENT;
 }
 
 /** Multi-Type Attacker (1): its stacks on an attack of that Foundation, 1(T) each. */

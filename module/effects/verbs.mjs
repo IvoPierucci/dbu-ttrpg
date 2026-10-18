@@ -143,6 +143,10 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Undying (1): leaving it below nothing - Defeated at once, nothing answering it (chat.mjs undyingFall)."
   },
+  multiTypeStart: {
+    args: [0, 0],
+    doc: "Multi-Type Specialist (2): Multi-Type Attacker's stack, any Foundation, outside its limit (chat.mjs multiTypeStart)."
+  },
   speedblitz: {
     args: [0, 0],
     doc: "Speedblitz (3): the Movement or the Basic Attack out of sequence, which asked (chat.mjs speedblitz)."
