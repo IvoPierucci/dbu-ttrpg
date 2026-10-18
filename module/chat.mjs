@@ -2180,10 +2180,8 @@ async function settleTerrify(message, clash) {
  * that is a Resource this system keeps and half of it is about Transformations, which this
  * system has none of - so the first is read and the second is asked.
  *
- * The reading is whispered, where every other settled Clash's note is read out. What the
- * others leave is a thing that happened and belongs to the table; this one buys knowing,
- * and reading it out gives the answer to the people the entry keeps it from. That it
- * landed is said publicly, since the card already shows who won.
+ * What it buys knowing - their Holding Back and their Transformation - is the ARC's to tell, not the card's: no
+ * reading, public or whispered (the user's). That it landed is said, since the card already shows who won.
  */
 async function settleSense(message, clash) {
   const sensor = fromUuidSync(clash.challengerUuid);
@@ -2203,31 +2201,7 @@ async function settleSense(message, clash) {
   }
 
   await settledNote(message,
-    `${sensor.name} gets a read on ${target.name} - what they sense is theirs.`);
-  await settledNote(message, senseReading(target), { to: sensor });
-}
-
-/**
- * The two things a won Sense tells you, in the order the entry names them.
- *
- * The Stacks are read off the target's own Resource, which is what "how many stacks of
- * Holding Back they possess" means - and none is an answer worth having, since the whole
- * point of the Maneuver is telling the difference.
- *
- * The Transformation is asked rather than answered. There are no Transformations in this
- * system: nothing records which one a character is in and no entry gives one a Tier of
- * Power Requirement to be the highest of. Guessing from the Tier of Power would be
- * guessing - that is the number a Transformation raises, not a record of being in one.
- */
-function senseReading(target) {
-  const stacks = Number(target.system.resources?.holdingback?.stacks) || 0;
-  const held = stacks
-    ? `${target.name} is holding back ${stacks} Stack${stacks === 1 ? "" : "s"}`
-    : `${target.name} is holding nothing back`;
-
-  return `${held}. Whether they are in their Transformation with the highest Tier of `
-    + "Power Requirement is the table's to answer - this system has no Transformations "
-    + "in it yet.";
+    `${sensor.name} gets a read on ${target.name} - what they sense, the ARC tells.`);
 }
 
 /**
