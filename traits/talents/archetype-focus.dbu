@@ -1,0 +1,26 @@
+id: archetype-focus
+name: Archetype Focus
+talentCategory: specialization
+prerequisites: N/A
+# (1) "Select a Foundation" - asked as it is gained, `$choice`; changeable on its Options tab.
+choose: list
+choices: Physical, Energy, Magic
+description: >
+  You have specialized in a specific type of attack.
+text: >
+  Archetype Focus: You have specialized in a specific type of attack.
+  –Prerequisites: N/A
+  (1)-[Passive, Ruling]: Upon gaining this Talent, select a Foundation. This Foundation becomes your ‘Focused Foundation’. Increase the Wound Roll of all Attacking Maneuvers made of your Focused Foundation by 1(T).
+  (2)-[Triggered]: If you score a Critical Result on the Strike Roll or the Wound Roll for an Attacking Maneuver of your Focused Foundation, regain 2(bT) Ki Points.
+
+---
+
+# (1) The Focused Foundation's Wound.
+[passive]
+wound.$choice += 1(T);
+
+# (2) A Critical Result on an attack's Strike or Wound (the `critical-scored` Moment), that attack of the Focused Foundation
+# (`ofFoundation`): 2(bT) Ki. Automatic by default, its Triggered/Automatic button.
+[triggered/critical-scored, effect 2]
+requires ofFoundation("$choice");
+ki.value += 2(bT);

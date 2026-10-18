@@ -481,6 +481,8 @@ class Parser {
 /** Questions the engine answers, as opposed to arithmetic it works out. */
 const PREDICATE_NAMES = new Set([
   "benefiting", "hasResource", "inState", "hasCondition", "targets", "aoeHits", "attacking",
+  // The Foundation of the attack whose roll answered the Moment - Archetype Focus's.
+  "ofFoundation",
   "wearing", "inEnvironment",
   // Is the Maneuver being declared that one - Cosmic Efficiency's Combat Recovery.
   "using",

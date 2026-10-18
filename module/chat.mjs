@@ -8445,7 +8445,8 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
                                            attackingManeuver = false,
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
-                                           naturalAdd = 0, linked = "", fixedTotal = null, urgent = false } = {}) {
+                                           naturalAdd = 0, linked = "", fixedTotal = null, urgent = false,
+                                           foundation = "" } = {}) {
   // A roll already made: Delayed's "keep a record of the Dice Score of your Wound Roll", applied
   // later "against their Soak Value" as it was.
   if (Number.isFinite(fixedTotal)) {
@@ -8711,7 +8712,10 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // Drawn now rather than first, so the Critical Extra Dice are among them.
   lines.unshift(...rolledDice(roll, { rolled, natural, forcedNatural }, groups, criticalTerms));
   // "Each time you score a Critical Result on a Combat Roll" - Evolved Right Eye's Critical Eye. Once a roll.
-  if (combatRoll && collect && (outcome === "critical")) await answerFor(actor, "critical-scored", {});
+  if (combatRoll && collect && (outcome === "critical")) {
+    // An attack's Strike or Wound: its Foundation, for what answers only one's - Archetype Focus (2).
+    await answerFor(actor, "critical-scored", attackingManeuver && foundation ? { foundation } : {});
+  }
 
   // The finished total is a system value like any other: a Botch takes what it takes,
   // but never past zero. Otherwise a bad roll turns into a negative that an opponent
@@ -22666,7 +22670,7 @@ async function resolveAttackWork(message, attack) {
   // Weak Point Analysis: the first attack at them this Round, its Natural 2 higher.
   const weakPoint = await weakPointNatural(attacker, targets.map(entry => entry.uuid), message);
   const strike = await rollSide(attacker, strikeParts(attacker, attack), {
-    ...attackerOptions, slot: "strike", attackingManeuver: true,
+    ...attackerOptions, slot: "strike", attackingManeuver: true, foundation: attack.foundation ?? "",
     ...(chargedCritical ? { criticalTarget: 5 } : ((ownCritical || tactics) ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN,
       (Number(attacker.system.criticalTarget) || 10) + ownCritical - tactics) } : {})),
     // Clearing puts a floor under the Natural Result; Cutting makes anything short of a
@@ -24647,6 +24651,7 @@ async function rollAttackWoundWork(message, attack) {
     combatRoll: true,
     slot: "wound",
     attackingManeuver: true,
+    foundation: attack.foundation ?? "",
     // Patient Sniper (3): through the Exploit Maneuver in an Ally's turn, 1 on its Natural Result. Wrath of the Dragon (2),
     // (3): the Impaired.
     // Weak Point Analysis's, on the attack that claimed it.

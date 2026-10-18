@@ -416,6 +416,10 @@ const PREDICATES = {
   weatherUnfelt: scope => Boolean(scope.data?.battlefield?.weather?.id)
     && (Number(scope.data?.battlefield?.weather?.felt ?? NaN) === 0),
 
+  /** The attack whose roll answers this Moment is of that Foundation - `critical-scored`'s `foundation` (Archetype Focus's). */
+  ofFoundation: (scope, name) => Boolean(scope.context?.foundation)
+    && (String(scope.context.foundation).toLowerCase() === String(name?.value ?? name ?? "").toLowerCase()),
+
   /** A Snack eaten this Combat Round - Snack Motivated's. */
   snackThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "snackRound") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
