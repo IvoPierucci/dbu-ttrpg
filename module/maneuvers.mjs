@@ -2737,8 +2737,24 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   if (!foundation) return null;
 
   return withGreedCharges(actor, maneuver,
-    await withLastResource(actor, await withOverwhelm(actor, { profile, foundation, kiWager, wagerFromLife, wagerFromDivine, advantages, ...answers,
-      ...allInMark })));
+    await withLastResource(actor, await withOverwhelm(actor, { profile, foundation, kiWager, wagerFromLife, wagerFromDivine,
+      advantages: await withEnhancedFist(actor, maneuver, advantages, foundation), ...answers, ...allInMark })));
+}
+
+/**
+ * Enhanced Fist (2): "If you use a Signature Technique that is a Physical Attack, you may apply a rank of Power Shot to that
+ * Attacking Maneuver." Asked, once a Round - a rank more on this attack (held to Power Shot's three wherever it is read).
+ */
+async function withEnhancedFist(actor, maneuver, advantages, foundation) {
+  if ((foundation !== "physical") || !maneuver?.signature || maneuver.signatureTechnique
+    || (actor?.system?.effects?.slots?.["enhancedFist.powerShot"] !== true)) return advantages;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "enhancedFistRound") === round) return advantages;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Enhanced Fist` },
+    content: `<p data-tooltip="Once a Round">A rank of Power Shot on this attack?</p>`, rejectClose: false });
+  if (!yes) return advantages;
+  await actor.setFlag("dbu-ttrpg", "enhancedFistRound", round);
+  return [...(advantages ?? []), "power-shot"];
 }
 
 /**

@@ -1,0 +1,20 @@
+id: enhanced-fist
+name: Enhanced Fist
+talentCategory: physical-attack
+prerequisites: N/A
+description: >
+  Enhancing your attacks with your energy, you deal devastating physical blows.
+text: >
+  Enhanced Fist: Enhancing your attacks with your energy, you deal devastating physical blows.
+  –Prerequisites: N/A
+  (1)-[Passive]: Increase the Wound Rolls for your Physical Attacks by 1(T).
+  (2)-[Triggered, 1/Round]: If you use a Signature Technique that is a Physical Attack, you may apply a rank of Power Shot to that Attacking Maneuver.
+
+---
+
+[passive]
+# (1)
+wound.physical += 1(T);
+# (2) A Signature Technique declared as a Physical Attack: asked, once a Round - a rank of Power Shot on it (maneuvers.mjs
+# withEnhancedFist).
+allow enhancedFist.powerShot;
