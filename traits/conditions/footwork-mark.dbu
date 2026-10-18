@@ -1,0 +1,16 @@
+id: footwork-mark
+name: Footwork
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: what Footwork's (2) gives, till the start of your next turn.
+combatCondition: no
+source: Core Rule
+description: >
+  Footwork: Defense Value 1(T) higher until the start of your next turn.
+text: >
+  Footwork (2): If you use the Rapid Movement effect of the Movement Maneuver, increase your Defense Value by 1(T) until the start of your next turn.
+
+---
+
+[passive]
+defenseValue += 1(T);

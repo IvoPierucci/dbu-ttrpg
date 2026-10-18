@@ -1,0 +1,23 @@
+id: footwork
+name: Footwork
+talentCategory: mobility
+prerequisites: Agility Score of 4+
+description: >
+  Your deft footwork allows you to close the gap between you and your target, even as they try to flee.
+text: >
+  Footwork: Your deft footwork allows you to close the gap between you and your target, even as they try to flee.
+  –Prerequisites: Agility Score of 4+
+  (1)-[1/Round]: As an Instant Maneuver, you may move up to 1(bT) Squares in any direction.
+  (2)-[Triggered, 1/Round]: If you use the Rapid Movement effect of the Movement Maneuver, increase your Defense Value by 1(T) until the start of your next turn.
+  (3)-[Triggered, 1/Round]: When a Character within your Melee Range uses the Movement Maneuver to leave your Melee Range, you may use the Movement Maneuver as an Out-of-Sequence Maneuver. If you do, their Movement does not trigger your Exploit Maneuver.
+
+---
+
+[passive]
+# (1) Its own Maneuver, on the Maneuvers tab (maneuvers/footwork-first-effect.dbu).
+# (2) Rapid Movement taken: asked, once a Round - Footwork (a mark), Defense Value 1(T) till the start of your next turn
+# (use-maneuver.mjs takeRapidMovement).
+allow footwork.rapid;
+# (3) A Movement used by one within your Melee Range: the Movement offered on its card out of sequence beside your Exploit -
+# taking it closes the Exploit; once a Round (chat.mjs offerExploits).
+allow footwork.follow;

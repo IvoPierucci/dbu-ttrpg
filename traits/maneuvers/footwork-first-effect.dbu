@@ -1,0 +1,19 @@
+id: footwork-first-effect
+name: Footwork
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: footwork
+fromEffect: 1
+source: Core Rule
+description: >
+  Footwork's first effect, as a Maneuver: up to 1(bT) Squares in any direction.
+text: >
+  (1)-[1/Round]: As an Instant Maneuver, you may move up to 1(bT) Squares in any direction.
+
+---
+
+# In the list while Footwork is had. Used, its card says it; the moving is the table's.

@@ -6590,6 +6590,19 @@ function offerExploits(card, actor, maneuver) {
     seen.set(other.uuid, other);
   }
 
+  // Footwork (3): "When a Character within your Melee Range uses the Movement Maneuver to leave your Melee Range, you may use the
+  // Movement Maneuver as an Out-of-Sequence Maneuver. If you do, their Movement does not trigger your Exploit Maneuver." Offered
+  // beside your Exploit - taking either closes the other (one card, one opening each); once a Round.
+  if (maneuver.movement) {
+    for (const token of (canvas?.tokens?.placeables ?? [])) {
+      const other = token.actor;
+      if (!other || (other.uuid === actor.uuid) || (other.system?.effects?.slots?.["footwork.follow"] !== true)
+        || other.system?.defeated || (other.getFlag?.(SCOPE, "footworkRound") === roundKey()) || whyNotWithinMelee(other, actor, "")) continue;
+      requestEdit(card, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId: "movement",
+        maneuverName: "Movement (Footwork)", reason: `Footwork - ${actor.name} leaves your Melee Range`, grants: { footwork: true } } });
+    }
+  }
+
   for (const other of seen.values()) {
     requestEdit(card, {
       type: "offer",
@@ -19019,6 +19032,14 @@ async function takeOutOfSequence(message, actor, offer) {
       offer = { ...offer, targetUuid: picked };
     }
     await actor.setFlag(SCOPE, flag, roundKey());
+  }
+  // Footwork (3)'s, once a Round.
+  if (offer.grants?.footwork) {
+    if (actor.getFlag?.(SCOPE, "footworkRound") === roundKey()) {
+      ui.notifications.warn(`${actor.name}: Footwork - already used this Combat Round.`);
+      return null;
+    }
+    await actor.setFlag(SCOPE, "footworkRound", roundKey());
   }
   // Personal Space (3)'s, once a Round.
   if (offer.grants?.personalSpace) {
