@@ -197,6 +197,8 @@ const TABLE = [
     doc: "Added to the Strike of a Magic Attack not of an Elemental Profile (Magic Caster's; chat.mjs strikeParts)." },
   { key: "wound.vsLarger", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Wound against each Opponent of a larger Size Category (Miniature Warrior's; chat.mjs largerParts)." },
+  { key: "stealthStrike.extraUses", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Times more a Round Stealth Strike (2) may be used (Master Assassin's; chat.mjs stealthStrikeClashes)." },
   { key: "wound.vsOblivious", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Wound against each one hit who was Oblivious of you as it hit (Assassinate's; chat.mjs)." },
   { key: "strike.vsOblivious", phase: PHASES.CORE, kind: N, ops: NUMERIC,

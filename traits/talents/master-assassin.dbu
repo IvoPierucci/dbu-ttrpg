@@ -1,0 +1,19 @@
+id: master-assassin
+name: Master Assassin
+talentCategory: skill
+prerequisites: Assassinate, 5+ Skill Ranks in the Stealth Skill
+description: >
+  You are peerless in the realm of dealing death from the shadows.
+text: >
+  Master Assassin: You are peerless in the realm of dealing death from the shadows.
+  –Prerequisites: Assassinate, 5+ Skill Ranks in the Stealth Skill
+  (1)-[Passive]: Increase your Wound Rolls against your Oblivious Characters by 1(T).
+  (2)-[Passive]: You may use the 1/Round effect of Stealth Strike an additional time each Combat Round.
+
+---
+
+[passive]
+# (1) With Assassinate's, against each one hit who was Oblivious of you as it hit.
+wound.vsOblivious += 1(T);
+# (2) Stealth Strike (2)'s Clash twice a Round (chat.mjs stealthStrikeClashes).
+stealthStrike.extraUses += 1;

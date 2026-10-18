@@ -14163,7 +14163,11 @@ async function silentFootstepsAttacked(attack) {
 async function stealthStrikeClashes(card, actor) {
   const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
   if (!attack || (actor?.system?.effects?.slots?.["stealthStrike.clash"] !== true)) return;
-  if (actor.getFlag?.(SCOPE, "stealthStrikeRound") === roundKey()) return;
+  // Once a Round - more with Master Assassin (2): how many this Round, kept with the Round.
+  const used = actor.getFlag?.(SCOPE, "stealthStrikeRound");
+  const times = (used?.round === roundKey()) ? (Number(used.n) || 0) : ((used === roundKey()) ? 1 : 0);
+  const most = 1 + Math.max(0, Math.floor(Number(actor.system.effects?.slots?.["stealthStrike.extraUses"]?.add) || 0));
+  if (times >= most) return;
   const { isHiddenFrom } = await import("./hidden.mjs");
   const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
   const aimed = attackTargets(attack).map(entry => fromUuidSync(entry.uuid))
@@ -14172,12 +14176,12 @@ async function stealthStrikeClashes(card, actor) {
   const escape = Handlebars.escapeExpression;
   const yes = await foundry.applications.api.DialogV2.confirm({
     classes: ["dbu-dialog"], window: { title: `${actor.name} - Stealth Strike` },
-    content: `<p data-tooltip="Won: Hidden from them for this Attacking Maneuver. Once a Round.">A Skill Clash (Stealth vs Perception) at ${
+    content: `<p data-tooltip="Won: Hidden from them for this Attacking Maneuver. ${(most > 1) ? `${most} times` : "Once"} a Round.">A Skill Clash (Stealth vs Perception) at ${
       escape(aimed.map(other => other.name).join(", "))}?</p>`,
     rejectClose: false
   });
   if (!yes) return;
-  await actor.setFlag(SCOPE, "stealthStrikeRound", roundKey());
+  await actor.setFlag(SCOPE, "stealthStrikeRound", { round: roundKey(), n: times + 1 });
   const now = card.getFlag(SCOPE, ATTACK_FLAG);
   await requestEdit(card, { type: "attack", attack: { ...now, stealthHold: { pending: true, left: aimed.length, name: "Stealth Strike" } } });
   for (const other of aimed) {
@@ -24492,7 +24496,9 @@ async function rollAttackWoundWork(message, attack) {
       { label: "Overwhelming Pressure", value: pressing ? pressing(target) : 0 },
       { label: "Stealthy Trick", value: own.oblivious ? unseen : 0 },
       // Assassinate (1): against one Oblivious of you as it hit.
-      { label: "Assassinate (Oblivious)", written: "+1(T)",
+      // Master Assassin (1)'s with it - named by what gave it.
+      { label: `${(attacker.system.effects?.slots?.["wound.vsOblivious"]?.parts ?? []).map(part => part.source).filter(Boolean)
+          .join(", ") || "Assassinate"} (Oblivious)`,
         value: own.oblivious ? (Number(attacker.system.effects?.slots?.["wound.vsOblivious"]?.add) || 0) : 0 },
       ...lockOnParts(attacker, target),
       ...enemyParts(attacker, target),
