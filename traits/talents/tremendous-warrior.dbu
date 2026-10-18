@@ -1,0 +1,20 @@
+id: tremendous-warrior
+name: Tremendous Warrior
+talentCategory: size
+prerequisites: N/A
+description: >
+  Towering over your enemies, you have long grown accustomed to fighting smaller opponents.
+text: >
+  Tremendous Warrior: Towering over your enemies, you have long grown accustomed to fighting smaller opponents.
+  –Prerequisites: N/A
+  (1)-[Passive]: Increase your Strike Rolls against an Opponent with a smaller Size Category than you by 1(T).
+  (2)-[Triggered, 1/Round]: If you fail to hit an Opponent with an Attacking Maneuver that would benefit from the Punching Down rules, roll the Extra Dice from Punching Down regardless. Reduce that Opponent’s Life Points by that amount.
+
+---
+
+[passive]
+# (1) Against each smaller Opponent alone (chat.mjs smallerParts).
+strike.vsSmaller += 1(T);
+# (2) A miss at an Opponent 2+ Size Categories smaller: a button on the attack's card, once a Round - Punching Down's 1d6(T) off
+# their Life Points (chat.mjs tremendousButtons).
+allow tremendous.missDice;

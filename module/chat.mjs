@@ -15834,6 +15834,14 @@ async function fleetTarget(message, actor) {
   return true;
 }
 
+/** Tremendous Warrior (1): "Increase your Strike Rolls against an Opponent with a smaller Size Category than you by 1(T)." */
+function smallerParts(attacker, target) {
+  const slot = attacker?.system?.effects?.slots?.["strike.vsSmaller"];
+  if (!(Number(slot?.add) || 0) || !target || (sizeDifference(attacker, target) <= 0)
+    || alliesOnScene(attacker).some(ally => ally.uuid === target.uuid)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Smaller", value: Number(slot.add) }];
+}
+
 /** Fleet of Foot (2): its 1(T), against the one it names. */
 function fleetParts(attacker, target) {
   const held = attacker?.getFlag?.(SCOPE, "fleetOfFoot");
@@ -16913,6 +16921,39 @@ function humanShieldButtons(message, container, attack) {
       await postGrappleCheck(actor, held, { maneuverName: "Human Shield", kind: "shield",
         reason: `${actor.name} pulls ${held.name} into the way of ${attack.maneuverName}`,
         shield: { messageId: message.id } });
+    });
+    container.append(button);
+  }
+}
+
+/**
+ * Tremendous Warrior (2): "If you fail to hit an Opponent with an Attacking Maneuver that would benefit from the Punching Down
+ * rules, roll the Extra Dice from Punching Down regardless. Reduce that Opponent's Life Points by that amount." A button for
+ * each such one missed, at the attack's maker; once a Round, once for the attack.
+ */
+function tremendousButtons(message, container, attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attacker?.isOwner || !attack?.result || attack.tremendousDone
+    || (attacker.system.effects?.slots?.["tremendous.missDice"] !== true)) return;
+  const allies = new Set(alliesOnScene(attacker).map(ally => ally.uuid));
+  const used = attacker.getFlag?.(SCOPE, "tremendousRound") === roundKey();
+  for (const entry of (attack.result.targets ?? []).filter(own => !own.hit && (own.uuid !== attacker.uuid) && !allies.has(own.uuid))) {
+    const target = fromUuidSync(entry.uuid);
+    if (!target || target.system?.defeated || (sizeDifference(attacker, target) < 2)) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dbu-clash-button";
+    button.textContent = `Punching Down - ${target.name}`;
+    button.disabled = used;
+    button.dataset.tooltip = used ? "Once a Combat Round." : "Tremendous Warrior: Punching Down's dice off their Life Points (1/Round)";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      const now = message.getFlag(SCOPE, ATTACK_FLAG);
+      if (!now || now.tremendousDone || (attacker.getFlag?.(SCOPE, "tremendousRound") === roundKey())) return;
+      await requestActorUpdate(attacker, { [`flags.${SCOPE}.tremendousRound`]: roundKey() });
+      requestEdit(message, { type: "attack", attack: { ...now, tremendousDone: true } });
+      await reduceLifePoints(target, await punchingDownRoll(attacker), { reason: "Tremendous Warrior" });
+      await settledNote(message, `Tremendous Warrior: Punching Down's dice off ${target.name}'s Life Points.`);
     });
     container.append(button);
   }
@@ -21846,7 +21887,8 @@ async function resolveAttackWork(message, attack) {
     const analysisParts = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target),
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
       ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
-      ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike"), ...fleetParts(attacker, target)]
+      ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike"), ...fleetParts(attacker, target),
+      ...smallerParts(attacker, target)]
       .filter(p => p.value);
     const analysis = analysisParts.reduce((sum, p) => sum + p.value, 0);
     // Technique Block: "reduce that Signature Technique's Strike Roll to 0".
@@ -28615,6 +28657,8 @@ function renderAttack(message, html) {
   suplexButton(message, container, attack);
   // Human Shield (2): targeted while holding someone - them in your place, a Grapple Check first.
   humanShieldButtons(message, container, attack);
+  // Tremendous Warrior (2): a miss at one Punching Down would have reached - its dice anyway.
+  tremendousButtons(message, container, attack);
   // Power of the Weak (5), (6): a Bonded Ally hitting or hit - Ki on the Wound Roll or their Soak Value, before it is rolled.
   bondButtons(message, attack, container);
 
