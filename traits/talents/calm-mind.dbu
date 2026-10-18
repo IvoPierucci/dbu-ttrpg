@@ -1,0 +1,26 @@
+id: calm-mind
+name: Calm Mind
+talentCategory: mindful
+prerequisites: N/A
+description: >
+  Your meditations have led to the ability to clear your mind of all thoughts but the ones that are necessary to continue the fight.
+text: >
+  Calm Mind: Your meditations have led to the ability to clear your mind of all thoughts but the ones that are necessary to continue the fight.
+  –Prerequisites: N/A
+  (1)-[Passive]: The L listed on any Mindful Talent refers to your current Level of your use of the Mindful State.
+  (2)-[Triggered]: Whenever you score a Critical Result on a Combat Roll while in the Mindful State, increase the Dice Score by an additional L(T).
+  (3)-[Triggered/Power, 2/Encounter]: Enter the Mindful State until the end of your next turn.
+
+---
+
+# (1) Read as `states.mindful` - the Level of the Mindful State held - wherever a Mindful Talent says L.
+
+# (2) A Combat Roll's Critical Result in the Mindful State: L(T) more on it. No limit, so its Triggered/Automatic button
+# (the user's); set Triggered, offered in the window as it Crits.
+[triggered/critical, toggle, effect 2]
+requires inState("mindful");
+roll.total += states.mindful * 1(T);
+
+# (3) Offered in a window as the Power Up Maneuver is used: the Mindful State, at Level 1, till the end of your next turn.
+[triggered/power, 2/encounter, effect 3]
+enterState("mindful", 1, "next-turn");

@@ -22,7 +22,7 @@ text: >
 requires !hasTalent("tai-chi-master");
 taiChi.wound = true;
 
-[triggered/hit, effect 2]
+[triggered/hit, toggle, effect 2]
 requires hasTalent("tai-chi-master");
 taiChi.wound = true;
 

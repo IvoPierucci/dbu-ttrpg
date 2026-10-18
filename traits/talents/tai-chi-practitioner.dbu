@@ -26,6 +26,6 @@ if (hasTalent("tai-chi-master")) {
 requires !hasTalent("tai-chi-expert");
 reduction.taiChi = true;
 
-[triggered/being-hit, effect 2]
+[triggered/being-hit, toggle, effect 2]
 requires hasTalent("tai-chi-expert");
 reduction.taiChi = true;
