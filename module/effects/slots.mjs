@@ -197,6 +197,8 @@ const TABLE = [
     doc: "Added to the Strike of a Magic Attack not of an Elemental Profile (Magic Caster's; chat.mjs strikeParts)." },
   { key: "wound.vsLarger", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Wound against each Opponent of a larger Size Category (Miniature Warrior's; chat.mjs largerParts)." },
+  { key: "ingenuity.devices", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to the Ingenuity a Device you make records (Instant Craft's; gear.mjs recordedFrom)." },
   { key: "flip.extraRanks", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Acrobatics Ranks more counted for the Flip's effects, past the maximum (Acrobat Star's; use-maneuver.mjs moveRanks)." },
   { key: "stealthStrike.extraUses", phase: PHASES.CORE, kind: N, ops: NUMERIC,

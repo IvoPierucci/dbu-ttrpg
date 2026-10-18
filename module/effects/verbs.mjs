@@ -178,6 +178,11 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Team Survivalist (3): Braced on every Ally within your Melee Range, on your clock (chat.mjs teamBrace)."
   },
+  instantCraft: {
+    args: [0, 0],
+    doc: "Instant Craft (2): a Basic Item asked, the Create's card at its DC - made, gone as the Encounter ends (chat.mjs "
+       + "instantCraft)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "

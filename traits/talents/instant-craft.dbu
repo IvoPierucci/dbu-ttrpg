@@ -1,0 +1,18 @@
+id: instant-craft
+name: Instant Craft
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in Craft
+description: >
+  You can create anything you need with just some duct tape, chewing gum, and the paper clip in your pocket.
+text: >
+  Instant Craft: You can create anything you need with just some duct tape, chewing gum, and the paper clip in your pocket.
+  –Prerequisites: 2+ Skill Ranks in Craft
+  (1)-[Passive]: Increase your Ingenuity by 1(bT) for the sake of any Items with the Device Detail that you craft.
+  (2)-[1/Round]: As an Instant Maneuver, select a Basic Item. Make a Craft Skill Check against the DC for that Basic Item. If you succeed, create that Basic Item. It is destroyed at the end of the Combat Encounter.
+
+---
+
+[passive]
+# (1) What a Device you make records - its Recorded Ingenuity - 1(bT) higher (gear.mjs recordedFrom).
+ingenuity.devices += 1(bT);
+# (2) Its own Maneuver, on the Maneuvers tab (maneuvers/instant-craft-second-effect.dbu).

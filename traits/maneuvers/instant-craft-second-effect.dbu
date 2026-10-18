@@ -1,0 +1,22 @@
+id: instant-craft-second-effect
+name: Instant Craft
+type: instant
+actionCost: 0
+kiCost: 0
+attacking: false
+requiresTarget: false
+usageLimit: 1/round
+fromTrait: instant-craft
+fromEffect: 2
+source: Core Rule
+description: >
+  Instant Craft's second effect, as a Maneuver: a Basic Item made on the spot, gone with the Combat Encounter.
+text: >
+  (2)-[1/Round]: As an Instant Maneuver, select a Basic Item. Make a Craft Skill Check against the DC for that Basic Item. If you succeed, create that Basic Item. It is destroyed at the end of the Combat Encounter.
+
+---
+
+# Which Basic Item, asked; the Create's card with its Craft Check rolled against that DC - no Time, Scrap or Blueprint -
+# and Create item on it; made, gone as the Encounter ends (chat.mjs instantCraft; combat.mjs).
+[on used]
+instantCraft();

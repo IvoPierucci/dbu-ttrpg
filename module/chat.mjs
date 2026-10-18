@@ -4962,6 +4962,32 @@ export async function postCreate(actor, create) {
 }
 
 /**
+ * Instant Craft (2): "As an Instant Maneuver, select a Basic Item. Make a Craft Skill Check against the DC for that Basic Item.
+ * If you succeed, create that Basic Item." Which, asked - any not Special, with a Craft DC; the Create's card, its Check at that
+ * DC, no Time, Scrap or Blueprint; made, marked to go as the Encounter ends (createMade). None, not spent.
+ */
+export async function instantCraft(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { createSkillFor, DIFFICULTY_ORDER } = await import("./adventure.mjs");
+  const { gearOfList, gearItemFrom, tagsOf } = await import("./gear.mjs");
+  const labels = DBUCharacterData.DIFFICULTIES;
+  const keyOf = label => DIFFICULTY_ORDER.find(key => labels[key]?.label.toLowerCase() === String(label ?? "").trim().toLowerCase()) ?? "";
+  const basics = gearOfList(traitsOfKind("gear"), "basic").filter(item => (item.special !== true) && item.craftDC)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (!basics.length) return UNSPENT;
+  const picked = await askPlayerChoice(actor, `${actor.name}: Instant Craft - a Basic Item`,
+    [...basics.map(each => ({ value: each.id, label: each.name })), { value: "none", label: "None" }]);
+  const item = basics.find(each => each.id === picked);
+  if (!item) return UNSPENT;
+  const choices = gearItemFrom(item, actor).system.craftDCChoices ?? [];
+  const difficulty = choices[0] ?? keyOf(item.craftDC);
+  if (!labels[difficulty]) return UNSPENT;
+  const { skill, specialty } = createSkillFor(tagsOf(item));
+  return postCreate(actor, { kind: "basic", id: item.id, name: item.name, difficulty, time: "Instant Craft", food: false, scrap: 0,
+    skill, specialty, noBlueprint: true, instantCraft: true });
+}
+
+/**
  * Magical Materialization, paid for: "Roll the Craft Skill Check for your choice, using the Use Magic Skill
  * instead of the relevant Craft Specialization, but increase the Difficulty Category by 1. If you fail, you do
  * not create the item, but you still lose the Ki Points." Rolled straight away against that Difficulty, and
@@ -5178,7 +5204,14 @@ async function createMade(message) {
   const maker = fromUuidSync(create?.actorUuid ?? "");
   const definition = getTrait(create?.id ?? "");
   if (!maker || !definition || !create.done?.success || create.done.given) return;
+  const had = new Set(Array.from(maker.items ?? []).map(item => item.id));
   await maker.sheet?.giveGear?.(definition, { made: true, craftDC: create.difficulty });
+  // Instant Craft (2)'s: "It is destroyed at the end of the Combat Encounter" - marked for it.
+  if (create.instantCraft) {
+    for (const item of Array.from(maker.items ?? []).filter(each => !had.has(each.id) && (each.type === "gear"))) {
+      await item.setFlag(SCOPE, "instantCraft", true);
+    }
+  }
   const blueprint = (!create.blueprint && !create.noBlueprint) ? await giveBlueprint(maker, create) : "";
   await message.setFlag(SCOPE, CREATE_FLAG,
     { ...create, done: { ...create.done, given: { actorUuid: maker.uuid, name: definition.name }, blueprint } });

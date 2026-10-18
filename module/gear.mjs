@@ -2013,8 +2013,10 @@ export function triggersOf(definition) {
 export function recordedFrom(definition, actor) {
   const attribute = recordsOf(definition);
   if (!attribute) return null;
+  // Instant Craft (1): "Increase your Ingenuity by 1(bT) for the sake of any Items with the Device Detail that you craft."
   const modifier = (attribute === "ingenuity")
-    ? actor?.system?.ingenuity
+    ? (Number(actor?.system?.ingenuity) || 0) + (listOf(definition?.details).includes("device")
+      ? (Number(actor?.system?.effects?.slots?.["ingenuity.devices"]?.add) || 0) : 0)
     : actor?.system?.attributes?.[attribute]?.mod;
   return Number.isFinite(Number(modifier)) ? Number(modifier) : 0;
 }

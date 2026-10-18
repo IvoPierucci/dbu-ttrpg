@@ -714,6 +714,9 @@ export function registerCombatHooks() {
       }
       // Counter Jury-rigging (2)'s Quality, with the Round it was for.
       await (await import("./chat.mjs")).juryRigEnds(actor);
+      // Instant Craft (2)'s: "It is destroyed at the end of the Combat Encounter."
+      const instant = Array.from(actor.items ?? []).filter(item => item.getFlag?.("dbu-ttrpg", "instantCraft")).map(item => item.id);
+      if (instant.length) await actor.deleteEmbeddedDocuments("Item", instant);
       // Finish Sign: its Finisher stacks are a Resource and end with the Encounter - and what they were for with them.
       for (const item of Array.from(actor.items ?? []).filter(each => each.system?.unique?.finishTechnique)) {
         await item.update({ "system.unique.finishTechnique": "" });
