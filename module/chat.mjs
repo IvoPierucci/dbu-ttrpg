@@ -14410,6 +14410,15 @@ function markedParts(roller, other) {
   return yours ? [{ label: "Marked", written: "+1(T)", value: Math.max(1, Number(roller.system.tierOfPower) || 1) }] : [];
 }
 
+/** Slow Starter (3): "Use the Holding Back Maneuver as an Out-of-Sequence Maneuver." */
+export async function slowStarter(actor) {
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor?.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "holding-back"));
+  const maneuver = own ? definitionOf(own) : getManeuver("holding-back");
+  if (!actor || !maneuver) return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  return useManeuver(actor, maneuver, { outOfSequence: true });
+}
+
 /**
  * Counter Jury-rigging (2): "Select a Weapon you possess and apply an applicable Weapon Quality that takes up 1 Weapon Slot to that
  * Weapon until the end of the Combat Round (this can exceed the Weapon's number of Weapon Slots)." Which Weapon, then which

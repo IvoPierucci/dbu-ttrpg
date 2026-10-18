@@ -187,11 +187,22 @@ Hooks.on("updateItem", (item, changes, options, userId) => sizeWatch(item.parent
 Hooks.on("createItem", (item, options, userId) => sizeWatch(item.parent, userId));
 Hooks.on("deleteItem", (item, options, userId) => sizeWatch(item.parent, userId));
 
-// Frequent Flyer (4): a Character entering a High Environment - its height before the change, kept for after it.
+// Frequent Flyer (4): a Character entering a High Environment - its height before the change, kept for after it. Slow
+// Starter (4): the stacks of Holding Back before, the same way.
 Hooks.on("preUpdateActor", (actor, changes, options) => {
   if (foundry.utils.hasProperty(changes, "system.battlefield.highEnvironment")) {
     options.dbuHighBefore = Number(actor.system?.battlefield?.highEnvironment) || 0;
   }
+  if (foundry.utils.hasProperty(changes, "system.resources") && !options.dbuEncounterStart) {
+    options.dbuHoldingBefore = Number(actor.system?.resources?.holdingback?.stacks) || 0;
+  }
+});
+Hooks.on("updateActor", async (actor, changes, options, userId) => {
+  if ((userId !== game.user.id) || !(Number(options.dbuHoldingBefore) > 0) || !game.combat?.started) return;
+  if ((Number(actor.system?.resources?.holdingback?.stacks) || 0) > 0) return;
+  // Every stack of Holding Back gone: what answers losing them - Slow Starter's Legend Realized.
+  const { answerFor } = await import("./chat.mjs");
+  await answerFor(actor, "holding-back-lost");
 });
 Hooks.on("updateActor", async (actor, changes, options, userId) => {
   if ((userId !== game.user.id) || !("dbuHighBefore" in options) || (actor.type !== "character")) return;

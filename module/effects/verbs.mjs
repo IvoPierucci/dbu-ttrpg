@@ -183,6 +183,10 @@ export const VERBS = Object.freeze({
     doc: "Instant Craft (2): a Basic Item asked, the Create's card at its DC - made, gone as the Encounter ends (chat.mjs "
        + "instantCraft)."
   },
+  slowStarter: {
+    args: [0, 0],
+    doc: "Slow Starter (3): the Holding Back Maneuver out of sequence (chat.mjs slowStarter)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "

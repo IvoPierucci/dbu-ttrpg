@@ -3874,6 +3874,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
   // A named Maneuver can be discounted on its own; an Attacking one also takes whatever
   // applies to attacks in general.
   let cost = applySlot(slots, `${maneuver.id}.kiCost`, base);
+  // Every Maneuver's - Slow Starter (2)'s 1(T) off while Holding Back - never below nothing.
+  if (actor && (Number(slots?.["maneuvers.kiCost"]?.add) || 0)) cost = Math.max(0, applySlot(slots, "maneuvers.kiCost", cost));
   // A Unique Ability's, by its type - God of Magic's 2(T) off every Magical one.
   if (actor && maneuver.uniqueType) cost = applySlot(slots, `unique.${maneuver.uniqueType}.kiCost`, cost);
   // The Energy Charge Maneuver, used once already this Combat Round - Energy Core's 1(T) off the next.

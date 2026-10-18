@@ -276,7 +276,7 @@ async function startEncounter(combat) {
       ...NOT_GRAPPLING,
       // Every Resource is lost when an Encounter ends, so one starts with none - but the ones that keep.
       "system.resources": replaceObject(keptResources(actor.system.resources))
-    });
+    }, { dbuEncounterStart: true });
     await stopCharging(actor);
     if (regulated) {
       const { postRegulated } = await import("./chat.mjs");

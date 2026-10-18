@@ -74,6 +74,9 @@ const TABLE = [
   { key: "rapid-movement", label: "You take Rapid Movement", provides: [],
     doc: "Fired as Rapid Movement is taken (use-maneuver.mjs takeRapidMovement) - Footwork's Defense Value. What is the "
        + "player's is asked in a window first." },
+  { key: "holding-back-lost", label: "You lose all stacks of Holding Back", provides: [],
+    doc: "Fired in a Combat as the last stack of Holding Back goes, by whatever took it (dbu-ttrpg.mjs) - not as the "
+       + "Encounter's start clears every Resource. Slow Starter's. What is the player's is asked in a window first." },
   { key: "brace", label: "You use the Brace Maneuver", provides: [],
     doc: "Fired as the Brace Maneuver is used, after its own effect (use-maneuver.mjs) - Team Survivalist's. What is the "
        + "player's is asked in a window first." },

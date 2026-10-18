@@ -199,6 +199,8 @@ const TABLE = [
     doc: "Added to the Wound against each Opponent of a larger Size Category (Miniature Warrior's; chat.mjs largerParts)." },
   { key: "ingenuity.devices", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Ingenuity a Device you make records (Instant Craft's; gear.mjs recordedFrom)." },
+  { key: "maneuvers.kiCost", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to the Ki Point Cost of every Maneuver (Slow Starter's; maneuvers.mjs maneuverKiCost)." },
   { key: "flip.extraRanks", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Acrobatics Ranks more counted for the Flip's effects, past the maximum (Acrobat Star's; use-maneuver.mjs moveRanks)." },
   { key: "stealthStrike.extraUses", phase: PHASES.CORE, kind: N, ops: NUMERIC,
