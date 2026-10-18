@@ -13288,6 +13288,31 @@ export async function multiTypeStart(actor) {
   return (await multiTypeStack(actor)) ? undefined : UNSPENT;
 }
 
+/**
+ * Multi-Type Gambit (1): "If you have triggered the effect of Multi-Type Attacker twice during this turn, increase the Dice
+ * Category of your Energy Charges by 1 Category" - its stacks this turn, Multi-Type Specialist's among them.
+ */
+function gambitDice(actor) {
+  if (actor?.system?.effects?.slots?.["multiType.gambitDice"] !== true) return 0;
+  const stacks = Object.values(actor.getFlag?.(SCOPE, "multiType") ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
+  return (stacks >= 2) ? 1 : 0;
+}
+
+/**
+ * Multi-Type Gambit (2): "If you use an Attacking Maneuver of a Foundation that has been selected 2+ times by the effect of
+ * Multi-Type Attacker, you may apply 2 Energy Charges to that Attacking Maneuver." Asked, once an Encounter.
+ */
+async function askGambitCharges(actor, foundation) {
+  if ((actor?.system?.effects?.slots?.["multiType.gambitCharges"] !== true)
+    || ((Number(actor.getFlag?.(SCOPE, "multiType")?.[foundation]) || 0) < 2)) return false;
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.(SCOPE, "gambitEncounter") === encounter) return false;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Multi-Type Gambit` },
+    content: `<p data-tooltip="Once an Encounter">2 Energy Charges on this attack?</p>`, rejectClose: false });
+  if (yes) await actor.setFlag(SCOPE, "gambitEncounter", encounter);
+  return Boolean(yes);
+}
+
 /** Multi-Type Attacker (1): its stacks on an attack of that Foundation, 1(T) each. */
 function multiTypeParts(attacker, attack) {
   const stacks = Number(attacker?.getFlag?.(SCOPE, "multiType")?.[attack?.foundation]) || 0;
@@ -19746,6 +19771,9 @@ export async function postAttack(actor, target, maneuver,
   if (revengeCharge && !reflecting) charges = (Number(charges) || 0) + 1;
   // Last Resource: "apply a number of Energy Charges up to your number of Overwhelm stacks".
   if (overwhelm?.lastResource && !reflecting) charges = (Number(charges) || 0) + (Number(overwhelm.lastResource) || 0);
+  // Multi-Type Gambit (2): an attack of a Foundation Multi-Type Attacker picked twice or more - 2 Energy Charges, asked once an
+  // Encounter.
+  if (!reflecting && await askGambitCharges(actor, foundation)) charges = (Number(charges) || 0) + 2;
   const everyone = [target, ...extraTargets.map(entry => fromUuidSync(entry.uuid)).filter(Boolean)];
   // Surging (1): "Apply an Energy Charge to all of your Attacking Maneuvers that include your Focus as a target."
   const focus = ((Number(actor.system.states?.surging) || 0) > 0) ? (actor.getFlag?.(SCOPE, "surgingFocus") ?? "") : "";
@@ -20061,7 +20089,8 @@ export async function postAttack(actor, target, maneuver,
                 // Eye of the Dragon's Way of the Warrior: "this Energy Charge does not count towards your maximum".
                 + (Number(uncappedCharges) || 0),
           // Dice Categories the Technique's features add to each Charge: Maximum Charge, Super Beam.
-          chargeCategories: reflecting ? (reflecting.chargeCategories ?? 0) : ((technique?.chargeCategories ?? 0) + blaster.dice),
+          chargeCategories: reflecting ? (reflecting.chargeCategories ?? 0)
+            : ((technique?.chargeCategories ?? 0) + blaster.dice + gambitDice(actor)),
           // Whose Technique it was, which is what decides the size of an Energy Charge's
           // die - and it is their attack being thrown back, not the reflector's.
           signature: reflecting

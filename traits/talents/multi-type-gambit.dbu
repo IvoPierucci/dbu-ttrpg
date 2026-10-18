@@ -1,0 +1,21 @@
+id: multi-type-gambit
+name: Multi-Type Gambit
+talentCategory: multi-type
+prerequisites: Multi-Type Attacker, ToP2+
+description: >
+  You’re an expert at utilizing a variety of fighting styles to pull off a bigger attack afterward.
+text: >
+  Multi-Type Gambit: You’re an expert at utilizing a variety of fighting styles to pull off a bigger attack afterward.
+  –Prerequisites: Multi-Type Attacker, ToP2+
+  (1)-[Passive]: If you have triggered the effect of Multi-Type Attacker twice during this turn, increase the Dice Category of your Energy Charges by 1 Category.
+  (2)-[Triggered, 1/Encounter]: If you use an Attacking Maneuver of a Foundation that has been selected 2+ times by the effect of Multi-Type Attacker, you may apply 2 Energy Charges to that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) Multi-Type Attacker's stacks this turn, two or more (Multi-Type Specialist's counted): the Energy Charges' Dice a Category
+# up (chat.mjs gambitDice).
+allow multiType.gambitDice;
+# (2) An attack of a Foundation picked twice or more this turn: asked, once an Encounter - 2 Energy Charges on it (chat.mjs
+# askGambitCharges).
+allow multiType.gambitCharges;
