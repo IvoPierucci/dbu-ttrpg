@@ -16511,6 +16511,33 @@ async function weakPointNatural(attacker, uuids, message) {
 }
 
 /**
+ * Terrifying Speed (2): "If you use the Rapid Movement effect of the Movement Maneuver and end your Movement on an adjacent
+ * Square to an Opponent, you may use the Terrify Maneuver as an Out-of-Sequence Maneuver." On the Movement's card - where you
+ * ended, the table's - once a Round, spent as it is taken (takeTerrifyingSpeed).
+ */
+export function terrifyingSpeedOffer(message, actor) {
+  if (!message || (actor?.system?.effects?.slots?.["terrifyingSpeed.terrify"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "terrifyingSpeedRound") === roundKey()) return;
+  const terrify = getManeuver("terrify");
+  if (!terrify || whyNotSpecial(actor, terrify)) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "terrify",
+    maneuverName: terrify.name, reason: "Terrifying Speed - ended beside an Opponent (target them)", terrifyingSpeed: true } });
+}
+
+/** Terrifying Speed (2)'s Terrify, taken: the Maneuver itself, out of sequence, at the one targeted - its own 1/Round still its. */
+async function takeTerrifyingSpeed(message, actor) {
+  if (actor.getFlag?.(SCOPE, "terrifyingSpeedRound") === roundKey()) {
+    ui.notifications.warn(`${actor.name}: Terrifying Speed - already used this Combat Round.`);
+    return null;
+  }
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "terrify"));
+  const used = await useManeuver(actor, own ? definitionOf(own) : getManeuver("terrify"), { outOfSequence: true });
+  if (used) await actor.setFlag(SCOPE, "terrifyingSpeedRound", roundKey());
+  return used;
+}
+
+/**
  * Team Pose (1): "If an Ally uses the Hype Maneuver within a Sphere AoE centered on you, regain 2(bT) Ki Points." The Hype
  * used: each of the user's Allies with something answering it (`ally-hype`) answers - Automatic, or asked; within the Sphere,
  * the table's.
@@ -19860,6 +19887,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.multiTypeMaster) return takeMultiTypeMaster(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
   if (offer.yoinkGrenade) return takeYoinkGrenade(message, actor, offer);
+  if (offer.terrifyingSpeed) return takeTerrifyingSpeed(message, actor);
   // Wild Counter's, once a Round.
   if (offer.grants?.wildCounter) {
     if (wildCounterSpent(actor)) {

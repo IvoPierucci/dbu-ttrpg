@@ -5839,6 +5839,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (crossing?.rapid) await (await import("./chat.mjs")).tinyTarget(actor);
   // "If you use the Movement Maneuver while Hidden through the effect of Fake Death, you stop being Hidden."
   if (crossing) await (await import("./hidden.mjs")).endFakeDeath(actor, "used the Movement Maneuver");
+  // Terrifying Speed (1): the Movement Maneuver used this Combat Round.
+  if (crossing && game.combat?.started) {
+    await actor.setFlag("dbu-ttrpg", "movedRound", `${game.combat.id}:${game.combat.round ?? 0}`);
+  }
 
   // And the Profile it was made with, if this is the Maneuver that limit is about. Only
   // inside a Combat Round: there are no rounds outside an Encounter, so nothing would
@@ -6162,6 +6166,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && !outOfSequence) await (await import("./chat.mjs")).mimicryOffers(card, actor, maneuver);
   // Balanced Mind (3): the Hype or Analysis used - the other offered on its card, out of sequence.
   if (card) (await import("./chat.mjs")).balancedMindOffer(card, actor, maneuver);
+  // Terrifying Speed (2): Rapid Movement taken - the Terrify out of sequence on its card.
+  if (card && crossing?.rapid) (await import("./chat.mjs")).terrifyingSpeedOffer(card, actor);
   // Team Pose: the Hype used - (2) the Hype offered on its card to Allies with Show Stopping Performance; (1) each Ally's Ki.
   if (card && ((maneuver.through?.id ?? maneuver.id) === "hype")) {
     (await import("./chat.mjs")).teamPoseOffers(card, actor);

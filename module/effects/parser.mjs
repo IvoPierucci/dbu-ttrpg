@@ -516,6 +516,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "evenRound", "tailed", "costumeMendable",
   // Brought to 0 by their own effect (Revenge Bomber's); a Snack eaten this Round (Snack Motivated's).
   "ownDefeat", "snackThisRound",
+  // The Movement Maneuver used this Combat Round (Terrifying Speed's).
+  "movedThisRound",
   // Ki Multiplier from elsewhere; no Ki regained by Surge or Combat Recovery (Power Battery's).
   "kiMultiplied", "kiLocked",
   // The one Defeated, your Lock On Target; no Counter Action left (Lingering Instincts').

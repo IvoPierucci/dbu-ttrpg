@@ -404,6 +404,11 @@ const PREDICATES = {
   /** Brought to 0 by their own effect - Revenge Bomber's. */
   ownDefeat: scope => Boolean(scope.data?.parent?.getFlag?.("dbu-ttrpg", "ownDefeat")),
 
+  /** The Movement Maneuver used this Combat Round - Terrifying Speed (1)'s. In a Combat alone: no Round, none. */
+  movedThisRound: scope => Boolean(globalThis.game?.combat?.started)
+    && ((scope.data?.parent?.getFlag?.("dbu-ttrpg", "movedRound") ?? "")
+      === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`),
+
   /** A Snack eaten this Combat Round - Snack Motivated's. */
   snackThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "snackRound") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
