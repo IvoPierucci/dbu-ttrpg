@@ -417,6 +417,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       spiritInstant: DBUCharacterSheet._onSpiritInstant,
       thiefInstant: DBUCharacterSheet._onThiefInstant,
       flipInstant: DBUCharacterSheet._onFlipInstant,
+      desperateInstant: DBUCharacterSheet._onDesperateInstant,
       hateInstant: DBUCharacterSheet._onHateInstant,
       creativeOutOfSequence: DBUCharacterSheet._onCreativeOutOfSequence,
       newTechnique: DBUCharacterSheet._onNewTechnique,
@@ -1604,6 +1605,10 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             // Thief (3): "You may use a 'Thief Maneuver' as an Instant Maneuver if you have access to it."
             thiefInstant: THIEF_MANEUVERS.includes(maneuver.id) && (this.actor.system.effects?.slots?.["thief.instant"] === true)
               && !((maneuver.id === "flip") && (this.actor.system.effects?.slots?.["flip.asInstant"] === true)),
+            // Desperate Distraction (2): "If you are below the Injured Health Threshold, you may use the Dirty Trick Maneuver as
+            // an Instant Maneuver."
+            desperateInstant: (maneuver.id === "dirty-trick")
+              && (this.actor.system.effects?.slots?.["dirtyTrick.desperateInstant"] === true),
             // Acrobat Star (1): "You may use the Flip Maneuver as an Instant Maneuver."
             flipInstant: (maneuver.id === "flip") && (this.actor.system.effects?.slots?.["flip.asInstant"] === true),
             // Glass Combat (3): "you may use the Movement Maneuver as an Instant Maneuver".
@@ -6010,6 +6015,19 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
     return this.actor.setFlag("dbu-ttrpg", "glassMoveRound", round);
+  }
+
+  /** Desperate Distraction (2): the Dirty Trick as an Instant Maneuver below Injured, once a Round. */
+  static async _onDesperateInstant(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item || (this.actor.system.effects?.slots?.["dirtyTrick.desperateInstant"] !== true)) return;
+    const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+    if (this.actor.getFlag("dbu-ttrpg", "desperateInstantRound") === round) {
+      return ui.notifications.warn(`${this.actor.name}: already used as an Instant this Combat Round.`);
+    }
+    const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
+    if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
+    return this.actor.setFlag("dbu-ttrpg", "desperateInstantRound", round);
   }
 
   /** Acrobat Star (1): the Flip as an Instant Maneuver - its own 1/Round the only limit. */

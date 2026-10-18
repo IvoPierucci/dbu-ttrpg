@@ -64,6 +64,11 @@
                     data-item-id="{{maneuver.itemId}}"
                     data-tooltip="Thief: a Thief Maneuver as an Instant Maneuver (1/Round)">Instant</button>
             {{/if}}
+            {{#if maneuver.desperateInstant}}
+            <button type="button" class="maneuver-control" data-action="desperateInstant"
+                    data-item-id="{{maneuver.itemId}}"
+                    data-tooltip="Desperate Distraction: as an Instant Maneuver, below Injured (1/Round)">Instant</button>
+            {{/if}}
             {{#if maneuver.flipInstant}}
             <button type="button" class="maneuver-control" data-action="flipInstant"
                     data-item-id="{{maneuver.itemId}}"

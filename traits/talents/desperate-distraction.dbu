@@ -1,0 +1,22 @@
+id: desperate-distraction
+name: Desperate Distraction
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in Bluff and 2+ Skill Ranks in Intuition
+description: >
+  You can read your opponents and skillfully deceive them into creating an opening for you to fight back!
+text: >
+  Desperate Distraction: You can read your opponents and skillfully deceive them into creating an opening for you to fight back!
+  –Prerequisites: 2+ Skill Ranks in Bluff and 2+ Skill Ranks in Intuition
+  (1)-[Passive]: You gain access to the Dirty Trick Maneuver.
+  (2)-[1/Round]: If you are below the Injured Health Threshold, you may use the Dirty Trick Maneuver as an Instant Maneuver.
+
+---
+
+[passive]
+# (1)
+allow maneuver.dirty-trick;
+# (2) Below Injured - Injured or Critical: the Dirty Trick's own Instant button on the Maneuvers tab, once a Round
+# (actor-character-sheet.mjs _onDesperateInstant).
+if (belowThreshold("injured")) {
+    allow dirtyTrick.desperateInstant;
+}
