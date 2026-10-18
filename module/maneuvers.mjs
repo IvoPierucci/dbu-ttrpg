@@ -2738,7 +2738,25 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
 
   return withGreedCharges(actor, maneuver,
     await withLastResource(actor, await withOverwhelm(actor, { profile, foundation, kiWager, wagerFromLife, wagerFromDivine,
-      advantages: await withEnhancedFist(actor, maneuver, advantages, foundation), ...answers, ...allInMark })));
+      advantages: await withEnhancedFist(actor, maneuver, advantages, foundation), ...answers, ...allInMark,
+      ...await askRapidFist(actor, maneuver, foundation) })));
+}
+
+/**
+ * Rapid Fist (2): "If you use a Signature Technique that is a Physical Attack, you may double the Diminishing Defense penalty
+ * currently suffered by the target(s) of that Attacking Maneuver for the duration of that Attacking Maneuver." Asked, once an
+ * Encounter; carried as `rapidFist` (chat.mjs dodgeBonus).
+ */
+async function askRapidFist(actor, maneuver, foundation) {
+  if ((foundation !== "physical") || !maneuver?.signature || maneuver.signatureTechnique
+    || (actor?.system?.effects?.slots?.["rapidFist.diminishing"] !== true)) return {};
+  const encounter = game.combat?.id ?? "none";
+  if (actor.getFlag?.("dbu-ttrpg", "rapidFistEncounter") === encounter) return {};
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Rapid Fist` },
+    content: `<p data-tooltip="Once an Encounter">Double the Diminishing Defense its targets suffer, for this attack?</p>`, rejectClose: false });
+  if (!yes) return {};
+  await actor.setFlag("dbu-ttrpg", "rapidFistEncounter", encounter);
+  return { rapidFist: true };
 }
 
 /**

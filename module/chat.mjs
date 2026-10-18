@@ -19796,7 +19796,8 @@ export async function postAttack(actor, target, maneuver,
                                    uncappedCharges = 0, eyeWeapon = false, glassSurge = false, shardCharge = false,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
-                                   unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false },
+                                   unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
+                                   rapidFist = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -20106,6 +20107,8 @@ export async function postAttack(actor, target, maneuver,
             { portal }), reflecting ? null : overwhelm), reflecting ? 0 : (boughtMagnitude + blaster.magnitude)),
           // Critical Point (2): primed by the Energy Charge Maneuver this Round.
           ...((primed && !reflecting) ? { primed: true } : {}),
+          // Rapid Fist (2): its targets' Diminishing Defense doubled for it (dodgeBonus).
+          ...((rapidFist && !reflecting) ? { rapidFist: true } : {}),
           // Overwhelming Assault's stacks, and Last Resource's, lost once this is done (spendOverwhelm).
           ...((overwhelm?.spent && !reflecting) ? { overwhelmSpent: overwhelm.spent } : {}),
           // Revenge Bomber's: Self-Explosion given to it, free.
@@ -24036,6 +24039,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
     if ((attack?.experienced?.kind === "strike") && (attack.experienced.targetUuid === actor.uuid)) {
       parts.push({ label: "Dim. Defense (Exploitation Strike)", value: -actor.system.diminishing.defense.penalty });
     }
+    // Rapid Fist (2): "double the Diminishing Defense penalty currently suffered by the target(s)".
+    if (attack?.rapidFist) parts.push({ label: "Dim. Defense (Rapid Fist)", value: -actor.system.diminishing.defense.penalty });
   }
   // Slashing: "Apply any Diminishing Defense from Attacking Maneuvers made with this Weapon at
   // Attack Declaration" - what this Dodge will earn, already weighing on it.

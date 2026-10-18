@@ -1,0 +1,20 @@
+id: rapid-fist
+name: Rapid Fist
+talentCategory: physical-attack
+prerequisites: Enhanced Fist
+description: >
+  Attacking faster than the eye can see, you leave enemies reeling from your sheer speed and precision.
+text: >
+  Rapid Fist: Attacking faster than the eye can see, you leave enemies reeling from your sheer speed and precision.
+  –Prerequisites: Enhanced Fist
+  (1)-[Passive]: Increase the Strike Roll of your Physical Attacks by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you use a Signature Technique that is a Physical Attack, you may double the Diminishing Defense penalty currently suffered by the target(s) of that Attacking Maneuver for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1)
+strike.physical += 1(T);
+# (2) A Signature Technique declared as a Physical Attack: asked, once an Encounter - its targets' Diminishing Defense penalty
+# doubled on their Dodge against it (maneuvers.mjs askRapidFist, chat.mjs dodgeBonus).
+allow rapidFist.diminishing;
