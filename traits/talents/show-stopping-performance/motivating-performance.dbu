@@ -1,0 +1,17 @@
+id: motivating-performance
+name: Motivating Performance
+order: 6
+optionOf: show-stopping-performance
+optionEffect: 1
+description: >
+  When using the Hype Maneuver, all Allies within a Sphere AoE centered on you have their Combat Rolls increased by 1/4 (rounded up) of your Personality Modifier while you are Hyped.
+text: >
+  Motivating Performance [Triggered, 1/Round]: When using the Hype Maneuver, all Allies within a Sphere AoE centered on you have their Combat Rolls increased by 1/4 (rounded up) of your Personality Modifier while you are Hyped.
+
+---
+
+# The Hype Maneuver used: who stands within the Sphere ticked - the table's - Motivated on each, its stacks that quarter,
+# taken off them as your Hyped goes (chat.mjs motivatingPerformance, motivatedLeft). Automatic by default, its
+# Triggered/Automatic button.
+[triggered/hype, 1/round, effect 1]
+motivatingPerformance();

@@ -1,0 +1,17 @@
+id: motivated-mark
+name: Motivated
+kind: conditions
+maxStacks: 20
+# Not a Combat Condition: what Motivating Performance (Show Stopping Performance) gives an Ally - its stacks a quarter of
+# the performer's Personality Modifier, rounded up - till the performer is no longer Hyped.
+combatCondition: no
+source: Core Rule
+description: >
+  Motivating Performance: Combat Rolls higher by a stack each, while the one who performed is Hyped.
+text: >
+  Motivating Performance: When using the Hype Maneuver, all Allies within a Sphere AoE centered on you have their Combat Rolls increased by 1/4 (rounded up) of your Personality Modifier while you are Hyped.
+
+---
+
+[passive]
+combatRolls += stacks;

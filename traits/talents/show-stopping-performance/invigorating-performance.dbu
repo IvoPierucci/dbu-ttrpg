@@ -1,0 +1,17 @@
+id: invigorating-performance
+name: Invigorating Performance
+order: 5
+optionOf: show-stopping-performance
+optionEffect: 1
+description: >
+  When using the Hype Maneuver, regain 5(bT) Life and Ki Points.
+text: >
+  Invigorating Performance [Triggered, 1/Round]: When using the Hype Maneuver, regain 5(bT) Life and Ki Points.
+
+---
+
+# The Hype Maneuver used (use-maneuver.mjs, the `hype` Moment): Automatic by default, its Triggered/Automatic button. What
+# it gives back said on the Hype's card.
+[triggered/hype, 1/round, effect 1]
+life.value += 5(bT);
+ki.value += 5(bT);

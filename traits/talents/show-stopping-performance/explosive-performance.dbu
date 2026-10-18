@@ -1,0 +1,17 @@
+id: explosive-performance
+name: Explosive Performance
+order: 7
+optionOf: show-stopping-performance
+optionEffect: 1
+description: >
+  When using the Hype Maneuver, if your last Maneuver was an Attacking Maneuver, reduce the Life Points of the Opponent(s) hit by that Attacking Maneuver by your Personality Modifier and 1/2 (rounded up) of your Might.
+text: >
+  Explosive Performance [Triggered, 1/Round]: When using the Hype Maneuver, if your last Maneuver was an Attacking Maneuver, reduce the Life Points of the Opponent(s) hit by that Attacking Maneuver by your Personality Modifier and 1/2 (rounded up) of your Might.
+
+---
+
+# The Hype Maneuver used: the Opponents your last Maneuver hit - read before the Hype is written over it - their Life
+# Points less your Personality Modifier and half your Might (chat.mjs explosivePerformance). Nobody, not spent. Automatic
+# by default, its Triggered/Automatic button.
+[triggered/hype, 1/round, effect 1]
+explosivePerformance();

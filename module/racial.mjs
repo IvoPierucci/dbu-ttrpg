@@ -191,9 +191,9 @@ export function racialTraitFiles() {
     .filter(trait => !trait.optionOf);
 }
 
-/** A Racial Trait's Options, in the order its text lists them (their `order:`), not by name (the user's). */
+/** A Racial Trait's Options - or a Talent's - in the order its text lists them (their `order:`), not by name (the user's). */
 export function racialOptionsOf(id) {
-  return [...traitsOfKind("races"), ...traitsOfKind("factors")].filter(trait => trait.optionOf === id)
+  return [...traitsOfKind("races"), ...traitsOfKind("factors"), ...traitsOfKind("talents")].filter(trait => trait.optionOf === id)
     .sort((a, b) => (orderOf(a) - orderOf(b)) || a.name.localeCompare(b.name));
 }
 
@@ -485,15 +485,29 @@ async function askOptions(trait, options, count = Math.max(1, Number(trait.optio
 }
 
 /**
- * A Talent's `choose:` answered as it is gained (Elementalist's): its Item's data with the script written in and the choice
+ * A Talent's `choose:` answered as it is gained (Elementalist's), and its Option effects as a Racial Trait's are (Show Stopping
+ * Performance's "Upon gaining this Talent, select an effect"): its Item's data with the scripts written in and the choices
  * kept - or null when backed out of. One with nothing to choose, as it was.
  */
 export async function answeredTalent(data, trait, actor) {
-  if (!trait?.choose) return data;
+  const groups = optionGroupsOf(trait);
+  if (!trait?.choose && !groups.length) return data;
   const chosen = [];
   const script = await answered({ ...trait, script: data.system.script }, chosen, actor);
   if (script === null) return null;
-  return { ...data, system: { ...data.system, script, chosen } };
+  const scripts = [script];
+  for (const group of groups) {
+    const picked = await askOptions(trait, group.options, group.count, group.effect);
+    if (!picked) return null;
+    for (const id of picked) {
+      const option = group.options.find(entry => entry.id === id);
+      chosen.push({ key: "option", value: option.id, label: option.name });
+      const own = await answered(option, chosen, actor);
+      if (own === null) return null;
+      scripts.push(`#@ option ${option.id} | ${option.name}\n${own}\n#@ end`);
+    }
+  }
+  return { ...data, system: { ...data.system, script: scripts.filter(Boolean).join("\n\n"), chosen } };
 }
 
 /**

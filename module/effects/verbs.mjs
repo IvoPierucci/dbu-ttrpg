@@ -139,6 +139,20 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Spectator left: its Ally's bonus off (chat.mjs spectatorLeft)."
   },
+  motivatingPerformance: {
+    args: [0, 0],
+    doc: "Motivating Performance: the Allies within a Sphere ticked - Motivated, a quarter of your Personality Modifier, while "
+       + "you are Hyped (chat.mjs motivatingPerformance)."
+  },
+  motivatedLeft: {
+    args: [0, 0],
+    doc: "Hyped gone: Motivating Performance's Motivated off whoever it was given to (chat.mjs motivatedLeft)."
+  },
+  explosivePerformance: {
+    args: [0, 0],
+    doc: "Explosive Performance: the Opponents your last Maneuver hit - Life Points less your Personality Modifier and half "
+       + "your Might (chat.mjs explosivePerformance)."
+  },
   undyingFall: {
     args: [0, 0],
     doc: "Undying (1): leaving it below nothing - Defeated at once, nothing answering it (chat.mjs undyingFall)."

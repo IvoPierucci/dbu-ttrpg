@@ -1,0 +1,16 @@
+id: resilient-performance
+name: Resilient Performance
+order: 4
+optionOf: show-stopping-performance
+optionEffect: 1
+description: >
+  While you are Hyped, increase your Soak Value by 2(T).
+text: >
+  Resilient Performance [Passive]: While you are Hyped, increase your Soak Value by 2(T).
+
+---
+
+[passive]
+if (hasCondition("hyped")) {
+  soakValue += 2(T);
+}

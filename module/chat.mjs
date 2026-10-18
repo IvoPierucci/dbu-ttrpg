@@ -13530,9 +13530,9 @@ async function settleGoof(message, clash) {
   return lasting(challenger, { kind: KINDS.CONDITION, key, edge: EDGES.START, on: target.uuid, source: "Goof" });
 }
 
-/** Who stands within a Sphere around them - themselves and their Allies on the scene, ticked; the table's. */
-async function askWhoWithin(actor, title, hint) {
-  const people = [actor, ...alliesOnScene(actor).filter(ally => !ally.system?.defeated)];
+/** Who stands within a Sphere around them - themselves (but `self: false`) and their Allies on the scene, ticked; the table's. */
+async function askWhoWithin(actor, title, hint, { self = true } = {}) {
+  const people = [...(self ? [actor] : []), ...alliesOnScene(actor).filter(ally => !ally.system?.defeated)];
   const escape = Handlebars.escapeExpression;
   const ticked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"], window: { title },
@@ -14070,6 +14070,53 @@ export async function spectatorLeft(actor) {
     if (ally && ((Number(ally.system?.conditions?.cheered) || 0) > 0)) await setCondition(ally, "cheered", 0);
   }
   return requestActorUpdate(actor, { [`flags.${SCOPE}.cheered`]: [] });
+}
+
+/**
+ * Motivating Performance (Show Stopping Performance): "When using the Hype Maneuver, all Allies within a Sphere AoE centered on
+ * you have their Combat Rolls increased by 1/4 (rounded up) of your Personality Modifier while you are Hyped." Who stands
+ * within it ticked - the Sphere the table's - Motivated on each, its stacks that quarter; off them as Hyped goes (motivatedLeft).
+ */
+export async function motivatingPerformance(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const amount = Math.ceil((Number(actor.system.attributes?.personality?.mod) || 0) / 4);
+  if ((amount <= 0) || !alliesOnScene(actor).some(ally => !ally.system?.defeated)) return UNSPENT;
+  const within = await askWhoWithin(actor, "Motivating Performance", "Your Allies within a Sphere around you.", { self: false });
+  if (!within.length) return UNSPENT;
+  const { setCondition } = await import("./conditions.mjs");
+  for (const ally of within) {
+    await setCondition(ally, "motivated-mark", Math.max(amount, Number(ally.system?.conditions?.["motivated-mark"]) || 0));
+  }
+  const given = Array.from(actor.getFlag?.(SCOPE, "motivated") ?? []);
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.motivated`]: [...new Set([...given, ...within.map(each => each.uuid)])] });
+}
+
+/** Hyped gone: Motivating Performance's Motivated off whoever it was given to - "while you are Hyped". */
+export async function motivatedLeft(actor) {
+  const given = Array.from(actor?.getFlag?.(SCOPE, "motivated") ?? []);
+  if (!given.length) return;
+  const { setCondition } = await import("./conditions.mjs");
+  for (const uuid of given) {
+    const ally = fromUuidSync(uuid);
+    if (ally && ((Number(ally.system?.conditions?.["motivated-mark"]) || 0) > 0)) await setCondition(ally, "motivated-mark", 0);
+  }
+  return requestActorUpdate(actor, { [`flags.${SCOPE}.motivated`]: [] });
+}
+
+/**
+ * Explosive Performance (Show Stopping Performance): "When using the Hype Maneuver, if your last Maneuver was an Attacking
+ * Maneuver, reduce the Life Points of the Opponent(s) hit by that Attacking Maneuver by your Personality Modifier and 1/2
+ * (rounded up) of your Might." Whom the last Maneuver hit - read before the Hype is written over it; only an attack's are
+ * kept - Opponents, not Defeated. None, not spent.
+ */
+export async function explosivePerformance(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const hit = (actor.system.lastManeuver?.hit ?? []).filter(uuid => (uuid !== actor.uuid) && !allies.has(uuid))
+    .map(uuid => fromUuidSync(uuid)).filter(each => each && !each.system?.defeated);
+  if (!hit.length) return UNSPENT;
+  const amount = (Number(actor.system.attributes?.personality?.mod) || 0) + Math.ceil((Number(actor.system.might) || 0) / 2);
+  for (const target of hit) await reduceLifePoints(target, amount, { reason: "Explosive Performance" });
 }
 
 /**

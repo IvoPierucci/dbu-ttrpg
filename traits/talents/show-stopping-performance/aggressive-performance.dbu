@@ -1,0 +1,16 @@
+id: aggressive-performance
+name: Aggressive Performance
+order: 1
+optionOf: show-stopping-performance
+optionEffect: 1
+description: >
+  While you are Hyped, increase your Wound Rolls by 2(T).
+text: >
+  Aggressive Performance [Passive]: While you are Hyped, increase your Wound Rolls by 2(T).
+
+---
+
+[passive]
+if (hasCondition("hyped")) {
+  wound += 2(T);
+}

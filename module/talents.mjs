@@ -10,6 +10,11 @@
 import { getTrait, traitsOfKind } from "./effects/traits.mjs";
 import { compareTalents, talentCategoryOf } from "./talent-categories.mjs";
 
+/** Every Talent written - not a Talent's Options, which are files beside it (Show Stopping Performance's). */
+function talentFiles() {
+  return traitsOfKind("talents").filter(trait => !trait.optionOf);
+}
+
 /**
  * Talents are taken on the Progression tab (the user's, 2026-10-15): a Talent Addition row - fixed, or a Character Perk made
  * one - names a Talent by its file's id, and once its Level is reached the Talent is on the character, made from its file and
@@ -58,7 +63,7 @@ export async function syncProgressionTalents(actor) {
   // not given (asked again the next time the tab is touched).
   const { answeredTalent } = await import("./racial.mjs");
   const created = [];
-  for (const trait of [...wanted].filter(id => !held.has(id)).map(id => getTrait(id)).filter(each => each?.kind === "talents")) {
+  for (const trait of [...wanted].filter(id => !held.has(id)).map(id => getTrait(id)).filter(each => (each?.kind === "talents") && !each.optionOf)) {
     const data = await answeredTalent(itemFrom(trait), trait, actor);
     if (!data) continue;
     data.flags["dbu-ttrpg"][FROM_PROGRESSION] = true;
@@ -87,7 +92,7 @@ export function talentChoicesFor(actor, entry) {
     if ((item.type === "talent") && item.flags?.["dbu-ttrpg"]?.fromTrait) taken.add(item.flags["dbu-ttrpg"].sourceId);
   }
   const groups = new Map();
-  for (const trait of [...traitsOfKind("talents")].sort(compareTalents)) {
+  for (const trait of [...talentFiles()].sort(compareTalents)) {
     if (taken.has(trait.id) && (trait.id !== entry.talent)) continue;
     const category = talentCategoryOf(trait);
     const label = category ? (category.raceLabel ? `${category.label} - ${category.raceLabel}` : category.label) : "Other";
@@ -158,7 +163,7 @@ export async function importCoreTalents() {
   const existing = new Set([...index].flatMap(entry =>
     [entry.flags?.["dbu-ttrpg"]?.sourceId, entry.name].filter(Boolean)));
 
-  const available = traitsOfKind("talents");
+  const available = talentFiles();
   if (!available.length) {
     ui.notifications.error(
       "No Talents were read from traits/talents/. Check the console for why."
@@ -200,7 +205,7 @@ export async function reloadCoreTalents() {
   const updates = [];
   const creations = [];
 
-  for (const trait of traitsOfKind("talents")) {
+  for (const trait of talentFiles()) {
     const id = byId.get(trait.id) ?? byId.get(trait.name);
     if (id) updates.push({ _id: id, ...itemFrom(trait) });
     else creations.push(itemFrom(trait));

@@ -1,0 +1,23 @@
+id: show-stopping-performance
+name: Show Stopping Performance
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in Performance
+description: >
+  You perform for everyone on the battlefield, inspiring awe in your allies, confidence in yourself, or terror in your enemies.
+text: >
+  Show Stopping Performance: You perform for everyone on the battlefield, inspiring awe in your allies, confidence in yourself, or terror in your enemies.
+  –Prerequisites: 2+ Skill Ranks in Performance
+  (1)-[Option]: Upon gaining this Talent, select an effect from the list below:
+
+  * Aggressive Performance [Passive]: While you are Hyped, increase your Wound Rolls by 2(T).
+  * Flexible Performance [Passive]: While you are Hyped, increase your Dodge Rolls by 1(T).
+  * Precision Performance [Passive]: While you are Hyped, increase your Strike Rolls by 1(T).
+  * Resilient Performance [Passive]: While you are Hyped, increase your Soak Value by 2(T).
+  * Invigorating Performance [Triggered, 1/Round]: When using the Hype Maneuver, regain 5(bT) Life and Ki Points.
+  * Motivating Performance [Triggered, 1/Round]: When using the Hype Maneuver, all Allies within a Sphere AoE centered on you have their Combat Rolls increased by 1/4 (rounded up) of your Personality Modifier while you are Hyped.
+  * Explosive Performance [Triggered, 1/Round]: When using the Hype Maneuver, if your last Maneuver was an Attacking Maneuver, reduce the Life Points of the Opponent(s) hit by that Attacking Maneuver by your Personality Modifier and 1/2 (rounded up) of your Might.
+
+---
+
+# (1) Its Options, one file each beside this one - asked as it is gained (racial.mjs answeredTalent), changeable on its
+# Options tab.

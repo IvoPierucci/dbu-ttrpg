@@ -30,3 +30,8 @@ text: >
 # three.
 [passive]
 combatRolls += 1(T) + ceil(personality.mod / 4);
+
+# Motivating Performance's "while you are Hyped": its Allies' Motivated off as this goes (chat.mjs motivatedLeft) - nothing
+# where none was given.
+[on removed]
+motivatedLeft();

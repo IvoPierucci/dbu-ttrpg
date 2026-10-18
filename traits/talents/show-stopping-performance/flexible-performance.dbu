@@ -1,0 +1,16 @@
+id: flexible-performance
+name: Flexible Performance
+order: 2
+optionOf: show-stopping-performance
+optionEffect: 1
+description: >
+  While you are Hyped, increase your Dodge Rolls by 1(T).
+text: >
+  Flexible Performance [Passive]: While you are Hyped, increase your Dodge Rolls by 1(T).
+
+---
+
+[passive]
+if (hasCondition("hyped")) {
+  dodge += 1(T);
+}
