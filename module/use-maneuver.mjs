@@ -4034,7 +4034,9 @@ async function treatAlly(actor, ally, maneuver) {
   const chosen = poisoned ? await askTreatment(actor, ally) : { cure: false };
   if (!chosen) return false;
 
-  const healed = await healAlly(actor, ally, maneuver, chosen.cure);
+  // Battlefield Doctor (2): a Combat Condition off them, asked - said with the healing.
+  const removed = await askDoctorRemoval(actor, ally);
+  const healed = await healAlly(actor, ally, maneuver, chosen.cure, removed);
 
   if (!chosen.cure) return healed;
 
@@ -4092,7 +4094,7 @@ async function treatAlly(actor, ally, maneuver) {
  * Capped at their maximum like every other regain, and what the card reports is what
  * actually went on rather than what was rolled.
  */
-async function healAlly(actor, ally, maneuver, halved) {
+async function healAlly(actor, ally, maneuver, halved, removed = "") {
   const dice = 2 * Math.max(1, actor.system.baseTierOfPower ?? 1);
   const bonus = actor.system.skills?.medicine?.bonus ?? 0;
 
@@ -4112,9 +4114,35 @@ async function healAlly(actor, ally, maneuver, halved) {
       + `${given === 1 ? "" : "s"}`
       + (halved ? ` (half of ${roll.total}, to go after the poison)` : "")
       + (given < rolled ? " - the rest had nowhere to go" : "")
+      + (removed ? `; no longer ${removed} (Battlefield Doctor)` : "")
   });
 
   return true;
+}
+
+/** Battlefield Doctor (2)'s exceptions: "(except Suffocating, Pinned, or Transfigured)". */
+const DOCTOR_KEEPS = Object.freeze(["suffocating", "pinned", "transfigured"]);
+
+/**
+ * Battlefield Doctor (2): "When you use the Treatment Maneuver, you may remove a Combat Condition from the target (except
+ * Suffocating, Pinned, or Transfigured)." Which, asked, once a Round - spent as one is taken off. Its name, or "".
+ */
+async function askDoctorRemoval(actor, target) {
+  if (actor.system.effects?.slots?.["treatment.removeCondition"] !== true) return "";
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "doctorRound") === round) return "";
+  const { allConditions, setCondition } = await import("./conditions.mjs");
+  const held = allConditions().filter(condition => condition.combatCondition && !DOCTOR_KEEPS.includes(condition.key)
+    && ((Number(target.system.conditions?.[condition.key]) || 0) > 0));
+  if (!held.length) return "";
+  const { askPlayerChoice } = await import("./chat.mjs");
+  const picked = await askPlayerChoice(actor, `${actor.name}: Battlefield Doctor - a Combat Condition off ${target.name}`,
+    [...held.map(condition => ({ value: condition.key, label: condition.name })), { value: "none", label: "None" }]);
+  const condition = held.find(each => each.key === picked);
+  if (!condition) return "";
+  await actor.setFlag("dbu-ttrpg", "doctorRound", round);
+  await setCondition(target, condition.key, 0);
+  return condition.name;
 }
 
 /**
@@ -4646,12 +4674,14 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // for having no target steps aside. Everything else about the Maneuver still applies:
   // the cost, the Profile, the limit, the Instant rule.
   if (maneuver.requiresTarget && !atFeature) {
-    targetActor = (targetUuid ? fromUuidSync(targetUuid) : null) ?? game.user.targets.first()?.actor ?? null;
+    // Battlefield Doctor (1): "you can target yourself instead of an Ally within your Melee Range" - your own token, or none.
+    const selfTreated = Boolean(maneuver.treatment) && (actor.system.effects?.slots?.["treatment.self"] === true);
+    targetActor = (targetUuid ? fromUuidSync(targetUuid) : null) ?? game.user.targets.first()?.actor ?? (selfTreated ? actor : null);
     if (!targetActor) {
       ui.notifications.warn(`${maneuver.name} needs a target. Target a token first.`);
       return false;
     }
-    if (targetActor.uuid === actor.uuid) {
+    if ((targetActor.uuid === actor.uuid) && !selfTreated) {
       ui.notifications.warn(`${maneuver.name} cannot target its own user.`);
       return false;
     }

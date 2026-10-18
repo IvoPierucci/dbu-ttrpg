@@ -1,0 +1,20 @@
+id: battlefield-doctor
+name: Battlefield Doctor
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in the Medicine Skill
+description: >
+  You are adept in medicine, allowing you to easily treat any maladies.
+text: >
+  Battlefield Doctor: You are adept in medicine, allowing you to easily treat any maladies.
+  –Prerequisites: 2+ Skill Ranks in the Medicine Skill
+  (1)-[Triggered]: Upon using the Treatment Maneuver, you can target yourself instead of an Ally within your Melee Range.
+  (2)-[Triggered, 1/Round]: When you use the Treatment Maneuver, you may remove a Combat Condition from the target (except Suffocating, Pinned, or Transfigured).
+
+---
+
+[passive]
+# (1) The Treatment aimed at yourself - your own token targeted, or none (use-maneuver.mjs, where its target is resolved).
+allow treatment.self;
+# (2) Asked as the Treatment is used, once a Round - the player's to choose: which of the target's Combat Conditions comes off,
+# Suffocating, Pinned and Transfigured never offered; said on its roll (use-maneuver.mjs askDoctorRemoval).
+allow treatment.removeCondition;
