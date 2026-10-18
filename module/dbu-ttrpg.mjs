@@ -176,6 +176,17 @@ function conduitRefresh() {
 }
 Hooks.on("updateActor", (actor, changes) => { if (changes.system?.life) conduitRefresh(); });
 
+// All Sizes Fit Me (2): a Size Category changed - by whatever changed it, by whoever made the change.
+async function sizeWatch(actor, userId) {
+  if ((userId !== game.user.id) || (actor?.type !== "character")) return;
+  const { sizeChangeCheck } = await import("./chat.mjs");
+  await sizeChangeCheck(actor);
+}
+Hooks.on("updateActor", (actor, changes, options, userId) => sizeWatch(actor, userId));
+Hooks.on("updateItem", (item, changes, options, userId) => sizeWatch(item.parent, userId));
+Hooks.on("createItem", (item, options, userId) => sizeWatch(item.parent, userId));
+Hooks.on("deleteItem", (item, options, userId) => sizeWatch(item.parent, userId));
+
 // Improved Initiative (2), Alert (3): Initiative Advantage read off the Combat's Initiative Values - read again as they change.
 const ADVANTAGE_READERS = new Set(["improved-initiative", "alert", "attentive-warrior", "speedblitz", "lightning-initiative",
   "patient-fighter"]);

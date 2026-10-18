@@ -2063,6 +2063,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       meleeRange: size.meleeRange,
       squares: size.squares,
       steps: sizeKeys.indexOf(sizeKey) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
+      // The base Size Category - what they were built as - in the same steps (All Sizes Fit Me's "not your base Size Category").
+      baseSteps: ((builtAt >= 0) ? builtAt : sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE)) - sizeKeys.indexOf(DBUCharacterData.DEFAULT_SIZE),
       // The Size beneath a Ki Avatar - the same as `key` without one.
       trueKey,
       // The Size beneath a Shapeshift - "this does not destroy any Apparel you have equipped" (gear.mjs outgrown).

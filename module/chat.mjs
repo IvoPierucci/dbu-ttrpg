@@ -19310,6 +19310,14 @@ async function takeOutOfSequence(message, actor, offer) {
     }
     await actor.setFlag(SCOPE, flag, roundKey());
   }
+  // All Sizes Fit Me (2)'s, once a Round.
+  if (offer.grants?.allSizes) {
+    if (actor.getFlag?.(SCOPE, "allSizesRound") === roundKey()) {
+      ui.notifications.warn(`${actor.name}: All Sizes Fit Me - already used this Combat Round.`);
+      return null;
+    }
+    await actor.setFlag(SCOPE, "allSizesRound", roundKey());
+  }
   // Footwork (3)'s, once a Round.
   if (offer.grants?.footwork) {
     if (actor.getFlag?.(SCOPE, "footworkRound") === roundKey()) {
@@ -22411,6 +22419,27 @@ async function takePointBlank(message, actor, offer) {
   requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
   await actor.setFlag(SCOPE, rule.flag, encounter);
   return used;
+}
+
+/**
+ * All Sizes Fit Me (2): "If you change your Size Category, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver." The
+ * Size Category watched (`lastSizeKey`); changed in a Combat, the Power Up offered on the character's latest card - one made for
+ * it where there is none - once a Round, counted when taken.
+ */
+export async function sizeChangeCheck(actor) {
+  const now = actor?.system?.size?.key;
+  // Watched only on whoever has it.
+  if (!now || (actor.system.effects?.slots?.["allSizes.powerUp"] !== true)) return;
+  const last = actor.getFlag?.(SCOPE, "lastSizeKey");
+  if (last === now) return;
+  await actor.setFlag(SCOPE, "lastSizeKey", now);
+  if (!last || !game.combat?.started || (actor.system.effects?.slots?.["allSizes.powerUp"] !== true)
+    || (actor.getFlag?.(SCOPE, "allSizesRound") === roundKey())) return;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "power-up", maneuverName: "Power Up",
+    reason: "All Sizes Fit Me - your Size Category changed", grants: { allSizes: true } };
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
 }
 
 /**

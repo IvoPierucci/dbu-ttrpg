@@ -1,0 +1,22 @@
+id: all-sizes-fit-me
+name: All Sizes Fit Me
+talentCategory: size
+prerequisites: 1+ Size Talent
+description: >
+  You change sizes like changing your hat.
+text: >
+  All Sizes Fit Me: You change sizes like changing your hat.
+  –Prerequisites: 1+ Size Talent
+  (1)-[Passive]: While your Size Category is not your base Size Category, increase your Surgency by 2(T).
+  (2)-[Triggered, 1/Round]: If you change your Size Category, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) The base Size Category: what you were built as (size.baseSteps).
+if (size.steps != size.baseSteps) {
+  surgency += 2(T);
+}
+# (2) A Size Category changed in a Combat: the Power Up offered out of sequence on your latest card, once a Round (chat.mjs
+# sizeChangeCheck).
+allow allSizes.powerUp;
