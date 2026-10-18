@@ -17131,6 +17131,25 @@ async function spendBlasterKi(attacker, attack, struck) {
 }
 
 /**
+ * Assassinate (2): "If you hit an Oblivious Character with an Attacking Maneuver, you may spend 5(bT) Ki Points to increase the
+ * Damage Category of that Attacking Maneuver by 1 Category." Asked as the hit lands on one Oblivious of you, once a Round; the
+ * Ki paid, the attack marked (`assassinated`) - its Damage Category 1 higher for everyone it reached.
+ */
+async function assassinateCategory(attacker, struck) {
+  if ((attacker?.system?.effects?.slots?.["assassinate.category"] !== true) || !struck.some(({ own }) => own?.oblivious)
+    || (attacker.getFlag?.(SCOPE, "assassinateRound") === roundKey())) return false;
+  const cost = 5 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1);
+  const { ki, capacity } = attacker.system;
+  if (((Number(ki?.value) || 0) < cost) || ((Number(capacity?.remaining) || 0) < cost)) return false;
+  const answer = await askPlayerChoice(attacker, `${attacker.name}: Assassinate - ${cost} Ki for the Damage Category 1 higher?`,
+    [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]);
+  if (answer !== "yes") return false;
+  await requestActorUpdate(attacker, { "system.ki.value": ki.value - cost, "system.capacity.spent": capacity.spent + cost,
+    [`flags.${SCOPE}.assassinateRound`]: roundKey() });
+  return true;
+}
+
+/**
  * Burning Fury (2): "If you hit an Opponent with an Attacking Maneuver while in the Raging State, reduce your Life Points by
  * 4(bT) to inflict the Broken Combat Condition on that Opponent until the end of your turn." Which one, asked as the hit lands,
  * once a Round; the Life paid, Broken on them till the end of this turn of yours.
@@ -23471,6 +23490,8 @@ async function answerHit(message, attack, attacker, struck) {
   if (blasted) Object.assign(answer.marks, { blasterWound: blasted.spent, blasterName: blasted.name });
   // Burning Fury (2): 4(bT) Life Points for Broken on one hit, asked.
   await burningFuryBreak(attacker, struck);
+  // Assassinate (2): one Oblivious of you hit - 5(bT) Ki for the Damage Category, asked.
+  if (await assassinateCategory(attacker, struck)) answer.marks.assassinated = true;
   await offerTriggers(attacker, "hit-opponent");
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
@@ -24368,9 +24389,11 @@ async function rollAttackWoundWork(message, attack) {
 
   // Feral at Unhinged: the Damage Category 1 higher for everyone it reached, where its user takes it.
   const unhinged = await askUnhinged(attacker, attack, wound);
-  const reached = unhinged
+  // And Assassinate (2)'s, bought as it hit.
+  const raised = (unhinged ? 1 : 0) + (attack.assassinated ? 1 : 0);
+  const reached = raised
     ? targets.map(entry => ({ ...entry, own: entry.own?.hit
-      ? { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, 1) } : entry.own }))
+      ? { ...entry.own, damageCategory: resolveDamageCategory(entry.own.damageCategory, raised) } : entry.own }))
     : targets;
 
   // Whoever stepped in front of somebody takes the Wound Roll in their place. Settled
@@ -24468,6 +24491,9 @@ async function rollAttackWoundWork(message, attack) {
         ? (Number(attacker.system.effects?.slots?.["wound.vsConditioned"]?.add) || 0) : 0 },
       { label: "Overwhelming Pressure", value: pressing ? pressing(target) : 0 },
       { label: "Stealthy Trick", value: own.oblivious ? unseen : 0 },
+      // Assassinate (1): against one Oblivious of you as it hit.
+      { label: "Assassinate (Oblivious)", written: "+1(T)",
+        value: own.oblivious ? (Number(attacker.system.effects?.slots?.["wound.vsOblivious"]?.add) || 0) : 0 },
       ...lockOnParts(attacker, target),
       ...enemyParts(attacker, target),
       ...inferiorParts(attacker, target, "wound"),

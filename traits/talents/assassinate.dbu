@@ -1,0 +1,20 @@
+id: assassinate
+name: Assassinate
+talentCategory: skill
+prerequisites: Stealth Strike, 3+ Skill Ranks in the Stealth Skill
+description: >
+  When you attack from hiding, your strikes become even more lethal.
+text: >
+  Assassinate: When you attack from hiding, your strikes become even more lethal.
+  –Prerequisites: Stealth Strike, 3+ Skill Ranks in the Stealth Skill
+  (1)-[Passive]: Increase your Wound Rolls against your Oblivious Characters by 1(T).
+  (2)-[Triggered, 1/Round]: If you hit an Oblivious Character with an Attacking Maneuver, you may spend 5(bT) Ki Points to increase the Damage Category of that Attacking Maneuver by 1 Category.
+
+---
+
+[passive]
+# (1) Against each one hit who was Oblivious of you as it hit (chat.mjs, where the Wound is worked out against each).
+wound.vsOblivious += 1(T);
+# (2) Asked as the hit lands on one Oblivious of you, once a Round - the player's to time: 5(bT) Ki for the Damage Category
+# 1 higher for everyone it reached (chat.mjs assassinateCategory).
+allow assassinate.category;
