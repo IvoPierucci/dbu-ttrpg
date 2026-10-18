@@ -6456,6 +6456,17 @@ export async function declareCharge(actor, { foundation = "" } = {}) {
     "system.charging.foundation": foundation,
     "system.charging.charges": 1
   });
+  // Magic Caster (2): "If you declare a Magic Attack for the Energy Charge Maneuver, you may gain an additional Energy Charge
+  // through the effects of that Maneuver" - asked, once an Encounter.
+  const encounter = game.combat?.id ?? "none";
+  if ((actor.system.effects?.slots?.["magicCaster.charge"] === true) && chargeOfFoundation(held, profile, "magic")
+    && (actor.getFlag?.("dbu-ttrpg", "magicCasterEncounter") !== encounter)
+    && (maxEnergyCharges(profile, DBUCharacterData.MAX_ENERGY_CHARGES, actor) >= 2)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Magic Caster` },
+      content: `<p data-tooltip="Once an Encounter">An Energy Charge more?</p>`, rejectClose: false })) {
+    await actor.setFlag("dbu-ttrpg", "magicCasterEncounter", encounter);
+    await actor.update({ "system.charging.charges": 2 });
+  }
 
   // "Until you use the chosen Attacking Maneuver, you suffer from the Guard Down Combat
   // Condition" - applied here rather than written into the Maneuver's script, because

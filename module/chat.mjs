@@ -21370,6 +21370,11 @@ function strikeParts(attacker, attack) {
     ...favoredParts(attacker, attack, "strike"),
     ...profileStrikeParts(attacker, attack),
     ...profileSlotStrike(attacker, attack),
+    // Magic Caster (1): a Magic Attack not of an Elemental Profile.
+    ...(((attack?.foundation === "magic") && !/^elemental/.test(String(attack?.profile ?? ""))
+      && (Number(attacker.system.effects?.slots?.["strike.magicNonElemental"]?.add) || 0))
+      ? [{ label: (attacker.system.effects.slots["strike.magicNonElemental"].parts ?? []).map(part => part.source).find(Boolean)
+          ?? "Magic Caster", value: Number(attacker.system.effects.slots["strike.magicNonElemental"].add) }] : []),
     ...modifierStrikeParts(attacker, attack),
     ...(attack.weapon?.strike ?? []),
     // One Maneuver's own Strike Roll - Bouncy Physique's 2(T) on the Reflect.

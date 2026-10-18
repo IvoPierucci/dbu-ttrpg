@@ -1,0 +1,20 @@
+id: magic-caster
+name: Magic Caster
+talentCategory: magic-attack
+prerequisites: Magic Blaster
+description: >
+  Your magical prowess allows you to infuse intense power into your attacks.
+text: >
+  Magic Caster: Your magical prowess allows you to infuse intense power into your attacks.
+  –Prerequisites: Magic Blaster
+  (1)-[Passive]: Increase the Strike Rolls of your Magic Attacks that are not using an ‘Elemental’ Profile by 1(T).
+  (2)-[Triggered, 1/Encounter]: If you declare a Magic Attack for the Energy Charge Maneuver, you may gain an additional Energy Charge through the effects of that Maneuver.
+
+---
+
+[passive]
+# (1) A Magic Attack not of an Elemental Profile (chat.mjs strikeParts).
+strike.magicNonElemental += 1(T);
+# (2) A Magic Attack declared for the Energy Charge: asked, once an Encounter - a second Energy Charge (use-maneuver.mjs
+# declareCharge).
+allow magicCaster.charge;
