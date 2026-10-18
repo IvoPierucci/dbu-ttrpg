@@ -16358,22 +16358,32 @@ async function spendCriticalEye(attacker, attack) {
 }
 
 /**
- * Blaster Master (1): "If you hit an Opponent with an Energy Attack, spend up to 5(bT) Ki Points. If you do, increase the
- * Wound Roll by an equal amount." How many, asked of whoever plays the attacker; spent - as Tough Warrior's, out of the
- * Capacity as well. The Ki spent, or 0.
+ * "If you hit an Opponent with an Energy Attack, spend up to 5(bT) Ki Points. If you do, increase the Wound Roll by an equal
+ * amount" - Blaster Master (1)'s; Magic Master (2)'s the same with a Magic Attack. By the attack's Foundation: its Slot and
+ * its name.
+ */
+const KI_ON_HIT = Object.freeze({
+  energy: { slot: "blaster.woundKi", name: "Blaster Master" },
+  magic: { slot: "magicMaster.woundKi", name: "Magic Master" }
+});
+
+/**
+ * Blaster Master (1), Magic Master (2): how many, asked of whoever plays the attacker; spent - as Tough Warrior's, out of the
+ * Capacity as well. The Ki spent and whose, or null.
  */
 async function spendBlasterKi(attacker, attack, struck) {
-  if ((attack.foundation !== "energy") || (attacker?.system?.effects?.slots?.["blaster.woundKi"] !== true)) return 0;
+  const which = KI_ON_HIT[attack.foundation];
+  if (!which || (attacker?.system?.effects?.slots?.[which.slot] !== true)) return null;
   const allies = new Set(alliesOnScene(attacker).map(ally => ally.uuid));
-  if (!struck.some(({ uuid }) => !allies.has(uuid))) return 0;
+  if (!struck.some(({ uuid }) => !allies.has(uuid))) return null;
   const most = Math.min(5 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1), Number(attacker.system.ki?.value) || 0,
     Number(attacker.system.capacity?.remaining) || 0);
-  if (most <= 0) return 0;
-  const spent = Math.min(most, await askPlayerAmount(attacker, `${attacker.name}: Blaster Master`, most, "Ki Points - as much on the Wound Roll"));
-  if (spent <= 0) return 0;
+  if (most <= 0) return null;
+  const spent = Math.min(most, await askPlayerAmount(attacker, `${attacker.name}: ${which.name}`, most, "Ki Points - as much on the Wound Roll"));
+  if (spent <= 0) return null;
   const { ki, capacity } = attacker.system;
   await requestActorUpdate(attacker, { "system.ki.value": ki.value - spent, "system.capacity.spent": capacity.spent + spent });
-  return spent;
+  return { spent, name: which.name };
 }
 
 /**
@@ -16382,10 +16392,16 @@ async function spendBlasterKi(attacker, attack, struck) {
  * Magnitude of this Attacking Maneuver's AoE by 1." Asked, once a Round. (3): "If you make an Energy Attack, increase the
  * Damage Category of that Attacking Maneuver by 1 Category" - asked, once an Encounter. What they add (postAttack).
  */
-async function askBlasterMaster(actor, area, charges) {
+async function askBlasterMaster(actor, area, charges, foundation = "energy") {
   const slots = actor?.system?.effects?.slots ?? {};
   const out = { dice: 0, magnitude: 0, category: 0 };
-  if ((slots["blaster.chargeOrMagnitude"] === true) && area && (charges >= 1) && (actor.getFlag?.(SCOPE, "blasterRound") !== roundKey())) {
+  // Magic Master (3): "If you make a Magic Attack, increase the Damage Category of that Attacking Maneuver by 1 Category" - the
+  // same question, its own once an Encounter.
+  const own = (foundation === "magic")
+    ? { slot: "magicMaster.category", flag: "magicMasterEncounter", name: "Magic Master", kind: "Magic" }
+    : { slot: "blaster.category", flag: "blasterEncounter", name: "Blaster Master", kind: "Energy" };
+  if ((foundation === "energy") && (slots["blaster.chargeOrMagnitude"] === true) && area && (charges >= 1)
+    && (actor.getFlag?.(SCOPE, "blasterRound") !== roundKey())) {
     const which = await askPlayerChoice(actor, `${actor.name}: Blaster Master`,
       [{ value: "dice", label: "Energy Charge Dice one Category up" }, { value: "magnitude", label: "AoE Magnitude +1" },
         { value: "no", label: "No" }]);
@@ -16395,10 +16411,10 @@ async function askBlasterMaster(actor, area, charges) {
     }
   }
   const encounter = game.combat?.id ?? "none";
-  if ((slots["blaster.category"] === true) && (actor.getFlag?.(SCOPE, "blasterEncounter") !== encounter)
-    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Blaster Master` },
-      content: `<p data-tooltip="Once an Encounter">This Energy Attack's Damage Category +1?</p>`, rejectClose: false })) {
-    await actor.setFlag(SCOPE, "blasterEncounter", encounter);
+  if ((slots[own.slot] === true) && (actor.getFlag?.(SCOPE, own.flag) !== encounter)
+    && await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - ${own.name}` },
+      content: `<p data-tooltip="Once an Encounter">This ${own.kind} Attack's Damage Category +1?</p>`, rejectClose: false })) {
+    await actor.setFlag(SCOPE, own.flag, encounter);
     out.category = 1;
   }
   return out;
@@ -19639,12 +19655,13 @@ export async function postAttack(actor, target, maneuver,
   if (technique?.area?.centredOnTarget) technique.area.centreName = target.name;
   // Volatile Explosion with its Sphere on the user: they are inside it, so they are a target, hit.
   const selfCaught = Boolean(technique?.features?.includes("volatile-explosion") && technique?.area?.centredOnSelf);
-  // Blaster Master (2), (3): an Energy Attack - its Charges' Dice or its AoE's Magnitude; its Damage Category.
-  const blaster = (reflecting || (foundation !== "energy")) ? { dice: 0, magnitude: 0, category: 0 }
+  // Blaster Master (2), (3): an Energy Attack - its Charges' Dice or its AoE's Magnitude; its Damage Category. Magic Master
+  // (3): a Magic Attack's Damage Category.
+  const blaster = (reflecting || !["energy", "magic"].includes(foundation)) ? { dice: 0, magnitude: 0, category: 0 }
     : await askBlasterMaster(actor, technique ? (technique.area ?? (areaAdded ? area : null)) : (area ?? PROFILES[profile]?.area ?? null),
       (Number(charges) || 0) + (PROFILES[profile]?.grantsEnergyCharge ?? 0) + (Number(weapon?.energyCharges) || 0)
         + (technique?.bonusCharges ?? []).reduce((sum, entry) => sum + entry.amount, 0)
-        + (PROFILES[profile]?.grantsUncappedEnergyCharge ?? 0) + (Number(uncappedCharges) || 0));
+        + (PROFILES[profile]?.grantsUncappedEnergyCharge ?? 0) + (Number(uncappedCharges) || 0), foundation);
 
   // "Do not count towards the penalty from Diminishing Offense." The count is what the
   // penalty is worked out from, so an attack outside it does not raise the count - and the
@@ -22541,7 +22558,7 @@ async function answerHit(message, attack, attacker, struck) {
   if (eyed.criticalEye) answer.marks.criticalEye = eyed.criticalEye;
   // Blaster Master (1): Ki spent on it, asked - as much on the Wound Roll (woundParts).
   const blasted = await spendBlasterKi(attacker, attack, struck);
-  if (blasted) answer.marks.blasterWound = blasted;
+  if (blasted) Object.assign(answer.marks, { blasterWound: blasted.spent, blasterName: blasted.name });
   await offerTriggers(attacker, "hit-opponent");
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
@@ -22683,7 +22700,7 @@ function woundParts(attacker, attack) {
     ...(eyes ? [{ label: `Critical Eye (${eyes})`, written: `+${2 * eyes}(T)`,
       value: 2 * eyes * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     // Blaster Master (1): the Ki spent as it hit.
-    ...((Number(attack.blasterWound) || 0) ? [{ label: "Blaster Master", value: Number(attack.blasterWound) }] : []),
+    ...((Number(attack.blasterWound) || 0) ? [{ label: attack.blasterName || "Blaster Master", value: Number(attack.blasterWound) }] : []),
     ...(doubled ? [{ label: "Searing Anger (Overwhelm doubled)", written: `+${doubled}(T)`,
       value: doubled * Math.max(1, attacker.system.tierOfPower ?? 1) }] : []),
     // Punching Up: "increase the Wound Roll of that Attacking Maneuver by 1(T) for every Size Category they are larger".

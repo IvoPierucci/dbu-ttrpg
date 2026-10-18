@@ -1,0 +1,23 @@
+id: magic-master
+name: Magic Master
+talentCategory: magic-attack
+prerequisites: Magic Caster and/or Elementalist, ToP2+
+description: >
+  Your ability to empower your attacks with magical energy is unsurpassed, allowing you to hit harder and more accurately.
+text: >
+  Magic Master: Your ability to empower your attacks with magical energy is unsurpassed, allowing you to hit harder and more accurately.
+  –Prerequisites: Magic Caster and/or Elementalist, ToP2+
+  (1)-[Passive]: Reduce the TP Cost of all Magical Unique Abilities by your number of Use Magic Skill Ranks. This effect applies retroactively.
+  (2)-[Triggered]: If you hit an Opponent with a Magic Attack, spend up to 5(bT) Ki Points. If you do, increase the Wound Roll by an equal amount.
+  (3)-[Triggered, 1/Encounter]: If you make a Magic Attack, increase the Damage Category of that Attacking Maneuver by 1 Category.
+
+---
+
+[passive]
+# (1) Read off the Unique Abilities as they are - so on those already taken too (never below half the listed cost).
+unique.magical.tpCost -= skills.useMagic.ranks;
+# (2) An Opponent hit by a Magic Attack: Ki asked as the hit lands, up to 5(bT) - as much on the Wound Roll (chat.mjs
+# spendBlasterKi, Blaster Master's).
+allow magicMaster.woundKi;
+# (3) A Magic Attack, as it is made: its Damage Category one up - asked, once an Encounter (chat.mjs askBlasterMaster).
+allow magicMaster.category;
