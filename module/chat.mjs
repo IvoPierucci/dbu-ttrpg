@@ -1589,9 +1589,8 @@ async function settleReveals(message, clash) {
     await settledNote(message, `${clash.defenderName} gives nothing away.`);
     return;
   }
-  const alignment = DBUCharacterData.ALIGNMENTS[target.system.alignment ?? 0]?.label ?? "Neutral";
-  await settledNote(message, `${target.name}: Power Level ${target.system.powerLevel ?? "?"}, ${alignment}.`,
-    { to: gauger });
+  // Their Power Level and Alignment, the ARC's to tell - not the card's, whispered or not (the user's).
+  await settledNote(message, `${gauger.name} sizes up ${target.name} - what they learn, the ARC tells.`);
 }
 
 /**
