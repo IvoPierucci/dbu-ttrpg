@@ -1,0 +1,25 @@
+id: furious-berserker
+name: Furious Berserker
+talentCategory: raging
+prerequisites: Angry Warrior
+description: >
+  Your rage is so powerful, it protects you from damage.
+text: >
+  Furious Berserker: Your rage is so powerful, it protects you from damage.
+  –Prerequisites: Angry Warrior
+  (1)-[Passive]: While you are in the Raging State, increase your Damage Reduction by 1/2 (rounded up) of L(T).
+  (2)-[Triggered/Threshold]: Regain Life Points equal to 2L(T).
+
+---
+
+[passive]
+# (1) L: the Raging State's Level held (Angry Warrior (1)).
+if (inState("raging")) {
+  damageReduction += ceil(states.raging * 1(T) / 2);
+}
+
+# (2) A Health Threshold reached, in the Raging State (L is nothing out of it): 2L(T) Life Points. Its Triggered/Automatic
+# button.
+[triggered/threshold, effect 2]
+requires inState("raging");
+life.value += 2 * states.raging * 1(T);
