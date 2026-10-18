@@ -1,0 +1,22 @@
+id: profile-focus
+name: Profile Focus
+talentCategory: specialization
+prerequisites: Precision Kata and/or Brutal Kata
+# (1) "Select a Profile from your Focused Foundation" - asked as it is gained, `$choice`; changeable on its Options tab.
+choose: focusedProfile
+description: >
+  You are especially adept at using a specific type of attack.
+text: >
+  Profile Focus: You are especially adept at using a specific type of attack.
+  –Prerequisites: Precision Kata and/or Brutal Kata
+  (1)-[Passive]: Upon gaining this Talent, select a Profile from your Focused Foundation. Reduce the Ki Point Cost for Attacking Maneuvers of the selected Profile by 1(T).
+  (2)-[Triggered, 1/Encounter]: When making an Attacking Maneuver of your chosen Profile, at Attack Declaration, you may declare that you will score a Critical Result on your Strike Roll and Wound Roll for that Attacking Maneuver. If you do, you score a Critical Result on both Combat Rolls regardless of your Natural Result.
+
+---
+
+[passive]
+# (1)
+profileKiCost.$choice -= 1(T);
+# (2) An attack of that Profile: asked as it is declared, once an Encounter - the player's to time; declared, both its Strike
+# and its Wound a Critical Result whatever their Natural Result (maneuvers.mjs askProfileFocus; chat.mjs rollSide).
+allow profileFocus.critical;

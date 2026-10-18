@@ -424,6 +424,15 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     return Object.entries(DBUCharacterData.SKILLS).filter(([key]) => key.startsWith("knowledge"))
       .map(([key, skill]) => [key, skill.label]);
   }
+  // Profile Focus: "a Profile from your Focused Foundation" - Archetype Focus's, where it is had; any Profile where it is not.
+  if (kind === "focusedProfile") {
+    const { PROFILES } = await import("./maneuvers.mjs");
+    const focus = Array.from(actor?.items ?? []).find(item => (item.type === "talent")
+      && (item.flags?.["dbu-ttrpg"]?.sourceId === "archetype-focus"));
+    const foundation = (focus?.system?.chosen ?? []).find(entry => entry.key === "archetype-focus")?.value ?? "";
+    return Object.entries(PROFILES).filter(([, profile]) => profile.label && Array.isArray(profile.foundations)
+      && (!foundation || profile.foundations.includes(foundation))).map(([key, profile]) => [key, profile.label]);
+  }
   if (kind === "elementalProfile") {
     const { PROFILES } = await import("./maneuvers.mjs");
     return Object.entries(PROFILES).filter(([, profile]) => /elemental/i.test(profile.label ?? ""))

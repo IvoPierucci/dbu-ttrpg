@@ -1740,6 +1740,26 @@ export async function askJuryRigWound(actor, declared, target = null) {
 }
 
 /**
+ * Profile Focus (2): "When making an Attacking Maneuver of your chosen Profile, at Attack Declaration, you may declare that you
+ * will score a Critical Result on your Strike Roll and Wound Roll for that Attacking Maneuver." The chosen Profile's attack:
+ * asked, once an Encounter; carried as `profileCritical`.
+ */
+export async function askProfileFocus(actor, declared) {
+  if (!declared?.profile || (actor?.system?.effects?.slots?.["profileFocus.critical"] !== true)) return declared;
+  const item = Array.from(actor.items ?? []).find(each => (each.type === "talent") && (each.flags?.["dbu-ttrpg"]?.sourceId === "profile-focus"));
+  const chosen = (item?.system?.chosen ?? []).find(entry => entry.key === "profile-focus")?.value ?? "";
+  const encounter = game.combat?.id ?? "none";
+  if ((chosen !== declared.profile) || (actor.getFlag?.("dbu-ttrpg", "profileFocusEncounter") === encounter)) return declared;
+  const yes = await foundry.applications.api.DialogV2.confirm({
+    classes: ["dbu-dialog"], window: { title: `${actor.name} - Profile Focus` },
+    content: `<p data-tooltip="Once an Encounter.">A Critical Result on this Strike Roll and Wound Roll, whatever they roll?</p>`,
+    rejectClose: false });
+  if (!yes) return declared;
+  await actor.setFlag("dbu-ttrpg", "profileFocusEncounter", encounter);
+  return { ...declared, profileCritical: true };
+}
+
+/**
  * Surging (3): "You cannot target a Character who isn't your Focus with an Attacking Maneuver unless that Attacking Maneuver
  * is an AoE that also targets your Focus." Whoever is aimed at - the target and every token targeted - against the Focus
  * picked on entering (`surgingFocus`). Why not, or "".
@@ -3875,6 +3895,8 @@ export function maneuverKiCost(maneuver, declared, actor) {
     cost = applySlot(slots, "attack.kiCost", cost);
     // And whatever applies to attacks of its Attack Type alone - the Magic Staff's, wielded.
     if (declared?.foundation) cost = applySlot(slots, `attack.kiCost.${declared.foundation}`, cost);
+    // And whatever applies to its Profile alone - Profile Focus's 1(T) off.
+    if (declared?.profile) cost = applySlot(slots, `profileKiCost.${declared.profile}`, cost);
     // And the Weapon it is made with - Efficient's "have their Ki Point Cost reduced by 2(T)".
     cost += Number(declared?.weapon?.kiCost) || 0;
     // Giga Flare: "2(T) per Action spent through its effects", asked at declaration.

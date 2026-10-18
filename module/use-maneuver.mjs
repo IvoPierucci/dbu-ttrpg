@@ -4973,6 +4973,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     declared = await (await import("./maneuvers.mjs")).askEyeWeapon(actor, declared);
     // Counter Jury-rigging (1): an Armed Attack at one you Analyzed - asked, once a Round.
     declared = await (await import("./maneuvers.mjs")).askJuryRigWound(actor, declared, targetActor);
+    // Profile Focus (2): its Profile's attack - both rolls a Critical Result, asked once an Encounter.
+    declared = await (await import("./maneuvers.mjs")).askProfileFocus(actor, declared);
     // Warrior (4): an Armed Attack - a stack of Tension, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
     // Energy of Revenge (1): Revenge Points on its Wound Roll, how many asked.

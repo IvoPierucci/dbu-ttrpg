@@ -8446,7 +8446,7 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
                                            minimumNatural = 0, criticalTarget = null,
                                            botchUnlessCritical = false,
                                            naturalAdd = 0, linked = "", fixedTotal = null, urgent = false,
-                                           foundation = "" } = {}) {
+                                           foundation = "", forceCritical = false } = {}) {
   // A roll already made: Delayed's "keep a record of the Dice Score of your Wound Roll", applied
   // later "against their Soak Value" as it was.
   if (Number.isFinite(fixedTotal)) {
@@ -8570,6 +8570,11 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
         || ((slot === "dodge") && (actor.system.effects?.slots?.["dodge.baseDieTwice"] === true)) });
   const { roll, naturalShift } = evaluated;
   let { natural, botch, critical } = evaluated;
+  // Profile Focus (2): "you score a Critical Result on both Combat Rolls regardless of your Natural Result".
+  if (forceCritical) {
+    critical = true;
+    botch = false;
+  }
   // Lingering Instincts: "You cannot score a Critical Result or a Botch Result on this Combat Roll, regardless of all
   // Effects."
   if (lingering) {
@@ -20440,6 +20445,8 @@ async function takeOutOfSequence(message, actor, offer) {
     declared = await (await import("./maneuvers.mjs")).askWarriorTension(actor, declared);
     // Counter Jury-rigging (1), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askJuryRigWound(actor, declared, target);
+    // Profile Focus (2), out of sequence as in it.
+    declared = await (await import("./maneuvers.mjs")).askProfileFocus(actor, declared);
     // Energy of Revenge (1), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askRevenge(actor, declared, maneuver, target);
     // Spiritual Warrior (5), out of sequence as in it.
@@ -20741,7 +20748,7 @@ export async function postAttack(actor, target, maneuver,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
-                                   rapidFist = false, angryNatural = 0 },
+                                   rapidFist = false, angryNatural = 0, profileCritical = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -20933,6 +20940,8 @@ export async function postAttack(actor, target, maneuver,
           ...(experienced ? { experienced: { kind: experienced.kind, targetUuid: experienced.targetUuid } } : {}),
           ...(instinct.length ? { instinct } : {}),
           ...((eyeWeapon && !reflecting) ? { eyeWeapon: true } : {}),
+          // Profile Focus (2): both its rolls a Critical Result.
+          ...((profileCritical && !reflecting) ? { profileCritical: true } : {}),
           // Heart of Glass (3)'s Surging, for this attack alone - left as it is concluded.
           ...((glassSurge && !reflecting) ? { glassSurge: true } : {}),
           // Entrusted (4): the State left once this is concluded (entrustedAllInEnds).
@@ -22671,6 +22680,7 @@ async function resolveAttackWork(message, attack) {
   const weakPoint = await weakPointNatural(attacker, targets.map(entry => entry.uuid), message);
   const strike = await rollSide(attacker, strikeParts(attacker, attack), {
     ...attackerOptions, slot: "strike", attackingManeuver: true, foundation: attack.foundation ?? "",
+    forceCritical: Boolean(attack.profileCritical),
     ...(chargedCritical ? { criticalTarget: 5 } : ((ownCritical || tactics) ? { criticalTarget: Math.max(DBUCharacterData.CRITICAL_TARGET_MIN,
       (Number(attacker.system.criticalTarget) || 10) + ownCritical - tactics) } : {})),
     // Clearing puts a floor under the Natural Result; Cutting makes anything short of a
@@ -24660,6 +24670,7 @@ async function rollAttackWoundWork(message, attack) {
     slot: "wound",
     attackingManeuver: true,
     foundation: attack.foundation ?? "",
+    forceCritical: Boolean(attack.profileCritical),
     // Patient Sniper (3): through the Exploit Maneuver in an Ally's turn, 1 on its Natural Result. Wrath of the Dragon (2),
     // (3): the Impaired.
     // Weak Point Analysis's, on the attack that claimed it.
