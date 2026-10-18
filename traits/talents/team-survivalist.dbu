@@ -1,0 +1,25 @@
+id: team-survivalist
+name: Team Survivalist
+talentCategory: skill
+prerequisites: Survivalist
+description: >
+  You are skilled enough to protect others from the effects of harsh environments.
+text: >
+  Team Survivalist: You are skilled enough to protect others from the effects of harsh environments.
+  –Prerequisites: Survivalist
+  (1)-[Passive]: You do not trigger the Exploit Maneuver when you use the Brace Maneuver.
+  (2)-[Passive]: Your Allies are unaffected by the effects of any Battle Weather created by you.
+  (3)-[Triggered]: If you use the Brace Maneuver, apply its effects to all Allies within your Melee Range.
+
+---
+
+[passive]
+# (1) The Brace's card offers no Exploit (chat.mjs offerExploits).
+allow brace.noExploit;
+# (2) A Battle Weather you summon set on nobody of yours, as on you (chat.mjs postWeatherSummon).
+allow weather.alliesSpared;
+
+# (3) The Brace used (the `brace` Moment): Braced on every Ally within your Melee Range - measured where both have a token - on
+# your clock till the start of your next turn (chat.mjs teamBrace). Automatic by default, its Triggered/Automatic button.
+[triggered/brace, effect 3]
+teamBrace();

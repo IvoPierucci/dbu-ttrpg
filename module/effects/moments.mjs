@@ -74,6 +74,9 @@ const TABLE = [
   { key: "rapid-movement", label: "You take Rapid Movement", provides: [],
     doc: "Fired as Rapid Movement is taken (use-maneuver.mjs takeRapidMovement) - Footwork's Defense Value. What is the "
        + "player's is asked in a window first." },
+  { key: "brace", label: "You use the Brace Maneuver", provides: [],
+    doc: "Fired as the Brace Maneuver is used, after its own effect (use-maneuver.mjs) - Team Survivalist's. What is the "
+       + "player's is asked in a window first." },
   { key: "hype", label: "You use the Hype Maneuver", provides: [],
     doc: "Fired as the Hype Maneuver is used, after its own effect and before its card (use-maneuver.mjs) - Show Stopping "
        + "Performance's Options. What is the player's is asked in a window first." },

@@ -5900,6 +5900,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   }, { only: maneuver.itemId, quiet: true });
   // The Hype Maneuver used - Show Stopping Performance's Options: Automatic, or asked in a window. Before its card, so what
   // they give back is said on it, and before the last Maneuver is written over (Explosive Performance's).
+  // The Brace used - Team Survivalist (3): Automatic, or asked in a window.
+  if (maneuver.id === "brace") await (await import("./chat.mjs")).answerFor(actor, "brace");
   if (maneuver.id === "hype") await (await import("./chat.mjs")).askDynamicHype(actor);
   const hyping = (maneuver.id === "hype") ? await (await import("./chat.mjs")).answerFor(actor, "hype") : null;
   const gains = (await import("./chat.mjs")).gainsHtml(actor, poolsBefore, [usedMoment?.slots, declaring?.slots, hyping?.slots]);

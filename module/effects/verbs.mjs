@@ -174,6 +174,10 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Terrifying Presence (2): the Terrify out of sequence, offered on your latest card (chat.mjs terrifyingPresence)."
   },
+  teamBrace: {
+    args: [0, 0],
+    doc: "Team Survivalist (3): Braced on every Ally within your Melee Range, on your clock (chat.mjs teamBrace)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "

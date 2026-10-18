@@ -6600,6 +6600,9 @@ function offerExploits(card, actor, maneuver) {
   // triggers the Exploit Maneuver from the target" - one person, and only on a loss.
   if (maneuver.exploitOnLoss) return;
 
+  // Team Survivalist (1): "You do not trigger the Exploit Maneuver when you use the Brace Maneuver."
+  if ((maneuver.id === "brace") && (actor.system.effects?.slots?.["brace.noExploit"] === true)) return;
+
   // Lightning Initiative (2): "Your use of the Movement Maneuver does not trigger the Exploit Maneuver from Opponents with a lower
   // Initiative Value than you."
   const outpaces = maneuver.movement && (actor.system.effects?.slots?.["movement.noExploitFromSlower"] === true);
@@ -15010,8 +15013,11 @@ export async function postWeatherSummon(actor, maneuver, plan) {
     await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - plan.extraKi),
       "system.capacity.spent": actor.system.capacity.spent + plan.extraKi });
   }
+  // Team Survivalist (2): "Your Allies are unaffected by the effects of any Battle Weather created by you" - nor set on them.
+  const spared = new Set((actor.system.effects?.slots?.["weather.alliesSpared"] === true)
+    ? alliesOnScene(actor).map(ally => ally.uuid) : []);
   const others = [...new Map((canvas?.tokens?.placeables ?? []).map(token => token.actor)
-    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid))
+    .filter(other => other && (other.type === "character") && (other.uuid !== actor.uuid) && !spared.has(other.uuid))
     .map(other => [other.uuid, other])).values()];
   const before = others.map(other => ({ uuid: other.uuid, id: other.system.battlefield?.weather?.id ?? "",
     tier: Number(other.system.battlefield?.weather?.tier) || 1 }));
@@ -15026,7 +15032,8 @@ export async function postWeatherSummon(actor, maneuver, plan) {
   const tier = ["", "Natural", "Unnatural", "Cataclysmic"][plan.tier] ?? "";
   return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<p>${Handlebars.escapeExpression(maneuver.name)}: ${Handlebars.escapeExpression(name)} (${tier}) over the Battlefield`
-      + `${plan.lasting ? "" : " until the end of your next turn"} - not on ${Handlebars.escapeExpression(actor.name)}.</p>` });
+      + `${plan.lasting ? "" : " until the end of your next turn"} - not on ${Handlebars.escapeExpression(actor.name)}`
+      + `${spared.size ? " or their Allies" : ""}.</p>` });
 }
 
 /** The summoned Battle Weather gone: each one's own given back, where it is still the one summoned. */
@@ -16571,6 +16578,22 @@ export async function terrifyingPresence(actor) {
   const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
   if (card) return requestEdit(card, { type: "offer", offer });
   return offerOutOfSequence(actor, offer);
+}
+
+/**
+ * Team Survivalist (3): "If you use the Brace Maneuver, apply its effects to all Allies within your Melee Range." Braced on each -
+ * within it measured where both have a token - on your clock, till the start of your next turn as yours. None, not spent.
+ */
+export async function teamBrace(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const allies = alliesOnScene(actor).filter(ally => !ally.system?.defeated && !whyNotWithinMelee(actor, ally, ""));
+  if (!allies.length) return UNSPENT;
+  const { setCondition } = await import("./conditions.mjs");
+  for (const ally of allies) {
+    if (!await setCondition(ally, "braced", 1)) continue;
+    await lasting(actor, { kind: KINDS.CONDITION, key: "braced", edge: EDGES.START, next: true, on: ally.uuid,
+      source: "Team Survivalist" });
+  }
 }
 
 /**
