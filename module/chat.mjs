@@ -1619,12 +1619,14 @@ async function settlePickpocket(message, clash) {
   // Neko Majin-Dama (2): an Integrated Majin-Dama named - taken, no longer Integrated.
   if (clash.pickpocket.majinDama) {
     await settledNote(message, await takeMajinDama(thief, victim, clash.pickpocket.itemId));
+    if (clash.pickpocket.snatch) await answerFor(thief, "snatch-won", { opponentUuid: victim.uuid });
     return;
   }
   const kinds = (clash.pickpocket.steals === "basic") ? ["basic"] : [clash.pickpocket.steals];
   const pockets = Array.from(victim.items ?? [])
     .filter(item => (item.type === "gear") && kinds.includes(item.system.itemType));
-  if (!pockets.length) {
+  // One named before the Clash may be other than those - Yoink (1)'s Weapon.
+  if (!pockets.length && !(clash.pickpocket.itemId && victim.items.get(clash.pickpocket.itemId))) {
     await settledNote(message, `${thief.name} wins, but ${victim.name} has no Basic Item to take.`);
     return;
   }
@@ -1645,6 +1647,8 @@ async function settlePickpocket(message, clash) {
   await requestCreateItem(thief, data);
   await requestDeleteItem(victim, item.id);
   await settledNote(message, `${thief.name} steals ${item.name} from ${victim.name}.`);
+  // A Snatch's Item taken: what answers it - Yoink's.
+  if (clash.pickpocket.snatch) await answerFor(thief, "snatch-won", { opponentUuid: victim.uuid });
 }
 
 /**
@@ -14210,6 +14214,76 @@ async function settleStealthStrike(message, clash) {
 }
 
 /**
+ * Yoink (2): "you can give them a Grenade you possess. That Grenade will explode at the start of their next turn, as if you
+ * threw it at them through the Throw Maneuver." Which Grenade, asked; kept on them (`yoinkGrenade`) for their turn's start
+ * (yoinkTurnStart). None, not spent.
+ */
+export async function yoinkGrenade(actor, context = {}) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const victim = fromUuidSync(context?.opponentUuid ?? "");
+  const grenades = Array.from(actor?.items ?? []).filter(item => (item.type === "gear") && (item.system?.gearId === "grenade"));
+  if (!victim || !grenades.length) return UNSPENT;
+  const which = (grenades.length === 1) ? grenades[0].id : await askPlayerChoice(actor, `${actor.name}: Yoink - a Grenade for ${victim.name}`,
+    [...grenades.map(each => ({ value: each.id, label: each.name })), { value: "none", label: "None" }]);
+  const item = grenades.find(each => each.id === which);
+  if (!item) return UNSPENT;
+  await requestActorUpdate(victim, { [`flags.${SCOPE}.yoinkGrenade`]: { by: actor.uuid, itemId: item.id, name: item.name } });
+  ui.notifications.info(`${actor.name}: ${item.name} slipped to ${victim.name} - it goes off at the start of their next turn.`);
+}
+
+/**
+ * Yoink (2), the start of their next turn: the Throw at them with that Grenade, out of sequence, offered on their turn's card to
+ * whoever gave it - "as if you threw it at them" (takeYoinkGrenade).
+ */
+export async function yoinkTurnStart(actor, card) {
+  const given = actor?.getFlag?.(SCOPE, "yoinkGrenade");
+  if (!given?.by) return;
+  await requestActorUpdate(actor, { [`flags.${SCOPE}.yoinkGrenade`]: null });
+  const by = fromUuidSync(given.by);
+  if (!by || !card) return;
+  requestEdit(card, { type: "offer", offer: { actorUuid: by.uuid, actorName: by.name, maneuverId: "throw", maneuverName: "Throw",
+    targetUuid: actor.uuid, reason: `Yoink - ${given.name} goes off at ${actor.name}`, yoinkGrenade: { itemId: given.itemId } } });
+}
+
+/** Yoink (2)'s Throw, taken: that Grenade thrown at them, out of sequence and outside the Throw's own 1/Round. */
+async function takeYoinkGrenade(message, actor, offer) {
+  const item = actor.items?.get(offer.yoinkGrenade?.itemId ?? "");
+  if (!item) {
+    ui.notifications.warn(`${actor.name} no longer has that Grenade.`);
+    return null;
+  }
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const { thrownAs } = await import("./gear.mjs");
+  const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "throw"));
+  const maneuver = own ? definitionOf(own) : getManeuver("throw");
+  return useManeuver(actor, { ...maneuver, usageLimit: null }, { outOfSequence: true, targetUuid: offer.targetUuid,
+    presetThrown: thrownAs(item, actor, getTrait) });
+}
+
+/** Yoink (3): "they gain the Guard Down Combat Condition against your next Attacking Maneuver against them during this turn". */
+export async function yoinkGuard(actor, context = {}) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const victim = fromUuidSync(context?.opponentUuid ?? "");
+  if (!actor || !victim) return UNSPENT;
+  await actor.setFlag(SCOPE, "yoinkGuard", { uuid: victim.uuid, turn: turnKey() });
+}
+
+/** Yoink (3), the attack made at them this turn: Guard Down on them for it, taken back once it is rolled (trapGuardOff). */
+async function yoinkGuardAttack(card, actor) {
+  const held = actor?.getFlag?.(SCOPE, "yoinkGuard");
+  if (!held?.uuid || (held.turn !== turnKey())) return;
+  const attack = card?.getFlag(SCOPE, ATTACK_FLAG);
+  if (!attack || !attackTargets(attack).some(entry => entry.uuid === held.uuid)) return;
+  await actor.unsetFlag(SCOPE, "yoinkGuard");
+  const target = fromUuidSync(held.uuid);
+  if (!target || ((Number(target.system.conditions?.["guard-down"]) || 0) > 0)) return;
+  const { setCondition } = await import("./conditions.mjs");
+  await setCondition(target, "guard-down", 1);
+  const now = card.getFlag(SCOPE, ATTACK_FLAG);
+  await requestEdit(card, { type: "attack", attack: { ...now, trapGuardOn: [...[now.trapGuardOn ?? []].flat(), target.uuid] } });
+}
+
+/**
  * Counter Jury-rigging (2): "Select a Weapon you possess and apply an applicable Weapon Quality that takes up 1 Weapon Slot to that
  * Weapon until the end of the Combat Round (this can exceed the Weapon's number of Weapon Slots)." Which Weapon, then which
  * Quality - one its Type takes, at 1 Slot, not on it already, none asking a choice of its own; on it, its Effects written again,
@@ -19766,6 +19840,7 @@ async function takeOutOfSequence(message, actor, offer) {
   // Multi-Type Master's: the Basic Attack or a Signature Technique, cheaper.
   if (offer.multiTypeMaster) return takeMultiTypeMaster(message, actor, offer);
   if (offer.spike) return takeSpike(message, actor, offer);
+  if (offer.yoinkGrenade) return takeYoinkGrenade(message, actor, offer);
   // Wild Counter's, once a Round.
   if (offer.grants?.wildCounter) {
     if (wildCounterSpent(actor)) {
@@ -20855,6 +20930,8 @@ export async function postAttack(actor, target, maneuver,
   }
   // Stealth Strike (2): its Clash at each it is aimed at, the attack held till they are settled.
   if (card && !reflecting) await stealthStrikeClashes(card, actor);
+  // Yoink (3): at the one Snatched from this turn - Guard Down for this attack.
+  if (card && !reflecting) await yoinkGuardAttack(card, actor);
   // Experienced Fighter (1): this Round's attacks, one with a Ki Wager or more than 1 Energy Charge marked.
   const madeNow = card?.getFlag(SCOPE, ATTACK_FLAG);
   if (madeNow && !reflecting && game.combat?.started && (actor.system.effects?.slots?.["combatRecovery.experienced"] === true)

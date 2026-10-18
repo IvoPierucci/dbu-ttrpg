@@ -1,0 +1,28 @@
+id: yoink
+name: Yoink
+talentCategory: skill
+prerequisites: 2+ Skill Ranks in the Thievery Skill
+description: >
+  You know how to slyly take anything unattended, startling foes.
+text: >
+  Yoink: You know how to slyly take anything unattended, startling foes.
+  –Prerequisites: 2+ Skill Ranks in the Thievery Skill
+  (1)-[Passive]: When using the Snatch Maneuver, you can also take Weapons possessed by another Character that they have not currently equipped.
+  (2)-[Triggered, 1/Round]: If you successfully use the Snatch Maneuver to take an Item from another Character, you can give them a Grenade you possess. That Grenade will explode at the start of their next turn, as if you threw it at them through the Throw Maneuver.
+  (3)-[Triggered, 1/Round]: If you successfully use the Snatch Maneuver to take an Item from another Character, they gain the Guard Down Combat Condition against your next Attacking Maneuver against them during this turn.
+
+---
+
+# (1) Their unequipped Weapons offered beside their Basic Items (use-maneuver.mjs askSnatch).
+[passive]
+allow snatch.weapons;
+
+# (2) A Snatch won (the `snatch-won` Moment): which Grenade of yours, asked - the player's to choose; at the start of their
+# next turn, the Throw at them with it, out of sequence, on their turn's card (chat.mjs yoinkGrenade, yoinkTurnStart).
+[triggered/snatch-won, 1/round, chosen, effect 2]
+yoinkGrenade();
+
+# (3) A Snatch won: Guard Down on them for your next Attacking Maneuver at them this turn (chat.mjs yoinkGuard,
+# yoinkGuardAttack). Automatic by default, its Triggered/Automatic button.
+[triggered/snatch-won, 1/round, effect 3]
+yoinkGuard();

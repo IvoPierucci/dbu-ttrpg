@@ -155,6 +155,16 @@ export const VERBS = Object.freeze({
     doc: "Silent Footsteps (1): a Skill Clash (Stealth vs Perception) at each Opponent - won, Hidden from them till the end of "
        + "your next turn or your attack at them (chat.mjs silentFootsteps)."
   },
+  yoinkGrenade: {
+    args: [0, 0],
+    doc: "Yoink (2): a Grenade of yours given to the one Snatched from - the Throw at them with it as their next turn begins "
+       + "(chat.mjs yoinkGrenade)."
+  },
+  yoinkGuard: {
+    args: [0, 0],
+    doc: "Yoink (3): Guard Down on the one Snatched from, against your next Attacking Maneuver at them this turn (chat.mjs "
+       + "yoinkGuard)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "

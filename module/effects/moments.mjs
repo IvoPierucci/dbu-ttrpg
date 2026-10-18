@@ -77,6 +77,9 @@ const TABLE = [
   { key: "hype", label: "You use the Hype Maneuver", provides: [],
     doc: "Fired as the Hype Maneuver is used, after its own effect and before its card (use-maneuver.mjs) - Show Stopping "
        + "Performance's Options. What is the player's is asked in a window first." },
+  { key: "snatch-won", label: "You take an Item with the Snatch Maneuver", provides: [],
+    doc: "Fired as a Snatch's Clash is won and the Item taken (chat.mjs settlePickpocket), the one it was taken from named as "
+       + "`opponentUuid` - Yoink's. What is the player's is asked in a window first." },
   { key: "analysis", label: "You use the Analysis Maneuver", provides: [],
     doc: "Fired once its target is Analyzed (use-maneuver.mjs), the target named as `opponentUuid` - Analytic Fighter's Options. "
        + "What is the player's is asked in a window first." },

@@ -3878,8 +3878,13 @@ async function askTalk(actor, target, maneuver) {
 async function askSnatch(actor, target, maneuver) {
   const { snatchableDama } = await import("./majin-dama.mjs");
   const dama = snatchableDama(target);
+  // Yoink (1): "you can also take Weapons possessed by another Character that they have not currently equipped".
+  const weapons = (actor.system.effects?.slots?.["snatch.weapons"] === true)
+    ? Array.from(target.items ?? []).filter(item => (item.type === "gear") && (item.system.crafted?.kind === "weapon")
+      && !item.system.equipped && !item.system.integrated)
+    : [];
   const items = [...Array.from(target.items ?? []).filter(item => (item.type === "gear") && (item.system.itemType === "basic")),
-    ...dama.map(entry => entry.item)];
+    ...weapons, ...dama.map(entry => entry.item)];
   if (!items.length) {
     ui.notifications.warn(`${target.name} has no Basic Item to take.`);
     return null;
@@ -6048,7 +6053,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         // Bluff Attack's: Staggered and Shaken won, their Exploit lost.
         ...(maneuver.bluffs ? { bluffAttack: { applied: false } } : {}),
         // Snatch's: won, the Basic Item named is taken.
-        ...(snatching ? { pickpocket: { applied: false, steals: "basic", itemId: snatching.itemId,
+        ...(snatching ? { pickpocket: { applied: false, steals: "basic", itemId: snatching.itemId, snatch: true,
           ...(snatching.majinDama ? { majinDama: true, sleeping: snatching.majinDama.sleeping } : {}) } } : {}),
         // Search's: won, no longer Oblivious of them.
         ...((maneuver.id === "search") ? { search: { applied: false } } : {}),

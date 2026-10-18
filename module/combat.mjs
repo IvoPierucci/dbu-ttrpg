@@ -399,6 +399,8 @@ async function beginTurn(actor) {
   await (await import("./chat.mjs")).flowOfCombatTurnStart(actor, turnCard);
   // Inherited Freedom: a Standard Maneuver of 1 Action out of sequence, for a Counter Action.
   await (await import("./chat.mjs")).freedomTurnStart(actor, turnCard);
+  // Yoink (2): a Grenade slipped to them goes off - the Throw offered to whoever gave it.
+  await (await import("./chat.mjs")).yoinkTurnStart(actor, turnCard);
   // Stealth Crawl: a move, faking it still.
   const { stealthCrawl } = await import("./hidden.mjs");
   await stealthCrawl(actor);
