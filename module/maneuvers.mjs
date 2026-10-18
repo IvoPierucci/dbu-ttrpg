@@ -1077,6 +1077,28 @@ export const FOUNDATION_RULES = Object.freeze({
 });
 
 /**
+ * Power of Movement (2): "When using any type of applicable Signature Technique that has gained at least 2 Energy Charges from
+ * the Energy Charge Maneuver, you may spend 2(T) Ki Points to add the Charging Assault Advantage to that Signature Technique for
+ * the duration of that Attacking Maneuver." The Technique being charged, 2 Charges on it: asked, once a Round - the Advantage
+ * on this attack, its Ki paid with it (`powerOfMovementKi`).
+ */
+async function askPowerOfMovement(actor, maneuver) {
+  const charging = actor?.system?.charging;
+  if (!maneuver?.signature || maneuver.signatureTechnique || (actor?.system?.effects?.slots?.["powerOfMovement.assault"] !== true)
+    || !charging?.maneuverId || (charging.maneuverId !== maneuver.itemId) || ((Number(charging.charges) || 0) < 2)
+    || (maneuver.advantages ?? []).includes("charging-assault")) return maneuver;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "powerOfMovementRound") === round) return maneuver;
+  const ki = 2 * Math.max(1, Number(actor.system.tierOfPower) || 1);
+  if ((Number(actor.system.ki?.value) || 0) < ki) return maneuver;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Power of Movement` },
+    content: `<p data-tooltip="Once a Round">${ki} Ki: Charging Assault on this attack?</p>`, rejectClose: false });
+  if (!yes) return maneuver;
+  await actor.setFlag("dbu-ttrpg", "powerOfMovementRound", round);
+  return { ...maneuver, advantages: withGranted(maneuver.advantages, "charging-assault"), powerOfMovementKi: ki };
+}
+
+/**
  * Whether this character may make an attack with this Foundation at all.
  *
  * Apart from reach, which is its own question and its own answer: this one is about the
@@ -2651,7 +2673,7 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   // Entrusted (4): Full Wager and All or Nothing, asked before the Ki Wager is.
   const allIn = await askEntrustedAllIn(actor, maneuver);
   if (allIn === null) return null;
-  maneuver = allIn;
+  maneuver = await askPowerOfMovement(actor, allIn);
   const picked = await pickProfile(maneuver, foundations, actor, limits);
   const declared = (picked && maneuver.entrustedAllIn)
     ? { ...picked, entrustedAllIn: true, ...(maneuver.tensionCharges ? { tensionCharges: maneuver.tensionCharges } : {}) }
@@ -2674,8 +2696,12 @@ export async function declareAttack(maneuver, foundations, actor, limits = {}) {
   const answers = await askFeatures(maneuver, actor, advantages);
   if (!answers) return null;
 
-  const allInMark = declared.entrustedAllIn
-    ? { entrustedAllIn: true, ...(declared.tensionCharges ? { tensionCharges: declared.tensionCharges } : {}) } : {};
+  const allInMark = {
+    ...(declared.entrustedAllIn
+      ? { entrustedAllIn: true, ...(declared.tensionCharges ? { tensionCharges: declared.tensionCharges } : {}) } : {}),
+    // Power of Movement (2)'s Ki, paid with the attack.
+    ...(maneuver.powerOfMovementKi ? { kiSurcharge: maneuver.powerOfMovementKi } : {})
+  };
   if (!profile) {
     return withGreedCharges(actor, maneuver,
       await withLastResource(actor, await withOverwhelm(actor, { profile: "", foundation: "physical", kiWager, advantages, ...answers,

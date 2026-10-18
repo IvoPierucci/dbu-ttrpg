@@ -236,6 +236,9 @@ function permitted(actor, maneuver) {
   if (charging?.maneuverId && !maneuver.charge
     && (maneuver.itemId !== charging.maneuverId)
     && !(maneuver.signatureTechnique && chargedTechnique)
+    // Power of Movement (1): "You can use the Movement Maneuver after using the Energy Charge Maneuver, even if you have not yet
+    // used whatever attack you have declared."
+    && !(maneuver.movement && (actor.system.effects?.slots?.["powerOfMovement.move"] === true))
     && (maneuver.attacking || (maneuver.type === "standard"))) {
     const held = actor.items.get(charging.maneuverId);
     ui.notifications.warn(
@@ -6483,8 +6486,10 @@ export async function declareCharge(actor, { foundation = "" } = {}) {
   // "Until you use the chosen Attacking Maneuver, you suffer from the Guard Down Combat
   // Condition" - applied here rather than written into the Maneuver's script, because
   // it lasts past the Maneuver that caused it.
+  // Power of Movement (1): "You do not suffer from the Guard Down Combat Condition through the effects of the Energy Charge
+  // Maneuver."
   const { setCondition } = await import("./conditions.mjs");
-  await setCondition(actor, "guard-down", 1);
+  if (actor.system.effects?.slots?.["powerOfMovement.move"] !== true) await setCondition(actor, "guard-down", 1);
 
   return true;
 }

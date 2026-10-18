@@ -1,0 +1,20 @@
+id: power-of-movement
+name: Power of Movement
+talentCategory: mobility
+prerequisites: Footwork
+description: >
+  Having mastered the ability to stay mobile while charging your energy, you are a real force to be reckoned with on the battlefield.
+text: >
+  Power of Movement: Having mastered the ability to stay mobile while charging your energy, you are a real force to be reckoned with on the battlefield.
+  –Prerequisites: Footwork
+  (1)-[Passive]: You can use the Movement Maneuver after using the Energy Charge Maneuver, even if you have not yet used whatever attack you have declared. You do not suffer from the Guard Down Combat Condition through the effects of the Energy Charge Maneuver.
+  (2)-[Triggered, 1/Round]: When using any type of applicable Signature Technique that has gained at least 2 Energy Charges from the Energy Charge Maneuver, you may spend 2(T) Ki Points to add the Charging Assault Advantage to that Signature Technique for the duration of that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) The Movement while charging, and no Guard Down from the Energy Charge (use-maneuver.mjs).
+allow powerOfMovement.move;
+# (2) The Signature Technique being charged, 2 Energy Charges on it, declared: asked, once a Round - 2(T) Ki, Charging Assault
+# on that attack (maneuvers.mjs askPowerOfMovement).
+allow powerOfMovement.assault;
