@@ -1,0 +1,23 @@
+id: size-doesnt-matter
+name: Size Doesn’t Matter
+talentCategory: size
+prerequisites: Miniature Warrior
+description: >
+  You’ve long since learned that it’s not the size of the dog in the fight that’s important, but the size of the fight in the dog.
+text: >
+  Size Doesn’t Matter: You’ve long since learned that it’s not the size of the dog in the fight that’s important, but the size of the fight in the dog.
+  –Prerequisites: Miniature Warrior
+  (1)-[Passive]: If your Size Category is Tiny or smaller, increase your Damage Reduction by 1(T).
+  (2)-[Passive]: If your Size Category is Small or smaller, and you would receive Damage from an Absolute Attack that missed you, reduce that Damage by 2(bT).
+
+---
+
+[passive]
+# (1) Tiny: 2 Size Categories below Medium.
+if (size.steps <= -2) {
+  damageReduction += 1(T);
+}
+# (2) Small: 1 below Medium. An Absolute Attack's Damage when it missed you, 2(bT) less (chat.mjs absoluteOutcome).
+if (size.steps <= -1) {
+  allow sizeDoesntMatter.absolute;
+}

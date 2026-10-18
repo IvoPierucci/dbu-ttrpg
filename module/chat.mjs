@@ -20806,6 +20806,9 @@ function absoluteOutcome(target, wound) {
   const half = Math.floor((wound.total ?? 0) / 2);
   const soak = Math.max(0, target.system.soakValue ?? 0);
   const reduction = Math.max(0, target.system.damageReduction ?? 0);
+  // Size Doesn't Matter (2): Small or smaller - "reduce that Damage by 2(bT)".
+  const small = (target.system.effects?.slots?.["sizeDoesntMatter.absolute"] === true)
+    ? 2 * Math.max(1, Number(target.system.baseTierOfPower) || 1) : 0;
 
   return {
     absolute: true,
@@ -20813,7 +20816,7 @@ function absoluteOutcome(target, wound) {
     effectiveWound: half,
     soak,
     reduction,
-    damage: Math.max(0, half - soak - reduction)
+    damage: Math.max(0, half - soak - reduction - small)
   };
 }
 
