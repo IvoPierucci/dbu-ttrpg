@@ -1,0 +1,25 @@
+id: combat-zen
+name: Combat Zen
+talentCategory: mindful
+prerequisites: Calm Mind
+description: >
+  Able to fully cleanse your mind of all thought, your body has become able to act on its own to some extent.
+text: >
+  Combat Zen: Able to fully cleanse your mind of all thought, your body has become able to act on its own to some extent.
+  –Prerequisites: Calm Mind
+  (1)-[Passive]: While in the Mindful State, reduce the Ki Point Cost of all Attacking Maneuvers by L(T).
+  (2)-[Triggered]: If you use a Counter Maneuver while in the Mindful State, increase your Damage Reduction by 1(T) for the duration of the Maneuver it was used in response to.
+
+---
+
+[passive]
+# (1) L: the Mindful State's Level held (Calm Mind (1)).
+if (inState("mindful")) {
+  attack.kiCost -= states.mindful * 1(T);
+}
+
+# (2) A Counter Maneuver used in the Mindful State: Damage Reduction 1(T), held as Skill of the Watcher's is - till what it
+# answered has run its course (chat.mjs answerCounter, endCounterBoost). Its Triggered/Automatic button.
+[triggered/counter-maneuver, effect 2]
+requires inState("mindful");
+damageReduction += 1(T);
