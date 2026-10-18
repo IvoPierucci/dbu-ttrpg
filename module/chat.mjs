@@ -16601,6 +16601,27 @@ async function spendBlasterKi(attacker, attack, struck) {
 }
 
 /**
+ * Burning Fury (2): "If you hit an Opponent with an Attacking Maneuver while in the Raging State, reduce your Life Points by
+ * 4(bT) to inflict the Broken Combat Condition on that Opponent until the end of your turn." Which one, asked as the hit lands,
+ * once a Round; the Life paid, Broken on them till the end of this turn of yours.
+ */
+async function burningFuryBreak(attacker, struck) {
+  if ((attacker?.system?.effects?.slots?.["burningFury.broken"] !== true) || !((Number(attacker.system.states?.raging) || 0) > 0)
+    || (attacker.getFlag?.(SCOPE, "burningFuryRound") === roundKey())) return;
+  const allies = new Set(alliesOnScene(attacker).map(ally => ally.uuid));
+  const opponents = struck.filter(({ uuid, actor }) => actor && !allies.has(uuid));
+  if (!opponents.length) return;
+  const cost = 4 * Math.max(1, Number(attacker.system.baseTierOfPower) || 1);
+  const picked = await askPlayerChoice(attacker, `${attacker.name}: Burning Fury - ${cost} Life Points for Broken`,
+    [...opponents.map(({ uuid, actor }) => ({ value: uuid, label: actor.name })), { value: "none", label: "No" }]);
+  const who = opponents.find(({ uuid }) => uuid === picked)?.actor;
+  if (!who) return;
+  await requestActorUpdate(attacker, { [`flags.${SCOPE}.burningFuryRound`]: roundKey() });
+  await reduceLifePoints(attacker, cost, { reason: "Burning Fury", own: true });
+  await markUntilNextTurn(attacker, who, "broken", 1, "end", "Burning Fury", false);
+}
+
+/**
  * Blaster Master (2): "If you use an Energy Attack with an AoE and at least 1 Energy Charge applied to it, you may either:
  * Increase the Dice Category of the Energy Charge Extra Dice applied to this Attacking Maneuver by 1 Category. Increase the
  * Magnitude of this Attacking Maneuver's AoE by 1." Asked, once a Round. (3): "If you make an Energy Attack, increase the
@@ -22829,6 +22850,8 @@ async function answerHit(message, attack, attacker, struck) {
   // Blaster Master (1): Ki spent on it, asked - as much on the Wound Roll (woundParts).
   const blasted = await spendBlasterKi(attacker, attack, struck);
   if (blasted) Object.assign(answer.marks, { blasterWound: blasted.spent, blasterName: blasted.name });
+  // Burning Fury (2): 4(bT) Life Points for Broken on one hit, asked.
+  await burningFuryBreak(attacker, struck);
   await offerTriggers(attacker, "hit-opponent");
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
   const answered = await fireMoment(attacker, "hit-opponent", { maneuver: { id: attack.maneuverId }, hits: struck.length,
@@ -25667,7 +25690,7 @@ async function applyCollisionDamage(message, clash) {
  *
  * @param {?string} edge "start" or "end" of the attacker's next turn, or null for none
  */
-async function markUntilNextTurn(attacker, target, key, stacks, edge, source) {
+async function markUntilNextTurn(attacker, target, key, stacks, edge, source, next = true) {
   const { gainCondition } = await import("./effects/moments-runtime.mjs");
   const { lasting, EDGES, KINDS } = await import("./durations.mjs");
   const { allConditions } = await import("./conditions.mjs");
@@ -25688,7 +25711,8 @@ async function markUntilNextTurn(attacker, target, key, stacks, edge, source) {
       kind: KINDS.CONDITION,
       key,
       edge: (edge === "end") ? EDGES.END : EDGES.START,
-      next: true,
+      // Burning Fury's "until the end of your turn" - this one, not the next.
+      next,
       on: target.uuid,
       source
     });

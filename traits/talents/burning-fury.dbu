@@ -1,0 +1,22 @@
+id: burning-fury
+name: Burning Fury
+talentCategory: raging
+prerequisites: Angry Warrior
+description: >
+  The flames of rage blazing inside you drive you forward, causing you to fight with reckless abandon.
+text: >
+  Burning Fury: The flames of rage blazing inside you drive you forward, causing you to fight with reckless abandon.
+  –Prerequisites: Angry Warrior
+  (1)-[Passive]: Halve the penalties from your Botch Results while in the Raging State.
+  (2)-[Triggered, 1/Round]: If you hit an Opponent with an Attacking Maneuver while in the Raging State, reduce your Life Points by 4(bT) to inflict the Broken Combat Condition on that Opponent until the end of your turn.
+
+---
+
+[passive]
+# (1) Rounded down.
+if (inState("raging")) {
+  botch.penalty *= 0.5;
+}
+# (2) An Opponent hit in the Raging State: which, asked as the hit lands, once a Round - 4(bT) Life Points, Broken on them till
+# the end of your turn (chat.mjs burningFuryBreak).
+allow burningFury.broken;
