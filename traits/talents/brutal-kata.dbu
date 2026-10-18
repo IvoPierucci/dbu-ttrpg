@@ -1,0 +1,18 @@
+id: brutal-kata
+name: Brutal Kata
+talentCategory: specialization
+prerequisites: Archetype Focus, Force or Magic Score of 5+
+description: >
+  Your attacks of your chosen type are more powerful.
+text: >
+  Brutal Kata: Your attacks of your chosen type are more powerful.
+  –Prerequisites: Archetype Focus, Force or Magic Score of 5+
+  (1)-[Passive]: Reduce the Critical Target by 1 for your Wound Rolls for an Attacking Maneuver of your Focused Foundation.
+  (2)-[Triggered]: If you score a Critical Result on your Wound Roll for an Attacking Maneuver made with your Focused Foundation, increase your Wound Roll for that Attacking Maneuver by 2(T).
+
+---
+
+[passive]
+# (1) An attack of the Focused Foundation: its Wound's Critical Target 1 lower; (2) that Wound a Critical Result, 2(T) more on
+# it, a row of its own (chat.mjs, as the Wound is rolled).
+allow brutalKata.wound;

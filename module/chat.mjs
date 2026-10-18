@@ -24647,6 +24647,9 @@ async function rollAttackWoundWork(message, attack) {
     }
   }
 
+  // Brutal Kata: an attack of the Focused Foundation.
+  const brutal = (attacker.system.effects?.slots?.["brutalKata.wound"] === true)
+    && (attacker.system.effects?.slots?.[`focused.${attack.foundation}`] === true);
   // One Wound Roll for the whole Maneuver, like the Strike. What differs between the
   // people it reached is what each of them did about it - their Soak, their Damage
   // Reduction, and a Power Flare that answers it for them alone.
@@ -24666,8 +24669,11 @@ async function rollAttackWoundWork(message, attack) {
     // The usual limit is the floor a character's own Critical Target is held to when it
     // is derived, so a stated one goes in as written rather than through it.
     // Critical Tactics: one it reached with it on them, 1 lower.
-    criticalTarget: profileFor(attack)?.woundCriticalTarget ?? (criticalTactics(struck.map(each => each.actor?.uuid ?? each.uuid))
-      ? Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, (Number(attacker.system.criticalTarget) || 10) - 1) : null),
+    // And Brutal Kata (1): an attack of the Focused Foundation, 1 lower.
+    criticalTarget: profileFor(attack)?.woundCriticalTarget ?? ((criticalTactics(struck.map(each => each.actor?.uuid ?? each.uuid))
+      + (brutal ? 1 : 0))
+      ? Math.max(DBUCharacterData.CRITICAL_TARGET_MIN, (Number(attacker.system.criticalTarget) || 10)
+        - criticalTactics(struck.map(each => each.actor?.uuid ?? each.uuid)) - (brutal ? 1 : 0)) : null),
     // Twin-Linked or Dead-Link on the Wound: made twice, one kept.
     linked: attack.technique?.linked?.wound ?? "",
     // Delayed's and Personal Bomb's: the Wound Roll made when it hit, not a new one.
@@ -24679,6 +24685,13 @@ async function rollAttackWoundWork(message, attack) {
     const value = 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1);
     wound = { ...wound, total: (Number(wound.total) || 0) + value,
       lines: [...(wound.lines ?? []), partLine({ label: "Wrath of the Dragon", written: "+2(T)", value })] };
+  }
+  // Brutal Kata (2): "If you score a Critical Result on your Wound Roll for an Attacking Maneuver made with your Focused
+  // Foundation, increase your Wound Roll for that Attacking Maneuver by 2(T)."
+  if (wound && (wound.outcome === "critical") && brutal) {
+    const value = 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1);
+    wound = { ...wound, total: (Number(wound.total) || 0) + value,
+      lines: [...(wound.lines ?? []), partLine({ label: "Brutal Kata (Critical)", written: "+2(T)", value })] };
   }
   // Done: Overwhelming Assault's stacks go now - after this Wound Roll counted them.
   await spendOverwhelm(attack);
