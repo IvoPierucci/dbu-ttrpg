@@ -1,0 +1,22 @@
+id: size-matters
+name: Size Matters
+talentCategory: size
+prerequisites: Tremendous Warrior
+description: >
+  Now you’re really getting huge!
+text: >
+  Size Matters: Now you’re really getting huge!
+  –Prerequisites: Tremendous Warrior
+  (1)-[Passive]: If your Size Category is Enormous or larger, increase your Damage Reduction by 1(T).
+  (2)-[Triggered, 1/Round]: If you would make an Attacking Maneuver where you would apply the Punching Down rules to all targets of that Attacking Maneuver, that Attacking Maneuver becomes an Absolute Attack.
+
+---
+
+[passive]
+# (1) Enormous: 2 Size Categories above Medium.
+if (size.steps >= 2) {
+  damageReduction += 1(T);
+}
+# (2) Every target 2+ Size Categories smaller, as the attack is made: asked, once a Round - an Absolute Attack (chat.mjs
+# askSizeMatters).
+allow sizeMatters.absolute;

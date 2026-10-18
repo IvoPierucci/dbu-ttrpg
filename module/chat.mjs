@@ -15834,6 +15834,21 @@ async function fleetTarget(message, actor) {
   return true;
 }
 
+/**
+ * Size Matters (2): "If you would make an Attacking Maneuver where you would apply the Punching Down rules to all targets of that
+ * Attacking Maneuver, that Attacking Maneuver becomes an Absolute Attack." Every target 2+ Size Categories smaller: asked, once a
+ * Round.
+ */
+async function askSizeMatters(actor, everyone) {
+  if ((actor?.system?.effects?.slots?.["sizeMatters.absolute"] !== true) || (actor.getFlag?.(SCOPE, "sizeMattersRound") === roundKey())) return false;
+  const aimed = everyone.filter(Boolean);
+  if (!aimed.length || !aimed.every(each => sizeDifference(actor, each) >= 2)) return false;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Size Matters` },
+    content: `<p data-tooltip="Once a Round">Make this an Absolute Attack?</p>`, rejectClose: false });
+  if (yes) await actor.setFlag(SCOPE, "sizeMattersRound", roundKey());
+  return Boolean(yes);
+}
+
 /** Tremendous Warrior (1): "Increase your Strike Rolls against an Opponent with a smaller Size Category than you by 1(T)." */
 function smallerParts(attacker, target) {
   const slot = attacker?.system?.effects?.slots?.["strike.vsSmaller"];
@@ -19948,7 +19963,8 @@ export async function postAttack(actor, target, maneuver,
         { targets: everyone, shaken: everyone.filter(who => (Number(who?.system?.conditions?.shaken) || 0) > 0) })
       : null);
 
-  const absolute = Boolean((maneuver.absolute || technique?.absolute) && maneuver.attacking);
+  const absolute = Boolean(((maneuver.absolute || technique?.absolute) && maneuver.attacking)
+    || (!reflecting && maneuver.attacking && await askSizeMatters(actor, everyone)));
   // Distant Explosion: "select a Square occupied by an Opponent to be the Target Square" - theirs.
   if (technique?.area?.centredOnTarget) technique.area.centreName = target.name;
   // Volatile Explosion with its Sphere on the user: they are inside it, so they are a target, hit.
