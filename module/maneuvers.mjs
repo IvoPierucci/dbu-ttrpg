@@ -1608,6 +1608,23 @@ export async function askAngryWarrior(actor, declared) {
 }
 
 /**
+ * Apoplectic Beast (2): "When you make an Attacking Maneuver while in the Raging State, you may reduce your Life Points by L(T)
+ * to increase your Wound Roll for that Attacking Maneuver by an equal amount." Asked as it is declared; the Life Points paid
+ * then, a row on its Wound.
+ */
+export async function askApoplecticBeast(actor, declared) {
+  const level = Number(actor?.system?.states?.raging) || 0;
+  if (!declared || (level <= 0) || (actor?.system?.effects?.slots?.["apoplectic.lifeWound"] !== true)) return declared;
+  const amount = level * Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Apoplectic Beast` },
+    content: `<p>${amount} Life Points for +${amount} on this Wound Roll?</p>`, rejectClose: false });
+  if (!yes) return declared;
+  const { reduceLifePoints } = await import("./chat.mjs");
+  await reduceLifePoints(actor, amount, { reason: "Apoplectic Beast", own: true });
+  return { ...declared, woundExtra: [...(declared.woundExtra ?? []), { label: "Apoplectic Beast", written: `+${level}(T)`, value: amount }] };
+}
+
+/**
  * Injuring Wound (2): "When making an Attacking Maneuver, you can reduce your Strike Roll by 1(bT) to increase your Wound Roll
  * by 2(bT)." Asked as one is declared, once a Round; carried on the attack as a row on its Strike and one on its Wound.
  */

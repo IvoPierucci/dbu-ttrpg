@@ -4896,6 +4896,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Risky Bet (2): Soak Value for twice as much Wound, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askRiskyBet(actor, declared);
     declared = await (await import("./maneuvers.mjs")).askAngryWarrior(actor, declared);
+    declared = await (await import("./maneuvers.mjs")).askApoplecticBeast(actor, declared);
     // Glass Combat (4): the Glass Profile applied - yours, or an adjacent Ally's - for 2(bT) Ki, asked once a Round.
     declared = await (await import("./maneuvers.mjs")).askGlassApply(actor, declared);
     // Heart of Glass (3): a Glass attack on a Glass Square - Surging for it, asked once a Round.

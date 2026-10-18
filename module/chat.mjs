@@ -10692,6 +10692,8 @@ async function bonusMomentum(attacker, why) {
  */
 export async function reducedMomentum(actor) {
   if (!game.combat?.started || ((Number(actor.system.momentum?.pending) || 0) > 0)) return;
+  // Apoplectic Beast (1): "you ignore the rules of Reduced Momentum" - at the 2nd Level of the Raging State or higher.
+  if (actor.system?.effects?.slots?.["momentum.noReduced"] === true) return;
   await requestActorUpdate(actor, { "system.momentum.pending": 1 });
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="dbu-settled-note">Reduced Momentum: ${Handlebars.escapeExpression(actor.name)} has a Standard `
@@ -19533,6 +19535,7 @@ async function takeOutOfSequence(message, actor, offer) {
     // Risky Bet (2), out of sequence as in it.
     declared = await (await import("./maneuvers.mjs")).askRiskyBet(actor, declared);
     declared = await (await import("./maneuvers.mjs")).askAngryWarrior(actor, declared);
+    declared = await (await import("./maneuvers.mjs")).askApoplecticBeast(actor, declared);
     // Boom's: its Tension's Broken and the stacks it spends.
     if (granted?.boom) declared = { ...declared, boom: granted.boom };
     // Ranger (3)'s: "it must be an Armed Attack", and a move away once it is concluded.

@@ -1,0 +1,22 @@
+id: apoplectic-beast
+name: Apoplectic Beast
+talentCategory: raging
+prerequisites: Burning Fury and/or Furious Berserker, Tier of Power 3+
+description: >
+  Charging forward in an unrelenting eruption of wrath, your instincts take over as your conscious mind disappears beneath the storm of rage inside you.
+text: >
+  Apoplectic Beast: Charging forward in an unrelenting eruption of wrath, your instincts take over as your conscious mind disappears beneath the storm of rage inside you.
+  –Prerequisites: Burning Fury and/or Furious Berserker, Tier of Power 3+
+  (1)-[Passive]: While in the 2nd or higher Levels of the Raging State, you ignore the rules of Reduced Momentum.
+  (2)-[Triggered]: When you make an Attacking Maneuver while in the Raging State, you may reduce your Life Points by L(T) to increase your Wound Roll for that Attacking Maneuver by an equal amount.
+
+---
+
+[passive]
+# (1) (chat.mjs reducedMomentum)
+if (states.raging >= 2) {
+  allow momentum.noReduced;
+}
+# (2) An Attacking Maneuver declared in the Raging State: asked - L(T) Life Points paid, as much on its Wound Roll (maneuvers.mjs
+# askApoplecticBeast).
+allow apoplectic.lifeWound;
