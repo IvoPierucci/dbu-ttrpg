@@ -1,0 +1,25 @@
+id: silent-footsteps
+name: Silent Footsteps
+talentCategory: skill
+prerequisites: Footwork, 2+ Skill Ranks in the Stealth Skill
+description: >
+  You are able to dampen the sounds of your movement, allowing you to pass unnoticed.
+text: >
+  Silent Footsteps: You are able to dampen the sounds of your movement, allowing you to pass unnoticed.
+  –Prerequisites: Footwork, 2+ Skill Ranks in the Stealth Skill
+  (1)-[Triggered]: When you use the Rapid Movement effect of the Movement Maneuver, make a Skill Clash (Stealth vs Perception) against all of your Opponents. If you win against an Opponent, you become Hidden to them until the end of your next turn or until after you make an Attacking Maneuver against them.
+  (2)-[Passive]: When making a Concealment Skill Check, you may use your Stealth Skill Bonus instead. If you do, reduce your Dice Score by 2.
+
+---
+
+# (1) Rapid Movement taken (the `rapid-movement` Moment): a Skill Clash at each Opponent on the scene you are not Hidden from
+# already; won, Hidden from them till the end of your next turn, or till an Attacking Maneuver of yours at them is concluded
+# (chat.mjs silentFootsteps, hidden.mjs expireOwnHidden, silentFootstepsAttacked). Automatic by default, its
+# Triggered/Automatic button.
+[triggered/rapid-movement, effect 1]
+silentFootsteps();
+
+# (2) The Concealment roll made with the Stealth Skill Bonus, 2 less, where that is the higher - nobody chooses less
+# (actor-character.mjs, where each Skill's roll is put together).
+[passive]
+allow concealment.byStealth;

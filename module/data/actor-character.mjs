@@ -2653,6 +2653,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         }),
         { as: `skill.${key}`, wraps: true });
     }
+    // Silent Footsteps (2): "When making a Concealment Skill Check, you may use your Stealth Skill Bonus instead. If you do,
+    // reduce your Dice Score by 2" - taken where it comes to more, since nobody chooses less.
+    if ((this.effects?.slots?.["concealment.byStealth"] === true) && this.skills.concealment && this.skills.stealth) {
+      const instead = (Number(this.skills.stealth.bonus) || 0) - (Number(this.skills.concealment.bonus) || 0) - 2;
+      if (instead > 0) this.skills.concealment.roll += instead;
+    }
 
     this.threshold.penalty = Math.max(0,
       withEffects(this, "threshold.penalty", this.threshold.penalty));

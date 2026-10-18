@@ -720,6 +720,10 @@ async function settleClashEffects(messageId, clash) {
     await settleAnalytic(message, clash);
   }
 
+  if (clash.silentFootsteps && clash.result && !clash.silentFootsteps.applied) {
+    await settleSilentFootsteps(message, clash);
+  }
+
   if (clash.sense && clash.result && !clash.sense.applied) {
     await settleSense(message, clash);
   }
@@ -13245,6 +13249,7 @@ async function frozenTurnAfterAttack(attack, message = null) {
   await studiedSpent(attack);
   await boomEnds(attack);
   await rangerRetreatEnds(attack);
+  await silentFootstepsAttacked(attack);
   // Glass Shards (5), (7): "After concluding that Attacking Maneuver, that Character stops being a Shard Carrier."
   if (attack?.shardEnds) await shardsSpent(attack.shardEnds);
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
@@ -14093,6 +14098,53 @@ export async function motivatingPerformance(actor) {
   }
   const given = Array.from(actor.getFlag?.(SCOPE, "motivated") ?? []);
   return requestActorUpdate(actor, { [`flags.${SCOPE}.motivated`]: [...new Set([...given, ...within.map(each => each.uuid)])] });
+}
+
+/**
+ * Silent Footsteps (1): "When you use the Rapid Movement effect of the Movement Maneuver, make a Skill Clash (Stealth vs
+ * Perception) against all of your Opponents." Each Opponent on the scene you are not Hidden from already, a Clash of its own;
+ * how many of your turn's ends "the end of your next turn" is, kept with it (settleSilentFootsteps).
+ */
+export async function silentFootsteps(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const { isHiddenFrom } = await import("./hidden.mjs");
+  const allies = new Set(alliesOnScene(actor).map(ally => ally.uuid));
+  const opponents = [...new Map((canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.type === "character")
+      && !allies.has(token.actor.uuid) && !token.actor.system?.defeated && !isHiddenFrom(actor, token.actor))
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  if (!opponents.length) return UNSPENT;
+  // Used in your own turn, its end is not the next one's.
+  const turnEnds = (game.combat?.combatant?.actor?.uuid === actor.uuid) ? 2 : 1;
+  for (const other of opponents) {
+    await postSkillClash(actor, other, { name: "Silent Footsteps", type: "outOfSequence",
+      clash: { skill: "stealth", defenderSkills: ["perception"] } }, { silentFootsteps: { applied: false, turnEnds } });
+  }
+}
+
+/** Silent Footsteps (1), settled: "If you win against an Opponent, you become Hidden to them" - said on its card. */
+async function settleSilentFootsteps(message, clash) {
+  await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, silentFootsteps: { ...clash.silentFootsteps, applied: true } });
+  const hider = fromUuidSync(clash.challengerUuid);
+  const seeker = fromUuidSync(clash.defenderUuid);
+  if (!hider || !seeker) return;
+  if (whoWonClash(clash.result) !== "challenger") return settledNote(message, `${seeker.name} hears ${hider.name} coming.`);
+  const { hideFrom } = await import("./hidden.mjs");
+  await hideFrom(hider, seeker, { quiet: true, until: `own:${Math.max(1, Number(clash.silentFootsteps.turnEnds) || 1)}`,
+    via: "silent-footsteps" });
+  return settledNote(message, `${hider.name} is Hidden from ${seeker.name}.`);
+}
+
+/** Silent Footsteps (1): "or until after you make an Attacking Maneuver against them" - the attack concluded, theirs no more. */
+async function silentFootstepsAttacked(attack) {
+  const attacker = fromUuidSync(attack?.attackerUuid ?? "");
+  if (!attacker) return;
+  const { hiddenEntries, revealTo } = await import("./hidden.mjs");
+  const aimed = new Set(attackTargets(attack).map(entry => entry.uuid));
+  for (const entry of hiddenEntries(attacker).filter(each => (each.via === "silent-footsteps") && aimed.has(each.uuid))) {
+    const seeker = fromUuidSync(entry.uuid);
+    if (seeker) await revealTo(attacker, seeker, "after an Attacking Maneuver at them");
+  }
 }
 
 /**

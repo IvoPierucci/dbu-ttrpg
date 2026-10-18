@@ -610,8 +610,10 @@ export function registerCombatHooks() {
       await fireMoment(leaving, "end-of-turn");
 
       // Hidden: "if you end your turn in their Melee Range, you stop being Hidden from them".
-      const { revealAtTurnEnd, expireHiddenAtTurnEnd } = await import("./hidden.mjs");
+      const { revealAtTurnEnd, expireHiddenAtTurnEnd, expireOwnHidden } = await import("./hidden.mjs");
       await revealAtTurnEnd(leaving);
+      // Silent Footsteps': Hidden till the end of their own next turn.
+      await expireOwnHidden(leaving);
       // And whoever was Hidden from them only until the end of their next turn - Down Burst.
       await expireHiddenAtTurnEnd(leaving, combat);
       // Surprise Strike: whoever fakes it, with this Oblivious one ending their turn beside them.

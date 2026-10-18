@@ -150,6 +150,11 @@ export const VERBS = Object.freeze({
     doc: "Analytic Fighter: the named Option's (damageAnalysis, weak, offensive, defensive, critical, teamwork) - its mark on the one "
        + "Analyzed, and its Clash where it has one (chat.mjs analyticFighter)."
   },
+  silentFootsteps: {
+    args: [0, 0],
+    doc: "Silent Footsteps (1): a Skill Clash (Stealth vs Perception) at each Opponent - won, Hidden from them till the end of "
+       + "your next turn or your attack at them (chat.mjs silentFootsteps)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "

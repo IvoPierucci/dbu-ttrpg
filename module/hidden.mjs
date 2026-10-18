@@ -135,6 +135,25 @@ export async function revealAtTurnEnd(actor) {
 }
 
 /**
+ * The end of this character's own turn: Hidden only till the end of their next turn - Silent Footsteps' `own:N`, N of their
+ * turn's ends still to come - one fewer, and none left, no longer.
+ */
+export async function expireOwnHidden(hider) {
+  const entries = hiddenEntries(hider);
+  const kept = [];
+  const gone = [];
+  for (const entry of entries) {
+    const left = /^own:(\d+)$/.exec(String(entry.until ?? ""));
+    if (!left) kept.push(entry);
+    else if (Number(left[1]) > 1) kept.push({ ...entry, until: `own:${Number(left[1]) - 1}` });
+    else gone.push(entry);
+  }
+  if (kept.length === entries.length && !entries.some(entry => /^own:/.test(String(entry.until ?? "")))) return;
+  await write(hider, kept);
+  if (gone.length) await say(hider, `${hider.name} is no longer Hidden from ${gone.map(entry => entry.name).join(", ")} - the end of their turn.`);
+}
+
+/**
  * The end of this character's turn: whoever was Hidden from them only "until the end of their next turn" - Down Burst's -
  * is no longer.
  */
