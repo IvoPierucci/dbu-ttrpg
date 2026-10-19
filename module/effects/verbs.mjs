@@ -216,6 +216,11 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Lion's Heart (2): the Surge Maneuver out of sequence, a Healing Surge (chat.mjs lionsHeart)."
   },
+  lightningPower: {
+    args: [0, 0],
+    doc: "Lightning Surge (3): the Power Up and the Transformation out of sequence, offered on your latest card (chat.mjs "
+       + "lightningPower)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "

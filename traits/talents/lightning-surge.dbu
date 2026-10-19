@@ -1,0 +1,31 @@
+id: lightning-surge
+name: Lightning Surge
+talentCategory: surge
+prerequisites: Never Surrender, Resilience
+description: >
+  When you recover your stamina, your combat effectiveness rises.
+text: >
+  Lightning Surge: When you recover your stamina, your combat effectiveness rises.
+  –Prerequisites: Never Surrender, Resilience
+  (1)-[Triggered, 1/Encounter]: If you use a Healing Surge, you may increase your Soak Value by 1(T) for the remainder of the Combat Encounter.
+  (2)-[Triggered, 1/Encounter]: If you use a Ki Surge, you may increase your Wound Rolls by 1(T) for the remainder of the Combat Encounter.
+  (3)-[Triggered, 1/Encounter]: If your Life Points would be increased beyond a Health Threshold you are currently under after using the effects of a Healing Surge, you may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+# (1) Ticked in the Healing Surge's window: Lightning Soak (a mark), Soak Value 1(T), for the Encounter.
+[triggered/healing-surge, 1/encounter, effect 1]
+gain("lightning-soak-mark");
+expires("lightning-soak-mark", encounter);
+
+# (2) A Ki Surge taken (the `ki-surge` Moment): Lightning Wound (a mark), Wound Rolls 1(T), for the Encounter. Automatic by
+# default, its Triggered/Automatic button.
+[triggered/ki-surge, 1/encounter, effect 2]
+gain("lightning-wound-mark");
+expires("lightning-wound-mark", encounter);
+
+# (3) A Healing Surge that took you above a Health Threshold you were under (the `surge-threshold` Moment) - never Automatic,
+# it hands over an Out-of-Sequence Maneuver: the Power Up and the Transformation offered on your latest card (chat.mjs
+# lightningPower).
+[triggered/surge-threshold, 1/encounter, outOfSequence, effect 3]
+lightningPower();

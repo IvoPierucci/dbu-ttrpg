@@ -74,6 +74,9 @@ const TABLE = [
   { key: "rapid-movement", label: "You take Rapid Movement", provides: [],
     doc: "Fired as Rapid Movement is taken (use-maneuver.mjs takeRapidMovement) - Footwork's Defense Value. What is the "
        + "player's is asked in a window first." },
+  { key: "surge-threshold", label: "A Healing Surge takes you above a Health Threshold you were under", provides: [],
+    doc: "Fired once a Healing Surge's Life Points are back, where they cross a Health Threshold upward (chat.mjs takeSurge) - "
+       + "Lightning Surge's. What is the player's is asked in a window first." },
   { key: "holding-back-lost", label: "You lose all stacks of Holding Back", provides: [],
     doc: "Fired in a Combat as the last stack of Holding Back goes, by whatever took it (dbu-ttrpg.mjs) - not as the "
        + "Encounter's start clears every Resource. Slow Starter's. What is the player's is asked in a window first." },

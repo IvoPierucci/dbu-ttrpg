@@ -14442,9 +14442,22 @@ function markedParts(roller, other) {
  * Maneuver." Both offered on your latest card - one made for them where there is none; either taken, the Maneuver itself.
  */
 export async function warmUpPower(actor) {
+  return offerPowerOrTransform(actor, "Warm Up - no longer Holding Back");
+}
+
+/**
+ * Lightning Surge (3): "you may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver" - as Warm
+ * Up's.
+ */
+export async function lightningPower(actor) {
+  return offerPowerOrTransform(actor, "Lightning Surge - above a Health Threshold again");
+}
+
+/** The Power Up and the Transformation out of sequence, offered on the latest card - one made for them where there is none. */
+async function offerPowerOrTransform(actor, reason) {
   if (!actor) return;
   const offers = [["power-up", "Power Up"], ["transformation", "Transformation"]].map(([id, name]) => ({ actorUuid: actor.uuid,
-    actorName: actor.name, maneuverId: id, maneuverName: getManeuver(id)?.name ?? name, reason: "Warm Up - no longer Holding Back",
+    actorName: actor.name, maneuverId: id, maneuverName: getManeuver(id)?.name ?? name, reason,
     ownOutOfSequence: id }));
   const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
   if (card) {
@@ -29054,6 +29067,10 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
     const { value, max } = actor.system.life;
     const restored = Math.min(max, value + (roll.total * multiplier)) - value;
     await actor.update({ "system.life.value": value + restored });
+    // Above a Health Threshold you were under: what answers it - Lightning Surge (3)'s.
+    const keys = Object.keys(DBUCharacterData.THRESHOLDS);
+    const crossedUp = Boolean(restored) && (keys.indexOf(DBUCharacterData.thresholdKey(value + restored, max))
+      < keys.indexOf(DBUCharacterData.thresholdKey(value, max)));
 
     // The Surge announces itself: a separate message for the Maneuver would say the
     // same thing twice.
@@ -29061,6 +29078,7 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
       speaker: ChatMessage.getSpeaker({ actor }),
       flavor: `${source} - Healing Surge${(multiplier > 1) ? ` x${multiplier}` : ""} - ${restored} Life Points restored`
     });
+    if (crossedUp) await answerFor(actor, "surge-threshold");
     return true;
   }
 

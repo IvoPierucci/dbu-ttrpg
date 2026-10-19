@@ -1,0 +1,16 @@
+id: lightning-wound-mark
+name: Lightning Wound
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Lightning Surge's, for the rest of the Combat Encounter.
+combatCondition: no
+source: Core Rule
+description: >
+  Lightning Surge: Wound Rolls 1(T) higher for the rest of the Combat Encounter.
+text: >
+  Lightning Surge: Wound Rolls 1(T) higher for the remainder of the Combat Encounter.
+
+---
+
+[passive]
+wound += 1(T);
