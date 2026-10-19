@@ -14289,12 +14289,16 @@ export async function energyControlAsk(actor, maneuver, declared, price) {
   const homingOpen = (slots["energyControl.homing"] === true) && signature && Boolean(declared) && !area && (ranks < 3)
     && (actor.getFlag?.(SCOPE, "energyControlHomingRound") !== roundKey());
   if (!costOpen && !homingOpen) return none;
+  // Technique Master (2): with no 1/Round, its Triggered/Automatic button - Automatic, taken without asking (the user's).
+  const costAuto = costOpen && (slots["techniqueMaster.freeControl"] === true)
+    && triggersFor(actor, ["energy-control-cost"]).some(entry => (actor.getFlag?.(SCOPE, "automatic") ?? []).includes(entry.blockId));
+  if (costAuto && !homingOpen) return { discount: Math.min(2 * tier, Number(price)), homing: false };
   const escape = Handlebars.escapeExpression;
   const picked = await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `${actor.name}: Energy Control` },
     content: `<p class="dbu-respond-hint">${escape(maneuver.name)}</p>
-      ${costOpen ? `<label class="dbu-wager" data-tooltip="Its Ki Point Cost 2(T) lower. 1/Round.">
+      ${(costOpen && !costAuto) ? `<label class="dbu-wager" data-tooltip="Its Ki Point Cost 2(T) lower.${(slots["techniqueMaster.freeControl"] === true) ? "" : " 1/Round."}">
         <input type="checkbox" name="cost" checked/> <span>-${Math.min(2 * tier, Number(price))} Ki</span></label>` : ""}
       ${homingOpen ? `<label class="dbu-wager" data-tooltip="Spend 2(T) Ki Points: a rank of Homing on this attack. 1/Round.">
         <input type="checkbox" name="homing"/> <span>Homing (${2 * tier} Ki)</span></label>` : ""}`,
@@ -14306,7 +14310,7 @@ export async function energyControlAsk(actor, maneuver, declared, price) {
     ],
     rejectClose: false
   });
-  const discount = (costOpen && picked?.cost) ? Math.min(2 * tier, Number(price)) : 0;
+  const discount = (costOpen && (costAuto || picked?.cost)) ? Math.min(2 * tier, Number(price)) : 0;
   let homing = false;
   if (homingOpen && picked?.homing) {
     homing = await spendManeuverCost(actor, { name: "Energy Control" }, 2 * tier);

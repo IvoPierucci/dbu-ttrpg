@@ -93,6 +93,10 @@ const TABLE = [
   { key: "hype", label: "You use the Hype Maneuver", provides: [],
     doc: "Fired as the Hype Maneuver is used, after its own effect and before its card (use-maneuver.mjs) - Show Stopping "
        + "Performance's Options. What is the player's is asked in a window first." },
+  { key: "energy-control-cost", label: "A Signature Technique or a Technical Unique Ability is about to be paid for",
+    provides: [],
+    doc: "Never fired: Energy Control (1)'s block is its Triggered/Automatic button, read by its window (chat.mjs "
+       + "energyControlAsk) - with Technique Master (2), Automatic takes the 2(T) without asking." },
   { key: "insult-won", label: "You win the Morale Clash for the Insult Maneuver", provides: [],
     doc: "Fired as the Insult's Clash is won and its Conditions on (chat.mjs settleInsult), its target named as `opponentUuid` - "
        + "Taunt's. What is the player's is asked in a window first." },

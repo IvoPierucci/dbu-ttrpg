@@ -19,3 +19,9 @@ text: >
 allow energyControl.cost;
 # (2) 2(T) Ki for a rank of Homing more - a Technique with no Area of Effect, below its 3 ranks (chat.mjs homing).
 allow energyControl.homing;
+
+# (1) With Technique Master (2) - no 1/Round - its Triggered/Automatic button (the user's): Automatic, taken without asking;
+# Triggered, a box in the window. This block is the button's: its Moment is never fired, the window reads it (energyControlAsk).
+[triggered/energy-control-cost, effect 1]
+requires hasTalent("technique-master");
+allow energyControl.cost;
