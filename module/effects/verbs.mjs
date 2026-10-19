@@ -199,6 +199,14 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Jump Start (2): your turn now, your Initiative above everyone's for this Round (chat.mjs jumpStart)."
   },
+  allOutTransform: {
+    args: [0, 0],
+    doc: "All-Out Start (1): the Transformation out of sequence (chat.mjs allOutTransform)."
+  },
+  allOutStart: {
+    args: [0, 0],
+    doc: "All-Out Start (2): All-Out, Soak Value and Combat Rolls 1(bT), for 2 Combat Rounds (chat.mjs allOutStart)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "

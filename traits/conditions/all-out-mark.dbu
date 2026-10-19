@@ -1,0 +1,17 @@
+id: all-out-mark
+name: All-Out
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: All-Out Start (2)'s, for 2 Combat Rounds from the Encounter's start (chat.mjs allOutStart).
+combatCondition: no
+source: Core Rule
+description: >
+  All-Out Start: Soak Value and Combat Rolls 1(bT) higher, for 2 Combat Rounds.
+text: >
+  All-Out Start (2): Increase your Soak Value and Combat Rolls by 1(bT) for 2 Combat Rounds.
+
+---
+
+[passive]
+soakValue += 1(bT);
+combatRolls += 1(bT);

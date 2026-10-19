@@ -1,0 +1,24 @@
+id: all-out-start
+name: All-Out Start
+talentCategory: starter
+prerequisites: Jump Start
+description: >
+  As soon as you decide to take the fight seriously, you unleash your full power, holding nothing back.
+text: >
+  All-Out Start: As soon as you decide to take the fight seriously, you unleash your full power, holding nothing back.
+  –Prerequisites: Jump Start
+  (1)-[Triggered/Start of Turn, 1/Encounter]: Use the Transformation Maneuver immediately as an Out-of-Sequence Maneuver.
+  (2)-[Triggered/Start of Combat Encounter]: Increase your Soak Value and Combat Rolls by 1(bT) for 2 Combat Rounds.
+
+---
+
+# (1) On your turn's card, ticked - never Automatic, it hands over an Out-of-Sequence Maneuver: the Transformation out of
+# sequence (chat.mjs allOutTransform).
+[triggered/start-of-turn, 1/encounter, outOfSequence, effect 1]
+allOutTransform();
+
+# (2) Entering the Encounter: All-Out (a mark) - Soak Value and Combat Rolls 1(bT) - through its second Combat Round, gone as
+# the third begins or the Encounter ends (chat.mjs allOutStart; combat.mjs). Automatic by default, its Triggered/Automatic
+# button.
+[triggered/start-of-encounter, effect 2]
+allOutStart();

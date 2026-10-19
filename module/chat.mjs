@@ -14475,6 +14475,22 @@ export async function reservedEnds(attack, actor = null) {
   }
 }
 
+/** All-Out Start (1): "Use the Transformation Maneuver immediately as an Out-of-Sequence Maneuver." */
+export async function allOutTransform(actor) {
+  const used = await ownOutOfSequence(actor, "transformation");
+  return used ? used : (await import("./effects/moments-runtime.mjs")).UNSPENT;
+}
+
+/**
+ * All-Out Start (2): "Increase your Soak Value and Combat Rolls by 1(bT) for 2 Combat Rounds." All-Out on, kept with the last
+ * Round it lasts through (`allOutUntil`) - taken off as a later one begins (combat.mjs allOutEnds) or the Encounter ends.
+ */
+export async function allOutStart(actor) {
+  const { setCondition } = await import("./conditions.mjs");
+  if (!actor || !await setCondition(actor, "all-out-mark", 1)) return;
+  await actor.setFlag(SCOPE, "allOutUntil", { combat: game.combat?.id ?? "none", round: Math.max(1, Number(game.combat?.round) || 1) + 1 });
+}
+
 /** Jump Start (1): "Use the Power Up Maneuver as an Out-of-Sequence Maneuver." */
 export async function jumpStartPower(actor) {
   const used = await ownOutOfSequence(actor, "power-up");

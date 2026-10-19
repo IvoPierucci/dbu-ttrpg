@@ -87,6 +87,13 @@ async function startRound(combat) {
   if (combat.getFlag?.("dbu-ttrpg", "turnResumed")) await combat.unsetFlag("dbu-ttrpg", "turnResumed");
 
   for (const actor of combatants(combat)) {
+    // All-Out Start (2): its 2 Combat Rounds over.
+    const allOut = actor.getFlag?.("dbu-ttrpg", "allOutUntil");
+    if (allOut && ((allOut.combat !== combat.id) || ((Number(combat.round) || 0) > (Number(allOut.round) || 0)))) {
+      const { setCondition } = await import("./conditions.mjs");
+      if ((Number(actor.system.conditions?.["all-out-mark"]) || 0) > 0) await setCondition(actor, "all-out-mark", 0);
+      await actor.unsetFlag("dbu-ttrpg", "allOutUntil");
+    }
     // Before anything else this Round. "Until the end of the Combat Round" ends here -
     // the start of the next one is the end of the last from where this stands, since
     // nothing happens between them - and it has to end before the new Round can hand out
@@ -733,6 +740,12 @@ export function registerCombatHooks() {
       }
       // Counter Jury-rigging (2)'s Quality, with the Round it was for.
       await (await import("./chat.mjs")).juryRigEnds(actor);
+      // All-Out Start (2)'s, with the Encounter.
+      if (actor.getFlag?.("dbu-ttrpg", "allOutUntil")) {
+        const { setCondition } = await import("./conditions.mjs");
+        if ((Number(actor.system.conditions?.["all-out-mark"]) || 0) > 0) await setCondition(actor, "all-out-mark", 0);
+        await actor.unsetFlag("dbu-ttrpg", "allOutUntil");
+      }
       // Instant Craft (2)'s: "It is destroyed at the end of the Combat Encounter."
       const instant = Array.from(actor.items ?? []).filter(item => item.getFlag?.("dbu-ttrpg", "instantCraft")).map(item => item.id);
       if (instant.length) await actor.deleteEmbeddedDocuments("Item", instant);
