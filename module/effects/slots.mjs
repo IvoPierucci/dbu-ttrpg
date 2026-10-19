@@ -213,6 +213,12 @@ const TABLE = [
     doc: "Added to the Strike against each Character Oblivious of you - you Hidden from them (Stealth Strike's; chat.mjs obliviousParts)." },
   { key: "strike.vsSmaller", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Strike against each Opponent of a smaller Size Category (Tremendous Warrior's; chat.mjs smallerParts)." },
+  { key: "strike.flanking", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to the Strike against an Opponent with an Ally of yours on a Square adjacent (Flexible Flanker's; chat.mjs "
+       + "flankerParts)." },
+  { key: "wound.flanking", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to the Wound against an Opponent with an Ally of yours on a Square adjacent (Flexible Flanker's; chat.mjs "
+       + "flankerParts)." },
   { key: "wound.vsGrappled", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Wound against each target in a Grapple (Heel's; chat.mjs heelParts)." },
   { key: "wound.perTargetThreshold", phase: PHASES.CORE, kind: N, ops: ["add"],

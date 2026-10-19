@@ -19912,6 +19912,16 @@ function rangeParts(attacker, attack, target, roll) {
       value: Number(slot.add) }));
 }
 
+/**
+ * Flexible Flanker (1): "If an Ally is on a Square adjacent to an Opponent, increase all of your Strike and Wound Rolls made
+ * against that Opponent by 1(T)." Against that one alone, as Brigand Combat's.
+ */
+function flankerParts(attacker, target, roll) {
+  const slot = attacker?.system?.effects?.slots?.[`${roll}.flanking`];
+  if (!(Number(slot?.add) || 0) || !target || (attacker.uuid === target.uuid) || !brigandAllyBeside(attacker, target)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Flanking", value: Number(slot.add) }];
+}
+
 /** Heel (1): "Increase the Wound Roll of your Attacking Maneuvers made against Opponents in a Grapple by 1(T)." */
 function heelParts(attacker, target) {
   const slot = attacker?.system?.effects?.slots?.["wound.vsGrappled"];
@@ -23029,7 +23039,7 @@ async function resolveAttackWork(message, attack) {
     // and what it is worth against each of them is not the same number.
     const analysisParts = [...analysisBonus(attacker, target), ...foresightBonus(attacker, target),
       ...mindReadBonus(attacker, target), ...secondSightBonus(attacker, target), ...lockOnParts(attacker, target),
-      ...brigandParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
+      ...brigandParts(attacker, target, "strike"), ...flankerParts(attacker, target, "strike"), ...studiedParts(attacker, target), ...inferiorParts(attacker, target, "strike"),
       ...tacticianParts(attacker, target), ...rangeParts(attacker, attack, target, "strike"), ...fleetParts(attacker, target),
       ...smallerParts(attacker, target), ...analyticParts(attacker, target, "strike"), ...obliviousParts(attacker, target),
       ...markedParts(attacker, target)]
@@ -25102,7 +25112,7 @@ async function rollAttackWoundWork(message, attack) {
       ...lockOnParts(attacker, target),
       ...enemyParts(attacker, target),
       ...inferiorParts(attacker, target, "wound"),
-      ...brigandParts(attacker, target, "wound"),
+      ...brigandParts(attacker, target, "wound"), ...flankerParts(attacker, target, "wound"),
       ...tacticianParts(attacker, target),
       ...rangeParts(attacker, attack, target, "wound"),
       ...heelParts(attacker, target),

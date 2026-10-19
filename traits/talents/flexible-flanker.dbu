@@ -1,0 +1,18 @@
+id: flexible-flanker
+name: Flexible Flanker
+talentCategory: teamwork
+prerequisites: N/A
+description: >
+  You are skilled in surrounding an opponent and taking them down with your allies.
+text: >
+  Flexible Flanker: You are skilled in surrounding an opponent and taking them down with your allies.
+  –Prerequisites: N/A
+  (1)-[Passive]: If an Ally is on a Square adjacent to an Opponent, increase all of your Strike and Wound Rolls made against that Opponent by 1(T).
+
+---
+
+[passive]
+# (1) Against that Opponent alone - an Ally of yours, not Defeated, on a Square adjacent to them, as Brigand Combat's (chat.mjs
+# flankerParts).
+strike.flanking += 1(T);
+wound.flanking += 1(T);
