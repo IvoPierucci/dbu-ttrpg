@@ -2404,11 +2404,15 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Steel Muscle (1): "Increase your Soak Value by 1(T). Double this bonus if you possess 3 Super Stacks."
     const steel = slot(this, "superStack.steelSoak")
       * ((this.superStack.stacks >= DBUCharacterData.MAX_SUPER_STACKS) ? 2 : 1);
+    // Adamantine Muscle (1): "Double the increase to your Soak Value from your Super Stacks while you are below the Injured
+    // Health Threshold" - Injured or Critical.
+    const bulkTimes = ((this.effects?.slots?.["superStack.adamantine"] === true)
+      && ["injured", "critical"].includes(this.threshold?.key)) ? 2 : 1;
     const beforeFloor = withEffects(this, "soakValue.external",
-      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk + soakBelow.value + battery + steel, {
+      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk * bulkTimes + soakBelow.value + battery + steel, {
         parts: [
           { label: "Own Soak", value: ownSoak },
-          { label: "Solid Bulk", value: this.superStack.solidBulk },
+          { label: (bulkTimes > 1) ? "Solid Bulk (twice, Adamantine Muscle)" : "Solid Bulk", value: this.superStack.solidBulk * bulkTimes },
           ...soakBelow.parts,
           ...(battery ? [{ label: "Power Battery", value: battery }] : []),
           ...(steel ? [{ label: "Steel Muscle", value: steel }] : [])

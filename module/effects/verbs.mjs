@@ -207,6 +207,11 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "All-Out Start (2): All-Out, Soak Value and Combat Rolls 1(bT), for 2 Combat Rounds (chat.mjs allOutStart)."
   },
+  adamantineStrike: {
+    args: [0, 0],
+    doc: "Adamantine Muscle (2): the Basic Attack out of sequence, Physical or Energy, its Wound a quarter back as Life (chat.mjs "
+       + "adamantineStrike)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "

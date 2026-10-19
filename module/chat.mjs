@@ -14491,6 +14491,20 @@ export async function allOutStart(actor) {
   await actor.setFlag(SCOPE, "allOutUntil", { combat: game.combat?.id ?? "none", round: Math.max(1, Number(game.combat?.round) || 1) + 1 });
 }
 
+/**
+ * Adamantine Muscle (2): "Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you can only select a Profile
+ * of the Physical or Energy Foundations." Offered on your latest card - the Defeated one; its Life back with the Damage
+ * (rollAttackWoundWork).
+ */
+export async function adamantineStrike(actor) {
+  if (!actor) return;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "basic-attack", maneuverName: "Basic Attack",
+    reason: "Adamantine Muscle - Physical or Energy", grants: { foundations: ["physical", "energy"], adamantineHeal: true } };
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
+}
+
 /** Jump Start (1): "Use the Power Up Maneuver as an Out-of-Sequence Maneuver." */
 export async function jumpStartPower(actor) {
   const used = await ownOutOfSequence(actor, "power-up");
@@ -20517,11 +20531,17 @@ async function takeOutOfSequence(message, actor, offer) {
   const granted = offer.grants ?? null;
 
   if (!declared && (maneuver.profile || maneuver.attacking)) {
-    declared = await declareAttack(maneuver, DBUCharacterData.FOUNDATIONS, actor, {
+    // Only some Foundations' Profiles - Adamantine Muscle's Physical or Energy.
+    const foundations = granted?.foundations?.length
+      ? Object.fromEntries(Object.entries(DBUCharacterData.FOUNDATIONS).filter(([key]) => granted.foundations.includes(key)))
+      : DBUCharacterData.FOUNDATIONS;
+    declared = await declareAttack(maneuver, foundations, actor, {
       noArea: Boolean(granted?.noArea),
       wagerCap: granted?.wagerCap
     });
     if (!declared) return;
+    // Adamantine Muscle (2): its Life back with the Damage.
+    if (granted?.adamantineHeal) declared = { ...declared, adamantineHeal: true };
 
     // The Weapon it is made with, asked as it is in sequence.
     const { armOutOfSequence } = await import("./use-maneuver.mjs");
@@ -20902,7 +20922,7 @@ export async function postAttack(actor, target, maneuver,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
-                                   rapidFist = false, angryNatural = 0, profileCritical = false },
+                                   rapidFist = false, angryNatural = 0, profileCritical = false, adamantineHeal = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -21101,6 +21121,8 @@ export async function postAttack(actor, target, maneuver,
           ...((eyeWeapon && !reflecting) ? { eyeWeapon: true } : {}),
           // Profile Focus (2): both its rolls a Critical Result.
           ...((profileCritical && !reflecting) ? { profileCritical: true } : {}),
+          // Adamantine Muscle (2): its Wound a quarter back as Life, with Damage against an Opponent.
+          ...((adamantineHeal && !reflecting) ? { adamantineHeal: true } : {}),
           // Heart of Glass (3)'s Surging, for this attack alone - left as it is concluded.
           ...((glassSurge && !reflecting) ? { glassSurge: true } : {}),
           // Entrusted (4): the State left once this is concluded (entrustedAllInEnds).
@@ -25174,6 +25196,21 @@ async function rollAttackWoundWork(message, attack) {
       result: { ...attack.result, wound, targets: settledTargets }
     }
   });
+
+  // Adamantine Muscle (2): "If that Attacking Maneuver deals Damage to an Opponent, regain Life Points equal to 1/4 (rounded up)
+  // of the Dice Score for that Attacking Maneuver's Wound Roll." Once its Damage is worked out.
+  const healer = attack.adamantineHeal ? fromUuidSync(attack.attackerUuid ?? "") : null;
+  if (healer && wound && (healer.getFlag?.(SCOPE, "adamantineHealedFor") !== message.id)) {
+    const allies = new Set(alliesOnScene(healer).map(ally => ally.uuid));
+    if (healer && settledTargets.some(line => line.hit && (line.uuid !== healer.uuid) && !allies.has(line.uuid)
+      && ((Number(line.damage) || 0) > 0))) {
+      const healed = Math.ceil(Math.max(0, Number(wound.total) || 0) / 4);
+      const { value, max } = healer.system.life;
+      await requestActorUpdate(healer, { "system.life.value": Math.min(max, value + healed),
+        [`flags.${SCOPE}.adamantineHealedFor`]: message.id });
+      await settledNote(message, `Adamantine Muscle: ${healer.name} regains ${healed} Life Points.`);
+    }
+  }
 
   // Hit for no Damage - there is nothing to apply, so it is said now: Feline Build (4)'s Copied Technique, Violent Rebuke
   // (3)'s Basic Attack.

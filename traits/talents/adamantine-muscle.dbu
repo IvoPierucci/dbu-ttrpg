@@ -1,0 +1,23 @@
+id: adamantine-muscle
+name: Adamantine Muscle
+talentCategory: super-stack
+prerequisites: Steel Muscle, Tenacity Score of 12+
+description: >
+  Your thick musculature is as solid as steel, providing additional defense.
+text: >
+  Adamantine Muscle: Your thick musculature is as solid as steel, providing additional defense.
+  –Prerequisites: Steel Muscle, Tenacity Score of 12+
+  (1)-[Passive]: Double the increase to your Soak Value from your Super Stacks while you are below the Injured Health Threshold.
+  (2)-[Triggered/Defeated]: Use the Basic Attack Maneuver as an Out-of-Sequence Maneuver. If you do, you can only select a Profile of the Physical or Energy Foundations. If that Attacking Maneuver deals Damage to an Opponent, regain Life Points equal to 1/4 (rounded up) of the Dice Score for that Attacking Maneuver’s Wound Roll.
+
+---
+
+[passive]
+# (1) Below Injured - Injured or Critical: Solid Bulk twice (actor-character.mjs).
+allow superStack.adamantine;
+
+# (2) Chosen on the Defeated card - never Automatic, it hands over an Out-of-Sequence Maneuver: the Basic Attack offered there,
+# its Profile of the Physical or Energy Foundation; Damage worked out against an Opponent, a quarter of its Wound Roll's Dice
+# Score, rounded up, back as Life Points (chat.mjs adamantineStrike).
+[triggered/defeated, outOfSequence, effect 2]
+adamantineStrike();
