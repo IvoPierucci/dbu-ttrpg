@@ -2513,6 +2513,8 @@ async function settleInsult(message, clash) {
   await settledNote(message,
     `${target.name} is Impaired, and Compelled against ${insulter.name} until the end of `
     + `${insulter.name}'s next turn. The Impaired stays until something takes it off.`);
+  // What answers winning it - Taunt (2)'s.
+  await answerFor(insulter, "insult-won", { opponentUuid: target.uuid });
 }
 
 /**
@@ -25160,6 +25162,9 @@ async function rollAttackWoundWork(message, attack) {
     const unreduced = (attack.modifiers ?? []).some(entry => entry.ignoresDamageReduction);
     // Demonic Combat (2): 1(T) more against the attack of one suffering from a Combat Condition.
     const demonic = conditioned(attacker) ? (Number(target.system.effects?.slots?.["damageReduction.vsConditioned"]?.add) || 0) : 0;
+    // Taunt (1): 1(bT) more against the attack of one with the Compelled Combat Condition.
+    const taunted = ((Number(attacker?.system?.conditions?.compelled) || 0) > 0)
+      ? (Number(target.system.effects?.slots?.["damageReduction.vsCompelled"]?.add) || 0) : 0;
     // Full Counter (1): "Increase your Damage Reduction when using the Cross Counter option of the Defend Maneuver by 2(T)."
     const fullCounter = (own.defense === "crossCounter")
       ? (Number(target.system.effects?.slots?.["crossCounter.damageReduction"]?.add) || 0) : 0;
@@ -25168,7 +25173,7 @@ async function rollAttackWoundWork(message, attack) {
     // that Maneuver" - its 1/Round spent here.
     const wiseReduction = Number(defending?.slots?.damageReduction?.add) || 0;
     if (wiseReduction) spendWriting(target, defending, "damageReduction");
-    const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic
+    const reduction = unreduced ? 0 : (Math.max(0, afterPierce - halved) + (Number(braced?.slots?.damageReduction?.add) || 0) + demonic + taunted
       + fullCounter + wiseReduction + (Number(own.taiChiReduction) || 0)
       + (Number(own.greedReduction) || 0) + (Number(own.toughReduction) || 0));
 

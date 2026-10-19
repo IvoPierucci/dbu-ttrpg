@@ -873,6 +873,9 @@ const PATTERNS = [
   // Beat-down Tactics (1): `clash.mightVsConditioned`, your side of a Might Clash against one (chat.mjs beatdownClashBonus).
   { match: /^clash\.mightVsConditioned$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "Added to your side of a Might Clash against an Opponent suffering from a Combat Condition." },
+  // Taunt (1): `damageReduction.vsCompelled`, against the attack of one with the Compelled Combat Condition (chat.mjs).
+  { match: /^damageReduction\.vsCompelled$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
+    doc: "Added to the Damage Reduction against the attack of one with the Compelled Combat Condition." },
   { match: /^(wound|damageReduction|combatRolls)\.vsConditioned$/, phase: PHASES.CORE, kind: N, ops: ["add"], valid: () => true,
     doc: "Added to the Wound against one suffering from a Combat Condition, or to the Damage Reduction against such a "
        + "one's attack (chat.mjs conditioned)." },

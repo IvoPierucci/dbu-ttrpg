@@ -1,0 +1,22 @@
+id: taunt
+name: Taunt
+talentCategory: taunt
+prerequisites: Mental Warfare, Personality Score of 6+
+description: >
+  You are skilled at convincing an opponent to focus their assault on you.
+text: >
+  Taunt: You are skilled at convincing an opponent to focus their assault on you.
+  –Prerequisites: Mental Warfare, Personality Score of 6+
+  (1)-[Passive]: Gain 1(bT) Damage Reduction against all Attacking Maneuvers made by Characters with the Compelled Combat Condition.
+  (2)-[Triggered, 1/Round]: If you win the Morale Clash for the Insult Maneuver, reduce that target’s Life Points by your Personality Modifier.
+
+---
+
+[passive]
+# (1) Against the attack of one with the Compelled Combat Condition - at whoever (chat.mjs, as the Damage is worked out).
+damageReduction.vsCompelled += 1(bT);
+
+# (2) The Insult's Morale Clash won (the `insult-won` Moment): its target's Life Points less your Personality Modifier.
+# Automatic by default, its Triggered/Automatic button.
+[triggered/insult-won, 1/round, effect 2]
+reduceOpponentLife(personality);
