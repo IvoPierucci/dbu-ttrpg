@@ -53,11 +53,10 @@ text: >
 # Action, doubled inside your Melee Range - and the transfer itself, which comes off
 # the pool and leaves Capacity exactly where it was.
 #
-# What is not:
+# Full Empowerment is a box in the same window, not for a Minion: ticked, any amount up to
+# all your Ki Points, your Capacity to 0 - Power Gifter's, down by half your Max Capacity -
+# and a stack each of Fatigued and Impediment.
 #
-#   - Full Empowerment needs a Maneuver to offer the player a choice between two of
-#     its own effects, which only the Defend options have and only in code. It also
-#     needs Capacity set rather than spent, which nothing can do yet.
 # Miracle Empowerment is not here either, and that one is settled rather than
 # pending: it counts what four characters did to a fifth across a Combat Round, and
 # the table would rather keep that count itself than have the system keep it. Which

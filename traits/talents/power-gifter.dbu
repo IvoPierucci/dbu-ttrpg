@@ -1,0 +1,20 @@
+id: power-gifter
+name: Power Gifter
+talentCategory: teamwork
+prerequisites: N/A
+description: >
+  You are adept in sharing your energy with others with minimal loss of efficiency.
+text: >
+  Power Gifter: You are adept in sharing your energy with others with minimal loss of efficiency.
+  –Prerequisites: N/A
+  (1)-[Passive]: Through the Full Empowerment effect of the Empower Maneuver, you reduce your Capacity by 1/2 of your Max Capacity instead of reducing it to 0.
+  (2)-[Triggered, 1/Round]: If you spend 3 Actions on the Empower Maneuver, your targeted Ally may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) Full Empowerment: your Capacity down by half your Max Capacity, rounded down, not to 0 (use-maneuver.mjs transferKi).
+allow empower.halfCapacity;
+# (2) The Empower with 3 Actions: the Ally's Power Up and Transformation out of sequence, offered on its note - once a Round,
+# yours, counted when one is taken (chat.mjs powerGifterOffers).
+allow powerGifter.offer;

@@ -375,41 +375,72 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
     actor.system.ki.value
   ));
 
-  if (cap <= 0) {
+  // Full Empowerment: "if you are not a Minion, you can choose to reduce your Capacity to 0 and gain a stack of the Fatigued
+  // Combat Condition and the Impediment Combat Condition. If you do, you may transfer any amount of Ki Points".
+  const pool = Math.max(0, Number(actor.system.ki.value) || 0);
+  const fullOpen = !actor.system.minion && (pool > 0);
+  if ((cap <= 0) && !fullOpen) {
     ui.notifications.warn(`${actor.name} has no Ki Points to send.`);
     return false;
   }
+  const halfCapacity = actor.system.effects?.slots?.["empower.halfCapacity"] === true;
+  const fullTip = halfCapacity
+    ? "Any amount. Capacity down by half your Max Capacity (Power Gifter); +1 Fatigued, +1 Impediment."
+    : "Any amount. Capacity to 0; +1 Fatigued, +1 Impediment.";
 
-  // Power of the Weak (1): "you must always give the maximum amount of Ki Points possible to that Ally" - nothing asked.
-  const chosen = (actor.system.effects?.slots?.["empower.maximum"] === true) ? cap : await foundry.applications.api.DialogV2.wait({
+  // Power of the Weak (1): "you must always give the maximum amount of Ki Points possible to that Ally" - nothing asked but
+  // whether through Full Empowerment, where it is open.
+  const maximum = actor.system.effects?.slots?.["empower.maximum"] === true;
+  const chosen = (maximum && !fullOpen) ? { ki: cap, full: false }
+    : maximum ? await foundry.applications.api.DialogV2.wait({
+      classes: ["dbu-dialog"],
+      window: { title: `Empower - ${ally.name}` },
+      content: "",
+      buttons: [
+        ...((cap > 0) ? [{ action: "send", label: `Send ${cap}`, callback: () => ({ ki: cap, full: false }) }] : []),
+        { action: "full", label: `Full Empowerment (${pool})`, icon: "fa-solid fa-bolt",
+          callback: () => ({ ki: pool, full: true }) },
+        { action: "cancel", label: "Cancel" }
+      ],
+      rejectClose: false
+    })
+    : await foundry.applications.api.DialogV2.wait({
     classes: ["dbu-dialog"],
     window: { title: `Empower - ${ally.name}` },
     content: `<p>${Handlebars.escapeExpression(actor.name)} is sending Ki Points to
         ${Handlebars.escapeExpression(ally.name)}.</p>
       <label class="dbu-wager">
         <span>Ki Points</span>
-        <input type="number" name="ki" value="${cap}" min="0" max="${cap}"/>
+        <input type="number" name="ki" value="${cap}" min="0" max="${fullOpen ? pool : cap}"/>
         <em>${actionsSpent} Action(s) &middot; twice your Might${close ? ", doubled for Melee Range" : ""}
           &middot; max ${cap}</em>
-      </label>`,
+      </label>
+      ${fullOpen ? `<label class="dbu-wager" data-tooltip="${fullTip}">
+        <input type="checkbox" name="full"/> <span>Full Empowerment</span>
+      </label>` : ""}`,
     buttons: [
       {
         action: "send",
         label: "Send",
-        callback: (event, button, dialog) =>
-          Number(dialog.element.querySelector('input[name="ki"]')?.value)
+        callback: (event, button, dialog) => ({
+          ki: Number(dialog.element.querySelector('input[name="ki"]')?.value),
+          full: Boolean(dialog.element.querySelector('input[name="full"]')?.checked)
+        })
       },
       { action: "cancel", label: "Cancel" }
     ],
     rejectClose: false
   });
 
-  const sent = Math.max(0, Math.min(cap, Math.floor(Number(chosen) || 0)));
+  const full = Boolean(chosen?.full) && fullOpen;
+  const sent = Math.max(0, Math.min(full ? pool : cap, Math.floor(Number(chosen?.ki) || 0)));
   if (!sent) return false;
 
   // Off the pool and nothing else: "transferring Ki Points does not reduce your
   // Capacity", so what caps your spending for the round is left exactly where it was.
   await actor.update({ "system.ki.value": Math.max(0, actor.system.ki.value - sent) });
+  // Full Empowerment's price: Capacity to 0 - Power Gifter (1)'s, down by half the Max Capacity - Fatigued and Impediment.
+  if (full) await (await import("./chat.mjs")).fullEmpowermentPrice(actor, halfCapacity);
 
   // Theirs is written through the relay: the Ally is very often somebody else's.
   const { requestActorUpdate, answerFor } = await import("./chat.mjs");
@@ -441,9 +472,9 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
   });
 
   // Questing Wisdom (3): the Ally's Power Up or Transformation, out of sequence, offered on this card.
-  const { questingOffers, trustedAllyOffers } = await import("./chat.mjs");
-  // And Refined Combat's Trusted Ally, the Empowering one's.
-  const offers = [...questingOffers(ally), ...await trustedAllyOffers(actor, ally),
+  const { questingOffers, trustedAllyOffers, powerGifterOffers } = await import("./chat.mjs");
+  // And Refined Combat's Trusted Ally, the Empowering one's; and Power Gifter (2)'s, for 3 Actions.
+  const offers = [...questingOffers(ally), ...await trustedAllyOffers(actor, ally), ...powerGifterOffers(actor, ally, actionsSpent),
     // People of the Spirit (5): "Your target ... may immediately use a Surge of their choice as an Out-of-Sequence Maneuver."
     ...(spiritSurge ? [{ actorUuid: ally.uuid, actorName: ally.name, maneuverId: "surge", maneuverName: "Surge",
       reason: `People of the Spirit - ${actor.name}'s Empower`, surge: true }] : [])];
@@ -452,7 +483,7 @@ async function transferKi(actor, ally, actionsSpent, { spiritSurge = false } = {
     content: `<div class="dbu-settled-note">${Handlebars.escapeExpression(actor.name)}
       sends <strong>${sent}</strong> Ki Points to
       ${Handlebars.escapeExpression(ally.name)}
-      <em>Capacity untouched${bonded}</em></div>`,
+      <em>${full ? "Full Empowerment" : "Capacity untouched"}${bonded}</em></div>`,
     ...(offers.length ? { flags: { "dbu-ttrpg": { oosOffers: offers } } } : {})
   });
 

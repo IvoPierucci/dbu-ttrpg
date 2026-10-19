@@ -17157,6 +17157,33 @@ export function questingOffers(actor) {
 }
 
 /**
+ * Full Empowerment's price: "reduce your Capacity to 0 and gain a stack of the Fatigued Combat Condition and the Impediment
+ * Combat Condition" - Power Gifter (1)'s "you reduce your Capacity by 1/2 of your Max Capacity instead", rounded down.
+ */
+export async function fullEmpowermentPrice(actor, halfCapacity = false) {
+  const max = Math.max(0, Number(actor.system.capacity?.max) || 0);
+  const remaining = Math.max(0, Number(actor.system.capacity?.remaining) || 0);
+  const left = halfCapacity ? Math.max(0, remaining - Math.floor(max / 2)) : 0;
+  await actor.update({ "system.capacity.spent": max - left });
+  const { gainCondition } = await import("./effects/moments-runtime.mjs");
+  await gainCondition(actor, "fatigued", 1);
+  await gainCondition(actor, "impediment", 1);
+}
+
+/**
+ * Power Gifter (2): "If you spend 3 Actions on the Empower Maneuver, your targeted Ally may use the Power Up Maneuver or
+ * Transformation Maneuver as an Out-of-Sequence Maneuver." Both offered to the Ally on the Empower's note - once a Round, the
+ * Empowering one's, counted when one is taken.
+ */
+export function powerGifterOffers(gifter, ally, actionsSpent) {
+  if (!gifter || !ally || ((Number(actionsSpent) || 0) < 3) || (gifter.system?.effects?.slots?.["powerGifter.offer"] !== true)) return [];
+  if (gifter.getFlag?.(SCOPE, "powerGifterRound") === roundKey()) return [];
+  const offer = (maneuverId, maneuverName) => ({ actorUuid: ally.uuid, actorName: ally.name, maneuverId, maneuverName,
+    reason: `Power Gifter - ${gifter.name}'s Empower`, grants: { powerGifterFrom: gifter.uuid } });
+  return [offer("power-up", "Power Up"), offer("transformation", "Transformation")];
+}
+
+/**
  * Power of the Hera (3): "If you Defeat a Character or knock a Character through a Health Threshold with your Attacking
  * Maneuver, you may use the Power Up Maneuver as an Out-of-Sequence Maneuver." Offered on the attack's card - once a Round,
  * counted when taken.
@@ -20332,6 +20359,12 @@ async function takeOutOfSequence(message, actor, offer) {
     ui.notifications.warn("Time is frozen: no Out-of-Sequence Maneuvers.");
     return null;
   }
+  // Power Gifter (2)'s, once a Round - the other of the two its note offered, or another Empower's, taken already.
+  if (offer.grants?.powerGifterFrom
+    && (fromUuidSync(offer.grants.powerGifterFrom)?.getFlag?.(SCOPE, "powerGifterRound") === roundKey())) {
+    ui.notifications.warn("Power Gifter - already used this Combat Round.");
+    return null;
+  }
   // Last Ditch Effort (2)'s, once an Encounter - either of the two its card offered.
   if (offer.grants?.lastDitch) {
     if (actor.getFlag?.(SCOPE, "lastDitchEncounter") === (game.combat?.id ?? "none")) {
@@ -20843,6 +20876,11 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.grants?.rebuke) await requestActorUpdate(actor, { [`flags.${SCOPE}.rebukeRound`]: roundKey() });
   // Questing Wisdom (3)'s, once a Round.
   if (offer.grants?.questing) await requestActorUpdate(actor, { [`flags.${SCOPE}.questingRound`]: roundKey() });
+  // Power Gifter (2)'s, once a Round - counted on whoever Empowered.
+  if (offer.grants?.powerGifterFrom) {
+    const gifter = fromUuidSync(offer.grants.powerGifterFrom);
+    if (gifter) await requestActorUpdate(gifter, { [`flags.${SCOPE}.powerGifterRound`]: roundKey() });
+  }
   // Power of the Hera (3)'s, once a Round.
   if (offer.grants?.heraPowerUp) await requestActorUpdate(actor, { [`flags.${SCOPE}.heraPowerUpRound`]: roundKey() });
   // Refined Combat's Grappler, once a Round - and its Opponent no longer Studied.
