@@ -73,6 +73,12 @@ export function whyNotTechnique(actor, technique, { via = "", ascended = false }
     return `${name} ascended this Combat Encounter.`;
   }
 
+  // Technique Master (1): "you cannot use the same Signature Technique more than once per Combat Round".
+  if ((actor.system?.effects?.slots?.["techniqueMaster.sameOnce"] === true)
+    && (actor.system?.usedManeuvers ?? []).includes(`round:${technique.id}.technique`)) {
+    return `${name} has been used this Combat Round.`;
+  }
+
   // Fake Out: "you cannot use a Signature Technique with the Fake Out Advantage if you've already
   // used one during this Combat Round."
   if (has(technique, "fake-out") && (actor.system?.usedManeuvers ?? []).includes(FAKE_OUT_USE)) {
@@ -200,7 +206,8 @@ export const DEEP_SPACE_RANK = 4;
  * its `through` limit.
  */
 export function techniqueUseEntries(technique, { ascended = false } = {}) {
-  const entries = [];
+  // Its own use this Round - Technique Master's "you cannot use the same Signature Technique more than once per Combat Round".
+  const entries = [`round:${technique.id}.technique`];
   if (technique.ultimate || ascended) entries.push(ULTIMATE_USE);
   if (ascended) entries.push(`encounter:${technique.id}.ascended`);
   if (has(technique, "fake-out")) entries.push(FAKE_OUT_USE);

@@ -14281,8 +14281,9 @@ export async function energyControlAsk(actor, maneuver, declared, price) {
   const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
   const signature = Boolean(maneuver?.signature) && !maneuver.signatureTechnique;
   const technical = (maneuver?.tags ?? []).includes("uniqueAbility") && (maneuver.uniqueType === "technical");
+  // Technique Master (2): "The first effect of Energy Control loses its [1/Round] Keyword."
   const costOpen = (slots["energyControl.cost"] === true) && (signature || technical) && (Number(price) > 0)
-    && (actor.getFlag?.(SCOPE, "energyControlCostRound") !== roundKey());
+    && ((slots["techniqueMaster.freeControl"] === true) || (actor.getFlag?.(SCOPE, "energyControlCostRound") !== roundKey()));
   const area = declared?.area ?? declared?.technique?.area ?? PROFILES[declared?.profile]?.area;
   const ranks = featureRanks(declared?.technique?.features ?? declared?.advantages ?? [], "homing");
   const homingOpen = (slots["energyControl.homing"] === true) && signature && Boolean(declared) && !area && (ranks < 3)

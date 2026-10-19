@@ -1,0 +1,20 @@
+id: technique-master
+name: Technique Master
+talentCategory: technique
+prerequisites: Energy Control
+description: >
+  Your control of ki has grown stronger, allowing you to perform amazing feats.
+text: >
+  Technique Master: Your control of ki has grown stronger, allowing you to perform amazing feats.
+  –Prerequisites: Energy Control
+  (1)-[Passive]: You can use the Signature Technique Maneuver an additional time per Combat Round, but you cannot use the same Signature Technique more than once per Combat Round.
+  (2)-[Passive]: The first effect of Energy Control loses its [1/Round] Keyword.
+
+---
+
+[passive]
+# (1) The Signature Technique Maneuver once more a Round - and no Technique twice in one (technique-use.mjs whyNotTechnique).
+signature-technique.uses += 1;
+allow techniqueMaster.sameOnce;
+# (2) Energy Control (1) asked every time (chat.mjs energyControlAsk).
+allow techniqueMaster.freeControl;
