@@ -1,0 +1,24 @@
+id: hefty-muscle
+name: Hefty Muscle
+talentCategory: super-stack
+prerequisites: Muscular Warrior, Force Score of 8+
+description: >
+  Thanks to the incredible bulk you’ve achieved, you can deal damage to your opponent even when your attacks miss their mark.
+text: >
+  Hefty Muscle: Thanks to the incredible bulk you’ve achieved, you can deal damage to your opponent even when your attacks miss their mark.
+  –Prerequisites: Muscular Warrior, Force Score of 8+
+  (1)-[Passive]: Increase the Wound Rolls of your Physical and Energy Attacks by 1(T). Double this bonus if you possess 3 Super Stacks.
+  (2)-[Triggered, 1/Round]: When making an Attacking Maneuver, you may declare that it is an Absolute Attack (see — Attacking).
+
+---
+
+[passive]
+# (1) 1(T), 2(T) with 3 Super Stacks.
+wound.physical += 1(T);
+wound.energy += 1(T);
+if (superStack.stacks >= 3) {
+    wound.physical += 1(T);
+    wound.energy += 1(T);
+}
+# (2) Asked as the attack is made, once a Round - the player's to time: an Absolute Attack (chat.mjs askHeftyAbsolute).
+allow hefty.absolute;

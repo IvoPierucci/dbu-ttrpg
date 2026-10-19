@@ -16535,6 +16535,15 @@ async function askSizeMatters(actor, everyone) {
   return Boolean(yes);
 }
 
+/** Hefty Muscle (2): "When making an Attacking Maneuver, you may declare that it is an Absolute Attack." Asked, once a Round. */
+async function askHeftyAbsolute(actor) {
+  if ((actor?.system?.effects?.slots?.["hefty.absolute"] !== true) || (actor.getFlag?.(SCOPE, "heftyRound") === roundKey())) return false;
+  const yes = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: `${actor.name} - Hefty Muscle` },
+    content: `<p data-tooltip="Once a Round">Make this an Absolute Attack?</p>`, rejectClose: false });
+  if (yes) await actor.setFlag(SCOPE, "heftyRound", roundKey());
+  return Boolean(yes);
+}
+
 /** Miniature Warrior (1): "Increase your Wound Rolls against an Opponent with a larger Size Category than you by 1(T)." */
 function largerParts(attacker, target) {
   const slot = attacker?.system?.effects?.slots?.["wound.vsLarger"];
@@ -20974,7 +20983,9 @@ export async function postAttack(actor, target, maneuver,
       : null);
 
   const absolute = Boolean(((maneuver.absolute || technique?.absolute) && maneuver.attacking)
-    || (!reflecting && maneuver.attacking && await askSizeMatters(actor, everyone)));
+    || (!reflecting && maneuver.attacking && await askSizeMatters(actor, everyone))
+    // Hefty Muscle (2): "you may declare that it is an Absolute Attack".
+    || (!reflecting && maneuver.attacking && await askHeftyAbsolute(actor)));
   // Distant Explosion: "select a Square occupied by an Opponent to be the Target Square" - theirs.
   if (technique?.area?.centredOnTarget) technique.area.centreName = target.name;
   // Volatile Explosion with its Sphere on the user: they are inside it, so they are a target, hit.
