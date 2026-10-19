@@ -780,10 +780,19 @@ export function registerCombatHooks() {
       if (actor.getFlag?.("dbu-ttrpg", "frozenTurn")) await (await import("./chat.mjs")).endFrozenTurn(actor);
       // Quick Learner: "At the end of the Combat Encounter, you can pay the TP Cost of any Copied Technique to gain access
       // to it permanently. If you do, it stops being a Copied Technique." Asked of whoever plays them.
+      // Copy Index (2): "select one Copied Technique to retain access to until the end of your next Combat Encounter" - one,
+      // offered beside the rest till it is taken.
+      let retainOpen = actor.system?.effects?.slots?.["copyIndex.retain"] === true;
       for (const item of Array.from(actor.items ?? []).filter(each => each.getFlag?.("dbu-ttrpg", "copied"))) {
         const { askPlayerChoice } = await import("./chat.mjs");
         const kept = await askPlayerChoice(actor, `${actor.name}: ${item.name}`,
-          [{ value: "keep", label: "Keep it (its TP Cost yours)" }, { value: "lose", label: "Let it go" }]);
+          [{ value: "keep", label: "Keep it (its TP Cost yours)" },
+            ...(retainOpen ? [{ value: "retain", label: "Retain it till your next Combat Encounter ends (Copy Index)" }] : []),
+            { value: "lose", label: "Let it go" }]);
+        if (kept === "retain") {
+          retainOpen = false;
+          continue;
+        }
         if (kept === "keep") {
           // Whose it was, kept - Quick Thinking (2) has it count as Copied still (Neko Mimicry's (5) reads whose).
           await item.update({ name: item.name.replace(/ \(Copied\)$/, ""), "flags.dbu-ttrpg.keptCopy": item.getFlag("dbu-ttrpg", "copied"),

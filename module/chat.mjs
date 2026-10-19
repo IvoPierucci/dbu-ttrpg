@@ -16733,12 +16733,20 @@ async function copyTechnique(actor, copyFrom) {
     return false;
   }
   const held = Array.from(actor.items ?? []).filter(item => item.getFlag?.(SCOPE, "copied"));
-  if (held.length) {
-    const lose = await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: "Quick Learner" },
-      content: `<p>Lose ${Handlebars.escapeExpression(held.map(item => item.name).join(", "))} to copy `
-        + `${Handlebars.escapeExpression(source.name)}?</p>`, rejectClose: false });
-    if (!lose) return false;
-    await actor.deleteEmbeddedDocuments("Item", held.map(item => item.id));
+  // Quick Learner (2)'s 1 at a time - Copy Index (1)'s 2: one past it, which to lose asked.
+  const most = 1 + Math.max(0, Math.floor(Number(actor.system?.effects?.slots?.["copied.max"]?.add) || 0));
+  if (held.length >= most) {
+    const escape = Handlebars.escapeExpression;
+    const lose = (held.length === 1)
+      ? (await foundry.applications.api.DialogV2.confirm({ classes: ["dbu-dialog"], window: { title: "Quick Learner" },
+          content: `<p>Lose ${escape(held[0].name)} to copy ${escape(source.name)}?</p>`, rejectClose: false }) ? held[0].id : null)
+      : await foundry.applications.api.DialogV2.wait({ classes: ["dbu-dialog"], window: { title: `Quick Learner - copy ${source.name}` },
+          content: "<p>Lose which?</p>",
+          buttons: [...held.map(item => ({ action: item.id, label: item.name })), { action: "cancel", label: "Cancel" }],
+          rejectClose: false });
+    const gone = held.find(item => item.id === lose);
+    if (!gone) return false;
+    await actor.deleteEmbeddedDocuments("Item", [gone.id]);
   }
   const data = source.toObject();
   delete data._id;

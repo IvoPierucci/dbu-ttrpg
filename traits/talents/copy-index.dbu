@@ -1,0 +1,20 @@
+id: copy-index
+name: Copy Index
+talentCategory: technique
+prerequisites: Quick Learner
+description: >
+  You are able to quickly learn multiple techniques at once, and use the techniques copied from one opponent on another.
+text: >
+  Copy Index: You are able to quickly learn multiple techniques at once, and use the techniques copied from one opponent on another.
+  –Prerequisites: Quick Learner
+  (1)-[Passive]: You can possess 2 Copied Techniques at any one time.
+  (2)-[Triggered]: At the end of each Combat Encounter, you may select one Copied Technique to retain access to until the end of your next Combat Encounter.
+
+---
+
+[passive]
+# (1) Two Copied Techniques held: a third copied, which to lose asked (chat.mjs copyTechnique).
+copied.max += 1;
+# (2) As the Encounter ends, beside Quick Learner (4)'s question: one of them kept, still Copied, till the next one ends
+# (combat.mjs).
+allow copyIndex.retain;
