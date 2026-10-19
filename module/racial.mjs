@@ -433,6 +433,11 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     return Object.entries(PROFILES).filter(([, profile]) => profile.label && Array.isArray(profile.foundations)
       && (!foundation || profile.foundations.includes(foundation))).map(([key, profile]) => [key, profile.label]);
   }
+  // Synchronized Combatants' "Choose a Character": any in the world but yourself.
+  if (kind === "character") {
+    return Array.from(globalThis.game?.actors ?? []).filter(other => (other.type === "character") && (other.id !== actor?.id))
+      .sort((a, b) => a.name.localeCompare(b.name)).map(other => [other.id, other.name]);
+  }
   if (kind === "elementalProfile") {
     const { PROFILES } = await import("./maneuvers.mjs");
     return Object.entries(PROFILES).filter(([, profile]) => /elemental/i.test(profile.label ?? ""))

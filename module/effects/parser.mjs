@@ -556,6 +556,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "bondOpen",
   // An Ally on the scene, and none of them Defeated (Conduit of Spirit's).
   "alliesStanding",
+  // On a Square adjacent to your Partner, an Ally (Synchronized Combatants').
+  "besidePartner",
   // A Bonded Ally standing (Spiritual Warrior's).
   "bondedAlly",
   // Ki gained through your Empower (Spiritual Pacifist's).

@@ -21892,9 +21892,17 @@ async function playIntervene(message, attack, { who, ally, effect }) {
     && ((await askPlayerChoice(actor, `${actor.name}: Spiritual Pacifist - ${allyActor.name}, Bonded`,
       [{ value: "yes", label: "Intervene without a Counter Action" }, { value: "no", label: "No" }])) === "yes");
   if (pacifistFree) await requestActorUpdate(allyActor, { [`flags.${SCOPE}.pacifistInterveneRound`]: roundKey() });
+  // Synchronized Combatants (3): "You may use the Intervene Maneuver without spending a Counter Action" - for your Partner,
+  // asked, once an Encounter.
+  const { partnerOf } = await import("./effects/conditions.mjs");
+  const syncFree = !protector && !refinedFree && !pacifistFree && (actor.system?.effects?.slots?.["sync.freeIntervene"] === true)
+    && (partnerOf(actor)?.id === allyActor.id) && (actor.getFlag?.(SCOPE, "syncInterveneEncounter") !== (game.combat?.id ?? "none"))
+    && ((await askPlayerChoice(actor, `${actor.name}: Synchronized Combatants - ${allyActor.name}, your Partner`,
+      [{ value: "yes", label: "Intervene without a Counter Action (1/Encounter)" }, { value: "no", label: "No" }])) === "yes");
+  if (syncFree) await actor.setFlag(SCOPE, "syncInterveneEncounter", game.combat?.id ?? "none");
   // A Counter Action and the chosen effect's Ki, in that order: the Action is the one
   // that can be short, and a refused Maneuver must cost nothing.
-  if (!protector && !refinedFree && !pacifistFree && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
+  if (!protector && !refinedFree && !pacifistFree && !syncFree && !await spendActions(actor, maneuver.actionCost ?? 1, "counter")) return;
   if (!await spendManeuverCost(actor, maneuver, interveneOptionCost(effect, actor))) return;
 
   // A Counter Maneuver is a Maneuver of another kind, so it releases the Instant rule.

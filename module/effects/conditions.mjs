@@ -66,6 +66,32 @@ function initiativeAgainstAll(actor, holds) {
   return (opponents.length > 0) && opponents.every(entry => Number.isFinite(entry.initiative) && holds(entry.initiative, own.initiative));
 }
 
+/**
+ * Synchronized Combatants (1): "Choose a Character. If that Character has also chosen you through this effect, that Character
+ * is your Partner." The world's Actor, or null.
+ */
+export function partnerOf(actor) {
+  const chosenBy = who => (Array.from(who?.items ?? []).find(item => item.flags?.["dbu-ttrpg"]?.sourceId === "synchronized-combatants")
+    ?.system?.chosen ?? []).find(entry => entry.key === "synchronized-combatants")?.value ?? "";
+  const id = chosenBy(actor);
+  if (!actor || !id || (id === actor.id)) return null;
+  const other = globalThis.game?.actors?.get?.(id) ?? null;
+  return (other && (chosenBy(other) === actor.id)) ? other : null;
+}
+
+/** Synchronized Combatants (2): on a Square adjacent to your Partner, and your Partner your Ally - their tokens, side by side. */
+function besidePartner(self) {
+  const partner = partnerOf(self);
+  const mine = self?.getActiveTokens?.(false, true)?.[0];
+  const theirs = partner ? (globalThis.canvas?.tokens?.placeables ?? []).find(token => token.actor?.id === partner.id)?.document : null;
+  const grid = globalThis.canvas?.grid?.size;
+  if (!mine || !theirs || !grid || (mine.parent?.id !== theirs.parent?.id) || (mine.disposition !== theirs.disposition)) return false;
+  const gap = (p, q, pSize, qSize) => Math.max(0, Math.max(p - (q + qSize), q - (p + pSize)));
+  const apart = Math.max(Math.ceil(gap(mine.x / grid, theirs.x / grid, mine.width ?? 1, theirs.width ?? 1)),
+    Math.ceil(gap(mine.y / grid, theirs.y / grid, mine.height ?? 1, theirs.height ?? 1)));
+  return apart === 0;
+}
+
 const PREDICATES = {
   /** Are you Defending against the attack currently being resolved. */
   defending: scope => Boolean(scope.context?.defending),
@@ -344,6 +370,8 @@ const PREDICATES = {
    * Conduit of Spirit (1): "while you have at least 1 Ally and none of your Allies are Defeated" - the tokens of your token's
    * disposition on the scene.
    */
+  besidePartner: scope => besidePartner(scope.data?.parent),
+
   alliesStanding: scope => {
     const self = scope.data?.parent;
     const own = self?.getActiveTokens?.(false, true)?.[0]?.document?.disposition;

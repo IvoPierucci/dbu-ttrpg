@@ -1,0 +1,25 @@
+id: synchronized-combatants
+name: Synchronized Combatants
+talentCategory: teamwork
+prerequisites: N/A
+# (1) "Choose a Character" - asked as it is gained, any character in the world; changeable on its Options tab.
+choose: character
+description: >
+  You are truly in sync with another person, allowing you two to act efficiently as a single unit.
+text: >
+  Synchronized Combatants: You are truly in sync with another person, allowing you two to act efficiently as a single unit.
+  –Prerequisites: N/A
+  (1)-[Ruling]: Choose a Character. If that Character has also chosen you through this effect, that Character is your Partner.
+  (2)-[Passive]: While you are on an adjacent Square to your Partner, and your Partner is your Ally, increase your Combat Rolls by 1(T).
+  (3)-[1/Encounter]: You may use the Intervene Maneuver without spending a Counter Action. You can only use this effect if the targeted Ally is your Partner.
+
+---
+
+[passive]
+# (1) Your Partner: the one you chose, if they chose you through it too (conditions.mjs partnerOf).
+# (2) On a Square adjacent to them, of your token's disposition: Combat Rolls 1(T) - read again as a token moves.
+if (besidePartner) {
+    combatRolls += 1(T);
+}
+# (3) Intervening for your Partner: asked whether without its Counter Action, once an Encounter (chat.mjs playIntervene).
+allow sync.freeIntervene;
