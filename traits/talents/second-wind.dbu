@@ -1,0 +1,19 @@
+id: second-wind
+name: Second Wind
+talentCategory: surge
+prerequisites: Personality Score of 4+
+description: >
+  You are able to recover your stamina more quickly than most.
+text: >
+  Second Wind: You are able to recover your stamina more quickly than most.
+  –Prerequisites: Personality Score of 4+
+  (1)-[Passive]: Increase your Surgency by 1(T).
+  (2)-[Passive]: You may use the Surge Maneuver an additional time per Combat Encounter.
+
+---
+
+[passive]
+# (1)
+surgency += 1(T);
+# (2) As Energizing Training's.
+surge.uses += 1;
