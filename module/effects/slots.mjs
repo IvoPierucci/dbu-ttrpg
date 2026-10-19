@@ -503,6 +503,8 @@ const TABLE = [
     doc: "The Muscle Penalty your Super Stacks cost your Strike and Dodge Rolls. "
        + "1(bT) per stack, and 1(bT) more at three. Zero while you hold none, so an "
        + "effect adding to it adds to nothing." },
+  { key: "superStack.muscleRelief", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Taken off the Muscle Penalty while no Health Threshold Penalty is suffered (Muscular Warrior's; actor-character.mjs)." },
   { key: "superStack.solidBulk", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "The Soak Value your Super Stacks grant: 1(bT) per stack." },
   { key: "superStack.massivePower", phase: PHASES.CORE, kind: N, ops: NUMERIC,

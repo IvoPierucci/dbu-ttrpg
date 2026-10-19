@@ -1,0 +1,19 @@
+id: muscular-warrior
+name: Muscular Warrior
+talentCategory: super-stack
+prerequisites: Force Score of 6+
+description: >
+  Your intense training has paid off, allowing you to effectively wield the massive strength you bear.
+text: >
+  Muscular Warrior: Your intense training has paid off, allowing you to effectively wield the massive strength you bear.
+  –Prerequisites: Force Score of 6+
+  (1)-[Passive]: Gain 1 Super Stack.
+  (2)-[Passive]: While you are not suffering from any Health Threshold Penalties, reduce your Muscle Penalty by 1(bT).
+
+---
+
+[passive]
+# (1)
+superStacks += 1;
+# (2) Off the Muscle Penalty once the Health Thresholds are settled - none of their Penalties suffered (actor-character.mjs).
+superStack.muscleRelief += 1(bT);

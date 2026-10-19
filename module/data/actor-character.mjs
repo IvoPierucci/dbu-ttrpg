@@ -2623,6 +2623,13 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
       pending: reached.filter(key => !passes(key) && !this.thresholdChecks[key])
     };
 
+    // Muscular Warrior (2): "While you are not suffering from any Health Threshold Penalties, reduce your Muscle Penalty by
+    // 1(bT)" - read now the Thresholds are settled.
+    const relief = slot(this, "superStack.muscleRelief");
+    if (relief && this.superStack?.musclePenalty && !this.threshold.penalty) {
+      this.superStack.musclePenalty = Math.max(0, this.superStack.musclePenalty - relief);
+    }
+
     // The last phase. It waits for the Thresholds, because Stress Bonus counts their
     // failures and an effect can change what one costs.
     runPhase(this, "late");
