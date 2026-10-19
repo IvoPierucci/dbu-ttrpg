@@ -5442,7 +5442,7 @@ function renderCheckKarma(message, html) {
   const options = [...(check.karmaSpent ? [] : karmicOptionsFor(actor, message)
     .filter(answersAfterTheFact)
     .filter(effect => !(effect.script ?? "").includes("clash."))), ...resolveRerollOption(actor, check),
-    ...damaRerollOption(actor)];
+    ...damaRerollOption(actor), ...luckyRerollOptions(actor)];
   if (!options.some(effect => effect.available)) return;
 
   const button = document.createElement("button");
@@ -5658,6 +5658,7 @@ function offerableTo(situation, message) {
       const reason = whyNot(effect, situation);
       return reason ? { ...effect, blocked: reason, available: false } : effect;
     }), ...resolveRerollOption(situation.actor, situation.side), ...damaRerollOption(situation.actor),
+    ...luckyRerollOptions(situation.actor),
     ...taiChiRerollOptions(situation, message)];
 }
 
@@ -5695,6 +5696,53 @@ async function takeResolveOnCheck(message, actor, check) {
   if (!resolveRerollOption(actor, check).some(effect => effect.available)) return;
   await requestActorUpdate(actor, { [`flags.${SCOPE}.resolveRerollRound`]: roundKey() });
   return rerolledCheck(message, actor, check, RESOLVE_CALL);
+}
+
+/** Lucky's reroll, by the key it is picked with in the window - `lucky:<uuid>`, whose Lucky it is. */
+const LUCKY_REROLL = "lucky";
+
+/**
+ * Lucky (1): "You can re-roll any d10 rolled by you after seeing the result." (2): "you may also re-roll any d10 rolled by an
+ * Ally through the 1st effect of Lucky." The Base Die again, the second result taken - once a Round of whoever's Lucky it is:
+ * the roller's own, and each Ally's on the scene with (2).
+ */
+function luckyRerollOptions(actor) {
+  if (!actor) return [];
+  const holders = [
+    ...((actor.system?.effects?.slots?.["lucky.reroll"] === true) ? [actor] : []),
+    ...alliesOnScene(actor).filter(ally => !ally.system?.defeated && (ally.system?.effects?.slots?.["lucky.allies"] === true)
+      && (ally.system?.effects?.slots?.["lucky.reroll"] === true))
+  ];
+  return holders.map(holder => {
+    const spent = holder.getFlag?.(SCOPE, "luckyRound") === roundKey();
+    return { key: `${LUCKY_REROLL}:${holder.uuid}`, trait: true, when: "after",
+      name: (holder.uuid === actor.uuid) ? "Lucky" : `Lucky (${holder.name})`,
+      text: "Re-roll the d10 after seeing the result.", costLabel: "Reroll the Base Die",
+      available: !spent, ...(spent ? { blocked: "Once a Combat Round" } : {}) };
+  });
+}
+
+/** Lucky taken: its Round spent - whoever's it is - and the roll worked out again with its Base Die rerolled. */
+async function spendLucky(actor, key) {
+  const option = luckyRerollOptions(actor).find(effect => effect.key === key);
+  if (!option?.available) return null;
+  const holder = fromUuidSync(key.slice(LUCKY_REROLL.length + 1));
+  if (!holder) return null;
+  await requestActorUpdate(holder, { [`flags.${SCOPE}.luckyRound`]: roundKey() });
+  return { verb: "reroll", forced: true, label: option.name };
+}
+
+async function takeLuckyReroll(message, situation, key) {
+  const call = await spendLucky(situation.actor, key);
+  if (!call) return;
+  const given = { spent: [], slots: {}, queue: [call] };
+  return (situation.kind === "clash") ? resettleClash(message, situation, given) : resettleAttack(message, situation, given);
+}
+
+async function takeLuckyOnCheck(message, actor, check, key) {
+  const call = await spendLucky(actor, key);
+  if (!call) return;
+  return rerolledCheck(message, actor, check, call);
 }
 
 /** Neko Majin-Dama (7)'s reroll, by the key it is picked with in the window. */
@@ -5993,6 +6041,7 @@ function answersAfterTheFact(effect) {
 export async function takeAfterTheFact(message, situation, key) {
   if (key === RESOLVE_REROLL) return takeResolveReroll(message, situation);
   if (key === DAMA_REROLL) return takeDamaReroll(message, situation);
+  if (String(key).startsWith(`${LUCKY_REROLL}:`)) return takeLuckyReroll(message, situation, key);
   if ((key === TAI_CHI_REROLL) || (key === TAI_CHI_MIGHT)) return takeTaiChiReroll(message, situation, key);
   const { actor } = situation;
   const effect = allKarmicEffects().find(e => e.key === key);
@@ -6022,6 +6071,7 @@ export async function takeAfterTheFact(message, situation, key) {
 async function takeOnCheck(message, actor, check, key) {
   if (key === RESOLVE_REROLL) return takeResolveOnCheck(message, actor, check);
   if (key === DAMA_REROLL) return takeDamaOnCheck(message, actor, check);
+  if (String(key).startsWith(`${LUCKY_REROLL}:`)) return takeLuckyOnCheck(message, actor, check, key);
   const effect = allKarmicEffects().find(e => e.key === key);
   if (!effect) return;
 
@@ -7083,7 +7133,7 @@ export async function endCounterBoost(actor) {
  * @returns {Promise<number>} what it adds to the Dice Score
  */
 async function outcomeTurn(actor, kind) {
-  if (!triggersFor(actor, [kind]).length) return 0;
+  if (!triggersFor(actor, [kind]).length) return { add: 0, toCritical: false };
   const player = playerOf(actor);
   let ids = [];
   if (player === game.user) ids = await showOutcomeWindow(actor, kind);
@@ -7092,10 +7142,11 @@ async function outcomeTurn(actor, kind) {
     catch (error) { console.warn(`DBU TTRPG | ${actor.name}'s ${kind} could not be asked`, error); }
   }
   const chosen = reactiveFor(actor).filter(entry => ids.includes(entry.blockId)).map(entry => ({ ...entry, armed: true }));
-  if (!chosen.length) return 0;
+  if (!chosen.length) return { add: 0, toCritical: false };
   const { slots, spent } = collectReactive(chosen, kind, { data: actor.system, errors: [], context: { roll: true }, queue: [] });
   for (const use of spent) await spendTriggeredEffect(actor, `${use.sourceId}#${use.block}`);
-  return applySlot(slots, "roll.total", 0);
+  // Lucky (3): the Botch a Critical Result instead.
+  return { add: applySlot(slots, "roll.total", 0), toCritical: slots?.["roll.luckyCritical"] === true };
 }
 
 /**
@@ -8740,7 +8791,20 @@ async function rollSide(actor, modifiers, { extraDice = "", criticalDice, combat
   // What answers the Natural Result once it is read - Celestial Potential's, Armed: a Botch's penalty turned into 2(T)
   // more, a Critical's 2(T) more again. A Combat Roll's, once - not again on a measurement of the same roll.
   // Asked there and then - before anybody knows how the Clash ends, which is not theirs to wait for (the user's).
-  const turned = (combatRoll && collect && (botch || critical)) ? await outcomeTurn(actor, botch ? "botch" : "critical") : 0;
+  // Lucky (3)'s, a Botch on any roll of theirs - not a Combat Roll's alone.
+  const lucky = botch && collect && !combatRoll && triggersFor(actor, ["botch"]).some(entry => actor.items?.get(entry.sourceId)
+    ?.flags?.[SCOPE]?.sourceId === "lucky");
+  const answeredOutcome = (collect && ((combatRoll && (botch || critical)) || lucky))
+    ? await outcomeTurn(actor, botch ? "botch" : "critical") : { add: 0, toCritical: false };
+  const turned = answeredOutcome.add;
+  // Lucky (3): "If you score a Botch Result, score a Critical Result instead and increase the Natural Result by 3."
+  if (botch && answeredOutcome.toCritical) {
+    botch = false;
+    critical = true;
+    natural += 3;
+    total += 3;
+    lines.push(partLine({ label: "Lucky: Natural Result", written: "+3", value: 3 }));
+  }
 
   if (botch && turned) {
     total += turned;

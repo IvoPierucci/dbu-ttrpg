@@ -1,0 +1,27 @@
+id: lucky
+name: Lucky
+talentCategory: miscellaneous
+prerequisites: N/A
+description: >
+  You are able to succeed even when the odds are not in your favor.
+text: >
+  Lucky: You are able to succeed even when the odds are not in your favor.
+  –Prerequisites: N/A
+  (1)-[1/Round]: You can re-roll any d10 rolled by you after seeing the result.
+  (2)-[Passive]: If you are not a Minion, you may also re-roll any d10 rolled by an Ally through the 1st effect of Lucky.
+  (3)-[Triggered, 1/Encounter]: If you score a Botch Result, score a Critical Result instead and increase the Natural Result by 3.
+
+---
+
+[passive]
+# (1) After the roll, beside the Karmic Effects: its Base Die again - yours - once a Round (chat.mjs luckyRerollOptions).
+allow lucky.reroll;
+# (2) And an Ally's, the same once a Round of yours - not a Minion's to give.
+if (!isMinion) {
+    allow lucky.allies;
+}
+
+# (3) A Botch scored: offered in a window the moment it is - a Critical Result instead, its Natural Result 3 higher (chat.mjs
+# rollSide).
+[triggered/botch, 1/encounter, effect 3]
+allow roll.luckyCritical;
