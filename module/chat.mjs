@@ -16897,6 +16897,37 @@ export async function terrifyingPresence(actor) {
 }
 
 /**
+ * Mental Warfare (2): "you may use the Insult Maneuver (targeting that Opponent) as an Out-of-Sequence Maneuver." Offered on your
+ * latest card - one made for it where there is none - aimed at the one knocked through; its 1/Round the block's, the Insult's
+ * own as it is.
+ */
+export async function mentalWarfare(actor, knockedUuid) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const insult = getManeuver("insult");
+  const knocked = fromUuidSync(knockedUuid ?? "");
+  if (!actor || !insult || !knocked || whyNotSpecial(actor, insult)) return UNSPENT;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "insult", maneuverName: insult.name,
+    reason: `Mental Warfare - at ${knocked.name}`, targetUuid: knocked.uuid, mentalWarfare: true };
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
+}
+
+/** Mental Warfare (2)'s Insult, out of sequence at that Opponent. */
+async function insultOutOfSequence(actor, targetUuid) {
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "insult"));
+  const named = fromUuidSync(targetUuid ?? "");
+  // Their token on the scene, where the name was of the Actor behind it.
+  const target = (named && (canvas?.tokens?.placeables ?? []).find(token => token.actor?.uuid === named.uuid)?.actor) ?? named;
+  if (!target) {
+    ui.notifications.warn("Mental Warfare: the Opponent knocked through is no longer on the scene.");
+    return null;
+  }
+  return useManeuver(actor, own ? definitionOf(own) : getManeuver("insult"), { outOfSequence: true, targetUuid: target.uuid });
+}
+
+/**
  * Team Survivalist (3): "If you use the Brace Maneuver, apply its effects to all Allies within your Melee Range." Braced on each -
  * within it measured where both have a token - on your clock, till the start of your next turn as yours. None, not spent.
  */
@@ -20272,6 +20303,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.yoinkGrenade) return takeYoinkGrenade(message, actor, offer);
   if (offer.terrifyingSpeed) return takeTerrifyingSpeed(message, actor);
   if (offer.terrifyingPresence) return terrifyOutOfSequence(actor);
+  if (offer.mentalWarfare) return insultOutOfSequence(actor, offer.targetUuid);
   if (offer.frequentFlyer) return takeFrequentFlyer(message, actor);
   if (offer.ownOutOfSequence) return ownOutOfSequence(actor, offer.ownOutOfSequence);
   // Wild Counter's, once a Round.

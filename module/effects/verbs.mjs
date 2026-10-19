@@ -170,6 +170,11 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  mentalWarfare: {
+    args: [0, 0],
+    doc: "Mental Warfare (2): the Insult out of sequence at the Opponent knocked through, offered on your latest card (chat.mjs "
+       + "mentalWarfare)."
+  },
   terrifyingPresence: {
     args: [0, 0],
     doc: "Terrifying Presence (2): the Terrify out of sequence, offered on your latest card (chat.mjs terrifyingPresence)."

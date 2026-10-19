@@ -1,0 +1,24 @@
+id: mental-warfare
+name: Mental Warfare
+talentCategory: taunt
+prerequisites: Personality Score of 4+
+description: >
+  You are not above breaking a target’s spirit to win a fight.
+text: >
+  Mental Warfare: You are not above breaking a target’s spirit to win a fight.
+  –Prerequisites: Personality Score of 4+
+  (1)-[Passive]: Gain access to the Insult Special Maneuver.
+  (2)-[Triggered, 1/Round]: If an Opponent is knocked through a Health Threshold by an Attacking Maneuver, you may use the Insult Maneuver (targeting that Opponent) as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1)
+allow maneuver.insult;
+
+# (2) An Opponent knocked through a Health Threshold by anybody's Attacking Maneuver - yours, an Ally's (the `opponent-knocked`
+# Moment): the Insult out of sequence at them, offered on your latest card - never Automatic, it hands over an Out-of-Sequence
+# Maneuver; the Insult's own 1/Round still its (chat.mjs mentalWarfare).
+[triggered/opponent-knocked, 1/round, outOfSequence, effect 2]
+requires knockedOpponent;
+mentalWarfare();
