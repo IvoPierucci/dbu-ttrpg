@@ -1,0 +1,21 @@
+id: flexible-technique
+name: Flexible Technique
+talentCategory: technique
+prerequisites: Favored Technique
+description: >
+  Your ability to manipulate your Favored Technique is beyond compare.
+text: >
+  Flexible Technique: Your ability to manipulate your Favored Technique is beyond compare.
+  –Prerequisites: Favored Technique
+  (1)-[Triggered]: When using your Favored Technique, you may exchange any number of ranks in the Accurate Advantage for any number of ranks in the Power Shot Advantage, or vice versa. If your Favored Technique has neither of these Advantages, you may apply a rank of the Efficiency Advantage to it instead.
+  (2)-[Triggered, 1/Encounter]: When using your Favored Technique, you may change its Profile to another Profile within the same Foundation. If you do, it loses access to any Advantages or Disadvantages that it no longer qualifies for and you must recalculate the Ki Point Cost for that Signature Technique. This Attacking Maneuver is considered a different Signature Technique for all effects.
+
+---
+
+[passive]
+# Both asked with the Favored Technique's declaration, in its window (use-maneuver.mjs askTechniqueDeclaration).
+# (1) Accurate ranks for as many of Power Shot, or the other way - each held to its 3; with neither, a rank of Efficiency: its
+# 4(T) off the Technique's own Ki, never below the Profile's.
+# (2) Once an Encounter, another Profile of its Foundation: what no longer qualifies does nothing on it, its Ki the new
+# Profile's - and another Technique: not the Favored one's Energy Charge, not Technique Master's once a Round.
+allow flexible.technique;

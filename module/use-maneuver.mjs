@@ -872,6 +872,38 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
       <span class="dbu-respond-name">Demonic Creativity: the Condition Advantage</span>
       <span class="dbu-respond-source">1 stack of Demonic Power, once a Round</span></label>`);
   }
+  // Flexible Technique: the Favored Technique's declaration - (1) Accurate and Power Shot traded rank for rank, or Efficiency
+  // where it has neither; (2) once an Encounter, another Profile of its Foundation.
+  const { isFavoredTechnique } = await import("./data/item-maneuver.mjs");
+  const flexible = (actor.system.effects?.slots?.["flexible.technique"] === true) && Boolean(declared.foundation)
+    && isFavoredTechnique(actor, technique.itemId);
+  const flexAccMost = flexible ? Math.min(ranks("accurate"), 3 - ranks("power-shot")) : 0;
+  const flexPsMost = flexible ? Math.min(ranks("power-shot"), 3 - ranks("accurate")) : 0;
+  const flexEfficiency = flexible && !ranks("accurate") && !ranks("power-shot") && !has("inefficiency") && (ranks("efficiency") < 2);
+  const flexProfiles = (flexible && (actor.getFlag?.("dbu-ttrpg", "flexibleProfileEncounter") !== (game.combat?.id ?? "none")))
+    ? Object.entries(PROFILES).filter(([id, profile]) => (id !== declared.profile) && profile.label && Array.isArray(profile.foundations)
+      && profile.foundations.includes(declared.foundation)).map(([id, profile]) => [id, profile.label]) : [];
+  if (flexAccMost) {
+    fields.push(`<label class="dbu-respond-option"${tip("flexible-technique", 1)}><span class="dbu-respond-name">Flexible Technique: Accurate to Power Shot</span>
+      <input type="number" name="flexAccToPs" value="0" min="0" max="${flexAccMost}"/>
+      <span class="dbu-respond-source">ranks, one for one</span></label>`);
+  }
+  if (flexPsMost) {
+    fields.push(`<label class="dbu-respond-option"${tip("flexible-technique", 1)}><span class="dbu-respond-name">Flexible Technique: Power Shot to Accurate</span>
+      <input type="number" name="flexPsToAcc" value="0" min="0" max="${flexPsMost}"/>
+      <span class="dbu-respond-source">ranks, one for one</span></label>`);
+  }
+  if (flexEfficiency) {
+    fields.push(`<label class="dbu-respond-option"${tip("flexible-technique", 1)}><input type="checkbox" name="flexEfficiency"/>
+      <span class="dbu-respond-name">Flexible Technique: a rank of Efficiency</span>
+      <span class="dbu-respond-source">4(T) less Ki, never below the Profile's</span></label>`);
+  }
+  if (flexProfiles.length) {
+    fields.push(`<label class="dbu-respond-option"${tip("flexible-technique", 2)}><span class="dbu-respond-name">Flexible Technique: Profile</span>
+      <select name="flexProfile"><option value="">${Handlebars.escapeExpression(PROFILES[declared.profile]?.label ?? "Its own")}</option>${
+        flexProfiles.map(([id, label]) => `<option value="${id}">${Handlebars.escapeExpression(label)}</option>`).join("")}</select>
+      <span class="dbu-respond-source">once an Encounter - another Technique</span></label>`);
+  }
   const areaProfiles = [declared.profile, technique.secondProfile].filter(id => PROFILES[id]?.area);
   if (areaProfiles.length > 1) {
     fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Area of Effect</span>
@@ -918,6 +950,9 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
             eyeBoth: Boolean(eyeBoth) && box("eyeBoth"),
             earthling: earthlingPicked(form),
             quickThinking: form.querySelector('[name="quickThinking"]')?.value ?? "",
+            flexAccToPs: Math.min(flexAccMost, num("flexAccToPs")), flexPsToAcc: Math.min(flexPsMost, num("flexPsToAcc")),
+            flexEfficiency: flexEfficiency && box("flexEfficiency"),
+            flexProfile: form.querySelector('[name="flexProfile"]')?.value ?? "",
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
             areaFrom: form.querySelector('[name="areaFrom"]')?.value ?? "" };
@@ -975,6 +1010,32 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     answers.advantages = [...(answers.advantages ?? declared.advantages ?? []), thought.id];
   }
   delete answers.quickThinking;
+  // Flexible Technique (1): ranks traded one for one - or a rank of Efficiency, its Ki off where the price is made.
+  if (answers.flexAccToPs || answers.flexPsToAcc || answers.flexEfficiency) {
+    const list = [...(answers.advantages ?? declared.advantages ?? [])];
+    const trade = (from, to, n) => {
+      for (let i = 0; i < n; i++) {
+        const at = list.indexOf(from);
+        if (at < 0) return;
+        list.splice(at, 1);
+        list.push(to);
+      }
+    };
+    trade("accurate", "power-shot", Number(answers.flexAccToPs) || 0);
+    trade("power-shot", "accurate", Number(answers.flexPsToAcc) || 0);
+    if (answers.flexEfficiency) {
+      list.push("efficiency");
+      answers.flexibleEfficiency = true;
+    }
+    answers.advantages = list;
+  }
+  // Flexible Technique (2): another Profile of its Foundation, once an Encounter - another Technique for all effects.
+  if (answers.flexProfile && flexProfiles.some(([id]) => id === answers.flexProfile)) {
+    answers.profile = answers.flexProfile;
+    answers.flexibleProfile = true;
+    await actor.setFlag("dbu-ttrpg", "flexibleProfileEncounter", game.combat?.id ?? "none");
+  }
+  for (const key of ["flexAccToPs", "flexPsToAcc", "flexEfficiency", "flexProfile"]) delete answers[key];
   // Demonic Creativity's: the Condition Advantage, its Combat Condition asked, for 1 Demonic Power.
   if (answers.creativeCondition && creative) {
     const { featureCatalogue, featureChoiceOptions } = await import("./technique.mjs");
@@ -5061,6 +5122,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
       const asked = await askTechniqueDeclaration(actor, maneuver, declared, targetActor);
       if (!asked) return false;
       declared = { ...declared, ...asked };
+      // Flexible Technique (1)'s Efficiency: "-4(T) per rank" off the Technique's own Ki, never below the Profile's.
+      if (declared.flexibleEfficiency) maneuver = { ...maneuver, kiCostPerTier: Math.max(0, (Number(maneuver.kiCostPerTier) || 0) - 4) };
     }
 
     // Majin See, Majin Do: "For Copied Techniques, you may use either your Force or Magic Modifier as the Damage
@@ -5846,7 +5909,9 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // A Signature Technique's own bookkeeping: the Ultimate count, an Ascended one's Encounter, the
   // Round's Fake Out.
   if (maneuver.signature && !maneuver.signatureTechnique) {
-    const entries = techniqueUseEntries(maneuver, { ascended: Boolean(maneuver.ascended) });
+    // Flexible Technique (2)'s other Profile: another Technique - its own Round's use not this one's.
+    const entries = techniqueUseEntries(maneuver, { ascended: Boolean(maneuver.ascended) })
+      .filter(entry => !(declared?.flexibleProfile && entry.endsWith(".technique")));
     if (entries.length) {
       await actor.update({ "system.usedManeuvers": [...(actor.system.usedManeuvers ?? []), ...entries] });
     }
@@ -5932,7 +5997,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     + (maneuver.signature ? await (await import("./chat.mjs")).spendFinisher(actor, maneuver.itemId) : 0)
     // Favored Technique (1): "When you use your Favored Technique through the Signature Technique Maneuver, it gains an
     // Energy Charge."
-    + (((maneuver.id === "signature-technique") && declared && (actor.system.effects?.slots?.["favored.technique"] === true)
+    + (((maneuver.id === "signature-technique") && declared && !declared.flexibleProfile
+      && (actor.system.effects?.slots?.["favored.technique"] === true)
       && (await import("./data/item-maneuver.mjs")).isFavoredTechnique(actor, maneuver.itemId)) ? 1 : 0);
 
   // The height, now that it is certain to happen. The mark is the file's - `[on used]`
