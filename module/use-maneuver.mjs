@@ -4737,6 +4737,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     // Point Blank Shot (2): the declared Attacking Maneuver, out of sequence, offered on this card. Iron Fist (2) the same.
     (await import("./chat.mjs")).offerPointBlank(card, actor);
     await (await import("./chat.mjs")).offerIronFist(card, actor);
+    // Terrifying Technique (2): the Favored Technique declared - the Terrify out of sequence on this card.
+    await (await import("./chat.mjs")).terrifyingTechniqueOffer(card, actor);
     return true;
   }
 

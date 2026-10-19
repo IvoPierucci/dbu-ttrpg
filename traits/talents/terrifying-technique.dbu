@@ -1,0 +1,21 @@
+id: terrifying-technique
+name: Terrifying Technique
+talentCategory: technique
+prerequisites: Terrifying Presence, Favored Technique
+description: >
+  Your terrifying demeanor is displayed even in your attacks, shaking others to their core when you use your Favored Technique.
+text: >
+  Terrifying Technique: Your terrifying demeanor is displayed even in your attacks, shaking others to their core when you use your Favored Technique.
+  –Prerequisites: Terrifying Presence, Favored Technique
+  (1)-[Passive]: Increase the Wound Rolls of your Signature Techniques against Characters with the Shaken Combat Condition by 1(T).
+  (2)-[Triggered, 1/Round]: If you use the Energy Charge Maneuver and select your Favored Technique as its declared Attacking Maneuver, you may use the Terrify Maneuver as an Out-of-Sequence Maneuver.
+
+---
+
+[passive]
+# (1) A Signature Technique's Wound against each one Shaken, as the Damage is worked out per target (chat.mjs
+# shakenTechniqueParts).
+wound.signatureVsShaken += 1(T);
+# (2) The Energy Charge with the Favored Technique declared: the Terrify out of sequence, offered on its card - once a Round,
+# counted when taken (chat.mjs terrifyingTechniqueOffer).
+allow terrifyingTechnique.terrify;

@@ -17101,6 +17101,33 @@ export function terrifyingSpeedOffer(message, actor) {
     maneuverName: terrify.name, reason: "Terrifying Speed - ended beside an Opponent (target them)", terrifyingSpeed: true } });
 }
 
+/**
+ * Terrifying Technique (2): "If you use the Energy Charge Maneuver and select your Favored Technique as its declared Attacking
+ * Maneuver, you may use the Terrify Maneuver as an Out-of-Sequence Maneuver." Offered on the Energy Charge's card - once a
+ * Round, counted when taken.
+ */
+export async function terrifyingTechniqueOffer(message, actor) {
+  if (!message || (actor?.system?.effects?.slots?.["terrifyingTechnique.terrify"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "terrifyingTechniqueRound") === roundKey()) return;
+  const { isFavoredTechnique } = await import("./data/item-maneuver.mjs");
+  if (!isFavoredTechnique(actor, actor.system.charging?.maneuverId ?? "")) return;
+  const terrify = getManeuver("terrify");
+  if (!terrify || whyNotSpecial(actor, terrify)) return;
+  requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "terrify",
+    maneuverName: terrify.name, reason: "Terrifying Technique - charging your Favored Technique (target them)", terrifyingTechnique: true } });
+}
+
+/** Terrifying Technique (2)'s Terrify, taken: once a Round, spent as it is. */
+async function takeTerrifyingTechnique(message, actor) {
+  if (actor.getFlag?.(SCOPE, "terrifyingTechniqueRound") === roundKey()) {
+    ui.notifications.warn(`${actor.name}: Terrifying Technique - already used this Combat Round.`);
+    return null;
+  }
+  const used = await terrifyOutOfSequence(actor);
+  if (used) await actor.setFlag(SCOPE, "terrifyingTechniqueRound", roundKey());
+  return used;
+}
+
 /** Terrifying Speed (2)'s Terrify, taken: once a Round, spent as it is. */
 async function takeTerrifyingSpeed(message, actor) {
   if (actor.getFlag?.(SCOPE, "terrifyingSpeedRound") === roundKey()) {
@@ -20269,6 +20296,14 @@ function flankerParts(attacker, target, roll) {
   return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Flanking", value: Number(slot.add) }];
 }
 
+/** Terrifying Technique (1): "Increase the Wound Rolls of your Signature Techniques against Characters with the Shaken Combat Condition by 1(T)." */
+function shakenTechniqueParts(attacker, attack, target) {
+  const slot = attacker?.system?.effects?.slots?.["wound.signatureVsShaken"];
+  if (!(Number(slot?.add) || 0) || !attack?.technique || !target || (attacker.uuid === target.uuid)
+    || !((Number(target.system?.conditions?.shaken) || 0) > 0)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Against the Shaken", value: Number(slot.add) }];
+}
+
 /** Heel (1): "Increase the Wound Roll of your Attacking Maneuvers made against Opponents in a Grapple by 1(T)." */
 function heelParts(attacker, target) {
   const slot = attacker?.system?.effects?.slots?.["wound.vsGrappled"];
@@ -20692,6 +20727,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.yoinkGrenade) return takeYoinkGrenade(message, actor, offer);
   if (offer.terrifyingSpeed) return takeTerrifyingSpeed(message, actor);
   if (offer.terrifyingPresence) return terrifyOutOfSequence(actor);
+  if (offer.terrifyingTechnique) return takeTerrifyingTechnique(message, actor);
   if (offer.mentalWarfare) return insultOutOfSequence(actor, offer.targetUuid);
   if (offer.bagOfTricks) return takeBagOfTricks(message, actor);
   if (offer.frequentFlyer) return takeFrequentFlyer(message, actor);
@@ -25521,6 +25557,7 @@ async function rollAttackWoundWork(message, attack) {
       ...tacticianParts(attacker, target),
       ...rangeParts(attacker, attack, target, "wound"),
       ...heelParts(attacker, target),
+      ...shakenTechniqueParts(attacker, attack, target),
       ...largerParts(attacker, target),
       ...analyticParts(attacker, target, "wound"),
       // Full Counter (2): the Might of the one who Jolted, on this attack's Wound against them.
