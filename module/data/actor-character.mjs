@@ -2380,6 +2380,11 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
         : 0
     };
 
+    // Compact Muscle (1): "While you only possess 1 Super Stack, increase your Defense Value by 1(T)" - the Defense Value is
+    // settled before the Super Stacks are, so it is added to it now.
+    const compactDefense = (this.superStack.stacks === 1) ? slot(this, "superStack.compactDefense") : 0;
+    if (compactDefense) this.defenseValue += compactDefense;
+
     // Soak Value: the Tenacity Modifier, except that the Soak a character provides
     // for themselves never falls below their Tier of Power. External effects can
     // reduce the result further, down to a floor of 0 - nothing writes such a penalty
@@ -2577,7 +2582,8 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // meet.
     this.steadfast = {
       die: DBUCharacterData.STEADFAST_DIE,
-      bonus: slot(this, "steadfast.dice"),
+      // Compact Muscle (2): with exactly 1 Super Stack, 1 more.
+      bonus: slot(this, "steadfast.dice") + ((this.superStack?.stacks === 1) ? slot(this, "superStack.compactSteadfast") : 0),
       // What moves the die itself - Legacy's 2.
       natural: slot(this, "steadfast.natural"),
       target: Math.max(1,

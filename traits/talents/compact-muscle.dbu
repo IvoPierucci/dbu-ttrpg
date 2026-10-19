@@ -1,0 +1,18 @@
+id: compact-muscle
+name: Compact Muscle
+talentCategory: super-stack
+prerequisites: Muscular Warrior, Agility Score of 8+
+description: >
+  Your lean but powerful muscles allow you to benefit from both high speed and great strength.
+text: >
+  Compact Muscle: Your lean but powerful muscles allow you to benefit from both high speed and great strength.
+  –Prerequisites: Muscular Warrior, Agility Score of 8+
+  (1)-[Passive]: While you only possess 1 Super Stack, increase your Defense Value by 1(T).
+  (2)-[Passive]: While you only possess 1 Super Stack, increase the Dice Score of your Steadfast Checks by 1.
+
+---
+
+[passive]
+# Both read once the Super Stacks are settled, with exactly 1 (actor-character.mjs).
+superStack.compactDefense += 1(T);
+superStack.compactSteadfast += 1;
