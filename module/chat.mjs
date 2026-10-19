@@ -16746,8 +16746,8 @@ async function copyTechnique(actor, copyFrom) {
   data.flags = { ...(data.flags ?? {}), "dbu-ttrpg": { ...(data.flags?.["dbu-ttrpg"] ?? {}),
     copied: { from: fromUuidSync(copyFrom.actorUuid)?.name ?? "", fromUuid: copyFrom.actorUuid, combat: game.combat?.id ?? "" },
     fromQuickLearner: true } };
-  await actor.createEmbeddedDocuments("Item", [data]);
-  return true;
+  const [made] = (await actor.createEmbeddedDocuments("Item", [data])) ?? [];
+  return made ?? true;
 }
 
 /**
@@ -16786,7 +16786,16 @@ async function takeMoveOffer(message, actor, offer) {
     return;
   }
   // Quick Learner's: copied first - a copy not made is no use spent.
-  if (offer.move.copyFrom && !await copyTechnique(actor, offer.move.copyFrom)) return;
+  const copy = offer.move.copyFrom ? await copyTechnique(actor, offer.move.copyFrom) : null;
+  if (offer.move.copyFrom && !copy) return;
+  // Perfect Mimicry (2): "When you declare a Copied Technique, you may use the required Maneuver ... as an Out-of-Sequence
+  // Maneuver, but you must use the Copied Technique you declared" - offered on this card, once an Encounter.
+  if (copy?.id && (actor.system?.effects?.slots?.["perfectMimicry.use"] === true)
+    && (actor.getFlag?.(SCOPE, "perfectMimicryEncounter") !== (game.combat?.id ?? "none"))) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "signature-technique",
+      maneuverName: copy.name, reason: "Perfect Mimicry - the Copied Technique, out of sequence (1/Encounter)",
+      technique: { via: "", itemId: copy.id }, grants: { perfectMimicry: true } } });
+  }
   // Ranger (3)'s: whom first - none picked, no use spent.
   if (offer.move.ranger && !await rangerBeside(message, actor)) return;
   // Fleet of Foot (2)'s: whom - none picked, no use spent.
@@ -20639,8 +20648,15 @@ async function takeTechniqueOffer(message, actor, offer) {
     ui.notifications.warn("Feline Build has been used this Combat Round.");
     return;
   }
-  // Any of them where the offer names no Advantage - Disarming Demeanor's; a Copied one alone - Feline Build's.
-  const techniques = actor.items.filter(item => (item.type === "maneuver") && (offer.technique?.copied
+  // Perfect Mimicry (2)'s, once an Encounter.
+  if (offer.grants?.perfectMimicry && (actor.getFlag?.(SCOPE, "perfectMimicryEncounter") === (game.combat?.id ?? "none"))) {
+    ui.notifications.warn(`${actor.name}: Perfect Mimicry - already used this Combat Encounter.`);
+    return;
+  }
+  // Any of them where the offer names no Advantage - Disarming Demeanor's; a Copied one alone - Feline Build's; the one named
+  // - Perfect Mimicry's, the Copied Technique declared.
+  const techniques = actor.items.filter(item => (item.type === "maneuver") && (offer.technique?.itemId
+    ? (item.id === offer.technique.itemId) : offer.technique?.copied
     ? countsAsCopied(item) : offer.technique?.any
     ? Boolean(item.system.signature?.level) : (item.system.advantages ?? []).includes(feature)));
   if (!techniques.length) {
@@ -20665,6 +20681,7 @@ async function takeTechniqueOffer(message, actor, offer) {
     outOfSequence: true, targetUuid: offer.targetUuid ?? "" });
   if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
   if (used && offer.grants?.feline) await requestActorUpdate(actor, { [`flags.${SCOPE}.felineRound`]: roundKey() });
+  if (used && offer.grants?.perfectMimicry) await actor.setFlag(SCOPE, "perfectMimicryEncounter", game.combat?.id ?? "none");
   return used;
 }
 

@@ -1,0 +1,21 @@
+id: perfect-mimicry
+name: Perfect Mimicry
+talentCategory: technique
+prerequisites: Quick Learner
+description: >
+  Not only can you pick up the principles behind others’ techniques on the fly, but you can perfectly recreate them, as if you’d always known them.
+text: >
+  Perfect Mimicry: Not only can you pick up the principles behind others’ techniques on the fly, but you can perfectly recreate them, as if you’d always known them.
+  –Prerequisites: Quick Learner
+  (1)-[Passive]: Ignore the 3rd effect of Quick Learner.
+  (2)-[Triggered, 1/Encounter]: When you declare a Copied Technique, you may use the required Maneuver to use that Copied Technique (as long as it is a Standard Maneuver) as an Out-of-Sequence Maneuver, but you must use the Copied Technique you declared. You must still meet any prerequisites for its use (such as the requisite number of Energy Charge Maneuvers if your Copied Technique has the Mandatory Charge Disadvantage).
+
+---
+
+[passive]
+# (1) A Copied Technique's Wound without Quick Learner's 2(T) off (chat.mjs woundParts).
+allow quickLearner.noPenalty;
+# (2) A Technique just copied: the Signature Technique Maneuver out of sequence with it, offered on the same card - once an
+# Encounter, counted when taken; what its use asks - Mandatory Charge's Charges and the rest - asked as ever (chat.mjs
+# takeTechniqueOffer).
+allow perfectMimicry.use;
