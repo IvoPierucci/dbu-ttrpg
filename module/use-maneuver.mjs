@@ -5762,7 +5762,7 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
 
   // A Movement's price is what was chosen rather than what the file lists: "N/A", until
   // you decide to go faster. Everything else pays what its Profile and its effects say.
-  const price = crossing
+  let price = crossing
     ? movementKiCost(actor, crossing)
     : maneuverKiCost(maneuver, declared, actor) + (Number(sustaining?.extraKi) || 0)
       // Free Flowing Stance (2): "Increase the Ki Point Cost of Attacking Maneuvers that target you by 1(T) for each Action
@@ -5771,6 +5771,12 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
         * Math.max(1, Number(targetActor.system?.tierOfPower) || 1) : 0)
       // "6(T) for each Action spent" - Explosion Sorcery's.
       + (maneuver.kiPerAction ? (Math.max(1, Number(actionsSpent) || 1) - 1) * maneuverKiCost(maneuver, null, actor) : 0);
+  // Energy Control: 2(T) off, a rank of Homing - asked before anything is paid.
+  if (!crossing) {
+    const control = await (await import("./chat.mjs")).energyControlAsk(actor, maneuver, declared, price);
+    price = Math.max(0, price - control.discount);
+    if (control.homing && declared) declared = { ...declared, energyHoming: true };
+  }
 
   // A wager paid in Life shares the Capacity with the Ki, so both are checked before
   // either is spent.

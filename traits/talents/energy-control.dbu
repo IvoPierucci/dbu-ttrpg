@@ -1,0 +1,21 @@
+id: energy-control
+name: Energy Control
+talentCategory: technique
+prerequisites: Scholarship or Insight Score of 5+
+description: >
+  You’ve learned to rein in your ki, fine-tuning your control.
+text: >
+  Energy Control: You’ve learned to rein in your ki, fine-tuning your control.
+  –Prerequisites: Scholarship or Insight Score of 5+
+  (1)-[Triggered, 1/Round]: When using a Signature Technique or a Technical Unique Ability, reduce the Ki Point Cost by 2(T).
+  (2)-[Triggered, 1/Round]: When making an Attacking Maneuver with a qualifying Signature Technique, you may spend 2(T) Ki Points to apply a rank of the Homing Advantage to that Attacking Maneuver.
+
+---
+
+[passive]
+# Both asked in one window as a Signature Technique - or, (1), a Technical Unique Ability - is used, before it is paid for;
+# each once a Round, spent where ticked (chat.mjs energyControlAsk).
+# (1) Its Ki Point Cost 2(T) lower, never below nothing.
+allow energyControl.cost;
+# (2) 2(T) Ki for a rank of Homing more - a Technique with no Area of Effect, below its 3 ranks (chat.mjs homing).
+allow energyControl.homing;

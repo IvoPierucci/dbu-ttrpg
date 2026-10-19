@@ -14269,6 +14269,53 @@ export async function spectatorTurnStart(actor) {
 }
 
 /**
+ * Energy Control, as a Signature Technique or a Technical Unique Ability is used and before it is paid for - one window, each
+ * once a Round: (1) "reduce the Ki Point Cost by 2(T)"; (2) "When making an Attacking Maneuver with a qualifying Signature
+ * Technique, you may spend 2(T) Ki Points to apply a rank of the Homing Advantage" - qualifying, Homing's Requirement: no Area of
+ * Effect; and below its 3 ranks. What was ticked: the Ki off the price, and whether Homing was bought - its Ki paid here.
+ */
+export async function energyControlAsk(actor, maneuver, declared, price) {
+  const none = { discount: 0, homing: false };
+  const slots = actor?.system?.effects?.slots ?? {};
+  if ((slots["energyControl.cost"] !== true) && (slots["energyControl.homing"] !== true)) return none;
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const signature = Boolean(maneuver?.signature) && !maneuver.signatureTechnique;
+  const technical = (maneuver?.tags ?? []).includes("uniqueAbility") && (maneuver.uniqueType === "technical");
+  const costOpen = (slots["energyControl.cost"] === true) && (signature || technical) && (Number(price) > 0)
+    && (actor.getFlag?.(SCOPE, "energyControlCostRound") !== roundKey());
+  const area = declared?.area ?? declared?.technique?.area ?? PROFILES[declared?.profile]?.area;
+  const ranks = featureRanks(declared?.technique?.features ?? declared?.advantages ?? [], "homing");
+  const homingOpen = (slots["energyControl.homing"] === true) && signature && Boolean(declared) && !area && (ranks < 3)
+    && (actor.getFlag?.(SCOPE, "energyControlHomingRound") !== roundKey());
+  if (!costOpen && !homingOpen) return none;
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${actor.name}: Energy Control` },
+    content: `<p class="dbu-respond-hint">${escape(maneuver.name)}</p>
+      ${costOpen ? `<label class="dbu-wager" data-tooltip="Its Ki Point Cost 2(T) lower. 1/Round.">
+        <input type="checkbox" name="cost" checked/> <span>-${Math.min(2 * tier, Number(price))} Ki</span></label>` : ""}
+      ${homingOpen ? `<label class="dbu-wager" data-tooltip="Spend 2(T) Ki Points: a rank of Homing on this attack. 1/Round.">
+        <input type="checkbox" name="homing"/> <span>Homing (${2 * tier} Ki)</span></label>` : ""}`,
+    buttons: [
+      { action: "confirm", label: "Use", default: true, callback: (event, button, dialog) => ({
+        cost: Boolean(dialog.element.querySelector('input[name="cost"]')?.checked),
+        homing: Boolean(dialog.element.querySelector('input[name="homing"]')?.checked) }) },
+      { action: "cancel", label: "Neither" }
+    ],
+    rejectClose: false
+  });
+  const discount = (costOpen && picked?.cost) ? Math.min(2 * tier, Number(price)) : 0;
+  let homing = false;
+  if (homingOpen && picked?.homing) {
+    homing = await spendManeuverCost(actor, { name: "Energy Control" }, 2 * tier);
+    if (homing) await actor.setFlag(SCOPE, "energyControlHomingRound", roundKey());
+  }
+  if (discount) await actor.setFlag(SCOPE, "energyControlCostRound", roundKey());
+  return { discount, homing: Boolean(homing) };
+}
+
+/**
  * Bag of Tricks (3): "you may use a Unique Ability that requires Standard Actions immediately as an Out-of-Sequence Maneuver. If
  * you do, you still have to pay the Action Cost but the Action Cost is reduced by 1". Offered on your latest card - one made for
  * it where there is none; which asked as it is taken (takeBagOfTricks).
@@ -21077,12 +21124,18 @@ async function takeOutOfSequence(message, actor, offer) {
   // paying the Action Cost or KP Cost as an Out-of-Sequence Maneuver". Out of sequence
   // waives the Action Cost for everything; `free` is what waives the Ki as well, and only
   // an offer that was already paid for carries it.
-  const price = offer.free
+  let price = offer.free
     // What was bought on top of it all the same - Greed of the Hera's AoE and Magnitude.
     ? (Number(declared?.kiSurcharge) || 0)
     : crossing
     ? movementKiCost(actor, crossing)
     : maneuverKiCost(maneuver, reflecting ? null : declared, actor);
+  // Energy Control: 2(T) off, a rank of Homing - asked before anything is paid.
+  if (!offer.free && !crossing && !reflecting) {
+    const control = await energyControlAsk(actor, maneuver, declared, price);
+    price = Math.max(0, price - control.discount);
+    if (control.homing && declared) declared = { ...declared, energyHoming: true };
+  }
   // The Energy-Suction Device's stored Ki may pay for it instead - asked below, before the Ki
   // is spent.
 
@@ -21333,7 +21386,8 @@ export async function postAttack(actor, target, maneuver,
                                    shardEnds = "", boughtMagnitude = 0, greedCharges = 0, entrustedAllIn = false,
                                    tensionCharges = 0, warriorTension = false, boom = null, rangerRetreat = "",
                                    unstudy = [], mimicry = null, revengeSpent = 0, revengeCharge = false, areaAdded = false,
-                                   rapidFist = false, angryNatural = 0, profileCritical = false, adamantineHeal = false },
+                                   rapidFist = false, angryNatural = 0, profileCritical = false, adamantineHeal = false,
+                                   energyHoming = false },
                                  { asOutOfSequence = false, provokedBy = null, viaExploit = false,
                                    reflecting = null, modifiers = [],
                                    defencesAllowed = [] } = {}) {
@@ -21534,6 +21588,8 @@ export async function postAttack(actor, target, maneuver,
           ...((profileCritical && !reflecting) ? { profileCritical: true } : {}),
           // Adamantine Muscle (2): its Wound a quarter back as Life, with Damage against an Opponent.
           ...((adamantineHeal && !reflecting) ? { adamantineHeal: true } : {}),
+          // Energy Control (2): a rank of Homing bought for it.
+          ...((energyHoming && !reflecting) ? { energyHoming: true } : {}),
           // Heart of Glass (3)'s Surging, for this attack alone - left as it is concluded.
           ...((glassSurge && !reflecting) ? { glassSurge: true } : {}),
           // Entrusted (4): the State left once this is concluded (entrustedAllInEnds).
@@ -30399,7 +30455,9 @@ function renderAttack(message, html) {
   focusedButtons(message, container, attack);
 
   // Glass Shards (2): "gain the Homing Advantage", at Shard Carriers alone.
-  const homingRanks = Math.max(featureRanks(attack.technique?.features ?? [], "homing"), attack.shardHoming ? 1 : 0);
+  // Energy Control (2): a rank more, bought for it - never past Homing's 3.
+  const homingRanks = Math.max(Math.min(3, featureRanks(attack.technique?.features ?? [], "homing") + (attack.energyHoming ? 1 : 0)),
+    attack.shardHoming ? 1 : 0);
   if (homingRanks && !result.wound) {
     const attacker = fromUuidSync(attack.attackerUuid);
     for (const branch of result.targets ?? []) {
