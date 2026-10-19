@@ -9170,7 +9170,8 @@ const CLASH_ROLLS = ({
 
     // "...and Saving Throws in Clashes against a Seen Opponent by ... 1(T)." The other
     // half of the same sentence, and a different number - which is why they are two rows.
-    parts: (actor, clash, uuid) => [...seenBonus(actor, clashOpponent(clash, uuid), "save"), ...saveDefendingParts(actor, clash, uuid)],
+    parts: (actor, clash, uuid) => [...seenBonus(actor, clashOpponent(clash, uuid), "save"), ...saveDefendingParts(actor, clash, uuid),
+      ...moraleClashParts(actor, clash, uuid)],
 
     options: (actor, clash, uuid) => ({
       criticalTarget: actor.system.savingThrows[savePicked(clash, uuid)]?.criticalTarget ?? null,
@@ -9237,6 +9238,13 @@ function saveDefendingParts(actor, clash, uuid) {
     || alliesOnScene(actor).some(ally => ally.uuid === clash.challengerUuid)) return [];
   return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Initiated by an Opponent",
     value: Number(slot.add) }];
+}
+
+/** Improved Taunt (1): "Increase your Dice Score for any Morale Clash by 1(T)" - the side answering with Morale. */
+function moraleClashParts(actor, clash, uuid) {
+  const slot = actor?.system?.effects?.slots?.["clash.morale"];
+  if ((savePicked(clash, uuid) !== "morale") || !(Number(slot?.add) || 0)) return [];
+  return [{ label: (slot.parts ?? []).map(part => part.source).filter(Boolean).join(", ") || "Morale Clash", value: Number(slot.add) }];
 }
 
 /** Which roll a side makes in Wrestler's Clash: the Grappler's Might; the Grappled's answer, Might till they say. */

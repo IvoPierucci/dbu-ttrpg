@@ -6213,6 +6213,20 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const { postSkillClash } = await import("./chat.mjs");
     for (const other of others) await postSkillClash(actor, other, maneuver, { terrify: { applied: false } });
   }
+  // Improved Taunt (2): "you can target all Opponents within a Sphere AoE centered on you" - a Morale Clash at every other
+  // Opponent targeted, as at the first.
+  if (card && maneuver.insult && targetActor && (actor.system.effects?.slots?.["insult.sphere"] === true)) {
+    const own = actor.getActiveTokens?.(false, true)?.[0]?.disposition;
+    const others = [...new Map(Array.from(game.user.targets ?? [])
+      .filter(token => token.actor && (token.actor.uuid !== actor.uuid) && (token.actor.uuid !== targetActor.uuid)
+        && ((own === undefined) || (token.document?.disposition !== own)))
+      .map(token => [token.actor.uuid, token.actor])).values()];
+    for (const other of others) {
+      await postSaveClash(actor, other, { maneuverName: maneuver.name, saves: maneuver.clashSaves,
+        defenderSaves: maneuver.clashDefenderSaves ?? [], reason: saveClashReason(actor, other, maneuver),
+        insult: { applied: false } });
+    }
+  }
   // Terrifying Speed (2): Rapid Movement taken - the Terrify out of sequence on its card.
   if (card && crossing?.rapid) (await import("./chat.mjs")).terrifyingSpeedOffer(card, actor);
   // Team Pose: the Hype used - (2) the Hype offered on its card to Allies with Show Stopping Performance; (1) each Ally's Ki.

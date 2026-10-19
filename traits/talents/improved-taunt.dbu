@@ -1,0 +1,20 @@
+id: improved-taunt
+name: Improved Taunt
+talentCategory: taunt
+prerequisites: Taunt, Personality Score of 8+
+description: >
+  Even more skilled, you are capable of drawing all of your enemies’ attention.
+text: >
+  Improved Taunt: Even more skilled, you are capable of drawing all of your enemies’ attention.
+  –Prerequisites: Taunt, Personality Score of 8+
+  (1)-[Passive]: Increase your Dice Score for any Morale Clash by 1(T).
+  (2)-[Triggered]: When you use the Insult Maneuver, you can target all Opponents within a Sphere AoE centered on you.
+
+---
+
+[passive]
+# (1) Your side of any Clash of the Morale Saving Throw - opened by you or against you (chat.mjs moraleClashParts).
+clash.morale += 1(T);
+# (2) The Insult at every Opponent targeted - who stands within the Sphere, the table's: a Morale Clash at each, as at the
+# first (use-maneuver.mjs). Targeting them is the choosing.
+allow insult.sphere;
