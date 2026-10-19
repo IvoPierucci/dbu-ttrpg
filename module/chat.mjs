@@ -679,6 +679,10 @@ async function settleClashEffects(messageId, clash) {
   if (!message) return;
   await message.setFlag(SCOPE, CLASH_FLAG, clash);
 
+  // Reserved Combatant (3), for a Unique Ability's Clash: its duration over with it.
+  const reservedDefender = clash.result ? fromUuidSync(clash.defenderUuid ?? "") : null;
+  if ((Number(reservedDefender?.system?.conditions?.["reserved-mark"]) || 0) > 0) await reservedEnds(null, reservedDefender);
+
   // A Grapple Check does something when it lands, and this is the one place a Clash is
   // written: exactly one client gets here - the message's author, or the GM acting for
   // them - so the Grapple is applied once rather than once per person watching.
@@ -8820,6 +8824,17 @@ function thiefClashOpen(actor, clash) {
   return (category === "save") ? `1(T)` : "1";
 }
 
+/**
+ * Reserved Combatant (3) at a Unique Ability's Clash against you, Holding Back: its block that answers being targeted, where it
+ * has a use left this Round - its three shared with the others of that effect.
+ */
+function reservedClashEntry(actor, clash) {
+  if (!actor || (actor.uuid !== clash?.defenderUuid) || !uniqueClashOf(clash)
+    || !((Number(actor.system.resources?.holdingback?.stacks) || 0) > 0)) return null;
+  return reactiveFor(actor).find(entry => entry.available && (entry.program.blocks?.[0]?.moment === "defending")
+    && (actor.items?.get(entry.sourceId)?.flags?.[SCOPE]?.sourceId === "reserved-combatant")) ?? null;
+}
+
 /** Thief (4)'s, on the side that spent its Tension. */
 function thiefClashBonus(actor, clash, uuid) {
   if (!(clash?.thiefBy ?? []).includes(uuid)) return [];
@@ -9920,10 +9935,14 @@ async function clashStage(message, actor) {
   // and Urgent here means what it means everywhere: it cannot be failed on purpose.
   // Thief (4): a stack of Tension on a Skill or Saving Throw Clash against an Opponent - a box, once a Round.
   const thief = thiefClashOpen(actor, opened);
+  // Reserved Combatant (3): a Unique Ability's Clash against you - "or are targeted by ... a Unique Ability".
+  const reserved = reservedClashEntry(actor, opened);
   const ready = await prepareRoll(actor, [], `${actor.name}: before the roll`, "",
     { urgent: Boolean(opened.urgent), senses,
-      boxes: thief ? [{ name: "thief", label: `Thief: a stack of Tension, +${thief}`,
-        tip: "Once a Round. Won, the Basic Attack or a Signature Technique out of sequence at them." }] : [],
+      boxes: [...(thief ? [{ name: "thief", label: `Thief: a stack of Tension, +${thief}`,
+        tip: "Once a Round. Won, the Basic Attack or a Signature Technique out of sequence at them." }] : []),
+        ...(reserved ? [{ name: "reserved", label: "Reserved Combatant: Holding Back ignored",
+          tip: "For this Unique Ability - its stacks still held. Three times a Round." }] : [])],
       formula: { base: DBUCharacterData.BASE_DIE,
       dice: [...(kind.options?.(actor, { ...opened, ...answer }, actor.uuid)?.combatRoll ? combatDiceGroups(actor) : []),
         ...((actor.uuid === opened.challengerUuid) && opened.challengerDice
@@ -9938,6 +9957,12 @@ async function clashStage(message, actor) {
   // erase it.
   const clash = message.getFlag(SCOPE, CLASH_FLAG);
   if (!clash || clash.result) return;
+  // Reserved: its use spent, the mark on - off as the Clash is settled (settleClashEffects).
+  if (reserved && (ready.boxes ?? []).includes("reserved")) {
+    await spendTriggeredEffect(actor, reserved.blockId);
+    const { setCondition } = await import("./conditions.mjs");
+    await setCondition(actor, "reserved-mark", 1);
+  }
   const thiefTaken = Boolean(thief) && (ready.boxes ?? []).includes("thief");
   if (thiefTaken) {
     await setResource(actor, "tension", Math.max(0, (Number(actor.system.resources?.tension?.stacks) || 0) - 1));

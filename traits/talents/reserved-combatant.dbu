@@ -27,9 +27,10 @@ requires hasResource("patience");
 ki.value += patience.stacks * 2(bT);
 patience.stacks = 0;
 
-# (3) Asked in the window as you declare an Attacking Maneuver or a Unique Ability, or as you Defend against an attack - three
-# times a Round: Reserved (a mark), the Holding Back Maneuver's effects left out (its stacks still held), till that Maneuver is
-# concluded (chat.mjs reservedEnds; use-maneuver.mjs). Being targeted by a Unique Ability that is no attack - the table's.
+# (3) Asked in the window as you declare an Attacking Maneuver or a Unique Ability, or as you Defend against an attack - and, a
+# Unique Ability's Clash against you (a Saving Throw's), a box before you roll it (chat.mjs clashStage) - three times a Round:
+# Reserved (a mark), the Holding Back Maneuver's effects left out (its stacks still held), till that Maneuver is concluded or
+# that Clash settled (chat.mjs reservedEnds; use-maneuver.mjs).
 [triggered/declare-maneuver, 3/round, effect 3]
 requires attackOrUnique;
 gain("reserved-mark");
