@@ -1,0 +1,22 @@
+id: flexible-muscle
+name: Flexible Muscle
+talentCategory: super-stack
+prerequisites: Compact Muscle, Agility Score of 12+
+description: >
+  Dodging, evading, and striking evasive enemies is easy for you, even with your enhanced musculature.
+text: >
+  Flexible Muscle: Dodging, evading, and striking evasive enemies is easy for you, even with your enhanced musculature.
+  –Prerequisites: Compact Muscle, Agility Score of 12+
+  (1)-[Passive]: While you only possess 1 Super Stack, increase your Strike Rolls by 1(T).
+  (2)-[Triggered, 1/Encounter]: While you only possess 1 Super Stack, if you would make a Steadfast Check, you may choose to automatically succeed at that Steadfast Check.
+
+---
+
+[passive]
+# (1) Read once the Super Stacks are settled - the Strike is worked out after them.
+if (superStack.stacks == 1) {
+    strike += 1(T);
+}
+# (2) A box in the Steadfast Check's window, with exactly 1, once an Encounter - the player's to time: passed, no roll
+# (chat.mjs, the Steadfast Check).
+allow flexibleMuscle.autoPass;

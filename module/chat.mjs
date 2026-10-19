@@ -28633,10 +28633,15 @@ export async function rollSteadfastCheck(actor) {
   const karmicBoxes = Array.from({ length: negativeHeld }, (each, index) => ({ name: `karmic${index + 1}`,
     label: "Karmic Reflection: 1 Negative Energy, +1",
     tip: "1 to the Dice Score; passed, 2(T) Ki Points back for it." }));
+  // Flexible Muscle (2): "While you only possess 1 Super Stack ... you may choose to automatically succeed" - once an Encounter.
+  const flexible = (actor.system.effects?.slots?.["flexibleMuscle.autoPass"] === true) && (actor.system.superStack?.stacks === 1)
+    && (actor.getFlag?.(SCOPE, "flexibleMuscleEncounter") !== (game.combat?.id ?? "none"));
   const ready = await prepareRoll(actor, [], `Steadfast Check - ${THRESHOLDS[rolled].label}`, `Needing ${target}`,
     { offerWilling: false,
       // Heart of Glass (4): failed without rolling, for a Ki Surge out of sequence and Surging after.
-      boxes: [...((actor.system.effects?.slots?.["steadfast.heartOfGlass"] === true) ? [{ name: "heartOfGlass",
+      boxes: [...(flexible ? [{ name: "flexibleMuscle", label: "Flexible Muscle: pass it",
+        tip: "No roll. Once an Encounter." }] : []),
+        ...((actor.system.effects?.slots?.["steadfast.heartOfGlass"] === true) ? [{ name: "heartOfGlass",
         label: "Heart of Glass: fail it", tip: "No roll: a Ki Surge as an Out-of-Sequence Maneuver, then Surging until the end of your turn if you like." }] : []),
         // Karmic Reflection (4): a Negative Energy for 1 on the Dice Score - up to 2; passed, 2(T) of Ki each.
         ...karmicBoxes],
@@ -28661,6 +28666,17 @@ export async function rollSteadfastCheck(actor) {
       flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - failed without rolling (Heart of Glass)` });
     await heartOfGlassFail(actor);
     return false;
+  }
+  // Flexible Muscle (2): passed without rolling.
+  if (flexible && (ready?.boxes ?? []).includes("flexibleMuscle")) {
+    updates[`system.thresholdChecks.${rolled}`] = "pass";
+    updates[`flags.${SCOPE}.flexibleMuscleEncounter`] = game.combat?.id ?? "none";
+    await actor.update(updates);
+    if (automatic.length) await steadfastFailed(actor, automatic);
+    await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+      flavor: `Steadfast Check - ${THRESHOLDS[rolled].label} - passed (Flexible Muscle)` });
+    await steadfastPassed(actor, rolled);
+    return true;
   }
   const lifeSpent = lifeSteps.includes(Number(ready?.picked)) ? Number(ready.picked) : 0;
   const karmicSpent = (ready?.boxes ?? []).filter(name => /^karmic\d$/.test(name)).length;
