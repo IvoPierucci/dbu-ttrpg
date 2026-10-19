@@ -433,6 +433,17 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     return Object.entries(PROFILES).filter(([, profile]) => profile.label && Array.isArray(profile.foundations)
       && (!foundation || profile.foundations.includes(foundation))).map(([key, profile]) => [key, profile.label]);
   }
+  // Favored Technique's "select one of your Signature Techniques".
+  if (kind === "ownTechnique") {
+    return Array.from(actor?.items ?? []).filter(item => (item.type === "maneuver") && (item.system.tags ?? []).includes("signature")
+      && !item.system.signatureTechnique).sort((a, b) => a.name.localeCompare(b.name)).map(item => [item.id, item.name]);
+  }
+  // And its "an Advantage with a Technique Point Cost of 10 or less" - its first rank's; none that asks a choice of its own.
+  if (kind === "advantageUpTo10") {
+    const { traitsOfKind } = await import("./effects/traits.mjs");
+    return traitsOfKind("signature", "advantages").filter(each => (Number(each.tpCost) || 0) && (Number(each.tpCost) <= 10) && !each.choose)
+      .sort((a, b) => a.name.localeCompare(b.name)).map(each => [each.id, each.name]);
+  }
   // Synchronized Combatants' "Choose a Character": any in the world but yourself.
   // Chosen Rival's "(except a Minion)".
   if ((kind === "character") || (kind === "characterNotMinion")) {

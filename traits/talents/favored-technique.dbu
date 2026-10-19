@@ -1,0 +1,23 @@
+id: favored-technique
+name: Favored Technique
+talentCategory: technique
+prerequisites: N/A
+# (1) "select one of your Signature Techniques" and (2) "select an Advantage with a Technique Point Cost of 10 or less" - asked as
+# it is gained; changeable on its Options tab.
+choose: ownTechnique
+choose2: advantageUpTo10
+description: >
+  You have specialized in a single technique, to the point that it is associated with your presence on the battlefield.
+text: >
+  Favored Technique: You have specialized in a single technique, to the point that it is associated with your presence on the battlefield.
+  –Prerequisites: N/A
+  (1)-[Passive]: When you gain this Talent, select one of your Signature Techniques. This becomes your Favored Technique. When you use your Favored Technique through the Signature Technique Maneuver, it gains an Energy Charge.
+  (2)-[Passive]: When you gain this Talent, select an Advantage with a Technique Point Cost of 10 or less. Apply that Advantage to your Favored Technique. If this Signature Technique is gained by another Character through any effect, their version of this Signature Technique does not gain this Advantage.
+
+---
+
+[passive]
+# (1) Your Favored Technique, used through the Signature Technique Maneuver: an Energy Charge (use-maneuver.mjs).
+# (2) Its Advantage on your Favored Technique, no TP spent on it - a rank, where it has none - on yours alone: read off this
+# Talent by the Technique itself (item-maneuver.mjs favoredAdvantage).
+allow favored.technique;

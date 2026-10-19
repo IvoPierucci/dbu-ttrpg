@@ -5925,7 +5925,11 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     : 0)
     // Finish Sign: "When you use your declared Signature Technique, you must convert all of your Finisher stacks into
     // Energy Charges for that Signature Technique."
-    + (maneuver.signature ? await (await import("./chat.mjs")).spendFinisher(actor, maneuver.itemId) : 0);
+    + (maneuver.signature ? await (await import("./chat.mjs")).spendFinisher(actor, maneuver.itemId) : 0)
+    // Favored Technique (1): "When you use your Favored Technique through the Signature Technique Maneuver, it gains an
+    // Energy Charge."
+    + (((maneuver.id === "signature-technique") && declared && (actor.system.effects?.slots?.["favored.technique"] === true)
+      && (await import("./data/item-maneuver.mjs")).isFavoredTechnique(actor, maneuver.itemId)) ? 1 : 0);
 
   // The height, now that it is certain to happen. The mark is the file's - `[on used]`
   // gains it and clocks it - and this is the half a script cannot do: a rank is a field,

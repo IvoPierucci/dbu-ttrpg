@@ -909,9 +909,13 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
     // A Unique Ability gained from a file reads that file as it is now (unique.mjs withLibrary).
     this.fromLibrary = withLibrary(this, { getTrait, traitsOfKind });
     const features = this.signature?.features ?? [];
-    if (!features.length) return;
-    this.advantages = features.flatMap(entry =>
-      Array(Math.max(1, Number(entry.ranks) || 1)).fill(entry.id));
+    if (features.length) {
+      this.advantages = features.flatMap(entry =>
+        Array(Math.max(1, Number(entry.ranks) || 1)).fill(entry.id));
+    }
+    // Favored Technique (2): "Apply that Advantage to your Favored Technique" - no TP for it, a rank where it has none.
+    const favored = favoredAdvantage(this.parent);
+    if (favored && !(this.advantages ?? []).includes(favored)) this.advantages = [...(this.advantages ?? []), favored];
   }
 
   /** The usage limit, split into the shape the rest of the system reads. */
@@ -920,4 +924,25 @@ export default class DBUManeuverData extends foundry.abstract.TypeDataModel {
     if (!match) return null;
     return { amount: Number(match[1]), per: match[2].toLowerCase() };
   }
+}
+
+/**
+ * Favored Technique (1), (2): the Advantage its Talent chose, where this Item is the Technique it chose - the character's own,
+ * never another's copy. "" where none.
+ */
+export function favoredAdvantage(item) {
+  const actor = item?.parent;
+  if (!actor || (item.type !== "maneuver")) return "";
+  const talent = Array.from(actor.items ?? []).find(each => (each.type === "talent")
+    && (each.flags?.["dbu-ttrpg"]?.sourceId === "favored-technique"));
+  const chosen = talent?.system?.chosen ?? [];
+  if ((chosen.find(entry => entry.key === "favored-technique")?.value ?? "") !== item.id) return "";
+  return chosen.find(entry => entry.key === "favored-technique#2")?.value ?? "";
+}
+
+/** Favored Technique (1): whether this Item is the character's Favored Technique. */
+export function isFavoredTechnique(actor, itemId) {
+  const talent = Array.from(actor?.items ?? []).find(each => (each.type === "talent")
+    && (each.flags?.["dbu-ttrpg"]?.sourceId === "favored-technique"));
+  return Boolean(itemId) && ((talent?.system?.chosen ?? []).find(entry => entry.key === "favored-technique")?.value === itemId);
 }
