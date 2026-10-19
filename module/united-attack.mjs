@@ -207,7 +207,13 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   const { actionsLeft, refundActions, spendActions } = await import("./combat.mjs");
   // Neko Mimicry (5): the Ally whose Copied Technique it is joins "without spending an Action" - still adjacent.
   const free = Boolean(attack.mimicryAlly) && (attack.mimicryAlly === joiner.uuid);
-  const refused = whyNotUnite(joiner, attack, attacker, { actionsLeft: free ? () => 1 : actionsLeft });
+  // Superior Synchronization (3): "without spending an Action, if your targeted Ally is your Partner" - once an Encounter, a box.
+  const { partnerOf } = await import("./effects/conditions.mjs");
+  const encounter = globalThis.game?.combat?.id ?? "none";
+  const leader = attacker ?? globalThis.fromUuidSync?.(attack.attackerUuid ?? "") ?? null;
+  const syncOpen = !free && (joiner.system?.effects?.slots?.["sync.freeUnited"] === true) && leader
+    && (partnerOf(joiner)?.id === leader.id) && (joiner.getFlag?.("dbu-ttrpg", "superiorUnitedEncounter") !== encounter);
+  const refused = whyNotUnite(joiner, attack, attacker, { actionsLeft: (free || syncOpen) ? () => 1 : actionsLeft });
   if (refused) {
     ui.notifications.warn(refused);
     return null;
@@ -235,7 +241,7 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   // Joining a Duel: the wager is the one each Duel Clash asks for, not one made now.
   const cap = duel ? 0 : unitedWagerCap(joiner);
   const teamwork = teamworkOpen(joiner);
-  const answer = await askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork });
+  const answer = await askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork, syncOpen });
   if (!answer) return null;
 
   const choice = answer.itemId ? choices.find(entry => entry.technique.itemId === answer.itemId) : null;
@@ -259,11 +265,14 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
   }
 
   // Paid: 1 Action, then the Ki and the wager together - both come out of Capacity.
-  if (!free && !await spendActions(joiner, 1)) return null;
+  const synced = syncOpen && Boolean(answer.synced);
+  const noAction = free || synced;
+  if (!noAction && !await spendActions(joiner, 1)) return null;
   if (!await spendManeuverCost(joiner, { name: united.name }, cost + wager)) {
-    if (!free) await refundActions(joiner, 1);
+    if (!noAction) await refundActions(joiner, 1);
     return null;
   }
+  if (synced) await joiner.setFlag("dbu-ttrpg", "superiorUnitedEncounter", encounter);
   await recordManeuverUse(joiner, united);
   // Teamwork (2)'s once a Round, spent.
   const teamworkBonus = (teamwork && answer.teamwork) ? Math.max(1, Number(joiner.system?.tierOfPower) || 1) : 0;
@@ -306,7 +315,7 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
 }
 
 /** The question: how they join, what they bring, what they wager. */
-async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork = false }) {
+async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork = false, syncOpen = false }) {
   const ways = [
     `<label class="dbu-technique"><input type="radio" name="way" value="" checked/>
       <span class="dbu-technique-name">${escape(attack.profileLabel ?? "Same Profile")}</span>
@@ -339,7 +348,9 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, t
         <input type="number" name="wager" value="0" min="0" max="${cap}"/></label>`
         : `<p class="dbu-respond-hint">In a Duel you wager on each Duel Clash instead.</p>`}
       ${teamwork ? `<label class="dbu-wager" data-tooltip="Their Strike and Wound Rolls 1(T) higher for this Attacking Maneuver. 1/Round.">
-        <input type="checkbox" name="teamwork" checked/> <span>Teamwork</span></label>` : ""}`,
+        <input type="checkbox" name="teamwork" checked/> <span>Teamwork</span></label>` : ""}
+      ${syncOpen ? `<label class="dbu-wager" data-tooltip="Superior Synchronization: join your Partner without spending an Action. 1/Encounter.">
+        <input type="checkbox" name="synced"/> <span>No Action</span></label>` : ""}`,
     buttons: [
       { action: "confirm", label: "Join",
         callback: (event, button, dialog) => {
@@ -351,7 +362,8 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, t
             picked[input.name.replace(/^rank-/, "")] = Number(input.value) || 0;
           }
           return { itemId, picked, wager: Number(root.querySelector('input[name="wager"]')?.value) || 0,
-            teamwork: Boolean(root.querySelector('input[name="teamwork"]')?.checked) };
+            teamwork: Boolean(root.querySelector('input[name="teamwork"]')?.checked),
+            synced: Boolean(root.querySelector('input[name="synced"]')?.checked) };
         } },
       { action: "cancel", label: "Cancel" }
     ],

@@ -6282,6 +6282,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).answerPower(actor, card);
   // Master of Openings (2): an Opponent's Exploit, offered on the Power Up's card.
   if (card && maneuver.powerUp) await (await import("./chat.mjs")).openingsOffers(card, actor);
+  // Superior Synchronization (2): a Partner's Power Up or Transformation - the same offered on its card.
+  if (card && ["power-up", "transformation"].includes(maneuver.through?.id ?? maneuver.id)) {
+    await (await import("./chat.mjs")).superiorSyncOffers(card, actor, maneuver.through?.id ?? maneuver.id);
+  }
   // Karmic Assault's Karma: the attack has been made, so now it is paid.
   if (card) await payKarmicAssault(actor, maneuver, declared);
   // Time Freeze: the Frozen Turn's last Maneuver made - closed now, or, an attack, once it is done (chat.mjs).

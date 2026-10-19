@@ -642,6 +642,26 @@ export async function openingsOffers(message, user) {
 }
 
 /**
+ * Superior Synchronization (2): "If your Partner would use the Power Up or Transformation Maneuver while within your Melee Range,
+ * you may immediately use the same Maneuver as an Out-of-Sequence Maneuver." Offered on its card to each whose Partner it is,
+ * with it inside their Melee Range - once an Encounter, counted when taken.
+ */
+export async function superiorSyncOffers(message, user, maneuverId) {
+  if (!message || !user || !canvas?.tokens) return;
+  const { partnerOf } = await import("./effects/conditions.mjs");
+  const followers = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
+    .filter(other => other && (other.uuid !== user.uuid) && !other.system?.defeated
+      && (other.system?.effects?.slots?.["sync.followPower"] === true) && (partnerOf(other)?.id === user.id)
+      && (other.getFlag?.(SCOPE, "superiorSyncEncounter") !== (game.combat?.id ?? "none"))
+      && !whyNotWithinMelee(other, user, ""));
+  const name = getManeuver(maneuverId)?.name ?? maneuverId;
+  for (const other of followers) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId, maneuverName: name,
+      reason: `Superior Synchronization - ${user.name}`, grants: { superiorSync: true } } });
+  }
+}
+
+/**
  * Perfected Tactics (2): an Opponent within four Squares of you gaining a Combat Condition "provokes your Exploit Maneuver".
  * For each who has it and the Exploit - `actor` their Opponent, within four Squares - the Exploit at them, out of sequence: on the
  * card being settled as it was gained, or on a note of its own where none is. Taken, once a Round (takeOutOfSequence).
@@ -20358,6 +20378,14 @@ async function takeOutOfSequence(message, actor, offer) {
   if (frozenTurnOf(actor) || (frozenBy(actor) && !offer.surge)) {
     ui.notifications.warn("Time is frozen: no Out-of-Sequence Maneuvers.");
     return null;
+  }
+  // Superior Synchronization (2)'s, once an Encounter.
+  if (offer.grants?.superiorSync) {
+    if (actor.getFlag?.(SCOPE, "superiorSyncEncounter") === (game.combat?.id ?? "none")) {
+      ui.notifications.warn(`${actor.name}: Superior Synchronization - already used this Combat Encounter.`);
+      return null;
+    }
+    await actor.setFlag(SCOPE, "superiorSyncEncounter", game.combat?.id ?? "none");
   }
   // Power Gifter (2)'s, once a Round - the other of the two its note offered, or another Empower's, taken already.
   if (offer.grants?.powerGifterFrom

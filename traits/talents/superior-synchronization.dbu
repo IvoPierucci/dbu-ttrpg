@@ -1,0 +1,22 @@
+id: superior-synchronization
+name: Superior Synchronization
+talentCategory: teamwork
+prerequisites: Synchronized Combatants, Tier of Power 3+
+description: >
+  Your synchronicity with your partner is uncanny, to the point that it almost seems like you can communicate telepathically.
+text: >
+  Superior Synchronization: Your synchronicity with your partner is uncanny, to the point that it almost seems like you can communicate telepathically.
+  –Prerequisites: Synchronized Combatants, Tier of Power 3+
+  (1)-[Passive]: Reduce the Performance Skill Check for the Metamoran Fusion Dance to the Expert DC, if the Character you are attempting to fuse with is your Partner.
+  (2)-[1/Encounter]: If your Partner would use the Power Up or Transformation Maneuver while within your Melee Range, you may immediately use the same Maneuver as an Out-of-Sequence Maneuver.
+  (3)-[1/Encounter]: You may use the United Attack Maneuver without spending an Action, if your targeted Ally is your Partner.
+
+---
+
+[passive]
+# (1) The table's: the Metamoran Fusion Dance is not built.
+# (2) Your Partner's Power Up or Transformation, within your Melee Range: the same, out of sequence, offered to you on its
+# card - once an Encounter, counted when taken (chat.mjs superiorSyncOffers).
+allow sync.followPower;
+# (3) Joining your Partner's attack: a box in the United Attack's window - no Action, once an Encounter (united-attack.mjs).
+allow sync.freeUnited;
