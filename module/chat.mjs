@@ -28249,7 +28249,11 @@ function defeatClosed(actor, card) {
 }
 
 function momentTriggers(actor, card) {
-  if (defeatClosed(actor, card)) return [];
+  // Lion's Heart (2)'s kind: what answers Damage bringing them to nothing without the Triggered/Defeated Keyword - for the one at
+  // nothing, while the card waits, the Keyword's limit and silencing none of its business (the user's).
+  const lethal = ((card.moment === "defeated") && card.pending && (card.subjectUuid === actor?.uuid))
+    ? triggersFor(actor, ["lethal-damage"]) : [];
+  if (defeatClosed(actor, card)) return lethal;
   // Only what may answer it now - Born for Battle's "every even-numbered Combat Round".
   const holds = entry => {
     const requires = entry.program.blocks?.[0]?.requires;
@@ -28263,7 +28267,7 @@ function momentTriggers(actor, card) {
     // Spectator (5): none but the Spectator State's own at a turn's or a Round's start.
     .filter(entry => !((Number(actor.system?.states?.spectator) || 0) > 0)
       || !["start-of-turn", "start-of-round"].includes(card.moment) || (entry.sourceId === "state:spectator"));
-  if ((card.moment !== "start-of-round") || ((game.combat?.round ?? 0) < 2)) return own;
+  if ((card.moment !== "start-of-round") || ((game.combat?.round ?? 0) < 2)) return [...own, ...lethal];
   return [...own, ...triggersFor(actor, ["end-of-round"]).filter(entry => !automatic.has(entry.blockId) && !entry.armed)];
 }
 
@@ -28277,9 +28281,14 @@ function momentAnswerers(card) {
 }
 
 /** Whether anybody at all could still answer this Moment, whoever they belong to. */
-export function anyoneAnswers(moment, uuids) {
+export function anyoneAnswers(moment, uuids, subjectUuid = "") {
   return uuids.some(uuid => {
     const actor = fromUuidSync(uuid);
+    // Lion's Heart (2)'s kind, for the one at nothing: not the Keyword's, nor held to its one an Encounter - and, silenced,
+    // the only thing that may still answer it (`lethal-only`).
+    if (["defeated", "lethal-only"].includes(moment) && subjectUuid && (uuid === subjectUuid)
+      && triggersFor(actor, ["lethal-damage"]).length) return true;
+    if (moment === "lethal-only") return false;
     // Their one Triggered/Defeated of the Encounter already used: nothing of theirs answers another.
     if ((moment === "defeated") && (actor?.system?.talentUses?.encounter ?? []).includes("moment:defeated")) return false;
     return triggersFor(actor, [moment]).length;
@@ -28515,19 +28524,26 @@ async function answerMoment(message, card, actor) {
     return;
   }
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
+  // Lion's Heart (2)'s kind, ticked on the Defeated card: its own Moment - the Keyword's one an Encounter not spent by it.
+  const lethal = defeated ? chosen.filter(entry => String(entry.program.blocks?.[0]?.moment ?? "").split(/[(/]/)[0] === "lethal-damage") : [];
+  const keyword = chosen.filter(entry => !lethal.includes(entry));
   // What was ticked alone: what is Automatic answered the Moment when it happened, and is not answered twice.
-  await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold } : (defeated ? { damage: 0 } : {}),
-    { blocks: chosen.map(entry => entry.blockId) });
-  // Caught: the rescue counts against the one allowed per Encounter, as one answered by itself does (combat.mjs) - and the
-  // card says they are up. Not caught, and nobody else holding anything for it: the defeat stands.
+  if (keyword.length) {
+    await fireMoment(actor, card.moment, threshold ? { threshold: card.threshold } : (defeated ? { damage: 0 } : {}),
+      { blocks: keyword.map(entry => entry.blockId) });
+  }
+  if (lethal.length) await fireMoment(actor, "lethal-damage", { damage: 0 }, { blocks: lethal.map(entry => entry.blockId) });
+  // Caught: the rescue counts against the one allowed per Encounter, as one answered by itself does (combat.mjs) - unless
+  // Lion's Heart's kind alone did it, not the Keyword's - and the card says they are up. Not caught, and nobody else holding
+  // anything for it: the defeat stands.
   if (defeated) {
     const answered = { ...card, applied: [...new Set([...(card.applied ?? []), actor.uuid])] };
     if (!actor.system.defeated) {
-      await actor.update({ "system.defeatsEscaped": (actor.system.defeatsEscaped ?? 0) + 1 });
+      if (keyword.length) await actor.update({ "system.defeatsEscaped": (actor.system.defeatsEscaped ?? 0) + 1 });
       requestEdit(message, { type: "moment",
         moment: { ...answered, pending: false, title: `${actor.name} is back on their feet` } });
     }
-    else if (!anyoneAnswers("defeated", answered.subjects ?? [])) await settleDefeat(message, answered);
+    else if (!anyoneAnswers("defeated", answered.subjects ?? [], answered.subjectUuid)) await settleDefeat(message, answered);
   }
   // The end of the Round before, answered now - from each Trait whose effect was ticked for it.
   const late = chosen.filter(entry => String(entry.program.blocks?.[0]?.moment ?? "") === "end-of-round");

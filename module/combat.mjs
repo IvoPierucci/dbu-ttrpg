@@ -36,9 +36,9 @@ async function announce(moment, options) {
 }
 
 /** Whether anybody here holds something that answers this Moment. */
-async function anybodyAnswers(moment, uuids) {
+async function anybodyAnswers(moment, uuids, subjectUuid = "") {
   const { anyoneAnswers } = await import("./chat.mjs");
-  return anyoneAnswers(moment, uuids);
+  return anyoneAnswers(moment, uuids, subjectUuid);
 }
 
 /** Every character taking part, as Actors. */
@@ -1110,7 +1110,9 @@ export async function beginDefeat(actor, { silenced = false } = {}) {
     // settled here and announced as settled - a card saying "incoming defeat" that
     // nobody can answer is a step the table has to click past for no reason.
     const who = witnesses(actor);
-    const pending = silenced ? false : await anybodyAnswers("defeated", who);
+    // Silenced, still Lion's Heart's kind - not the Keyword's (the user's).
+    const pending = silenced ? await anybodyAnswers("lethal-only", [actor.uuid], actor.uuid)
+      : await anybodyAnswers("defeated", who, actor.uuid);
 
     if (!pending) {
       await fireMoment(actor, "defeat-resolved");

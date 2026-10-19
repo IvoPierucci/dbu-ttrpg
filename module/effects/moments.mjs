@@ -59,6 +59,13 @@ const TABLE = [
        + "defeat instead of your own."
   },
   {
+    key: "lethal-damage",
+    label: "Damage would reduce your Life Points to 0 or below",
+    provides: [CTX.DAMAGE],
+    doc: "Offered on the Defeated card beside `defeated`, to the one at nothing - but not the Triggered/Defeated Keyword's: "
+       + "not held to its one an Encounter, nor spending it, nor shut by what shuts that Keyword (the user's: Lion's Heart's)."
+  },
+  {
     key: "defeat-resolved",
     label: "Defeated, once it is settled",
     provides: [],
