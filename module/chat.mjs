@@ -14505,6 +14505,18 @@ export async function adamantineStrike(actor) {
   return offerOutOfSequence(actor, offer);
 }
 
+/**
+ * Lion's Heart (2): "you may use the Surge Maneuver as an Out-of-Sequence Maneuver. If you do, you must use a Healing Surge."
+ * The Maneuver itself - its own limit spent - a Healing Surge. None left, not spent.
+ */
+export async function lionsHeart(actor) {
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const own = Array.from(actor?.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === "surge"));
+  const surge = own ? definitionOf(own) : getManeuver("surge");
+  const used = surge ? await useManeuver(actor, { ...surge, surgeKind: "healing" }, { outOfSequence: true }) : null;
+  return used ? used : (await import("./effects/moments-runtime.mjs")).UNSPENT;
+}
+
 /** Jump Start (1): "Use the Power Up Maneuver as an Out-of-Sequence Maneuver." */
 export async function jumpStartPower(actor) {
   const used = await ownOutOfSequence(actor, "power-up");

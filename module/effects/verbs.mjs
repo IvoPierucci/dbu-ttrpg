@@ -212,6 +212,10 @@ export const VERBS = Object.freeze({
     doc: "Adamantine Muscle (2): the Basic Attack out of sequence, Physical or Energy, its Wound a quarter back as Life (chat.mjs "
        + "adamantineStrike)."
   },
+  lionsHeart: {
+    args: [0, 0],
+    doc: "Lion's Heart (2): the Surge Maneuver out of sequence, a Healing Surge (chat.mjs lionsHeart)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "

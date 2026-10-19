@@ -1,0 +1,22 @@
+id: lions-heart
+name: Lion’s Heart
+talentCategory: surge
+prerequisites: Never Surrender
+description: >
+  You do not give up the fight until your final breath is drawn.
+text: >
+  Lion’s Heart: You do not give up the fight until your final breath is drawn.
+  –Prerequisites: Never Surrender
+  (1)-[Passive]: You may use the Surge Maneuver an additional time per Combat Encounter.
+  (2)-[Triggered, 1/Encounter]: When you take an amount of Damage that would reduce your Life Points to 0 or below, you may use the Surge Maneuver as an Out-of-Sequence Maneuver. If you do, you must use a Healing Surge.
+
+---
+
+[passive]
+# (1)
+surge.uses += 1;
+
+# (2) Reduced to your minimum Life Points (the `defeated` Moment), chosen on the Defeated card - never Automatic, it hands over
+# an Out-of-Sequence Maneuver: the Surge Maneuver itself, its own limit spent, a Healing Surge (chat.mjs lionsHeart).
+[triggered/defeated, 1/encounter, outOfSequence, effect 2]
+lionsHeart();
