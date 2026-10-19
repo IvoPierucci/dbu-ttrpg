@@ -29,9 +29,22 @@ const escape = text => Handlebars.escapeExpression(String(text ?? ""));
 /** The Maneuver's own id, as its file names it. */
 export const UNITED_ATTACK = "united-attack-maneuver";
 
-/** "1/4 of your Max Capacity": the most a joiner may wager. */
+/** "1/4 of your Max Capacity": the most a joiner may wager - Teamwork (1)'s twice that. */
 export function unitedWagerCap(joiner) {
-  return Math.floor((Number(joiner?.system?.capacity?.max) || 0) / 4);
+  const doubled = joiner?.system?.effects?.slots?.["united.doubleWager"] === true;
+  return Math.floor((Number(joiner?.system?.capacity?.max) || 0) / 4) * (doubled ? 2 : 1);
+}
+
+/** Teamwork (2): its once a Round, not yet spent - the joiner's. */
+function teamworkOpen(joiner) {
+  const round = `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`;
+  return (joiner?.system?.effects?.slots?.["united.teamwork"] === true) && (joiner.getFlag?.("dbu-ttrpg", "teamworkRound") !== round);
+}
+
+/** Teamwork (2): "increase your targeted Ally's Strike and Wound Rolls by 1(T) for that Attacking Maneuver" - a row each. */
+export function unitedStrikeParts(attack) {
+  return (attack?.united ?? []).filter(entry => Number(entry.teamwork) > 0)
+    .map(entry => ({ label: `Teamwork (${entry.name})`, written: "+1(T)", value: Number(entry.teamwork) }));
 }
 
 /**
@@ -87,7 +100,7 @@ export function unitedWoundParts(attack) {
   return (attack?.united ?? []).map(entry => {
     const value = (duel && Number.isFinite(entry.modifier)) ? Math.floor(entry.modifier / 4) : entry.wound;
     return { label: `United Attack (${entry.name}, 1/${duel ? 4 : 2} ${entry.attributeLabel})`, value };
-  }).filter(part => part.value);
+  }).filter(part => part.value).concat(unitedStrikeParts(attack));
 }
 
 /** Characters with a Signature Technique of this name, not this one: whom United Attack may ask. */
@@ -221,7 +234,8 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
 
   // Joining a Duel: the wager is the one each Duel Clash asks for, not one made now.
   const cap = duel ? 0 : unitedWagerCap(joiner);
-  const answer = await askUnite(attack, joiner, { profileCost, choices, baseTier, cap });
+  const teamwork = teamworkOpen(joiner);
+  const answer = await askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork });
   if (!answer) return null;
 
   const choice = answer.itemId ? choices.find(entry => entry.technique.itemId === answer.itemId) : null;
@@ -251,6 +265,11 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
     return null;
   }
   await recordManeuverUse(joiner, united);
+  // Teamwork (2)'s once a Round, spent.
+  const teamworkBonus = (teamwork && answer.teamwork) ? Math.max(1, Number(joiner.system?.tierOfPower) || 1) : 0;
+  if (teamworkBonus) {
+    await joiner.setFlag("dbu-ttrpg", "teamworkRound", `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`);
+  }
   if (choice) {
     if (!choice.lowStakes && door) await recordManeuverUse(joiner, door);
     await recordManeuverUse(joiner, choice.technique);
@@ -277,6 +296,8 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
     wound: bonus.value,
     modifier: bonus.modifier,
     attributeLabel: (bonus.attribute === "magic") ? "Magic" : "Force",
+    // Teamwork (2): their Strike and Wound, 1(T) of yours.
+    ...(teamworkBonus ? { teamwork: teamworkBonus } : {}),
     advantages: added,
     answers,
     // Final Chance's Life, on the wager - not Ki, so not given back as Ki at a Duel's start.
@@ -285,7 +306,7 @@ export async function joinUnitedAttack(attack, joiner, { attacker = null, techni
 }
 
 /** The question: how they join, what they bring, what they wager. */
-async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap }) {
+async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap, teamwork = false }) {
   const ways = [
     `<label class="dbu-technique"><input type="radio" name="way" value="" checked/>
       <span class="dbu-technique-name">${escape(attack.profileLabel ?? "Same Profile")}</span>
@@ -316,7 +337,9 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap })
         data-tooltip="Only those of the Technique you use.">Advantages (up to ${baseTier} ranks)</p>${advantages}` : ""}
       ${cap ? `<label class="dbu-wager"><span>Ki Wager (max ${cap})</span>
         <input type="number" name="wager" value="0" min="0" max="${cap}"/></label>`
-        : `<p class="dbu-respond-hint">In a Duel you wager on each Duel Clash instead.</p>`}`,
+        : `<p class="dbu-respond-hint">In a Duel you wager on each Duel Clash instead.</p>`}
+      ${teamwork ? `<label class="dbu-wager" data-tooltip="Their Strike and Wound Rolls 1(T) higher for this Attacking Maneuver. 1/Round.">
+        <input type="checkbox" name="teamwork" checked/> <span>Teamwork</span></label>` : ""}`,
     buttons: [
       { action: "confirm", label: "Join",
         callback: (event, button, dialog) => {
@@ -327,7 +350,8 @@ async function askUnite(attack, joiner, { profileCost, choices, baseTier, cap })
           for (const input of box?.querySelectorAll('input[type="number"]') ?? []) {
             picked[input.name.replace(/^rank-/, "")] = Number(input.value) || 0;
           }
-          return { itemId, picked, wager: Number(root.querySelector('input[name="wager"]')?.value) || 0 };
+          return { itemId, picked, wager: Number(root.querySelector('input[name="wager"]')?.value) || 0,
+            teamwork: Boolean(root.querySelector('input[name="teamwork"]')?.checked) };
         } },
       { action: "cancel", label: "Cancel" }
     ],

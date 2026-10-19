@@ -1,4 +1,4 @@
-import { unitedPending, unitedWoundParts, withJoiner } from "./united-attack.mjs";
+import { unitedPending, unitedStrikeParts, unitedWoundParts, withJoiner } from "./united-attack.mjs";
 import { entryEffectLine } from "./racial.mjs";
 import { duelEscapeOpen, duelEscapeUndo, duelClashRows, duelFoundations, duelParticipants, duelRunning, duelSideOf, duelSides, duelTieLoss,
   duelTotal, duelUnderway, duelWaitingOn, duelWagerCap, endedByDuel, powerDuelWound, settleDuelClash, whyNotDuel,
@@ -22918,6 +22918,8 @@ function strikeParts(attacker, attack) {
     ...((attack?.experienced?.kind === "strike") ? [{ label: "Exploitation Strike", written: "+2(T)",
       value: 2 * Math.max(1, Number(attacker.system.tierOfPower) || 1) }] : []),
     strikeOf(attacker, attack?.foundation),
+    // Teamwork (2): a joiner's 1(T).
+    ...unitedStrikeParts(attack),
     ...favoredParts(attacker, attack, "strike"),
     ...profileStrikeParts(attacker, attack),
     ...profileSlotStrike(attacker, attack),
@@ -27579,7 +27581,10 @@ async function submitDuelWager(message, actor) {
   // The Duplicate wagers as the one it copies, and from Ki that is nobody's (the user's ruling).
   const mirrored = mirroredBy(attack.duel, actor.uuid);
   const copied = mirrored ? fromUuidSync(attack.attackerUuid) : null;
-  const cap = mirrored ? Math.floor((Number(copied?.system?.capacity?.max) || 0) / 2) : duelWagerCap(actor, { primary });
+  // Teamwork (1): joined through the United Attack, twice the 1/10th.
+  const teamworked = !primary && (actor.system?.effects?.slots?.["united.doubleWager"] === true)
+    && [...(attack.duel.united ?? []), ...(attack.united ?? [])].some(entry => entry.uuid === actor.uuid);
+  const cap = mirrored ? Math.floor((Number(copied?.system?.capacity?.max) || 0) / 2) : duelWagerCap(actor, { primary, doubled: teamworked });
   // The side's roll, before the wagers: whose dice they are - the attacker's, the Initiator's, or the copy's.
   const roller = (side === "attacker") ? fromUuidSync(attack.attackerUuid)
     : (attack.duel.mirror ? fromUuidSync(attack.attackerUuid) : fromUuidSync(attack.duel.initiatorUuid));

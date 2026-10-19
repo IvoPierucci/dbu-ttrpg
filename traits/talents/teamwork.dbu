@@ -1,0 +1,21 @@
+id: teamwork
+name: Teamwork
+talentCategory: teamwork
+prerequisites: N/A
+description: >
+  You are especially skilled in providing tactical support for your allies in combat.
+text: >
+  Teamwork: You are especially skilled in providing tactical support for your allies in combat.
+  –Prerequisites: N/A
+  (1)-[Passive]: Double the maximum amount you can Ki Wager when using the United Attack Maneuver.
+  (2)-[Triggered, 1/Round]: When using the United Attack Maneuver, increase your targeted Ally’s Strike and Wound Rolls by 1(T) for that Attacking Maneuver.
+
+---
+
+[passive]
+# (1) The United Attack's 1/4 of your Max Capacity twice over - and, joined to a Duel, its 1/10th on each Duel Clash (united-
+# attack.mjs unitedWagerCap; chat.mjs submitDuelWager).
+allow united.doubleWager;
+# (2) A box in the United Attack's own window, ticked by default, once a Round: their Strike and Wound 1(T), your Tier, for that
+# Attacking Maneuver (united-attack.mjs).
+allow united.teamwork;

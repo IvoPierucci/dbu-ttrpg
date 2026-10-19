@@ -144,9 +144,10 @@ export function whyNotDuel(actor, attack, { counterLeft = 1 } = {}) {
  * their current Capacity)" for a primary, "up to 1/10th of their Max Capacity" for everyone else -
  * and never Ki they have not got.
  */
-export function duelWagerCap(actor, { primary = false } = {}) {
+export function duelWagerCap(actor, { primary = false, doubled = false } = {}) {
   const max = Number(actor?.system?.capacity?.max) || 0;
-  const cap = Math.floor(max / (primary ? 2 : 10));
+  // Teamwork (1)'s, a United Attack's joiner: twice the 1/10th.
+  const cap = Math.floor(max / (primary ? 2 : 10)) * (doubled ? 2 : 1);
   return Math.max(0, Math.min(cap, Number(actor?.system?.ki?.value) || 0));
 }
 
