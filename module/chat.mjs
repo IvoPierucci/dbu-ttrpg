@@ -16941,6 +16941,22 @@ export async function mentalWarfare(actor, knockedUuid) {
   return offerOutOfSequence(actor, offer);
 }
 
+/**
+ * Opportunist (1): "If an Ally knocks an Opponent through a Health Threshold, you may use the Exploit Maneuver against that
+ * Opponent." Offered on your latest card - one made for it where there is none - at them; its 1/Round the block's, and (2)'s
+ * question as it is taken.
+ */
+export async function opportunist(actor, knockedUuid) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  const knocked = fromUuidSync(knockedUuid ?? "");
+  if (!actor || !knocked) return UNSPENT;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "exploit", maneuverName: "Exploit",
+    targetUuid: knocked.uuid, reason: `Opportunist - at ${knocked.name}`, grants: { opportunist: true } };
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
+}
+
 /** Mental Warfare (2)'s Insult, out of sequence at that Opponent. */
 async function insultOutOfSequence(actor, targetUuid) {
   const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
@@ -20530,6 +20546,17 @@ async function takeOutOfSequence(message, actor, offer) {
       await actor.setFlag(SCOPE, "sinisterRound", roundKey());
       if (pay === "negative") {
         await setResource(actor, "negativeenergy", negative - 2);
+        offer = { ...offer, counterPaid: true };
+      }
+    }
+    // Opportunist (2): "you may do so without spending a Counter Action" - once an Encounter, asked.
+    if (offer.grants?.opportunist && !offer.counterPaid
+      && (actor.getFlag?.(SCOPE, "opportunistEncounter") !== (game.combat?.id ?? "none"))) {
+      const pay = await askPlayerChoice(actor, `${actor.name}: Opportunist`,
+        [{ value: "counter", label: "A Counter Action" }, { value: "free", label: "No Counter Action (1/Encounter)" }]);
+      if (!pay) return;
+      if (pay === "free") {
+        await actor.setFlag(SCOPE, "opportunistEncounter", game.combat?.id ?? "none");
         offer = { ...offer, counterPaid: true };
       }
     }

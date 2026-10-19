@@ -305,6 +305,15 @@ const PREDICATES = {
     return opponentNear(self, knocked);
   },
 
+  /** Opportunist (1): knocked through by an Ally of yours - not you (moment opponent-knocked). */
+  knockedByAlly: scope => {
+    const self = scope.data?.parent;
+    const knocker = globalThis.fromUuidSync?.(scope.context?.knockerUuid ?? "");
+    if (!self || !knocker || (knocker.uuid === self.uuid)) return false;
+    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+    return (side(knocker) !== undefined) && (side(knocker) === side(self));
+  },
+
   /** Critical Wound (2): the attack that knocked them through a Critical Result on its Wound Roll (moment knock-through). */
   woundCriticalKnock: scope => Boolean(scope.context?.woundCritical),
 

@@ -1205,7 +1205,7 @@ async function announceThreshold(actor, before, knockedBy = "", pinpoint = false
     // Whoever answers anybody's knocking through - Wrath of the Dragon's "you or an Ally", Mental Warfare's "by an Attacking
     // Maneuver".
     const { answerFor } = await import("./chat.mjs");
-    const answering = new Set(["wrath-of-the-dragon", "mental-warfare"]);
+    const answering = new Set(["wrath-of-the-dragon", "mental-warfare", "opportunist"]);
     for (const other of new Map((canvas?.tokens?.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()) {
       if (!other || other.system?.defeated
         || !Array.from(other.items ?? []).some(item => answering.has(item.flags?.["dbu-ttrpg"]?.sourceId))) continue;

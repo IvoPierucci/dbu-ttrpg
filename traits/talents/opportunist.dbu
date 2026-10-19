@@ -1,0 +1,21 @@
+id: opportunist
+name: Opportunist
+talentCategory: teamwork
+prerequisites: N/A
+description: >
+  You leap to the ready anytime an opportunity to injure an enemy presents itself.
+text: >
+  Opportunist: You leap to the ready anytime an opportunity to injure an enemy presents itself.
+  –Prerequisites: N/A
+  (1)-[Triggered, 1/Round]: If an Ally knocks an Opponent through a Health Threshold, you may use the Exploit Maneuver against that Opponent.
+  (2)-[1/Encounter]: If you would use the Exploit Maneuver due to the first effect of this Trait, you may do so without spending a Counter Action.
+
+---
+
+# (1) An Ally knocking an Opponent through a Health Threshold (the `opponent-knocked` Moment): the Exploit at them, offered on
+# your latest card - never Automatic, it hands over a Maneuver (chat.mjs opportunist).
+[triggered/opponent-knocked, 1/round, outOfSequence, effect 1]
+requires knockedByAlly && knockedOpponent;
+opportunist();
+
+# (2) That Exploit taken: asked whether without its Counter Action, once an Encounter (chat.mjs takeOutOfSequence).

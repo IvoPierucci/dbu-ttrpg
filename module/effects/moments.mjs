@@ -159,7 +159,7 @@ const TABLE = [
   { key: "opponent-knocked", label: "Someone is knocked through a Health Threshold by an Attacking Maneuver", provides: [],
     doc: "Fired for whoever has an effect answering it as anybody is knocked through a Health Threshold by an Attacking "
        + "Maneuver, with `knockedUuid` and `knockerUuid` (combat.mjs) - Wrath of the Dragon's (you or an Ally: knockedNear), "
-       + "Mental Warfare's (anybody's). What is the player's is asked in a window first." },
+       + "Mental Warfare's (anybody's), Opportunist's (an Ally's: knockedByAlly). What is the player's is asked in a window first." },
   { key: "opponent-steadfast-failed", label: "An Opponent fails a Steadfast Check", provides: [],
     doc: "Fired for whoever has an effect answering it as anybody fails a Steadfast Check, with `failedUuid` (chat.mjs "
        + "steadfastFailed) - Wrath of the Dragon's. What is the player's is asked in a window first." },
