@@ -3878,6 +3878,10 @@ export function maneuverKiCost(maneuver, declared, actor) {
   if (actor && (Number(slots?.["maneuvers.kiCost"]?.add) || 0)) cost = Math.max(0, applySlot(slots, "maneuvers.kiCost", cost));
   // A Unique Ability's, by its type - God of Magic's 2(T) off every Magical one.
   if (actor && maneuver.uniqueType) cost = applySlot(slots, `unique.${maneuver.uniqueType}.kiCost`, cost);
+  // Any Unique Ability's - Bag of Tricks' 1(T) off - never below nothing.
+  if (actor && (maneuver.tags ?? []).includes("uniqueAbility") && (Number(slots?.["unique.kiCost"]?.add) || 0)) {
+    cost = Math.max(0, applySlot(slots, "unique.kiCost", cost));
+  }
   // The Energy Charge Maneuver, used once already this Combat Round - Energy Core's 1(T) off the next.
   if (actor && maneuver.charge && (actor.getFlag?.("dbu-ttrpg", "energyChargeRound") === roundNow())) {
     cost = applySlot(slots, "energyCharge.again.kiCost", cost);

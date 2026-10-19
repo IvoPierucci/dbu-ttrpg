@@ -278,6 +278,11 @@ const TABLE = [
        + "defendingClashBonus) - Battle Tension's." },
   { key: "skills.allBonus", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to the Skill Bonus of every Skill - Thief's." },
+  { key: "unique.kiCost", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to every Unique Ability's Ki Cost, never below nothing (Bag of Tricks'; maneuvers.mjs maneuverKiCost)." },
+  { key: "clash.uniqueAny", phase: PHASES.CORE, kind: N, ops: NUMERIC,
+    doc: "Added to your side of any Clash but a Skill Clash a Unique Ability of yours opens against an Opponent - a Skill "
+       + "Clash's Natural Result 1 instead (Bag of Tricks'; chat.mjs bagClashBonus, bagNatural)." },
   { key: "clash.unique", phase: PHASES.CORE, kind: N, ops: NUMERIC,
     doc: "Added to a Might or Saving Throw Clash a Unique Ability of yours opens (chat.mjs uniqueClashBonus)." },
   { key: "defend.byTension", phase: PHASES.REACTIVE, kind: F, ops: ["set"],

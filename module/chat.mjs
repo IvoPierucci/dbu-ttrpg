@@ -1173,6 +1173,27 @@ function uniqueClashBonus(actor, clash, uuid) {
  * Whimsical Magic (3): "Increase the Natural Result of your Clashes using Skill Ranks or Saving Throws made through the
  * effects of one of your Unique Abilities by 1." The challenger's side, a Unique Ability of theirs having opened it.
  */
+/**
+ * Bag of Tricks (2): "If you make a Clash against an Opponent through the effects of a Unique Ability ... increase your Dice Score
+ * for that Clash by 1(T). If the Clash is a Skill Clash, increase your Natural Result by 1 for that Clash instead." The one who
+ * opened it, through a Unique Ability's own effects - its name - against one not an Ally.
+ */
+function bagOpen(actor, clash, uuid) {
+  if ((uuid !== clash?.challengerUuid) || !(Number(actor?.system?.effects?.slots?.["clash.uniqueAny"]?.add) || 0)) return false;
+  if (!clash.defenderUuid || alliesOnScene(actor).some(ally => ally.uuid === clash.defenderUuid)) return false;
+  return Boolean(uniqueClashOf(clash));
+}
+
+function bagClashBonus(actor, clash, uuid) {
+  if (((clash?.category ?? "skill") === "skill") || !bagOpen(actor, clash, uuid)) return [];
+  const slot = actor.system.effects.slots["clash.uniqueAny"];
+  return [{ label: (slot.parts ?? []).map(part => part.source).find(Boolean) ?? "Through a Unique Ability", value: Number(slot.add) }];
+}
+
+function bagNatural(actor, clash, uuid) {
+  return (((clash?.category ?? "skill") === "skill") && bagOpen(actor, clash, uuid)) ? 1 : 0;
+}
+
 function uniqueNatural(actor, clash, uuid) {
   return ((uuid === clash?.challengerUuid) && (actor?.system?.effects?.slots?.["whimsical.uniqueNatural"] === true)
     && uniqueClashOf(clash)) ? 1 : 0;
@@ -1221,9 +1242,11 @@ async function uniqueClashWon(message) {
     return;
   }
   await message.setFlag(SCOPE, CLASH_FLAG, { ...clash, uniqueWon: true });
-  await offerTriggers(winner, "unique-clash-won");
+  // Whether the Unique Ability was the winner's own - Bag of Tricks'.
+  const context = { opponentUuid: loser, ownUnique: won === "challenger" };
+  await offerTriggers(winner, "unique-clash-won", context);
   const { fireMoment } = await import("./effects/moments-runtime.mjs");
-  await fireMoment(winner, "unique-clash-won", { opponentUuid: loser });
+  await fireMoment(winner, "unique-clash-won", context);
 }
 
 /**
@@ -8832,7 +8855,7 @@ function clashParts(kind, actor, clash, uuid) {
   return [kind.of(actor, clash, uuid), ...(kind.parts ? kind.parts(actor, clash, uuid) : []),
     ...((uuid === clash.defenderUuid) ? openedAgainst(actor) : []),
     ...uniqueClashBonus(actor, clash, uuid), ...shardClashBonus(actor, clash, uuid), ...defendingClashBonus(actor, clash, uuid),
-    ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid)];
+    ...thiefClashBonus(actor, clash, uuid), ...beatdownClashBonus(actor, clash, uuid), ...bagClashBonus(actor, clash, uuid)];
 }
 
 /** Beat-down Tactics (1): "Increase your Might Clashes against an Opponent with a Combat Condition by 1(T)." */
@@ -8976,6 +8999,8 @@ const CLASH_ROLLS = ({
           : 0)
         // Whimsical Magic (3): opened by a Unique Ability of theirs.
         + uniqueNatural(actor, clash, uuid)
+        // Bag of Tricks (2): the same, against an Opponent.
+        + bagNatural(actor, clash, uuid)
     }),
 
     prompt: (actor, clash, uuid) => ((uuid === clash.defenderUuid)
@@ -14237,6 +14262,45 @@ export async function spectatorTurnStart(actor) {
   if (answer !== "leave") return;
   const { leaveState } = await import("./effects/moments-runtime.mjs");
   return leaveState(actor, "spectator");
+}
+
+/**
+ * Bag of Tricks (3): "you may use a Unique Ability that requires Standard Actions immediately as an Out-of-Sequence Maneuver. If
+ * you do, you still have to pay the Action Cost but the Action Cost is reduced by 1". Offered on your latest card - one made for
+ * it where there is none; which asked as it is taken (takeBagOfTricks).
+ */
+export async function bagOfTricks(actor) {
+  const { UNSPENT } = await import("./effects/moments-runtime.mjs");
+  if (!actor || !bagUniques(actor).length) return UNSPENT;
+  const offer = { actorUuid: actor.uuid, actorName: actor.name, maneuverId: "", maneuverName: "Unique Ability",
+    reason: "Bag of Tricks - its Actions 1 fewer", bagOfTricks: true };
+  const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
+  if (card) return requestEdit(card, { type: "offer", offer });
+  return offerOutOfSequence(actor, offer);
+}
+
+/** Their Unique Abilities that require Standard Actions. */
+function bagUniques(actor) {
+  return Array.from(actor?.items ?? []).filter(item => (item.type === "maneuver") && (item.system.tags ?? []).includes("uniqueAbility")
+    && (item.system.type === "standard"));
+}
+
+/** Bag of Tricks (3), taken: which Unique Ability, its Actions less 1 paid, then used out of sequence. */
+async function takeBagOfTricks(message, actor) {
+  const { useManeuver, definitionOf } = await import("./use-maneuver.mjs");
+  const uniques = bagUniques(actor);
+  if (!uniques.length) return ui.notifications.warn(`${actor.name}: no Unique Ability that requires Standard Actions.`);
+  const id = (uniques.length === 1) ? uniques[0].id : await askPlayerChoice(actor, `${actor.name}: Bag of Tricks`,
+    uniques.map(item => ({ value: item.id, label: item.name })));
+  const item = uniques.find(each => each.id === id);
+  if (!item) return null;
+  const maneuver = definitionOf(item);
+  const actions = Math.max(0, (Number(maneuver.actionCost) || 1) - 1);
+  if (actions && !await spendActions(actor, actions, "standard")) return null;
+  const used = await useManeuver(actor, maneuver, { outOfSequence: true });
+  if (!used && actions) await refundActions(actor, actions);
+  if (used) requestEdit(message, { type: "offerTaken", actorUuid: actor.uuid });
+  return used;
 }
 
 /** Desperate Support (3)'s effects - the mark each leaves, and whether its number is the supporter's base Tier. */
@@ -20573,6 +20637,7 @@ async function takeOutOfSequence(message, actor, offer) {
   if (offer.terrifyingSpeed) return takeTerrifyingSpeed(message, actor);
   if (offer.terrifyingPresence) return terrifyOutOfSequence(actor);
   if (offer.mentalWarfare) return insultOutOfSequence(actor, offer.targetUuid);
+  if (offer.bagOfTricks) return takeBagOfTricks(message, actor);
   if (offer.frequentFlyer) return takeFrequentFlyer(message, actor);
   if (offer.ownOutOfSequence) return ownOutOfSequence(actor, offer.ownOutOfSequence);
   // Wild Counter's, once a Round.

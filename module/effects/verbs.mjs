@@ -170,6 +170,11 @@ export const VERBS = Object.freeze({
     doc: "Enhanced Search (5): a Character picked, a Clash (Perception/Clairvoyance vs Stealth/Concealment) - won, Marked till "
        + "the start of your next turn (chat.mjs enhancedMark)."
   },
+  bagOfTricks: {
+    args: [0, 0],
+    doc: "Bag of Tricks (3): a Unique Ability of Standard Actions out of sequence, its Actions 1 fewer, offered on your latest "
+       + "card (chat.mjs bagOfTricks)."
+  },
   desperateRally: {
     args: [0, 0],
     doc: "Desperate Support (2): Rallied on every Ally on the scene, Combat Rolls 1(bT), till the next Combat Round ends "

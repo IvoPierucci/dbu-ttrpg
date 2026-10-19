@@ -564,6 +564,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "rivalInEncounter", "besideRival",
   // The Spectator's Life and Ki given up this Round for Desperate Support (3)'s effect.
   "desperateForgone",
+  // A Clash your own Unique Ability opened, won against an Opponent (Bag of Tricks').
+  "ownUniqueWon",
   // A Bonded Ally standing (Spiritual Warrior's).
   "bondedAlly",
   // Ki gained through your Empower (Spiritual Pacifist's).

@@ -408,6 +408,14 @@ const PREDICATES = {
   rivalOpponent: scope => rivalSide(scope.data?.parent) === "opponent",
   rivalAlly: scope => rivalSide(scope.data?.parent) === "ally",
   rivalOnlyAlly: scope => rivalOnlyAlly(scope.data?.parent),
+  // Bag of Tricks (3): the Clash won one your own Unique Ability opened, against an Opponent (moment unique-clash-won).
+  ownUniqueWon: scope => {
+    const self = scope.data?.parent;
+    const loser = globalThis.fromUuidSync?.(scope.context?.opponentUuid ?? "");
+    if (!self || !loser || !scope.context?.ownUnique) return false;
+    const side = who => who?.getActiveTokens?.(false, true)?.[0]?.disposition;
+    return side(loser) !== side(self);
+  },
   // Desperate Support (3): "forgo regaining Life and Ki Points" - this Round's, chosen as the turn began.
   desperateForgone: scope => scope.data?.parent?.getFlag?.("dbu-ttrpg", "desperateForgone")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
