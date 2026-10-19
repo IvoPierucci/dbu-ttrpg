@@ -1,0 +1,14 @@
+id: reserved-mark
+name: Reserved
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Reserved Combatant (3)'s - the Holding Back Maneuver's effects ignored for one Maneuver, its stacks
+# still held (maneuvers/holding-back.dbu).
+combatCondition: no
+source: Core Rule
+description: >
+  Reserved Combatant: the effects of your Holding Back stacks ignored for the duration of this Maneuver - the stacks still held.
+text: >
+  Reserved Combatant (3): When you use an Attacking Maneuver, a Unique Ability, or are targeted by an Attacking Maneuver/Unique Ability, you can ignore your stacks of Holding Back for the duration of that Maneuver.
+
+---

@@ -74,12 +74,13 @@ text: >
 # unreachable through the Maneuver, and a GM who sets the stacks by hand should get the
 # floor rather than a Tier of Power below 1 - the reading that cannot go wrong either way.
 [passive]
-# Warm Up (1)'s Warmed Up: these effects ignored - the stacks still held, for what reads them (Slow Starter's).
-if (!hasCondition("warm-up-mark") && holdingback.stacks > 0 && holdingback.stacks < baseTierOfPower) {
+# Warm Up (1)'s Warmed Up, Reserved Combatant (3)'s Reserved: these effects ignored - the stacks still held, for what reads
+# them (Slow Starter's).
+if (!hasCondition("warm-up-mark") && !hasCondition("reserved-mark") && holdingback.stacks > 0 && holdingback.stacks < baseTierOfPower) {
     tierOfPower -= holdingback.stacks;
 }
 
-if (!hasCondition("warm-up-mark") && holdingback.stacks >= baseTierOfPower && holdingback.stacks > 0) {
+if (!hasCondition("warm-up-mark") && !hasCondition("reserved-mark") && holdingback.stacks >= baseTierOfPower && holdingback.stacks > 0) {
     tierOfPower = 1;
     combatRolls -= 1(bT);
 }
@@ -87,7 +88,7 @@ if (!hasCondition("warm-up-mark") && holdingback.stacks >= baseTierOfPower && ho
 # "Increase the Skill Bonus for your Concealment Skill Checks by 1 (max. 3)." The cap is on
 # what the stacks are worth rather than on the stacks - a character with a base Tier of 5
 # may hold five and still only gets three.
-if (!hasCondition("warm-up-mark") && holdingback.stacks > 0) {
+if (!hasCondition("warm-up-mark") && !hasCondition("reserved-mark") && holdingback.stacks > 0) {
     skill.concealment.bonus += min(holdingback.stacks, 3);
 }
 

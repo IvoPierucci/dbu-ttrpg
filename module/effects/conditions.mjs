@@ -423,6 +423,10 @@ const PREDICATES = {
   /** The Focused Foundation is that one - Archetype Focus's, said as `focused.<foundation>` (Archetype Defense's). */
   focusedOn: (scope, name) => scope.data?.effects?.slots?.[`focused.${String(name?.value ?? name ?? "").toLowerCase()}`] === true,
 
+  /** The Maneuver this Moment names is an Attacking Maneuver or a Unique Ability - Reserved Combatant (3)'s. */
+  attackOrUnique: scope => Boolean(scope.context?.maneuver?.attacking)
+    || (scope.context?.maneuver?.tags ?? []).includes("uniqueAbility") || Boolean(scope.context?.maneuver?.uniqueType),
+
   /** A Snack eaten this Combat Round - Snack Motivated's. */
   snackThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "snackRound") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,

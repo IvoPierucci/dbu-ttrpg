@@ -13343,6 +13343,7 @@ async function frozenTurnAfterAttack(attack, message = null) {
   await boomEnds(attack);
   await rangerRetreatEnds(attack);
   await silentFootstepsAttacked(attack);
+  await reservedEnds(attack);
   // Glass Shards (5), (7): "After concluding that Attacking Maneuver, that Character stops being a Shard Carrier."
   if (attack?.shardEnds) await shardsSpent(attack.shardEnds);
   const attacker = fromUuidSync(attack?.attackerUuid ?? "");
@@ -14434,6 +14435,18 @@ async function ownOutOfSequence(actor, id) {
   const own = Array.from(actor?.items ?? []).find(each => (each.type === "maneuver") && (each.flags?.[SCOPE]?.sourceId === id));
   const maneuver = own ? definitionOf(own) : getManeuver(id);
   return maneuver ? useManeuver(actor, maneuver, { outOfSequence: true }) : null;
+}
+
+/**
+ * Reserved Combatant (3): "for the duration of that Maneuver" - the attack concluded, Reserved off whoever made it and whoever it
+ * was aimed at; a Unique Ability that is no attack, once its card is made (use-maneuver.mjs).
+ */
+export async function reservedEnds(attack, actor = null) {
+  const people = actor ? [actor] : [fromUuidSync(attack?.attackerUuid ?? ""), ...attackTargets(attack ?? {}).map(entry => fromUuidSync(entry.uuid))];
+  const { setCondition } = await import("./conditions.mjs");
+  for (const who of people.filter(Boolean)) {
+    if ((Number(who.system?.conditions?.["reserved-mark"]) || 0) > 0) await setCondition(who, "reserved-mark", 0);
+  }
 }
 
 /** Slow Starter (3): "Use the Holding Back Maneuver as an Out-of-Sequence Maneuver." */

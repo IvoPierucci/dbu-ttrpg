@@ -1,0 +1,38 @@
+id: reserved-combatant
+name: Reserved Combatant
+talentCategory: starter
+prerequisites: Slow Starter
+resource: patience
+resourceMax: 10
+resourceLabel: Patience
+description: >
+  Your patience in battle is rewarded, and you are always ready to unleash your full power in an emergency.
+text: >
+  Reserved Combatant: Your patience in battle is rewarded, and you are always ready to unleash your full power in an emergency.
+  –Prerequisites: Slow Starter
+  (1)-[Triggered/Start of Combat Round, Resource]: If you are Holding Back, gain a stack of Patience (up to 10).
+  (2)-[Automatic, 1/Encounter]: When you lose all stacks of Holding Back, lose all Patience Stacks and regain x(bT) Ki Points, where x is equal to 2x the amount of Patience stacks you lost.
+  (3)-[Triggered, 3/Round]: When you use an Attacking Maneuver, a Unique Ability, or are targeted by an Attacking Maneuver/Unique Ability, you can ignore your stacks of Holding Back for the duration of that Maneuver.
+
+---
+
+# (1) Automatic by default, its Triggered/Automatic button.
+[triggered/start-of-round, effect 1]
+requires hasResource("holdingback");
+patience.stacks += 1;
+
+# (2) The last stack of Holding Back gone in a Combat (the `holding-back-lost` Moment), with Patience held.
+[automatic/holding-back-lost, 1/encounter, effect 2]
+requires hasResource("patience");
+ki.value += patience.stacks * 2(bT);
+patience.stacks = 0;
+
+# (3) Asked in the window as you declare an Attacking Maneuver or a Unique Ability, or as you Defend against an attack - three
+# times a Round: Reserved (a mark), the Holding Back Maneuver's effects left out (its stacks still held), till that Maneuver is
+# concluded (chat.mjs reservedEnds; use-maneuver.mjs). Being targeted by a Unique Ability that is no attack - the table's.
+[triggered/declare-maneuver, 3/round, effect 3]
+requires attackOrUnique;
+gain("reserved-mark");
+
+[triggered/defending, 3/round, effect 3]
+gain("reserved-mark");

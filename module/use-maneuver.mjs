@@ -6184,6 +6184,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
   // under it.
   await recordManeuverType(actor, outOfSequence ? "outOfSequence" : maneuver.type, { messageId: card?.id,
     maneuverId: maneuver.through?.id ?? maneuver.id, profile: declared?.profile ?? "" });
+  // Reserved Combatant (3): a Unique Ability that is no attack - its duration over with its card.
+  if (!declared && ((Number(actor.system.conditions?.["reserved-mark"]) || 0) > 0)) {
+    await (await import("./chat.mjs")).reservedEnds(null, actor);
+  }
 
   // Whimsical Magic (8): the same Clash at every other Opponent not at Long Range.
   if (card && trickAll.length) {
