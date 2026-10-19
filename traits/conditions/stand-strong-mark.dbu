@@ -1,0 +1,17 @@
+id: stand-strong-mark
+name: Stand Strong
+kind: conditions
+maxStacks: 10
+# Not a Combat Condition: Desperate Support's, on an Ally, held on the supporter's clock.
+combatCondition: no
+source: Core Rule
+description: >
+  Desperate Support: Soak Value and Damage Reduction 1(bT) higher, the supporter's base Tier, until the start of their next turn.
+text: >
+  Stand strong!: The Ally has their Soak Value and Damage Reduction increased by 1(bT) until the start of your next turn.
+
+---
+
+[passive]
+soakValue += stacks;
+damageReduction += stacks;

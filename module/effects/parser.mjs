@@ -562,6 +562,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "rivalOpponent", "rivalAlly", "rivalOnlyAlly",
   // Your Rival in the Combat Encounter, on a Square adjacent to you (Eternal Rival's).
   "rivalInEncounter", "besideRival",
+  // The Spectator's Life and Ki given up this Round for Desperate Support (3)'s effect.
+  "desperateForgone",
   // A Bonded Ally standing (Spiritual Warrior's).
   "bondedAlly",
   // Ki gained through your Empower (Spiritual Pacifist's).

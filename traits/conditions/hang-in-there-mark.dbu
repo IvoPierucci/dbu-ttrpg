@@ -1,0 +1,16 @@
+id: hang-in-there-mark
+name: Hang in There
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Desperate Support's, on an Ally, held on the supporter's clock.
+combatCondition: no
+source: Core Rule
+description: >
+  Desperate Support: no Health Threshold Penalties until the start of the supporter's next turn.
+text: >
+  Hang in there!: The Ally may ignore any Health Threshold Penalties until the start of your next turn.
+
+---
+
+[passive]
+threshold.penalty = 0;

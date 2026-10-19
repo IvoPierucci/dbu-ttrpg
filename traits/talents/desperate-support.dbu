@@ -1,0 +1,33 @@
+id: desperate-support
+name: Desperate Support
+talentCategory: teamwork
+prerequisites: N/A
+description: >
+  You are able to offer assistance to your friends even when you cannot fight by their side.
+text: >
+  Desperate Support: You are able to offer assistance to your friends even when you cannot fight by their side.
+  –Prerequisites: N/A
+  (1)-[1/Encounter]: While you are Defeated, you may use the Empower Maneuver (as if you spent 2 Actions), or apply one of the listed effects of the third effect of Desperate Support as an Instant Maneuver.
+  (2)-[Triggered/Defeated]: Increase all of your Allies’ Combat Rolls by 1(bT) until the end of the next Combat Round.
+  (3)-[Triggered, 1/Round]: When you trigger the third effect of the Spectator State, you can choose to forgo regaining Life and Ki Points to instead apply one of the following effects:
+  * Go all out! [Triggered, 1/Round]: The Ally you targeted with the first effect of the Spectator State may use the Power Up Maneuver or Transformation Maneuver as an Out-of-Sequence Maneuver.
+  * Hang in there! [Triggered, 1/Round]: The Ally you targeted with the first effect of the Spectator State may ignore any Health Threshold Penalties until the start of your next turn.
+  * Stand strong! [Triggered, 1/Round]: The Ally you targeted with the first effect of the Spectator State has their Soak Value and Damage Reduction increased by 1(bT) until the start of your next turn.
+  * Dance for us. [Triggered, 1/Round]: The Ally you targeted with the first effect of the Spectator State has their Strike and Dodge Rolls increased by 1(bT) until the start of your next turn.
+  * You can do it! [Triggered, 1/Round]: The Ally you targeted with the first effect of the Spectator State has their Stress Bonus increased by 2 until the start of your next turn.
+
+---
+
+[passive]
+# (1) Defeated: a button on the Empower's row, once an Encounter - the Empower as if 2 Actions were spent, or one of (3)'s
+# effects at an Ally, as an Instant Maneuver (chat.mjs desperateDefeated).
+allow desperate.defeated;
+# (3) Staying a Spectator as your turn begins: its question offers (3)'s effects instead of the Life and Ki, once a Round - at
+# the Ally you last Cheered (chat.mjs spectatorTurnStart; the Spectator State's `desperateForgone`).
+allow desperate.spectator;
+
+# (2) Defeated (the `defeated` Moment), ticked on the Defeated card - a Triggered/Defeated effect, the Keyword's one of the
+# Encounter: Rallied on each Ally on the scene - Combat Rolls 1(bT), your base Tier - till the next Combat Round ends (chat.mjs
+# desperateRally).
+[triggered/defeated, effect 2]
+desperateRally();

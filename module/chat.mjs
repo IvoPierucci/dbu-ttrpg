@@ -14220,12 +14220,106 @@ async function studiedShield(target, attacker, damage) {
  */
 export async function spectatorTurnStart(actor) {
   if (!((Number(actor?.system?.states?.spectator) || 0) > 0)) return;
+  // Desperate Support (3): "you can choose to forgo regaining Life and Ki Points to instead apply one of the following effects" -
+  // at "the Ally you targeted with the first effect of the Spectator State", the last one Cheered; once a Round.
+  const cheeredLast = fromUuidSync(Array.from(actor.getFlag?.(SCOPE, "cheered") ?? []).at(-1) ?? "");
+  const desperate = (actor.system?.effects?.slots?.["desperate.spectator"] === true) && cheeredLast
+    && !cheeredLast.system?.defeated && (actor.getFlag?.(SCOPE, "desperateRound") !== roundKey());
   const answer = await askPlayerChoice(actor, `${actor.name}: Spectator - your turn`,
     [{ value: "leave", label: "Exit the Spectator State" },
-      { value: "stay", label: "Stay: no Actions, the turn ended, 2d10(bT) Life and Ki" }]);
+      { value: "stay", label: "Stay: no Actions, the turn ended, 2d10(bT) Life and Ki" },
+      ...(desperate ? DESPERATE_EFFECTS.map(effect => ({ value: effect.key,
+        label: `Stay: no Actions, the turn ended - ${effect.label} (${cheeredLast.name})` })) : [])]);
+  if (desperate && DESPERATE_EFFECTS.some(effect => effect.key === answer)) {
+    await actor.update({ [`flags.${SCOPE}.desperateRound`]: roundKey(), [`flags.${SCOPE}.desperateForgone`]: roundKey() });
+    return desperateEffect(actor, cheeredLast, answer);
+  }
   if (answer !== "leave") return;
   const { leaveState } = await import("./effects/moments-runtime.mjs");
   return leaveState(actor, "spectator");
+}
+
+/** Desperate Support (3)'s effects - the mark each leaves, and whether its number is the supporter's base Tier. */
+const DESPERATE_EFFECTS = Object.freeze([
+  { key: "go-all-out", label: "Go all out!" },
+  { key: "hang-in-there", label: "Hang in there!", mark: "hang-in-there-mark" },
+  { key: "stand-strong", label: "Stand strong!", mark: "stand-strong-mark", tiered: true },
+  { key: "dance-for-us", label: "Dance for us.", mark: "dance-for-us-mark", tiered: true },
+  { key: "you-can-do-it", label: "You can do it!", mark: "you-can-do-it-mark" }
+]);
+
+/**
+ * One of Desperate Support (3)'s effects at an Ally: Go all out!'s Power Up and Transformation offered to them out of sequence -
+ * on your latest card, one made for them where there is none - or the others' mark on them till the start of your next turn,
+ * on your clock.
+ */
+async function desperateEffect(actor, ally, key) {
+  const effect = DESPERATE_EFFECTS.find(each => each.key === key);
+  if (!actor || !ally || !effect) return;
+  if (!effect.mark) {
+    const offers = [["power-up", "Power Up"], ["transformation", "Transformation"]].map(([id, name]) => ({ actorUuid: ally.uuid,
+      actorName: ally.name, maneuverId: id, maneuverName: getManeuver(id)?.name ?? name,
+      reason: `Desperate Support - ${actor.name}: Go all out!`, ownOutOfSequence: id }));
+    const card = (game.messages?.contents ?? []).findLast(message => message.speaker?.actor === actor.id);
+    if (card) {
+      for (const offer of offers) requestEdit(card, { type: "offer", offer });
+      return;
+    }
+    return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: "",
+      flags: { [SCOPE]: { [OOS_OFFERS_FLAG]: offers } } });
+  }
+  const { setCondition } = await import("./conditions.mjs");
+  const stacks = effect.tiered ? Math.max(1, Number(actor.system.baseTierOfPower) || 1) : 1;
+  if (!await setCondition(ally, effect.mark, stacks)) return;
+  return lasting(actor, { kind: KINDS.CONDITION, key: effect.mark, edge: EDGES.START, on: ally.uuid, source: "Desperate Support" });
+}
+
+/**
+ * Desperate Support (1): "While you are Defeated, you may use the Empower Maneuver (as if you spent 2 Actions), or apply one of
+ * the listed effects of the third effect of Desperate Support as an Instant Maneuver." Once an Encounter: which asked, and at
+ * which Ally - the Empower's the one targeted, or asked.
+ */
+export async function desperateDefeated(actor) {
+  if (!actor?.system?.defeated || (actor.system?.effects?.slots?.["desperate.defeated"] !== true)) return;
+  if (actor.getFlag?.(SCOPE, "desperateEncounter") === (game.combat?.id ?? "none")) {
+    return ui.notifications.warn(`${actor.name}: Desperate Support - already used this Combat Encounter.`);
+  }
+  const held = whyNotAnotherInstant(actor);
+  if (held) return ui.notifications.warn(held);
+  const allies = alliesOnScene(actor).filter(ally => !ally.system?.defeated);
+  if (!allies.length) return ui.notifications.warn(`${actor.name}: no Ally to support.`);
+  const which = await askPlayerChoice(actor, `${actor.name}: Desperate Support`,
+    [{ value: "empower", label: "Empower (as if 2 Actions)" }, ...DESPERATE_EFFECTS.map(effect => ({ value: effect.key, label: effect.label }))]);
+  if (!which) return;
+  const targeted = game.user.targets.first()?.actor;
+  const picked = (targeted && allies.some(ally => ally.uuid === targeted.uuid)) ? targeted.uuid
+    : (allies.length === 1) ? allies[0].uuid
+    : await askPlayerChoice(actor, `${actor.name}: Desperate Support - an Ally`, allies.map(ally => ({ value: ally.uuid, label: ally.name })));
+  const ally = allies.find(each => each.uuid === picked);
+  if (!ally) return;
+  if (which === "empower") {
+    const { empowerAs } = await import("./use-maneuver.mjs");
+    if (!await empowerAs(actor, ally, 2)) return;
+  }
+  else await desperateEffect(actor, ally, which);
+  await actor.setFlag(SCOPE, "desperateEncounter", game.combat?.id ?? "none");
+  await recordManeuverType(actor, "instant");
+}
+
+/**
+ * Desperate Support (2): "Increase all of your Allies' Combat Rolls by 1(bT) until the end of the next Combat Round." Rallied on
+ * each on the scene - its stacks your base Tier - on your clock.
+ */
+export async function desperateRally(actor) {
+  const allies = alliesOnScene(actor);
+  if (!allies.length) return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  const { setCondition } = await import("./conditions.mjs");
+  const stacks = Math.max(1, Number(actor.system.baseTierOfPower) || 1);
+  for (const ally of allies) {
+    if (!await setCondition(ally, "desperate-rally-mark", stacks)) continue;
+    await lasting(actor, { kind: KINDS.CONDITION, key: "desperate-rally-mark", edge: EDGES.ROUND, next: true, on: ally.uuid,
+      source: "Desperate Support" });
+  }
 }
 
 /**

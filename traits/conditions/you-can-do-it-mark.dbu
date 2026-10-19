@@ -1,0 +1,16 @@
+id: you-can-do-it-mark
+name: You Can Do It
+kind: conditions
+maxStacks: 1
+# Not a Combat Condition: Desperate Support's, on an Ally, held on the supporter's clock.
+combatCondition: no
+source: Core Rule
+description: >
+  Desperate Support: Stress Bonus 2 higher until the start of the supporter's next turn.
+text: >
+  You can do it!: The Ally has their Stress Bonus increased by 2 until the start of your next turn.
+
+---
+
+[passive]
+stressBonus += 2;

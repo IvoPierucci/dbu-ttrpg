@@ -408,6 +408,9 @@ const PREDICATES = {
   rivalOpponent: scope => rivalSide(scope.data?.parent) === "opponent",
   rivalAlly: scope => rivalSide(scope.data?.parent) === "ally",
   rivalOnlyAlly: scope => rivalOnlyAlly(scope.data?.parent),
+  // Desperate Support (3): "forgo regaining Life and Ki Points" - this Round's, chosen as the turn began.
+  desperateForgone: scope => scope.data?.parent?.getFlag?.("dbu-ttrpg", "desperateForgone")
+    === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
   // Eternal Rival (1): "While your Rival is in a Combat Encounter" - a Combatant of the one under way.
   rivalInEncounter: scope => {
     const rival = rivalOf(scope.data?.parent);

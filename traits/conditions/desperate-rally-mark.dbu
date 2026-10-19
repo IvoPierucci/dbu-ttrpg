@@ -1,0 +1,16 @@
+id: desperate-rally-mark
+name: Rallied
+kind: conditions
+maxStacks: 10
+# Not a Combat Condition: Desperate Support's, on an Ally, held on the supporter's clock.
+combatCondition: no
+source: Core Rule
+description: >
+  Desperate Support (2): Combat Rolls 1(bT) higher, the supporter's base Tier, until the end of the next Combat Round.
+text: >
+  Increase all of your Allies’ Combat Rolls by 1(bT) until the end of the next Combat Round.
+
+---
+
+[passive]
+combatRolls += stacks;

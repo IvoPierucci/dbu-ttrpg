@@ -64,6 +64,11 @@
                     data-item-id="{{maneuver.itemId}}"
                     data-tooltip="Thief: a Thief Maneuver as an Instant Maneuver (1/Round)">Instant</button>
             {{/if}}
+            {{#if maneuver.desperateSupport}}
+            <button type="button" class="maneuver-control" data-action="desperateSupport"
+                    data-item-id="{{maneuver.itemId}}"
+                    data-tooltip="Desperate Support: Defeated - the Empower (as if 2 Actions) or one of its third effect's, as an Instant Maneuver (1/Encounter)">Desperate</button>
+            {{/if}}
             {{#if maneuver.desperateInstant}}
             <button type="button" class="maneuver-control" data-action="desperateInstant"
                     data-item-id="{{maneuver.itemId}}"

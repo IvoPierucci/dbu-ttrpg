@@ -31,11 +31,14 @@ spectatorLeft();
 
 # (3) Still a Spectator once (2) was asked: no Actions, the turn ended - a skip, which is the same thing at its start - and
 # 2d10(bT) Life and Ki Points.
+# Not the Life and Ki where Desperate Support (3)'s effect was chosen instead (`desperateForgone`).
 [automatic/start-of-turn]
 actions.remaining = 0;
 turn.skip = true;
-life.value += 2d10(bT);
-ki.value += 2d10(bT);
+if (!desperateForgone) {
+    life.value += 2d10(bT);
+    ki.value += 2d10(bT);
+}
 
 # (4) The three named Maneuvers by name; the rest by their class. "That target another Character" is left applied to none
 # of them - which it qualifies is one sentence and three readings.

@@ -419,6 +419,7 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
       flipInstant: DBUCharacterSheet._onFlipInstant,
       soarInstant: DBUCharacterSheet._onSoarInstant,
       desperateInstant: DBUCharacterSheet._onDesperateInstant,
+      desperateSupport: DBUCharacterSheet._onDesperateSupport,
       hateInstant: DBUCharacterSheet._onHateInstant,
       creativeOutOfSequence: DBUCharacterSheet._onCreativeOutOfSequence,
       newTechnique: DBUCharacterSheet._onNewTechnique,
@@ -1603,6 +1604,9 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
             hateInstant: (maneuver.id === "basic-attack") && (this.actor.system.effects?.slots?.["hate.instant"] === true),
             // People of the Spirit (5): "As an Instant Maneuver, you may use the Empower Maneuver as if you spent 3 Actions."
             spiritInstant: Boolean(maneuver.empower) && (this.actor.system.effects?.slots?.["empower.spiritInstant"] === true),
+            // Desperate Support (1): Defeated - the Empower, or one of its third effect's, as an Instant Maneuver.
+            desperateSupport: Boolean(maneuver.empower) && Boolean(this.actor.system.defeated)
+              && (this.actor.system.effects?.slots?.["desperate.defeated"] === true),
             // Thief (3): "You may use a 'Thief Maneuver' as an Instant Maneuver if you have access to it."
             thiefInstant: THIEF_MANEUVERS.includes(maneuver.id) && (this.actor.system.effects?.slots?.["thief.instant"] === true)
               && !((maneuver.id === "flip") && (this.actor.system.effects?.slots?.["flip.asInstant"] === true)),
@@ -6031,6 +6035,12 @@ export default class DBUCharacterSheet extends HandlebarsApplicationMixin(ActorS
     const { useManeuver, definitionOf } = await import("../use-maneuver.mjs");
     if (!await useManeuver(this.actor, { ...definitionOf(item), type: "instant" })) return;
     return this.actor.setFlag("dbu-ttrpg", "desperateInstantRound", round);
+  }
+
+  /** Desperate Support (1): Defeated, the Empower or one of its third effect's as an Instant Maneuver, once an Encounter. */
+  static async _onDesperateSupport() {
+    const { desperateDefeated } = await import("../chat.mjs");
+    return desperateDefeated(this.actor);
   }
 
   /** Frequent Flyer (1): the Soar as an Instant Maneuver, once a Round. */
