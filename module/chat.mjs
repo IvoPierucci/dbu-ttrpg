@@ -648,7 +648,7 @@ export async function openingsOffers(message, user) {
  */
 export async function superiorSyncOffers(message, user, maneuverId) {
   if (!message || !user || !canvas?.tokens) return;
-  const { partnerOf } = await import("./effects/conditions.mjs");
+  const { partnerOf, rivalOf } = await import("./effects/conditions.mjs");
   const followers = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
     .filter(other => other && (other.uuid !== user.uuid) && !other.system?.defeated
       && (other.system?.effects?.slots?.["sync.followPower"] === true) && (partnerOf(other)?.id === user.id)
@@ -658,6 +658,16 @@ export async function superiorSyncOffers(message, user, maneuverId) {
   for (const other of followers) {
     requestEdit(message, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId, maneuverName: name,
       reason: `Superior Synchronization - ${user.name}`, grants: { superiorSync: true } } });
+  }
+  // Chosen Rival (5): "If your Rival uses the Power Up or Transformation Maneuver, you may immediately use the same Maneuver as
+  // an Out-of-Sequence Maneuver" - wherever they are, once an Encounter.
+  const rivals = [...new Map((canvas.tokens.placeables ?? []).map(token => [token.actor?.uuid, token.actor])).values()]
+    .filter(other => other && (other.uuid !== user.uuid) && !other.system?.defeated
+      && (other.system?.effects?.slots?.["rival.followPower"] === true) && (rivalOf(other)?.id === user.id)
+      && (other.getFlag?.(SCOPE, "rivalFollowEncounter") !== (game.combat?.id ?? "none")));
+  for (const other of rivals) {
+    requestEdit(message, { type: "offer", offer: { actorUuid: other.uuid, actorName: other.name, maneuverId, maneuverName: name,
+      reason: `Chosen Rival - ${user.name}`, grants: { rivalFollow: true } } });
   }
 }
 
@@ -20378,6 +20388,14 @@ async function takeOutOfSequence(message, actor, offer) {
   if (frozenTurnOf(actor) || (frozenBy(actor) && !offer.surge)) {
     ui.notifications.warn("Time is frozen: no Out-of-Sequence Maneuvers.");
     return null;
+  }
+  // Chosen Rival (5)'s, once an Encounter.
+  if (offer.grants?.rivalFollow) {
+    if (actor.getFlag?.(SCOPE, "rivalFollowEncounter") === (game.combat?.id ?? "none")) {
+      ui.notifications.warn(`${actor.name}: Chosen Rival - already used this Combat Encounter.`);
+      return null;
+    }
+    await actor.setFlag(SCOPE, "rivalFollowEncounter", game.combat?.id ?? "none");
   }
   // Superior Synchronization (2)'s, once an Encounter.
   if (offer.grants?.superiorSync) {

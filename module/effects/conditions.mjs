@@ -71,12 +71,42 @@ function initiativeAgainstAll(actor, holds) {
  * is your Partner." The world's Actor, or null.
  */
 export function partnerOf(actor) {
-  const chosenBy = who => (Array.from(who?.items ?? []).find(item => item.flags?.["dbu-ttrpg"]?.sourceId === "synchronized-combatants")
-    ?.system?.chosen ?? []).find(entry => entry.key === "synchronized-combatants")?.value ?? "";
+  return mutualChoice(actor, "synchronized-combatants");
+}
+
+/** Chosen Rival (1): "If that Character has also chosen you through this effect, that Character is your Rival." */
+export function rivalOf(actor) {
+  return mutualChoice(actor, "chosen-rival");
+}
+
+/** The Character this one chose through a Talent's `choose: character`, where they chose this one through it too. */
+function mutualChoice(actor, sourceId) {
+  const chosenBy = who => (Array.from(who?.items ?? []).find(item => item.flags?.["dbu-ttrpg"]?.sourceId === sourceId)
+    ?.system?.chosen ?? []).find(entry => entry.key === sourceId)?.value ?? "";
   const id = chosenBy(actor);
   if (!actor || !id || (id === actor.id)) return null;
   const other = globalThis.game?.actors?.get?.(id) ?? null;
   return (other && (chosenBy(other) === actor.id)) ? other : null;
+}
+
+/** Chosen Rival: your Rival's side against yours, by their tokens on the scene - "opponent", "ally", or "" where not there. */
+function rivalSide(self) {
+  const rival = rivalOf(self);
+  const mine = self?.getActiveTokens?.(false, true)?.[0];
+  const theirs = rival ? (globalThis.canvas?.tokens?.placeables ?? []).find(token => token.actor?.id === rival.id)?.document : null;
+  if (!mine || !theirs) return "";
+  return (mine.disposition === theirs.disposition) ? "ally" : "opponent";
+}
+
+/** Chosen Rival (4): "your Rival is your only non-Defeated Ally" - the one Ally on the scene still standing. */
+function rivalOnlyAlly(self) {
+  const rival = rivalOf(self);
+  const own = self?.getActiveTokens?.(false, true)?.[0]?.disposition;
+  if (!rival || (own === undefined)) return false;
+  const standing = [...new Map((globalThis.canvas?.tokens?.placeables ?? [])
+    .filter(token => token.actor && (token.document?.disposition === own) && (token.actor.uuid !== self.uuid) && !token.actor.system?.defeated)
+    .map(token => [token.actor.uuid, token.actor])).values()];
+  return (standing.length === 1) && (standing[0].id === rival.id);
 }
 
 /** Synchronized Combatants (2): on a Square adjacent to your Partner, and your Partner your Ally - their tokens, side by side. */
@@ -371,6 +401,9 @@ const PREDICATES = {
    * disposition on the scene.
    */
   besidePartner: scope => besidePartner(scope.data?.parent),
+  rivalOpponent: scope => rivalSide(scope.data?.parent) === "opponent",
+  rivalAlly: scope => rivalSide(scope.data?.parent) === "ally",
+  rivalOnlyAlly: scope => rivalOnlyAlly(scope.data?.parent),
 
   alliesStanding: scope => {
     const self = scope.data?.parent;

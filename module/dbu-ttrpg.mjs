@@ -168,7 +168,7 @@ Hooks.on("updateActor", async (actor, changes, options, userId) => {
 // Conduit of Spirit (1): "while you have at least 1 Ally and none of your Allies are Defeated" - read off the others, so read
 // again as one of them is hurt or healed, or a token comes, goes or changes side.
 // Synchronized Combatants (2): beside your Partner - read again as a token moves, too, or a choice of it changes.
-const READ_OFF_OTHERS = new Set(["conduit-of-spirit", "synchronized-combatants"]);
+const READ_OFF_OTHERS = new Set(["conduit-of-spirit", "synchronized-combatants", "chosen-rival"]);
 function conduitRefresh() {
   for (const actor of new Set((canvas?.tokens?.placeables ?? []).map(token => token.actor))) {
     if (!actor || !Array.from(actor.items ?? []).some(item => READ_OFF_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId))) continue;
@@ -237,7 +237,7 @@ Hooks.on("deleteToken", () => conduitRefresh());
 Hooks.on("updateToken", (token, changes) => {
   if (["disposition", "x", "y"].some(key => key in (changes ?? {}))) conduitRefresh();
 });
-Hooks.on("updateItem", item => { if (item.flags?.["dbu-ttrpg"]?.sourceId === "synchronized-combatants") conduitRefresh(); });
+Hooks.on("updateItem", item => { if (READ_OFF_OTHERS.has(item.flags?.["dbu-ttrpg"]?.sourceId)) conduitRefresh(); });
 
 Hooks.once("setup", async () => {
   registerManeuverSocket();

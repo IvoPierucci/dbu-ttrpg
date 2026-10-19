@@ -558,6 +558,8 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "alliesStanding",
   // On a Square adjacent to your Partner, an Ally (Synchronized Combatants').
   "besidePartner",
+  // Your Rival an Opponent, an Ally, your only Ally standing (Chosen Rival's).
+  "rivalOpponent", "rivalAlly", "rivalOnlyAlly",
   // A Bonded Ally standing (Spiritual Warrior's).
   "bondedAlly",
   // Ki gained through your Empower (Spiritual Pacifist's).

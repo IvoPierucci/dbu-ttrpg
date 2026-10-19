@@ -434,8 +434,10 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
       && (!foundation || profile.foundations.includes(foundation))).map(([key, profile]) => [key, profile.label]);
   }
   // Synchronized Combatants' "Choose a Character": any in the world but yourself.
-  if (kind === "character") {
+  // Chosen Rival's "(except a Minion)".
+  if ((kind === "character") || (kind === "characterNotMinion")) {
     return Array.from(globalThis.game?.actors ?? []).filter(other => (other.type === "character") && (other.id !== actor?.id))
+      .filter(other => (kind === "character") || !other.system?.minion)
       .sort((a, b) => a.name.localeCompare(b.name)).map(other => [other.id, other.name]);
   }
   if (kind === "elementalProfile") {
