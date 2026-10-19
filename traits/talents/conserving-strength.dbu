@@ -1,0 +1,24 @@
+id: conserving-strength
+name: Conserving Strength
+talentCategory: starter
+prerequisites: Reserved Combatant, Tier of Power 4+, access to a Transformation with a Tier of Power Requirement of 4+
+description: >
+  As you patiently raise your power, you can store up the energy you don’t use to unleash the moment you go all out.
+text: >
+  Conserving Strength: As you patiently raise your power, you can store up the energy you don’t use to unleash the moment you go all out.
+  –Prerequisites: Reserved Combatant, Tier of Power 4+, access to a Transformation with a Tier of Power Requirement of 4+
+  (1)-[Passive]: Increase your maximum number of Patience Stacks to 15.
+  (2)-[Passive]: The second effect of Reserved Combatant loses the Automatic Keyword and gains the Triggered Keyword.
+  (3)-[Passive]: You do not need to be Holding Back to gain Patience Stacks through the first effect of Reserved Combatant, as long as you are not in a Transformation with a Tier of Power Requirement of 4+.
+  (4)-[Triggered, 1/Encounter]: When you enter a Transformation with a Tier of Power Requirement of 4+, lose all Patience Stacks and regain x(bT) Ki Points, where x is equal to 2x the amount of Patience stacks you lost.
+
+---
+
+[passive]
+# (1) 10 to 15.
+patience.max += 5;
+
+# (2) Read on Reserved Combatant's file: its second effect Triggered while this is held - its Triggered/Automatic button.
+
+# (3), (4) Which Transformation you are in, and its Tier of Power Requirement, are not recorded - Transformations are not built:
+# the table's (the user's).

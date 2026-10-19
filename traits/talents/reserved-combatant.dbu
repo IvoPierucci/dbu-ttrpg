@@ -21,9 +21,15 @@ text: >
 requires hasResource("holdingback");
 patience.stacks += 1;
 
-# (2) The last stack of Holding Back gone in a Combat (the `holding-back-lost` Moment), with Patience held.
+# (2) The last stack of Holding Back gone in a Combat (the `holding-back-lost` Moment), with Patience held. With Conserving
+# Strength (its (2): "loses the Automatic Keyword and gains the Triggered Keyword"), Triggered - its Triggered/Automatic button.
 [automatic/holding-back-lost, 1/encounter, effect 2]
-requires hasResource("patience");
+requires hasResource("patience") && !hasTalent("conserving-strength");
+ki.value += patience.stacks * 2(bT);
+patience.stacks = 0;
+
+[triggered/holding-back-lost, 1/encounter, effect 2]
+requires hasResource("patience") && hasTalent("conserving-strength");
 ki.value += patience.stacks * 2(bT);
 patience.stacks = 0;
 
