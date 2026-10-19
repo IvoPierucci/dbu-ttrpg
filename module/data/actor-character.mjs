@@ -2401,13 +2401,17 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // where the Capacity is known.
     const battery = ((this.effects?.slots?.["powerBattery.overCapacity"] === true)
       && ((Number(this.ki?.value) || 0) > (Number(this.capacity?.max) || 0))) ? this.baseTierOfPower : 0;
+    // Steel Muscle (1): "Increase your Soak Value by 1(T). Double this bonus if you possess 3 Super Stacks."
+    const steel = slot(this, "superStack.steelSoak")
+      * ((this.superStack.stacks >= DBUCharacterData.MAX_SUPER_STACKS) ? 2 : 1);
     const beforeFloor = withEffects(this, "soakValue.external",
-      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk + soakBelow.value + battery, {
+      withEffects(this, "soakValue", ownSoak + this.superStack.solidBulk + soakBelow.value + battery + steel, {
         parts: [
           { label: "Own Soak", value: ownSoak },
           { label: "Solid Bulk", value: this.superStack.solidBulk },
           ...soakBelow.parts,
-          ...(battery ? [{ label: "Power Battery", value: battery }] : [])
+          ...(battery ? [{ label: "Power Battery", value: battery }] : []),
+          ...(steel ? [{ label: "Steel Muscle", value: steel }] : [])
         ]
       })
         + this.externalModifiers.soak,
@@ -2424,9 +2428,12 @@ export default class DBUCharacterData extends foundry.abstract.TypeDataModel {
     // Bonus where it is not Armor or Weights.
     const glassSoak = (this.effects?.slots?.["damageReduction.soak"] === true) ? this.soakValue : 0;
     const glassApparel = (this.effects?.slots?.["damageReduction.apparelBonus"] === true) ? topApparelBonus(this) : 0;
-    this.damageReduction = Math.max(0, withEffects(this, "damageReduction", glassSoak + glassApparel, {
+    // Steel Muscle (2): "While you possess 2+ Super Stacks, increase your Damage Reduction by 1(T)."
+    const steelReduction = (this.superStack.stacks >= 2) ? slot(this, "superStack.steelReduction") : 0;
+    this.damageReduction = Math.max(0, withEffects(this, "damageReduction", glassSoak + glassApparel + steelReduction, {
       parts: [...(glassSoak ? [{ label: "Soak Value", value: glassSoak }] : []),
-        ...(glassApparel ? [{ label: "Apparel Bonus (Top Layer)", value: glassApparel }] : [])]
+        ...(glassApparel ? [{ label: "Apparel Bonus (Top Layer)", value: glassApparel }] : []),
+        ...(steelReduction ? [{ label: "Steel Muscle", value: steelReduction }] : [])]
     }));
 
     // Surgency: increases the Life/Ki Points regained through a Surge. Cosmic Efficiency's "You may use your Magic

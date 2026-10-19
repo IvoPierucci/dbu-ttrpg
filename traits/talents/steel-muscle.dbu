@@ -1,0 +1,19 @@
+id: steel-muscle
+name: Steel Muscle
+talentCategory: super-stack
+prerequisites: Muscular Warrior, Tenacity Score of 8+
+description: >
+  Your muscular build serves almost as a layer of armor, protecting you from attacks.
+text: >
+  Steel Muscle: Your muscular build serves almost as a layer of armor, protecting you from attacks.
+  –Prerequisites: Muscular Warrior, Tenacity Score of 8+
+  (1)-[Passive]: Increase your Soak Value by 1(T). Double this bonus if you possess 3 Super Stacks.
+  (2)-[Passive]: While you possess 2+ Super Stacks, increase your Damage Reduction by 1(T).
+
+---
+
+[passive]
+# Both read once the Super Stacks are settled (actor-character.mjs): (1) the Soak Value, twice at 3; (2) the Damage Reduction
+# at 2+.
+superStack.steelSoak += 1(T);
+superStack.steelReduction += 1(T);
