@@ -1203,9 +1203,13 @@ function uniqueClashOf(clash) {
   const challenger = fromUuidSync(clash?.challengerUuid ?? "");
   const name = String(clash?.maneuverName ?? "").trim();
   if (!challenger || !name) return null;
+  const named = label => (name === label) || name.startsWith(`${label} `) || name.startsWith(`${label}:`);
+  // Or one of its Advancements' - Afterimage Strike's Clash is the Afterimage Technique's (the user's): an effect of the
+  // Unique Ability, not of the Movement Maneuver it hands over.
   return Array.from(challenger.items ?? []).find(item => (item.type === "maneuver")
     && (item.system.tags ?? []).includes("uniqueAbility")
-    && ((name === item.name) || name.startsWith(`${item.name} `) || name.startsWith(`${item.name}:`))) ?? null;
+    && (named(item.name) || (item.system.unique?.advancements ?? [])
+      .some(entry => (entry.bought || entry.free) && entry.name && named(entry.name)))) ?? null;
 }
 
 /**
