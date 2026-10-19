@@ -244,6 +244,7 @@ function applyRequest(request) {
       ?.createEmbeddedDocuments("Item", [request.data]);
     case "deleteItem": return fromUuidSync(request.actorUuid)?.items.get(request.itemId)?.delete();
     case "foresee": return applyForesee(request.combatId, request.combatantId, request.initiative);
+    case "jumpStart": return applyJumpStart(request.combatId, request.combatantId);
     case "initiative": return applyInitiative(request.combatId, request.combatantId, request.initiative);
     case "offer": return applyOffer(request.messageId, request.offer);
     case "offerTaken": return applyOfferTaken(request.messageId, request.actorUuid);
@@ -14472,6 +14473,60 @@ export async function reservedEnds(attack, actor = null) {
   for (const who of people.filter(Boolean)) {
     if ((Number(who.system?.conditions?.["reserved-mark"]) || 0) > 0) await setCondition(who, "reserved-mark", 0);
   }
+}
+
+/** Jump Start (1): "Use the Power Up Maneuver as an Out-of-Sequence Maneuver." */
+export async function jumpStartPower(actor) {
+  const used = await ownOutOfSequence(actor, "power-up");
+  return used ? used : (await import("./effects/moments-runtime.mjs")).UNSPENT;
+}
+
+/**
+ * Jump Start (2): "Take your Turn immediately, ignoring the current Initiative Order. If multiple characters apply this effect,
+ * they take their turns in order of highest to lowest Initiative Value." Through the GM, as a Combatant seldom is the player's.
+ */
+export async function jumpStart(actor) {
+  const combat = game.combat;
+  const mine = (combat?.turns ?? []).find(combatant => combatant.actor?.uuid === actor?.uuid);
+  if (!combat?.started || !mine) return (await import("./effects/moments-runtime.mjs")).UNSPENT;
+  if (game.user.isGM) return applyJumpStart(combat.id, mine.id);
+  if (!game.users.activeGM) return;
+  game.socket.emit(CHANNEL, { type: "jumpStart", combatId: combat.id, combatantId: mine.id });
+}
+
+/**
+ * Jump Start (2), on the GM's client: its Initiative above everyone's own for this Round (`jumpStarted` keeps its own, put back
+ * as the next Round begins - combat.mjs), and the turn its now. Whoever's turn it was is marked to take theirs up again after
+ * it, not begun a second time (`turnResumed`). One Jump Started already on their turn: this one straight after theirs, the
+ * higher Initiative first - their turn not taken from them.
+ */
+async function applyJumpStart(combatId, combatantId) {
+  const combat = game.combats.get(combatId);
+  const mine = combat?.combatants.get(combatantId);
+  if (!mine) return;
+  const own = c => {
+    const kept = c.getFlag?.(SCOPE, "jumpStarted");
+    return (typeof kept === "number") ? kept : (Number(c.initiative) || 0);
+  };
+  const current = combat.combatant;
+  const kept = own(mine);
+  if (current && (current.id !== mine.id) && (typeof current.getFlag?.(SCOPE, "jumpStarted") === "number")) {
+    // After the one Jump Started on their turn, and before every other.
+    const later = (combat.turns ?? []).filter(c => (c.id !== current.id) && (c.id !== mine.id)
+      && (typeof c.getFlag?.(SCOPE, "jumpStarted") === "number"));
+    const below = Number(current.initiative) - 0.001 * (1 + later.filter(c => own(c) > kept).length) + kept / 1e6;
+    await mine.update({ initiative: below, [`flags.${SCOPE}.jumpStarted`]: kept }, { turnEvents: false });
+    const { keepTurnWith } = await import("./combat.mjs");
+    return keepTurnWith(combat, current.id);
+  }
+  const top = Math.max(...(combat.turns ?? []).map(own));
+  await mine.update({ initiative: top + 1 + (kept / 1000), [`flags.${SCOPE}.jumpStarted`]: kept }, { turnEvents: false });
+  if (!current || (current.id === mine.id)) return;
+  // Whoever's turn it was takes it up again after this one - begun already, not begun again.
+  await combat.setFlag(SCOPE, "turnResumed", current.id);
+  const { keepTurnWith, beginTurnOf } = await import("./combat.mjs");
+  await keepTurnWith(combat, mine.id);
+  if (mine.actor) await beginTurnOf(combat, mine.actor);
 }
 
 /** Slow Starter (3): "Use the Holding Back Maneuver as an Out-of-Sequence Maneuver." */

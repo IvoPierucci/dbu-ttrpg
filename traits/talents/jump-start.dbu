@@ -1,0 +1,24 @@
+id: jump-start
+name: Jump Start
+talentCategory: starter
+prerequisites: N/A
+description: >
+  You seize the initiative in battle, allowing you to get the jump on your enemies.
+text: >
+  Jump Start: You seize the initiative in battle, allowing you to get the jump on your enemies.
+  –Prerequisites: N/A
+  (1)-[Triggered/Start of Turn, 1/Encounter]: Use the Power Up Maneuver as an Out-of-Sequence Maneuver.
+  (2)-[Triggered/Start of Combat Round, 1/Encounter]: Take your Turn immediately, ignoring the current Initiative Order. If multiple characters apply this effect, they take their turns in order of highest to lowest Initiative Value.
+
+---
+
+# (1) On your turn's card, ticked - never Automatic, it hands over an Out-of-Sequence Maneuver: the Power Up out of sequence
+# (chat.mjs jumpStartPower).
+[triggered/start-of-turn, 1/encounter, outOfSequence, effect 1]
+jumpStartPower();
+
+# (2) On the Round's card, the player's to time: your Initiative above everyone's for this Round, and the turn yours now -
+# whoever's it was takes it up again after yours; one already Jump Started on their turn, yours straight after theirs, the
+# higher Initiative first (chat.mjs jumpStart; combat.mjs).
+[triggered/start-of-round, 1/encounter, chosen, effect 2]
+jumpStart();

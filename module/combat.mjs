@@ -77,6 +77,14 @@ async function startRound(combat) {
     await combatant.update({ initiative: kept }, { turnEvents: false });
     await combatant.unsetFlag("dbu-ttrpg", "foreseen");
   }
+  // Jump Start (2)'s: their own Initiative back, its Round over.
+  for (const combatant of combat.combatants ?? []) {
+    const kept = combatant.getFlag?.("dbu-ttrpg", "jumpStarted");
+    if (typeof kept !== "number") continue;
+    await combatant.update({ initiative: kept }, { turnEvents: false });
+    await combatant.unsetFlag("dbu-ttrpg", "jumpStarted");
+  }
+  if (combat.getFlag?.("dbu-ttrpg", "turnResumed")) await combat.unsetFlag("dbu-ttrpg", "turnResumed");
 
   for (const actor of combatants(combat)) {
     // Before anything else this Round. "Until the end of the Combat Round" ends here -
@@ -551,6 +559,11 @@ async function burnDot(actor) {
  * The turn kept with this Combatant - after an Initiative moved, which Foundry answers by keeping the turn's number and
  * handing it to whoever now stands there. Not told as a turn changing.
  */
+/** A turn begun out of the turn order's own changing - Jump Start (2)'s: as any turn begins, on to the next if it is lost. */
+export async function beginTurnOf(combat, actor) {
+  if ((actor?.type === "character") && !await beginTurn(actor)) return combat.nextTurn();
+}
+
 export async function keepTurnWith(combat, combatantId) {
   const at = (combat?.turns ?? []).findIndex(turn => turn.id === combatantId);
   if ((at >= 0) && (at !== combat.turn)) await combat.update({ turn: at }, { turnEvents: false });
@@ -692,6 +705,12 @@ export function registerCombatHooks() {
     }
 
     const arriving = combat.combatant?.actor;
+    // Jump Start (2): a turn taken up again after the one that jumped in front of it - begun already, not begun again.
+    const resumed = combat.getFlag?.("dbu-ttrpg", "turnResumed");
+    if (resumed && (combat.combatant?.id === resumed)) {
+      await combat.unsetFlag("dbu-ttrpg", "turnResumed");
+      return;
+    }
     if (arriving) await foresee(combat, arriving, true);
     if ((arriving?.type === "character") && !await beginTurn(arriving)) {
       return combat.nextTurn();

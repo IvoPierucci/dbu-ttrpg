@@ -191,6 +191,14 @@ export const VERBS = Object.freeze({
     args: [0, 0],
     doc: "Warm Up (2): the Power Up and the Transformation out of sequence, offered on your latest card (chat.mjs warmUpPower)."
   },
+  jumpStartPower: {
+    args: [0, 0],
+    doc: "Jump Start (1): the Power Up out of sequence (chat.mjs jumpStartPower)."
+  },
+  jumpStart: {
+    args: [0, 0],
+    doc: "Jump Start (2): your turn now, your Initiative above everyone's for this Round (chat.mjs jumpStart)."
+  },
   juryRig: {
     args: [0, 0],
     doc: "Counter Jury-rigging (2): a Weapon and a 1-Slot Quality it takes, asked - on it till the Round turns over (chat.mjs "
