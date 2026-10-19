@@ -946,3 +946,13 @@ export function isFavoredTechnique(actor, itemId) {
     && (each.flags?.["dbu-ttrpg"]?.sourceId === "favored-technique"));
   return Boolean(itemId) && ((talent?.system?.chosen ?? []).find(entry => entry.key === "favored-technique")?.value === itemId);
 }
+
+/** Favored Technique (2): its Advantage's own choice, as the Technique's feature choices read it - {} where none. */
+export function favoredChoiceOf(item) {
+  const advantage = favoredAdvantage(item);
+  if (!advantage) return {};
+  const talent = Array.from(item.parent?.items ?? []).find(each => (each.type === "talent")
+    && (each.flags?.["dbu-ttrpg"]?.sourceId === "favored-technique"));
+  const choice = (talent?.system?.chosen ?? []).find(entry => entry.key === "favored-technique#3")?.value ?? "";
+  return choice ? { [advantage]: choice } : {};
+}

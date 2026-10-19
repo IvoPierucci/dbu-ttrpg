@@ -3,7 +3,8 @@ name: Favored Technique
 talentCategory: technique
 prerequisites: N/A
 # (1) "select one of your Signature Techniques" and (2) "select an Advantage with a Technique Point Cost of 10 or less" - asked as
-# it is gained; changeable on its Options tab.
+# it is gained; changeable on its Options tab. An Advantage that asks a choice of its own - Trick Attack's Skill, Condition's
+# Condition - asked it too, and again as either changes (racial.mjs favoredFeatureChoice).
 choose: ownTechnique
 choose2: advantageUpTo10
 description: >

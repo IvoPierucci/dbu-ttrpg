@@ -7,6 +7,7 @@
  * and this system has already been bitten by that once.
  */
 
+import { favoredChoiceOf } from "./data/item-maneuver.mjs";
 import DBUCharacterData from "./data/actor-character.mjs";
 import {
   MANEUVER_TYPES,
@@ -2569,7 +2570,9 @@ export function definitionOf(item) {
         }
       : null,
     // A Technique built on its sheet: what its build makes of it.
-    ...(isBuilt(item) ? techniqueDefinition(item) : {})
+    ...(isBuilt(item) ? techniqueDefinition(item)
+      // Favored Technique (2)'s Advantage's own choice on one that is not.
+      : (Object.keys(favoredChoiceOf(item)).length ? { featureChoices: favoredChoiceOf(item) } : {}))
   };
 }
 
@@ -2593,7 +2596,8 @@ export function techniqueDefinition(item) {
     ultimate,
     superProfile: sig.superProfile,
     secondProfile: (sig.superProfile === "multi-profile") ? sig.secondProfile : "",
-    featureChoices: choicesOf(sig),
+    // Favored Technique (2)'s Advantage's own choice, where the Technique has not made one of its own.
+    featureChoices: { ...favoredChoiceOf(item), ...choicesOf(sig) },
     fromTransformation: sig.fromTransformation,
     godFinisher: sig.godFinisher,
     ...(ultimate ? { usageLimit: { amount: 1, per: "encounter" } } : {})

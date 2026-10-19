@@ -438,10 +438,10 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     return Array.from(actor?.items ?? []).filter(item => (item.type === "maneuver") && (item.system.tags ?? []).includes("signature")
       && !item.system.signatureTechnique).sort((a, b) => a.name.localeCompare(b.name)).map(item => [item.id, item.name]);
   }
-  // And its "an Advantage with a Technique Point Cost of 10 or less" - its first rank's; none that asks a choice of its own.
+  // And its "an Advantage with a Technique Point Cost of 10 or less" - its first rank's.
   if (kind === "advantageUpTo10") {
     const { traitsOfKind } = await import("./effects/traits.mjs");
-    return traitsOfKind("signature", "advantages").filter(each => (Number(each.tpCost) || 0) && (Number(each.tpCost) <= 10) && !each.choose)
+    return traitsOfKind("signature", "advantages").filter(each => (Number(each.tpCost) || 0) && (Number(each.tpCost) <= 10))
       .sort((a, b) => a.name.localeCompare(b.name)).map(each => [each.id, each.name]);
   }
   // Synchronized Combatants' "Choose a Character": any in the world but yourself.
@@ -570,9 +570,15 @@ export async function changeChoice(item, which, value) {
   const kind = (which === 2) ? file.choose2 : file.choose;
   const offered = await choicesFor(kind, file, { actor: item.actor ?? null });
   const label = offered.find(([each]) => each === value)?.[1] ?? value;
-  const chosen = [...(item.system.chosen ?? []).filter(entry => entry.key !== key), { key, value, label: `${file.name}: ${label}` }];
+  let chosen = [...(item.system.chosen ?? []).filter(entry => entry.key !== key), { key, value, label: `${file.name}: ${label}` }];
   const first = chosen.find(entry => entry.key === file.id)?.value ?? "";
   const second = chosen.find(entry => entry.key === `${file.id}#2`)?.value ?? "";
+  // Favored Technique's Advantage's own choice, asked again - of the Advantage, or of the Technique a `feature` choice reads.
+  if (file.choose2 === "advantageUpTo10") {
+    const third = await favoredFeatureChoice(file, item.actor ?? null, first, second);
+    if (third === null) return false;
+    chosen = [...chosen.filter(entry => entry.key !== `${file.id}#3`), ...(third ? [third] : [])];
+  }
   // Its own part: the file's script with both answers written in - a list's flags too.
   let own = String(file.script ?? "").trim();
   if (second) own = own.replaceAll("$choice2", second);
@@ -588,6 +594,35 @@ ${script.slice(at).trim()}` : "";
   return true;
 }
 
+/**
+ * Favored Technique (2): the Advantage chosen, where it asks a choice of its own - Trick Attack's Skill, Condition's Condition -
+ * that choice, of the Technique chosen: its row (`<id>#3`), "" where it asks none, or null when backed out of.
+ */
+async function favoredFeatureChoice(source, actor, techniqueId, advantageId) {
+  if ((source?.choose2 !== "advantageUpTo10") || !advantageId) return "";
+  const { featureDef, featureChoiceOptions } = await import("./technique.mjs");
+  const def = featureDef(advantageId);
+  if (!def?.choose) return "";
+  const sig = actor?.items?.get?.(techniqueId)?.system?.signature ?? null;
+  const offered = featureChoiceOptions(def, { ranks: 1, sig, actor });
+  if (!offered.length) return "";
+  const escape = Handlebars.escapeExpression;
+  const picked = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${source.name}: ${def.name}` },
+    content: `<select name="choice">${offered.map(([value, label]) =>
+      `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select>`,
+    buttons: [
+      { action: "confirm", label: "Choose", default: true,
+        callback: (event, button, dialog) => dialog.element.querySelector('select[name="choice"]')?.value ?? "" },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  const pair = offered.find(([value]) => value === picked);
+  return pair ? { key: `${source.id}#3`, value: pair[0], label: `${source.name}: ${def.name} - ${pair[1]}` } : null;
+}
+
 /** A part's script with its `choose:` answered - `$choice` replaced - and the choice recorded. */
 async function answered(source, chosen, actor = null) {
   let script = String(source.script ?? "").trim();
@@ -601,6 +636,10 @@ async function answered(source, chosen, actor = null) {
     if (!second) return null;
     chosen.push({ key: `${source.id}#2`, value: second.value, label: `${source.name}: ${second.label}` });
     script = script.replaceAll("$choice2", second.value);
+    // Favored Technique's Advantage, where it asks a choice of its own.
+    const third = await favoredFeatureChoice(source, actor, choice.value, second.value);
+    if (third === null) return null;
+    if (third) chosen.push(third);
   }
   // A list's: each of its values a number too - `$tiny` 1 where Tiny was chosen, 0 where it was not.
   const flags = (source.choose === "list") ? (await choicesFor("list", source)).map(([value]) => value)
