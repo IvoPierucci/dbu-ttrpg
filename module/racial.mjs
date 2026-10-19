@@ -433,6 +433,16 @@ async function choicesFor(kind, source = null, { actor = null, earlier = [] } = 
     return Object.entries(PROFILES).filter(([, profile]) => profile.label && Array.isArray(profile.foundations)
       && (!foundation || profile.foundations.includes(foundation))).map(([key, profile]) => [key, profile.label]);
   }
+  // Unique Technique's "a Profile of the same Foundation as your Favored Technique" - any Profile where none is chosen yet.
+  if (kind === "uniqueProfile") {
+    const { PROFILES } = await import("./maneuvers.mjs");
+    const favored = Array.from(actor?.items ?? []).find(item => (item.type === "talent")
+      && (item.flags?.["dbu-ttrpg"]?.sourceId === "favored-technique"));
+    const techniqueId = (favored?.system?.chosen ?? []).find(entry => entry.key === "favored-technique")?.value ?? "";
+    const foundation = actor?.items?.get?.(techniqueId)?.system?.signature?.foundation ?? "";
+    return Object.entries(PROFILES).filter(([, profile]) => profile.label && Array.isArray(profile.foundations)
+      && (!foundation || profile.foundations.includes(foundation))).map(([key, profile]) => [key, profile.label]);
+  }
   // Favored Technique's "select one of your Signature Techniques".
   if (kind === "ownTechnique") {
     return Array.from(actor?.items ?? []).filter(item => (item.type === "maneuver") && (item.system.tags ?? []).includes("signature")

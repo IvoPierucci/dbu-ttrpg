@@ -1,0 +1,21 @@
+id: unique-technique
+name: Unique Technique
+talentCategory: technique
+prerequisites: Favored Technique
+# (1) "select a Profile of the same Foundation as your Favored Technique" - asked as it is gained; changeable on its Options tab.
+choose: uniqueProfile
+description: >
+  You’ve managed to make your special technique even more unique, creating something truly your own.
+text: >
+  Unique Technique: You’ve managed to make your special technique even more unique, creating something truly your own.
+  –Prerequisites: Favored Technique
+  (1)-[Ruling]: Upon gaining this Talent, select a Profile of the same Foundation as your Favored Technique. This becomes known as your ‘Unique Profile’.
+  (2)-[Triggered, 1/Round]: When using your Favored Technique, you may apply the Multi-Profile Super Profile onto your Favored Technique. If you do, you must select your Unique Profile for its effects.
+
+---
+
+[passive]
+# (2) Asked as the Favored Technique is declared, once a Round: Multi-Profile with your Unique Profile - its KP paid, what that
+# Profile hands out with it; a Super Profile it has already, replaced, as Neko Mimicry's (use-maneuver.mjs
+# uniqueTechniqueMulti).
+allow unique.multiProfile;

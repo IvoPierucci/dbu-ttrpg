@@ -2743,6 +2743,52 @@ export async function mimicryMultiProfile(actor, maneuver, declared) {
 }
 
 /**
+ * Unique Technique (2): "When using your Favored Technique, you may apply the Multi-Profile Super Profile onto your Favored
+ * Technique. If you do, you must select your Unique Profile for its effects." Once a Round, asked - as Neko Mimicry's: a Super
+ * Profile it has already is replaced; Multi-Profile's KP is paid; what its Profile hands out comes with it.
+ *
+ * @returns {Promise<?{maneuver: object, declared: object}>} null when the question was put away
+ */
+export async function uniqueTechniqueMulti(actor, maneuver, declared) {
+  const unchanged = { maneuver, declared };
+  if (!declared || !maneuver.signature || maneuver.signatureTechnique) return unchanged;
+  if (actor.system.effects?.slots?.["unique.multiProfile"] !== true) return unchanged;
+  const round = `${game.combat?.id ?? "none"}:${game.combat?.round ?? 0}`;
+  if (actor.getFlag?.("dbu-ttrpg", "uniqueTechniqueRound") === round) return unchanged;
+  const { isFavoredTechnique } = await import("./data/item-maneuver.mjs");
+  if (!isFavoredTechnique(actor, maneuver.itemId)) return unchanged;
+  const talent = Array.from(actor.items ?? []).find(item => (item.type === "talent")
+    && (item.flags?.["dbu-ttrpg"]?.sourceId === "unique-technique"));
+  const unique = (talent?.system?.chosen ?? []).find(entry => entry.key === "unique-technique")?.value ?? "";
+  if (!PROFILES[unique] || (unique === declared.profile)
+    || ((maneuver.superProfile === "multi-profile") && (maneuver.secondProfile === unique))) return unchanged;
+  const escape = Handlebars.escapeExpression;
+  const had = maneuver.superProfile ?? "";
+  const answer = await foundry.applications.api.DialogV2.wait({
+    classes: ["dbu-dialog"],
+    window: { title: `${maneuver.name} - Unique Technique` },
+    content: `<p class="dbu-respond-hint" data-tooltip="${escape(getTrait("unique-technique")?.text ?? "")}">Multi-Profile with
+        ${escape(PROFILES[unique].label)}, once a Round.${had ? ` It replaces ${escape(SUPER_PROFILES[had]?.label ?? had)}.` : ""}</p>`,
+    buttons: [
+      { action: "apply", label: "Apply", default: true },
+      { action: "skip", label: "No" },
+      { action: "cancel", label: "Cancel" }
+    ],
+    rejectClose: false
+  });
+  if (!answer || (answer === "cancel")) return null;
+  if (answer !== "apply") return unchanged;
+  const tier = Math.max(1, Number(actor.system.tierOfPower) || 1);
+  const was = had ? superProfileKiPerTier(had, maneuver.secondProfile ?? "") : 0;
+  const next = { ...maneuver, superProfile: "multi-profile", secondProfile: unique };
+  const out = { ...declared,
+    superProfileKi: (Number(declared.superProfileKi) || 0) + ((superProfileKiPerTier("multi-profile", unique) - was) * tier),
+    advantages: withGranted(declared.advantages ?? [], PROFILES[unique].grantsAdvantage) };
+  await actor.setFlag("dbu-ttrpg", "uniqueTechniqueRound", round);
+  return { maneuver: next, declared: await wagerAgain(actor, next, declared, out, unique) };
+}
+
+/**
  * Karmic Assault (2 Karma): "If you use an Ultimate Signature Technique, you may apply a Super
  * Profile of your choice to that Attacking Maneuver."
  *
@@ -5115,6 +5161,10 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     const mimicked = await mimicryMultiProfile(actor, maneuver, declared);
     if (!mimicked) return false;
     ({ maneuver, declared } = mimicked);
+    // Unique Technique (2): Multi-Profile with the Unique Profile on the Favored Technique, once a Round.
+    const uniqued = await uniqueTechniqueMulti(actor, maneuver, declared);
+    if (!uniqued) return false;
+    ({ maneuver, declared } = uniqued);
 
     // "You may use your Personality Modifier for the Damage Attribute" - a choice, asked
     // with the declaration, and only where something worn offers one for this attack.
