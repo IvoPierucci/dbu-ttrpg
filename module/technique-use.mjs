@@ -73,9 +73,10 @@ export function whyNotTechnique(actor, technique, { via = "", ascended = false }
     return `${name} ascended this Combat Encounter.`;
   }
 
-  // Technique Master (1): "you cannot use the same Signature Technique more than once per Combat Round".
-  if ((actor.system?.effects?.slots?.["techniqueMaster.sameOnce"] === true)
-    && (actor.system?.usedManeuvers ?? []).includes(`round:${technique.id}.technique`)) {
+  // Technique Master (1): "you cannot use the same Signature Technique more than once per Combat Round" - unless it may yet
+  // become another through Flexible Technique (2), in either order (the user's): then asked at its declaration
+  // (use-maneuver.mjs askTechniqueDeclaration), refused there if its Profile is not changed.
+  if (usedThisRoundTwice(actor, technique) && !flexibleOpen(actor, technique)) {
     return `${name} has been used this Combat Round.`;
   }
 
@@ -205,6 +206,23 @@ export const DEEP_SPACE_RANK = 4;
  * one, the Round's Fake Out. The Technique's own once-per-Encounter is recorded by the door, as
  * its `through` limit.
  */
+/** Technique Master (1): held, and this Technique used already this Combat Round. */
+export function usedThisRoundTwice(actor, technique) {
+  return (actor?.system?.effects?.slots?.["techniqueMaster.sameOnce"] === true)
+    && (actor.system?.usedManeuvers ?? []).includes(`round:${technique?.id}.technique`);
+}
+
+/** Flexible Technique (2): open on this Technique - the Favored one, its once an Encounter not spent. */
+export function flexibleOpen(actor, technique) {
+  if (actor?.system?.effects?.slots?.["flexible.technique"] !== true) return false;
+  const encounter = globalThis.game?.combat?.id ?? "none";
+  if (actor.getFlag?.("dbu-ttrpg", "flexibleProfileEncounter") === encounter) return false;
+  const favored = Array.from(actor.items ?? []).find(each => (each.type === "talent")
+    && (each.flags?.["dbu-ttrpg"]?.sourceId === "favored-technique"));
+  const id = technique?.itemId || technique?.id;
+  return Boolean(id) && ((favored?.system?.chosen ?? []).find(entry => entry.key === "favored-technique")?.value === id);
+}
+
 export function techniqueUseEntries(technique, { ascended = false } = {}) {
   // Its own use this Round - Technique Master's "you cannot use the same Signature Technique more than once per Combat Round".
   const entries = [`round:${technique.id}.technique`];

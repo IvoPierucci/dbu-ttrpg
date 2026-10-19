@@ -1036,6 +1036,12 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     await actor.setFlag("dbu-ttrpg", "flexibleProfileEncounter", game.combat?.id ?? "none");
   }
   for (const key of ["flexAccToPs", "flexPsToAcc", "flexEfficiency", "flexProfile"]) delete answers[key];
+  // Technique Master (1): used already this Round, it is only let through as another Profile (the user's: either order).
+  const { usedThisRoundTwice } = await import("./technique-use.mjs");
+  if (!answers.flexibleProfile && usedThisRoundTwice(actor, technique)) {
+    ui.notifications.warn(`${technique.name} has been used this Combat Round - only as another Profile (Flexible Technique).`);
+    return null;
+  }
   // Powerful Technique (1), (2): the Favored Technique's Wound - not another Profile's, Flexible Technique (2)'s other Technique.
   if ((actor.system.effects?.slots?.["powerful.technique"] === true) && isFavoredTechnique(actor, technique.itemId)
     && !answers.flexibleProfile) {
