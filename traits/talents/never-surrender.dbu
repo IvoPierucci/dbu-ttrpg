@@ -1,0 +1,23 @@
+id: never-surrender
+name: Never Surrender
+talentCategory: surge
+prerequisites: Second Wind
+description: >
+  Your raw determination keeps you going even on the brink of death.
+text: >
+  Never Surrender: Your raw determination keeps you going even on the brink of death.
+  –Prerequisites: Second Wind
+  (1)-[Passive]: Increase your Surgency by 2(T).
+  (2)-[Triggered, 1/Encounter]: If you use a Ki Surge through the Surge Maneuver while below the Injured Health Threshold, enter the Superior State until the end of your next turn.
+
+---
+
+[passive]
+# (1)
+surgency += 2(T);
+
+# (2) A Ki Surge taken (the `ki-surge` Moment) through the Surge Maneuver itself (`bySurgeManeuver`), below Injured - Injured or
+# Critical: the Superior State till the end of your next turn. Automatic by default, its Triggered/Automatic button.
+[triggered/ki-surge, 1/encounter, effect 2]
+requires bySurgeManeuver && belowThreshold("injured");
+enterState(superior, 1, next-turn);

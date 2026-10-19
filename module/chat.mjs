@@ -8036,7 +8036,7 @@ async function playInstant(message, actor, maneuverId) {
     const cost = maneuverKiCost(maneuver, null, actor);
     if ((cost > 0) && !await spendManeuverCost(actor, maneuver, cost)) return;
     if (!await takeSurge(actor, { source: maneuver.name, kind: maneuver.surgeKind || null,
-      dicePerBaseTier: Number(maneuver.surgeDicePerBaseTier) || 0 })) {
+      dicePerBaseTier: Number(maneuver.surgeDicePerBaseTier) || 0, viaManeuver: maneuver.id ?? "" })) {
       if (cost > 0) await refundManeuverCost(actor, maneuver);
       return;
     }
@@ -28969,7 +28969,7 @@ export async function postTransformation(actor, maneuver, into, actionsSpent = 1
  * whatever triggered it.
  */
 export async function takeSurge(actor, { source = "Surge", kind: forced = null, dicePerBaseTier = 0, lifeMultiplier = 1,
-                                          extraDie = 0 } = {}) {
+                                          extraDie = 0, viaManeuver = "" } = {}) {
   // An effect that names a Surge is not offering a choice between the two: "use a Ki
   // Surge as an Instant Maneuver" is one Surge, and asking which would be wrong.
   const kind = forced ?? await foundry.applications.api.DialogV2.wait({
@@ -29075,6 +29075,8 @@ export async function takeSurge(actor, { source = "Surge", kind: forced = null, 
       outcome: "surge"
     })
   });
+  // What answers a Ki Surge - Never Surrender's, through the Surge Maneuver.
+  await answerFor(actor, "ki-surge", { surgeManeuver: viaManeuver === "surge" });
   return true;
 }
 

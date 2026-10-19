@@ -521,8 +521,9 @@ const BARE_PREDICATES = new Set(["defending", "isMinion", "attackingManeuver",
   "ownDefeat", "snackThisRound",
   // The Movement Maneuver used this Combat Round (Terrifying Speed's); a Battle Weather on you not felt (Survivalist's).
   "movedThisRound", "weatherUnfelt",
-  // The Maneuver declared an Attacking Maneuver or a Unique Ability (Reserved Combatant's).
-  "attackOrUnique",
+  // The Maneuver declared an Attacking Maneuver or a Unique Ability (Reserved Combatant's); a Surge through the Surge Maneuver
+  // itself (Never Surrender's).
+  "attackOrUnique", "bySurgeManeuver",
   // Ki Multiplier from elsewhere; no Ki regained by Surge or Combat Recovery (Power Battery's).
   "kiMultiplied", "kiLocked",
   // The one Defeated, your Lock On Target; no Counter Action left (Lingering Instincts').

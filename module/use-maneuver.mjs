@@ -4666,7 +4666,8 @@ async function useManeuverOnce(actor, maneuver, { atFeature = false, techniqueId
     if (!await takeSurge(actor, {
       source: maneuver.name,
       kind: maneuver.surgeKind || null,
-      dicePerBaseTier: Number(maneuver.surgeDicePerBaseTier) || 0
+      dicePerBaseTier: Number(maneuver.surgeDicePerBaseTier) || 0,
+      viaManeuver: maneuver.id ?? ""
     })) {
       if (surgeCost > 0) await refundManeuverCost(actor, maneuver);
       return false;

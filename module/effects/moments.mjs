@@ -281,7 +281,9 @@ const TABLE = [
   { key: "critical", label: "You score a Critical Result on a Combat Roll", provides: [CTX.ROLL],
     doc: "Read once the Natural Result is, with the Critical Extra Dice - Celestial Potential's 2(T) more." },
   { key: "healing-surge", label: "You take a Healing Surge", provides: [CTX.AMOUNT] },
-  { key: "ki-surge", label: "You take a Ki Surge", provides: [CTX.AMOUNT] },
+  { key: "ki-surge", label: "You take a Ki Surge", provides: [CTX.AMOUNT],
+    doc: "Fired once its Ki and Capacity are back (chat.mjs takeSurge), `surgeManeuver` where it was the Surge Maneuver's - "
+       + "Never Surrender's. What is the player's is asked in a window first." },
   { key: "counter-maneuver", label: "You use a Counter Maneuver", provides: [CTX.ATTACK] },
   { key: "counter-window", label: "You could act out of sequence", provides: [CTX.ATTACK] },
 

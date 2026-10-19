@@ -427,6 +427,9 @@ const PREDICATES = {
   attackOrUnique: scope => Boolean(scope.context?.maneuver?.attacking)
     || (scope.context?.maneuver?.tags ?? []).includes("uniqueAbility") || Boolean(scope.context?.maneuver?.uniqueType),
 
+  /** The Surge this Moment is for was taken through the Surge Maneuver itself - Never Surrender (2)'s. */
+  bySurgeManeuver: scope => scope.context?.surgeManeuver === true,
+
   /** A Snack eaten this Combat Round - Snack Motivated's. */
   snackThisRound: scope => (scope.data?.parent?.getFlag?.("dbu-ttrpg", "snackRound") ?? "")
     === `${globalThis.game?.combat?.id ?? "none"}:${globalThis.game?.combat?.round ?? 0}`,
