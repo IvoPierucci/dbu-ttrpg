@@ -1,0 +1,23 @@
+id: technique-armory
+name: Technique Armory
+talentCategory: technique
+prerequisites: You have access to 3+ Signature Techniques
+resource: armory
+resourceLabel: Armory Points
+description: >
+  Your arsenal of combat techniques is vast and powerful, granting you a broad array of options for overcoming any obstacle.
+text: >
+  Technique Armory: Your arsenal of combat techniques is vast and powerful, granting you a broad array of options for overcoming any obstacle.
+  –Prerequisites: You have access to 3+ Signature Techniques
+  (1)-[Passive]: Reduce the initial Technique Point Cost of Signature Techniques by 4. This effect applies retroactively, meaning you regain 4 Technique Points for each Signature Technique you had previously obtained with Technique Points.
+  (2)-[Triggered, Resource]: Each time you use a Super Signature Technique for the first time in a Combat Encounter, gain 1 Armory Point. When using an Ultimate Signature Technique, you may spend up to 5 Armory Points to increase the Wound Roll of that Signature Technique by 2(T) for each Armory Point spent.
+
+---
+
+[passive]
+# (1) What each Technique takes of your TP, 4 less - as Earthling-Raised's, after the rest; read off every Technique, so those
+# had already give theirs back (technique.mjs techniqueTPCharged).
+signature.tpCost -= 4;
+# (2) Asked in the Technique's declaration window (use-maneuver.mjs askTechniqueDeclaration): a Super used the first time this
+# Encounter, an Armory Point; an Ultimate, up to 5 of them spent for 2(T) each on its Wound.
+allow armory.points;

@@ -904,6 +904,14 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
         flexProfiles.map(([id, label]) => `<option value="${id}">${Handlebars.escapeExpression(label)}</option>`).join("")}</select>
       <span class="dbu-respond-source">once an Encounter - another Technique</span></label>`);
   }
+  // Technique Armory (2): on an Ultimate, up to 5 Armory Points for 2(T) each on its Wound.
+  const armoryHeld = Number(actor.system.resources?.armory?.stacks) || 0;
+  const armoryMost = ((actor.system.effects?.slots?.["armory.points"] === true) && technique.ultimate) ? Math.min(5, armoryHeld) : 0;
+  if (armoryMost) {
+    fields.push(`<label class="dbu-respond-option"${tip("technique-armory", 2)}><span class="dbu-respond-name">Technique Armory: Armory Points</span>
+      <input type="number" name="armory" value="0" min="0" max="${armoryMost}"/>
+      <span class="dbu-respond-source">each +2(T) Wound</span></label>`);
+  }
   const areaProfiles = [declared.profile, technique.secondProfile].filter(id => PROFILES[id]?.area);
   if (areaProfiles.length > 1) {
     fields.push(`<label class="dbu-respond-option"><span class="dbu-respond-name">Area of Effect</span>
@@ -953,6 +961,7 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
             flexAccToPs: Math.min(flexAccMost, num("flexAccToPs")), flexPsToAcc: Math.min(flexPsMost, num("flexPsToAcc")),
             flexEfficiency: flexEfficiency && box("flexEfficiency"),
             flexProfile: form.querySelector('[name="flexProfile"]')?.value ?? "",
+            armory: Math.min(armoryMost, num("armory")),
             gigaFlare: Math.min(2, num("gigaFlare")),
             superCombination: num("superCombination"), powerbomb: box("powerbomb"),
             areaFrom: form.querySelector('[name="areaFrom"]')?.value ?? "" };
@@ -1125,15 +1134,33 @@ async function askTechniqueDeclaration(actor, technique, declared, target) {
     answers.unstudy = [...(declared.unstudy ?? []), { by: actor.uuid, uuid: target.uuid }];
   }
   delete answers.channeler;
-  if (woundExtra.length) answers.woundExtra = woundExtra;
+  // Technique Armory (2): the Armory Points spent, 2(T) each on the Wound.
+  const armorySpent = Math.min(armoryMost, Number(answers.armory) || 0);
+  delete answers.armory;
+  if (armorySpent > 0) {
+    const { setResource } = await import("./chat.mjs");
+    await setResource(actor, "armory", armoryHeld - armorySpent);
+    woundExtra.push({ label: `Technique Armory (${armorySpent})`, written: `+${2 * armorySpent}(T)`,
+      value: 2 * armorySpent * Math.max(1, Number(tier) || 1) });
+  }
+  // Beside what was put on it before - Powerful Technique's rows - not over them.
+  if (woundExtra.length) answers.woundExtra = [...(answers.woundExtra ?? declared.woundExtra ?? []), ...woundExtra];
   const extraActions = (answers.gigaFlare ?? 0) + (answers.superCombination ?? 0);
   if (extraActions) {
     answers.extraActions = extraActions;
     // Giga Flare's own price: "2(T) per Action spent through its effects".
     if (answers.gigaFlare) answers.kiSurcharge = 2 * answers.gigaFlare * tier;
   }
-  // This Technique used this Encounter - Eye of the Dragon (2) asks after the first time.
-  if (actor.system.effects?.slots?.["signature.earthlingBoth"] === true) {
+  // Technique Armory (2): "Each time you use a Super Signature Technique for the first time in a Combat Encounter, gain 1
+  // Armory Point."
+  const armoryFirst = (actor.system.effects?.slots?.["armory.points"] === true) && !technique.ultimate && game.combat?.started
+    && !usedHere.includes(technique.itemId ?? technique.id);
+  if (armoryFirst) {
+    const { setResource } = await import("./chat.mjs");
+    await setResource(actor, "armory", (Number(actor.system.resources?.armory?.stacks) || 0) + 1);
+  }
+  // This Technique used this Encounter - Eye of the Dragon (2) asks after the first time; Technique Armory (2) counts it.
+  if ((actor.system.effects?.slots?.["signature.earthlingBoth"] === true) || (actor.system.effects?.slots?.["armory.points"] === true)) {
     const combatId = game.combat?.id ?? "none";
     await actor.setFlag("dbu-ttrpg", "techniquesUsed", { combatId,
       ids: [...new Set([...usedHere, technique.itemId ?? technique.id])] });
