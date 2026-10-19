@@ -1,0 +1,17 @@
+id: supporting-defender
+name: Supporting Defender
+talentCategory: teamwork
+prerequisites: N/A
+description: >
+  Able to create openings in your opponents’ attacks, you provide perfect defensive support for your allies.
+text: >
+  Supporting Defender: Able to create openings in your opponents’ attacks, you provide perfect defensive support for your allies.
+  –Prerequisites: N/A
+  (1)-[Passive]: If you are on a Square adjacent to an Opponent, increase all of your Allies’ Dodge Rolls, or Strike Rolls when using the Parry effect of the Defend Maneuver, made against that Opponent by 1(T).
+
+---
+
+[passive]
+# (1) An Ally's Dodge, or Parry's Strike, against the attack of an Opponent you - not Defeated - are on a Square adjacent to:
+# 1(T), your Tier; one Supporting Defender at a time, the highest (chat.mjs supportParts).
+allow supporting.defender;

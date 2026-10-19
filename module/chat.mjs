@@ -14137,6 +14137,24 @@ function refinedParts(actor, other) {
   return [{ label: "Refined Combat (Studied)", written: "+1(T)", value: Math.max(1, Number(actor.system.tierOfPower) || 1) }];
 }
 
+/**
+ * Supporting Defender (1): "If you are on a Square adjacent to an Opponent, increase all of your Allies' Dodge Rolls, or Strike
+ * Rolls when using the Parry effect of the Defend Maneuver, made against that Opponent by 1(T)." The defender's Allies with it,
+ * not Defeated, beside the attacker - an Opponent of theirs; the same Talent once, the highest Tier's.
+ */
+function supportParts(actor, attacker) {
+  if (!actor || !attacker || (attacker.uuid === actor.uuid)) return [];
+  const at = attacker.getActiveTokens?.(false, true)?.[0];
+  if (!at) return [];
+  const helpers = alliesOnScene(actor).filter(ally => (ally.uuid !== attacker.uuid) && !ally.system?.defeated
+    && (ally.system?.effects?.slots?.["supporting.defender"] === true)
+    && !alliesOnScene(ally).some(other => other.uuid === attacker.uuid)
+    && (ally.getActiveTokens?.(false, true) ?? []).some(token => squaresBetween(token, at) === 0));
+  if (!helpers.length) return [];
+  const best = helpers.reduce((top, ally) => ((Number(ally.system.tierOfPower) || 1) > (Number(top.system.tierOfPower) || 1)) ? ally : top);
+  return [{ label: `Supporting Defender (${best.name})`, written: "+1(T)", value: Math.max(1, Number(best.system.tierOfPower) || 1) }];
+}
+
 /** And the Dodge against one of their attacks. */
 function studiedDodge(actor, attack) {
   return studiedParts(actor, fromUuidSync(attack?.attackerUuid ?? ""));
@@ -25395,6 +25413,8 @@ function dodgeBonus(actor, { halved = false, attack = null } = {}) {
   parts.push(...analyticParts(actor, fromUuidSync(attack?.attackerUuid ?? ""), "dodge"));
   // Enhanced Search (5): the attack of one you Marked.
   parts.push(...markedParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
+  // Supporting Defender: an Ally beside the attacker.
+  parts.push(...supportParts(actor, fromUuidSync(attack?.attackerUuid ?? "")));
   // Telepathic Warning: the Dodge raised for this attack by whoever warned them.
   parts.push(...telepathicDodge(actor, attack));
   // Refined Combat's Fleet-Footed.
@@ -25794,6 +25814,8 @@ const DEFENCES = {
       ...tacticianParts(actor, fromUuidSync(attack?.attackerUuid ?? "")),
       // Mind Reading: "the Dice Score of any Strike Roll made through the Parry effect of the Defend Maneuver".
       ...mindReadBonus(actor, fromUuidSync(attack?.attackerUuid ?? ""), { defending: true }),
+      // Supporting Defender: an Ally beside the attacker.
+      ...supportParts(actor, fromUuidSync(attack?.attackerUuid ?? "")),
       ...zenCounterParts(actor, attack)
     ],
     answer: (actor, options, attack) => rollSide(actor, DEFENCES.parry.parts(actor, attack),
